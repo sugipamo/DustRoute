@@ -44,6 +44,23 @@ DAG -> physical baseline の半加算器。
 /function ro_half_base:case_11
 ```
 
+## half_subtractor.zip
+
+DAG -> physical baseline の半減算器（DIFF / BORROW）。
+
+```text
+/function ro_halfsub:halfsub/tests
+```
+
+個別ケース:
+
+```text
+/function ro_halfsub:halfsub/case_00
+/function ro_halfsub:halfsub/case_01
+/function ro_halfsub:halfsub/case_10
+/function ro_halfsub:halfsub/case_11
+```
+
 ## mux_decoder.zip
 
 2:1 MUX と enable 付き 1→2 decoder。

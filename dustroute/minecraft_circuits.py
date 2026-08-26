@@ -5,7 +5,7 @@ from itertools import product
 import json
 
 from .dag_baseline import BaselineDAGCircuit, compile_baseline_dag
-from .dag_circuits import mux2_dag, decoder1to2_dag
+from .dag_circuits import half_subtractor_dag, mux2_dag, decoder1to2_dag
 from .logic_dag import evaluate_dag
 from .minecraft_export import JavaExportConfig, isolated_build_commands, _xyz
 
@@ -136,6 +136,45 @@ def _write_circuit(
             f"schedule function {config.namespace}:{api}/case_{name} {2+i*window}t replace"
         )
     (cdir/"tests.mcfunction").write_text("\n".join(tests)+"\n",encoding="utf-8")
+
+
+def export_half_subtractor_datapack(
+    output_dir: str|Path,
+    *,
+    config: JavaExportConfig=JavaExportConfig(
+        namespace="ro_halfsub",
+        pack_format=71,
+        test_delay_ticks=60,
+    ),
+):
+    """
+    Half subtractor truth-table regression (DIFF/BORROW), compiled through
+    the same DAG baseline pipeline as the mux/decoder pack.
+    """
+    output_dir=Path(output_dir)
+    funcs=output_dir/"data"/config.namespace/"function"
+    funcs.mkdir(parents=True,exist_ok=True)
+
+    hs=compile_baseline_dag(half_subtractor_dag(),spacing_x=12,lane_gap=8)
+
+    _write_circuit(funcs,"halfsub",hs,("a","b"),config=config)
+
+    help_lines=[
+        'tellraw @a '+json.dumps({"text":"half subtractor validation","color":"gold"},separators=(",",":")),
+        'tellraw @a '+json.dumps({"text":"/function ro_halfsub:halfsub/tests","color":"aqua"},separators=(",",":")),
+    ]
+    (funcs/"help.mcfunction").write_text("\n".join(help_lines)+"\n",encoding="utf-8")
+
+    (output_dir/"pack.mcmeta").write_text(
+        json.dumps({
+            "pack":{
+                "pack_format":config.pack_format,
+                "description":"DAG half-subtractor Minecraft validation",
+            }
+        },indent=2)+"\n",
+        encoding="utf-8",
+    )
+    return output_dir
 
 
 def export_multi_circuit_datapack(
