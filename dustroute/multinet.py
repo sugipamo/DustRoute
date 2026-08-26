@@ -165,6 +165,11 @@ def _route_branch_to_tree(
     pq=[(_heuristic_to_tree(start,tree),0,start)]
     g={start:0.0}; prev={}; serial=0; expanded=0
 
+    # Supports required by already-routed same-Net tree positions are physical
+    # blocks: a new conductor may not displace them.
+    tree_supports={p.offset(dy=-1) for p in tree}
+    tree_positions=set(tree)
+
     while pq:
         _,_,cur=heappop(pq)
         if cur in tree:
@@ -192,6 +197,12 @@ def _route_branch_to_tree(
             if support in blocked:
                 continue
 
+            # A conductor may not displace the support block required by an
+            # already-routed same-Net tree position, nor may it sit directly
+            # underneath a wire placed earlier on this very path.
+            if q in path_supports or q in tree_supports:
+                continue
+
             # Do not let this path destroy its own earlier stair geometry.
             if q in path_clearances or support in path_clearances:
                 continue
@@ -216,9 +227,10 @@ def _route_branch_to_tree(
                     if clearance in blocked or clearance in blocked_supports:
                         continue
 
-                # Existing same-Net tree supports are physical blocks too and
-                # may not close the stair clearance.
-                tree_supports={p.offset(dy=-1) for p in tree}
+                # Existing same-Net tree conductors and supports are physical
+                # volumes too and may not close the stair clearance.
+                if clearance in tree_positions and clearance != upper:
+                    continue
                 if clearance in tree_supports and clearance != upper:
                     continue
                 if clearance in path_supports and clearance != upper:
@@ -488,6 +500,10 @@ def route_net_tree(
         exempt_cell_wires=exempt_cell_wires,
     ))
 
+    # Own terminals are un-blocked below so the route may enter/leave its
+    # cells even when the declaration overlaps conservative reservations.
+    # Precise legality (actual cross-Net dust contact, stair geometry,
+    # signal budget) is enforced by the caller after each Net lands.
     for p in own_terminals:
         if p not in reserved:
             blocked.discard(p)
@@ -619,6 +635,19 @@ def route_all_nets(
             config=config,
         )
         routing.nets[n.id]=rn
+
+        # Precise cross-Net legality gate: geometric blocking cannot express
+        # every Minecraft electrical rule (keepout is a conservative
+        # over-approximation and terminal declarations may legally overlap
+        # it). A Net that shorts or robs support from earlier geometry is
+        # undone here, surfacing RouteNotFound for reorder/rip-up.
+        contacts,support_conflicts=find_cross_net_conflicts(pc,routing)
+        if contacts or support_conflicts:
+            del routing.nets[n.id]
+            raise RouteNotFound(
+                f"net {n.id} produced illegal routing: "
+                f"contacts={len(contacts)}, supports={len(support_conflicts)}"
+            )
 
     return routing
 
@@ -785,6 +814,19 @@ def route_all_nets_ripup(
                 config=config,
             )
             routing.nets[nid] = rn
+
+            # Same precise cross-Net legality gate as the plain sequential
+            # router, limited to the violation classes that re-ordering can
+            # actually fix (shorts and support theft). Per-Net continuity and
+            # signal budget remain the caller's final acceptance gate.
+            contacts,support_conflicts=find_cross_net_conflicts(pc,routing)
+            if contacts or support_conflicts:
+                del routing.nets[nid]
+                raise RouteNotFound(
+                    f"net {nid} produced illegal routing: "
+                    f"contacts={len(contacts)}, supports={len(support_conflicts)}"
+                )
+
             routed_order.append(nid)
             continue
 
@@ -840,6 +882,82 @@ class RoutingLegalityReport:
             and not self.over_budget_paths
             and not self.broken_steps
         )
+
+
+def find_cross_net_conflicts(
+    pc: PhysicalCircuit,
+    routing: MultiNetRouting,
+    world: World | None = None,
+):
+    """
+    Precise but cheap cross-Net violation scan.
+
+    Returns (contacts, support_conflicts) using the same rules as
+    :func:`validate_routing_legality`, without reconstructing per-Net source
+    to sink paths. Safe to run after every routed Net.
+    """
+    world=world or materialize_multinet(pc,routing)
+
+    owner:dict[Pos,int]={}
+    for nid,net in routing.nets.items():
+        for p in net.occupied:
+            owner.setdefault(p,nid)
+
+    cell_boxes=[]
+    for node in pc.cells.values():
+        ps=[p for p,_ in node.placed.blocks()]
+        if not ps:
+            continue
+        lo=Pos(min(p.x for p in ps),min(p.y for p in ps),min(p.z for p in ps))
+        hi=Pos(max(p.x for p in ps),max(p.y for p in ps),max(p.z for p in ps))
+        cell_boxes.append((lo,hi))
+
+    def same_cell_volume(a: Pos,b: Pos) -> bool:
+        for lo,hi in cell_boxes:
+            def inside(p):
+                return (
+                    lo.x<=p.x<=hi.x
+                    and lo.y<=p.y<=hi.y
+                    and lo.z<=p.z<=hi.z
+                )
+            if inside(a) and inside(b):
+                return True
+        return False
+
+    from .wire import dust_connected
+    contacts=set()
+    for p,nid in owner.items():
+        if world.get(p).kind is not BlockKind.REDSTONE_WIRE:
+            continue
+        for q in electrical_keepout_for_wire(p):
+            oid=owner.get(q)
+            if oid is None or oid==nid:
+                continue
+            if world.get(q).kind is not BlockKind.REDSTONE_WIRE:
+                continue
+            if same_cell_volume(p,q):
+                continue
+            if dust_connected(world,p,q):
+                a,b=sorted((nid,oid))
+                pp,qq=(p,q) if nid==a else (q,p)
+                contacts.add((a,b,pp,qq))
+
+    support_conflicts=set()
+    for a,na in routing.nets.items():
+        supports={p.offset(dy=-1) for p in na.occupied}
+        for b,nb in routing.nets.items():
+            if a>=b:
+                continue
+            for p in supports.intersection(nb.occupied):
+                support_conflicts.add((a,b,p))
+            bs={p.offset(dy=-1) for p in nb.occupied}
+            for p in bs.intersection(na.occupied):
+                support_conflicts.add((a,b,p))
+
+    return (
+        tuple(sorted(contacts,key=lambda x:(x[0],x[1],x[2].x,x[2].y,x[2].z))),
+        tuple(sorted(support_conflicts,key=lambda x:(x[0],x[1],x[2].x,x[2].y,x[2].z))),
+    )
 
 
 def validate_routing_legality(
