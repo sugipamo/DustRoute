@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "project": {
+    "catalog": "prod",
+    "initializedAt": "2026-08-26T12:22:13.951Z",
+    "merchantDisplayName": "新規アカウント",
+    "merchantId": "acct_1U8fmIIeNglI9wee",
+    "projectId": "project_61VI3nh8voxiefP5l16VI3jePDHNHEcULEekbQFqyLKi",
+    "projectName": "DustRoute"
+  },
+  "providers": {
+    "openrouter": {
+      "accountRequestId": "facctrq_61VI3nzedZDbrHaNJ16VI3jePDHNHEcULEekbQFqyAT2",
+      "configuration": {},
+      "linkedAt": "2026-08-26T12:22:32.438Z",
+      "providerId": "prvdr_61URImmFACEuDHEx651IO",
+      "providerName": "OpenRouter",
+      "redirectUrl": null,
+      "requestedAt": "2026-08-26T12:22:32.438Z",
+      "status": "complete"
+    }
+  },
+  "resources": {
+    "openrouter-api": {
+      "configuration": {},
+      "createdAt": "2026-08-26T12:22:33.849Z",
+      "lastRevealedAt": "2026-08-26T12:22:34.062Z",
+      "lastStatus": "complete",
+      "name": "openrouter-api",
+      "providerId": "prvdr_61URImmFACEuDHEx651IO",
+      "providerName": "OpenRouter",
+      "resourceId": "fres_61VI3o0WE0WueKHJH16VI3jePDHNHEcULEekbQFqyIeG",
+      "serviceId": "api"
+    }
+  }
+}
