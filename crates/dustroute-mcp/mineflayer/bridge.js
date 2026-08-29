@@ -4,9 +4,28 @@ const net = require('node:net')
 const mineflayer = require('mineflayer')
 const { Vec3 } = require('vec3')
 
+function minecraftEndpoint () {
+  const configured = process.env.DUSTROUTE_SERVER_ADDRESS
+  if (!configured) {
+    return {
+      host: process.env.DUSTROUTE_MC_HOST || '127.0.0.1',
+      port: Number(process.env.DUSTROUTE_MC_PORT || 25565)
+    }
+  }
+  const separator = configured.lastIndexOf(':')
+  if (separator <= 0) throw new Error('DUSTROUTE_SERVER_ADDRESS must be host:port')
+  const host = configured.slice(0, separator).replace(/^\[|\]$/g, '')
+  const port = Number(configured.slice(separator + 1))
+  if (!host || !Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new Error('DUSTROUTE_SERVER_ADDRESS must be host:port')
+  }
+  return { host, port }
+}
+
+const minecraft = minecraftEndpoint()
 const config = {
-  host: process.env.DUSTROUTE_MC_HOST || '127.0.0.1',
-  port: Number(process.env.DUSTROUTE_MC_PORT || 25565),
+  host: minecraft.host,
+  port: minecraft.port,
   username: process.env.DUSTROUTE_BOT_NAME || 'DustRouteBot',
   version: process.env.DUSTROUTE_MC_VERSION || '1.21.11',
   bridgeHost: '127.0.0.1',

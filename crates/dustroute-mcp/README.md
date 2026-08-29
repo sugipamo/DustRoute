@@ -9,7 +9,8 @@ JSON-lines bridge.
 ```bash
 cd crates/dustroute-mcp/mineflayer
 npm install
-DUSTROUTE_MC_VERSION=1.21.11 npm start
+DUSTROUTE_SERVER_ADDRESS=127.0.0.1:25565 \
+  DUSTROUTE_MC_VERSION=1.21.11 npm start
 ```
 
 The default bot name is `DustRouteBot`. For offline test servers, grant it
@@ -21,10 +22,17 @@ The bridge listens only on `127.0.0.1:25580`.
 Configure an MCP client to launch:
 
 ```bash
-cargo run -p dustroute-mcp
+DUSTROUTE_SERVER_ADDRESS=127.0.0.1:25565 \
+  DUSTROUTE_ASSIST_PLAYER=YourMinecraftName \
+  cargo run -p dustroute-mcp
 ```
 
-Set `DUSTROUTE_BOT_BRIDGE` to override the bridge address. Natural-language
+`DUSTROUTE_SERVER_ADDRESS` and `DUSTROUTE_ASSIST_PLAYER` are required. The same
+server address must be supplied to the Mineflayer process. MCP tools use the
+configured player automatically, so callers normally omit their optional
+`player` argument. An attempt to override it with another player is rejected.
+
+Set `DUSTROUTE_BOT_BRIDGE` to override the local bridge address. Natural-language
 references such as “this circuit” are resolved by the LLM through the MCP tool
 sequence: `observe_player`, `discover_looked_at_circuit` or
 `mark_region_corner`, `preview_region`, and `analyze_selected_region`.

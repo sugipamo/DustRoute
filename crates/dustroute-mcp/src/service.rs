@@ -16,6 +16,7 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 use tokio::sync::Mutex;
 
+use crate::McpConfig;
 use crate::{
     BotBridge, McpPolicy, OperationKind, OperationRegistry, OperationStatus, PlacementPlan,
     SelectionSession, discover_connected_region, plan_world_overlay,
@@ -32,26 +33,28 @@ pub struct DustRouteMcp {
     policy: McpPolicy,
     app: DustRouteService,
     operations: OperationRegistry,
+    assist_player: Option<String>,
+    server_address: Option<String>,
 }
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 struct PlayerParams {
-    /// Exact in-game player name whose gaze should be observed.
-    player: String,
+    /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
+    player: Option<String>,
 }
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 struct ObserveParams {
-    /// Exact in-game player name whose gaze should be observed.
-    player: String,
+    /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
+    player: Option<String>,
     /// Ray-cast limit in blocks. Defaults to 64.
     max_distance: Option<f64>,
 }
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 struct MarkCornerParams {
-    /// Exact in-game player name whose current target becomes a corner.
-    player: String,
+    /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
+    player: Option<String>,
     /// Either `first` or `second`.
     corner: String,
     /// Ray-cast limit in blocks. Defaults to 64.
@@ -60,8 +63,8 @@ struct MarkCornerParams {
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 struct DiscoverCircuitParams {
-    /// Exact in-game player name whose gaze anchors circuit discovery.
-    player: String,
+    /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
+    player: Option<String>,
     /// Horizontal half-size of the initial scan, from 4 through 31. Defaults to 24.
     horizontal_radius: Option<i32>,
     /// Vertical half-size of the initial scan, from 2 through 16. Defaults to 12.
@@ -72,8 +75,8 @@ struct DiscoverCircuitParams {
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 struct PreviewPlacementParams {
-    /// Exact in-game player name whose gaze target becomes the placement origin.
-    player: String,
+    /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
+    player: Option<String>,
     /// Built-in circuit: half-adder, half-subtractor, mux2, decoder1to2, or full-adder.
     circuit: String,
     /// Maximum number of blocks allowed in one placement plan. Defaults to 32768.
@@ -148,6 +151,43 @@ impl DustRouteMcp {
             policy,
             app: DustRouteService::default(),
             operations: OperationRegistry::default(),
+            assist_player: None,
+            server_address: None,
+        }
+    }
+
+    #[must_use]
+    pub fn with_policy_and_player(
+        bridge_address: impl Into<String>,
+        policy: McpPolicy,
+        assist_player: impl Into<String>,
+    ) -> Self {
+        let mut service = Self::with_policy(bridge_address, policy);
+        service.assist_player = Some(assist_player.into());
+        service
+    }
+
+    #[must_use]
+    pub fn with_config(config: McpConfig, policy: McpPolicy) -> Self {
+        let mut service =
+            Self::with_policy_and_player(config.bridge_address, policy, config.assist_player);
+        service.server_address = Some(config.server_address);
+        service
+    }
+
+    fn resolve_player(&self, requested: Option<&str>) -> Result<String, String> {
+        match (&self.assist_player, requested) {
+            (Some(configured), None) => Ok(configured.clone()),
+            (Some(configured), Some(requested)) if configured == requested => {
+                Ok(configured.clone())
+            }
+            (Some(configured), Some(_)) => Err(format!(
+                "player override is not allowed; configured assist player is {configured:?}"
+            )),
+            (None, Some(requested)) => Ok(requested.to_owned()),
+            (None, None) => {
+                Err("player is required when DUSTROUTE_ASSIST_PLAYER is not configured".to_owned())
+            }
         }
     }
 
@@ -189,7 +229,13 @@ impl DustRouteMcp {
     )]
     async fn server_status(&self) -> String {
         match self.bridge.status().await {
-            Ok(status) => json_text(json!({ "ok": true, "bot": status, "policy": self.policy })),
+            Ok(status) => json_text(json!({
+                "ok": true,
+                "bot": status,
+                "configured_server": self.server_address,
+                "assist_player": self.assist_player,
+                "policy": self.policy
+            })),
             Err(error) => json_text(json!({ "ok": false, "error": error.to_string() })),
         }
     }
@@ -219,12 +265,16 @@ impl DustRouteMcp {
         annotations(read_only_hint = true, destructive_hint = false)
     )]
     async fn observe_player(&self, Parameters(params): Parameters<ObserveParams>) -> String {
-        if let Some(error) = self.authorize_player(&params.player) {
+        let player = match self.resolve_player(params.player.as_deref()) {
+            Ok(player) => player,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+        };
+        if let Some(error) = self.authorize_player(&player) {
             return error;
         }
         match self
             .bridge
-            .observe_player(&params.player, params.max_distance.unwrap_or(64.0))
+            .observe_player(&player, params.max_distance.unwrap_or(64.0))
             .await
         {
             Ok(observation) => match self.policy.authorize_dimension(&observation.dimension) {
@@ -239,12 +289,16 @@ impl DustRouteMcp {
         description = "Mark the first or second region corner at the block a player is looking at"
     )]
     async fn mark_region_corner(&self, Parameters(params): Parameters<MarkCornerParams>) -> String {
-        if let Some(error) = self.authorize_player(&params.player) {
+        let player = match self.resolve_player(params.player.as_deref()) {
+            Ok(player) => player,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+        };
+        if let Some(error) = self.authorize_player(&player) {
             return error;
         }
         let observation = match self
             .bridge
-            .observe_player(&params.player, params.max_distance.unwrap_or(64.0))
+            .observe_player(&player, params.max_distance.unwrap_or(64.0))
             .await
         {
             Ok(observation) => observation,
@@ -262,22 +316,22 @@ impl DustRouteMcp {
         }
         let mut selections = self.selections.lock().await;
         let session = selections
-            .entry(params.player.clone())
-            .or_insert_with(|| SelectionSession::new(&params.player));
+            .entry(player.clone())
+            .or_insert_with(|| SelectionSession::new(&player));
         let result = match params.corner.as_str() {
             "first" => {
                 session.mark_first(target);
                 self.selection_dimensions
                     .lock()
                     .await
-                    .insert(params.player.clone(), observation.dimension.clone());
+                    .insert(player.clone(), observation.dimension.clone());
                 json!({ "ok": true, "corner": "first", "position": target })
             }
             "second" => match self
                 .selection_dimensions
                 .lock()
                 .await
-                .get(&params.player)
+                .get(&player)
                 .filter(|dimension| *dimension == &observation.dimension)
             {
                 None => {
@@ -302,7 +356,11 @@ impl DustRouteMcp {
         &self,
         Parameters(params): Parameters<DiscoverCircuitParams>,
     ) -> String {
-        if let Some(error) = self.authorize_player(&params.player) {
+        let player = match self.resolve_player(params.player.as_deref()) {
+            Ok(player) => player,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+        };
+        if let Some(error) = self.authorize_player(&player) {
             return error;
         }
         let horizontal = params.horizontal_radius.unwrap_or(24);
@@ -317,7 +375,7 @@ impl DustRouteMcp {
                 "error": "horizontal_radius must be 4..31, vertical_radius 2..16, and padding 0..8"
             }));
         }
-        let observation = match self.bridge.observe_player(&params.player, 64.0).await {
+        let observation = match self.bridge.observe_player(&player, 64.0).await {
             Ok(observation) => observation,
             Err(error) => {
                 return json_text(json!({ "ok": false, "error": error.to_string() }));
@@ -375,13 +433,13 @@ impl DustRouteMcp {
         self.selections
             .lock()
             .await
-            .entry(params.player.clone())
-            .or_insert_with(|| SelectionSession::new(&params.player))
+            .entry(player.clone())
+            .or_insert_with(|| SelectionSession::new(&player))
             .set_bounds(bounds);
         self.selection_dimensions
             .lock()
             .await
-            .insert(params.player.clone(), observation.dimension);
+            .insert(player, observation.dimension);
         json_text(json!({
             "ok": true,
             "candidate": discovery,
@@ -399,10 +457,14 @@ impl DustRouteMcp {
         &self,
         Parameters(params): Parameters<PreviewPlacementParams>,
     ) -> String {
-        if let Some(error) = self.authorize_player(&params.player) {
+        let player = match self.resolve_player(params.player.as_deref()) {
+            Ok(player) => player,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+        };
+        if let Some(error) = self.authorize_player(&player) {
             return error;
         }
-        let observation = match self.bridge.observe_player(&params.player, 64.0).await {
+        let observation = match self.bridge.observe_player(&player, 64.0).await {
             Ok(observation) => observation,
             Err(error) => {
                 return json_text(json!({ "ok": false, "error": error.to_string() }));
@@ -531,10 +593,14 @@ impl DustRouteMcp {
         description = "Show the player's selected region in the Minecraft world before analysis or mutation"
     )]
     async fn preview_region(&self, Parameters(params): Parameters<PlayerParams>) -> String {
-        if let Some(error) = self.authorize_player(&params.player) {
+        let player = match self.resolve_player(params.player.as_deref()) {
+            Ok(player) => player,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+        };
+        if let Some(error) = self.authorize_player(&player) {
             return error;
         }
-        let (bounds, dimension) = match self.selected_region(&params.player).await {
+        let (bounds, dimension) = match self.selected_region(&player).await {
             Ok(region) => region,
             Err(error) => return json_text(json!({ "ok": false, "error": error })),
         };
@@ -543,7 +609,7 @@ impl DustRouteMcp {
         }
         match self
             .bridge
-            .preview_region(&params.player, bounds.min, bounds.max, &dimension)
+            .preview_region(&player, bounds.min, bounds.max, &dimension)
             .await
         {
             Ok(preview) => {
@@ -560,10 +626,14 @@ impl DustRouteMcp {
         &self,
         Parameters(params): Parameters<PlayerParams>,
     ) -> String {
-        if let Some(error) = self.authorize_player(&params.player) {
+        let player = match self.resolve_player(params.player.as_deref()) {
+            Ok(player) => player,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+        };
+        if let Some(error) = self.authorize_player(&player) {
             return error;
         }
-        let (bounds, dimension) = match self.selected_region(&params.player).await {
+        let (bounds, dimension) = match self.selected_region(&player).await {
             Ok(region) => region,
             Err(error) => return json_text(json!({ "ok": false, "error": error })),
         };
@@ -599,10 +669,14 @@ impl DustRouteMcp {
         &self,
         Parameters(params): Parameters<PlayerParams>,
     ) -> String {
-        if let Some(error) = self.authorize_player(&params.player) {
+        let player = match self.resolve_player(params.player.as_deref()) {
+            Ok(player) => player,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+        };
+        if let Some(error) = self.authorize_player(&player) {
             return error;
         }
-        let (bounds, dimension) = match self.selected_region(&params.player).await {
+        let (bounds, dimension) = match self.selected_region(&player).await {
             Ok(region) => region,
             Err(error) => return json_text(json!({ "ok": false, "error": error })),
         };
@@ -726,17 +800,18 @@ impl DustRouteMcp {
 
     #[tool(description = "Clear a player's pending gaze-based region selection")]
     async fn clear_region_selection(&self, Parameters(params): Parameters<PlayerParams>) -> String {
-        if let Some(error) = self.authorize_player(&params.player) {
+        let player = match self.resolve_player(params.player.as_deref()) {
+            Ok(player) => player,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+        };
+        if let Some(error) = self.authorize_player(&player) {
             return error;
         }
-        if let Some(session) = self.selections.lock().await.get_mut(&params.player) {
+        if let Some(session) = self.selections.lock().await.get_mut(&player) {
             session.clear();
         }
-        self.selection_dimensions
-            .lock()
-            .await
-            .remove(&params.player);
-        json_text(json!({ "ok": true, "player": params.player }))
+        self.selection_dimensions.lock().await.remove(&player);
+        json_text(json!({ "ok": true, "player": player }))
     }
 }
 
@@ -917,7 +992,7 @@ mod tests {
 
         let (server_transport, client_transport) = tokio::io::duplex(64 * 1024);
         let server = tokio::spawn(async move {
-            DustRouteMcp::new(address)
+            DustRouteMcp::with_policy_and_player(address, McpPolicy::default(), "builder")
                 .serve(server_transport)
                 .await
                 .unwrap()
@@ -928,7 +1003,6 @@ mod tests {
         let client = ClientInfo::default().serve(client_transport).await.unwrap();
         for corner in ["first", "second"] {
             let arguments = serde_json::from_value(json!({
-                "player": "builder",
                 "corner": corner
             }))
             .unwrap();
@@ -944,7 +1018,7 @@ mod tests {
             assert!(text.text.contains("\"ok\": true"));
         }
         for tool in ["preview_region", "analyze_selected_region"] {
-            let arguments = serde_json::from_value(json!({ "player": "builder" })).unwrap();
+            let arguments = serde_json::Map::new();
             let result = client
                 .call_tool(CallToolRequestParams::new(tool).with_arguments(arguments))
                 .await
@@ -956,5 +1030,18 @@ mod tests {
         }
         client.cancel().await.unwrap();
         server.await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn rejects_an_override_of_the_configured_assist_player() {
+        let service =
+            DustRouteMcp::with_policy_and_player("127.0.0.1:1", McpPolicy::default(), "builder");
+        let result = service
+            .observe_player(Parameters(ObserveParams {
+                player: Some("someone_else".to_owned()),
+                max_distance: None,
+            }))
+            .await;
+        assert!(result.contains("player override is not allowed"));
     }
 }
