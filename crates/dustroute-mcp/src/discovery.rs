@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use std::collections::BTreeSet;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 
@@ -12,6 +12,8 @@ pub struct CircuitDiscovery {
     pub looked_at: Pos,
     pub bounds: RegionBoundsDto,
     pub node_count: usize,
+    pub fragment_count: usize,
+    pub gap_candidate_count: usize,
     pub touches_scan_boundary: bool,
 }
 
@@ -59,38 +61,55 @@ pub fn discover_connected_region(
     analysis: &RegionAnalysis,
     looked_at: Pos,
     seed_distance: i32,
+    fragment_gap: u32,
     padding: i32,
     max_nodes: usize,
 ) -> Result<CircuitDiscovery, DiscoveryError> {
-    let seed = analysis
-        .graph
-        .nodes
+    let seed_component = analysis
+        .physical
+        .components
         .iter()
-        .filter_map(|pos| {
-            let distance = manhattan(*pos, looked_at);
-            (distance <= seed_distance).then_some((distance, *pos))
+        .filter_map(|component| {
+            let distance = manhattan(component.pos, looked_at);
+            (distance <= seed_distance).then_some((distance, component))
         })
-        .min()
-        .map(|(_, pos)| pos)
+        .min_by_key(|(distance, component)| (*distance, component.pos))
         .ok_or(DiscoveryError::NoRedstoneNearTarget)?;
-
-    let mut adjacency: BTreeMap<Pos, BTreeSet<Pos>> = BTreeMap::new();
-    for edge in &analysis.graph.edges {
-        adjacency.entry(edge.source).or_default().insert(edge.sink);
-        adjacency.entry(edge.sink).or_default().insert(edge.source);
+    let seed_fragment = analysis
+        .physical
+        .fragments
+        .iter()
+        .find(|fragment| fragment.components.contains(&seed_component.1.id))
+        .ok_or(DiscoveryError::NoRedstoneNearTarget)?;
+    let fragments = analysis
+        .physical
+        .discover_nearby_fragments(seed_fragment.id, fragment_gap);
+    let component_ids: BTreeSet<_> = analysis
+        .physical
+        .fragments
+        .iter()
+        .filter(|fragment| fragments.contains(&fragment.id))
+        .flat_map(|fragment| fragment.components.iter().copied())
+        .collect();
+    if component_ids.len() > max_nodes {
+        return Err(DiscoveryError::NodeLimitExceeded { limit: max_nodes });
     }
-    let mut nodes = BTreeSet::from([seed]);
-    let mut queue = VecDeque::from([seed]);
-    while let Some(current) = queue.pop_front() {
-        for next in adjacency.get(&current).into_iter().flatten() {
-            if nodes.insert(*next) {
-                if nodes.len() > max_nodes {
-                    return Err(DiscoveryError::NodeLimitExceeded { limit: max_nodes });
-                }
-                queue.push_back(*next);
-            }
-        }
-    }
+    let nodes: BTreeSet<_> = analysis
+        .physical
+        .components
+        .iter()
+        .filter(|component| component_ids.contains(&component.id))
+        .map(|component| component.pos)
+        .collect();
+    let gap_candidate_count = analysis
+        .physical
+        .gap_candidates(fragment_gap)
+        .iter()
+        .filter(|candidate| {
+            fragments.contains(&candidate.left) && fragments.contains(&candidate.right)
+        })
+        .count();
+    let seed = seed_component.1.pos;
 
     let min = Pos::new(
         nodes.iter().map(|pos| pos.x).min().unwrap() - padding,
@@ -116,6 +135,8 @@ pub fn discover_connected_region(
         looked_at,
         bounds: RegionBounds::new(min, max).into(),
         node_count: nodes.len(),
+        fragment_count: fragments.len(),
+        gap_candidate_count,
         touches_scan_boundary,
     })
 }
@@ -143,7 +164,7 @@ mod tests {
         dustroute_translate::update_wire_shapes(&mut world);
         let scan = RegionBounds::new(Pos::new(-2, -1, -2), Pos::new(22, 3, 2));
         let analysis = analyze_world_region(&world, scan);
-        let found = discover_connected_region(&analysis, Pos::new(0, 0, 0), 2, 1, 100).unwrap();
+        let found = discover_connected_region(&analysis, Pos::new(0, 0, 0), 2, 2, 1, 100).unwrap();
         assert_eq!(found.node_count, 8);
         assert_eq!(found.bounds.min, Pos::new(-1, -1, -1));
         assert_eq!(found.bounds.max, Pos::new(4, 2, 1));
@@ -159,7 +180,24 @@ mod tests {
         dustroute_translate::update_wire_shapes(&mut world);
         let scan = RegionBounds::new(Pos::new(0, 0, 0), Pos::new(2, 2, 0));
         let analysis = analyze_world_region(&world, scan);
-        let found = discover_connected_region(&analysis, Pos::new(1, 1, 0), 1, 0, 100).unwrap();
+        let found = discover_connected_region(&analysis, Pos::new(1, 1, 0), 1, 2, 0, 100).unwrap();
         assert!(found.touches_scan_boundary);
+    }
+
+    #[test]
+    fn discovers_nearby_broken_fragment_without_unioning_it() {
+        let mut world = World::new();
+        for x in [0, 1, 3, 4] {
+            world.set(Pos::new(x, 0, 0), Block::new(BlockKind::Solid));
+            world.set(Pos::new(x, 1, 0), Block::new(BlockKind::RedstoneWire));
+        }
+        dustroute_translate::update_wire_shapes(&mut world);
+        let scan = RegionBounds::new(Pos::new(-2, -1, -2), Pos::new(6, 3, 2));
+        let analysis = analyze_world_region(&world, scan);
+        let found = discover_connected_region(&analysis, Pos::new(0, 1, 0), 1, 2, 0, 100).unwrap();
+        assert_eq!(found.fragment_count, 2);
+        assert_eq!(found.gap_candidate_count, 1);
+        assert_eq!(analysis.physical.fragments.len(), 2);
+        assert_eq!(found.bounds.max.x, 4);
     }
 }

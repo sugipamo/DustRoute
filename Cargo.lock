@@ -159,6 +159,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "dustroute-ir"
+version = "0.2.0"
+dependencies = [
+ "dustroute-physical",
+ "serde",
+]
+
+[[package]]
 name = "dustroute-mcp"
 version = "0.2.0"
 dependencies = [
@@ -178,7 +186,8 @@ dependencies = [
 name = "dustroute-model"
 version = "0.2.0"
 dependencies = [
- "serde",
+ "dustroute-ir",
+ "dustroute-physical",
 ]
 
 [[package]]
@@ -189,10 +198,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "dustroute-physical"
+version = "0.2.0"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "dustroute-translate"
 version = "0.2.0"
 dependencies = [
- "dustroute-model",
+ "dustroute-ir",
+ "dustroute-physical",
  "serde",
  "serde_json",
  "zip",

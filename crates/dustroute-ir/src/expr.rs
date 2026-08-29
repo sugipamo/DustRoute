@@ -1,3 +1,5 @@
+//! Boolean expression IR and rewrite search.
+
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::fmt::{Display, Formatter};
 

@@ -76,6 +76,8 @@ struct DiscoverCircuitParams {
     vertical_radius: Option<i32>,
     /// Extra blocks around the discovered circuit. Defaults to 1.
     padding: Option<i32>,
+    /// Maximum Manhattan distance used to discover a nearby disconnected fragment. Defaults to 2.
+    fragment_gap: Option<u32>,
 }
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
@@ -119,6 +121,12 @@ fn reverse_result_json(
         "ok": true,
         "bounds": bounds_json(bounds),
         "redstone_blocks": translated.analysis.redstone_blocks.len(),
+        "physical": {
+            "components": translated.analysis.physical.components.len(),
+            "verified_connections": translated.analysis.physical.connections.len(),
+            "connected_fragments": translated.analysis.physical.fragments.len(),
+            "nearby_gap_candidates": translated.analysis.physical.gap_candidates(2),
+        },
         "inputs": translated.analysis.inputs.iter().map(|terminal| json!({
             "position": terminal.anchor,
             "component": terminal.component,
@@ -500,13 +508,15 @@ impl DustRouteMcp {
         let horizontal = params.horizontal_radius.unwrap_or(24);
         let vertical = params.vertical_radius.unwrap_or(12);
         let padding = params.padding.unwrap_or(1);
+        let fragment_gap = params.fragment_gap.unwrap_or(2);
         if !(4..=31).contains(&horizontal)
             || !(2..=16).contains(&vertical)
             || !(0..=8).contains(&padding)
+            || !(1..=8).contains(&fragment_gap)
         {
             return json_text(json!({
                 "ok": false,
-                "error": "horizontal_radius must be 4..31, vertical_radius 2..16, and padding 0..8"
+                "error": "horizontal_radius must be 4..31, vertical_radius 2..16, padding 0..8, and fragment_gap 1..8"
             }));
         }
         let observation = match self.bridge.observe_player(&player, 64.0).await {
@@ -557,12 +567,13 @@ impl DustRouteMcp {
             Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
         };
         let analysis = dustroute_translate::analyze_world_region(&world, scan_bounds);
-        let discovery = match discover_connected_region(&analysis, target, 2, padding, 8192) {
-            Ok(discovery) => discovery,
-            Err(error) => {
-                return json_text(json!({ "ok": false, "error": error.to_string() }));
-            }
-        };
+        let discovery =
+            match discover_connected_region(&analysis, target, 2, fragment_gap, padding, 8192) {
+                Ok(discovery) => discovery,
+                Err(error) => {
+                    return json_text(json!({ "ok": false, "error": error.to_string() }));
+                }
+            };
         let bounds: dustroute_translate::RegionBounds = discovery.bounds.into();
         self.selections
             .lock()

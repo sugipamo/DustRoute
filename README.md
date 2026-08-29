@@ -11,7 +11,9 @@ Rust is the canonical and only supported implementation.
 The workspace is split by responsibility:
 
 ```text
-dustroute-model      shared logic and Minecraft world types
+dustroute-physical   canonical blocks, verified connections, nets, and fragments
+dustroute-ir         cross-abstraction Signal/Logic IRs and transformations
+dustroute-model      compatibility facade during the crate migration
 dustroute-translate  forward and reverse translation
 dustroute-optimize   placement and semantic rewrite optimization
 dustroute-app        shared application services for MCP and CLI
@@ -19,9 +21,16 @@ dustroute-mcp        AI-facing MCP server and visible Minecraft bot
 dustroute-cli        command-line integration
 ```
 
+`dustroute-physical` is the source of truth for observed Minecraft circuits.
+Only verified physical connections are unioned into nets. Nearby disconnected
+fragments are discovered separately as gap candidates and are never unioned by
+proximity alone. `dustroute-ir` owns abstraction changes used to project the
+physical circuit into signal and logical views. `dustroute-model` temporarily
+re-exports both crates so existing consumers can migrate incrementally.
+
 `dustroute-translate` exposes `Translator::forward`, `Translator::reverse`, and
-`Translator::verify` as its stable facade. Optimization depends on the shared
-model and translation types; translation does not depend on optimization.
+`Translator::verify` as its stable facade. Reverse results carry the canonical
+physical circuit alongside the older signal and behavior projections.
 
 `dustroute-mcp` is the intended primary user interface. It connects to a visible
 Mineflayer player and grounds natural-language references in a player's gaze.
@@ -29,8 +38,8 @@ The CLI remains available as a debugging and automation interface.
 
 ## Translation pipeline
 
-The compiler keeps stable boundaries between logical intent and Minecraft
-realization:
+The forward compiler keeps stable boundaries between logical intent and
+Minecraft realization:
 
 ```text
 LogicDAG
@@ -42,8 +51,17 @@ LogicDAG
   -> Minecraft Data Pack
 ```
 
-These boundaries are intended to become the API used by a future MCP server,
-where an LLM and a user can construct and inspect circuits incrementally.
+For reverse analysis the ownership direction is physical-first:
+
+```text
+observed Minecraft blocks
+  -> verified physical connections
+  -> Union-Find nets and disconnected fragments
+  -> optional Signal / Logic / Behavior projections
+```
+
+The upper layers help an LLM and user understand the circuit; they do not
+replace the observed physical representation as the source of truth.
 
 ## Implementation status
 
@@ -76,10 +94,11 @@ from Git.
 ## Reverse analysis
 
 `analyze-snapshot` accepts a bounded Minecraft block snapshot and reconstructs
-the directional redstone connectivity graph. Bidirectional dust runs are
-collapsed into signal components; repeaters, powered blocks, and torch-control
-edges provide direction. Source and sink components become inferred input and
-output terminals.
+the directional redstone connectivity graph. Verified connections form
+physical nets, while nearby disconnected nets remain separate fragments with
+gap evidence for broken-circuit analysis. Bidirectional dust runs are projected
+into signal components; repeaters, powered blocks, and torch-control edges
+provide direction. Source and sink components become inferred terminals.
 
 The JSON report contains the detected terminals, unsupported components, an
 exhaustive truth table (up to 16 inferred inputs), and a Boolean expression for

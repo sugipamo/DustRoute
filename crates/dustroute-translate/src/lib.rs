@@ -8,10 +8,10 @@ pub mod compiler;
 pub mod connectivity;
 pub mod electrical;
 pub mod expr {
-    pub use dustroute_model::expr::*;
+    pub use dustroute_ir::expr::*;
 }
 pub mod logic {
-    pub use dustroute_model::logic::*;
+    pub use dustroute_ir::logic::*;
 }
 pub mod minecraft_export;
 pub mod minecraft_semantics;
@@ -24,7 +24,7 @@ pub mod sim;
 pub mod snapshot;
 pub mod wire;
 pub mod world {
-    pub use dustroute_model::world::*;
+    pub use dustroute_physical::*;
 }
 pub mod world_reverse;
 
@@ -41,11 +41,14 @@ pub use circuits::{decoder_1_to_2, full_adder, half_adder, half_subtractor, mux_
 pub use compiler::{BaselineCompileConfig, BaselineCompileResult, BaselineCompiler, CompileError};
 pub use connectivity::{
     ConnectivityEdge, EdgeKind, PhysicalConnectivityGraph, PhysicalStep, PhysicalStepKind,
-    extract_connectivity, physical_step, physical_step_connected,
+    build_physical_circuit, extract_connectivity, physical_step, physical_step_connected,
 };
-pub use dustroute_model::{
-    Block, BlockKind, BlockProperties, DagBuilder, Expr, Facing, GateKind, LogicDag, LogicError,
-    LogicNode, NodeId, Pos, WireConnection, World, best_by_size, rewrites_once, search_equivalents,
+pub use dustroute_ir::{
+    DagBuilder, Expr, GateKind, LogicDag, LogicError, LogicNode, NodeId, best_by_size,
+    rewrites_once, search_equivalents,
+};
+pub use dustroute_physical::{
+    Block, BlockKind, BlockProperties, Facing, Pos, WireConnection, World,
 };
 pub use electrical::{
     DeviceOutputState, InstantaneousElectricalState, MAX_SIGNAL, PoweredBlockState,

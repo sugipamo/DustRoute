@@ -1,3 +1,5 @@
+//! Minecraft block and world primitives.
+
 use std::collections::BTreeMap;
 use std::error::Error;
 use std::fmt::{Display, Formatter};

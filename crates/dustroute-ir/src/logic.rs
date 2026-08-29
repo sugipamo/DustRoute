@@ -1,3 +1,5 @@
+//! Abstract logical DAG IR.
+
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::error::Error;
 use std::fmt::{Display, Formatter};

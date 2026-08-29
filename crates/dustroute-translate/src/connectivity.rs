@@ -2,6 +2,9 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use crate::wire::{dust_connected, wire_has_arm};
 use crate::world::{BlockKind, Facing, Pos, World};
+use dustroute_physical::{
+    ComponentId, ConnectionKind, PhysicalCircuit, PhysicalComponent, PhysicalConnection,
+};
 
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum PhysicalStepKind {
@@ -224,6 +227,60 @@ pub fn extract_connectivity(world: &World) -> PhysicalConnectivityGraph {
         }
     }
     PhysicalConnectivityGraph { nodes, edges }
+}
+
+#[must_use]
+pub fn build_physical_circuit(world: &World, graph: &PhysicalConnectivityGraph) -> PhysicalCircuit {
+    let edge_positions: BTreeSet<_> = graph
+        .edges
+        .iter()
+        .flat_map(|edge| [edge.source, edge.sink])
+        .collect();
+    let positions: Vec<_> = world
+        .iter()
+        .filter_map(|(pos, block)| {
+            let redstone_related = matches!(
+                block.kind,
+                BlockKind::RedstoneWire
+                    | BlockKind::RedstoneTorch
+                    | BlockKind::Repeater
+                    | BlockKind::Comparator
+                    | BlockKind::Lever
+                    | BlockKind::RedstoneBlock
+            );
+            (redstone_related || edge_positions.contains(pos)).then_some(*pos)
+        })
+        .collect();
+    let ids: BTreeMap<_, _> = positions
+        .iter()
+        .enumerate()
+        .map(|(id, pos)| (*pos, ComponentId(id)))
+        .collect();
+    let components = positions
+        .iter()
+        .filter_map(|pos| {
+            world.get(*pos).cloned().map(|block| PhysicalComponent {
+                id: ids[pos],
+                pos: *pos,
+                block,
+            })
+        })
+        .collect();
+    let connections = graph.edges.iter().filter_map(|edge| {
+        let source = *ids.get(&edge.source)?;
+        let sink = *ids.get(&edge.sink)?;
+        let kind = match edge.kind {
+            EdgeKind::Dust => ConnectionKind::Dust,
+            EdgeKind::DustToBlockWeak => ConnectionKind::WeakPower,
+            EdgeKind::BlockToDustStrong => ConnectionKind::StrongPower,
+            EdgeKind::BlockToRepeater | EdgeKind::RepeaterInput => ConnectionKind::DirectionalInput,
+            EdgeKind::RepeaterOutput => ConnectionKind::DirectionalOutput,
+            EdgeKind::DirectSource | EdgeKind::LeverOutput => ConnectionKind::DirectSource,
+            EdgeKind::TorchControl => ConnectionKind::Control,
+        };
+        Some(PhysicalConnection { source, sink, kind })
+    });
+    PhysicalCircuit::from_parts(components, connections)
 }
 
 #[cfg(test)]

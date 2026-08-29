@@ -1,5 +1,7 @@
 [workspace]
 members = [
+    "crates/dustroute-physical",
+    "crates/dustroute-ir",
     "crates/dustroute-model",
     "crates/dustroute-translate",
     "crates/dustroute-optimize",

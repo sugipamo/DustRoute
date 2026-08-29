@@ -1,6 +1,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::connectivity::{ConnectivityEdge, PhysicalConnectivityGraph, extract_connectivity};
+use crate::connectivity::{
+    ConnectivityEdge, PhysicalConnectivityGraph, build_physical_circuit, extract_connectivity,
+};
 use crate::expr::Expr;
 use crate::sim::RedstoneTickSimulator;
 use crate::wire::update_wire_shapes;
@@ -67,6 +69,7 @@ pub struct RegionAnalysis {
     pub bounds: RegionBounds,
     pub redstone_blocks: BTreeMap<Pos, BlockKind>,
     pub graph: PhysicalConnectivityGraph,
+    pub physical: dustroute_physical::PhysicalCircuit,
     pub components: Vec<SignalComponent>,
     pub inputs: Vec<InferredTerminal>,
     pub outputs: Vec<InferredTerminal>,
@@ -377,6 +380,7 @@ fn input_driver(
 pub fn analyze_world_region(world: &World, bounds: RegionBounds) -> RegionAnalysis {
     let bounded = bounded_world(world, bounds);
     let graph = extract_connectivity(&bounded);
+    let physical = build_physical_circuit(&bounded, &graph);
     let propagating_supports: BTreeSet<_> = graph.edges.iter().map(|edge| edge.source).collect();
     let functional_nodes: BTreeSet<_> = graph
         .nodes
@@ -453,6 +457,7 @@ pub fn analyze_world_region(world: &World, bounds: RegionBounds) -> RegionAnalys
         bounds,
         redstone_blocks,
         graph,
+        physical,
         components,
         inputs,
         outputs,

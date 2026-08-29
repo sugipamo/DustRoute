@@ -1,6 +1,6 @@
 [package]
-name = "dustroute-model"
-description = "Compatibility facade for DustRoute physical and IR models"
+name = "dustroute-ir"
+description = "Cross-abstraction circuit IRs and transformations for DustRoute"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -8,8 +8,8 @@ repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-dustroute-ir = { path = "../dustroute-ir" }
 dustroute-physical = { path = "../dustroute-physical" }
+serde = { version = "1.0", features = ["derive"] }
 
 [lints]
 workspace = true
