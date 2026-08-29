@@ -69,6 +69,7 @@ pub fn discover_connected_region(
         .physical
         .components
         .iter()
+        .filter(|component| component.block.kind.is_redstone_related())
         .filter_map(|component| {
             let distance = manhattan(component.pos, looked_at);
             (distance <= seed_distance).then_some((distance, component))

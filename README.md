@@ -63,6 +63,13 @@ observed Minecraft blocks
 The upper layers help an LLM and user understand the circuit; they do not
 replace the observed physical representation as the source of truth.
 
+Signal projections retain physical component IDs, positions, verified edge
+evidence, and device delays. Behavior projections describe repeaters, torches,
+comparators, pistons, delayed traces, and feedback patterns such as clock and
+latch candidates. Reverse truth-table expressions can be converted back into a
+`LogicDag`; forward compilation produces a physical projection alongside the
+Minecraft layout.
+
 ## Implementation status
 
 The Rust workspace provides typed logic DAGs and rewrites, verified physical

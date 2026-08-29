@@ -110,6 +110,22 @@ impl BlockProperties {
 }
 
 impl BlockKind {
+    /// Whether this block is an explicit redstone circuit element rather than
+    /// structural support that may incidentally carry power.
+    #[must_use]
+    pub const fn is_redstone_related(self) -> bool {
+        matches!(
+            self,
+            Self::RedstoneWire
+                | Self::RedstoneTorch
+                | Self::Repeater
+                | Self::Comparator
+                | Self::Lever
+                | Self::RedstoneBlock
+                | Self::Piston
+        )
+    }
+
     #[must_use]
     pub const fn properties(self) -> BlockProperties {
         match self {

@@ -1,6 +1,7 @@
 //! Core intermediate representations and compiler stages for DustRoute.
 
 pub mod api;
+pub mod behavior;
 pub mod cell_library;
 pub mod cells;
 pub mod circuits;
@@ -18,6 +19,7 @@ pub mod minecraft_semantics;
 pub mod multinet;
 pub mod physical;
 pub mod port_realization;
+pub mod repair;
 pub mod routing;
 pub mod routing_resources;
 pub mod sim;
@@ -31,6 +33,7 @@ pub mod world_reverse;
 pub use api::{
     ForwardOptions, ForwardResult, ReverseRequest, ReverseResult, TranslateError, Translator,
 };
+pub use behavior::simulate_behavior_trace;
 pub use cell_library::{CellLibrary, CellVerification, default_cell_library, verify_cell};
 pub use cells::{
     InputPort, OutputPort, PhysicalCell, PlacedCell, PortKind, RotationY, and_cell,
@@ -69,6 +72,7 @@ pub use port_realization::{
     PortRealization, PortRealizationError, realize_sink_endpoint, realize_source_endpoint,
     terminal_for_endpoint,
 };
+pub use repair::{propose_component_removal, propose_physical_repairs};
 pub use routing::{
     RouteNotFound, RouteResult, RouterConfig, astar_route, insert_repeaters, materialize_route,
 };

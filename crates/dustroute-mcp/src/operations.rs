@@ -15,6 +15,9 @@ pub enum OperationKind {
     PlacementPreview,
     PlacementApply,
     PlacementUndo,
+    RepairProposal,
+    RepairApply,
+    RepairUndo,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]

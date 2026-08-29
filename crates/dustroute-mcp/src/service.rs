@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use dustroute_app::DustRouteService;
 use dustroute_model::{BlockKind, Pos};
+use dustroute_physical::{PhysicalBlockChange, PhysicalPatch};
 use dustroute_translate::{
     ForwardOptions, JavaExportConfig, ReverseRequest, java_block_state, world_from_snapshot_json,
 };
@@ -35,6 +36,7 @@ pub struct DustRouteMcp {
     plans: Arc<Mutex<HashMap<uuid::Uuid, PlacementPlan>>>,
     plan_dimensions: Arc<Mutex<HashMap<uuid::Uuid, String>>>,
     applied_plans: Arc<Mutex<HashMap<uuid::Uuid, bool>>>,
+    repair_plans: Arc<Mutex<HashMap<uuid::Uuid, StoredRepairPlan>>>,
     policy: McpPolicy,
     app: DustRouteService,
     operations: OperationRegistry,
@@ -104,6 +106,32 @@ struct ConfirmedOperationParams {
     confirm: bool,
 }
 
+#[derive(Clone, Debug)]
+struct StoredRepairPlan {
+    patch: PhysicalPatch,
+    dimension: String,
+    analysis_bounds: dustroute_translate::RegionBounds,
+    fragments_before: usize,
+    previewed: bool,
+    applied: bool,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+struct ProposeRepairsParams {
+    /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
+    player: Option<String>,
+    /// Maximum Manhattan gap between disconnected fragments. Defaults to 2.
+    max_gap: Option<u32>,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+struct PreviewRepairParams {
+    /// Repair operation UUID returned by propose_repairs.
+    operation_id: String,
+    /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
+    player: Option<String>,
+}
+
 fn json_text(value: Value) -> String {
     serde_json::to_string_pretty(&value)
         .unwrap_or_else(|error| json!({ "ok": false, "error": error.to_string() }).to_string())
@@ -126,6 +154,15 @@ fn reverse_result_json(
             "verified_connections": translated.analysis.physical.connections.len(),
             "connected_fragments": translated.analysis.physical.fragments.len(),
             "nearby_gap_candidates": translated.analysis.physical.gap_candidates(2),
+        },
+        "signal_ir": {
+            "nodes": translated.projection.signal.nodes.len(),
+            "edges": translated.projection.signal.edges.len(),
+            "physical_origins": translated.projection.signal.physical_origins,
+        },
+        "behavior_ir": {
+            "temporal_devices": translated.projection.behavior.devices,
+            "trace_count": translated.projection.behavior.traces.len(),
         },
         "inputs": translated.analysis.inputs.iter().map(|terminal| json!({
             "position": terminal.anchor,
@@ -171,6 +208,7 @@ impl DustRouteMcp {
             plans: Arc::new(Mutex::new(HashMap::new())),
             plan_dimensions: Arc::new(Mutex::new(HashMap::new())),
             applied_plans: Arc::new(Mutex::new(HashMap::new())),
+            repair_plans: Arc::new(Mutex::new(HashMap::new())),
             policy,
             app: DustRouteService::default(),
             operations: OperationRegistry::default(),
@@ -340,6 +378,182 @@ impl DustRouteMcp {
         }))
     }
 
+    async fn write_physical_changes(
+        &self,
+        changes: &[PhysicalBlockChange],
+        dimension: &str,
+    ) -> Result<Value, String> {
+        self.policy
+            .validate_placement_size(changes.len())
+            .map_err(|error| error.to_string())?;
+        let mut changes = changes.iter().collect::<Vec<_>>();
+        changes.sort_by_key(|change| {
+            let priority = match change.after.kind {
+                BlockKind::Solid
+                | BlockKind::Transparent
+                | BlockKind::RedstoneBlock
+                | BlockKind::Piston => 0,
+                BlockKind::RedstoneTorch | BlockKind::Lever => 2,
+                _ => 1,
+            };
+            (priority, change.pos.y, change.pos.x, change.pos.z)
+        });
+        let export = JavaExportConfig {
+            relative: false,
+            ..JavaExportConfig::default()
+        };
+        let writes = changes
+            .into_iter()
+            .map(|change| {
+                java_block_state(&change.after, &export)
+                    .map(|state| json!({ "pos": change.pos, "state": state }))
+                    .map_err(|error| error.to_string())
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        self.bridge
+            .write_blocks(json!(writes), dimension)
+            .await
+            .map_err(|error| error.to_string())
+    }
+
+    async fn verify_physical_changes(
+        &self,
+        changes: &[PhysicalBlockChange],
+        dimension: &str,
+    ) -> Result<(bool, Vec<Pos>), String> {
+        let Some(bounds) = bounds_for_changes(changes) else {
+            return Ok((true, Vec::new()));
+        };
+        let snapshot = self
+            .bridge
+            .scan_region(bounds.min, bounds.max, dimension)
+            .await
+            .map_err(|error| error.to_string())?;
+        let snapshot_json = serde_json::to_string(&snapshot).map_err(|error| error.to_string())?;
+        let (_, world) =
+            world_from_snapshot_json(&snapshot_json).map_err(|error| error.to_string())?;
+        let mismatches = changes
+            .iter()
+            .filter(|change| !block_matches(world.get(change.pos), &change.after))
+            .map(|change| change.pos)
+            .collect::<Vec<_>>();
+        Ok((mismatches.is_empty(), mismatches))
+    }
+
+    async fn mutate_repair(&self, params: ConfirmedOperationParams, undo: bool) -> String {
+        if !params.confirm {
+            return json_text(json!({
+                "ok": false,
+                "error": "confirm must be true because this operation changes the world"
+            }));
+        }
+        if let Err(error) = self.policy.authorize_mutation() {
+            return json_text(json!({ "ok": false, "error": error.to_string() }));
+        }
+        let operation_id = match uuid::Uuid::parse_str(&params.operation_id) {
+            Ok(id) => id,
+            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        };
+        let plan = match self.repair_plans.lock().await.get(&operation_id).cloned() {
+            Some(plan) => plan,
+            None => return json_text(json!({ "ok": false, "error": "unknown repair ID" })),
+        };
+        if !undo && self.policy.preview_required && !plan.previewed {
+            return json_text(json!({ "ok": false, "error": "repair must be previewed first" }));
+        }
+        if undo && !plan.applied {
+            return json_text(json!({ "ok": false, "error": "repair is not applied" }));
+        }
+        if !undo && plan.applied {
+            return json_text(json!({ "ok": false, "error": "repair is already applied" }));
+        }
+        let patch = if undo {
+            plan.patch.inverse()
+        } else {
+            plan.patch.clone()
+        };
+        let bridge = match self
+            .write_physical_changes(&patch.changes, &plan.dimension)
+            .await
+        {
+            Ok(result) => result,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+        };
+        self.repair_plans
+            .lock()
+            .await
+            .entry(operation_id)
+            .and_modify(|stored| stored.applied = !undo);
+        let (verified, mismatches) = match self
+            .verify_physical_changes(&patch.changes, &plan.dimension)
+            .await
+        {
+            Ok(result) => result,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+        };
+        if !verified && !undo {
+            let rollback = plan.patch.inverse();
+            let rollback_result = self
+                .write_physical_changes(&rollback.changes, &plan.dimension)
+                .await;
+            if rollback_result.is_ok() {
+                self.repair_plans
+                    .lock()
+                    .await
+                    .entry(operation_id)
+                    .and_modify(|stored| stored.applied = false);
+            }
+            return json_text(json!({
+                "ok": false,
+                "error": "repair verification failed; automatic rollback attempted",
+                "mismatches": mismatches,
+                "rollback_ok": rollback_result.is_ok(),
+            }));
+        }
+        let snapshot = match self
+            .bridge
+            .scan_region(
+                plan.analysis_bounds.min,
+                plan.analysis_bounds.max,
+                &plan.dimension,
+            )
+            .await
+        {
+            Ok(snapshot) => snapshot,
+            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        };
+        let fragments_after = serde_json::to_string(&snapshot)
+            .ok()
+            .and_then(|snapshot| world_from_snapshot_json(&snapshot).ok())
+            .map(|(_, world)| {
+                dustroute_translate::analyze_world_region(&world, plan.analysis_bounds)
+                    .physical
+                    .fragments
+                    .len()
+            });
+        self.operations
+            .record_completed(
+                uuid::Uuid::new_v4(),
+                if undo {
+                    OperationKind::RepairUndo
+                } else {
+                    OperationKind::RepairApply
+                },
+                json!({ "source_operation_id": operation_id, "verified": verified }),
+            )
+            .await;
+        json_text(json!({
+            "ok": true,
+            "operation_id": operation_id,
+            "action": if undo { "undo" } else { "apply" },
+            "verified": verified,
+            "changed_blocks": patch.changes.len(),
+            "fragments_before": plan.fragments_before,
+            "fragments_after": fragments_after,
+            "bridge": bridge,
+        }))
+    }
+
     async fn selected_region(
         &self,
         player: &str,
@@ -361,6 +575,49 @@ impl DustRouteMcp {
             .ok_or_else(|| "selection has no dimension".to_owned())?;
         Ok((bounds, dimension))
     }
+}
+
+fn bounds_for_changes(
+    changes: &[PhysicalBlockChange],
+) -> Option<dustroute_translate::RegionBounds> {
+    let first = changes.first()?.pos;
+    let (min, max) = changes
+        .iter()
+        .skip(1)
+        .fold((first, first), |(min, max), change| {
+            (
+                Pos::new(
+                    min.x.min(change.pos.x),
+                    min.y.min(change.pos.y),
+                    min.z.min(change.pos.z),
+                ),
+                Pos::new(
+                    max.x.max(change.pos.x),
+                    max.y.max(change.pos.y),
+                    max.z.max(change.pos.z),
+                ),
+            )
+        });
+    Some(dustroute_translate::RegionBounds::new(min, max))
+}
+
+fn block_matches(
+    actual: Option<&dustroute_model::Block>,
+    expected: &dustroute_model::Block,
+) -> bool {
+    let actual_kind = actual.map_or(BlockKind::Air, |block| block.kind);
+    if actual_kind != expected.kind {
+        return false;
+    }
+    let Some(actual) = actual else {
+        return expected.kind == BlockKind::Air;
+    };
+    expected
+        .facing
+        .is_none_or(|facing| actual.facing == Some(facing))
+        && expected
+            .delay
+            .is_none_or(|delay| actual.delay == Some(delay))
 }
 
 #[tool_router]
@@ -840,6 +1097,220 @@ impl DustRouteMcp {
     }
 
     #[tool(
+        description = "Diagnose the selected physical circuit and create ranked, non-mutating partial repair plans"
+    )]
+    async fn propose_repairs(
+        &self,
+        Parameters(params): Parameters<ProposeRepairsParams>,
+    ) -> String {
+        let player = match self.resolve_player(params.player.as_deref()) {
+            Ok(player) => player,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+        };
+        if let Some(error) = self.authorize_player(&player) {
+            return error;
+        }
+        let max_gap = params.max_gap.unwrap_or(2);
+        if !(1..=8).contains(&max_gap) {
+            return json_text(json!({ "ok": false, "error": "max_gap must be 1..8" }));
+        }
+        let (bounds, dimension) = match self.selected_region(&player).await {
+            Ok(region) => region,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+        };
+        let snapshot = match self
+            .bridge
+            .scan_region(bounds.min, bounds.max, &dimension)
+            .await
+        {
+            Ok(snapshot) => snapshot,
+            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        };
+        let snapshot_json = match serde_json::to_string(&snapshot) {
+            Ok(snapshot) => snapshot,
+            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        };
+        let (_, world) = match world_from_snapshot_json(&snapshot_json) {
+            Ok(result) => result,
+            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        };
+        let analysis = dustroute_translate::analyze_world_region(&world, bounds);
+        let fragments_before = analysis.physical.fragments.len();
+        let proposals =
+            dustroute_translate::propose_physical_repairs(&world, &analysis.physical, max_gap);
+        let mut response = Vec::new();
+        for proposal in proposals.into_iter().take(32) {
+            let operation_id = uuid::Uuid::new_v4();
+            self.repair_plans.lock().await.insert(
+                operation_id,
+                StoredRepairPlan {
+                    patch: proposal.patch.clone(),
+                    dimension: dimension.clone(),
+                    analysis_bounds: bounds,
+                    fragments_before,
+                    previewed: false,
+                    applied: false,
+                },
+            );
+            self.operations
+                .record_completed(
+                    operation_id,
+                    OperationKind::RepairProposal,
+                    json!({ "patch": &proposal.patch, "evidence": &proposal.evidence }),
+                )
+                .await;
+            response.push(json!({
+                "operation_id": operation_id,
+                "patch": proposal.patch,
+                "evidence": proposal.evidence,
+            }));
+        }
+        json_text(json!({
+            "ok": true,
+            "bounds": bounds_json(bounds),
+            "fragments": fragments_before,
+            "proposal_count": response.len(),
+            "proposals": response,
+            "next_step": "review a proposal, call preview_repair, ask for explicit confirmation, then call apply_repair with confirm=true"
+        }))
+    }
+
+    #[tool(
+        description = "Create a low-confidence removal repair for the redstone component the player is looking at. Use only when the player explicitly identifies it as an unwanted connection."
+    )]
+    async fn propose_targeted_component_removal(
+        &self,
+        Parameters(params): Parameters<PlayerParams>,
+    ) -> String {
+        let player = match self.resolve_player(params.player.as_deref()) {
+            Ok(player) => player,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+        };
+        let observation = match self.bridge.observe_player(&player, 64.0).await {
+            Ok(observation) => observation,
+            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        };
+        let Some(target) = observation.targeted_block else {
+            return json_text(json!({ "ok": false, "error": "player is not looking at a block" }));
+        };
+        let (bounds, dimension) = match self.selected_region(&player).await {
+            Ok(region) => region,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+        };
+        if !bounds.contains(target) {
+            return json_text(
+                json!({ "ok": false, "error": "target is outside the selected region" }),
+            );
+        }
+        let snapshot = match self
+            .bridge
+            .scan_region(bounds.min, bounds.max, &dimension)
+            .await
+        {
+            Ok(snapshot) => snapshot,
+            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        };
+        let snapshot_json = match serde_json::to_string(&snapshot) {
+            Ok(snapshot) => snapshot,
+            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        };
+        let (_, world) = match world_from_snapshot_json(&snapshot_json) {
+            Ok(result) => result,
+            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        };
+        let analysis = dustroute_translate::analyze_world_region(&world, bounds);
+        let Some(proposal) =
+            dustroute_translate::propose_component_removal(&world, &analysis.physical, target)
+        else {
+            return json_text(
+                json!({ "ok": false, "error": "target is not a removable redstone component" }),
+            );
+        };
+        let operation_id = uuid::Uuid::new_v4();
+        self.repair_plans.lock().await.insert(
+            operation_id,
+            StoredRepairPlan {
+                patch: proposal.patch.clone(),
+                dimension,
+                analysis_bounds: bounds,
+                fragments_before: analysis.physical.fragments.len(),
+                previewed: false,
+                applied: false,
+            },
+        );
+        json_text(json!({
+            "ok": true,
+            "operation_id": operation_id,
+            "proposal": proposal,
+            "warning": "removal intent cannot be inferred from geometry alone; preview and explicit confirmation are required",
+            "next_step": "call preview_repair, then apply_repair with confirm=true only after confirmation"
+        }))
+    }
+
+    #[tool(description = "Highlight the blocks affected by a proposed partial repair")]
+    async fn preview_repair(&self, Parameters(params): Parameters<PreviewRepairParams>) -> String {
+        let player = match self.resolve_player(params.player.as_deref()) {
+            Ok(player) => player,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+        };
+        let operation_id = match uuid::Uuid::parse_str(&params.operation_id) {
+            Ok(id) => id,
+            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        };
+        let plan = match self.repair_plans.lock().await.get(&operation_id).cloned() {
+            Some(plan) => plan,
+            None => return json_text(json!({ "ok": false, "error": "unknown repair ID" })),
+        };
+        let Some(bounds) = bounds_for_changes(&plan.patch.changes) else {
+            return json_text(json!({ "ok": false, "error": "repair has no changes" }));
+        };
+        match self
+            .bridge
+            .preview_region(&player, bounds.min, bounds.max, &plan.dimension)
+            .await
+        {
+            Ok(preview) => {
+                self.repair_plans
+                    .lock()
+                    .await
+                    .entry(operation_id)
+                    .and_modify(|stored| stored.previewed = true);
+                json_text(json!({
+                    "ok": true,
+                    "operation_id": operation_id,
+                    "bounds": bounds_json(bounds),
+                    "patch": plan.patch,
+                    "preview": preview,
+                    "next_step": "obtain explicit player confirmation before apply_repair"
+                }))
+            }
+            Err(error) => json_text(json!({ "ok": false, "error": error.to_string() })),
+        }
+    }
+
+    #[tool(
+        description = "Apply a previewed partial repair and verify the resulting blocks. Requires confirm=true.",
+        annotations(read_only_hint = false, destructive_hint = true)
+    )]
+    async fn apply_repair(
+        &self,
+        Parameters(params): Parameters<ConfirmedOperationParams>,
+    ) -> String {
+        self.mutate_repair(params, false).await
+    }
+
+    #[tool(
+        description = "Undo an applied partial repair using its exact captured before-state. Requires confirm=true.",
+        annotations(read_only_hint = false, destructive_hint = true)
+    )]
+    async fn undo_repair(
+        &self,
+        Parameters(params): Parameters<ConfirmedOperationParams>,
+    ) -> String {
+        self.mutate_repair(params, true).await
+    }
+
+    #[tool(
         description = "Start cancellable reverse analysis of the selected region and return an operation ID for progress polling"
     )]
     async fn start_selected_region_analysis(
@@ -1001,7 +1472,7 @@ impl DustRouteMcp {
     async fn collaboration_prompt(&self) -> GetPromptResult {
         GetPromptResult::new(vec![PromptMessage::new_text(
             Role::User,
-            "Work with the player on a Minecraft redstone circuit. Interpret 'this', 'here', and similar deictic phrases through observe_player. For 'this circuit', call discover_looked_at_circuit, then preview_region and ask the player to confirm the highlighted bounds before analysis. For 'from here to there', call mark_region_corner for first and second while the player looks at each point, then preview. If discovery reports that it touches the scan boundary, increase the scan radius before treating the bounds as complete. Read-only observation and analysis may proceed after range confirmation. Never infer coordinates from prose when gaze tools can ground them, and never perform a world mutation without an explicit preview and confirmation.".to_owned(),
+            "Work with the player on a Minecraft redstone circuit. Interpret 'this', 'here', and similar deictic phrases through observe_player. For 'this circuit', call discover_looked_at_circuit, then preview_region and ask the player to confirm the highlighted bounds before analysis. For 'from here to there', call mark_region_corner for first and second while the player looks at each point, then preview. If discovery reports that it touches the scan boundary, increase the scan radius before treating the bounds as complete. Use propose_repairs for physical fault candidates. Only call propose_targeted_component_removal when the player explicitly identifies the looked-at component as unwanted. Read-only observation and analysis may proceed after range confirmation. Never infer coordinates from prose when gaze tools can ground them, and never perform a world mutation without an explicit preview and confirmation.".to_owned(),
         )])
         .with_description("Safe gaze-grounded DustRoute collaboration workflow")
     }
@@ -1220,5 +1691,134 @@ mod tests {
             }))
             .await;
         assert!(result.contains("player override is not allowed"));
+    }
+
+    #[tokio::test]
+    async fn repairs_and_undoes_a_broken_wire_through_the_mcp_workflow() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap().to_string();
+        tokio::spawn(async move {
+            let mut repaired = false;
+            for _ in 0..8 {
+                let (mut stream, _) = listener.accept().await.unwrap();
+                let mut request = String::new();
+                BufReader::new(&mut stream)
+                    .read_line(&mut request)
+                    .await
+                    .unwrap();
+                let request: Value = serde_json::from_str(&request).unwrap();
+                let result = match request["method"].as_str().unwrap() {
+                    "scan_region" => broken_wire_snapshot(repaired),
+                    "preview_region" => json!({ "particle_corners": 8 }),
+                    "write_blocks" => {
+                        repaired = request["params"]["changes"][0]["state"]
+                            .as_str()
+                            .unwrap()
+                            .starts_with("minecraft:redstone_wire");
+                        json!({ "submitted_changes": 1 })
+                    }
+                    method => panic!("unexpected fake bridge method {method}"),
+                };
+                let response = json!({ "id": request["id"], "result": result });
+                stream
+                    .write_all(format!("{response}\n").as_bytes())
+                    .await
+                    .unwrap();
+            }
+        });
+
+        let policy = McpPolicy {
+            read_only: false,
+            ..McpPolicy::default()
+        };
+        let service = DustRouteMcp::with_policy_and_player(address, policy, "builder");
+        let bounds = dustroute_translate::RegionBounds::new(Pos::new(0, 0, 0), Pos::new(2, 2, 0));
+        service
+            .selections
+            .lock()
+            .await
+            .entry("builder".into())
+            .or_insert_with(|| SelectionSession::new("builder"))
+            .set_bounds(bounds);
+        service
+            .selection_dimensions
+            .lock()
+            .await
+            .insert("builder".into(), "minecraft:overworld".into());
+
+        let proposed: Value = serde_json::from_str(
+            &service
+                .propose_repairs(Parameters(ProposeRepairsParams {
+                    player: None,
+                    max_gap: Some(2),
+                }))
+                .await,
+        )
+        .unwrap();
+        assert_eq!(proposed["proposal_count"], 3);
+        let operation_id = proposed["proposals"][0]["operation_id"]
+            .as_str()
+            .unwrap()
+            .to_owned();
+
+        let preview = service
+            .preview_repair(Parameters(PreviewRepairParams {
+                operation_id: operation_id.clone(),
+                player: None,
+            }))
+            .await;
+        assert!(preview.contains("\"ok\": true"));
+        let applied = service
+            .apply_repair(Parameters(ConfirmedOperationParams {
+                operation_id: operation_id.clone(),
+                confirm: true,
+            }))
+            .await;
+        assert!(applied.contains("\"verified\": true"), "{applied}");
+        let undone = service
+            .undo_repair(Parameters(ConfirmedOperationParams {
+                operation_id,
+                confirm: true,
+            }))
+            .await;
+        assert!(undone.contains("\"verified\": true"), "{undone}");
+    }
+
+    fn broken_wire_snapshot(repaired: bool) -> Value {
+        let mut blocks = vec![
+            snapshot_block(0, 0, 0, "minecraft:stone", json!({})),
+            snapshot_block(1, 0, 0, "minecraft:stone", json!({})),
+            snapshot_block(2, 0, 0, "minecraft:stone", json!({})),
+            snapshot_block(0, 1, 0, "minecraft:redstone_wire", wire_properties()),
+            snapshot_block(2, 1, 0, "minecraft:redstone_wire", wire_properties()),
+        ];
+        if repaired {
+            blocks.push(snapshot_block(
+                1,
+                1,
+                0,
+                "minecraft:redstone_wire",
+                wire_properties(),
+            ));
+        }
+        json!({
+            "min": { "x": 0, "y": 0, "z": 0 },
+            "max": { "x": 2, "y": 2, "z": 0 },
+            "blocks": blocks,
+        })
+    }
+
+    fn snapshot_block(x: i32, y: i32, z: i32, name: &str, properties: Value) -> Value {
+        json!({ "pos": { "x": x, "y": y, "z": z }, "name": name, "properties": properties })
+    }
+
+    fn wire_properties() -> Value {
+        json!({
+            "north": "none",
+            "east": "side",
+            "south": "none",
+            "west": "side",
+            "power": "0",
+        })
     }
 }

@@ -173,6 +173,7 @@ dependencies = [
  "anyhow",
  "dustroute-app",
  "dustroute-model",
+ "dustroute-physical",
  "dustroute-translate",
  "rmcp",
  "serde",

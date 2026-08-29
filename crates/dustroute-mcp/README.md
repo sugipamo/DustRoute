@@ -44,6 +44,27 @@ world. When `DUSTROUTE_READ_ONLY=false`, an explicitly confirmed plan can be
 written with `apply_placement_plan`; `undo_placement_plan` restores the captured
 blocks.
 
+## Physical repair workflow
+
+After selecting and previewing a region, `propose_repairs` ranks partial physical
+patches for missing wire, missing support, and directional component problems.
+Each proposal includes coordinates, evidence, confidence, a virtual before/after
+impact, and an operation UUID. The safe mutation sequence is:
+
+```text
+propose_repairs
+  -> preview_repair
+  -> explicit player confirmation
+  -> apply_repair(confirm=true)
+  -> automatic block-state rescan and circuit re-analysis
+  -> undo_repair(confirm=true), when needed
+```
+
+Failed block-state verification triggers an automatic rollback attempt. A
+suspected short cannot be inferred safely from geometry alone;
+`propose_targeted_component_removal` is available only for a component the
+player explicitly identifies while looking at it.
+
 ## Safety configuration
 
 The server defaults to read-only mode, requires previews, allows only the

@@ -11,6 +11,7 @@ rust-version.workspace = true
 anyhow = "1.0"
 dustroute-app = { path = "../dustroute-app" }
 dustroute-model = { path = "../dustroute-model" }
+dustroute-physical = { path = "../dustroute-physical" }
 dustroute-translate = { path = "../dustroute-translate" }
 rmcp = { version = "3.1.4", features = ["server", "transport-io", "schemars"] }
 serde = { version = "1.0", features = ["derive"] }

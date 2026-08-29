@@ -61,6 +61,20 @@ pub enum GapEvidence {
         right: ComponentId,
         manhattan_distance: u32,
     },
+    MissingInlineBlock {
+        position: Pos,
+    },
+    InvalidSupport {
+        component: ComponentId,
+        expected_support: Pos,
+    },
+    DirectionMismatch {
+        component: ComponentId,
+        toward: ComponentId,
+    },
+    SuspectedUnexpectedConnection {
+        component: ComponentId,
+    },
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -145,16 +159,21 @@ impl PhysicalCircuit {
                 let nearest = left
                     .components
                     .iter()
+                    .filter(|left_id| by_id[left_id].block.kind.is_redstone_related())
                     .flat_map(|left_id| {
-                        right.components.iter().map(|right_id| {
-                            let a = by_id[left_id].pos;
-                            let b = by_id[right_id].pos;
-                            (
-                                *left_id,
-                                *right_id,
-                                a.x.abs_diff(b.x) + a.y.abs_diff(b.y) + a.z.abs_diff(b.z),
-                            )
-                        })
+                        right
+                            .components
+                            .iter()
+                            .filter(|right_id| by_id[right_id].block.kind.is_redstone_related())
+                            .map(|right_id| {
+                                let a = by_id[left_id].pos;
+                                let b = by_id[right_id].pos;
+                                (
+                                    *left_id,
+                                    *right_id,
+                                    a.x.abs_diff(b.x) + a.y.abs_diff(b.y) + a.z.abs_diff(b.z),
+                                )
+                            })
                     })
                     .min_by_key(|(_, _, distance)| *distance);
                 if let Some((left_component, right_component, distance)) =
@@ -257,6 +276,14 @@ mod tests {
         }
     }
 
+    fn support(id: usize, x: i32) -> PhysicalComponent {
+        PhysicalComponent {
+            id: ComponentId(id),
+            pos: Pos::new(x, 64, 0),
+            block: Block::new(BlockKind::Solid),
+        }
+    }
+
     #[test]
     fn unions_only_verified_connections() {
         let circuit = PhysicalCircuit::from_parts(
@@ -285,5 +312,30 @@ mod tests {
         let nearby = circuit.discover_nearby_fragments(FragmentId(0), 2);
         assert_eq!(nearby, BTreeSet::from([FragmentId(0), FragmentId(1)]));
         assert_eq!(circuit.fragments.len(), 2);
+    }
+
+    #[test]
+    fn structural_supports_do_not_create_proximity_candidates() {
+        let circuit = PhysicalCircuit::from_parts(
+            vec![
+                component(0, 0),
+                support(1, 4),
+                support(2, 5),
+                component(3, 10),
+            ],
+            [
+                PhysicalConnection {
+                    source: ComponentId(0),
+                    sink: ComponentId(1),
+                    kind: ConnectionKind::Support,
+                },
+                PhysicalConnection {
+                    source: ComponentId(2),
+                    sink: ComponentId(3),
+                    kind: ConnectionKind::Support,
+                },
+            ],
+        );
+        assert!(circuit.gap_candidates(2).is_empty());
     }
 }
