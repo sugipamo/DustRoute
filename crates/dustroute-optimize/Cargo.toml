@@ -1,6 +1,6 @@
 [package]
-name = "dustroute-cli"
-description = "Command-line interface for DustRoute"
+name = "dustroute-optimize"
+description = "Placement and semantic optimization for DustRoute"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -8,10 +8,7 @@ repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-dustroute-app = { path = "../dustroute-app" }
-dustroute-model = { path = "../dustroute-model" }
 dustroute-translate = { path = "../dustroute-translate" }
-serde_json = "1.0"
 
 [lints]
 workspace = true

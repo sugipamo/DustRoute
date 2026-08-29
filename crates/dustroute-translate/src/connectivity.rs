@@ -30,6 +30,8 @@ pub enum EdgeKind {
     RepeaterInput,
     RepeaterOutput,
     DirectSource,
+    TorchControl,
+    LeverOutput,
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -197,6 +199,26 @@ pub fn extract_connectivity(world: &World) -> PhysicalConnectivityGraph {
                     source: *source,
                     sink: *sink,
                     kind,
+                });
+            }
+        }
+    }
+    for (pos, block) in world.iter() {
+        if block.kind == BlockKind::RedstoneTorch {
+            if let Some(support) = block.support_pos(*pos) {
+                edges.insert(ConnectivityEdge {
+                    source: support,
+                    sink: *pos,
+                    kind: EdgeKind::TorchControl,
+                });
+            }
+        }
+        if block.kind == BlockKind::Lever {
+            if let Some(support) = block.support_pos(*pos) {
+                edges.insert(ConnectivityEdge {
+                    source: *pos,
+                    sink: support,
+                    kind: EdgeKind::LeverOutput,
                 });
             }
         }

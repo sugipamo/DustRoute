@@ -1,10 +1,10 @@
 use std::collections::BTreeMap;
 
-use crate::cell_library::{CellLibrary, default_cell_library, verify_cell};
-use crate::cells::RotationY;
-use crate::logic::GateKind;
-use crate::physical::{CellId, Endpoint, PhysicalCircuit, PhysicalNode, Route};
-use crate::world::Pos;
+use dustroute_translate::cell_library::{CellLibrary, default_cell_library, verify_cell};
+use dustroute_translate::cells::RotationY;
+use dustroute_translate::logic::GateKind;
+use dustroute_translate::physical::{CellId, Endpoint, PhysicalCircuit, PhysicalNode, Route};
+use dustroute_translate::world::Pos;
 
 #[derive(Clone, Copy, Debug)]
 pub struct PlacementWeights {
@@ -257,7 +257,7 @@ pub fn optimize_placement(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cells::{PlacedCell, PortKind, not_cell};
+    use dustroute_translate::cells::{PlacedCell, PortKind, not_cell};
     #[test]
     fn optimizer_moves_cell_toward_nets() {
         let mut pc = PhysicalCircuit::new();

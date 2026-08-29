@@ -1,6 +1,6 @@
 [package]
-name = "dustroute-core"
-description = "Logical and physical compiler core for DustRoute"
+name = "dustroute-translate"
+description = "Bidirectional logical circuit and Minecraft translation for DustRoute"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -11,4 +11,7 @@ rust-version.workspace = true
 workspace = true
 
 [dependencies]
+dustroute-model = { path = "../dustroute-model" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 zip = { version = "6.0.0", default-features = false, features = ["deflate-flate2-zlib-rs"] }

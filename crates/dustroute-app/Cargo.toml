@@ -1,6 +1,6 @@
 [package]
-name = "dustroute-cli"
-description = "Command-line interface for DustRoute"
+name = "dustroute-app"
+description = "Shared application services for DustRoute frontends"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -8,10 +8,10 @@ repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-dustroute-app = { path = "../dustroute-app" }
 dustroute-model = { path = "../dustroute-model" }
 dustroute-translate = { path = "../dustroute-translate" }
-serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+uuid = { version = "1.26", features = ["serde", "v4"] }
 
 [lints]
 workspace = true

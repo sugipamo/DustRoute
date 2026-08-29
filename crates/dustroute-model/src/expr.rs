@@ -1,4 +1,5 @@
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use std::fmt::{Display, Formatter};
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum Expr {
@@ -9,6 +10,35 @@ pub enum Expr {
     Or(Vec<Expr>),
     Xor(Vec<Expr>),
     Nand(Vec<Expr>),
+}
+
+impl Display for Expr {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Var(name) => f.write_str(name),
+            Self::Const(value) => f.write_str(if *value { "1" } else { "0" }),
+            Self::Not(value) => write!(f, "!({value})"),
+            Self::And(values) => joined(f, values, " & "),
+            Self::Or(values) => joined(f, values, " | "),
+            Self::Xor(values) => joined(f, values, " ^ "),
+            Self::Nand(values) => {
+                f.write_str("![(")?;
+                joined(f, values, " & ")?;
+                f.write_str(")]")
+            }
+        }
+    }
+}
+
+fn joined(f: &mut Formatter<'_>, values: &[Expr], separator: &str) -> std::fmt::Result {
+    f.write_str("(")?;
+    for (index, value) in values.iter().enumerate() {
+        if index > 0 {
+            f.write_str(separator)?;
+        }
+        Display::fmt(value, f)?;
+    }
+    f.write_str(")")
 }
 
 impl Expr {

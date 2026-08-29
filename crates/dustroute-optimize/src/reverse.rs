@@ -1,12 +1,12 @@
 use std::collections::BTreeSet;
 
-use crate::cell_library::default_cell_library;
-use crate::cells::PlacedCell;
-use crate::expr::{Expr, best_by_size};
-use crate::logic::GateKind;
-use crate::physical::{CellId, Endpoint, PhysicalCircuit, RouteId};
-use crate::port_realization::terminal_for_endpoint;
-use crate::routing::{RouterConfig, astar_route};
+use dustroute_translate::cell_library::default_cell_library;
+use dustroute_translate::cells::PlacedCell;
+use dustroute_translate::expr::{Expr, best_by_size};
+use dustroute_translate::logic::GateKind;
+use dustroute_translate::physical::{CellId, Endpoint, PhysicalCircuit, RouteId};
+use dustroute_translate::port_realization::terminal_for_endpoint;
+use dustroute_translate::routing::{RouterConfig, astar_route};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PhysicalRegion {
@@ -37,9 +37,9 @@ fn boundary(
     pc: &PhysicalCircuit,
     cells: &BTreeSet<CellId>,
 ) -> (
-    Vec<crate::physical::Route>,
-    Vec<crate::physical::Route>,
-    Vec<crate::physical::Route>,
+    Vec<dustroute_translate::physical::Route>,
+    Vec<dustroute_translate::physical::Route>,
+    Vec<dustroute_translate::physical::Route>,
 ) {
     let mut i = vec![];
     let mut o = vec![];
@@ -311,8 +311,8 @@ pub fn optimize_once_via_reverse(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cells::{PlacedCell, PortKind, RotationY, not_cell};
-    use crate::world::Pos;
+    use dustroute_translate::cells::{PlacedCell, PortKind, RotationY, not_cell};
+    use dustroute_translate::world::Pos;
     #[test]
     fn extracts_and_eliminates_double_not() {
         let mut pc = PhysicalCircuit::new();

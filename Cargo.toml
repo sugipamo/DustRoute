@@ -1,5 +1,12 @@
 [workspace]
-members = ["crates/dustroute-core", "crates/dustroute-cli"]
+members = [
+    "crates/dustroute-model",
+    "crates/dustroute-translate",
+    "crates/dustroute-optimize",
+    "crates/dustroute-app",
+    "crates/dustroute-mcp",
+    "crates/dustroute-cli",
+]
 resolver = "2"
 
 [workspace.package]

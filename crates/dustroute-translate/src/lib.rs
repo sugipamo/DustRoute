@@ -1,26 +1,36 @@
 //! Core intermediate representations and compiler stages for DustRoute.
 
+pub mod api;
 pub mod cell_library;
 pub mod cells;
 pub mod circuits;
 pub mod compiler;
 pub mod connectivity;
 pub mod electrical;
-pub mod expr;
-pub mod logic;
+pub mod expr {
+    pub use dustroute_model::expr::*;
+}
+pub mod logic {
+    pub use dustroute_model::logic::*;
+}
 pub mod minecraft_export;
 pub mod minecraft_semantics;
 pub mod multinet;
 pub mod physical;
-pub mod placement;
 pub mod port_realization;
-pub mod reverse;
 pub mod routing;
 pub mod routing_resources;
 pub mod sim;
+pub mod snapshot;
 pub mod wire;
-pub mod world;
+pub mod world {
+    pub use dustroute_model::world::*;
+}
+pub mod world_reverse;
 
+pub use api::{
+    ForwardOptions, ForwardResult, ReverseRequest, ReverseResult, TranslateError, Translator,
+};
 pub use cell_library::{CellLibrary, CellVerification, default_cell_library, verify_cell};
 pub use cells::{
     InputPort, OutputPort, PhysicalCell, PlacedCell, PortKind, RotationY, and_cell,
@@ -33,12 +43,14 @@ pub use connectivity::{
     ConnectivityEdge, EdgeKind, PhysicalConnectivityGraph, PhysicalStep, PhysicalStepKind,
     extract_connectivity, physical_step, physical_step_connected,
 };
+pub use dustroute_model::{
+    Block, BlockKind, BlockProperties, DagBuilder, Expr, Facing, GateKind, LogicDag, LogicError,
+    LogicNode, NodeId, Pos, WireConnection, World, best_by_size, rewrites_once, search_equivalents,
+};
 pub use electrical::{
     DeviceOutputState, InstantaneousElectricalState, MAX_SIGNAL, PoweredBlockState,
     solve_instantaneous,
 };
-pub use expr::{Expr, best_by_size, rewrites_once, search_equivalents};
-pub use logic::{DagBuilder, GateKind, LogicDag, LogicError, LogicNode, NodeId};
 pub use minecraft_export::{
     DataPack, JavaExportConfig, MinecraftExportError, compiled_circuit_datapack,
     isolated_build_commands, java_block_state, world_setblock_commands,
@@ -50,19 +62,9 @@ pub use multinet::{
     route_net_tree, validate_routing_legality,
 };
 pub use physical::{CellId, Endpoint, PhysicalCircuit, PhysicalError, Route, RouteId};
-pub use placement::{
-    MutationKind, PlacementMutation, PlacementOptimizationResult, PlacementScore, PlacementWeights,
-    apply_mutation, candidate_mutations, optimize_placement, placement_score,
-    refresh_route_endpoints,
-};
 pub use port_realization::{
     PortRealization, PortRealizationError, realize_sink_endpoint, realize_source_endpoint,
     terminal_for_endpoint,
-};
-pub use reverse::{
-    PhysicalRegion, RewriteReport, SemanticFragment, SemanticRewrite, eliminate_double_not,
-    extract_and_then_not, extract_linear_not_chain, optimize_once_via_reverse,
-    realize_identity_rewrite, realize_nand_rewrite, simplify_fragment,
 };
 pub use routing::{
     RouteNotFound, RouteResult, RouterConfig, astar_route, insert_repeaters, materialize_route,
@@ -71,5 +73,12 @@ pub use routing_resources::{
     RoutingResources, branch_stair_clearances, electrical_keepout_for_wire, horizontal_neighbors,
 };
 pub use sim::{RedstoneTickSimulator, TickState};
+pub use snapshot::{
+    MinecraftSnapshot, MinecraftSnapshotBlock, SnapshotError, world_from_snapshot_json,
+};
 pub use wire::{dust_connected, infer_wire_connection, update_wire_shapes, wire_has_arm};
-pub use world::{Block, BlockKind, BlockProperties, Facing, Pos, WireConnection, World};
+pub use world_reverse::{
+    InferredTerminal, InferredTruthTable, RegionAnalysis, RegionBounds, SignalComponent,
+    SignalDiagnostics, TerminalConfidence, TruthTableComparison, TruthTableError, TruthTableRow,
+    analyze_world_region, compare_truth_tables, infer_output_expressions, infer_truth_table,
+};

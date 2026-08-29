@@ -220,9 +220,16 @@ pub fn solve_instantaneous(
             .collect();
         for dust in &wires {
             let mut best = 0;
-            for other in &wires {
-                if dust != other && dust_connected(world, *dust, *other) {
-                    best = best.max(signals.get(other).copied().unwrap_or(0).saturating_sub(1));
+            for facing in HORIZONTAL {
+                let delta = facing.horizontal_offset().expect("horizontal facing");
+                for dy in -1..=1 {
+                    let other = dust.offset(delta.x, dy, delta.z);
+                    if world.kind_at(other) == BlockKind::RedstoneWire
+                        && dust_connected(world, *dust, other)
+                    {
+                        best =
+                            best.max(signals.get(&other).copied().unwrap_or(0).saturating_sub(1));
+                    }
                 }
             }
             for facing in HORIZONTAL {
