@@ -38,9 +38,11 @@ sequence: `observe_player`, `discover_looked_at_circuit` or
 `mark_region_corner`, `preview_region`, and `analyze_selected_region`.
 
 Long analyses can use `start_selected_region_analysis`, `get_operation`, and
-`cancel_operation`. Placement remains read-only: `preview_compiled_circuit`
-returns a block diff, collisions, material counts, an operation UUID, and an
-exact undo plan without changing the world.
+`cancel_operation`. `preview_compiled_circuit` returns a block diff, collisions,
+material counts, an operation UUID, and an exact undo plan without changing the
+world. When `DUSTROUTE_READ_ONLY=false`, an explicitly confirmed plan can be
+written with `apply_placement_plan`; `undo_placement_plan` restores the captured
+blocks.
 
 ## Safety configuration
 
@@ -62,6 +64,6 @@ The visible bot reconnects three seconds after disconnecting. Every scan and
 preview carries the selected dimension, so moving between dimensions invalidates
 the operation instead of silently targeting a different world.
 
-Mutating circuit placement is intentionally not exposed yet. Region selection
-and reverse translation are read-only, while preview only emits particles and a
-private chat message.
+Region selection and reverse translation remain read-only. World mutations
+require a preview operation ID, `confirm=true`, and
+`DUSTROUTE_READ_ONLY=false`.

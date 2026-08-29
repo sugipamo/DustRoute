@@ -193,6 +193,18 @@ impl BotBridge {
         )
         .await
     }
+
+    pub async fn write_blocks(
+        &self,
+        changes: Value,
+        dimension: &str,
+    ) -> Result<Value, BotBridgeError> {
+        self.request(
+            "write_blocks",
+            json!({ "changes": changes, "dimension": dimension }),
+        )
+        .await
+    }
 }
 
 #[cfg(test)]

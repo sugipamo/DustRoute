@@ -13,6 +13,8 @@ use uuid::Uuid;
 pub enum OperationKind {
     AnalyzeRegion,
     PlacementPreview,
+    PlacementApply,
+    PlacementUndo,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]

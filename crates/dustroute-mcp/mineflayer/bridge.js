@@ -141,6 +141,24 @@ async function scanRegion (min, max) {
   return { min: low, max: high, blocks }
 }
 
+async function writeBlocks (changes) {
+  if (!Array.isArray(changes)) throw new Error('changes must be an array')
+  if (changes.length > 32768) throw new Error('write exceeds the 32768 block limit')
+  const statePattern = /^minecraft:[a-z0-9_]+(?:\[[a-z0-9_=,]+\])?$/
+  for (let index = 0; index < changes.length; index++) {
+    const change = changes[index]
+    const { x, y, z } = change.pos || {}
+    if (![x, y, z].every(Number.isInteger)) throw new Error('write position must use integers')
+    if (typeof change.state !== 'string' || !statePattern.test(change.state)) {
+      throw new Error(`invalid Minecraft block state at change ${index}`)
+    }
+    bot.chat(`/setblock ${x} ${y} ${z} ${change.state} replace`)
+    if ((index + 1) % 1000 === 0) await bot.waitForTicks(1)
+  }
+  await bot.waitForTicks(2)
+  return { submitted_changes: changes.length }
+}
+
 function previewRegion (player, min, max) {
   const low = { x: Math.min(min.x, max.x), y: Math.min(min.y, max.y), z: Math.min(min.z, max.z) }
   const high = { x: Math.max(min.x, max.x), y: Math.max(min.y, max.y), z: Math.max(min.z, max.z) }
@@ -199,6 +217,10 @@ async function dispatch (method, params) {
   if (method === 'preview_region') {
     requireDimension(params.dimension)
     return previewRegion(params.player, params.min, params.max)
+  }
+  if (method === 'write_blocks') {
+    requireDimension(params.dimension)
+    return writeBlocks(params.changes)
   }
   throw new Error(`unknown method: ${method}`)
 }

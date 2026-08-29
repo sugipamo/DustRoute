@@ -2,7 +2,10 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use dustroute_app::DustRouteService;
-use dustroute_translate::{ForwardOptions, ReverseRequest, world_from_snapshot_json};
+use dustroute_model::{BlockKind, Pos};
+use dustroute_translate::{
+    ForwardOptions, JavaExportConfig, ReverseRequest, java_block_state, world_from_snapshot_json,
+};
 use rmcp::{
     ServerHandler,
     handler::server::{
@@ -30,6 +33,8 @@ pub struct DustRouteMcp {
     tool_router: ToolRouter<Self>,
     prompt_router: PromptRouter<Self>,
     plans: Arc<Mutex<HashMap<uuid::Uuid, PlacementPlan>>>,
+    plan_dimensions: Arc<Mutex<HashMap<uuid::Uuid, String>>>,
+    applied_plans: Arc<Mutex<HashMap<uuid::Uuid, bool>>>,
     policy: McpPolicy,
     app: DustRouteService,
     operations: OperationRegistry,
@@ -87,6 +92,14 @@ struct PreviewPlacementParams {
 struct OperationParams {
     /// Operation UUID returned by a start or preview tool.
     operation_id: String,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+struct ConfirmedOperationParams {
+    /// Operation UUID returned by preview_compiled_circuit.
+    operation_id: String,
+    /// Must be true to acknowledge that this call changes the test world.
+    confirm: bool,
 }
 
 fn json_text(value: Value) -> String {
@@ -148,6 +161,8 @@ impl DustRouteMcp {
             tool_router: Self::tool_router(),
             prompt_router: Self::prompt_router(),
             plans: Arc::new(Mutex::new(HashMap::new())),
+            plan_dimensions: Arc::new(Mutex::new(HashMap::new())),
+            applied_plans: Arc::new(Mutex::new(HashMap::new())),
             policy,
             app: DustRouteService::default(),
             operations: OperationRegistry::default(),
@@ -196,6 +211,125 @@ impl DustRouteMcp {
             .authorize_player(player)
             .err()
             .map(|error| json_text(json!({ "ok": false, "error": error.to_string() })))
+    }
+
+    async fn mutate_placement(&self, params: ConfirmedOperationParams, undo: bool) -> String {
+        if !params.confirm {
+            return json_text(json!({
+                "ok": false,
+                "error": "confirm must be true because this operation changes the world"
+            }));
+        }
+        if let Err(error) = self.policy.authorize_mutation() {
+            return json_text(json!({ "ok": false, "error": error.to_string() }));
+        }
+        let operation_id = match uuid::Uuid::parse_str(&params.operation_id) {
+            Ok(id) => id,
+            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        };
+        let plan = match self.plans.lock().await.get(&operation_id).cloned() {
+            Some(plan) => plan,
+            None => return json_text(json!({ "ok": false, "error": "unknown operation ID" })),
+        };
+        let dimension = match self
+            .plan_dimensions
+            .lock()
+            .await
+            .get(&operation_id)
+            .cloned()
+        {
+            Some(dimension) => dimension,
+            None => {
+                return json_text(json!({
+                    "ok": false,
+                    "error": "placement plan has no captured dimension"
+                }));
+            }
+        };
+        if let Err(error) = self.policy.authorize_dimension(&dimension) {
+            return json_text(json!({ "ok": false, "error": error.to_string() }));
+        }
+        let is_applied = self
+            .applied_plans
+            .lock()
+            .await
+            .get(&operation_id)
+            .copied()
+            .unwrap_or(false);
+        if undo && !is_applied {
+            return json_text(json!({ "ok": false, "error": "placement plan is not applied" }));
+        }
+        if !undo && is_applied {
+            return json_text(json!({ "ok": false, "error": "placement plan is already applied" }));
+        }
+
+        let source = if undo {
+            &plan.undo.changes
+        } else {
+            &plan.changes
+        };
+        if let Err(error) = self.policy.validate_placement_size(source.len()) {
+            return json_text(json!({ "ok": false, "error": error.to_string() }));
+        }
+        let mut changes = source.iter().collect::<Vec<_>>();
+        changes.sort_by_key(|change| {
+            let priority = match change.after.kind {
+                BlockKind::Solid
+                | BlockKind::Transparent
+                | BlockKind::RedstoneBlock
+                | BlockKind::Piston => 0,
+                BlockKind::RedstoneTorch | BlockKind::Lever => 2,
+                _ => 1,
+            };
+            (priority, change.pos.y, change.pos.x, change.pos.z)
+        });
+        let export = JavaExportConfig {
+            relative: false,
+            ..JavaExportConfig::default()
+        };
+        let writes = match changes
+            .into_iter()
+            .map(|change| {
+                java_block_state(&change.after, &export).map(|state| {
+                    json!({
+                        "pos": Pos::new(change.pos.x, change.pos.y, change.pos.z),
+                        "state": state,
+                    })
+                })
+            })
+            .collect::<Result<Vec<_>, _>>()
+        {
+            Ok(writes) => writes,
+            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        };
+        let bridge_result = match self.bridge.write_blocks(json!(writes), &dimension).await {
+            Ok(result) => result,
+            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        };
+        self.applied_plans.lock().await.insert(operation_id, !undo);
+        self.operations
+            .record_completed(
+                uuid::Uuid::new_v4(),
+                if undo {
+                    OperationKind::PlacementUndo
+                } else {
+                    OperationKind::PlacementApply
+                },
+                json!({
+                    "source_operation_id": operation_id,
+                    "changed_blocks": source.len(),
+                    "dimension": dimension,
+                }),
+            )
+            .await;
+        json_text(json!({
+            "ok": true,
+            "operation_id": operation_id,
+            "action": if undo { "undo" } else { "apply" },
+            "changed_blocks": source.len(),
+            "dimension": dimension,
+            "bridge": bridge_result,
+        }))
     }
 
     async fn selected_region(
@@ -451,7 +585,7 @@ impl DustRouteMcp {
     }
 
     #[tool(
-        description = "Compile a built-in circuit at a player's gaze target and return a read-only block diff, collisions, materials, operation ID, and undo plan"
+        description = "Compile a built-in circuit at a player's gaze target and return a block diff, collisions, materials, operation ID, and exact undo plan without changing the world"
     )]
     async fn preview_compiled_circuit(
         &self,
@@ -552,7 +686,7 @@ impl DustRouteMcp {
             .collect::<Vec<_>>();
         let response = json!({
             "ok": true,
-            "read_only": true,
+            "read_only": self.policy.read_only,
             "operation_id": operation_id,
             "origin": origin,
             "bounds": { "min": min, "max": max },
@@ -561,9 +695,17 @@ impl DustRouteMcp {
             "collision_samples": collision_samples,
             "materials": &plan.materials,
             "undo_change_count": plan.undo.changes.len(),
-            "next_step": "review this plan; no blocks have been changed"
+            "next_step": if self.policy.read_only {
+                "review this plan; writes are disabled by policy"
+            } else {
+                "review this plan, obtain explicit player confirmation, then call apply_placement_plan with confirm=true"
+            }
         });
         self.plans.lock().await.insert(operation_id, plan);
+        self.plan_dimensions
+            .lock()
+            .await
+            .insert(operation_id, observation.dimension);
         self.operations
             .record_completed(
                 operation_id,
@@ -575,7 +717,7 @@ impl DustRouteMcp {
     }
 
     #[tool(
-        description = "Retrieve the complete read-only placement and undo plan by operation ID",
+        description = "Retrieve the complete placement and exact undo plan by operation ID",
         annotations(read_only_hint = true, destructive_hint = false)
     )]
     async fn get_placement_plan(&self, Parameters(params): Parameters<OperationParams>) -> String {
@@ -584,9 +726,33 @@ impl DustRouteMcp {
             Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
         };
         match self.plans.lock().await.get(&operation_id) {
-            Some(plan) => json_text(json!({ "ok": true, "read_only": true, "plan": plan })),
+            Some(plan) => {
+                json_text(json!({ "ok": true, "read_only": self.policy.read_only, "plan": plan }))
+            }
             None => json_text(json!({ "ok": false, "error": "unknown operation ID" })),
         }
+    }
+
+    #[tool(
+        description = "Apply a previously previewed placement plan to the test world. Requires confirm=true and write-enabled policy.",
+        annotations(read_only_hint = false, destructive_hint = true)
+    )]
+    async fn apply_placement_plan(
+        &self,
+        Parameters(params): Parameters<ConfirmedOperationParams>,
+    ) -> String {
+        self.mutate_placement(params, false).await
+    }
+
+    #[tool(
+        description = "Restore the exact blocks captured before an applied placement plan. Requires confirm=true and write-enabled policy.",
+        annotations(read_only_hint = false, destructive_hint = true)
+    )]
+    async fn undo_placement_plan(
+        &self,
+        Parameters(params): Parameters<ConfirmedOperationParams>,
+    ) -> String {
+        self.mutate_placement(params, true).await
     }
 
     #[tool(
