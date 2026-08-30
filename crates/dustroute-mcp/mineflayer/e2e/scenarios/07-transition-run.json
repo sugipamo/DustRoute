@@ -24,7 +24,8 @@
       { "path": "ok", "equals": true },
       { "path": "activation.bot_approached", "equals": true },
       { "path": "scenario_verification.simulated.ok", "equals": true },
-      { "path": "scenario_verification.equivalent", "equals": true },
+      { "path": "scenario_verification.steady_state_equivalent", "equals": true },
+      { "path": "scenario_verification.trace_equivalent", "exists": true },
       { "path": "scenario_verification.live_trace.final_strengths.0.position", "exists": true },
       { "path": "restoration.verified", "equals": true }
     ]},
@@ -32,5 +33,6 @@
     { "kind": "assert", "from": "status", "expect": [
       { "path": "ok", "equals": true }
     ]}
-  ]
+  ],
+  "cleanup": ["/fill 499 103 -1 503 108 1 minecraft:air"]
 }

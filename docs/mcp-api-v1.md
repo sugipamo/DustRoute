@@ -56,6 +56,11 @@ This representation is required even for empty state. It prevents non-string
 map keys from reaching `serde_json` and keeps live and simulated traces in the
 same shape.
 
+Transition verification reports `steady_state_equivalent` separately from
+`trace_equivalent`. Server/physics observation can place an otherwise immediate
+dust update on either side of a redstone-tick sampling boundary; this remains a
+visible trace difference without incorrectly claiming a final-state mismatch.
+
 ## Mutation lifecycle
 
 `new_*` creates a plan, `show_*` records preview, `invoke_*` requires explicit

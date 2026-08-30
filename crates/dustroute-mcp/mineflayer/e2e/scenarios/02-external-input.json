@@ -18,5 +18,6 @@
       { "path": "signal_liveness.source_counts_by_kind.inferred_primary_input", "at_least": 1 },
       { "path": "signal_liveness.undriven_required_input_count", "equals": 0 }
     ]}
-  ]
+  ],
+  "cleanup": ["/fill 319 103 -1 323 106 1 minecraft:air"]
 }

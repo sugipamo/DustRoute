@@ -49,6 +49,7 @@ class McpStdioClient {
     this.pending = new Map()
     this.process = spawn(command, args, { ...options, stdio: ['pipe', 'pipe', 'pipe'] })
     this.stderr = ''
+    this.timeoutMs = Number(options.timeoutMs || 120000)
     this.process.stderr.on('data', chunk => { this.stderr = (this.stderr + chunk).slice(-8192) })
     readline.createInterface({ input: this.process.stdout }).on('line', line => {
       let message
@@ -66,7 +67,7 @@ class McpStdioClient {
     })
   }
 
-  request (method, params = {}, timeoutMs = 120000) {
+  request (method, params = {}, timeoutMs = this.timeoutMs) {
     const id = this.nextId++
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {

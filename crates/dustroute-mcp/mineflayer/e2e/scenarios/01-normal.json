@@ -17,5 +17,6 @@
       { "path": "diagnostic.observation_complete", "equals": true },
       { "path": "diagnostic.counts.probable_faults", "equals": 0 }
     ]}
-  ]
+  ],
+  "cleanup": ["/fill 299 103 -1 306 106 1 minecraft:air"]
 }

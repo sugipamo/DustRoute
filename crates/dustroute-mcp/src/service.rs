@@ -3160,6 +3160,10 @@ impl DustRouteMcp {
         let simulation_comparison = simulated.as_ref().ok().map(|simulated| {
             dustroute_translate::compare_live_trace(&simulated.trace, &live_scenario_trace)
         });
+        let steady_state_equivalent = simulated.as_ref().is_ok_and(|simulated| {
+            simulated.trace.final_strengths == live_scenario_trace.final_strengths
+                && simulated.trace.final_powered == live_scenario_trace.final_powered
+        });
         let scenario = match serde_json::to_value(&scenario) {
             Ok(value) => value,
             Err(error) => {
@@ -3196,7 +3200,8 @@ impl DustRouteMcp {
                 "simulated": simulated,
                 "live_trace": live_scenario_trace,
                 "differences": simulation_comparison,
-                "equivalent": simulation_comparison.as_ref().is_some_and(Vec::is_empty)
+                "trace_equivalent": simulation_comparison.as_ref().is_some_and(Vec::is_empty),
+                "steady_state_equivalent": steady_state_equivalent
             },
             "restoration": {
                 "lever_restored": lever_restored,

@@ -29,5 +29,6 @@
     { "kind": "assert", "from": "restored", "expect": [
       { "path": "diagnostic.counts.probable_faults", "at_least": 1 }
     ]}
-  ]
+  ],
+  "cleanup": ["/fill 399 103 -1 405 106 1 minecraft:air"]
 }

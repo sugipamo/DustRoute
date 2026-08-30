@@ -57,12 +57,26 @@ npm run test:e2e -- normal_circuit component_limit repair_and_undo
 
 The transition scenario deliberately moves `DustRouteBot` out of interaction
 range before invocation. It verifies automatic pre-recording approach, normal
-Mineflayer lever activation, non-empty live/simulated JSON traces, semantic
-equivalence, state restoration, and continued MCP availability after the run:
+Mineflayer lever activation, non-empty live/simulated JSON traces, steady-state
+equivalence, explicit strict-trace differences, state restoration, and
+continued MCP availability after the run:
 
 ```bash
 npm run test:e2e -- transition_run_and_restore
 ```
+
+When the exported semantics Data Pack is installed and enabled in the test
+world, collect its player-chat results automatically with:
+
+```bash
+DUSTROUTE_E2E_SEMANTICS_FUNCTION=ro_sem:tests \
+  DUSTROUTE_E2E_SEMANTICS_ASSERTIONS=23 \
+  npm run test:e2e:semantics
+```
+
+The collector fails on any `FAIL` message, a missing `DUSTROUTE COMPLETE`, an
+unexpected PASS count, disconnect, or timeout. It deliberately reads player
+chat because these assertions are not emitted to the server console.
 
 ## Scenario contract
 
@@ -80,6 +94,14 @@ Scenario files are ordered JSON documents in `scenarios/`. Supported steps are:
 `${result.path.0.value}` references pass dynamic operation IDs between steps.
 Mutation tools still receive `confirm: true` explicitly; the harness never
 weakens MCP preview policy.
+
+`DUSTROUTE_E2E_TIMEOUT_MS` configures MCP/scenario waits from 1,000 through
+600,000 milliseconds. Each scenario declares cleanup commands, and temporary
+gaze footings are removed whether the scenario passes or fails. On failure the
+harness writes the failed step, saved MCP results, actor pose, and recent MCP
+stderr to `.local/e2e-artifacts/<timestamp>-<scenario>.json`; these diagnostics
+remain ignored by Git. Set `DUSTROUTE_E2E_VERBOSE=true` to print every saved MCP
+response during a run.
 
 Tracked files contain only harness code and deterministic scenario definitions.
 The server JAR, world, logs, node_modules, MCP state, and credentials remain

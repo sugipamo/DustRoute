@@ -19,5 +19,6 @@
       { "path": "analysis_complete", "equals": false },
       { "path": "signal_liveness.source_counts_by_kind.observation_boundary", "at_least": 1 }
     ]}
-  ]
+  ],
+  "cleanup": ["/fill 379 103 -1 394 106 1 minecraft:air"]
 }

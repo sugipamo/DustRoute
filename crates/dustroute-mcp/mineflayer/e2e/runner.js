@@ -15,8 +15,11 @@ const [host, portText] = serverAddress.split(':')
 const port = Number(portText)
 const version = process.env.DUSTROUTE_MC_VERSION || '1.21.11'
 const selected = new Set(process.argv.slice(2))
+const timeoutMs = Number(process.env.DUSTROUTE_E2E_TIMEOUT_MS || 120000)
+const artifactDir = path.join(root, '.local', 'e2e-artifacts')
 
 if (!/^[A-Za-z0-9_]{1,16}$/.test(playerName)) throw new Error('DUSTROUTE_E2E_PLAYER must be a valid 1-16 character Minecraft name')
+if (!Number.isInteger(timeoutMs) || timeoutMs < 1000 || timeoutMs > 600000) throw new Error('DUSTROUTE_E2E_TIMEOUT_MS must be 1000..600000')
 
 function connectPlayer () {
   return new Promise((resolve, reject) => {
@@ -25,6 +28,8 @@ function connectPlayer () {
     bot.once('spawn', async () => {
       try {
         await bot.waitForChunksToLoad()
+        bot.chat(`/gamemode creative ${playerName}`)
+        await bot.waitForTicks(2)
         clearTimeout(timer)
         resolve(bot)
       } catch (error) { reject(error) }
@@ -43,13 +48,15 @@ async function command (bot, text) {
   await sleep(300)
 }
 
-async function aim (bot, mcp, step) {
+async function aim (bot, mcp, step, footings) {
   const footing = {
     x: Math.floor(step.position.x),
     y: Math.floor(step.position.y) - 1,
     z: Math.floor(step.position.z)
   }
+  footings.push(footing)
   await command(bot, `/setblock ${footing.x} ${footing.y} ${footing.z} minecraft:barrier`)
+  await command(bot, `/gamemode creative ${playerName}`)
   await command(bot, `/tp ${playerName} ${step.position.x} ${step.position.y} ${step.position.z}`)
   await command(bot, `/tp ${assistantName} ${playerName}`)
   bot.creative.startFlying()
@@ -73,31 +80,61 @@ async function aim (bot, mcp, step) {
 
 async function runScenario (bot, mcp, scenario) {
   const results = {}
+  const footings = []
+  let currentStep = -1
+  let primaryError = null
   process.stdout.write(`\n[scenario] ${scenario.name}\n`)
-  for (const step of scenario.steps) {
-    if (step.kind === 'command') {
-      for (const text of step.commands) await command(bot, text)
-    } else if (step.kind === 'aim') {
-      results[step.save || 'gaze'] = await aim(bot, mcp, step)
-    } else if (step.kind === 'mcp') {
-      const args = resolveReferences(step.arguments || {}, results)
-      results[step.save] = await mcp.callTool(step.tool, args)
-      if (process.env.DUSTROUTE_E2E_VERBOSE === 'true') {
-        process.stdout.write(`${JSON.stringify({ step: step.save, result: results[step.save] }, null, 2)}\n`)
+  try {
+    for (const [index, step] of scenario.steps.entries()) {
+      currentStep = index
+      if (step.kind === 'command') {
+        for (const text of step.commands) await command(bot, text)
+      } else if (step.kind === 'aim') {
+        results[step.save || 'gaze'] = await aim(bot, mcp, step, footings)
+      } else if (step.kind === 'mcp') {
+        const args = resolveReferences(step.arguments || {}, results)
+        results[step.save] = await mcp.callTool(step.tool, args)
+        if (process.env.DUSTROUTE_E2E_VERBOSE === 'true') {
+          process.stdout.write(`${JSON.stringify({ step: step.save, result: results[step.save] }, null, 2)}\n`)
+        }
+      } else if (step.kind === 'mcp_error') {
+        const args = resolveReferences(step.arguments || {}, results)
+        results[step.save] = await mcp.callToolRaw(step.tool, args)
+        if (results[step.save].ok !== false) throw new Error(`${step.tool} unexpectedly succeeded`)
+      } else if (step.kind === 'assert') {
+        for (const expectation of step.expect) assertExpectation(results[step.from], expectation)
+      } else if (step.kind === 'wait') {
+        await sleep(step.ticks * 50)
+      } else {
+        throw new Error(`unknown scenario step ${step.kind}`)
       }
-    } else if (step.kind === 'mcp_error') {
-      const args = resolveReferences(step.arguments || {}, results)
-      results[step.save] = await mcp.callToolRaw(step.tool, args)
-      if (results[step.save].ok !== false) throw new Error(`${step.tool} unexpectedly succeeded`)
-    } else if (step.kind === 'assert') {
-      for (const expectation of step.expect) assertExpectation(results[step.from], expectation)
-    } else if (step.kind === 'wait') {
-      await sleep(step.ticks * 50)
-    } else {
-      throw new Error(`unknown scenario step ${step.kind}`)
+    }
+    process.stdout.write(`[pass] ${scenario.name}\n`)
+  } catch (error) {
+    primaryError = error
+    fs.mkdirSync(artifactDir, { recursive: true })
+    const artifact = path.join(artifactDir, `${Date.now()}-${scenario.name}.json`)
+    fs.writeFileSync(artifact, JSON.stringify({
+      scenario: scenario.name,
+      failed_step_index: currentStep,
+      failed_step: scenario.steps[currentStep],
+      error: error.stack || String(error),
+      actor: { position: bot.entity && bot.entity.position, yaw: bot.entity && bot.entity.yaw, pitch: bot.entity && bot.entity.pitch },
+      results,
+      mcp_stderr: mcp.stderr
+    }, null, 2))
+    error.message = `${error.message} (artifact: ${artifact})`
+    error.stack = `${error.stack || error.message}\nArtifact: ${artifact}`
+    throw error
+  } finally {
+    try {
+      for (const text of scenario.cleanup || []) await command(bot, text)
+      for (const footing of footings) await command(bot, `/setblock ${footing.x} ${footing.y} ${footing.z} minecraft:air`)
+    } catch (cleanupError) {
+      if (primaryError) process.stderr.write(`[cleanup] ${scenario.name}: ${cleanupError.stack || cleanupError}\n`)
+      else throw cleanupError
     }
   }
-  process.stdout.write(`[pass] ${scenario.name}\n`)
 }
 
 async function main () {
@@ -108,6 +145,7 @@ async function main () {
   const bot = await connectPlayer()
   const mcp = new McpStdioClient(path.join(root, 'target/debug/dustroute-mcp'), [], {
     cwd: root,
+    timeoutMs,
     env: {
       ...process.env,
       DUSTROUTE_SERVER_ADDRESS: serverAddress,

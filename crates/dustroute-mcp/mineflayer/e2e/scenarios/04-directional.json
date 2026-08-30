@@ -14,5 +14,6 @@
       { "path": "diagnostic.counts.probable_faults", "at_least": 1 },
       { "path": "diagnostic.recommended_next_action.kind", "equals": "inspect_fault" }
     ]}
-  ]
+  ],
+  "cleanup": ["/fill 359 103 -1 365 106 1 minecraft:air"]
 }
