@@ -295,7 +295,21 @@ async function ensureLeverReachable (pos) {
   let distance = bot.entity.position.distanceTo(block.position.offset(0.5, 0.5, 0.5))
   let moved = false
   if (distance > 5.5) {
-    const approach = block.position.offset(0.5, 3, 0.5)
+    let approach = null
+    for (const dy of [2, 3, 4]) {
+      for (const [dx, dz] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]]) {
+        const feet = block.position.offset(dx, dy, dz)
+        const feetBlock = bot.blockAt(feet)
+        const headBlock = bot.blockAt(feet.offset(0, 1, 0))
+        const center = feet.offset(0.5, 0, 0.5)
+        if (feetBlock && headBlock && feetBlock.boundingBox === 'empty' && headBlock.boundingBox === 'empty' && center.distanceTo(block.position.offset(0.5, 0.5, 0.5)) <= 5.5) {
+          approach = center
+          break
+        }
+      }
+      if (approach) break
+    }
+    if (!approach) throw new Error(`no safe air position is available within reach of lever at ${pos.x} ${pos.y} ${pos.z}`)
     bot.chat(`/tp ${bot.username} ${approach.x} ${approach.y} ${approach.z}`)
     await bot.waitForTicks(3)
     bot.creative.startFlying()
