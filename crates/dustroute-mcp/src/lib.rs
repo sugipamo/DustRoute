@@ -22,7 +22,7 @@ pub use dustroute_app::{
 pub use operations::{OperationKind, OperationRecord, OperationRegistry, OperationStatus};
 pub use policy::{McpPolicy, PolicyError};
 pub use selection::{RegionSelection, SelectionError, SelectionSession};
-pub use service::DustRouteMcp;
+pub use service::{DustRouteMcp, ToolProfile};
 pub use transition::{
     TransitionSafety, TransitionSafetyAssessment, TransitionSafetyReason, assess_transition_safety,
     behavior_trace_from_recording, scenario_trace_from_recording,

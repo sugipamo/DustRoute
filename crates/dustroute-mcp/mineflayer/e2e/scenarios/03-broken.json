@@ -1,0 +1,19 @@
+{
+  "name": "broken_wire",
+  "steps": [
+    { "kind": "command", "commands": [
+      "/fill 339 103 -1 345 106 1 minecraft:air",
+      "/fill 340 103 0 343 103 0 minecraft:stone",
+      "/setblock 340 104 0 minecraft:lever[face=floor,facing=east,powered=false]",
+      "/setblock 341 104 0 minecraft:redstone_wire",
+      "/setblock 342 104 0 minecraft:air",
+      "/setblock 343 104 0 minecraft:repeater[facing=west,delay=1,locked=false,powered=false]"
+    ]},
+    { "kind": "aim", "position": { "x": 343.5, "y": 106, "z": 6.5 }, "target": { "x": 343, "y": 104, "z": 0 } },
+    { "kind": "mcp", "tool": "test_looked_at_circuit", "arguments": { "max_components": 64 }, "save": "diagnostic" },
+    { "kind": "assert", "from": "diagnostic", "expect": [
+      { "path": "diagnostic.health", "equals": "degraded" },
+      { "path": "diagnostic.counts.probable_faults", "at_least": 1 }
+    ]}
+  ]
+}

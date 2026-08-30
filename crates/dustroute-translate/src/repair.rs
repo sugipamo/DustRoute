@@ -151,6 +151,42 @@ fn liveness_bridge_repairs(world: &World, circuit: &PhysicalScene) -> Vec<Repair
         Pos::new(0, 0, -1),
     ];
     let mut candidates = BTreeMap::<Pos, (ComponentId, ComponentId)>::new();
+    for finding in report
+        .undriven_inputs
+        .iter()
+        .filter(|finding| finding.failure == crate::DriveFailure::DisconnectedRequiredInput)
+    {
+        let Some(device) = by_id.get(&finding.device) else {
+            continue;
+        };
+        let Some(offset) = device
+            .ports
+            .iter()
+            .find(|port| port.id == finding.input.port)
+            .and_then(|port| port.face.horizontal_offset())
+        else {
+            continue;
+        };
+        let missing = device.pos.offset(offset.x, offset.y, offset.z);
+        if world.kind_at(missing) != BlockKind::Air
+            || !world
+                .get(missing.offset(0, -1, 0))
+                .is_some_and(|block| block.redstone_traits().supports_dust_on_top)
+        {
+            continue;
+        }
+        let live = circuit.components.iter().find(|component| {
+            report.drive_reachable.contains(&component.id)
+                && horizontal
+                    .iter()
+                    .any(|other| missing.offset(other.x, other.y, other.z) == component.pos)
+        });
+        if let Some(live) = live {
+            candidates
+                .entry(missing)
+                .or_insert((finding.device, live.id));
+        }
+    }
     for dead in dead_region {
         let Some(dead_component) = by_id.get(&dead) else {
             continue;
@@ -715,6 +751,39 @@ mod tests {
             proposal.is_none(),
             "an inferred input must not be shorted automatically"
         );
+    }
+
+    #[test]
+    fn bridges_a_disconnected_directional_input_without_an_immediate_source() {
+        let mut world = World::new();
+        for x in 0..=3 {
+            world.set(Pos::new(x, 0, 0), Block::new(BlockKind::Solid));
+        }
+        world.place(BlockKind::Lever, Pos::new(0, 1, 0));
+        world.place(BlockKind::RedstoneWire, Pos::new(1, 1, 0));
+        let repeater = world.place(BlockKind::Repeater, Pos::new(3, 1, 0));
+        repeater.facing = Some(Facing::East);
+        repeater.delay = Some(1);
+        repeater.support_offset = Some(Pos::new(0, -1, 0));
+        update_wire_shapes(&mut world);
+        let analysis = analyze_world_region(
+            &world,
+            RegionBounds::new(Pos::new(-1, -1, -1), Pos::new(4, 3, 1)),
+        );
+        let report = crate::analyze_signal_liveness(&analysis.scene);
+        assert!(report.undriven_inputs.iter().any(|finding| {
+            finding.failure == crate::DriveFailure::DisconnectedRequiredInput
+                && finding.immediate_sources.is_empty()
+        }));
+
+        let proposal = propose_scene_repairs(&world, &analysis.scene, 2)
+            .into_iter()
+            .find(|proposal| {
+                proposal.patch.reason == RepairReason::ConnectMissingWire
+                    && proposal.patch.changes[0].pos == Pos::new(2, 1, 0)
+            })
+            .expect("the missing directional input wire should be repairable");
+        assert!(proposal.impact.is_some_and(RepairImpact::improves));
     }
 
     #[test]

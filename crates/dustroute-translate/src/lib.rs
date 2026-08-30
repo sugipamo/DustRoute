@@ -8,6 +8,7 @@ pub mod cells;
 pub mod circuits;
 pub mod compiler;
 pub mod connectivity;
+pub mod diagnostic;
 pub mod electrical;
 pub mod expr {
     pub use dustroute_ir::expr::*;
@@ -54,6 +55,10 @@ pub use compiler::{BaselineCompileConfig, BaselineCompileResult, BaselineCompile
 pub use connectivity::{
     ConnectivityEdge, EdgeKind, PhysicalConnectivityGraph, PhysicalStep, PhysicalStepKind,
     build_physical_circuit, extract_connectivity, physical_step, physical_step_connected,
+};
+pub use diagnostic::{
+    CircuitDiagnosticReport, CircuitDiagnosticStatus, DiagnosticConfidence, DiagnosticCounts,
+    DiagnosticFinding, DiagnosticHealth, RecommendedAction, RecommendedActionKind, diagnose_scene,
 };
 pub use dustroute_ir::{
     DagBuilder, Expr, GateKind, LogicDag, LogicError, LogicNode, NodeId, best_by_size,

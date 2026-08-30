@@ -17,6 +17,11 @@ The default bot name is `DustRouteBot`. For offline test servers, grant it
 operator permission if region previews should use particles and chat messages.
 The bridge listens only on `127.0.0.1:25580`.
 
+Automated live testing with a second Mineflayer player is documented in
+[`mineflayer/e2e/README.md`](mineflayer/e2e/README.md). It controls player gaze
+and exercises observation, diagnostics, component limits, repair application,
+verification, and undo without requiring a human to enter the world.
+
 ## Start the MCP server
 
 Configure an MCP client to launch:
@@ -32,13 +37,37 @@ server address must be supplied to the Mineflayer process. MCP tools use the
 configured player automatically, so callers normally omit their optional
 `player` argument. An attempt to override it with another player is rejected.
 If that player is online but outside the bot's entity-tracking range, gaze tools
-and `list_visible_players` move only `DustRouteBot` to the configured player,
+and debug-only `get_visible_player` move only `DustRouteBot` to the configured player,
 wait for tracking to resume, and retry once. The observation reports
 `reacquired=true` when this happens. Player names are validated before a
 teleport command is issued; an offline player remains an explicit error.
 
+## Tool naming and profiles
+
+MCP tool names follow a PowerShell-style Verb-Noun contract written as
+`snake_case`. The supported verbs are deliberately small:
+
+- `get` retrieves current state.
+- `resolve` grounds a reference such as player gaze to a circuit.
+- `test` judges health or consistency.
+- `convert_from` reverse-translates Minecraft physics into IR views.
+- `new` creates a non-mutating plan.
+- `show` renders a plan or selection without applying it.
+- `invoke` performs a confirmed world mutation.
+- `undo` returns the immediately changed resource to its prior state.
+- `restore` returns a test resource to its captured baseline.
+- `start`, `stop`, and `get` manage asynchronous operations.
+- `set` and `clear` manage the current region selection.
+
+`DUSTROUTE_MCP_TOOL_PROFILE=default` exposes the 20 tools intended for normal
+LLM collaboration. `debug` additionally exposes low-level gaze/discovery,
+operation history, full plan retrieval, asynchronous conversion control, and
+explicit component-removal planning. Debug tools remain implemented but cannot
+be listed or called in the default profile. Old pre-convention tool names are
+not retained as aliases.
+
 Set `DUSTROUTE_BOT_BRIDGE` to override the local bridge address. Natural-language
-references such as “what is this?” use `analyze_looked_at_circuit`. One call
+references such as “what is this?” use `convert_from_looked_at_circuit`. One call
 returns the focused physical component, its local signal role, recognized
 AND/OR/NOT-style gates, traceable expressions, optional whole-circuit function
 candidates, observation completeness, diagnostics, and non-mutating repairs.
@@ -47,10 +76,11 @@ can continue from explanation to validation without rediscovering or rescanning
 the circuit.
 Set `include_truth_table=true` only when a small circuit explicitly needs a
 truth table; local hierarchical inspection is the default. Explicit regions continue to
-use `discover_looked_at_circuit` or `mark_region_corner`, `preview_region`, and
-`analyze_selected_region`.
+use two `set_region_corner` calls, `show_selected_region`, and
+`convert_from_selected_region`. Debug clients may call
+`resolve_looked_at_circuit` directly.
 
-For observation debugging, `inspect_looked_at_world` starts near the block the
+For observation debugging, `get_looked_at_world` starts near the block the
 player is looking at and progressively follows adjacent redstone components
 without applying circuit inference. There is no caller-selected scan radius.
 Expansion ends when the component frontier is exhausted or `max_components`
@@ -59,10 +89,10 @@ Expansion ends when the component frontier is exhausted or `max_components`
 fragment. The result includes exact block-name and block-state-property counts,
 the targeted block, raw redstone states, truncation, and expansion completeness.
 Use `include_block_list=true` only when the non-air listing is needed; both raw
-lists are bounded by `max_listed_blocks`. `discover_looked_at_circuit` and
-`analyze_looked_at_circuit` use the same component-limited expansion.
+lists are bounded by `max_listed_blocks`. `resolve_looked_at_circuit` and
+`convert_from_looked_at_circuit` use the same component-limited expansion.
 
-`analyze_looked_at_circuit` reports a physical-first hierarchy. Observed facts
+`convert_from_looked_at_circuit` reports a physical-first hierarchy. Observed facts
 become a directed physical graph, recognized local cells, traceable logic
 expressions, and finally optional functional candidates. Every stage reports
 its own completeness and unresolved count while retaining physical component
@@ -80,6 +110,41 @@ inferred bare input is therefore reported separately from a genuine fault and
 is not used by itself as evidence for an automatic repair. This catches
 directional failures that Union-Find connectivity alone cannot detect without
 shorting independent inputs together.
+
+For conversational entry points, call `test_looked_at_circuit` first. It is
+a read-only fast path: it discovers the connected components around the
+player's gaze, skips truth-table inference, repair enumeration, and transition
+scenario generation, and returns `dustroute.diagnostic.v1`. The response places
+`diagnostic.health`, typed `diagnostic.counts`, ranked `diagnostic.findings`, and
+one `diagnostic.recommended_next_action` ahead of detailed evidence. Use
+`convert_from_looked_at_circuit` only when higher-level logical interpretation or
+repair/transition proposals are actually needed.
+
+Example response shape:
+
+```json
+{
+  "schema_version": "dustroute.diagnostic.v1",
+  "analysis_mode": "focused_fast",
+  "mutation_performed": false,
+  "diagnostic": {
+    "health": "degraded",
+    "observation_complete": true,
+    "counts": {
+      "healthy": 32,
+      "awaiting_external_input": 3,
+      "probable_faults": 1,
+      "unsupported": 0,
+      "incomplete_observation": 0
+    },
+    "recommended_next_action": {
+      "kind": "inspect_fault",
+      "position": { "x": 45, "y": 104, "z": 8 },
+      "requires_confirmation": false
+    }
+  }
+}
+```
 
 Analysis responses preserve the focused block's original namespaced identifier
 and complete block-state map. `block_capabilities` groups every observed circuit
@@ -109,7 +174,7 @@ matching pulse contract becomes `intentional_pulse`.
 The intended conversational workflow is:
 
 ```text
-analyze_looked_at_circuit
+convert_from_looked_at_circuit
   -> explain physical evidence, local role, and provisional higher roles
   -> choose a returned transition scenario or repair proposal
   -> preview the exact region or block diff
@@ -118,11 +183,12 @@ analyze_looked_at_circuit
   -> report the post-operation re-analysis
 ```
 
-Long analyses can use `start_selected_region_analysis`, `get_operation`, and
-`cancel_operation`. `preview_compiled_circuit` returns a block diff, collisions,
+In the debug profile, long conversions can use
+`start_selected_region_conversion`, `get_operation`, and `stop_operation`.
+`new_circuit_placement` returns a block diff, collisions,
 material counts, an operation UUID, and an exact undo plan without changing the
 world. When `DUSTROUTE_READ_ONLY=false`, an explicitly confirmed plan can be
-written with `apply_placement_plan`; `undo_placement_plan` restores the captured
+written with `invoke_circuit_placement`; `undo_circuit_placement` restores the captured
 blocks.
 
 ## Transition scenarios
@@ -133,13 +199,13 @@ restoration. The initial workflow supports one normal lever activation at a
 time:
 
 ```text
-propose_transition_scenarios
-  -> preview_transition_scenario
+new_transition_test
+  -> show_transition_test
   -> explicit player confirmation
-  -> run_transition_scenario(confirm=true)
+  -> invoke_transition_test(confirm=true)
   -> block-update trace, transient assessment, and Rust-simulator comparison
   -> automatic lever and region restoration verification
-  -> restore_transition_scenario(confirm=true), if recovery is needed
+  -> restore_transition_test(confirm=true), if recovery is needed
 ```
 
 The bridge uses Mineflayer's normal block activation rather than changing a
@@ -158,7 +224,7 @@ retained rather than silently treated as electrical mismatches.
 
 ## Physical repair workflow
 
-After selecting and previewing a region, `propose_repairs` ranks partial physical
+After selecting and previewing a region, `new_repair_plan` ranks partial physical
 patches for missing wire, missing support, and directional component problems.
 Each proposal includes coordinates, evidence, confidence, a virtual before/after
 impact, and an operation UUID. Virtual impact includes traversal-group and
@@ -174,10 +240,10 @@ updates and block shape, then retreats 16 blocks above the repaired area and
 hovers. Post-write block-state and circuit verification still run normally.
 
 ```text
-propose_repairs
-  -> preview_repair
+new_repair_plan
+  -> show_repair_plan
   -> explicit player confirmation
-  -> apply_repair(confirm=true)
+  -> invoke_repair(confirm=true)
   -> automatic block-state rescan and circuit re-analysis
   -> undo_repair(confirm=true), when needed
 ```
@@ -189,7 +255,7 @@ comparison. This comparison describes whether behavior changed relative to the
 observed pre-repair circuit; it does not by itself prove the user's intended
 function.
 A suspected short cannot be inferred safely from geometry alone;
-`propose_targeted_component_removal` is available only for a component the
+Debug-only `new_component_removal_plan` is available only for a component the
 player explicitly identifies while looking at it.
 
 ## Safety configuration

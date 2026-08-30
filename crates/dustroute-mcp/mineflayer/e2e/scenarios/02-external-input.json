@@ -1,0 +1,17 @@
+{
+  "name": "external_input_waiting",
+  "steps": [
+    { "kind": "command", "commands": [
+      "/fill 319 103 -1 323 106 1 minecraft:air",
+      "/fill 320 103 0 321 103 0 minecraft:stone",
+      "/setblock 321 104 0 minecraft:repeater[facing=west,delay=1,locked=false,powered=false]",
+      "/setblock 320 104 0 minecraft:redstone_wire"
+    ]},
+    { "kind": "aim", "position": { "x": 321.5, "y": 106, "z": 6.5 }, "target": { "x": 321, "y": 104, "z": 0 } },
+    { "kind": "mcp", "tool": "test_looked_at_circuit", "arguments": { "max_components": 64 }, "save": "diagnostic" },
+    { "kind": "assert", "from": "diagnostic", "expect": [
+      { "path": "diagnostic.counts.awaiting_external_input", "at_least": 1 },
+      { "path": "diagnostic.counts.probable_faults", "equals": 0 }
+    ]}
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "name": "component_limit",
+  "steps": [
+    { "kind": "command", "commands": [
+      "/fill 379 103 -1 394 106 1 minecraft:air",
+      "/fill 380 103 0 391 103 0 minecraft:stone",
+      "/fill 380 104 0 390 104 0 minecraft:redstone_wire",
+      "/setblock 391 104 0 minecraft:repeater[facing=east,delay=1,locked=false,powered=false]"
+    ]},
+    { "kind": "aim", "position": { "x": 391.5, "y": 106, "z": 6.5 }, "target": { "x": 391, "y": 104, "z": 0 } },
+    { "kind": "mcp", "tool": "test_looked_at_circuit", "arguments": { "max_components": 3 }, "save": "diagnostic" },
+    { "kind": "assert", "from": "diagnostic", "expect": [
+      { "path": "diagnostic.observation_complete", "equals": false },
+      { "path": "diagnostic.health", "equals": "incomplete" },
+      { "path": "diagnostic.recommended_next_action.kind", "equals": "expand_observation" }
+    ]}
+  ]
+}

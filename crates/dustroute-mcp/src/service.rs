@@ -31,6 +31,31 @@ use crate::{
 
 const MAX_FLAT_ANALYSIS_COMPONENTS: usize = 128;
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ToolProfile {
+    Default,
+    Debug,
+}
+
+impl ToolProfile {
+    fn from_environment() -> Self {
+        match std::env::var("DUSTROUTE_MCP_TOOL_PROFILE").as_deref() {
+            Ok("debug") => Self::Debug,
+            _ => Self::Default,
+        }
+    }
+}
+
+const DEBUG_ONLY_TOOLS: [&str; 7] = [
+    "get_visible_player",
+    "get_player_gaze",
+    "resolve_looked_at_circuit",
+    "get_circuit_placement",
+    "new_component_removal_plan",
+    "start_selected_region_conversion",
+    "stop_operation",
+];
+
 #[derive(Clone)]
 pub struct DustRouteMcp {
     bridge: BotBridge,
@@ -116,6 +141,16 @@ struct AnalyzeLookedAtParams {
 }
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
+struct DiagnoseLookedAtParams {
+    /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
+    player: Option<String>,
+    /// Maximum redstone components followed from the gaze target. Defaults to 8192.
+    max_components: Option<usize>,
+    /// Maximum Manhattan gap considered when discovering broken fragments. Defaults to 2.
+    fragment_gap: Option<u32>,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
 struct PreviewPlacementParams {
     /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
     player: Option<String>,
@@ -133,7 +168,7 @@ struct OperationParams {
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 struct ConfirmedOperationParams {
-    /// Operation UUID returned by preview_compiled_circuit.
+    /// Operation UUID returned by new_circuit_placement.
     operation_id: String,
     /// Must be true to acknowledge that this call changes the test world.
     confirm: bool,
@@ -227,7 +262,7 @@ struct ProposeRepairsParams {
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 struct PreviewRepairParams {
-    /// Repair operation UUID returned by propose_repairs.
+    /// Repair operation UUID returned by new_repair_plan.
     operation_id: String,
     /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
     player: Option<String>,
@@ -798,11 +833,26 @@ impl DustRouteMcp {
 
     #[must_use]
     pub fn with_policy(bridge_address: impl Into<String>, policy: McpPolicy) -> Self {
+        Self::with_policy_and_profile(bridge_address, policy, ToolProfile::from_environment())
+    }
+
+    #[must_use]
+    pub fn with_policy_and_profile(
+        bridge_address: impl Into<String>,
+        policy: McpPolicy,
+        profile: ToolProfile,
+    ) -> Self {
+        let mut tool_router = Self::tool_router();
+        if profile == ToolProfile::Default {
+            for tool in DEBUG_ONLY_TOOLS {
+                tool_router.disable_route(tool.to_owned());
+            }
+        }
         Self {
             bridge: BotBridge::new(bridge_address),
             selections: Arc::new(Mutex::new(HashMap::new())),
             selection_dimensions: Arc::new(Mutex::new(HashMap::new())),
-            tool_router: Self::tool_router(),
+            tool_router,
             prompt_router: Self::prompt_router(),
             plans: Arc::new(Mutex::new(HashMap::new())),
             plan_dimensions: Arc::new(Mutex::new(HashMap::new())),
@@ -1538,7 +1588,7 @@ impl DustRouteMcp {
         description = "Get the visible Minecraft bot connection status",
         annotations(read_only_hint = true, destructive_hint = false)
     )]
-    async fn server_status(&self) -> String {
+    async fn get_bot_status(&self) -> String {
         match self.bridge.status().await {
             Ok(status) => json_text(json!({
                 "ok": true,
@@ -1555,7 +1605,7 @@ impl DustRouteMcp {
         description = "List players visible to the Minecraft bot. If the configured assist player is outside tracking range, move only the bot to that player and retry.",
         annotations(read_only_hint = true, destructive_hint = false)
     )]
-    async fn list_visible_players(&self) -> String {
+    async fn get_visible_player(&self) -> String {
         match self.bridge.visible_players().await {
             Ok(mut players) => {
                 let mut reacquire_error = None;
@@ -1593,7 +1643,7 @@ impl DustRouteMcp {
         description = "Observe a player's eye position, gaze direction, and targeted block",
         annotations(read_only_hint = true, destructive_hint = false)
     )]
-    async fn observe_player(&self, Parameters(params): Parameters<ObserveParams>) -> String {
+    async fn get_player_gaze(&self, Parameters(params): Parameters<ObserveParams>) -> String {
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
             Err(error) => return json_text(json!({ "ok": false, "error": error })),
@@ -1618,7 +1668,7 @@ impl DustRouteMcp {
         description = "Inspect raw Minecraft blocks by starting near the block a player is looking at and progressively following adjacent redstone components. Expansion stops naturally at the circuit edge or explicitly at max_components; no scan radius is required.",
         annotations(read_only_hint = true, destructive_hint = false)
     )]
-    async fn inspect_looked_at_world(
+    async fn get_looked_at_world(
         &self,
         Parameters(params): Parameters<InspectLookedAtWorldParams>,
     ) -> String {
@@ -1729,7 +1779,7 @@ impl DustRouteMcp {
     #[tool(
         description = "Mark the first or second region corner at the block a player is looking at"
     )]
-    async fn mark_region_corner(&self, Parameters(params): Parameters<MarkCornerParams>) -> String {
+    async fn set_region_corner(&self, Parameters(params): Parameters<MarkCornerParams>) -> String {
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
             Err(error) => return json_text(json!({ "ok": false, "error": error })),
@@ -1793,7 +1843,7 @@ impl DustRouteMcp {
     #[tool(
         description = "Infer the bounds of 'this circuit' by progressively following adjacent redstone from the block a player is looking at, stopping at the circuit edge or max_components"
     )]
-    async fn discover_looked_at_circuit(
+    async fn resolve_looked_at_circuit(
         &self,
         Parameters(params): Parameters<DiscoverCircuitParams>,
     ) -> String {
@@ -1862,7 +1912,7 @@ impl DustRouteMcp {
             2,
             fragment_gap,
             padding,
-            max_components,
+            usize::MAX,
         ) {
             Ok(discovery) => discovery,
             Err(error) => {
@@ -1894,7 +1944,80 @@ impl DustRouteMcp {
             "warning": scan.limit_reached.then_some(
                 "the circuit exceeds the component limit; analysis is incomplete"
             ),
-            "next_step": "call preview_region and ask the player to confirm the highlighted candidate"
+            "next_step": "call show_selected_region and ask the player to confirm the highlighted candidate"
+        }))
+    }
+
+    #[tool(
+        description = "Quickly diagnose the circuit around the player's gaze. Returns a compact health summary, typed findings, evidence, and one safe recommended next action without generating repairs or changing the world",
+        annotations(read_only_hint = true, destructive_hint = false)
+    )]
+    async fn test_looked_at_circuit(
+        &self,
+        Parameters(params): Parameters<DiagnoseLookedAtParams>,
+    ) -> String {
+        let player = match self.resolve_player(params.player.as_deref()) {
+            Ok(player) => player,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+        };
+        let discovery_text = self
+            .resolve_looked_at_circuit(Parameters(DiscoverCircuitParams {
+                player: Some(player.clone()),
+                max_components: params.max_components,
+                padding: Some(1),
+                fragment_gap: Some(params.fragment_gap.unwrap_or(2)),
+            }))
+            .await;
+        let discovery: Value = match serde_json::from_str(&discovery_text) {
+            Ok(value) => value,
+            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        };
+        if discovery.get("ok") != Some(&Value::Bool(true)) {
+            return discovery_text;
+        }
+        let target = match serde_json::from_value::<Pos>(discovery["candidate"]["seed"].clone()) {
+            Ok(target) => target,
+            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        };
+        let (bounds, dimension) = match self.selected_region(&player).await {
+            Ok(region) => region,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+        };
+        let snapshot = match self
+            .bridge
+            .scan_region(bounds.min, bounds.max, &dimension)
+            .await
+        {
+            Ok(snapshot) => snapshot,
+            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        };
+        let snapshot_json = match serde_json::to_string(&snapshot) {
+            Ok(snapshot) => snapshot,
+            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        };
+        let (_, world) = match world_from_snapshot_json(&snapshot_json) {
+            Ok(result) => result,
+            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        };
+        let mut analysis = dustroute_translate::analyze_world_region(&world, bounds);
+        analysis.scene.observation.dimension = dimension;
+        let complete = discovery["expansion"]["limit_reached"] != Value::Bool(true);
+        let diagnostic =
+            dustroute_translate::diagnose_scene(&analysis.scene, Some(target), complete);
+        json_text(json!({
+            "ok": true,
+            "schema_version": "dustroute.diagnostic.v1",
+            "analysis_mode": "focused_fast",
+            "mutation_performed": false,
+            "target": target,
+            "bounds": bounds_json(bounds),
+            "expansion": discovery["expansion"],
+            "diagnostic": diagnostic,
+            "detail_tools": {
+                "full_conversion": "convert_from_looked_at_circuit",
+                "raw_observation": "get_looked_at_world",
+                "repair_planning": "new_repair_plan"
+            }
         }))
     }
 
@@ -1902,7 +2025,7 @@ impl DustRouteMcp {
         description = "Start the complete gaze-grounded workflow for questions such as 'what is this?': discover the connected circuit, explain physical/local/higher roles, and return non-mutating transition scenarios and repair proposals",
         annotations(read_only_hint = true, destructive_hint = false)
     )]
-    async fn analyze_looked_at_circuit(
+    async fn convert_from_looked_at_circuit(
         &self,
         Parameters(params): Parameters<AnalyzeLookedAtParams>,
     ) -> String {
@@ -1912,7 +2035,7 @@ impl DustRouteMcp {
         };
         let fragment_gap = params.fragment_gap.unwrap_or(2);
         let discovery_text = self
-            .discover_looked_at_circuit(Parameters(DiscoverCircuitParams {
+            .resolve_looked_at_circuit(Parameters(DiscoverCircuitParams {
                 player: Some(player.clone()),
                 max_components: params.max_components,
                 padding: Some(1),
@@ -2004,6 +2127,15 @@ impl DustRouteMcp {
                 Some(target),
             );
             if let Some(object) = result.as_object_mut() {
+                object.insert(
+                    "diagnostic".to_owned(),
+                    serde_json::to_value(dustroute_translate::diagnose_scene(
+                        &analysis.scene,
+                        Some(target),
+                        discovery["expansion"]["limit_reached"] != Value::Bool(true),
+                    ))
+                    .unwrap_or(Value::Null),
+                );
                 object.insert("repair_proposals".to_owned(), Value::Array(repair_json));
                 object.insert(
                     "repair_guidance".to_owned(),
@@ -2017,7 +2149,7 @@ impl DustRouteMcp {
                     json!({
                         "safety": transition_safety,
                         "proposals": transition_proposals,
-                        "next_step": "preview_transition_scenario before requesting confirmation"
+                        "next_step": "show_transition_test before requesting confirmation"
                     }),
                 );
             }
@@ -2082,6 +2214,15 @@ impl DustRouteMcp {
         let incomplete = discovery["expansion"]["limit_reached"] == Value::Bool(true);
         let mut result = reverse_result_json(bounds, translated);
         if let Some(object) = result.as_object_mut() {
+            object.insert(
+                "diagnostic".to_owned(),
+                serde_json::to_value(dustroute_translate::diagnose_scene(
+                    &translated.analysis.scene,
+                    Some(target),
+                    !incomplete,
+                ))
+                .unwrap_or(Value::Null),
+            );
             object.insert("focused_component".to_owned(), focused);
             object.insert("discovery".to_owned(), discovery["candidate"].clone());
             object.insert("analysis_complete".to_owned(), Value::Bool(!incomplete));
@@ -2091,7 +2232,7 @@ impl DustRouteMcp {
                 json!({
                     "safety": transition_safety,
                     "proposals": transition_proposals,
-                    "next_step": "preview_transition_scenario before requesting confirmation"
+                    "next_step": "show_transition_test before requesting confirmation"
                 }),
             );
             object.insert(
@@ -2109,7 +2250,7 @@ impl DustRouteMcp {
     #[tool(
         description = "Compile a built-in circuit at a player's gaze target and return a block diff, collisions, materials, operation ID, and exact undo plan without changing the world"
     )]
-    async fn preview_compiled_circuit(
+    async fn new_circuit_placement(
         &self,
         Parameters(params): Parameters<PreviewPlacementParams>,
     ) -> String {
@@ -2220,7 +2361,7 @@ impl DustRouteMcp {
             "next_step": if self.policy.read_only {
                 "review this plan; writes are disabled by policy"
             } else {
-                "review this plan, obtain explicit player confirmation, then call apply_placement_plan with confirm=true"
+                "review this plan, obtain explicit player confirmation, then call invoke_circuit_placement with confirm=true"
             }
         });
         self.plans.lock().await.insert(operation_id, plan);
@@ -2242,7 +2383,10 @@ impl DustRouteMcp {
         description = "Retrieve the complete placement and exact undo plan by operation ID",
         annotations(read_only_hint = true, destructive_hint = false)
     )]
-    async fn get_placement_plan(&self, Parameters(params): Parameters<OperationParams>) -> String {
+    async fn get_circuit_placement(
+        &self,
+        Parameters(params): Parameters<OperationParams>,
+    ) -> String {
         let operation_id = match uuid::Uuid::parse_str(&params.operation_id) {
             Ok(id) => id,
             Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
@@ -2259,7 +2403,7 @@ impl DustRouteMcp {
         description = "Apply a previously previewed placement plan to the test world. Requires confirm=true and write-enabled policy.",
         annotations(read_only_hint = false, destructive_hint = true)
     )]
-    async fn apply_placement_plan(
+    async fn invoke_circuit_placement(
         &self,
         Parameters(params): Parameters<ConfirmedOperationParams>,
     ) -> String {
@@ -2270,7 +2414,7 @@ impl DustRouteMcp {
         description = "Restore the exact blocks captured before an applied placement plan. Requires confirm=true and write-enabled policy.",
         annotations(read_only_hint = false, destructive_hint = true)
     )]
-    async fn undo_placement_plan(
+    async fn undo_circuit_placement(
         &self,
         Parameters(params): Parameters<ConfirmedOperationParams>,
     ) -> String {
@@ -2280,7 +2424,7 @@ impl DustRouteMcp {
     #[tool(
         description = "Show the player's selected region in the Minecraft world before analysis or mutation"
     )]
-    async fn preview_region(&self, Parameters(params): Parameters<PlayerParams>) -> String {
+    async fn show_selected_region(&self, Parameters(params): Parameters<PlayerParams>) -> String {
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
             Err(error) => return json_text(json!({ "ok": false, "error": error })),
@@ -2310,7 +2454,7 @@ impl DustRouteMcp {
     #[tool(
         description = "Scan and reverse-translate the region previously selected with the player's gaze"
     )]
-    async fn analyze_selected_region(
+    async fn convert_from_selected_region(
         &self,
         Parameters(params): Parameters<PlayerParams>,
     ) -> String {
@@ -2378,7 +2522,7 @@ impl DustRouteMcp {
     #[tool(
         description = "Diagnose the selected physical circuit and create ranked, non-mutating partial repair plans"
     )]
-    async fn propose_repairs(
+    async fn new_repair_plan(
         &self,
         Parameters(params): Parameters<ProposeRepairsParams>,
     ) -> String {
@@ -2456,14 +2600,14 @@ impl DustRouteMcp {
             "fragments": fragments_before,
             "proposal_count": response.len(),
             "proposals": response,
-            "next_step": "review a proposal, call preview_repair, ask for explicit confirmation, then call apply_repair with confirm=true"
+            "next_step": "review a proposal, call show_repair_plan, ask for explicit confirmation, then call invoke_repair with confirm=true"
         }))
     }
 
     #[tool(
         description = "Create a low-confidence removal repair for the redstone component the player is looking at. Use only when the player explicitly identifies it as an unwanted connection."
     )]
-    async fn propose_targeted_component_removal(
+    async fn new_component_removal_plan(
         &self,
         Parameters(params): Parameters<PlayerParams>,
     ) -> String {
@@ -2534,12 +2678,15 @@ impl DustRouteMcp {
             "operation_id": operation_id,
             "proposal": proposal,
             "warning": "removal intent cannot be inferred from geometry alone; preview and explicit confirmation are required",
-            "next_step": "call preview_repair, then apply_repair with confirm=true only after confirmation"
+            "next_step": "call show_repair_plan, then invoke_repair with confirm=true only after confirmation"
         }))
     }
 
     #[tool(description = "Highlight the blocks affected by a proposed partial repair")]
-    async fn preview_repair(&self, Parameters(params): Parameters<PreviewRepairParams>) -> String {
+    async fn show_repair_plan(
+        &self,
+        Parameters(params): Parameters<PreviewRepairParams>,
+    ) -> String {
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
             Err(error) => return json_text(json!({ "ok": false, "error": error })),
@@ -2575,7 +2722,7 @@ impl DustRouteMcp {
                     "bounds": bounds_json(bounds),
                     "patch": plan.patch,
                     "preview": preview,
-                    "next_step": "obtain explicit player confirmation before apply_repair"
+                    "next_step": "obtain explicit player confirmation before invoke_repair"
                 }))
             }
             Err(error) => json_text(json!({ "ok": false, "error": error.to_string() })),
@@ -2586,7 +2733,7 @@ impl DustRouteMcp {
         description = "Apply a previewed partial repair and verify the resulting blocks. Requires confirm=true.",
         annotations(read_only_hint = false, destructive_hint = true)
     )]
-    async fn apply_repair(
+    async fn invoke_repair(
         &self,
         Parameters(params): Parameters<ConfirmedOperationParams>,
     ) -> String {
@@ -2608,7 +2755,7 @@ impl DustRouteMcp {
         description = "Discover single-lever transition scenarios around the player's gaze without changing the world",
         annotations(read_only_hint = true, destructive_hint = false)
     )]
-    async fn propose_transition_scenarios(
+    async fn new_transition_test(
         &self,
         Parameters(params): Parameters<ProposeTransitionParams>,
     ) -> String {
@@ -2628,7 +2775,7 @@ impl DustRouteMcp {
             }));
         }
         let discovery_text = self
-            .discover_looked_at_circuit(Parameters(DiscoverCircuitParams {
+            .resolve_looked_at_circuit(Parameters(DiscoverCircuitParams {
                 player: Some(player.clone()),
                 max_components: params.max_components,
                 padding: Some(1),
@@ -2679,7 +2826,7 @@ impl DustRouteMcp {
             "bounds": bounds_json(bounds),
             "dimension": dimension,
             "proposals": proposals,
-            "next_step": "preview_transition_scenario, then run_transition_scenario(confirm=true) only for a ready proposal"
+            "next_step": "show_transition_test, then invoke_transition_test(confirm=true) only for a ready proposal"
         }))
     }
 
@@ -2687,7 +2834,7 @@ impl DustRouteMcp {
         description = "Highlight a proposed lever transition and observation region without activating it",
         annotations(read_only_hint = true, destructive_hint = false)
     )]
-    async fn preview_transition_scenario(
+    async fn show_transition_test(
         &self,
         Parameters(params): Parameters<PreviewTransitionParams>,
     ) -> String {
@@ -2732,7 +2879,7 @@ impl DustRouteMcp {
         description = "Run a previewed single-lever transition, record block updates, analyze transients, and restore the original state",
         annotations(read_only_hint = false, destructive_hint = true)
     )]
-    async fn run_transition_scenario(
+    async fn invoke_transition_test(
         &self,
         Parameters(params): Parameters<RunTransitionParams>,
     ) -> String {
@@ -2760,7 +2907,7 @@ impl DustRouteMcp {
         };
         if self.policy.preview_required && !plan.previewed {
             return json_text(
-                json!({ "ok": false, "error": "preview_transition_scenario is required first" }),
+                json!({ "ok": false, "error": "show_transition_test is required first" }),
             );
         }
         if plan.executed {
@@ -2960,21 +3107,10 @@ impl DustRouteMcp {
     }
 
     #[tool(
-        description = "Get a transition scenario proposal or completed run result",
-        annotations(read_only_hint = true, destructive_hint = false)
-    )]
-    async fn get_transition_result(
-        &self,
-        Parameters(params): Parameters<OperationParams>,
-    ) -> String {
-        self.get_operation(Parameters(params)).await
-    }
-
-    #[tool(
         description = "Attempt to restore a transition scenario lever and verify its original region snapshot",
         annotations(read_only_hint = false, destructive_hint = true)
     )]
-    async fn restore_transition_scenario(
+    async fn restore_transition_test(
         &self,
         Parameters(params): Parameters<RunTransitionParams>,
     ) -> String {
@@ -3061,7 +3197,7 @@ impl DustRouteMcp {
     #[tool(
         description = "Start cancellable reverse analysis of the selected region and return an operation ID for progress polling"
     )]
-    async fn start_selected_region_analysis(
+    async fn start_selected_region_conversion(
         &self,
         Parameters(params): Parameters<PlayerParams>,
     ) -> String {
@@ -3184,7 +3320,7 @@ impl DustRouteMcp {
             "ok": true,
             "operation_id": operation_id,
             "status": "queued",
-            "next_step": "poll get_operation; call cancel_operation if the analysis is no longer needed"
+            "next_step": "poll get_operation; call stop_operation if the conversion is no longer needed"
         }))
     }
 
@@ -3203,16 +3339,8 @@ impl DustRouteMcp {
         }
     }
 
-    #[tool(
-        description = "List analysis and placement-preview operation history",
-        annotations(read_only_hint = true, destructive_hint = false)
-    )]
-    async fn list_operations(&self) -> String {
-        json_text(json!({ "ok": true, "operations": self.operations.list().await }))
-    }
-
     #[tool(description = "Cancel a queued or running DustRoute operation")]
-    async fn cancel_operation(&self, Parameters(params): Parameters<OperationParams>) -> String {
+    async fn stop_operation(&self, Parameters(params): Parameters<OperationParams>) -> String {
         let operation_id = match uuid::Uuid::parse_str(&params.operation_id) {
             Ok(id) => id,
             Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
@@ -3247,7 +3375,7 @@ impl DustRouteMcp {
     async fn collaboration_prompt(&self) -> GetPromptResult {
         GetPromptResult::new(vec![PromptMessage::new_text(
             Role::User,
-            "Work with the player on a Minecraft redstone circuit. For questions about what the bot can literally see, scan coverage, or raw block states, call inspect_looked_at_world before applying circuit inference. Interpret 'this', 'here', 'what is this?', and similar circuit questions through analyze_looked_at_circuit. Treat its response as a workflow: first explain the focused physical component and local signal role; then explain higher-level candidates with completeness and evidence; then offer either a returned transition scenario or repair proposal. For a transition, call preview_transition_scenario, explain exactly which lever and region will be touched, obtain explicit confirmation, then call run_transition_scenario with confirm=true; report both the live trace and Rust-simulator differences, and verify restoration. For a repair, call preview_repair, explain the block diff, obtain explicit confirmation, call apply_repair with confirm=true, and report the post-repair reanalysis and semantic verification. If analysis_complete is false, label higher-level classification provisional. For an explicitly selected region, use discover_looked_at_circuit or two mark_region_corner calls, preview_region, and analyze_selected_region. Only call propose_targeted_component_removal when the player explicitly identifies the looked-at component as unwanted. Never infer coordinates from prose when gaze tools can ground them, and never mutate the world without preview and explicit confirmation.".to_owned(),
+            "Work with the player on a Minecraft redstone circuit. Follow the DustRoute PowerShell-style Verb-Noun contract expressed as snake_case. Use get_looked_at_world for literal visibility, test_looked_at_circuit for compact circuit health, and convert_from_looked_at_circuit only when higher-level logic or plans are needed. Treat inferred external inputs as informational, not automatic repair evidence. New operations only create plans; show operations render previews; invoke operations change the world and require explicit confirmation; undo or restore operations recover prior state. For a transition, call show_transition_test, explain exactly which lever and region will be touched, obtain explicit confirmation, then call invoke_transition_test with confirm=true; report both the live trace and Rust-simulator differences, and verify restoration. For a repair, call show_repair_plan, explain the block diff, obtain explicit confirmation, call invoke_repair with confirm=true, and report the post-repair reanalysis. If observation_complete is false, expand observation before higher-level claims. For an explicitly selected region, use two set_region_corner calls, show_selected_region, and convert_from_selected_region. Never infer coordinates from prose when gaze tools can ground them, and never mutate the world without preview and explicit confirmation.".to_owned(),
         )])
         .with_description("Safe gaze-grounded DustRoute collaboration workflow")
     }
@@ -3268,7 +3396,7 @@ impl ServerHandler for DustRouteMcp {
             env!("CARGO_PKG_VERSION"),
         ))
         .with_instructions(
-            "Use the collaborate-on-redstone-circuit prompt. Use inspect_looked_at_world for raw visibility questions and analyze_looked_at_circuit to begin the explanation, transition-test, or repair workflow. Present evidence and completeness before higher-level claims. Preview every transition or repair, obtain explicit confirmation before mutation, and report live-versus-simulated or post-repair verification afterward."
+            "Use the collaborate-on-redstone-circuit prompt. Use get_looked_at_world for raw visibility, test_looked_at_circuit for compact health, and convert_from_looked_at_circuit for deeper logic or planning. The naming contract is get/resolve/test/convert_from/new/show/invoke/undo/restore/start/stop/clear. New creates a plan, show previews it, and invoke requires explicit confirmation before mutation."
         )
     }
 }
@@ -3293,9 +3421,45 @@ mod tests {
         let ContentBlock::Text(text) = &prompt.messages[0].content else {
             panic!("expected text prompt");
         };
-        assert!(text.text.contains("discover_looked_at_circuit"));
-        assert!(text.text.contains("preview_region"));
+        assert!(text.text.contains("get_looked_at_world"));
+        assert!(text.text.contains("test_looked_at_circuit"));
+        assert!(text.text.contains("show_selected_region"));
         assert!(text.text.contains("confirmation"));
+    }
+
+    #[test]
+    fn tool_profiles_keep_low_level_operations_out_of_the_default_surface() {
+        let default = DustRouteMcp::with_policy_and_profile(
+            "127.0.0.1:1",
+            McpPolicy::default(),
+            ToolProfile::Default,
+        );
+        let debug = DustRouteMcp::with_policy_and_profile(
+            "127.0.0.1:1",
+            McpPolicy::default(),
+            ToolProfile::Debug,
+        );
+        let default_names = default
+            .tool_router
+            .list_all()
+            .into_iter()
+            .map(|tool| tool.name.to_string())
+            .collect::<BTreeSet<_>>();
+        let debug_names = debug
+            .tool_router
+            .list_all()
+            .into_iter()
+            .map(|tool| tool.name.to_string())
+            .collect::<BTreeSet<_>>();
+
+        assert_eq!(default_names.len(), 20);
+        assert_eq!(debug_names.len(), 27);
+        assert!(default_names.contains("test_looked_at_circuit"));
+        assert!(default_names.contains("invoke_repair"));
+        for name in DEBUG_ONLY_TOOLS {
+            assert!(!default_names.contains(name), "{name}");
+            assert!(debug_names.contains(name), "{name}");
+        }
     }
 
     #[tokio::test]
@@ -3340,22 +3504,28 @@ mod tests {
         let client = ClientInfo::default().serve(client_transport).await.unwrap();
         let tools = client.list_tools(None).await.unwrap();
         assert!(
-            tools
+            !tools
                 .tools
                 .iter()
-                .any(|tool| tool.name == "discover_looked_at_circuit")
+                .any(|tool| tool.name == "resolve_looked_at_circuit")
         );
         assert!(
             tools
                 .tools
                 .iter()
-                .any(|tool| tool.name == "analyze_looked_at_circuit")
+                .any(|tool| tool.name == "convert_from_looked_at_circuit")
         );
         assert!(
             tools
                 .tools
                 .iter()
-                .any(|tool| tool.name == "inspect_looked_at_world")
+                .any(|tool| tool.name == "test_looked_at_circuit")
+        );
+        assert!(
+            tools
+                .tools
+                .iter()
+                .any(|tool| tool.name == "get_looked_at_world")
         );
         let prompts = client.list_prompts(None).await.unwrap();
         assert!(
@@ -3365,7 +3535,7 @@ mod tests {
                 .any(|prompt| prompt.name == "collaborate-on-redstone-circuit")
         );
         let result = client
-            .call_tool(CallToolRequestParams::new("server_status"))
+            .call_tool(CallToolRequestParams::new("get_bot_status"))
             .await
             .unwrap();
         let ContentBlock::Text(text) = &result.content[0] else {
@@ -3443,7 +3613,7 @@ mod tests {
             .unwrap();
             let result = client
                 .call_tool(
-                    CallToolRequestParams::new("mark_region_corner").with_arguments(arguments),
+                    CallToolRequestParams::new("set_region_corner").with_arguments(arguments),
                 )
                 .await
                 .unwrap();
@@ -3452,7 +3622,7 @@ mod tests {
             };
             assert!(text.text.contains("\"ok\": true"));
         }
-        for tool in ["preview_region", "analyze_selected_region"] {
+        for tool in ["show_selected_region", "convert_from_selected_region"] {
             let arguments = serde_json::Map::new();
             let result = client
                 .call_tool(CallToolRequestParams::new(tool).with_arguments(arguments))
@@ -3472,7 +3642,7 @@ mod tests {
         let service =
             DustRouteMcp::with_policy_and_player("127.0.0.1:1", McpPolicy::default(), "builder");
         let result = service
-            .observe_player(Parameters(ObserveParams {
+            .get_player_gaze(Parameters(ObserveParams {
                 player: Some("someone_else".to_owned()),
                 max_distance: None,
             }))
@@ -3530,7 +3700,7 @@ mod tests {
         let service =
             DustRouteMcp::with_policy_and_player(address, McpPolicy::default(), "builder");
         let result = service
-            .analyze_looked_at_circuit(Parameters(AnalyzeLookedAtParams {
+            .convert_from_looked_at_circuit(Parameters(AnalyzeLookedAtParams {
                 player: None,
                 max_components: Some(64),
                 fragment_gap: Some(2),
@@ -3561,6 +3731,75 @@ mod tests {
         assert!(value["physical"]["block_capabilities"]["groups"].is_array());
         assert!(value["stages"]["physical_scene"].is_object());
         assert!(value["transition_scenarios"]["safety"].is_object());
+        assert_eq!(value["diagnostic"]["observation_complete"], true);
+        assert!(value["diagnostic"]["counts"].is_object());
+        assert!(value["diagnostic"]["recommended_next_action"].is_object());
+    }
+
+    #[tokio::test]
+    async fn focused_diagnostic_returns_a_compact_read_only_contract() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap().to_string();
+        let bridge = tokio::spawn(async move {
+            loop {
+                let (mut stream, _) = listener.accept().await.unwrap();
+                let mut request = String::new();
+                BufReader::new(&mut stream)
+                    .read_line(&mut request)
+                    .await
+                    .unwrap();
+                let request: Value = serde_json::from_str(&request).unwrap();
+                let result = match request["method"].as_str().unwrap() {
+                    "observe_player" => json!({
+                        "player": "builder",
+                        "eye_position": { "x": 0.5, "y": 3.0, "z": 0.5 },
+                        "yaw": 0.0,
+                        "pitch": -1.0,
+                        "targeted_block": { "x": 1, "y": 1, "z": 0 },
+                        "targeted_face": "up",
+                        "distance": 2.0,
+                        "dimension": "minecraft:overworld"
+                    }),
+                    "scan_region" => json!({
+                        "min": request["params"]["min"],
+                        "max": request["params"]["max"],
+                        "blocks": [
+                            { "pos": { "x": 0, "y": 0, "z": 0 }, "name": "minecraft:stone", "properties": {} },
+                            { "pos": { "x": 1, "y": 0, "z": 0 }, "name": "minecraft:stone", "properties": {} },
+                            { "pos": { "x": 0, "y": 1, "z": 0 }, "name": "minecraft:redstone_wire", "properties": { "east": "side", "power": "0" } },
+                            { "pos": { "x": 1, "y": 1, "z": 0 }, "name": "minecraft:repeater", "properties": { "facing": "west", "delay": "1", "powered": "false" } }
+                        ]
+                    }),
+                    method => panic!("unexpected fake bridge method {method}"),
+                };
+                stream
+                    .write_all(
+                        format!("{}\n", json!({ "id": request["id"], "result": result }))
+                            .as_bytes(),
+                    )
+                    .await
+                    .unwrap();
+            }
+        });
+        let service =
+            DustRouteMcp::with_policy_and_player(address, McpPolicy::default(), "builder");
+        let result = service
+            .test_looked_at_circuit(Parameters(DiagnoseLookedAtParams {
+                player: None,
+                max_components: Some(64),
+                fragment_gap: Some(2),
+            }))
+            .await;
+        bridge.abort();
+
+        let value: Value = serde_json::from_str(&result).unwrap();
+        assert_eq!(value["ok"], true, "{result}");
+        assert_eq!(value["schema_version"], "dustroute.diagnostic.v1");
+        assert_eq!(value["analysis_mode"], "focused_fast");
+        assert_eq!(value["mutation_performed"], false);
+        assert!(value["diagnostic"]["counts"].is_object());
+        assert!(value["diagnostic"]["findings"].is_array());
+        assert!(value["diagnostic"]["recommended_next_action"].is_object());
     }
 
     #[tokio::test]
@@ -3619,7 +3858,7 @@ mod tests {
 
         let proposed: Value = serde_json::from_str(
             &service
-                .propose_repairs(Parameters(ProposeRepairsParams {
+                .new_repair_plan(Parameters(ProposeRepairsParams {
                     player: None,
                     max_gap: Some(2),
                 }))
@@ -3633,14 +3872,14 @@ mod tests {
             .to_owned();
 
         let preview = service
-            .preview_repair(Parameters(PreviewRepairParams {
+            .show_repair_plan(Parameters(PreviewRepairParams {
                 operation_id: operation_id.clone(),
                 player: None,
             }))
             .await;
         assert!(preview.contains("\"ok\": true"));
         let applied = service
-            .apply_repair(Parameters(ConfirmedOperationParams {
+            .invoke_repair(Parameters(ConfirmedOperationParams {
                 operation_id: operation_id.clone(),
                 confirm: true,
             }))

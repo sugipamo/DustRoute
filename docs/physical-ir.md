@@ -88,7 +88,7 @@ state and proposed placement state from being confused at API boundaries.
 
 ## MCP contract
 
-`analyze_looked_at_circuit` returns, in order of authority:
+`convert_from_looked_at_circuit` returns, in order of authority:
 
 1. observation completeness and focused physical component;
 2. local signal role and recognized gates;

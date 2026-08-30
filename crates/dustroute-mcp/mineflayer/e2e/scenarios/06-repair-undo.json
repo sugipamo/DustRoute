@@ -1,0 +1,30 @@
+{
+  "name": "repair_and_undo",
+  "steps": [
+    { "kind": "command", "commands": [
+      "/fill 399 103 -1 405 106 1 minecraft:air",
+      "/fill 400 103 0 403 103 0 minecraft:stone",
+      "/setblock 400 104 0 minecraft:lever[face=floor,facing=east,powered=false]",
+      "/setblock 401 104 0 minecraft:redstone_wire",
+      "/setblock 402 104 0 minecraft:air",
+      "/setblock 403 104 0 minecraft:repeater[facing=west,delay=1,locked=false,powered=false]"
+    ]},
+    { "kind": "aim", "position": { "x": 403.5, "y": 106, "z": 6.5 }, "target": { "x": 403, "y": 104, "z": 0 } },
+    { "kind": "mcp", "tool": "convert_from_looked_at_circuit", "arguments": { "max_components": 64, "fragment_gap": 2 }, "save": "analysis" },
+    { "kind": "assert", "from": "analysis", "expect": [
+      { "path": "diagnostic.counts.probable_faults", "at_least": 1 },
+      { "path": "repair_proposals.0.operation_id", "exists": true }
+    ]},
+    { "kind": "mcp", "tool": "show_repair_plan", "arguments": { "operation_id": "${analysis.repair_proposals.0.operation_id}" }, "save": "preview" },
+    { "kind": "mcp", "tool": "invoke_repair", "arguments": { "operation_id": "${analysis.repair_proposals.0.operation_id}", "confirm": true }, "save": "applied" },
+    { "kind": "mcp", "tool": "test_looked_at_circuit", "arguments": { "max_components": 64 }, "save": "after" },
+    { "kind": "assert", "from": "after", "expect": [
+      { "path": "diagnostic.counts.probable_faults", "equals": 0 }
+    ]},
+    { "kind": "mcp", "tool": "undo_repair", "arguments": { "operation_id": "${analysis.repair_proposals.0.operation_id}", "confirm": true }, "save": "undone" },
+    { "kind": "mcp", "tool": "test_looked_at_circuit", "arguments": { "max_components": 64 }, "save": "restored" },
+    { "kind": "assert", "from": "restored", "expect": [
+      { "path": "diagnostic.counts.probable_faults", "at_least": 1 }
+    ]}
+  ]
+}
