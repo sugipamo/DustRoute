@@ -471,4 +471,34 @@ mod tests {
         );
         assert!(compare_scenario_traces(&simulated.trace, &live).is_empty());
     }
+
+    #[test]
+    fn captured_repeater_lock_difference_remains_visible() {
+        let scenario: Scenario = serde_json::from_str(include_str!(
+            "../tests/fixtures/repeater_lock_scenario.json"
+        ))
+        .unwrap();
+        let recording: UpdateRecording = serde_json::from_str(include_str!(
+            "../tests/fixtures/repeater_lock_live_recording.json"
+        ))
+        .unwrap();
+        let simulated = run_scenario(&scenario).unwrap();
+        let live = scenario_trace_from_recording(
+            &recording,
+            &scenario.observe,
+            scenario.duration_redstone_ticks,
+        );
+        let differences = compare_scenario_traces(&simulated.trace, &live);
+
+        assert!(differences.iter().any(|difference| matches!(
+            difference,
+            ScenarioDifference::FinalPowered { position, expected: true, actual: false }
+                if *position == Pos::new(2, 1, 1)
+        )));
+        assert!(differences.iter().any(|difference| matches!(
+            difference,
+            ScenarioDifference::EventCount { expected, actual }
+                if expected > actual
+        )));
+    }
 }
