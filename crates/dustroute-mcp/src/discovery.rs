@@ -65,8 +65,8 @@ pub fn discover_connected_region(
     padding: i32,
     max_nodes: usize,
 ) -> Result<CircuitDiscovery, DiscoveryError> {
-    let seed_component = analysis
-        .physical
+    let verified = analysis.scene.verified_topology();
+    let seed_component = verified
         .components
         .iter()
         .filter(|component| component.block.kind.is_redstone_related())
@@ -76,17 +76,13 @@ pub fn discover_connected_region(
         })
         .min_by_key(|(distance, component)| (*distance, component.pos))
         .ok_or(DiscoveryError::NoRedstoneNearTarget)?;
-    let seed_fragment = analysis
-        .physical
+    let seed_fragment = verified
         .fragments
         .iter()
         .find(|fragment| fragment.components.contains(&seed_component.1.id))
         .ok_or(DiscoveryError::NoRedstoneNearTarget)?;
-    let fragments = analysis
-        .physical
-        .discover_nearby_fragments(seed_fragment.id, fragment_gap);
-    let component_ids: BTreeSet<_> = analysis
-        .physical
+    let fragments = verified.discover_nearby_fragments(seed_fragment.id, fragment_gap);
+    let component_ids: BTreeSet<_> = verified
         .fragments
         .iter()
         .filter(|fragment| fragments.contains(&fragment.id))
@@ -95,15 +91,13 @@ pub fn discover_connected_region(
     if component_ids.len() > max_nodes {
         return Err(DiscoveryError::NodeLimitExceeded { limit: max_nodes });
     }
-    let nodes: BTreeSet<_> = analysis
-        .physical
+    let nodes: BTreeSet<_> = verified
         .components
         .iter()
         .filter(|component| component_ids.contains(&component.id))
         .map(|component| component.pos)
         .collect();
-    let gap_candidate_count = analysis
-        .physical
+    let gap_candidate_count = verified
         .gap_candidates(fragment_gap)
         .iter()
         .filter(|candidate| {
@@ -198,7 +192,7 @@ mod tests {
         let found = discover_connected_region(&analysis, Pos::new(0, 1, 0), 1, 2, 0, 100).unwrap();
         assert_eq!(found.fragment_count, 2);
         assert_eq!(found.gap_candidate_count, 1);
-        assert_eq!(analysis.physical.fragments.len(), 2);
+        assert_eq!(analysis.scene.fragments.len(), 2);
         assert_eq!(found.bounds.max.x, 4);
     }
 }

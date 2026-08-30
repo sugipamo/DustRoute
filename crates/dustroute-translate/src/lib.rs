@@ -67,12 +67,12 @@ pub use multinet::{
     RipupRoutingResult, RoutedNet, RoutingJob, materialize_multinet, route_jobs_ripup,
     route_net_tree, validate_routing_legality,
 };
-pub use physical::{CellId, Endpoint, PhysicalCircuit, PhysicalError, Route, RouteId};
+pub use physical::{CellId, Endpoint, PhysicalError, PlacementCircuit, Route, RouteId};
 pub use port_realization::{
     PortRealization, PortRealizationError, realize_sink_endpoint, realize_source_endpoint,
     terminal_for_endpoint,
 };
-pub use repair::{propose_component_removal, propose_physical_repairs};
+pub use repair::{propose_scene_component_removal, propose_scene_repairs};
 pub use routing::{
     RouteNotFound, RouteResult, RouterConfig, astar_route, insert_repeaters, materialize_route,
 };
@@ -87,5 +87,6 @@ pub use wire::{dust_connected, infer_wire_connection, update_wire_shapes, wire_h
 pub use world_reverse::{
     InferredTerminal, InferredTruthTable, RegionAnalysis, RegionBounds, SignalComponent,
     SignalDiagnostics, TerminalConfidence, TruthTableComparison, TruthTableError, TruthTableRow,
-    analyze_world_region, compare_truth_tables, infer_output_expressions, infer_truth_table,
+    analyze_world_region, analyze_world_region_in_dimension, compare_truth_tables,
+    infer_output_expressions, infer_truth_table,
 };

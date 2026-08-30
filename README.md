@@ -11,8 +11,8 @@ Rust is the canonical and only supported implementation.
 The workspace is split by responsibility:
 
 ```text
-dustroute-physical   canonical blocks, verified connections, nets, and fragments
-dustroute-ir         cross-abstraction Signal/Logic IRs and transformations
+dustroute-physical   canonical PhysicalScene observations, ports, evidence, nets, and fragments
+dustroute-ir         derived Gate/Expression/Functional views and transformations
 dustroute-model      compatibility facade during the crate migration
 dustroute-translate  forward and reverse translation
 dustroute-optimize   placement and semantic rewrite optimization
@@ -22,7 +22,10 @@ dustroute-cli        command-line integration
 ```
 
 `dustroute-physical` is the source of truth for observed Minecraft circuits.
-Only verified physical connections are unioned into nets. Nearby disconnected
+`PhysicalScene` records typed ports, evidence, scan frontiers, and incomplete
+observations. Only verified conductive connections are unioned into nets;
+verified functional connections form fragments without merging distinct signal
+nets across directional devices. Nearby disconnected
 fragments are discovered separately as gap candidates and are never unioned by
 proximity alone. `dustroute-ir` owns abstraction changes used to project the
 physical circuit into signal and logical views. `dustroute-model` temporarily
@@ -30,7 +33,9 @@ re-exports both crates so existing consumers can migrate incrementally.
 
 `dustroute-translate` exposes `Translator::forward`, `Translator::reverse`, and
 `Translator::verify` as its stable facade. Reverse results carry the canonical
-physical circuit alongside the older signal and behavior projections.
+physical scene alongside traceable gate, expression, functional, signal, and
+behavior views. The forward placement graph is explicitly named
+`PlacementCircuit`; it is not an observation of the Minecraft world.
 
 `dustroute-mcp` is the intended primary user interface. It connects to a visible
 Mineflayer player and grounds natural-language references in a player's gaze.
@@ -55,14 +60,18 @@ For reverse analysis the ownership direction is physical-first:
 
 ```text
 observed Minecraft blocks
-  -> verified physical connections
-  -> Union-Find nets and disconnected fragments
-  -> optional Signal / Logic / Behavior projections
+  -> PhysicalScene and observation frontiers
+  -> typed ports and evidence-backed directed connections
+  -> conductive nets and verified functional fragments
+  -> GateView -> ExpressionView -> optional FunctionalView
 ```
 
 The upper layers help an LLM and user understand the circuit; they do not
 replace the observed physical representation as the source of truth.
 
+Gate and expression views retain physical component IDs and can represent
+partial, conflicting, and boundary-limited recognition. Functional labels such
+as half adders are optional metadata over the lower-level gates and expressions.
 Signal projections retain physical component IDs, positions, verified edge
 evidence, and device delays. Behavior projections describe repeaters, torches,
 comparators, pistons, delayed traces, and feedback patterns such as clock and

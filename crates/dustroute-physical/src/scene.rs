@@ -1,0 +1,629 @@
+use std::collections::{BTreeMap, BTreeSet};
+
+use serde::{Deserialize, Serialize};
+
+use crate::{
+    Block, BlockKind, ComponentId, ConnectionKind, Facing, PhysicalComponent, PhysicalFragment,
+    PhysicalNet, Pos, VerifiedTopology, WireConnection,
+};
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct Observation {
+    pub dimension: String,
+    pub regions: Vec<ObservedRegion>,
+    pub frontier: Vec<ObservationFrontier>,
+}
+
+impl Observation {
+    #[must_use]
+    pub fn complete(dimension: impl Into<String>, bounds: SceneBounds) -> Self {
+        Self {
+            dimension: dimension.into(),
+            regions: vec![ObservedRegion {
+                bounds,
+                completeness: RegionCompleteness::Complete,
+            }],
+            frontier: Vec::new(),
+        }
+    }
+
+    #[must_use]
+    pub fn is_complete(&self) -> bool {
+        self.frontier.is_empty()
+            && self
+                .regions
+                .iter()
+                .all(|region| region.completeness == RegionCompleteness::Complete)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct SceneBounds {
+    pub min: Pos,
+    pub max: Pos,
+}
+
+impl SceneBounds {
+    #[must_use]
+    pub const fn new(a: Pos, b: Pos) -> Self {
+        Self {
+            min: Pos::new(min(a.x, b.x), min(a.y, b.y), min(a.z, b.z)),
+            max: Pos::new(max(a.x, b.x), max(a.y, b.y), max(a.z, b.z)),
+        }
+    }
+
+    #[must_use]
+    pub const fn contains(self, pos: Pos) -> bool {
+        pos.x >= self.min.x
+            && pos.x <= self.max.x
+            && pos.y >= self.min.y
+            && pos.y <= self.max.y
+            && pos.z >= self.min.z
+            && pos.z <= self.max.z
+    }
+}
+
+const fn min(a: i32, b: i32) -> i32 {
+    if a < b { a } else { b }
+}
+
+const fn max(a: i32, b: i32) -> i32 {
+    if a > b { a } else { b }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct ObservedRegion {
+    pub bounds: SceneBounds,
+    pub completeness: RegionCompleteness,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RegionCompleteness {
+    Complete,
+    OpenBoundary,
+    MissingChunks,
+    PartiallyUnavailable,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct ObservationFrontier {
+    pub position: Pos,
+    pub direction: Facing,
+    pub reason: FrontierReason,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum FrontierReason {
+    ConnectedComponentContinues,
+    ChunkUnavailable,
+    ScanLimitReached,
+    PolicyBoundary,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub struct PortId(pub u8);
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub struct PortRef {
+    pub component: ComponentId,
+    pub port: PortId,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct PhysicalPort {
+    pub id: PortId,
+    pub role: PortRole,
+    pub face: Facing,
+    pub channel: PortChannel,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PortRole {
+    Input,
+    Output,
+    Bidirectional,
+    Control,
+    Support,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PortChannel {
+    RedstoneSignal,
+    WeakPower,
+    StrongPower,
+    Mechanical,
+    Structural,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct SceneComponent {
+    pub id: ComponentId,
+    pub pos: Pos,
+    pub block: Block,
+    pub ports: Vec<PhysicalPort>,
+    pub support: Option<SupportRelation>,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct SupportRelation {
+    pub support_position: Pos,
+    pub valid: bool,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct PortConnection {
+    pub source: PortRef,
+    pub sink: PortRef,
+    pub transfer: TransferKind,
+    pub confidence: Confidence,
+    pub evidence: Vec<PhysicalEvidence>,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TransferKind {
+    DustPropagation,
+    DirectSignal,
+    WeakPower,
+    StrongPower,
+    DirectionalDevice,
+    SideControl,
+    StructuralSupport,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Confidence {
+    Low,
+    Medium,
+    High,
+    Certain,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum PhysicalEvidence {
+    AdjacentBlocks {
+        source: Pos,
+        sink: Pos,
+    },
+    BlockFacing {
+        component: ComponentId,
+        facing: Facing,
+    },
+    WireShape {
+        component: ComponentId,
+        toward: Facing,
+        shape: WireConnection,
+    },
+    Support {
+        component: ComponentId,
+        support: Pos,
+    },
+    MinecraftRule {
+        rule: String,
+    },
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum PhysicalDiagnostic {
+    OpenObservationBoundary {
+        frontier: ObservationFrontier,
+    },
+    InvalidSupport {
+        component: ComponentId,
+        expected: Pos,
+    },
+    AmbiguousConnection {
+        components: [ComponentId; 2],
+        reason: String,
+    },
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct PhysicalScene {
+    pub observation: Observation,
+    pub components: Vec<SceneComponent>,
+    pub connections: Vec<PortConnection>,
+    pub nets: Vec<PhysicalNet>,
+    pub fragments: Vec<PhysicalFragment>,
+    pub diagnostics: Vec<PhysicalDiagnostic>,
+}
+
+impl PhysicalScene {
+    #[must_use]
+    pub fn from_topology(observation: Observation, topology: &VerifiedTopology) -> Self {
+        let components = topology
+            .components
+            .iter()
+            .map(|component| scene_component(component, topology))
+            .collect::<Vec<_>>();
+        let by_id = components
+            .iter()
+            .map(|component| (component.id, component))
+            .collect::<BTreeMap<_, _>>();
+        let connections = topology
+            .connections
+            .iter()
+            .filter_map(|connection| port_connection(connection, &by_id))
+            .collect();
+        let mut diagnostics = observation
+            .frontier
+            .iter()
+            .cloned()
+            .map(|frontier| PhysicalDiagnostic::OpenObservationBoundary { frontier })
+            .collect::<Vec<_>>();
+        diagnostics.extend(components.iter().filter_map(|component| {
+            component
+                .support
+                .filter(|support| !support.valid)
+                .map(|support| PhysicalDiagnostic::InvalidSupport {
+                    component: component.id,
+                    expected: support.support_position,
+                })
+        }));
+        Self {
+            observation,
+            components,
+            connections,
+            nets: topology.nets.clone(),
+            fragments: topology.fragments.clone(),
+            diagnostics,
+        }
+    }
+
+    #[must_use]
+    pub fn component_at(&self, pos: Pos) -> Option<&SceneComponent> {
+        self.components
+            .iter()
+            .find(|component| component.pos == pos)
+    }
+
+    #[must_use]
+    pub fn open_frontier_components(&self) -> BTreeSet<ComponentId> {
+        self.observation
+            .frontier
+            .iter()
+            .filter_map(|frontier| self.component_at(frontier.position).map(|item| item.id))
+            .collect()
+    }
+
+    /// Compatibility projection for algorithms that have not yet migrated to
+    /// port endpoints. The scene remains authoritative.
+    #[must_use]
+    pub fn verified_topology(&self) -> VerifiedTopology {
+        let components = self
+            .components
+            .iter()
+            .map(|component| PhysicalComponent {
+                id: component.id,
+                pos: component.pos,
+                block: component.block.clone(),
+            })
+            .collect::<Vec<_>>();
+        let connections = self
+            .connections
+            .iter()
+            .map(|connection| crate::PhysicalConnection {
+                source: connection.source.component,
+                sink: connection.sink.component,
+                kind: match connection.transfer {
+                    TransferKind::DustPropagation => ConnectionKind::Dust,
+                    TransferKind::DirectSignal => ConnectionKind::DirectSource,
+                    TransferKind::WeakPower => ConnectionKind::WeakPower,
+                    TransferKind::StrongPower => ConnectionKind::StrongPower,
+                    TransferKind::DirectionalDevice => ConnectionKind::DirectionalOutput,
+                    TransferKind::SideControl => ConnectionKind::Control,
+                    TransferKind::StructuralSupport => ConnectionKind::Support,
+                },
+            });
+        VerifiedTopology::from_parts(components, connections)
+    }
+}
+
+fn scene_component(component: &PhysicalComponent, topology: &VerifiedTopology) -> SceneComponent {
+    let support = component
+        .block
+        .support_pos(component.pos)
+        .map(|support_position| {
+            let valid = topology.components.iter().any(|candidate| {
+                candidate.pos == support_position
+                    && candidate.block.kind.properties().supports_components
+            });
+            SupportRelation {
+                support_position,
+                valid,
+            }
+        });
+    SceneComponent {
+        id: component.id,
+        pos: component.pos,
+        block: component.block.clone(),
+        ports: ports_for(&component.block),
+        support,
+    }
+}
+
+fn ports_for(block: &Block) -> Vec<PhysicalPort> {
+    let mut ports = Vec::new();
+    let mut push = |role, face, channel| {
+        ports.push(PhysicalPort {
+            id: PortId(ports.len() as u8),
+            role,
+            face,
+            channel,
+        });
+    };
+    let horizontal = [Facing::North, Facing::East, Facing::South, Facing::West];
+    match block.kind {
+        BlockKind::RedstoneWire => {
+            for face in horizontal {
+                push(PortRole::Bidirectional, face, PortChannel::RedstoneSignal);
+            }
+            push(
+                PortRole::Bidirectional,
+                Facing::Up,
+                PortChannel::RedstoneSignal,
+            );
+            push(
+                PortRole::Bidirectional,
+                Facing::Down,
+                PortChannel::RedstoneSignal,
+            );
+            push(PortRole::Support, Facing::Down, PortChannel::Structural);
+        }
+        BlockKind::Repeater | BlockKind::Comparator => {
+            let facing = block.facing.unwrap_or(Facing::North);
+            push(PortRole::Output, facing, PortChannel::RedstoneSignal);
+            push(
+                PortRole::Input,
+                facing.opposite(),
+                PortChannel::RedstoneSignal,
+            );
+            for face in horizontal
+                .into_iter()
+                .filter(|face| *face != facing && *face != facing.opposite())
+            {
+                push(PortRole::Control, face, PortChannel::RedstoneSignal);
+            }
+            push(PortRole::Support, Facing::Down, PortChannel::Structural);
+        }
+        BlockKind::RedstoneTorch => {
+            for face in horizontal {
+                push(PortRole::Output, face, PortChannel::RedstoneSignal);
+            }
+            push(PortRole::Control, Facing::Down, PortChannel::RedstoneSignal);
+        }
+        BlockKind::Lever | BlockKind::RedstoneBlock => {
+            for face in horizontal {
+                push(PortRole::Output, face, PortChannel::StrongPower);
+            }
+        }
+        BlockKind::Piston => {
+            for face in horizontal {
+                push(PortRole::Input, face, PortChannel::RedstoneSignal);
+            }
+            push(
+                PortRole::Output,
+                block.facing.unwrap_or(Facing::North),
+                PortChannel::Mechanical,
+            );
+        }
+        BlockKind::Solid | BlockKind::Transparent => {
+            for face in [
+                Facing::North,
+                Facing::East,
+                Facing::South,
+                Facing::West,
+                Facing::Up,
+                Facing::Down,
+            ] {
+                push(PortRole::Bidirectional, face, PortChannel::WeakPower);
+            }
+        }
+        BlockKind::Air => {}
+    }
+    ports
+}
+
+fn port_connection(
+    connection: &crate::PhysicalConnection,
+    components: &BTreeMap<ComponentId, &SceneComponent>,
+) -> Option<PortConnection> {
+    let source = components.get(&connection.source)?;
+    let sink = components.get(&connection.sink)?;
+    let source_face = facing_between(source.pos, sink.pos)?;
+    let sink_face = source_face.opposite();
+    let source_port = select_port(source, source_face, true, connection.kind)?;
+    let sink_port = select_port(sink, sink_face, false, connection.kind)?;
+    let mut evidence = vec![PhysicalEvidence::AdjacentBlocks {
+        source: source.pos,
+        sink: sink.pos,
+    }];
+    if let Some(facing) = source.block.facing {
+        evidence.push(PhysicalEvidence::BlockFacing {
+            component: source.id,
+            facing,
+        });
+    }
+    if let Some(shape) = source
+        .block
+        .wire_connections
+        .as_ref()
+        .and_then(|connections| connections.get(&source_face))
+        .copied()
+    {
+        evidence.push(PhysicalEvidence::WireShape {
+            component: source.id,
+            toward: source_face,
+            shape,
+        });
+    }
+    if let Some(shape) = sink
+        .block
+        .wire_connections
+        .as_ref()
+        .and_then(|connections| connections.get(&sink_face))
+        .copied()
+    {
+        evidence.push(PhysicalEvidence::WireShape {
+            component: sink.id,
+            toward: sink_face,
+            shape,
+        });
+    }
+    evidence.push(PhysicalEvidence::MinecraftRule {
+        rule: match connection.kind {
+            ConnectionKind::Dust => "java.redstone.dust_connection",
+            ConnectionKind::WeakPower => "java.redstone.weak_power",
+            ConnectionKind::StrongPower => "java.redstone.strong_power",
+            ConnectionKind::DirectionalInput => "java.redstone.directional_input",
+            ConnectionKind::DirectionalOutput => "java.redstone.directional_output",
+            ConnectionKind::DirectSource => "java.redstone.direct_source",
+            ConnectionKind::Control => "java.redstone.side_or_support_control",
+            ConnectionKind::Support => "java.block.structural_support",
+        }
+        .to_owned(),
+    });
+    Some(PortConnection {
+        source: PortRef {
+            component: source.id,
+            port: source_port.id,
+        },
+        sink: PortRef {
+            component: sink.id,
+            port: sink_port.id,
+        },
+        transfer: transfer_kind(connection.kind),
+        confidence: Confidence::Certain,
+        evidence,
+    })
+}
+
+fn select_port(
+    component: &SceneComponent,
+    face: Facing,
+    outgoing: bool,
+    kind: ConnectionKind,
+) -> Option<&PhysicalPort> {
+    component.ports.iter().find(|port| {
+        port.face == face
+            && match kind {
+                ConnectionKind::Support => port.channel == PortChannel::Structural,
+                ConnectionKind::Control if outgoing => {
+                    matches!(port.role, PortRole::Output | PortRole::Bidirectional)
+                }
+                ConnectionKind::Control => port.role == PortRole::Control,
+                _ if outgoing => matches!(port.role, PortRole::Output | PortRole::Bidirectional),
+                _ => matches!(
+                    port.role,
+                    PortRole::Input | PortRole::Bidirectional | PortRole::Control
+                ),
+            }
+    })
+}
+
+const fn transfer_kind(kind: ConnectionKind) -> TransferKind {
+    match kind {
+        ConnectionKind::Dust => TransferKind::DustPropagation,
+        ConnectionKind::WeakPower => TransferKind::WeakPower,
+        ConnectionKind::StrongPower => TransferKind::StrongPower,
+        ConnectionKind::DirectionalInput | ConnectionKind::DirectionalOutput => {
+            TransferKind::DirectionalDevice
+        }
+        ConnectionKind::DirectSource => TransferKind::DirectSignal,
+        ConnectionKind::Control => TransferKind::SideControl,
+        ConnectionKind::Support => TransferKind::StructuralSupport,
+    }
+}
+
+fn facing_between(source: Pos, sink: Pos) -> Option<Facing> {
+    match (sink.x - source.x, sink.y - source.y, sink.z - source.z) {
+        (1, 0, 0) => Some(Facing::East),
+        (-1, 0, 0) => Some(Facing::West),
+        (0, 1, 0) => Some(Facing::Up),
+        (0, -1, 0) => Some(Facing::Down),
+        (0, 0, 1) => Some(Facing::South),
+        (0, 0, -1) => Some(Facing::North),
+        _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{PhysicalComponent, PhysicalConnection};
+
+    #[test]
+    fn repeater_ports_preserve_direction_and_physical_origin() {
+        let wire = PhysicalComponent {
+            id: ComponentId(0),
+            pos: Pos::new(0, 1, 0),
+            block: Block::new(BlockKind::RedstoneWire),
+        };
+        let mut repeater_block = Block::new(BlockKind::Repeater);
+        repeater_block.facing = Some(Facing::East);
+        let repeater = PhysicalComponent {
+            id: ComponentId(1),
+            pos: Pos::new(1, 1, 0),
+            block: repeater_block,
+        };
+        let topology = VerifiedTopology::from_parts(
+            vec![wire, repeater],
+            [PhysicalConnection {
+                source: ComponentId(0),
+                sink: ComponentId(1),
+                kind: ConnectionKind::DirectionalInput,
+            }],
+        );
+        let scene = PhysicalScene::from_topology(
+            Observation::complete(
+                "minecraft:overworld",
+                SceneBounds::new(Pos::new(0, 0, 0), Pos::new(2, 2, 0)),
+            ),
+            &topology,
+        );
+        assert_eq!(scene.connections.len(), 1);
+        let repeater = scene.component_at(Pos::new(1, 1, 0)).unwrap();
+        assert!(
+            repeater
+                .ports
+                .iter()
+                .any(|port| port.role == PortRole::Input && port.face == Facing::West)
+        );
+        assert!(
+            repeater
+                .ports
+                .iter()
+                .any(|port| port.role == PortRole::Output && port.face == Facing::East)
+        );
+    }
+
+    #[test]
+    fn open_boundary_is_not_reported_as_a_complete_scene() {
+        let frontier = ObservationFrontier {
+            position: Pos::new(0, 1, 0),
+            direction: Facing::West,
+            reason: FrontierReason::ScanLimitReached,
+        };
+        let observation = Observation {
+            dimension: "minecraft:overworld".to_owned(),
+            regions: vec![ObservedRegion {
+                bounds: SceneBounds::new(Pos::new(0, 0, 0), Pos::new(2, 2, 2)),
+                completeness: RegionCompleteness::OpenBoundary,
+            }],
+            frontier: vec![frontier],
+        };
+        let scene = PhysicalScene::from_topology(observation, &VerifiedTopology::default());
+        assert!(!scene.observation.is_complete());
+        assert!(matches!(
+            scene.diagnostics[0],
+            PhysicalDiagnostic::OpenObservationBoundary { .. }
+        ));
+    }
+}

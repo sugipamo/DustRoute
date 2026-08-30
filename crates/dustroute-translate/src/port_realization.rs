@@ -71,13 +71,13 @@ pub fn realize_source_endpoint(
 
 #[cfg(test)]
 mod tests {
-    use crate::physical::PhysicalCircuit;
+    use crate::physical::PlacementCircuit;
 
     use super::*;
 
     #[test]
     fn block_power_targets_external_conductor() {
-        let endpoint = PhysicalCircuit::boundary(
+        let endpoint = PlacementCircuit::boundary(
             "a",
             Pos::new(10, 2, 4),
             PortKind::BlockPower,

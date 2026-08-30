@@ -8,7 +8,7 @@ use crate::multinet::{
     LegalityReport, MultiNetError, MultiNetRouting, NetId, RipupRoutingError, RoutingJob,
     materialize_multinet, route_jobs_ripup, validate_routing_legality,
 };
-use crate::physical::{CellId, PhysicalCircuit, PhysicalError};
+use crate::physical::{CellId, PhysicalError, PlacementCircuit};
 use crate::port_realization::PortRealizationError;
 use crate::routing::RouterConfig;
 use crate::world::{Pos, World};
@@ -38,7 +38,7 @@ impl Default for BaselineCompileConfig {
 pub struct BaselineCompileResult {
     pub abstract_dag: LogicDag,
     pub primitive_dag: LogicDag,
-    pub physical: PhysicalCircuit,
+    pub physical: PlacementCircuit,
     pub routing: MultiNetRouting,
     pub world: World,
     pub node_to_cell: BTreeMap<NodeId, CellId>,
@@ -113,7 +113,7 @@ impl BaselineCompiler {
         let primitive = abstract_dag.lower_xor()?;
         let origins =
             fanout_aware_origins(&primitive, self.config.spacing_x, self.config.lane_gap)?;
-        let mut physical = PhysicalCircuit::new();
+        let mut physical = PlacementCircuit::new();
         let mut node_to_cell = BTreeMap::new();
         for node in primitive.nodes() {
             let cell = baseline_cell_for(node.kind).ok_or(CompileError::MissingCell(node.kind))?;

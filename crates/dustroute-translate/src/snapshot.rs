@@ -72,6 +72,10 @@ fn block_from_record(record: &MinecraftSnapshotBlock) -> Result<Block, SnapshotE
     let mut block = Block::new(kind);
     match kind {
         BlockKind::RedstoneWire => {
+            block.power_level = record
+                .properties
+                .get("power")
+                .and_then(|value| value.parse().ok());
             block.support_offset = Some(Pos::new(0, -1, 0));
             block.wire_connections = Some(
                 [Facing::North, Facing::East, Facing::South, Facing::West]

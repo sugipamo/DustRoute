@@ -3,7 +3,7 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use crate::wire::{dust_connected, wire_has_arm};
 use crate::world::{BlockKind, Facing, Pos, World};
 use dustroute_physical::{
-    ComponentId, ConnectionKind, PhysicalCircuit, PhysicalComponent, PhysicalConnection,
+    ComponentId, ConnectionKind, PhysicalComponent, PhysicalConnection, VerifiedTopology,
 };
 
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -230,7 +230,10 @@ pub fn extract_connectivity(world: &World) -> PhysicalConnectivityGraph {
 }
 
 #[must_use]
-pub fn build_physical_circuit(world: &World, graph: &PhysicalConnectivityGraph) -> PhysicalCircuit {
+pub fn build_physical_circuit(
+    world: &World,
+    graph: &PhysicalConnectivityGraph,
+) -> VerifiedTopology {
     let edge_positions: BTreeSet<_> = graph
         .edges
         .iter()
@@ -280,7 +283,7 @@ pub fn build_physical_circuit(world: &World, graph: &PhysicalConnectivityGraph) 
         };
         Some(PhysicalConnection { source, sink, kind })
     });
-    PhysicalCircuit::from_parts(components, connections)
+    VerifiedTopology::from_parts(components, connections)
 }
 
 #[cfg(test)]

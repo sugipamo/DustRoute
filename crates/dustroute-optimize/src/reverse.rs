@@ -4,7 +4,7 @@ use dustroute_translate::cell_library::default_cell_library;
 use dustroute_translate::cells::PlacedCell;
 use dustroute_translate::expr::{Expr, best_by_size};
 use dustroute_translate::logic::GateKind;
-use dustroute_translate::physical::{CellId, Endpoint, PhysicalCircuit, RouteId};
+use dustroute_translate::physical::{CellId, Endpoint, PlacementCircuit, RouteId};
 use dustroute_translate::port_realization::terminal_for_endpoint;
 use dustroute_translate::routing::{RouterConfig, astar_route};
 
@@ -34,7 +34,7 @@ pub struct RewriteReport {
 }
 
 fn boundary(
-    pc: &PhysicalCircuit,
+    pc: &PlacementCircuit,
     cells: &BTreeSet<CellId>,
 ) -> (
     Vec<dustroute_translate::physical::Route>,
@@ -59,7 +59,7 @@ fn boundary(
 
 #[must_use]
 pub fn extract_linear_not_chain(
-    pc: &PhysicalCircuit,
+    pc: &PlacementCircuit,
     start: CellId,
     max_len: usize,
 ) -> Option<SemanticFragment> {
@@ -108,7 +108,7 @@ pub fn extract_linear_not_chain(
 }
 
 #[must_use]
-pub fn extract_and_then_not(pc: &PhysicalCircuit, id: CellId) -> Option<SemanticFragment> {
+pub fn extract_and_then_not(pc: &PlacementCircuit, id: CellId) -> Option<SemanticFragment> {
     if pc.cells.get(&id)?.logical_kind != GateKind::And {
         return None;
     }
@@ -149,7 +149,7 @@ pub fn simplify_fragment(f: &SemanticFragment) -> Option<SemanticRewrite> {
 }
 
 pub fn realize_identity_rewrite(
-    pc: &mut PhysicalCircuit,
+    pc: &mut PlacementCircuit,
     r: &SemanticRewrite,
 ) -> Result<RewriteReport, String> {
     if r.after_expr != Expr::Var("in0".into())
@@ -191,7 +191,7 @@ pub fn realize_identity_rewrite(
     }
 }
 
-pub fn eliminate_double_not(pc: &mut PhysicalCircuit) -> Result<Option<RewriteReport>, String> {
+pub fn eliminate_double_not(pc: &mut PlacementCircuit) -> Result<Option<RewriteReport>, String> {
     for id in pc.cells.keys().copied().collect::<Vec<_>>() {
         if let Some(f) = extract_linear_not_chain(pc, id, 8) {
             if let Some(r) = simplify_fragment(&f) {
@@ -205,7 +205,7 @@ pub fn eliminate_double_not(pc: &mut PhysicalCircuit) -> Result<Option<RewriteRe
 }
 
 pub fn realize_nand_rewrite(
-    pc: &mut PhysicalCircuit,
+    pc: &mut PlacementCircuit,
     r: &SemanticRewrite,
 ) -> Result<RewriteReport, String> {
     if !matches!(r.after_expr, Expr::Nand(_))
@@ -287,7 +287,7 @@ pub fn realize_nand_rewrite(
 }
 
 pub fn optimize_once_via_reverse(
-    pc: &mut PhysicalCircuit,
+    pc: &mut PlacementCircuit,
 ) -> Result<Option<RewriteReport>, String> {
     for id in pc.cells.keys().copied().collect::<Vec<_>>() {
         if let Some(f) = extract_and_then_not(pc, id) {
@@ -315,7 +315,7 @@ mod tests {
     use dustroute_translate::world::Pos;
     #[test]
     fn extracts_and_eliminates_double_not() {
-        let mut pc = PhysicalCircuit::new();
+        let mut pc = PlacementCircuit::new();
         let a = pc.add_cell(
             GateKind::Not,
             PlacedCell {
@@ -332,8 +332,8 @@ mod tests {
                 rotation: RotationY::R0,
             },
         );
-        let src = PhysicalCircuit::boundary("in", Pos::new(0, 2, 0), PortKind::Wire, None);
-        let dst = PhysicalCircuit::boundary("out", Pos::new(18, 2, 0), PortKind::Wire, None);
+        let src = PlacementCircuit::boundary("in", Pos::new(0, 2, 0), PortKind::Wire, None);
+        let dst = PlacementCircuit::boundary("out", Pos::new(18, 2, 0), PortKind::Wire, None);
         pc.add_route(src, pc.input_endpoint(a, "a").unwrap(), vec![], vec![]);
         pc.add_route(
             pc.output_endpoint(a, "out").unwrap(),

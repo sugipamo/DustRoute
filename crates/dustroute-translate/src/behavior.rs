@@ -1,13 +1,13 @@
 use std::collections::BTreeMap;
 
 use dustroute_ir::{BehaviorEvent, BehaviorTrace, PhysicalProjection};
-use dustroute_physical::{ComponentId, PhysicalCircuit, World};
+use dustroute_physical::{ComponentId, VerifiedTopology, World};
 
 use crate::RedstoneTickSimulator;
 
 pub fn simulate_behavior_trace(
     world: &World,
-    physical: &PhysicalCircuit,
+    physical: &VerifiedTopology,
     projection: &PhysicalProjection,
     ticks: usize,
     label: impl Into<String>,
@@ -87,10 +87,10 @@ mod tests {
             &world,
             RegionBounds::new(Pos::new(0, 0, 0), Pos::new(3, 2, 0)),
         );
-        let projection = PhysicalProjection::from_physical(&analysis.physical);
+        let projection = PhysicalProjection::from_scene(&analysis.scene);
+        let verified = analysis.scene.verified_topology();
         let trace =
-            simulate_behavior_trace(&world, &analysis.physical, &projection, 3, "powered input")
-                .unwrap();
+            simulate_behavior_trace(&world, &verified, &projection, 3, "powered input").unwrap();
         assert!(
             trace
                 .events

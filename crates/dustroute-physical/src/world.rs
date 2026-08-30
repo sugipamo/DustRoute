@@ -154,6 +154,8 @@ pub struct Block {
     pub kind: BlockKind,
     pub facing: Option<Facing>,
     pub powered: Option<bool>,
+    /// Observed analog redstone strength, when the block state exposes one.
+    pub power_level: Option<u8>,
     pub delay: Option<u8>,
     pub support_offset: Option<Pos>,
     pub wire_connections: Option<BTreeMap<Facing, WireConnection>>,
@@ -166,6 +168,7 @@ impl Block {
             kind,
             facing: None,
             powered: None,
+            power_level: None,
             delay: None,
             support_offset: None,
             wire_connections: None,

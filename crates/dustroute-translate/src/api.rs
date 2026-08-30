@@ -46,6 +46,9 @@ impl ReverseRequest {
 pub struct ReverseResult {
     pub analysis: RegionAnalysis,
     pub projection: PhysicalProjection,
+    pub gate_view: dustroute_ir::GateView,
+    pub expression_view: dustroute_ir::ExpressionView,
+    pub functional_view: dustroute_ir::FunctionalView,
     pub truth_table: Option<InferredTruthTable>,
     pub expressions: Vec<Expr>,
     pub logic: Option<LogicDag>,
@@ -90,8 +93,8 @@ impl Translator {
             .world
             .bounds()
             .map(|(min, max)| analyze_world_region(&compiled.world, RegionBounds::new(min, max)))
-            .map(|analysis| PhysicalProjection::from_physical(&analysis.physical))
-            .unwrap_or_else(|| PhysicalProjection::from_physical(&Default::default()));
+            .map(|analysis| PhysicalProjection::from_scene(&analysis.scene))
+            .unwrap_or_else(|| PhysicalProjection::from_topology(&Default::default()));
         Ok(ForwardResult {
             compiled,
             projection,
@@ -101,11 +104,12 @@ impl Translator {
     #[must_use]
     pub fn reverse(&self, world: &World, request: ReverseRequest) -> ReverseResult {
         let analysis = analyze_world_region(world, request.bounds);
-        let mut projection = PhysicalProjection::from_physical(&analysis.physical);
+        let mut projection = PhysicalProjection::from_scene(&analysis.scene);
+        let verified = analysis.scene.verified_topology();
         if !projection.behavior.devices.is_empty()
             && let Ok(trace) = crate::simulate_behavior_trace(
                 world,
-                &analysis.physical,
+                &verified,
                 &projection,
                 request.settle_ticks,
                 "observed initial state",
@@ -113,34 +117,44 @@ impl Translator {
         {
             projection.behavior.traces.push(trace);
         }
-        match infer_truth_table(world, &analysis, request.max_inputs, request.settle_ticks) {
-            Ok(truth_table) => {
-                let expressions = infer_output_expressions(&truth_table);
-                let logic = dustroute_ir::logic_from_expressions(
-                    expressions
-                        .iter()
-                        .cloned()
-                        .enumerate()
-                        .map(|(index, expression)| (format!("o{index}"), expression)),
-                )
-                .ok();
-                ReverseResult {
-                    analysis,
-                    projection,
-                    truth_table: Some(truth_table),
-                    expressions,
-                    logic,
-                    truth_table_error: None,
+        let mut gate_view = dustroute_ir::recognize_gates(&analysis.scene);
+        let mut expression_view = dustroute_ir::derive_expressions(&analysis.scene, &gate_view);
+        let (truth_table, expressions, logic, truth_table_error) =
+            match infer_truth_table(world, &analysis, request.max_inputs, request.settle_ticks) {
+                Ok(truth_table) => {
+                    let expressions = infer_output_expressions(&truth_table);
+                    let logic = dustroute_ir::logic_from_expressions(
+                        expressions
+                            .iter()
+                            .cloned()
+                            .enumerate()
+                            .map(|(index, expression)| (format!("o{index}"), expression)),
+                    )
+                    .ok();
+                    (Some(truth_table), expressions, logic, None)
                 }
-            }
-            Err(error) => ReverseResult {
-                analysis,
-                projection,
-                truth_table: None,
-                expressions: Vec::new(),
-                logic: None,
-                truth_table_error: Some(error),
-            },
+                Err(error) => (None, Vec::new(), None, Some(error)),
+            };
+        if let Some(table) = &truth_table {
+            append_truth_table_views(
+                &analysis,
+                table,
+                &expressions,
+                &mut gate_view,
+                &mut expression_view,
+            );
+        }
+        let functional_view = dustroute_ir::classify_function(&gate_view, &expression_view);
+        ReverseResult {
+            analysis,
+            projection,
+            gate_view,
+            expression_view,
+            functional_view,
+            truth_table,
+            expressions,
+            logic,
+            truth_table_error,
         }
     }
 
@@ -154,5 +168,273 @@ impl Translator {
             .truth_table
             .as_ref()
             .map(|table| compare_truth_tables(expected, table))
+    }
+}
+
+fn append_truth_table_views(
+    analysis: &RegionAnalysis,
+    table: &InferredTruthTable,
+    expressions: &[Expr],
+    gates: &mut dustroute_ir::GateView,
+    expression_view: &mut dustroute_ir::ExpressionView,
+) {
+    use std::collections::BTreeSet;
+
+    let input_ports = table
+        .inputs
+        .iter()
+        .filter_map(|terminal| {
+            analysis
+                .scene
+                .component_at(terminal.anchor)
+                .and_then(|component| {
+                    component
+                        .ports
+                        .first()
+                        .map(|port| dustroute_physical::PortRef {
+                            component: component.id,
+                            port: port.id,
+                        })
+                })
+        })
+        .collect::<Vec<_>>();
+    for (terminal, expression) in table.outputs.iter().zip(expressions) {
+        let Some(kind) = expression_gate_kind(expression) else {
+            continue;
+        };
+        let physical_components = analysis
+            .components
+            .get(terminal.component)
+            .into_iter()
+            .flat_map(|component| &component.positions)
+            .filter_map(|pos| {
+                analysis
+                    .scene
+                    .component_at(*pos)
+                    .map(|component| component.id)
+            })
+            .collect::<BTreeSet<_>>();
+        let outputs = analysis
+            .scene
+            .component_at(terminal.anchor)
+            .and_then(|component| {
+                component
+                    .ports
+                    .first()
+                    .map(|port| dustroute_physical::PortRef {
+                        component: component.id,
+                        port: port.id,
+                    })
+            })
+            .into_iter()
+            .collect::<Vec<_>>();
+        let boundary_limited =
+            !physical_components.is_disjoint(&analysis.scene.open_frontier_components());
+        let status = if boundary_limited {
+            dustroute_ir::RecognitionStatus::BoundaryLimited
+        } else {
+            dustroute_ir::RecognitionStatus::Complete
+        };
+        let id = dustroute_ir::GateId(gates.gates.len());
+        gates.gates.push(dustroute_ir::RecognizedGate {
+            id,
+            kind,
+            status,
+            inputs: input_ports.clone(),
+            outputs,
+            physical_components: physical_components.clone(),
+            confidence: if boundary_limited {
+                dustroute_physical::Confidence::Medium
+            } else {
+                dustroute_physical::Confidence::High
+            },
+            evidence: vec![dustroute_ir::GateEvidence::TruthTableInference {
+                rows: table.rows.len(),
+            }],
+        });
+        expression_view
+            .expressions
+            .push(dustroute_ir::DerivedExpression {
+                id: dustroute_ir::ExpressionId(expression_view.expressions.len()),
+                gate: id,
+                expression: derived_truth_expression(expression, &input_ports),
+                physical_components,
+                status,
+            });
+    }
+}
+
+fn expression_gate_kind(expression: &Expr) -> Option<dustroute_ir::RecognizedGateKind> {
+    match expression {
+        Expr::Not(_) => Some(dustroute_ir::RecognizedGateKind::Not),
+        Expr::And(_) => Some(dustroute_ir::RecognizedGateKind::And),
+        Expr::Or(_) => Some(dustroute_ir::RecognizedGateKind::Or),
+        Expr::Xor(_) => Some(dustroute_ir::RecognizedGateKind::Xor),
+        Expr::Nand(_) => Some(dustroute_ir::RecognizedGateKind::Nand),
+        Expr::Var(_) | Expr::Const(_) => None,
+    }
+}
+
+fn derived_truth_expression(
+    expression: &Expr,
+    inputs: &[dustroute_physical::PortRef],
+) -> dustroute_ir::DerivedExpr {
+    match expression {
+        Expr::Var(name) => name
+            .strip_prefix('x')
+            .and_then(|index| index.parse::<usize>().ok())
+            .and_then(|index| inputs.get(index).copied())
+            .map_or_else(
+                || dustroute_ir::DerivedExpr::Unknown(Vec::new()),
+                dustroute_ir::DerivedExpr::Signal,
+            ),
+        Expr::Const(_) => dustroute_ir::DerivedExpr::Unknown(Vec::new()),
+        Expr::Not(inner) => {
+            dustroute_ir::DerivedExpr::Not(Box::new(derived_truth_expression(inner, inputs)))
+        }
+        Expr::And(values) => dustroute_ir::DerivedExpr::And(
+            values
+                .iter()
+                .map(|value| derived_truth_expression(value, inputs))
+                .collect(),
+        ),
+        Expr::Or(values) => dustroute_ir::DerivedExpr::Or(
+            values
+                .iter()
+                .map(|value| derived_truth_expression(value, inputs))
+                .collect(),
+        ),
+        Expr::Xor(values) => dustroute_ir::DerivedExpr::Xor(
+            values
+                .iter()
+                .map(|value| derived_truth_expression(value, inputs))
+                .collect(),
+        ),
+        Expr::Nand(values) => {
+            dustroute_ir::DerivedExpr::Not(Box::new(dustroute_ir::DerivedExpr::And(
+                values
+                    .iter()
+                    .map(|value| derived_truth_expression(value, inputs))
+                    .collect(),
+            )))
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use dustroute_ir::{DerivedExpr, RecognizedGateKind};
+
+    use super::*;
+    use crate::half_adder;
+
+    #[test]
+    fn physical_first_reverse_exposes_local_gates_before_function_metadata() {
+        let forward = Translator
+            .forward(&half_adder(), ForwardOptions::default())
+            .unwrap();
+        let (min, max) = forward.compiled.world.bounds().unwrap();
+        let reverse = Translator.reverse(
+            &forward.compiled.world,
+            ReverseRequest::new(RegionBounds::new(
+                min.offset(-1, -1, -1),
+                max.offset(1, 1, 1),
+            )),
+        );
+        assert!(
+            reverse
+                .gate_view
+                .gates
+                .iter()
+                .any(|gate| gate.kind == RecognizedGateKind::Not)
+        );
+        assert!(
+            reverse
+                .gate_view
+                .gates
+                .iter()
+                .any(|gate| gate.kind == RecognizedGateKind::Or)
+        );
+        assert!(
+            reverse
+                .expression_view
+                .expressions
+                .iter()
+                .any(|expression| { matches!(expression.expression, DerivedExpr::And(_)) }),
+            "{:#?}",
+            reverse.expression_view
+        );
+        assert!(
+            reverse
+                .functional_view
+                .candidates
+                .iter()
+                .any(|candidate| candidate.kind == dustroute_ir::FunctionalKind::HalfAdder),
+            "{:#?}",
+            reverse.functional_view
+        );
+        assert!(reverse.analysis.scene.observation.is_complete());
+    }
+
+    #[test]
+    fn broken_physical_scene_keeps_local_gates_and_proposes_a_patch() {
+        let forward = Translator
+            .forward(&half_adder(), ForwardOptions::default())
+            .unwrap();
+        let mut world = forward.compiled.world.clone();
+        let missing = world
+            .iter()
+            .find_map(|(pos, block)| {
+                if block.kind != crate::BlockKind::RedstoneWire {
+                    return None;
+                }
+                let east_west = world.kind_at(pos.offset(-1, 0, 0))
+                    == crate::BlockKind::RedstoneWire
+                    && world.kind_at(pos.offset(1, 0, 0)) == crate::BlockKind::RedstoneWire;
+                let north_south = world.kind_at(pos.offset(0, 0, -1))
+                    == crate::BlockKind::RedstoneWire
+                    && world.kind_at(pos.offset(0, 0, 1)) == crate::BlockKind::RedstoneWire;
+                (east_west || north_south).then_some(*pos)
+            })
+            .expect("compiled half adder should contain an inline wire");
+        world.remove(missing);
+        crate::update_wire_shapes(&mut world);
+        let (min, max) = forward.compiled.world.bounds().unwrap();
+        let bounds = RegionBounds::new(min.offset(-1, -1, -1), max.offset(1, 1, 1));
+        let analysis = analyze_world_region(&world, bounds);
+        let gates = dustroute_ir::recognize_gates(&analysis.scene);
+        let repairs = crate::propose_scene_repairs(&world, &analysis.scene, 2);
+        assert!(
+            gates
+                .gates
+                .iter()
+                .any(|gate| gate.kind == RecognizedGateKind::Not)
+        );
+        assert!(analysis.scene.fragments.len() > 1);
+        assert!(repairs.iter().any(|proposal| {
+            proposal.patch.reason == dustroute_physical::RepairReason::ConnectMissingWire
+                && proposal
+                    .patch
+                    .changes
+                    .iter()
+                    .any(|change| change.pos == missing)
+        }));
+    }
+
+    #[test]
+    fn scan_edge_is_preserved_as_boundary_limited_evidence() {
+        let forward = Translator
+            .forward(&half_adder(), ForwardOptions::default())
+            .unwrap();
+        let (min, max) = forward.compiled.world.bounds().unwrap();
+        let analysis = analyze_world_region(&forward.compiled.world, RegionBounds::new(min, max));
+        let gates = dustroute_ir::recognize_gates(&analysis.scene);
+        assert!(!analysis.scene.observation.is_complete());
+        assert!(
+            gates
+                .gates
+                .iter()
+                .any(|gate| { gate.status == dustroute_ir::RecognitionStatus::BoundaryLimited })
+        );
     }
 }

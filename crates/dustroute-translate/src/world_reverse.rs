@@ -69,7 +69,8 @@ pub struct RegionAnalysis {
     pub bounds: RegionBounds,
     pub redstone_blocks: BTreeMap<Pos, BlockKind>,
     pub graph: PhysicalConnectivityGraph,
-    pub physical: dustroute_physical::PhysicalCircuit,
+    /// Canonical physical observation.
+    pub scene: dustroute_physical::PhysicalScene,
     pub components: Vec<SignalComponent>,
     pub inputs: Vec<InferredTerminal>,
     pub outputs: Vec<InferredTerminal>,
@@ -378,6 +379,15 @@ fn input_driver(
 
 #[must_use]
 pub fn analyze_world_region(world: &World, bounds: RegionBounds) -> RegionAnalysis {
+    analyze_world_region_in_dimension(world, bounds, "unknown")
+}
+
+#[must_use]
+pub fn analyze_world_region_in_dimension(
+    world: &World,
+    bounds: RegionBounds,
+    dimension: impl Into<String>,
+) -> RegionAnalysis {
     let bounded = bounded_world(world, bounds);
     let graph = extract_connectivity(&bounded);
     let physical = build_physical_circuit(&bounded, &graph);
@@ -453,17 +463,56 @@ pub fn analyze_world_region(world: &World, bounds: RegionBounds) -> RegionAnalys
         &outputs,
         &redstone_blocks,
     );
+    let mut observation = dustroute_physical::Observation::complete(
+        dimension,
+        dustroute_physical::SceneBounds::new(bounds.min, bounds.max),
+    );
+    observation.frontier = observation_frontier(&physical, bounds);
+    if !observation.frontier.is_empty() {
+        observation.regions[0].completeness = dustroute_physical::RegionCompleteness::OpenBoundary;
+    }
+    let scene = dustroute_physical::PhysicalScene::from_topology(observation, &physical);
     RegionAnalysis {
         bounds,
         redstone_blocks,
         graph,
-        physical,
+        scene,
         components,
         inputs,
         outputs,
         unsupported,
         diagnostics,
     }
+}
+
+fn observation_frontier(
+    physical: &dustroute_physical::VerifiedTopology,
+    bounds: RegionBounds,
+) -> Vec<dustroute_physical::ObservationFrontier> {
+    let mut frontier = Vec::new();
+    for component in physical
+        .components
+        .iter()
+        .filter(|component| component.block.kind.is_redstone_related())
+    {
+        for (at_boundary, direction) in [
+            (component.pos.x == bounds.min.x, crate::Facing::West),
+            (component.pos.x == bounds.max.x, crate::Facing::East),
+            (component.pos.y == bounds.min.y, crate::Facing::Down),
+            (component.pos.y == bounds.max.y, crate::Facing::Up),
+            (component.pos.z == bounds.min.z, crate::Facing::North),
+            (component.pos.z == bounds.max.z, crate::Facing::South),
+        ] {
+            if at_boundary {
+                frontier.push(dustroute_physical::ObservationFrontier {
+                    position: component.pos,
+                    direction,
+                    reason: dustroute_physical::FrontierReason::ScanLimitReached,
+                });
+            }
+        }
+    }
+    frontier
 }
 
 fn signal_diagnostics(

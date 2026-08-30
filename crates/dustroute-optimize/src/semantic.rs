@@ -1,6 +1,7 @@
+use dustroute_physical::{PhysicalDiagnostic, PhysicalScene};
 use dustroute_translate::{SignalDiagnostics, TruthTableComparison};
 
-use dustroute_translate::physical::PhysicalCircuit;
+use dustroute_translate::physical::PlacementCircuit;
 
 use crate::{PlacementScore, PlacementWeights, placement_score};
 
@@ -14,6 +15,8 @@ pub struct SemanticWeights {
     pub invalid_support: f64,
     pub non_controllable_torch: f64,
     pub unavailable_truth_table: f64,
+    pub open_observation_boundary: f64,
+    pub ambiguous_physical_connection: f64,
 }
 
 impl Default for SemanticWeights {
@@ -27,6 +30,8 @@ impl Default for SemanticWeights {
             invalid_support: 5_000.0,
             non_controllable_torch: 10_000.0,
             unavailable_truth_table: 1_000_000.0,
+            open_observation_boundary: 100.0,
+            ambiguous_physical_connection: 2_000.0,
         }
     }
 }
@@ -42,6 +47,8 @@ pub struct SemanticScore {
     pub invalid_supports: usize,
     pub non_controllable_torches: usize,
     pub truth_table_available: bool,
+    pub open_observation_boundaries: usize,
+    pub ambiguous_physical_connections: usize,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -53,6 +60,7 @@ pub struct CombinedPlacementScore {
 
 #[must_use]
 pub fn semantic_score(
+    scene: &PhysicalScene,
     comparison: Option<&TruthTableComparison>,
     diagnostics: &SignalDiagnostics,
     weights: SemanticWeights,
@@ -60,6 +68,26 @@ pub fn semantic_score(
     let truth_table_penalty = comparison.map_or(0, |value| value.fitness_penalty);
     let extra_signal_islands = diagnostics.signal_islands.len().saturating_sub(1);
     let truth_table_available = comparison.is_some();
+    let open_observation_boundaries = scene
+        .diagnostics
+        .iter()
+        .filter(|diagnostic| {
+            matches!(
+                diagnostic,
+                PhysicalDiagnostic::OpenObservationBoundary { .. }
+            )
+        })
+        .count();
+    let ambiguous_physical_connections = scene
+        .diagnostics
+        .iter()
+        .filter(|diagnostic| matches!(diagnostic, PhysicalDiagnostic::AmbiguousConnection { .. }))
+        .count();
+    let physical_invalid_supports = scene
+        .diagnostics
+        .iter()
+        .filter(|diagnostic| matches!(diagnostic, PhysicalDiagnostic::InvalidSupport { .. }))
+        .count();
     let score = SemanticScore {
         total: 0.0,
         truth_table_penalty,
@@ -67,9 +95,11 @@ pub fn semantic_score(
         extra_signal_islands,
         unreachable_components: diagnostics.unreachable_from_inputs.len(),
         components_without_output: diagnostics.cannot_reach_outputs.len(),
-        invalid_supports: diagnostics.invalid_supports.len(),
+        invalid_supports: physical_invalid_supports,
         non_controllable_torches: diagnostics.non_controllable_torches.len(),
         truth_table_available,
+        open_observation_boundaries,
+        ambiguous_physical_connections,
     };
     SemanticScore {
         total: weights.truth_table_penalty * score.truth_table_penalty as f64
@@ -79,6 +109,8 @@ pub fn semantic_score(
             + weights.component_without_output * score.components_without_output as f64
             + weights.invalid_support * score.invalid_supports as f64
             + weights.non_controllable_torch * score.non_controllable_torches as f64
+            + weights.open_observation_boundary * score.open_observation_boundaries as f64
+            + weights.ambiguous_physical_connection * score.ambiguous_physical_connections as f64
             + if truth_table_available {
                 0.0
             } else {
@@ -102,7 +134,8 @@ pub fn combined_placement_score(
 
 #[must_use]
 pub fn evaluate_placement_with_semantics(
-    circuit: &PhysicalCircuit,
+    circuit: &PlacementCircuit,
+    scene: &PhysicalScene,
     placement_weights: PlacementWeights,
     comparison: Option<&TruthTableComparison>,
     diagnostics: &SignalDiagnostics,
@@ -110,7 +143,7 @@ pub fn evaluate_placement_with_semantics(
 ) -> CombinedPlacementScore {
     combined_placement_score(
         placement_score(circuit, placement_weights),
-        semantic_score(comparison, diagnostics, semantic_weights),
+        semantic_score(scene, comparison, diagnostics, semantic_weights),
     )
 }
 
@@ -118,9 +151,23 @@ pub fn evaluate_placement_with_semantics(
 mod tests {
     use std::collections::BTreeSet;
 
+    use dustroute_physical::{
+        Block, BlockKind, ComponentId, Observation, PhysicalComponent, PhysicalScene,
+        Pos as PhysicalPos, SceneBounds, VerifiedTopology,
+    };
     use dustroute_translate::{Pos, SignalDiagnostics, TruthTableComparison};
 
     use super::*;
+
+    fn empty_scene() -> PhysicalScene {
+        PhysicalScene::from_topology(
+            Observation::complete(
+                "minecraft:overworld",
+                SceneBounds::new(PhysicalPos::new(0, 0, 0), PhysicalPos::new(0, 0, 0)),
+            ),
+            &VerifiedTopology::default(),
+        )
+    }
 
     #[test]
     fn broken_circuit_diagnostics_increase_optimizer_score() {
@@ -140,7 +187,12 @@ mod tests {
             .non_controllable_torches
             .insert(Pos::new(1, 2, 3));
         diagnostics.unreachable_from_inputs = BTreeSet::from([4, 5]);
-        let score = semantic_score(Some(&comparison), &diagnostics, SemanticWeights::default());
+        let score = semantic_score(
+            &empty_scene(),
+            Some(&comparison),
+            &diagnostics,
+            SemanticWeights::default(),
+        );
         assert_eq!(score.truth_table_penalty, 13);
         assert_eq!(score.non_controllable_torches, 1);
         assert_eq!(score.unreachable_components, 2);
@@ -150,6 +202,7 @@ mod tests {
     #[test]
     fn missing_truth_table_is_not_treated_as_valid() {
         let score = semantic_score(
+            &empty_scene(),
             None,
             &SignalDiagnostics::default(),
             SemanticWeights::default(),
@@ -163,15 +216,28 @@ mod tests {
 
     #[test]
     fn combined_evaluator_adds_reverse_diagnostics_to_geometry() {
-        let circuit = PhysicalCircuit::new();
-        let mut diagnostics = SignalDiagnostics::default();
-        diagnostics.invalid_supports.push((
-            Pos::new(0, 1, 0),
-            dustroute_translate::BlockKind::RedstoneWire,
-            Some(Pos::new(0, 0, 0)),
-        ));
+        let circuit = PlacementCircuit::new();
+        let mut wire = Block::new(BlockKind::RedstoneWire);
+        wire.support_offset = Some(PhysicalPos::new(0, -1, 0));
+        let topology = VerifiedTopology::from_parts(
+            vec![PhysicalComponent {
+                id: ComponentId(0),
+                pos: PhysicalPos::new(0, 1, 0),
+                block: wire,
+            }],
+            [],
+        );
+        let scene = PhysicalScene::from_topology(
+            Observation::complete(
+                "minecraft:overworld",
+                SceneBounds::new(PhysicalPos::new(0, 0, 0), PhysicalPos::new(1, 2, 1)),
+            ),
+            &topology,
+        );
+        let diagnostics = SignalDiagnostics::default();
         let combined = evaluate_placement_with_semantics(
             &circuit,
+            &scene,
             PlacementWeights::default(),
             None,
             &diagnostics,

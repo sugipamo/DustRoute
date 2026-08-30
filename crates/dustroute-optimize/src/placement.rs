@@ -3,10 +3,10 @@ use std::collections::BTreeMap;
 use dustroute_translate::cell_library::{CellLibrary, default_cell_library, verify_cell};
 use dustroute_translate::cells::RotationY;
 use dustroute_translate::logic::GateKind;
-use dustroute_translate::physical::{CellId, Endpoint, PhysicalCircuit, PhysicalNode, Route};
+use dustroute_translate::physical::{CellId, Endpoint, PhysicalNode, PlacementCircuit, Route};
 use dustroute_translate::world::Pos;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct PlacementWeights {
     pub wire_distance: f64,
     pub bounding_volume: f64,
@@ -47,13 +47,13 @@ pub struct PlacementMutation {
 }
 #[derive(Clone, Debug)]
 pub struct PlacementOptimizationResult {
-    pub circuit: PhysicalCircuit,
+    pub circuit: PlacementCircuit,
     pub initial_score: PlacementScore,
     pub final_score: PlacementScore,
     pub accepted: Vec<PlacementMutation>,
 }
 
-fn refresh_endpoint(pc: &PhysicalCircuit, ep: &Endpoint, output: bool) -> Endpoint {
+fn refresh_endpoint(pc: &PlacementCircuit, ep: &Endpoint, output: bool) -> Endpoint {
     if let Some(id) = ep.cell {
         if output {
             pc.output_endpoint(id, &ep.port).unwrap()
@@ -64,7 +64,7 @@ fn refresh_endpoint(pc: &PhysicalCircuit, ep: &Endpoint, output: bool) -> Endpoi
         ep.clone()
     }
 }
-pub fn refresh_route_endpoints(pc: &mut PhysicalCircuit) {
+pub fn refresh_route_endpoints(pc: &mut PlacementCircuit) {
     let old = pc.routes.clone();
     pc.routes = old
         .into_iter()
@@ -84,7 +84,7 @@ pub fn refresh_route_endpoints(pc: &mut PhysicalCircuit) {
 }
 
 #[must_use]
-pub fn placement_score(pc: &PhysicalCircuit, w: PlacementWeights) -> PlacementScore {
+pub fn placement_score(pc: &PlacementCircuit, w: PlacementWeights) -> PlacementScore {
     let wire_distance = pc
         .routes
         .values()
@@ -124,10 +124,10 @@ pub fn placement_score(pc: &PhysicalCircuit, w: PlacementWeights) -> PlacementSc
     }
 }
 pub fn apply_mutation(
-    pc: &PhysicalCircuit,
+    pc: &PlacementCircuit,
     m: &PlacementMutation,
     lib: &CellLibrary,
-) -> PhysicalCircuit {
+) -> PlacementCircuit {
     let mut out = pc.clone();
     let node = &out.cells[&m.cell_id];
     let mut placed = node.placed.clone();
@@ -156,7 +156,7 @@ pub fn apply_mutation(
 }
 #[must_use]
 pub fn candidate_mutations(
-    pc: &PhysicalCircuit,
+    pc: &PlacementCircuit,
     lib: &CellLibrary,
     step: i32,
 ) -> Vec<PlacementMutation> {
@@ -214,7 +214,7 @@ pub fn candidate_mutations(
 }
 #[must_use]
 pub fn optimize_placement(
-    pc: &PhysicalCircuit,
+    pc: &PlacementCircuit,
     max_steps: usize,
     move_step: i32,
 ) -> PlacementOptimizationResult {
@@ -260,7 +260,7 @@ mod tests {
     use dustroute_translate::cells::{PlacedCell, PortKind, not_cell};
     #[test]
     fn optimizer_moves_cell_toward_nets() {
-        let mut pc = PhysicalCircuit::new();
+        let mut pc = PlacementCircuit::new();
         let id = pc.add_cell(
             GateKind::Not,
             PlacedCell {
@@ -269,8 +269,8 @@ mod tests {
                 rotation: RotationY::R0,
             },
         );
-        let src = PhysicalCircuit::boundary("src", Pos::new(0, 2, 0), PortKind::Wire, None);
-        let dst = PhysicalCircuit::boundary("dst", Pos::new(22, 2, 0), PortKind::Wire, None);
+        let src = PlacementCircuit::boundary("src", Pos::new(0, 2, 0), PortKind::Wire, None);
+        let dst = PlacementCircuit::boundary("dst", Pos::new(22, 2, 0), PortKind::Wire, None);
         pc.add_route(src, pc.input_endpoint(id, "a").unwrap(), vec![], vec![]);
         pc.add_route(pc.output_endpoint(id, "out").unwrap(), dst, vec![], vec![]);
         let result = optimize_placement(&pc, 20, 2);
@@ -279,7 +279,7 @@ mod tests {
     }
     #[test]
     fn replacement_candidates_are_verified() {
-        let mut pc = PhysicalCircuit::new();
+        let mut pc = PlacementCircuit::new();
         let id = pc.add_cell(
             GateKind::Not,
             PlacedCell {

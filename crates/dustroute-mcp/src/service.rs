@@ -83,6 +83,21 @@ struct DiscoverCircuitParams {
 }
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
+struct AnalyzeLookedAtParams {
+    /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
+    player: Option<String>,
+    /// Horizontal half-size of the scan, from 4 through 31. Defaults to 24.
+    horizontal_radius: Option<i32>,
+    /// Vertical half-size of the scan, from 2 through 16. Defaults to 12.
+    vertical_radius: Option<i32>,
+    /// Maximum Manhattan gap considered for broken connections. Defaults to 2.
+    fragment_gap: Option<u32>,
+    /// Also enumerate the complete truth table. Defaults to true so higher-level
+    /// functions can be recognized. Set false for a faster local-only result.
+    include_truth_table: Option<bool>,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
 struct PreviewPlacementParams {
     /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
     player: Option<String>,
@@ -141,20 +156,165 @@ fn bounds_json(bounds: dustroute_translate::RegionBounds) -> Value {
     json!({ "min": bounds.min, "max": bounds.max })
 }
 
+fn boolean_function(values: &[bool]) -> Option<&'static str> {
+    match values {
+        [false, true] => Some("buffer"),
+        [true, false] => Some("not"),
+        [false, false, false, true] => Some("and"),
+        [false, true, true, true] => Some("or"),
+        [false, true, true, false] => Some("xor"),
+        [true, true, true, false] => Some("nand"),
+        [true, false, false, false] => Some("nor"),
+        [true, false, false, true] => Some("xnor"),
+        _ => None,
+    }
+}
+
+fn logical_role_json(translated: &dustroute_translate::ReverseResult) -> Value {
+    let Some(table) = &translated.truth_table else {
+        return json!({
+            "classification": "unknown",
+            "confidence": "low",
+            "reason": translated.truth_table_error.as_ref().map(ToString::to_string)
+                .unwrap_or_else(|| "no truth table could be inferred".to_owned())
+        });
+    };
+    let columns = (0..table.outputs.len())
+        .map(|index| {
+            table
+                .rows
+                .iter()
+                .map(|row| row.outputs[index])
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
+    let functions = columns
+        .iter()
+        .map(|column| boolean_function(column).unwrap_or("unclassified"))
+        .collect::<Vec<_>>();
+    let classification = match (table.inputs.len(), functions.as_slice()) {
+        (2, ["xor", "and"] | ["and", "xor"]) => "half_adder",
+        (3, functions) if functions.contains(&"unclassified") && functions.len() == 2 => {
+            let parity = columns
+                .iter()
+                .any(|column| column == &[false, true, true, false, true, false, false, true]);
+            let majority = columns
+                .iter()
+                .any(|column| column == &[false, false, false, true, false, true, true, true]);
+            if parity && majority {
+                "full_adder"
+            } else {
+                "unclassified"
+            }
+        }
+        (_, [function]) => function,
+        _ => "unclassified",
+    };
+    json!({
+        "classification": classification,
+        "confidence": if classification == "unclassified" { "low" } else { "high" },
+        "input_count": table.inputs.len(),
+        "output_count": table.outputs.len(),
+        "output_functions": functions,
+        "basis": "inferred_truth_table"
+    })
+}
+
+fn focused_role_json(
+    translated: &dustroute_translate::ReverseResult,
+    target: dustroute_model::Pos,
+) -> Value {
+    let physical_component = translated
+        .analysis
+        .scene
+        .component_at(target)
+        .map(|component| component.id);
+    let recognized_gates = physical_component
+        .map(|component| {
+            translated
+                .gate_view
+                .gates
+                .iter()
+                .filter(|gate| gate.physical_components.contains(&component))
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    let component = translated
+        .analysis
+        .components
+        .iter()
+        .find(|component| component.positions.contains(&target));
+    let block = translated
+        .analysis
+        .scene
+        .component_at(target)
+        .map(|component| component.block.kind);
+    let Some(component) = component else {
+        return json!({
+            "position": target,
+            "block": block,
+            "physical_component": physical_component,
+            "recognized_gates": recognized_gates,
+            "role": "support_or_unresolved"
+        });
+    };
+    let is_input = translated
+        .analysis
+        .inputs
+        .iter()
+        .any(|item| item.component == component.id);
+    let is_output = translated
+        .analysis
+        .outputs
+        .iter()
+        .any(|item| item.component == component.id);
+    let role = if is_input {
+        "input_boundary"
+    } else if is_output {
+        "output_boundary"
+    } else if component.incoming.len() > 1 {
+        "signal_merge"
+    } else if component.outgoing.len() > 1 {
+        "signal_branch"
+    } else if component.incoming.contains(&component.id)
+        || component.outgoing.contains(&component.id)
+    {
+        "feedback_path"
+    } else {
+        "intermediate_path"
+    };
+    json!({
+        "position": target,
+        "block": block,
+        "physical_component": physical_component,
+        "recognized_gates": recognized_gates,
+        "signal_component": component.id,
+        "incoming_components": component.incoming,
+        "outgoing_components": component.outgoing,
+        "role": role
+    })
+}
+
 fn reverse_result_json(
     bounds: dustroute_translate::RegionBounds,
     translated: &dustroute_translate::ReverseResult,
 ) -> Value {
+    let verified = translated.analysis.scene.verified_topology();
     json!({
         "ok": true,
         "bounds": bounds_json(bounds),
         "redstone_blocks": translated.analysis.redstone_blocks.len(),
         "physical": {
-            "components": translated.analysis.physical.components.len(),
-            "verified_connections": translated.analysis.physical.connections.len(),
-            "connected_fragments": translated.analysis.physical.fragments.len(),
-            "nearby_gap_candidates": translated.analysis.physical.gap_candidates(2),
+            "components": translated.analysis.scene.components.len(),
+            "verified_connections": translated.analysis.scene.connections.len(),
+            "connected_fragments": translated.analysis.scene.fragments.len(),
+            "nearby_gap_candidates": verified.gap_candidates(2),
+            "observation": translated.analysis.scene.observation,
+            "analysis_complete": translated.analysis.scene.observation.is_complete(),
         },
+        "gate_view": translated.gate_view,
+        "expression_view": translated.expression_view,
+        "functional_view": translated.functional_view,
         "signal_ir": {
             "nodes": translated.projection.signal.nodes.len(),
             "edges": translated.projection.signal.edges.len(),
@@ -175,6 +335,7 @@ fn reverse_result_json(
             "confidence": format!("{:?}", terminal.confidence).to_lowercase(),
         })).collect::<Vec<_>>(),
         "expressions": translated.expressions.iter().map(ToString::to_string).collect::<Vec<_>>(),
+        "logical_role": logical_role_json(translated),
         "truth_table": translated.truth_table.as_ref().map(|table| table.rows.iter().map(|row| json!({
             "inputs": row.inputs,
             "outputs": row.outputs,
@@ -527,7 +688,7 @@ impl DustRouteMcp {
             .and_then(|snapshot| world_from_snapshot_json(&snapshot).ok())
             .map(|(_, world)| {
                 dustroute_translate::analyze_world_region(&world, plan.analysis_bounds)
-                    .physical
+                    .scene
                     .fragments
                     .len()
             });
@@ -853,6 +1014,112 @@ impl DustRouteMcp {
     }
 
     #[tool(
+        description = "Answer questions such as 'what is this?' by following the circuit at the player's gaze, inferring the focused component's signal role and the circuit's higher-level logical function, and returning non-mutating repair proposals",
+        annotations(read_only_hint = true, destructive_hint = false)
+    )]
+    async fn analyze_looked_at_circuit(
+        &self,
+        Parameters(params): Parameters<AnalyzeLookedAtParams>,
+    ) -> String {
+        let player = match self.resolve_player(params.player.as_deref()) {
+            Ok(player) => player,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+        };
+        let fragment_gap = params.fragment_gap.unwrap_or(2);
+        let discovery_text = self
+            .discover_looked_at_circuit(Parameters(DiscoverCircuitParams {
+                player: Some(player.clone()),
+                horizontal_radius: params.horizontal_radius,
+                vertical_radius: params.vertical_radius,
+                padding: Some(1),
+                fragment_gap: Some(fragment_gap),
+            }))
+            .await;
+        let discovery: Value = match serde_json::from_str(&discovery_text) {
+            Ok(value) => value,
+            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        };
+        if discovery.get("ok") != Some(&Value::Bool(true)) {
+            return discovery_text;
+        }
+        let target = match serde_json::from_value::<dustroute_model::Pos>(
+            discovery["candidate"]["seed"].clone(),
+        ) {
+            Ok(target) => target,
+            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        };
+        let (bounds, dimension) = match self.selected_region(&player).await {
+            Ok(region) => region,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+        };
+        let snapshot = match self
+            .bridge
+            .scan_region(bounds.min, bounds.max, &dimension)
+            .await
+        {
+            Ok(snapshot) => snapshot,
+            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        };
+        let snapshot_json = match serde_json::to_string(&snapshot) {
+            Ok(snapshot) => snapshot,
+            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        };
+        let (_, world) = match world_from_snapshot_json(&snapshot_json) {
+            Ok(result) => result,
+            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        };
+        let mut request = ReverseRequest::new(bounds);
+        if !params.include_truth_table.unwrap_or(true) {
+            request.max_inputs = 0;
+        }
+        let mut translated = self.app.analyze_world(&world, request);
+        translated.analysis.scene.observation.dimension = dimension.clone();
+        let focused = focused_role_json(&translated, target);
+        let repairs = dustroute_translate::propose_scene_repairs(
+            &world,
+            &translated.analysis.scene,
+            fragment_gap,
+        );
+        let mut repair_json = Vec::new();
+        for proposal in repairs.into_iter().take(16) {
+            let operation_id = uuid::Uuid::new_v4();
+            self.repair_plans.lock().await.insert(
+                operation_id,
+                StoredRepairPlan {
+                    patch: proposal.patch.clone(),
+                    dimension: dimension.clone(),
+                    analysis_bounds: bounds,
+                    fragments_before: translated.analysis.scene.fragments.len(),
+                    previewed: false,
+                    applied: false,
+                },
+            );
+            repair_json.push(json!({
+                "operation_id": operation_id,
+                "patch": proposal.patch,
+                "evidence": proposal.evidence
+            }));
+        }
+        let incomplete = discovery["candidate"]["touches_scan_boundary"] == Value::Bool(true);
+        let mut result = reverse_result_json(bounds, &translated);
+        if let Some(object) = result.as_object_mut() {
+            object.insert("focused_component".to_owned(), focused);
+            object.insert("discovery".to_owned(), discovery["candidate"].clone());
+            object.insert("analysis_complete".to_owned(), Value::Bool(!incomplete));
+            object.insert("repair_proposals".to_owned(), Value::Array(repair_json));
+            object.insert(
+                "interpretation_guidance".to_owned(),
+                Value::String(if incomplete {
+                    "Treat the logical classification as provisional because the connected circuit continues beyond the scan boundary. Explain the local role, then ask the user to select or isolate a larger functional region before applying a repair."
+                } else {
+                    "Explain the focused component in the context of the inferred logical function. Repairs are proposals only; preview one and obtain confirmation before mutation."
+                }.to_owned()),
+            );
+        }
+        json_text(result)
+    }
+
+    #[tool(
         description = "Compile a built-in circuit at a player's gaze target and return a block diff, collisions, materials, operation ID, and exact undo plan without changing the world"
     )]
     async fn preview_compiled_circuit(
@@ -1092,7 +1359,8 @@ impl DustRouteMcp {
             Ok(result) => result,
             Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
         };
-        let translated = self.app.analyze_world(&world, ReverseRequest::new(bounds));
+        let mut translated = self.app.analyze_world(&world, ReverseRequest::new(bounds));
+        translated.analysis.scene.observation.dimension = dimension;
         json_text(reverse_result_json(bounds, &translated))
     }
 
@@ -1135,9 +1403,9 @@ impl DustRouteMcp {
             Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
         };
         let analysis = dustroute_translate::analyze_world_region(&world, bounds);
-        let fragments_before = analysis.physical.fragments.len();
+        let fragments_before = analysis.scene.fragments.len();
         let proposals =
-            dustroute_translate::propose_physical_repairs(&world, &analysis.physical, max_gap);
+            dustroute_translate::propose_scene_repairs(&world, &analysis.scene, max_gap);
         let mut response = Vec::new();
         for proposal in proposals.into_iter().take(32) {
             let operation_id = uuid::Uuid::new_v4();
@@ -1220,7 +1488,7 @@ impl DustRouteMcp {
         };
         let analysis = dustroute_translate::analyze_world_region(&world, bounds);
         let Some(proposal) =
-            dustroute_translate::propose_component_removal(&world, &analysis.physical, target)
+            dustroute_translate::propose_scene_component_removal(&world, &analysis.scene, target)
         else {
             return json_text(
                 json!({ "ok": false, "error": "target is not a removable redstone component" }),
@@ -1233,7 +1501,7 @@ impl DustRouteMcp {
                 patch: proposal.patch.clone(),
                 dimension,
                 analysis_bounds: bounds,
-                fragments_before: analysis.physical.fragments.len(),
+                fragments_before: analysis.scene.fragments.len(),
                 previewed: false,
                 applied: false,
             },
@@ -1387,7 +1655,7 @@ impl DustRouteMcp {
                     "simulating truth table",
                 )
                 .await;
-            let translated = match tokio::task::spawn_blocking(move || {
+            let mut translated = match tokio::task::spawn_blocking(move || {
                 app.analyze_world(&world, ReverseRequest::new(bounds))
             })
             .await
@@ -1398,6 +1666,7 @@ impl DustRouteMcp {
                     return;
                 }
             };
+            translated.analysis.scene.observation.dimension = dimension;
             if operations.is_cancelled(operation_id).await {
                 return;
             }
@@ -1472,7 +1741,7 @@ impl DustRouteMcp {
     async fn collaboration_prompt(&self) -> GetPromptResult {
         GetPromptResult::new(vec![PromptMessage::new_text(
             Role::User,
-            "Work with the player on a Minecraft redstone circuit. Interpret 'this', 'here', and similar deictic phrases through observe_player. For 'this circuit', call discover_looked_at_circuit, then preview_region and ask the player to confirm the highlighted bounds before analysis. For 'from here to there', call mark_region_corner for first and second while the player looks at each point, then preview. If discovery reports that it touches the scan boundary, increase the scan radius before treating the bounds as complete. Use propose_repairs for physical fault candidates. Only call propose_targeted_component_removal when the player explicitly identifies the looked-at component as unwanted. Read-only observation and analysis may proceed after range confirmation. Never infer coordinates from prose when gaze tools can ground them, and never perform a world mutation without an explicit preview and confirmation.".to_owned(),
+            "Work with the player on a Minecraft redstone circuit. Interpret 'this', 'here', 'what is this?', and similar deictic phrases through analyze_looked_at_circuit so one call returns the focused physical component, its local signal role, the inferred higher-level logical function, diagnostics, and repair proposals. If analysis_complete is false, describe the local role but label the higher-level classification provisional and ask for a bounded functional region. For an explicitly selected region, use discover_looked_at_circuit or two mark_region_corner calls, preview_region, and analyze_selected_region. Preview every repair and obtain explicit confirmation before applying it. Only call propose_targeted_component_removal when the player explicitly identifies the looked-at component as unwanted. Never infer coordinates from prose when gaze tools can ground them, and never perform a world mutation without an explicit preview and confirmation.".to_owned(),
         )])
         .with_description("Safe gaze-grounded DustRoute collaboration workflow")
     }
@@ -1493,7 +1762,7 @@ impl ServerHandler for DustRouteMcp {
             env!("CARGO_PKG_VERSION"),
         ))
         .with_instructions(
-            "Use the collaborate-on-redstone-circuit prompt. Ground relative language in player gaze, preview ranges before analysis, and keep world operations read-only unless policy and explicit confirmation permit otherwise."
+            "Use the collaborate-on-redstone-circuit prompt. For gaze-grounded questions such as 'what is this?', prefer analyze_looked_at_circuit. Treat incomplete boundary-limited classifications as provisional. Keep world mutations behind a preview and explicit confirmation."
         )
     }
 }
@@ -1569,6 +1838,12 @@ mod tests {
                 .tools
                 .iter()
                 .any(|tool| tool.name == "discover_looked_at_circuit")
+        );
+        assert!(
+            tools
+                .tools
+                .iter()
+                .any(|tool| tool.name == "analyze_looked_at_circuit")
         );
         let prompts = client.list_prompts(None).await.unwrap();
         assert!(
@@ -1691,6 +1966,84 @@ mod tests {
             }))
             .await;
         assert!(result.contains("player override is not allowed"));
+    }
+
+    #[tokio::test]
+    async fn what_is_this_returns_physical_gate_and_boundary_views() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap().to_string();
+        tokio::spawn(async move {
+            for _ in 0..3 {
+                let (mut stream, _) = listener.accept().await.unwrap();
+                let mut request = String::new();
+                BufReader::new(&mut stream)
+                    .read_line(&mut request)
+                    .await
+                    .unwrap();
+                let request: Value = serde_json::from_str(&request).unwrap();
+                let result = match request["method"].as_str().unwrap() {
+                    "observe_player" => json!({
+                        "player": "builder",
+                        "eye_position": { "x": 0.5, "y": 3.0, "z": 0.5 },
+                        "yaw": 0.0,
+                        "pitch": -1.0,
+                        "targeted_block": { "x": 1, "y": 1, "z": 0 },
+                        "targeted_face": "up",
+                        "distance": 2.0,
+                        "dimension": "minecraft:overworld"
+                    }),
+                    "scan_region" => json!({
+                        "min": request["params"]["min"],
+                        "max": request["params"]["max"],
+                        "blocks": [
+                            { "pos": { "x": 0, "y": 0, "z": 0 }, "name": "minecraft:stone", "properties": {} },
+                            { "pos": { "x": 1, "y": 0, "z": 0 }, "name": "minecraft:stone", "properties": {} },
+                            { "pos": { "x": 2, "y": 0, "z": 0 }, "name": "minecraft:stone", "properties": {} },
+                            { "pos": { "x": 0, "y": 1, "z": 0 }, "name": "minecraft:redstone_wire", "properties": { "east": "side", "power": "0" } },
+                            { "pos": { "x": 1, "y": 1, "z": 0 }, "name": "minecraft:repeater", "properties": { "facing": "west", "delay": "1", "powered": "false" } },
+                            { "pos": { "x": 2, "y": 1, "z": 0 }, "name": "minecraft:redstone_wire", "properties": { "west": "side", "power": "0" } }
+                        ]
+                    }),
+                    method => panic!("unexpected fake bridge method {method}"),
+                };
+                stream
+                    .write_all(
+                        format!("{}\n", json!({ "id": request["id"], "result": result }))
+                            .as_bytes(),
+                    )
+                    .await
+                    .unwrap();
+            }
+        });
+        let service =
+            DustRouteMcp::with_policy_and_player(address, McpPolicy::default(), "builder");
+        let result = service
+            .analyze_looked_at_circuit(Parameters(AnalyzeLookedAtParams {
+                player: None,
+                horizontal_radius: Some(4),
+                vertical_radius: Some(2),
+                fragment_gap: Some(2),
+                include_truth_table: Some(false),
+            }))
+            .await;
+        let value: Value = serde_json::from_str(&result).unwrap();
+        assert_eq!(value["ok"], true);
+        assert_eq!(value["focused_component"]["block"], "Repeater");
+        assert_eq!(
+            value["focused_component"]["recognized_gates"][0]["kind"],
+            "buffer"
+        );
+        assert!(!value["gate_view"]["gates"].as_array().unwrap().is_empty());
+        assert!(value["physical"]["observation"].is_object());
+    }
+
+    #[test]
+    fn recognizes_common_boolean_functions_for_logical_roles() {
+        assert_eq!(boolean_function(&[false, false, false, true]), Some("and"));
+        assert_eq!(boolean_function(&[false, true, true, true]), Some("or"));
+        assert_eq!(boolean_function(&[false, true, true, false]), Some("xor"));
+        assert_eq!(boolean_function(&[true, false]), Some("not"));
+        assert_eq!(boolean_function(&[false, false, true, false]), None);
     }
 
     #[tokio::test]

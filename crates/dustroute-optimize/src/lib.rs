@@ -1,9 +1,15 @@
 //! Placement and semantic circuit optimizers for DustRoute.
 
+mod phased;
 mod placement;
 mod reverse;
 mod semantic;
 
+pub use phased::{
+    AnchorPolicy, CompressionAxis, CompressionDirection, DirectionalWeights, OptimizationPhase,
+    OptimizationPlan, PhaseOptimizationResult, PhaseScore, StagedOptimizationResult,
+    optimize_staged,
+};
 pub use placement::{
     MutationKind, PlacementMutation, PlacementOptimizationResult, PlacementScore, PlacementWeights,
     apply_mutation, candidate_mutations, optimize_placement, placement_score,

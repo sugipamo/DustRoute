@@ -49,7 +49,7 @@ pub struct PhysicalNet {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct PhysicalFragment {
     pub id: FragmentId,
-    pub net: NetId,
+    pub nets: BTreeSet<NetId>,
     pub components: BTreeSet<ComponentId>,
 }
 
@@ -85,14 +85,14 @@ pub struct GapCandidate {
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
-pub struct PhysicalCircuit {
+pub struct VerifiedTopology {
     pub components: Vec<PhysicalComponent>,
     pub connections: BTreeSet<PhysicalConnection>,
     pub nets: Vec<PhysicalNet>,
     pub fragments: Vec<PhysicalFragment>,
 }
 
-impl PhysicalCircuit {
+impl VerifiedTopology {
     #[must_use]
     pub fn from_parts(
         mut components: Vec<PhysicalComponent>,
@@ -100,44 +100,39 @@ impl PhysicalCircuit {
     ) -> Self {
         components.sort_by_key(|component| (component.pos, component.id));
         let connections: BTreeSet<_> = connections.into_iter().collect();
-        let mut union_find = UnionFind::new(components.len());
         let indices: BTreeMap<_, _> = components
             .iter()
             .enumerate()
             .map(|(index, component)| (component.id, index))
             .collect();
-        for connection in &connections {
-            if let (Some(source), Some(sink)) = (
-                indices.get(&connection.source),
-                indices.get(&connection.sink),
-            ) {
-                union_find.union(*source, *sink);
-            }
-        }
-        let mut groups: BTreeMap<usize, BTreeSet<ComponentId>> = BTreeMap::new();
-        for (index, component) in components.iter().enumerate() {
-            groups
-                .entry(union_find.find(index))
-                .or_default()
-                .insert(component.id);
-        }
-        let nets: Vec<_> = groups
-            .into_values()
-            .enumerate()
-            .map(|(id, components)| PhysicalNet {
-                id: NetId(id),
-                components,
-            })
-            .collect();
-        let fragments = nets
-            .iter()
-            .enumerate()
-            .map(|(id, net)| PhysicalFragment {
-                id: FragmentId(id),
-                net: net.id,
-                components: net.components.clone(),
-            })
-            .collect();
+        let nets: Vec<_> = connection_groups(&components, &connections, &indices, |kind| {
+            matches!(
+                kind,
+                ConnectionKind::Dust | ConnectionKind::WeakPower | ConnectionKind::StrongPower
+            )
+        })
+        .into_values()
+        .enumerate()
+        .map(|(id, components)| PhysicalNet {
+            id: NetId(id),
+            components,
+        })
+        .collect();
+        let fragments = connection_groups(&components, &connections, &indices, |kind| {
+            kind != ConnectionKind::Support
+        })
+        .into_values()
+        .enumerate()
+        .map(|(id, components)| PhysicalFragment {
+            id: FragmentId(id),
+            nets: nets
+                .iter()
+                .filter(|net| !net.components.is_disjoint(&components))
+                .map(|net| net.id)
+                .collect(),
+            components,
+        })
+        .collect();
         Self {
             components,
             connections,
@@ -225,6 +220,34 @@ impl PhysicalCircuit {
     }
 }
 
+fn connection_groups(
+    components: &[PhysicalComponent],
+    connections: &BTreeSet<PhysicalConnection>,
+    indices: &BTreeMap<ComponentId, usize>,
+    include: impl Fn(ConnectionKind) -> bool,
+) -> BTreeMap<usize, BTreeSet<ComponentId>> {
+    let mut union_find = UnionFind::new(components.len());
+    for connection in connections
+        .iter()
+        .filter(|connection| include(connection.kind))
+    {
+        if let (Some(source), Some(sink)) = (
+            indices.get(&connection.source),
+            indices.get(&connection.sink),
+        ) {
+            union_find.union(*source, *sink);
+        }
+    }
+    let mut groups: BTreeMap<usize, BTreeSet<ComponentId>> = BTreeMap::new();
+    for (index, component) in components.iter().enumerate() {
+        groups
+            .entry(union_find.find(index))
+            .or_default()
+            .insert(component.id);
+    }
+    groups
+}
+
 #[derive(Clone, Debug)]
 struct UnionFind {
     parent: Vec<usize>,
@@ -286,7 +309,7 @@ mod tests {
 
     #[test]
     fn unions_only_verified_connections() {
-        let circuit = PhysicalCircuit::from_parts(
+        let circuit = VerifiedTopology::from_parts(
             vec![component(0, 0), component(1, 1), component(2, 3)],
             [PhysicalConnection {
                 source: ComponentId(0),
@@ -301,7 +324,7 @@ mod tests {
 
     #[test]
     fn proximity_discovers_broken_fragments_without_unioning_them() {
-        let circuit = PhysicalCircuit::from_parts(
+        let circuit = VerifiedTopology::from_parts(
             vec![component(0, 0), component(1, 1), component(2, 3)],
             [PhysicalConnection {
                 source: ComponentId(0),
@@ -315,8 +338,30 @@ mod tests {
     }
 
     #[test]
+    fn directional_devices_separate_nets_without_splitting_fragments() {
+        let circuit = VerifiedTopology::from_parts(
+            vec![component(0, 0), component(1, 1), component(2, 2)],
+            [
+                PhysicalConnection {
+                    source: ComponentId(0),
+                    sink: ComponentId(1),
+                    kind: ConnectionKind::DirectionalInput,
+                },
+                PhysicalConnection {
+                    source: ComponentId(1),
+                    sink: ComponentId(2),
+                    kind: ConnectionKind::DirectionalOutput,
+                },
+            ],
+        );
+        assert_eq!(circuit.nets.len(), 3);
+        assert_eq!(circuit.fragments.len(), 1);
+        assert_eq!(circuit.fragments[0].nets.len(), 3);
+    }
+
+    #[test]
     fn structural_supports_do_not_create_proximity_candidates() {
-        let circuit = PhysicalCircuit::from_parts(
+        let circuit = VerifiedTopology::from_parts(
             vec![
                 component(0, 0),
                 support(1, 4),

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{Block, FragmentId, GapEvidence, Pos};
+use crate::{Block, BlockKind, FragmentId, GapEvidence, Pos, World};
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct PhysicalBlockChange {
@@ -71,7 +71,46 @@ impl PhysicalPatch {
                 .collect(),
         }
     }
+
+    /// Apply this patch to a cloned observation without mutating the source.
+    /// Every captured before-state must still match, preventing stale repairs
+    /// from being evaluated against a different world.
+    pub fn apply_virtual(&self, world: &World) -> Result<World, PatchApplyError> {
+        for change in &self.changes {
+            let actual = world
+                .get(change.pos)
+                .cloned()
+                .unwrap_or_else(|| Block::new(BlockKind::Air));
+            if actual != change.before {
+                return Err(PatchApplyError {
+                    position: change.pos,
+                    expected: Box::new(change.before.clone()),
+                    actual: Box::new(actual),
+                });
+            }
+        }
+        let mut result = world.clone();
+        for change in &self.changes {
+            result.set(change.pos, change.after.clone());
+        }
+        Ok(result)
+    }
 }
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PatchApplyError {
+    pub position: Pos,
+    pub expected: Box<Block>,
+    pub actual: Box<Block>,
+}
+
+impl std::fmt::Display for PatchApplyError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(formatter, "stale physical patch at {:?}", self.position)
+    }
+}
+
+impl std::error::Error for PatchApplyError {}
 
 #[cfg(test)]
 mod tests {
@@ -94,5 +133,24 @@ mod tests {
         let inverse = patch.inverse();
         assert_eq!(inverse.changes[0].after.kind, BlockKind::Air);
         assert_eq!(inverse.changes[0].before.kind, BlockKind::RedstoneWire);
+    }
+
+    #[test]
+    fn virtual_patch_checks_the_captured_before_state() {
+        let world = World::new();
+        let patch = PhysicalPatch {
+            reason: RepairReason::ConnectMissingWire,
+            affected_fragments: Vec::new(),
+            confidence_percent: 80,
+            explanation: "test".into(),
+            changes: vec![PhysicalBlockChange {
+                pos: Pos::new(1, 2, 3),
+                before: Block::new(BlockKind::Air),
+                after: Block::new(BlockKind::RedstoneWire),
+            }],
+        };
+        let changed = patch.apply_virtual(&world).unwrap();
+        assert_eq!(changed.kind_at(Pos::new(1, 2, 3)), BlockKind::RedstoneWire);
+        assert!(patch.apply_virtual(&changed).is_err());
     }
 }

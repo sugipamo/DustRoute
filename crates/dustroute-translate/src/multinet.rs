@@ -4,7 +4,7 @@ use std::fmt::{Display, Formatter};
 
 use crate::cells::PortKind;
 use crate::connectivity::physical_step_connected;
-use crate::physical::{Endpoint, PhysicalCircuit, PhysicalError};
+use crate::physical::{Endpoint, PhysicalError, PlacementCircuit};
 use crate::port_realization::{PortRealizationError, realize_sink_endpoint, terminal_for_endpoint};
 use crate::routing::{RouteNotFound, RouterConfig, astar_route};
 use crate::routing_resources::{RoutingResources, branch_stair_clearances};
@@ -113,7 +113,7 @@ impl MultiNetRouting {
 }
 
 pub fn route_jobs_ripup(
-    circuit: &PhysicalCircuit,
+    circuit: &PlacementCircuit,
     mut jobs: Vec<RoutingJob>,
     config: RouterConfig,
     max_attempts: usize,
@@ -291,7 +291,7 @@ fn blocked_world(base: &World, blocked: &BTreeSet<Pos>, allowed: &[Pos]) -> Worl
     world
 }
 
-fn cell_source_keepout(circuit: &PhysicalCircuit) -> BTreeSet<Pos> {
+fn cell_source_keepout(circuit: &PlacementCircuit) -> BTreeSet<Pos> {
     let mut keepout = BTreeSet::new();
     for node in circuit.cells.values() {
         let cell_world: BTreeMap<_, _> = node.placed.blocks().collect();
@@ -521,7 +521,7 @@ fn reinforce_wire_sink_tails(
 }
 
 pub fn route_net_tree(
-    circuit: &PhysicalCircuit,
+    circuit: &PlacementCircuit,
     id: NetId,
     source: Endpoint,
     sinks: Vec<Endpoint>,
@@ -600,7 +600,7 @@ fn realized_positions(sinks: &[Endpoint]) -> Result<Vec<Pos>, PortRealizationErr
 }
 
 pub fn materialize_multinet(
-    circuit: &PhysicalCircuit,
+    circuit: &PlacementCircuit,
     routing: &MultiNetRouting,
 ) -> Result<World, MultiNetError> {
     let mut world = circuit.cell_world()?;
@@ -702,7 +702,7 @@ impl LegalityReport {
 
 #[must_use]
 pub fn validate_routing_legality(
-    _circuit: &PhysicalCircuit,
+    _circuit: &PlacementCircuit,
     routing: &MultiNetRouting,
     world: &World,
     max_wire_run: usize,
@@ -785,7 +785,7 @@ mod tests {
             origin: pos,
             rotation: RotationY::R0,
         };
-        let mut circuit = PhysicalCircuit::new();
+        let mut circuit = PlacementCircuit::new();
         let source_id = circuit.add_cell(GateKind::Input, placed(Pos::new(0, 0, 0)));
         let left_id = circuit.add_cell(GateKind::Output, placed(Pos::new(16, 0, -6)));
         let right_id = circuit.add_cell(GateKind::Output, placed(Pos::new(16, 0, 6)));

@@ -1,14 +1,32 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use dustroute_physical::{
-    Block, BlockKind, ComponentId, Facing, GapEvidence, PhysicalBlockChange, PhysicalCircuit,
-    PhysicalPatch, Pos, RepairImpact, RepairProposal, RepairReason, World,
+    Block, BlockKind, ComponentId, Facing, GapEvidence, PhysicalBlockChange, PhysicalPatch,
+    PhysicalScene, Pos, RepairImpact, RepairProposal, RepairReason, VerifiedTopology, World,
 };
 
 #[must_use]
-pub fn propose_physical_repairs(
+pub fn propose_scene_repairs(
     world: &World,
-    circuit: &PhysicalCircuit,
+    scene: &PhysicalScene,
+    max_gap: u32,
+) -> Vec<RepairProposal> {
+    propose_physical_repairs(world, &scene.verified_topology(), max_gap)
+}
+
+#[must_use]
+pub fn propose_scene_component_removal(
+    world: &World,
+    scene: &PhysicalScene,
+    pos: Pos,
+) -> Option<RepairProposal> {
+    propose_component_removal(world, &scene.verified_topology(), pos)
+}
+
+#[must_use]
+fn propose_physical_repairs(
+    world: &World,
+    circuit: &VerifiedTopology,
     max_gap: u32,
 ) -> Vec<RepairProposal> {
     let mut proposals = missing_wire_repairs(world, circuit, max_gap);
@@ -31,9 +49,9 @@ pub fn propose_physical_repairs(
 }
 
 #[must_use]
-pub fn propose_component_removal(
+fn propose_component_removal(
     world: &World,
-    circuit: &PhysicalCircuit,
+    circuit: &VerifiedTopology,
     pos: Pos,
 ) -> Option<RepairProposal> {
     let component = circuit
@@ -65,7 +83,7 @@ pub fn propose_component_removal(
 
 fn missing_wire_repairs(
     world: &World,
-    circuit: &PhysicalCircuit,
+    circuit: &VerifiedTopology,
     max_gap: u32,
 ) -> Vec<RepairProposal> {
     let by_id: BTreeMap<_, _> = circuit
@@ -136,7 +154,7 @@ fn missing_wire_repairs(
 
 fn missing_directional_component_repairs(
     world: &World,
-    circuit: &PhysicalCircuit,
+    circuit: &VerifiedTopology,
     max_gap: u32,
 ) -> Vec<RepairProposal> {
     let by_id: BTreeMap<_, _> = circuit
@@ -212,7 +230,7 @@ fn missing_directional_component_repairs(
     proposals
 }
 
-fn missing_support_repairs(world: &World, circuit: &PhysicalCircuit) -> Vec<RepairProposal> {
+fn missing_support_repairs(world: &World, circuit: &VerifiedTopology) -> Vec<RepairProposal> {
     let by_pos: BTreeMap<_, _> = circuit
         .components
         .iter()
@@ -249,7 +267,7 @@ fn missing_support_repairs(world: &World, circuit: &PhysicalCircuit) -> Vec<Repa
         .collect()
 }
 
-fn direction_repairs(world: &World, circuit: &PhysicalCircuit) -> Vec<RepairProposal> {
+fn direction_repairs(world: &World, circuit: &VerifiedTopology) -> Vec<RepairProposal> {
     let by_pos: BTreeMap<_, _> = circuit
         .components
         .iter()
@@ -320,26 +338,23 @@ fn direction_repairs(world: &World, circuit: &PhysicalCircuit) -> Vec<RepairProp
 
 fn evaluate_repair(
     world: &World,
-    circuit: &PhysicalCircuit,
+    circuit: &VerifiedTopology,
     patch: &PhysicalPatch,
 ) -> Option<RepairImpact> {
-    let mut repaired = world.clone();
-    for change in &patch.changes {
-        repaired.set(change.pos, change.after.clone());
-    }
+    let mut repaired = patch.apply_virtual(world).ok()?;
     crate::update_wire_shapes(&mut repaired);
     let (min, max) = repaired.bounds()?;
     let analysis = crate::analyze_world_region(&repaired, crate::RegionBounds::new(min, max));
     Some(RepairImpact {
         fragments_before: circuit.fragments.len(),
-        fragments_after: analysis.physical.fragments.len(),
+        fragments_after: analysis.scene.fragments.len(),
         invalid_supports_before: world.support_issues().len(),
         invalid_supports_after: repaired.support_issues().len(),
     })
 }
 
 fn fragments_for(
-    circuit: &PhysicalCircuit,
+    circuit: &VerifiedTopology,
     components: impl IntoIterator<Item = ComponentId>,
 ) -> Vec<dustroute_physical::FragmentId> {
     let components: BTreeSet<_> = components.into_iter().collect();
@@ -371,7 +386,7 @@ mod tests {
             &world,
             RegionBounds::new(Pos::new(0, 0, 0), Pos::new(4, 2, 0)),
         );
-        let proposals = propose_physical_repairs(&world, &analysis.physical, 2);
+        let proposals = propose_scene_repairs(&world, &analysis.scene, 2);
         assert_eq!(proposals.len(), 3);
         assert_eq!(proposals[0].patch.changes[0].pos, Pos::new(2, 1, 0));
         assert_eq!(proposals[0].patch.reason, RepairReason::ConnectMissingWire);
@@ -393,7 +408,7 @@ mod tests {
             &world,
             RegionBounds::new(Pos::new(0, 0, 0), Pos::new(2, 2, 0)),
         );
-        let proposals = propose_physical_repairs(&world, &analysis.physical, 2);
+        let proposals = propose_scene_repairs(&world, &analysis.scene, 2);
         assert_eq!(
             proposals
                 .iter()
@@ -418,7 +433,7 @@ mod tests {
             RegionBounds::new(Pos::new(0, 0, 0), Pos::new(2, 2, 0)),
         );
         let proposal =
-            propose_component_removal(&world, &analysis.physical, Pos::new(1, 1, 0)).unwrap();
+            propose_scene_component_removal(&world, &analysis.scene, Pos::new(1, 1, 0)).unwrap();
         assert_eq!(proposal.patch.confidence_percent, 40);
         assert_eq!(
             proposal.patch.inverse().changes[0].after.kind,
@@ -439,7 +454,7 @@ mod tests {
             &world,
             RegionBounds::new(Pos::new(0, 0, 0), Pos::new(0, 2, 0)),
         );
-        let proposals = propose_physical_repairs(&world, &analysis.physical, 2);
+        let proposals = propose_scene_repairs(&world, &analysis.scene, 2);
         assert!(proposals.iter().any(|proposal| {
             proposal.patch.reason == RepairReason::RestoreComponentSupport
                 && proposal.patch.changes[0].pos == Pos::new(0, 0, 0)

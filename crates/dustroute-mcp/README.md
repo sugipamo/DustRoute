@@ -33,9 +33,14 @@ configured player automatically, so callers normally omit their optional
 `player` argument. An attempt to override it with another player is rejected.
 
 Set `DUSTROUTE_BOT_BRIDGE` to override the local bridge address. Natural-language
-references such as “this circuit” are resolved by the LLM through the MCP tool
-sequence: `observe_player`, `discover_looked_at_circuit` or
-`mark_region_corner`, `preview_region`, and `analyze_selected_region`.
+references such as “what is this?” use `analyze_looked_at_circuit`. One call
+returns the focused physical component, its local signal role, recognized
+AND/OR/NOT-style gates, traceable expressions, optional whole-circuit function
+candidates, observation completeness, diagnostics, and non-mutating repairs.
+Set `include_truth_table=false` for faster local-only inspection; it defaults to
+true so higher-level functions can be inferred. Explicit regions continue to
+use `discover_looked_at_circuit` or `mark_region_corner`, `preview_region`, and
+`analyze_selected_region`.
 
 Long analyses can use `start_selected_region_analysis`, `get_operation`, and
 `cancel_operation`. `preview_compiled_circuit` returns a block diff, collisions,

@@ -65,7 +65,7 @@ connectBot()
 
 function directionFromRotation (yaw, pitch) {
   const cosPitch = Math.cos(pitch)
-  return new Vec3(-Math.sin(yaw) * cosPitch, -Math.sin(pitch), -Math.cos(yaw) * cosPitch)
+  return new Vec3(-Math.sin(yaw) * cosPitch, Math.sin(pitch), -Math.cos(yaw) * cosPitch)
 }
 
 function targetFromPlayer (username, maxDistance) {

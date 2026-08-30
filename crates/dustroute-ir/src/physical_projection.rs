@@ -1,6 +1,9 @@
 use std::collections::BTreeMap;
 
-use dustroute_physical::{BlockKind, ComponentId, ConnectionKind, PhysicalCircuit, Pos};
+use dustroute_physical::{
+    BlockKind, ComponentId, ConnectionKind, Observation, PhysicalScene, Pos, SceneBounds,
+    TransferKind, VerifiedTopology,
+};
 use serde::{Deserialize, Serialize};
 
 use crate::LogicDag;
@@ -116,7 +119,7 @@ pub enum ProjectionEvidence {
 
 #[derive(Clone, Debug)]
 pub enum IrProjection {
-    Physical(PhysicalCircuit),
+    Physical(PhysicalScene),
     Signal(SignalIr),
     Logic(LogicDag),
     Behavior(BehaviorIr),
@@ -172,10 +175,31 @@ pub struct PhysicalProjection {
 
 impl PhysicalProjection {
     #[must_use]
-    pub fn from_physical(physical: &PhysicalCircuit) -> Self {
-        let origins: BTreeMap<_, _> = physical.components.iter().map(|c| (c.id, c.pos)).collect();
-        let by_id: BTreeMap<_, _> = physical.components.iter().map(|c| (c.id, c)).collect();
-        let nodes = physical
+    pub fn from_topology(topology: &VerifiedTopology) -> Self {
+        let (min, max) = topology
+            .components
+            .iter()
+            .map(|component| component.pos)
+            .fold(None, |bounds, pos| match bounds {
+                None => Some((pos, pos)),
+                Some((min, max)) => Some((
+                    Pos::new(min.x.min(pos.x), min.y.min(pos.y), min.z.min(pos.z)),
+                    Pos::new(max.x.max(pos.x), max.y.max(pos.y), max.z.max(pos.z)),
+                )),
+            })
+            .unwrap_or((Pos::default(), Pos::default()));
+        let scene = PhysicalScene::from_topology(
+            Observation::complete("unknown", SceneBounds::new(min, max)),
+            topology,
+        );
+        Self::from_scene(&scene)
+    }
+
+    #[must_use]
+    pub fn from_scene(scene: &PhysicalScene) -> Self {
+        let origins: BTreeMap<_, _> = scene.components.iter().map(|c| (c.id, c.pos)).collect();
+        let by_id: BTreeMap<_, _> = scene.components.iter().map(|c| (c.id, c)).collect();
+        let nodes = scene
             .components
             .iter()
             .map(|c| SignalNode {
@@ -185,33 +209,33 @@ impl PhysicalProjection {
                 delay_ticks: component_delay(c.block.kind, c.block.delay),
             })
             .collect();
-        let edges = physical
+        let edges = scene
             .connections
             .iter()
             .map(|edge| SignalEdge {
-                source: edge.source,
-                sink: edge.sink,
-                physical_kind: edge.kind,
+                source: edge.source.component,
+                sink: edge.sink.component,
+                physical_kind: legacy_connection_kind(edge.transfer),
                 delay_ticks: by_id
-                    .get(&edge.source)
+                    .get(&edge.source.component)
                     .map_or(0, |c| component_delay(c.block.kind, c.block.delay)),
             })
             .collect();
-        let evidence = physical
+        let evidence = scene
             .connections
             .iter()
             .map(|edge| ProjectionEvidence::VerifiedPhysicalConnection {
-                source: edge.source,
-                sink: edge.sink,
+                source: edge.source.component,
+                sink: edge.sink.component,
             })
-            .chain(physical.components.iter().filter_map(|c| {
+            .chain(scene.components.iter().filter_map(|c| {
                 temporal_semantics(c.block.kind).map(|_| ProjectionEvidence::DeviceSemantics {
                     component: c.id,
                     block: c.block.kind,
                 })
             }))
             .collect();
-        let devices = physical
+        let devices = scene
             .components
             .iter()
             .filter_map(|c| {
@@ -255,6 +279,18 @@ impl PhysicalProjection {
                     .collect(),
             })
         }
+    }
+}
+
+const fn legacy_connection_kind(transfer: TransferKind) -> ConnectionKind {
+    match transfer {
+        TransferKind::DustPropagation => ConnectionKind::Dust,
+        TransferKind::DirectSignal => ConnectionKind::DirectSource,
+        TransferKind::WeakPower => ConnectionKind::WeakPower,
+        TransferKind::StrongPower => ConnectionKind::StrongPower,
+        TransferKind::DirectionalDevice => ConnectionKind::DirectionalOutput,
+        TransferKind::SideControl => ConnectionKind::Control,
+        TransferKind::StructuralSupport => ConnectionKind::Support,
     }
 }
 
@@ -360,7 +396,7 @@ mod tests {
     fn projects_delay_and_physical_traceability() {
         let mut repeater = Block::new(BlockKind::Repeater);
         repeater.delay = Some(3);
-        let physical = PhysicalCircuit::from_parts(
+        let topology = VerifiedTopology::from_parts(
             vec![
                 PhysicalComponent {
                     id: ComponentId(0),
@@ -379,7 +415,7 @@ mod tests {
                 kind: ConnectionKind::DirectSource,
             }],
         );
-        let projection = PhysicalProjection::from_physical(&physical);
+        let projection = PhysicalProjection::from_topology(&topology);
         assert_eq!(projection.behavior.devices[0].minimum_delay_ticks, 3);
         assert_eq!(
             projection.behavior.patterns,
@@ -397,7 +433,7 @@ mod tests {
 
     #[test]
     fn identifies_inverting_feedback_as_clock_candidate() {
-        let physical = PhysicalCircuit::from_parts(
+        let topology = VerifiedTopology::from_parts(
             vec![
                 PhysicalComponent {
                     id: ComponentId(0),
@@ -409,6 +445,16 @@ mod tests {
                     pos: Pos::new(1, 64, 0),
                     block: Block::new(BlockKind::RedstoneWire),
                 },
+                PhysicalComponent {
+                    id: ComponentId(2),
+                    pos: Pos::new(1, 63, 0),
+                    block: Block::new(BlockKind::RedstoneWire),
+                },
+                PhysicalComponent {
+                    id: ComponentId(3),
+                    pos: Pos::new(0, 63, 0),
+                    block: Block::new(BlockKind::Solid),
+                },
             ],
             [
                 PhysicalConnection {
@@ -418,12 +464,22 @@ mod tests {
                 },
                 PhysicalConnection {
                     source: ComponentId(1),
+                    sink: ComponentId(2),
+                    kind: ConnectionKind::Dust,
+                },
+                PhysicalConnection {
+                    source: ComponentId(2),
+                    sink: ComponentId(3),
+                    kind: ConnectionKind::WeakPower,
+                },
+                PhysicalConnection {
+                    source: ComponentId(3),
                     sink: ComponentId(0),
                     kind: ConnectionKind::Control,
                 },
             ],
         );
-        let projection = PhysicalProjection::from_physical(&physical);
+        let projection = PhysicalProjection::from_topology(&topology);
         assert!(matches!(
             projection.behavior.patterns[0],
             BehaviorPattern::ClockCandidate { .. }

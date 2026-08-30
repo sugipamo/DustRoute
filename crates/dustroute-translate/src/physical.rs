@@ -65,14 +65,14 @@ impl Display for PhysicalError {
 impl Error for PhysicalError {}
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct PhysicalCircuit {
+pub struct PlacementCircuit {
     pub cells: BTreeMap<CellId, PhysicalNode>,
     pub routes: BTreeMap<RouteId, Route>,
     next_cell: u32,
     next_route: u32,
 }
 
-impl PhysicalCircuit {
+impl PlacementCircuit {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -246,7 +246,7 @@ mod tests {
             origin,
             rotation: RotationY::R0,
         };
-        let mut circuit = PhysicalCircuit::new();
+        let mut circuit = PlacementCircuit::new();
         let first = circuit.add_cell(GateKind::Input, placed(Pos::new(0, 0, 0)));
         assert_eq!(
             circuit.output_endpoint(first, "out").unwrap().pos,
@@ -261,9 +261,9 @@ mod tests {
 
     #[test]
     fn build_world_materializes_recorded_repeaters() {
-        let mut circuit = PhysicalCircuit::new();
-        let source = PhysicalCircuit::boundary("in", Pos::new(0, 1, 0), PortKind::Wire, None);
-        let sink = PhysicalCircuit::boundary("out", Pos::new(3, 1, 0), PortKind::Wire, None);
+        let mut circuit = PlacementCircuit::new();
+        let source = PlacementCircuit::boundary("in", Pos::new(0, 1, 0), PortKind::Wire, None);
+        let sink = PlacementCircuit::boundary("out", Pos::new(3, 1, 0), PortKind::Wire, None);
         circuit.add_route(
             source,
             sink,
