@@ -1,5 +1,6 @@
 //! MCP-facing orchestration for a visible Minecraft bot.
 
+pub mod api;
 pub mod bridge;
 pub mod config;
 pub mod discovery;
@@ -10,6 +11,10 @@ pub mod service;
 mod state;
 pub mod transition;
 
+pub use api::{
+    DIAGNOSTIC_SCHEMA_V1, ERROR_SCHEMA_V1, ErrorResponse, McpErrorCode, PLACEMENT_SCHEMA_V1,
+    REPAIR_SCHEMA_V1, TRANSITION_SCHEMA_V1, TransitionTraceResponse,
+};
 pub use bridge::{
     BlockUpdateEvent, BotBridge, BotBridgeError, BotStatus, LeverActivation, ObservedBlock,
     ObservedBlockState, PlayerObservation, UpdateRecording, UpdateRecordingStarted, VisiblePlayer,

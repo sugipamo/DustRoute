@@ -72,6 +72,7 @@ Scenario files are ordered JSON documents in `scenarios/`. Supported steps are:
 - `aim`: teleport the actor, call Mineflayer `lookAt`, and poll MCP until the
   observed targeted block exactly matches.
 - `mcp`: call a named MCP tool and save its JSON result.
+- `mcp_error`: require a tool-level error and save its stable error envelope.
 - `assert`: compare a saved result using `equals`, `at_least`, `at_most`, or
   `exists`.
 - `wait`: wait a number of Mineflayer physics ticks.

@@ -17,6 +17,9 @@
     ]},
     { "kind": "mcp", "tool": "show_repair_plan", "arguments": { "operation_id": "${analysis.repair_proposals.0.operation_id}" }, "save": "preview" },
     { "kind": "mcp", "tool": "invoke_repair", "arguments": { "operation_id": "${analysis.repair_proposals.0.operation_id}", "confirm": true }, "save": "applied" },
+    { "kind": "assert", "from": "applied", "expect": [
+      { "path": "schema_version", "equals": "dustroute.repair.v1" }
+    ]},
     { "kind": "mcp", "tool": "test_looked_at_circuit", "arguments": { "max_components": 64 }, "save": "after" },
     { "kind": "assert", "from": "after", "expect": [
       { "path": "diagnostic.counts.probable_faults", "equals": 0 }

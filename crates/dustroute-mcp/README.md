@@ -113,6 +113,10 @@ explicit component-removal planning. Debug tools remain implemented but cannot
 be listed or called in the default profile. Old pre-convention tool names are
 not retained as aliases.
 
+High-level JSON response versions, compatible-change rules, stable error codes,
+and coordinate-state representations are documented in
+[`../../docs/mcp-api-v1.md`](../../docs/mcp-api-v1.md).
+
 Set `DUSTROUTE_BOT_BRIDGE` to override the local bridge address. Natural-language
 references such as “what is this?” use `convert_from_looked_at_circuit`. One call
 returns the focused physical component, its local signal role, recognized

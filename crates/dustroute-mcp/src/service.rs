@@ -21,6 +21,10 @@ use serde_json::{Value, json};
 use tokio::sync::Mutex;
 
 use crate::McpConfig;
+use crate::api::{
+    DIAGNOSTIC_SCHEMA_V1, ErrorResponse, McpErrorCode, PLACEMENT_SCHEMA_V1, REPAIR_SCHEMA_V1,
+    TRANSITION_SCHEMA_V1, TransitionTraceResponse,
+};
 use crate::state::PlanStateStore;
 use crate::{
     BotBridge, McpPolicy, OperationKind, OperationRegistry, OperationStatus, PlacementPlan,
@@ -268,27 +272,40 @@ struct PreviewRepairParams {
     player: Option<String>,
 }
 
-fn json_text(value: Value) -> String {
+fn json_text(mut value: Value) -> String {
+    if value.get("ok") == Some(&Value::Bool(false))
+        && let Some(object) = value.as_object_mut()
+    {
+        object
+            .entry("schema_version")
+            .or_insert_with(|| Value::String(crate::api::ERROR_SCHEMA_V1.to_owned()));
+        object
+            .entry("error_code")
+            .or_insert_with(|| Value::String("internal".to_owned()));
+        object.entry("retryable").or_insert(Value::Bool(false));
+    }
     serde_json::to_string_pretty(&value)
         .unwrap_or_else(|error| json!({ "ok": false, "error": error.to_string() }).to_string())
 }
 
+fn error_text(code: McpErrorCode, message: impl Into<String>, retryable: bool) -> String {
+    match serde_json::to_value(ErrorResponse::new(code, message, retryable)) {
+        Ok(value) => json_text(value),
+        Err(error) => format!(
+            "{{\"ok\":false,\"schema_version\":\"dustroute.error.v1\",\"error\":\"failed to serialize MCP error: {error}\",\"error_code\":\"internal\",\"retryable\":false}}"
+        ),
+    }
+}
+
 fn scenario_trace_json(trace: &dustroute_translate::ScenarioTrace) -> Value {
-    let final_strengths = trace
-        .final_strengths
-        .iter()
-        .map(|(position, strength)| json!({ "position": position, "strength": strength }))
-        .collect::<Vec<_>>();
-    let final_powered = trace
-        .final_powered
-        .iter()
-        .map(|(position, powered)| json!({ "position": position, "powered": powered }))
-        .collect::<Vec<_>>();
-    json!({
-        "duration_redstone_ticks": trace.duration_redstone_ticks,
-        "events": trace.events,
-        "final_strengths": final_strengths,
-        "final_powered": final_powered,
+    serde_json::to_value(TransitionTraceResponse::from(trace)).unwrap_or_else(|error| {
+        json!({
+            "serialization_error": error.to_string(),
+            "duration_redstone_ticks": trace.duration_redstone_ticks,
+            "events": [],
+            "final_strengths": [],
+            "final_powered": [],
+        })
     })
 }
 
@@ -1085,6 +1102,7 @@ impl DustRouteMcp {
             )
             .await;
         json_text(json!({
+            "schema_version": PLACEMENT_SCHEMA_V1,
             "ok": true,
             "operation_id": operation_id,
             "action": if undo { "undo" } else { "apply" },
@@ -1315,6 +1333,7 @@ impl DustRouteMcp {
             )
             .await;
         json_text(json!({
+            "schema_version": REPAIR_SCHEMA_V1,
             "ok": true,
             "operation_id": operation_id,
             "action": if undo { "undo" } else { "apply" },
@@ -2044,7 +2063,7 @@ impl DustRouteMcp {
             dustroute_translate::diagnose_scene(&analysis.scene, Some(target), complete);
         json_text(json!({
             "ok": true,
-            "schema_version": "dustroute.diagnostic.v1",
+            "schema_version": DIAGNOSTIC_SCHEMA_V1,
             "analysis_mode": "focused_fast",
             "mutation_performed": false,
             "target": target,
@@ -2633,6 +2652,7 @@ impl DustRouteMcp {
             }));
         }
         json_text(json!({
+            "schema_version": REPAIR_SCHEMA_V1,
             "ok": true,
             "bounds": bounds_json(bounds),
             "fragments": fragments_before,
@@ -2712,6 +2732,7 @@ impl DustRouteMcp {
             return json_text(json!({ "ok": false, "error": error }));
         }
         json_text(json!({
+            "schema_version": REPAIR_SCHEMA_V1,
             "ok": true,
             "operation_id": operation_id,
             "proposal": proposal,
@@ -2755,6 +2776,7 @@ impl DustRouteMcp {
                     return json_text(json!({ "ok": false, "error": error }));
                 }
                 json_text(json!({
+                    "schema_version": REPAIR_SCHEMA_V1,
                     "ok": true,
                     "operation_id": operation_id,
                     "bounds": bounds_json(bounds),
@@ -2807,10 +2829,11 @@ impl DustRouteMcp {
         let observation_ticks = params.observation_ticks.unwrap_or(20);
         let max_events = params.max_events.unwrap_or(16_384);
         if !(1..=200).contains(&observation_ticks) || !(1..=65_536).contains(&max_events) {
-            return json_text(json!({
-                "ok": false,
-                "error": "observation_ticks must be 1..200 and max_events must be 1..65536"
-            }));
+            return error_text(
+                McpErrorCode::InvalidArgument,
+                "observation_ticks must be 1..200 and max_events must be 1..65536",
+                false,
+            );
         }
         let discovery_text = self
             .resolve_looked_at_circuit(Parameters(DiscoverCircuitParams {
@@ -2860,6 +2883,7 @@ impl DustRouteMcp {
             }));
         }
         json_text(json!({
+            "schema_version": TRANSITION_SCHEMA_V1,
             "ok": true,
             "bounds": bounds_json(bounds),
             "dimension": dimension,
@@ -2878,11 +2902,17 @@ impl DustRouteMcp {
     ) -> String {
         let operation_id = match uuid::Uuid::parse_str(&params.operation_id) {
             Ok(id) => id,
-            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+            Err(error) => {
+                return error_text(McpErrorCode::InvalidArgument, error.to_string(), false);
+            }
         };
         let mut plans = self.transition_plans.lock().await;
         let Some(plan) = plans.get_mut(&operation_id) else {
-            return json_text(json!({ "ok": false, "error": "transition scenario not found" }));
+            return error_text(
+                McpErrorCode::NotFound,
+                "transition scenario not found",
+                false,
+            );
         };
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
@@ -2903,6 +2933,7 @@ impl DustRouteMcp {
         };
         plan.previewed = true;
         json_text(json!({
+            "schema_version": TRANSITION_SCHEMA_V1,
             "ok": true,
             "operation_id": operation_id,
             "lever": plan.lever,
@@ -2922,14 +2953,20 @@ impl DustRouteMcp {
         Parameters(params): Parameters<RunTransitionParams>,
     ) -> String {
         if !params.confirm {
-            return json_text(json!({ "ok": false, "error": "confirm=true is required" }));
+            return error_text(
+                McpErrorCode::InvalidArgument,
+                "confirm=true is required",
+                false,
+            );
         }
         if let Err(error) = self.policy.authorize_mutation() {
             return json_text(json!({ "ok": false, "error": error.to_string() }));
         }
         let operation_id = match uuid::Uuid::parse_str(&params.operation_id) {
             Ok(id) => id,
-            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+            Err(error) => {
+                return error_text(McpErrorCode::InvalidArgument, error.to_string(), false);
+            }
         };
         let plan = match self
             .transition_plans
@@ -2940,12 +2977,18 @@ impl DustRouteMcp {
         {
             Some(plan) => plan,
             None => {
-                return json_text(json!({ "ok": false, "error": "transition scenario not found" }));
+                return error_text(
+                    McpErrorCode::NotFound,
+                    "transition scenario not found",
+                    false,
+                );
             }
         };
         if self.policy.preview_required && !plan.previewed {
-            return json_text(
-                json!({ "ok": false, "error": "show_transition_test is required first" }),
+            return error_text(
+                McpErrorCode::InvalidState,
+                "show_transition_test is required first",
+                false,
             );
         }
         if plan.executed {
@@ -3134,6 +3177,7 @@ impl DustRouteMcp {
         };
         let live_scenario_trace = scenario_trace_json(&live_scenario_trace);
         let result = json!({
+            "schema_version": TRANSITION_SCHEMA_V1,
             "ok": restoration_verified && wait_error.is_none() && !recording.truncated,
             "operation_id": operation_id,
             "activation": activation,
@@ -3178,14 +3222,20 @@ impl DustRouteMcp {
         Parameters(params): Parameters<RunTransitionParams>,
     ) -> String {
         if !params.confirm {
-            return json_text(json!({ "ok": false, "error": "confirm=true is required" }));
+            return error_text(
+                McpErrorCode::InvalidArgument,
+                "confirm=true is required",
+                false,
+            );
         }
         if let Err(error) = self.policy.authorize_mutation() {
             return json_text(json!({ "ok": false, "error": error.to_string() }));
         }
         let operation_id = match uuid::Uuid::parse_str(&params.operation_id) {
             Ok(id) => id,
-            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+            Err(error) => {
+                return error_text(McpErrorCode::InvalidArgument, error.to_string(), false);
+            }
         };
         let plan = match self
             .transition_plans
@@ -3196,7 +3246,11 @@ impl DustRouteMcp {
         {
             Some(plan) => plan,
             None => {
-                return json_text(json!({ "ok": false, "error": "transition scenario not found" }));
+                return error_text(
+                    McpErrorCode::NotFound,
+                    "transition scenario not found",
+                    false,
+                );
             }
         };
         let current = match self.bridge.get_block(plan.lever, &plan.dimension).await {
@@ -3242,6 +3296,7 @@ impl DustRouteMcp {
             stored.restoration_verified = verified;
         }
         let result = json!({
+            "schema_version": TRANSITION_SCHEMA_V1,
             "ok": verified,
             "operation_id": operation_id,
             "restoration_verified": verified,
@@ -3491,6 +3546,19 @@ mod tests {
         assert_eq!(value["final_strengths"][0]["strength"], 15);
         assert_eq!(value["final_powered"][0]["powered"], true);
         assert!(serde_json::to_string(&value).is_ok());
+    }
+
+    #[test]
+    fn legacy_tool_errors_receive_the_common_error_contract() {
+        let value: Value = serde_json::from_str(&json_text(json!({
+            "ok": false,
+            "error": "legacy failure"
+        })))
+        .unwrap();
+        assert_eq!(value["schema_version"], crate::api::ERROR_SCHEMA_V1);
+        assert_eq!(value["error_code"], "internal");
+        assert_eq!(value["retryable"], false);
+        assert_eq!(value["error"], "legacy failure");
     }
 
     #[tokio::test]

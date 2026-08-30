@@ -20,6 +20,7 @@
     ]},
     { "kind": "mcp", "tool": "invoke_transition_test", "arguments": { "operation_id": "${proposal.proposals.0.operation_id}", "confirm": true }, "save": "run" },
     { "kind": "assert", "from": "run", "expect": [
+      { "path": "schema_version", "equals": "dustroute.transition.v1" },
       { "path": "ok", "equals": true },
       { "path": "activation.bot_approached", "equals": true },
       { "path": "scenario_verification.simulated.ok", "equals": true },

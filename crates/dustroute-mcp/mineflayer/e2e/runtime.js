@@ -90,12 +90,16 @@ class McpStdioClient {
   }
 
   async callTool (name, args = {}) {
+    const parsed = await this.callToolRaw(name, args)
+    if (parsed.ok === false) throw new Error(`${name}: ${parsed.error || JSON.stringify(parsed)}`)
+    return parsed
+  }
+
+  async callToolRaw (name, args = {}) {
     const result = await this.request('tools/call', { name, arguments: args })
     const text = result.content.find(item => item.type === 'text')
     if (!text) throw new Error(`${name} returned no text content`)
-    const parsed = JSON.parse(text.text)
-    if (parsed.ok === false) throw new Error(`${name}: ${parsed.error || text.text}`)
-    return parsed
+    return JSON.parse(text.text)
   }
 
   close () {

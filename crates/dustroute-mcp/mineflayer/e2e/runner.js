@@ -85,6 +85,10 @@ async function runScenario (bot, mcp, scenario) {
       if (process.env.DUSTROUTE_E2E_VERBOSE === 'true') {
         process.stdout.write(`${JSON.stringify({ step: step.save, result: results[step.save] }, null, 2)}\n`)
       }
+    } else if (step.kind === 'mcp_error') {
+      const args = resolveReferences(step.arguments || {}, results)
+      results[step.save] = await mcp.callToolRaw(step.tool, args)
+      if (results[step.save].ok !== false) throw new Error(`${step.tool} unexpectedly succeeded`)
     } else if (step.kind === 'assert') {
       for (const expectation of step.expect) assertExpectation(results[step.from], expectation)
     } else if (step.kind === 'wait') {

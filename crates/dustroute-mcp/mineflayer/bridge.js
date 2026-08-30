@@ -319,9 +319,12 @@ async function activateLever (pos) {
   const before = propertiesOf(block).powered === 'true'
   await bot.lookAt(block.position.offset(0.5, 0.5, 0.5), true)
   await bot.activateBlock(block)
-  await bot.waitForTicks(1)
-  const afterBlock = bot.blockAt(block.position)
-  const after = afterBlock && propertiesOf(afterBlock).powered === 'true'
+  let after = before
+  for (let attempt = 0; attempt < 5 && after === before; attempt++) {
+    await bot.waitForTicks(1)
+    const afterBlock = bot.blockAt(block.position)
+    after = afterBlock && propertiesOf(afterBlock).powered === 'true'
+  }
   if (after === before) throw new Error('lever state did not change after normal player activation')
   return { pos, before_powered: before, after_powered: after, bot_approached: approach.moved }
 }
