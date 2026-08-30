@@ -263,6 +263,7 @@ dependencies = [
  "axum",
  "dustroute-app",
  "dustroute-ir",
+ "dustroute-optimize",
  "dustroute-physical",
  "dustroute-translate",
  "rmcp",

@@ -2,6 +2,11 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};
 use std::sync::Arc;
 
 use dustroute_app::DustRouteService;
+use dustroute_optimize::{
+    AnchorPolicy, BehavioralVerificationConfig, CompressionAxis, CompressionDirection,
+    OptimizationPlan, OptimizationRoutingConfig, OptimizationSafety, TemporalCapabilities,
+    assess_optimization_safety, realize_staged_optimization, verify_realized_optimization,
+};
 use dustroute_physical::{BlockKind, Pos};
 use dustroute_physical::{PhysicalBlockChange, PhysicalPatch};
 use dustroute_translate::{
@@ -27,10 +32,10 @@ use crate::api::{
 };
 use crate::state::PlanStateStore;
 use crate::{
-    BotBridge, McpPolicy, OperationKind, OperationRegistry, OperationStatus, PlacementPlan,
-    SelectionSession, TransitionSafety, TransitionSafetyAssessment, assess_transition_safety,
-    behavior_trace_from_recording, discover_connected_region, plan_world_overlay,
-    scenario_trace_from_recording,
+    BlockChange, BotBridge, McpPolicy, OperationKind, OperationRegistry, OperationStatus,
+    PlacementPlan, SelectionSession, TransitionSafety, TransitionSafetyAssessment,
+    assess_transition_safety, behavior_trace_from_recording, discover_connected_region,
+    plan_world_overlay, scenario_trace_from_recording,
 };
 
 const MAX_FLAT_ANALYSIS_COMPONENTS: usize = 128;
@@ -163,6 +168,8 @@ struct PreviewPlacementParams {
     circuit: String,
     /// Maximum number of blocks allowed in one placement plan. Defaults to 32768.
     max_blocks: Option<usize>,
+    /// Run directional compression followed by global compaction before creating the placement plan.
+    optimize: Option<bool>,
 }
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
@@ -1053,6 +1060,20 @@ impl DustRouteMcp {
         if let Err(error) = self.policy.validate_placement_size(source.len()) {
             return json_text(json!({ "ok": false, "error": error.to_string() }));
         }
+        let (baseline_matches, baseline_mismatches) = match self
+            .verify_placement_changes(source, &dimension, false)
+            .await
+        {
+            Ok(result) => result,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+        };
+        if !baseline_matches {
+            return json_text(json!({
+                "ok": false,
+                "error": "placement baseline is stale; preview again before changing the world",
+                "mismatches": baseline_mismatches
+            }));
+        }
         let mut changes = source.iter().collect::<Vec<_>>();
         changes.sort_by_key(|change| {
             let priority = match change.after.kind {
@@ -1088,6 +1109,21 @@ impl DustRouteMcp {
             Ok(result) => result,
             Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
         };
+        let (verified, verification_mismatches) = match self
+            .verify_placement_changes(source, &dimension, true)
+            .await
+        {
+            Ok(result) => result,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+        };
+        if !verified {
+            return json_text(json!({
+                "ok": false,
+                "error": format!("placement write completed but live verification failed at {:?}", verification_mismatches),
+                "mismatches": verification_mismatches,
+                "bridge": bridge_result
+            }));
+        }
         self.applied_plans.lock().await.insert(operation_id, !undo);
         self.operations
             .record_completed(
@@ -1110,9 +1146,55 @@ impl DustRouteMcp {
             "operation_id": operation_id,
             "action": if undo { "undo" } else { "apply" },
             "changed_blocks": source.len(),
+            "verified": verified,
             "dimension": dimension,
             "bridge": bridge_result,
         }))
+    }
+
+    async fn verify_placement_changes(
+        &self,
+        changes: &[BlockChange],
+        dimension: &str,
+        verify_after: bool,
+    ) -> Result<(bool, Vec<Pos>), String> {
+        let Some(first) = changes.first() else {
+            return Ok((true, Vec::new()));
+        };
+        let (mut min, mut max) = (first.pos, first.pos);
+        for change in &changes[1..] {
+            min = Pos::new(
+                min.x.min(change.pos.x),
+                min.y.min(change.pos.y),
+                min.z.min(change.pos.z),
+            );
+            max = Pos::new(
+                max.x.max(change.pos.x),
+                max.y.max(change.pos.y),
+                max.z.max(change.pos.z),
+            );
+        }
+        let snapshot = self
+            .bridge
+            .scan_region(min, max, dimension)
+            .await
+            .map_err(|error| error.to_string())?;
+        let snapshot_json = serde_json::to_string(&snapshot).map_err(|error| error.to_string())?;
+        let (_, world) =
+            world_from_snapshot_json(&snapshot_json).map_err(|error| error.to_string())?;
+        let mismatches = changes
+            .iter()
+            .filter(|change| {
+                let expected = if verify_after {
+                    &change.after
+                } else {
+                    &change.before
+                };
+                !block_matches(world.get(change.pos), expected)
+            })
+            .map(|change| change.pos)
+            .collect::<Vec<_>>();
+        Ok((mismatches.is_empty(), mismatches))
     }
 
     async fn write_physical_changes(
@@ -1636,6 +1718,11 @@ fn block_matches(
     let Some(actual) = actual else {
         return expected.kind == BlockKind::Air;
     };
+    if expected.kind == BlockKind::RedstoneTorch {
+        return expected
+            .support_offset
+            .is_none_or(|support| actual.support_offset == Some(support));
+    }
     expected
         .facing
         .is_none_or(|facing| actual.facing == Some(facing))
@@ -2350,7 +2437,73 @@ impl DustRouteMcp {
             }
             Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
         };
-        let Some((local_min, local_max)) = translated.compiled.world.bounds() else {
+        let (proposed_world, optimization) = if params.optimize.unwrap_or(false) {
+            let optimization_plan = OptimizationPlan::directional_then_global(
+                CompressionAxis::X,
+                CompressionDirection::TowardMinimum,
+                AnchorPolicy::Inputs,
+            );
+            let realized = match realize_staged_optimization(
+                &translated.compiled.physical,
+                &optimization_plan,
+                OptimizationRoutingConfig::default(),
+            ) {
+                Ok(realized) => realized,
+                Err(error) => {
+                    return json_text(json!({
+                        "ok": false,
+                        "error": format!("placement optimization failed: {error}")
+                    }));
+                }
+            };
+            let verification = verify_realized_optimization(
+                &translated.compiled.world,
+                &translated.compiled.physical,
+                &realized,
+                BehavioralVerificationConfig::default(),
+            );
+            let safety = assess_optimization_safety(&verification, TemporalCapabilities::current());
+            let safety_label = match &safety {
+                OptimizationSafety::Verified { .. } => "verified",
+                OptimizationSafety::PreviewOnly { .. } => "preview_only",
+                OptimizationSafety::Rejected { .. } => {
+                    return json_text(json!({
+                        "ok": false,
+                        "error": format!("optimized placement was rejected: {safety:?}"),
+                        "optimization": {
+                            "safety": "rejected",
+                            "topology_preserved": verification.topology_preserved,
+                            "behavior": format!("{:?}", verification.behavior)
+                        }
+                    }));
+                }
+            };
+            let phases = realized
+                .optimization
+                .phases
+                .iter()
+                .map(|phase| {
+                    json!({
+                        "accepted_mutations": phase.accepted.len(),
+                        "initial_score": phase.initial_score.total,
+                        "final_score": phase.final_score.total
+                    })
+                })
+                .collect::<Vec<_>>();
+            (
+                realized.world,
+                Some(json!({
+                    "strategy": "directional_x_toward_minimum_then_global",
+                    "safety": safety_label,
+                    "safety_details": format!("{safety:?}"),
+                    "topology_preserved": verification.topology_preserved,
+                    "phases": phases
+                })),
+            )
+        } else {
+            (translated.compiled.world.clone(), None)
+        };
+        let Some((local_min, local_max)) = proposed_world.bounds() else {
             return json_text(json!({ "ok": false, "error": "compiled circuit is empty" }));
         };
         let min = Pos::new(
@@ -2367,7 +2520,7 @@ impl DustRouteMcp {
         if let Err(error) = self.policy.validate_region(placement_bounds) {
             return json_text(json!({ "ok": false, "error": error.to_string() }));
         }
-        let proposed_blocks = translated.compiled.world.iter().count();
+        let proposed_blocks = proposed_world.iter().count();
         if let Err(error) = self.policy.validate_placement_size(proposed_blocks) {
             return json_text(json!({ "ok": false, "error": error.to_string() }));
         }
@@ -2391,7 +2544,7 @@ impl DustRouteMcp {
         };
         let plan = match plan_world_overlay(
             &existing,
-            &translated.compiled.world,
+            &proposed_world,
             origin,
             params
                 .max_blocks
@@ -2420,6 +2573,7 @@ impl DustRouteMcp {
             "collision_samples": collision_samples,
             "materials": &plan.materials,
             "undo_change_count": plan.undo.changes.len(),
+            "optimization": optimization,
             "next_step": if self.policy.read_only {
                 "review this plan; writes are disabled by policy"
             } else {

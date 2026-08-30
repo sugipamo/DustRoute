@@ -253,9 +253,16 @@ In the debug profile, long conversions can use
 `start_selected_region_conversion`, `get_operation`, and `stop_operation`.
 `new_circuit_placement` returns a block diff, collisions,
 material counts, an operation UUID, and an exact undo plan without changing the
-world. When `DUSTROUTE_READ_ONLY=false`, an explicitly confirmed plan can be
-written with `invoke_circuit_placement`; `undo_circuit_placement` restores the captured
-blocks.
+world. Set its optional `optimize=true` argument to run X-axis directional
+compression followed by global compaction and rerouting. The response includes
+per-phase score changes and a safety classification. Current built-in circuits
+contain scheduled-tick components, so optimized results are normally
+`preview_only` and require explicit confirmation. Rejected candidates do not
+produce a placement plan. When `DUSTROUTE_READ_ONLY=false`, an explicitly
+confirmed plan can be written with `invoke_circuit_placement`; the server first
+checks that the preview baseline is still current and then verifies the live
+world after writing. `undo_circuit_placement` performs the same checks while
+restoring the captured blocks.
 
 ## Transition scenarios
 
