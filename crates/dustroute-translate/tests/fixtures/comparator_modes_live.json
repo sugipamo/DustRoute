@@ -1,0 +1,30 @@
+{
+  "min":{"x":0,"y":0,"z":-3},
+  "max":{"x":2,"y":1,"z":5},
+  "blocks":[
+    {"pos":{"x":0,"y":1,"z":0},"name":"minecraft:redstone_block"},
+    {"pos":{"x":1,"y":1,"z":-3},"name":"minecraft:redstone_block"},
+    {"pos":{"x":1,"y":1,"z":-2},"name":"minecraft:redstone_wire","properties":{"west":"none","south":"side","power":"15","north":"side","east":"none"}},
+    {"pos":{"x":1,"y":1,"z":-1},"name":"minecraft:redstone_wire","properties":{"west":"none","south":"side","power":"14","north":"side","east":"none"}},
+    {"pos":{"x":1,"y":1,"z":0},"name":"minecraft:comparator","properties":{"powered":"true","mode":"compare","facing":"west"}},
+    {"pos":{"x":2,"y":1,"z":0},"name":"minecraft:redstone_wire","properties":{"west":"side","south":"none","power":"15","north":"none","east":"side"}},
+    {"pos":{"x":0,"y":1,"z":5},"name":"minecraft:redstone_block"},
+    {"pos":{"x":1,"y":1,"z":2},"name":"minecraft:redstone_block"},
+    {"pos":{"x":1,"y":1,"z":3},"name":"minecraft:redstone_wire","properties":{"west":"none","south":"side","power":"15","north":"side","east":"none"}},
+    {"pos":{"x":1,"y":1,"z":4},"name":"minecraft:redstone_wire","properties":{"west":"none","south":"side","power":"14","north":"side","east":"none"}},
+    {"pos":{"x":1,"y":1,"z":5},"name":"minecraft:comparator","properties":{"powered":"true","mode":"subtract","facing":"west"}},
+    {"pos":{"x":2,"y":1,"z":5},"name":"minecraft:redstone_wire","properties":{"west":"side","south":"none","power":"1","north":"none","east":"side"}},
+    {"pos":{"x":0,"y":0,"z":0},"name":"minecraft:stone"},
+    {"pos":{"x":1,"y":0,"z":-3},"name":"minecraft:stone"},
+    {"pos":{"x":1,"y":0,"z":-2},"name":"minecraft:stone"},
+    {"pos":{"x":1,"y":0,"z":-1},"name":"minecraft:stone"},
+    {"pos":{"x":1,"y":0,"z":0},"name":"minecraft:stone"},
+    {"pos":{"x":2,"y":0,"z":0},"name":"minecraft:stone"},
+    {"pos":{"x":0,"y":0,"z":5},"name":"minecraft:stone"},
+    {"pos":{"x":1,"y":0,"z":2},"name":"minecraft:stone"},
+    {"pos":{"x":1,"y":0,"z":3},"name":"minecraft:stone"},
+    {"pos":{"x":1,"y":0,"z":4},"name":"minecraft:stone"},
+    {"pos":{"x":1,"y":0,"z":5},"name":"minecraft:stone"},
+    {"pos":{"x":2,"y":0,"z":5},"name":"minecraft:stone"}
+  ]
+}

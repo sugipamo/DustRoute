@@ -1,0 +1,12 @@
+{
+  "recording_id": "captured-on-java-1.21.11",
+  "started_game_tick": 100,
+  "stopped_game_tick": 112,
+  "seen_events": 3,
+  "truncated": false,
+  "events": [
+    {"sequence":1,"game_tick":103,"pos":{"x":1,"y":1,"z":0},"before":{"name":"minecraft:repeater","properties":{"powered":"false","locked":"false","facing":"west","delay":"2"}},"after":{"name":"minecraft:repeater","properties":{"powered":"true","locked":"false","facing":"west","delay":"2"}}},
+    {"sequence":2,"game_tick":103,"pos":{"x":3,"y":1,"z":0},"before":{"name":"minecraft:redstone_lamp","properties":{"lit":"false"}},"after":{"name":"minecraft:redstone_lamp","properties":{"lit":"true"}}},
+    {"sequence":3,"game_tick":103,"pos":{"x":2,"y":1,"z":0},"before":{"name":"minecraft:redstone_wire","properties":{"west":"side","south":"none","power":"0","north":"none","east":"side"}},"after":{"name":"minecraft:redstone_wire","properties":{"west":"side","south":"none","power":"15","north":"none","east":"side"}}}
+  ]
+}

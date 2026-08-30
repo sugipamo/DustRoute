@@ -1,0 +1,301 @@
+use std::collections::BTreeMap;
+
+use dustroute_translate::cell_library::{CellLibrary, default_cell_library, verify_cell};
+use dustroute_translate::cells::RotationY;
+use dustroute_translate::logic::GateKind;
+use dustroute_translate::physical::{CellId, Endpoint, PhysicalNode, PlacementCircuit, Route};
+use dustroute_translate::world::Pos;
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct PlacementWeights {
+    pub wire_distance: f64,
+    pub bounding_volume: f64,
+    pub cell_block_count: f64,
+    pub overlap_penalty: f64,
+}
+impl Default for PlacementWeights {
+    fn default() -> Self {
+        Self {
+            wire_distance: 1.0,
+            bounding_volume: 0.002,
+            cell_block_count: 0.05,
+            overlap_penalty: 1_000_000.0,
+        }
+    }
+}
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct PlacementScore {
+    pub total: f64,
+    pub wire_distance: i32,
+    pub bounding_volume: i32,
+    pub cell_block_count: usize,
+    pub overlaps: usize,
+}
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MutationKind {
+    Move,
+    Rotate,
+    ReplaceCell,
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct PlacementMutation {
+    pub kind: MutationKind,
+    pub cell_id: CellId,
+    pub delta: Pos,
+    pub rotation: Option<RotationY>,
+    pub candidate_name: Option<String>,
+}
+#[derive(Clone, Debug)]
+pub struct PlacementOptimizationResult {
+    pub circuit: PlacementCircuit,
+    pub initial_score: PlacementScore,
+    pub final_score: PlacementScore,
+    pub accepted: Vec<PlacementMutation>,
+}
+
+fn refresh_endpoint(pc: &PlacementCircuit, ep: &Endpoint, output: bool) -> Endpoint {
+    if let Some(id) = ep.cell {
+        if output {
+            pc.output_endpoint(id, &ep.port).unwrap()
+        } else {
+            pc.input_endpoint(id, &ep.port).unwrap()
+        }
+    } else {
+        ep.clone()
+    }
+}
+pub fn refresh_route_endpoints(pc: &mut PlacementCircuit) {
+    let old = pc.routes.clone();
+    pc.routes = old
+        .into_iter()
+        .map(|(id, r)| {
+            (
+                id,
+                Route {
+                    id,
+                    source: refresh_endpoint(pc, &r.source, true),
+                    sink: refresh_endpoint(pc, &r.sink, false),
+                    path: vec![],
+                    repeaters: vec![],
+                },
+            )
+        })
+        .collect();
+}
+
+#[must_use]
+pub fn placement_score(pc: &PlacementCircuit, w: PlacementWeights) -> PlacementScore {
+    let wire_distance = pc
+        .routes
+        .values()
+        .map(|r| {
+            (r.source.pos.x - r.sink.pos.x).abs()
+                + (r.source.pos.y - r.sink.pos.y).abs()
+                + (r.source.pos.z - r.sink.pos.z).abs()
+        })
+        .sum();
+    let mut counts: BTreeMap<Pos, usize> = BTreeMap::new();
+    for n in pc.cells.values() {
+        for (p, _) in n.placed.blocks() {
+            *counts.entry(p).or_default() += 1;
+        }
+    }
+    let cell_block_count = counts.values().sum();
+    let overlaps = counts.values().map(|n| n.saturating_sub(1)).sum();
+    let bounding_volume = if counts.is_empty() {
+        0
+    } else {
+        let xs = counts.keys().map(|p| p.x);
+        let ys = counts.keys().map(|p| p.y);
+        let zs = counts.keys().map(|p| p.z);
+        (xs.clone().max().unwrap() - xs.min().unwrap() + 1)
+            * (ys.clone().max().unwrap() - ys.min().unwrap() + 1)
+            * (zs.clone().max().unwrap() - zs.min().unwrap() + 1)
+    };
+    PlacementScore {
+        total: w.wire_distance * f64::from(wire_distance)
+            + w.bounding_volume * f64::from(bounding_volume)
+            + w.cell_block_count * cell_block_count as f64
+            + w.overlap_penalty * overlaps as f64,
+        wire_distance,
+        bounding_volume,
+        cell_block_count,
+        overlaps,
+    }
+}
+pub fn apply_mutation(
+    pc: &PlacementCircuit,
+    m: &PlacementMutation,
+    lib: &CellLibrary,
+) -> PlacementCircuit {
+    let mut out = pc.clone();
+    let node = &out.cells[&m.cell_id];
+    let mut placed = node.placed.clone();
+    match m.kind {
+        MutationKind::Move => placed.origin = placed.origin.offset(m.delta.x, m.delta.y, m.delta.z),
+        MutationKind::Rotate => placed.rotation = m.rotation.unwrap(),
+        MutationKind::ReplaceCell => {
+            placed.cell = lib
+                .candidates_for(node.logical_kind)
+                .iter()
+                .find(|c| Some(c.name.as_str()) == m.candidate_name.as_deref())
+                .unwrap()
+                .clone()
+        }
+    };
+    out.cells.insert(
+        m.cell_id,
+        PhysicalNode {
+            id: m.cell_id,
+            logical_kind: node.logical_kind,
+            placed,
+        },
+    );
+    refresh_route_endpoints(&mut out);
+    out
+}
+#[must_use]
+pub fn candidate_mutations(
+    pc: &PlacementCircuit,
+    lib: &CellLibrary,
+    step: i32,
+) -> Vec<PlacementMutation> {
+    let mut out = vec![];
+    for (&id, n) in &pc.cells {
+        if !matches!(
+            n.logical_kind,
+            GateKind::Not | GateKind::And | GateKind::Or | GateKind::Xor | GateKind::Nand
+        ) {
+            continue;
+        }
+        for d in [
+            Pos::new(step, 0, 0),
+            Pos::new(-step, 0, 0),
+            Pos::new(0, 0, step),
+            Pos::new(0, 0, -step),
+        ] {
+            out.push(PlacementMutation {
+                kind: MutationKind::Move,
+                cell_id: id,
+                delta: d,
+                rotation: None,
+                candidate_name: None,
+            });
+        }
+        for r in [
+            RotationY::R0,
+            RotationY::R90,
+            RotationY::R180,
+            RotationY::R270,
+        ] {
+            if r != n.placed.rotation {
+                out.push(PlacementMutation {
+                    kind: MutationKind::Rotate,
+                    cell_id: id,
+                    delta: Pos::new(0, 0, 0),
+                    rotation: Some(r),
+                    candidate_name: None,
+                });
+            }
+        }
+        for c in lib.candidates_for(n.logical_kind) {
+            if c.name != n.placed.cell.name && verify_cell(n.logical_kind, c).valid {
+                out.push(PlacementMutation {
+                    kind: MutationKind::ReplaceCell,
+                    cell_id: id,
+                    delta: Pos::new(0, 0, 0),
+                    rotation: None,
+                    candidate_name: Some(c.name.clone()),
+                });
+            }
+        }
+    }
+    out
+}
+#[must_use]
+pub fn optimize_placement(
+    pc: &PlacementCircuit,
+    max_steps: usize,
+    move_step: i32,
+) -> PlacementOptimizationResult {
+    let lib = default_cell_library();
+    let w = PlacementWeights::default();
+    let mut current = pc.clone();
+    refresh_route_endpoints(&mut current);
+    let initial = placement_score(&current, w);
+    let mut score = initial;
+    let mut accepted = vec![];
+    for _ in 0..max_steps {
+        let mut best = None;
+        for m in candidate_mutations(&current, &lib, move_step) {
+            let c = apply_mutation(&current, &m, &lib);
+            let s = placement_score(&c, w);
+            if s.total < score.total
+                && best
+                    .as_ref()
+                    .is_none_or(|(_, _, bs): &(_, _, PlacementScore)| s.total < bs.total)
+            {
+                best = Some((m, c, s));
+            }
+        }
+        if let Some((m, c, s)) = best {
+            accepted.push(m);
+            current = c;
+            score = s
+        } else {
+            break;
+        }
+    }
+    PlacementOptimizationResult {
+        circuit: current,
+        initial_score: initial,
+        final_score: score,
+        accepted,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use dustroute_translate::cells::{PlacedCell, PortKind, not_cell};
+    #[test]
+    fn optimizer_moves_cell_toward_nets() {
+        let mut pc = PlacementCircuit::new();
+        let id = pc.add_cell(
+            GateKind::Not,
+            PlacedCell {
+                cell: not_cell(),
+                origin: Pos::new(10, 2, 12),
+                rotation: RotationY::R0,
+            },
+        );
+        let src = PlacementCircuit::boundary("src", Pos::new(0, 2, 0), PortKind::Wire, None);
+        let dst = PlacementCircuit::boundary("dst", Pos::new(22, 2, 0), PortKind::Wire, None);
+        pc.add_route(src, pc.input_endpoint(id, "a").unwrap(), vec![], vec![]);
+        pc.add_route(pc.output_endpoint(id, "out").unwrap(), dst, vec![], vec![]);
+        let result = optimize_placement(&pc, 20, 2);
+        assert!(result.final_score.total < result.initial_score.total);
+        assert_eq!(result.circuit.cells[&id].placed.origin.z, 0);
+    }
+    #[test]
+    fn replacement_candidates_are_verified() {
+        let mut pc = PlacementCircuit::new();
+        let id = pc.add_cell(
+            GateKind::Not,
+            PlacedCell {
+                cell: not_cell(),
+                origin: Pos::new(0, 0, 0),
+                rotation: RotationY::R0,
+            },
+        );
+        let lib = default_cell_library();
+        let m = candidate_mutations(&pc, &lib, 2)
+            .into_iter()
+            .find(|m| m.candidate_name.as_deref() == Some("not_torch_top"))
+            .unwrap();
+        assert_eq!(
+            apply_mutation(&pc, &m, &lib).cells[&id].placed.cell.name,
+            "not_torch_top"
+        );
+    }
+}

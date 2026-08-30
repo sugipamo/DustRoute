@@ -1,0 +1,28 @@
+{
+  "label": "live two-tick repeater to lamp",
+  "initial": {
+    "min": {"x": 0, "y": 0, "z": 0},
+    "max": {"x": 3, "y": 1, "z": 0},
+    "blocks": [
+      {"pos":{"x":0,"y":0,"z":0},"name":"minecraft:stone"},
+      {"pos":{"x":1,"y":0,"z":0},"name":"minecraft:stone"},
+      {"pos":{"x":2,"y":0,"z":0},"name":"minecraft:stone"},
+      {"pos":{"x":3,"y":0,"z":0},"name":"minecraft:stone"},
+      {"pos":{"x":0,"y":1,"z":0},"name":"minecraft:lever","properties":{"powered":"false","facing":"north","face":"floor"}},
+      {"pos":{"x":1,"y":1,"z":0},"name":"minecraft:repeater","properties":{"powered":"false","locked":"false","facing":"west","delay":"2"}},
+      {"pos":{"x":2,"y":1,"z":0},"name":"minecraft:redstone_wire","properties":{"west":"side","south":"none","power":"0","north":"none","east":"side"}},
+      {"pos":{"x":3,"y":1,"z":0},"name":"minecraft:redstone_lamp","properties":{"lit":"false"}}
+    ]
+  },
+  "actions": [
+    {"kind":"set_powered","redstone_tick":0,"position":{"x":0,"y":1,"z":0},"powered":true}
+  ],
+  "observe": [
+    {"x":1,"y":1,"z":0},
+    {"x":2,"y":1,"z":0},
+    {"x":3,"y":1,"z":0}
+  ],
+  "duration_redstone_ticks": 2,
+  "required_capabilities": ["repeater_timing","lamp_observation"],
+  "expectation": {}
+}

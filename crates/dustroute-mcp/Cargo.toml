@@ -1,0 +1,27 @@
+[package]
+name = "dustroute-mcp"
+description = "MCP server and visible Minecraft bot integration for DustRoute"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+anyhow = "1.0"
+dustroute-app = { path = "../dustroute-app" }
+dustroute-ir = { path = "../dustroute-ir" }
+dustroute-physical = { path = "../dustroute-physical" }
+dustroute-translate = { path = "../dustroute-translate" }
+rmcp = { version = "3.1.4", features = ["server", "transport-io", "schemars"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.47", features = ["io-util", "macros", "net", "rt-multi-thread", "sync", "time"] }
+tokio-util = "0.7"
+uuid = { version = "1.26", features = ["serde"] }
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+rmcp = { version = "3.1.4", features = ["client"] }

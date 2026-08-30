@@ -1,0 +1,8 @@
+{
+  "recording_id":"captured-on-java-1.21.11",
+  "started_game_tick":100,
+  "stopped_game_tick":106,
+  "seen_events":1,
+  "truncated":false,
+  "events":[{"sequence":1,"game_tick":101,"pos":{"x":1,"y":1,"z":0},"before":{"name":"minecraft:redstone_wall_torch","properties":{"lit":"true","facing":"east"}},"after":{"name":"minecraft:redstone_wall_torch","properties":{"lit":"false","facing":"east"}}}]
+}
