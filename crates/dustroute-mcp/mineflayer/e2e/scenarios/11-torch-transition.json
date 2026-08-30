@@ -1,0 +1,27 @@
+{
+  "name": "torch_inversion_transition",
+  "steps": [
+    { "kind": "command", "commands": [
+      "/fill 559 102 -1 563 108 1 minecraft:air",
+      "/setblock 560 103 0 minecraft:stone",
+      "/setblock 560 104 0 minecraft:lever[face=floor,facing=east,powered=false]",
+      "/setblock 561 103 0 minecraft:redstone_wall_torch[facing=east,lit=true]",
+      "/setblock 562 102 0 minecraft:stone",
+      "/setblock 562 103 0 minecraft:redstone_wire"
+    ]},
+    { "kind": "wait", "ticks": 4 },
+    { "kind": "aim", "position": { "x": 560.5, "y": 106, "z": 6.5 }, "target": { "x": 560, "y": 103, "z": 0 } },
+    { "kind": "mcp", "tool": "new_transition_test", "arguments": { "max_components": 64, "observation_ticks": 12 }, "save": "proposal" },
+    { "kind": "assert", "from": "proposal", "expect": [
+      { "path": "proposals.0.safety.safety", "equals": "ready" }
+    ]},
+    { "kind": "mcp", "tool": "show_transition_test", "arguments": { "operation_id": "${proposal.proposals.0.operation_id}" }, "save": "preview" },
+    { "kind": "mcp", "tool": "invoke_transition_test", "arguments": { "operation_id": "${proposal.proposals.0.operation_id}", "confirm": true }, "save": "run" },
+    { "kind": "assert", "from": "run", "expect": [
+      { "path": "ok", "equals": true },
+      { "path": "recording.stored_events", "at_least": 2 },
+      { "path": "restoration.verified", "equals": true }
+    ]}
+  ],
+  "cleanup": ["/fill 559 102 -1 563 108 1 minecraft:air"]
+}
