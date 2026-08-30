@@ -61,6 +61,18 @@ pub enum TransientVerdict {
     IntentionalPulse,
 }
 
+impl TransientVerdict {
+    const fn as_str(self) -> &'static str {
+        match self {
+            Self::PulseObserved => "pulse_observed",
+            Self::TransientDeviation => "transient_deviation",
+            Self::HazardCandidate => "hazard_candidate",
+            Self::HazardConfirmed => "hazard_confirmed",
+            Self::IntentionalPulse => "intentional_pulse",
+        }
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct TransientFinding {
     pub pulse: PulseObservation,
@@ -135,7 +147,7 @@ pub fn assess_transients(
     let mut counts = BTreeMap::new();
     for finding in &findings {
         *counts
-            .entry(format!("{:?}", finding.verdict).to_lowercase())
+            .entry(finding.verdict.as_str().to_owned())
             .or_default() += 1;
     }
     TransientAssessment {

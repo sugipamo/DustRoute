@@ -144,6 +144,15 @@ async function runScenario (bot, mcp, scenario) {
         const args = resolveReferences(step.arguments || {}, results)
         results[step.save] = await mcp.callToolRaw(step.tool, args)
         if (results[step.save].ok !== false) throw new Error(`${step.tool} unexpectedly succeeded`)
+      } else if (step.kind === 'mcp_with_commands') {
+        const args = resolveReferences(step.arguments || {}, results)
+        const pending = mcp.callToolRaw(step.tool, args)
+        await sleep(Number(step.delay_ticks || 1) * 50)
+        for (const text of step.commands || []) await command(bot, text)
+        results[step.save] = await pending
+        if (step.require_error === true && results[step.save].ok !== false) {
+          throw new Error(`${step.tool} unexpectedly succeeded`)
+        }
       } else if (step.kind === 'assert') {
         for (const expectation of step.expect) assertExpectation(results[step.from], expectation)
       } else if (step.kind === 'wait') {

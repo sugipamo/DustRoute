@@ -87,6 +87,8 @@ Scenario files are ordered JSON documents in `scenarios/`. Supported steps are:
   observed targeted block exactly matches.
 - `mcp`: call a named MCP tool and save its JSON result.
 - `mcp_error`: require a tool-level error and save its stable error envelope.
+- `mcp_with_commands`: call a tool while issuing delayed test-world commands;
+  this is reserved for deterministic interference and recovery scenarios.
 - `assert`: compare a saved result using `equals`, `at_least`, `at_most`, or
   `exists`.
 - `wait`: wait a number of Mineflayer physics ticks.
