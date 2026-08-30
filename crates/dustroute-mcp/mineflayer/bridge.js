@@ -266,11 +266,33 @@ async function placePhysicalBlocks (changes) {
     if (!reference || reference.boundingBox === 'empty') {
       throw new Error(`placement support is unavailable at ${referencePos.x} ${referencePos.y} ${referencePos.z}`)
     }
-    await bot.placeBlock(reference, new Vec3(change.face.x, change.face.y, change.face.z))
-    await bot.waitForTicks(2)
-    const placed = bot.blockAt(new Vec3(x, y, z))
+    const facingMatch = String(change.state || '').match(/(?:\[|,)facing=([a-z]+)/)
+    const desiredFacing = facingMatch && facingMatch[1]
+    const approaches = desiredFacing
+      ? [[0, -2], [2, 0], [0, 2], [-2, 0]]
+      : [[0, 0]]
+    let placed = null
+    for (const [dx, dz] of approaches) {
+      if (dx !== 0 || dz !== 0) {
+        bot.chat(`/tp ${bot.username} ${x + dx + 0.5} ${y + 2} ${z + dz + 0.5}`)
+        await bot.waitForTicks(2)
+        bot.creative.startFlying()
+      }
+      await bot.placeBlock(reference, new Vec3(change.face.x, change.face.y, change.face.z))
+      await bot.waitForTicks(2)
+      placed = bot.blockAt(new Vec3(x, y, z))
+      if (!desiredFacing || (placed && propertiesOf(placed).facing === desiredFacing)) break
+      if (placed && !['air', 'cave_air', 'void_air'].includes(placed.name)) {
+        await bot.dig(placed, true)
+        await bot.waitForTicks(1)
+      }
+      placed = null
+    }
     if (!placed || ['air', 'cave_air', 'void_air'].includes(placed.name)) {
       throw new Error(`normal placement did not create a block at ${x} ${y} ${z}`)
+    }
+    if (desiredFacing && propertiesOf(placed).facing !== desiredFacing) {
+      throw new Error(`normal placement could not orient block at ${x} ${y} ${z} toward ${desiredFacing}`)
     }
   }
   centerX = centerX / changes.length

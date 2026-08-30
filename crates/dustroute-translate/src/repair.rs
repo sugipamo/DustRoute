@@ -42,6 +42,7 @@ fn propose_physical_repairs(
     focus: Option<(Pos, u32)>,
 ) -> Vec<RepairProposal> {
     let mut proposals = missing_wire_repairs(world, circuit, max_gap);
+    proposals.extend(missing_vertical_wire_repairs(world, circuit, max_gap));
     proposals.extend(liveness_bridge_repairs(world, circuit));
     proposals.extend(missing_directional_component_repairs(
         world, circuit, max_gap,
@@ -103,6 +104,90 @@ fn propose_physical_repairs(
         )
     });
     proposals
+}
+
+fn missing_vertical_wire_repairs(
+    world: &World,
+    circuit: &PhysicalScene,
+    max_gap: u32,
+) -> Vec<RepairProposal> {
+    if max_gap < 3 {
+        return Vec::new();
+    }
+    let by_id: BTreeMap<_, _> = circuit
+        .components
+        .iter()
+        .map(|component| (component.id, component))
+        .collect();
+    circuit
+        .gap_candidates(max_gap)
+        .into_iter()
+        .filter_map(|candidate| {
+            let GapEvidence::Nearby {
+                left,
+                right,
+                manhattan_distance: 3,
+            } = candidate.evidence[0]
+            else {
+                return None;
+            };
+            let first = by_id[&left];
+            let second = by_id[&right];
+            if first.block.kind != BlockKind::RedstoneWire
+                || second.block.kind != BlockKind::RedstoneWire
+                || first.pos.y.abs_diff(second.pos.y) != 1
+                || first.pos.x.abs_diff(second.pos.x) + first.pos.z.abs_diff(second.pos.z) != 2
+                || !((first.pos.x == second.pos.x) ^ (first.pos.z == second.pos.z))
+            {
+                return None;
+            }
+            let (lower, upper) = if first.pos.y < second.pos.y {
+                (first, second)
+            } else {
+                (second, first)
+            };
+            let missing = Pos::new(
+                (lower.pos.x + upper.pos.x) / 2,
+                upper.pos.y,
+                (lower.pos.z + upper.pos.z) / 2,
+            );
+            if world.kind_at(missing) != BlockKind::Air
+                || world.kind_at(lower.pos.offset(0, 1, 0)) != BlockKind::Air
+                || !world
+                    .get(missing.offset(0, -1, 0))
+                    .is_some_and(|block| block.redstone_traits().supports_dust_on_top)
+            {
+                return None;
+            }
+            let mut wire = Block::new(BlockKind::RedstoneWire);
+            wire.support_offset = Some(Pos::new(0, -1, 0));
+            Some(RepairProposal {
+                impact: None,
+                evidence: vec![
+                    GapEvidence::Nearby {
+                        left,
+                        right,
+                        manhattan_distance: 3,
+                    },
+                    GapEvidence::MissingInlineBlock { position: missing },
+                ],
+                patch: PhysicalPatch {
+                    reason: RepairReason::ConnectMissingWire,
+                    affected_fragments: vec![candidate.left, candidate.right],
+                    confidence_percent: 75,
+                    explanation: format!(
+                        "place redstone wire at ({}, {}, {}) to restore a supported upward dust step",
+                        missing.x, missing.y, missing.z
+                    ),
+                    changes: vec![PhysicalBlockChange {
+                        pos: missing,
+                        before: Block::new(BlockKind::Air),
+                        after: wire,
+                    }],
+                },
+            })
+        })
+        .collect()
 }
 
 const fn repair_reason_priority(reason: RepairReason) -> u8 {
@@ -470,6 +555,7 @@ fn missing_support_repairs(world: &World, circuit: &PhysicalScene) -> Vec<Repair
 }
 
 fn direction_repairs(world: &World, circuit: &PhysicalScene) -> Vec<RepairProposal> {
+    let liveness = crate::analyze_signal_liveness(circuit);
     let by_pos: BTreeMap<_, _> = circuit
         .components
         .iter()
@@ -499,6 +585,42 @@ fn direction_repairs(world: &World, circuit: &PhysicalScene) -> Vec<RepairPropos
                 }
             })
             .collect();
+        if neighbors.len() == 1
+            && liveness.undriven_inputs.iter().any(|finding| {
+                finding.device == component.id
+                    && finding.failure == crate::DriveFailure::DisconnectedRequiredInput
+            })
+            && liveness.drive_reachable.contains(&neighbors[0].1)
+        {
+            let (source_side, neighbor) = neighbors[0];
+            let facing = source_side.opposite();
+            if component.block.facing != Some(facing) {
+                let mut after = component.block.clone();
+                after.facing = Some(facing);
+                proposals.push(RepairProposal {
+                    impact: None,
+                    evidence: vec![GapEvidence::DirectionMismatch {
+                        component: component.id,
+                        toward: neighbor,
+                    }],
+                    patch: PhysicalPatch {
+                        reason: RepairReason::ReorientDirectionalComponent,
+                        affected_fragments: fragments_for(circuit, [component.id, neighbor]),
+                        confidence_percent: 80,
+                        explanation: format!(
+                            "orient {:?} at ({}, {}, {}) with its input toward the only adjacent drive-reachable wire",
+                            component.block.kind, component.pos.x, component.pos.y, component.pos.z
+                        ),
+                        changes: vec![PhysicalBlockChange {
+                            pos: component.pos,
+                            before: component.block.clone(),
+                            after,
+                        }],
+                    },
+                });
+            }
+            continue;
+        }
         if neighbors.len() != 2 || neighbors[0].0.opposite() != neighbors[1].0 {
             continue;
         }
@@ -676,6 +798,28 @@ mod tests {
     }
 
     #[test]
+    fn proposes_supported_wire_for_a_broken_upward_step() {
+        let mut world = World::new();
+        world.set(Pos::new(0, 0, 0), Block::new(BlockKind::Solid));
+        world.place(BlockKind::RedstoneWire, Pos::new(0, 1, 0));
+        world.set(Pos::new(1, 1, 0), Block::new(BlockKind::Solid));
+        world.set(Pos::new(2, 1, 0), Block::new(BlockKind::Solid));
+        world.place(BlockKind::RedstoneWire, Pos::new(2, 2, 0));
+        update_wire_shapes(&mut world);
+        let analysis = analyze_world_region(
+            &world,
+            RegionBounds::new(Pos::new(-1, -1, -1), Pos::new(3, 3, 1)),
+        );
+
+        let proposal = propose_scene_repairs(&world, &analysis.scene, 3)
+            .into_iter()
+            .find(|proposal| proposal.patch.changes[0].pos == Pos::new(1, 2, 0))
+            .expect("the missing upward-step wire should be proposed");
+        assert_eq!(proposal.patch.reason, RepairReason::ConnectMissingWire);
+        assert!(proposal.impact.is_some_and(RepairImpact::improves));
+    }
+
+    #[test]
     fn virtual_repair_evaluates_liveness_electrical_and_temporal_risk() {
         let mut world = World::new();
         for x in 0..=4 {
@@ -811,6 +955,33 @@ mod tests {
                 .count(),
             2
         );
+    }
+
+    #[test]
+    fn reorients_a_disconnected_device_toward_the_only_reachable_source() {
+        let mut world = World::new();
+        for x in 0..=2 {
+            world.set(Pos::new(x, 0, 0), Block::new(BlockKind::Solid));
+        }
+        world.place(BlockKind::Lever, Pos::new(0, 1, 0));
+        world.place(BlockKind::RedstoneWire, Pos::new(1, 1, 0));
+        let repeater = world.place(BlockKind::Repeater, Pos::new(2, 1, 0));
+        repeater.facing = Some(Facing::West);
+        repeater.delay = Some(1);
+        repeater.support_offset = Some(Pos::new(0, -1, 0));
+        update_wire_shapes(&mut world);
+        let analysis = analyze_world_region(
+            &world,
+            RegionBounds::new(Pos::new(-1, -1, -1), Pos::new(3, 3, 1)),
+        );
+
+        let proposal = propose_scene_repairs(&world, &analysis.scene, 2)
+            .into_iter()
+            .find(|proposal| proposal.patch.reason == RepairReason::ReorientDirectionalComponent)
+            .expect("the reversed repeater should have a causal reorientation repair");
+        assert_eq!(proposal.patch.confidence_percent, 80);
+        assert_eq!(proposal.patch.changes[0].after.facing, Some(Facing::East));
+        assert!(proposal.impact.is_some_and(RepairImpact::improves));
     }
 
     #[test]

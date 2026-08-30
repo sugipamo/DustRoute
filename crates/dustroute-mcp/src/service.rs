@@ -1158,6 +1158,7 @@ impl DustRouteMcp {
                     "action": "place",
                     "pos": change.pos,
                     "item": item,
+                    "state": state,
                     "reference": reference,
                     "face": Pos::new(-support_offset.x, -support_offset.y, -support_offset.z),
                 }))

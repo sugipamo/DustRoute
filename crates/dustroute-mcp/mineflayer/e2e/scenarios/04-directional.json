@@ -13,6 +13,23 @@
     { "kind": "assert", "from": "diagnostic", "expect": [
       { "path": "diagnostic.counts.probable_faults", "at_least": 1 },
       { "path": "diagnostic.recommended_next_action.kind", "equals": "inspect_fault" }
+    ]},
+    { "kind": "mcp", "tool": "convert_from_looked_at_circuit", "arguments": { "max_components": 64 }, "save": "analysis" },
+    { "kind": "assert", "from": "analysis", "expect": [
+      { "path": "repair_proposals.0.operation_id", "exists": true },
+      { "path": "repair_proposals.0.patch.reason", "equals": "reorient_directional_component" },
+      { "path": "repair_proposals.0.patch.confidence_percent", "at_least": 80 }
+    ]},
+    { "kind": "mcp", "tool": "show_repair_plan", "arguments": { "operation_id": "${analysis.repair_proposals.0.operation_id}" }, "save": "preview" },
+    { "kind": "mcp", "tool": "invoke_repair", "arguments": { "operation_id": "${analysis.repair_proposals.0.operation_id}", "confirm": true }, "save": "applied" },
+    { "kind": "mcp", "tool": "test_looked_at_circuit", "arguments": { "max_components": 64 }, "save": "after" },
+    { "kind": "assert", "from": "after", "expect": [
+      { "path": "diagnostic.counts.probable_faults", "equals": 0 }
+    ]},
+    { "kind": "mcp", "tool": "undo_repair", "arguments": { "operation_id": "${analysis.repair_proposals.0.operation_id}", "confirm": true }, "save": "undone" },
+    { "kind": "mcp", "tool": "test_looked_at_circuit", "arguments": { "max_components": 64 }, "save": "restored" },
+    { "kind": "assert", "from": "restored", "expect": [
+      { "path": "diagnostic.counts.probable_faults", "at_least": 1 }
     ]}
   ],
   "cleanup": ["/fill 359 103 -1 365 106 1 minecraft:air"]
