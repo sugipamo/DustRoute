@@ -250,6 +250,7 @@ pub fn build_physical_circuit(
                     | BlockKind::Comparator
                     | BlockKind::Lever
                     | BlockKind::RedstoneBlock
+                    | BlockKind::Piston
             );
             (redstone_related || edge_positions.contains(pos)).then_some(*pos)
         })

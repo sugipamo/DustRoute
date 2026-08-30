@@ -1,6 +1,6 @@
 [package]
-name = "dustroute-physical"
-description = "Canonical physical Minecraft circuit model for DustRoute"
+name = "dustroute-minecraft"
+description = "Versioned Minecraft world primitives and block behavior model for DustRoute"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -8,7 +8,6 @@ repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-dustroute-minecraft = { path = "../dustroute-minecraft" }
 serde = { version = "1.0", features = ["derive"] }
 
 [lints]

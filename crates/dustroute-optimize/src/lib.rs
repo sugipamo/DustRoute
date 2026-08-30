@@ -2,7 +2,9 @@
 
 mod phased;
 mod placement;
+mod realize;
 mod reverse;
+mod safety;
 mod semantic;
 
 pub use phased::{
@@ -15,10 +17,19 @@ pub use placement::{
     apply_mutation, candidate_mutations, optimize_placement, placement_score,
     refresh_route_endpoints,
 };
+pub use realize::{
+    BehavioralEquivalence, BehavioralVerificationConfig, OptimizationRealizationError,
+    OptimizationRoutingConfig, OptimizationVerification, RealizedOptimization, optimization_patch,
+    realize_staged_optimization, verify_realized_optimization,
+};
 pub use reverse::{
     PhysicalRegion, RewriteReport, SemanticFragment, SemanticRewrite, eliminate_double_not,
     extract_and_then_not, extract_linear_not_chain, optimize_once_via_reverse,
     realize_identity_rewrite, realize_nand_rewrite, simplify_fragment,
+};
+pub use safety::{
+    GuardedOptimizationCandidate, OptimizationSafety, OptimizationSafetyReason,
+    TemporalCapabilities, assess_optimization_safety, prepare_guarded_optimization,
 };
 pub use semantic::{
     CombinedPlacementScore, SemanticScore, SemanticWeights, combined_placement_score,

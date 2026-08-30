@@ -3,14 +3,19 @@
 mod circuit;
 mod patch;
 mod scene;
-mod world;
+mod temporal;
 
 pub use circuit::{
     ComponentId, ConnectionKind, FragmentId, GapCandidate, GapEvidence, NetId, PhysicalComponent,
     PhysicalConnection, PhysicalFragment, PhysicalNet, VerifiedTopology,
 };
+pub use dustroute_minecraft::{
+    Block, BlockBehaviorProfile, BlockKind, BlockProperties, Facing, Pos, UpdateModel,
+    WireConnection, World, behavior_profile,
+};
 pub use patch::{
-    PatchApplyError, PhysicalBlockChange, PhysicalPatch, RepairImpact, RepairProposal, RepairReason,
+    PatchApplyError, PhysicalBlockChange, PhysicalPatch, PhysicalPatchReason, RepairImpact,
+    RepairProposal, RepairReason,
 };
 pub use scene::{
     Confidence, FrontierReason, Observation, ObservationFrontier, ObservedRegion,
@@ -18,4 +23,4 @@ pub use scene::{
     PortId, PortRef, PortRole, RegionCompleteness, SceneBounds, SceneComponent, SupportRelation,
     TransferKind,
 };
-pub use world::{Block, BlockKind, BlockProperties, Facing, Pos, WireConnection, World};
+pub use temporal::{TemporalAssessment, TemporalReason, TemporalRequirement};

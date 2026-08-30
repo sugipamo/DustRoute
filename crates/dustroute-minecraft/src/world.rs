@@ -1,4 +1,4 @@
-//! Minecraft block and world primitives.
+//! Minecraft block and world primitives, independent from DustRoute IRs.
 
 use std::collections::BTreeMap;
 use std::error::Error;
@@ -93,7 +93,7 @@ pub struct BlockProperties {
 }
 
 impl BlockProperties {
-    const fn support_only(supports_components: bool) -> Self {
+    pub(crate) const fn support_only(supports_components: bool) -> Self {
         Self {
             supports_components,
             receives_weak_power: false,
@@ -128,24 +128,7 @@ impl BlockKind {
 
     #[must_use]
     pub const fn properties(self) -> BlockProperties {
-        match self {
-            Self::Solid => BlockProperties {
-                supports_components: true,
-                receives_weak_power: true,
-                receives_strong_power: true,
-                repeater_reads_block_power: true,
-                strong_power_drives_dust: true,
-            },
-            Self::Transparent | Self::RedstoneBlock | Self::Piston => {
-                BlockProperties::support_only(true)
-            }
-            Self::Air
-            | Self::RedstoneWire
-            | Self::RedstoneTorch
-            | Self::Repeater
-            | Self::Comparator
-            | Self::Lever => BlockProperties::support_only(false),
-        }
+        crate::blocks::behavior_profile(self).properties
     }
 }
 

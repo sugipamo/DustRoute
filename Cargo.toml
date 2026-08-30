@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "crates/dustroute-minecraft",
     "crates/dustroute-physical",
     "crates/dustroute-ir",
     "crates/dustroute-model",

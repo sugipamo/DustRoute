@@ -26,7 +26,7 @@ pub mod sim;
 pub mod snapshot;
 pub mod wire;
 pub mod world {
-    pub use dustroute_physical::*;
+    pub use dustroute_minecraft::*;
 }
 pub mod world_reverse;
 
@@ -50,7 +50,7 @@ pub use dustroute_ir::{
     DagBuilder, Expr, GateKind, LogicDag, LogicError, LogicNode, NodeId, best_by_size,
     rewrites_once, search_equivalents,
 };
-pub use dustroute_physical::{
+pub use dustroute_minecraft::{
     Block, BlockKind, BlockProperties, Facing, Pos, WireConnection, World,
 };
 pub use electrical::{

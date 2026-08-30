@@ -11,17 +11,22 @@ pub struct PhysicalBlockChange {
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub enum RepairReason {
+pub enum PhysicalPatchReason {
     ConnectMissingWire,
     InsertDirectionalComponent,
     RestoreComponentSupport,
     ReorientDirectionalComponent,
     RemoveUnexpectedConnection,
+    OptimizePlacement,
 }
+
+/// Compatibility name for repair-specific callers. New generic patch APIs
+/// should use [`PhysicalPatchReason`].
+pub type RepairReason = PhysicalPatchReason;
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct PhysicalPatch {
-    pub reason: RepairReason,
+    pub reason: PhysicalPatchReason,
     pub affected_fragments: Vec<FragmentId>,
     /// Confidence in percent. This is evidence strength, not a guarantee of user intent.
     pub confidence_percent: u8,

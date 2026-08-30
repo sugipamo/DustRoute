@@ -62,7 +62,7 @@ pub fn simulate_behavior_trace(
 
 #[cfg(test)]
 mod tests {
-    use dustroute_physical::{Block, BlockKind, Facing, Pos};
+    use dustroute_minecraft::{Block, BlockKind, Facing, Pos};
 
     use crate::{RegionBounds, analyze_world_region, update_wire_shapes};
 
