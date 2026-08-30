@@ -14,6 +14,11 @@
     { "kind": "assert", "from": "diagnostic", "expect": [
       { "path": "diagnostic.health", "equals": "degraded" },
       { "path": "diagnostic.counts.probable_faults", "at_least": 1 }
+    ]},
+    { "kind": "mcp", "tool": "convert_from_looked_at_circuit", "arguments": { "max_components": 64 }, "save": "analysis" },
+    { "kind": "assert", "from": "analysis", "expect": [
+      { "path": "signal_liveness.source_counts_by_kind.controllable_input", "at_least": 1 },
+      { "path": "signal_liveness.undriven_required_input_count", "at_least": 1 }
     ]}
   ]
 }

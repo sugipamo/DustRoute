@@ -158,8 +158,20 @@ pub fn scenario_trace_from_recording(
             continue;
         }
         let delta = update.game_tick.saturating_sub(recording.started_game_tick);
+        let redstone_tick = delta.div_ceil(2);
+        if redstone_tick == 0
+            && let Some(initial) = trace
+                .events
+                .iter_mut()
+                .find(|event| event.position == update.pos && event.redstone_tick == 0)
+        {
+            initial.strength = value.0;
+            initial.powered = value.1;
+            last.insert(update.pos, value);
+            continue;
+        }
         trace.events.push(ScenarioEvent {
-            redstone_tick: delta.div_ceil(2),
+            redstone_tick,
             sequence: trace.events.len() as u64,
             position: update.pos,
             strength: value.0,
@@ -385,6 +397,34 @@ mod tests {
         assert_eq!(trace.events[1].redstone_tick, 2);
         assert_eq!(trace.events[1].sequence, 1);
         assert_eq!(trace.final_strengths[&pos], 15);
+    }
+
+    #[test]
+    fn tick_zero_activation_replaces_the_pre_action_baseline() {
+        let pos = Pos::new(1, 1, 0);
+        let state = |powered: &str| ObservedBlockState {
+            name: "minecraft:lever".to_owned(),
+            properties: BTreeMap::from([("powered".to_owned(), powered.to_owned())]),
+        };
+        let recording = UpdateRecording {
+            recording_id: "live".to_owned(),
+            started_game_tick: 100,
+            stopped_game_tick: 104,
+            seen_events: 1,
+            truncated: false,
+            events: vec![BlockUpdateEvent {
+                sequence: 1,
+                game_tick: 100,
+                pos,
+                before: Some(state("false")),
+                after: Some(state("true")),
+            }],
+        };
+
+        let trace = scenario_trace_from_recording(&recording, &BTreeSet::from([pos]), 2);
+        assert_eq!(trace.events.len(), 1);
+        assert_eq!(trace.events[0].redstone_tick, 0);
+        assert!(trace.events[0].powered);
     }
 
     #[test]

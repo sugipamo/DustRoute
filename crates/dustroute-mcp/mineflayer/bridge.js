@@ -288,12 +288,34 @@ function getBlock (pos) {
   return { pos, ...blockRecord(block) }
 }
 
-async function activateLever (pos) {
-  const block = bot.blockAt(new Vec3(pos.x, pos.y, pos.z))
+async function ensureLeverReachable (pos) {
+  let block = bot.blockAt(new Vec3(pos.x, pos.y, pos.z))
   if (!block) throw new Error(`block is unavailable at ${pos.x} ${pos.y} ${pos.z}`)
   if (block.name !== 'lever') throw new Error(`activation target is not a lever: minecraft:${block.name}`)
-  const distance = bot.entity.position.distanceTo(block.position.offset(0.5, 0.5, 0.5))
-  if (distance > 5.5) throw new Error(`bot is ${distance.toFixed(2)} blocks from the lever; move it within 5.5 blocks`)
+  let distance = bot.entity.position.distanceTo(block.position.offset(0.5, 0.5, 0.5))
+  let moved = false
+  if (distance > 5.5) {
+    const approach = block.position.offset(0.5, 3, 0.5)
+    bot.chat(`/tp ${bot.username} ${approach.x} ${approach.y} ${approach.z}`)
+    await bot.waitForTicks(3)
+    bot.creative.startFlying()
+    block = bot.blockAt(new Vec3(pos.x, pos.y, pos.z))
+    if (!block || block.name !== 'lever') throw new Error('lever became unavailable after bot approach')
+    distance = bot.entity.position.distanceTo(block.position.offset(0.5, 0.5, 0.5))
+    if (distance > 5.5) throw new Error(`bot is still ${distance.toFixed(2)} blocks from the lever after approach`)
+    moved = true
+  }
+  return { block, moved, distance }
+}
+
+async function approachLever (pos) {
+  const approach = await ensureLeverReachable(pos)
+  return { pos, moved: approach.moved, distance: approach.distance }
+}
+
+async function activateLever (pos) {
+  const approach = await ensureLeverReachable(pos)
+  const block = approach.block
   const before = propertiesOf(block).powered === 'true'
   await bot.lookAt(block.position.offset(0.5, 0.5, 0.5), true)
   await bot.activateBlock(block)
@@ -301,7 +323,7 @@ async function activateLever (pos) {
   const afterBlock = bot.blockAt(block.position)
   const after = afterBlock && propertiesOf(afterBlock).powered === 'true'
   if (after === before) throw new Error('lever state did not change after normal player activation')
-  return { pos, before_powered: before, after_powered: after }
+  return { pos, before_powered: before, after_powered: after, bot_approached: approach.moved }
 }
 
 function startUpdateRecording (params) {
@@ -414,6 +436,10 @@ async function dispatch (method, params) {
   if (method === 'activate_lever') {
     requireDimension(params.dimension)
     return activateLever(params.pos)
+  }
+  if (method === 'approach_lever') {
+    requireDimension(params.dimension)
+    return approachLever(params.pos)
   }
   if (method === 'wait_ticks') {
     requireDimension(params.dimension)

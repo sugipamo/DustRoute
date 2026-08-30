@@ -273,6 +273,34 @@ fn json_text(value: Value) -> String {
         .unwrap_or_else(|error| json!({ "ok": false, "error": error.to_string() }).to_string())
 }
 
+fn scenario_trace_json(trace: &dustroute_translate::ScenarioTrace) -> Value {
+    let final_strengths = trace
+        .final_strengths
+        .iter()
+        .map(|(position, strength)| json!({ "position": position, "strength": strength }))
+        .collect::<Vec<_>>();
+    let final_powered = trace
+        .final_powered
+        .iter()
+        .map(|(position, powered)| json!({ "position": position, "powered": powered }))
+        .collect::<Vec<_>>();
+    json!({
+        "duration_redstone_ticks": trace.duration_redstone_ticks,
+        "events": trace.events,
+        "final_strengths": final_strengths,
+        "final_powered": final_powered,
+    })
+}
+
+fn scenario_run_json(run: &dustroute_translate::ScenarioRun) -> Value {
+    json!({
+        "label": run.label,
+        "safety": run.safety,
+        "trace": scenario_trace_json(&run.trace),
+        "differences": run.differences,
+    })
+}
+
 fn transition_contracts(
     params: Option<&[TransitionContractParam]>,
     scene: &dustroute_physical::PhysicalScene,
@@ -622,9 +650,19 @@ fn signal_liveness_json(
             .sources
             .iter()
             .fold(BTreeMap::<String, usize>::new(), |mut counts, source| {
-                *counts
-                    .entry(format!("{:?}", source.kind).to_lowercase())
-                    .or_default() += 1;
+                let kind = match source.kind {
+                    dustroute_translate::SignalSourceKind::ControllableInput => {
+                        "controllable_input"
+                    }
+                    dustroute_translate::SignalSourceKind::IntrinsicSource => "intrinsic_source",
+                    dustroute_translate::SignalSourceKind::ObservationBoundary => {
+                        "observation_boundary"
+                    }
+                    dustroute_translate::SignalSourceKind::InferredPrimaryInput => {
+                        "inferred_primary_input"
+                    }
+                };
+                *counts.entry(kind.to_owned()).or_default() += 1;
                 counts
             });
     let external_input_waiting = report
@@ -2871,7 +2909,7 @@ impl DustRouteMcp {
             "original_powered": plan.original_powered,
             "safety": plan.safety,
             "preview": preview,
-            "warning": "running normally activates this lever once and restores it after observation"
+            "warning": "running moves the bot within reach when necessary, normally activates this lever once, and restores it after observation"
         }))
     }
 
@@ -2953,6 +2991,14 @@ impl DustRouteMcp {
             Ok(contracts) => contracts,
             Err(error) => return json_text(json!({ "ok": false, "error": error })),
         };
+        let approach = match self
+            .bridge
+            .approach_lever(plan.lever, &plan.dimension)
+            .await
+        {
+            Ok(approach) => approach,
+            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        };
         let started = match self
             .bridge
             .start_update_recording(
@@ -2966,7 +3012,7 @@ impl DustRouteMcp {
             Ok(started) => started,
             Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
         };
-        let activation = match self
+        let mut activation = match self
             .bridge
             .activate_lever(plan.lever, &plan.dimension)
             .await
@@ -2980,6 +3026,7 @@ impl DustRouteMcp {
                 return json_text(json!({ "ok": false, "error": error.to_string() }));
             }
         };
+        activation.bot_approached |= approach.moved;
         let wait_error = self
             .bridge
             .wait_ticks(plan.observation_ticks, &plan.dimension)
@@ -3070,6 +3117,22 @@ impl DustRouteMcp {
         let simulation_comparison = simulated.as_ref().ok().map(|simulated| {
             dustroute_translate::compare_live_trace(&simulated.trace, &live_scenario_trace)
         });
+        let scenario = match serde_json::to_value(&scenario) {
+            Ok(value) => value,
+            Err(error) => {
+                return json_text(json!({
+                    "ok": false,
+                    "error": format!("failed to serialize transition scenario: {error}"),
+                    "restoration_verified": restoration_verified,
+                    "restore_error": restore_error,
+                }));
+            }
+        };
+        let simulated = match &simulated {
+            Ok(run) => json!({ "ok": true, "run": scenario_run_json(run) }),
+            Err(error) => json!({ "ok": false, "error": error }),
+        };
+        let live_scenario_trace = scenario_trace_json(&live_scenario_trace);
         let result = json!({
             "ok": restoration_verified && wait_error.is_none() && !recording.truncated,
             "operation_id": operation_id,
@@ -3412,6 +3475,23 @@ mod tests {
     use tokio::net::TcpListener;
 
     use super::*;
+
+    #[test]
+    fn transition_trace_json_uses_arrays_for_coordinate_keyed_state() {
+        let position = Pos::new(1, 64, -2);
+        let trace = dustroute_translate::ScenarioTrace {
+            duration_redstone_ticks: 2,
+            events: Vec::new(),
+            final_strengths: BTreeMap::from([(position, 15)]),
+            final_powered: BTreeMap::from([(position, true)]),
+        };
+
+        let value = scenario_trace_json(&trace);
+        assert_eq!(value["final_strengths"][0]["position"], json!(position));
+        assert_eq!(value["final_strengths"][0]["strength"], 15);
+        assert_eq!(value["final_powered"][0]["powered"], true);
+        assert!(serde_json::to_string(&value).is_ok());
+    }
 
     #[tokio::test]
     async fn collaboration_prompt_requires_gaze_grounding_and_preview() {

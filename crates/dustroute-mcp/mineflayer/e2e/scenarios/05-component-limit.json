@@ -13,6 +13,11 @@
       { "path": "diagnostic.observation_complete", "equals": false },
       { "path": "diagnostic.health", "equals": "incomplete" },
       { "path": "diagnostic.recommended_next_action.kind", "equals": "expand_observation" }
+    ]},
+    { "kind": "mcp", "tool": "convert_from_looked_at_circuit", "arguments": { "max_components": 3 }, "save": "boundary" },
+    { "kind": "assert", "from": "boundary", "expect": [
+      { "path": "analysis_complete", "equals": false },
+      { "path": "signal_liveness.source_counts_by_kind.observation_boundary", "at_least": 1 }
     ]}
   ]
 }

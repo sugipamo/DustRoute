@@ -6,21 +6,68 @@ JSON-lines bridge.
 
 ## Start the visible bot
 
-```bash
-cd crates/dustroute-mcp/mineflayer
-npm install
-DUSTROUTE_SERVER_ADDRESS=127.0.0.1:25565 \
-  DUSTROUTE_MC_VERSION=1.21.11 npm start
+Live integration requires Node.js 22/npm, Java 21, and the official Minecraft
+Java Edition 1.21.11 server JAR. Keep the server and its generated world under
+an ignored directory such as `.local/minecraft-server-1.21.11`; do not copy the
+JAR, world, logs, operator lists, or authentication data into the repository.
+
+Run the server once to generate its files, read the EULA, and set
+`eula=true` only after accepting it. The bundled Mineflayer workflow defaults
+to offline authentication, so a private test server must include at least:
+
+```properties
+online-mode=false
+white-list=true
+level-type=minecraft:flat
 ```
 
-The default bot name is `DustRouteBot`. For offline test servers, grant it
-operator permission if region previews should use particles and chat messages.
+Start it with Java 21:
+
+```bash
+cd .local/minecraft-server-1.21.11
+java -Xms1G -Xmx2G -jar server.jar nogui
+```
+
+Never expose an offline-mode server to an untrusted network. From the server
+console, add the bot and assisted player using the exact names they use to
+connect:
+
+```text
+whitelist add DustRouteBot
+op DustRouteBot
+whitelist add YourMinecraftName
+```
+
+Letting each offline player join once before running `whitelist add` is the
+safest way to obtain the correct UUID. If a whitelist file must be generated
+manually, Minecraft derives the UUID from the UTF-8 bytes of
+`OfflinePlayer:<exact player name>` using the version-3/name-based UUID
+algorithm. Name spelling and case are part of that input; a UUID generated for
+a differently cased name will not match.
+
+```bash
+cd crates/dustroute-mcp/mineflayer
+npm ci
+DUSTROUTE_SERVER_ADDRESS=127.0.0.1:25565 \
+  DUSTROUTE_MC_VERSION=1.21.11 \
+  DUSTROUTE_MC_AUTH=offline \
+  DUSTROUTE_BOT_NAME=DustRouteBot \
+  npm start
+```
+
+`DUSTROUTE_MC_AUTH` defaults to `offline`, and `DUSTROUTE_BOT_NAME` defaults to
+`DustRouteBot`. Grant the bot operator permission on the dedicated test server
+if region previews, teleport-based safe approach, and chat messages are needed.
 The bridge listens only on `127.0.0.1:25580`.
 
 Automated live testing with a second Mineflayer player is documented in
 [`mineflayer/e2e/README.md`](mineflayer/e2e/README.md). It controls player gaze
 and exercises observation, diagnostics, component limits, repair application,
 verification, and undo without requiring a human to enter the world.
+
+The exported semantic Data Pack reports assertion results to player chat, not
+the dedicated-server console. Join as a player or capture chat through a test
+client when validating its 20 scenarios and 23 assertions.
 
 ## Start the MCP server
 

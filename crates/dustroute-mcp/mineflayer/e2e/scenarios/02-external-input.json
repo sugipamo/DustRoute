@@ -12,6 +12,11 @@
     { "kind": "assert", "from": "diagnostic", "expect": [
       { "path": "diagnostic.counts.awaiting_external_input", "at_least": 1 },
       { "path": "diagnostic.counts.probable_faults", "equals": 0 }
+    ]},
+    { "kind": "mcp", "tool": "convert_from_looked_at_circuit", "arguments": { "max_components": 64 }, "save": "analysis" },
+    { "kind": "assert", "from": "analysis", "expect": [
+      { "path": "signal_liveness.source_counts_by_kind.inferred_primary_input", "at_least": 1 },
+      { "path": "signal_liveness.undriven_required_input_count", "equals": 0 }
     ]}
   ]
 }

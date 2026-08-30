@@ -13,8 +13,11 @@ HTTP wrapper.
 
 ## One-time server setup
 
-The server must be an offline/private test server. From its console, allow and
-grant operator permission to both bots:
+The server must be an offline/private Java 1.21.11 superflat test server running
+on Java 21 with `online-mode=false`, `white-list=true`, and an accepted EULA.
+The repository-level and MCP READMEs describe the required Rust and Node.js
+toolchains and initial server setup. From its console, allow and grant operator
+permission to both bots:
 
 ```text
 whitelist add DustRouteBot
@@ -50,6 +53,15 @@ Pass scenario names to run a subset:
 
 ```bash
 npm run test:e2e -- normal_circuit component_limit repair_and_undo
+```
+
+The transition scenario deliberately moves `DustRouteBot` out of interaction
+range before invocation. It verifies automatic pre-recording approach, normal
+Mineflayer lever activation, non-empty live/simulated JSON traces, semantic
+equivalence, state restoration, and continued MCP availability after the run:
+
+```bash
+npm run test:e2e -- transition_run_and_restore
 ```
 
 ## Scenario contract

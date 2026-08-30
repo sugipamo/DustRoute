@@ -9,6 +9,7 @@ const { McpStdioClient, assertExpectation, resolveReferences } = require('./runt
 const root = path.resolve(__dirname, '../../../..')
 const scenarioDir = path.join(__dirname, 'scenarios')
 const playerName = process.env.DUSTROUTE_E2E_PLAYER || 'dustroutetest'
+const assistantName = process.env.DUSTROUTE_BOT_NAME || 'DustRouteBot'
 const serverAddress = process.env.DUSTROUTE_SERVER_ADDRESS || '127.0.0.1:25565'
 const [host, portText] = serverAddress.split(':')
 const port = Number(portText)
@@ -38,7 +39,7 @@ function sleep (milliseconds) {
 }
 
 async function command (bot, text) {
-  bot.chat(text.replaceAll('${player}', playerName))
+  bot.chat(text.replaceAll('${player}', playerName).replaceAll('${assistant}', assistantName))
   await sleep(300)
 }
 
@@ -50,6 +51,7 @@ async function aim (bot, mcp, step) {
   }
   await command(bot, `/setblock ${footing.x} ${footing.y} ${footing.z} minecraft:barrier`)
   await command(bot, `/tp ${playerName} ${step.position.x} ${step.position.y} ${step.position.z}`)
+  await command(bot, `/tp ${assistantName} ${playerName}`)
   bot.creative.startFlying()
   await sleep(1000)
   await bot.waitForChunksToLoad()
