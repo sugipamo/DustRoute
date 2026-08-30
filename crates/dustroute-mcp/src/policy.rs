@@ -88,8 +88,8 @@ impl McpPolicy {
             };
             policy.allowed_region = Some(
                 RegionBounds::new(
-                    dustroute_model::Pos::new(*min_x, *min_y, *min_z),
-                    dustroute_model::Pos::new(*max_x, *max_y, *max_z),
+                    dustroute_physical::Pos::new(*min_x, *min_y, *min_z),
+                    dustroute_physical::Pos::new(*max_x, *max_y, *max_z),
                 )
                 .into(),
             );
@@ -200,7 +200,7 @@ fn axis_len(a: i32, b: i32) -> usize {
 
 #[cfg(test)]
 mod tests {
-    use dustroute_model::Pos;
+    use dustroute_physical::Pos;
 
     use super::*;
 

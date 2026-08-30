@@ -37,10 +37,31 @@ references such as “what is this?” use `analyze_looked_at_circuit`. One call
 returns the focused physical component, its local signal role, recognized
 AND/OR/NOT-style gates, traceable expressions, optional whole-circuit function
 candidates, observation completeness, diagnostics, and non-mutating repairs.
-Set `include_truth_table=false` for faster local-only inspection; it defaults to
-true so higher-level functions can be inferred. Explicit regions continue to
+Set `include_truth_table=true` only when a small circuit explicitly needs a
+truth table; local hierarchical inspection is the default. Explicit regions continue to
 use `discover_looked_at_circuit` or `mark_region_corner`, `preview_region`, and
 `analyze_selected_region`.
+
+For observation debugging, `inspect_looked_at_world` starts near the block the
+player is looking at and progressively follows adjacent redstone components
+without applying circuit inference. There is no caller-selected scan radius.
+Expansion ends when the component frontier is exhausted or `max_components`
+(8192 by default) is reached; the latter is reported as an incomplete result.
+`component_gap` defaults to 2 so a one-block break can be inspected as a nearby
+fragment. The result includes exact block-name and block-state-property counts,
+the targeted block, raw redstone states, truncation, and expansion completeness.
+Use `include_block_list=true` only when the non-air listing is needed; both raw
+lists are bounded by `max_listed_blocks`. `discover_looked_at_circuit` and
+`analyze_looked_at_circuit` use the same component-limited expansion.
+
+`analyze_looked_at_circuit` reports a physical-first hierarchy. Observed facts
+become a directed physical graph, recognized local cells, traceable logic
+expressions, and finally optional functional candidates. Every stage reports
+its own completeness and unresolved count while retaining physical component
+origins. Circuits above 128 discovered redstone components deliberately skip a
+flat whole-circuit truth table and broad repair enumeration; the MCP returns
+local cells and hierarchical summaries, then asks the caller to focus a smaller
+functional area for detailed simulation or repair.
 
 Long analyses can use `start_selected_region_analysis`, `get_operation`, and
 `cancel_operation`. `preview_compiled_circuit` returns a block diff, collisions,

@@ -21,7 +21,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         let (snapshot, world) = world_from_snapshot_json(&json)?;
         let result = app.analyze_world(
             &world,
-            ReverseRequest::new(RegionBounds::new(snapshot.min, snapshot.max)),
+            ReverseRequest::new(RegionBounds::new(snapshot.min, snapshot.max)).with_truth_table(16),
         );
         let analysis = &result.analysis;
         let (truth_table, expressions) = match &result.truth_table {

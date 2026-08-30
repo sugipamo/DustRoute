@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use dustroute_physical::{
     Block, BlockKind, ComponentId, Facing, GapEvidence, PhysicalBlockChange, PhysicalPatch,
-    PhysicalScene, Pos, RepairImpact, RepairProposal, RepairReason, VerifiedTopology, World,
+    PhysicalScene, Pos, RepairImpact, RepairProposal, RepairReason, World,
 };
 
 #[must_use]
@@ -11,7 +11,7 @@ pub fn propose_scene_repairs(
     scene: &PhysicalScene,
     max_gap: u32,
 ) -> Vec<RepairProposal> {
-    propose_physical_repairs(world, &scene.verified_topology(), max_gap)
+    propose_physical_repairs(world, scene, max_gap)
 }
 
 #[must_use]
@@ -20,13 +20,13 @@ pub fn propose_scene_component_removal(
     scene: &PhysicalScene,
     pos: Pos,
 ) -> Option<RepairProposal> {
-    propose_component_removal(world, &scene.verified_topology(), pos)
+    propose_component_removal(world, scene, pos)
 }
 
 #[must_use]
 fn propose_physical_repairs(
     world: &World,
-    circuit: &VerifiedTopology,
+    circuit: &PhysicalScene,
     max_gap: u32,
 ) -> Vec<RepairProposal> {
     let mut proposals = missing_wire_repairs(world, circuit, max_gap);
@@ -51,7 +51,7 @@ fn propose_physical_repairs(
 #[must_use]
 fn propose_component_removal(
     world: &World,
-    circuit: &VerifiedTopology,
+    circuit: &PhysicalScene,
     pos: Pos,
 ) -> Option<RepairProposal> {
     let component = circuit
@@ -83,7 +83,7 @@ fn propose_component_removal(
 
 fn missing_wire_repairs(
     world: &World,
-    circuit: &VerifiedTopology,
+    circuit: &PhysicalScene,
     max_gap: u32,
 ) -> Vec<RepairProposal> {
     let by_id: BTreeMap<_, _> = circuit
@@ -154,7 +154,7 @@ fn missing_wire_repairs(
 
 fn missing_directional_component_repairs(
     world: &World,
-    circuit: &VerifiedTopology,
+    circuit: &PhysicalScene,
     max_gap: u32,
 ) -> Vec<RepairProposal> {
     let by_id: BTreeMap<_, _> = circuit
@@ -230,7 +230,7 @@ fn missing_directional_component_repairs(
     proposals
 }
 
-fn missing_support_repairs(world: &World, circuit: &VerifiedTopology) -> Vec<RepairProposal> {
+fn missing_support_repairs(world: &World, circuit: &PhysicalScene) -> Vec<RepairProposal> {
     let by_pos: BTreeMap<_, _> = circuit
         .components
         .iter()
@@ -267,7 +267,7 @@ fn missing_support_repairs(world: &World, circuit: &VerifiedTopology) -> Vec<Rep
         .collect()
 }
 
-fn direction_repairs(world: &World, circuit: &VerifiedTopology) -> Vec<RepairProposal> {
+fn direction_repairs(world: &World, circuit: &PhysicalScene) -> Vec<RepairProposal> {
     let by_pos: BTreeMap<_, _> = circuit
         .components
         .iter()
@@ -338,7 +338,7 @@ fn direction_repairs(world: &World, circuit: &VerifiedTopology) -> Vec<RepairPro
 
 fn evaluate_repair(
     world: &World,
-    circuit: &VerifiedTopology,
+    circuit: &PhysicalScene,
     patch: &PhysicalPatch,
 ) -> Option<RepairImpact> {
     let mut repaired = patch.apply_virtual(world).ok()?;
@@ -354,7 +354,7 @@ fn evaluate_repair(
 }
 
 fn fragments_for(
-    circuit: &VerifiedTopology,
+    circuit: &PhysicalScene,
     components: impl IntoIterator<Item = ComponentId>,
 ) -> Vec<dustroute_physical::FragmentId> {
     let components: BTreeSet<_> = components.into_iter().collect();

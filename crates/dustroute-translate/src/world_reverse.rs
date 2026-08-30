@@ -471,7 +471,11 @@ pub fn analyze_world_region_in_dimension(
     if !observation.frontier.is_empty() {
         observation.regions[0].completeness = dustroute_physical::RegionCompleteness::OpenBoundary;
     }
-    let scene = dustroute_physical::PhysicalScene::from_topology(observation, &physical);
+    let scene = dustroute_physical::PhysicalScene::from_topology_and_world(
+        observation,
+        &physical,
+        &bounded,
+    );
     RegionAnalysis {
         bounds,
         redstone_blocks,

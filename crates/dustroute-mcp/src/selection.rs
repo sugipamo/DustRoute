@@ -1,7 +1,7 @@
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 
-use dustroute_model::Pos;
+use dustroute_physical::Pos;
 use dustroute_translate::RegionBounds;
 use serde::{Deserialize, Serialize};
 

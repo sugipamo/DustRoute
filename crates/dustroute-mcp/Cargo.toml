@@ -10,7 +10,7 @@ rust-version.workspace = true
 [dependencies]
 anyhow = "1.0"
 dustroute-app = { path = "../dustroute-app" }
-dustroute-model = { path = "../dustroute-model" }
+dustroute-ir = { path = "../dustroute-ir" }
 dustroute-physical = { path = "../dustroute-physical" }
 dustroute-translate = { path = "../dustroute-translate" }
 rmcp = { version = "3.1.4", features = ["server", "transport-io", "schemars"] }

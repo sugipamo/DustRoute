@@ -13,7 +13,6 @@ The workspace is split by responsibility:
 ```text
 dustroute-physical   canonical PhysicalScene observations, ports, evidence, nets, and fragments
 dustroute-ir         derived Gate/Expression/Functional views and transformations
-dustroute-model      compatibility facade during the crate migration
 dustroute-translate  forward and reverse translation
 dustroute-optimize   placement and semantic rewrite optimization
 dustroute-app        shared application services for MCP and CLI
@@ -28,8 +27,7 @@ verified functional connections form fragments without merging distinct signal
 nets across directional devices. Nearby disconnected
 fragments are discovered separately as gap candidates and are never unioned by
 proximity alone. `dustroute-ir` owns abstraction changes used to project the
-physical circuit into signal and logical views. `dustroute-model` temporarily
-re-exports both crates so existing consumers can migrate incrementally.
+physical circuit into local cells, logic expressions, and functional views.
 
 `dustroute-translate` exposes `Translator::forward`, `Translator::reverse`, and
 `Translator::verify` as its stable facade. Reverse results carry the canonical
@@ -72,12 +70,12 @@ replace the observed physical representation as the source of truth.
 Gate and expression views retain physical component IDs and can represent
 partial, conflicting, and boundary-limited recognition. Functional labels such
 as half adders are optional metadata over the lower-level gates and expressions.
-Signal projections retain physical component IDs, positions, verified edge
-evidence, and device delays. Behavior projections describe repeaters, torches,
+The physical graph retains component IDs, positions, verified edge evidence,
+and device delays. Independent temporal analysis describes repeaters, torches,
 comparators, pistons, delayed traces, and feedback patterns such as clock and
-latch candidates. Reverse truth-table expressions can be converted back into a
-`LogicDag`; forward compilation produces a physical projection alongside the
-Minecraft layout.
+latch candidates. Explicitly requested reverse truth-table expressions can be
+converted back into a `LogicDag`; forward compilation produces the Minecraft
+layout directly.
 
 ## Implementation status
 
@@ -116,9 +114,10 @@ gap evidence for broken-circuit analysis. Bidirectional dust runs are projected
 into signal components; repeaters, powered blocks, and torch-control edges
 provide direction. Source and sink components become inferred terminals.
 
-The JSON report contains the detected terminals, unsupported components, an
-exhaustive truth table (up to 16 inferred inputs), and a Boolean expression for
-each output. Known functions such as AND, OR, XOR, NAND, and NOT are identified
+The CLI JSON report explicitly requests and contains an exhaustive truth table
+(up to 16 inferred inputs) and a Boolean expression for each output. Library and
+MCP reverse analysis leave truth-table enumeration disabled unless requested.
+Known functions such as AND, OR, XOR, NAND, and NOT are identified
 directly; other combinational outputs fall back to canonical sum-of-products.
 
 Snapshots use this shape; `properties` contains the Java block-state values

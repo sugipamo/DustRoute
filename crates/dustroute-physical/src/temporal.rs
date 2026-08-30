@@ -102,7 +102,7 @@ mod tests {
             }],
             [],
         );
-        PhysicalScene::from_topology(
+        PhysicalScene::from_unvalidated_topology(
             Observation::complete(
                 "minecraft:overworld",
                 SceneBounds::new(Pos::new(-1, 0, -1), Pos::new(1, 2, 1)),

@@ -2,7 +2,8 @@
 
 mod planning;
 
-use dustroute_model::{LogicDag, World};
+use dustroute_ir::LogicDag;
+use dustroute_physical::World;
 use dustroute_translate::{
     ForwardOptions, ForwardResult, RegionBounds, ReverseRequest, ReverseResult, TranslateError,
     Translator, decoder_1_to_2, full_adder, half_adder, half_subtractor, mux_2_to_1,

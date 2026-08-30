@@ -7,7 +7,7 @@ use crate::{
     TruthTableError, World, analyze_world_region, compare_truth_tables, infer_output_expressions,
     infer_truth_table,
 };
-use dustroute_ir::PhysicalProjection;
+use dustroute_ir::TemporalAnalysis;
 
 /// Stable entry point for both directions of circuit translation.
 #[derive(Clone, Copy, Debug, Default)]
@@ -21,12 +21,12 @@ pub struct ForwardOptions {
 #[derive(Clone, Debug)]
 pub struct ForwardResult {
     pub compiled: BaselineCompileResult,
-    pub projection: PhysicalProjection,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct ReverseRequest {
     pub bounds: RegionBounds,
+    pub infer_truth_table: bool,
     pub max_inputs: usize,
     pub settle_ticks: usize,
 }
@@ -36,16 +36,24 @@ impl ReverseRequest {
     pub const fn new(bounds: RegionBounds) -> Self {
         Self {
             bounds,
+            infer_truth_table: false,
             max_inputs: 16,
             settle_ticks: 60,
         }
+    }
+
+    #[must_use]
+    pub const fn with_truth_table(mut self, max_inputs: usize) -> Self {
+        self.infer_truth_table = true;
+        self.max_inputs = max_inputs;
+        self
     }
 }
 
 #[derive(Clone, Debug)]
 pub struct ReverseResult {
     pub analysis: RegionAnalysis,
-    pub projection: PhysicalProjection,
+    pub temporal: TemporalAnalysis,
     pub gate_view: dustroute_ir::GateView,
     pub expression_view: dustroute_ir::ExpressionView,
     pub functional_view: dustroute_ir::FunctionalView,
@@ -89,37 +97,27 @@ impl Translator {
         options: ForwardOptions,
     ) -> Result<ForwardResult, TranslateError> {
         let compiled = BaselineCompiler::new(options.compile).compile(circuit)?;
-        let projection = compiled
-            .world
-            .bounds()
-            .map(|(min, max)| analyze_world_region(&compiled.world, RegionBounds::new(min, max)))
-            .map(|analysis| PhysicalProjection::from_scene(&analysis.scene))
-            .unwrap_or_else(|| PhysicalProjection::from_topology(&Default::default()));
-        Ok(ForwardResult {
-            compiled,
-            projection,
-        })
+        Ok(ForwardResult { compiled })
     }
 
     #[must_use]
     pub fn reverse(&self, world: &World, request: ReverseRequest) -> ReverseResult {
         let analysis = analyze_world_region(world, request.bounds);
-        let mut projection = PhysicalProjection::from_scene(&analysis.scene);
-        let verified = analysis.scene.verified_topology();
-        if !projection.behavior.devices.is_empty()
+        let mut temporal = TemporalAnalysis::from_scene(&analysis.scene);
+        if !temporal.behavior.devices.is_empty()
             && let Ok(trace) = crate::simulate_behavior_trace(
                 world,
-                &verified,
-                &projection,
+                &analysis.scene,
+                &temporal,
                 request.settle_ticks,
                 "observed initial state",
             )
         {
-            projection.behavior.traces.push(trace);
+            temporal.behavior.traces.push(trace);
         }
         let mut gate_view = dustroute_ir::recognize_gates(&analysis.scene);
         let mut expression_view = dustroute_ir::derive_expressions(&analysis.scene, &gate_view);
-        let (truth_table, expressions, logic, truth_table_error) =
+        let (truth_table, expressions, logic, truth_table_error) = if request.infer_truth_table {
             match infer_truth_table(world, &analysis, request.max_inputs, request.settle_ticks) {
                 Ok(truth_table) => {
                     let expressions = infer_output_expressions(&truth_table);
@@ -134,7 +132,10 @@ impl Translator {
                     (Some(truth_table), expressions, logic, None)
                 }
                 Err(error) => (None, Vec::new(), None, Some(error)),
-            };
+            }
+        } else {
+            (None, Vec::new(), None, None)
+        };
         if let Some(table) = &truth_table {
             append_truth_table_views(
                 &analysis,
@@ -147,7 +148,7 @@ impl Translator {
         let functional_view = dustroute_ir::classify_function(&gate_view, &expression_view);
         ReverseResult {
             analysis,
-            projection,
+            temporal,
             gate_view,
             expression_view,
             functional_view,
@@ -329,6 +330,16 @@ mod tests {
     use crate::half_adder;
 
     #[test]
+    fn truth_table_is_explicitly_opted_in() {
+        let bounds = RegionBounds::new(crate::Pos::new(0, 0, 0), crate::Pos::new(1, 1, 1));
+        let default_request = ReverseRequest::new(bounds);
+        assert!(!default_request.infer_truth_table);
+        let requested = default_request.with_truth_table(4);
+        assert!(requested.infer_truth_table);
+        assert_eq!(requested.max_inputs, 4);
+    }
+
+    #[test]
     fn physical_first_reverse_exposes_local_gates_before_function_metadata() {
         let forward = Translator
             .forward(&half_adder(), ForwardOptions::default())
@@ -339,7 +350,8 @@ mod tests {
             ReverseRequest::new(RegionBounds::new(
                 min.offset(-1, -1, -1),
                 max.offset(1, 1, 1),
-            )),
+            ))
+            .with_truth_table(16),
         );
         assert!(
             reverse

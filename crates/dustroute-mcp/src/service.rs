@@ -1,8 +1,8 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};
 use std::sync::Arc;
 
 use dustroute_app::DustRouteService;
-use dustroute_model::{BlockKind, Pos};
+use dustroute_physical::{BlockKind, Pos};
 use dustroute_physical::{PhysicalBlockChange, PhysicalPatch};
 use dustroute_translate::{
     ForwardOptions, JavaExportConfig, ReverseRequest, java_block_state, world_from_snapshot_json,
@@ -25,6 +25,8 @@ use crate::{
     BotBridge, McpPolicy, OperationKind, OperationRegistry, OperationStatus, PlacementPlan,
     SelectionSession, discover_connected_region, plan_world_overlay,
 };
+
+const MAX_FLAT_ANALYSIS_COMPONENTS: usize = 128;
 
 #[derive(Clone)]
 pub struct DustRouteMcp {
@@ -59,6 +61,22 @@ struct ObserveParams {
 }
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
+struct InspectLookedAtWorldParams {
+    /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
+    player: Option<String>,
+    /// Maximum redstone components followed from the gaze target, from 1 through 32768. Defaults to 8192.
+    max_components: Option<usize>,
+    /// Maximum Manhattan gap followed between nearby components. Defaults to 2 so a one-block break remains visible.
+    component_gap: Option<u32>,
+    /// Ray-cast limit in blocks. Defaults to 64.
+    max_distance: Option<f64>,
+    /// Include a raw non-air block list in addition to the redstone list. Defaults to false.
+    include_block_list: Option<bool>,
+    /// Maximum entries returned in each block list, from 1 through 2048. Defaults to 256.
+    max_listed_blocks: Option<usize>,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
 struct MarkCornerParams {
     /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
     player: Option<String>,
@@ -72,10 +90,8 @@ struct MarkCornerParams {
 struct DiscoverCircuitParams {
     /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
     player: Option<String>,
-    /// Horizontal half-size of the initial scan, from 4 through 31. Defaults to 24.
-    horizontal_radius: Option<i32>,
-    /// Vertical half-size of the initial scan, from 2 through 16. Defaults to 12.
-    vertical_radius: Option<i32>,
+    /// Maximum redstone components followed from the gaze target. Defaults to 8192.
+    max_components: Option<usize>,
     /// Extra blocks around the discovered circuit. Defaults to 1.
     padding: Option<i32>,
     /// Maximum Manhattan distance used to discover a nearby disconnected fragment. Defaults to 2.
@@ -86,14 +102,11 @@ struct DiscoverCircuitParams {
 struct AnalyzeLookedAtParams {
     /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
     player: Option<String>,
-    /// Horizontal half-size of the scan, from 4 through 31. Defaults to 24.
-    horizontal_radius: Option<i32>,
-    /// Vertical half-size of the scan, from 2 through 16. Defaults to 12.
-    vertical_radius: Option<i32>,
+    /// Maximum redstone components followed from the gaze target. Defaults to 8192.
+    max_components: Option<usize>,
     /// Maximum Manhattan gap considered for broken connections. Defaults to 2.
     fragment_gap: Option<u32>,
-    /// Also enumerate the complete truth table. Defaults to true so higher-level
-    /// functions can be recognized. Set false for a faster local-only result.
+    /// Explicitly enumerate a truth table for a small circuit. Defaults to false.
     include_truth_table: Option<bool>,
 }
 
@@ -131,6 +144,16 @@ struct StoredRepairPlan {
     applied: bool,
 }
 
+#[derive(Debug)]
+struct AdaptiveComponentScan {
+    snapshot: dustroute_translate::MinecraftSnapshot,
+    component_count: usize,
+    component_limit: usize,
+    limit_reached: bool,
+    scanned_tiles: usize,
+    scanned_block_positions: usize,
+}
+
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 struct ProposeRepairsParams {
     /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
@@ -154,6 +177,151 @@ fn json_text(value: Value) -> String {
 
 fn bounds_json(bounds: dustroute_translate::RegionBounds) -> Value {
     json!({ "min": bounds.min, "max": bounds.max })
+}
+
+fn is_supported_redstone_name(name: &str) -> bool {
+    matches!(
+        name,
+        "minecraft:redstone_wire"
+            | "minecraft:redstone_torch"
+            | "minecraft:redstone_wall_torch"
+            | "minecraft:repeater"
+            | "minecraft:comparator"
+            | "minecraft:lever"
+            | "minecraft:redstone_block"
+            | "minecraft:piston"
+            | "minecraft:sticky_piston"
+    )
+}
+
+fn is_redstone_candidate_name(name: &str) -> bool {
+    is_supported_redstone_name(name)
+        || matches!(
+            name,
+            "minecraft:observer"
+                | "minecraft:redstone_lamp"
+                | "minecraft:target"
+                | "minecraft:dispenser"
+                | "minecraft:dropper"
+                | "minecraft:hopper"
+                | "minecraft:daylight_detector"
+                | "minecraft:tripwire_hook"
+                | "minecraft:sculk_sensor"
+                | "minecraft:calibrated_sculk_sensor"
+        )
+        || name.ends_with("_button")
+        || name.ends_with("_pressure_plate")
+}
+
+fn position_on_boundary(position: Pos, min: Pos, max: Pos) -> bool {
+    position.x == min.x
+        || position.x == max.x
+        || position.y == min.y
+        || position.y == max.y
+        || position.z == min.z
+        || position.z == max.z
+}
+
+fn raw_world_inspection(
+    snapshot: &dustroute_translate::MinecraftSnapshot,
+    target: Pos,
+    dimension: &str,
+    include_block_list: bool,
+    max_listed_blocks: usize,
+) -> Value {
+    let size = Pos::new(
+        snapshot.max.x - snapshot.min.x + 1,
+        snapshot.max.y - snapshot.min.y + 1,
+        snapshot.max.z - snapshot.min.z + 1,
+    );
+    let volume = i64::from(size.x) * i64::from(size.y) * i64::from(size.z);
+    let mut counts = BTreeMap::<String, usize>::new();
+    let mut chunks = BTreeSet::new();
+    let mut redstone = Vec::new();
+    let mut modeled_redstone_count = 0_usize;
+    let mut boundary_non_air_count = 0_usize;
+    let mut boundary_redstone_count = 0_usize;
+    let mut state_property_counts = BTreeMap::<String, usize>::new();
+    let mut target_block = None;
+    for block in &snapshot.blocks {
+        *counts.entry(block.name.clone()).or_default() += 1;
+        chunks.insert((block.pos.x.div_euclid(16), block.pos.z.div_euclid(16)));
+        if position_on_boundary(block.pos, snapshot.min, snapshot.max) {
+            boundary_non_air_count += 1;
+        }
+        for property in block.properties.keys() {
+            *state_property_counts.entry(property.clone()).or_default() += 1;
+        }
+        if block.pos == target {
+            target_block = Some(block);
+        }
+        if is_redstone_candidate_name(&block.name) {
+            if is_supported_redstone_name(&block.name) {
+                modeled_redstone_count += 1;
+            }
+            if position_on_boundary(block.pos, snapshot.min, snapshot.max) {
+                boundary_redstone_count += 1;
+            }
+            redstone.push(block);
+        }
+    }
+    redstone.sort_by_key(|block| {
+        (
+            block.pos.x.abs_diff(target.x)
+                + block.pos.y.abs_diff(target.y)
+                + block.pos.z.abs_diff(target.z),
+            block.pos,
+        )
+    });
+    let listed_redstone = redstone.iter().take(max_listed_blocks).collect::<Vec<_>>();
+    let listed_blocks = include_block_list.then(|| {
+        snapshot
+            .blocks
+            .iter()
+            .take(max_listed_blocks)
+            .collect::<Vec<_>>()
+    });
+    let non_air_count = snapshot.blocks.len();
+    let air_count = usize::try_from(volume)
+        .unwrap_or(usize::MAX)
+        .saturating_sub(non_air_count);
+    json!({
+        "ok": true,
+        "mode": "raw_world_inspection",
+        "inference_applied": false,
+        "dimension": dimension,
+        "target": target,
+        "target_block": target_block,
+        "scan": {
+            "requested_and_returned_bounds": { "min": snapshot.min, "max": snapshot.max },
+            "size": size,
+            "volume": volume,
+            "complete": true,
+            "completeness_basis": "the bridge rejects the entire scan if any coordinate is unavailable",
+            "chunk_columns_with_non_air_blocks": chunks.len()
+        },
+        "counts": {
+            "air": air_count,
+            "non_air": non_air_count,
+            "redstone_candidates": redstone.len(),
+            "modeled_redstone": modeled_redstone_count,
+            "unmodeled_redstone_candidates": redstone.len().saturating_sub(modeled_redstone_count),
+            "by_block_name": counts,
+            "state_properties_present": state_property_counts
+        },
+        "boundary": {
+            "non_air_blocks": boundary_non_air_count,
+            "redstone_candidates": boundary_redstone_count,
+            "redstone_touches_boundary": boundary_redstone_count > 0,
+            "guidance": (boundary_redstone_count > 0).then_some(
+                "redstone reaches the raw scan boundary; increase the radius before assuming the circuit is complete"
+            )
+        },
+        "redstone_blocks": listed_redstone,
+        "redstone_blocks_truncated": redstone.len() > max_listed_blocks,
+        "blocks": listed_blocks,
+        "blocks_truncated": include_block_list && non_air_count > max_listed_blocks
+    })
 }
 
 fn boolean_function(values: &[bool]) -> Option<&'static str> {
@@ -220,10 +388,7 @@ fn logical_role_json(translated: &dustroute_translate::ReverseResult) -> Value {
     })
 }
 
-fn focused_role_json(
-    translated: &dustroute_translate::ReverseResult,
-    target: dustroute_model::Pos,
-) -> Value {
+fn focused_role_json(translated: &dustroute_translate::ReverseResult, target: Pos) -> Value {
     let physical_component = translated
         .analysis
         .scene
@@ -295,11 +460,114 @@ fn focused_role_json(
     })
 }
 
+fn focused_hierarchy_role_json(
+    scene: &dustroute_physical::PhysicalScene,
+    hierarchy: &dustroute_ir::HierarchicalIr,
+    target: Pos,
+) -> Value {
+    let Some(component) = scene.component_at(target) else {
+        return json!({
+            "position": target,
+            "role": "support_or_unresolved",
+            "recognized_cells": []
+        });
+    };
+    let incoming = scene
+        .connections
+        .iter()
+        .filter(|connection| connection.sink.component == component.id)
+        .map(|connection| connection.source.component)
+        .collect::<BTreeSet<_>>();
+    let outgoing = scene
+        .connections
+        .iter()
+        .filter(|connection| connection.source.component == component.id)
+        .map(|connection| connection.sink.component)
+        .collect::<BTreeSet<_>>();
+    let cells = hierarchy
+        .cell_graph
+        .value
+        .cells
+        .gates
+        .iter()
+        .filter(|cell| cell.physical_components.contains(&component.id))
+        .collect::<Vec<_>>();
+    let role = if incoming.len() > 1 {
+        "signal_merge"
+    } else if outgoing.len() > 1 {
+        "signal_branch"
+    } else if !incoming.is_empty() || !outgoing.is_empty() {
+        "intermediate_path"
+    } else {
+        "isolated_or_unresolved"
+    };
+    json!({
+        "position": target,
+        "block": component.block.kind,
+        "physical_component": component.id,
+        "incoming_components": incoming,
+        "outgoing_components": outgoing,
+        "recognized_cells": cells,
+        "role": role,
+        "physical_origin": hierarchy.cell_graph.provenance.physical_positions.get(&component.id)
+    })
+}
+
+fn hierarchical_result_json(
+    bounds: dustroute_translate::RegionBounds,
+    hierarchy: &dustroute_ir::HierarchicalIr,
+    focused: Value,
+    expansion: &Value,
+) -> Value {
+    let scene = &hierarchy.physical_graph.value.scene;
+    json!({
+        "ok": true,
+        "analysis_mode": "hierarchical_local_first",
+        "bounds": bounds_json(bounds),
+        "analysis_complete": expansion["limit_reached"] != Value::Bool(true),
+        "focused_component": focused,
+        "expansion": expansion,
+        "stages": {
+            "physical_snapshot": {
+                "completeness": hierarchy.physical_snapshot.completeness,
+                "components": scene.components.len(),
+                "diagnostic_count": hierarchy.physical_snapshot.diagnostics.len(),
+                "diagnostics": hierarchy.physical_snapshot.diagnostics.iter().take(16).collect::<Vec<_>>(),
+                "diagnostics_truncated": hierarchy.physical_snapshot.diagnostics.len() > 16
+            },
+            "physical_graph": {
+                "completeness": hierarchy.physical_graph.completeness,
+                "directed_connections": scene.connections.len(),
+                "fragments": scene.fragments.len(),
+                "unresolved": hierarchy.physical_graph.unresolved
+            },
+            "cell_graph": {
+                "completeness": hierarchy.cell_graph.completeness,
+                "cell_count": hierarchy.cell_graph.value.cells.gates.len(),
+                "cells": hierarchy.cell_graph.value.cells.gates,
+                "unresolved_component_count": hierarchy.cell_graph.unresolved.len()
+            },
+            "logic_graph": {
+                "completeness": hierarchy.logic_graph.completeness,
+                "expression_count": hierarchy.logic_graph.value.expressions.expressions.len(),
+                "expressions": hierarchy.logic_graph.value.expressions
+            },
+            "functional_graph": {
+                "completeness": hierarchy.functional_graph.completeness,
+                "functions": hierarchy.functional_graph.value.functions
+            }
+        },
+        "truth_table": null,
+        "truth_table_skipped": "large circuits use local cells and hierarchical summaries instead of a flat whole-circuit truth table",
+        "repair_proposals": [],
+        "repair_guidance": "select or look at a smaller cell before generating a physical repair proposal"
+    })
+}
+
 fn reverse_result_json(
     bounds: dustroute_translate::RegionBounds,
     translated: &dustroute_translate::ReverseResult,
 ) -> Value {
-    let verified = translated.analysis.scene.verified_topology();
     json!({
         "ok": true,
         "bounds": bounds_json(bounds),
@@ -308,21 +576,16 @@ fn reverse_result_json(
             "components": translated.analysis.scene.components.len(),
             "verified_connections": translated.analysis.scene.connections.len(),
             "connected_fragments": translated.analysis.scene.fragments.len(),
-            "nearby_gap_candidates": verified.gap_candidates(2),
+            "nearby_gap_candidates": translated.analysis.scene.gap_candidates(2),
             "observation": translated.analysis.scene.observation,
             "analysis_complete": translated.analysis.scene.observation.is_complete(),
         },
         "gate_view": translated.gate_view,
         "expression_view": translated.expression_view,
         "functional_view": translated.functional_view,
-        "signal_ir": {
-            "nodes": translated.projection.signal.nodes.len(),
-            "edges": translated.projection.signal.edges.len(),
-            "physical_origins": translated.projection.signal.physical_origins,
-        },
         "behavior_ir": {
-            "temporal_devices": translated.projection.behavior.devices,
-            "trace_count": translated.projection.behavior.traces.len(),
+            "temporal_devices": translated.temporal.behavior.devices,
+            "trace_count": translated.temporal.behavior.traces.len(),
         },
         "inputs": translated.analysis.inputs.iter().map(|terminal| json!({
             "position": terminal.anchor,
@@ -736,6 +999,167 @@ impl DustRouteMcp {
             .ok_or_else(|| "selection has no dimension".to_owned())?;
         Ok((bounds, dimension))
     }
+
+    async fn scan_connected_components(
+        &self,
+        target: Pos,
+        dimension: &str,
+        max_components: usize,
+        component_gap: i32,
+    ) -> Result<AdaptiveComponentScan, String> {
+        const TILE_SIZE: i32 = 16;
+        const SEED_DISTANCE: i32 = 2;
+
+        let seed_bounds = dustroute_translate::RegionBounds::new(
+            Pos::new(
+                target.x - SEED_DISTANCE,
+                target.y - SEED_DISTANCE,
+                target.z - SEED_DISTANCE,
+            ),
+            Pos::new(
+                target.x + SEED_DISTANCE,
+                target.y + SEED_DISTANCE,
+                target.z + SEED_DISTANCE,
+            ),
+        );
+        self.policy
+            .validate_region(seed_bounds)
+            .map_err(|error| error.to_string())?;
+        let seed_snapshot = self
+            .bridge
+            .scan_region(seed_bounds.min, seed_bounds.max, dimension)
+            .await
+            .map_err(|error| error.to_string())?;
+        let seed = seed_snapshot
+            .blocks
+            .iter()
+            .filter(|block| is_redstone_candidate_name(&block.name))
+            .min_by_key(|block| (manhattan_pos(block.pos, target), block.pos))
+            .filter(|block| manhattan_pos(block.pos, target) <= SEED_DISTANCE)
+            .map(|block| block.pos)
+            .ok_or_else(|| {
+                "no redstone component was found within 2 blocks of the gaze target".to_owned()
+            })?;
+
+        let mut blocks = seed_snapshot
+            .blocks
+            .into_iter()
+            .map(|block| (block.pos, block))
+            .collect::<BTreeMap<_, _>>();
+        let mut candidates = blocks
+            .values()
+            .filter(|block| is_redstone_candidate_name(&block.name))
+            .map(|block| block.pos)
+            .collect::<BTreeSet<_>>();
+        let mut loaded_tiles = BTreeSet::<(i32, i32, i32)>::new();
+        let mut queued = BTreeSet::from([seed]);
+        let mut queue = VecDeque::from([seed]);
+        let mut connected = BTreeSet::new();
+        let mut limit_reached = false;
+
+        while let Some(current) = queue.pop_front() {
+            if connected.len() == max_components {
+                limit_reached = true;
+                break;
+            }
+            queued.remove(&current);
+            if !connected.insert(current) {
+                continue;
+            }
+
+            let min_tile = Pos::new(
+                (current.x - component_gap).div_euclid(TILE_SIZE),
+                (current.y - component_gap).div_euclid(TILE_SIZE),
+                (current.z - component_gap).div_euclid(TILE_SIZE),
+            );
+            let max_tile = Pos::new(
+                (current.x + component_gap).div_euclid(TILE_SIZE),
+                (current.y + component_gap).div_euclid(TILE_SIZE),
+                (current.z + component_gap).div_euclid(TILE_SIZE),
+            );
+            for tile_x in min_tile.x..=max_tile.x {
+                for tile_y in min_tile.y..=max_tile.y {
+                    for tile_z in min_tile.z..=max_tile.z {
+                        let tile = (tile_x, tile_y, tile_z);
+                        if !loaded_tiles.insert(tile) {
+                            continue;
+                        }
+                        let min =
+                            Pos::new(tile_x * TILE_SIZE, tile_y * TILE_SIZE, tile_z * TILE_SIZE);
+                        let max = Pos::new(
+                            min.x + TILE_SIZE - 1,
+                            min.y + TILE_SIZE - 1,
+                            min.z + TILE_SIZE - 1,
+                        );
+                        let bounds = dustroute_translate::RegionBounds::new(min, max);
+                        self.policy
+                            .validate_region(bounds)
+                            .map_err(|error| error.to_string())?;
+                        let snapshot = self
+                            .bridge
+                            .scan_region(min, max, dimension)
+                            .await
+                            .map_err(|error| error.to_string())?;
+                        for block in snapshot.blocks {
+                            if is_redstone_candidate_name(&block.name) {
+                                candidates.insert(block.pos);
+                            }
+                            blocks.insert(block.pos, block);
+                        }
+                    }
+                }
+            }
+
+            for neighbor in candidates.iter().copied().filter(|candidate| {
+                !connected.contains(candidate)
+                    && manhattan_pos(*candidate, current) <= component_gap
+            }) {
+                if queued.insert(neighbor) {
+                    queue.push_back(neighbor);
+                }
+            }
+        }
+        if !queue.is_empty() {
+            limit_reached = true;
+        }
+
+        let mut min = target;
+        let mut max = target;
+        for pos in &connected {
+            min = Pos::new(min.x.min(pos.x), min.y.min(pos.y), min.z.min(pos.z));
+            max = Pos::new(max.x.max(pos.x), max.y.max(pos.y), max.z.max(pos.z));
+        }
+        min = Pos::new(min.x - 1, min.y - 1, min.z - 1);
+        max = Pos::new(max.x + 1, max.y + 1, max.z + 1);
+        let snapshot_blocks = blocks
+            .into_values()
+            .filter(|block| {
+                block.pos.x >= min.x
+                    && block.pos.x <= max.x
+                    && block.pos.y >= min.y
+                    && block.pos.y <= max.y
+                    && block.pos.z >= min.z
+                    && block.pos.z <= max.z
+            })
+            .collect();
+        let scanned_tiles = loaded_tiles.len();
+        Ok(AdaptiveComponentScan {
+            snapshot: dustroute_translate::MinecraftSnapshot {
+                min,
+                max,
+                blocks: snapshot_blocks,
+            },
+            component_count: connected.len(),
+            component_limit: max_components,
+            limit_reached,
+            scanned_tiles,
+            scanned_block_positions: 125 + scanned_tiles * 4096,
+        })
+    }
+}
+
+fn manhattan_pos(a: Pos, b: Pos) -> i32 {
+    (a.x - b.x).abs() + (a.y - b.y).abs() + (a.z - b.z).abs()
 }
 
 fn bounds_for_changes(
@@ -763,8 +1187,8 @@ fn bounds_for_changes(
 }
 
 fn block_matches(
-    actual: Option<&dustroute_model::Block>,
-    expected: &dustroute_model::Block,
+    actual: Option<&dustroute_physical::Block>,
+    expected: &dustroute_physical::Block,
 ) -> bool {
     let actual_kind = actual.map_or(BlockKind::Air, |block| block.kind);
     if actual_kind != expected.kind {
@@ -846,6 +1270,118 @@ impl DustRouteMcp {
     }
 
     #[tool(
+        description = "Inspect raw Minecraft blocks by starting near the block a player is looking at and progressively following adjacent redstone components. Expansion stops naturally at the circuit edge or explicitly at max_components; no scan radius is required.",
+        annotations(read_only_hint = true, destructive_hint = false)
+    )]
+    async fn inspect_looked_at_world(
+        &self,
+        Parameters(params): Parameters<InspectLookedAtWorldParams>,
+    ) -> String {
+        let player = match self.resolve_player(params.player.as_deref()) {
+            Ok(player) => player,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+        };
+        if let Some(error) = self.authorize_player(&player) {
+            return error;
+        }
+        let max_components = params.max_components.unwrap_or(8192);
+        let component_gap = params.component_gap.unwrap_or(2);
+        let max_distance = params.max_distance.unwrap_or(64.0);
+        let max_listed_blocks = params.max_listed_blocks.unwrap_or(256);
+        if !(1..=32768).contains(&max_components)
+            || !(1..=8).contains(&component_gap)
+            || !(1.0..=256.0).contains(&max_distance)
+            || !(1..=2048).contains(&max_listed_blocks)
+        {
+            return json_text(json!({
+                "ok": false,
+                "error": "max_components must be 1..32768, component_gap 1..8, max_distance 1..256, and max_listed_blocks 1..2048"
+            }));
+        }
+        let observation = match self.bridge.observe_player(&player, max_distance).await {
+            Ok(observation) => observation,
+            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        };
+        let Some(target) = observation.targeted_block else {
+            return json_text(json!({
+                "ok": false,
+                "error": "the player is not looking at a block",
+                "observation": observation
+            }));
+        };
+        if let Err(error) = self.policy.authorize_dimension(&observation.dimension) {
+            return json_text(json!({ "ok": false, "error": error.to_string() }));
+        }
+        let scan = match self
+            .scan_connected_components(
+                target,
+                &observation.dimension,
+                max_components,
+                component_gap as i32,
+            )
+            .await
+        {
+            Ok(scan) => scan,
+            Err(error) => {
+                return json_text(json!({
+                    "ok": false,
+                    "error": error,
+                    "observation": observation,
+                    "scan_complete": false
+                }));
+            }
+        };
+        let mut result = raw_world_inspection(
+            &scan.snapshot,
+            target,
+            &observation.dimension,
+            params.include_block_list.unwrap_or(false),
+            max_listed_blocks,
+        );
+        if let Some(object) = result.as_object_mut() {
+            object.insert("player_observation".to_owned(), json!(observation));
+            object.insert(
+                "expansion".to_owned(),
+                json!({
+                    "strategy": "adjacent_component_flood_fill",
+                    "component_gap": component_gap,
+                    "components_loaded": scan.component_count,
+                    "component_limit": scan.component_limit,
+                    "limit_reached": scan.limit_reached,
+                    "complete": !scan.limit_reached,
+                    "scanned_tiles": scan.scanned_tiles,
+                    "scanned_block_positions": scan.scanned_block_positions,
+                    "guidance": scan.limit_reached.then_some(
+                        "the circuit is larger than the configured component limit; treat this inspection as incomplete"
+                    )
+                }),
+            );
+            if let Some(scan_json) = object.get_mut("scan").and_then(Value::as_object_mut) {
+                scan_json.insert("complete".to_owned(), json!(!scan.limit_reached));
+                scan_json.insert(
+                    "completeness_basis".to_owned(),
+                    json!(if scan.limit_reached {
+                        "component limit reached before the adjacency frontier was exhausted"
+                    } else {
+                        "the adjacency frontier was exhausted without reaching the component limit"
+                    }),
+                );
+            }
+            object.insert(
+                "boundary".to_owned(),
+                json!({
+                    "component_frontier_remaining": scan.limit_reached,
+                    "redstone_touches_boundary": scan.limit_reached,
+                    "guidance": scan.limit_reached.then_some(
+                        "raise max_components or explicitly select a smaller functional area"
+                    )
+                }),
+            );
+        }
+        json_text(result)
+    }
+
+    #[tool(
         description = "Mark the first or second region corner at the block a player is looking at"
     )]
     async fn mark_region_corner(&self, Parameters(params): Parameters<MarkCornerParams>) -> String {
@@ -910,7 +1446,7 @@ impl DustRouteMcp {
     }
 
     #[tool(
-        description = "Infer the bounds of 'this circuit' by following redstone connected to the block a player is looking at"
+        description = "Infer the bounds of 'this circuit' by progressively following adjacent redstone from the block a player is looking at, stopping at the circuit edge or max_components"
     )]
     async fn discover_looked_at_circuit(
         &self,
@@ -923,18 +1459,16 @@ impl DustRouteMcp {
         if let Some(error) = self.authorize_player(&player) {
             return error;
         }
-        let horizontal = params.horizontal_radius.unwrap_or(24);
-        let vertical = params.vertical_radius.unwrap_or(12);
+        let max_components = params.max_components.unwrap_or(8192);
         let padding = params.padding.unwrap_or(1);
         let fragment_gap = params.fragment_gap.unwrap_or(2);
-        if !(4..=31).contains(&horizontal)
-            || !(2..=16).contains(&vertical)
+        if !(1..=32768).contains(&max_components)
             || !(0..=8).contains(&padding)
             || !(1..=8).contains(&fragment_gap)
         {
             return json_text(json!({
                 "ok": false,
-                "error": "horizontal_radius must be 4..31, vertical_radius 2..16, padding 0..8, and fragment_gap 1..8"
+                "error": "max_components must be 1..32768, padding 0..8, and fragment_gap 1..8"
             }));
         }
         let observation = match self.bridge.observe_player(&player, 64.0).await {
@@ -951,31 +1485,23 @@ impl DustRouteMcp {
         if let Err(error) = self.policy.authorize_dimension(&observation.dimension) {
             return json_text(json!({ "ok": false, "error": error.to_string() }));
         }
-        let scan_bounds = dustroute_translate::RegionBounds::new(
-            dustroute_model::Pos::new(
-                target.x - horizontal,
-                target.y - vertical,
-                target.z - horizontal,
-            ),
-            dustroute_model::Pos::new(
-                target.x + horizontal,
-                target.y + vertical,
-                target.z + horizontal,
-            ),
-        );
-        if let Err(error) = self.policy.validate_region(scan_bounds) {
-            return json_text(json!({ "ok": false, "error": error.to_string() }));
-        }
-        let snapshot = match self
-            .bridge
-            .scan_region(scan_bounds.min, scan_bounds.max, &observation.dimension)
+        let scan = match self
+            .scan_connected_components(
+                target,
+                &observation.dimension,
+                max_components,
+                fragment_gap as i32,
+            )
             .await
         {
-            Ok(snapshot) => snapshot,
+            Ok(scan) => scan,
             Err(error) => {
-                return json_text(json!({ "ok": false, "error": error.to_string() }));
+                return json_text(json!({ "ok": false, "error": error }));
             }
         };
+        let scan_bounds =
+            dustroute_translate::RegionBounds::new(scan.snapshot.min, scan.snapshot.max);
+        let snapshot = scan.snapshot.clone();
         let snapshot_json = match serde_json::to_string(&snapshot) {
             Ok(json) => json,
             Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
@@ -985,13 +1511,19 @@ impl DustRouteMcp {
             Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
         };
         let analysis = dustroute_translate::analyze_world_region(&world, scan_bounds);
-        let discovery =
-            match discover_connected_region(&analysis, target, 2, fragment_gap, padding, 8192) {
-                Ok(discovery) => discovery,
-                Err(error) => {
-                    return json_text(json!({ "ok": false, "error": error.to_string() }));
-                }
-            };
+        let discovery = match discover_connected_region(
+            &analysis,
+            target,
+            2,
+            fragment_gap,
+            padding,
+            max_components,
+        ) {
+            Ok(discovery) => discovery,
+            Err(error) => {
+                return json_text(json!({ "ok": false, "error": error.to_string() }));
+            }
+        };
         let bounds: dustroute_translate::RegionBounds = discovery.bounds.into();
         self.selections
             .lock()
@@ -1006,8 +1538,16 @@ impl DustRouteMcp {
         json_text(json!({
             "ok": true,
             "candidate": discovery,
-            "warning": discovery.touches_scan_boundary.then_some(
-                "the connected circuit touches the initial scan boundary; increase the scan radius before confirming"
+            "expansion": {
+                "strategy": "adjacent_component_flood_fill",
+                "components_loaded": scan.component_count,
+                "component_limit": scan.component_limit,
+                "limit_reached": scan.limit_reached,
+                "scanned_tiles": scan.scanned_tiles,
+                "scanned_block_positions": scan.scanned_block_positions
+            },
+            "warning": scan.limit_reached.then_some(
+                "the circuit exceeds the component limit; analysis is incomplete"
             ),
             "next_step": "call preview_region and ask the player to confirm the highlighted candidate"
         }))
@@ -1029,8 +1569,7 @@ impl DustRouteMcp {
         let discovery_text = self
             .discover_looked_at_circuit(Parameters(DiscoverCircuitParams {
                 player: Some(player.clone()),
-                horizontal_radius: params.horizontal_radius,
-                vertical_radius: params.vertical_radius,
+                max_components: params.max_components,
                 padding: Some(1),
                 fragment_gap: Some(fragment_gap),
             }))
@@ -1042,9 +1581,7 @@ impl DustRouteMcp {
         if discovery.get("ok") != Some(&Value::Bool(true)) {
             return discovery_text;
         }
-        let target = match serde_json::from_value::<dustroute_model::Pos>(
-            discovery["candidate"]["seed"].clone(),
-        ) {
+        let target = match serde_json::from_value::<Pos>(discovery["candidate"]["seed"].clone()) {
             Ok(target) => target,
             Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
         };
@@ -1068,9 +1605,25 @@ impl DustRouteMcp {
             Ok(result) => result,
             Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
         };
+        let discovered_components = discovery["expansion"]["components_loaded"]
+            .as_u64()
+            .and_then(|count| usize::try_from(count).ok())
+            .unwrap_or(0);
+        if discovered_components > MAX_FLAT_ANALYSIS_COMPONENTS {
+            let mut analysis = dustroute_translate::analyze_world_region(&world, bounds);
+            analysis.scene.observation.dimension = dimension;
+            let hierarchy = dustroute_ir::derive_hierarchy(&analysis.scene);
+            let focused = focused_hierarchy_role_json(&analysis.scene, &hierarchy, target);
+            return json_text(hierarchical_result_json(
+                bounds,
+                &hierarchy,
+                focused,
+                &discovery["expansion"],
+            ));
+        }
         let mut request = ReverseRequest::new(bounds);
-        if !params.include_truth_table.unwrap_or(true) {
-            request.max_inputs = 0;
+        if params.include_truth_table.unwrap_or(false) {
+            request = request.with_truth_table(16);
         }
         let mut translated = self.app.analyze_world(&world, request);
         translated.analysis.scene.observation.dimension = dimension.clone();
@@ -1100,7 +1653,7 @@ impl DustRouteMcp {
                 "evidence": proposal.evidence
             }));
         }
-        let incomplete = discovery["candidate"]["touches_scan_boundary"] == Value::Bool(true);
+        let incomplete = discovery["expansion"]["limit_reached"] == Value::Bool(true);
         let mut result = reverse_result_json(bounds, &translated);
         if let Some(object) = result.as_object_mut() {
             object.insert("focused_component".to_owned(), focused);
@@ -1163,12 +1716,12 @@ impl DustRouteMcp {
         let Some((local_min, local_max)) = translated.compiled.world.bounds() else {
             return json_text(json!({ "ok": false, "error": "compiled circuit is empty" }));
         };
-        let min = dustroute_model::Pos::new(
+        let min = Pos::new(
             local_min.x + origin.x,
             local_min.y + origin.y,
             local_min.z + origin.z,
         );
-        let max = dustroute_model::Pos::new(
+        let max = Pos::new(
             local_max.x + origin.x,
             local_max.y + origin.y,
             local_max.z + origin.z,
@@ -1351,6 +1904,11 @@ impl DustRouteMcp {
                 return json_text(json!({ "ok": false, "error": error.to_string() }));
             }
         };
+        let redstone_components = snapshot
+            .blocks
+            .iter()
+            .filter(|block| is_redstone_candidate_name(&block.name))
+            .count();
         let snapshot_json = match serde_json::to_string(&snapshot) {
             Ok(json) => json,
             Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
@@ -1359,6 +1917,22 @@ impl DustRouteMcp {
             Ok(result) => result,
             Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
         };
+        if redstone_components > MAX_FLAT_ANALYSIS_COMPONENTS {
+            let mut analysis = dustroute_translate::analyze_world_region(&world, bounds);
+            analysis.scene.observation.dimension = dimension;
+            let hierarchy = dustroute_ir::derive_hierarchy(&analysis.scene);
+            return json_text(hierarchical_result_json(
+                bounds,
+                &hierarchy,
+                Value::Null,
+                &json!({
+                    "strategy": "explicit_selected_region",
+                    "components_loaded": redstone_components,
+                    "component_limit": null,
+                    "limit_reached": false
+                }),
+            ));
+        }
         let mut translated = self.app.analyze_world(&world, ReverseRequest::new(bounds));
         translated.analysis.scene.observation.dimension = dimension;
         json_text(reverse_result_json(bounds, &translated))
@@ -1625,6 +2199,11 @@ impl DustRouteMcp {
             if operations.is_cancelled(operation_id).await {
                 return;
             }
+            let redstone_components = snapshot
+                .blocks
+                .iter()
+                .filter(|block| is_redstone_candidate_name(&block.name))
+                .count();
             operations
                 .update(
                     operation_id,
@@ -1652,11 +2231,34 @@ impl DustRouteMcp {
                     operation_id,
                     OperationStatus::Running,
                     50,
-                    "simulating truth table",
+                    if redstone_components > MAX_FLAT_ANALYSIS_COMPONENTS {
+                        "deriving hierarchical circuit views"
+                    } else {
+                        "analyzing selected circuit"
+                    },
                 )
                 .await;
-            let mut translated = match tokio::task::spawn_blocking(move || {
-                app.analyze_world(&world, ReverseRequest::new(bounds))
+            let result = match tokio::task::spawn_blocking(move || {
+                if redstone_components > MAX_FLAT_ANALYSIS_COMPONENTS {
+                    let mut analysis = dustroute_translate::analyze_world_region(&world, bounds);
+                    analysis.scene.observation.dimension = dimension;
+                    let hierarchy = dustroute_ir::derive_hierarchy(&analysis.scene);
+                    hierarchical_result_json(
+                        bounds,
+                        &hierarchy,
+                        Value::Null,
+                        &json!({
+                            "strategy": "explicit_selected_region",
+                            "components_loaded": redstone_components,
+                            "component_limit": null,
+                            "limit_reached": false
+                        }),
+                    )
+                } else {
+                    let mut translated = app.analyze_world(&world, ReverseRequest::new(bounds));
+                    translated.analysis.scene.observation.dimension = dimension;
+                    reverse_result_json(bounds, &translated)
+                }
             })
             .await
             {
@@ -1666,13 +2268,10 @@ impl DustRouteMcp {
                     return;
                 }
             };
-            translated.analysis.scene.observation.dimension = dimension;
             if operations.is_cancelled(operation_id).await {
                 return;
             }
-            operations
-                .complete(operation_id, reverse_result_json(bounds, &translated))
-                .await;
+            operations.complete(operation_id, result).await;
         });
         json_text(json!({
             "ok": true,
@@ -1741,7 +2340,7 @@ impl DustRouteMcp {
     async fn collaboration_prompt(&self) -> GetPromptResult {
         GetPromptResult::new(vec![PromptMessage::new_text(
             Role::User,
-            "Work with the player on a Minecraft redstone circuit. Interpret 'this', 'here', 'what is this?', and similar deictic phrases through analyze_looked_at_circuit so one call returns the focused physical component, its local signal role, the inferred higher-level logical function, diagnostics, and repair proposals. If analysis_complete is false, describe the local role but label the higher-level classification provisional and ask for a bounded functional region. For an explicitly selected region, use discover_looked_at_circuit or two mark_region_corner calls, preview_region, and analyze_selected_region. Preview every repair and obtain explicit confirmation before applying it. Only call propose_targeted_component_removal when the player explicitly identifies the looked-at component as unwanted. Never infer coordinates from prose when gaze tools can ground them, and never perform a world mutation without an explicit preview and confirmation.".to_owned(),
+            "Work with the player on a Minecraft redstone circuit. For questions about what the bot can literally see, scan coverage, or raw block states, call inspect_looked_at_world before applying circuit inference. Interpret 'this', 'here', 'what is this?', and similar circuit questions through analyze_looked_at_circuit so one call returns the focused physical component, its local signal role, the inferred higher-level logical function, diagnostics, and repair proposals. If analysis_complete is false, describe the local role but label the higher-level classification provisional and ask for a bounded functional region. For an explicitly selected region, use discover_looked_at_circuit or two mark_region_corner calls, preview_region, and analyze_selected_region. Preview every repair and obtain explicit confirmation before applying it. Only call propose_targeted_component_removal when the player explicitly identifies the looked-at component as unwanted. Never infer coordinates from prose when gaze tools can ground them, and never perform a world mutation without an explicit preview and confirmation.".to_owned(),
         )])
         .with_description("Safe gaze-grounded DustRoute collaboration workflow")
     }
@@ -1762,7 +2361,7 @@ impl ServerHandler for DustRouteMcp {
             env!("CARGO_PKG_VERSION"),
         ))
         .with_instructions(
-            "Use the collaborate-on-redstone-circuit prompt. For gaze-grounded questions such as 'what is this?', prefer analyze_looked_at_circuit. Treat incomplete boundary-limited classifications as provisional. Keep world mutations behind a preview and explicit confirmation."
+            "Use the collaborate-on-redstone-circuit prompt. Use inspect_looked_at_world for raw visibility and scan-state questions; for circuit questions such as 'what is this?', prefer analyze_looked_at_circuit. Treat incomplete boundary-limited classifications as provisional. Keep world mutations behind a preview and explicit confirmation."
         )
     }
 }
@@ -1844,6 +2443,12 @@ mod tests {
                 .tools
                 .iter()
                 .any(|tool| tool.name == "analyze_looked_at_circuit")
+        );
+        assert!(
+            tools
+                .tools
+                .iter()
+                .any(|tool| tool.name == "inspect_looked_at_world")
         );
         let prompts = client.list_prompts(None).await.unwrap();
         assert!(
@@ -1973,7 +2578,7 @@ mod tests {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let address = listener.local_addr().unwrap().to_string();
         tokio::spawn(async move {
-            for _ in 0..3 {
+            for _ in 0..11 {
                 let (mut stream, _) = listener.accept().await.unwrap();
                 let mut request = String::new();
                 BufReader::new(&mut stream)
@@ -2020,14 +2625,13 @@ mod tests {
         let result = service
             .analyze_looked_at_circuit(Parameters(AnalyzeLookedAtParams {
                 player: None,
-                horizontal_radius: Some(4),
-                vertical_radius: Some(2),
+                max_components: Some(64),
                 fragment_gap: Some(2),
                 include_truth_table: Some(false),
             }))
             .await;
         let value: Value = serde_json::from_str(&result).unwrap();
-        assert_eq!(value["ok"], true);
+        assert_eq!(value["ok"], true, "{result}");
         assert_eq!(value["focused_component"]["block"], "Repeater");
         assert_eq!(
             value["focused_component"]["recognized_gates"][0]["kind"],
@@ -2135,6 +2739,43 @@ mod tests {
             }))
             .await;
         assert!(undone.contains("\"verified\": true"), "{undone}");
+    }
+
+    #[test]
+    fn raw_inspection_preserves_states_and_reports_scan_boundaries() {
+        let snapshot: dustroute_translate::MinecraftSnapshot = serde_json::from_value(json!({
+            "min": { "x": 0, "y": 0, "z": 0 },
+            "max": { "x": 2, "y": 1, "z": 0 },
+            "blocks": [
+                snapshot_block(0, 0, 0, "minecraft:stone", json!({})),
+                snapshot_block(1, 0, 0, "minecraft:stone", json!({})),
+                snapshot_block(2, 0, 0, "minecraft:stone", json!({})),
+                snapshot_block(1, 1, 0, "minecraft:redstone_wire", json!({
+                    "north": "none", "east": "side", "south": "none",
+                    "west": "side", "power": "7"
+                })),
+                snapshot_block(2, 1, 0, "minecraft:repeater", json!({
+                    "facing": "east", "delay": "3", "powered": "true"
+                }))
+            ]
+        }))
+        .unwrap();
+        let result = raw_world_inspection(
+            &snapshot,
+            Pos::new(1, 1, 0),
+            "minecraft:overworld",
+            false,
+            16,
+        );
+        assert_eq!(result["inference_applied"], false);
+        assert_eq!(result["scan"]["volume"], 6);
+        assert_eq!(result["counts"]["air"], 1);
+        assert_eq!(result["counts"]["redstone_candidates"], 2);
+        assert_eq!(result["counts"]["modeled_redstone"], 2);
+        assert_eq!(result["boundary"]["redstone_touches_boundary"], true);
+        assert_eq!(result["target_block"]["properties"]["power"], "7");
+        assert_eq!(result["redstone_blocks"][1]["properties"]["delay"], "3");
+        assert!(result["blocks"].is_null());
     }
 
     fn broken_wire_snapshot(repaired: bool) -> Value {

@@ -1,10 +1,10 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    Block, BlockKind, ComponentId, ConnectionKind, Facing, PhysicalComponent, PhysicalFragment,
-    PhysicalNet, Pos, VerifiedTopology, WireConnection,
+    Block, BlockKind, ComponentId, ConnectionKind, Facing, FragmentId, GapCandidate, GapEvidence,
+    PhysicalComponent, PhysicalFragment, PhysicalNet, Pos, VerifiedTopology, WireConnection,
 };
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -237,11 +237,34 @@ pub struct PhysicalScene {
 
 impl PhysicalScene {
     #[must_use]
-    pub fn from_topology(observation: Observation, topology: &VerifiedTopology) -> Self {
+    pub fn from_unvalidated_topology(
+        observation: Observation,
+        topology: &VerifiedTopology,
+    ) -> Self {
+        Self::from_topology_and_optional_world(observation, topology, None)
+    }
+
+    /// Builds a physical observation while validating placement support against
+    /// the observed world, before support-only blocks are removed from signal
+    /// topology.
+    #[must_use]
+    pub fn from_topology_and_world(
+        observation: Observation,
+        topology: &VerifiedTopology,
+        world: &crate::World,
+    ) -> Self {
+        Self::from_topology_and_optional_world(observation, topology, Some(world))
+    }
+
+    fn from_topology_and_optional_world(
+        observation: Observation,
+        topology: &VerifiedTopology,
+        world: Option<&crate::World>,
+    ) -> Self {
         let components = topology
             .components
             .iter()
-            .map(|component| scene_component(component, topology))
+            .map(|component| scene_component(component, topology, world))
             .collect::<Vec<_>>();
         let by_id = components
             .iter()
@@ -293,48 +316,106 @@ impl PhysicalScene {
             .collect()
     }
 
-    /// Compatibility projection for algorithms that have not yet migrated to
-    /// port endpoints. The scene remains authoritative.
     #[must_use]
-    pub fn verified_topology(&self) -> VerifiedTopology {
-        let components = self
+    pub fn gap_candidates(&self, max_manhattan_distance: u32) -> Vec<GapCandidate> {
+        let by_id: BTreeMap<_, _> = self
             .components
             .iter()
-            .map(|component| PhysicalComponent {
-                id: component.id,
-                pos: component.pos,
-                block: component.block.clone(),
-            })
-            .collect::<Vec<_>>();
-        let connections = self
-            .connections
-            .iter()
-            .map(|connection| crate::PhysicalConnection {
-                source: connection.source.component,
-                sink: connection.sink.component,
-                kind: match connection.transfer {
-                    TransferKind::DustPropagation => ConnectionKind::Dust,
-                    TransferKind::DirectSignal => ConnectionKind::DirectSource,
-                    TransferKind::WeakPower => ConnectionKind::WeakPower,
-                    TransferKind::StrongPower => ConnectionKind::StrongPower,
-                    TransferKind::DirectionalDevice => ConnectionKind::DirectionalOutput,
-                    TransferKind::SideControl => ConnectionKind::Control,
-                    TransferKind::StructuralSupport => ConnectionKind::Support,
-                },
-            });
-        VerifiedTopology::from_parts(components, connections)
+            .map(|component| (component.id, component))
+            .collect();
+        let mut candidates = Vec::new();
+        for (left_index, left) in self.fragments.iter().enumerate() {
+            for right in self.fragments.iter().skip(left_index + 1) {
+                let nearest = left
+                    .components
+                    .iter()
+                    .filter(|id| by_id[id].block.kind.is_redstone_related())
+                    .flat_map(|left_id| {
+                        right
+                            .components
+                            .iter()
+                            .filter(|id| by_id[id].block.kind.is_redstone_related())
+                            .map(|right_id| {
+                                let a = by_id[left_id].pos;
+                                let b = by_id[right_id].pos;
+                                (
+                                    *left_id,
+                                    *right_id,
+                                    a.x.abs_diff(b.x) + a.y.abs_diff(b.y) + a.z.abs_diff(b.z),
+                                )
+                            })
+                    })
+                    .min_by_key(|(_, _, distance)| *distance);
+                if let Some((left_component, right_component, distance)) =
+                    nearest.filter(|(_, _, distance)| *distance <= max_manhattan_distance)
+                {
+                    candidates.push(GapCandidate {
+                        left: left.id,
+                        right: right.id,
+                        evidence: vec![GapEvidence::Nearby {
+                            left: left_component,
+                            right: right_component,
+                            manhattan_distance: distance,
+                        }],
+                    });
+                }
+            }
+        }
+        candidates
+    }
+
+    #[must_use]
+    pub fn discover_nearby_fragments(
+        &self,
+        seed: FragmentId,
+        max_manhattan_distance: u32,
+    ) -> BTreeSet<FragmentId> {
+        let mut adjacency = BTreeMap::<FragmentId, Vec<FragmentId>>::new();
+        for candidate in self.gap_candidates(max_manhattan_distance) {
+            adjacency
+                .entry(candidate.left)
+                .or_default()
+                .push(candidate.right);
+            adjacency
+                .entry(candidate.right)
+                .or_default()
+                .push(candidate.left);
+        }
+        let mut discovered = BTreeSet::from([seed]);
+        let mut queue = VecDeque::from([seed]);
+        while let Some(fragment) = queue.pop_front() {
+            for next in adjacency.get(&fragment).into_iter().flatten() {
+                if discovered.insert(*next) {
+                    queue.push_back(*next);
+                }
+            }
+        }
+        discovered
     }
 }
 
-fn scene_component(component: &PhysicalComponent, topology: &VerifiedTopology) -> SceneComponent {
+fn scene_component(
+    component: &PhysicalComponent,
+    topology: &VerifiedTopology,
+    world: Option<&crate::World>,
+) -> SceneComponent {
     let support = component
         .block
         .support_pos(component.pos)
         .map(|support_position| {
-            let valid = topology.components.iter().any(|candidate| {
-                candidate.pos == support_position
-                    && candidate.block.kind.properties().supports_components
-            });
+            let valid = world.map_or_else(
+                || {
+                    topology.components.iter().any(|candidate| {
+                        candidate.pos == support_position
+                            && candidate.block.kind.properties().supports_components
+                    })
+                },
+                |world| {
+                    world
+                        .get(support_position)
+                        .is_some_and(|block| block.kind.properties().supports_components)
+                },
+            );
             SupportRelation {
                 support_position,
                 valid,
@@ -560,6 +641,37 @@ mod tests {
     use crate::{PhysicalComponent, PhysicalConnection};
 
     #[test]
+    fn world_support_is_valid_even_when_support_is_not_a_signal_component() {
+        let mut wire = Block::new(BlockKind::RedstoneWire);
+        wire.support_offset = Some(Pos::new(0, -1, 0));
+        let topology = VerifiedTopology::from_parts(
+            vec![PhysicalComponent {
+                id: ComponentId(0),
+                pos: Pos::new(0, 1, 0),
+                block: wire.clone(),
+            }],
+            [],
+        );
+        let mut world = crate::World::new();
+        world.set(Pos::new(0, 0, 0), Block::new(BlockKind::Transparent));
+        world.set(Pos::new(0, 1, 0), wire);
+        let scene = PhysicalScene::from_topology_and_world(
+            Observation::complete(
+                "minecraft:overworld",
+                SceneBounds::new(Pos::new(0, 0, 0), Pos::new(0, 1, 0)),
+            ),
+            &topology,
+            &world,
+        );
+        assert_eq!(scene.components.len(), 1);
+        assert_eq!(
+            scene.components[0].support.map(|support| support.valid),
+            Some(true)
+        );
+        assert!(scene.diagnostics.is_empty());
+    }
+
+    #[test]
     fn repeater_ports_preserve_direction_and_physical_origin() {
         let wire = PhysicalComponent {
             id: ComponentId(0),
@@ -581,7 +693,7 @@ mod tests {
                 kind: ConnectionKind::DirectionalInput,
             }],
         );
-        let scene = PhysicalScene::from_topology(
+        let scene = PhysicalScene::from_unvalidated_topology(
             Observation::complete(
                 "minecraft:overworld",
                 SceneBounds::new(Pos::new(0, 0, 0), Pos::new(2, 2, 0)),
@@ -619,7 +731,8 @@ mod tests {
             }],
             frontier: vec![frontier],
         };
-        let scene = PhysicalScene::from_topology(observation, &VerifiedTopology::default());
+        let scene =
+            PhysicalScene::from_unvalidated_topology(observation, &VerifiedTopology::default());
         assert!(!scene.observation.is_complete());
         assert!(matches!(
             scene.diagnostics[0],

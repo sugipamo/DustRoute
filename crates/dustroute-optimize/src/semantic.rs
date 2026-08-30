@@ -160,7 +160,7 @@ mod tests {
     use super::*;
 
     fn empty_scene() -> PhysicalScene {
-        PhysicalScene::from_topology(
+        PhysicalScene::from_unvalidated_topology(
             Observation::complete(
                 "minecraft:overworld",
                 SceneBounds::new(PhysicalPos::new(0, 0, 0), PhysicalPos::new(0, 0, 0)),
@@ -227,7 +227,7 @@ mod tests {
             }],
             [],
         );
-        let scene = PhysicalScene::from_topology(
+        let scene = PhysicalScene::from_unvalidated_topology(
             Observation::complete(
                 "minecraft:overworld",
                 SceneBounds::new(PhysicalPos::new(0, 0, 0), PhysicalPos::new(1, 2, 1)),

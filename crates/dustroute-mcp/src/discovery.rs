@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 
-use dustroute_model::Pos;
+use dustroute_physical::Pos;
 use dustroute_translate::{RegionAnalysis, RegionBounds};
 use serde::{Deserialize, Serialize};
 
@@ -65,8 +65,8 @@ pub fn discover_connected_region(
     padding: i32,
     max_nodes: usize,
 ) -> Result<CircuitDiscovery, DiscoveryError> {
-    let verified = analysis.scene.verified_topology();
-    let seed_component = verified
+    let scene = &analysis.scene;
+    let seed_component = scene
         .components
         .iter()
         .filter(|component| component.block.kind.is_redstone_related())
@@ -76,13 +76,13 @@ pub fn discover_connected_region(
         })
         .min_by_key(|(distance, component)| (*distance, component.pos))
         .ok_or(DiscoveryError::NoRedstoneNearTarget)?;
-    let seed_fragment = verified
+    let seed_fragment = scene
         .fragments
         .iter()
         .find(|fragment| fragment.components.contains(&seed_component.1.id))
         .ok_or(DiscoveryError::NoRedstoneNearTarget)?;
-    let fragments = verified.discover_nearby_fragments(seed_fragment.id, fragment_gap);
-    let component_ids: BTreeSet<_> = verified
+    let fragments = scene.discover_nearby_fragments(seed_fragment.id, fragment_gap);
+    let component_ids: BTreeSet<_> = scene
         .fragments
         .iter()
         .filter(|fragment| fragments.contains(&fragment.id))
@@ -91,13 +91,13 @@ pub fn discover_connected_region(
     if component_ids.len() > max_nodes {
         return Err(DiscoveryError::NodeLimitExceeded { limit: max_nodes });
     }
-    let nodes: BTreeSet<_> = verified
+    let nodes: BTreeSet<_> = scene
         .components
         .iter()
         .filter(|component| component_ids.contains(&component.id))
         .map(|component| component.pos)
         .collect();
-    let gap_candidate_count = verified
+    let gap_candidate_count = scene
         .gap_candidates(fragment_gap)
         .iter()
         .filter(|candidate| {
@@ -142,7 +142,7 @@ fn manhattan(a: Pos, b: Pos) -> i32 {
 
 #[cfg(test)]
 mod tests {
-    use dustroute_model::{Block, BlockKind, World};
+    use dustroute_physical::{Block, BlockKind, World};
     use dustroute_translate::{RegionBounds, analyze_world_region};
 
     use super::*;

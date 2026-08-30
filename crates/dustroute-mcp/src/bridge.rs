@@ -3,7 +3,7 @@ use std::fmt::{Display, Formatter};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
-use dustroute_model::Pos;
+use dustroute_physical::Pos;
 use dustroute_translate::MinecraftSnapshot;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};

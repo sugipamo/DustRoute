@@ -1,25 +1,11 @@
 use std::collections::BTreeMap;
 
-use dustroute_physical::{
-    BlockKind, ComponentId, ConnectionKind, Observation, PhysicalScene, Pos, SceneBounds,
-    TransferKind, VerifiedTopology,
-};
+use dustroute_physical::{BlockKind, ComponentId, PhysicalScene, Pos, TransferKind};
 use serde::{Deserialize, Serialize};
 
-use crate::LogicDag;
-
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub enum AbstractionLevel {
-    Physical,
-    Signal,
-    Logic,
-    Behavior,
-}
-
-#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum SignalNodeKind {
+enum TemporalNodeKind {
     Source,
     Wire,
     Inverter,
@@ -30,26 +16,21 @@ pub enum SignalNodeKind {
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-pub struct SignalNode {
+struct TemporalNode {
     pub component: ComponentId,
-    pub physical_position: Pos,
-    pub kind: SignalNodeKind,
-    pub delay_ticks: u8,
+    pub kind: TemporalNodeKind,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
-pub struct SignalEdge {
+struct TemporalDependency {
     pub source: ComponentId,
     pub sink: ComponentId,
-    pub physical_kind: ConnectionKind,
-    pub delay_ticks: u8,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
-pub struct SignalIr {
-    pub nodes: Vec<SignalNode>,
-    pub edges: Vec<SignalEdge>,
-    pub physical_origins: BTreeMap<ComponentId, Pos>,
+struct TemporalDependencyGraph {
+    pub nodes: Vec<TemporalNode>,
+    pub edges: Vec<TemporalDependency>,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -105,7 +86,7 @@ pub enum BehaviorPattern {
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
-pub enum ProjectionEvidence {
+pub enum TemporalEvidence {
     VerifiedPhysicalConnection {
         source: ComponentId,
         sink: ComponentId,
@@ -117,119 +98,43 @@ pub enum ProjectionEvidence {
     TruthTableInference,
 }
 
-#[derive(Clone, Debug)]
-pub enum IrProjection {
-    Physical(PhysicalScene),
-    Signal(SignalIr),
-    Logic(LogicDag),
-    Behavior(BehaviorIr),
-}
-
-impl IrProjection {
-    #[must_use]
-    pub const fn level(&self) -> AbstractionLevel {
-        match self {
-            Self::Physical(_) => AbstractionLevel::Physical,
-            Self::Signal(_) => AbstractionLevel::Signal,
-            Self::Logic(_) => AbstractionLevel::Logic,
-            Self::Behavior(_) => AbstractionLevel::Behavior,
-        }
-    }
-}
-
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum ProjectionError {
-    Unsupported {
-        from: AbstractionLevel,
-        to: AbstractionLevel,
-    },
-    TemporalCircuitRequiresBehavior {
-        components: Vec<ComponentId>,
-    },
-}
-
-impl std::fmt::Display for ProjectionError {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Unsupported { from, to } => write!(
-                formatter,
-                "projection from {from:?} to {to:?} is not implemented"
-            ),
-            Self::TemporalCircuitRequiresBehavior { components } => write!(
-                formatter,
-                "{} temporal component(s) require Behavior IR",
-                components.len()
-            ),
-        }
-    }
-}
-impl std::error::Error for ProjectionError {}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct PhysicalProjection {
-    pub signal: SignalIr,
+pub struct TemporalAnalysis {
     pub behavior: BehaviorIr,
     pub confidence_percent: u8,
-    pub evidence: Vec<ProjectionEvidence>,
+    pub evidence: Vec<TemporalEvidence>,
 }
 
-impl PhysicalProjection {
-    #[must_use]
-    pub fn from_topology(topology: &VerifiedTopology) -> Self {
-        let (min, max) = topology
-            .components
-            .iter()
-            .map(|component| component.pos)
-            .fold(None, |bounds, pos| match bounds {
-                None => Some((pos, pos)),
-                Some((min, max)) => Some((
-                    Pos::new(min.x.min(pos.x), min.y.min(pos.y), min.z.min(pos.z)),
-                    Pos::new(max.x.max(pos.x), max.y.max(pos.y), max.z.max(pos.z)),
-                )),
-            })
-            .unwrap_or((Pos::default(), Pos::default()));
-        let scene = PhysicalScene::from_topology(
-            Observation::complete("unknown", SceneBounds::new(min, max)),
-            topology,
-        );
-        Self::from_scene(&scene)
-    }
-
+impl TemporalAnalysis {
     #[must_use]
     pub fn from_scene(scene: &PhysicalScene) -> Self {
         let origins: BTreeMap<_, _> = scene.components.iter().map(|c| (c.id, c.pos)).collect();
-        let by_id: BTreeMap<_, _> = scene.components.iter().map(|c| (c.id, c)).collect();
         let nodes = scene
             .components
             .iter()
-            .map(|c| SignalNode {
+            .map(|c| TemporalNode {
                 component: c.id,
-                physical_position: c.pos,
                 kind: signal_kind(c.block.kind),
-                delay_ticks: component_delay(c.block.kind, c.block.delay),
             })
             .collect();
         let edges = scene
             .connections
             .iter()
-            .map(|edge| SignalEdge {
+            .filter(|edge| edge.transfer != TransferKind::StructuralSupport)
+            .map(|edge| TemporalDependency {
                 source: edge.source.component,
                 sink: edge.sink.component,
-                physical_kind: legacy_connection_kind(edge.transfer),
-                delay_ticks: by_id
-                    .get(&edge.source.component)
-                    .map_or(0, |c| component_delay(c.block.kind, c.block.delay)),
             })
             .collect();
         let evidence = scene
             .connections
             .iter()
-            .map(|edge| ProjectionEvidence::VerifiedPhysicalConnection {
+            .map(|edge| TemporalEvidence::VerifiedPhysicalConnection {
                 source: edge.source.component,
                 sink: edge.sink.component,
             })
             .chain(scene.components.iter().filter_map(|c| {
-                temporal_semantics(c.block.kind).map(|_| ProjectionEvidence::DeviceSemantics {
+                temporal_semantics(c.block.kind).map(|_| TemporalEvidence::DeviceSemantics {
                     component: c.id,
                     block: c.block.kind,
                 })
@@ -247,55 +152,23 @@ impl PhysicalProjection {
                 })
             })
             .collect::<Vec<_>>();
-        let signal = SignalIr {
-            nodes,
-            edges,
-            physical_origins: origins.clone(),
-        };
+        let dependencies = TemporalDependencyGraph { nodes, edges };
         let behavior = BehaviorIr {
-            patterns: classify_behavior_patterns(&signal, &devices),
+            patterns: classify_behavior_patterns(&dependencies, &devices),
             devices,
             traces: Vec::new(),
             physical_origins: origins.clone(),
         };
         Self {
-            signal,
             behavior,
             confidence_percent: 100,
             evidence,
         }
     }
-
-    pub fn require_combinational(&self) -> Result<&SignalIr, ProjectionError> {
-        if self.behavior.devices.is_empty() {
-            Ok(&self.signal)
-        } else {
-            Err(ProjectionError::TemporalCircuitRequiresBehavior {
-                components: self
-                    .behavior
-                    .devices
-                    .iter()
-                    .map(|device| device.component)
-                    .collect(),
-            })
-        }
-    }
-}
-
-const fn legacy_connection_kind(transfer: TransferKind) -> ConnectionKind {
-    match transfer {
-        TransferKind::DustPropagation => ConnectionKind::Dust,
-        TransferKind::DirectSignal => ConnectionKind::DirectSource,
-        TransferKind::WeakPower => ConnectionKind::WeakPower,
-        TransferKind::StrongPower => ConnectionKind::StrongPower,
-        TransferKind::DirectionalDevice => ConnectionKind::DirectionalOutput,
-        TransferKind::SideControl => ConnectionKind::Control,
-        TransferKind::StructuralSupport => ConnectionKind::Support,
-    }
 }
 
 fn classify_behavior_patterns(
-    signal: &SignalIr,
+    signal: &TemporalDependencyGraph,
     devices: &[TemporalDevice],
 ) -> Vec<BehaviorPattern> {
     let adjacency: BTreeMap<ComponentId, Vec<ComponentId>> =
@@ -327,7 +200,7 @@ fn classify_behavior_patterns(
         .collect();
     if feedback
         .iter()
-        .any(|component| kinds.get(component) == Some(&SignalNodeKind::Inverter))
+        .any(|component| kinds.get(component) == Some(&TemporalNodeKind::Inverter))
     {
         vec![BehaviorPattern::ClockCandidate {
             feedback_components: feedback,
@@ -357,15 +230,15 @@ fn path_exists(
     false
 }
 
-const fn signal_kind(kind: BlockKind) -> SignalNodeKind {
+const fn signal_kind(kind: BlockKind) -> TemporalNodeKind {
     match kind {
-        BlockKind::Lever | BlockKind::RedstoneBlock => SignalNodeKind::Source,
-        BlockKind::RedstoneWire => SignalNodeKind::Wire,
-        BlockKind::RedstoneTorch => SignalNodeKind::Inverter,
-        BlockKind::Repeater => SignalNodeKind::Delay,
-        BlockKind::Comparator => SignalNodeKind::Comparator,
-        BlockKind::Piston => SignalNodeKind::Actuator,
-        BlockKind::Air | BlockKind::Solid | BlockKind::Transparent => SignalNodeKind::Conductor,
+        BlockKind::Lever | BlockKind::RedstoneBlock => TemporalNodeKind::Source,
+        BlockKind::RedstoneWire => TemporalNodeKind::Wire,
+        BlockKind::RedstoneTorch => TemporalNodeKind::Inverter,
+        BlockKind::Repeater => TemporalNodeKind::Delay,
+        BlockKind::Comparator => TemporalNodeKind::Comparator,
+        BlockKind::Piston => TemporalNodeKind::Actuator,
+        BlockKind::Air | BlockKind::Solid | BlockKind::Transparent => TemporalNodeKind::Conductor,
     }
 }
 
@@ -390,7 +263,21 @@ const fn temporal_semantics(kind: BlockKind) -> Option<TemporalSemantics> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use dustroute_physical::{Block, PhysicalComponent, PhysicalConnection};
+    use dustroute_physical::{
+        Block, ConnectionKind, Observation, PhysicalComponent, PhysicalConnection, SceneBounds,
+        VerifiedTopology,
+    };
+
+    fn analyze(topology: &VerifiedTopology) -> TemporalAnalysis {
+        let scene = PhysicalScene::from_unvalidated_topology(
+            Observation::complete(
+                "test",
+                SceneBounds::new(Pos::new(-16, -16, -16), Pos::new(16, 128, 16)),
+            ),
+            topology,
+        );
+        TemporalAnalysis::from_scene(&scene)
+    }
 
     #[test]
     fn projects_delay_and_physical_traceability() {
@@ -415,18 +302,14 @@ mod tests {
                 kind: ConnectionKind::DirectSource,
             }],
         );
-        let projection = PhysicalProjection::from_topology(&topology);
+        let projection = analyze(&topology);
         assert_eq!(projection.behavior.devices[0].minimum_delay_ticks, 3);
         assert_eq!(
             projection.behavior.patterns,
             vec![BehaviorPattern::DelayedPath]
         );
-        assert!(matches!(
-            projection.require_combinational(),
-            Err(ProjectionError::TemporalCircuitRequiresBehavior { .. })
-        ));
         assert_eq!(
-            projection.signal.physical_origins[&ComponentId(1)],
+            projection.behavior.physical_origins[&ComponentId(1)],
             Pos::new(1, 64, 0)
         );
     }
@@ -479,7 +362,7 @@ mod tests {
                 },
             ],
         );
-        let projection = PhysicalProjection::from_topology(&topology);
+        let projection = analyze(&topology);
         assert!(matches!(
             projection.behavior.patterns[0],
             BehaviorPattern::ClockCandidate { .. }

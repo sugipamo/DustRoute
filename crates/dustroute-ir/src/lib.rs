@@ -2,8 +2,10 @@
 
 mod derived;
 pub mod expr;
+mod hierarchy;
 pub mod logic;
-mod physical_projection;
+#[path = "physical_projection.rs"]
+mod temporal_analysis;
 
 pub use derived::{
     DerivedExpr, DerivedExpression, ExpressionId, ExpressionView, FunctionalCandidate,
@@ -14,9 +16,14 @@ pub use derived::{
 pub use expr::{
     Expr, ExprToLogicError, best_by_size, logic_from_expressions, rewrites_once, search_equivalents,
 };
+pub use hierarchy::{
+    CellGraph, DiagnosticSeverity, FunctionalGraph, HierarchicalIr, IrCompleteness, IrDiagnostic,
+    IrStage, LogicGraph, PhysicalGraph, PhysicalSnapshot, ProvenanceMap, TransformResult,
+    UnresolvedItem, build_cell_graph, build_functional_graph, build_logic_graph,
+    build_physical_graph, build_physical_snapshot, derive_hierarchy, hierarchy_from_views,
+};
 pub use logic::{DagBuilder, GateKind, LogicDag, LogicError, LogicNode, NodeId};
-pub use physical_projection::{
-    AbstractionLevel, BehaviorEvent, BehaviorIr, BehaviorPattern, BehaviorTrace, IrProjection,
-    PhysicalProjection, ProjectionError, ProjectionEvidence, SignalEdge, SignalIr, SignalNode,
-    SignalNodeKind, TemporalDevice, TemporalSemantics,
+pub use temporal_analysis::{
+    BehaviorEvent, BehaviorIr, BehaviorPattern, BehaviorTrace, TemporalAnalysis, TemporalDevice,
+    TemporalEvidence, TemporalSemantics,
 };

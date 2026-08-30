@@ -568,7 +568,7 @@ mod tests {
                 },
             ],
         );
-        let scene = PhysicalScene::from_topology(
+        let scene = PhysicalScene::from_unvalidated_topology(
             Observation::complete(
                 "minecraft:overworld",
                 SceneBounds::new(
@@ -615,7 +615,10 @@ mod tests {
                 reason: dustroute_physical::FrontierReason::ScanLimitReached,
             }],
         };
-        let view = recognize_gates(&PhysicalScene::from_topology(observation, &topology));
+        let view = recognize_gates(&PhysicalScene::from_unvalidated_topology(
+            observation,
+            &topology,
+        ));
         assert_eq!(view.gates[0].status, RecognitionStatus::BoundaryLimited);
     }
 

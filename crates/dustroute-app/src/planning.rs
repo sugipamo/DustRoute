@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 
-use dustroute_model::{Block, BlockKind, Pos, World};
+use dustroute_physical::{Block, BlockKind, Pos, World};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 

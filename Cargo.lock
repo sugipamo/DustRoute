@@ -142,7 +142,8 @@ dependencies = [
 name = "dustroute-app"
 version = "0.2.0"
 dependencies = [
- "dustroute-model",
+ "dustroute-ir",
+ "dustroute-physical",
  "dustroute-translate",
  "serde",
  "uuid",
@@ -153,7 +154,6 @@ name = "dustroute-cli"
 version = "0.2.0"
 dependencies = [
  "dustroute-app",
- "dustroute-model",
  "dustroute-translate",
  "serde_json",
 ]
@@ -172,7 +172,7 @@ version = "0.2.0"
 dependencies = [
  "anyhow",
  "dustroute-app",
- "dustroute-model",
+ "dustroute-ir",
  "dustroute-physical",
  "dustroute-translate",
  "rmcp",
@@ -188,14 +188,6 @@ name = "dustroute-minecraft"
 version = "0.2.0"
 dependencies = [
  "serde",
-]
-
-[[package]]
-name = "dustroute-model"
-version = "0.2.0"
-dependencies = [
- "dustroute-ir",
- "dustroute-physical",
 ]
 
 [[package]]

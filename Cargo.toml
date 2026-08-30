@@ -3,7 +3,6 @@ members = [
     "crates/dustroute-minecraft",
     "crates/dustroute-physical",
     "crates/dustroute-ir",
-    "crates/dustroute-model",
     "crates/dustroute-translate",
     "crates/dustroute-optimize",
     "crates/dustroute-app",
