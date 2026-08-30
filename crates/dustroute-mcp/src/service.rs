@@ -76,6 +76,7 @@ pub struct DustRouteMcp {
     policy: McpPolicy,
     app: DustRouteService,
     operations: OperationRegistry,
+    mutation_lock: Arc<Mutex<()>>,
     assist_player: Option<String>,
     server_address: Option<String>,
 }
@@ -918,6 +919,7 @@ impl DustRouteMcp {
             policy,
             app: DustRouteService::default(),
             operations: OperationRegistry::default(),
+            mutation_lock: Arc::new(Mutex::new(())),
             assist_player: None,
             server_address: None,
         }
@@ -1002,6 +1004,7 @@ impl DustRouteMcp {
         if let Err(error) = self.policy.authorize_mutation() {
             return json_text(json!({ "ok": false, "error": error.to_string() }));
         }
+        let _mutation_guard = self.mutation_lock.lock().await;
         let operation_id = match uuid::Uuid::parse_str(&params.operation_id) {
             Ok(id) => id,
             Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
@@ -1204,6 +1207,7 @@ impl DustRouteMcp {
         if let Err(error) = self.policy.authorize_mutation() {
             return json_text(json!({ "ok": false, "error": error.to_string() }));
         }
+        let _mutation_guard = self.mutation_lock.lock().await;
         let operation_id = match uuid::Uuid::parse_str(&params.operation_id) {
             Ok(id) => id,
             Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
@@ -2963,6 +2967,7 @@ impl DustRouteMcp {
         if let Err(error) = self.policy.authorize_mutation() {
             return json_text(json!({ "ok": false, "error": error.to_string() }));
         }
+        let _mutation_guard = self.mutation_lock.lock().await;
         let operation_id = match uuid::Uuid::parse_str(&params.operation_id) {
             Ok(id) => id,
             Err(error) => {
@@ -3237,6 +3242,7 @@ impl DustRouteMcp {
         if let Err(error) = self.policy.authorize_mutation() {
             return json_text(json!({ "ok": false, "error": error.to_string() }));
         }
+        let _mutation_guard = self.mutation_lock.lock().await;
         let operation_id = match uuid::Uuid::parse_str(&params.operation_id) {
             Ok(id) => id,
             Err(error) => {

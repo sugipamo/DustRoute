@@ -1,8 +1,8 @@
 # dustroute-mcp
 
 This crate is the primary AI-facing entry point for DustRoute. It exposes MCP
-tools over stdio and talks to a visible Mineflayer player through a localhost
-JSON-lines bridge.
+tools over stdio or loopback-only Streamable HTTP and talks to a visible
+Mineflayer player through a localhost JSON-lines bridge.
 
 ## Start the visible bot
 
@@ -88,6 +88,21 @@ and debug-only `get_visible_player` move only `DustRouteBot` to the configured p
 wait for tracking to resume, and retry once. The observation reports
 `reacquired=true` when this happens. Player names are validated before a
 teleport command is issued; an offline player remains an explicit error.
+
+stdio is the default transport. A local HTTP client can instead use `/mcp`:
+
+```bash
+DUSTROUTE_SERVER_ADDRESS=127.0.0.1:25565 \
+  DUSTROUTE_ASSIST_PLAYER=YourMinecraftName \
+  DUSTROUTE_MCP_TRANSPORT=http \
+  DUSTROUTE_MCP_HTTP_BIND=127.0.0.1:3000 \
+  cargo run -p dustroute-mcp
+```
+
+The HTTP endpoint intentionally rejects wildcard, LAN, and public bind
+addresses. It has no authentication layer yet, so exposing it beyond the local
+machine is not supported. Multiple HTTP sessions share the same operation and
+plan state inside one server process.
 
 ## Tool naming and profiles
 

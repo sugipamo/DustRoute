@@ -9,14 +9,15 @@ rust-version.workspace = true
 
 [dependencies]
 anyhow = "1.0"
+axum = "0.8"
 dustroute-app = { path = "../dustroute-app" }
 dustroute-ir = { path = "../dustroute-ir" }
 dustroute-physical = { path = "../dustroute-physical" }
 dustroute-translate = { path = "../dustroute-translate" }
-rmcp = { version = "3.1.4", features = ["server", "transport-io", "schemars"] }
+rmcp = { version = "3.1.4", features = ["server", "transport-io", "transport-streamable-http-server", "schemars"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-tokio = { version = "1.47", features = ["io-util", "macros", "net", "rt-multi-thread", "sync", "time"] }
+tokio = { version = "1.47", features = ["io-util", "macros", "net", "rt-multi-thread", "signal", "sync", "time"] }
 tokio-util = "0.7"
 uuid = { version = "1.26", features = ["serde"] }
 

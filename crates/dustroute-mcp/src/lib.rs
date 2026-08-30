@@ -19,7 +19,7 @@ pub use bridge::{
     BlockUpdateEvent, BotBridge, BotBridgeError, BotStatus, LeverActivation, ObservedBlock,
     ObservedBlockState, PlayerObservation, UpdateRecording, UpdateRecordingStarted, VisiblePlayer,
 };
-pub use config::{McpConfig, McpConfigError};
+pub use config::{McpConfig, McpConfigError, McpTransport};
 pub use discovery::{CircuitDiscovery, DiscoveryError, discover_connected_region};
 pub use dustroute_app::{
     BlockChange, PlacementPlan, PlanningError, UndoPlan, plan_world_overlay, relocate_world,
