@@ -29,6 +29,14 @@ fragments are discovered separately as gap candidates and are never unioned by
 proximity alone. `dustroute-ir` owns abstraction changes used to project the
 physical circuit into local cells, logic expressions, and functional views.
 
+Imported blocks retain their namespaced Minecraft identifier and every
+reported block-state property even when DustRoute only has a coarse physical
+classification for that block. Per-block capability reports distinguish full,
+partial, unsupported, and non-applicable support for physical classification,
+connectivity, steady-state behavior, temporal behavior, repair, and placement.
+Unsupported semantics make the relevant derived IR stage partial; they do not
+erase the underlying observation.
+
 `dustroute-translate` exposes `Translator::forward`, `Translator::reverse`, and
 `Translator::verify` as its stable facade. Reverse results carry the canonical
 physical scene alongside traceable gate, expression, functional, signal, and
@@ -77,12 +85,39 @@ latch candidates. Explicitly requested reverse truth-table expressions can be
 converted back into a `LogicDag`; forward compilation produces the Minecraft
 layout directly.
 
+Temporal analysis also builds a lossless timed circuit before deriving a
+steady-state projection. Buffer and wire compression retains the accumulated
+delay in redstone ticks (one redstone tick is two game ticks) and the exact
+physical path. Every analyzed region is classified as `steady_state_safe`,
+`timing_sensitive`, or `temporal_required`. Unequal-delay reconvergence remains
+timing-sensitive; feedback and mechanical devices require temporal
+interpretation. The bounded simulator handles repeater delay and side locking,
+torch delay, basic comparator compare/subtract behavior, and lamp off delay;
+exact within-tick vanilla update ordering remains live-observation evidence.
+Higher-level functional labels are
+therefore explicitly scoped instead of silently discarding timing behavior.
+
+Measured behavior traces are classified separately from structural timing
+risk. A `0 -> 1 -> 0` or `1 -> 0 -> 1` interval becomes a traceable pulse
+observation. Without registered intent it is a `hazard_candidate`; a
+steady-state-only contract yields a `transient_deviation`; a stable-signal or
+pulse-width contract can confirm a hazard; and a matching pulse contract marks
+the event as an `intentional_pulse`. Structural delay differences alone never
+claim that a pulse was observed.
+
 ## Implementation status
 
 The Rust workspace provides typed logic DAGs and rewrites, verified physical
 cells, placement, electrical simulation, connectivity extraction, fanout-aware
 multi-net routing with legality checks, and Java Data Pack export. Built-in
 regressions cover half adders/subtractors, MUX, decoder, and full adder.
+
+Serializable `Scenario` fixtures share an initial Minecraft snapshot, timed
+input actions, observation points, final-state expectations, and pulse-width
+contracts. The Rust runner and Mineflayer adapter produce compatible
+redstone-tick traces and classify final strength, powered state, event tick,
+within-tick order, pulse width, unsupported physics, and torch burnout
+candidates separately.
 
 The logical/physical boundary is deliberately public so a future MCP server can
 build, inspect, optimize, and export a circuit incrementally with a user.
@@ -104,6 +139,12 @@ cargo run -p dustroute-mcp
 
 The local Minecraft integration harness lives under `.local/` and is excluded
 from Git.
+
+Sanitized observation regression fixtures live under
+`crates/dustroute-translate/tests/fixtures`. They cover intact and broken
+wiring, direction errors, missing support, inversion, signal merges, delayed
+paths, unsupported devices, and scan boundaries without requiring a running
+Minecraft server.
 
 ## Reverse analysis
 

@@ -16,14 +16,17 @@ use rmcp::{
     model::{GetPromptResult, Implementation, PromptMessage, Role, ServerCapabilities, ServerInfo},
     prompt, prompt_handler, prompt_router, schemars, tool, tool_handler, tool_router,
 };
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use tokio::sync::Mutex;
 
 use crate::McpConfig;
+use crate::state::PlanStateStore;
 use crate::{
     BotBridge, McpPolicy, OperationKind, OperationRegistry, OperationStatus, PlacementPlan,
-    SelectionSession, discover_connected_region, plan_world_overlay,
+    SelectionSession, TransitionSafety, TransitionSafetyAssessment, assess_transition_safety,
+    behavior_trace_from_recording, discover_connected_region, plan_world_overlay,
+    scenario_trace_from_recording,
 };
 
 const MAX_FLAT_ANALYSIS_COMPONENTS: usize = 128;
@@ -39,6 +42,8 @@ pub struct DustRouteMcp {
     plan_dimensions: Arc<Mutex<HashMap<uuid::Uuid, String>>>,
     applied_plans: Arc<Mutex<HashMap<uuid::Uuid, bool>>>,
     repair_plans: Arc<Mutex<HashMap<uuid::Uuid, StoredRepairPlan>>>,
+    transition_plans: Arc<Mutex<HashMap<uuid::Uuid, StoredTransitionPlan>>>,
+    state_store: PlanStateStore,
     policy: McpPolicy,
     app: DustRouteService,
     operations: OperationRegistry,
@@ -134,14 +139,72 @@ struct ConfirmedOperationParams {
     confirm: bool,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 struct StoredRepairPlan {
     patch: PhysicalPatch,
     dimension: String,
     analysis_bounds: dustroute_translate::RegionBounds,
     fragments_before: usize,
+    baseline_truth_table: Option<dustroute_translate::InferredTruthTable>,
     previewed: bool,
     applied: bool,
+}
+
+#[derive(Clone, Debug)]
+struct StoredTransitionPlan {
+    player: String,
+    dimension: String,
+    bounds: dustroute_translate::RegionBounds,
+    lever: Pos,
+    original_powered: bool,
+    initial_snapshot: dustroute_translate::MinecraftSnapshot,
+    observation_ticks: u16,
+    max_events: usize,
+    safety: TransitionSafetyAssessment,
+    previewed: bool,
+    executed: bool,
+    restoration_verified: bool,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+struct ProposeTransitionParams {
+    /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
+    player: Option<String>,
+    /// Maximum redstone components followed from the gaze target. Defaults to 8192.
+    max_components: Option<usize>,
+    /// Number of game ticks observed after activation, from 1 through 200. Defaults to 20.
+    observation_ticks: Option<u16>,
+    /// Maximum block update events recorded, from 1 through 65536. Defaults to 16384.
+    max_events: Option<usize>,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+struct PreviewTransitionParams {
+    operation_id: String,
+    /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
+    player: Option<String>,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+struct RunTransitionParams {
+    operation_id: String,
+    /// Must be true because this normally activates a lever in the test world.
+    confirm: bool,
+    /// Optional output contracts used to distinguish candidates, confirmed hazards, and intended pulses.
+    contracts: Option<Vec<TransitionContractParam>>,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+struct TransitionContractParam {
+    x: i32,
+    y: i32,
+    z: i32,
+    /// steady_state_only, stable_high, stable_low, intentional_high_pulse, intentional_low_pulse, maximum_high_pulse, or maximum_low_pulse.
+    intent: String,
+    /// Widths for live scenarios are measured in game ticks.
+    minimum_width_ticks: Option<u64>,
+    /// Required for intentional and maximum-width pulse contracts.
+    maximum_width_ticks: Option<u64>,
 }
 
 #[derive(Debug)]
@@ -173,6 +236,60 @@ struct PreviewRepairParams {
 fn json_text(value: Value) -> String {
     serde_json::to_string_pretty(&value)
         .unwrap_or_else(|error| json!({ "ok": false, "error": error.to_string() }).to_string())
+}
+
+fn transition_contracts(
+    params: Option<&[TransitionContractParam]>,
+    scene: &dustroute_physical::PhysicalScene,
+) -> Result<BTreeMap<dustroute_physical::ComponentId, dustroute_ir::SignalIntent>, String> {
+    let mut contracts = BTreeMap::new();
+    for contract in params.into_iter().flatten() {
+        let position = Pos::new(contract.x, contract.y, contract.z);
+        let component = scene
+            .component_at(position)
+            .ok_or_else(|| format!("contract position {position:?} is not a circuit component"))?
+            .id;
+        let high = contract.intent.contains("high");
+        let polarity = if high {
+            dustroute_ir::PulsePolarity::High
+        } else {
+            dustroute_ir::PulsePolarity::Low
+        };
+        let intent = match contract.intent.as_str() {
+            "steady_state_only" => dustroute_ir::SignalIntent::SteadyStateOnly,
+            "stable_high" => dustroute_ir::SignalIntent::Stable { powered: true },
+            "stable_low" => dustroute_ir::SignalIntent::Stable { powered: false },
+            "intentional_high_pulse" | "intentional_low_pulse" => {
+                let minimum = contract.minimum_width_ticks.unwrap_or(1);
+                let maximum = contract
+                    .maximum_width_ticks
+                    .ok_or_else(|| format!("{} requires maximum_width_ticks", contract.intent))?;
+                if minimum > maximum {
+                    return Err("minimum_width_ticks exceeds maximum_width_ticks".to_owned());
+                }
+                dustroute_ir::SignalIntent::IntentionalPulse {
+                    polarity,
+                    time_unit: dustroute_ir::TraceTimeUnit::GameTick,
+                    minimum_width_ticks: minimum,
+                    maximum_width_ticks: maximum,
+                }
+            }
+            "maximum_high_pulse" | "maximum_low_pulse" => {
+                dustroute_ir::SignalIntent::MaximumPulseWidth {
+                    polarity,
+                    time_unit: dustroute_ir::TraceTimeUnit::GameTick,
+                    maximum_width_ticks: contract.maximum_width_ticks.ok_or_else(|| {
+                        format!("{} requires maximum_width_ticks", contract.intent)
+                    })?,
+                }
+            }
+            _ => return Err(format!("unknown transition intent {:?}", contract.intent)),
+        };
+        if contracts.insert(component, intent).is_some() {
+            return Err(format!("duplicate contract for component {}", component.0));
+        }
+    }
+    Ok(contracts)
 }
 
 fn bounds_json(bounds: dustroute_translate::RegionBounds) -> Value {
@@ -324,71 +441,13 @@ fn raw_world_inspection(
     })
 }
 
-fn boolean_function(values: &[bool]) -> Option<&'static str> {
-    match values {
-        [false, true] => Some("buffer"),
-        [true, false] => Some("not"),
-        [false, false, false, true] => Some("and"),
-        [false, true, true, true] => Some("or"),
-        [false, true, true, false] => Some("xor"),
-        [true, true, true, false] => Some("nand"),
-        [true, false, false, false] => Some("nor"),
-        [true, false, false, true] => Some("xnor"),
-        _ => None,
-    }
-}
-
 fn logical_role_json(translated: &dustroute_translate::ReverseResult) -> Value {
-    let Some(table) = &translated.truth_table else {
-        return json!({
-            "classification": "unknown",
-            "confidence": "low",
-            "reason": translated.truth_table_error.as_ref().map(ToString::to_string)
-                .unwrap_or_else(|| "no truth table could be inferred".to_owned())
-        });
-    };
-    let columns = (0..table.outputs.len())
-        .map(|index| {
-            table
-                .rows
-                .iter()
-                .map(|row| row.outputs[index])
-                .collect::<Vec<_>>()
-        })
-        .collect::<Vec<_>>();
-    let functions = columns
-        .iter()
-        .map(|column| boolean_function(column).unwrap_or("unclassified"))
-        .collect::<Vec<_>>();
-    let classification = match (table.inputs.len(), functions.as_slice()) {
-        (2, ["xor", "and"] | ["and", "xor"]) => "half_adder",
-        (3, functions) if functions.contains(&"unclassified") && functions.len() == 2 => {
-            let parity = columns
-                .iter()
-                .any(|column| column == &[false, true, true, false, true, false, false, true]);
-            let majority = columns
-                .iter()
-                .any(|column| column == &[false, false, false, true, false, true, true, true]);
-            if parity && majority {
-                "full_adder"
-            } else {
-                "unclassified"
-            }
-        }
-        (_, [function]) => function,
-        _ => "unclassified",
-    };
-    json!({
-        "classification": classification,
-        "confidence": if classification == "unclassified" { "low" } else { "high" },
-        "input_count": table.inputs.len(),
-        "output_count": table.outputs.len(),
-        "output_functions": functions,
-        "basis": "inferred_truth_table"
-    })
+    serde_json::to_value(dustroute_translate::derive_local_logic(translated))
+        .unwrap_or_else(|error| json!({ "classification": "unknown", "reason": error.to_string() }))
 }
 
 fn focused_role_json(translated: &dustroute_translate::ReverseResult, target: Pos) -> Value {
+    let focused = dustroute_translate::classify_focused_role(translated, target);
     let physical_component = translated
         .analysis
         .scene
@@ -404,59 +463,35 @@ fn focused_role_json(translated: &dustroute_translate::ReverseResult, target: Po
                 .collect::<Vec<_>>()
         })
         .unwrap_or_default();
-    let component = translated
-        .analysis
-        .components
-        .iter()
-        .find(|component| component.positions.contains(&target));
-    let block = translated
+    let observed_block = translated
         .analysis
         .scene
         .component_at(target)
-        .map(|component| component.block.kind);
-    let Some(component) = component else {
+        .map(|component| &component.block);
+    let Some(component_id) = focused.signal_component else {
         return json!({
             "position": target,
-            "block": block,
+            "block": observed_block.map(|block| block.kind),
+            "observed_name": observed_block.and_then(|block| block.observed_name.as_deref()),
+            "observed_properties": observed_block.map(|block| &block.observed_properties),
+            "capabilities": observed_block.map(dustroute_physical::Block::capabilities),
             "physical_component": physical_component,
             "recognized_gates": recognized_gates,
             "role": "support_or_unresolved"
         });
     };
-    let is_input = translated
-        .analysis
-        .inputs
-        .iter()
-        .any(|item| item.component == component.id);
-    let is_output = translated
-        .analysis
-        .outputs
-        .iter()
-        .any(|item| item.component == component.id);
-    let role = if is_input {
-        "input_boundary"
-    } else if is_output {
-        "output_boundary"
-    } else if component.incoming.len() > 1 {
-        "signal_merge"
-    } else if component.outgoing.len() > 1 {
-        "signal_branch"
-    } else if component.incoming.contains(&component.id)
-        || component.outgoing.contains(&component.id)
-    {
-        "feedback_path"
-    } else {
-        "intermediate_path"
-    };
     json!({
         "position": target,
-        "block": block,
+        "block": observed_block.map(|block| block.kind),
+        "observed_name": observed_block.and_then(|block| block.observed_name.as_deref()),
+        "observed_properties": observed_block.map(|block| &block.observed_properties),
+        "capabilities": observed_block.map(dustroute_physical::Block::capabilities),
         "physical_component": physical_component,
         "recognized_gates": recognized_gates,
-        "signal_component": component.id,
-        "incoming_components": component.incoming,
-        "outgoing_components": component.outgoing,
-        "role": role
+        "signal_component": component_id,
+        "incoming_components": focused.incoming_components,
+        "outgoing_components": focused.outgoing_components,
+        "role": focused.role
     })
 }
 
@@ -504,6 +539,9 @@ fn focused_hierarchy_role_json(
     json!({
         "position": target,
         "block": component.block.kind,
+        "observed_name": component.block.observed_name,
+        "observed_properties": component.block.observed_properties,
+        "capabilities": component.block.capabilities(),
         "physical_component": component.id,
         "incoming_components": incoming,
         "outgoing_components": outgoing,
@@ -513,11 +551,80 @@ fn focused_hierarchy_role_json(
     })
 }
 
+fn capability_report_json(scene: &dustroute_physical::PhysicalScene) -> Value {
+    const MAX_CAPABILITY_ISSUE_SAMPLES: usize = 32;
+    let report = scene.capability_report();
+    let mut counts = BTreeMap::<String, usize>::new();
+    for issue in &report.issues {
+        *counts
+            .entry(format!("{:?}:{:?}", issue.stage, issue.level).to_lowercase())
+            .or_default() += 1;
+    }
+    json!({
+        "groups": report.groups,
+        "issue_count": report.issues.len(),
+        "issue_counts_by_stage_and_level": counts,
+        "issue_samples": report.issues.iter().take(MAX_CAPABILITY_ISSUE_SAMPLES).collect::<Vec<_>>(),
+        "issues_truncated": report.issues.len() > MAX_CAPABILITY_ISSUE_SAMPLES
+    })
+}
+
+fn signal_liveness_json(
+    scene: &dustroute_physical::PhysicalScene,
+    focus: Option<dustroute_physical::Pos>,
+) -> Value {
+    const MAX_FINDINGS: usize = 64;
+    const MAX_RANKED_FINDINGS: usize = 16;
+    let report = dustroute_translate::analyze_signal_liveness(scene);
+    let ranked = focus.map(|focus| {
+        dustroute_translate::rank_liveness_findings(scene, &report, focus)
+            .into_iter()
+            .take(MAX_RANKED_FINDINGS)
+            .collect::<Vec<_>>()
+    });
+    let source_counts =
+        report
+            .sources
+            .iter()
+            .fold(BTreeMap::<String, usize>::new(), |mut counts, source| {
+                *counts
+                    .entry(format!("{:?}", source.kind).to_lowercase())
+                    .or_default() += 1;
+                counts
+            });
+    let external_input_waiting = report
+        .required_input_assessments
+        .iter()
+        .filter(|assessment| {
+            assessment.status == dustroute_translate::RequiredInputStatus::AwaitingExternalInput
+        })
+        .take(MAX_FINDINGS)
+        .collect::<Vec<_>>();
+    json!({
+        "physical_traversal_group_count": scene.physical_traversal_groups().len(),
+        "directed_signal_region_count": report.directed_regions.len(),
+        "cyclic_directed_signal_region_count": report.directed_regions.iter().filter(|region| region.cyclic).count(),
+        "drive_source_count": report.drive_sources.len(),
+        "source_counts_by_kind": source_counts,
+        "source_evidence": report.sources.iter().take(MAX_FINDINGS).collect::<Vec<_>>(),
+        "drive_reachable_component_count": report.drive_reachable.len(),
+        "potentially_drive_reachable_component_count": report.potential_drive_reachable.len(),
+        "external_input_waiting_count": report.required_input_assessments.iter().filter(|assessment| assessment.status == dustroute_translate::RequiredInputStatus::AwaitingExternalInput).count(),
+        "external_input_waiting": external_input_waiting,
+        "undriven_required_input_count": report.undriven_inputs.len(),
+        "undriven_required_inputs": report.undriven_inputs.iter().take(MAX_FINDINGS).collect::<Vec<_>>(),
+        "ranked_findings_near_focus": ranked,
+        "findings_truncated": report.undriven_inputs.len() > MAX_FINDINGS,
+        "interpretation": "confirmed sources, inferred primary inputs, and genuine no-source failures are separate; inferred external inputs are not automatic repair evidence"
+    })
+}
+
 fn hierarchical_result_json(
     bounds: dustroute_translate::RegionBounds,
     hierarchy: &dustroute_ir::HierarchicalIr,
     focused: Value,
     expansion: &Value,
+    focus: Option<dustroute_physical::Pos>,
 ) -> Value {
     let scene = &hierarchy.physical_graph.value.scene;
     json!({
@@ -527,6 +634,8 @@ fn hierarchical_result_json(
         "analysis_complete": expansion["limit_reached"] != Value::Bool(true),
         "focused_component": focused,
         "expansion": expansion,
+        "block_capabilities": capability_report_json(scene),
+        "signal_liveness": signal_liveness_json(scene, focus),
         "stages": {
             "physical_snapshot": {
                 "completeness": hierarchy.physical_snapshot.completeness,
@@ -538,6 +647,7 @@ fn hierarchical_result_json(
             "physical_graph": {
                 "completeness": hierarchy.physical_graph.completeness,
                 "directed_connections": scene.connections.len(),
+                "physical_traversal_groups": scene.physical_traversal_groups().len(),
                 "fragments": scene.fragments.len(),
                 "unresolved": hierarchy.physical_graph.unresolved
             },
@@ -554,7 +664,21 @@ fn hierarchical_result_json(
             },
             "functional_graph": {
                 "completeness": hierarchy.functional_graph.completeness,
-                "functions": hierarchy.functional_graph.value.functions
+                "functions": hierarchy.functional_graph.value.functions,
+                "validity": hierarchy.temporal.timing,
+            }
+        },
+        "temporal": {
+            "timing": hierarchy.temporal.timing,
+            "timed_nodes": hierarchy.temporal.timed_circuit.nodes.len(),
+            "timed_edges": hierarchy.temporal.timed_circuit.edges.len(),
+            "steady_state_retained_components": hierarchy.temporal.steady_state.retained_components.len(),
+            "steady_state_compressed_components": hierarchy.temporal.steady_state.compressed_components.len(),
+            "steady_state_edges": hierarchy.temporal.steady_state.edges.len(),
+            "transient_assessment": {
+                "status": "not_simulated",
+                "findings": [],
+                "guidance": "timing risk is structural only; run transition scenarios before claiming that a pulse was observed"
             }
         },
         "truth_table": null,
@@ -568,6 +692,13 @@ fn reverse_result_json(
     bounds: dustroute_translate::RegionBounds,
     translated: &dustroute_translate::ReverseResult,
 ) -> Value {
+    let mut hierarchy = dustroute_ir::hierarchy_from_views(
+        &translated.analysis.scene,
+        translated.gate_view.clone(),
+        translated.expression_view.clone(),
+        translated.functional_view.clone(),
+    );
+    hierarchy.temporal = translated.temporal.clone();
     json!({
         "ok": true,
         "bounds": bounds_json(bounds),
@@ -575,17 +706,61 @@ fn reverse_result_json(
         "physical": {
             "components": translated.analysis.scene.components.len(),
             "verified_connections": translated.analysis.scene.connections.len(),
+            "physical_traversal_groups": translated.analysis.scene.physical_traversal_groups().len(),
             "connected_fragments": translated.analysis.scene.fragments.len(),
             "nearby_gap_candidates": translated.analysis.scene.gap_candidates(2),
             "observation": translated.analysis.scene.observation,
             "analysis_complete": translated.analysis.scene.observation.is_complete(),
+            "block_capabilities": capability_report_json(&translated.analysis.scene),
+        },
+        "signal_liveness": signal_liveness_json(&translated.analysis.scene, None),
+        "stages": {
+            "observed_world": {
+                "bounds": bounds_json(bounds),
+                "redstone_blocks": translated.analysis.redstone_blocks.len()
+            },
+            "physical_scene": {
+                "completeness": hierarchy.physical_snapshot.completeness,
+                "components": hierarchy.physical_snapshot.value.scene.components.len(),
+                "diagnostics": hierarchy.physical_snapshot.diagnostics
+            },
+            "electrical_network": {
+                "completeness": hierarchy.physical_graph.completeness,
+                "directed_connections": hierarchy.physical_graph.value.scene.connections.len(),
+                "unresolved": hierarchy.physical_graph.unresolved
+            },
+            "timed_behavior": {
+                "timing": hierarchy.temporal.timing,
+                "devices": hierarchy.temporal.behavior.devices.len(),
+                "traces": hierarchy.temporal.behavior.traces.len()
+            },
+            "local_logic": {
+                "completeness": hierarchy.logic_graph.completeness,
+                "cells": hierarchy.cell_graph.value.cells,
+                "expressions": hierarchy.logic_graph.value.expressions
+            },
+            "functional_candidates": {
+                "completeness": hierarchy.functional_graph.completeness,
+                "functions": hierarchy.functional_graph.value.functions,
+                "unresolved": hierarchy.functional_graph.unresolved
+            }
         },
         "gate_view": translated.gate_view,
         "expression_view": translated.expression_view,
         "functional_view": translated.functional_view,
+        "functional_validity": translated.temporal.timing,
         "behavior_ir": {
             "temporal_devices": translated.temporal.behavior.devices,
             "trace_count": translated.temporal.behavior.traces.len(),
+            "timing": translated.temporal.timing,
+            "timed_nodes": translated.temporal.timed_circuit.nodes.len(),
+            "timed_edges": translated.temporal.timed_circuit.edges.len(),
+            "steady_state_projection": translated.temporal.steady_state,
+            "transient_assessment": {
+                "status": if translated.temporal.behavior.traces.is_empty() { "not_simulated" } else { "observed_initial_state_only" },
+                "assessments": translated.temporal.transients,
+                "guidance": "hazard_candidate means a measured transient has no registered intent; hazard_confirmed requires an explicit signal contract. Initial-state settling does not cover every input transition."
+            },
         },
         "inputs": translated.analysis.inputs.iter().map(|terminal| json!({
             "position": terminal.anchor,
@@ -633,6 +808,8 @@ impl DustRouteMcp {
             plan_dimensions: Arc::new(Mutex::new(HashMap::new())),
             applied_plans: Arc::new(Mutex::new(HashMap::new())),
             repair_plans: Arc::new(Mutex::new(HashMap::new())),
+            transition_plans: Arc::new(Mutex::new(HashMap::new())),
+            state_store: PlanStateStore::from_environment("default"),
             policy,
             app: DustRouteService::default(),
             operations: OperationRegistry::default(),
@@ -654,10 +831,37 @@ impl DustRouteMcp {
 
     #[must_use]
     pub fn with_config(config: McpConfig, policy: McpPolicy) -> Self {
+        let state_scope = format!("{}\n{}", config.server_address, config.assist_player);
         let mut service =
             Self::with_policy_and_player(config.bridge_address, policy, config.assist_player);
         service.server_address = Some(config.server_address);
+        service.state_store = PlanStateStore::from_environment(&state_scope);
         service
+    }
+
+    async fn store_repair_plan(
+        &self,
+        operation_id: uuid::Uuid,
+        plan: StoredRepairPlan,
+    ) -> Result<(), String> {
+        self.state_store.save("repairs", operation_id, &plan)?;
+        self.repair_plans.lock().await.insert(operation_id, plan);
+        Ok(())
+    }
+
+    async fn repair_plan(
+        &self,
+        operation_id: uuid::Uuid,
+    ) -> Result<Option<StoredRepairPlan>, String> {
+        let plan: Option<StoredRepairPlan> = self.state_store.load("repairs", operation_id)?;
+        if let Some(plan) = &plan {
+            self.repair_plans
+                .lock()
+                .await
+                .insert(operation_id, plan.clone());
+            return Ok(Some(plan.clone()));
+        }
+        Ok(self.repair_plans.lock().await.get(&operation_id).cloned())
     }
 
     fn resolve_player(&self, requested: Option<&str>) -> Result<String, String> {
@@ -826,16 +1030,35 @@ impl DustRouteMcp {
             relative: false,
             ..JavaExportConfig::default()
         };
-        let writes = changes
+        let actions = changes
             .into_iter()
-            .map(|change| {
-                java_block_state(&change.after, &export)
-                    .map(|state| json!({ "pos": change.pos, "state": state }))
-                    .map_err(|error| error.to_string())
+            .map(|change| -> Result<Value, String> {
+                if change.after.kind == BlockKind::Air {
+                    return Ok(json!({ "action": "dig", "pos": change.pos }));
+                }
+                let state =
+                    java_block_state(&change.after, &export).map_err(|error| error.to_string())?;
+                let item = if change.after.kind == BlockKind::RedstoneWire {
+                    "minecraft:redstone".to_owned()
+                } else {
+                    state.split('[').next().unwrap_or(&state).to_owned()
+                };
+                let support_offset = change.after.support_offset.unwrap_or(Pos::new(0, -1, 0));
+                let reference =
+                    change
+                        .pos
+                        .offset(support_offset.x, support_offset.y, support_offset.z);
+                Ok(json!({
+                    "action": "place",
+                    "pos": change.pos,
+                    "item": item,
+                    "reference": reference,
+                    "face": Pos::new(-support_offset.x, -support_offset.y, -support_offset.z),
+                }))
             })
             .collect::<Result<Vec<_>, _>>()?;
         self.bridge
-            .write_blocks(json!(writes), dimension)
+            .place_physical_blocks(json!(actions), dimension)
             .await
             .map_err(|error| error.to_string())
     }
@@ -878,9 +1101,12 @@ impl DustRouteMcp {
             Ok(id) => id,
             Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
         };
-        let plan = match self.repair_plans.lock().await.get(&operation_id).cloned() {
-            Some(plan) => plan,
-            None => return json_text(json!({ "ok": false, "error": "unknown repair ID" })),
+        let plan = match self.repair_plan(operation_id).await {
+            Ok(Some(plan)) => plan,
+            Ok(None) => {
+                return json_text(json!({ "ok": false, "error": "unknown or expired repair ID" }));
+            }
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
         };
         if !undo && self.policy.preview_required && !plan.previewed {
             return json_text(json!({ "ok": false, "error": "repair must be previewed first" }));
@@ -903,11 +1129,6 @@ impl DustRouteMcp {
             Ok(result) => result,
             Err(error) => return json_text(json!({ "ok": false, "error": error })),
         };
-        self.repair_plans
-            .lock()
-            .await
-            .entry(operation_id)
-            .and_modify(|stored| stored.applied = !undo);
         let (verified, mismatches) = match self
             .verify_physical_changes(&patch.changes, &plan.dimension)
             .await
@@ -921,17 +1142,25 @@ impl DustRouteMcp {
                 .write_physical_changes(&rollback.changes, &plan.dimension)
                 .await;
             if rollback_result.is_ok() {
-                self.repair_plans
-                    .lock()
-                    .await
-                    .entry(operation_id)
-                    .and_modify(|stored| stored.applied = false);
+                let mut rolled_back = plan.clone();
+                rolled_back.applied = false;
+                let _ = self.store_repair_plan(operation_id, rolled_back).await;
             }
             return json_text(json!({
                 "ok": false,
                 "error": "repair verification failed; automatic rollback attempted",
                 "mismatches": mismatches,
                 "rollback_ok": rollback_result.is_ok(),
+            }));
+        }
+        let mut updated_plan = plan.clone();
+        updated_plan.applied = !undo;
+        if let Err(error) = self.store_repair_plan(operation_id, updated_plan).await {
+            return json_text(json!({
+                "ok": false,
+                "error": format!("world changed but repair state could not be persisted: {error}"),
+                "verification_ok": verified,
+                "mismatches": mismatches
             }));
         }
         let snapshot = match self
@@ -946,15 +1175,46 @@ impl DustRouteMcp {
             Ok(snapshot) => snapshot,
             Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
         };
-        let fragments_after = serde_json::to_string(&snapshot)
-            .ok()
-            .and_then(|snapshot| world_from_snapshot_json(&snapshot).ok())
-            .map(|(_, world)| {
-                dustroute_translate::analyze_world_region(&world, plan.analysis_bounds)
-                    .scene
-                    .fragments
-                    .len()
+        let post_world = serde_json::to_string(&snapshot)
+            .map_err(|error| error.to_string())
+            .and_then(|snapshot| {
+                world_from_snapshot_json(&snapshot)
+                    .map(|(_, world)| world)
+                    .map_err(|error| error.to_string())
             });
+        let post_analysis = post_world.as_ref().ok().map(|world| {
+            let request = if plan.baseline_truth_table.is_some() {
+                ReverseRequest::new(plan.analysis_bounds).with_truth_table(8)
+            } else {
+                ReverseRequest::new(plan.analysis_bounds)
+            };
+            self.app.analyze_physical(world, request)
+        });
+        let fragments_after = post_analysis
+            .as_ref()
+            .map(|analysis| analysis.reverse.analysis.scene.fragments.len());
+        let semantic_verification = match (
+            plan.baseline_truth_table.as_ref(),
+            post_analysis
+                .as_ref()
+                .and_then(|analysis| analysis.reverse.truth_table.as_ref()),
+        ) {
+            (Some(expected), Some(actual)) => {
+                let comparison = dustroute_translate::compare_truth_tables(expected, actual);
+                json!({
+                    "available": true,
+                    "equivalent": comparison.comparable && comparison.fitness_penalty == 0,
+                    "comparison": comparison
+                })
+            }
+            _ => json!({
+                "available": false,
+                "reason": "the repair proposal did not include a baseline truth table; structural and block-state verification still ran"
+            }),
+        };
+        let resulting_logic = post_analysis
+            .as_ref()
+            .map(|analysis| &analysis.logical_role);
         self.operations
             .record_completed(
                 uuid::Uuid::new_v4(),
@@ -974,8 +1234,75 @@ impl DustRouteMcp {
             "changed_blocks": patch.changes.len(),
             "fragments_before": plan.fragments_before,
             "fragments_after": fragments_after,
+            "resulting_logic": resulting_logic,
+            "semantic_verification": semantic_verification,
             "bridge": bridge,
         }))
+    }
+
+    async fn create_transition_proposals(
+        &self,
+        player: &str,
+        dimension: &str,
+        bounds: dustroute_translate::RegionBounds,
+        snapshot: &dustroute_translate::MinecraftSnapshot,
+        observation_ticks: u16,
+        max_events: usize,
+    ) -> (TransitionSafetyAssessment, Vec<Value>) {
+        let safety = assess_transition_safety(snapshot);
+        if safety.safety == TransitionSafety::Rejected {
+            return (safety, Vec::new());
+        }
+        let levers = snapshot
+            .blocks
+            .iter()
+            .filter(|block| block.name == "minecraft:lever")
+            .filter_map(|block| {
+                block
+                    .properties
+                    .get("powered")
+                    .and_then(|powered| powered.parse::<bool>().ok())
+                    .map(|powered| (block.pos, powered))
+            })
+            .collect::<Vec<_>>();
+        let mut proposals = Vec::new();
+        for (lever, original_powered) in levers {
+            let operation_id = uuid::Uuid::new_v4();
+            self.transition_plans.lock().await.insert(
+                operation_id,
+                StoredTransitionPlan {
+                    player: player.to_owned(),
+                    dimension: dimension.to_owned(),
+                    bounds,
+                    lever,
+                    original_powered,
+                    initial_snapshot: snapshot.clone(),
+                    observation_ticks,
+                    max_events,
+                    safety: safety.clone(),
+                    previewed: false,
+                    executed: false,
+                    restoration_verified: false,
+                },
+            );
+            let proposal = json!({
+                "operation_id": operation_id,
+                "lever": lever,
+                "transition": if original_powered { "on_to_off" } else { "off_to_on" },
+                "observation_ticks": observation_ticks,
+                "max_events": max_events,
+                "safety": safety,
+            });
+            self.operations
+                .record_completed(
+                    operation_id,
+                    OperationKind::TransitionProposal,
+                    proposal.clone(),
+                )
+                .await;
+            proposals.push(proposal);
+        }
+        (safety, proposals)
     }
 
     async fn selected_region(
@@ -1225,12 +1552,25 @@ impl DustRouteMcp {
     }
 
     #[tool(
-        description = "List players currently visible to the Minecraft bot so gaze tools can use an exact player name",
+        description = "List players visible to the Minecraft bot. If the configured assist player is outside tracking range, move only the bot to that player and retry.",
         annotations(read_only_hint = true, destructive_hint = false)
     )]
     async fn list_visible_players(&self) -> String {
         match self.bridge.visible_players().await {
-            Ok(players) => {
+            Ok(mut players) => {
+                let mut reacquire_error = None;
+                let assist_missing = self
+                    .assist_player
+                    .as_ref()
+                    .is_some_and(|assist| !players.iter().any(|player| &player.player == assist));
+                if assist_missing {
+                    let assist = self.assist_player.as_deref().unwrap_or_default();
+                    if let Err(error) = self.bridge.observe_player(assist, 64.0).await {
+                        reacquire_error = Some(error.to_string());
+                    } else if let Ok(refreshed) = self.bridge.visible_players().await {
+                        players = refreshed;
+                    }
+                }
                 let players = players
                     .into_iter()
                     .filter(|player| {
@@ -1238,7 +1578,12 @@ impl DustRouteMcp {
                             && self.policy.authorize_dimension(&player.dimension).is_ok()
                     })
                     .collect::<Vec<_>>();
-                json_text(json!({ "ok": true, "players": players }))
+                json_text(json!({
+                    "ok": reacquire_error.is_none(),
+                    "players": players,
+                    "assist_player": self.assist_player,
+                    "reacquire_error": reacquire_error
+                }))
             }
             Err(error) => json_text(json!({ "ok": false, "error": error.to_string() })),
         }
@@ -1554,7 +1899,7 @@ impl DustRouteMcp {
     }
 
     #[tool(
-        description = "Answer questions such as 'what is this?' by following the circuit at the player's gaze, inferring the focused component's signal role and the circuit's higher-level logical function, and returning non-mutating repair proposals",
+        description = "Start the complete gaze-grounded workflow for questions such as 'what is this?': discover the connected circuit, explain physical/local/higher roles, and return non-mutating transition scenarios and repair proposals",
         annotations(read_only_hint = true, destructive_hint = false)
     )]
     async fn analyze_looked_at_circuit(
@@ -1609,57 +1954,146 @@ impl DustRouteMcp {
             .as_u64()
             .and_then(|count| usize::try_from(count).ok())
             .unwrap_or(0);
+        let (transition_safety, transition_proposals) = self
+            .create_transition_proposals(&player, &dimension, bounds, &snapshot, 20, 16_384)
+            .await;
         if discovered_components > MAX_FLAT_ANALYSIS_COMPONENTS {
             let mut analysis = dustroute_translate::analyze_world_region(&world, bounds);
             analysis.scene.observation.dimension = dimension;
             let hierarchy = dustroute_ir::derive_hierarchy(&analysis.scene);
             let focused = focused_hierarchy_role_json(&analysis.scene, &hierarchy, target);
-            return json_text(hierarchical_result_json(
+            let repairs = dustroute_translate::propose_scene_repairs_near(
+                &world,
+                &analysis.scene,
+                fragment_gap,
+                target,
+                12,
+            );
+            let mut repair_json = Vec::new();
+            for proposal in repairs.into_iter().take(16) {
+                let operation_id = uuid::Uuid::new_v4();
+                if let Err(error) = self
+                    .store_repair_plan(
+                        operation_id,
+                        StoredRepairPlan {
+                            patch: proposal.patch.clone(),
+                            dimension: analysis.scene.observation.dimension.clone(),
+                            analysis_bounds: bounds,
+                            fragments_before: analysis.scene.fragments.len(),
+                            baseline_truth_table: None,
+                            previewed: false,
+                            applied: false,
+                        },
+                    )
+                    .await
+                {
+                    return json_text(json!({ "ok": false, "error": error }));
+                }
+                repair_json.push(json!({
+                    "operation_id": operation_id,
+                    "patch": proposal.patch,
+                    "evidence": proposal.evidence,
+                    "virtual_impact": proposal.impact
+                }));
+            }
+            let mut result = hierarchical_result_json(
                 bounds,
                 &hierarchy,
                 focused,
                 &discovery["expansion"],
-            ));
+                Some(target),
+            );
+            if let Some(object) = result.as_object_mut() {
+                object.insert("repair_proposals".to_owned(), Value::Array(repair_json));
+                object.insert(
+                    "repair_guidance".to_owned(),
+                    Value::String(
+                        "ranked local virtual patches; preview an operation before any world mutation"
+                            .to_owned(),
+                    ),
+                );
+                object.insert(
+                    "transition_scenarios".to_owned(),
+                    json!({
+                        "safety": transition_safety,
+                        "proposals": transition_proposals,
+                        "next_step": "preview_transition_scenario before requesting confirmation"
+                    }),
+                );
+            }
+            return json_text(result);
         }
         let mut request = ReverseRequest::new(bounds);
         if params.include_truth_table.unwrap_or(false) {
             request = request.with_truth_table(16);
         }
-        let mut translated = self.app.analyze_world(&world, request);
-        translated.analysis.scene.observation.dimension = dimension.clone();
-        let focused = focused_role_json(&translated, target);
-        let repairs = dustroute_translate::propose_scene_repairs(
+        let mut staged = self.app.analyze_physical(&world, request);
+        staged.reverse.analysis.scene.observation.dimension = dimension.clone();
+        staged
+            .hierarchy
+            .physical_snapshot
+            .value
+            .scene
+            .observation
+            .dimension = dimension.clone();
+        staged
+            .hierarchy
+            .physical_graph
+            .value
+            .scene
+            .observation
+            .dimension = dimension.clone();
+        let translated = &staged.reverse;
+        let focused = focused_role_json(translated, target);
+        let repairs = dustroute_translate::propose_scene_repairs_near(
             &world,
             &translated.analysis.scene,
             fragment_gap,
+            target,
+            12,
         );
         let mut repair_json = Vec::new();
         for proposal in repairs.into_iter().take(16) {
             let operation_id = uuid::Uuid::new_v4();
-            self.repair_plans.lock().await.insert(
-                operation_id,
-                StoredRepairPlan {
-                    patch: proposal.patch.clone(),
-                    dimension: dimension.clone(),
-                    analysis_bounds: bounds,
-                    fragments_before: translated.analysis.scene.fragments.len(),
-                    previewed: false,
-                    applied: false,
-                },
-            );
+            if let Err(error) = self
+                .store_repair_plan(
+                    operation_id,
+                    StoredRepairPlan {
+                        patch: proposal.patch.clone(),
+                        dimension: dimension.clone(),
+                        analysis_bounds: bounds,
+                        fragments_before: translated.analysis.scene.fragments.len(),
+                        baseline_truth_table: translated.truth_table.clone(),
+                        previewed: false,
+                        applied: false,
+                    },
+                )
+                .await
+            {
+                return json_text(json!({ "ok": false, "error": error }));
+            }
             repair_json.push(json!({
                 "operation_id": operation_id,
                 "patch": proposal.patch,
-                "evidence": proposal.evidence
+                "evidence": proposal.evidence,
+                "virtual_impact": proposal.impact
             }));
         }
         let incomplete = discovery["expansion"]["limit_reached"] == Value::Bool(true);
-        let mut result = reverse_result_json(bounds, &translated);
+        let mut result = reverse_result_json(bounds, translated);
         if let Some(object) = result.as_object_mut() {
             object.insert("focused_component".to_owned(), focused);
             object.insert("discovery".to_owned(), discovery["candidate"].clone());
             object.insert("analysis_complete".to_owned(), Value::Bool(!incomplete));
             object.insert("repair_proposals".to_owned(), Value::Array(repair_json));
+            object.insert(
+                "transition_scenarios".to_owned(),
+                json!({
+                    "safety": transition_safety,
+                    "proposals": transition_proposals,
+                    "next_step": "preview_transition_scenario before requesting confirmation"
+                }),
+            );
             object.insert(
                 "interpretation_guidance".to_owned(),
                 Value::String(if incomplete {
@@ -1931,11 +2365,14 @@ impl DustRouteMcp {
                     "component_limit": null,
                     "limit_reached": false
                 }),
+                None,
             ));
         }
-        let mut translated = self.app.analyze_world(&world, ReverseRequest::new(bounds));
-        translated.analysis.scene.observation.dimension = dimension;
-        json_text(reverse_result_json(bounds, &translated))
+        let mut staged = self
+            .app
+            .analyze_physical(&world, ReverseRequest::new(bounds));
+        staged.reverse.analysis.scene.observation.dimension = dimension;
+        json_text(reverse_result_json(bounds, &staged.reverse))
     }
 
     #[tool(
@@ -1983,17 +2420,23 @@ impl DustRouteMcp {
         let mut response = Vec::new();
         for proposal in proposals.into_iter().take(32) {
             let operation_id = uuid::Uuid::new_v4();
-            self.repair_plans.lock().await.insert(
-                operation_id,
-                StoredRepairPlan {
-                    patch: proposal.patch.clone(),
-                    dimension: dimension.clone(),
-                    analysis_bounds: bounds,
-                    fragments_before,
-                    previewed: false,
-                    applied: false,
-                },
-            );
+            if let Err(error) = self
+                .store_repair_plan(
+                    operation_id,
+                    StoredRepairPlan {
+                        patch: proposal.patch.clone(),
+                        dimension: dimension.clone(),
+                        analysis_bounds: bounds,
+                        fragments_before,
+                        baseline_truth_table: None,
+                        previewed: false,
+                        applied: false,
+                    },
+                )
+                .await
+            {
+                return json_text(json!({ "ok": false, "error": error }));
+            }
             self.operations
                 .record_completed(
                     operation_id,
@@ -2069,17 +2512,23 @@ impl DustRouteMcp {
             );
         };
         let operation_id = uuid::Uuid::new_v4();
-        self.repair_plans.lock().await.insert(
-            operation_id,
-            StoredRepairPlan {
-                patch: proposal.patch.clone(),
-                dimension,
-                analysis_bounds: bounds,
-                fragments_before: analysis.scene.fragments.len(),
-                previewed: false,
-                applied: false,
-            },
-        );
+        if let Err(error) = self
+            .store_repair_plan(
+                operation_id,
+                StoredRepairPlan {
+                    patch: proposal.patch.clone(),
+                    dimension,
+                    analysis_bounds: bounds,
+                    fragments_before: analysis.scene.fragments.len(),
+                    baseline_truth_table: None,
+                    previewed: false,
+                    applied: false,
+                },
+            )
+            .await
+        {
+            return json_text(json!({ "ok": false, "error": error }));
+        }
         json_text(json!({
             "ok": true,
             "operation_id": operation_id,
@@ -2099,9 +2548,12 @@ impl DustRouteMcp {
             Ok(id) => id,
             Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
         };
-        let plan = match self.repair_plans.lock().await.get(&operation_id).cloned() {
-            Some(plan) => plan,
-            None => return json_text(json!({ "ok": false, "error": "unknown repair ID" })),
+        let plan = match self.repair_plan(operation_id).await {
+            Ok(Some(plan)) => plan,
+            Ok(None) => {
+                return json_text(json!({ "ok": false, "error": "unknown or expired repair ID" }));
+            }
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
         };
         let Some(bounds) = bounds_for_changes(&plan.patch.changes) else {
             return json_text(json!({ "ok": false, "error": "repair has no changes" }));
@@ -2112,11 +2564,11 @@ impl DustRouteMcp {
             .await
         {
             Ok(preview) => {
-                self.repair_plans
-                    .lock()
-                    .await
-                    .entry(operation_id)
-                    .and_modify(|stored| stored.previewed = true);
+                let mut previewed = plan.clone();
+                previewed.previewed = true;
+                if let Err(error) = self.store_repair_plan(operation_id, previewed).await {
+                    return json_text(json!({ "ok": false, "error": error }));
+                }
                 json_text(json!({
                     "ok": true,
                     "operation_id": operation_id,
@@ -2150,6 +2602,460 @@ impl DustRouteMcp {
         Parameters(params): Parameters<ConfirmedOperationParams>,
     ) -> String {
         self.mutate_repair(params, true).await
+    }
+
+    #[tool(
+        description = "Discover single-lever transition scenarios around the player's gaze without changing the world",
+        annotations(read_only_hint = true, destructive_hint = false)
+    )]
+    async fn propose_transition_scenarios(
+        &self,
+        Parameters(params): Parameters<ProposeTransitionParams>,
+    ) -> String {
+        let player = match self.resolve_player(params.player.as_deref()) {
+            Ok(player) => player,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+        };
+        if let Some(error) = self.authorize_player(&player) {
+            return error;
+        }
+        let observation_ticks = params.observation_ticks.unwrap_or(20);
+        let max_events = params.max_events.unwrap_or(16_384);
+        if !(1..=200).contains(&observation_ticks) || !(1..=65_536).contains(&max_events) {
+            return json_text(json!({
+                "ok": false,
+                "error": "observation_ticks must be 1..200 and max_events must be 1..65536"
+            }));
+        }
+        let discovery_text = self
+            .discover_looked_at_circuit(Parameters(DiscoverCircuitParams {
+                player: Some(player.clone()),
+                max_components: params.max_components,
+                padding: Some(1),
+                fragment_gap: Some(2),
+            }))
+            .await;
+        let discovery: Value = match serde_json::from_str(&discovery_text) {
+            Ok(value) => value,
+            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        };
+        if discovery.get("ok") != Some(&Value::Bool(true)) {
+            return discovery_text;
+        }
+        let (bounds, dimension) = match self.selected_region(&player).await {
+            Ok(region) => region,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+        };
+        if let Err(error) = self.policy.validate_region(bounds) {
+            return json_text(json!({ "ok": false, "error": error.to_string() }));
+        }
+        let snapshot = match self
+            .bridge
+            .scan_region(bounds.min, bounds.max, &dimension)
+            .await
+        {
+            Ok(snapshot) => snapshot,
+            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        };
+        let (safety, proposals) = self
+            .create_transition_proposals(
+                &player,
+                &dimension,
+                bounds,
+                &snapshot,
+                observation_ticks,
+                max_events,
+            )
+            .await;
+        if safety.safety == TransitionSafety::Rejected {
+            return json_text(json!({
+                "ok": false,
+                "safety": safety,
+                "error": "the observed region is not eligible for an automatic transition scenario"
+            }));
+        }
+        json_text(json!({
+            "ok": true,
+            "bounds": bounds_json(bounds),
+            "dimension": dimension,
+            "proposals": proposals,
+            "next_step": "preview_transition_scenario, then run_transition_scenario(confirm=true) only for a ready proposal"
+        }))
+    }
+
+    #[tool(
+        description = "Highlight a proposed lever transition and observation region without activating it",
+        annotations(read_only_hint = true, destructive_hint = false)
+    )]
+    async fn preview_transition_scenario(
+        &self,
+        Parameters(params): Parameters<PreviewTransitionParams>,
+    ) -> String {
+        let operation_id = match uuid::Uuid::parse_str(&params.operation_id) {
+            Ok(id) => id,
+            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        };
+        let mut plans = self.transition_plans.lock().await;
+        let Some(plan) = plans.get_mut(&operation_id) else {
+            return json_text(json!({ "ok": false, "error": "transition scenario not found" }));
+        };
+        let player = match self.resolve_player(params.player.as_deref()) {
+            Ok(player) => player,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+        };
+        if player != plan.player {
+            return json_text(
+                json!({ "ok": false, "error": "scenario belongs to another player" }),
+            );
+        }
+        let preview = match self
+            .bridge
+            .preview_region(&player, plan.bounds.min, plan.bounds.max, &plan.dimension)
+            .await
+        {
+            Ok(preview) => preview,
+            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        };
+        plan.previewed = true;
+        json_text(json!({
+            "ok": true,
+            "operation_id": operation_id,
+            "lever": plan.lever,
+            "original_powered": plan.original_powered,
+            "safety": plan.safety,
+            "preview": preview,
+            "warning": "running normally activates this lever once and restores it after observation"
+        }))
+    }
+
+    #[tool(
+        description = "Run a previewed single-lever transition, record block updates, analyze transients, and restore the original state",
+        annotations(read_only_hint = false, destructive_hint = true)
+    )]
+    async fn run_transition_scenario(
+        &self,
+        Parameters(params): Parameters<RunTransitionParams>,
+    ) -> String {
+        if !params.confirm {
+            return json_text(json!({ "ok": false, "error": "confirm=true is required" }));
+        }
+        if let Err(error) = self.policy.authorize_mutation() {
+            return json_text(json!({ "ok": false, "error": error.to_string() }));
+        }
+        let operation_id = match uuid::Uuid::parse_str(&params.operation_id) {
+            Ok(id) => id,
+            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        };
+        let plan = match self
+            .transition_plans
+            .lock()
+            .await
+            .get(&operation_id)
+            .cloned()
+        {
+            Some(plan) => plan,
+            None => {
+                return json_text(json!({ "ok": false, "error": "transition scenario not found" }));
+            }
+        };
+        if self.policy.preview_required && !plan.previewed {
+            return json_text(
+                json!({ "ok": false, "error": "preview_transition_scenario is required first" }),
+            );
+        }
+        if plan.executed {
+            return json_text(json!({
+                "ok": false,
+                "error": "scenario was already executed; create and preview a new scenario"
+            }));
+        }
+        if plan.safety.safety != TransitionSafety::Ready {
+            return json_text(json!({
+                "ok": false,
+                "error": "scenario is preview-only because the region contains temporal or unsupported devices",
+                "safety": plan.safety
+            }));
+        }
+        let current = match self.bridge.get_block(plan.lever, &plan.dimension).await {
+            Ok(block) => block,
+            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        };
+        let current_powered = current
+            .state
+            .properties
+            .get("powered")
+            .and_then(|value| value.parse::<bool>().ok());
+        if current.state.name != "minecraft:lever" || current_powered != Some(plan.original_powered)
+        {
+            return json_text(json!({
+                "ok": false,
+                "error": "lever state changed since proposal; create a new scenario"
+            }));
+        }
+        let snapshot_json = match serde_json::to_string(&plan.initial_snapshot) {
+            Ok(snapshot) => snapshot,
+            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        };
+        let (_, world) = match world_from_snapshot_json(&snapshot_json) {
+            Ok(value) => value,
+            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        };
+        let mut analysis = dustroute_translate::analyze_world_region(&world, plan.bounds);
+        analysis.scene.observation.dimension = plan.dimension.clone();
+        let contracts = match transition_contracts(params.contracts.as_deref(), &analysis.scene) {
+            Ok(contracts) => contracts,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+        };
+        let started = match self
+            .bridge
+            .start_update_recording(
+                plan.bounds.min,
+                plan.bounds.max,
+                &plan.dimension,
+                plan.max_events,
+            )
+            .await
+        {
+            Ok(started) => started,
+            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        };
+        let activation = match self
+            .bridge
+            .activate_lever(plan.lever, &plan.dimension)
+            .await
+        {
+            Ok(activation) => activation,
+            Err(error) => {
+                let _ = self
+                    .bridge
+                    .stop_update_recording(&started.recording_id, &plan.dimension)
+                    .await;
+                return json_text(json!({ "ok": false, "error": error.to_string() }));
+            }
+        };
+        let wait_error = self
+            .bridge
+            .wait_ticks(plan.observation_ticks, &plan.dimension)
+            .await
+            .err()
+            .map(|error| error.to_string());
+        let recording_result = self
+            .bridge
+            .stop_update_recording(&started.recording_id, &plan.dimension)
+            .await;
+
+        let restore_error = self
+            .bridge
+            .activate_lever(plan.lever, &plan.dimension)
+            .await
+            .err()
+            .map(|error| error.to_string());
+        let _ = self
+            .bridge
+            .wait_ticks(plan.observation_ticks, &plan.dimension)
+            .await;
+        let restored_block = self.bridge.get_block(plan.lever, &plan.dimension).await;
+        let restored_snapshot = self
+            .bridge
+            .scan_region(plan.bounds.min, plan.bounds.max, &plan.dimension)
+            .await;
+        let lever_restored = restored_block.as_ref().ok().is_some_and(|block| {
+            block.state.name == "minecraft:lever"
+                && block
+                    .state
+                    .properties
+                    .get("powered")
+                    .and_then(|value| value.parse::<bool>().ok())
+                    == Some(plan.original_powered)
+        });
+        let region_restored = restored_snapshot
+            .as_ref()
+            .is_ok_and(|snapshot| snapshot == &plan.initial_snapshot);
+        let restoration_verified = restore_error.is_none() && lever_restored && region_restored;
+        if let Some(stored) = self.transition_plans.lock().await.get_mut(&operation_id) {
+            stored.executed = true;
+            stored.restoration_verified = restoration_verified;
+        }
+        let recording = match recording_result {
+            Ok(recording) => recording,
+            Err(error) => {
+                return json_text(json!({
+                    "ok": false,
+                    "error": error.to_string(),
+                    "restoration_verified": restoration_verified,
+                    "restore_error": restore_error
+                }));
+            }
+        };
+        let trace = behavior_trace_from_recording(
+            &recording,
+            &analysis.scene,
+            format!(
+                "lever {} -> {}",
+                activation.before_powered, activation.after_powered
+            ),
+        );
+        let transient = dustroute_ir::assess_transients(&trace, &contracts);
+        let observe = plan
+            .initial_snapshot
+            .blocks
+            .iter()
+            .filter(|block| is_redstone_candidate_name(&block.name))
+            .map(|block| block.pos)
+            .collect::<BTreeSet<_>>();
+        let duration_redstone_ticks = u64::from(plan.observation_ticks).div_ceil(2);
+        let scenario = dustroute_translate::Scenario {
+            label: format!("lever transition at {:?}", plan.lever),
+            initial: plan.initial_snapshot.clone(),
+            actions: vec![dustroute_translate::ScenarioAction::SetPowered {
+                redstone_tick: 0,
+                position: plan.lever,
+                powered: !plan.original_powered,
+            }],
+            observe: observe.clone(),
+            duration_redstone_ticks,
+            required_capabilities: Vec::new(),
+            expectation: dustroute_translate::ScenarioExpectation::default(),
+        };
+        let simulated = dustroute_translate::simulate_scenario(&scenario);
+        let live_scenario_trace =
+            scenario_trace_from_recording(&recording, &observe, duration_redstone_ticks);
+        let simulation_comparison = simulated.as_ref().ok().map(|simulated| {
+            dustroute_translate::compare_live_trace(&simulated.trace, &live_scenario_trace)
+        });
+        let result = json!({
+            "ok": restoration_verified && wait_error.is_none() && !recording.truncated,
+            "operation_id": operation_id,
+            "activation": activation,
+            "observation_ticks": plan.observation_ticks,
+            "recording": {
+                "started_game_tick": recording.started_game_tick,
+                "stopped_game_tick": recording.stopped_game_tick,
+                "seen_events": recording.seen_events,
+                "stored_events": recording.events.len(),
+                "truncated": recording.truncated
+            },
+            "trace": trace,
+            "transient_assessment": transient,
+            "scenario_verification": {
+                "scenario": scenario,
+                "simulated": simulated,
+                "live_trace": live_scenario_trace,
+                "differences": simulation_comparison,
+                "equivalent": simulation_comparison.as_ref().is_some_and(Vec::is_empty)
+            },
+            "restoration": {
+                "lever_restored": lever_restored,
+                "region_restored": region_restored,
+                "verified": restoration_verified,
+                "activation_error": restore_error,
+            },
+            "wait_error": wait_error,
+            "guidance": "hazard_candidate is an observed pulse without registered intent; register a signal contract before calling it a confirmed hazard"
+        });
+        self.operations
+            .record_completed(operation_id, OperationKind::TransitionRun, result.clone())
+            .await;
+        json_text(result)
+    }
+
+    #[tool(
+        description = "Get a transition scenario proposal or completed run result",
+        annotations(read_only_hint = true, destructive_hint = false)
+    )]
+    async fn get_transition_result(
+        &self,
+        Parameters(params): Parameters<OperationParams>,
+    ) -> String {
+        self.get_operation(Parameters(params)).await
+    }
+
+    #[tool(
+        description = "Attempt to restore a transition scenario lever and verify its original region snapshot",
+        annotations(read_only_hint = false, destructive_hint = true)
+    )]
+    async fn restore_transition_scenario(
+        &self,
+        Parameters(params): Parameters<RunTransitionParams>,
+    ) -> String {
+        if !params.confirm {
+            return json_text(json!({ "ok": false, "error": "confirm=true is required" }));
+        }
+        if let Err(error) = self.policy.authorize_mutation() {
+            return json_text(json!({ "ok": false, "error": error.to_string() }));
+        }
+        let operation_id = match uuid::Uuid::parse_str(&params.operation_id) {
+            Ok(id) => id,
+            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        };
+        let plan = match self
+            .transition_plans
+            .lock()
+            .await
+            .get(&operation_id)
+            .cloned()
+        {
+            Some(plan) => plan,
+            None => {
+                return json_text(json!({ "ok": false, "error": "transition scenario not found" }));
+            }
+        };
+        let current = match self.bridge.get_block(plan.lever, &plan.dimension).await {
+            Ok(block) => block,
+            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        };
+        let powered = current
+            .state
+            .properties
+            .get("powered")
+            .and_then(|value| value.parse::<bool>().ok());
+        let activation_error = if powered != Some(plan.original_powered) {
+            self.bridge
+                .activate_lever(plan.lever, &plan.dimension)
+                .await
+                .err()
+                .map(|error| error.to_string())
+        } else {
+            None
+        };
+        let _ = self
+            .bridge
+            .wait_ticks(plan.observation_ticks, &plan.dimension)
+            .await;
+        let block = self.bridge.get_block(plan.lever, &plan.dimension).await;
+        let snapshot = self
+            .bridge
+            .scan_region(plan.bounds.min, plan.bounds.max, &plan.dimension)
+            .await;
+        let verified = activation_error.is_none()
+            && block.as_ref().ok().is_some_and(|block| {
+                block
+                    .state
+                    .properties
+                    .get("powered")
+                    .and_then(|value| value.parse::<bool>().ok())
+                    == Some(plan.original_powered)
+            })
+            && snapshot
+                .as_ref()
+                .is_ok_and(|snapshot| snapshot == &plan.initial_snapshot);
+        if let Some(stored) = self.transition_plans.lock().await.get_mut(&operation_id) {
+            stored.restoration_verified = verified;
+        }
+        let result = json!({
+            "ok": verified,
+            "operation_id": operation_id,
+            "restoration_verified": verified,
+            "activation_error": activation_error
+        });
+        self.operations
+            .record_completed(
+                operation_id,
+                OperationKind::TransitionRestore,
+                result.clone(),
+            )
+            .await;
+        json_text(result)
     }
 
     #[tool(
@@ -2253,11 +3159,12 @@ impl DustRouteMcp {
                             "component_limit": null,
                             "limit_reached": false
                         }),
+                        None,
                     )
                 } else {
-                    let mut translated = app.analyze_world(&world, ReverseRequest::new(bounds));
-                    translated.analysis.scene.observation.dimension = dimension;
-                    reverse_result_json(bounds, &translated)
+                    let mut staged = app.analyze_physical(&world, ReverseRequest::new(bounds));
+                    staged.reverse.analysis.scene.observation.dimension = dimension;
+                    reverse_result_json(bounds, &staged.reverse)
                 }
             })
             .await
@@ -2340,7 +3247,7 @@ impl DustRouteMcp {
     async fn collaboration_prompt(&self) -> GetPromptResult {
         GetPromptResult::new(vec![PromptMessage::new_text(
             Role::User,
-            "Work with the player on a Minecraft redstone circuit. For questions about what the bot can literally see, scan coverage, or raw block states, call inspect_looked_at_world before applying circuit inference. Interpret 'this', 'here', 'what is this?', and similar circuit questions through analyze_looked_at_circuit so one call returns the focused physical component, its local signal role, the inferred higher-level logical function, diagnostics, and repair proposals. If analysis_complete is false, describe the local role but label the higher-level classification provisional and ask for a bounded functional region. For an explicitly selected region, use discover_looked_at_circuit or two mark_region_corner calls, preview_region, and analyze_selected_region. Preview every repair and obtain explicit confirmation before applying it. Only call propose_targeted_component_removal when the player explicitly identifies the looked-at component as unwanted. Never infer coordinates from prose when gaze tools can ground them, and never perform a world mutation without an explicit preview and confirmation.".to_owned(),
+            "Work with the player on a Minecraft redstone circuit. For questions about what the bot can literally see, scan coverage, or raw block states, call inspect_looked_at_world before applying circuit inference. Interpret 'this', 'here', 'what is this?', and similar circuit questions through analyze_looked_at_circuit. Treat its response as a workflow: first explain the focused physical component and local signal role; then explain higher-level candidates with completeness and evidence; then offer either a returned transition scenario or repair proposal. For a transition, call preview_transition_scenario, explain exactly which lever and region will be touched, obtain explicit confirmation, then call run_transition_scenario with confirm=true; report both the live trace and Rust-simulator differences, and verify restoration. For a repair, call preview_repair, explain the block diff, obtain explicit confirmation, call apply_repair with confirm=true, and report the post-repair reanalysis and semantic verification. If analysis_complete is false, label higher-level classification provisional. For an explicitly selected region, use discover_looked_at_circuit or two mark_region_corner calls, preview_region, and analyze_selected_region. Only call propose_targeted_component_removal when the player explicitly identifies the looked-at component as unwanted. Never infer coordinates from prose when gaze tools can ground them, and never mutate the world without preview and explicit confirmation.".to_owned(),
         )])
         .with_description("Safe gaze-grounded DustRoute collaboration workflow")
     }
@@ -2361,7 +3268,7 @@ impl ServerHandler for DustRouteMcp {
             env!("CARGO_PKG_VERSION"),
         ))
         .with_instructions(
-            "Use the collaborate-on-redstone-circuit prompt. Use inspect_looked_at_world for raw visibility and scan-state questions; for circuit questions such as 'what is this?', prefer analyze_looked_at_circuit. Treat incomplete boundary-limited classifications as provisional. Keep world mutations behind a preview and explicit confirmation."
+            "Use the collaborate-on-redstone-circuit prompt. Use inspect_looked_at_world for raw visibility questions and analyze_looked_at_circuit to begin the explanation, transition-test, or repair workflow. Present evidence and completeness before higher-level claims. Preview every transition or repair, obtain explicit confirmation before mutation, and report live-versus-simulated or post-repair verification afterward."
         )
     }
 }
@@ -2634,20 +3541,26 @@ mod tests {
         assert_eq!(value["ok"], true, "{result}");
         assert_eq!(value["focused_component"]["block"], "Repeater");
         assert_eq!(
+            value["focused_component"]["observed_name"],
+            "minecraft:repeater"
+        );
+        assert_eq!(
+            value["focused_component"]["observed_properties"]["delay"],
+            "1"
+        );
+        assert_eq!(
+            value["focused_component"]["capabilities"]["temporal"],
+            "partial"
+        );
+        assert_eq!(
             value["focused_component"]["recognized_gates"][0]["kind"],
             "buffer"
         );
         assert!(!value["gate_view"]["gates"].as_array().unwrap().is_empty());
         assert!(value["physical"]["observation"].is_object());
-    }
-
-    #[test]
-    fn recognizes_common_boolean_functions_for_logical_roles() {
-        assert_eq!(boolean_function(&[false, false, false, true]), Some("and"));
-        assert_eq!(boolean_function(&[false, true, true, true]), Some("or"));
-        assert_eq!(boolean_function(&[false, true, true, false]), Some("xor"));
-        assert_eq!(boolean_function(&[true, false]), Some("not"));
-        assert_eq!(boolean_function(&[false, false, true, false]), None);
+        assert!(value["physical"]["block_capabilities"]["groups"].is_array());
+        assert!(value["stages"]["physical_scene"].is_object());
+        assert!(value["transition_scenarios"]["safety"].is_object());
     }
 
     #[tokio::test]
@@ -2667,12 +3580,13 @@ mod tests {
                 let result = match request["method"].as_str().unwrap() {
                     "scan_region" => broken_wire_snapshot(repaired),
                     "preview_region" => json!({ "particle_corners": 8 }),
-                    "write_blocks" => {
-                        repaired = request["params"]["changes"][0]["state"]
-                            .as_str()
-                            .unwrap()
-                            .starts_with("minecraft:redstone_wire");
-                        json!({ "submitted_changes": 1 })
+                    "place_physical_blocks" => {
+                        repaired = request["params"]["changes"][0]["action"] == "place";
+                        json!({
+                            "placed_changes": 1,
+                            "placement_mode": "mineflayer_player",
+                            "retreat": { "x": 2.5, "y": 18.0, "z": 0.5 }
+                        })
                     }
                     method => panic!("unexpected fake bridge method {method}"),
                 };
@@ -2732,6 +3646,9 @@ mod tests {
             }))
             .await;
         assert!(applied.contains("\"verified\": true"), "{applied}");
+        let applied_value: Value = serde_json::from_str(&applied).unwrap();
+        assert!(applied_value["resulting_logic"].is_object());
+        assert_eq!(applied_value["semantic_verification"]["available"], false);
         let undone = service
             .undo_repair(Parameters(ConfirmedOperationParams {
                 operation_id,

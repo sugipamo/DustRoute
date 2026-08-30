@@ -7,10 +7,13 @@
 use crate::{BlockKind, BlockProperties};
 
 mod air;
+mod button;
 mod comparator;
 mod lever;
 mod piston;
+mod pressure_plate;
 mod redstone_block;
+mod redstone_lamp;
 mod redstone_torch;
 mod redstone_wire;
 mod repeater;
@@ -45,6 +48,9 @@ pub const fn behavior_profile(kind: BlockKind) -> BlockBehaviorProfile {
         BlockKind::Repeater => repeater::PROFILE,
         BlockKind::Comparator => comparator::PROFILE,
         BlockKind::Lever => lever::PROFILE,
+        BlockKind::Button => button::PROFILE,
+        BlockKind::PressurePlate => pressure_plate::PROFILE,
+        BlockKind::RedstoneLamp => redstone_lamp::PROFILE,
         BlockKind::RedstoneBlock => redstone_block::PROFILE,
         BlockKind::Piston => piston::PROFILE,
     }

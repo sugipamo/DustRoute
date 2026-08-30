@@ -12,6 +12,9 @@ pub struct CircuitDiscovery {
     pub looked_at: Pos,
     pub bounds: RegionBoundsDto,
     pub node_count: usize,
+    /// Preferred name: an undirected exploration group, not a logical circuit.
+    pub physical_traversal_group_count: usize,
+    /// Compatibility field for older clients.
     pub fragment_count: usize,
     pub gap_candidate_count: usize,
     pub touches_scan_boundary: bool,
@@ -130,6 +133,7 @@ pub fn discover_connected_region(
         looked_at,
         bounds: RegionBounds::new(min, max).into(),
         node_count: nodes.len(),
+        physical_traversal_group_count: fragments.len(),
         fragment_count: fragments.len(),
         gap_candidate_count,
         touches_scan_boundary,

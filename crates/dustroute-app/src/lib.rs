@@ -5,8 +5,9 @@ mod planning;
 use dustroute_ir::LogicDag;
 use dustroute_physical::World;
 use dustroute_translate::{
-    ForwardOptions, ForwardResult, RegionBounds, ReverseRequest, ReverseResult, TranslateError,
-    Translator, decoder_1_to_2, full_adder, half_adder, half_subtractor, mux_2_to_1,
+    ForwardOptions, ForwardResult, PhysicalAnalysis, RegionBounds, ReverseRequest, ReverseResult,
+    TranslateError, Translator, analyze_physical_region, decoder_1_to_2, full_adder, half_adder,
+    half_subtractor, mux_2_to_1,
 };
 
 pub use planning::{
@@ -44,6 +45,13 @@ impl DustRouteService {
     #[must_use]
     pub fn analyze_world(&self, world: &World, request: ReverseRequest) -> ReverseResult {
         self.translator.reverse(world, request)
+    }
+
+    /// Preferred physical-first entry point for frontends that need evidence,
+    /// completeness, timing, and higher interpretations together.
+    #[must_use]
+    pub fn analyze_physical(&self, world: &World, request: ReverseRequest) -> PhysicalAnalysis {
+        analyze_physical_region(world, request)
     }
 
     #[must_use]

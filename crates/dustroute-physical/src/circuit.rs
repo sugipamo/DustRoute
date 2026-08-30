@@ -13,10 +13,16 @@ pub struct NetId(pub usize);
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 pub struct FragmentId(pub usize);
 
+/// Preferred name for a Union-Find group used only for physical traversal and
+/// nearby-fragment discovery. It is not a logical circuit or signal-flow unit.
+pub type PhysicalTraversalGroupId = FragmentId;
+
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ConnectionKind {
     Dust,
+    DustRise,
+    DustFallThroughConductor,
     WeakPower,
     StrongPower,
     DirectionalInput,
@@ -47,11 +53,15 @@ pub struct PhysicalNet {
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-pub struct PhysicalFragment {
+pub struct PhysicalTraversalGroup {
     pub id: FragmentId,
     pub nets: BTreeSet<NetId>,
     pub components: BTreeSet<ComponentId>,
 }
+
+/// Compatibility name. New APIs should say `PhysicalTraversalGroup` so callers
+/// do not mistake undirected membership for functional circuit identity.
+pub type PhysicalFragment = PhysicalTraversalGroup;
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
@@ -93,6 +103,13 @@ pub struct VerifiedTopology {
 }
 
 impl VerifiedTopology {
+    /// Undirected groups used to bound physical discovery. These groups do not
+    /// imply common signal direction, driveability, or logical function.
+    #[must_use]
+    pub fn physical_traversal_groups(&self) -> &[PhysicalTraversalGroup] {
+        &self.fragments
+    }
+
     #[must_use]
     pub fn from_parts(
         mut components: Vec<PhysicalComponent>,
@@ -108,7 +125,11 @@ impl VerifiedTopology {
         let nets: Vec<_> = connection_groups(&components, &connections, &indices, |kind| {
             matches!(
                 kind,
-                ConnectionKind::Dust | ConnectionKind::WeakPower | ConnectionKind::StrongPower
+                ConnectionKind::Dust
+                    | ConnectionKind::DustRise
+                    | ConnectionKind::DustFallThroughConductor
+                    | ConnectionKind::WeakPower
+                    | ConnectionKind::StrongPower
             )
         })
         .into_values()

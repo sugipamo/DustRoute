@@ -2,11 +2,19 @@ use std::collections::BTreeMap;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 
-use crate::connectivity::repeater_output_pos;
-use crate::wire::{HORIZONTAL, dust_connected, wire_has_arm};
+use crate::connectivity::{comparator_output_pos, repeater_output_pos};
+use crate::wire::{HORIZONTAL, dust_transmits, wire_has_arm};
 use crate::world::{BlockKind, Pos, World};
 
 pub const MAX_SIGNAL: u8 = 15;
+const ADJACENT: [Pos; 6] = [
+    Pos::new(1, 0, 0),
+    Pos::new(-1, 0, 0),
+    Pos::new(0, 1, 0),
+    Pos::new(0, -1, 0),
+    Pos::new(0, 0, 1),
+    Pos::new(0, 0, -1),
+];
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct PoweredBlockState {
@@ -30,6 +38,7 @@ impl PoweredBlockState {
 pub struct DeviceOutputState {
     pub repeater_powered: BTreeMap<Pos, bool>,
     pub torch_lit: BTreeMap<Pos, bool>,
+    pub comparator_output: BTreeMap<Pos, u8>,
 }
 
 impl DeviceOutputState {
@@ -45,6 +54,11 @@ impl DeviceOutputState {
                 .iter()
                 .filter(|(_, block)| block.kind == BlockKind::RedstoneTorch)
                 .map(|(pos, _)| (*pos, true))
+                .collect(),
+            comparator_output: world
+                .iter()
+                .filter(|(_, block)| block.kind == BlockKind::Comparator)
+                .map(|(pos, _)| (*pos, 0))
                 .collect(),
         }
     }
@@ -92,13 +106,18 @@ fn component_output_level(world: &World, pos: Pos, devices: &DeviceOutputState) 
     };
     match block.kind {
         BlockKind::RedstoneBlock => MAX_SIGNAL,
-        BlockKind::Lever if block.powered.unwrap_or(false) => MAX_SIGNAL,
+        BlockKind::Lever | BlockKind::Button | BlockKind::PressurePlate
+            if block.powered.unwrap_or(false) =>
+        {
+            block.power_level.unwrap_or(MAX_SIGNAL).min(MAX_SIGNAL)
+        }
         BlockKind::RedstoneTorch if devices.torch_lit.get(&pos).copied().unwrap_or(false) => {
             MAX_SIGNAL
         }
         BlockKind::Repeater if devices.repeater_powered.get(&pos).copied().unwrap_or(false) => {
             MAX_SIGNAL
         }
+        BlockKind::Comparator => devices.comparator_output.get(&pos).copied().unwrap_or(0),
         _ => 0,
     }
 }
@@ -126,18 +145,40 @@ fn compute_powered_blocks(
         if output == 0 {
             continue;
         }
-        let target = match block.kind {
-            BlockKind::Lever => block.support_pos(*pos),
-            BlockKind::Repeater => repeater_output_pos(world, *pos),
-            _ => None,
+        let targets: Vec<_> = match block.kind {
+            BlockKind::Lever | BlockKind::Button | BlockKind::PressurePlate => {
+                block.support_pos(*pos).into_iter().collect()
+            }
+            BlockKind::Repeater => repeater_output_pos(world, *pos).into_iter().collect(),
+            BlockKind::Comparator => comparator_output_pos(world, *pos).into_iter().collect(),
+            BlockKind::RedstoneBlock => ADJACENT
+                .into_iter()
+                .map(|delta| pos.offset(delta.x, delta.y, delta.z))
+                .collect(),
+            _ => Vec::new(),
         };
-        if let Some(target) =
-            target.filter(|target| world.kind_at(*target).properties().receives_strong_power)
-        {
+        for target in targets.into_iter().filter(|target| {
+            world
+                .get(*target)
+                .is_some_and(|block| block.redstone_traits().conducts_strong_power)
+        }) {
             strong
                 .entry(target)
                 .and_modify(|value| *value = (*value).max(output))
                 .or_insert(output);
+        }
+    }
+    for (source, level) in strong.clone() {
+        for delta in ADJACENT {
+            let target = source.offset(delta.x, delta.y, delta.z);
+            if world
+                .get(target)
+                .is_some_and(|block| block.redstone_traits().conducts_weak_power)
+            {
+                weak.entry(target)
+                    .and_modify(|value| *value = (*value).max(level))
+                    .or_insert(level);
+            }
         }
     }
     for (pos, block) in world.iter() {
@@ -149,7 +190,10 @@ fn compute_powered_blocks(
             continue;
         }
         for target in dust_weak_power_targets(world, *pos) {
-            if world.kind_at(target).properties().receives_weak_power {
+            if world
+                .get(target)
+                .is_some_and(|block| block.redstone_traits().conducts_weak_power)
+            {
                 weak.entry(target)
                     .and_modify(|value| *value = (*value).max(level))
                     .or_insert(level);
@@ -158,7 +202,10 @@ fn compute_powered_blocks(
     }
     world
         .iter()
-        .filter(|(_, block)| block.kind.properties().can_be_powered())
+        .filter(|(_, block)| {
+            let traits = block.redstone_traits();
+            traits.conducts_weak_power || traits.conducts_strong_power
+        })
         .map(|(pos, _)| {
             (
                 *pos,
@@ -179,13 +226,21 @@ fn direct_level_into_dust(
     devices: &DeviceOutputState,
 ) -> u8 {
     match world.kind_at(neighbor) {
-        BlockKind::RedstoneBlock | BlockKind::Lever | BlockKind::RedstoneTorch => {
-            component_output_level(world, neighbor, devices)
-        }
+        BlockKind::RedstoneBlock
+        | BlockKind::Lever
+        | BlockKind::Button
+        | BlockKind::PressurePlate
+        | BlockKind::RedstoneTorch => component_output_level(world, neighbor, devices),
         BlockKind::Repeater if repeater_output_pos(world, neighbor) == Some(dust) => {
             component_output_level(world, neighbor, devices)
         }
-        kind if kind.properties().strong_power_drives_dust => {
+        BlockKind::Comparator if comparator_output_pos(world, neighbor) == Some(dust) => {
+            component_output_level(world, neighbor, devices)
+        }
+        _ if world
+            .get(neighbor)
+            .is_some_and(|block| block.redstone_traits().strong_power_drives_dust) =>
+        {
             block_power
                 .get(&neighbor)
                 .copied()
@@ -225,12 +280,22 @@ pub fn solve_instantaneous(
                 for dy in -1..=1 {
                     let other = dust.offset(delta.x, dy, delta.z);
                     if world.kind_at(other) == BlockKind::RedstoneWire
-                        && dust_connected(world, *dust, other)
+                        && dust_transmits(world, other, *dust)
                     {
                         best =
                             best.max(signals.get(&other).copied().unwrap_or(0).saturating_sub(1));
                     }
                 }
+            }
+            for dy in [-1, 1] {
+                let neighbor = dust.offset(0, dy, 0);
+                best = best.max(direct_level_into_dust(
+                    world,
+                    *dust,
+                    neighbor,
+                    &next_block_power,
+                    devices,
+                ));
             }
             for facing in HORIZONTAL {
                 if !wire_has_arm(world, *dust, facing) {
@@ -263,7 +328,10 @@ pub fn solve_instantaneous(
 
 #[must_use]
 pub fn repeater_input_level(world: &World, pos: Pos, state: &InstantaneousElectricalState) -> u8 {
-    if world.kind_at(pos).properties().repeater_reads_block_power {
+    if world
+        .get(pos)
+        .is_some_and(|block| block.kind.properties().repeater_reads_block_power)
+    {
         state.power(pos).level()
     } else {
         state.signal(pos)
@@ -279,7 +347,12 @@ pub fn torch_support_is_powered(
     world
         .get(pos)
         .and_then(|block| block.support_pos(pos))
-        .filter(|support| world.kind_at(*support).properties().can_be_powered())
+        .filter(|support| {
+            world.get(*support).is_some_and(|block| {
+                let traits = block.redstone_traits();
+                traits.conducts_weak_power || traits.conducts_strong_power
+            })
+        })
         .is_some_and(|support| state.power(support).powered())
 }
 
@@ -290,8 +363,14 @@ mod tests {
 
     use super::*;
 
+    fn glass() -> Block {
+        let mut block = Block::new(BlockKind::Transparent);
+        block.observed_name = Some("minecraft:glass".to_owned());
+        block
+    }
+
     #[test]
-    fn redstone_block_is_direct_source_not_stored_power() {
+    fn redstone_block_strongly_powers_adjacent_conductor() {
         let mut world = World::new();
         world.set(Pos::new(-1, 0, 0), Block::new(BlockKind::RedstoneBlock));
         world.set(Pos::new(0, 0, 0), Block::new(BlockKind::Solid));
@@ -300,7 +379,13 @@ mod tests {
         update_wire_shapes(&mut world);
         let state = solve_instantaneous(&world, &DeviceOutputState::default(), 128).unwrap();
         assert_eq!(state.signal(Pos::new(-1, 0, 0)), 15);
-        assert_eq!(state.power(Pos::new(0, 0, 0)), PoweredBlockState::default());
+        assert_eq!(
+            state.power(Pos::new(0, 0, 0)),
+            PoweredBlockState {
+                weak: 0,
+                strong: 15
+            }
+        );
         assert_eq!(state.signal(Pos::new(-1, 0, 1)), 15);
     }
 
@@ -323,6 +408,35 @@ mod tests {
     }
 
     #[test]
+    fn strong_powered_conductor_drives_adjacent_receiver() {
+        let mut world = World::new();
+        world.set(Pos::new(0, 0, 0), Block::new(BlockKind::RedstoneBlock));
+        world.set(Pos::new(1, 0, 0), Block::new(BlockKind::Solid));
+        world.set(Pos::new(2, 0, 0), Block::new(BlockKind::RedstoneLamp));
+        let state = solve_instantaneous(&world, &DeviceOutputState::default(), 128).unwrap();
+        assert_eq!(state.power(Pos::new(1, 0, 0)).strong, 15);
+        assert_eq!(state.power(Pos::new(2, 0, 0)).weak, 15);
+    }
+
+    #[test]
+    fn weighted_pressure_plate_preserves_analog_output() {
+        let mut world = World::new();
+        world.fill(
+            Pos::new(0, 0, 0),
+            Pos::new(1, 0, 0),
+            Block::new(BlockKind::Solid),
+        );
+        let plate = world.place(BlockKind::PressurePlate, Pos::new(0, 1, 0));
+        plate.powered = Some(true);
+        plate.power_level = Some(7);
+        plate.support_offset = Some(Pos::new(0, -1, 0));
+        world.place(BlockKind::RedstoneWire, Pos::new(1, 1, 0));
+        update_wire_shapes(&mut world);
+        let state = solve_instantaneous(&world, &DeviceOutputState::default(), 128).unwrap();
+        assert_eq!(state.signal(Pos::new(1, 1, 0)), 7);
+    }
+
+    #[test]
     fn dust_strength_decays() {
         let mut world = World::new();
         world.fill(
@@ -338,6 +452,31 @@ mod tests {
         let state = solve_instantaneous(&world, &DeviceOutputState::default(), 128).unwrap();
         assert_eq!(state.signal(Pos::new(1, 1, 0)), 15);
         assert_eq!(state.signal(Pos::new(3, 1, 0)), 13);
+    }
+
+    #[test]
+    fn glass_stair_carries_strength_up_but_not_down() {
+        let mut upward = World::new();
+        upward.set(Pos::new(0, 0, 0), Block::new(BlockKind::Solid));
+        upward.set(Pos::new(1, 1, 0), glass());
+        upward.set(Pos::new(-1, 1, 0), Block::new(BlockKind::RedstoneBlock));
+        upward.place(BlockKind::RedstoneWire, Pos::new(0, 1, 0));
+        upward.place(BlockKind::RedstoneWire, Pos::new(1, 2, 0));
+        update_wire_shapes(&mut upward);
+        let state = solve_instantaneous(&upward, &DeviceOutputState::default(), 128).unwrap();
+        assert_eq!(state.signal(Pos::new(0, 1, 0)), 15);
+        assert_eq!(state.signal(Pos::new(1, 2, 0)), 14);
+
+        let mut downward = World::new();
+        downward.set(Pos::new(0, 0, 0), Block::new(BlockKind::Solid));
+        downward.set(Pos::new(1, 1, 0), glass());
+        downward.set(Pos::new(2, 2, 0), Block::new(BlockKind::RedstoneBlock));
+        downward.place(BlockKind::RedstoneWire, Pos::new(0, 1, 0));
+        downward.place(BlockKind::RedstoneWire, Pos::new(1, 2, 0));
+        update_wire_shapes(&mut downward);
+        let state = solve_instantaneous(&downward, &DeviceOutputState::default(), 128).unwrap();
+        assert_eq!(state.signal(Pos::new(1, 2, 0)), 15);
+        assert_eq!(state.signal(Pos::new(0, 1, 0)), 0);
     }
 
     #[test]

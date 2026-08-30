@@ -1,0 +1,1 @@
+{"min":{"x":0,"y":0,"z":0},"max":{"x":0,"y":2,"z":0},"blocks":[{"pos":{"x":0,"y":0,"z":0},"name":"minecraft:stone"},{"pos":{"x":0,"y":1,"z":0},"name":"minecraft:redstone_torch","properties":{"lit":"true"}},{"pos":{"x":0,"y":2,"z":0},"name":"minecraft:redstone_wire","properties":{"power":"15"}}]}

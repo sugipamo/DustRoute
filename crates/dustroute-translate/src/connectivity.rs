@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
-use crate::wire::{dust_connected, wire_has_arm};
+use crate::wire::{DustTransfer, dust_transfer, wire_has_arm};
 use crate::world::{BlockKind, Facing, Pos, World};
 use dustroute_physical::{
     ComponentId, ConnectionKind, PhysicalComponent, PhysicalConnection, VerifiedTopology,
@@ -9,11 +9,16 @@ use dustroute_physical::{
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum PhysicalStepKind {
     Dust,
+    DustRise,
+    DustFallThroughConductor,
     DustToRepeater,
+    DustToComparator,
     RepeaterToDust,
+    ComparatorToDust,
     DustToBlock,
     BlockToRepeater,
     RepeaterToBlock,
+    ComparatorToBlock,
     SourceToDust,
 }
 
@@ -27,6 +32,8 @@ pub struct PhysicalStep {
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum EdgeKind {
     Dust,
+    DustRise,
+    DustFallThroughConductor,
     DustToBlockWeak,
     BlockToDustStrong,
     BlockToRepeater,
@@ -77,7 +84,12 @@ impl PhysicalConnectivityGraph {
     #[must_use]
     pub fn conductive_components(&self) -> Vec<BTreeSet<Pos>> {
         let mut adjacency: BTreeMap<Pos, BTreeSet<Pos>> = BTreeMap::new();
-        for edge in self.edges.iter().filter(|edge| edge.kind == EdgeKind::Dust) {
+        for edge in self.edges.iter().filter(|edge| {
+            matches!(
+                edge.kind,
+                EdgeKind::Dust | EdgeKind::DustRise | EdgeKind::DustFallThroughConductor
+            )
+        }) {
             adjacency.entry(edge.source).or_default().insert(edge.sink);
             adjacency.entry(edge.sink).or_default().insert(edge.source);
         }
@@ -138,29 +150,96 @@ pub fn repeater_output_pos(world: &World, pos: Pos) -> Option<Pos> {
 }
 
 #[must_use]
+pub fn comparator_input_pos(world: &World, pos: Pos) -> Option<Pos> {
+    let block = world.get(pos)?;
+    if block.kind != BlockKind::Comparator {
+        return None;
+    }
+    let delta = block.facing?.opposite().horizontal_offset()?;
+    Some(pos.offset(delta.x, 0, delta.z))
+}
+
+#[must_use]
+pub fn comparator_output_pos(world: &World, pos: Pos) -> Option<Pos> {
+    let block = world.get(pos)?;
+    if block.kind != BlockKind::Comparator {
+        return None;
+    }
+    let delta = block.facing?.horizontal_offset()?;
+    Some(pos.offset(delta.x, 0, delta.z))
+}
+
+#[must_use]
+pub fn device_side_positions(world: &World, pos: Pos) -> Option<[Pos; 2]> {
+    let facing = world.get(pos)?.facing?;
+    let [a, b] = match facing {
+        Facing::North | Facing::South => [Facing::East, Facing::West],
+        Facing::East | Facing::West => [Facing::North, Facing::South],
+        Facing::Up | Facing::Down => return None,
+    };
+    let a = a.horizontal_offset()?;
+    let b = b.horizontal_offset()?;
+    Some([pos.offset(a.x, 0, a.z), pos.offset(b.x, 0, b.z)])
+}
+
+#[must_use]
 pub fn physical_step(world: &World, source: Pos, sink: Pos) -> Option<PhysicalStep> {
     let a = world.kind_at(source);
     let b = world.kind_at(sink);
     let kind = if a == BlockKind::RedstoneWire && b == BlockKind::RedstoneWire {
-        dust_connected(world, source, sink).then_some(PhysicalStepKind::Dust)
+        dust_transfer(world, source, sink).map(|transfer| match transfer {
+            DustTransfer::Horizontal => PhysicalStepKind::Dust,
+            DustTransfer::Rise => PhysicalStepKind::DustRise,
+            DustTransfer::FallThroughConductor => PhysicalStepKind::DustFallThroughConductor,
+        })
     } else if a == BlockKind::RedstoneWire && b == BlockKind::Repeater {
         (repeater_input_pos(world, sink) == Some(source))
             .then_some(PhysicalStepKind::DustToRepeater)
+    } else if a == BlockKind::RedstoneWire && b == BlockKind::Comparator {
+        if comparator_input_pos(world, sink) == Some(source) {
+            Some(PhysicalStepKind::DustToComparator)
+        } else {
+            device_side_positions(world, sink)
+                .is_some_and(|sides| sides.contains(&source))
+                .then_some(PhysicalStepKind::DustToComparator)
+        }
     } else if a == BlockKind::Repeater && b == BlockKind::RedstoneWire {
         (repeater_output_pos(world, source) == Some(sink))
             .then_some(PhysicalStepKind::RepeaterToDust)
-    } else if a == BlockKind::RedstoneWire && b.properties().receives_weak_power {
+    } else if a == BlockKind::Comparator && b == BlockKind::RedstoneWire {
+        (comparator_output_pos(world, source) == Some(sink))
+            .then_some(PhysicalStepKind::ComparatorToDust)
+    } else if a == BlockKind::RedstoneWire
+        && world
+            .get(sink)
+            .is_some_and(|block| block.redstone_traits().conducts_weak_power)
+    {
         (sink == source.offset(0, -1, 0) || horizontal_facing_between(source, sink).is_some())
             .then_some(PhysicalStepKind::DustToBlock)
     } else if a.properties().repeater_reads_block_power && b == BlockKind::Repeater {
         (repeater_input_pos(world, sink) == Some(source))
             .then_some(PhysicalStepKind::BlockToRepeater)
-    } else if a == BlockKind::Repeater && b.properties().receives_strong_power {
+    } else if a == BlockKind::Repeater
+        && world
+            .get(sink)
+            .is_some_and(|block| block.redstone_traits().conducts_strong_power)
+    {
         (repeater_output_pos(world, source) == Some(sink))
             .then_some(PhysicalStepKind::RepeaterToBlock)
+    } else if a == BlockKind::Comparator
+        && world
+            .get(sink)
+            .is_some_and(|block| block.redstone_traits().conducts_strong_power)
+    {
+        (comparator_output_pos(world, source) == Some(sink))
+            .then_some(PhysicalStepKind::ComparatorToBlock)
     } else if matches!(
         a,
-        BlockKind::RedstoneBlock | BlockKind::Lever | BlockKind::RedstoneTorch
+        BlockKind::RedstoneBlock
+            | BlockKind::Lever
+            | BlockKind::Button
+            | BlockKind::PressurePlate
+            | BlockKind::RedstoneTorch
     ) && b == BlockKind::RedstoneWire
     {
         horizontal_facing_between(source, sink)
@@ -190,8 +269,16 @@ pub fn extract_connectivity(world: &World) -> PhysicalConnectivityGraph {
             if let Some(step) = physical_step(world, *source, *sink) {
                 let kind = match step.kind {
                     PhysicalStepKind::Dust => EdgeKind::Dust,
+                    PhysicalStepKind::DustRise => EdgeKind::DustRise,
+                    PhysicalStepKind::DustFallThroughConductor => {
+                        EdgeKind::DustFallThroughConductor
+                    }
                     PhysicalStepKind::DustToRepeater => EdgeKind::RepeaterInput,
+                    PhysicalStepKind::DustToComparator => EdgeKind::RepeaterInput,
                     PhysicalStepKind::RepeaterToDust | PhysicalStepKind::RepeaterToBlock => {
+                        EdgeKind::RepeaterOutput
+                    }
+                    PhysicalStepKind::ComparatorToDust | PhysicalStepKind::ComparatorToBlock => {
                         EdgeKind::RepeaterOutput
                     }
                     PhysicalStepKind::DustToBlock => EdgeKind::DustToBlockWeak,
@@ -225,6 +312,15 @@ pub fn extract_connectivity(world: &World) -> PhysicalConnectivityGraph {
                 });
             }
         }
+        if matches!(block.kind, BlockKind::Button | BlockKind::PressurePlate) {
+            if let Some(support) = block.support_pos(*pos) {
+                edges.insert(ConnectivityEdge {
+                    source: *pos,
+                    sink: support,
+                    kind: EdgeKind::LeverOutput,
+                });
+            }
+        }
     }
     PhysicalConnectivityGraph { nodes, edges }
 }
@@ -249,6 +345,9 @@ pub fn build_physical_circuit(
                     | BlockKind::Repeater
                     | BlockKind::Comparator
                     | BlockKind::Lever
+                    | BlockKind::Button
+                    | BlockKind::PressurePlate
+                    | BlockKind::RedstoneLamp
                     | BlockKind::RedstoneBlock
                     | BlockKind::Piston
             );
@@ -275,6 +374,8 @@ pub fn build_physical_circuit(
         let sink = *ids.get(&edge.sink)?;
         let kind = match edge.kind {
             EdgeKind::Dust => ConnectionKind::Dust,
+            EdgeKind::DustRise => ConnectionKind::DustRise,
+            EdgeKind::DustFallThroughConductor => ConnectionKind::DustFallThroughConductor,
             EdgeKind::DustToBlockWeak => ConnectionKind::WeakPower,
             EdgeKind::BlockToDustStrong => ConnectionKind::StrongPower,
             EdgeKind::BlockToRepeater | EdgeKind::RepeaterInput => ConnectionKind::DirectionalInput,
@@ -331,5 +432,13 @@ mod tests {
             Pos::new(1, 2, 0),
             Pos::new(0, 1, 0)
         ));
+        assert_eq!(
+            physical_step(&world, Pos::new(0, 1, 0), Pos::new(1, 2, 0)).map(|step| step.kind),
+            Some(PhysicalStepKind::DustRise)
+        );
+        assert_eq!(
+            physical_step(&world, Pos::new(1, 2, 0), Pos::new(0, 1, 0)).map(|step| step.kind),
+            Some(PhysicalStepKind::DustFallThroughConductor)
+        );
     }
 }

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{Block, BlockKind, FragmentId, GapEvidence, Pos, World};
+use crate::{Block, BlockKind, FragmentId, GapEvidence, Pos, TemporalRequirement, World};
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct PhysicalBlockChange {
@@ -43,17 +43,37 @@ pub struct RepairProposal {
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct RepairImpact {
+    /// Compatibility metric for undirected discovery grouping.
     pub fragments_before: usize,
+    /// Compatibility metric for undirected discovery grouping.
     pub fragments_after: usize,
     pub invalid_supports_before: usize,
     pub invalid_supports_after: usize,
+    pub undriven_required_inputs_before: usize,
+    pub undriven_required_inputs_after: usize,
+    pub external_input_waiting_before: usize,
+    pub external_input_waiting_after: usize,
+    pub drive_reachable_components_before: usize,
+    pub drive_reachable_components_after: usize,
+    pub instantaneous_solve_converged_before: bool,
+    pub instantaneous_solve_converged_after: bool,
+    pub energized_positions_before: usize,
+    pub energized_positions_after: usize,
+    pub temporal_requirement_after: TemporalRequirement,
+    pub requires_temporal_validation: bool,
 }
 
 impl RepairImpact {
     #[must_use]
     pub const fn improves(self) -> bool {
-        self.fragments_after < self.fragments_before
-            || self.invalid_supports_after < self.invalid_supports_before
+        (!self.instantaneous_solve_converged_before || self.instantaneous_solve_converged_after)
+            && self.invalid_supports_after <= self.invalid_supports_before
+            && self.undriven_required_inputs_after <= self.undriven_required_inputs_before
+            && self.drive_reachable_components_after >= self.drive_reachable_components_before
+            && (self.fragments_after < self.fragments_before
+                || self.invalid_supports_after < self.invalid_supports_before
+                || self.undriven_required_inputs_after < self.undriven_required_inputs_before
+                || self.drive_reachable_components_after > self.drive_reachable_components_before)
     }
 }
 

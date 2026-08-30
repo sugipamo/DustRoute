@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -43,6 +44,9 @@ pub struct PlayerObservation {
     pub targeted_face: Option<String>,
     pub distance: Option<f64>,
     pub dimension: String,
+    /// True when the bot had to move to the configured player before observing.
+    #[serde(default)]
+    pub reacquired: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -51,6 +55,52 @@ pub struct VisiblePlayer {
     pub position: Vec3,
     pub distance_from_bot: f64,
     pub dimension: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct ObservedBlockState {
+    pub name: String,
+    #[serde(default)]
+    pub properties: BTreeMap<String, String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct ObservedBlock {
+    pub pos: Pos,
+    #[serde(flatten)]
+    pub state: ObservedBlockState,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct LeverActivation {
+    pub pos: Pos,
+    pub before_powered: bool,
+    pub after_powered: bool,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct UpdateRecordingStarted {
+    pub recording_id: String,
+    pub started_game_tick: u64,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct BlockUpdateEvent {
+    pub sequence: u64,
+    pub game_tick: u64,
+    pub pos: Pos,
+    pub before: Option<ObservedBlockState>,
+    pub after: Option<ObservedBlockState>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct UpdateRecording {
+    pub recording_id: String,
+    pub started_game_tick: u64,
+    pub stopped_game_tick: u64,
+    pub seen_events: usize,
+    pub truncated: bool,
+    pub events: Vec<BlockUpdateEvent>,
 }
 
 #[derive(Debug)]
@@ -156,11 +206,27 @@ impl BotBridge {
         player: &str,
         max_distance: f64,
     ) -> Result<PlayerObservation, BotBridgeError> {
-        self.request(
-            "observe_player",
-            json!({ "player": player, "max_distance": max_distance }),
-        )
-        .await
+        if !is_valid_minecraft_username(player) {
+            return Err(BotBridgeError::Protocol(format!(
+                "invalid Minecraft player name: {player}"
+            )));
+        }
+        let params = json!({ "player": player, "max_distance": max_distance });
+        match self.request("observe_player", params.clone()).await {
+            Ok(observation) => Ok(observation),
+            Err(BotBridgeError::Protocol(message))
+                if message.starts_with("player is not visible to the bot:") =>
+            {
+                let _: Value = self
+                    .request("approach_player", json!({ "player": player }))
+                    .await?;
+                let mut observation: PlayerObservation =
+                    self.request("observe_player", params).await?;
+                observation.reacquired = true;
+                Ok(observation)
+            }
+            Err(error) => Err(error),
+        }
     }
 
     pub async fn visible_players(&self) -> Result<Vec<VisiblePlayer>, BotBridgeError> {
@@ -176,6 +242,66 @@ impl BotBridge {
         self.request(
             "scan_region",
             json!({ "min": min, "max": max, "dimension": dimension }),
+        )
+        .await
+    }
+
+    pub async fn get_block(
+        &self,
+        pos: Pos,
+        dimension: &str,
+    ) -> Result<ObservedBlock, BotBridgeError> {
+        self.request("get_block", json!({ "pos": pos, "dimension": dimension }))
+            .await
+    }
+
+    pub async fn activate_lever(
+        &self,
+        pos: Pos,
+        dimension: &str,
+    ) -> Result<LeverActivation, BotBridgeError> {
+        self.request(
+            "activate_lever",
+            json!({ "pos": pos, "dimension": dimension }),
+        )
+        .await
+    }
+
+    pub async fn wait_ticks(&self, ticks: u16, dimension: &str) -> Result<Value, BotBridgeError> {
+        self.request(
+            "wait_ticks",
+            json!({ "ticks": ticks, "dimension": dimension }),
+        )
+        .await
+    }
+
+    pub async fn start_update_recording(
+        &self,
+        min: Pos,
+        max: Pos,
+        dimension: &str,
+        max_events: usize,
+    ) -> Result<UpdateRecordingStarted, BotBridgeError> {
+        self.request(
+            "start_update_recording",
+            json!({
+                "min": min,
+                "max": max,
+                "dimension": dimension,
+                "max_events": max_events
+            }),
+        )
+        .await
+    }
+
+    pub async fn stop_update_recording(
+        &self,
+        recording_id: &str,
+        dimension: &str,
+    ) -> Result<UpdateRecording, BotBridgeError> {
+        self.request(
+            "stop_update_recording",
+            json!({ "recording_id": recording_id, "dimension": dimension }),
         )
         .await
     }
@@ -205,6 +331,26 @@ impl BotBridge {
         )
         .await
     }
+
+    pub async fn place_physical_blocks(
+        &self,
+        changes: Value,
+        dimension: &str,
+    ) -> Result<Value, BotBridgeError> {
+        self.request(
+            "place_physical_blocks",
+            json!({ "changes": changes, "dimension": dimension }),
+        )
+        .await
+    }
+}
+
+fn is_valid_minecraft_username(player: &str) -> bool {
+    !player.is_empty()
+        && player.len() <= 16
+        && player
+            .bytes()
+            .all(|character| character.is_ascii_alphanumeric() || character == b'_')
 }
 
 #[cfg(test)]
@@ -270,6 +416,98 @@ mod tests {
         assert_eq!(observation.player, "builder");
         assert_eq!(observation.targeted_block, Some(Pos::new(1, 64, -4)));
         assert_eq!(observation.targeted_face.as_deref(), Some("up"));
+        assert!(!observation.reacquired);
+    }
+
+    #[tokio::test]
+    async fn moves_to_an_out_of_range_player_and_retries_observation() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap().to_string();
+        tokio::spawn(async move {
+            for attempt in 0..3 {
+                let (mut stream, _) = listener.accept().await.unwrap();
+                let mut request = String::new();
+                BufReader::new(&mut stream)
+                    .read_line(&mut request)
+                    .await
+                    .unwrap();
+                let request: Value = serde_json::from_str(&request).unwrap();
+                let response = match attempt {
+                    0 => {
+                        assert_eq!(request["method"], "observe_player");
+                        json!({ "id": request["id"], "error": "player is not visible to the bot: builder" })
+                    }
+                    1 => {
+                        assert_eq!(request["method"], "approach_player");
+                        json!({ "id": request["id"], "result": {
+                            "player": "builder", "moved": true,
+                            "position": { "x": 1.0, "y": 64.0, "z": 1.0 },
+                            "distance": 2.0, "dimension": "minecraft:overworld"
+                        }})
+                    }
+                    _ => {
+                        assert_eq!(request["method"], "observe_player");
+                        json!({ "id": request["id"], "result": {
+                            "player": "builder",
+                            "eye_position": { "x": 1.5, "y": 65.62, "z": 2.5 },
+                            "yaw": 0.0, "pitch": 0.25,
+                            "targeted_block": { "x": 1, "y": 64, "z": -4 },
+                            "targeted_face": null, "distance": 6.0,
+                            "dimension": "minecraft:overworld"
+                        }})
+                    }
+                };
+                stream
+                    .write_all(format!("{response}\n").as_bytes())
+                    .await
+                    .unwrap();
+            }
+        });
+        let observation = BotBridge::new(address)
+            .observe_player("builder", 64.0)
+            .await
+            .unwrap();
+        assert!(observation.reacquired);
+        assert_eq!(observation.player, "builder");
+    }
+
+    #[tokio::test]
+    async fn rejects_a_player_name_before_sending_a_command() {
+        let error = BotBridge::new("127.0.0.1:1")
+            .observe_player("builder /kill", 64.0)
+            .await
+            .unwrap_err();
+        assert!(error.to_string().contains("invalid Minecraft player name"));
+    }
+
+    #[tokio::test]
+    async fn reports_when_an_offline_player_cannot_be_reacquired() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap().to_string();
+        tokio::spawn(async move {
+            for message in [
+                "player is not visible to the bot: builder",
+                "player could not be reacquired after moving the bot: builder",
+            ] {
+                let (mut stream, _) = listener.accept().await.unwrap();
+                let mut request = String::new();
+                BufReader::new(&mut stream)
+                    .read_line(&mut request)
+                    .await
+                    .unwrap();
+                let request: Value = serde_json::from_str(&request).unwrap();
+                let response = json!({ "id": request["id"], "error": message });
+                stream
+                    .write_all(format!("{response}\n").as_bytes())
+                    .await
+                    .unwrap();
+            }
+        });
+        let error = BotBridge::new(address)
+            .observe_player("builder", 64.0)
+            .await
+            .unwrap_err();
+        assert!(error.to_string().contains("could not be reacquired"));
     }
 
     #[tokio::test]

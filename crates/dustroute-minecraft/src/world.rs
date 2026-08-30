@@ -37,8 +37,47 @@ pub enum BlockKind {
     Repeater,
     Comparator,
     Lever,
+    Button,
+    PressurePlate,
+    RedstoneLamp,
     RedstoneBlock,
     Piston,
+}
+
+/// How completely DustRoute can use an observed block at a specific analysis
+/// boundary. Observation is kept even when later semantic stages are not
+/// supported.
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CapabilityLevel {
+    Full,
+    Partial,
+    Unsupported,
+    NotApplicable,
+}
+
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ObservationClassification {
+    /// Constructed internally rather than read from a live Minecraft world.
+    #[default]
+    Synthetic,
+    /// The observed identifier maps exactly to the modeled physical class.
+    Exact,
+    /// The original observation is retained, but its physical class is a
+    /// conservative fallback.
+    Coarse,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct BlockCapabilities {
+    pub observation: CapabilityLevel,
+    pub physical_classification: CapabilityLevel,
+    pub connectivity: CapabilityLevel,
+    pub steady_state: CapabilityLevel,
+    pub temporal: CapabilityLevel,
+    pub repair: CapabilityLevel,
+    pub placement: CapabilityLevel,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -83,6 +122,35 @@ pub enum WireConnection {
     Up,
 }
 
+/// Geometry and electrical properties that affect redstone independently of a
+/// block's display name.  This deliberately avoids Minecraft's overloaded
+/// "transparent" classification.
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum OccupiedShape {
+    Empty,
+    FullCube,
+    TopHalf,
+    BottomHalf,
+    Partial,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct BlockRedstoneTraits {
+    pub occupied_shape: OccupiedShape,
+    pub supports_dust_on_top: bool,
+    pub conducts_weak_power: bool,
+    pub conducts_strong_power: bool,
+    pub strong_power_drives_dust: bool,
+    /// A wire beside this block may form an `up` arm to wire above it.
+    pub permits_wire_rise_beside: bool,
+    /// The block-state shape used by the lower wire. Top-half supports use a
+    /// visually horizontal `side` arm even though power rises one block.
+    pub wire_rise_connection: Option<WireConnection>,
+    /// A full block above the lower wire prevents the rising arm.
+    pub blocks_wire_rise_when_above: bool,
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct BlockProperties {
     pub supports_components: bool,
@@ -121,6 +189,9 @@ impl BlockKind {
                 | Self::Repeater
                 | Self::Comparator
                 | Self::Lever
+                | Self::Button
+                | Self::PressurePlate
+                | Self::RedstoneLamp
                 | Self::RedstoneBlock
                 | Self::Piston
         )
@@ -135,6 +206,16 @@ impl BlockKind {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Block {
     pub kind: BlockKind,
+    /// Namespaced identifier reported by Minecraft. Synthetic blocks leave
+    /// this unset; imported observations retain it even when `kind` is only a
+    /// coarse DustRoute classification.
+    #[serde(default)]
+    pub observed_name: Option<String>,
+    /// Complete Java block-state properties as observed at the world boundary.
+    #[serde(default)]
+    pub observed_properties: BTreeMap<String, String>,
+    #[serde(default)]
+    pub observation_classification: ObservationClassification,
     pub facing: Option<Facing>,
     pub powered: Option<bool>,
     /// Observed analog redstone strength, when the block state exposes one.
@@ -149,6 +230,9 @@ impl Block {
     pub const fn new(kind: BlockKind) -> Self {
         Self {
             kind,
+            observed_name: None,
+            observed_properties: BTreeMap::new(),
+            observation_classification: ObservationClassification::Synthetic,
             facing: None,
             powered: None,
             power_level: None,
@@ -159,9 +243,162 @@ impl Block {
     }
 
     #[must_use]
+    pub fn capabilities(&self) -> BlockCapabilities {
+        use CapabilityLevel::{Full, NotApplicable, Partial, Unsupported};
+        match self.kind {
+            BlockKind::Air => BlockCapabilities {
+                observation: Full,
+                physical_classification: Full,
+                connectivity: NotApplicable,
+                steady_state: NotApplicable,
+                temporal: NotApplicable,
+                repair: NotApplicable,
+                placement: Full,
+            },
+            BlockKind::Solid | BlockKind::Transparent => {
+                let exact = self.observation_classification != ObservationClassification::Coarse;
+                BlockCapabilities {
+                    observation: Full,
+                    physical_classification: if exact { Full } else { Partial },
+                    connectivity: if exact { Full } else { Partial },
+                    steady_state: NotApplicable,
+                    temporal: NotApplicable,
+                    repair: NotApplicable,
+                    placement: if exact { Full } else { Unsupported },
+                }
+            }
+            BlockKind::RedstoneWire => BlockCapabilities {
+                observation: Full,
+                physical_classification: Full,
+                connectivity: Full,
+                steady_state: Full,
+                temporal: Partial,
+                repair: Full,
+                placement: Full,
+            },
+            BlockKind::RedstoneTorch | BlockKind::Repeater => BlockCapabilities {
+                observation: Full,
+                physical_classification: Full,
+                connectivity: Full,
+                steady_state: Full,
+                temporal: Partial,
+                repair: Partial,
+                placement: Full,
+            },
+            BlockKind::Lever | BlockKind::PressurePlate | BlockKind::RedstoneBlock => {
+                BlockCapabilities {
+                    observation: Full,
+                    physical_classification: Full,
+                    connectivity: Full,
+                    steady_state: Full,
+                    temporal: Full,
+                    repair: Partial,
+                    placement: Full,
+                }
+            }
+            BlockKind::Button | BlockKind::RedstoneLamp => BlockCapabilities {
+                observation: Full,
+                physical_classification: Full,
+                connectivity: Full,
+                steady_state: Full,
+                temporal: Partial,
+                repair: Partial,
+                placement: Full,
+            },
+            BlockKind::Comparator => BlockCapabilities {
+                observation: Full,
+                physical_classification: Full,
+                connectivity: Full,
+                steady_state: Full,
+                temporal: Partial,
+                repair: Partial,
+                placement: Full,
+            },
+            BlockKind::Piston => BlockCapabilities {
+                observation: Full,
+                physical_classification: Partial,
+                connectivity: Partial,
+                steady_state: Unsupported,
+                temporal: Unsupported,
+                repair: Unsupported,
+                placement: Unsupported,
+            },
+        }
+    }
+
+    #[must_use]
     pub fn support_pos(&self, pos: Pos) -> Option<Pos> {
         self.support_offset
             .map(|offset| pos.offset(offset.x, offset.y, offset.z))
+    }
+
+    /// Resolves physical redstone behavior from the observed block and its
+    /// block state. Synthetic blocks retain the historical kind defaults.
+    #[must_use]
+    pub fn redstone_traits(&self) -> BlockRedstoneTraits {
+        let properties = self.kind.properties();
+        let mut traits = BlockRedstoneTraits {
+            occupied_shape: match self.kind {
+                BlockKind::Air => OccupiedShape::Empty,
+                BlockKind::Solid
+                | BlockKind::Transparent
+                | BlockKind::RedstoneBlock
+                | BlockKind::RedstoneLamp => OccupiedShape::FullCube,
+                _ => OccupiedShape::Partial,
+            },
+            supports_dust_on_top: properties.supports_components,
+            conducts_weak_power: properties.receives_weak_power,
+            conducts_strong_power: properties.receives_strong_power,
+            strong_power_drives_dust: properties.strong_power_drives_dust,
+            permits_wire_rise_beside: properties.supports_components,
+            wire_rise_connection: properties.supports_components.then_some(WireConnection::Up),
+            blocks_wire_rise_when_above: self.kind == BlockKind::Solid,
+        };
+        let name = self.observed_name.as_deref().unwrap_or_default();
+        if name.ends_with("_slab") {
+            let top = self.observed_properties.get("type").map(String::as_str) == Some("top");
+            let double = self.observed_properties.get("type").map(String::as_str) == Some("double");
+            traits.occupied_shape = if double {
+                OccupiedShape::FullCube
+            } else if top {
+                OccupiedShape::TopHalf
+            } else {
+                OccupiedShape::BottomHalf
+            };
+            traits.supports_dust_on_top = top || double;
+            traits.permits_wire_rise_beside = top || double;
+            traits.wire_rise_connection = if top {
+                Some(WireConnection::Side)
+            } else if double {
+                Some(WireConnection::Up)
+            } else {
+                None
+            };
+            traits.blocks_wire_rise_when_above = double;
+            traits.conducts_weak_power = double;
+            traits.conducts_strong_power = double;
+            traits.strong_power_drives_dust = double;
+        } else if name.ends_with("_stairs") {
+            let top = self.observed_properties.get("half").map(String::as_str) == Some("top");
+            traits.occupied_shape = OccupiedShape::Partial;
+            traits.supports_dust_on_top = top;
+            traits.permits_wire_rise_beside = top;
+            traits.wire_rise_connection = top.then_some(WireConnection::Side);
+            traits.blocks_wire_rise_when_above = false;
+            traits.conducts_weak_power = false;
+            traits.conducts_strong_power = false;
+            traits.strong_power_drives_dust = false;
+        } else if matches!(name, "minecraft:glass" | "minecraft:tinted_glass") {
+            traits.occupied_shape = OccupiedShape::FullCube;
+            traits.supports_dust_on_top = true;
+            traits.permits_wire_rise_beside = true;
+            traits.wire_rise_connection = Some(WireConnection::Up);
+            traits.blocks_wire_rise_when_above = false;
+            traits.conducts_weak_power = false;
+            traits.conducts_strong_power = false;
+            traits.strong_power_drives_dust = false;
+        }
+        traits
     }
 }
 
@@ -268,8 +505,9 @@ impl World {
                     return None;
                 }
                 let support = block.support_pos(*pos);
-                let valid =
-                    support.is_some_and(|at| self.kind_at(at).properties().supports_components);
+                let valid = support
+                    .and_then(|at| self.get(at))
+                    .is_some_and(|support| support.redstone_traits().supports_dust_on_top);
                 (!valid).then_some((*pos, block.kind, support))
             })
             .collect()
@@ -309,5 +547,42 @@ mod tests {
         assert!(world.validate_supports().is_ok());
         world.remove(Pos::new(0, 0, 0));
         assert!(world.validate_supports().is_err());
+    }
+
+    #[test]
+    fn reports_capabilities_without_discarding_an_unknown_observation() {
+        let mut block = Block::new(BlockKind::Solid);
+        block.observed_name = Some("minecraft:target".to_owned());
+        block.observation_classification = ObservationClassification::Coarse;
+        block
+            .observed_properties
+            .insert("power".to_owned(), "7".to_owned());
+        assert_eq!(
+            block.capabilities().physical_classification,
+            CapabilityLevel::Partial
+        );
+        assert_eq!(block.observed_name.as_deref(), Some("minecraft:target"));
+        assert_eq!(block.observed_properties["power"], "7");
+    }
+
+    #[test]
+    fn top_and_bottom_slabs_resolve_to_different_support_traits() {
+        let mut top = Block::new(BlockKind::Transparent);
+        top.observed_name = Some("minecraft:stone_slab".to_owned());
+        top.observed_properties
+            .insert("type".to_owned(), "top".to_owned());
+        let mut bottom = top.clone();
+        bottom
+            .observed_properties
+            .insert("type".to_owned(), "bottom".to_owned());
+
+        assert_eq!(top.redstone_traits().occupied_shape, OccupiedShape::TopHalf);
+        assert!(top.redstone_traits().supports_dust_on_top);
+        assert!(!top.redstone_traits().conducts_weak_power);
+        assert_eq!(
+            bottom.redstone_traits().occupied_shape,
+            OccupiedShape::BottomHalf
+        );
+        assert!(!bottom.redstone_traits().supports_dust_on_top);
     }
 }

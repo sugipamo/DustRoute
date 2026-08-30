@@ -1,5 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
+use serde::{Deserialize, Serialize};
+
 use crate::connectivity::{
     ConnectivityEdge, PhysicalConnectivityGraph, build_physical_circuit, extract_connectivity,
 };
@@ -9,7 +11,7 @@ use crate::wire::update_wire_shapes;
 use crate::world::Block;
 use crate::world::{BlockKind, Pos, World};
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct RegionBounds {
     pub min: Pos,
     pub max: Pos,
@@ -43,13 +45,13 @@ const fn max_i32(a: i32, b: i32) -> i32 {
     if a > b { a } else { b }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum TerminalConfidence {
     Certain,
     Likely,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct InferredTerminal {
     pub anchor: Pos,
     pub component: usize,
@@ -88,20 +90,20 @@ pub struct SignalDiagnostics {
     pub non_controllable_torches: BTreeSet<Pos>,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct TruthTableRow {
     pub inputs: Vec<bool>,
     pub outputs: Vec<bool>,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct InferredTruthTable {
     pub inputs: Vec<InferredTerminal>,
     pub outputs: Vec<InferredTerminal>,
     pub rows: Vec<TruthTableRow>,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct TruthTableComparison {
     pub comparable: bool,
     pub expected_inputs: usize,

@@ -3,9 +3,45 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    Block, BlockKind, ComponentId, ConnectionKind, Facing, FragmentId, GapCandidate, GapEvidence,
-    PhysicalComponent, PhysicalFragment, PhysicalNet, Pos, VerifiedTopology, WireConnection,
+    Block, BlockCapabilities, BlockKind, CapabilityLevel, ComponentId, ConnectionKind, Facing,
+    FragmentId, GapCandidate, GapEvidence, PhysicalComponent, PhysicalFragment, PhysicalNet, Pos,
+    VerifiedTopology, WireConnection,
 };
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CapabilityStage {
+    PhysicalClassification,
+    Connectivity,
+    SteadyState,
+    Temporal,
+    Repair,
+    Placement,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct BlockCapabilityGroup {
+    pub observed_name: Option<String>,
+    pub kind: BlockKind,
+    pub count: usize,
+    pub capabilities: BlockCapabilities,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct CapabilityIssue {
+    pub component: ComponentId,
+    pub position: Pos,
+    pub observed_name: Option<String>,
+    pub kind: BlockKind,
+    pub stage: CapabilityStage,
+    pub level: CapabilityLevel,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+pub struct SceneCapabilityReport {
+    pub groups: Vec<BlockCapabilityGroup>,
+    pub issues: Vec<CapabilityIssue>,
+}
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Observation {
@@ -236,6 +272,13 @@ pub struct PhysicalScene {
 }
 
 impl PhysicalScene {
+    /// Undirected groups used to bound physical discovery. They are not
+    /// directional signal regions or inferred logical circuits.
+    #[must_use]
+    pub fn physical_traversal_groups(&self) -> &[PhysicalFragment] {
+        &self.fragments
+    }
+
     #[must_use]
     pub fn from_unvalidated_topology(
         observation: Observation,
@@ -314,6 +357,54 @@ impl PhysicalScene {
             .iter()
             .filter_map(|frontier| self.component_at(frontier.position).map(|item| item.id))
             .collect()
+    }
+
+    #[must_use]
+    pub fn capability_report(&self) -> SceneCapabilityReport {
+        let mut groups: Vec<BlockCapabilityGroup> = Vec::new();
+        let mut issues = Vec::new();
+        for component in &self.components {
+            let capabilities = component.block.capabilities();
+            let observed_name = component.block.observed_name.clone();
+            if let Some(group) = groups.iter_mut().find(|group| {
+                group.kind == component.block.kind && group.observed_name == observed_name
+            }) {
+                group.count += 1;
+            } else {
+                groups.push(BlockCapabilityGroup {
+                    observed_name: observed_name.clone(),
+                    kind: component.block.kind,
+                    count: 1,
+                    capabilities,
+                });
+            }
+            for (stage, level) in [
+                (
+                    CapabilityStage::PhysicalClassification,
+                    capabilities.physical_classification,
+                ),
+                (CapabilityStage::Connectivity, capabilities.connectivity),
+                (CapabilityStage::SteadyState, capabilities.steady_state),
+                (CapabilityStage::Temporal, capabilities.temporal),
+                (CapabilityStage::Repair, capabilities.repair),
+                (CapabilityStage::Placement, capabilities.placement),
+            ] {
+                if matches!(
+                    level,
+                    CapabilityLevel::Partial | CapabilityLevel::Unsupported
+                ) {
+                    issues.push(CapabilityIssue {
+                        component: component.id,
+                        position: component.pos,
+                        observed_name: observed_name.clone(),
+                        kind: component.block.kind,
+                        stage,
+                        level,
+                    });
+                }
+            }
+        }
+        SceneCapabilityReport { groups, issues }
     }
 
     #[must_use]
@@ -407,13 +498,13 @@ fn scene_component(
                 || {
                     topology.components.iter().any(|candidate| {
                         candidate.pos == support_position
-                            && candidate.block.kind.properties().supports_components
+                            && candidate.block.redstone_traits().supports_dust_on_top
                     })
                 },
                 |world| {
                     world
                         .get(support_position)
-                        .is_some_and(|block| block.kind.properties().supports_components)
+                        .is_some_and(|block| block.redstone_traits().supports_dust_on_top)
                 },
             );
             SupportRelation {
@@ -478,9 +569,20 @@ fn ports_for(block: &Block) -> Vec<PhysicalPort> {
             for face in horizontal {
                 push(PortRole::Output, face, PortChannel::RedstoneSignal);
             }
-            push(PortRole::Control, Facing::Down, PortChannel::RedstoneSignal);
+            let control_face = match block.support_offset {
+                Some(Pos { x: 1, y: 0, z: 0 }) => Facing::East,
+                Some(Pos { x: -1, y: 0, z: 0 }) => Facing::West,
+                Some(Pos { x: 0, y: 1, z: 0 }) => Facing::Up,
+                Some(Pos { x: 0, y: 0, z: 1 }) => Facing::South,
+                Some(Pos { x: 0, y: 0, z: -1 }) => Facing::North,
+                _ => Facing::Down,
+            };
+            push(PortRole::Control, control_face, PortChannel::RedstoneSignal);
         }
-        BlockKind::Lever | BlockKind::RedstoneBlock => {
+        BlockKind::Lever
+        | BlockKind::Button
+        | BlockKind::PressurePlate
+        | BlockKind::RedstoneBlock => {
             for face in horizontal {
                 push(PortRole::Output, face, PortChannel::StrongPower);
             }
@@ -495,7 +597,10 @@ fn ports_for(block: &Block) -> Vec<PhysicalPort> {
                 PortChannel::Mechanical,
             );
         }
-        BlockKind::Solid | BlockKind::Transparent => {
+        BlockKind::Solid | BlockKind::Transparent | BlockKind::RedstoneLamp => {
+            if !block.redstone_traits().conducts_weak_power {
+                return ports;
+            }
             for face in [
                 Facing::North,
                 Facing::East,
@@ -560,7 +665,11 @@ fn port_connection(
     }
     evidence.push(PhysicalEvidence::MinecraftRule {
         rule: match connection.kind {
-            ConnectionKind::Dust => "java.redstone.dust_connection",
+            ConnectionKind::Dust => "java.redstone.dust_connection.horizontal",
+            ConnectionKind::DustRise => "java.redstone.dust_connection.vertical_rise",
+            ConnectionKind::DustFallThroughConductor => {
+                "java.redstone.dust_connection.vertical_fall_through_conductor"
+            }
             ConnectionKind::WeakPower => "java.redstone.weak_power",
             ConnectionKind::StrongPower => "java.redstone.strong_power",
             ConnectionKind::DirectionalInput => "java.redstone.directional_input",
@@ -611,7 +720,9 @@ fn select_port(
 
 const fn transfer_kind(kind: ConnectionKind) -> TransferKind {
     match kind {
-        ConnectionKind::Dust => TransferKind::DustPropagation,
+        ConnectionKind::Dust
+        | ConnectionKind::DustRise
+        | ConnectionKind::DustFallThroughConductor => TransferKind::DustPropagation,
         ConnectionKind::WeakPower => TransferKind::WeakPower,
         ConnectionKind::StrongPower => TransferKind::StrongPower,
         ConnectionKind::DirectionalInput | ConnectionKind::DirectionalOutput => {
@@ -626,11 +737,15 @@ const fn transfer_kind(kind: ConnectionKind) -> TransferKind {
 fn facing_between(source: Pos, sink: Pos) -> Option<Facing> {
     match (sink.x - source.x, sink.y - source.y, sink.z - source.z) {
         (1, 0, 0) => Some(Facing::East),
+        (1, 1 | -1, 0) => Some(Facing::East),
         (-1, 0, 0) => Some(Facing::West),
+        (-1, 1 | -1, 0) => Some(Facing::West),
         (0, 1, 0) => Some(Facing::Up),
         (0, -1, 0) => Some(Facing::Down),
         (0, 0, 1) => Some(Facing::South),
+        (0, 1 | -1, 1) => Some(Facing::South),
         (0, 0, -1) => Some(Facing::North),
+        (0, 1 | -1, -1) => Some(Facing::North),
         _ => None,
     }
 }
@@ -714,6 +829,44 @@ mod tests {
                 .iter()
                 .any(|port| port.role == PortRole::Output && port.face == Facing::East)
         );
+    }
+
+    #[test]
+    fn vertical_dust_connection_preserves_its_minecraft_rule() {
+        let topology = VerifiedTopology::from_parts(
+            vec![
+                PhysicalComponent {
+                    id: ComponentId(0),
+                    pos: Pos::new(0, 1, 0),
+                    block: Block::new(BlockKind::RedstoneWire),
+                },
+                PhysicalComponent {
+                    id: ComponentId(1),
+                    pos: Pos::new(1, 2, 0),
+                    block: Block::new(BlockKind::RedstoneWire),
+                },
+            ],
+            [PhysicalConnection {
+                source: ComponentId(0),
+                sink: ComponentId(1),
+                kind: ConnectionKind::DustRise,
+            }],
+        );
+        let scene = PhysicalScene::from_unvalidated_topology(
+            Observation::complete(
+                "minecraft:overworld",
+                SceneBounds::new(Pos::new(0, 1, 0), Pos::new(1, 2, 0)),
+            ),
+            &topology,
+        );
+        assert_eq!(scene.connections[0].confidence, Confidence::Certain);
+        assert!(scene.connections[0].evidence.iter().any(|evidence| {
+            matches!(
+                evidence,
+                PhysicalEvidence::MinecraftRule { rule }
+                    if rule == "java.redstone.dust_connection.vertical_rise"
+            )
+        }));
     }
 
     #[test]

@@ -6,6 +6,7 @@ mod hierarchy;
 pub mod logic;
 #[path = "physical_projection.rs"]
 mod temporal_analysis;
+mod transient;
 
 pub use derived::{
     DerivedExpr, DerivedExpression, ExpressionId, ExpressionView, FunctionalCandidate,
@@ -24,6 +25,12 @@ pub use hierarchy::{
 };
 pub use logic::{DagBuilder, GateKind, LogicDag, LogicError, LogicNode, NodeId};
 pub use temporal_analysis::{
-    BehaviorEvent, BehaviorIr, BehaviorPattern, BehaviorTrace, TemporalAnalysis, TemporalDevice,
-    TemporalEvidence, TemporalSemantics,
+    BehaviorEvent, BehaviorIr, BehaviorPattern, BehaviorTrace, DelayRange, EdgeBehavior,
+    SteadyStateEdge, SteadyStateProjection, TemporalAnalysis, TemporalDevice, TemporalEvidence,
+    TemporalNode, TemporalNodeKind, TemporalScope, TemporalSemantics, TimedCircuit, TimedEdge,
+    TimingAssessment, TimingReason, TraceTimeUnit,
+};
+pub use transient::{
+    PulseObservation, PulsePolarity, SignalIntent, TransientAssessment, TransientFinding,
+    TransientVerdict, assess_transients, observe_pulses,
 };

@@ -1,11 +1,13 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use dustroute_physical::{ComponentId, PhysicalDiagnostic, PhysicalScene, Pos};
+use dustroute_physical::{
+    CapabilityLevel, CapabilityStage, ComponentId, PhysicalDiagnostic, PhysicalScene, Pos,
+};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ExpressionView, FunctionalView, GateView, RecognitionStatus, classify_function,
-    derive_expressions, recognize_gates,
+    ExpressionView, FunctionalView, GateView, RecognitionStatus, TemporalAnalysis,
+    classify_function, derive_expressions, recognize_gates,
 };
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -103,6 +105,8 @@ pub struct HierarchicalIr {
     pub cell_graph: TransformResult<CellGraph>,
     pub logic_graph: TransformResult<LogicGraph>,
     pub functional_graph: TransformResult<FunctionalGraph>,
+    /// Orthogonal timing view retained alongside every abstraction stage.
+    pub temporal: TemporalAnalysis,
 }
 
 #[must_use]
@@ -142,6 +146,42 @@ pub fn build_physical_graph(
             });
         }
     }
+    let capability_issues = scene
+        .capability_report()
+        .issues
+        .into_iter()
+        .filter(|issue| {
+            matches!(
+                issue.stage,
+                CapabilityStage::PhysicalClassification | CapabilityStage::Connectivity
+            )
+        })
+        .collect::<Vec<_>>();
+    unresolved.extend(capability_issues.iter().map(|issue| UnresolvedItem {
+        stage: IrStage::PhysicalGraph,
+        entity: format!("component:{}", issue.component.0),
+        reason: format!(
+            "{:?} capability is {:?} for {}",
+            issue.stage,
+            issue.level,
+            issue.observed_name.as_deref().unwrap_or("synthetic block")
+        ),
+        physical_components: BTreeSet::from([issue.component]),
+    }));
+    let mut diagnostics = snapshot.diagnostics.clone();
+    diagnostics.extend(capability_issues.iter().map(|issue| IrDiagnostic {
+        stage: IrStage::PhysicalGraph,
+        severity: DiagnosticSeverity::Warning,
+        code: "block_capability_limited".to_owned(),
+        message: format!(
+            "{} at {:?} has {:?} {:?} support",
+            issue.observed_name.as_deref().unwrap_or("synthetic block"),
+            issue.position,
+            issue.level,
+            issue.stage
+        ),
+        physical_components: BTreeSet::from([issue.component]),
+    }));
     TransformResult {
         value: PhysicalGraph { scene },
         completeness: if unresolved.is_empty() {
@@ -149,7 +189,7 @@ pub fn build_physical_graph(
         } else {
             IrCompleteness::Partial
         },
-        diagnostics: snapshot.diagnostics.clone(),
+        diagnostics,
         unresolved,
         provenance: snapshot.provenance.clone(),
     }
@@ -158,7 +198,9 @@ pub fn build_physical_graph(
 #[must_use]
 pub fn build_cell_graph(physical: &TransformResult<PhysicalGraph>) -> TransformResult<CellGraph> {
     let cells = recognize_gates(&physical.value.scene);
-    cell_result(physical, cells)
+    let mut result = cell_result(physical, cells);
+    add_steady_state_capabilities(&physical.value.scene, &mut result);
+    result
 }
 
 fn cell_result(
@@ -204,7 +246,69 @@ pub fn build_logic_graph(
     cells: &TransformResult<CellGraph>,
 ) -> TransformResult<LogicGraph> {
     let expressions = derive_expressions(&physical.value.scene, &cells.value.cells);
-    logic_result(cells, expressions)
+    let mut result = logic_result(cells, expressions);
+    add_temporal_capabilities(&physical.value.scene, &mut result);
+    result
+}
+
+fn add_steady_state_capabilities(scene: &PhysicalScene, result: &mut TransformResult<CellGraph>) {
+    let issues = scene
+        .capability_report()
+        .issues
+        .into_iter()
+        .filter(|issue| {
+            issue.stage == CapabilityStage::SteadyState
+                && issue.level == CapabilityLevel::Unsupported
+        });
+    for issue in issues {
+        result.completeness = derived_completeness(result.completeness, true, false);
+        result.unresolved.push(UnresolvedItem {
+            stage: IrStage::CellGraph,
+            entity: format!("component:{}", issue.component.0),
+            reason: format!(
+                "steady-state semantics are unsupported for {}",
+                issue.observed_name.as_deref().unwrap_or("synthetic block")
+            ),
+            physical_components: BTreeSet::from([issue.component]),
+        });
+        result.diagnostics.push(IrDiagnostic {
+            stage: IrStage::CellGraph,
+            severity: DiagnosticSeverity::Warning,
+            code: "steady_state_semantics_unsupported".to_owned(),
+            message: format!(
+                "steady-state semantics are unavailable at {:?}",
+                issue.position
+            ),
+            physical_components: BTreeSet::from([issue.component]),
+        });
+    }
+}
+
+fn add_temporal_capabilities(scene: &PhysicalScene, result: &mut TransformResult<LogicGraph>) {
+    for issue in scene
+        .capability_report()
+        .issues
+        .into_iter()
+        .filter(|issue| issue.stage == CapabilityStage::Temporal)
+    {
+        result.diagnostics.push(IrDiagnostic {
+            stage: IrStage::LogicGraph,
+            severity: DiagnosticSeverity::Information,
+            code: match issue.level {
+                CapabilityLevel::Partial => "temporal_semantics_partial",
+                CapabilityLevel::Unsupported => "temporal_semantics_unsupported",
+                CapabilityLevel::Full | CapabilityLevel::NotApplicable => continue,
+            }
+            .to_owned(),
+            message: format!(
+                "temporal semantics are {:?} for {} at {:?}; steady-state interpretation remains separate",
+                issue.level,
+                issue.observed_name.as_deref().unwrap_or("synthetic block"),
+                issue.position
+            ),
+            physical_components: BTreeSet::from([issue.component]),
+        });
+    }
 }
 
 fn logic_result(
@@ -343,6 +447,7 @@ pub fn derive_hierarchy(scene: &PhysicalScene) -> HierarchicalIr {
         cell_graph,
         logic_graph,
         functional_graph,
+        temporal: TemporalAnalysis::from_scene(scene),
     }
 }
 
@@ -358,8 +463,10 @@ pub fn hierarchy_from_views(
 ) -> HierarchicalIr {
     let physical_snapshot = build_physical_snapshot(scene);
     let physical_graph = build_physical_graph(&physical_snapshot);
-    let cell_graph = cell_result(&physical_graph, cells);
-    let logic_graph = logic_result(&cell_graph, expressions);
+    let mut cell_graph = cell_result(&physical_graph, cells);
+    add_steady_state_capabilities(&physical_graph.value.scene, &mut cell_graph);
+    let mut logic_graph = logic_result(&cell_graph, expressions);
+    add_temporal_capabilities(&physical_graph.value.scene, &mut logic_graph);
     let functional_graph = functional_result(&cell_graph, &logic_graph, functions);
     HierarchicalIr {
         physical_snapshot,
@@ -367,6 +474,7 @@ pub fn hierarchy_from_views(
         cell_graph,
         logic_graph,
         functional_graph,
+        temporal: TemporalAnalysis::from_scene(scene),
     }
 }
 
@@ -564,5 +672,52 @@ mod tests {
             IrCompleteness::Partial
         );
         assert_eq!(hierarchy.physical_snapshot.diagnostics.len(), 1);
+    }
+
+    #[test]
+    fn unsupported_semantics_are_reported_at_their_actual_stage() {
+        let mut piston = Block::new(BlockKind::Piston);
+        piston.observed_name = Some("minecraft:piston".to_owned());
+        let topology = VerifiedTopology::from_parts(
+            vec![PhysicalComponent {
+                id: ComponentId(0),
+                pos: Pos::new(0, 1, 0),
+                block: piston,
+            }],
+            [],
+        );
+        let scene = PhysicalScene::from_unvalidated_topology(
+            Observation::complete(
+                "minecraft:overworld",
+                SceneBounds::new(Pos::new(0, 0, 0), Pos::new(0, 2, 0)),
+            ),
+            &topology,
+        );
+        let hierarchy = derive_hierarchy(&scene);
+        assert_eq!(
+            hierarchy.physical_graph.completeness,
+            IrCompleteness::Partial
+        );
+        assert!(
+            hierarchy
+                .physical_graph
+                .diagnostics
+                .iter()
+                .any(|diagnostic| { diagnostic.code == "block_capability_limited" })
+        );
+        assert!(
+            hierarchy
+                .cell_graph
+                .diagnostics
+                .iter()
+                .any(|diagnostic| { diagnostic.code == "steady_state_semantics_unsupported" })
+        );
+        assert!(
+            hierarchy
+                .logic_graph
+                .diagnostics
+                .iter()
+                .any(|diagnostic| { diagnostic.code == "temporal_semantics_unsupported" })
+        );
     }
 }

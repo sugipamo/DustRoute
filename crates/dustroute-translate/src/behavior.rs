@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use dustroute_ir::{BehaviorEvent, BehaviorTrace, TemporalAnalysis};
+use dustroute_ir::{BehaviorEvent, BehaviorTrace, TemporalAnalysis, TraceTimeUnit};
 use dustroute_physical::{ComponentId, PhysicalScene, World};
 
 use crate::RedstoneTickSimulator;
@@ -55,6 +55,7 @@ pub fn simulate_behavior_trace(
     }
     Ok(BehaviorTrace {
         label: label.into(),
+        time_unit: TraceTimeUnit::RedstoneTick,
         events,
         stable: !changed_on_last_tick,
     })

@@ -9,5 +9,6 @@ mod world;
 
 pub use blocks::{BlockBehaviorProfile, UpdateModel, behavior_profile};
 pub use world::{
-    Block, BlockKind, BlockProperties, Facing, Pos, SupportError, WireConnection, World,
+    Block, BlockCapabilities, BlockKind, BlockProperties, BlockRedstoneTraits, CapabilityLevel,
+    Facing, ObservationClassification, OccupiedShape, Pos, SupportError, WireConnection, World,
 };

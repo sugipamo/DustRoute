@@ -113,7 +113,7 @@ impl Translator {
                 "observed initial state",
             )
         {
-            temporal.behavior.traces.push(trace);
+            temporal.record_trace(trace, &std::collections::BTreeMap::new());
         }
         let mut gate_view = dustroute_ir::recognize_gates(&analysis.scene);
         let mut expression_view = dustroute_ir::derive_expressions(&analysis.scene, &gate_view);

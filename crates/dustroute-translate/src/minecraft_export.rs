@@ -189,6 +189,26 @@ pub fn java_block_state(
                 facing_name(facing)
             )
         }
+        BlockKind::Button => format!(
+            "{}[face=floor,facing=north,powered={}]",
+            block
+                .observed_name
+                .as_deref()
+                .unwrap_or("minecraft:stone_button"),
+            block.powered.unwrap_or(false)
+        ),
+        BlockKind::PressurePlate => format!(
+            "{}[powered={}]",
+            block
+                .observed_name
+                .as_deref()
+                .unwrap_or("minecraft:stone_pressure_plate"),
+            block.powered.unwrap_or(false)
+        ),
+        BlockKind::RedstoneLamp => format!(
+            "minecraft:redstone_lamp[lit={}]",
+            block.powered.unwrap_or(false)
+        ),
         BlockKind::Piston => format!(
             "minecraft:piston[facing={},extended=false]",
             facing_name(block.facing.unwrap_or(Facing::North))

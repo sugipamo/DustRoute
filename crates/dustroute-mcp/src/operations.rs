@@ -18,6 +18,9 @@ pub enum OperationKind {
     RepairProposal,
     RepairApply,
     RepairUndo,
+    TransitionProposal,
+    TransitionRun,
+    TransitionRestore,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
