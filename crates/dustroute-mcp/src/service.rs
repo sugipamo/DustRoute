@@ -5,7 +5,7 @@ use dustroute_app::DustRouteService;
 use dustroute_optimize::{
     AnchorPolicy, BehavioralVerificationConfig, CompressionAxis, CompressionDirection,
     OptimizationPlan, OptimizationRoutingConfig, OptimizationSafety, TemporalCapabilities,
-    assess_optimization_safety, realize_staged_optimization, verify_realized_optimization,
+    assess_optimization_safety, realize_staged_optimization_against, verify_realized_optimization,
 };
 use dustroute_physical::{BlockKind, Pos};
 use dustroute_physical::{PhysicalBlockChange, PhysicalPatch};
@@ -24,6 +24,7 @@ use rmcp::{
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use tokio::sync::Mutex;
+use tokio::time::{Duration, sleep};
 
 use crate::McpConfig;
 use crate::api::{
@@ -38,7 +39,9 @@ use crate::{
     plan_world_overlay, scenario_trace_from_recording_with_initial,
 };
 
-const MAX_FLAT_ANALYSIS_COMPONENTS: usize = 128;
+const MAX_FLAT_ANALYSIS_COMPONENTS: usize = 512;
+const PLACEMENT_VERIFY_ATTEMPTS: usize = 10;
+const PLACEMENT_VERIFY_INTERVAL: Duration = Duration::from_millis(100);
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ToolProfile {
@@ -106,7 +109,7 @@ struct InspectLookedAtWorldParams {
     player: Option<String>,
     /// Maximum redstone components followed from the gaze target, from 1 through 32768. Defaults to 8192.
     max_components: Option<usize>,
-    /// Maximum Manhattan gap followed between nearby components. Defaults to 2 so a one-block break remains visible.
+    /// Maximum Manhattan gap followed between nearby components, from 1 through 16. Defaults to 2 so a one-block break remains visible.
     component_gap: Option<u32>,
     /// Ray-cast limit in blocks. Defaults to 64.
     max_distance: Option<f64>,
@@ -134,7 +137,7 @@ struct DiscoverCircuitParams {
     max_components: Option<usize>,
     /// Extra blocks around the discovered circuit. Defaults to 1.
     padding: Option<i32>,
-    /// Maximum Manhattan distance used to discover a nearby disconnected fragment. Defaults to 2.
+    /// Maximum Manhattan distance used to discover a nearby disconnected fragment, from 1 through 16. Defaults to 2.
     fragment_gap: Option<u32>,
 }
 
@@ -144,7 +147,7 @@ struct AnalyzeLookedAtParams {
     player: Option<String>,
     /// Maximum redstone components followed from the gaze target. Defaults to 8192.
     max_components: Option<usize>,
-    /// Maximum Manhattan gap considered for broken connections. Defaults to 2.
+    /// Maximum Manhattan gap considered for broken connections, from 1 through 16. Defaults to 2.
     fragment_gap: Option<u32>,
     /// Explicitly enumerate a truth table for a small circuit. Defaults to false.
     include_truth_table: Option<bool>,
@@ -156,7 +159,7 @@ struct DiagnoseLookedAtParams {
     player: Option<String>,
     /// Maximum redstone components followed from the gaze target. Defaults to 8192.
     max_components: Option<usize>,
-    /// Maximum Manhattan gap considered when discovering broken fragments. Defaults to 2.
+    /// Maximum Manhattan gap considered when discovering broken fragments, from 1 through 16. Defaults to 2.
     fragment_gap: Option<u32>,
 }
 
@@ -786,6 +789,92 @@ fn hierarchical_result_json(
     })
 }
 
+fn circuit_identity_json(
+    hierarchy: &dustroute_ir::HierarchicalIr,
+    logical_role: Option<&dustroute_translate::LogicalRole>,
+    analysis_complete: bool,
+    repair_count: usize,
+) -> Value {
+    let mut local_gate_counts = BTreeMap::<String, usize>::new();
+    for gate in &hierarchy.cell_graph.value.cells.gates {
+        *local_gate_counts
+            .entry(format!("{:?}", gate.kind).to_lowercase())
+            .or_default() += 1;
+    }
+    let mut candidates = hierarchy
+        .functional_graph
+        .value
+        .functions
+        .candidates
+        .iter()
+        .collect::<Vec<_>>();
+    candidates.sort_by_key(|candidate| {
+        let status = match candidate.status {
+            dustroute_ir::RecognitionStatus::Complete => 3_u8,
+            dustroute_ir::RecognitionStatus::Partial => 2,
+            dustroute_ir::RecognitionStatus::BoundaryLimited => 1,
+            dustroute_ir::RecognitionStatus::Conflicting => 0,
+        };
+        (
+            std::cmp::Reverse(candidate.confidence),
+            std::cmp::Reverse(status),
+        )
+    });
+    let truth_table_candidate = logical_role.filter(|role| {
+        !matches!(
+            role.classification,
+            dustroute_translate::FunctionalClassification::Unknown
+                | dustroute_translate::FunctionalClassification::Unclassified
+        )
+    });
+    let primary = truth_table_candidate
+        .map(|role| {
+            json!({
+                "kind": role.classification,
+                "confidence": "certain",
+                "status": "complete",
+                "basis": role.basis,
+                "input_count": role.input_count,
+                "output_count": role.output_count,
+                "output_functions": role.output_functions
+            })
+        })
+        .or_else(|| candidates.first().map(|candidate| json!(candidate)));
+    let classification_level = if primary.is_some() {
+        "higher_function"
+    } else if !local_gate_counts.is_empty() {
+        "local_gate_network"
+    } else {
+        "physical_only"
+    };
+    let mut uncertainty_reasons = Vec::new();
+    if !analysis_complete {
+        uncertainty_reasons.push("component_limit_reached");
+    }
+    if !hierarchy.physical_graph.unresolved.is_empty() {
+        uncertainty_reasons.push("unresolved_physical_connections");
+    }
+    if !hierarchy.cell_graph.unresolved.is_empty() {
+        uncertainty_reasons.push("unresolved_local_components");
+    }
+    if primary.is_none() {
+        uncertainty_reasons.push("no_registered_higher_level_pattern_matched");
+    }
+    json!({
+        "classification_level": classification_level,
+        "primary_candidate": primary,
+        "higher_level_candidates": candidates,
+        "local_gate_counts": local_gate_counts,
+        "local_gates": hierarchy.cell_graph.value.cells.gates,
+        "analysis_complete": analysis_complete,
+        "uncertainty_reasons": uncertainty_reasons,
+        "repair_candidate_count": repair_count,
+        "repair_available": repair_count > 0,
+        "temporal_validity": hierarchy.temporal.timing,
+        "interpretation": "primary_candidate is a ranked registered pattern; local_gates remain useful evidence when no whole-circuit name is known"
+    })
+}
+
 fn reverse_result_json(
     bounds: dustroute_translate::RegionBounds,
     translated: &dustroute_translate::ReverseResult,
@@ -1110,7 +1199,7 @@ impl DustRouteMcp {
             Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
         };
         let (verified, verification_mismatches) = match self
-            .verify_placement_changes(source, &dimension, true)
+            .verify_placement_changes_eventually(source, &dimension)
             .await
         {
             Ok(result) => result,
@@ -1195,6 +1284,31 @@ impl DustRouteMcp {
             .map(|change| change.pos)
             .collect::<Vec<_>>();
         Ok((mismatches.is_empty(), mismatches))
+    }
+
+    /// Minecraft applies neighbor updates asynchronously after a batch write.
+    /// A successful bridge response therefore does not guarantee that an
+    /// immediately following scan observes every written block. Keep stale
+    /// baseline detection strict, but allow post-write verification to settle.
+    async fn verify_placement_changes_eventually(
+        &self,
+        changes: &[BlockChange],
+        dimension: &str,
+    ) -> Result<(bool, Vec<Pos>), String> {
+        let mut last_mismatches = Vec::new();
+        for attempt in 0..PLACEMENT_VERIFY_ATTEMPTS {
+            let (verified, mismatches) = self
+                .verify_placement_changes(changes, dimension, true)
+                .await?;
+            if verified {
+                return Ok((true, Vec::new()));
+            }
+            last_mismatches = mismatches;
+            if attempt + 1 < PLACEMENT_VERIFY_ATTEMPTS {
+                sleep(PLACEMENT_VERIFY_INTERVAL).await;
+            }
+        }
+        Ok((false, last_mismatches))
     }
 
     async fn write_physical_changes(
@@ -1855,13 +1969,13 @@ impl DustRouteMcp {
         let max_distance = params.max_distance.unwrap_or(64.0);
         let max_listed_blocks = params.max_listed_blocks.unwrap_or(256);
         if !(1..=32768).contains(&max_components)
-            || !(1..=8).contains(&component_gap)
+            || !(1..=16).contains(&component_gap)
             || !(1.0..=256.0).contains(&max_distance)
             || !(1..=2048).contains(&max_listed_blocks)
         {
             return json_text(json!({
                 "ok": false,
-                "error": "max_components must be 1..32768, component_gap 1..8, max_distance 1..256, and max_listed_blocks 1..2048"
+                "error": "max_components must be 1..32768, component_gap 1..16, max_distance 1..256, and max_listed_blocks 1..2048"
             }));
         }
         let observation = match self.bridge.observe_player(&player, max_distance).await {
@@ -2030,11 +2144,11 @@ impl DustRouteMcp {
         let fragment_gap = params.fragment_gap.unwrap_or(2);
         if !(1..=32768).contains(&max_components)
             || !(0..=8).contains(&padding)
-            || !(1..=8).contains(&fragment_gap)
+            || !(1..=16).contains(&fragment_gap)
         {
             return json_text(json!({
                 "ok": false,
-                "error": "max_components must be 1..32768, padding 0..8, and fragment_gap 1..8"
+                "error": "max_components must be 1..32768, padding 0..8, and fragment_gap 1..16"
             }));
         }
         let observation = match self.bridge.observe_player(&player, 64.0).await {
@@ -2299,6 +2413,15 @@ impl DustRouteMcp {
             );
             if let Some(object) = result.as_object_mut() {
                 object.insert(
+                    "circuit_identity".to_owned(),
+                    circuit_identity_json(
+                        &hierarchy,
+                        None,
+                        discovery["expansion"]["limit_reached"] != Value::Bool(true),
+                        repair_json.len(),
+                    ),
+                );
+                object.insert(
                     "diagnostic".to_owned(),
                     serde_json::to_value(dustroute_translate::diagnose_scene(
                         &analysis.scene,
@@ -2386,6 +2509,15 @@ impl DustRouteMcp {
         let mut result = reverse_result_json(bounds, translated);
         if let Some(object) = result.as_object_mut() {
             object.insert(
+                "circuit_identity".to_owned(),
+                circuit_identity_json(
+                    &staged.hierarchy,
+                    Some(&staged.logical_role),
+                    !incomplete,
+                    repair_json.len(),
+                ),
+            );
+            object.insert(
                 "diagnostic".to_owned(),
                 serde_json::to_value(dustroute_translate::diagnose_scene(
                     &translated.analysis.scene,
@@ -2465,8 +2597,9 @@ impl DustRouteMcp {
                 CompressionDirection::TowardMinimum,
                 AnchorPolicy::Inputs,
             );
-            let realized = match realize_staged_optimization(
+            let realized = match realize_staged_optimization_against(
                 &translated.compiled.physical,
+                &translated.compiled.world,
                 &optimization_plan,
                 OptimizationRoutingConfig::default(),
             ) {
@@ -4109,6 +4242,21 @@ mod tests {
             "buffer"
         );
         assert!(!value["gate_view"]["gates"].as_array().unwrap().is_empty());
+        assert_eq!(
+            value["circuit_identity"]["classification_level"],
+            "local_gate_network"
+        );
+        assert_eq!(value["circuit_identity"]["local_gate_counts"]["buffer"], 1);
+        assert_eq!(value["circuit_identity"]["analysis_complete"], true);
+        assert!(value["circuit_identity"]["primary_candidate"].is_null());
+        assert!(
+            value["circuit_identity"]["uncertainty_reasons"]
+                .as_array()
+                .unwrap()
+                .contains(&Value::String(
+                    "no_registered_higher_level_pattern_matched".to_owned()
+                ))
+        );
         assert!(value["physical"]["observation"].is_object());
         assert!(value["physical"]["block_capabilities"]["groups"].is_array());
         assert!(value["stages"]["physical_scene"].is_object());

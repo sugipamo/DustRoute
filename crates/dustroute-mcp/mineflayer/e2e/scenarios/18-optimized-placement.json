@@ -1,5 +1,5 @@
 {
-  "name": "optimized_placement_apply_verify_undo",
+  "name": "guarded_optimized_placement",
   "steps": [
     { "kind": "command", "commands": [
       "/fill 699 102 -1 752 109 25 minecraft:air",
@@ -15,11 +15,9 @@
       { "path": "ok", "equals": true },
       { "path": "optimization.safety", "equals": "preview_only" },
       { "path": "optimization.phases.0.accepted_mutations", "exists": true },
+      { "path": "optimization.phases.1.accepted_mutations", "exists": true },
       { "path": "operation_id", "exists": true }
     ]},
-    { "kind": "mcp", "tool": "get_circuit_placement", "arguments": {
-      "operation_id": "${plan.operation_id}"
-    }, "save": "detail" },
     { "kind": "mcp", "tool": "invoke_circuit_placement", "arguments": {
       "operation_id": "${plan.operation_id}", "confirm": true
     }, "save": "apply" },
@@ -28,6 +26,7 @@
       { "path": "verified", "equals": true },
       { "path": "action", "equals": "apply" }
     ]},
+    { "kind": "wait", "ticks": 20 },
     { "kind": "mcp", "tool": "undo_circuit_placement", "arguments": {
       "operation_id": "${plan.operation_id}", "confirm": true
     }, "save": "undo" },

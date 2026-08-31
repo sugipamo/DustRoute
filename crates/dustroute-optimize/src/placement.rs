@@ -34,6 +34,7 @@ pub struct PlacementScore {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum MutationKind {
     Move,
+    MovePair,
     Rotate,
     ReplaceCell,
 }
@@ -44,6 +45,7 @@ pub struct PlacementMutation {
     pub delta: Pos,
     pub rotation: Option<RotationY>,
     pub candidate_name: Option<String>,
+    pub companion_move: Option<(CellId, Pos)>,
 }
 #[derive(Clone, Debug)]
 pub struct PlacementOptimizationResult {
@@ -79,6 +81,18 @@ pub fn refresh_route_endpoints(pc: &mut PlacementCircuit) {
                     repeaters: vec![],
                 },
             )
+        })
+        .collect();
+    let old_terminals = pc.terminals.clone();
+    pc.terminals = old_terminals
+        .into_iter()
+        .map(|(name, mut terminal)| {
+            terminal.endpoint = refresh_endpoint(
+                pc,
+                &terminal.endpoint,
+                terminal.direction == dustroute_translate::TerminalDirection::Output,
+            );
+            (name, terminal)
         })
         .collect();
 }
@@ -123,6 +137,39 @@ pub fn placement_score(pc: &PlacementCircuit, w: PlacementWeights) -> PlacementS
         overlaps,
     }
 }
+
+/// Counts cross-cell block pairs inside a one-block electrical keep-out.
+/// This is deliberately conservative: exact redstone behavior is checked by
+/// realization, while this inexpensive metric prevents geometry scoring from
+/// preferring newly adjacent cell footprints in the first place.
+pub(crate) fn electrical_keepout_contacts(pc: &PlacementCircuit) -> usize {
+    let blocks = pc
+        .cells
+        .iter()
+        .flat_map(|(cell, node)| {
+            node.placed
+                .blocks()
+                .map(move |(position, block)| (*cell, position, block.kind))
+        })
+        .collect::<Vec<_>>();
+    let mut contacts = 0;
+    for (index, (first_cell, first_pos, first_kind)) in blocks.iter().enumerate() {
+        for (second_cell, second_pos, second_kind) in &blocks[index + 1..] {
+            if first_cell == second_cell
+                || (!first_kind.is_redstone_related() && !second_kind.is_redstone_related())
+            {
+                continue;
+            }
+            let distance = first_pos.x.abs_diff(second_pos.x)
+                + first_pos.y.abs_diff(second_pos.y)
+                + first_pos.z.abs_diff(second_pos.z);
+            if distance <= 1 {
+                contacts += 1;
+            }
+        }
+    }
+    contacts
+}
 pub fn apply_mutation(
     pc: &PlacementCircuit,
     m: &PlacementMutation,
@@ -132,8 +179,13 @@ pub fn apply_mutation(
     let node = &out.cells[&m.cell_id];
     let mut placed = node.placed.clone();
     match m.kind {
-        MutationKind::Move => placed.origin = placed.origin.offset(m.delta.x, m.delta.y, m.delta.z),
-        MutationKind::Rotate => placed.rotation = m.rotation.unwrap(),
+        MutationKind::Move | MutationKind::MovePair => {
+            placed.origin = placed.origin.offset(m.delta.x, m.delta.y, m.delta.z);
+        }
+        MutationKind::Rotate => {
+            placed.rotation = m.rotation.unwrap();
+            placed.origin = placed.origin.offset(m.delta.x, m.delta.y, m.delta.z);
+        }
         MutationKind::ReplaceCell => {
             placed.cell = lib
                 .candidates_for(node.logical_kind)
@@ -151,6 +203,10 @@ pub fn apply_mutation(
             placed,
         },
     );
+    if let Some((companion_id, delta)) = m.companion_move {
+        let companion = out.cells.get_mut(&companion_id).unwrap();
+        companion.placed.origin = companion.placed.origin.offset(delta.x, delta.y, delta.z);
+    }
     refresh_route_endpoints(&mut out);
     out
 }
@@ -173,6 +229,10 @@ pub fn candidate_mutations(
             Pos::new(-step, 0, 0),
             Pos::new(0, 0, step),
             Pos::new(0, 0, -step),
+            Pos::new(step, 0, step),
+            Pos::new(step, 0, -step),
+            Pos::new(-step, 0, step),
+            Pos::new(-step, 0, -step),
         ] {
             out.push(PlacementMutation {
                 kind: MutationKind::Move,
@@ -180,22 +240,54 @@ pub fn candidate_mutations(
                 delta: d,
                 rotation: None,
                 candidate_name: None,
+                companion_move: None,
             });
         }
-        for r in [
+        let local_positions = n.placed.cell.world.positions().collect::<Vec<_>>();
+        let center_sum = |rotation: RotationY| {
+            let rotated = local_positions
+                .iter()
+                .map(|position| rotation.pos(*position))
+                .collect::<Vec<_>>();
+            let min_x = rotated.iter().map(|position| position.x).min().unwrap_or(0);
+            let max_x = rotated.iter().map(|position| position.x).max().unwrap_or(0);
+            let min_z = rotated.iter().map(|position| position.z).min().unwrap_or(0);
+            let max_z = rotated.iter().map(|position| position.z).max().unwrap_or(0);
+            (min_x + max_x, min_z + max_z)
+        };
+        let old_center = center_sum(n.placed.rotation);
+        for rotation in [
             RotationY::R0,
             RotationY::R90,
             RotationY::R180,
             RotationY::R270,
         ] {
-            if r != n.placed.rotation {
-                out.push(PlacementMutation {
-                    kind: MutationKind::Rotate,
-                    cell_id: id,
-                    delta: Pos::new(0, 0, 0),
-                    rotation: Some(r),
-                    candidate_name: None,
-                });
+            if rotation != n.placed.rotation {
+                let new_center = center_sum(rotation);
+                let difference = (old_center.0 - new_center.0, old_center.1 - new_center.1);
+                let x_floor = difference.0.div_euclid(2);
+                let z_floor = difference.1.div_euclid(2);
+                let x_offsets = [x_floor, x_floor + difference.0.rem_euclid(2)];
+                let z_offsets = [z_floor, z_floor + difference.1.rem_euclid(2)];
+                let mut deltas = Vec::new();
+                for x in x_offsets {
+                    for z in z_offsets {
+                        let delta = Pos::new(x, 0, z);
+                        if !deltas.contains(&delta) {
+                            deltas.push(delta);
+                        }
+                    }
+                }
+                for delta in deltas {
+                    out.push(PlacementMutation {
+                        kind: MutationKind::Rotate,
+                        cell_id: id,
+                        delta,
+                        rotation: Some(rotation),
+                        candidate_name: None,
+                        companion_move: None,
+                    });
+                }
             }
         }
         for c in lib.candidates_for(n.logical_kind) {
@@ -206,8 +298,42 @@ pub fn candidate_mutations(
                     delta: Pos::new(0, 0, 0),
                     rotation: None,
                     candidate_name: Some(c.name.clone()),
+                    companion_move: None,
                 });
             }
+        }
+    }
+    let connected_pairs = pc
+        .routes
+        .values()
+        .filter_map(|route| Some((route.source.cell?, route.sink.cell?)))
+        .map(|(first, second)| {
+            if first < second {
+                (first, second)
+            } else {
+                (second, first)
+            }
+        })
+        .collect::<std::collections::BTreeSet<_>>();
+    for (first, second) in connected_pairs {
+        let first_origin = pc.cells[&first].placed.origin;
+        let second_origin = pc.cells[&second].placed.origin;
+        let toward = |difference: i32| difference.signum() * step;
+        let first_delta = Pos::new(
+            toward(second_origin.x - first_origin.x),
+            0,
+            toward(second_origin.z - first_origin.z),
+        );
+        let second_delta = Pos::new(-first_delta.x, 0, -first_delta.z);
+        if first_delta != Pos::new(0, 0, 0) {
+            out.push(PlacementMutation {
+                kind: MutationKind::MovePair,
+                cell_id: first,
+                delta: first_delta,
+                rotation: None,
+                candidate_name: None,
+                companion_move: Some((second, second_delta)),
+            });
         }
     }
     out
@@ -297,5 +423,89 @@ mod tests {
             apply_mutation(&pc, &m, &lib).cells[&id].placed.cell.name,
             "not_torch_top"
         );
+    }
+
+    #[test]
+    fn rotations_are_proposed_for_guarded_validation() {
+        let mut pc = PlacementCircuit::new();
+        pc.add_cell(
+            GateKind::Not,
+            PlacedCell {
+                cell: not_cell(),
+                origin: Pos::new(0, 0, 0),
+                rotation: RotationY::R0,
+            },
+        );
+        let mutations = candidate_mutations(&pc, &default_cell_library(), 1);
+        assert!(
+            mutations
+                .iter()
+                .filter(|mutation| mutation.kind == MutationKind::Rotate)
+                .count()
+                >= 3
+        );
+        assert!(mutations.iter().any(|mutation| {
+            mutation.kind == MutationKind::Rotate && mutation.delta != Pos::new(0, 0, 0)
+        }));
+    }
+
+    #[test]
+    fn electrical_keepout_detects_new_cross_cell_adjacency() {
+        let mut pc = PlacementCircuit::new();
+        let first = pc.add_cell(
+            GateKind::Not,
+            PlacedCell {
+                cell: not_cell(),
+                origin: Pos::new(0, 0, 0),
+                rotation: RotationY::R0,
+            },
+        );
+        let second = pc.add_cell(
+            GateKind::Not,
+            PlacedCell {
+                cell: not_cell(),
+                origin: Pos::new(8, 0, 0),
+                rotation: RotationY::R0,
+            },
+        );
+        assert_eq!(electrical_keepout_contacts(&pc), 0);
+        pc.cells.get_mut(&second).unwrap().placed.origin = Pos::new(3, 0, 0);
+        assert!(electrical_keepout_contacts(&pc) > 0);
+        assert_ne!(first, second);
+    }
+
+    #[test]
+    fn connected_cells_receive_an_atomic_pair_compression_candidate() {
+        let mut pc = PlacementCircuit::new();
+        let first = pc.add_cell(
+            GateKind::Not,
+            PlacedCell {
+                cell: not_cell(),
+                origin: Pos::new(0, 0, 0),
+                rotation: RotationY::R0,
+            },
+        );
+        let second = pc.add_cell(
+            GateKind::Not,
+            PlacedCell {
+                cell: not_cell(),
+                origin: Pos::new(12, 0, 4),
+                rotation: RotationY::R0,
+            },
+        );
+        pc.add_route(
+            pc.output_endpoint(first, "out").unwrap(),
+            pc.input_endpoint(second, "a").unwrap(),
+            vec![],
+            vec![],
+        );
+        let library = default_cell_library();
+        let mutation = candidate_mutations(&pc, &library, 1)
+            .into_iter()
+            .find(|mutation| mutation.kind == MutationKind::MovePair)
+            .unwrap();
+        let candidate = apply_mutation(&pc, &mutation, &library);
+        assert_eq!(candidate.cells[&first].placed.origin, Pos::new(1, 0, 1));
+        assert_eq!(candidate.cells[&second].placed.origin, Pos::new(11, 0, 3));
     }
 }

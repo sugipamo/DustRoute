@@ -8,7 +8,7 @@ use crate::multinet::{
     LegalityReport, MultiNetError, MultiNetRouting, NetId, RipupRoutingError, RoutingJob,
     materialize_multinet, route_jobs_ripup, validate_routing_legality,
 };
-use crate::physical::{CellId, PhysicalError, PlacementCircuit};
+use crate::physical::{CellId, PhysicalError, PlacementCircuit, TerminalDirection};
 use crate::port_realization::PortRealizationError;
 use crate::routing::RouterConfig;
 use crate::world::{Pos, World};
@@ -125,6 +125,17 @@ impl BaselineCompiler {
                     rotation: RotationY::R0,
                 },
             );
+            if node.kind == GateKind::Input {
+                let name = node
+                    .name
+                    .clone()
+                    .unwrap_or_else(|| format!("in{}", node.id.0));
+                physical.add_terminal(
+                    name,
+                    TerminalDirection::Input,
+                    physical.input_endpoint(id, "in")?,
+                );
+            }
             node_to_cell.insert(node.id, id);
         }
         let depths = primitive.logic_depths()?;
@@ -136,17 +147,20 @@ impl BaselineCompiler {
                 i32::try_from(index).expect("output index fits i32") * self.config.lane_gap * 3,
             );
             let cell = baseline_cell_for(GateKind::Output).expect("output baseline cell");
-            output_cells.insert(
-                name.clone(),
-                physical.add_cell(
-                    GateKind::Output,
-                    PlacedCell {
-                        cell,
-                        origin,
-                        rotation: RotationY::R0,
-                    },
-                ),
+            let output_cell = physical.add_cell(
+                GateKind::Output,
+                PlacedCell {
+                    cell,
+                    origin,
+                    rotation: RotationY::R0,
+                },
             );
+            physical.add_terminal(
+                name.clone(),
+                TerminalDirection::Output,
+                physical.output_endpoint(output_cell, "out")?,
+            );
+            output_cells.insert(name.clone(), output_cell);
         }
 
         let mut sinks_by_source: BTreeMap<NodeId, Vec<(CellId, String)>> = BTreeMap::new();

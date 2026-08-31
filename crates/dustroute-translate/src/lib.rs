@@ -87,7 +87,10 @@ pub use multinet::{
     RipupRoutingResult, RoutedNet, RoutingJob, materialize_multinet, route_jobs_ripup,
     route_net_tree, validate_routing_legality,
 };
-pub use physical::{CellId, Endpoint, PhysicalError, PlacementCircuit, Route, RouteId};
+pub use physical::{
+    CellId, Endpoint, PhysicalError, PlacementCircuit, Route, RouteId, TerminalContract,
+    TerminalDirection,
+};
 pub use port_realization::{
     PortRealization, PortRealizationError, realize_sink_endpoint, realize_source_endpoint,
     terminal_for_endpoint,
