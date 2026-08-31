@@ -34,7 +34,7 @@ pub struct PlacementScore {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum MutationKind {
     Move,
-    MovePair,
+    MoveGroup,
     Rotate,
     ReplaceCell,
 }
@@ -45,7 +45,13 @@ pub struct PlacementMutation {
     pub delta: Pos,
     pub rotation: Option<RotationY>,
     pub candidate_name: Option<String>,
-    pub companion_move: Option<(CellId, Pos)>,
+    pub companion_moves: Vec<(CellId, Pos)>,
+}
+
+impl PlacementMutation {
+    pub(crate) fn affected_cells(&self) -> impl Iterator<Item = CellId> + '_ {
+        std::iter::once(self.cell_id).chain(self.companion_moves.iter().map(|(cell, _)| *cell))
+    }
 }
 #[derive(Clone, Debug)]
 pub struct PlacementOptimizationResult {
@@ -179,7 +185,7 @@ pub fn apply_mutation(
     let node = &out.cells[&m.cell_id];
     let mut placed = node.placed.clone();
     match m.kind {
-        MutationKind::Move | MutationKind::MovePair => {
+        MutationKind::Move | MutationKind::MoveGroup => {
             placed.origin = placed.origin.offset(m.delta.x, m.delta.y, m.delta.z);
         }
         MutationKind::Rotate => {
@@ -203,8 +209,8 @@ pub fn apply_mutation(
             placed,
         },
     );
-    if let Some((companion_id, delta)) = m.companion_move {
-        let companion = out.cells.get_mut(&companion_id).unwrap();
+    for (companion_id, delta) in &m.companion_moves {
+        let companion = out.cells.get_mut(companion_id).unwrap();
         companion.placed.origin = companion.placed.origin.offset(delta.x, delta.y, delta.z);
     }
     refresh_route_endpoints(&mut out);
@@ -240,7 +246,7 @@ pub fn candidate_mutations(
                 delta: d,
                 rotation: None,
                 candidate_name: None,
-                companion_move: None,
+                companion_moves: vec![],
             });
         }
         let local_positions = n.placed.cell.world.positions().collect::<Vec<_>>();
@@ -285,7 +291,7 @@ pub fn candidate_mutations(
                         delta,
                         rotation: Some(rotation),
                         candidate_name: None,
-                        companion_move: None,
+                        companion_moves: vec![],
                     });
                 }
             }
@@ -298,7 +304,7 @@ pub fn candidate_mutations(
                     delta: Pos::new(0, 0, 0),
                     rotation: None,
                     candidate_name: Some(c.name.clone()),
-                    companion_move: None,
+                    companion_moves: vec![],
                 });
             }
         }
@@ -327,12 +333,88 @@ pub fn candidate_mutations(
         let second_delta = Pos::new(-first_delta.x, 0, -first_delta.z);
         if first_delta != Pos::new(0, 0, 0) {
             out.push(PlacementMutation {
-                kind: MutationKind::MovePair,
+                kind: MutationKind::MoveGroup,
                 cell_id: first,
                 delta: first_delta,
                 rotation: None,
                 candidate_name: None,
-                companion_move: Some((second, second_delta)),
+                companion_moves: vec![(second, second_delta)],
+            });
+        }
+    }
+    let mut adjacency = BTreeMap::<CellId, std::collections::BTreeSet<CellId>>::new();
+    for route in pc.routes.values() {
+        let (Some(first), Some(second)) = (route.source.cell, route.sink.cell) else {
+            continue;
+        };
+        adjacency.entry(first).or_default().insert(second);
+        adjacency.entry(second).or_default().insert(first);
+    }
+    let groups = adjacency
+        .iter()
+        .filter_map(|(seed, neighbors)| {
+            let mut group = std::collections::BTreeSet::from([*seed]);
+            group.extend(neighbors);
+            (group.len() >= 2 && group.len() <= 8).then_some(group)
+        })
+        .collect::<std::collections::BTreeSet<_>>();
+    let directions = [
+        Pos::new(step, 0, 0),
+        Pos::new(-step, 0, 0),
+        Pos::new(0, 0, step),
+        Pos::new(0, 0, -step),
+        Pos::new(step, 0, step),
+        Pos::new(step, 0, -step),
+        Pos::new(-step, 0, step),
+        Pos::new(-step, 0, -step),
+    ];
+    for group in groups {
+        let cells = group.into_iter().collect::<Vec<_>>();
+        let primary = cells[0];
+        for delta in directions {
+            out.push(PlacementMutation {
+                kind: MutationKind::MoveGroup,
+                cell_id: primary,
+                delta,
+                rotation: None,
+                candidate_name: None,
+                companion_moves: cells[1..].iter().map(|cell| (*cell, delta)).collect(),
+            });
+        }
+        let sum_x = cells
+            .iter()
+            .map(|cell| i64::from(pc.cells[cell].placed.origin.x))
+            .sum::<i64>();
+        let sum_z = cells
+            .iter()
+            .map(|cell| i64::from(pc.cells[cell].placed.origin.z))
+            .sum::<i64>();
+        let count = i64::try_from(cells.len()).expect("group length fits i64");
+        let toward_center = |cell: CellId| {
+            let origin = pc.cells[&cell].placed.origin;
+            Pos::new(
+                (sum_x - i64::from(origin.x) * count).signum() as i32 * step,
+                0,
+                (sum_z - i64::from(origin.z) * count).signum() as i32 * step,
+            )
+        };
+        let primary_delta = toward_center(primary);
+        let companion_moves = cells[1..]
+            .iter()
+            .map(|cell| (*cell, toward_center(*cell)))
+            .collect::<Vec<_>>();
+        if primary_delta != Pos::new(0, 0, 0)
+            || companion_moves
+                .iter()
+                .any(|(_, delta)| *delta != Pos::new(0, 0, 0))
+        {
+            out.push(PlacementMutation {
+                kind: MutationKind::MoveGroup,
+                cell_id: primary,
+                delta: primary_delta,
+                rotation: None,
+                candidate_name: None,
+                companion_moves,
             });
         }
     }
@@ -502,10 +584,46 @@ mod tests {
         let library = default_cell_library();
         let mutation = candidate_mutations(&pc, &library, 1)
             .into_iter()
-            .find(|mutation| mutation.kind == MutationKind::MovePair)
+            .find(|mutation| mutation.kind == MutationKind::MoveGroup)
             .unwrap();
         let candidate = apply_mutation(&pc, &mutation, &library);
         assert_eq!(candidate.cells[&first].placed.origin, Pos::new(1, 0, 1));
         assert_eq!(candidate.cells[&second].placed.origin, Pos::new(11, 0, 3));
+    }
+
+    #[test]
+    fn one_hop_subgraph_receives_group_translation_and_squeeze_candidates() {
+        let mut pc = PlacementCircuit::new();
+        let cells = [Pos::new(0, 0, 0), Pos::new(12, 0, 4), Pos::new(24, 0, 0)].map(|origin| {
+            pc.add_cell(
+                GateKind::Not,
+                PlacedCell {
+                    cell: not_cell(),
+                    origin,
+                    rotation: RotationY::R0,
+                },
+            )
+        });
+        for sink in [cells[0], cells[2]] {
+            pc.add_route(
+                pc.output_endpoint(cells[1], "out").unwrap(),
+                pc.input_endpoint(sink, "a").unwrap(),
+                vec![],
+                vec![],
+            );
+        }
+        let groups = candidate_mutations(&pc, &default_cell_library(), 1)
+            .into_iter()
+            .filter(|mutation| {
+                mutation.kind == MutationKind::MoveGroup && mutation.companion_moves.len() == 2
+            })
+            .collect::<Vec<_>>();
+        assert!(groups.len() >= 9);
+        assert!(groups.iter().any(|mutation| {
+            mutation
+                .companion_moves
+                .iter()
+                .any(|(_, delta)| *delta != mutation.delta)
+        }));
     }
 }

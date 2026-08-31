@@ -247,7 +247,10 @@ fn optimize_phase(
     for _ in 0..max_steps {
         let mut improving = Vec::new();
         for mutation in candidate_mutations(&current, &library, move_step) {
-            if anchors.contains(&mutation.cell_id) {
+            if mutation
+                .affected_cells()
+                .any(|cell| anchors.contains(&cell))
+            {
                 continue;
             }
             if let OptimizationPhase::DirectionalCompress {
