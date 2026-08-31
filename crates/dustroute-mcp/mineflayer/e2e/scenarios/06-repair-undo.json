@@ -10,22 +10,22 @@
       "/setblock 403 104 0 minecraft:repeater[facing=west,delay=1,locked=false,powered=false]"
     ]},
     { "kind": "aim", "position": { "x": 403.5, "y": 106, "z": 6.5 }, "target": { "x": 403, "y": 104, "z": 0 } },
-    { "kind": "mcp", "tool": "convert_from_looked_at_circuit", "arguments": { "max_components": 64, "fragment_gap": 2 }, "save": "analysis" },
+    { "kind": "mcp", "tool": "test_circuit", "arguments": { "max_components": 64, "fragment_gap": 2 }, "save": "analysis" },
     { "kind": "assert", "from": "analysis", "expect": [
-      { "path": "diagnostic.counts.probable_faults", "at_least": 1 },
-      { "path": "repair_proposals.0.operation_id", "exists": true }
+      { "path": "diagnostic.counts.probable_faults", "at_least": 1 }
     ]},
-    { "kind": "mcp", "tool": "show_repair_plan", "arguments": { "operation_id": "${analysis.repair_proposals.0.operation_id}" }, "save": "preview" },
-    { "kind": "mcp", "tool": "invoke_repair", "arguments": { "operation_id": "${analysis.repair_proposals.0.operation_id}", "confirm": true }, "save": "applied" },
+    { "kind": "mcp", "tool": "new_repair", "arguments": { "max_gap": 2 }, "save": "repair" },
+    { "kind": "mcp", "tool": "show_operation", "arguments": { "operation_id": "${repair.proposals.0.operation_id}" }, "save": "preview" },
+    { "kind": "mcp", "tool": "invoke_operation", "arguments": { "operation_id": "${repair.proposals.0.operation_id}", "confirm": true }, "save": "applied" },
     { "kind": "assert", "from": "applied", "expect": [
       { "path": "schema_version", "equals": "dustroute.repair.v1" }
     ]},
-    { "kind": "mcp", "tool": "test_looked_at_circuit", "arguments": { "max_components": 64 }, "save": "after" },
+    { "kind": "mcp", "tool": "test_circuit", "arguments": { "max_components": 64 }, "save": "after" },
     { "kind": "assert", "from": "after", "expect": [
       { "path": "diagnostic.counts.probable_faults", "equals": 0 }
     ]},
-    { "kind": "mcp", "tool": "undo_repair", "arguments": { "operation_id": "${analysis.repair_proposals.0.operation_id}", "confirm": true }, "save": "undone" },
-    { "kind": "mcp", "tool": "test_looked_at_circuit", "arguments": { "max_components": 64 }, "save": "restored" },
+    { "kind": "mcp", "tool": "undo_operation", "arguments": { "operation_id": "${repair.proposals.0.operation_id}", "confirm": true }, "save": "undone" },
+    { "kind": "mcp", "tool": "test_circuit", "arguments": { "max_components": 64 }, "save": "restored" },
     { "kind": "assert", "from": "restored", "expect": [
       { "path": "diagnostic.counts.probable_faults", "at_least": 1 }
     ]}

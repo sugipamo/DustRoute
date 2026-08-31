@@ -14,9 +14,9 @@
     { "kind": "assert", "from": "proposal", "expect": [
       { "path": "proposals.0.transition", "equals": "on_to_off" }
     ]},
-    { "kind": "mcp", "tool": "show_transition_test", "arguments": { "operation_id": "${proposal.proposals.0.operation_id}" }, "save": "preview" },
+    { "kind": "mcp", "tool": "show_operation", "arguments": { "operation_id": "${proposal.proposals.0.operation_id}" }, "save": "preview" },
     { "kind": "command", "commands": ["/tp ${assistant} 521.5 124 0.5"] },
-    { "kind": "mcp", "tool": "invoke_transition_test", "arguments": { "operation_id": "${proposal.proposals.0.operation_id}", "confirm": true }, "save": "run" },
+    { "kind": "mcp", "tool": "invoke_operation", "arguments": { "operation_id": "${proposal.proposals.0.operation_id}", "confirm": true }, "save": "run" },
     { "kind": "assert", "from": "run", "expect": [
       { "path": "ok", "equals": true },
       { "path": "activation.before_powered", "equals": true },

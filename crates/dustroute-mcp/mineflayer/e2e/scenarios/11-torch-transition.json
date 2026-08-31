@@ -15,8 +15,8 @@
     { "kind": "assert", "from": "proposal", "expect": [
       { "path": "proposals.0.safety.safety", "equals": "ready" }
     ]},
-    { "kind": "mcp", "tool": "show_transition_test", "arguments": { "operation_id": "${proposal.proposals.0.operation_id}" }, "save": "preview" },
-    { "kind": "mcp", "tool": "invoke_transition_test", "arguments": { "operation_id": "${proposal.proposals.0.operation_id}", "confirm": true }, "save": "run" },
+    { "kind": "mcp", "tool": "show_operation", "arguments": { "operation_id": "${proposal.proposals.0.operation_id}" }, "save": "preview" },
+    { "kind": "mcp", "tool": "invoke_operation", "arguments": { "operation_id": "${proposal.proposals.0.operation_id}", "confirm": true }, "save": "run" },
     { "kind": "assert", "from": "run", "expect": [
       { "path": "ok", "equals": true },
       { "path": "recording.stored_events", "at_least": 2 },

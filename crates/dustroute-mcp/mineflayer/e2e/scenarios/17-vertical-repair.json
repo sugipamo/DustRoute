@@ -11,17 +11,18 @@
       "/setblock 682 105 0 minecraft:redstone_wire"
     ]},
     { "kind": "aim", "position": { "x": 680.5, "y": 107, "z": 6.5 }, "target": { "x": 680, "y": 103, "z": 0 } },
-    { "kind": "mcp", "tool": "convert_from_looked_at_circuit", "arguments": { "max_components": 64, "fragment_gap": 3 }, "save": "analysis" },
-    { "kind": "assert", "from": "analysis", "expect": [
-      { "path": "repair_proposals.0.patch.reason", "equals": "connect_missing_wire" },
-      { "path": "repair_proposals.0.patch.changes.0.pos.y", "equals": 105 }
+    { "kind": "mcp", "tool": "test_circuit", "arguments": { "max_components": 64, "fragment_gap": 3 }, "save": "analysis" },
+    { "kind": "mcp", "tool": "new_repair", "arguments": { "max_gap": 3 }, "save": "repair" },
+    { "kind": "assert", "from": "repair", "expect": [
+      { "path": "proposals.0.patch.reason", "equals": "connect_missing_wire" },
+      { "path": "proposals.0.patch.changes.0.pos.y", "equals": 105 }
     ]},
-    { "kind": "mcp", "tool": "show_repair_plan", "arguments": { "operation_id": "${analysis.repair_proposals.0.operation_id}" }, "save": "preview" },
-    { "kind": "mcp", "tool": "invoke_repair", "arguments": { "operation_id": "${analysis.repair_proposals.0.operation_id}", "confirm": true }, "save": "applied" },
+    { "kind": "mcp", "tool": "show_operation", "arguments": { "operation_id": "${repair.proposals.0.operation_id}" }, "save": "preview" },
+    { "kind": "mcp", "tool": "invoke_operation", "arguments": { "operation_id": "${repair.proposals.0.operation_id}", "confirm": true }, "save": "applied" },
     { "kind": "assert", "from": "applied", "expect": [
       { "path": "verified", "equals": true }
     ]},
-    { "kind": "mcp", "tool": "undo_repair", "arguments": { "operation_id": "${analysis.repair_proposals.0.operation_id}", "confirm": true }, "save": "undone" },
+    { "kind": "mcp", "tool": "undo_operation", "arguments": { "operation_id": "${repair.proposals.0.operation_id}", "confirm": true }, "save": "undone" },
     { "kind": "assert", "from": "undone", "expect": [
       { "path": "verified", "equals": true }
     ]}

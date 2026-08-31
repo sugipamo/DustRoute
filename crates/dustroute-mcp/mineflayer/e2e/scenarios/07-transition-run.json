@@ -16,11 +16,11 @@
       { "path": "proposals.0.operation_id", "exists": true },
       { "path": "proposals.0.safety.safety", "equals": "ready" }
     ]},
-    { "kind": "mcp", "tool": "show_transition_test", "arguments": { "operation_id": "${proposal.proposals.0.operation_id}" }, "save": "preview" },
+    { "kind": "mcp", "tool": "show_operation", "arguments": { "operation_id": "${proposal.proposals.0.operation_id}" }, "save": "preview" },
     { "kind": "command", "commands": [
       "/tp ${assistant} 501.5 124 0.5"
     ]},
-    { "kind": "mcp", "tool": "invoke_transition_test", "arguments": { "operation_id": "${proposal.proposals.0.operation_id}", "confirm": true }, "save": "run" },
+    { "kind": "mcp", "tool": "invoke_operation", "arguments": { "operation_id": "${proposal.proposals.0.operation_id}", "confirm": true }, "save": "run" },
     { "kind": "assert", "from": "run", "expect": [
       { "path": "schema_version", "equals": "dustroute.transition.v1" },
       { "path": "ok", "equals": true },

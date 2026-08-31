@@ -10,12 +10,12 @@
       "/setblock 343 104 0 minecraft:repeater[facing=west,delay=1,locked=false,powered=false]"
     ]},
     { "kind": "aim", "position": { "x": 343.5, "y": 106, "z": 6.5 }, "target": { "x": 343, "y": 104, "z": 0 } },
-    { "kind": "mcp", "tool": "test_looked_at_circuit", "arguments": { "max_components": 64 }, "save": "diagnostic" },
+    { "kind": "mcp", "tool": "test_circuit", "arguments": { "max_components": 64 }, "save": "diagnostic" },
     { "kind": "assert", "from": "diagnostic", "expect": [
       { "path": "diagnostic.health", "equals": "degraded" },
       { "path": "diagnostic.counts.probable_faults", "at_least": 1 }
     ]},
-    { "kind": "mcp", "tool": "convert_from_looked_at_circuit", "arguments": { "max_components": 64 }, "save": "analysis" },
+    { "kind": "mcp", "tool": "convert_from_circuit", "arguments": { "max_components": 64 }, "save": "analysis" },
     { "kind": "assert", "from": "analysis", "expect": [
       { "path": "signal_liveness.source_counts_by_kind.controllable_input", "at_least": 1 },
       { "path": "signal_liveness.undriven_required_input_count", "at_least": 1 }

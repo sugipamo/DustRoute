@@ -11,7 +11,7 @@
       "/setblock 304 104 0 minecraft:redstone_lamp[lit=false]"
     ]},
     { "kind": "aim", "position": { "x": 302.5, "y": 106, "z": 6.5 }, "target": { "x": 302, "y": 104, "z": 0 } },
-    { "kind": "mcp", "tool": "test_looked_at_circuit", "arguments": { "max_components": 64 }, "save": "diagnostic" },
+    { "kind": "mcp", "tool": "test_circuit", "arguments": { "max_components": 64 }, "save": "diagnostic" },
     { "kind": "assert", "from": "diagnostic", "expect": [
       { "path": "mutation_performed", "equals": false },
       { "path": "diagnostic.observation_complete", "equals": true },

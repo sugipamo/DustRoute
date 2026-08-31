@@ -9,8 +9,8 @@
     ]},
     { "kind": "aim", "position": { "x": 620.5, "y": 106, "z": 6.5 }, "target": { "x": 620, "y": 103, "z": 0 } },
     { "kind": "mcp", "tool": "new_transition_test", "arguments": { "max_components": 64, "observation_ticks": 6, "max_events": 1 }, "save": "proposal" },
-    { "kind": "mcp", "tool": "show_transition_test", "arguments": { "operation_id": "${proposal.proposals.0.operation_id}" }, "save": "preview" },
-    { "kind": "mcp_error", "tool": "invoke_transition_test", "arguments": { "operation_id": "${proposal.proposals.0.operation_id}", "confirm": true }, "save": "run" },
+    { "kind": "mcp", "tool": "show_operation", "arguments": { "operation_id": "${proposal.proposals.0.operation_id}" }, "save": "preview" },
+    { "kind": "mcp_error", "tool": "invoke_operation", "arguments": { "operation_id": "${proposal.proposals.0.operation_id}", "confirm": true }, "save": "run" },
     { "kind": "assert", "from": "run", "expect": [
       { "path": "schema_version", "equals": "dustroute.transition.v1" },
       { "path": "recording.truncated", "equals": true },

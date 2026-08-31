@@ -1,7 +1,7 @@
 {
   "name": "api_error_contract",
   "steps": [
-    { "kind": "mcp_error", "tool": "invoke_transition_test", "arguments": { "operation_id": "not-a-uuid", "confirm": true }, "save": "error" },
+    { "kind": "mcp_error", "tool": "invoke_operation", "arguments": { "operation_id": "not-a-uuid", "confirm": true }, "save": "error" },
     { "kind": "assert", "from": "error", "expect": [
       { "path": "ok", "equals": false },
       { "path": "schema_version", "equals": "dustroute.error.v1" },

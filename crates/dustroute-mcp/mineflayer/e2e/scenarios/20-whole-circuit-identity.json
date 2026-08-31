@@ -6,12 +6,12 @@
       "/setblock 800 103 0 minecraft:stone"
     ]},
     { "kind": "aim", "position": { "x": 800.5, "y": 106, "z": 6.5 }, "target": { "x": 800, "y": 103, "z": 0 } },
-    { "kind": "mcp", "tool": "new_circuit_placement", "arguments": {
+    { "kind": "mcp", "tool": "new_placement", "arguments": {
       "circuit": "half-adder",
       "max_blocks": 4096,
       "optimize": false
     }, "save": "plan" },
-    { "kind": "mcp", "tool": "invoke_circuit_placement", "arguments": {
+    { "kind": "mcp", "tool": "invoke_operation", "arguments": {
       "operation_id": "${plan.operation_id}", "confirm": true
     }, "save": "apply" },
     { "kind": "assert", "from": "apply", "expect": [
@@ -19,7 +19,7 @@
       { "path": "verified", "equals": true }
     ]},
     { "kind": "aim", "position": { "x": 794.5, "y": 107, "z": 8.5 }, "target": { "x": 801, "y": 106, "z": 8 } },
-    { "kind": "mcp", "tool": "convert_from_looked_at_circuit", "arguments": {
+    { "kind": "mcp", "tool": "convert_from_circuit", "arguments": {
       "max_components": 512,
       "fragment_gap": 16,
       "include_truth_table": true
@@ -35,7 +35,7 @@
       { "path": "circuit_identity.analysis_complete", "equals": true }
     ]},
     { "kind": "wait", "ticks": 20 },
-    { "kind": "mcp", "tool": "undo_circuit_placement", "arguments": {
+    { "kind": "mcp", "tool": "undo_operation", "arguments": {
       "operation_id": "${plan.operation_id}", "confirm": true
     }, "save": "undo" },
     { "kind": "assert", "from": "undo", "expect": [

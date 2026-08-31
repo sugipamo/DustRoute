@@ -20,8 +20,8 @@
       { "path": "proposals.0.safety.safety", "equals": "ready" },
       { "path": "proposals.1.operation_id", "exists": true }
     ]},
-    { "kind": "mcp", "tool": "show_transition_test", "arguments": { "operation_id": "${proposal.proposals.0.operation_id}" }, "save": "preview" },
-    { "kind": "mcp", "tool": "invoke_transition_test", "arguments": { "operation_id": "${proposal.proposals.0.operation_id}", "confirm": true }, "save": "run" },
+    { "kind": "mcp", "tool": "show_operation", "arguments": { "operation_id": "${proposal.proposals.0.operation_id}" }, "save": "preview" },
+    { "kind": "mcp", "tool": "invoke_operation", "arguments": { "operation_id": "${proposal.proposals.0.operation_id}", "confirm": true }, "save": "run" },
     { "kind": "assert", "from": "run", "expect": [
       { "path": "ok", "equals": true },
       { "path": "scenario_verification.steady_state_equivalent", "equals": true },

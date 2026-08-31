@@ -23,10 +23,10 @@
       { "path": "proposals.1.operation_id", "exists": true },
       { "path": "proposals.1.transition", "equals": "on_to_off" }
     ]},
-    { "kind": "mcp", "tool": "show_transition_test", "arguments": {
+    { "kind": "mcp", "tool": "show_operation", "arguments": {
       "operation_id": "${proposal.proposals.1.operation_id}"
     }, "save": "preview" },
-    { "kind": "mcp_error", "tool": "invoke_transition_test", "arguments": {
+    { "kind": "mcp_error", "tool": "invoke_operation", "arguments": {
       "operation_id": "${proposal.proposals.1.operation_id}", "confirm": true
     }, "save": "run" },
     { "kind": "assert", "from": "run", "expect": [
@@ -36,7 +36,7 @@
       { "path": "restoration.lever_restored", "equals": true },
       { "path": "restoration.region_restored", "equals": false }
     ]},
-    { "kind": "mcp", "tool": "restore_transition_test", "arguments": {
+    { "kind": "mcp", "tool": "undo_operation", "arguments": {
       "operation_id": "${proposal.proposals.1.operation_id}", "confirm": true
     }, "save": "restored" },
     { "kind": "assert", "from": "restored", "expect": [

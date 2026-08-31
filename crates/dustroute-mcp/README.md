@@ -133,20 +133,18 @@ and coordinate-state representations are documented in
 [`../../docs/mcp-api-v1.md`](../../docs/mcp-api-v1.md).
 
 Set `DUSTROUTE_BOT_BRIDGE` to override the local bridge address. Natural-language
-references such as “what is this?” use `convert_from_looked_at_circuit`. One call
-returns the focused physical component, its local signal role, recognized
-AND/OR/NOT-style gates, traceable expressions, optional whole-circuit function
-candidates, observation completeness, diagnostics, and non-mutating repairs.
-The same response also returns safe lever-transition candidates, so the client
-can continue from explanation to validation without rediscovering or rescanning
-the circuit.
+references such as “what is this?” use `convert_from_circuit`. One call
+returns the focused physical component, mixed-IR summary, optional
+whole-circuit function candidates, observation completeness, and diagnostics.
+Repair and transition plans are separate: use `new_repair` or
+`new_transition_test` only after interpretation requires them.
 Set `include_truth_table=true` only when a small circuit explicitly needs a
 truth table; local hierarchical inspection is the default. Explicit regions continue to
-use two `set_region_corner` calls, `show_selected_region`, and
-`convert_from_selected_region`. Debug clients may call
+use two `set_region` calls, `show_region`, and
+`convert_from_circuit(scope=selected_region)`. Debug clients may call
 `resolve_looked_at_circuit` directly.
 
-For observation debugging, `get_looked_at_world` starts near the block the
+For observation debugging, `get_world` starts near the block the
 player is looking at and progressively follows adjacent redstone components
 without applying circuit inference. There is no caller-selected scan radius.
 Expansion ends when the component frontier is exhausted or `max_components`
@@ -156,16 +154,15 @@ fragment. The result includes exact block-name and block-state-property counts,
 the targeted block, raw redstone states, truncation, and expansion completeness.
 Use `include_block_list=true` only when the non-air listing is needed; both raw
 lists are bounded by `max_listed_blocks`. `resolve_looked_at_circuit` and
-`convert_from_looked_at_circuit` use the same component-limited expansion.
+`convert_from_circuit` use the same component-limited expansion.
 
-`convert_from_looked_at_circuit` reports a physical-first hierarchy. Observed facts
+`convert_from_circuit` reports a physical-first hierarchy. Observed facts
 become a directed physical graph, recognized local cells, traceable logic
 expressions, and finally optional functional candidates. Every stage reports
 its own completeness and unresolved count while retaining physical component
-origins. Circuits above 128 discovered redstone components deliberately skip a
-flat whole-circuit truth table and broad repair enumeration. The MCP still
-returns local cells, hierarchical summaries, and repair candidates within 12
-blocks of the gaze target; distant repair enumeration remains bounded.
+origins. Large circuits deliberately skip a flat whole-circuit truth table and
+return bounded mixed-IR summaries. Call `get_circuit_ir` with the returned
+`analysis_id` and a `node_id` to expand only one region or logic cell.
 
 `signal_liveness` is evaluated independently of physical fragments. It follows
 directed signal edges while preserving whether a source is a controllable
@@ -177,14 +174,14 @@ is not used by itself as evidence for an automatic repair. This catches
 directional failures that Union-Find connectivity alone cannot detect without
 shorting independent inputs together.
 
-For conversational entry points, call `test_looked_at_circuit` first. It is
+For conversational entry points, call `test_circuit` first. It is
 a read-only fast path: it discovers the connected components around the
 player's gaze, skips truth-table inference, repair enumeration, and transition
 scenario generation, and returns `dustroute.diagnostic.v1`. The response places
 `diagnostic.health`, typed `diagnostic.counts`, ranked `diagnostic.findings`, and
 one `diagnostic.recommended_next_action` ahead of detailed evidence. Use
-`convert_from_looked_at_circuit` only when higher-level logical interpretation or
-repair/transition proposals are actually needed.
+`convert_from_circuit` only when higher-level logical interpretation is needed.
+Use `test_circuit_change` for one or more non-mutating block substitutions.
 
 Example response shape:
 
@@ -240,18 +237,19 @@ matching pulse contract becomes `intentional_pulse`.
 The intended conversational workflow is:
 
 ```text
-convert_from_looked_at_circuit
+convert_from_circuit
   -> explain physical evidence, local role, and provisional higher roles
-  -> choose a returned transition scenario or repair proposal
-  -> preview the exact region or block diff
+  -> call new_repair, new_transition_test, or new_placement when needed
+  -> show_operation to preview the exact region or block diff
   -> obtain explicit player confirmation
-  -> execute and restore/verify
+  -> invoke_operation and restore/verify
+  -> undo_operation when recovery is needed
   -> report the post-operation re-analysis
 ```
 
 In the debug profile, long conversions can use
 `start_selected_region_conversion`, `get_operation`, and `stop_operation`.
-`new_circuit_placement` returns a block diff, collisions,
+`new_placement` returns a block diff, collisions,
 material counts, an operation UUID, and an exact undo plan without changing the
 world. Set its optional `optimize=true` argument to run X-axis directional
 compression followed by global compaction and rerouting. The response includes
@@ -259,9 +257,9 @@ per-phase score changes and a safety classification. Current built-in circuits
 contain scheduled-tick components, so optimized results are normally
 `preview_only` and require explicit confirmation. Rejected candidates do not
 produce a placement plan. When `DUSTROUTE_READ_ONLY=false`, an explicitly
-confirmed plan can be written with `invoke_circuit_placement`; the server first
+confirmed plan can be written with `invoke_operation`; the server first
 checks that the preview baseline is still current and then verifies the live
-world after writing. `undo_circuit_placement` performs the same checks while
+world after writing. `undo_operation` performs the same checks while
 restoring the captured blocks.
 
 ## Transition scenarios
@@ -273,12 +271,12 @@ time:
 
 ```text
 new_transition_test
-  -> show_transition_test
+  -> show_operation
   -> explicit player confirmation
-  -> invoke_transition_test(confirm=true)
+  -> invoke_operation(confirm=true)
   -> block-update trace, transient assessment, and Rust-simulator comparison
   -> automatic lever and region restoration verification
-  -> restore_transition_test(confirm=true), if recovery is needed
+  -> undo_operation(confirm=true), if recovery is needed
 ```
 
 The bridge uses Mineflayer's normal block activation rather than changing a
@@ -293,7 +291,7 @@ preview-only. Every run captures the original snapshot and reports failure
 unless both the lever state and full region are restored.
 Stateful devices such as locked repeaters may retain the post-test state even
 after the lever is returned. In that case the run reports restoration failure.
-An explicit `restore_transition_test(confirm=true)` first retries the natural
+An explicit `undo_operation(confirm=true)` first retries the natural
 reverse operation, then reapplies the bounded pre-test block states only when
 the region still differs, and verifies the complete region again.
 `scenario_verification` contains the normalized live trace, simulated trace,
@@ -302,7 +300,7 @@ retained rather than silently treated as electrical mismatches.
 
 ## Physical repair workflow
 
-After selecting and previewing a region, `new_repair_plan` ranks partial physical
+After selecting and previewing a region, `new_repair` ranks partial physical
 patches for missing wire, missing support, and directional component problems.
 Each proposal includes coordinates, evidence, confidence, a virtual before/after
 impact, and an operation UUID. Virtual impact includes traversal-group and
@@ -318,12 +316,12 @@ updates and block shape, then retreats 16 blocks above the repaired area and
 hovers. Post-write block-state and circuit verification still run normally.
 
 ```text
-new_repair_plan
-  -> show_repair_plan
+new_repair
+  -> show_operation
   -> explicit player confirmation
-  -> invoke_repair(confirm=true)
+  -> invoke_operation(confirm=true)
   -> automatic block-state rescan and circuit re-analysis
-  -> undo_repair(confirm=true), when needed
+  -> undo_operation(confirm=true), when needed
 ```
 
 Failed block-state verification triggers an automatic rollback attempt. A

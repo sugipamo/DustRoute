@@ -6,7 +6,7 @@
       "/setblock 700 103 0 minecraft:stone"
     ]},
     { "kind": "aim", "position": { "x": 700.5, "y": 106, "z": 6.5 }, "target": { "x": 700, "y": 103, "z": 0 } },
-    { "kind": "mcp", "tool": "new_circuit_placement", "arguments": {
+    { "kind": "mcp", "tool": "new_placement", "arguments": {
       "circuit": "half-adder",
       "max_blocks": 4096,
       "optimize": true
@@ -18,7 +18,7 @@
       { "path": "optimization.phases.1.accepted_mutations", "exists": true },
       { "path": "operation_id", "exists": true }
     ]},
-    { "kind": "mcp", "tool": "invoke_circuit_placement", "arguments": {
+    { "kind": "mcp", "tool": "invoke_operation", "arguments": {
       "operation_id": "${plan.operation_id}", "confirm": true
     }, "save": "apply" },
     { "kind": "assert", "from": "apply", "expect": [
@@ -27,7 +27,7 @@
       { "path": "action", "equals": "apply" }
     ]},
     { "kind": "wait", "ticks": 20 },
-    { "kind": "mcp", "tool": "undo_circuit_placement", "arguments": {
+    { "kind": "mcp", "tool": "undo_operation", "arguments": {
       "operation_id": "${plan.operation_id}", "confirm": true
     }, "save": "undo" },
     { "kind": "assert", "from": "undo", "expect": [

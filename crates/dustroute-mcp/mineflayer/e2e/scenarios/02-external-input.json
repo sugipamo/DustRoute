@@ -8,12 +8,12 @@
       "/setblock 320 104 0 minecraft:redstone_wire"
     ]},
     { "kind": "aim", "position": { "x": 321.5, "y": 106, "z": 6.5 }, "target": { "x": 321, "y": 104, "z": 0 } },
-    { "kind": "mcp", "tool": "test_looked_at_circuit", "arguments": { "max_components": 64 }, "save": "diagnostic" },
+    { "kind": "mcp", "tool": "test_circuit", "arguments": { "max_components": 64 }, "save": "diagnostic" },
     { "kind": "assert", "from": "diagnostic", "expect": [
       { "path": "diagnostic.counts.awaiting_external_input", "at_least": 1 },
       { "path": "diagnostic.counts.probable_faults", "equals": 0 }
     ]},
-    { "kind": "mcp", "tool": "convert_from_looked_at_circuit", "arguments": { "max_components": 64 }, "save": "analysis" },
+    { "kind": "mcp", "tool": "convert_from_circuit", "arguments": { "max_components": 64 }, "save": "analysis" },
     { "kind": "assert", "from": "analysis", "expect": [
       { "path": "signal_liveness.source_counts_by_kind.inferred_primary_input", "at_least": 1 },
       { "path": "signal_liveness.undriven_required_input_count", "equals": 0 }

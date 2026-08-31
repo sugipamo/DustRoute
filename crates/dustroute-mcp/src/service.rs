@@ -1,4 +1,6 @@
+use std::collections::hash_map::DefaultHasher;
 use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};
+use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 use dustroute_app::DustRouteService;
@@ -92,12 +94,14 @@ pub struct DustRouteMcp {
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 struct PlayerParams {
     /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
+    #[schemars(skip)]
     player: Option<String>,
 }
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 struct ObserveParams {
     /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
+    #[schemars(skip)]
     player: Option<String>,
     /// Ray-cast limit in blocks. Defaults to 64.
     max_distance: Option<f64>,
@@ -106,6 +110,7 @@ struct ObserveParams {
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 struct InspectLookedAtWorldParams {
     /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
+    #[schemars(skip)]
     player: Option<String>,
     /// Maximum redstone components followed from the gaze target, from 1 through 32768. Defaults to 8192.
     max_components: Option<usize>,
@@ -122,6 +127,7 @@ struct InspectLookedAtWorldParams {
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 struct MarkCornerParams {
     /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
+    #[schemars(skip)]
     player: Option<String>,
     /// Either `first` or `second`.
     corner: String,
@@ -132,6 +138,7 @@ struct MarkCornerParams {
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 struct DiscoverCircuitParams {
     /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
+    #[schemars(skip)]
     player: Option<String>,
     /// Maximum redstone components followed from the gaze target. Defaults to 8192.
     max_components: Option<usize>,
@@ -144,6 +151,7 @@ struct DiscoverCircuitParams {
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 struct AnalyzeLookedAtParams {
     /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
+    #[schemars(skip)]
     player: Option<String>,
     /// Maximum redstone components followed from the gaze target. Defaults to 8192.
     max_components: Option<usize>,
@@ -151,11 +159,14 @@ struct AnalyzeLookedAtParams {
     fragment_gap: Option<u32>,
     /// Explicitly enumerate a truth table for a small circuit. Defaults to false.
     include_truth_table: Option<bool>,
+    /// Observation source: gaze (default) or selected_region.
+    scope: Option<String>,
 }
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 struct DiagnoseLookedAtParams {
     /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
+    #[schemars(skip)]
     player: Option<String>,
     /// Maximum redstone components followed from the gaze target. Defaults to 8192.
     max_components: Option<usize>,
@@ -164,8 +175,53 @@ struct DiagnoseLookedAtParams {
 }
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
+struct GetLookedAtCircuitIrParams {
+    /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
+    #[schemars(skip)]
+    player: Option<String>,
+    /// Maximum redstone components followed from the gaze target. Defaults to 8192.
+    max_components: Option<usize>,
+    /// Maximum Manhattan gap considered when discovering broken fragments. Defaults to 2.
+    fragment_gap: Option<u32>,
+    /// Expand one mixed-IR node from the returned summary into physical block details.
+    node_id: Option<usize>,
+    /// Analysis ID returned by the summary call. Required with node_id to prevent stale expansion.
+    analysis_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+struct TestCircuitChangeParams {
+    /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
+    #[schemars(skip)]
+    player: Option<String>,
+    /// Maximum redstone components followed from the gaze target. Defaults to 8192.
+    max_components: Option<usize>,
+    /// Maximum Manhattan gap considered when discovering broken fragments. Defaults to 2.
+    fragment_gap: Option<u32>,
+    /// One or more virtual block substitutions. Minecraft is never changed.
+    changes: Vec<VirtualBlockChangeParam>,
+    /// Number of simulator ticks after applying the virtual changes. Defaults to 64, maximum 256.
+    simulation_ticks: Option<usize>,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+struct VirtualBlockChangeParam {
+    position: CoordinateParam,
+    /// Replacement block name such as minecraft:stone. Block-state properties default to empty.
+    block: String,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, schemars::JsonSchema)]
+struct CoordinateParam {
+    x: i32,
+    y: i32,
+    z: i32,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
 struct PreviewPlacementParams {
     /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
+    #[schemars(skip)]
     player: Option<String>,
     /// Built-in circuit: half-adder, half-subtractor, mux2, decoder1to2, or full-adder.
     circuit: String,
@@ -183,10 +239,29 @@ struct OperationParams {
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 struct ConfirmedOperationParams {
-    /// Operation UUID returned by new_circuit_placement.
+    /// Operation UUID returned by new_placement.
     operation_id: String,
     /// Must be true to acknowledge that this call changes the test world.
     confirm: bool,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+struct ShowOperationParams {
+    /// Operation UUID returned by a new_* tool.
+    operation_id: String,
+    /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
+    #[schemars(skip)]
+    player: Option<String>,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+struct InvokeOperationParams {
+    /// Operation UUID returned by a new_* tool.
+    operation_id: String,
+    /// Must be true to acknowledge that this call can change the test world.
+    confirm: bool,
+    /// Optional signal contracts used only by transition-test operations.
+    contracts: Option<Vec<TransitionContractParam>>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -219,6 +294,7 @@ struct StoredTransitionPlan {
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 struct ProposeTransitionParams {
     /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
+    #[schemars(skip)]
     player: Option<String>,
     /// Maximum redstone components followed from the gaze target. Defaults to 8192.
     max_components: Option<usize>,
@@ -232,6 +308,7 @@ struct ProposeTransitionParams {
 struct PreviewTransitionParams {
     operation_id: String,
     /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
+    #[schemars(skip)]
     player: Option<String>,
 }
 
@@ -270,6 +347,7 @@ struct AdaptiveComponentScan {
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 struct ProposeRepairsParams {
     /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
+    #[schemars(skip)]
     player: Option<String>,
     /// Maximum Manhattan gap between disconnected fragments. Defaults to 2.
     max_gap: Option<u32>,
@@ -277,9 +355,10 @@ struct ProposeRepairsParams {
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 struct PreviewRepairParams {
-    /// Repair operation UUID returned by new_repair_plan.
+    /// Repair operation UUID returned by new_repair.
     operation_id: String,
     /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
+    #[schemars(skip)]
     player: Option<String>,
 }
 
@@ -728,6 +807,20 @@ fn hierarchical_result_json(
     focus: Option<dustroute_physical::Pos>,
 ) -> Value {
     let scene = &hierarchy.physical_graph.value.scene;
+    let mixed = dustroute_ir::build_mixed_ir(hierarchy);
+    let mixed_counts = mixed
+        .nodes
+        .iter()
+        .fold(BTreeMap::new(), |mut counts, node| {
+            let representation = match &node.kind {
+                dustroute_ir::MixedNodeKind::LogicGate { .. } => "logic_gate",
+                dustroute_ir::MixedNodeKind::TimedCell { .. } => "timed_cell",
+                dustroute_ir::MixedNodeKind::PhysicalRegion => "physical_region",
+                dustroute_ir::MixedNodeKind::Boundary { .. } => "boundary",
+            };
+            *counts.entry(representation).or_insert(0_usize) += 1;
+            counts
+        });
     json!({
         "ok": true,
         "analysis_mode": "hierarchical_local_first",
@@ -755,13 +848,23 @@ fn hierarchical_result_json(
             "cell_graph": {
                 "completeness": hierarchy.cell_graph.completeness,
                 "cell_count": hierarchy.cell_graph.value.cells.gates.len(),
-                "cells": hierarchy.cell_graph.value.cells.gates,
-                "unresolved_component_count": hierarchy.cell_graph.unresolved.len()
+                "unresolved_component_count": hierarchy.cell_graph.unresolved.len(),
+                "detail": "represented by mixed_ir node references; recursive cell payload omitted"
             },
             "logic_graph": {
                 "completeness": hierarchy.logic_graph.completeness,
                 "expression_count": hierarchy.logic_graph.value.expressions.expressions.len(),
-                "expressions": hierarchy.logic_graph.value.expressions
+                "detail": "recursive expressions omitted; follow mixed_ir edges by node id"
+            },
+            "mixed_ir": {
+                "physical_component_count": mixed.physical_component_count,
+                "recognized_component_count": mixed.recognized_component_count,
+                "unresolved_component_count": mixed.unresolved_component_count,
+                "node_count": mixed.nodes.len(),
+                "edge_count": mixed.edges.len(),
+                "representation_counts": mixed_counts,
+                "nodes": mixed.nodes,
+                "edges": mixed.edges
             },
             "functional_graph": {
                 "completeness": hierarchy.functional_graph.completeness,
@@ -783,9 +886,7 @@ fn hierarchical_result_json(
             }
         },
         "truth_table": null,
-        "truth_table_skipped": "large circuits use local cells and hierarchical summaries instead of a flat whole-circuit truth table",
-        "repair_proposals": [],
-        "repair_guidance": "select or look at a smaller cell before generating a physical repair proposal"
+        "truth_table_skipped": "large circuits use local cells and hierarchical summaries instead of a flat whole-circuit truth table"
     })
 }
 
@@ -795,6 +896,8 @@ fn circuit_identity_json(
     analysis_complete: bool,
     repair_count: usize,
 ) -> Value {
+    const MAX_CANDIDATE_SAMPLES: usize = 8;
+    const MAX_GATE_SAMPLES: usize = 12;
     let mut local_gate_counts = BTreeMap::<String, usize>::new();
     for gate in &hierarchy.cell_graph.value.cells.gates {
         *local_gate_counts
@@ -860,19 +963,215 @@ fn circuit_identity_json(
     if primary.is_none() {
         uncertainty_reasons.push("no_registered_higher_level_pattern_matched");
     }
+    let candidate_count = candidates.len();
+    let candidate_samples = candidates
+        .iter()
+        .take(MAX_CANDIDATE_SAMPLES)
+        .map(|candidate| {
+            json!({
+                "kind": candidate.kind,
+                "confidence": candidate.confidence,
+                "status": candidate.status,
+                "covered_gate_count": candidate.covered_gates.len(),
+                "missing_features": candidate.missing_features,
+                "conflicts": candidate.conflicts,
+            })
+        })
+        .collect::<Vec<_>>();
+    let local_gates = &hierarchy.cell_graph.value.cells.gates;
+    let local_gate_samples = local_gates
+        .iter()
+        .take(MAX_GATE_SAMPLES)
+        .map(|gate| {
+            json!({
+                "id": gate.id,
+                "kind": gate.kind,
+                "status": gate.status,
+                "confidence": gate.confidence,
+                "input_count": gate.inputs.len(),
+                "output_count": gate.outputs.len(),
+                "physical_component_count": gate.physical_components.len(),
+                "physical_components": gate.physical_components,
+            })
+        })
+        .collect::<Vec<_>>();
     json!({
         "classification_level": classification_level,
         "primary_candidate": primary,
-        "higher_level_candidates": candidates,
+        "higher_level_candidate_count": candidate_count,
+        "higher_level_candidate_samples": candidate_samples,
+        "higher_level_candidates_truncated": candidate_count > MAX_CANDIDATE_SAMPLES,
         "local_gate_counts": local_gate_counts,
-        "local_gates": hierarchy.cell_graph.value.cells.gates,
+        "local_gate_count": local_gates.len(),
+        "local_gate_samples": local_gate_samples,
+        "local_gates_truncated": local_gates.len() > MAX_GATE_SAMPLES,
         "analysis_complete": analysis_complete,
         "uncertainty_reasons": uncertainty_reasons,
         "repair_candidate_count": repair_count,
         "repair_available": repair_count > 0,
         "temporal_validity": hierarchy.temporal.timing,
-        "interpretation": "primary_candidate is a ranked registered pattern; local_gates remain useful evidence when no whole-circuit name is known"
+        "interpretation": "primary_candidate is a ranked registered pattern; sampled local gates and mixed_ir node references provide bounded drill-down evidence"
     })
+}
+
+fn mixed_ir_json(
+    hierarchy: &dustroute_ir::HierarchicalIr,
+    expanded_node_id: Option<usize>,
+) -> Result<Value, String> {
+    let scene = &hierarchy.physical_graph.value.scene;
+    let mixed = dustroute_ir::build_mixed_ir(hierarchy);
+    let nodes = mixed
+        .nodes
+        .iter()
+        .map(|node| {
+            let positions = node
+                .physical_components
+                .iter()
+                .filter_map(|component| scene.components.get(component.0).map(|item| item.pos))
+                .collect::<Vec<_>>();
+            let min = positions.iter().copied().reduce(|left, right| Pos {
+                x: left.x.min(right.x),
+                y: left.y.min(right.y),
+                z: left.z.min(right.z),
+            });
+            let max = positions.iter().copied().reduce(|left, right| Pos {
+                x: left.x.max(right.x),
+                y: left.y.max(right.y),
+                z: left.z.max(right.z),
+            });
+            json!({
+                "id": node.id,
+                "kind": node.kind,
+                "recognition": node.recognition,
+                "confidence": node.confidence,
+                "component_count": node.physical_components.len(),
+                "bounds": { "min": min, "max": max },
+                "expandable": node.expandable,
+            })
+        })
+        .collect::<Vec<_>>();
+    let expanded_node = if let Some(id) = expanded_node_id {
+        let node = mixed
+            .nodes
+            .get(id)
+            .filter(|node| node.id.0 == id)
+            .ok_or_else(|| format!("mixed IR node {id} does not exist"))?;
+        let components = node
+            .physical_components
+            .iter()
+            .filter_map(|component| scene.components.get(component.0))
+            .map(|component| {
+                json!({
+                    "id": component.id,
+                    "position": component.pos,
+                    "block": component.block.kind,
+                    "observed_name": component.block.observed_name,
+                    "observed_properties": component.block.observed_properties,
+                })
+            })
+            .collect::<Vec<_>>();
+        let incoming = mixed
+            .edges
+            .iter()
+            .filter(|edge| edge.sink == node.id)
+            .collect::<Vec<_>>();
+        let outgoing = mixed
+            .edges
+            .iter()
+            .filter(|edge| edge.source == node.id)
+            .collect::<Vec<_>>();
+        Some(json!({
+            "id": node.id,
+            "kind": node.kind,
+            "recognition": node.recognition,
+            "confidence": node.confidence,
+            "components": components,
+            "incoming": incoming,
+            "outgoing": outgoing,
+        }))
+    } else {
+        None
+    };
+    Ok(json!({
+        "physical_component_count": mixed.physical_component_count,
+        "recognized_component_count": mixed.recognized_component_count,
+        "unresolved_component_count": mixed.unresolved_component_count,
+        "node_count": mixed.nodes.len(),
+        "edge_count": mixed.edges.len(),
+        "nodes": nodes,
+        "edges": mixed.edges,
+        "expanded_node": expanded_node,
+    }))
+}
+
+fn virtual_analysis_summary(
+    scene: &dustroute_physical::PhysicalScene,
+    focus: Pos,
+    complete: bool,
+) -> Value {
+    let hierarchy = dustroute_ir::derive_hierarchy(scene);
+    let mixed = dustroute_ir::build_mixed_ir(&hierarchy);
+    let diagnostic = dustroute_translate::diagnose_scene(scene, Some(focus), complete);
+    let faults = diagnostic
+        .findings
+        .iter()
+        .filter(|finding| {
+            finding.status == dustroute_translate::CircuitDiagnosticStatus::ProbableFault
+        })
+        .collect::<Vec<_>>();
+    let mut representations = BTreeMap::<&str, usize>::new();
+    for node in &mixed.nodes {
+        let name = match node.kind {
+            dustroute_ir::MixedNodeKind::LogicGate { .. } => "logic_gate",
+            dustroute_ir::MixedNodeKind::TimedCell { .. } => "timed_cell",
+            dustroute_ir::MixedNodeKind::PhysicalRegion => "physical_region",
+            dustroute_ir::MixedNodeKind::Boundary { .. } => "boundary",
+        };
+        *representations.entry(name).or_default() += 1;
+    }
+    json!({
+        "health": diagnostic.health,
+        "diagnostic_counts": diagnostic.counts,
+        "source_counts": diagnostic.source_counts,
+        "probable_faults": faults,
+        "mixed_ir": {
+            "physical_components": mixed.physical_component_count,
+            "recognized_components": mixed.recognized_component_count,
+            "unresolved_components": mixed.unresolved_component_count,
+            "nodes": mixed.nodes.len(),
+            "edges": mixed.edges.len(),
+            "representations": representations,
+        },
+        "identity": circuit_identity_json(&hierarchy, None, complete, 0),
+    })
+}
+
+fn simulated_terminal_summary(
+    world: &dustroute_translate::World,
+    analysis: &dustroute_translate::RegionAnalysis,
+    ticks: usize,
+) -> Result<Value, String> {
+    let mut simulator = dustroute_translate::RedstoneTickSimulator::new(world.clone())
+        .map_err(|error| error.to_string())?;
+    let mut state = simulator.snapshot();
+    for _ in 0..ticks {
+        state = simulator
+            .advance_tick()
+            .map_err(|error| error.to_string())?;
+    }
+    let terminal = |item: &dustroute_translate::InferredTerminal| {
+        json!({
+            "position": item.anchor,
+            "powered": state.powered(item.anchor),
+            "strength": state.strength(item.anchor),
+            "confidence": item.confidence,
+        })
+    };
+    Ok(json!({
+        "ticks": ticks,
+        "inputs": analysis.inputs.iter().map(terminal).collect::<Vec<_>>(),
+        "outputs": analysis.outputs.iter().map(terminal).collect::<Vec<_>>(),
+    }))
 }
 
 fn reverse_result_json(
@@ -1103,7 +1402,9 @@ impl DustRouteMcp {
         let _mutation_guard = self.mutation_lock.lock().await;
         let operation_id = match uuid::Uuid::parse_str(&params.operation_id) {
             Ok(id) => id,
-            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+            Err(error) => {
+                return error_text(McpErrorCode::InvalidArgument, error.to_string(), false);
+            }
         };
         let plan = match self.plans.lock().await.get(&operation_id).cloned() {
             Some(plan) => plan,
@@ -1406,7 +1707,9 @@ impl DustRouteMcp {
         let _mutation_guard = self.mutation_lock.lock().await;
         let operation_id = match uuid::Uuid::parse_str(&params.operation_id) {
             Ok(id) => id,
-            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+            Err(error) => {
+                return error_text(McpErrorCode::InvalidArgument, error.to_string(), false);
+            }
         };
         let plan = match self.repair_plan(operation_id).await {
             Ok(Some(plan)) => plan,
@@ -1953,7 +2256,7 @@ impl DustRouteMcp {
         description = "Inspect raw Minecraft blocks by starting near the block a player is looking at and progressively following adjacent redstone components. Expansion stops naturally at the circuit edge or explicitly at max_components; no scan radius is required.",
         annotations(read_only_hint = true, destructive_hint = false)
     )]
-    async fn get_looked_at_world(
+    async fn get_world(
         &self,
         Parameters(params): Parameters<InspectLookedAtWorldParams>,
     ) -> String {
@@ -2064,7 +2367,7 @@ impl DustRouteMcp {
     #[tool(
         description = "Mark the first or second region corner at the block a player is looking at"
     )]
-    async fn set_region_corner(&self, Parameters(params): Parameters<MarkCornerParams>) -> String {
+    async fn set_region(&self, Parameters(params): Parameters<MarkCornerParams>) -> String {
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
             Err(error) => return json_text(json!({ "ok": false, "error": error })),
@@ -2229,7 +2532,7 @@ impl DustRouteMcp {
             "warning": scan.limit_reached.then_some(
                 "the circuit exceeds the component limit; analysis is incomplete"
             ),
-            "next_step": "call show_selected_region and ask the player to confirm the highlighted candidate"
+            "next_step": "call show_region and ask the player to confirm the highlighted candidate"
         }))
     }
 
@@ -2237,10 +2540,7 @@ impl DustRouteMcp {
         description = "Quickly diagnose the circuit around the player's gaze. Returns a compact health summary, typed findings, evidence, and one safe recommended next action without generating repairs or changing the world",
         annotations(read_only_hint = true, destructive_hint = false)
     )]
-    async fn test_looked_at_circuit(
-        &self,
-        Parameters(params): Parameters<DiagnoseLookedAtParams>,
-    ) -> String {
+    async fn test_circuit(&self, Parameters(params): Parameters<DiagnoseLookedAtParams>) -> String {
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
             Err(error) => return json_text(json!({ "ok": false, "error": error })),
@@ -2299,21 +2599,292 @@ impl DustRouteMcp {
             "expansion": discovery["expansion"],
             "diagnostic": diagnostic,
             "detail_tools": {
-                "full_conversion": "convert_from_looked_at_circuit",
-                "raw_observation": "get_looked_at_world",
-                "repair_planning": "new_repair_plan"
+                "full_conversion": "convert_from_circuit",
+                "raw_observation": "get_world",
+                "repair_planning": "new_repair"
             }
         }))
     }
 
     #[tool(
-        description = "Start the complete gaze-grounded workflow for questions such as 'what is this?': discover the connected circuit, explain physical/local/higher roles, and return non-mutating transition scenarios and repair proposals",
+        description = "Get a bounded mixed-IR summary of the circuit around the player's gaze. Logical gates, timed cells, and unresolved physical regions share one graph. Pass node_id to expand only that node into physical blocks and directed neighbors.",
         annotations(read_only_hint = true, destructive_hint = false)
     )]
-    async fn convert_from_looked_at_circuit(
+    async fn get_circuit_ir(
+        &self,
+        Parameters(params): Parameters<GetLookedAtCircuitIrParams>,
+    ) -> String {
+        let player = match self.resolve_player(params.player.as_deref()) {
+            Ok(player) => player,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+        };
+        let discovery_text = self
+            .resolve_looked_at_circuit(Parameters(DiscoverCircuitParams {
+                player: Some(player.clone()),
+                max_components: params.max_components,
+                padding: Some(1),
+                fragment_gap: Some(params.fragment_gap.unwrap_or(2)),
+            }))
+            .await;
+        let discovery: Value = match serde_json::from_str(&discovery_text) {
+            Ok(value) => value,
+            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        };
+        if discovery.get("ok") != Some(&Value::Bool(true)) {
+            return discovery_text;
+        }
+        let target = match serde_json::from_value::<Pos>(discovery["candidate"]["seed"].clone()) {
+            Ok(target) => target,
+            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        };
+        let (bounds, dimension) = match self.selected_region(&player).await {
+            Ok(region) => region,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+        };
+        let snapshot = match self
+            .bridge
+            .scan_region(bounds.min, bounds.max, &dimension)
+            .await
+        {
+            Ok(snapshot) => snapshot,
+            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        };
+        let snapshot_json = match serde_json::to_string(&snapshot) {
+            Ok(snapshot) => snapshot,
+            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        };
+        let mut analysis_hasher = DefaultHasher::new();
+        snapshot_json.hash(&mut analysis_hasher);
+        let analysis_id = format!("{:016x}", analysis_hasher.finish());
+        if params.node_id.is_some() && params.analysis_id.as_deref() != Some(analysis_id.as_str()) {
+            return json_text(json!({
+                "ok": false,
+                "error": if params.analysis_id.is_some() {
+                    "the observed circuit changed after the mixed-IR summary; request a new summary before expanding a node"
+                } else {
+                    "analysis_id from a mixed-IR summary is required when node_id is specified"
+                },
+                "current_analysis_id": analysis_id,
+                "retryable": true,
+            }));
+        }
+        let (_, world) = match world_from_snapshot_json(&snapshot_json) {
+            Ok(result) => result,
+            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        };
+        let mut analysis = dustroute_translate::analyze_world_region(&world, bounds);
+        analysis.scene.observation.dimension = dimension;
+        let hierarchy = dustroute_ir::derive_hierarchy(&analysis.scene);
+        let mixed_ir = match mixed_ir_json(&hierarchy, params.node_id) {
+            Ok(mixed_ir) => mixed_ir,
+            Err(error) => {
+                return json_text(json!({
+                    "ok": false,
+                    "error": error,
+                    "available_node_count": dustroute_ir::build_mixed_ir(&hierarchy).nodes.len(),
+                }));
+            }
+        };
+        json_text(json!({
+            "ok": true,
+            "analysis_mode": "mixed_ir",
+            "analysis_id": analysis_id,
+            "mutation_performed": false,
+            "target": target,
+            "bounds": bounds_json(bounds),
+            "analysis_complete": discovery["expansion"]["limit_reached"] != Value::Bool(true),
+            "expansion": discovery["expansion"],
+            "mixed_ir": mixed_ir,
+            "guidance": if params.node_id.is_some() {
+                "Use the physical block details and directed neighbors to explain or diagnose this node in context."
+            } else {
+                "Choose a node_id from this bounded graph and call this tool again to expand only that node."
+            }
+        }))
+    }
+
+    #[tool(
+        description = "Test one or more block substitutions against the circuit around the player's gaze without changing Minecraft. Returns bounded before/after diagnostics, mixed IR, identity, and steady-state simulation.",
+        annotations(read_only_hint = true, destructive_hint = false)
+    )]
+    async fn test_circuit_change(
+        &self,
+        Parameters(params): Parameters<TestCircuitChangeParams>,
+    ) -> String {
+        let player = match self.resolve_player(params.player.as_deref()) {
+            Ok(player) => player,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+        };
+        if params.changes.is_empty() || params.changes.len() > 64 {
+            return json_text(json!({
+                "ok": false,
+                "error": "changes must contain 1 through 64 virtual substitutions"
+            }));
+        }
+        let replacement_is_valid = |block: &str| {
+            block.starts_with("minecraft:")
+                && block["minecraft:".len()..].chars().all(|character| {
+                    character.is_ascii_lowercase() || character.is_ascii_digit() || character == '_'
+                })
+        };
+        if params
+            .changes
+            .iter()
+            .any(|change| !replacement_is_valid(&change.block))
+        {
+            return json_text(json!({
+                "ok": false,
+                "error": "every block must be a namespaced vanilla block name such as minecraft:stone"
+            }));
+        }
+        let simulation_ticks = params.simulation_ticks.unwrap_or(64);
+        if !(1..=256).contains(&simulation_ticks) {
+            return json_text(json!({
+                "ok": false,
+                "error": "simulation_ticks must be 1 through 256"
+            }));
+        }
+        let discovery_text = self
+            .resolve_looked_at_circuit(Parameters(DiscoverCircuitParams {
+                player: Some(player.clone()),
+                max_components: params.max_components,
+                padding: Some(1),
+                fragment_gap: Some(params.fragment_gap.unwrap_or(2)),
+            }))
+            .await;
+        let discovery: Value = match serde_json::from_str(&discovery_text) {
+            Ok(value) => value,
+            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        };
+        if discovery.get("ok") != Some(&Value::Bool(true)) {
+            return discovery_text;
+        }
+        let focus = match serde_json::from_value::<Pos>(discovery["candidate"]["seed"].clone()) {
+            Ok(target) => target,
+            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        };
+        let (bounds, dimension) = match self.selected_region(&player).await {
+            Ok(region) => region,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+        };
+        let positions = params
+            .changes
+            .iter()
+            .map(|change| Pos::new(change.position.x, change.position.y, change.position.z))
+            .collect::<Vec<_>>();
+        if positions.iter().any(|position| {
+            position.x < bounds.min.x
+                || position.y < bounds.min.y
+                || position.z < bounds.min.z
+                || position.x > bounds.max.x
+                || position.y > bounds.max.y
+                || position.z > bounds.max.z
+        }) {
+            return json_text(json!({
+                "ok": false,
+                "error": "a substitution position is outside the observed circuit bounds",
+                "bounds": bounds_json(bounds),
+            }));
+        }
+        let snapshot = match self
+            .bridge
+            .scan_region(bounds.min, bounds.max, &dimension)
+            .await
+        {
+            Ok(snapshot) => snapshot,
+            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        };
+        let mut substituted = snapshot.clone();
+        let mut applied_changes = Vec::new();
+        for (change, position) in params.changes.iter().zip(positions) {
+            let Some(record) = substituted
+                .blocks
+                .iter_mut()
+                .find(|record| record.pos == position)
+            else {
+                return json_text(json!({
+                    "ok": false,
+                    "error": "a substitution target is air or was not present in the observation",
+                    "position": position,
+                }));
+            };
+            let previous = json!({ "name": record.name, "properties": record.properties });
+            record.name.clone_from(&change.block);
+            record.properties.clear();
+            applied_changes.push(json!({
+                "position": position,
+                "before": previous,
+                "after": { "name": change.block, "properties": {} },
+            }));
+        }
+        let baseline_world = match dustroute_translate::world_from_snapshot(&snapshot) {
+            Ok(world) => world,
+            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        };
+        let substituted_world = match dustroute_translate::world_from_snapshot(&substituted) {
+            Ok(world) => world,
+            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        };
+        let mut baseline = dustroute_translate::analyze_world_region(&baseline_world, bounds);
+        baseline.scene.observation.dimension.clone_from(&dimension);
+        let mut after = dustroute_translate::analyze_world_region(&substituted_world, bounds);
+        after.scene.observation.dimension = dimension;
+        let complete = discovery["expansion"]["limit_reached"] != Value::Bool(true);
+        let simulation_json = |result: Result<Value, String>| match result {
+            Ok(value) => json!({ "ok": true, "result": value }),
+            Err(error) => json!({ "ok": false, "error": error }),
+        };
+        let baseline_simulation = simulation_json(simulated_terminal_summary(
+            &baseline_world,
+            &baseline,
+            simulation_ticks,
+        ));
+        let substituted_simulation = simulation_json(simulated_terminal_summary(
+            &substituted_world,
+            &after,
+            simulation_ticks,
+        ));
+        json_text(json!({
+            "ok": true,
+            "analysis_mode": "virtual_circuit_change",
+            "mutation_performed": false,
+            "changes": applied_changes,
+            "analysis_complete": complete,
+            "before": virtual_analysis_summary(&baseline.scene, focus, complete),
+            "after": virtual_analysis_summary(&after.scene, focus, complete),
+            "steady_state_simulation": {
+                "before": baseline_simulation,
+                "after": substituted_simulation,
+            },
+            "guidance": "A structural improvement is evidence for a repair proposal, not permission to mutate the world."
+        }))
+    }
+
+    #[tool(
+        description = "Convert a gaze-discovered or selected physical circuit into bounded physical, mixed-IR, and higher-level identity summaries. Repair and transition planning are separate tools.",
+        annotations(read_only_hint = true, destructive_hint = false)
+    )]
+    async fn convert_from_circuit(
         &self,
         Parameters(params): Parameters<AnalyzeLookedAtParams>,
     ) -> String {
+        match params.scope.as_deref().unwrap_or("gaze") {
+            "gaze" => {}
+            "selected_region" => {
+                return self
+                    .convert_from_selected_region(Parameters(PlayerParams {
+                        player: params.player,
+                    }))
+                    .await;
+            }
+            _ => {
+                return error_text(
+                    McpErrorCode::InvalidArgument,
+                    "scope must be gaze or selected_region",
+                    false,
+                );
+            }
+        }
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
             Err(error) => return json_text(json!({ "ok": false, "error": error })),
@@ -2362,48 +2933,11 @@ impl DustRouteMcp {
             .as_u64()
             .and_then(|count| usize::try_from(count).ok())
             .unwrap_or(0);
-        let (transition_safety, transition_proposals) = self
-            .create_transition_proposals(&player, &dimension, bounds, &snapshot, 20, 16_384)
-            .await;
         if discovered_components > MAX_FLAT_ANALYSIS_COMPONENTS {
             let mut analysis = dustroute_translate::analyze_world_region(&world, bounds);
             analysis.scene.observation.dimension = dimension;
             let hierarchy = dustroute_ir::derive_hierarchy(&analysis.scene);
             let focused = focused_hierarchy_role_json(&analysis.scene, &hierarchy, target);
-            let repairs = dustroute_translate::propose_scene_repairs_near(
-                &world,
-                &analysis.scene,
-                fragment_gap,
-                target,
-                12,
-            );
-            let mut repair_json = Vec::new();
-            for proposal in repairs.into_iter().take(16) {
-                let operation_id = uuid::Uuid::new_v4();
-                if let Err(error) = self
-                    .store_repair_plan(
-                        operation_id,
-                        StoredRepairPlan {
-                            patch: proposal.patch.clone(),
-                            dimension: analysis.scene.observation.dimension.clone(),
-                            analysis_bounds: bounds,
-                            fragments_before: analysis.scene.fragments.len(),
-                            baseline_truth_table: None,
-                            previewed: false,
-                            applied: false,
-                        },
-                    )
-                    .await
-                {
-                    return json_text(json!({ "ok": false, "error": error }));
-                }
-                repair_json.push(json!({
-                    "operation_id": operation_id,
-                    "patch": proposal.patch,
-                    "evidence": proposal.evidence,
-                    "virtual_impact": proposal.impact
-                }));
-            }
             let mut result = hierarchical_result_json(
                 bounds,
                 &hierarchy,
@@ -2418,7 +2952,7 @@ impl DustRouteMcp {
                         &hierarchy,
                         None,
                         discovery["expansion"]["limit_reached"] != Value::Bool(true),
-                        repair_json.len(),
+                        0,
                     ),
                 );
                 object.insert(
@@ -2430,20 +2964,12 @@ impl DustRouteMcp {
                     ))
                     .unwrap_or(Value::Null),
                 );
-                object.insert("repair_proposals".to_owned(), Value::Array(repair_json));
                 object.insert(
-                    "repair_guidance".to_owned(),
-                    Value::String(
-                        "ranked local virtual patches; preview an operation before any world mutation"
-                            .to_owned(),
-                    ),
-                );
-                object.insert(
-                    "transition_scenarios".to_owned(),
+                    "next_tools".to_owned(),
                     json!({
-                        "safety": transition_safety,
-                        "proposals": transition_proposals,
-                        "next_step": "show_transition_test before requesting confirmation"
+                        "ir_detail": "get_circuit_ir",
+                        "repair_planning": "new_repair",
+                        "transition_planning": "new_transition_test"
                     }),
                 );
             }
@@ -2471,40 +2997,6 @@ impl DustRouteMcp {
             .dimension = dimension.clone();
         let translated = &staged.reverse;
         let focused = focused_role_json(translated, target);
-        let repairs = dustroute_translate::propose_scene_repairs_near(
-            &world,
-            &translated.analysis.scene,
-            fragment_gap,
-            target,
-            12,
-        );
-        let mut repair_json = Vec::new();
-        for proposal in repairs.into_iter().take(16) {
-            let operation_id = uuid::Uuid::new_v4();
-            if let Err(error) = self
-                .store_repair_plan(
-                    operation_id,
-                    StoredRepairPlan {
-                        patch: proposal.patch.clone(),
-                        dimension: dimension.clone(),
-                        analysis_bounds: bounds,
-                        fragments_before: translated.analysis.scene.fragments.len(),
-                        baseline_truth_table: translated.truth_table.clone(),
-                        previewed: false,
-                        applied: false,
-                    },
-                )
-                .await
-            {
-                return json_text(json!({ "ok": false, "error": error }));
-            }
-            repair_json.push(json!({
-                "operation_id": operation_id,
-                "patch": proposal.patch,
-                "evidence": proposal.evidence,
-                "virtual_impact": proposal.impact
-            }));
-        }
         let incomplete = discovery["expansion"]["limit_reached"] == Value::Bool(true);
         let mut result = reverse_result_json(bounds, translated);
         if let Some(object) = result.as_object_mut() {
@@ -2514,7 +3006,7 @@ impl DustRouteMcp {
                     &staged.hierarchy,
                     Some(&staged.logical_role),
                     !incomplete,
-                    repair_json.len(),
+                    0,
                 ),
             );
             object.insert(
@@ -2529,13 +3021,12 @@ impl DustRouteMcp {
             object.insert("focused_component".to_owned(), focused);
             object.insert("discovery".to_owned(), discovery["candidate"].clone());
             object.insert("analysis_complete".to_owned(), Value::Bool(!incomplete));
-            object.insert("repair_proposals".to_owned(), Value::Array(repair_json));
             object.insert(
-                "transition_scenarios".to_owned(),
+                "next_tools".to_owned(),
                 json!({
-                    "safety": transition_safety,
-                    "proposals": transition_proposals,
-                    "next_step": "show_transition_test before requesting confirmation"
+                    "ir_detail": "get_circuit_ir",
+                    "repair_planning": "new_repair",
+                    "transition_planning": "new_transition_test"
                 }),
             );
             object.insert(
@@ -2553,7 +3044,7 @@ impl DustRouteMcp {
     #[tool(
         description = "Compile a built-in circuit at a player's gaze target and return a block diff, collisions, materials, operation ID, and exact undo plan without changing the world"
     )]
-    async fn new_circuit_placement(
+    async fn new_placement(
         &self,
         Parameters(params): Parameters<PreviewPlacementParams>,
     ) -> String {
@@ -2733,7 +3224,7 @@ impl DustRouteMcp {
             "next_step": if self.policy.read_only {
                 "review this plan; writes are disabled by policy"
             } else {
-                "review this plan, obtain explicit player confirmation, then call invoke_circuit_placement with confirm=true"
+                "call show_operation, obtain explicit player confirmation, then call invoke_operation with confirm=true"
             }
         });
         self.plans.lock().await.insert(operation_id, plan);
@@ -2761,7 +3252,9 @@ impl DustRouteMcp {
     ) -> String {
         let operation_id = match uuid::Uuid::parse_str(&params.operation_id) {
             Ok(id) => id,
-            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+            Err(error) => {
+                return error_text(McpErrorCode::InvalidArgument, error.to_string(), false);
+            }
         };
         match self.plans.lock().await.get(&operation_id) {
             Some(plan) => {
@@ -2771,10 +3264,6 @@ impl DustRouteMcp {
         }
     }
 
-    #[tool(
-        description = "Apply a previously previewed placement plan to the test world. Requires confirm=true and write-enabled policy.",
-        annotations(read_only_hint = false, destructive_hint = true)
-    )]
     async fn invoke_circuit_placement(
         &self,
         Parameters(params): Parameters<ConfirmedOperationParams>,
@@ -2782,10 +3271,6 @@ impl DustRouteMcp {
         self.mutate_placement(params, false).await
     }
 
-    #[tool(
-        description = "Restore the exact blocks captured before an applied placement plan. Requires confirm=true and write-enabled policy.",
-        annotations(read_only_hint = false, destructive_hint = true)
-    )]
     async fn undo_circuit_placement(
         &self,
         Parameters(params): Parameters<ConfirmedOperationParams>,
@@ -2796,7 +3281,7 @@ impl DustRouteMcp {
     #[tool(
         description = "Show the player's selected region in the Minecraft world before analysis or mutation"
     )]
-    async fn show_selected_region(&self, Parameters(params): Parameters<PlayerParams>) -> String {
+    async fn show_region(&self, Parameters(params): Parameters<PlayerParams>) -> String {
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
             Err(error) => return json_text(json!({ "ok": false, "error": error })),
@@ -2823,9 +3308,6 @@ impl DustRouteMcp {
         }
     }
 
-    #[tool(
-        description = "Scan and reverse-translate the region previously selected with the player's gaze"
-    )]
     async fn convert_from_selected_region(
         &self,
         Parameters(params): Parameters<PlayerParams>,
@@ -2894,10 +3376,7 @@ impl DustRouteMcp {
     #[tool(
         description = "Diagnose the selected physical circuit and create ranked, non-mutating partial repair plans"
     )]
-    async fn new_repair_plan(
-        &self,
-        Parameters(params): Parameters<ProposeRepairsParams>,
-    ) -> String {
+    async fn new_repair(&self, Parameters(params): Parameters<ProposeRepairsParams>) -> String {
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
             Err(error) => return json_text(json!({ "ok": false, "error": error })),
@@ -2973,7 +3452,7 @@ impl DustRouteMcp {
             "fragments": fragments_before,
             "proposal_count": response.len(),
             "proposals": response,
-            "next_step": "review a proposal, call show_repair_plan, ask for explicit confirmation, then call invoke_repair with confirm=true"
+            "next_step": "review a proposal, call show_operation, ask for explicit confirmation, then call invoke_operation with confirm=true"
         }))
     }
 
@@ -3052,11 +3531,10 @@ impl DustRouteMcp {
             "operation_id": operation_id,
             "proposal": proposal,
             "warning": "removal intent cannot be inferred from geometry alone; preview and explicit confirmation are required",
-            "next_step": "call show_repair_plan, then invoke_repair with confirm=true only after confirmation"
+            "next_step": "call show_operation, then invoke_operation with confirm=true only after confirmation"
         }))
     }
 
-    #[tool(description = "Highlight the blocks affected by a proposed partial repair")]
     async fn show_repair_plan(
         &self,
         Parameters(params): Parameters<PreviewRepairParams>,
@@ -3097,17 +3575,13 @@ impl DustRouteMcp {
                     "bounds": bounds_json(bounds),
                     "patch": plan.patch,
                     "preview": preview,
-                    "next_step": "obtain explicit player confirmation before invoke_repair"
+                    "next_step": "obtain explicit player confirmation before invoke_operation"
                 }))
             }
             Err(error) => json_text(json!({ "ok": false, "error": error.to_string() })),
         }
     }
 
-    #[tool(
-        description = "Apply a previewed partial repair and verify the resulting blocks. Requires confirm=true.",
-        annotations(read_only_hint = false, destructive_hint = true)
-    )]
     async fn invoke_repair(
         &self,
         Parameters(params): Parameters<ConfirmedOperationParams>,
@@ -3115,10 +3589,6 @@ impl DustRouteMcp {
         self.mutate_repair(params, false).await
     }
 
-    #[tool(
-        description = "Undo an applied partial repair using its exact captured before-state. Requires confirm=true.",
-        annotations(read_only_hint = false, destructive_hint = true)
-    )]
     async fn undo_repair(
         &self,
         Parameters(params): Parameters<ConfirmedOperationParams>,
@@ -3203,14 +3673,10 @@ impl DustRouteMcp {
             "bounds": bounds_json(bounds),
             "dimension": dimension,
             "proposals": proposals,
-            "next_step": "show_transition_test, then invoke_transition_test(confirm=true) only for a ready proposal"
+            "next_step": "show_operation, then invoke_operation(confirm=true) only for a ready proposal"
         }))
     }
 
-    #[tool(
-        description = "Highlight a proposed lever transition and observation region without activating it",
-        annotations(read_only_hint = true, destructive_hint = false)
-    )]
     async fn show_transition_test(
         &self,
         Parameters(params): Parameters<PreviewTransitionParams>,
@@ -3259,10 +3725,6 @@ impl DustRouteMcp {
         }))
     }
 
-    #[tool(
-        description = "Run a previewed single-lever transition, record block updates, analyze transients, and restore the original state",
-        annotations(read_only_hint = false, destructive_hint = true)
-    )]
     async fn invoke_transition_test(
         &self,
         Parameters(params): Parameters<RunTransitionParams>,
@@ -3303,7 +3765,7 @@ impl DustRouteMcp {
         if self.policy.preview_required && !plan.previewed {
             return error_text(
                 McpErrorCode::InvalidState,
-                "show_transition_test is required first",
+                "show_operation is required first",
                 false,
             );
         }
@@ -3538,10 +4000,6 @@ impl DustRouteMcp {
         json_text(result)
     }
 
-    #[tool(
-        description = "Attempt to restore a transition scenario lever and verify its original region snapshot",
-        annotations(read_only_hint = false, destructive_hint = true)
-    )]
     async fn restore_transition_test(
         &self,
         Parameters(params): Parameters<RunTransitionParams>,
@@ -3811,6 +4269,150 @@ impl DustRouteMcp {
     }
 
     #[tool(
+        description = "Show or highlight any placement, repair, or transition-test operation before execution",
+        annotations(read_only_hint = true, destructive_hint = false)
+    )]
+    async fn show_operation(&self, Parameters(params): Parameters<ShowOperationParams>) -> String {
+        let operation_id = match uuid::Uuid::parse_str(&params.operation_id) {
+            Ok(id) => id,
+            Err(error) => {
+                return error_text(McpErrorCode::InvalidArgument, error.to_string(), false);
+            }
+        };
+        if self.plans.lock().await.contains_key(&operation_id) {
+            return self
+                .get_circuit_placement(Parameters(OperationParams {
+                    operation_id: params.operation_id,
+                }))
+                .await;
+        }
+        if self
+            .repair_plan(operation_id)
+            .await
+            .ok()
+            .flatten()
+            .is_some()
+        {
+            return self
+                .show_repair_plan(Parameters(PreviewRepairParams {
+                    operation_id: params.operation_id,
+                    player: params.player,
+                }))
+                .await;
+        }
+        if self
+            .transition_plans
+            .lock()
+            .await
+            .contains_key(&operation_id)
+        {
+            return self
+                .show_transition_test(Parameters(PreviewTransitionParams {
+                    operation_id: params.operation_id,
+                    player: params.player,
+                }))
+                .await;
+        }
+        error_text(McpErrorCode::NotFound, "operation not found", false)
+    }
+
+    #[tool(
+        description = "Invoke any previewed placement, repair, or transition-test operation. Requires confirm=true.",
+        annotations(read_only_hint = false, destructive_hint = true)
+    )]
+    async fn invoke_operation(
+        &self,
+        Parameters(params): Parameters<InvokeOperationParams>,
+    ) -> String {
+        let operation_id = match uuid::Uuid::parse_str(&params.operation_id) {
+            Ok(id) => id,
+            Err(error) => {
+                return error_text(McpErrorCode::InvalidArgument, error.to_string(), false);
+            }
+        };
+        if self.plans.lock().await.contains_key(&operation_id) {
+            return self
+                .invoke_circuit_placement(Parameters(ConfirmedOperationParams {
+                    operation_id: params.operation_id,
+                    confirm: params.confirm,
+                }))
+                .await;
+        }
+        if self
+            .repair_plan(operation_id)
+            .await
+            .ok()
+            .flatten()
+            .is_some()
+        {
+            return self
+                .invoke_repair(Parameters(ConfirmedOperationParams {
+                    operation_id: params.operation_id,
+                    confirm: params.confirm,
+                }))
+                .await;
+        }
+        if self
+            .transition_plans
+            .lock()
+            .await
+            .contains_key(&operation_id)
+        {
+            return self
+                .invoke_transition_test(Parameters(RunTransitionParams {
+                    operation_id: params.operation_id,
+                    confirm: params.confirm,
+                    contracts: params.contracts,
+                }))
+                .await;
+        }
+        error_text(McpErrorCode::NotFound, "operation not found", false)
+    }
+
+    #[tool(
+        description = "Undo an applied placement or repair, or restore a transition-test operation. Requires confirm=true.",
+        annotations(read_only_hint = false, destructive_hint = true)
+    )]
+    async fn undo_operation(
+        &self,
+        Parameters(params): Parameters<ConfirmedOperationParams>,
+    ) -> String {
+        let operation_id = match uuid::Uuid::parse_str(&params.operation_id) {
+            Ok(id) => id,
+            Err(error) => {
+                return error_text(McpErrorCode::InvalidArgument, error.to_string(), false);
+            }
+        };
+        if self.plans.lock().await.contains_key(&operation_id) {
+            return self.undo_circuit_placement(Parameters(params)).await;
+        }
+        if self
+            .repair_plan(operation_id)
+            .await
+            .ok()
+            .flatten()
+            .is_some()
+        {
+            return self.undo_repair(Parameters(params)).await;
+        }
+        if self
+            .transition_plans
+            .lock()
+            .await
+            .contains_key(&operation_id)
+        {
+            return self
+                .restore_transition_test(Parameters(RunTransitionParams {
+                    operation_id: params.operation_id,
+                    confirm: params.confirm,
+                    contracts: None,
+                }))
+                .await;
+        }
+        error_text(McpErrorCode::NotFound, "operation not found", false)
+    }
+
+    #[tool(
         description = "Get progress and result for a long-running DustRoute operation",
         annotations(read_only_hint = true, destructive_hint = false)
     )]
@@ -3836,7 +4438,7 @@ impl DustRouteMcp {
     }
 
     #[tool(description = "Clear a player's pending gaze-based region selection")]
-    async fn clear_region_selection(&self, Parameters(params): Parameters<PlayerParams>) -> String {
+    async fn clear_region(&self, Parameters(params): Parameters<PlayerParams>) -> String {
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
             Err(error) => return json_text(json!({ "ok": false, "error": error })),
@@ -3861,7 +4463,7 @@ impl DustRouteMcp {
     async fn collaboration_prompt(&self) -> GetPromptResult {
         GetPromptResult::new(vec![PromptMessage::new_text(
             Role::User,
-            "Work with the player on a Minecraft redstone circuit. Follow the DustRoute PowerShell-style Verb-Noun contract expressed as snake_case. Use get_looked_at_world for literal visibility, test_looked_at_circuit for compact circuit health, and convert_from_looked_at_circuit only when higher-level logic or plans are needed. Treat inferred external inputs as informational, not automatic repair evidence. New operations only create plans; show operations render previews; invoke operations change the world and require explicit confirmation; undo or restore operations recover prior state. For a transition, call show_transition_test, explain exactly which lever and region will be touched, obtain explicit confirmation, then call invoke_transition_test with confirm=true; report both the live trace and Rust-simulator differences, and verify restoration. For a repair, call show_repair_plan, explain the block diff, obtain explicit confirmation, call invoke_repair with confirm=true, and report the post-repair reanalysis. If observation_complete is false, expand observation before higher-level claims. For an explicitly selected region, use two set_region_corner calls, show_selected_region, and convert_from_selected_region. Never infer coordinates from prose when gaze tools can ground them, and never mutate the world without preview and explicit confirmation.".to_owned(),
+            "Work with the player on a Minecraft redstone circuit using the PowerShell-style Verb-Noun contract expressed as snake_case. Use get_world for literal visibility, test_circuit for compact health, get_circuit_ir for bounded mixed-IR navigation, and convert_from_circuit only for higher-level identity. For mixed IR, first request the summary, then pass its analysis_id and a node_id to expand only that node. Use test_circuit_change for non-mutating multi-block hypotheses. Treat intrinsic sources, controllable inputs, event inputs, and observation boundaries as distinct. New operations only create plans. Always call show_operation, explain the preview, and obtain explicit confirmation before invoke_operation(confirm=true). Use undo_operation for recovery. For an explicitly selected region, call set_region twice, show_region, then convert_from_circuit(scope=selected_region). Never infer coordinates from prose when gaze tools can ground them, and never mutate the world without preview and explicit confirmation.".to_owned(),
         )])
         .with_description("Safe gaze-grounded DustRoute collaboration workflow")
     }
@@ -3882,7 +4484,7 @@ impl ServerHandler for DustRouteMcp {
             env!("CARGO_PKG_VERSION"),
         ))
         .with_instructions(
-            "Use the collaborate-on-redstone-circuit prompt. Use get_looked_at_world for raw visibility, test_looked_at_circuit for compact health, and convert_from_looked_at_circuit for deeper logic or planning. The naming contract is get/resolve/test/convert_from/new/show/invoke/undo/restore/start/stop/clear. New creates a plan, show previews it, and invoke requires explicit confirmation before mutation."
+            "Use the collaborate-on-redstone-circuit prompt. Use get_world for raw visibility, test_circuit for compact health, get_circuit_ir for bounded mixed-IR navigation, and convert_from_circuit for higher-level identity. New creates a plan, show_operation previews it, invoke_operation requires explicit confirmation, and undo_operation recovers it."
         )
     }
 }
@@ -3930,6 +4532,25 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn unified_operation_tools_reject_invalid_ids_with_argument_error() {
+        let service = DustRouteMcp::new("127.0.0.1:1");
+        let result: Value = serde_json::from_str(
+            &service
+                .invoke_operation(Parameters(InvokeOperationParams {
+                    operation_id: "not-a-uuid".into(),
+                    confirm: true,
+                    contracts: None,
+                }))
+                .await,
+        )
+        .unwrap();
+
+        assert_eq!(result["ok"], false);
+        assert_eq!(result["error_code"], "invalid_argument");
+        assert_eq!(result["retryable"], false);
+    }
+
+    #[tokio::test]
     async fn collaboration_prompt_requires_gaze_grounding_and_preview() {
         let prompt = DustRouteMcp::new("127.0.0.1:1")
             .collaboration_prompt()
@@ -3937,9 +4558,10 @@ mod tests {
         let ContentBlock::Text(text) = &prompt.messages[0].content else {
             panic!("expected text prompt");
         };
-        assert!(text.text.contains("get_looked_at_world"));
-        assert!(text.text.contains("test_looked_at_circuit"));
-        assert!(text.text.contains("show_selected_region"));
+        assert!(text.text.contains("get_world"));
+        assert!(text.text.contains("test_circuit"));
+        assert!(text.text.contains("get_circuit_ir"));
+        assert!(text.text.contains("show_operation"));
         assert!(text.text.contains("confirmation"));
     }
 
@@ -3968,10 +4590,13 @@ mod tests {
             .map(|tool| tool.name.to_string())
             .collect::<BTreeSet<_>>();
 
-        assert_eq!(default_names.len(), 20);
-        assert_eq!(debug_names.len(), 27);
-        assert!(default_names.contains("test_looked_at_circuit"));
-        assert!(default_names.contains("invoke_repair"));
+        assert_eq!(default_names.len(), 16);
+        assert_eq!(debug_names.len(), 23);
+        assert!(default_names.contains("test_circuit"));
+        assert!(default_names.contains("get_circuit_ir"));
+        assert!(default_names.contains("test_circuit_change"));
+        assert!(default_names.contains("invoke_operation"));
+        assert!(!default_names.contains("invoke_repair"));
         for name in DEBUG_ONLY_TOOLS {
             assert!(!default_names.contains(name), "{name}");
             assert!(debug_names.contains(name), "{name}");
@@ -4029,20 +4654,10 @@ mod tests {
             tools
                 .tools
                 .iter()
-                .any(|tool| tool.name == "convert_from_looked_at_circuit")
+                .any(|tool| tool.name == "convert_from_circuit")
         );
-        assert!(
-            tools
-                .tools
-                .iter()
-                .any(|tool| tool.name == "test_looked_at_circuit")
-        );
-        assert!(
-            tools
-                .tools
-                .iter()
-                .any(|tool| tool.name == "get_looked_at_world")
-        );
+        assert!(tools.tools.iter().any(|tool| tool.name == "test_circuit"));
+        assert!(tools.tools.iter().any(|tool| tool.name == "get_world"));
         let prompts = client.list_prompts(None).await.unwrap();
         assert!(
             prompts
@@ -4128,9 +4743,7 @@ mod tests {
             }))
             .unwrap();
             let result = client
-                .call_tool(
-                    CallToolRequestParams::new("set_region_corner").with_arguments(arguments),
-                )
+                .call_tool(CallToolRequestParams::new("set_region").with_arguments(arguments))
                 .await
                 .unwrap();
             let ContentBlock::Text(text) = &result.content[0] else {
@@ -4138,8 +4751,16 @@ mod tests {
             };
             assert!(text.text.contains("\"ok\": true"));
         }
-        for tool in ["show_selected_region", "convert_from_selected_region"] {
-            let arguments = serde_json::Map::new();
+        for (tool, arguments) in [
+            ("show_region", serde_json::Map::new()),
+            (
+                "convert_from_circuit",
+                serde_json::from_value::<serde_json::Map<String, Value>>(json!({
+                    "scope": "selected_region"
+                }))
+                .unwrap(),
+            ),
+        ] {
             let result = client
                 .call_tool(CallToolRequestParams::new(tool).with_arguments(arguments))
                 .await
@@ -4216,11 +4837,12 @@ mod tests {
         let service =
             DustRouteMcp::with_policy_and_player(address, McpPolicy::default(), "builder");
         let result = service
-            .convert_from_looked_at_circuit(Parameters(AnalyzeLookedAtParams {
+            .convert_from_circuit(Parameters(AnalyzeLookedAtParams {
                 player: None,
                 max_components: Some(64),
                 fragment_gap: Some(2),
                 include_truth_table: Some(false),
+                scope: None,
             }))
             .await;
         let value: Value = serde_json::from_str(&result).unwrap();
@@ -4248,6 +4870,12 @@ mod tests {
             "local_gate_network"
         );
         assert_eq!(value["circuit_identity"]["local_gate_counts"]["buffer"], 1);
+        assert_eq!(value["circuit_identity"]["local_gate_count"], 1);
+        assert_eq!(
+            value["circuit_identity"]["local_gate_samples"][0]["kind"],
+            "buffer"
+        );
+        assert!(value["circuit_identity"].get("local_gates").is_none());
         assert_eq!(value["circuit_identity"]["analysis_complete"], true);
         assert!(value["circuit_identity"]["primary_candidate"].is_null());
         assert!(
@@ -4261,7 +4889,9 @@ mod tests {
         assert!(value["physical"]["observation"].is_object());
         assert!(value["physical"]["block_capabilities"]["groups"].is_array());
         assert!(value["stages"]["physical_scene"].is_object());
-        assert!(value["transition_scenarios"]["safety"].is_object());
+        assert_eq!(value["next_tools"]["repair_planning"], "new_repair");
+        assert!(value.get("transition_scenarios").is_none());
+        assert!(value.get("repair_proposals").is_none());
         assert_eq!(value["diagnostic"]["observation_complete"], true);
         assert!(value["diagnostic"]["counts"].is_object());
         assert!(value["diagnostic"]["recommended_next_action"].is_object());
@@ -4315,7 +4945,7 @@ mod tests {
         let service =
             DustRouteMcp::with_policy_and_player(address, McpPolicy::default(), "builder");
         let result = service
-            .test_looked_at_circuit(Parameters(DiagnoseLookedAtParams {
+            .test_circuit(Parameters(DiagnoseLookedAtParams {
                 player: None,
                 max_components: Some(64),
                 fragment_gap: Some(2),
@@ -4389,7 +5019,7 @@ mod tests {
 
         let proposed: Value = serde_json::from_str(
             &service
-                .new_repair_plan(Parameters(ProposeRepairsParams {
+                .new_repair(Parameters(ProposeRepairsParams {
                     player: None,
                     max_gap: Some(2),
                 }))
@@ -4403,16 +5033,17 @@ mod tests {
             .to_owned();
 
         let preview = service
-            .show_repair_plan(Parameters(PreviewRepairParams {
+            .show_operation(Parameters(ShowOperationParams {
                 operation_id: operation_id.clone(),
                 player: None,
             }))
             .await;
         assert!(preview.contains("\"ok\": true"));
         let applied = service
-            .invoke_repair(Parameters(ConfirmedOperationParams {
+            .invoke_operation(Parameters(InvokeOperationParams {
                 operation_id: operation_id.clone(),
                 confirm: true,
+                contracts: None,
             }))
             .await;
         assert!(applied.contains("\"verified\": true"), "{applied}");
@@ -4420,7 +5051,7 @@ mod tests {
         assert!(applied_value["resulting_logic"].is_object());
         assert_eq!(applied_value["semantic_verification"]["available"], false);
         let undone = service
-            .undo_repair(Parameters(ConfirmedOperationParams {
+            .undo_operation(Parameters(ConfirmedOperationParams {
                 operation_id,
                 confirm: true,
             }))
