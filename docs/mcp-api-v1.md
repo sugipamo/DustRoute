@@ -7,6 +7,7 @@ families use these identifiers:
 | --- | --- |
 | focused diagnostic | `dustroute.diagnostic.v1` |
 | placement mutation | `dustroute.placement.v1` |
+| observed physical optimization | `dustroute.optimization.v1` |
 | repair plan and mutation | `dustroute.repair.v1` |
 | repair evidence context | `dustroute.repair-context.v1` |
 | transition plan, run, and restore | `dustroute.transition.v1` |

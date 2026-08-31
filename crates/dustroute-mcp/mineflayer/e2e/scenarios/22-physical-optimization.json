@@ -1,0 +1,76 @@
+{
+  "name": "focused_physical_wire_optimization",
+  "steps": [
+    { "kind": "command", "commands": [
+      "/fill 878 102 -1 887 106 3 minecraft:air",
+      "/fill 879 103 0 885 103 2 minecraft:stone",
+      "/setblock 879 104 0 minecraft:lever[face=floor,facing=east,powered=false]",
+      "/setblock 880 104 0 minecraft:redstone_wire",
+      "/setblock 880 104 1 minecraft:redstone_wire",
+      "/setblock 880 104 2 minecraft:redstone_wire",
+      "/setblock 881 104 2 minecraft:redstone_wire",
+      "/setblock 882 104 2 minecraft:redstone_wire",
+      "/setblock 883 104 2 minecraft:redstone_wire",
+      "/setblock 884 104 2 minecraft:redstone_wire",
+      "/setblock 884 104 1 minecraft:redstone_wire",
+      "/setblock 884 104 0 minecraft:redstone_wire",
+      "/setblock 885 104 0 minecraft:repeater[facing=west,delay=1,locked=false,powered=false]"
+    ]},
+    { "kind": "aim", "position": { "x": 885.5, "y": 106, "z": 6.5 }, "target": { "x": 885, "y": 104, "z": 0 } },
+    { "kind": "mcp", "tool": "test_circuit", "arguments": {
+      "max_components": 64,
+      "fragment_gap": 2
+    }, "save": "analysis" },
+    { "kind": "mcp", "tool": "new_optimization", "arguments": {
+      "circuit_id": "${analysis.circuit_id}",
+      "focus": {
+        "min": {
+          "x": "${analysis.bounds.min.x}",
+          "y": "${analysis.bounds.min.y}",
+          "z": "${analysis.bounds.min.z}"
+        },
+        "max": {
+          "x": "${analysis.bounds.max.x}",
+          "y": "${analysis.bounds.max.y}",
+          "z": "${analysis.bounds.max.z}"
+        }
+      },
+      "objective": "wire_length"
+    }, "save": "plan" },
+    { "kind": "assert", "from": "plan", "expect": [
+      { "path": "schema_version", "equals": "dustroute.optimization.v1" },
+      { "path": "outside_focus_fixed", "equals": true },
+      { "path": "metrics.wire_blocks_before", "equals": 9 },
+      { "path": "metrics.wire_blocks_after", "equals": 5 },
+      { "path": "verification.temporal_requirement_preserved", "equals": true }
+    ]},
+    { "kind": "mcp_error", "tool": "invoke_operation", "arguments": {
+      "operation_id": "${plan.operation_id}",
+      "confirm": true
+    }, "save": "unpreviewed" },
+    { "kind": "assert", "from": "unpreviewed", "expect": [
+      { "path": "error_code", "equals": "invalid_state" }
+    ]},
+    { "kind": "mcp", "tool": "show_operation", "arguments": {
+      "operation_id": "${plan.operation_id}"
+    }, "save": "preview" },
+    { "kind": "mcp", "tool": "invoke_operation", "arguments": {
+      "operation_id": "${plan.operation_id}",
+      "confirm": true
+    }, "save": "applied" },
+    { "kind": "assert", "from": "applied", "expect": [
+      { "path": "ok", "equals": true },
+      { "path": "verified", "equals": true },
+      { "path": "semantic_verification.equivalent", "equals": true }
+    ]},
+    { "kind": "mcp", "tool": "undo_operation", "arguments": {
+      "operation_id": "${plan.operation_id}",
+      "confirm": true
+    }, "save": "undone" },
+    { "kind": "assert", "from": "undone", "expect": [
+      { "path": "ok", "equals": true },
+      { "path": "verified", "equals": true }
+    ]}
+  ],
+  "cleanup": ["/fill 878 102 -1 887 106 3 minecraft:air"]
+}

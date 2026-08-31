@@ -187,7 +187,7 @@ MCP tool names follow a PowerShell-style Verb-Noun contract written as
 - `start`, `stop`, and `get` manage asynchronous operations.
 - `set` and `clear` manage the current region selection.
 
-`DUSTROUTE_MCP_TOOL_PROFILE=default` exposes the 17 tools intended for normal
+`DUSTROUTE_MCP_TOOL_PROFILE=default` exposes the 18 tools intended for normal
 LLM collaboration. `debug` additionally exposes low-level gaze/discovery,
 operation history, full plan retrieval, asynchronous conversion control, and
 explicit component-removal planning. Debug tools remain implemented but cannot
@@ -415,6 +415,22 @@ function.
 A suspected short cannot be inferred safely from geometry alone;
 Debug-only `new_component_removal_plan` is available only for a component the
 player explicitly identifies while looking at it.
+
+## Observed physical optimization
+
+`new_optimization` creates a reversible optimization plan from an immutable
+observed `circuit_id`. The first supported objective is `wire_length`, limited
+to one supported, non-branching dust path inside an explicit focus. Both path
+endpoints and every block outside the focus remain fixed. Candidate generation
+rejects branches, missing support, occupied targets, new redstone adjacency,
+and paths that are not shorter.
+
+Before returning a plan, DustRoute re-analyzes the virtual result, requires the
+diagnostic and temporal classifications not to worsen, and rejects a differing
+inferred truth table when both sides can be enumerated. An unavailable truth
+table is reported explicitly rather than treated as proof. Application uses the
+same `show_operation` / explicit confirmation / `invoke_operation` /
+`undo_operation` lifecycle as repairs.
 
 ## Safety configuration
 

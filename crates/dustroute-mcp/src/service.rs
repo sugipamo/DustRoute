@@ -7,7 +7,8 @@ use dustroute_app::DustRouteService;
 use dustroute_optimize::{
     AnchorPolicy, BehavioralVerificationConfig, CompressionAxis, CompressionDirection,
     OptimizationPlan, OptimizationRoutingConfig, OptimizationSafety, TemporalCapabilities,
-    assess_optimization_safety, realize_staged_optimization_against, verify_realized_optimization,
+    assess_optimization_safety, optimize_physical_wire_path, realize_staged_optimization_against,
+    verify_realized_optimization,
 };
 use dustroute_physical::{BlockKind, Pos};
 use dustroute_physical::{PhysicalBlockChange, PhysicalPatch};
@@ -30,7 +31,7 @@ use tokio::time::{Duration, Instant, sleep};
 
 use crate::McpConfig;
 use crate::api::{
-    DIAGNOSTIC_SCHEMA_V1, ErrorResponse, McpErrorCode, PLACEMENT_SCHEMA_V1,
+    DIAGNOSTIC_SCHEMA_V1, ErrorResponse, McpErrorCode, OPTIMIZATION_SCHEMA_V1, PLACEMENT_SCHEMA_V1,
     REPAIR_CONTEXT_SCHEMA_V1, REPAIR_SCHEMA_V1, TRANSITION_SCHEMA_V1, TransitionTraceResponse,
 };
 use crate::state::PlanStateStore;
@@ -386,6 +387,25 @@ struct GetRepairContextParams {
     operation_id: Option<String>,
     /// Maximum Manhattan gap considered for repair evidence. Defaults to 2.
     max_gap: Option<u32>,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+struct OptimizationFocusParam {
+    min: CoordinateParam,
+    max: CoordinateParam,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+struct NewOptimizationParams {
+    /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
+    #[schemars(skip)]
+    player: Option<String>,
+    /// Immutable observed circuit to optimize.
+    circuit_id: String,
+    /// Inclusive physical region that may change. Every block outside remains fixed.
+    focus: OptimizationFocusParam,
+    /// Currently wire_length. Future objectives will be added explicitly.
+    objective: String,
 }
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
@@ -1768,7 +1788,11 @@ impl DustRouteMcp {
             Err(error) => return json_text(json!({ "ok": false, "error": error })),
         };
         if !undo && self.policy.preview_required && !plan.previewed {
-            return json_text(json!({ "ok": false, "error": "repair must be previewed first" }));
+            return error_text(
+                McpErrorCode::InvalidState,
+                "repair must be previewed first",
+                false,
+            );
         }
         if undo && !plan.applied {
             return json_text(json!({ "ok": false, "error": "repair is not applied" }));
@@ -3826,6 +3850,183 @@ impl DustRouteMcp {
     }
 
     #[tool(
+        description = "Create a non-mutating, reversible optimization plan for a simple physical dust path inside an explicit focus while fixing everything outside",
+        annotations(read_only_hint = true, destructive_hint = false)
+    )]
+    async fn new_optimization(
+        &self,
+        Parameters(params): Parameters<NewOptimizationParams>,
+    ) -> String {
+        let player = match self.resolve_player(params.player.as_deref()) {
+            Ok(player) => player,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+        };
+        if let Some(error) = self.authorize_player(&player) {
+            return error;
+        }
+        if params.objective != "wire_length" {
+            return error_text(
+                McpErrorCode::InvalidArgument,
+                "objective must currently be wire_length",
+                false,
+            );
+        }
+        let (circuit_id, circuit) = match self.load_circuit(&params.circuit_id, &player).await {
+            Ok(circuit) => circuit,
+            Err(error) => return error_text(McpErrorCode::NotFound, error, false),
+        };
+        let focus = dustroute_translate::RegionBounds::new(
+            Pos::new(params.focus.min.x, params.focus.min.y, params.focus.min.z),
+            Pos::new(params.focus.max.x, params.focus.max.y, params.focus.max.z),
+        );
+        if !circuit.bounds.contains(focus.min) || !circuit.bounds.contains(focus.max) {
+            return error_text(
+                McpErrorCode::InvalidArgument,
+                "focus must be fully contained by the immutable circuit snapshot",
+                false,
+            );
+        }
+        if let Err(error) = self.policy.validate_region(focus) {
+            return error_text(McpErrorCode::PermissionDenied, error.to_string(), false);
+        }
+        let snapshot_json = match serde_json::to_string(&circuit.snapshot) {
+            Ok(snapshot) => snapshot,
+            Err(error) => {
+                return error_text(McpErrorCode::SerializationFailed, error.to_string(), false);
+            }
+        };
+        let (_, world) = match world_from_snapshot_json(&snapshot_json) {
+            Ok(result) => result,
+            Err(error) => {
+                return error_text(McpErrorCode::SerializationFailed, error.to_string(), false);
+            }
+        };
+        let optimization = match optimize_physical_wire_path(&world, focus) {
+            Ok(optimization) => optimization,
+            Err(error) => {
+                return error_text(
+                    McpErrorCode::InvalidState,
+                    format!("no safe physical wire optimization: {error:?}"),
+                    false,
+                );
+            }
+        };
+        if let Err(error) = self
+            .policy
+            .validate_placement_size(optimization.patch.changes.len())
+        {
+            return error_text(McpErrorCode::PermissionDenied, error.to_string(), false);
+        }
+        let mut optimized_world = match optimization.patch.apply_virtual(&world) {
+            Ok(world) => world,
+            Err(error) => {
+                return error_text(McpErrorCode::InvalidState, error.to_string(), false);
+            }
+        };
+        dustroute_translate::update_wire_shapes(&mut optimized_world);
+        let before = dustroute_translate::analyze_world_region(&world, circuit.bounds);
+        let after = dustroute_translate::analyze_world_region(&optimized_world, circuit.bounds);
+        let before_temporal = before.scene.temporal_assessment();
+        let after_temporal = after.scene.temporal_assessment();
+        if before_temporal.requirement != after_temporal.requirement {
+            return error_text(
+                McpErrorCode::VerificationFailed,
+                "optimization changed the circuit temporal requirement",
+                false,
+            );
+        }
+        let before_diagnostic =
+            dustroute_translate::diagnose_scene(&before.scene, circuit.target, circuit.complete);
+        let after_diagnostic =
+            dustroute_translate::diagnose_scene(&after.scene, circuit.target, circuit.complete);
+        if after_diagnostic.counts.probable_faults > before_diagnostic.counts.probable_faults
+            || after_diagnostic.counts.unsupported > before_diagnostic.counts.unsupported
+        {
+            return error_text(
+                McpErrorCode::VerificationFailed,
+                "optimization introduced a new diagnostic fault",
+                false,
+            );
+        }
+        let before_truth = dustroute_translate::infer_truth_table(&world, &before, 8, 64).ok();
+        let after_truth =
+            dustroute_translate::infer_truth_table(&optimized_world, &after, 8, 64).ok();
+        let semantic = match (&before_truth, &after_truth) {
+            (Some(before), Some(after)) => {
+                let comparison = dustroute_translate::compare_truth_tables(before, after);
+                if !comparison.comparable || comparison.fitness_penalty != 0 {
+                    return error_text(
+                        McpErrorCode::VerificationFailed,
+                        "optimization changed the inferred truth table",
+                        false,
+                    );
+                }
+                json!({ "available": true, "equivalent": true, "comparison": comparison })
+            }
+            _ => json!({
+                "available": false,
+                "reason": "truth-table inference was unavailable; the plan remains preview-only physical-path optimization"
+            }),
+        };
+        let operation_id = uuid::Uuid::new_v4();
+        let fragments_before = before.scene.fragments.len();
+        if let Err(error) = self
+            .store_repair_plan(
+                operation_id,
+                StoredRepairPlan {
+                    patch: optimization.patch.clone(),
+                    dimension: circuit.dimension.clone(),
+                    analysis_bounds: circuit.bounds,
+                    fragments_before,
+                    baseline_truth_table: before_truth,
+                    previewed: false,
+                    applied: false,
+                },
+            )
+            .await
+        {
+            return error_text(McpErrorCode::Internal, error, false);
+        }
+        self.operations
+            .record_completed(
+                operation_id,
+                OperationKind::OptimizationProposal,
+                json!({
+                    "circuit_id": circuit_id,
+                    "focus": bounds_json(focus),
+                    "patch": optimization.patch,
+                    "semantic_verification": semantic
+                }),
+            )
+            .await;
+        json_text(json!({
+            "schema_version": OPTIMIZATION_SCHEMA_V1,
+            "ok": true,
+            "circuit_id": circuit_id,
+            "operation_id": operation_id,
+            "objective": "wire_length",
+            "focus": bounds_json(focus),
+            "outside_focus_fixed": true,
+            "fixed_endpoints": optimization.fixed_endpoints,
+            "metrics": {
+                "wire_blocks_before": optimization.wire_blocks_before,
+                "wire_blocks_after": optimization.wire_blocks_after,
+                "path_length_before": optimization.path_length_before,
+                "path_length_after": optimization.path_length_after,
+                "changed_blocks": optimization.patch.changes.len()
+            },
+            "patch": optimization.patch,
+            "verification": {
+                "diagnostics_not_worse": true,
+                "temporal_requirement_preserved": true,
+                "temporal_requirement": after_temporal.requirement,
+                "semantic": semantic
+            },
+            "next_step": "call show_operation, explain the fixed focus and verification limits, obtain explicit confirmation, then call invoke_operation(confirm=true)"
+        }))
+    }
+
+    #[tool(
         description = "Create a low-confidence removal repair for the redstone component the player is looking at. Use only when the player explicitly identifies it as an unwanted connection."
     )]
     async fn new_component_removal_plan(
@@ -4817,7 +5018,7 @@ impl DustRouteMcp {
     async fn collaboration_prompt(&self) -> GetPromptResult {
         GetPromptResult::new(vec![PromptMessage::new_text(
             Role::User,
-            "Work with the player on a Minecraft redstone circuit using the PowerShell-style Verb-Noun contract expressed as snake_case. Use get_world for literal visibility, then test_circuit to capture an immutable circuit snapshot and compact health. Reuse its circuit_id for get_circuit_ir, convert_from_circuit, test_circuit_change, new_repair, get_repair_context, and new_transition_test; never silently switch back to the current gaze during one task. After new_repair, use get_repair_context when physical fragments admit competing repair and external-input hypotheses; present supporting and contradictory evidence and ask the returned questions before choosing. For mixed IR, pass circuit_id and first request the summary, then pass its analysis_id and a node_id to expand only that node. Treat intrinsic sources, controllable inputs, event inputs, and observation boundaries as distinct. New operations only create plans. Always call show_operation, explain the preview, and obtain explicit confirmation before invoke_operation(confirm=true). Use undo_operation for recovery. For an explicitly selected region, call set_region twice and show_region; reuse the circuit_id returned by show_region. Never infer coordinates from prose when gaze tools can ground them, and never mutate the world without preview and explicit confirmation.".to_owned(),
+            "Work with the player on a Minecraft redstone circuit using the PowerShell-style Verb-Noun contract expressed as snake_case. Use get_world for literal visibility, then test_circuit to capture an immutable circuit snapshot and compact health. Reuse its circuit_id for get_circuit_ir, convert_from_circuit, test_circuit_change, new_repair, get_repair_context, new_optimization, and new_transition_test; never silently switch back to the current gaze during one task. After new_repair, use get_repair_context when physical fragments admit competing repair and external-input hypotheses; present supporting and contradictory evidence and ask the returned questions before choosing. For observed optimization, require an explicit focus, keep everything outside fixed, and explain verification limits. For mixed IR, pass circuit_id and first request the summary, then pass its analysis_id and a node_id to expand only that node. Treat intrinsic sources, controllable inputs, event inputs, and observation boundaries as distinct. New operations only create plans. Always call show_operation, explain the preview, and obtain explicit confirmation before invoke_operation(confirm=true). Use undo_operation for recovery. For an explicitly selected region, call set_region twice and show_region; reuse the circuit_id returned by show_region. Never infer coordinates from prose when gaze tools can ground them, and never mutate the world without preview and explicit confirmation.".to_owned(),
         )])
         .with_description("Safe gaze-grounded DustRoute collaboration workflow")
     }
@@ -4975,6 +5176,7 @@ mod tests {
         assert!(text.text.contains("test_circuit"));
         assert!(text.text.contains("get_circuit_ir"));
         assert!(text.text.contains("get_repair_context"));
+        assert!(text.text.contains("new_optimization"));
         assert!(text.text.contains("show_operation"));
         assert!(text.text.contains("confirmation"));
     }
@@ -5004,12 +5206,13 @@ mod tests {
             .map(|tool| tool.name.to_string())
             .collect::<BTreeSet<_>>();
 
-        assert_eq!(default_names.len(), 17);
-        assert_eq!(debug_names.len(), 24);
+        assert_eq!(default_names.len(), 18);
+        assert_eq!(debug_names.len(), 25);
         assert!(default_names.contains("test_circuit"));
         assert!(default_names.contains("get_circuit_ir"));
         assert!(default_names.contains("test_circuit_change"));
         assert!(default_names.contains("get_repair_context"));
+        assert!(default_names.contains("new_optimization"));
         assert!(default_names.contains("invoke_operation"));
         assert!(!default_names.contains("invoke_repair"));
         for name in DEBUG_ONLY_TOOLS {
