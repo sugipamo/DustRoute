@@ -82,6 +82,7 @@ pub struct DustRouteMcp {
     prompt_router: PromptRouter<Self>,
     plans: Arc<Mutex<HashMap<uuid::Uuid, PlacementPlan>>>,
     plan_dimensions: Arc<Mutex<HashMap<uuid::Uuid, String>>>,
+    previewed_plans: Arc<Mutex<BTreeSet<uuid::Uuid>>>,
     applied_plans: Arc<Mutex<HashMap<uuid::Uuid, bool>>>,
     repair_plans: Arc<Mutex<HashMap<uuid::Uuid, StoredRepairPlan>>>,
     transition_plans: Arc<Mutex<HashMap<uuid::Uuid, StoredTransitionPlan>>>,
@@ -1329,6 +1330,7 @@ impl DustRouteMcp {
             prompt_router: Self::prompt_router(),
             plans: Arc::new(Mutex::new(HashMap::new())),
             plan_dimensions: Arc::new(Mutex::new(HashMap::new())),
+            previewed_plans: Arc::new(Mutex::new(BTreeSet::new())),
             applied_plans: Arc::new(Mutex::new(HashMap::new())),
             repair_plans: Arc::new(Mutex::new(HashMap::new())),
             transition_plans: Arc::new(Mutex::new(HashMap::new())),
@@ -1463,6 +1465,16 @@ impl DustRouteMcp {
         if !undo && is_applied {
             return json_text(json!({ "ok": false, "error": "placement plan is already applied" }));
         }
+        if !undo
+            && self.policy.preview_required
+            && !self.previewed_plans.lock().await.contains(&operation_id)
+        {
+            return error_text(
+                McpErrorCode::InvalidState,
+                "placement must be shown with show_operation before invoke_operation",
+                false,
+            );
+        }
 
         let source = if undo {
             &plan.undo.changes
@@ -1480,6 +1492,7 @@ impl DustRouteMcp {
             Err(error) => return json_text(json!({ "ok": false, "error": error })),
         };
         if !baseline_matches {
+            self.previewed_plans.lock().await.remove(&operation_id);
             return json_text(json!({
                 "ok": false,
                 "error": "placement baseline is stale; preview again before changing the world",
@@ -1537,6 +1550,7 @@ impl DustRouteMcp {
             }));
         }
         self.applied_plans.lock().await.insert(operation_id, !undo);
+        self.previewed_plans.lock().await.remove(&operation_id);
         self.operations
             .record_completed(
                 uuid::Uuid::new_v4(),
@@ -4368,11 +4382,13 @@ impl DustRouteMcp {
             }
         };
         if self.plans.lock().await.contains_key(&operation_id) {
-            return self
+            let result = self
                 .get_circuit_placement(Parameters(OperationParams {
                     operation_id: params.operation_id,
                 }))
                 .await;
+            self.previewed_plans.lock().await.insert(operation_id);
+            return result;
         }
         if self
             .repair_plan(operation_id)
@@ -4507,7 +4523,9 @@ impl DustRouteMcp {
     async fn get_operation(&self, Parameters(params): Parameters<OperationParams>) -> String {
         let operation_id = match uuid::Uuid::parse_str(&params.operation_id) {
             Ok(id) => id,
-            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+            Err(error) => {
+                return error_text(McpErrorCode::InvalidArgument, error.to_string(), false);
+            }
         };
         match self.operations.get(operation_id).await {
             Some(operation) => json_text(json!({ "ok": true, "operation": operation })),
@@ -4636,6 +4654,65 @@ mod tests {
         assert_eq!(result["ok"], false);
         assert_eq!(result["error_code"], "invalid_argument");
         assert_eq!(result["retryable"], false);
+
+        let get_result: Value = serde_json::from_str(
+            &service
+                .get_operation(Parameters(OperationParams {
+                    operation_id: "not-a-uuid".into(),
+                }))
+                .await,
+        )
+        .unwrap();
+        assert_eq!(get_result["error_code"], "invalid_argument");
+    }
+
+    #[tokio::test]
+    async fn placement_requires_show_before_invoke_when_preview_is_required() {
+        let policy = McpPolicy {
+            read_only: false,
+            preview_required: true,
+            ..McpPolicy::default()
+        };
+        let service = DustRouteMcp::with_policy("127.0.0.1:1", policy);
+        let plan = plan_world_overlay(
+            &dustroute_physical::World::new(),
+            &dustroute_physical::World::new(),
+            Pos::new(0, 0, 0),
+            1,
+        )
+        .unwrap();
+        let operation_id = plan.operation_id;
+        service.plans.lock().await.insert(operation_id, plan);
+        service
+            .plan_dimensions
+            .lock()
+            .await
+            .insert(operation_id, "minecraft:overworld".into());
+
+        let rejected: Value = serde_json::from_str(
+            &service
+                .invoke_operation(Parameters(InvokeOperationParams {
+                    operation_id: operation_id.to_string(),
+                    confirm: true,
+                    contracts: None,
+                }))
+                .await,
+        )
+        .unwrap();
+        assert_eq!(rejected["error_code"], "invalid_state");
+        assert!(!service.previewed_plans.lock().await.contains(&operation_id));
+
+        let shown: Value = serde_json::from_str(
+            &service
+                .show_operation(Parameters(ShowOperationParams {
+                    operation_id: operation_id.to_string(),
+                    player: None,
+                }))
+                .await,
+        )
+        .unwrap();
+        assert_eq!(shown["ok"], true);
+        assert!(service.previewed_plans.lock().await.contains(&operation_id));
     }
 
     #[tokio::test]
