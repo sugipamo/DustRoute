@@ -14,7 +14,7 @@
       { "path": "diagnostic.counts.probable_faults", "at_least": 1 },
       { "path": "diagnostic.recommended_next_action.kind", "equals": "inspect_fault" }
     ]},
-    { "kind": "mcp", "tool": "new_repair", "arguments": {}, "save": "repair" },
+    { "kind": "mcp", "tool": "new_repair", "arguments": { "circuit_id": "${diagnostic.circuit_id}" }, "save": "repair" },
     { "kind": "assert", "from": "repair", "expect": [
       { "path": "proposals.0.operation_id", "exists": true },
       { "path": "proposals.0.patch.reason", "equals": "reorient_directional_component" },

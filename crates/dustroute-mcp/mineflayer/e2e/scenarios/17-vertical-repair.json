@@ -12,7 +12,7 @@
     ]},
     { "kind": "aim", "position": { "x": 680.5, "y": 107, "z": 6.5 }, "target": { "x": 680, "y": 103, "z": 0 } },
     { "kind": "mcp", "tool": "test_circuit", "arguments": { "max_components": 64, "fragment_gap": 3 }, "save": "analysis" },
-    { "kind": "mcp", "tool": "new_repair", "arguments": { "max_gap": 3 }, "save": "repair" },
+    { "kind": "mcp", "tool": "new_repair", "arguments": { "circuit_id": "${analysis.circuit_id}", "max_gap": 3 }, "save": "repair" },
     { "kind": "assert", "from": "repair", "expect": [
       { "path": "proposals.0.patch.reason", "equals": "connect_missing_wire" },
       { "path": "proposals.0.patch.changes.0.pos.y", "equals": 105 }

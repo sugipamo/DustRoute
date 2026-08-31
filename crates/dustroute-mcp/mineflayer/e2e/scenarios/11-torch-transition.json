@@ -11,7 +11,8 @@
     ]},
     { "kind": "wait", "ticks": 4 },
     { "kind": "aim", "position": { "x": 560.5, "y": 106, "z": 6.5 }, "target": { "x": 560, "y": 103, "z": 0 } },
-    { "kind": "mcp", "tool": "new_transition_test", "arguments": { "max_components": 64, "observation_ticks": 12 }, "save": "proposal" },
+    { "kind": "mcp", "tool": "test_circuit", "arguments": { "max_components": 64 }, "save": "circuit" },
+    { "kind": "mcp", "tool": "new_transition_test", "arguments": { "circuit_id": "${circuit.circuit_id}", "observation_ticks": 12 }, "save": "proposal" },
     { "kind": "assert", "from": "proposal", "expect": [
       { "path": "proposals.0.safety.safety", "equals": "ready" }
     ]},

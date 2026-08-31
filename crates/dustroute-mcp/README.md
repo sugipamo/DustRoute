@@ -121,7 +121,7 @@ MCP tool names follow a PowerShell-style Verb-Noun contract written as
 - `start`, `stop`, and `get` manage asynchronous operations.
 - `set` and `clear` manage the current region selection.
 
-`DUSTROUTE_MCP_TOOL_PROFILE=default` exposes the 20 tools intended for normal
+`DUSTROUTE_MCP_TOOL_PROFILE=default` exposes the 16 tools intended for normal
 LLM collaboration. `debug` additionally exposes low-level gaze/discovery,
 operation history, full plan retrieval, asynchronous conversion control, and
 explicit component-removal planning. Debug tools remain implemented but cannot
@@ -137,11 +137,14 @@ references such as “what is this?” use `convert_from_circuit`. One call
 returns the focused physical component, mixed-IR summary, optional
 whole-circuit function candidates, observation completeness, and diagnostics.
 Repair and transition plans are separate: use `new_repair` or
-`new_transition_test` only after interpretation requires them.
+`new_transition_test` only after interpretation requires them. Circuit reads
+return a TTL-bound immutable `circuit_id`. Reuse that ID for later analysis,
+virtual changes, repair planning, and transition planning so moving the
+player's gaze cannot silently change the target.
 Set `include_truth_table=true` only when a small circuit explicitly needs a
 truth table; local hierarchical inspection is the default. Explicit regions continue to
-use two `set_region` calls, `show_region`, and
-`convert_from_circuit(scope=selected_region)`. Debug clients may call
+use two `set_region` calls and `show_region`, then reuse the returned
+`circuit_id`. Debug clients may call
 `resolve_looked_at_circuit` directly.
 
 For observation debugging, `get_world` starts near the block the
@@ -161,8 +164,9 @@ become a directed physical graph, recognized local cells, traceable logic
 expressions, and finally optional functional candidates. Every stage reports
 its own completeness and unresolved count while retaining physical component
 origins. Large circuits deliberately skip a flat whole-circuit truth table and
-return bounded mixed-IR summaries. Call `get_circuit_ir` with the returned
-`analysis_id` and a `node_id` to expand only one region or logic cell.
+return bounded mixed-IR summaries. Call `get_circuit_ir` with `circuit_id` to
+obtain its `analysis_id`, then pass all three of `circuit_id`, `analysis_id`,
+and `node_id` to expand only one region or logic cell.
 
 `signal_liveness` is evaluated independently of physical fragments. It follows
 directed signal edges while preserving whether a source is a controllable
@@ -178,6 +182,7 @@ For conversational entry points, call `test_circuit` first. It is
 a read-only fast path: it discovers the connected components around the
 player's gaze, skips truth-table inference, repair enumeration, and transition
 scenario generation, and returns `dustroute.diagnostic.v1`. The response places
+an immutable `circuit_id`,
 `diagnostic.health`, typed `diagnostic.counts`, ranked `diagnostic.findings`, and
 one `diagnostic.recommended_next_action` ahead of detailed evidence. Use
 `convert_from_circuit` only when higher-level logical interpretation is needed.
@@ -237,9 +242,10 @@ matching pulse contract becomes `intentional_pulse`.
 The intended conversational workflow is:
 
 ```text
-convert_from_circuit
+test_circuit -> capture circuit_id
+  -> reuse circuit_id with convert_from_circuit or get_circuit_ir
   -> explain physical evidence, local role, and provisional higher roles
-  -> call new_repair, new_transition_test, or new_placement when needed
+  -> call new_repair(circuit_id), new_transition_test(circuit_id), or new_placement when needed
   -> show_operation to preview the exact region or block diff
   -> obtain explicit player confirmation
   -> invoke_operation and restore/verify
@@ -270,7 +276,8 @@ restoration. The initial workflow supports one normal lever activation at a
 time:
 
 ```text
-new_transition_test
+test_circuit -> capture circuit_id
+  -> new_transition_test(circuit_id)
   -> show_operation
   -> explicit player confirmation
   -> invoke_operation(confirm=true)
@@ -300,7 +307,8 @@ retained rather than silently treated as electrical mismatches.
 
 ## Physical repair workflow
 
-After selecting and previewing a region, `new_repair` ranks partial physical
+After capturing a gaze circuit with `test_circuit`, or selecting and previewing
+a region with `show_region`, pass its `circuit_id` to `new_repair`. It ranks partial physical
 patches for missing wire, missing support, and directional component problems.
 Each proposal includes coordinates, evidence, confidence, a virtual before/after
 impact, and an operation UUID. Virtual impact includes traversal-group and
@@ -316,7 +324,7 @@ updates and block shape, then retreats 16 blocks above the repaired area and
 hovers. Post-write block-state and circuit verification still run normally.
 
 ```text
-new_repair
+new_repair(circuit_id)
   -> show_operation
   -> explicit player confirmation
   -> invoke_operation(confirm=true)

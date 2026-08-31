@@ -14,7 +14,7 @@
     { "kind": "assert", "from": "analysis", "expect": [
       { "path": "diagnostic.counts.probable_faults", "at_least": 1 }
     ]},
-    { "kind": "mcp", "tool": "new_repair", "arguments": { "max_gap": 2 }, "save": "repair" },
+    { "kind": "mcp", "tool": "new_repair", "arguments": { "circuit_id": "${analysis.circuit_id}", "max_gap": 2 }, "save": "repair" },
     { "kind": "mcp", "tool": "show_operation", "arguments": { "operation_id": "${repair.proposals.0.operation_id}" }, "save": "preview" },
     { "kind": "mcp", "tool": "invoke_operation", "arguments": { "operation_id": "${repair.proposals.0.operation_id}", "confirm": true }, "save": "applied" },
     { "kind": "assert", "from": "applied", "expect": [

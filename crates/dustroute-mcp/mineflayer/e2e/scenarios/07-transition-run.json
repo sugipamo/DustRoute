@@ -11,7 +11,8 @@
       "/setblock 500 107 0 minecraft:glass"
     ]},
     { "kind": "aim", "position": { "x": 500.5, "y": 106, "z": 6.5 }, "target": { "x": 500, "y": 103, "z": 0 } },
-    { "kind": "mcp", "tool": "new_transition_test", "arguments": { "max_components": 64, "observation_ticks": 6 }, "save": "proposal" },
+    { "kind": "mcp", "tool": "test_circuit", "arguments": { "max_components": 64 }, "save": "circuit" },
+    { "kind": "mcp", "tool": "new_transition_test", "arguments": { "circuit_id": "${circuit.circuit_id}", "observation_ticks": 6 }, "save": "proposal" },
     { "kind": "assert", "from": "proposal", "expect": [
       { "path": "proposals.0.operation_id", "exists": true },
       { "path": "proposals.0.safety.safety", "equals": "ready" }
