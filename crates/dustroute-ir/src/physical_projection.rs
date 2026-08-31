@@ -478,11 +478,20 @@ fn active_feedback_components(circuit: &TimedCircuit) -> Vec<ComponentId> {
             result
         },
     );
-    let cyclic_groups = quotient_edges
-        .iter()
-        .filter(|(source, sink)| path_exists(&quotient_adjacency, *sink, *source))
-        .flat_map(|(source, sink)| [*source, *sink])
-        .collect::<BTreeSet<_>>();
+    let quotient_reverse = quotient_edges.iter().fold(
+        BTreeMap::<ComponentId, Vec<ComponentId>>::new(),
+        |mut result, (source, sink)| {
+            result.entry(*sink).or_default().push(*source);
+            result
+        },
+    );
+    let quotient_nodes = group.values().copied().collect::<BTreeSet<_>>();
+    let cyclic_groups =
+        strongly_connected_components(&quotient_nodes, &quotient_adjacency, &quotient_reverse)
+            .into_iter()
+            .filter(|component| component.len() > 1)
+            .flatten()
+            .collect::<BTreeSet<_>>();
     circuit
         .nodes
         .iter()
@@ -513,9 +522,13 @@ fn reconvergent_delay_reasons(circuit: &TimedCircuit) -> Vec<TimingReason> {
         .map(|(component, _)| *component)
         .collect::<VecDeque<_>>();
     let mut incoming = BTreeMap::<ComponentId, Vec<DelayRange>>::new();
+    let mut outgoing = BTreeMap::<ComponentId, Vec<&TimedEdge>>::new();
+    for edge in &circuit.edges {
+        outgoing.entry(edge.source).or_default().push(edge);
+    }
     while let Some(component) = queue.pop_front() {
         let base = ranges[&component];
-        for edge in circuit.edges.iter().filter(|edge| edge.source == component) {
+        for edge in outgoing.get(&component).into_iter().flatten() {
             incoming
                 .entry(edge.sink)
                 .or_default()
@@ -664,22 +677,57 @@ fn classify_behavior_patterns(
     }
 }
 
-fn path_exists(
-    adjacency: &BTreeMap<ComponentId, Vec<ComponentId>>,
-    start: ComponentId,
-    target: ComponentId,
-) -> bool {
-    let mut pending = vec![start];
-    let mut seen = std::collections::BTreeSet::new();
-    while let Some(current) = pending.pop() {
-        if current == target {
-            return true;
+fn strongly_connected_components(
+    nodes: &BTreeSet<ComponentId>,
+    forward: &BTreeMap<ComponentId, Vec<ComponentId>>,
+    reverse: &BTreeMap<ComponentId, Vec<ComponentId>>,
+) -> Vec<BTreeSet<ComponentId>> {
+    fn visit_order(
+        node: ComponentId,
+        adjacency: &BTreeMap<ComponentId, Vec<ComponentId>>,
+        seen: &mut BTreeSet<ComponentId>,
+        order: &mut Vec<ComponentId>,
+    ) {
+        if !seen.insert(node) {
+            return;
         }
-        if seen.insert(current) {
-            pending.extend(adjacency.get(&current).into_iter().flatten().copied());
+        for next in adjacency.get(&node).into_iter().flatten().copied() {
+            visit_order(next, adjacency, seen, order);
+        }
+        order.push(node);
+    }
+
+    fn collect(
+        node: ComponentId,
+        adjacency: &BTreeMap<ComponentId, Vec<ComponentId>>,
+        seen: &mut BTreeSet<ComponentId>,
+        component: &mut BTreeSet<ComponentId>,
+    ) {
+        if !seen.insert(node) {
+            return;
+        }
+        component.insert(node);
+        for next in adjacency.get(&node).into_iter().flatten().copied() {
+            collect(next, adjacency, seen, component);
         }
     }
-    false
+
+    let mut seen = BTreeSet::new();
+    let mut order = Vec::with_capacity(nodes.len());
+    for node in nodes {
+        visit_order(*node, forward, &mut seen, &mut order);
+    }
+    seen.clear();
+    let mut result = Vec::new();
+    while let Some(node) = order.pop() {
+        if seen.contains(&node) {
+            continue;
+        }
+        let mut component = BTreeSet::new();
+        collect(node, reverse, &mut seen, &mut component);
+        result.push(component);
+    }
+    result
 }
 
 const fn signal_kind(kind: BlockKind) -> TemporalNodeKind {

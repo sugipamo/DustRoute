@@ -14,6 +14,10 @@ workspace = true
 name = "connectivity_scaling"
 harness = false
 
+[[bench]]
+name = "analysis_scaling"
+harness = false
+
 [dependencies]
 dustroute-ir = { path = "../dustroute-ir" }
 dustroute-minecraft = { path = "../dustroute-minecraft" }
