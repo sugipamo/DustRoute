@@ -1,0 +1,27 @@
+{
+  "name": "torch_diagonal_supported_dust_semantics",
+  "save_artifact": true,
+  "trace_origin": { "x": 950, "y": 104, "z": 0 },
+  "trace_positions": [
+    { "x": 950, "y": 105, "z": 0 },
+    { "x": 949, "y": 106, "z": 0 }
+  ],
+  "steps": [
+    { "kind": "command", "commands": [
+      "/fill 947 103 -2 952 108 2 minecraft:air",
+      "/setblock 950 104 0 minecraft:stone_bricks",
+      "/setblock 950 105 0 minecraft:redstone_torch[lit=true]",
+      "/setblock 949 105 0 minecraft:stone_bricks",
+      "/setblock 949 106 0 minecraft:redstone_wire",
+      "/tp ${player} 951 107 0"
+    ]},
+    { "kind": "wait", "ticks": 20 },
+    { "kind": "block_trace", "save": "trace", "duration_redstone_ticks": 2 },
+    { "kind": "block", "position": { "x": 949, "y": 106, "z": 0 }, "save": "dust" },
+    { "kind": "assert", "from": "dust", "expect": [
+      { "path": "name", "equals": "redstone_wire" },
+      { "path": "properties.power", "equals": "0" }
+    ]}
+  ],
+  "cleanup": ["/fill 947 103 -2 952 108 2 minecraft:air"]
+}

@@ -1,0 +1,84 @@
+{
+  "name": "external_library_xor_compatibility_probe",
+  "save_artifact": true,
+  "trace_origin": { "x": 900, "y": 104, "z": 0 },
+  "trace_positions": [
+    { "x": 900, "y": 104, "z": 1 }, { "x": 901, "y": 105, "z": 1 },
+    { "x": 901, "y": 105, "z": 2 }, { "x": 902, "y": 105, "z": 3 },
+    { "x": 900, "y": 106, "z": 1 }, { "x": 901, "y": 106, "z": 2 },
+    { "x": 902, "y": 106, "z": 4 }, { "x": 900, "y": 107, "z": 1 },
+    { "x": 902, "y": 107, "z": 1 }, { "x": 902, "y": 107, "z": 2 },
+    { "x": 902, "y": 107, "z": 4 }
+  ],
+  "steps": [
+    { "kind": "command", "commands": [
+      "/fill 899 103 -1 904 109 6 minecraft:air",
+      "/setblock 900 104 1 minecraft:redstone_wall_torch[facing=west,lit=true]",
+      "/setblock 901 104 0 minecraft:lever[face=wall,facing=north,powered=false]",
+      "/setblock 901 104 1 minecraft:stone_bricks",
+      "/setblock 901 104 2 minecraft:stone_bricks",
+      "/setblock 900 105 1 minecraft:stone_bricks",
+      "/setblock 901 105 1 minecraft:redstone_torch[lit=true]",
+      "/setblock 901 105 2 minecraft:redstone_wire",
+      "/setblock 901 105 3 minecraft:stone_bricks",
+      "/setblock 902 105 3 minecraft:redstone_wall_torch[facing=east,lit=true]",
+      "/setblock 902 105 4 minecraft:stone_bricks",
+      "/setblock 900 106 1 minecraft:redstone_wire",
+      "/setblock 900 106 2 minecraft:stone_bricks",
+      "/setblock 901 106 2 minecraft:redstone_wall_torch[facing=east,lit=true]",
+      "/setblock 902 106 2 minecraft:stone_bricks",
+      "/setblock 902 106 3 minecraft:stone_bricks",
+      "/setblock 902 106 4 minecraft:redstone_wire",
+      "/setblock 900 107 1 minecraft:redstone_wall_torch[facing=west,lit=true]",
+      "/setblock 901 107 0 minecraft:lever[face=wall,facing=north,powered=false]",
+      "/setblock 901 107 1 minecraft:stone_bricks",
+      "/setblock 901 107 2 minecraft:stone_bricks",
+      "/setblock 902 107 1 minecraft:redstone_wall_torch[facing=east,lit=true]",
+      "/setblock 902 107 2 minecraft:redstone_wire",
+      "/setblock 902 107 3 minecraft:stone_bricks",
+      "/setblock 902 107 4 minecraft:redstone_wall_torch[facing=south,lit=true]",
+      "/setblock 902 108 4 minecraft:stone_bricks"
+    ]},
+    { "kind": "aim", "position": { "x": 905.5, "y": 110, "z": 4.5 }, "target": { "x": 902, "y": 108, "z": 4 } },
+    { "kind": "command", "commands": ["/tp ${player} 904 106 0"] },
+    { "kind": "wait", "ticks": 100 },
+    { "kind": "block_trace", "save": "trace00", "duration_redstone_ticks": 2 },
+    { "kind": "block", "position": { "x": 902, "y": 106, "z": 4 }, "save": "case00" },
+    { "kind": "assert", "from": "case00", "expect": [
+      { "path": "name", "equals": "redstone_wire" },
+      { "path": "properties.power", "equals": "0" }
+    ]},
+    { "kind": "activate", "position": { "x": 901, "y": 104, "z": 0 } },
+    { "kind": "wait", "ticks": 20 },
+    { "kind": "block_trace", "save": "trace10", "duration_redstone_ticks": 2 },
+    { "kind": "block", "position": { "x": 901, "y": 104, "z": 0 }, "save": "lever10" },
+    { "kind": "assert", "from": "lever10", "expect": [
+      { "path": "properties.powered", "equals": true }
+    ]},
+    { "kind": "block", "position": { "x": 902, "y": 106, "z": 4 }, "save": "case10" },
+    { "kind": "assert", "from": "case10", "expect": [
+      { "path": "properties.power", "equals": "0" }
+    ]},
+    { "kind": "activate", "position": { "x": 901, "y": 104, "z": 0 } },
+    { "kind": "activate", "position": { "x": 901, "y": 107, "z": 0 } },
+    { "kind": "wait", "ticks": 20 },
+    { "kind": "block_trace", "save": "trace01", "duration_redstone_ticks": 2 },
+    { "kind": "block", "position": { "x": 902, "y": 107, "z": 4 }, "save": "output_torch01" },
+    { "kind": "assert", "from": "output_torch01", "expect": [
+      { "path": "name", "equals": "redstone_wall_torch" },
+      { "path": "properties.lit", "equals": false }
+    ]},
+    { "kind": "block", "position": { "x": 902, "y": 106, "z": 4 }, "save": "case01" },
+    { "kind": "assert", "from": "case01", "expect": [
+      { "path": "properties.power", "equals": "0" }
+    ]},
+    { "kind": "activate", "position": { "x": 901, "y": 104, "z": 0 } },
+    { "kind": "wait", "ticks": 20 },
+    { "kind": "block_trace", "save": "trace11", "duration_redstone_ticks": 2 },
+    { "kind": "block", "position": { "x": 902, "y": 106, "z": 4 }, "save": "case11" },
+    { "kind": "assert", "from": "case11", "expect": [
+      { "path": "properties.power", "equals": "0" }
+    ]}
+  ],
+  "cleanup": ["/fill 899 103 -1 904 109 6 minecraft:air"]
+}

@@ -3,9 +3,9 @@ use std::fmt::{Display, Formatter};
 
 use crate::{
     BaselineCompileConfig, BaselineCompileResult, BaselineCompiler, CompileError, Expr,
-    InferredTruthTable, LogicDag, RegionAnalysis, RegionBounds, TruthTableComparison,
-    TruthTableError, World, analyze_world_region, compare_truth_tables, infer_output_expressions,
-    infer_truth_table,
+    FunctionalNetworkModel, InferredTruthTable, LogicDag, RegionAnalysis, RegionBounds,
+    TruthTableComparison, TruthTableError, World, analyze_world_region, compare_truth_tables,
+    derive_functional_network,
 };
 use dustroute_ir::TemporalAnalysis;
 
@@ -57,6 +57,7 @@ pub struct ReverseResult {
     pub gate_view: dustroute_ir::GateView,
     pub expression_view: dustroute_ir::ExpressionView,
     pub functional_view: dustroute_ir::FunctionalView,
+    pub functional_network: Option<FunctionalNetworkModel>,
     pub truth_table: Option<InferredTruthTable>,
     pub expressions: Vec<Expr>,
     pub logic: Option<LogicDag>,
@@ -117,25 +118,42 @@ impl Translator {
         }
         let mut gate_view = dustroute_ir::recognize_gates(&analysis.scene);
         let mut expression_view = dustroute_ir::derive_expressions(&analysis.scene, &gate_view);
-        let (truth_table, expressions, logic, truth_table_error) = if request.infer_truth_table {
-            match infer_truth_table(world, &analysis, request.max_inputs, request.settle_ticks) {
-                Ok(truth_table) => {
-                    let expressions = infer_output_expressions(&truth_table);
-                    let logic = dustroute_ir::logic_from_expressions(
-                        expressions
+        let (functional_network, truth_table, expressions, logic, truth_table_error) =
+            if request.infer_truth_table {
+                match derive_functional_network(
+                    world,
+                    &analysis,
+                    request.max_inputs,
+                    request.settle_ticks,
+                ) {
+                    Ok(functional_network) => {
+                        let truth_table = functional_network.truth_table.clone();
+                        let expressions = functional_network
+                            .output_functions
                             .iter()
-                            .cloned()
-                            .enumerate()
-                            .map(|(index, expression)| (format!("o{index}"), expression)),
-                    )
-                    .ok();
-                    (Some(truth_table), expressions, logic, None)
+                            .map(|output| output.expression.clone())
+                            .collect::<Vec<_>>();
+                        let logic = dustroute_ir::logic_from_expressions(
+                            expressions
+                                .iter()
+                                .cloned()
+                                .enumerate()
+                                .map(|(index, expression)| (format!("o{index}"), expression)),
+                        )
+                        .ok();
+                        (
+                            Some(functional_network),
+                            Some(truth_table),
+                            expressions,
+                            logic,
+                            None,
+                        )
+                    }
+                    Err(error) => (None, None, Vec::new(), None, Some(error)),
                 }
-                Err(error) => (None, Vec::new(), None, Some(error)),
-            }
-        } else {
-            (None, Vec::new(), None, None)
-        };
+            } else {
+                (None, None, Vec::new(), None, None)
+            };
         if let Some(table) = &truth_table {
             append_truth_table_views(
                 &analysis,
@@ -152,6 +170,7 @@ impl Translator {
             gate_view,
             expression_view,
             functional_view,
+            functional_network,
             truth_table,
             expressions,
             logic,
@@ -386,6 +405,17 @@ mod tests {
             reverse.functional_view
         );
         assert!(reverse.analysis.scene.observation.is_complete());
+        let network = reverse
+            .functional_network
+            .as_ref()
+            .expect("truth-table reverse exposes the physical function model");
+        assert_eq!(network.output_functions.len(), 2);
+        assert!(
+            network
+                .physical_influences
+                .iter()
+                .any(|influence| influence.shared_role)
+        );
     }
 
     #[test]

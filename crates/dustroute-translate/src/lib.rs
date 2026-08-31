@@ -21,6 +21,7 @@ pub mod minecraft_export;
 pub mod minecraft_semantics;
 pub mod multinet;
 pub mod physical;
+pub mod physics_trace;
 pub mod port_realization;
 pub mod repair;
 pub mod routing;
@@ -44,11 +45,14 @@ pub use api::{
     ForwardOptions, ForwardResult, ReverseRequest, ReverseResult, TranslateError, Translator,
 };
 pub use behavior::simulate_behavior_trace;
-pub use cell_library::{CellLibrary, CellVerification, default_cell_library, verify_cell};
+pub use cell_library::{
+    CellLibrary, CellVerification, default_cell_library, verify_cell, verify_cell_with_settle_ticks,
+};
 pub use cells::{
     InputPort, OutputPort, PhysicalCell, PlacedCell, PortKind, RotationY, and_cell,
-    baseline_cell_for, buffered_boundary_cell, nand_cell, not_cell, not_top_cell, or_buffered_cell,
-    terminal_cell,
+    baseline_cell_for, buffered_boundary_cell, compact_compiled_xor_cell, compiled_xor_cell,
+    compiled_xor_cell_with_config, external_xor_cell, nand_cell, not_cell, not_top_cell,
+    or_buffered_cell, terminal_cell,
 };
 pub use circuits::{decoder_1_to_2, full_adder, half_adder, half_subtractor, mux_2_to_1};
 pub use compiler::{BaselineCompileConfig, BaselineCompileResult, BaselineCompiler, CompileError};
@@ -91,6 +95,11 @@ pub use physical::{
     CellId, Endpoint, PhysicalError, PlacementCircuit, Route, RouteId, TerminalContract,
     TerminalDirection,
 };
+pub use physics_trace::{
+    PhysicalBlockObservation, PhysicalProperty, PhysicalTrace, PhysicalTraceComparison,
+    PhysicalTraceMismatch, PhysicalValue, TraceSource, compare_physical_traces,
+    simulate_cell_trace, simulate_world_trace, simulator_observations,
+};
 pub use port_realization::{
     PortRealization, PortRealizationError, realize_sink_endpoint, realize_source_endpoint,
     terminal_for_endpoint,
@@ -119,8 +128,9 @@ pub use wire::{
     update_wire_shapes, wire_has_arm,
 };
 pub use world_reverse::{
-    InferredTerminal, InferredTruthTable, RegionAnalysis, RegionBounds, SignalComponent,
-    SignalDiagnostics, TerminalConfidence, TruthTableComparison, TruthTableError, TruthTableRow,
-    analyze_world_region, analyze_world_region_in_dimension, compare_truth_tables,
+    FunctionalNetworkModel, InferredOutputFunction, InferredTerminal, InferredTruthTable,
+    PhysicalInfluence, RegionAnalysis, RegionBounds, SignalComponent, SignalDiagnostics,
+    TerminalConfidence, TruthTableComparison, TruthTableError, TruthTableRow, analyze_world_region,
+    analyze_world_region_in_dimension, compare_truth_tables, derive_functional_network,
     infer_output_expressions, infer_truth_table,
 };

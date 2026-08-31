@@ -1,0 +1,16 @@
+[package]
+name = "dustroute-library"
+description = "Provenance-aware logical and physical component catalog for DustRoute"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+dustroute-ir = { path = "../dustroute-ir" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"

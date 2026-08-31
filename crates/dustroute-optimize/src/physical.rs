@@ -13,6 +13,60 @@ pub struct PhysicalWireOptimization {
     pub path_length_before: usize,
     pub path_length_after: usize,
     pub fixed_endpoints: [Pos; 2],
+    pub phases: Vec<PhysicalOptimizationPhase>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct PhasedPhysicalScore {
+    pub bounding_volume: usize,
+    pub occupied_blocks: usize,
+    pub connector_length: usize,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PhysicalOptimizationPhase {
+    pub name: &'static str,
+    pub before: PhasedPhysicalScore,
+    pub after: PhasedPhysicalScore,
+    pub accepted: bool,
+    pub connector_growth: usize,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct PhasedPhysicalSelection {
+    pub local_density: PhasedPhysicalScore,
+    pub final_global: PhasedPhysicalScore,
+}
+
+pub fn select_phased_physical_scores(
+    baseline: PhasedPhysicalScore,
+    local_candidates: impl IntoIterator<Item = PhasedPhysicalScore>,
+    final_candidates: impl IntoIterator<Item = PhasedPhysicalScore>,
+    connector_growth_budget: usize,
+) -> Option<PhasedPhysicalSelection> {
+    let local_density = local_candidates
+        .into_iter()
+        .filter(|score| {
+            score.connector_length
+                <= baseline
+                    .connector_length
+                    .saturating_add(connector_growth_budget)
+        })
+        .min_by_key(|score| {
+            (
+                score.bounding_volume,
+                score.occupied_blocks,
+                score.connector_length,
+            )
+        })?;
+    let final_global = final_candidates
+        .into_iter()
+        .filter(|score| final_score(*score) < final_score(baseline))
+        .min_by_key(|score| final_score(*score))?;
+    Some(PhasedPhysicalSelection {
+        local_density,
+        final_global,
+    })
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -83,6 +137,15 @@ pub fn optimize_physical_wire_path(
     }
 
     let path_set = path.iter().copied().collect::<BTreeSet<_>>();
+    let baseline_score = score_positions(&wires);
+    let final_score = score_positions(&path_set);
+    let selection = select_phased_physical_scores(
+        baseline_score,
+        [final_score],
+        [final_score],
+        baseline_score.connector_length / 2,
+    )
+    .ok_or(PhysicalWireOptimizationError::NoShorterRoute)?;
     let mut changes = Vec::new();
     for pos in wires.difference(&path_set).copied() {
         changes.push(PhysicalBlockChange {
@@ -121,7 +184,67 @@ pub fn optimize_physical_wire_path(
         path_length_before: wires.len().saturating_sub(1),
         path_length_after: path.len().saturating_sub(1),
         fixed_endpoints: [start, end],
+        phases: vec![
+            PhysicalOptimizationPhase {
+                name: "local_density",
+                before: baseline_score,
+                after: selection.local_density,
+                accepted: selection.local_density != baseline_score,
+                connector_growth: selection
+                    .local_density
+                    .connector_length
+                    .saturating_sub(baseline_score.connector_length),
+            },
+            PhysicalOptimizationPhase {
+                name: "connector_recovery",
+                before: selection.local_density,
+                after: selection.final_global,
+                accepted: selection.final_global != selection.local_density,
+                connector_growth: selection
+                    .final_global
+                    .connector_length
+                    .saturating_sub(selection.local_density.connector_length),
+            },
+            PhysicalOptimizationPhase {
+                name: "global_compaction",
+                before: baseline_score,
+                after: selection.final_global,
+                accepted: true,
+                connector_growth: selection
+                    .final_global
+                    .connector_length
+                    .saturating_sub(baseline_score.connector_length),
+            },
+        ],
     })
+}
+
+fn score_positions(positions: &BTreeSet<Pos>) -> PhasedPhysicalScore {
+    let min_x = positions.iter().map(|pos| pos.x).min().unwrap_or(0);
+    let max_x = positions.iter().map(|pos| pos.x).max().unwrap_or(0);
+    let min_y = positions.iter().map(|pos| pos.y).min().unwrap_or(0);
+    let max_y = positions.iter().map(|pos| pos.y).max().unwrap_or(0);
+    let min_z = positions.iter().map(|pos| pos.z).min().unwrap_or(0);
+    let max_z = positions.iter().map(|pos| pos.z).max().unwrap_or(0);
+    PhasedPhysicalScore {
+        bounding_volume: axis_len(min_x, max_x)
+            .saturating_mul(axis_len(min_y, max_y))
+            .saturating_mul(axis_len(min_z, max_z)),
+        occupied_blocks: positions.len(),
+        connector_length: positions.len().saturating_sub(1),
+    }
+}
+
+const fn axis_len(min: i32, max: i32) -> usize {
+    max.abs_diff(min) as usize + 1
+}
+
+const fn final_score(score: PhasedPhysicalScore) -> (usize, usize, usize) {
+    (
+        score.bounding_volume,
+        score.occupied_blocks,
+        score.connector_length,
+    )
 }
 
 fn connected_count(adjacency: &BTreeMap<Pos, BTreeSet<Pos>>, start: Pos) -> usize {
@@ -280,6 +403,48 @@ mod tests {
                 RegionBounds::new(Pos::new(0, 1, 0), Pos::new(2, 1, 1))
             ),
             Err(PhysicalWireOptimizationError::NotSimplePath)
+        );
+    }
+
+    #[test]
+    fn local_density_can_spend_connector_length_before_global_recovery() {
+        let baseline = PhasedPhysicalScore {
+            bounding_volume: 120,
+            occupied_blocks: 30,
+            connector_length: 12,
+        };
+        let local = PhasedPhysicalScore {
+            bounding_volume: 60,
+            occupied_blocks: 26,
+            connector_length: 17,
+        };
+        let recovered = PhasedPhysicalScore {
+            bounding_volume: 48,
+            occupied_blocks: 22,
+            connector_length: 10,
+        };
+        let selected = select_phased_physical_scores(baseline, [local], [recovered], 6).unwrap();
+        assert_eq!(selected.local_density, local);
+        assert!(selected.local_density.connector_length > baseline.connector_length);
+        assert_eq!(selected.final_global, recovered);
+        assert!(final_score(selected.final_global) < final_score(baseline));
+    }
+
+    #[test]
+    fn rejects_a_dense_local_move_when_no_final_global_improvement_exists() {
+        let baseline = PhasedPhysicalScore {
+            bounding_volume: 40,
+            occupied_blocks: 20,
+            connector_length: 8,
+        };
+        let local = PhasedPhysicalScore {
+            bounding_volume: 30,
+            occupied_blocks: 18,
+            connector_length: 12,
+        };
+        assert_eq!(
+            select_phased_physical_scores(baseline, [local], [baseline], 4),
+            None
         );
     }
 }

@@ -35,11 +35,17 @@
           "z": "${analysis.bounds.max.z}"
         }
       },
-      "objective": "wire_length"
+      "objective": "density_then_wire_length"
     }, "save": "plan" },
     { "kind": "assert", "from": "plan", "expect": [
       { "path": "schema_version", "equals": "dustroute.optimization.v1" },
+      { "path": "objective", "equals": "density_then_wire_length" },
       { "path": "outside_focus_fixed", "equals": true },
+      { "path": "phase_trace.0.name", "equals": "local_density" },
+      { "path": "phase_trace.1.name", "equals": "connector_recovery" },
+      { "path": "phase_trace.2.name", "equals": "global_compaction" },
+      { "path": "planning_policy.temporary_connector_growth_is_internal_only", "equals": true },
+      { "path": "planning_policy.final_global_improvement_required", "equals": true },
       { "path": "metrics.wire_blocks_before", "equals": 9 },
       { "path": "metrics.wire_blocks_after", "equals": 5 },
       { "path": "verification.temporal_requirement_preserved", "equals": true }

@@ -1,0 +1,51 @@
+{
+  "name": "compact_compiled_xor_java_1_21_11",
+  "save_artifact": true,
+  "trace_origin": { "x": 1300, "y": 104, "z": 0 },
+  "trace_positions": [
+    { "x": 1300, "y": 107, "z": 0 },
+    { "x": 1300, "y": 107, "z": 6 },
+    { "x": 1338, "y": 107, "z": 0 }
+  ],
+  "steps": [
+    { "kind": "command", "commands": [
+      "/fill 1297 103 -3 1341 111 13 minecraft:air",
+      "/tp ${player} 1300 112 3"
+    ]},
+    { "kind": "rust_cell", "example": "export_compiled_xor", "arguments": [9, 6], "origin": { "x": 1300, "y": 104, "z": 0 }, "settle_game_ticks": 160, "save": "cell" },
+    { "kind": "block", "position": { "x": 1338, "y": 107, "z": 0 }, "save": "out00" },
+    { "kind": "assert", "from": "out00", "expect": [{ "path": "properties.power", "equals": "0" }] },
+
+    { "kind": "command", "commands": ["/setblock 1299 107 0 minecraft:redstone_block"] },
+    { "kind": "block_trace", "save": "trace00_to_10", "duration_redstone_ticks": 64 },
+    { "kind": "assert", "from": "trace00_to_10", "expect": [
+      { "path": "observations.2.dust_strength", "equals": 0 },
+      { "path": "observations.17.dust_strength", "equals": 15 }
+    ]},
+    { "kind": "block", "position": { "x": 1338, "y": 107, "z": 0 }, "save": "out10" },
+    { "kind": "assert", "from": "out10", "expect": [{ "path": "properties.power", "at_least": 1 }] },
+
+    { "kind": "command", "commands": [
+      "/setblock 1299 107 0 minecraft:air",
+      "/setblock 1299 107 6 minecraft:redstone_block"
+    ]},
+    { "kind": "block_trace", "save": "trace10_to_01", "duration_redstone_ticks": 64 },
+    { "kind": "assert", "from": "trace10_to_01", "expect": [
+      { "path": "observations.2.dust_strength", "equals": 15 },
+      { "path": "observations.11.dust_strength", "equals": 0 },
+      { "path": "observations.20.dust_strength", "equals": 15 }
+    ]},
+    { "kind": "block", "position": { "x": 1338, "y": 107, "z": 0 }, "save": "out01" },
+    { "kind": "assert", "from": "out01", "expect": [{ "path": "properties.power", "at_least": 1 }] },
+
+    { "kind": "command", "commands": ["/setblock 1299 107 0 minecraft:redstone_block"] },
+    { "kind": "block_trace", "save": "trace01_to_11", "duration_redstone_ticks": 64 },
+    { "kind": "assert", "from": "trace01_to_11", "expect": [
+      { "path": "observations.2.dust_strength", "equals": 15 },
+      { "path": "observations.23.dust_strength", "equals": 0 }
+    ]},
+    { "kind": "block", "position": { "x": 1338, "y": 107, "z": 0 }, "save": "out11" },
+    { "kind": "assert", "from": "out11", "expect": [{ "path": "properties.power", "equals": "0" }] }
+  ],
+  "cleanup": ["/fill 1297 103 -3 1341 111 13 minecraft:air"]
+}

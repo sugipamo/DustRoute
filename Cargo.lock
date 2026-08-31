@@ -256,6 +256,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "dustroute-library"
+version = "0.2.0"
+dependencies = [
+ "dustroute-ir",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "dustroute-mcp"
 version = "0.2.0"
 dependencies = [
@@ -302,6 +311,7 @@ name = "dustroute-translate"
 version = "0.2.0"
 dependencies = [
  "dustroute-ir",
+ "dustroute-library",
  "dustroute-minecraft",
  "dustroute-physical",
  "serde",

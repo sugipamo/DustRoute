@@ -1289,6 +1289,23 @@ fn reverse_result_json(
         "gate_view": translated.gate_view,
         "expression_view": translated.expression_view,
         "functional_view": translated.functional_view,
+        "physical_function_model": translated.functional_network.as_ref().map(|model| json!({
+            "output_functions": model.output_functions.iter().map(|output| json!({
+                "output_index": output.output_index,
+                "position": output.terminal.anchor,
+                "expression": output.expression.to_string(),
+                "truth_column": output.truth_column,
+            })).collect::<Vec<_>>(),
+            "shared_physical_components": model.physical_influences.iter()
+                .filter(|influence| influence.shared_role)
+                .map(|influence| json!({
+                    "component": influence.component,
+                    "positions": influence.positions,
+                    "input_dependencies": influence.input_dependencies,
+                    "output_dependencies": influence.output_dependencies,
+                })).collect::<Vec<_>>(),
+            "interpretation": "Output functions are derived from the shared physical network. Physical components are not assigned exclusive gate identities."
+        })),
         "functional_validity": translated.temporal.timing,
         "behavior_ir": {
             "temporal_devices": translated.temporal.behavior.devices,
@@ -3864,10 +3881,13 @@ impl DustRouteMcp {
         if let Some(error) = self.authorize_player(&player) {
             return error;
         }
-        if params.objective != "wire_length" {
+        if !matches!(
+            params.objective.as_str(),
+            "wire_length" | "density_then_wire_length"
+        ) {
             return error_text(
                 McpErrorCode::InvalidArgument,
-                "objective must currently be wire_length",
+                "objective must be wire_length or density_then_wire_length",
                 false,
             );
         }
@@ -3969,6 +3989,27 @@ impl DustRouteMcp {
             }),
         };
         let operation_id = uuid::Uuid::new_v4();
+        let phase_trace = optimization
+            .phases
+            .iter()
+            .map(|phase| {
+                json!({
+                    "name": phase.name,
+                    "accepted": phase.accepted,
+                    "before": {
+                        "bounding_volume": phase.before.bounding_volume,
+                        "occupied_blocks": phase.before.occupied_blocks,
+                        "connector_length": phase.before.connector_length
+                    },
+                    "after": {
+                        "bounding_volume": phase.after.bounding_volume,
+                        "occupied_blocks": phase.after.occupied_blocks,
+                        "connector_length": phase.after.connector_length
+                    },
+                    "connector_growth": phase.connector_growth
+                })
+            })
+            .collect::<Vec<_>>();
         let fragments_before = before.scene.fragments.len();
         if let Err(error) = self
             .store_repair_plan(
@@ -4004,7 +4045,7 @@ impl DustRouteMcp {
             "ok": true,
             "circuit_id": circuit_id,
             "operation_id": operation_id,
-            "objective": "wire_length",
+            "objective": params.objective,
             "focus": bounds_json(focus),
             "outside_focus_fixed": true,
             "fixed_endpoints": optimization.fixed_endpoints,
@@ -4014,6 +4055,12 @@ impl DustRouteMcp {
                 "path_length_before": optimization.path_length_before,
                 "path_length_after": optimization.path_length_after,
                 "changed_blocks": optimization.patch.changes.len()
+            },
+            "phase_trace": phase_trace,
+            "planning_policy": {
+                "temporary_connector_growth_is_internal_only": true,
+                "temporary_connector_growth_budget": optimization.path_length_before / 2,
+                "final_global_improvement_required": true
             },
             "patch": optimization.patch,
             "verification": {

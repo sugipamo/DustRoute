@@ -14,7 +14,9 @@ pub use phased::{
     optimize_staged,
 };
 pub use physical::{
+    PhasedPhysicalScore, PhasedPhysicalSelection, PhysicalOptimizationPhase,
     PhysicalWireOptimization, PhysicalWireOptimizationError, optimize_physical_wire_path,
+    select_phased_physical_scores,
 };
 pub use placement::{
     MutationKind, PlacementMutation, PlacementOptimizationResult, PlacementScore, PlacementWeights,

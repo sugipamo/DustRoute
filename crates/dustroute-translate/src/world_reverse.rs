@@ -104,6 +104,30 @@ pub struct InferredTruthTable {
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct InferredOutputFunction {
+    pub output_index: usize,
+    pub terminal: InferredTerminal,
+    pub expression: Expr,
+    pub truth_column: Vec<bool>,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct PhysicalInfluence {
+    pub component: usize,
+    pub positions: BTreeSet<Pos>,
+    pub input_dependencies: BTreeSet<usize>,
+    pub output_dependencies: BTreeSet<usize>,
+    pub shared_role: bool,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct FunctionalNetworkModel {
+    pub truth_table: InferredTruthTable,
+    pub output_functions: Vec<InferredOutputFunction>,
+    pub physical_influences: Vec<PhysicalInfluence>,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct TruthTableComparison {
     pub comparable: bool,
     pub expected_inputs: usize,
@@ -253,6 +277,86 @@ pub fn infer_output_expressions(table: &InferredTruthTable) -> Vec<Expr> {
     (0..table.outputs.len())
         .map(|output| infer_output_expression(table, output))
         .collect()
+}
+
+pub fn derive_functional_network(
+    world: &World,
+    analysis: &RegionAnalysis,
+    max_inputs: usize,
+    settle_ticks: usize,
+) -> Result<FunctionalNetworkModel, TruthTableError> {
+    let truth_table = infer_truth_table(world, analysis, max_inputs, settle_ticks)?;
+    let expressions = infer_output_expressions(&truth_table);
+    let output_functions = truth_table
+        .outputs
+        .iter()
+        .cloned()
+        .zip(expressions)
+        .enumerate()
+        .map(
+            |(output_index, (terminal, expression))| InferredOutputFunction {
+                output_index,
+                terminal,
+                expression,
+                truth_column: truth_table
+                    .rows
+                    .iter()
+                    .map(|row| row.outputs[output_index])
+                    .collect(),
+            },
+        )
+        .collect();
+    let physical_influences = analysis
+        .components
+        .iter()
+        .map(|component| {
+            let input_dependencies = analysis
+                .inputs
+                .iter()
+                .enumerate()
+                .filter(|(_, terminal)| {
+                    component_reaches(analysis, terminal.component, component.id)
+                })
+                .map(|(index, _)| index)
+                .collect::<BTreeSet<_>>();
+            let output_dependencies = analysis
+                .outputs
+                .iter()
+                .enumerate()
+                .filter(|(_, terminal)| {
+                    component_reaches(analysis, component.id, terminal.component)
+                })
+                .map(|(index, _)| index)
+                .collect::<BTreeSet<_>>();
+            PhysicalInfluence {
+                component: component.id,
+                positions: component.positions.clone(),
+                shared_role: input_dependencies.len() > 1 || output_dependencies.len() > 1,
+                input_dependencies,
+                output_dependencies,
+            }
+        })
+        .collect();
+    Ok(FunctionalNetworkModel {
+        truth_table,
+        output_functions,
+        physical_influences,
+    })
+}
+
+fn component_reaches(analysis: &RegionAnalysis, start: usize, target: usize) -> bool {
+    let mut pending = vec![start];
+    let mut visited = BTreeSet::new();
+    while let Some(component) = pending.pop() {
+        if component == target {
+            return true;
+        }
+        if !visited.insert(component) {
+            continue;
+        }
+        pending.extend(analysis.components[component].outgoing.iter().copied());
+    }
+    false
 }
 
 fn infer_output_expression(table: &InferredTruthTable, output: usize) -> Expr {
@@ -917,5 +1021,24 @@ mod tests {
         assert_eq!(comparison.terminal_count_delta, 0, "{comparison:?}");
         assert!(comparison.differing_bits > 0, "{comparison:?}");
         assert!(comparison.fitness_penalty > 0, "{comparison:?}");
+    }
+
+    #[test]
+    fn compact_xor_is_derived_from_shared_physics_without_gate_partitioning() {
+        let cell = crate::compact_compiled_xor_cell().unwrap();
+        let (min, max) = cell.world.bounds().unwrap();
+        let analysis = analyze_world_region(&cell.world, RegionBounds::new(min, max));
+        let model = derive_functional_network(&cell.world, &analysis, 16, 64).unwrap();
+
+        assert_eq!(model.truth_table.inputs.len(), 2);
+        assert_eq!(model.truth_table.outputs.len(), 1);
+        assert!(matches!(model.output_functions[0].expression, Expr::Xor(_)));
+        assert_eq!(
+            model.output_functions[0].truth_column,
+            vec![false, true, true, false]
+        );
+        assert!(model.physical_influences.iter().any(|influence| {
+            influence.shared_role && influence.input_dependencies == BTreeSet::from([0, 1])
+        }));
     }
 }

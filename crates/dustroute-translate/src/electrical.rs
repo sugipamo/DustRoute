@@ -158,6 +158,10 @@ fn compute_powered_blocks(
             }
             BlockKind::Repeater => repeater_output_pos(world, *pos).into_iter().collect(),
             BlockKind::Comparator => comparator_output_pos(world, *pos).into_iter().collect(),
+            // A lit standing or wall torch strongly powers an opaque block
+            // directly above it. Horizontal neighbors receive component power,
+            // but are not strongly powered conductors.
+            BlockKind::RedstoneTorch => vec![pos.offset(0, 1, 0)],
             BlockKind::RedstoneBlock => ADJACENT
                 .into_iter()
                 .map(|delta| pos.offset(delta.x, delta.y, delta.z))
@@ -178,10 +182,9 @@ fn compute_powered_blocks(
     for (source, level) in strong.clone() {
         for delta in ADJACENT {
             let target = source.offset(delta.x, delta.y, delta.z);
-            if world
-                .get(target)
-                .is_some_and(|block| block.redstone_traits().conducts_weak_power)
-            {
+            if world.get(target).is_some_and(|block| {
+                block.kind != BlockKind::Solid && block.redstone_traits().conducts_weak_power
+            }) {
                 weak.entry(target)
                     .and_modify(|value| *value = (*value).max(level))
                     .or_insert(level);
@@ -305,11 +308,18 @@ pub fn solve_instantaneous(
                 ));
             }
             for facing in HORIZONTAL {
-                if !wire_has_arm(world, *dust, facing) {
-                    continue;
-                }
                 let delta = facing.horizontal_offset().expect("horizontal facing");
                 let neighbor = dust.offset(delta.x, 0, delta.z);
+                let receives_through_arm = wire_has_arm(world, *dust, facing);
+                let receives_from_strong_block = world.get(neighbor).is_some_and(|block| {
+                    block.redstone_traits().strong_power_drives_dust
+                        && next_block_power
+                            .get(&neighbor)
+                            .is_some_and(|power| power.strong > 0)
+                });
+                if !receives_through_arm && !receives_from_strong_block {
+                    continue;
+                }
                 best = best.max(direct_level_into_dust(
                     world,
                     *dust,
@@ -415,6 +425,24 @@ mod tests {
     }
 
     #[test]
+    fn lit_torch_strongly_powers_block_above_and_dust_on_top() {
+        let mut world = World::new();
+        world.set(Pos::new(1, 0, 0), Block::new(BlockKind::Solid));
+        let torch = world.place(BlockKind::RedstoneTorch, Pos::new(0, 0, 0));
+        torch.facing = Some(Facing::West);
+        torch.support_offset = Some(Pos::new(1, 0, 0));
+        world.set(Pos::new(0, 1, 0), Block::new(BlockKind::Solid));
+        world.place(BlockKind::RedstoneWire, Pos::new(0, 2, 0));
+        update_wire_shapes(&mut world);
+
+        let devices = DeviceOutputState::initially_lit(&world);
+        let state = solve_instantaneous(&world, &devices, 128).unwrap();
+
+        assert_eq!(state.power(Pos::new(0, 1, 0)).strong, 15);
+        assert_eq!(state.signal(Pos::new(0, 2, 0)), 15);
+    }
+
+    #[test]
     fn strong_powered_conductor_drives_adjacent_receiver() {
         let mut world = World::new();
         world.set(Pos::new(0, 0, 0), Block::new(BlockKind::RedstoneBlock));
@@ -423,6 +451,33 @@ mod tests {
         let state = solve_instantaneous(&world, &DeviceOutputState::default(), 128).unwrap();
         assert_eq!(state.power(Pos::new(1, 0, 0)).strong, 15);
         assert_eq!(state.power(Pos::new(2, 0, 0)).weak, 15);
+    }
+
+    #[test]
+    fn strong_power_does_not_chain_into_an_adjacent_solid_conductor() {
+        let mut world = World::new();
+        world.set(Pos::new(0, 0, 0), Block::new(BlockKind::RedstoneBlock));
+        world.set(Pos::new(1, 0, 0), Block::new(BlockKind::Solid));
+        world.set(Pos::new(2, 0, 0), Block::new(BlockKind::Solid));
+        let state = solve_instantaneous(&world, &DeviceOutputState::default(), 128).unwrap();
+        assert_eq!(state.power(Pos::new(1, 0, 0)).strong, 15);
+        assert_eq!(state.power(Pos::new(2, 0, 0)), PoweredBlockState::default());
+    }
+
+    #[test]
+    fn dust_reads_adjacent_strong_block_without_visual_arm() {
+        let mut world = World::new();
+        world.set(Pos::new(0, -1, 0), Block::new(BlockKind::Solid));
+        world.place(BlockKind::RedstoneWire, Pos::new(0, 0, 0));
+        world.set(Pos::new(1, 0, 0), Block::new(BlockKind::Solid));
+        world.set(Pos::new(1, -1, 0), Block::new(BlockKind::RedstoneTorch));
+        update_wire_shapes(&mut world);
+        assert!(!wire_has_arm(&world, Pos::new(0, 0, 0), Facing::East));
+
+        let devices = DeviceOutputState::initially_lit(&world);
+        let state = solve_instantaneous(&world, &devices, 128).unwrap();
+        assert_eq!(state.power(Pos::new(1, 0, 0)).strong, 15);
+        assert_eq!(state.signal(Pos::new(0, 0, 0)), 15);
     }
 
     #[test]

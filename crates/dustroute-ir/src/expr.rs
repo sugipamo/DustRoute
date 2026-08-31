@@ -3,9 +3,12 @@
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::fmt::{Display, Formatter};
 
+use serde::{Deserialize, Serialize};
+
 use crate::{DagBuilder, GateKind, LogicDag, LogicError, NodeId};
 
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(tag = "kind", content = "values", rename_all = "snake_case")]
 pub enum Expr {
     Var(String),
     Const(bool),

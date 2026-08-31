@@ -1,5 +1,12 @@
 # MCP JSON contracts
 
+Reverse-analysis responses may include `physical_function_model` when
+truth-table inference is requested. Its output functions are derived from the
+shared physical network; `shared_physical_components` reports components that
+depend on multiple inputs or influence multiple outputs. Local gate labels are
+explanatory and do not exclusively own physical blocks. See
+[`physical-function-model.md`](physical-function-model.md).
+
 DustRoute MCP tool results are JSON text. Versioned high-level response
 families use these identifiers:
 
@@ -69,3 +76,18 @@ visible trace difference without incorrectly claiming a final-state mismatch.
 confirmation, and `undo_*` or `restore_*` verifies recovery. An operation ID is
 opaque. Clients must not invoke a plan belonging to another player or assume
 that an expired ID can be recreated without observing the world again.
+
+## Observed physical optimization
+
+`new_optimization` accepts `wire_length` and `density_then_wire_length`.
+The latter reports a three-stage `phase_trace`: `local_density`,
+`connector_recovery`, and `global_compaction`. Search may internally accept a
+denser local candidate whose connectors are temporarily longer. Intermediate
+candidates are never written to Minecraft. Only a final candidate whose
+lexicographic `(bounding_volume, occupied_blocks, connector_length)` score is
+better than the observed baseline can become a previewable operation.
+
+The current observed-world candidate generator handles one non-branching
+redstone-dust path with fixed endpoints inside an explicit focus. The phased
+score selector is more general, but arbitrary component relocation is not yet
+part of this API.

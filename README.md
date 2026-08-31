@@ -13,12 +13,22 @@ The workspace is split by responsibility:
 ```text
 dustroute-physical   canonical PhysicalScene observations, ports, evidence, nets, and fragments
 dustroute-ir         derived Gate/Expression/Functional views and transformations
+dustroute-library    provenance-aware reusable circuit specifications and evidence
 dustroute-translate  forward and reverse translation
 dustroute-optimize   placement and semantic rewrite optimization
 dustroute-app        shared application services for MCP and CLI
 dustroute-mcp        AI-facing MCP server and visible Minecraft bot
 dustroute-cli        command-line integration
 ```
+
+Observed-world optimization supports a conservative phased objective through
+the MCP `new_optimization` tool. With `objective` set to
+`density_then_wire_length`, planning first favors local density, then recovers
+connector cost, and finally requires the whole result to beat the baseline.
+Temporary connector growth exists only inside the search: Minecraft receives
+only the previewed final patch. The live candidate generator currently supports
+a single non-branching dust path with fixed endpoints; broader physical
+component relocation remains future work.
 
 `dustroute-physical` is the source of truth for observed Minecraft circuits.
 `PhysicalScene` records typed ports, evidence, scan frontiers, and incomplete
@@ -123,6 +133,9 @@ The logical/physical boundary is deliberately public so a future MCP server can
 build, inspect, optimize, and export a circuit incrementally with a user.
 
 ## Development
+
+Minecraft-vs-simulator physical trace comparison is documented in
+[`docs/physics-differential-testing.md`](docs/physics-differential-testing.md).
 
 Rust 1.85 or newer is required. Live Minecraft integration additionally needs
 Node.js 22 with npm and a Java 21 runtime. Verify the toolchain before building:
