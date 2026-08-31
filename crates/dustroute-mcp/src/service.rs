@@ -1631,12 +1631,21 @@ impl DustRouteMcp {
                 }
             }
 
-            for neighbor in candidates.iter().copied().filter(|candidate| {
-                !connected.contains(candidate)
-                    && manhattan_pos(*candidate, current) <= component_gap
-            }) {
-                if queued.insert(neighbor) {
-                    queue.push_back(neighbor);
+            for dx in -component_gap..=component_gap {
+                for dy in -component_gap..=component_gap {
+                    for dz in -component_gap..=component_gap {
+                        if dx.abs() + dy.abs() + dz.abs() > component_gap {
+                            continue;
+                        }
+                        let neighbor = current.offset(dx, dy, dz);
+                        if neighbor != current
+                            && candidates.contains(&neighbor)
+                            && !connected.contains(&neighbor)
+                            && queued.insert(neighbor)
+                        {
+                            queue.push_back(neighbor);
+                        }
+                    }
                 }
             }
         }

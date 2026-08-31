@@ -262,11 +262,12 @@ pub fn extract_connectivity(world: &World) -> PhysicalConnectivityGraph {
     let positions: Vec<_> = world.positions().collect();
     let mut edges = BTreeSet::new();
     for source in &positions {
-        for sink in &positions {
-            if source == sink {
+        for (dx, dy, dz) in LOCAL_CONNECTION_OFFSETS {
+            let sink = source.offset(dx, dy, dz);
+            if world.get(sink).is_none() {
                 continue;
             }
-            if let Some(step) = physical_step(world, *source, *sink) {
+            if let Some(step) = physical_step(world, *source, sink) {
                 let kind = match step.kind {
                     PhysicalStepKind::Dust => EdgeKind::Dust,
                     PhysicalStepKind::DustRise => EdgeKind::DustRise,
@@ -287,7 +288,7 @@ pub fn extract_connectivity(world: &World) -> PhysicalConnectivityGraph {
                 };
                 edges.insert(ConnectivityEdge {
                     source: *source,
-                    sink: *sink,
+                    sink,
                     kind,
                 });
             }
@@ -324,6 +325,26 @@ pub fn extract_connectivity(world: &World) -> PhysicalConnectivityGraph {
     }
     PhysicalConnectivityGraph { nodes, edges }
 }
+
+// All currently modeled direct redstone transfers are horizontal neighbors,
+// one-block dust rises/falls, or the block directly below dust. Keeping this
+// finite stencil explicit prevents connectivity extraction from comparing
+// every world block with every other world block.
+const LOCAL_CONNECTION_OFFSETS: [(i32, i32, i32); 13] = [
+    (-1, -1, 0),
+    (-1, 0, 0),
+    (-1, 1, 0),
+    (0, -1, -1),
+    (0, -1, 0),
+    (0, -1, 1),
+    (0, 0, -1),
+    (0, 0, 1),
+    (0, 1, -1),
+    (0, 1, 1),
+    (1, -1, 0),
+    (1, 0, 0),
+    (1, 1, 0),
+];
 
 #[must_use]
 pub fn build_physical_circuit(
@@ -394,6 +415,91 @@ mod tests {
     use crate::world::Block;
 
     use super::*;
+
+    fn extract_connectivity_all_pairs(world: &World) -> PhysicalConnectivityGraph {
+        let nodes = world.positions().collect();
+        let positions = world.positions().collect::<Vec<_>>();
+        let mut edges = BTreeSet::new();
+        for source in &positions {
+            for sink in &positions {
+                if source == sink {
+                    continue;
+                }
+                if let Some(step) = physical_step(world, *source, *sink) {
+                    let kind = match step.kind {
+                        PhysicalStepKind::Dust => EdgeKind::Dust,
+                        PhysicalStepKind::DustRise => EdgeKind::DustRise,
+                        PhysicalStepKind::DustFallThroughConductor => {
+                            EdgeKind::DustFallThroughConductor
+                        }
+                        PhysicalStepKind::DustToRepeater | PhysicalStepKind::DustToComparator => {
+                            EdgeKind::RepeaterInput
+                        }
+                        PhysicalStepKind::RepeaterToDust
+                        | PhysicalStepKind::RepeaterToBlock
+                        | PhysicalStepKind::ComparatorToDust
+                        | PhysicalStepKind::ComparatorToBlock => EdgeKind::RepeaterOutput,
+                        PhysicalStepKind::DustToBlock => EdgeKind::DustToBlockWeak,
+                        PhysicalStepKind::BlockToRepeater => EdgeKind::BlockToRepeater,
+                        PhysicalStepKind::SourceToDust => EdgeKind::DirectSource,
+                    };
+                    edges.insert(ConnectivityEdge {
+                        source: *source,
+                        sink: *sink,
+                        kind,
+                    });
+                }
+            }
+        }
+        for (pos, block) in world.iter() {
+            if block.kind == BlockKind::RedstoneTorch
+                && let Some(support) = block.support_pos(*pos)
+            {
+                edges.insert(ConnectivityEdge {
+                    source: support,
+                    sink: *pos,
+                    kind: EdgeKind::TorchControl,
+                });
+            }
+            if matches!(
+                block.kind,
+                BlockKind::Lever | BlockKind::Button | BlockKind::PressurePlate
+            ) && let Some(support) = block.support_pos(*pos)
+            {
+                edges.insert(ConnectivityEdge {
+                    source: *pos,
+                    sink: support,
+                    kind: EdgeKind::LeverOutput,
+                });
+            }
+        }
+        PhysicalConnectivityGraph { nodes, edges }
+    }
+
+    #[test]
+    fn local_stencil_matches_all_pairs_for_mixed_vertical_and_directional_world() {
+        let mut world = World::new();
+        world.fill(
+            Pos::new(-2, 0, -2),
+            Pos::new(4, 0, 2),
+            Block::new(BlockKind::Solid),
+        );
+        world.place(BlockKind::RedstoneWire, Pos::new(-1, 1, 0));
+        world.place(BlockKind::RedstoneWire, Pos::new(0, 1, 0));
+        let repeater = world.place(BlockKind::Repeater, Pos::new(1, 1, 0));
+        repeater.facing = Some(Facing::East);
+        world.place(BlockKind::RedstoneWire, Pos::new(2, 1, 0));
+        world.set(Pos::new(3, 1, 0), Block::new(BlockKind::Solid));
+        world.place(BlockKind::RedstoneWire, Pos::new(3, 2, 0));
+        let lever = world.place(BlockKind::Lever, Pos::new(-2, 1, 0));
+        lever.support_offset = Some(Pos::new(0, -1, 0));
+        crate::wire::update_wire_shapes(&mut world);
+
+        assert_eq!(
+            extract_connectivity(&world),
+            extract_connectivity_all_pairs(&world)
+        );
+    }
 
     #[test]
     fn repeater_is_directional() {
