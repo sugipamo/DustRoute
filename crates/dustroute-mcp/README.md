@@ -291,6 +291,11 @@ TNT, fire, water, and lava reject a scenario. Pistons, observers,
 containers with activation behavior, and unsupported sensors remain
 preview-only. Every run captures the original snapshot and reports failure
 unless both the lever state and full region are restored.
+Stateful devices such as locked repeaters may retain the post-test state even
+after the lever is returned. In that case the run reports restoration failure.
+An explicit `restore_transition_test(confirm=true)` first retries the natural
+reverse operation, then reapplies the bounded pre-test block states only when
+the region still differs, and verifies the complete region again.
 `scenario_verification` contains the normalized live trace, simulated trace,
 typed differences, and an `equivalent` flag. Same-tick ordering differences are
 retained rather than silently treated as electrical mismatches.

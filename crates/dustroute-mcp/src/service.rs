@@ -1731,6 +1731,19 @@ fn block_matches(
             .is_none_or(|delay| actual.delay == Some(delay))
 }
 
+fn observed_java_block_state(block: &dustroute_translate::MinecraftSnapshotBlock) -> String {
+    if block.properties.is_empty() {
+        return block.name.clone();
+    }
+    let properties = block
+        .properties
+        .iter()
+        .map(|(name, value)| format!("{name}={value}"))
+        .collect::<Vec<_>>()
+        .join(",");
+    format!("{}[{properties}]", block.name)
+}
+
 #[tool_router]
 impl DustRouteMcp {
     #[tool(
@@ -3450,7 +3463,7 @@ impl DustRouteMcp {
             .bridge
             .scan_region(plan.bounds.min, plan.bounds.max, &plan.dimension)
             .await;
-        let verified = activation_error.is_none()
+        let naturally_verified = activation_error.is_none()
             && block.as_ref().ok().is_some_and(|block| {
                 block
                     .state
@@ -3462,6 +3475,45 @@ impl DustRouteMcp {
             && snapshot
                 .as_ref()
                 .is_ok_and(|snapshot| snapshot == &plan.initial_snapshot);
+        let mut forced_restore = None;
+        let verified = if naturally_verified {
+            true
+        } else {
+            let writes = plan
+                .initial_snapshot
+                .blocks
+                .iter()
+                .map(|block| {
+                    json!({
+                        "pos": block.pos,
+                        "state": observed_java_block_state(block),
+                    })
+                })
+                .collect::<Vec<_>>();
+            forced_restore = Some(
+                match self
+                    .policy
+                    .validate_placement_size(plan.initial_snapshot.blocks.len())
+                {
+                    Ok(()) => self
+                        .bridge
+                        .write_blocks(json!(writes), &plan.dimension)
+                        .await
+                        .map_err(|error| error.to_string()),
+                    Err(error) => Err(error.to_string()),
+                },
+            );
+            let _ = self
+                .bridge
+                .wait_ticks(plan.observation_ticks, &plan.dimension)
+                .await;
+            forced_restore.as_ref().is_some_and(Result::is_ok)
+                && self
+                    .bridge
+                    .scan_region(plan.bounds.min, plan.bounds.max, &plan.dimension)
+                    .await
+                    .is_ok_and(|snapshot| snapshot == plan.initial_snapshot)
+        };
         if let Some(stored) = self.transition_plans.lock().await.get_mut(&operation_id) {
             stored.restoration_verified = verified;
         }
@@ -3470,7 +3522,10 @@ impl DustRouteMcp {
             "ok": verified,
             "operation_id": operation_id,
             "restoration_verified": verified,
-            "activation_error": activation_error
+            "activation_error": activation_error,
+            "natural_restore_verified": naturally_verified,
+            "snapshot_restore_attempted": forced_restore.is_some(),
+            "snapshot_restore_error": forced_restore.and_then(Result::err),
         });
         self.operations
             .record_completed(
