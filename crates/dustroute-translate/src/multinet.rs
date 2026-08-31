@@ -114,7 +114,25 @@ impl MultiNetRouting {
 
 pub fn route_jobs_ripup(
     circuit: &PlacementCircuit,
+    jobs: Vec<RoutingJob>,
+    config: RouterConfig,
+    max_attempts: usize,
+    ripup_width: usize,
+) -> Result<RipupRoutingResult, RipupRoutingError> {
+    route_jobs_ripup_with_fixed(
+        circuit,
+        jobs,
+        MultiNetRouting::default(),
+        config,
+        max_attempts,
+        ripup_width,
+    )
+}
+
+pub fn route_jobs_ripup_with_fixed(
+    circuit: &PlacementCircuit,
     mut jobs: Vec<RoutingJob>,
+    fixed: MultiNetRouting,
     config: RouterConfig,
     max_attempts: usize,
     ripup_width: usize,
@@ -148,7 +166,7 @@ pub fn route_jobs_ripup(
         .collect();
     let mut pending: Vec<_> = by_id.keys().copied().collect();
     pending.sort_by_key(|id| std::cmp::Reverse(by_id[id].sinks.len()));
-    let mut routing = MultiNetRouting::default();
+    let mut routing = fixed;
     let mut routed_order = Vec::new();
     let mut events = Vec::new();
     let mut attempts = 0;

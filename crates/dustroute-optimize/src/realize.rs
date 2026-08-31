@@ -7,7 +7,7 @@ use dustroute_physical::{
 };
 use dustroute_translate::multinet::{
     LegalityReport, MultiNetRouting, NetId, RipupRoutingError, RoutingJob, materialize_multinet,
-    route_jobs_ripup, validate_routing_legality,
+    route_jobs_ripup_with_fixed, validate_routing_legality,
 };
 use dustroute_translate::physical::{Endpoint, PhysicalError, PlacementCircuit};
 use dustroute_translate::routing::RouterConfig;
@@ -17,7 +17,7 @@ use dustroute_translate::world_reverse::{
 };
 use dustroute_translate::{RedstoneTickSimulator, TruthTableRow, update_wire_shapes};
 
-use crate::phased::optimize_staged_with_validator;
+use crate::phased::optimize_staged_windowed_with_validator;
 use crate::{OptimizationPlan, StagedOptimizationResult};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -184,13 +184,16 @@ fn realize_staged_optimization(
 pub fn realize_staged_optimization_against(
     circuit: &PlacementCircuit,
     original_world: &World,
+    original_routing: &MultiNetRouting,
     plan: &OptimizationPlan,
     config: OptimizationRoutingConfig,
 ) -> Result<RealizedOptimization, OptimizationRealizationError> {
     let verification_config = BehavioralVerificationConfig::default();
-    let optimization = optimize_staged_with_validator(circuit, plan, |candidate| {
+    let optimization = optimize_staged_windowed_with_validator(circuit, plan, 8, 4, |candidate| {
+        let focus = changed_cells(circuit, candidate);
         let Ok(candidate_world) =
-            route_and_materialize(candidate, config).map(|(_, _, world)| world)
+            route_and_materialize_focused(candidate, original_routing, &focus, config)
+                .map(|(_, _, world)| world)
         else {
             return false;
         };
@@ -209,12 +212,14 @@ pub fn realize_staged_optimization_against(
     {
         return Ok(RealizedOptimization {
             optimization,
-            routing: MultiNetRouting::default(),
+            routing: original_routing.clone(),
             legality: LegalityReport::default(),
             world: original_world.clone(),
         });
     }
-    let (routing, legality, world) = route_and_materialize(&optimization.circuit, config)?;
+    let focus = changed_cells(circuit, &optimization.circuit);
+    let (routing, legality, world) =
+        route_and_materialize_focused(&optimization.circuit, original_routing, &focus, config)?;
     Ok(RealizedOptimization {
         optimization,
         routing,
@@ -223,13 +228,85 @@ pub fn realize_staged_optimization_against(
     })
 }
 
+#[cfg(test)]
 fn route_and_materialize(
     circuit: &PlacementCircuit,
     config: OptimizationRoutingConfig,
 ) -> Result<(MultiNetRouting, LegalityReport, World), OptimizationRealizationError> {
-    let routed = route_jobs_ripup(
+    let routed = dustroute_translate::multinet::route_jobs_ripup(
         circuit,
         routing_jobs(circuit),
+        config.router,
+        config.max_attempts,
+        config.ripup_width,
+    )?;
+    let world = materialize_multinet(circuit, &routed.routing)
+        .map_err(|error| OptimizationRealizationError::Routing(error.to_string()))?;
+    let legality = validate_routing_legality(circuit, &routed.routing, &world, config.max_wire_run);
+    if !legality.valid() {
+        return Err(OptimizationRealizationError::IllegalRouting(legality));
+    }
+    Ok((routed.routing, legality, world))
+}
+
+fn changed_cells(
+    before: &PlacementCircuit,
+    after: &PlacementCircuit,
+) -> BTreeSet<dustroute_translate::CellId> {
+    before
+        .cells
+        .iter()
+        .filter_map(|(id, node)| (after.cells.get(id) != Some(node)).then_some(*id))
+        .collect()
+}
+
+fn same_endpoint_identity(left: &Endpoint, right: &Endpoint) -> bool {
+    left.cell == right.cell && left.port == right.port && left.kind == right.kind
+}
+
+fn route_and_materialize_focused(
+    circuit: &PlacementCircuit,
+    original_routing: &MultiNetRouting,
+    focus: &BTreeSet<dustroute_translate::CellId>,
+    config: OptimizationRoutingConfig,
+) -> Result<(MultiNetRouting, LegalityReport, World), OptimizationRealizationError> {
+    let fixed = MultiNetRouting {
+        nets: original_routing
+            .nets
+            .iter()
+            .filter(|(_, net)| {
+                net.source.cell.is_none_or(|cell| !focus.contains(&cell))
+                    && net
+                        .sinks
+                        .iter()
+                        .all(|sink| sink.cell.is_none_or(|cell| !focus.contains(&cell)))
+            })
+            .map(|(id, net)| (*id, net.clone()))
+            .collect(),
+    };
+    let jobs = routing_jobs(circuit)
+        .into_iter()
+        .filter_map(|mut job| {
+            let (id, _) = original_routing.nets.iter().find(|(_, net)| {
+                same_endpoint_identity(&job.source, &net.source)
+                    && job.sinks.len() == net.sinks.len()
+                    && job.sinks.iter().all(|sink| {
+                        net.sinks
+                            .iter()
+                            .any(|original| same_endpoint_identity(sink, original))
+                    })
+            })?;
+            if fixed.nets.contains_key(id) {
+                return None;
+            }
+            job.id = *id;
+            Some(job)
+        })
+        .collect::<Vec<_>>();
+    let routed = route_jobs_ripup_with_fixed(
+        circuit,
+        jobs,
+        fixed,
         config.router,
         config.max_attempts,
         config.ripup_width,
@@ -722,6 +799,7 @@ mod tests {
         let realized = realize_staged_optimization_against(
             &compiled.physical,
             &compiled.world,
+            &compiled.routing,
             &plan,
             OptimizationRoutingConfig::default(),
         )
@@ -768,5 +846,38 @@ mod tests {
             verification.behavior
         );
         assert!(verification.verified());
+    }
+
+    #[test]
+    fn focused_routing_preserves_every_net_outside_the_focus() {
+        let compiled = BaselineCompiler::new(BaselineCompileConfig::default())
+            .compile(&half_adder())
+            .unwrap();
+        let focus = dustroute_translate::CellId(7);
+        let mut candidate = compiled.physical.clone();
+        candidate.cells.get_mut(&focus).unwrap().placed.origin =
+            candidate.cells[&focus].placed.origin.offset(0, 0, -1);
+        crate::refresh_route_endpoints(&mut candidate);
+        let focus_set = BTreeSet::from([focus]);
+        let (routing, _, _) = route_and_materialize_focused(
+            &candidate,
+            &compiled.routing,
+            &focus_set,
+            OptimizationRoutingConfig::default(),
+        )
+        .unwrap();
+        let fixed = compiled
+            .routing
+            .nets
+            .iter()
+            .filter(|(_, net)| {
+                net.source.cell != Some(focus)
+                    && net.sinks.iter().all(|sink| sink.cell != Some(focus))
+            })
+            .collect::<Vec<_>>();
+        assert!(!fixed.is_empty());
+        for (id, expected) in fixed {
+            assert_eq!(routing.nets.get(id), Some(expected));
+        }
     }
 }

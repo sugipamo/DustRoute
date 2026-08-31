@@ -85,7 +85,7 @@ pub use minecraft_semantics::{SemanticProbe, semantic_probes, semantics_datapack
 pub use multinet::{
     BrokenStep, LegalityReport, MultiNetRouting, NetId, RerouteEvent, RipupRoutingError,
     RipupRoutingResult, RoutedNet, RoutingJob, materialize_multinet, route_jobs_ripup,
-    route_net_tree, validate_routing_legality,
+    route_jobs_ripup_with_fixed, route_net_tree, validate_routing_legality,
 };
 pub use physical::{
     CellId, Endpoint, PhysicalError, PlacementCircuit, Route, RouteId, TerminalContract,

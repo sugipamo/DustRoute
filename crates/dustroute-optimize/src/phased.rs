@@ -213,6 +213,7 @@ fn move_matches_direction(
 fn optimize_phase(
     circuit: &PlacementCircuit,
     phase: &OptimizationPhase,
+    focus: Option<&BTreeSet<CellId>>,
     accept_candidate: &mut impl FnMut(&PlacementCircuit) -> bool,
 ) -> (PlacementCircuit, PhaseOptimizationResult) {
     let library = default_cell_library();
@@ -247,6 +248,11 @@ fn optimize_phase(
     for _ in 0..max_steps {
         let mut improving = Vec::new();
         for mutation in candidate_mutations(&current, &library, move_step) {
+            if focus
+                .is_some_and(|focus| mutation.affected_cells().any(|cell| !focus.contains(&cell)))
+            {
+                continue;
+            }
             if mutation
                 .affected_cells()
                 .any(|cell| anchors.contains(&cell))
@@ -311,13 +317,96 @@ pub(crate) fn optimize_staged_with_validator(
     let mut current = circuit.clone();
     let mut results = Vec::with_capacity(plan.phases.len());
     for phase in &plan.phases {
-        let (next, result) = optimize_phase(&current, phase, &mut accept_candidate);
+        let (next, result) = optimize_phase(&current, phase, None, &mut accept_candidate);
         current = next;
         results.push(result);
     }
     StagedOptimizationResult {
         circuit: current,
         phases: results,
+    }
+}
+
+fn focus_windows(circuit: &PlacementCircuit, max_cells: usize) -> Vec<BTreeSet<CellId>> {
+    let mut adjacency = std::collections::BTreeMap::<CellId, BTreeSet<CellId>>::new();
+    for id in circuit.cells.keys() {
+        adjacency.entry(*id).or_default();
+    }
+    for route in circuit.routes.values() {
+        let (Some(first), Some(second)) = (route.source.cell, route.sink.cell) else {
+            continue;
+        };
+        adjacency.entry(first).or_default().insert(second);
+        adjacency.entry(second).or_default().insert(first);
+    }
+    adjacency
+        .into_iter()
+        .map(|(seed, neighbors)| {
+            std::iter::once(seed)
+                .chain(neighbors)
+                .take(max_cells.max(1))
+                .collect()
+        })
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect()
+}
+
+pub(crate) fn optimize_staged_windowed_with_validator(
+    circuit: &PlacementCircuit,
+    plan: &OptimizationPlan,
+    max_focus_cells: usize,
+    max_sweeps: usize,
+    mut accept_candidate: impl FnMut(&PlacementCircuit) -> bool,
+) -> StagedOptimizationResult {
+    let mut current = circuit.clone();
+    let initial_scores = plan
+        .phases
+        .iter()
+        .map(|phase| match phase {
+            OptimizationPhase::DirectionalCompress { axis, weights, .. } => {
+                directional_score(&current, *axis, *weights)
+            }
+            OptimizationPhase::GlobalCompact { weights, .. } => global_score(&current, *weights),
+        })
+        .collect::<Vec<_>>();
+    let mut accepted = vec![Vec::new(); plan.phases.len()];
+    for _ in 0..max_sweeps.max(1) {
+        let mut improved = false;
+        for focus in focus_windows(&current, max_focus_cells) {
+            for (index, phase) in plan.phases.iter().enumerate() {
+                let (next, result) =
+                    optimize_phase(&current, phase, Some(&focus), &mut accept_candidate);
+                improved |= !result.accepted.is_empty();
+                accepted[index].extend(result.accepted);
+                current = next;
+            }
+        }
+        if !improved {
+            break;
+        }
+    }
+    let phases = plan
+        .phases
+        .iter()
+        .enumerate()
+        .map(|(index, phase)| PhaseOptimizationResult {
+            phase: phase.clone(),
+            initial_score: initial_scores[index],
+            final_score: match phase {
+                OptimizationPhase::DirectionalCompress { axis, weights, .. } => {
+                    directional_score(&current, *axis, *weights)
+                }
+                OptimizationPhase::GlobalCompact { weights, .. } => {
+                    global_score(&current, *weights)
+                }
+            },
+            accepted: std::mem::take(&mut accepted[index]),
+        })
+        .collect();
+    StagedOptimizationResult {
+        circuit: current,
+        phases,
     }
 }
 
@@ -461,5 +550,29 @@ mod tests {
         assert_eq!(result.phases[0].accepted.len(), 1);
         assert_eq!(result.circuit.cells[&first].placed.origin, initial_first);
         assert_ne!(result.circuit.cells[&second].placed.origin, initial_second);
+    }
+
+    #[test]
+    fn focus_windows_are_bounded_and_cover_every_cell() {
+        let (circuit, _, _) = linear_circuit();
+        let windows = focus_windows(&circuit, 2);
+        assert!(windows.iter().all(|window| window.len() <= 2));
+        let covered = windows.iter().flatten().copied().collect::<BTreeSet<_>>();
+        assert_eq!(covered, circuit.cells.keys().copied().collect());
+    }
+
+    #[test]
+    fn windowed_sweeps_accumulate_local_improvements_until_convergence() {
+        let (circuit, _, _) = linear_circuit();
+        let plan = OptimizationPlan {
+            phases: vec![OptimizationPhase::GlobalCompact {
+                max_steps: 1,
+                move_step: 1,
+                weights: PlacementWeights::default(),
+            }],
+        };
+        let result = optimize_staged_windowed_with_validator(&circuit, &plan, 1, 4, |_| true);
+        assert!(result.phases[0].accepted.len() >= 2);
+        assert!(result.phases[0].final_score.total < result.phases[0].initial_score.total);
     }
 }

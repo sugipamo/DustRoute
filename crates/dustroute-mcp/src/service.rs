@@ -2600,6 +2600,7 @@ impl DustRouteMcp {
             let realized = match realize_staged_optimization_against(
                 &translated.compiled.physical,
                 &translated.compiled.world,
+                &translated.compiled.routing,
                 &optimization_plan,
                 OptimizationRoutingConfig::default(),
             ) {
