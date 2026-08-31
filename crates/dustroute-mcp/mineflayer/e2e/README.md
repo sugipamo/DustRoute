@@ -16,8 +16,40 @@ HTTP wrapper.
 The server must be an offline/private Java 1.21.11 superflat test server running
 on Java 21 with `online-mode=false`, `white-list=true`, and an accepted EULA.
 The repository-level and MCP READMEs describe the required Rust and Node.js
-toolchains and initial server setup. From its console, allow and grant operator
-permission to both bots:
+toolchains and initial server setup. Its world-generation properties must
+include:
+
+```properties
+online-mode=false
+white-list=true
+gamemode=creative
+force-gamemode=true
+enable-command-block=true
+spawn-protection=0
+generate-structures=false
+spawn-animals=false
+spawn-monsters=false
+spawn-npcs=false
+level-type=minecraft:flat
+generator-settings={"biome":"minecraft:plains","features":false,"lakes":false,"layers":[{"block":"minecraft:bedrock","height":1},{"block":"minecraft:dirt","height":2},{"block":"minecraft:grass_block","height":1}],"structure_overrides":[]}
+```
+
+Do not omit `generator-settings`: with Java 1.21.11,
+`level-type=minecraft:flat` alone can produce a void world. These settings are
+read when the world is first generated, so correct them before creating the
+dedicated E2E world.
+
+After first creation, run this once from the server console:
+
+```text
+gamerule doMobSpawning false
+```
+
+Together with `generate-structures=false`, `features=false`, and an empty
+`structure_overrides`, this keeps structures, decoration, and natural mob
+spawning out of the deterministic E2E world.
+
+From the server console, allow and grant operator permission to both bots:
 
 ```text
 whitelist add DustRouteBot
@@ -25,6 +57,12 @@ op DustRouteBot
 whitelist add dustroutetest
 op dustroutetest
 ```
+
+Because the server uses offline authentication, connect both names once with
+their exact spelling and case before finalizing the whitelist. Verify that
+their UUIDs agree across the login message, `usercache.json`,
+`whitelist.json`, and `ops.json`. A case difference creates a different
+offline UUID and can leave a name visibly listed but unable to join.
 
 The actor needs operator permission only to build isolated deterministic test
 fixtures with `/fill`, `/setblock`, and `/tp`. Never point the harness at a
@@ -35,7 +73,7 @@ Start the normal visible bridge and build the MCP binary:
 ```bash
 cargo build -p dustroute-mcp
 cd crates/dustroute-mcp/mineflayer
-npm install
+npm ci
 DUSTROUTE_SERVER_ADDRESS=127.0.0.1:25565 \
   DUSTROUTE_MC_VERSION=1.21.11 npm start
 ```

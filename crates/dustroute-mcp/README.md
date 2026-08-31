@@ -16,10 +16,30 @@ Run the server once to generate its files, read the EULA, and set
 to offline authentication, so a private test server must include at least:
 
 ```properties
+server-port=25565
 online-mode=false
 white-list=true
+gamemode=creative
+force-gamemode=true
+enable-command-block=true
+spawn-protection=0
+generate-structures=false
+spawn-animals=false
+spawn-monsters=false
+spawn-npcs=false
+level-name=dustroute-test
 level-type=minecraft:flat
+generator-settings={"biome":"minecraft:plains","features":false,"lakes":false,"layers":[{"block":"minecraft:bedrock","height":1},{"block":"minecraft:dirt","height":2},{"block":"minecraft:grass_block","height":1}],"structure_overrides":[]}
 ```
+
+For Java 1.21.11, `level-type=minecraft:flat` by itself is not a sufficient
+test-world definition: a server may generate a void flat world. Keep the
+explicit `generator-settings` line above. Its `layers` are ordered bottom to
+top and produce one bedrock layer, two dirt layers, and one grass-block layer.
+Generator settings are used only when the world is created. If
+`dustroute-test/` already exists, changing these properties does not rebuild
+it; stop the server and move that disposable test world aside before starting
+again. Never do this to a world containing user data.
 
 Start it with Java 21:
 
@@ -28,22 +48,54 @@ cd .local/minecraft-server-1.21.11
 java -Xms1G -Xmx2G -jar server.jar nogui
 ```
 
-Never expose an offline-mode server to an untrusted network. From the server
-console, add the bot and assisted player using the exact names they use to
-connect:
-
-```text
-whitelist add DustRouteBot
-op DustRouteBot
-whitelist add YourMinecraftName
-```
-
-Letting each offline player join once before running `whitelist add` is the
+Never expose an offline-mode server to an untrusted network. Letting each
+offline player join once before running `whitelist add` is the
 safest way to obtain the correct UUID. If a whitelist file must be generated
 manually, Minecraft derives the UUID from the UTF-8 bytes of
 `OfflinePlayer:<exact player name>` using the version-3/name-based UUID
 algorithm. Name spelling and case are part of that input; a UUID generated for
 a differently cased name will not match.
+
+For a new isolated server, a reliable registration sequence is:
+
+1. Temporarily set `white-list=false` (or run `whitelist off`) while the server
+   is reachable only by trusted local test clients.
+2. Connect `DustRouteBot`, `dustroutetest`, and the assisted player once using
+   their final spelling and case.
+3. Stop the server and compare every entry in `usercache.json` with the name
+   and UUID that will be written to `whitelist.json` and `ops.json`.
+4. Restart, run the commands below with the exact same names, and enable the
+   whitelist again.
+
+```text
+whitelist add DustRouteBot
+op DustRouteBot
+whitelist add dustroutetest
+op dustroutetest
+whitelist add YourMinecraftName
+whitelist on
+whitelist list
+```
+
+Do not grant operator permission to the normal assisted player unless a test
+explicitly requires it. If a listed player is rejected, compare the UUID in
+the server login message, `usercache.json`, and `whitelist.json`; also compare
+the name case byte-for-byte. Remove only the incorrect disposable entry and
+register it again. Do not substitute an online-mode UUID for an offline-mode
+UUID.
+
+After the world first loads, disable natural spawning at the world level too:
+
+```text
+gamerule doMobSpawning false
+```
+
+The `generate-structures=false` property, empty `structure_overrides`, and
+`features=false` generator setting keep generated structures and decoration
+out of a newly created test world. The `spawn-*` properties prevent the
+server's normal animal, monster, and NPC spawning, while the game rule covers
+natural spawning controlled by the world. Existing generated structures are
+not removed retroactively.
 
 ```bash
 cd crates/dustroute-mcp/mineflayer
@@ -59,6 +111,19 @@ DUSTROUTE_SERVER_ADDRESS=127.0.0.1:25565 \
 `DustRouteBot`. Grant the bot operator permission on the dedicated test server
 if region previews, teleport-based safe approach, and chat messages are needed.
 The bridge listens only on `127.0.0.1:25580`.
+
+Before starting MCP, verify the dedicated stack from a local shell:
+
+```bash
+# Minecraft should be listening on 25565; the bridge should be loopback-only.
+ss -ltn | grep -E '(:25565|127\.0\.0\.1:25580)'
+```
+
+The server console should show both `DustRouteBot` and the intended actor
+joining successfully. A human can then connect as `YourMinecraftName` to port
+25565. Keep the server JAR, `server.properties`, player lists, logs, and the
+entire generated world below `.local/`; all are runtime state rather than
+repository fixtures.
 
 Automated live testing with a second Mineflayer player is documented in
 [`mineflayer/e2e/README.md`](mineflayer/e2e/README.md). It controls player gaze
@@ -81,8 +146,9 @@ DUSTROUTE_SERVER_ADDRESS=127.0.0.1:25565 \
 
 `DUSTROUTE_SERVER_ADDRESS` and `DUSTROUTE_ASSIST_PLAYER` are required. The same
 server address must be supplied to the Mineflayer process. MCP tools use the
-configured player automatically, so callers normally omit their optional
-`player` argument. An attempt to override it with another player is rejected.
+configured player automatically; the default public tool schemas do not expose
+a `player` argument. Internal/debug calls that attempt to override the
+configured player with another name are rejected.
 If that player is online but outside the bot's entity-tracking range, gaze tools
 and debug-only `get_visible_player` move only `DustRouteBot` to the configured player,
 wait for tracking to resume, and retry once. The observation reports

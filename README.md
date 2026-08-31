@@ -150,7 +150,11 @@ cargo run -p dustroute-mcp
 ```
 
 The local Minecraft integration harness lives under `.local/` and is excluded
-from Git.
+from Git. See [`crates/dustroute-mcp/README.md`](crates/dustroute-mcp/README.md)
+for the Java 1.21.11 server properties, explicit non-void superflat generator,
+offline UUID/whitelist procedure, and visible bridge setup. See
+[`crates/dustroute-mcp/mineflayer/e2e/README.md`](crates/dustroute-mcp/mineflayer/e2e/README.md)
+for the automated live-test procedure.
 
 Sanitized observation regression fixtures live under
 `crates/dustroute-translate/tests/fixtures`. They cover intact and broken
