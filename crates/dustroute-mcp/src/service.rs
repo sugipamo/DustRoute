@@ -30,8 +30,8 @@ use tokio::time::{Duration, Instant, sleep};
 
 use crate::McpConfig;
 use crate::api::{
-    DIAGNOSTIC_SCHEMA_V1, ErrorResponse, McpErrorCode, PLACEMENT_SCHEMA_V1, REPAIR_SCHEMA_V1,
-    TRANSITION_SCHEMA_V1, TransitionTraceResponse,
+    DIAGNOSTIC_SCHEMA_V1, ErrorResponse, McpErrorCode, PLACEMENT_SCHEMA_V1,
+    REPAIR_CONTEXT_SCHEMA_V1, REPAIR_SCHEMA_V1, TRANSITION_SCHEMA_V1, TransitionTraceResponse,
 };
 use crate::state::PlanStateStore;
 use crate::{
@@ -373,6 +373,19 @@ struct ProposeRepairsParams {
     max_gap: Option<u32>,
     /// Circuit snapshot to use when creating repair plans.
     circuit_id: String,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+struct GetRepairContextParams {
+    /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
+    #[schemars(skip)]
+    player: Option<String>,
+    /// Immutable circuit snapshot used to ground every fact and hypothesis.
+    circuit_id: String,
+    /// Optional repair operation returned by new_repair. When omitted, the highest-ranked current hypothesis is explained.
+    operation_id: Option<String>,
+    /// Maximum Manhattan gap considered for repair evidence. Defaults to 2.
+    max_gap: Option<u32>,
 }
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
@@ -3556,13 +3569,18 @@ impl DustRouteMcp {
                 .record_completed(
                     operation_id,
                     OperationKind::RepairProposal,
-                    json!({ "patch": &proposal.patch, "evidence": &proposal.evidence }),
+                    json!({
+                        "patch": &proposal.patch,
+                        "evidence": &proposal.evidence,
+                        "impact": proposal.impact
+                    }),
                 )
                 .await;
             response.push(json!({
                 "operation_id": operation_id,
                 "patch": proposal.patch,
                 "evidence": proposal.evidence,
+                "impact": proposal.impact,
             }));
         }
         json_text(json!({
@@ -3574,6 +3592,236 @@ impl DustRouteMcp {
             "proposal_count": response.len(),
             "proposals": response,
             "next_step": "review a proposal, call show_operation, ask for explicit confirmation, then call invoke_operation with confirm=true"
+        }))
+    }
+
+    #[tool(
+        description = "Explain repair evidence for an immutable circuit as bounded facts, competing hypotheses, counterfactual impact, related physical components, and questions for the player",
+        annotations(read_only_hint = true, destructive_hint = false)
+    )]
+    async fn get_repair_context(
+        &self,
+        Parameters(params): Parameters<GetRepairContextParams>,
+    ) -> String {
+        let player = match self.resolve_player(params.player.as_deref()) {
+            Ok(player) => player,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+        };
+        if let Some(error) = self.authorize_player(&player) {
+            return error;
+        }
+        let max_gap = params.max_gap.unwrap_or(2);
+        if !(1..=8).contains(&max_gap) {
+            return error_text(McpErrorCode::InvalidArgument, "max_gap must be 1..8", false);
+        }
+        let (circuit_id, circuit) = match self.load_circuit(&params.circuit_id, &player).await {
+            Ok(circuit) => circuit,
+            Err(error) => return error_text(McpErrorCode::NotFound, error, false),
+        };
+        let snapshot_json = match serde_json::to_string(&circuit.snapshot) {
+            Ok(snapshot) => snapshot,
+            Err(error) => {
+                return error_text(McpErrorCode::SerializationFailed, error.to_string(), false);
+            }
+        };
+        let (_, world) = match world_from_snapshot_json(&snapshot_json) {
+            Ok(result) => result,
+            Err(error) => {
+                return error_text(McpErrorCode::SerializationFailed, error.to_string(), false);
+            }
+        };
+        let analysis = dustroute_translate::analyze_world_region(&world, circuit.bounds);
+        let diagnostic =
+            dustroute_translate::diagnose_scene(&analysis.scene, circuit.target, circuit.complete);
+        let proposals =
+            dustroute_translate::propose_scene_repairs(&world, &analysis.scene, max_gap);
+        let operation_id = match params.operation_id.as_deref() {
+            Some(value) => match uuid::Uuid::parse_str(value) {
+                Ok(id) => Some(id),
+                Err(error) => {
+                    return error_text(McpErrorCode::InvalidArgument, error.to_string(), false);
+                }
+            },
+            None => None,
+        };
+        let selected_patch = if let Some(operation_id) = operation_id {
+            let plan = match self.repair_plan(operation_id).await {
+                Ok(Some(plan)) => plan,
+                Ok(None) => {
+                    return error_text(McpErrorCode::NotFound, "repair operation not found", false);
+                }
+                Err(error) => return error_text(McpErrorCode::Internal, error, false),
+            };
+            if plan.dimension != circuit.dimension || plan.analysis_bounds != circuit.bounds {
+                return error_text(
+                    McpErrorCode::InvalidArgument,
+                    "operation_id does not belong to this circuit snapshot",
+                    false,
+                );
+            }
+            Some(plan.patch)
+        } else {
+            proposals.first().map(|proposal| proposal.patch.clone())
+        };
+        let selected = selected_patch
+            .as_ref()
+            .and_then(|patch| proposals.iter().find(|proposal| proposal.patch == *patch));
+
+        let relevant_positions = selected
+            .into_iter()
+            .flat_map(|proposal| proposal.patch.changes.iter().map(|change| change.pos))
+            .collect::<Vec<_>>();
+        let related_components = analysis
+            .scene
+            .components
+            .iter()
+            .filter(|component| {
+                relevant_positions.iter().any(|position| {
+                    component.pos.x.abs_diff(position.x)
+                        + component.pos.y.abs_diff(position.y)
+                        + component.pos.z.abs_diff(position.z)
+                        <= 2
+                })
+            })
+            .take(32)
+            .map(|component| {
+                let incoming = analysis
+                    .scene
+                    .connections
+                    .iter()
+                    .filter(|connection| connection.sink.component == component.id)
+                    .map(|connection| {
+                        json!({
+                            "component": connection.source.component,
+                            "transfer": connection.transfer,
+                            "confidence": connection.confidence
+                        })
+                    })
+                    .collect::<Vec<_>>();
+                let outgoing = analysis
+                    .scene
+                    .connections
+                    .iter()
+                    .filter(|connection| connection.source.component == component.id)
+                    .map(|connection| {
+                        json!({
+                            "component": connection.sink.component,
+                            "transfer": connection.transfer,
+                            "confidence": connection.confidence
+                        })
+                    })
+                    .collect::<Vec<_>>();
+                json!({
+                    "id": component.id,
+                    "position": component.pos,
+                    "block": component.block.kind,
+                    "facing": component.block.facing,
+                    "support": component.support,
+                    "incoming": incoming,
+                    "outgoing": outgoing
+                })
+            })
+            .collect::<Vec<_>>();
+
+        let mut hypotheses = Vec::new();
+        if let Some(proposal) = selected {
+            let mut supporting_evidence = vec![format!(
+                "virtual repair contains {} non-conflicting block change(s)",
+                proposal.patch.changes.len()
+            )];
+            if let Some(impact) = proposal.impact {
+                supporting_evidence.push(format!(
+                    "physical fragments change from {} to {}",
+                    impact.fragments_before, impact.fragments_after
+                ));
+                supporting_evidence.push(format!(
+                    "drive-reachable components change from {} to {}",
+                    impact.drive_reachable_components_before,
+                    impact.drive_reachable_components_after
+                ));
+            }
+            let mut contradictions = Vec::new();
+            if diagnostic.counts.awaiting_external_input > 0 {
+                contradictions.push(
+                    "one or more disconnected paths are also valid inferred external-input boundaries"
+                        .to_owned(),
+                );
+            }
+            if proposal
+                .impact
+                .is_some_and(|impact| impact.requires_temporal_validation)
+            {
+                contradictions.push(
+                    "the repaired path contains temporal behavior that still needs a live transition test"
+                        .to_owned(),
+                );
+            }
+            hypotheses.push(json!({
+                "kind": proposal.patch.reason,
+                "confidence_percent": proposal.patch.confidence_percent,
+                "supporting_evidence": supporting_evidence,
+                "contradictions": contradictions,
+                "physical_evidence": proposal.evidence,
+                "counterfactual_impact": proposal.impact,
+                "operation_id": operation_id
+            }));
+        }
+        if diagnostic.counts.awaiting_external_input > 0 {
+            hypotheses.push(json!({
+                "kind": "intentional_external_inputs",
+                "confidence": "plausible",
+                "supporting_evidence": [
+                    "the disconnected paths satisfy the structural rules for inferred input boundaries"
+                ],
+                "contradictions": selected.map_or_else(Vec::new, |proposal| vec![format!(
+                    "the highest-ranked virtual repair improves connectivity with {} block change(s)",
+                    proposal.patch.changes.len()
+                )])
+            }));
+        }
+
+        let gaps = analysis.scene.gap_candidates(max_gap);
+        let mut questions = Vec::new();
+        if diagnostic.counts.awaiting_external_input > 0 && selected.is_some() {
+            questions.push(
+                "Are the disconnected fragments intended as separate inputs, or should the known controllable input drive the downstream path?"
+                    .to_owned(),
+            );
+        }
+        if selected
+            .and_then(|proposal| proposal.impact)
+            .is_some_and(|impact| impact.requires_temporal_validation)
+        {
+            questions.push(
+                "May DustRoute run a previewed transition scenario after repair to verify timing?"
+                    .to_owned(),
+            );
+        }
+        json_text(json!({
+            "schema_version": REPAIR_CONTEXT_SCHEMA_V1,
+            "ok": true,
+            "circuit_id": circuit_id,
+            "operation_id": operation_id,
+            "summary": format!(
+                "{} physical component(s), {} traversal fragment(s), {} nearby gap candidate(s), {} repair hypothesis/hypotheses",
+                analysis.scene.components.len(),
+                analysis.scene.fragments.len(),
+                gaps.len(),
+                hypotheses.len()
+            ),
+            "facts": {
+                "observation_complete": diagnostic.observation_complete,
+                "components": analysis.scene.components.len(),
+                "fragments": analysis.scene.fragments.len(),
+                "gap_candidates": gaps.iter().take(16).collect::<Vec<_>>(),
+                "gap_candidates_truncated": gaps.len() > 16,
+                "diagnostic": diagnostic,
+                "temporal": analysis.scene.temporal_assessment()
+            },
+            "hypotheses": hypotheses,
+            "related_components": related_components,
+            "questions": questions,
+            "next_step": "compare the hypotheses with the player's intent; use show_operation only after choosing a repair hypothesis"
         }))
     }
 
@@ -4569,7 +4817,7 @@ impl DustRouteMcp {
     async fn collaboration_prompt(&self) -> GetPromptResult {
         GetPromptResult::new(vec![PromptMessage::new_text(
             Role::User,
-            "Work with the player on a Minecraft redstone circuit using the PowerShell-style Verb-Noun contract expressed as snake_case. Use get_world for literal visibility, then test_circuit to capture an immutable circuit snapshot and compact health. Reuse its circuit_id for get_circuit_ir, convert_from_circuit, test_circuit_change, new_repair, and new_transition_test; never silently switch back to the current gaze during one task. For mixed IR, pass circuit_id and first request the summary, then pass its analysis_id and a node_id to expand only that node. Treat intrinsic sources, controllable inputs, event inputs, and observation boundaries as distinct. New operations only create plans. Always call show_operation, explain the preview, and obtain explicit confirmation before invoke_operation(confirm=true). Use undo_operation for recovery. For an explicitly selected region, call set_region twice and show_region; reuse the circuit_id returned by show_region. Never infer coordinates from prose when gaze tools can ground them, and never mutate the world without preview and explicit confirmation.".to_owned(),
+            "Work with the player on a Minecraft redstone circuit using the PowerShell-style Verb-Noun contract expressed as snake_case. Use get_world for literal visibility, then test_circuit to capture an immutable circuit snapshot and compact health. Reuse its circuit_id for get_circuit_ir, convert_from_circuit, test_circuit_change, new_repair, get_repair_context, and new_transition_test; never silently switch back to the current gaze during one task. After new_repair, use get_repair_context when physical fragments admit competing repair and external-input hypotheses; present supporting and contradictory evidence and ask the returned questions before choosing. For mixed IR, pass circuit_id and first request the summary, then pass its analysis_id and a node_id to expand only that node. Treat intrinsic sources, controllable inputs, event inputs, and observation boundaries as distinct. New operations only create plans. Always call show_operation, explain the preview, and obtain explicit confirmation before invoke_operation(confirm=true). Use undo_operation for recovery. For an explicitly selected region, call set_region twice and show_region; reuse the circuit_id returned by show_region. Never infer coordinates from prose when gaze tools can ground them, and never mutate the world without preview and explicit confirmation.".to_owned(),
         )])
         .with_description("Safe gaze-grounded DustRoute collaboration workflow")
     }
@@ -4590,7 +4838,7 @@ impl ServerHandler for DustRouteMcp {
             env!("CARGO_PKG_VERSION"),
         ))
         .with_instructions(
-            "Use the collaborate-on-redstone-circuit prompt. Use get_world for raw visibility, test_circuit to capture a stable circuit_id and compact health, then reuse that circuit_id for analysis, hypotheses, repair, and transition planning. New creates a plan, show_operation previews it, invoke_operation requires explicit confirmation, and undo_operation recovers it."
+            "Use the collaborate-on-redstone-circuit prompt. Use get_world for raw visibility, test_circuit to capture a stable circuit_id and compact health, then reuse that circuit_id for analysis, hypotheses, repair, and transition planning. Use get_repair_context to compare repair evidence against intentional-boundary alternatives. New creates a plan, show_operation previews it, invoke_operation requires explicit confirmation, and undo_operation recovers it."
         )
     }
 }
@@ -4726,6 +4974,7 @@ mod tests {
         assert!(text.text.contains("get_world"));
         assert!(text.text.contains("test_circuit"));
         assert!(text.text.contains("get_circuit_ir"));
+        assert!(text.text.contains("get_repair_context"));
         assert!(text.text.contains("show_operation"));
         assert!(text.text.contains("confirmation"));
     }
@@ -4755,11 +5004,12 @@ mod tests {
             .map(|tool| tool.name.to_string())
             .collect::<BTreeSet<_>>();
 
-        assert_eq!(default_names.len(), 16);
-        assert_eq!(debug_names.len(), 23);
+        assert_eq!(default_names.len(), 17);
+        assert_eq!(debug_names.len(), 24);
         assert!(default_names.contains("test_circuit"));
         assert!(default_names.contains("get_circuit_ir"));
         assert!(default_names.contains("test_circuit_change"));
+        assert!(default_names.contains("get_repair_context"));
         assert!(default_names.contains("invoke_operation"));
         assert!(!default_names.contains("invoke_repair"));
         for name in DEBUG_ONLY_TOOLS {

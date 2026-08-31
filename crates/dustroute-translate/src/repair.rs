@@ -11,7 +11,11 @@ pub fn propose_scene_repairs(
     scene: &PhysicalScene,
     max_gap: u32,
 ) -> Vec<RepairProposal> {
-    propose_physical_repairs(world, scene, max_gap, None)
+    let mut proposals = propose_single_repairs(world, scene, max_gap, None);
+    if let Some(composite) = compose_multi_fault_repair(world, scene, max_gap, 8) {
+        proposals.insert(0, composite);
+    }
+    proposals
 }
 
 #[must_use]
@@ -22,7 +26,7 @@ pub fn propose_scene_repairs_near(
     focus: Pos,
     max_distance: u32,
 ) -> Vec<RepairProposal> {
-    propose_physical_repairs(world, scene, max_gap, Some((focus, max_distance)))
+    propose_single_repairs(world, scene, max_gap, Some((focus, max_distance)))
 }
 
 #[must_use]
@@ -35,7 +39,7 @@ pub fn propose_scene_component_removal(
 }
 
 #[must_use]
-fn propose_physical_repairs(
+fn propose_single_repairs(
     world: &World,
     circuit: &PhysicalScene,
     max_gap: u32,
@@ -104,6 +108,95 @@ fn propose_physical_repairs(
         )
     });
     proposals
+}
+
+fn compose_multi_fault_repair(
+    world: &World,
+    circuit: &PhysicalScene,
+    max_gap: u32,
+    max_steps: usize,
+) -> Option<RepairProposal> {
+    let bounds = scene_bounds(circuit, world)?;
+    let mut working_world = world.clone();
+    let mut working_scene = circuit.clone();
+    let mut changes = Vec::new();
+    let mut evidence = Vec::new();
+    let mut confidence_percent = 100;
+    let mut repair_count = 0;
+
+    for _ in 0..max_steps {
+        let candidate = propose_single_repairs(&working_world, &working_scene, max_gap, None)
+            .into_iter()
+            .find(|proposal| {
+                proposal.impact.is_some_and(RepairImpact::improves)
+                    && proposal.patch.changes.iter().all(|change| {
+                        !changes
+                            .iter()
+                            .any(|selected: &PhysicalBlockChange| selected.pos == change.pos)
+                    })
+            });
+        let Some(candidate) = candidate else {
+            break;
+        };
+        working_world = candidate.patch.apply_virtual(&working_world).ok()?;
+        crate::update_wire_shapes(&mut working_world);
+        working_scene = crate::analyze_world_region(&working_world, bounds).scene;
+        confidence_percent = confidence_percent.min(candidate.patch.confidence_percent);
+        changes.extend(candidate.patch.changes);
+        evidence.extend(candidate.evidence);
+        repair_count += 1;
+    }
+
+    if repair_count < 2 {
+        return None;
+    }
+    let patch = PhysicalPatch {
+        reason: RepairReason::MultiFaultRepair,
+        affected_fragments: circuit
+            .fragments
+            .iter()
+            .map(|fragment| fragment.id)
+            .collect(),
+        confidence_percent,
+        explanation: format!(
+            "apply {repair_count} non-conflicting repairs selected by iterative virtual analysis"
+        ),
+        changes,
+    };
+    let impact = evaluate_repair(world, circuit, &patch)?;
+    impact.improves().then_some(RepairProposal {
+        patch,
+        evidence,
+        impact: Some(impact),
+    })
+}
+
+fn scene_bounds(circuit: &PhysicalScene, world: &World) -> Option<crate::RegionBounds> {
+    circuit
+        .observation
+        .regions
+        .iter()
+        .map(|region| region.bounds)
+        .reduce(|left, right| {
+            dustroute_physical::SceneBounds::new(
+                Pos::new(
+                    left.min.x.min(right.min.x),
+                    left.min.y.min(right.min.y),
+                    left.min.z.min(right.min.z),
+                ),
+                Pos::new(
+                    left.max.x.max(right.max.x),
+                    left.max.y.max(right.max.y),
+                    left.max.z.max(right.max.z),
+                ),
+            )
+        })
+        .map(|bounds| crate::RegionBounds::new(bounds.min, bounds.max))
+        .or_else(|| {
+            world
+                .bounds()
+                .map(|(min, max)| crate::RegionBounds::new(min, max))
+        })
 }
 
 fn missing_vertical_wire_repairs(
@@ -192,6 +285,7 @@ fn missing_vertical_wire_repairs(
 
 const fn repair_reason_priority(reason: RepairReason) -> u8 {
     match reason {
+        RepairReason::MultiFaultRepair => 0,
         RepairReason::RestoreComponentSupport => 0,
         RepairReason::ConnectMissingWire => 1,
         RepairReason::InsertDirectionalComponent | RepairReason::ReorientDirectionalComponent => 2,
@@ -667,31 +761,7 @@ fn evaluate_repair(
 ) -> Option<RepairImpact> {
     let mut repaired = patch.apply_virtual(world).ok()?;
     crate::update_wire_shapes(&mut repaired);
-    let bounds = circuit
-        .observation
-        .regions
-        .iter()
-        .map(|region| region.bounds)
-        .reduce(|left, right| {
-            dustroute_physical::SceneBounds::new(
-                Pos::new(
-                    left.min.x.min(right.min.x),
-                    left.min.y.min(right.min.y),
-                    left.min.z.min(right.min.z),
-                ),
-                Pos::new(
-                    left.max.x.max(right.max.x),
-                    left.max.y.max(right.max.y),
-                    left.max.z.max(right.max.z),
-                ),
-            )
-        })
-        .map(|bounds| crate::RegionBounds::new(bounds.min, bounds.max))
-        .or_else(|| {
-            repaired
-                .bounds()
-                .map(|(min, max)| crate::RegionBounds::new(min, max))
-        })?;
+    let bounds = scene_bounds(circuit, &repaired)?;
     let analysis = crate::analyze_world_region(&repaired, bounds);
     let before_liveness = crate::analyze_signal_liveness(circuit);
     let after_liveness = crate::analyze_signal_liveness(&analysis.scene);
@@ -927,6 +997,77 @@ mod tests {
                     && proposal.patch.changes[0].pos == Pos::new(2, 1, 0)
             })
             .expect("the missing directional input wire should be repairable");
+        assert!(proposal.impact.is_some_and(RepairImpact::improves));
+    }
+
+    #[test]
+    fn composes_two_disconnected_wire_repairs_into_one_reversible_plan() {
+        let mut world = World::new();
+        for x in 0..=6 {
+            world.set(Pos::new(x, 0, 0), Block::new(BlockKind::Solid));
+        }
+        world.place(BlockKind::Lever, Pos::new(0, 1, 0));
+        for x in [1, 3, 5] {
+            world.place(BlockKind::RedstoneWire, Pos::new(x, 1, 0));
+        }
+        let repeater = world.place(BlockKind::Repeater, Pos::new(6, 1, 0));
+        repeater.facing = Some(Facing::East);
+        repeater.delay = Some(1);
+        repeater.support_offset = Some(Pos::new(0, -1, 0));
+        update_wire_shapes(&mut world);
+        let analysis = analyze_world_region(
+            &world,
+            RegionBounds::new(Pos::new(-1, -1, -1), Pos::new(7, 3, 1)),
+        );
+
+        let proposal = propose_scene_repairs(&world, &analysis.scene, 2)
+            .into_iter()
+            .find(|proposal| proposal.patch.reason == RepairReason::MultiFaultRepair)
+            .expect("both gaps should be combined into one repair plan");
+        assert_eq!(proposal.patch.changes.len(), 2);
+        assert_eq!(
+            proposal
+                .patch
+                .changes
+                .iter()
+                .map(|change| change.pos)
+                .collect::<BTreeSet<_>>(),
+            BTreeSet::from([Pos::new(2, 1, 0), Pos::new(4, 1, 0)])
+        );
+        assert!(proposal.impact.is_some_and(RepairImpact::improves));
+
+        let repaired = proposal.patch.apply_virtual(&world).unwrap();
+        let restored = proposal.patch.inverse().apply_virtual(&repaired).unwrap();
+        assert_eq!(restored, world);
+    }
+
+    #[test]
+    fn composes_a_wire_break_and_reversed_repeater_without_conflicting_changes() {
+        let mut world = World::new();
+        for x in 0..=4 {
+            world.set(Pos::new(x, 0, 0), Block::new(BlockKind::Solid));
+        }
+        world.place(BlockKind::Lever, Pos::new(0, 1, 0));
+        world.place(BlockKind::RedstoneWire, Pos::new(1, 1, 0));
+        world.place(BlockKind::RedstoneWire, Pos::new(3, 1, 0));
+        let repeater = world.place(BlockKind::Repeater, Pos::new(4, 1, 0));
+        repeater.facing = Some(Facing::West);
+        repeater.delay = Some(1);
+        repeater.support_offset = Some(Pos::new(0, -1, 0));
+        update_wire_shapes(&mut world);
+        let analysis = analyze_world_region(
+            &world,
+            RegionBounds::new(Pos::new(-1, -1, -1), Pos::new(5, 3, 1)),
+        );
+
+        let proposal = propose_scene_repairs(&world, &analysis.scene, 2)
+            .into_iter()
+            .find(|proposal| proposal.patch.reason == RepairReason::MultiFaultRepair)
+            .expect("the wire and repeater faults should form one repair plan");
+        assert_eq!(proposal.patch.changes.len(), 2);
+        assert_eq!(proposal.patch.changes[0].pos, Pos::new(2, 1, 0));
+        assert_eq!(proposal.patch.changes[1].pos, Pos::new(4, 1, 0));
+        assert_eq!(proposal.patch.changes[1].after.facing, Some(Facing::East));
         assert!(proposal.impact.is_some_and(RepairImpact::improves));
     }
 

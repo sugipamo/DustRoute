@@ -187,7 +187,7 @@ MCP tool names follow a PowerShell-style Verb-Noun contract written as
 - `start`, `stop`, and `get` manage asynchronous operations.
 - `set` and `clear` manage the current region selection.
 
-`DUSTROUTE_MCP_TOOL_PROFILE=default` exposes the 16 tools intended for normal
+`DUSTROUTE_MCP_TOOL_PROFILE=default` exposes the 17 tools intended for normal
 LLM collaboration. `debug` additionally exposes low-level gaze/discovery,
 operation history, full plan retrieval, asynchronous conversion control, and
 explicit component-removal planning. Debug tools remain implemented but cannot
@@ -391,12 +391,20 @@ hovers. Post-write block-state and circuit verification still run normally.
 
 ```text
 new_repair(circuit_id)
+  -> get_repair_context(circuit_id, operation_id)
+  -> compare supporting evidence, contradictions, and questions with the player
   -> show_operation
   -> explicit player confirmation
   -> invoke_operation(confirm=true)
   -> automatic block-state rescan and circuit re-analysis
   -> undo_operation(confirm=true), when needed
 ```
+
+`get_repair_context` is read-only and progressively expands one repair
+hypothesis. It returns bounded physical facts, competing interpretations,
+counterfactual impact, nearby directed components, and questions that can
+distinguish an intentional external input from a broken path. It does not
+preview or authorize the operation.
 
 Failed block-state verification triggers an automatic rollback attempt. A
 successful application returns the resulting logical classification and, when
