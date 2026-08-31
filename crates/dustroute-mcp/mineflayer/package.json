@@ -4,7 +4,10 @@
   "version": "0.2.0",
   "description": "Visible Minecraft bot bridge for dustroute-mcp",
   "scripts": {
-    "start": "node bridge.js"
+    "start": "node bridge.js",
+    "test": "node --test e2e/runtime.test.js",
+    "test:e2e": "node e2e/runner.js",
+    "test:e2e:semantics": "node e2e/semantics.js"
   },
   "dependencies": {
     "mineflayer": "4.37.1"

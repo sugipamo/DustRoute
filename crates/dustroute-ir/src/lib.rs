@@ -4,6 +4,7 @@ mod derived;
 pub mod expr;
 mod hierarchy;
 pub mod logic;
+mod mixed;
 #[path = "physical_projection.rs"]
 mod temporal_analysis;
 mod transient;
@@ -24,6 +25,9 @@ pub use hierarchy::{
     build_physical_graph, build_physical_snapshot, derive_hierarchy, hierarchy_from_views,
 };
 pub use logic::{DagBuilder, GateKind, LogicDag, LogicError, LogicNode, NodeId};
+pub use mixed::{
+    BoundaryDirection, MixedEdge, MixedIr, MixedNode, MixedNodeId, MixedNodeKind, build_mixed_ir,
+};
 pub use temporal_analysis::{
     BehaviorEvent, BehaviorIr, BehaviorPattern, BehaviorTrace, DelayRange, EdgeBehavior,
     SteadyStateEdge, SteadyStateProjection, TemporalAnalysis, TemporalDevice, TemporalEvidence,

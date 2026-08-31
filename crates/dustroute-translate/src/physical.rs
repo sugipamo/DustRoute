@@ -30,6 +30,19 @@ pub struct Endpoint {
     pub facing: Option<Facing>,
 }
 
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub enum TerminalDirection {
+    Input,
+    Output,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct TerminalContract {
+    pub name: String,
+    pub direction: TerminalDirection,
+    pub endpoint: Endpoint,
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Route {
     pub id: RouteId,
@@ -68,6 +81,7 @@ impl Error for PhysicalError {}
 pub struct PlacementCircuit {
     pub cells: BTreeMap<CellId, PhysicalNode>,
     pub routes: BTreeMap<RouteId, Route>,
+    pub terminals: BTreeMap<String, TerminalContract>,
     next_cell: u32,
     next_route: u32,
 }
@@ -165,6 +179,23 @@ impl PlacementCircuit {
             },
         );
         id
+    }
+
+    pub fn add_terminal(
+        &mut self,
+        name: impl Into<String>,
+        direction: TerminalDirection,
+        endpoint: Endpoint,
+    ) {
+        let name = name.into();
+        self.terminals.insert(
+            name.clone(),
+            TerminalContract {
+                name,
+                direction,
+                endpoint,
+            },
+        );
     }
 
     pub fn incoming(&self, cell: CellId) -> impl Iterator<Item = &Route> {

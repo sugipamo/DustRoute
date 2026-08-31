@@ -124,7 +124,19 @@ build, inspect, optimize, and export a circuit incrementally with a user.
 
 ## Development
 
-Rust 1.85 or newer is required.
+Rust 1.85 or newer is required. Live Minecraft integration additionally needs
+Node.js 22 with npm and a Java 21 runtime. Verify the toolchain before building:
+
+```bash
+rustc --version
+node --version
+npm --version
+java -version
+```
+
+Install Rust through rustup, use a supported Node.js distribution, and install
+a Java 21 JDK or JRE through the operating system package manager. The Rust-only
+workspace tests do not require Node.js, Java, or a Minecraft server.
 
 ```bash
 cargo fmt --all --check

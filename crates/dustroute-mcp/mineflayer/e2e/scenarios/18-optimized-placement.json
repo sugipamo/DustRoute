@@ -1,0 +1,40 @@
+{
+  "name": "guarded_optimized_placement",
+  "steps": [
+    { "kind": "command", "commands": [
+      "/fill 699 102 -1 752 109 25 minecraft:air",
+      "/setblock 700 103 0 minecraft:stone"
+    ]},
+    { "kind": "aim", "position": { "x": 700.5, "y": 106, "z": 6.5 }, "target": { "x": 700, "y": 103, "z": 0 } },
+    { "kind": "mcp", "tool": "new_placement", "arguments": {
+      "circuit": "half-adder",
+      "max_blocks": 4096,
+      "optimize": true
+    }, "save": "plan" },
+    { "kind": "assert", "from": "plan", "expect": [
+      { "path": "ok", "equals": true },
+      { "path": "optimization.safety", "equals": "preview_only" },
+      { "path": "optimization.phases.0.accepted_mutations", "exists": true },
+      { "path": "optimization.phases.1.accepted_mutations", "exists": true },
+      { "path": "operation_id", "exists": true }
+    ]},
+    { "kind": "mcp", "tool": "invoke_operation", "arguments": {
+      "operation_id": "${plan.operation_id}", "confirm": true
+    }, "save": "apply" },
+    { "kind": "assert", "from": "apply", "expect": [
+      { "path": "ok", "equals": true },
+      { "path": "verified", "equals": true },
+      { "path": "action", "equals": "apply" }
+    ]},
+    { "kind": "wait", "ticks": 20 },
+    { "kind": "mcp", "tool": "undo_operation", "arguments": {
+      "operation_id": "${plan.operation_id}", "confirm": true
+    }, "save": "undo" },
+    { "kind": "assert", "from": "undo", "expect": [
+      { "path": "ok", "equals": true },
+      { "path": "verified", "equals": true },
+      { "path": "action", "equals": "undo" }
+    ]}
+  ],
+  "cleanup": ["/fill 699 102 -1 752 109 25 minecraft:air"]
+}

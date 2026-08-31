@@ -65,14 +65,20 @@ impl RedstoneTickSimulator {
             .filter(|(_, block)| block.kind == BlockKind::Repeater)
             .map(|(pos, block)| {
                 let delay = usize::from(block.delay.unwrap_or(1).clamp(1, 4));
-                (*pos, VecDeque::from(vec![false; delay]))
+                let powered = devices.repeater_powered.get(pos).copied().unwrap_or(false);
+                (*pos, VecDeque::from(vec![powered; delay]))
             })
             .collect();
         let instantaneous = solve_instantaneous(&world, &devices, 128)?;
         let comparator_queues = devices
             .comparator_output
             .keys()
-            .map(|pos| (*pos, VecDeque::from([0])))
+            .map(|pos| {
+                (
+                    *pos,
+                    VecDeque::from([devices.comparator_output.get(pos).copied().unwrap_or(0)]),
+                )
+            })
             .collect();
         let lamp_lit = world
             .iter()
@@ -347,6 +353,27 @@ mod tests {
         simulator.set_powered(Pos::new(0, 1, 0), true).unwrap();
         simulator.advance_tick().unwrap();
         assert!(!simulator.snapshot().repeater_powered[&Pos::new(1, 1, 0)]);
+    }
+
+    #[test]
+    fn imported_powered_repeater_keeps_its_initial_delay_state() {
+        let mut world = World::new();
+        world.fill(
+            Pos::new(0, 0, 0),
+            Pos::new(2, 0, 0),
+            Block::new(BlockKind::Solid),
+        );
+        let source = world.place(BlockKind::Lever, Pos::new(0, 1, 0));
+        source.powered = Some(true);
+        source.support_offset = Some(Pos::new(0, -1, 0));
+        let repeater = world.place(BlockKind::Repeater, Pos::new(1, 1, 0));
+        repeater.facing = Some(Facing::East);
+        repeater.delay = Some(2);
+        repeater.powered = Some(true);
+
+        let mut simulator = RedstoneTickSimulator::new(world).unwrap();
+        assert!(simulator.snapshot().repeater_powered[&Pos::new(1, 1, 0)]);
+        assert!(simulator.advance_tick().unwrap().repeater_powered[&Pos::new(1, 1, 0)]);
     }
 
     #[test]

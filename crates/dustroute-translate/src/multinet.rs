@@ -114,7 +114,25 @@ impl MultiNetRouting {
 
 pub fn route_jobs_ripup(
     circuit: &PlacementCircuit,
+    jobs: Vec<RoutingJob>,
+    config: RouterConfig,
+    max_attempts: usize,
+    ripup_width: usize,
+) -> Result<RipupRoutingResult, RipupRoutingError> {
+    route_jobs_ripup_with_fixed(
+        circuit,
+        jobs,
+        MultiNetRouting::default(),
+        config,
+        max_attempts,
+        ripup_width,
+    )
+}
+
+pub fn route_jobs_ripup_with_fixed(
+    circuit: &PlacementCircuit,
     mut jobs: Vec<RoutingJob>,
+    fixed: MultiNetRouting,
     config: RouterConfig,
     max_attempts: usize,
     ripup_width: usize,
@@ -148,7 +166,7 @@ pub fn route_jobs_ripup(
         .collect();
     let mut pending: Vec<_> = by_id.keys().copied().collect();
     pending.sort_by_key(|id| std::cmp::Reverse(by_id[id].sinks.len()));
-    let mut routing = MultiNetRouting::default();
+    let mut routing = fixed;
     let mut routed_order = Vec::new();
     let mut events = Vec::new();
     let mut attempts = 0;
@@ -709,27 +727,44 @@ pub fn validate_routing_legality(
 ) -> LegalityReport {
     let mut report = LegalityReport::default();
     let ids: Vec<_> = routing.nets.keys().copied().collect();
+    let resources = routing
+        .nets
+        .iter()
+        .map(|(id, net)| {
+            (
+                *id,
+                RoutingResources::from_conductors(
+                    net.occupied.iter().copied(),
+                    net.stair_clearances(),
+                    std::iter::empty(),
+                ),
+            )
+        })
+        .collect::<BTreeMap<_, _>>();
+    let occupied_by_pos = routing
+        .nets
+        .iter()
+        .flat_map(|(id, net)| net.occupied.iter().map(move |pos| (*pos, *id)))
+        .collect::<BTreeMap<_, _>>();
+    for (position, first) in &occupied_by_pos {
+        for (dx, dy, dz) in DUST_CONTACT_OFFSETS {
+            let neighbor = position.offset(dx, dy, dz);
+            let Some(second) = occupied_by_pos.get(&neighbor) else {
+                continue;
+            };
+            if first < second && dust_connected(world, *position, neighbor) {
+                report
+                    .cross_net_contacts
+                    .push((*first, *second, *position, neighbor));
+            }
+        }
+    }
     for (offset, first) in ids.iter().enumerate() {
         for second in &ids[offset + 1..] {
             let a = &routing.nets[first];
             let b = &routing.nets[second];
-            let ra = RoutingResources::from_conductors(
-                a.occupied.iter().copied(),
-                a.stair_clearances(),
-                std::iter::empty(),
-            );
-            let rb = RoutingResources::from_conductors(
-                b.occupied.iter().copied(),
-                b.stair_clearances(),
-                std::iter::empty(),
-            );
-            for p in &a.occupied {
-                for q in &b.occupied {
-                    if dust_connected(world, *p, *q) {
-                        report.cross_net_contacts.push((*first, *second, *p, *q));
-                    }
-                }
-            }
+            let ra = &resources[first];
+            let rb = &resources[second];
             for pos in ra
                 .supports
                 .intersection(&b.occupied)
@@ -770,6 +805,21 @@ pub fn validate_routing_legality(
     }
     report
 }
+
+const DUST_CONTACT_OFFSETS: [(i32, i32, i32); 12] = [
+    (-1, -1, 0),
+    (-1, 0, 0),
+    (-1, 1, 0),
+    (0, -1, -1),
+    (0, -1, 1),
+    (0, 0, -1),
+    (0, 0, 1),
+    (0, 1, -1),
+    (0, 1, 1),
+    (1, -1, 0),
+    (1, 0, 0),
+    (1, 1, 0),
+];
 
 #[cfg(test)]
 mod tests {

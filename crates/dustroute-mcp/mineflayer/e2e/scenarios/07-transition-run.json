@@ -1,0 +1,41 @@
+{
+  "name": "transition_run_and_restore",
+  "steps": [
+    { "kind": "command", "commands": [
+      "/fill 499 103 -1 503 108 1 minecraft:air",
+      "/fill 500 103 0 502 103 0 minecraft:stone",
+      "/setblock 500 104 0 minecraft:lever[face=floor,facing=east,powered=false]",
+      "/setblock 501 104 0 minecraft:redstone_wire",
+      "/setblock 502 104 0 minecraft:redstone_wire",
+      "/setblock 500 106 0 minecraft:glass",
+      "/setblock 500 107 0 minecraft:glass"
+    ]},
+    { "kind": "aim", "position": { "x": 500.5, "y": 106, "z": 6.5 }, "target": { "x": 500, "y": 103, "z": 0 } },
+    { "kind": "mcp", "tool": "test_circuit", "arguments": { "max_components": 64 }, "save": "circuit" },
+    { "kind": "mcp", "tool": "new_transition_test", "arguments": { "circuit_id": "${circuit.circuit_id}", "observation_ticks": 6 }, "save": "proposal" },
+    { "kind": "assert", "from": "proposal", "expect": [
+      { "path": "proposals.0.operation_id", "exists": true },
+      { "path": "proposals.0.safety.safety", "equals": "ready" }
+    ]},
+    { "kind": "mcp", "tool": "show_operation", "arguments": { "operation_id": "${proposal.proposals.0.operation_id}" }, "save": "preview" },
+    { "kind": "command", "commands": [
+      "/tp ${assistant} 501.5 124 0.5"
+    ]},
+    { "kind": "mcp", "tool": "invoke_operation", "arguments": { "operation_id": "${proposal.proposals.0.operation_id}", "confirm": true }, "save": "run" },
+    { "kind": "assert", "from": "run", "expect": [
+      { "path": "schema_version", "equals": "dustroute.transition.v1" },
+      { "path": "ok", "equals": true },
+      { "path": "activation.bot_approached", "equals": true },
+      { "path": "scenario_verification.simulated.ok", "equals": true },
+      { "path": "scenario_verification.steady_state_equivalent", "equals": true },
+      { "path": "scenario_verification.trace_equivalent", "exists": true },
+      { "path": "scenario_verification.live_trace.final_strengths.0.position", "exists": true },
+      { "path": "restoration.verified", "equals": true }
+    ]},
+    { "kind": "mcp", "tool": "get_bot_status", "arguments": {}, "save": "status" },
+    { "kind": "assert", "from": "status", "expect": [
+      { "path": "ok", "equals": true }
+    ]}
+  ],
+  "cleanup": ["/fill 499 103 -1 503 108 1 minecraft:air"]
+}

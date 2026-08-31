@@ -23,6 +23,9 @@ The public facade consists of:
   input, intrinsic source, observation boundary, or inferred primary input.
   Required inputs are classified as driven, awaiting an external input,
   disconnected, or lacking a known source.
+- `diagnose_scene` — emits the stable `dustroute.diagnostic.v1`-compatible
+  health summary used by conversational clients. Findings retain confidence,
+  physical positions, evidence, inference markers, and a safe next action.
 - `propose_scene_repairs_near` — enumerates local physical patches, applies each
   to a cloned observation, rebuilds connectivity, compares directed liveness,
   runs the instantaneous electrical solver, and marks patches whose components

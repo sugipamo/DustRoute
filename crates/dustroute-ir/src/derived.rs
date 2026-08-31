@@ -133,6 +133,32 @@ pub fn recognize_gates(scene: &PhysicalScene) -> GateView {
     let frontier = scene.open_frontier_components();
     let mut gates = Vec::new();
     let mut covered = BTreeSet::new();
+    let component_net = scene
+        .nets
+        .iter()
+        .flat_map(|net| {
+            net.components
+                .iter()
+                .map(move |component| (*component, net.id))
+        })
+        .collect::<BTreeMap<_, _>>();
+    let mut external_inputs = BTreeMap::<NetId, Vec<_>>::new();
+    let mut external_outputs = BTreeMap::<NetId, Vec<_>>::new();
+    for connection in &scene.connections {
+        let source_net = component_net.get(&connection.source.component);
+        let sink_net = component_net.get(&connection.sink.component);
+        if source_net == sink_net {
+            continue;
+        }
+        if connection.transfer != TransferKind::StructuralSupport
+            && let Some(net) = sink_net
+        {
+            external_inputs.entry(*net).or_default().push(connection);
+        }
+        if let Some(net) = source_net {
+            external_outputs.entry(*net).or_default().push(connection);
+        }
+    }
 
     for component in &scene.components {
         let kind = match component.block.kind {
@@ -169,13 +195,7 @@ pub fn recognize_gates(scene: &PhysicalScene) -> GateView {
     }
 
     for net in &scene.nets {
-        let external_inputs = scene
-            .connections
-            .iter()
-            .filter(|connection| net.components.contains(&connection.sink.component))
-            .filter(|connection| !net.components.contains(&connection.source.component))
-            .filter(|connection| connection.transfer != TransferKind::StructuralSupport)
-            .collect::<Vec<_>>();
+        let external_inputs = external_inputs.get(&net.id).cloned().unwrap_or_default();
         let sources = external_inputs
             .iter()
             .map(|connection| connection.source.component)
@@ -183,11 +203,10 @@ pub fn recognize_gates(scene: &PhysicalScene) -> GateView {
         if sources.len() < 2 {
             continue;
         }
-        let outputs = scene
-            .connections
-            .iter()
-            .filter(|connection| net.components.contains(&connection.source.component))
-            .filter(|connection| !net.components.contains(&connection.sink.component))
+        let outputs = external_outputs
+            .get(&net.id)
+            .into_iter()
+            .flatten()
             .map(|connection| connection.source)
             .collect::<Vec<_>>();
         let inputs = external_inputs
@@ -287,17 +306,19 @@ pub fn classify_function(gates: &GateView, expressions: &ExpressionView) -> Func
         .iter()
         .filter(|expression| matches!(expression.expression, DerivedExpr::And(_)))
         .collect::<Vec<_>>();
-    let xors = expressions
-        .expressions
-        .iter()
-        .filter(|expression| matches!(expression.expression, DerivedExpr::Xor(_)))
-        .collect::<Vec<_>>();
+    let mut xors_by_signals = BTreeMap::<BTreeSet<PortRef>, Vec<&DerivedExpression>>::new();
+    for expression in &expressions.expressions {
+        if matches!(expression.expression, DerivedExpr::Xor(_)) {
+            xors_by_signals
+                .entry(expression_signals(&expression.expression))
+                .or_default()
+                .push(expression);
+        }
+    }
     let mut candidates = Vec::new();
     for and in &ands {
-        for xor in &xors {
-            if expression_signals(&and.expression) != expression_signals(&xor.expression) {
-                continue;
-            }
+        let signals = expression_signals(&and.expression);
+        for xor in xors_by_signals.get(&signals).into_iter().flatten() {
             let covered_gates = BTreeSet::from([and.gate, xor.gate]);
             let boundary_limited = covered_gates.iter().any(|id| {
                 gates

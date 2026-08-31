@@ -1,0 +1,31 @@
+{
+  "name": "vertical_dust_repair_and_undo",
+  "steps": [
+    { "kind": "command", "commands": [
+      "/fill 678 102 -1 684 109 1 minecraft:air",
+      "/fill 679 103 0 680 103 0 minecraft:stone",
+      "/setblock 681 104 0 minecraft:stone",
+      "/setblock 682 104 0 minecraft:stone",
+      "/setblock 679 104 0 minecraft:lever[face=floor,facing=east,powered=false]",
+      "/setblock 680 104 0 minecraft:redstone_wire",
+      "/setblock 682 105 0 minecraft:redstone_wire"
+    ]},
+    { "kind": "aim", "position": { "x": 680.5, "y": 107, "z": 6.5 }, "target": { "x": 680, "y": 103, "z": 0 } },
+    { "kind": "mcp", "tool": "test_circuit", "arguments": { "max_components": 64, "fragment_gap": 3 }, "save": "analysis" },
+    { "kind": "mcp", "tool": "new_repair", "arguments": { "circuit_id": "${analysis.circuit_id}", "max_gap": 3 }, "save": "repair" },
+    { "kind": "assert", "from": "repair", "expect": [
+      { "path": "proposals.0.patch.reason", "equals": "connect_missing_wire" },
+      { "path": "proposals.0.patch.changes.0.pos.y", "equals": 105 }
+    ]},
+    { "kind": "mcp", "tool": "show_operation", "arguments": { "operation_id": "${repair.proposals.0.operation_id}" }, "save": "preview" },
+    { "kind": "mcp", "tool": "invoke_operation", "arguments": { "operation_id": "${repair.proposals.0.operation_id}", "confirm": true }, "save": "applied" },
+    { "kind": "assert", "from": "applied", "expect": [
+      { "path": "verified", "equals": true }
+    ]},
+    { "kind": "mcp", "tool": "undo_operation", "arguments": { "operation_id": "${repair.proposals.0.operation_id}", "confirm": true }, "save": "undone" },
+    { "kind": "assert", "from": "undone", "expect": [
+      { "path": "verified", "equals": true }
+    ]}
+  ],
+  "cleanup": ["/fill 678 102 -1 684 109 1 minecraft:air"]
+}

@@ -48,17 +48,24 @@ impl DeviceOutputState {
             repeater_powered: world
                 .iter()
                 .filter(|(_, block)| block.kind == BlockKind::Repeater)
-                .map(|(pos, _)| (*pos, false))
+                .map(|(pos, block)| (*pos, block.powered.unwrap_or(false)))
                 .collect(),
             torch_lit: world
                 .iter()
                 .filter(|(_, block)| block.kind == BlockKind::RedstoneTorch)
-                .map(|(pos, _)| (*pos, true))
+                .map(|(pos, block)| (*pos, block.powered.unwrap_or(true)))
                 .collect(),
             comparator_output: world
                 .iter()
                 .filter(|(_, block)| block.kind == BlockKind::Comparator)
-                .map(|(pos, _)| (*pos, 0))
+                .map(|(pos, block)| {
+                    (
+                        *pos,
+                        block
+                            .power_level
+                            .unwrap_or_else(|| u8::from(block.powered.unwrap_or(false)) * 15),
+                    )
+                })
                 .collect(),
         }
     }

@@ -1,0 +1,51 @@
+{
+  "name": "repeater_unlock_delay_and_snapshot_restore",
+  "steps": [
+    { "kind": "command", "commands": [
+      "/fill 759 103 -1 766 108 4 minecraft:air",
+      "/fill 760 103 0 764 103 0 minecraft:stone",
+      "/fill 762 103 1 762 103 3 minecraft:stone",
+      "/setblock 762 104 3 minecraft:lever[face=floor,facing=north,powered=true]",
+      "/setblock 762 104 2 minecraft:redstone_wire",
+      "/setblock 762 104 1 minecraft:repeater[facing=south,delay=1,locked=false,powered=true]",
+      "/setblock 762 104 0 minecraft:repeater[facing=west,delay=2,locked=true,powered=false]",
+      "/setblock 763 104 0 minecraft:redstone_wire",
+      "/setblock 764 104 0 minecraft:redstone_lamp[lit=false]",
+      "/setblock 760 104 0 minecraft:lever[face=floor,facing=east,powered=true]",
+      "/setblock 761 104 0 minecraft:redstone_wire"
+    ]},
+    { "kind": "wait", "ticks": 6 },
+    { "kind": "aim", "position": { "x": 760.5, "y": 106, "z": 6.5 }, "target": { "x": 760, "y": 103, "z": 0 } },
+    { "kind": "mcp", "tool": "test_circuit", "arguments": { "max_components": 64 }, "save": "circuit" },
+    { "kind": "mcp", "tool": "new_transition_test", "arguments": {
+      "circuit_id": "${circuit.circuit_id}", "observation_ticks": 16
+    }, "save": "proposal" },
+    { "kind": "assert", "from": "proposal", "expect": [
+      { "path": "proposals.1.operation_id", "exists": true },
+      { "path": "proposals.1.transition", "equals": "on_to_off" }
+    ]},
+    { "kind": "mcp", "tool": "show_operation", "arguments": {
+      "operation_id": "${proposal.proposals.1.operation_id}"
+    }, "save": "preview" },
+    { "kind": "mcp_error", "tool": "invoke_operation", "arguments": {
+      "operation_id": "${proposal.proposals.1.operation_id}", "confirm": true
+    }, "save": "run" },
+    { "kind": "assert", "from": "run", "expect": [
+      { "path": "ok", "equals": false },
+      { "path": "scenario_verification.steady_state_equivalent", "equals": true },
+      { "path": "scenario_verification.live_trace.final_powered.2.powered", "equals": true },
+      { "path": "restoration.lever_restored", "equals": true },
+      { "path": "restoration.region_restored", "equals": false }
+    ]},
+    { "kind": "mcp", "tool": "undo_operation", "arguments": {
+      "operation_id": "${proposal.proposals.1.operation_id}", "confirm": true
+    }, "save": "restored" },
+    { "kind": "assert", "from": "restored", "expect": [
+      { "path": "ok", "equals": true },
+      { "path": "natural_restore_verified", "equals": false },
+      { "path": "snapshot_restore_attempted", "equals": true },
+      { "path": "restoration_verified", "equals": true }
+    ]}
+  ],
+  "cleanup": ["/fill 759 103 -1 766 108 4 minecraft:air"]
+}

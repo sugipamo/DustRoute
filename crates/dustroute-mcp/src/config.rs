@@ -2,6 +2,7 @@ use std::error::Error;
 use std::fmt::{Display, Formatter};
 
 use serde::{Deserialize, Serialize};
+use std::net::{IpAddr, SocketAddr};
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct McpConfig {
@@ -16,6 +17,12 @@ pub enum McpConfigError {
     InvalidServerAddress(String),
     InvalidBridgeAddress(String),
     InvalidPlayerName,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum McpTransport {
+    Stdio,
+    Http(SocketAddr),
 }
 
 impl Display for McpConfigError {
@@ -42,6 +49,37 @@ impl Display for McpConfigError {
 }
 
 impl Error for McpConfigError {}
+
+impl McpTransport {
+    pub fn from_environment() -> Result<Self, String> {
+        match std::env::var("DUSTROUTE_MCP_TRANSPORT")
+            .unwrap_or_else(|_| "stdio".to_owned())
+            .as_str()
+        {
+            "stdio" => Ok(Self::Stdio),
+            "http" => {
+                let value = std::env::var("DUSTROUTE_MCP_HTTP_BIND")
+                    .unwrap_or_else(|_| "127.0.0.1:3000".to_owned());
+                let address: SocketAddr = value.parse().map_err(|_| {
+                    format!("invalid DUSTROUTE_MCP_HTTP_BIND {value:?}; expected loopback IP:port")
+                })?;
+                if !is_loopback(address.ip()) {
+                    return Err(format!(
+                        "DUSTROUTE_MCP_HTTP_BIND must be loopback-only; refusing {address} without an authentication design"
+                    ));
+                }
+                Ok(Self::Http(address))
+            }
+            value => Err(format!(
+                "invalid DUSTROUTE_MCP_TRANSPORT {value:?}; expected stdio or http"
+            )),
+        }
+    }
+}
+
+fn is_loopback(address: IpAddr) -> bool {
+    address.is_loopback()
+}
 
 impl McpConfig {
     pub fn from_environment() -> Result<Self, McpConfigError> {
@@ -104,5 +142,12 @@ mod tests {
         assert_eq!(config.assist_player, "Builder");
         assert!(McpConfig::new("mc.example", "Builder", "127.0.0.1:25580").is_err());
         assert!(McpConfig::new("mc.example:25565", "", "127.0.0.1:25580").is_err());
+    }
+
+    #[test]
+    fn recognizes_loopback_http_addresses() {
+        assert!(is_loopback("127.0.0.1".parse().unwrap()));
+        assert!(is_loopback("::1".parse().unwrap()));
+        assert!(!is_loopback("0.0.0.0".parse().unwrap()));
     }
 }

@@ -1,0 +1,35 @@
+{
+  "name": "repeater_lock_transition",
+  "steps": [
+    { "kind": "command", "commands": [
+      "/fill 599 103 -1 605 108 4 minecraft:air",
+      "/fill 600 103 0 603 103 0 minecraft:stone",
+      "/fill 602 103 1 602 103 3 minecraft:stone",
+      "/setblock 600 104 0 minecraft:lever[face=floor,facing=east,powered=false]",
+      "/setblock 601 104 0 minecraft:redstone_wire",
+      "/setblock 602 104 0 minecraft:repeater[facing=west,delay=2,locked=true,powered=false]",
+      "/setblock 603 104 0 minecraft:redstone_wire",
+      "/setblock 602 104 1 minecraft:repeater[facing=south,delay=1,locked=false,powered=true]",
+      "/setblock 602 104 2 minecraft:redstone_wire",
+      "/setblock 602 104 3 minecraft:lever[face=floor,facing=north,powered=true]"
+    ]},
+    { "kind": "wait", "ticks": 6 },
+    { "kind": "aim", "position": { "x": 600.5, "y": 106, "z": 6.5 }, "target": { "x": 600, "y": 103, "z": 0 } },
+    { "kind": "mcp", "tool": "test_circuit", "arguments": { "max_components": 64 }, "save": "circuit" },
+    { "kind": "mcp", "tool": "new_transition_test", "arguments": { "circuit_id": "${circuit.circuit_id}", "observation_ticks": 12 }, "save": "proposal" },
+    { "kind": "assert", "from": "proposal", "expect": [
+      { "path": "proposals.0.safety.safety", "equals": "ready" },
+      { "path": "proposals.1.operation_id", "exists": true }
+    ]},
+    { "kind": "mcp", "tool": "show_operation", "arguments": { "operation_id": "${proposal.proposals.0.operation_id}" }, "save": "preview" },
+    { "kind": "mcp", "tool": "invoke_operation", "arguments": { "operation_id": "${proposal.proposals.0.operation_id}", "confirm": true }, "save": "run" },
+    { "kind": "assert", "from": "run", "expect": [
+      { "path": "ok", "equals": true },
+      { "path": "scenario_verification.steady_state_equivalent", "equals": true },
+      { "path": "scenario_verification.live_trace.final_powered.2.powered", "equals": false },
+      { "path": "scenario_verification.live_trace.final_powered.3.powered", "equals": true },
+      { "path": "restoration.verified", "equals": true }
+    ]}
+  ],
+  "cleanup": ["/fill 599 103 -1 605 108 4 minecraft:air"]
+}

@@ -116,22 +116,55 @@ pub fn scenario_trace_from_recording(
     observe: &BTreeSet<dustroute_physical::Pos>,
     duration_redstone_ticks: u64,
 ) -> ScenarioTrace {
+    scenario_trace_from_recording_with_initial(recording, observe, duration_redstone_ticks, None)
+}
+
+/// Seeds unchanged components from the snapshot captured immediately before
+/// the packet update recording began.
+#[must_use]
+pub fn scenario_trace_from_recording_with_initial(
+    recording: &UpdateRecording,
+    observe: &BTreeSet<dustroute_physical::Pos>,
+    duration_redstone_ticks: u64,
+    initial: Option<&dustroute_translate::MinecraftSnapshot>,
+) -> ScenarioTrace {
     let mut trace = ScenarioTrace {
         duration_redstone_ticks,
         ..ScenarioTrace::default()
     };
     let mut last = BTreeMap::new();
     for position in observe {
-        if let Some(before) = recording
+        let snapshot_state = initial
+            .and_then(|snapshot| snapshot.blocks.iter().find(|block| block.pos == *position))
+            .map(|block| {
+                let strength = block
+                    .properties
+                    .get("power")
+                    .and_then(|value| value.parse::<u8>().ok())
+                    .unwrap_or_else(|| {
+                        u8::from(
+                            block
+                                .properties
+                                .get("powered")
+                                .or_else(|| block.properties.get("lit"))
+                                .and_then(|value| value.parse::<bool>().ok())
+                                .unwrap_or(false),
+                        ) * 15
+                    });
+                (strength, strength > 0)
+            });
+        let event_state = recording
             .events
             .iter()
             .find(|event| event.pos == *position)
             .and_then(|event| event.before.as_ref())
-        {
-            let value = (
-                strength_state(before),
-                powered_state(before).unwrap_or(false),
-            );
+            .map(|before| {
+                (
+                    strength_state(before),
+                    powered_state(before).unwrap_or(false),
+                )
+            });
+        if let Some(value) = event_state.or(snapshot_state) {
             last.insert(*position, value);
             trace.events.push(ScenarioEvent {
                 redstone_tick: 0,
@@ -158,8 +191,20 @@ pub fn scenario_trace_from_recording(
             continue;
         }
         let delta = update.game_tick.saturating_sub(recording.started_game_tick);
+        let redstone_tick = delta.div_ceil(2);
+        if redstone_tick == 0
+            && let Some(initial) = trace
+                .events
+                .iter_mut()
+                .find(|event| event.position == update.pos && event.redstone_tick == 0)
+        {
+            initial.strength = value.0;
+            initial.powered = value.1;
+            last.insert(update.pos, value);
+            continue;
+        }
         trace.events.push(ScenarioEvent {
-            redstone_tick: delta.div_ceil(2),
+            redstone_tick,
             sequence: trace.events.len() as u64,
             position: update.pos,
             strength: value.0,
@@ -388,6 +433,34 @@ mod tests {
     }
 
     #[test]
+    fn tick_zero_activation_replaces_the_pre_action_baseline() {
+        let pos = Pos::new(1, 1, 0);
+        let state = |powered: &str| ObservedBlockState {
+            name: "minecraft:lever".to_owned(),
+            properties: BTreeMap::from([("powered".to_owned(), powered.to_owned())]),
+        };
+        let recording = UpdateRecording {
+            recording_id: "live".to_owned(),
+            started_game_tick: 100,
+            stopped_game_tick: 104,
+            seen_events: 1,
+            truncated: false,
+            events: vec![BlockUpdateEvent {
+                sequence: 1,
+                game_tick: 100,
+                pos,
+                before: Some(state("false")),
+                after: Some(state("true")),
+            }],
+        };
+
+        let trace = scenario_trace_from_recording(&recording, &BTreeSet::from([pos]), 2);
+        assert_eq!(trace.events.len(), 1);
+        assert_eq!(trace.events[0].redstone_tick, 0);
+        assert!(trace.events[0].powered);
+    }
+
+    #[test]
     fn captured_java_scenario_matches_state_and_timing_and_classifies_order() {
         let scenario: Scenario = serde_json::from_str(include_str!(
             "../tests/fixtures/repeater_lamp_scenario.json"
@@ -430,5 +503,30 @@ mod tests {
             scenario.duration_redstone_ticks,
         );
         assert!(compare_scenario_traces(&simulated.trace, &live).is_empty());
+    }
+
+    #[test]
+    fn captured_repeater_lock_preserves_unchanged_powered_side_input() {
+        let scenario: Scenario = serde_json::from_str(include_str!(
+            "../tests/fixtures/repeater_lock_scenario.json"
+        ))
+        .unwrap();
+        let recording: UpdateRecording = serde_json::from_str(include_str!(
+            "../tests/fixtures/repeater_lock_live_recording.json"
+        ))
+        .unwrap();
+        let simulated = run_scenario(&scenario).unwrap();
+        let live = scenario_trace_from_recording_with_initial(
+            &recording,
+            &scenario.observe,
+            scenario.duration_redstone_ticks,
+            Some(&scenario.initial),
+        );
+        let differences = compare_scenario_traces(&simulated.trace, &live);
+        assert!(live.final_powered[&Pos::new(2, 1, 1)]);
+        assert_eq!(live.final_strengths[&Pos::new(2, 1, 2)], 15);
+        assert_eq!(simulated.trace.final_powered, live.final_powered);
+        assert_eq!(simulated.trace.final_strengths, live.final_strengths);
+        assert!(differences.is_empty());
     }
 }

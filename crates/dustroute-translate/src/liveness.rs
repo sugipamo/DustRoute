@@ -98,9 +98,48 @@ pub struct RankedLivenessFinding {
     pub suspicion_score: u64,
 }
 
+struct SignalIndex {
+    forward: BTreeMap<ComponentId, BTreeSet<ComponentId>>,
+    reverse: BTreeMap<ComponentId, BTreeSet<ComponentId>>,
+    incoming_by_port: BTreeMap<PortRef, BTreeSet<ComponentId>>,
+    kinds: BTreeMap<ComponentId, BlockKind>,
+}
+
+impl SignalIndex {
+    fn new(scene: &PhysicalScene) -> Self {
+        let mut forward = BTreeMap::<_, BTreeSet<_>>::new();
+        let mut reverse = BTreeMap::<_, BTreeSet<_>>::new();
+        let mut incoming_by_port = BTreeMap::<_, BTreeSet<_>>::new();
+        for connection in &scene.connections {
+            if connection.transfer == TransferKind::StructuralSupport {
+                continue;
+            }
+            let source = connection.source.component;
+            let sink = connection.sink.component;
+            forward.entry(source).or_default().insert(sink);
+            reverse.entry(sink).or_default().insert(source);
+            incoming_by_port
+                .entry(connection.sink)
+                .or_default()
+                .insert(source);
+        }
+        Self {
+            forward,
+            reverse,
+            incoming_by_port,
+            kinds: scene
+                .components
+                .iter()
+                .map(|component| (component.id, component.block.kind))
+                .collect(),
+        }
+    }
+}
+
 #[must_use]
 pub fn analyze_signal_liveness(scene: &PhysicalScene) -> SignalLivenessReport {
-    let directed_regions = directed_signal_regions(scene);
+    let index = SignalIndex::new(scene);
+    let directed_regions = directed_signal_regions(scene, &index);
     let mut sources = scene
         .components
         .iter()
@@ -143,7 +182,7 @@ pub fn analyze_signal_liveness(scene: &PhysicalScene) -> SignalLivenessReport {
         .iter()
         .map(|source| source.component)
         .collect::<BTreeSet<_>>();
-    let inferred_primary_inputs = infer_primary_inputs(scene, &directed_regions, &drive_sources);
+    let inferred_primary_inputs = infer_primary_inputs(&directed_regions, &drive_sources, &index);
     sources.extend(inferred_primary_inputs.iter().filter_map(|component| {
         scene
             .components
@@ -157,12 +196,12 @@ pub fn analyze_signal_liveness(scene: &PhysicalScene) -> SignalLivenessReport {
             })
     }));
     sources.sort_by_key(|source| (source.position, source.component, source.kind as u8));
-    let drive_reachable = reachable_from_sources(scene, &drive_sources);
+    let drive_reachable = reachable_from_sources(&index.forward, &drive_sources);
     let potential_sources = drive_sources
         .union(&inferred_primary_inputs)
         .copied()
         .collect::<BTreeSet<_>>();
-    let potential_drive_reachable = reachable_from_sources(scene, &potential_sources);
+    let potential_drive_reachable = reachable_from_sources(&index.forward, &potential_sources);
 
     let mut undriven_inputs = Vec::new();
     let mut required_input_assessments = Vec::new();
@@ -183,12 +222,11 @@ pub fn analyze_signal_liveness(scene: &PhysicalScene) -> SignalLivenessReport {
                 component: device.id,
                 port: port.id,
             };
-            let immediate_sources = scene
-                .connections
-                .iter()
-                .filter(|connection| connection.sink == input)
-                .map(|connection| connection.source.component)
-                .collect::<BTreeSet<_>>();
+            let immediate_sources = index
+                .incoming_by_port
+                .get(&input)
+                .cloned()
+                .unwrap_or_default();
             let (status, failure) = if immediate_sources.is_empty() {
                 (
                     RequiredInputStatus::Disconnected,
@@ -215,7 +253,7 @@ pub fn analyze_signal_liveness(scene: &PhysicalScene) -> SignalLivenessReport {
             } else {
                 (RequiredInputStatus::DrivenByKnownSource, None)
             };
-            let upstream = reverse_reachable(scene, &immediate_sources);
+            let upstream = reachable_from_sources(&index.reverse, &immediate_sources);
             let assessment_inferred_inputs = upstream
                 .intersection(&inferred_primary_inputs)
                 .copied()
@@ -258,6 +296,7 @@ pub fn rank_liveness_findings(
     report: &SignalLivenessReport,
     focus: Pos,
 ) -> Vec<RankedLivenessFinding> {
+    let index = SignalIndex::new(scene);
     let gaps = scene.gap_candidates(2);
     let by_id = scene
         .components
@@ -269,7 +308,7 @@ pub fn rank_liveness_findings(
         .iter()
         .map(|finding| {
             let distance = manhattan(finding.position, focus);
-            let downstream = reachable_from(scene, finding.device);
+            let downstream = reachable_from(&index.forward, finding.device);
             let nearby_gap_candidate_count = gaps
                 .iter()
                 .filter(|gap| {
@@ -329,9 +368,9 @@ pub fn rank_liveness_findings(
 }
 
 fn infer_primary_inputs(
-    scene: &PhysicalScene,
     regions: &[DirectedSignalRegion],
     confirmed_sources: &BTreeSet<ComponentId>,
+    index: &SignalIndex,
 ) -> BTreeSet<ComponentId> {
     let region_by_component = regions
         .iter()
@@ -342,23 +381,25 @@ fn infer_primary_inputs(
                 .map(move |component| (*component, region.id))
         })
         .collect::<BTreeMap<_, _>>();
-    let regions_with_external_incoming = scene
-        .connections
-        .iter()
-        .filter(|connection| connection.transfer != TransferKind::StructuralSupport)
-        .filter_map(|connection| {
-            let source = region_by_component.get(&connection.source.component)?;
-            let sink = region_by_component.get(&connection.sink.component)?;
-            let source_kind = scene
-                .components
-                .iter()
-                .find(|component| component.id == connection.source.component)?
-                .block
-                .kind;
-            (source != sink && !matches!(source_kind, BlockKind::Solid | BlockKind::Transparent))
-                .then_some(*sink)
-        })
-        .collect::<BTreeSet<_>>();
+    let mut regions_with_external_incoming = BTreeSet::new();
+    for (source_component, sinks) in &index.forward {
+        let Some(source) = region_by_component.get(source_component) else {
+            continue;
+        };
+        let Some(source_kind) = index.kinds.get(source_component) else {
+            continue;
+        };
+        if matches!(source_kind, BlockKind::Solid | BlockKind::Transparent) {
+            continue;
+        }
+        for sink_component in sinks {
+            if let Some(sink) = region_by_component.get(sink_component)
+                && source != sink
+            {
+                regions_with_external_incoming.insert(*sink);
+            }
+        }
+    }
     regions
         .iter()
         .filter(|region| {
@@ -367,26 +408,16 @@ fn infer_primary_inputs(
         })
         .flat_map(|region| {
             region.components.iter().filter(|component| {
-                let Some(candidate) = scene
-                    .components
-                    .iter()
-                    .find(|candidate| candidate.id == **component)
-                else {
-                    return false;
-                };
-                if candidate.block.kind != BlockKind::RedstoneWire {
+                if index.kinds.get(component) != Some(&BlockKind::RedstoneWire) {
                     return false;
                 }
-                let neighbors = scene
-                    .connections
-                    .iter()
-                    .filter(|connection| {
-                        connection.transfer != TransferKind::StructuralSupport
-                            && (connection.source.component == candidate.id
-                                || connection.sink.component == candidate.id)
-                    })
-                    .flat_map(|connection| [connection.source.component, connection.sink.component])
-                    .filter(|neighbor| *neighbor != candidate.id)
+                let neighbors = index
+                    .forward
+                    .get(component)
+                    .into_iter()
+                    .flatten()
+                    .chain(index.reverse.get(component).into_iter().flatten())
+                    .copied()
                     .filter(|neighbor| region.components.contains(neighbor))
                     .collect::<BTreeSet<_>>();
                 neighbors.len() <= 1
@@ -397,21 +428,13 @@ fn infer_primary_inputs(
 }
 
 fn reachable_from_sources(
-    scene: &PhysicalScene,
+    adjacency: &BTreeMap<ComponentId, BTreeSet<ComponentId>>,
     sources: &BTreeSet<ComponentId>,
 ) -> BTreeSet<ComponentId> {
     let mut reachable = sources.clone();
     let mut queue = VecDeque::from_iter(sources.iter().copied());
     while let Some(source) = queue.pop_front() {
-        for sink in scene
-            .connections
-            .iter()
-            .filter(|connection| {
-                connection.source.component == source
-                    && connection.transfer != TransferKind::StructuralSupport
-            })
-            .map(|connection| connection.sink.component)
-        {
+        for sink in adjacency.get(&source).into_iter().flatten().copied() {
             if reachable.insert(sink) {
                 queue.push_back(sink);
             }
@@ -420,51 +443,20 @@ fn reachable_from_sources(
     reachable
 }
 
-fn reverse_reachable(
+fn directed_signal_regions(
     scene: &PhysicalScene,
-    starts: &BTreeSet<ComponentId>,
-) -> BTreeSet<ComponentId> {
-    let mut reachable = starts.clone();
-    let mut queue = VecDeque::from_iter(starts.iter().copied());
-    while let Some(sink) = queue.pop_front() {
-        for source in scene
-            .connections
-            .iter()
-            .filter(|connection| {
-                connection.sink.component == sink
-                    && connection.transfer != TransferKind::StructuralSupport
-            })
-            .map(|connection| connection.source.component)
-        {
-            if reachable.insert(source) {
-                queue.push_back(source);
-            }
-        }
-    }
-    reachable
-}
-
-fn directed_signal_regions(scene: &PhysicalScene) -> Vec<DirectedSignalRegion> {
+    index: &SignalIndex,
+) -> Vec<DirectedSignalRegion> {
     let nodes = scene
         .components
         .iter()
         .map(|component| component.id)
         .collect::<BTreeSet<_>>();
-    let edges = scene
-        .connections
-        .iter()
-        .filter(|connection| connection.transfer != TransferKind::StructuralSupport)
-        .map(|connection| (connection.source.component, connection.sink.component))
-        .collect::<BTreeSet<_>>();
     let mut order = Vec::new();
     let mut visited = BTreeSet::new();
     for node in &nodes {
-        visit_order(*node, &edges, &mut visited, &mut order);
+        visit_order(*node, &index.forward, &mut visited, &mut order);
     }
-    let reversed = edges
-        .iter()
-        .map(|(source, sink)| (*sink, *source))
-        .collect::<BTreeSet<_>>();
     visited.clear();
     let sources = scene
         .components
@@ -488,8 +480,12 @@ fn directed_signal_regions(scene: &PhysicalScene) -> Vec<DirectedSignalRegion> {
             continue;
         }
         let mut components = BTreeSet::new();
-        collect_region(node, &reversed, &mut visited, &mut components);
-        let cyclic = components.len() > 1 || edges.contains(&(node, node));
+        collect_region(node, &index.reverse, &mut visited, &mut components);
+        let cyclic = components.len() > 1
+            || index
+                .forward
+                .get(&node)
+                .is_some_and(|sinks| sinks.contains(&node));
         regions.push(DirectedSignalRegion {
             id: regions.len(),
             contains_drive_source: !components.is_disjoint(&sources),
@@ -502,26 +498,22 @@ fn directed_signal_regions(scene: &PhysicalScene) -> Vec<DirectedSignalRegion> {
 
 fn visit_order(
     node: ComponentId,
-    edges: &BTreeSet<(ComponentId, ComponentId)>,
+    adjacency: &BTreeMap<ComponentId, BTreeSet<ComponentId>>,
     visited: &mut BTreeSet<ComponentId>,
     order: &mut Vec<ComponentId>,
 ) {
     if !visited.insert(node) {
         return;
     }
-    for sink in edges
-        .iter()
-        .filter(|(source, _)| *source == node)
-        .map(|(_, sink)| *sink)
-    {
-        visit_order(sink, edges, visited, order);
+    for sink in adjacency.get(&node).into_iter().flatten().copied() {
+        visit_order(sink, adjacency, visited, order);
     }
     order.push(node);
 }
 
 fn collect_region(
     node: ComponentId,
-    edges: &BTreeSet<(ComponentId, ComponentId)>,
+    adjacency: &BTreeMap<ComponentId, BTreeSet<ComponentId>>,
     visited: &mut BTreeSet<ComponentId>,
     region: &mut BTreeSet<ComponentId>,
 ) {
@@ -529,32 +521,22 @@ fn collect_region(
         return;
     }
     region.insert(node);
-    for sink in edges
-        .iter()
-        .filter(|(source, _)| *source == node)
-        .map(|(_, sink)| *sink)
-    {
-        collect_region(sink, edges, visited, region);
+    for sink in adjacency.get(&node).into_iter().flatten().copied() {
+        collect_region(sink, adjacency, visited, region);
     }
 }
 
-fn reachable_from(scene: &PhysicalScene, start: ComponentId) -> BTreeSet<ComponentId> {
+fn reachable_from(
+    adjacency: &BTreeMap<ComponentId, BTreeSet<ComponentId>>,
+    start: ComponentId,
+) -> BTreeSet<ComponentId> {
     let mut seen = BTreeSet::new();
     let mut queue = VecDeque::from([start]);
     while let Some(source) = queue.pop_front() {
         if !seen.insert(source) {
             continue;
         }
-        queue.extend(
-            scene
-                .connections
-                .iter()
-                .filter(|connection| {
-                    connection.source.component == source
-                        && connection.transfer != TransferKind::StructuralSupport
-                })
-                .map(|connection| connection.sink.component),
-        );
+        queue.extend(adjacency.get(&source).into_iter().flatten().copied());
     }
     seen
 }

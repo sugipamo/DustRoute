@@ -1,0 +1,36 @@
+{
+  "name": "reversed_directional_device",
+  "steps": [
+    { "kind": "command", "commands": [
+      "/fill 359 103 -1 365 106 1 minecraft:air",
+      "/fill 360 103 0 362 103 0 minecraft:stone",
+      "/setblock 360 104 0 minecraft:lever[face=floor,facing=east,powered=false]",
+      "/setblock 361 104 0 minecraft:redstone_wire",
+      "/setblock 362 104 0 minecraft:repeater[facing=east,delay=1,locked=false,powered=false]"
+    ]},
+    { "kind": "aim", "position": { "x": 362.5, "y": 106, "z": 6.5 }, "target": { "x": 362, "y": 104, "z": 0 } },
+    { "kind": "mcp", "tool": "test_circuit", "arguments": { "max_components": 64 }, "save": "diagnostic" },
+    { "kind": "assert", "from": "diagnostic", "expect": [
+      { "path": "diagnostic.counts.probable_faults", "at_least": 1 },
+      { "path": "diagnostic.recommended_next_action.kind", "equals": "inspect_fault" }
+    ]},
+    { "kind": "mcp", "tool": "new_repair", "arguments": { "circuit_id": "${diagnostic.circuit_id}" }, "save": "repair" },
+    { "kind": "assert", "from": "repair", "expect": [
+      { "path": "proposals.0.operation_id", "exists": true },
+      { "path": "proposals.0.patch.reason", "equals": "reorient_directional_component" },
+      { "path": "proposals.0.patch.confidence_percent", "at_least": 80 }
+    ]},
+    { "kind": "mcp", "tool": "show_operation", "arguments": { "operation_id": "${repair.proposals.0.operation_id}" }, "save": "preview" },
+    { "kind": "mcp", "tool": "invoke_operation", "arguments": { "operation_id": "${repair.proposals.0.operation_id}", "confirm": true }, "save": "applied" },
+    { "kind": "mcp", "tool": "test_circuit", "arguments": { "max_components": 64 }, "save": "after" },
+    { "kind": "assert", "from": "after", "expect": [
+      { "path": "diagnostic.counts.probable_faults", "equals": 0 }
+    ]},
+    { "kind": "mcp", "tool": "undo_operation", "arguments": { "operation_id": "${repair.proposals.0.operation_id}", "confirm": true }, "save": "undone" },
+    { "kind": "mcp", "tool": "test_circuit", "arguments": { "max_components": 64 }, "save": "restored" },
+    { "kind": "assert", "from": "restored", "expect": [
+      { "path": "diagnostic.counts.probable_faults", "at_least": 1 }
+    ]}
+  ],
+  "cleanup": ["/fill 359 103 -1 365 106 1 minecraft:air"]
+}

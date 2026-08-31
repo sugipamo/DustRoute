@@ -266,11 +266,33 @@ async function placePhysicalBlocks (changes) {
     if (!reference || reference.boundingBox === 'empty') {
       throw new Error(`placement support is unavailable at ${referencePos.x} ${referencePos.y} ${referencePos.z}`)
     }
-    await bot.placeBlock(reference, new Vec3(change.face.x, change.face.y, change.face.z))
-    await bot.waitForTicks(2)
-    const placed = bot.blockAt(new Vec3(x, y, z))
+    const facingMatch = String(change.state || '').match(/(?:\[|,)facing=([a-z]+)/)
+    const desiredFacing = facingMatch && facingMatch[1]
+    const approaches = desiredFacing
+      ? [[0, -2], [2, 0], [0, 2], [-2, 0]]
+      : [[0, 0]]
+    let placed = null
+    for (const [dx, dz] of approaches) {
+      if (dx !== 0 || dz !== 0) {
+        bot.chat(`/tp ${bot.username} ${x + dx + 0.5} ${y + 2} ${z + dz + 0.5}`)
+        await bot.waitForTicks(2)
+        bot.creative.startFlying()
+      }
+      await bot.placeBlock(reference, new Vec3(change.face.x, change.face.y, change.face.z))
+      await bot.waitForTicks(2)
+      placed = bot.blockAt(new Vec3(x, y, z))
+      if (!desiredFacing || (placed && propertiesOf(placed).facing === desiredFacing)) break
+      if (placed && !['air', 'cave_air', 'void_air'].includes(placed.name)) {
+        await bot.dig(placed, true)
+        await bot.waitForTicks(1)
+      }
+      placed = null
+    }
     if (!placed || ['air', 'cave_air', 'void_air'].includes(placed.name)) {
       throw new Error(`normal placement did not create a block at ${x} ${y} ${z}`)
+    }
+    if (desiredFacing && propertiesOf(placed).facing !== desiredFacing) {
+      throw new Error(`normal placement could not orient block at ${x} ${y} ${z} toward ${desiredFacing}`)
     }
   }
   centerX = centerX / changes.length
@@ -288,20 +310,59 @@ function getBlock (pos) {
   return { pos, ...blockRecord(block) }
 }
 
-async function activateLever (pos) {
-  const block = bot.blockAt(new Vec3(pos.x, pos.y, pos.z))
+async function ensureLeverReachable (pos) {
+  let block = bot.blockAt(new Vec3(pos.x, pos.y, pos.z))
   if (!block) throw new Error(`block is unavailable at ${pos.x} ${pos.y} ${pos.z}`)
   if (block.name !== 'lever') throw new Error(`activation target is not a lever: minecraft:${block.name}`)
-  const distance = bot.entity.position.distanceTo(block.position.offset(0.5, 0.5, 0.5))
-  if (distance > 5.5) throw new Error(`bot is ${distance.toFixed(2)} blocks from the lever; move it within 5.5 blocks`)
+  let distance = bot.entity.position.distanceTo(block.position.offset(0.5, 0.5, 0.5))
+  let moved = false
+  if (distance > 5.5) {
+    let approach = null
+    for (const dy of [2, 3, 4]) {
+      for (const [dx, dz] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]]) {
+        const feet = block.position.offset(dx, dy, dz)
+        const feetBlock = bot.blockAt(feet)
+        const headBlock = bot.blockAt(feet.offset(0, 1, 0))
+        const center = feet.offset(0.5, 0, 0.5)
+        if (feetBlock && headBlock && feetBlock.boundingBox === 'empty' && headBlock.boundingBox === 'empty' && center.distanceTo(block.position.offset(0.5, 0.5, 0.5)) <= 5.5) {
+          approach = center
+          break
+        }
+      }
+      if (approach) break
+    }
+    if (!approach) throw new Error(`no safe air position is available within reach of lever at ${pos.x} ${pos.y} ${pos.z}`)
+    bot.chat(`/tp ${bot.username} ${approach.x} ${approach.y} ${approach.z}`)
+    await bot.waitForTicks(3)
+    bot.creative.startFlying()
+    block = bot.blockAt(new Vec3(pos.x, pos.y, pos.z))
+    if (!block || block.name !== 'lever') throw new Error('lever became unavailable after bot approach')
+    distance = bot.entity.position.distanceTo(block.position.offset(0.5, 0.5, 0.5))
+    if (distance > 5.5) throw new Error(`bot is still ${distance.toFixed(2)} blocks from the lever after approach`)
+    moved = true
+  }
+  return { block, moved, distance }
+}
+
+async function approachLever (pos) {
+  const approach = await ensureLeverReachable(pos)
+  return { pos, moved: approach.moved, distance: approach.distance }
+}
+
+async function activateLever (pos) {
+  const approach = await ensureLeverReachable(pos)
+  const block = approach.block
   const before = propertiesOf(block).powered === 'true'
   await bot.lookAt(block.position.offset(0.5, 0.5, 0.5), true)
   await bot.activateBlock(block)
-  await bot.waitForTicks(1)
-  const afterBlock = bot.blockAt(block.position)
-  const after = afterBlock && propertiesOf(afterBlock).powered === 'true'
+  let after = before
+  for (let attempt = 0; attempt < 5 && after === before; attempt++) {
+    await bot.waitForTicks(1)
+    const afterBlock = bot.blockAt(block.position)
+    after = afterBlock && propertiesOf(afterBlock).powered === 'true'
+  }
   if (after === before) throw new Error('lever state did not change after normal player activation')
-  return { pos, before_powered: before, after_powered: after }
+  return { pos, before_powered: before, after_powered: after, bot_approached: approach.moved }
 }
 
 function startUpdateRecording (params) {
@@ -414,6 +475,10 @@ async function dispatch (method, params) {
   if (method === 'activate_lever') {
     requireDimension(params.dimension)
     return activateLever(params.pos)
+  }
+  if (method === 'approach_lever') {
+    requireDimension(params.dimension)
+    return approachLever(params.pos)
   }
   if (method === 'wait_ticks') {
     requireDimension(params.dimension)

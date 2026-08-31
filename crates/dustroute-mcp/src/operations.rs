@@ -41,6 +41,8 @@ pub struct OperationRecord {
     pub progress_percent: u8,
     pub message: String,
     pub created_at_unix_ms: u128,
+    pub updated_at_unix_ms: u128,
+    pub completed_at_unix_ms: Option<u128>,
     pub result: Option<Value>,
 }
 
@@ -50,26 +52,50 @@ struct OperationEntry {
     cancellation: CancellationToken,
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct OperationRegistry {
     entries: Arc<Mutex<HashMap<Uuid, OperationEntry>>>,
+    max_entries: usize,
+}
+
+impl Default for OperationRegistry {
+    fn default() -> Self {
+        Self::with_max_entries(256)
+    }
+}
+
+fn now_unix_ms() -> u128 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |duration| duration.as_millis())
 }
 
 impl OperationRegistry {
+    #[must_use]
+    pub fn with_max_entries(max_entries: usize) -> Self {
+        Self {
+            entries: Arc::new(Mutex::new(HashMap::new())),
+            max_entries: max_entries.max(1),
+        }
+    }
+
     pub async fn create(&self, kind: OperationKind, message: impl Into<String>) -> Uuid {
         let id = Uuid::new_v4();
+        let now = now_unix_ms();
         let record = OperationRecord {
             id,
             kind,
             status: OperationStatus::Queued,
             progress_percent: 0,
             message: message.into(),
-            created_at_unix_ms: SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .map_or(0, |duration| duration.as_millis()),
+            created_at_unix_ms: now,
+            updated_at_unix_ms: now,
+            completed_at_unix_ms: None,
             result: None,
         };
-        self.entries.lock().await.insert(
+        let mut entries = self.entries.lock().await;
+        prune_terminal_entries(&mut entries, self.max_entries.saturating_sub(1));
+        entries.insert(
             id,
             OperationEntry {
                 record,
@@ -90,20 +116,27 @@ impl OperationRegistry {
             entry.record.status = status;
             entry.record.progress_percent = progress_percent.min(100);
             entry.record.message = message.into();
+            entry.record.updated_at_unix_ms = now_unix_ms();
         }
     }
 
     pub async fn complete(&self, id: Uuid, result: Value) {
         if let Some(entry) = self.entries.lock().await.get_mut(&id) {
+            let now = now_unix_ms();
             entry.record.status = OperationStatus::Completed;
             entry.record.progress_percent = 100;
             entry.record.message = "completed".to_owned();
             entry.record.result = Some(result);
+            entry.record.updated_at_unix_ms = now;
+            entry.record.completed_at_unix_ms = Some(now);
         }
     }
 
     pub async fn record_completed(&self, id: Uuid, kind: OperationKind, result: Value) {
-        self.entries.lock().await.insert(
+        let now = now_unix_ms();
+        let mut entries = self.entries.lock().await;
+        prune_terminal_entries(&mut entries, self.max_entries.saturating_sub(1));
+        entries.insert(
             id,
             OperationEntry {
                 record: OperationRecord {
@@ -112,9 +145,9 @@ impl OperationRegistry {
                     status: OperationStatus::Completed,
                     progress_percent: 100,
                     message: "completed".to_owned(),
-                    created_at_unix_ms: SystemTime::now()
-                        .duration_since(UNIX_EPOCH)
-                        .map_or(0, |duration| duration.as_millis()),
+                    created_at_unix_ms: now,
+                    updated_at_unix_ms: now,
+                    completed_at_unix_ms: Some(now),
                     result: Some(result),
                 },
                 cancellation: CancellationToken::new(),
@@ -124,8 +157,11 @@ impl OperationRegistry {
 
     pub async fn fail(&self, id: Uuid, message: impl Into<String>) {
         if let Some(entry) = self.entries.lock().await.get_mut(&id) {
+            let now = now_unix_ms();
             entry.record.status = OperationStatus::Failed;
             entry.record.message = message.into();
+            entry.record.updated_at_unix_ms = now;
+            entry.record.completed_at_unix_ms = Some(now);
         }
     }
 
@@ -141,8 +177,11 @@ impl OperationRegistry {
             return false;
         }
         entry.cancellation.cancel();
+        let now = now_unix_ms();
         entry.record.status = OperationStatus::Cancelled;
         entry.record.message = "cancelled by request".to_owned();
+        entry.record.updated_at_unix_ms = now;
+        entry.record.completed_at_unix_ms = Some(now);
         true
     }
 
@@ -175,6 +214,27 @@ impl OperationRegistry {
     }
 }
 
+fn prune_terminal_entries(entries: &mut HashMap<Uuid, OperationEntry>, target_len: usize) {
+    if entries.len() <= target_len {
+        return;
+    }
+    let mut terminal = entries
+        .values()
+        .filter(|entry| {
+            matches!(
+                entry.record.status,
+                OperationStatus::Completed | OperationStatus::Failed | OperationStatus::Cancelled
+            )
+        })
+        .map(|entry| (entry.record.updated_at_unix_ms, entry.record.id))
+        .collect::<Vec<_>>();
+    terminal.sort_unstable();
+    let remove_count = entries.len().saturating_sub(target_len).min(terminal.len());
+    for (_, id) in terminal.into_iter().take(remove_count) {
+        entries.remove(&id);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -202,5 +262,33 @@ mod tests {
         assert!(registry.cancel(cancelled).await);
         assert!(registry.is_cancelled(cancelled).await);
         assert_eq!(registry.list().await.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn bounds_terminal_audit_history_without_dropping_active_work() {
+        let registry = OperationRegistry::with_max_entries(2);
+        let active = registry
+            .create(OperationKind::AnalyzeRegion, "active")
+            .await;
+        registry
+            .update(active, OperationStatus::Running, 10, "running")
+            .await;
+        for _ in 0..3 {
+            let id = registry
+                .create(OperationKind::RepairProposal, "queued")
+                .await;
+            registry
+                .complete(id, serde_json::json!({ "ok": true }))
+                .await;
+        }
+
+        let records = registry.list().await;
+        assert!(records.iter().any(|record| record.id == active));
+        assert!(records.len() <= 2);
+        assert!(
+            records
+                .iter()
+                .all(|record| record.updated_at_unix_ms >= record.created_at_unix_ms)
+        );
     }
 }

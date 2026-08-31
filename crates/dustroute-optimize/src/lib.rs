@@ -20,7 +20,7 @@ pub use placement::{
 pub use realize::{
     BehavioralEquivalence, BehavioralVerificationConfig, OptimizationRealizationError,
     OptimizationRoutingConfig, OptimizationVerification, RealizedOptimization, optimization_patch,
-    realize_staged_optimization, verify_realized_optimization,
+    realize_staged_optimization_against, verify_realized_optimization,
 };
 pub use reverse::{
     PhysicalRegion, RewriteReport, SemanticFragment, SemanticRewrite, eliminate_double_not,

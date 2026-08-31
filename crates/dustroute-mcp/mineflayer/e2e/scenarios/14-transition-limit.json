@@ -1,0 +1,22 @@
+{
+  "name": "transition_recording_limit",
+  "steps": [
+    { "kind": "command", "commands": [
+      "/fill 619 103 -1 625 108 1 minecraft:air",
+      "/fill 620 103 0 623 103 0 minecraft:stone",
+      "/setblock 620 104 0 minecraft:lever[face=floor,facing=east,powered=false]",
+      "/fill 621 104 0 623 104 0 minecraft:redstone_wire"
+    ]},
+    { "kind": "aim", "position": { "x": 620.5, "y": 106, "z": 6.5 }, "target": { "x": 620, "y": 103, "z": 0 } },
+    { "kind": "mcp", "tool": "test_circuit", "arguments": { "max_components": 64 }, "save": "circuit" },
+    { "kind": "mcp", "tool": "new_transition_test", "arguments": { "circuit_id": "${circuit.circuit_id}", "observation_ticks": 6, "max_events": 1 }, "save": "proposal" },
+    { "kind": "mcp", "tool": "show_operation", "arguments": { "operation_id": "${proposal.proposals.0.operation_id}" }, "save": "preview" },
+    { "kind": "mcp_error", "tool": "invoke_operation", "arguments": { "operation_id": "${proposal.proposals.0.operation_id}", "confirm": true }, "save": "run" },
+    { "kind": "assert", "from": "run", "expect": [
+      { "path": "schema_version", "equals": "dustroute.transition.v1" },
+      { "path": "recording.truncated", "equals": true },
+      { "path": "restoration.verified", "equals": true }
+    ]}
+  ],
+  "cleanup": ["/fill 619 103 -1 625 108 1 minecraft:air"]
+}

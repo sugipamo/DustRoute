@@ -76,6 +76,15 @@ pub struct LeverActivation {
     pub pos: Pos,
     pub before_powered: bool,
     pub after_powered: bool,
+    #[serde(default)]
+    pub bot_approached: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct LeverApproach {
+    pub pos: Pos,
+    pub moved: bool,
+    pub distance: f64,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -262,6 +271,18 @@ impl BotBridge {
     ) -> Result<LeverActivation, BotBridgeError> {
         self.request(
             "activate_lever",
+            json!({ "pos": pos, "dimension": dimension }),
+        )
+        .await
+    }
+
+    pub async fn approach_lever(
+        &self,
+        pos: Pos,
+        dimension: &str,
+    ) -> Result<LeverApproach, BotBridgeError> {
+        self.request(
+            "approach_lever",
             json!({ "pos": pos, "dimension": dimension }),
         )
         .await

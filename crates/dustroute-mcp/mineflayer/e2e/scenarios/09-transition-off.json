@@ -1,0 +1,30 @@
+{
+  "name": "transition_on_to_off_and_restore",
+  "steps": [
+    { "kind": "command", "commands": [
+      "/fill 519 103 -1 523 108 1 minecraft:air",
+      "/fill 520 103 0 522 103 0 minecraft:stone",
+      "/setblock 520 104 0 minecraft:lever[face=floor,facing=east,powered=true]",
+      "/setblock 521 104 0 minecraft:redstone_wire",
+      "/setblock 522 104 0 minecraft:redstone_wire"
+    ]},
+    { "kind": "wait", "ticks": 5 },
+    { "kind": "aim", "position": { "x": 520.5, "y": 106, "z": 6.5 }, "target": { "x": 520, "y": 103, "z": 0 } },
+    { "kind": "mcp", "tool": "test_circuit", "arguments": { "max_components": 64 }, "save": "circuit" },
+    { "kind": "mcp", "tool": "new_transition_test", "arguments": { "circuit_id": "${circuit.circuit_id}", "observation_ticks": 6 }, "save": "proposal" },
+    { "kind": "assert", "from": "proposal", "expect": [
+      { "path": "proposals.0.transition", "equals": "on_to_off" }
+    ]},
+    { "kind": "mcp", "tool": "show_operation", "arguments": { "operation_id": "${proposal.proposals.0.operation_id}" }, "save": "preview" },
+    { "kind": "command", "commands": ["/tp ${assistant} 521.5 124 0.5"] },
+    { "kind": "mcp", "tool": "invoke_operation", "arguments": { "operation_id": "${proposal.proposals.0.operation_id}", "confirm": true }, "save": "run" },
+    { "kind": "assert", "from": "run", "expect": [
+      { "path": "ok", "equals": true },
+      { "path": "activation.before_powered", "equals": true },
+      { "path": "activation.after_powered", "equals": false },
+      { "path": "scenario_verification.steady_state_equivalent", "equals": true },
+      { "path": "restoration.verified", "equals": true }
+    ]}
+  ],
+  "cleanup": ["/fill 519 103 -1 523 108 1 minecraft:air"]
+}

@@ -1,0 +1,11 @@
+{
+  "recording_id": "captured-on-java-1.21.11",
+  "started_game_tick": 2250450,
+  "stopped_game_tick": 2250462,
+  "seen_events": 4,
+  "truncated": false,
+  "events": [
+    {"sequence":1,"game_tick":2250450,"pos":{"x":0,"y":1,"z":0},"before":{"name":"minecraft:lever","properties":{"powered":"false"}},"after":{"name":"minecraft:lever","properties":{"powered":"true"}}},
+    {"sequence":2,"game_tick":2250450,"pos":{"x":1,"y":1,"z":0},"before":{"name":"minecraft:redstone_wire","properties":{"power":"0"}},"after":{"name":"minecraft:redstone_wire","properties":{"power":"15"}}}
+  ]
+}

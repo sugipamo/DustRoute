@@ -8,6 +8,7 @@ pub mod cells;
 pub mod circuits;
 pub mod compiler;
 pub mod connectivity;
+pub mod diagnostic;
 pub mod electrical;
 pub mod expr {
     pub use dustroute_ir::expr::*;
@@ -55,6 +56,10 @@ pub use connectivity::{
     ConnectivityEdge, EdgeKind, PhysicalConnectivityGraph, PhysicalStep, PhysicalStepKind,
     build_physical_circuit, extract_connectivity, physical_step, physical_step_connected,
 };
+pub use diagnostic::{
+    CircuitDiagnosticReport, CircuitDiagnosticStatus, DiagnosticConfidence, DiagnosticCounts,
+    DiagnosticFinding, DiagnosticHealth, RecommendedAction, RecommendedActionKind, diagnose_scene,
+};
 pub use dustroute_ir::{
     DagBuilder, Expr, GateKind, LogicDag, LogicError, LogicNode, NodeId, best_by_size,
     rewrites_once, search_equivalents,
@@ -80,9 +85,12 @@ pub use minecraft_semantics::{SemanticProbe, semantic_probes, semantics_datapack
 pub use multinet::{
     BrokenStep, LegalityReport, MultiNetRouting, NetId, RerouteEvent, RipupRoutingError,
     RipupRoutingResult, RoutedNet, RoutingJob, materialize_multinet, route_jobs_ripup,
-    route_net_tree, validate_routing_legality,
+    route_jobs_ripup_with_fixed, route_net_tree, validate_routing_legality,
 };
-pub use physical::{CellId, Endpoint, PhysicalError, PlacementCircuit, Route, RouteId};
+pub use physical::{
+    CellId, Endpoint, PhysicalError, PlacementCircuit, Route, RouteId, TerminalContract,
+    TerminalDirection,
+};
 pub use port_realization::{
     PortRealization, PortRealizationError, realize_sink_endpoint, realize_source_endpoint,
     terminal_for_endpoint,

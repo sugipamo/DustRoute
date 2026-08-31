@@ -1,0 +1,34 @@
+{
+  "name": "repair_and_undo",
+  "steps": [
+    { "kind": "command", "commands": [
+      "/fill 399 103 -1 405 106 1 minecraft:air",
+      "/fill 400 103 0 403 103 0 minecraft:stone",
+      "/setblock 400 104 0 minecraft:lever[face=floor,facing=east,powered=false]",
+      "/setblock 401 104 0 minecraft:redstone_wire",
+      "/setblock 402 104 0 minecraft:air",
+      "/setblock 403 104 0 minecraft:repeater[facing=west,delay=1,locked=false,powered=false]"
+    ]},
+    { "kind": "aim", "position": { "x": 403.5, "y": 106, "z": 6.5 }, "target": { "x": 403, "y": 104, "z": 0 } },
+    { "kind": "mcp", "tool": "test_circuit", "arguments": { "max_components": 64, "fragment_gap": 2 }, "save": "analysis" },
+    { "kind": "assert", "from": "analysis", "expect": [
+      { "path": "diagnostic.counts.probable_faults", "at_least": 1 }
+    ]},
+    { "kind": "mcp", "tool": "new_repair", "arguments": { "circuit_id": "${analysis.circuit_id}", "max_gap": 2 }, "save": "repair" },
+    { "kind": "mcp", "tool": "show_operation", "arguments": { "operation_id": "${repair.proposals.0.operation_id}" }, "save": "preview" },
+    { "kind": "mcp", "tool": "invoke_operation", "arguments": { "operation_id": "${repair.proposals.0.operation_id}", "confirm": true }, "save": "applied" },
+    { "kind": "assert", "from": "applied", "expect": [
+      { "path": "schema_version", "equals": "dustroute.repair.v1" }
+    ]},
+    { "kind": "mcp", "tool": "test_circuit", "arguments": { "max_components": 64 }, "save": "after" },
+    { "kind": "assert", "from": "after", "expect": [
+      { "path": "diagnostic.counts.probable_faults", "equals": 0 }
+    ]},
+    { "kind": "mcp", "tool": "undo_operation", "arguments": { "operation_id": "${repair.proposals.0.operation_id}", "confirm": true }, "save": "undone" },
+    { "kind": "mcp", "tool": "test_circuit", "arguments": { "max_components": 64 }, "save": "restored" },
+    { "kind": "assert", "from": "restored", "expect": [
+      { "path": "diagnostic.counts.probable_faults", "at_least": 1 }
+    ]}
+  ],
+  "cleanup": ["/fill 399 103 -1 405 106 1 minecraft:air"]
+}

@@ -1,0 +1,22 @@
+{
+  "name": "normal_circuit",
+  "steps": [
+    { "kind": "command", "commands": [
+      "/fill 299 103 -1 306 106 1 minecraft:air",
+      "/fill 300 103 0 304 103 0 minecraft:stone",
+      "/setblock 300 104 0 minecraft:lever[face=floor,facing=east,powered=false]",
+      "/setblock 301 104 0 minecraft:redstone_wire",
+      "/setblock 302 104 0 minecraft:repeater[facing=east,delay=1,locked=false,powered=false]",
+      "/setblock 303 104 0 minecraft:redstone_wire",
+      "/setblock 304 104 0 minecraft:redstone_lamp[lit=false]"
+    ]},
+    { "kind": "aim", "position": { "x": 302.5, "y": 106, "z": 6.5 }, "target": { "x": 302, "y": 104, "z": 0 } },
+    { "kind": "mcp", "tool": "test_circuit", "arguments": { "max_components": 64 }, "save": "diagnostic" },
+    { "kind": "assert", "from": "diagnostic", "expect": [
+      { "path": "mutation_performed", "equals": false },
+      { "path": "diagnostic.observation_complete", "equals": true },
+      { "path": "diagnostic.counts.probable_faults", "equals": 0 }
+    ]}
+  ],
+  "cleanup": ["/fill 299 103 -1 306 106 1 minecraft:air"]
+}

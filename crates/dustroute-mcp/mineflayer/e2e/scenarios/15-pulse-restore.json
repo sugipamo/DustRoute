@@ -1,0 +1,29 @@
+{
+  "name": "pulse_hazard_and_explicit_restore",
+  "steps": [
+    { "kind": "command", "commands": [
+      "/fill 639 103 -1 645 108 1 minecraft:air",
+      "/fill 640 103 0 643 103 0 minecraft:stone",
+      "/setblock 640 104 0 minecraft:lever[face=floor,facing=east,powered=false]",
+      "/fill 641 104 0 643 104 0 minecraft:redstone_wire"
+    ]},
+    { "kind": "aim", "position": { "x": 640.5, "y": 106, "z": 6.5 }, "target": { "x": 640, "y": 103, "z": 0 } },
+    { "kind": "mcp", "tool": "test_circuit", "arguments": { "max_components": 64 }, "save": "circuit" },
+    { "kind": "mcp", "tool": "new_transition_test", "arguments": { "circuit_id": "${circuit.circuit_id}", "observation_ticks": 14 }, "save": "proposal" },
+    { "kind": "mcp", "tool": "show_operation", "arguments": { "operation_id": "${proposal.proposals.0.operation_id}" }, "save": "preview" },
+    { "kind": "mcp_with_commands", "tool": "invoke_operation", "arguments": { "operation_id": "${proposal.proposals.0.operation_id}", "confirm": true }, "delay_ticks": 5, "commands": [
+      "/setblock 640 104 0 minecraft:lever[face=floor,facing=east,powered=false]"
+    ], "require_error": true, "save": "run" },
+    { "kind": "assert", "from": "run", "expect": [
+      { "path": "ok", "equals": false },
+      { "path": "restoration.verified", "equals": false },
+      { "path": "transient_assessment.counts.hazard_candidate", "at_least": 1 }
+    ]},
+    { "kind": "mcp", "tool": "undo_operation", "arguments": { "operation_id": "${proposal.proposals.0.operation_id}", "confirm": true }, "save": "restored" },
+    { "kind": "assert", "from": "restored", "expect": [
+      { "path": "ok", "equals": true },
+      { "path": "restoration_verified", "equals": true }
+    ]}
+  ],
+  "cleanup": ["/fill 639 103 -1 645 108 1 minecraft:air"]
+}
