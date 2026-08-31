@@ -35,7 +35,7 @@ use crate::{
     BlockChange, BotBridge, McpPolicy, OperationKind, OperationRegistry, OperationStatus,
     PlacementPlan, SelectionSession, TransitionSafety, TransitionSafetyAssessment,
     assess_transition_safety, behavior_trace_from_recording, discover_connected_region,
-    plan_world_overlay, scenario_trace_from_recording,
+    plan_world_overlay, scenario_trace_from_recording_with_initial,
 };
 
 const MAX_FLAT_ANALYSIS_COMPONENTS: usize = 128;
@@ -3315,8 +3315,12 @@ impl DustRouteMcp {
             expectation: dustroute_translate::ScenarioExpectation::default(),
         };
         let simulated = dustroute_translate::simulate_scenario(&scenario);
-        let live_scenario_trace =
-            scenario_trace_from_recording(&recording, &observe, duration_redstone_ticks);
+        let live_scenario_trace = scenario_trace_from_recording_with_initial(
+            &recording,
+            &observe,
+            duration_redstone_ticks,
+            Some(&plan.initial_snapshot),
+        );
         let simulation_comparison = simulated.as_ref().ok().map(|simulated| {
             dustroute_translate::compare_live_trace(&simulated.trace, &live_scenario_trace)
         });

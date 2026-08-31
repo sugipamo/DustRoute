@@ -116,22 +116,55 @@ pub fn scenario_trace_from_recording(
     observe: &BTreeSet<dustroute_physical::Pos>,
     duration_redstone_ticks: u64,
 ) -> ScenarioTrace {
+    scenario_trace_from_recording_with_initial(recording, observe, duration_redstone_ticks, None)
+}
+
+/// Seeds unchanged components from the snapshot captured immediately before
+/// the packet update recording began.
+#[must_use]
+pub fn scenario_trace_from_recording_with_initial(
+    recording: &UpdateRecording,
+    observe: &BTreeSet<dustroute_physical::Pos>,
+    duration_redstone_ticks: u64,
+    initial: Option<&dustroute_translate::MinecraftSnapshot>,
+) -> ScenarioTrace {
     let mut trace = ScenarioTrace {
         duration_redstone_ticks,
         ..ScenarioTrace::default()
     };
     let mut last = BTreeMap::new();
     for position in observe {
-        if let Some(before) = recording
+        let snapshot_state = initial
+            .and_then(|snapshot| snapshot.blocks.iter().find(|block| block.pos == *position))
+            .map(|block| {
+                let strength = block
+                    .properties
+                    .get("power")
+                    .and_then(|value| value.parse::<u8>().ok())
+                    .unwrap_or_else(|| {
+                        u8::from(
+                            block
+                                .properties
+                                .get("powered")
+                                .or_else(|| block.properties.get("lit"))
+                                .and_then(|value| value.parse::<bool>().ok())
+                                .unwrap_or(false),
+                        ) * 15
+                    });
+                (strength, strength > 0)
+            });
+        let event_state = recording
             .events
             .iter()
             .find(|event| event.pos == *position)
             .and_then(|event| event.before.as_ref())
-        {
-            let value = (
-                strength_state(before),
-                powered_state(before).unwrap_or(false),
-            );
+            .map(|before| {
+                (
+                    strength_state(before),
+                    powered_state(before).unwrap_or(false),
+                )
+            });
+        if let Some(value) = event_state.or(snapshot_state) {
             last.insert(*position, value);
             trace.events.push(ScenarioEvent {
                 redstone_tick: 0,
@@ -473,7 +506,7 @@ mod tests {
     }
 
     #[test]
-    fn captured_repeater_lock_difference_remains_visible() {
+    fn captured_repeater_lock_preserves_unchanged_powered_side_input() {
         let scenario: Scenario = serde_json::from_str(include_str!(
             "../tests/fixtures/repeater_lock_scenario.json"
         ))
@@ -483,22 +516,17 @@ mod tests {
         ))
         .unwrap();
         let simulated = run_scenario(&scenario).unwrap();
-        let live = scenario_trace_from_recording(
+        let live = scenario_trace_from_recording_with_initial(
             &recording,
             &scenario.observe,
             scenario.duration_redstone_ticks,
+            Some(&scenario.initial),
         );
         let differences = compare_scenario_traces(&simulated.trace, &live);
-
-        assert!(differences.iter().any(|difference| matches!(
-            difference,
-            ScenarioDifference::FinalPowered { position, expected: true, actual: false }
-                if *position == Pos::new(2, 1, 1)
-        )));
-        assert!(differences.iter().any(|difference| matches!(
-            difference,
-            ScenarioDifference::EventCount { expected, actual }
-                if expected > actual
-        )));
+        assert!(live.final_powered[&Pos::new(2, 1, 1)]);
+        assert_eq!(live.final_strengths[&Pos::new(2, 1, 2)], 15);
+        assert_eq!(simulated.trace.final_powered, live.final_powered);
+        assert_eq!(simulated.trace.final_strengths, live.final_strengths);
+        assert!(differences.is_empty());
     }
 }

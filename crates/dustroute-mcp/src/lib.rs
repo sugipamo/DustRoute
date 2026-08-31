@@ -31,4 +31,5 @@ pub use service::{DustRouteMcp, ToolProfile};
 pub use transition::{
     TransitionSafety, TransitionSafetyAssessment, TransitionSafetyReason, assess_transition_safety,
     behavior_trace_from_recording, scenario_trace_from_recording,
+    scenario_trace_from_recording_with_initial,
 };
