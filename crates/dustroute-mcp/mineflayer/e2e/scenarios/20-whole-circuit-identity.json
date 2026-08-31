@@ -11,6 +11,9 @@
       "max_blocks": 4096,
       "optimize": false
     }, "save": "plan" },
+    { "kind": "mcp", "tool": "show_operation", "arguments": {
+      "operation_id": "${plan.operation_id}"
+    }, "save": "preview" },
     { "kind": "mcp", "tool": "invoke_operation", "arguments": {
       "operation_id": "${plan.operation_id}", "confirm": true
     }, "save": "apply" },
