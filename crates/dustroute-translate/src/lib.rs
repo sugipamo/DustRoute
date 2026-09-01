@@ -128,9 +128,9 @@ pub use wire::{
     update_wire_shapes, wire_has_arm,
 };
 pub use world_reverse::{
-    FunctionalNetworkModel, InferredOutputFunction, InferredTerminal, InferredTruthTable,
-    PhysicalInfluence, RegionAnalysis, RegionBounds, SignalComponent, SignalDiagnostics,
-    TerminalConfidence, TruthTableComparison, TruthTableError, TruthTableRow, analyze_world_region,
-    analyze_world_region_in_dimension, compare_truth_tables, derive_functional_network,
-    infer_output_expressions, infer_truth_table,
+    FunctionalNetworkModel, InferredInputDriver, InferredOutputFunction, InferredTerminal,
+    InferredTruthTable, PhysicalInfluence, RegionAnalysis, RegionBounds, SignalComponent,
+    SignalDiagnostics, TerminalConfidence, TruthTableComparison, TruthTableError, TruthTableRow,
+    analyze_world_region, analyze_world_region_in_dimension, compare_truth_tables,
+    derive_functional_network, infer_output_expressions, infer_truth_table, inferred_input_driver,
 };

@@ -42,6 +42,7 @@ impl TickState {
     }
 }
 
+#[derive(Clone)]
 pub struct RedstoneTickSimulator {
     world: World,
     tick: u64,
@@ -252,6 +253,22 @@ impl RedstoneTickSimulator {
             let mut changed = block;
             changed.powered = Some(powered);
             self.world.set(pos, changed);
+        }
+        self.settle_instantaneous()
+    }
+
+    /// Drives an inferred open-boundary input without making the temporary
+    /// source part of the circuit's persistent physical representation.
+    pub fn set_external_powered(
+        &mut self,
+        pos: Pos,
+        powered: bool,
+    ) -> Result<TickState, InstantaneousSolveDidNotConverge> {
+        if powered {
+            self.world
+                .set(pos, crate::world::Block::new(BlockKind::RedstoneBlock));
+        } else if self.world.kind_at(pos) == BlockKind::RedstoneBlock {
+            self.world.remove(pos);
         }
         self.settle_instantaneous()
     }

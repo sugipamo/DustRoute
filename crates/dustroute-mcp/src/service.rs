@@ -6,11 +6,15 @@ use std::sync::Arc;
 use dustroute_app::DustRouteService;
 use dustroute_optimize::{
     AnchorPolicy, BehavioralVerificationConfig, CompressionAxis, CompressionDirection,
-    ContextualVerificationState, ObservedMacroMetrics, OptimizationPlan, OptimizationRoutingConfig,
-    OptimizationSafety, TemporalCapabilities, assess_optimization_safety, extract_model_boundary,
+    ContextualVerificationState, ContractCheck, ContractCheckState, MacroSteadyStateReport,
+    MacroStructuralReport, ObservedMacroMetrics, OptimizationContract,
+    OptimizationContractAssessment, OptimizationPlan, OptimizationRoutingConfig,
+    OptimizationSafety, TemporalCapabilities, TimingContractMode, assess_macro_contract,
+    assess_optimization_safety, extract_model_boundary_with_context,
     find_builtin_verified_macro_replacements, materialize_macro_replacement,
-    optimize_physical_wire_path, plan_macro_replacement, realize_staged_optimization_against,
-    validate_macro_structure, verify_realized_optimization,
+    optimize_physical_wire_path, plan_macro_replacement_with_reserved,
+    realize_staged_optimization_against, validate_macro_structure, verify_macro_steady_state,
+    verify_macro_transitions, verify_realized_optimization, verify_world_transitions,
 };
 use dustroute_physical::{BlockKind, Pos};
 use dustroute_physical::{PhysicalBlockChange, PhysicalPatch};
@@ -296,6 +300,12 @@ struct StoredRepairPlan {
     baseline_truth_table: Option<dustroute_translate::InferredTruthTable>,
     previewed: bool,
     applied: bool,
+    #[serde(default = "default_true")]
+    contract_satisfied: bool,
+}
+
+const fn default_true() -> bool {
+    true
 }
 
 #[derive(Clone, Debug)]
@@ -408,6 +418,203 @@ struct NewOptimizationParams {
     focus: OptimizationFocusParam,
     /// Currently wire_length. Future objectives will be added explicitly.
     objective: String,
+    /// Explicit preservation contract. Omitted fields use the documented safe defaults.
+    contract: Option<OptimizationContractParam>,
+}
+
+#[derive(Debug, Default, Deserialize, schemars::JsonSchema)]
+struct OptimizationContractParam {
+    logical: Option<LogicalContractParam>,
+    timing: Option<TimingContractParam>,
+    pulse: Option<PulseContractParam>,
+    analog: Option<AnalogContractParam>,
+    boundary: Option<BoundaryContractParam>,
+    mutation: Option<MutationContractParam>,
+}
+
+#[derive(Debug, Default, Deserialize, schemars::JsonSchema)]
+struct LogicalContractParam {
+    /// Currently exact_truth_table.
+    mode: Option<String>,
+}
+
+#[derive(Debug, Default, Deserialize, schemars::JsonSchema)]
+struct TimingContractParam {
+    /// exact_trace, bounded_delay, settled_value_only, or preserve_order.
+    mode: Option<String>,
+    maximum_added_redstone_ticks: Option<usize>,
+    settle_deadline_redstone_ticks: Option<usize>,
+}
+
+#[derive(Debug, Default, Deserialize, schemars::JsonSchema)]
+struct PulseContractParam {
+    allow_new_pulses: Option<bool>,
+    allow_removed_pulses: Option<bool>,
+    maximum_width_delta_redstone_ticks: Option<usize>,
+}
+
+#[derive(Debug, Default, Deserialize, schemars::JsonSchema)]
+struct AnalogContractParam {
+    preserve_strength: Option<bool>,
+}
+
+#[derive(Debug, Default, Deserialize, schemars::JsonSchema)]
+struct BoundaryContractParam {
+    preserve_blocks: Option<bool>,
+    preserve_facing: Option<bool>,
+    preserve_driver_positions: Option<bool>,
+}
+
+#[derive(Debug, Default, Deserialize, schemars::JsonSchema)]
+struct MutationContractParam {
+    focus_only: Option<bool>,
+    allow_temporary_expansion: Option<bool>,
+    maximum_changed_blocks: Option<usize>,
+    automatic_apply: Option<bool>,
+}
+
+fn optimization_contract_from_param(
+    param: Option<OptimizationContractParam>,
+) -> Result<OptimizationContract, String> {
+    let mut contract = OptimizationContract::default();
+    let Some(param) = param else {
+        return Ok(contract);
+    };
+    if let Some(logical) = param.logical
+        && logical
+            .mode
+            .as_deref()
+            .is_some_and(|mode| mode != "exact_truth_table")
+    {
+        return Err(format!(
+            "unknown logical contract mode {:?}",
+            logical.mode.expect("mode was present")
+        ));
+    }
+    if let Some(timing) = param.timing {
+        if let Some(mode) = timing.mode {
+            contract.timing.mode = match mode.as_str() {
+                "exact_trace" => TimingContractMode::ExactTrace,
+                "bounded_delay" => TimingContractMode::BoundedDelay,
+                "settled_value_only" => TimingContractMode::SettledValueOnly,
+                "preserve_order" => TimingContractMode::PreserveOrder,
+                _ => return Err(format!("unknown timing contract mode {mode:?}")),
+            };
+        }
+        if let Some(value) = timing.maximum_added_redstone_ticks {
+            contract.timing.maximum_added_redstone_ticks = value;
+        }
+        if let Some(value) = timing.settle_deadline_redstone_ticks {
+            contract.timing.settle_deadline_redstone_ticks = value;
+        }
+    }
+    if let Some(pulse) = param.pulse {
+        contract.pulse.allow_new_pulses = pulse
+            .allow_new_pulses
+            .unwrap_or(contract.pulse.allow_new_pulses);
+        contract.pulse.allow_removed_pulses = pulse
+            .allow_removed_pulses
+            .unwrap_or(contract.pulse.allow_removed_pulses);
+        contract.pulse.maximum_width_delta_redstone_ticks = pulse
+            .maximum_width_delta_redstone_ticks
+            .unwrap_or(contract.pulse.maximum_width_delta_redstone_ticks);
+    }
+    if let Some(analog) = param.analog {
+        contract.analog.preserve_strength = analog
+            .preserve_strength
+            .unwrap_or(contract.analog.preserve_strength);
+    }
+    if let Some(boundary) = param.boundary {
+        contract.boundary.preserve_blocks = boundary
+            .preserve_blocks
+            .unwrap_or(contract.boundary.preserve_blocks);
+        contract.boundary.preserve_facing = boundary
+            .preserve_facing
+            .unwrap_or(contract.boundary.preserve_facing);
+        contract.boundary.preserve_driver_positions = boundary
+            .preserve_driver_positions
+            .unwrap_or(contract.boundary.preserve_driver_positions);
+    }
+    if let Some(mutation) = param.mutation {
+        contract.mutation.focus_only = mutation.focus_only.unwrap_or(contract.mutation.focus_only);
+        contract.mutation.allow_temporary_expansion = mutation
+            .allow_temporary_expansion
+            .unwrap_or(contract.mutation.allow_temporary_expansion);
+        contract.mutation.maximum_changed_blocks = mutation
+            .maximum_changed_blocks
+            .unwrap_or(contract.mutation.maximum_changed_blocks);
+        contract.mutation.automatic_apply = mutation
+            .automatic_apply
+            .unwrap_or(contract.mutation.automatic_apply);
+    }
+    if contract.mutation.maximum_changed_blocks == 0 {
+        return Err("maximum_changed_blocks must be greater than zero".to_owned());
+    }
+    if contract.timing.maximum_added_redstone_ticks > 256 {
+        return Err("maximum_added_redstone_ticks must be at most 256".to_owned());
+    }
+    if !(1..=256).contains(&contract.timing.settle_deadline_redstone_ticks) {
+        return Err("settle_deadline_redstone_ticks must be 1..=256".to_owned());
+    }
+    if contract.pulse.maximum_width_delta_redstone_ticks > 256 {
+        return Err("maximum_width_delta_redstone_ticks must be at most 256".to_owned());
+    }
+    Ok(contract)
+}
+
+fn optimization_contract_json(contract: OptimizationContract) -> Value {
+    let timing_mode = match contract.timing.mode {
+        TimingContractMode::ExactTrace => "exact_trace",
+        TimingContractMode::BoundedDelay => "bounded_delay",
+        TimingContractMode::SettledValueOnly => "settled_value_only",
+        TimingContractMode::PreserveOrder => "preserve_order",
+    };
+    json!({
+        "logical": { "mode": "exact_truth_table" },
+        "timing": {
+            "mode": timing_mode,
+            "maximum_added_redstone_ticks": contract.timing.maximum_added_redstone_ticks,
+            "settle_deadline_redstone_ticks": contract.timing.settle_deadline_redstone_ticks,
+        },
+        "pulse": {
+            "allow_new_pulses": contract.pulse.allow_new_pulses,
+            "allow_removed_pulses": contract.pulse.allow_removed_pulses,
+            "maximum_width_delta_redstone_ticks": contract.pulse.maximum_width_delta_redstone_ticks,
+        },
+        "analog": { "preserve_strength": contract.analog.preserve_strength },
+        "boundary": {
+            "preserve_blocks": contract.boundary.preserve_blocks,
+            "preserve_facing": contract.boundary.preserve_facing,
+            "preserve_driver_positions": contract.boundary.preserve_driver_positions,
+        },
+        "mutation": {
+            "focus_only": contract.mutation.focus_only,
+            "allow_temporary_expansion": contract.mutation.allow_temporary_expansion,
+            "maximum_changed_blocks": contract.mutation.maximum_changed_blocks,
+            "automatic_apply": contract.mutation.automatic_apply,
+        },
+    })
+}
+
+fn contract_check_json(check: &ContractCheck) -> Value {
+    let state = match check.state {
+        ContractCheckState::Passed => "passed",
+        ContractCheckState::Failed => "failed",
+        ContractCheckState::Unavailable => "unavailable",
+    };
+    json!({ "state": state, "reasons": check.reasons })
+}
+
+fn contract_assessment_json(assessment: &OptimizationContractAssessment) -> Value {
+    json!({
+        "satisfied": assessment.satisfied(),
+        "logical": contract_check_json(&assessment.logical),
+        "timing": contract_check_json(&assessment.timing),
+        "pulse": contract_check_json(&assessment.pulse),
+        "analog": contract_check_json(&assessment.analog),
+        "boundary": contract_check_json(&assessment.boundary),
+        "mutation": contract_check_json(&assessment.mutation),
+    })
 }
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
@@ -1813,6 +2020,13 @@ impl DustRouteMcp {
                 false,
             );
         }
+        if !undo && !plan.contract_satisfied {
+            return error_text(
+                McpErrorCode::VerificationFailed,
+                "the optimization preservation contract is not fully satisfied",
+                false,
+            );
+        }
         if undo && !plan.applied {
             return json_text(json!({ "ok": false, "error": "repair is not applied" }));
         }
@@ -3124,7 +3338,11 @@ impl DustRouteMcp {
             )
         });
         let macro_plans = translated.functional_network.as_ref().and_then(|model| {
-            let boundary = extract_model_boundary(model);
+            let boundary = extract_model_boundary_with_context(model, &world, &translated.analysis);
+            let reserved = boundary
+                .iter()
+                .filter_map(|port| port.driver_position)
+                .collect::<BTreeSet<_>>();
             let boundary_positions = boundary
                 .iter()
                 .map(|port| port.position)
@@ -3137,7 +3355,9 @@ impl DustRouteMcp {
                 candidates
                     .iter()
                     .filter_map(|candidate| {
-                        let mut plan = plan_macro_replacement(candidate, &boundary).ok()?;
+                        let mut plan =
+                            plan_macro_replacement_with_reserved(candidate, &boundary, &reserved)
+                                .ok()?;
                         let structural = validate_macro_structure(&plan, &world, &replaceable);
                         plan.verification.structural = if structural.valid() {
                             ContextualVerificationState::Passed
@@ -3146,7 +3366,54 @@ impl DustRouteMcp {
                         };
                         let materialized =
                             materialize_macro_replacement(&plan, &world, &replaceable, 14);
-                        Some((plan, structural, materialized))
+                        let steady_state = materialized.as_ref().ok().map(|materialized| {
+                            verify_macro_steady_state(
+                                &model.truth_table,
+                                &world,
+                                &materialized.world,
+                                8,
+                                64,
+                            )
+                        });
+                        if let Some(report) = &steady_state {
+                            plan.verification.steady_state = report.state;
+                        }
+                        let transitions = materialized.as_ref().ok().and_then(|materialized| {
+                            (plan.verification.steady_state == ContextualVerificationState::Passed)
+                                .then(|| {
+                                    verify_macro_transitions(
+                                        &model.truth_table,
+                                        &world,
+                                        &materialized.world,
+                                        64,
+                                        16,
+                                        4,
+                                    )
+                                })
+                        });
+                        if let Some(report) = &transitions {
+                            plan.verification.transitions = report.state;
+                        }
+                        let contract = OptimizationContract::default();
+                        let contract_assessment = materialized.as_ref().ok().map(|materialized| {
+                            assess_macro_contract(
+                                contract,
+                                &structural,
+                                steady_state.as_ref(),
+                                transitions.as_ref(),
+                                materialized.patch.changes.len(),
+                                false,
+                            )
+                        });
+                        Some((
+                            plan,
+                            structural,
+                            materialized,
+                            steady_state,
+                            transitions,
+                            contract,
+                            contract_assessment,
+                        ))
                     })
                     .collect::<Vec<_>>()
             })
@@ -3199,12 +3466,14 @@ impl DustRouteMcp {
                         "saved_volume": candidate.saved_volume,
                         "requires_contextual_transition_verification": candidate.requires_contextual_transition_verification,
                     })).collect::<Vec<_>>()
-                    ,"placement_plans": macro_plans.as_ref().map(|plans| plans.iter().map(|(plan, structural, materialized)| json!({
+                    ,"placement_plans": macro_plans.as_ref().map(|plans| plans.iter().map(|(plan, structural, materialized, steady_state, transitions, contract, contract_assessment)| json!({
                         "component_id": plan.component_id,
                         "origin": plan.placed.origin,
                         "rotation_y": format!("{:?}", plan.placed.rotation).to_lowercase(),
                         "total_route_length": plan.total_route_length,
                         "automatic_apply_allowed": plan.automatic_apply_allowed,
+                        "contract": optimization_contract_json(*contract),
+                        "contract_assessment": contract_assessment.as_ref().map(contract_assessment_json),
                         "structural_report": {
                             "valid": structural.valid(),
                             "candidate_collisions": structural.candidate_collisions,
@@ -3232,6 +3501,28 @@ impl DustRouteMcp {
                                 "reason": format!("{error:?}"),
                             }),
                         },
+                        "steady_state_report": steady_state.as_ref().map(|report| json!({
+                            "state": format!("{:?}", report.state).to_lowercase(),
+                            "comparison": report.comparison,
+                            "input_mapping": report.input_mapping,
+                            "output_mapping": report.output_mapping,
+                            "differing_assignments": report.differing_assignments,
+                            "reason": report.reason,
+                        })),
+                        "transition_report": transitions.as_ref().map(|report| json!({
+                            "state": format!("{:?}", report.state).to_lowercase(),
+                            "case_count": report.cases.len(),
+                            "differing_cases": report.differing_cases,
+                            "reason": report.reason,
+                            "cases": report.cases.iter().map(|case| json!({
+                                "from": case.from,
+                                "to": case.to,
+                                "equivalent": case.equivalent,
+                                "first_difference_tick": case.first_difference_tick,
+                                "original_outputs": case.original_outputs,
+                                "candidate_outputs": case.candidate_outputs,
+                            })).collect::<Vec<_>>(),
+                        })),
                         "verification": {
                             "structural": format!("{:?}", plan.verification.structural).to_lowercase(),
                             "steady_state": format!("{:?}", plan.verification.steady_state).to_lowercase(),
@@ -3241,6 +3532,8 @@ impl DustRouteMcp {
                             "direction": format!("{:?}", route.boundary.direction).to_lowercase(),
                             "observed_index": route.boundary.observed_index,
                             "boundary_position": route.boundary.position,
+                            "boundary_facing": route.boundary.facing,
+                            "driver_position": route.boundary.driver_position,
                             "candidate_port": route.candidate_port,
                             "candidate_position": route.candidate_position,
                             "path": route.path,
@@ -3704,6 +3997,7 @@ impl DustRouteMcp {
                         baseline_truth_table: None,
                         previewed: false,
                         applied: false,
+                        contract_satisfied: true,
                     },
                 )
                 .await
@@ -3995,6 +4289,10 @@ impl DustRouteMcp {
                 false,
             );
         }
+        let contract = match optimization_contract_from_param(params.contract) {
+            Ok(contract) => contract,
+            Err(error) => return error_text(McpErrorCode::InvalidArgument, error, false),
+        };
         let (circuit_id, circuit) = match self.load_circuit(&params.circuit_id, &player).await {
             Ok(circuit) => circuit,
             Err(error) => return error_text(McpErrorCode::NotFound, error, false),
@@ -4040,6 +4338,17 @@ impl DustRouteMcp {
             .validate_placement_size(optimization.patch.changes.len())
         {
             return error_text(McpErrorCode::PermissionDenied, error.to_string(), false);
+        }
+        if optimization.patch.changes.len() > contract.mutation.maximum_changed_blocks {
+            return error_text(
+                McpErrorCode::VerificationFailed,
+                format!(
+                    "{} changed blocks exceeds contract maximum {}",
+                    optimization.patch.changes.len(),
+                    contract.mutation.maximum_changed_blocks
+                ),
+                false,
+            );
         }
         let mut optimized_world = match optimization.patch.apply_virtual(&world) {
             Ok(world) => world,
@@ -4092,6 +4401,74 @@ impl DustRouteMcp {
                 "reason": "truth-table inference was unavailable; the plan remains preview-only physical-path optimization"
             }),
         };
+        let steady_state =
+            before_truth
+                .as_ref()
+                .zip(after_truth.as_ref())
+                .map(|(before_truth, after_truth)| {
+                    let comparison =
+                        dustroute_translate::compare_truth_tables(before_truth, after_truth);
+                    let differing_assignments = before_truth
+                        .rows
+                        .iter()
+                        .zip(&after_truth.rows)
+                        .filter(|(before, after)| before.outputs != after.outputs)
+                        .map(|(before, _)| before.inputs.clone())
+                        .collect();
+                    MacroSteadyStateReport {
+                        state: if comparison.comparable && comparison.differing_bits == 0 {
+                            ContextualVerificationState::Passed
+                        } else {
+                            ContextualVerificationState::Failed
+                        },
+                        comparison: Some(comparison),
+                        input_mapping: (0..before_truth.inputs.len()).collect(),
+                        output_mapping: (0..before_truth.outputs.len()).collect(),
+                        differing_assignments,
+                        reason: None,
+                    }
+                });
+        let transitions = before_truth.as_ref().zip(after_truth.as_ref()).and_then(
+            |(before_truth, after_truth)| {
+                steady_state
+                    .as_ref()
+                    .is_some_and(|report| report.state == ContextualVerificationState::Passed)
+                    .then(|| {
+                        verify_world_transitions(
+                            &world,
+                            before_truth,
+                            &optimized_world,
+                            after_truth,
+                            64,
+                            contract.timing.settle_deadline_redstone_ticks.max(20),
+                            4,
+                        )
+                    })
+            },
+        );
+        let structural = MacroStructuralReport::default();
+        let used_temporary_expansion = optimization
+            .phases
+            .iter()
+            .any(|phase| phase.connector_growth > 0);
+        let mut contract_assessment = assess_macro_contract(
+            contract,
+            &structural,
+            steady_state.as_ref(),
+            transitions.as_ref(),
+            optimization.patch.changes.len(),
+            false,
+        );
+        if !contract.mutation.allow_temporary_expansion && used_temporary_expansion {
+            contract_assessment.mutation = ContractCheck {
+                state: ContractCheckState::Failed,
+                reasons: vec![
+                    "the search used temporary connector expansion forbidden by the contract"
+                        .to_owned(),
+                ],
+            };
+        }
+        let contract_satisfied = contract_assessment.satisfied();
         let operation_id = uuid::Uuid::new_v4();
         let phase_trace = optimization
             .phases
@@ -4126,6 +4503,7 @@ impl DustRouteMcp {
                     baseline_truth_table: before_truth,
                     previewed: false,
                     applied: false,
+                    contract_satisfied,
                 },
             )
             .await
@@ -4140,7 +4518,9 @@ impl DustRouteMcp {
                     "circuit_id": circuit_id,
                     "focus": bounds_json(focus),
                     "patch": optimization.patch,
-                    "semantic_verification": semantic
+                    "semantic_verification": semantic,
+                    "contract": optimization_contract_json(contract),
+                    "contract_assessment": contract_assessment_json(&contract_assessment)
                 }),
             )
             .await;
@@ -4150,6 +4530,8 @@ impl DustRouteMcp {
             "circuit_id": circuit_id,
             "operation_id": operation_id,
             "objective": params.objective,
+            "contract": optimization_contract_json(contract),
+            "contract_assessment": contract_assessment_json(&contract_assessment),
             "focus": bounds_json(focus),
             "outside_focus_fixed": true,
             "fixed_endpoints": optimization.fixed_endpoints,
@@ -4171,9 +4553,24 @@ impl DustRouteMcp {
                 "diagnostics_not_worse": true,
                 "temporal_requirement_preserved": true,
                 "temporal_requirement": after_temporal.requirement,
-                "semantic": semantic
+                "semantic": semantic,
+                "steady_state": steady_state.as_ref().map(|report| json!({
+                    "state": format!("{:?}", report.state).to_lowercase(),
+                    "differing_assignments": report.differing_assignments,
+                    "reason": report.reason,
+                })),
+                "transitions": transitions.as_ref().map(|report| json!({
+                    "state": format!("{:?}", report.state).to_lowercase(),
+                    "case_count": report.cases.len(),
+                    "differing_cases": report.differing_cases,
+                    "reason": report.reason,
+                }))
             },
-            "next_step": "call show_operation, explain the fixed focus and verification limits, obtain explicit confirmation, then call invoke_operation(confirm=true)"
+            "next_step": if contract_satisfied {
+                "call show_operation, explain the fixed focus and verified contract, obtain explicit confirmation, then call invoke_operation(confirm=true)"
+            } else {
+                "do not invoke this operation; satisfy every failed or unavailable contract category first"
+            }
         }))
     }
 
@@ -4240,6 +4637,7 @@ impl DustRouteMcp {
                     baseline_truth_table: None,
                     previewed: false,
                     applied: false,
+                    contract_satisfied: true,
                 },
             )
             .await
@@ -5206,6 +5604,28 @@ mod tests {
     use tokio::net::TcpListener;
 
     use super::*;
+
+    #[test]
+    fn optimization_contract_defaults_are_explicit_and_conservative() {
+        let contract = optimization_contract_from_param(None).expect("default contract");
+        assert_eq!(contract.timing.mode, TimingContractMode::BoundedDelay);
+        assert!(!contract.pulse.allow_new_pulses);
+        assert!(!contract.pulse.allow_removed_pulses);
+        assert!(contract.boundary.preserve_driver_positions);
+        assert!(!contract.mutation.automatic_apply);
+    }
+
+    #[test]
+    fn optimization_contract_rejects_an_unknown_logical_mode() {
+        let error = optimization_contract_from_param(Some(OptimizationContractParam {
+            logical: Some(LogicalContractParam {
+                mode: Some("approximate".to_owned()),
+            }),
+            ..OptimizationContractParam::default()
+        }))
+        .expect_err("unknown mode must fail");
+        assert!(error.contains("approximate"));
+    }
 
     #[test]
     fn transition_trace_json_uses_arrays_for_coordinate_keyed_state() {

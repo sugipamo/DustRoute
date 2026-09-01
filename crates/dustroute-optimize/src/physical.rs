@@ -385,6 +385,84 @@ mod tests {
     }
 
     #[test]
+    fn shortened_detour_preserves_steady_and_transition_contracts() {
+        let mut world = World::new();
+        for x in -1..=5 {
+            for z in 0..=2 {
+                world.set(Pos::new(x, 0, z), Block::new(BlockKind::Solid));
+            }
+        }
+        for pos in [
+            Pos::new(0, 1, 0),
+            Pos::new(0, 1, 1),
+            Pos::new(0, 1, 2),
+            Pos::new(1, 1, 2),
+            Pos::new(2, 1, 2),
+            Pos::new(3, 1, 2),
+            Pos::new(4, 1, 2),
+            Pos::new(4, 1, 1),
+            Pos::new(4, 1, 0),
+        ] {
+            world.place(BlockKind::RedstoneWire, pos);
+        }
+        world.place(BlockKind::Lever, Pos::new(-1, 1, 0));
+        world.place(BlockKind::RedstoneLamp, Pos::new(5, 1, 0));
+        update_wire_shapes(&mut world);
+        let bounds = RegionBounds::new(Pos::new(-1, 0, 0), Pos::new(5, 1, 2));
+        let focus = RegionBounds::new(Pos::new(0, 1, 0), Pos::new(4, 1, 2));
+        let analysis = dustroute_translate::analyze_world_region(&world, bounds);
+        let truth = dustroute_translate::infer_truth_table(&world, &analysis, 4, 64)
+            .expect("detour truth table");
+        let optimization = optimize_physical_wire_path(&world, focus).unwrap();
+        let mut optimized = optimization.patch.apply_virtual(&world).unwrap();
+        update_wire_shapes(&mut optimized);
+        let optimized_analysis = dustroute_translate::analyze_world_region(&optimized, bounds);
+        let optimized_truth =
+            dustroute_translate::infer_truth_table(&optimized, &optimized_analysis, 4, 64)
+                .expect("optimized truth table");
+        let comparison = dustroute_translate::compare_truth_tables(&truth, &optimized_truth);
+        let steady = crate::MacroSteadyStateReport {
+            state: if comparison.comparable && comparison.differing_bits == 0 {
+                crate::ContextualVerificationState::Passed
+            } else {
+                crate::ContextualVerificationState::Failed
+            },
+            comparison: Some(comparison),
+            input_mapping: vec![0],
+            output_mapping: vec![0],
+            differing_assignments: Vec::new(),
+            reason: None,
+        };
+        let transitions = crate::verify_world_transitions(
+            &world,
+            &truth,
+            &optimized,
+            &optimized_truth,
+            64,
+            20,
+            4,
+        );
+        let assessment = crate::assess_macro_contract(
+            crate::OptimizationContract::default(),
+            &crate::MacroStructuralReport::default(),
+            Some(&steady),
+            Some(&transitions),
+            optimization.patch.changes.len(),
+            false,
+        );
+        assert_eq!(
+            steady.state,
+            crate::ContextualVerificationState::Passed,
+            "{steady:#?}\noriginal={truth:#?}\noptimized={optimized_truth:#?}"
+        );
+        assert_eq!(
+            transitions.state,
+            crate::ContextualVerificationState::Passed
+        );
+        assert!(assessment.satisfied(), "{assessment:#?}");
+    }
+
+    #[test]
     fn refuses_a_branching_dust_network() {
         let mut world = World::new();
         for pos in [

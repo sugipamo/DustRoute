@@ -224,7 +224,7 @@ pub fn infer_truth_table(
     let drivers = analysis
         .inputs
         .iter()
-        .map(|terminal| input_driver(world, analysis, terminal))
+        .map(|terminal| inferred_input_driver(world, analysis, terminal))
         .collect::<Result<Vec<_>, _>>()?;
     let mut rows = Vec::new();
     for bits in 0..(1_usize << analysis.inputs.len()) {
@@ -234,17 +234,17 @@ pub fn infer_truth_table(
         let mut driven = world.clone();
         for ((terminal, driver), value) in analysis.inputs.iter().zip(&drivers).zip(&inputs) {
             match driver {
-                InputDriver::Lever(pos) => {
+                InferredInputDriver::Lever(pos) => {
                     if let Some(block) = driven.get(*pos).cloned() {
                         let mut block = block;
                         block.powered = Some(*value);
                         driven.set(*pos, block);
                     }
                 }
-                InputDriver::External(pos) if *value => {
+                InferredInputDriver::External(pos) if *value => {
                     driven.set(*pos, Block::new(BlockKind::RedstoneBlock));
                 }
-                InputDriver::External(pos) => {
+                InferredInputDriver::External(pos) => {
                     driven.remove(*pos);
                 }
             }
@@ -438,18 +438,18 @@ fn canonical_sum_of_products(table: &InferredTruthTable, output: usize, vars: &[
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum InputDriver {
+pub enum InferredInputDriver {
     Lever(Pos),
     External(Pos),
 }
 
-fn input_driver(
+pub fn inferred_input_driver(
     world: &World,
     analysis: &RegionAnalysis,
     terminal: &InferredTerminal,
-) -> Result<InputDriver, TruthTableError> {
+) -> Result<InferredInputDriver, TruthTableError> {
     if world.kind_at(terminal.anchor) == BlockKind::Lever {
-        return Ok(InputDriver::Lever(terminal.anchor));
+        return Ok(InferredInputDriver::Lever(terminal.anchor));
     }
     let horizontal = [
         Pos::new(-1, 0, 0),
@@ -462,7 +462,7 @@ fn input_driver(
         .map(|delta| terminal.anchor.offset(delta.x, delta.y, delta.z))
         .find(|pos| !analysis.bounds.contains(*pos) && world.kind_at(*pos) == BlockKind::Air)
     {
-        return Ok(InputDriver::External(pos));
+        return Ok(InferredInputDriver::External(pos));
     }
     let component = &analysis.components[terminal.component];
     let downstream: BTreeSet<_> = component
@@ -476,7 +476,7 @@ fn input_driver(
         if next.y == terminal.anchor.y && dx.abs() + dz.abs() == 1 {
             let pos = terminal.anchor.offset(-dx, 0, -dz);
             if world.kind_at(pos) == BlockKind::Air {
-                return Ok(InputDriver::External(pos));
+                return Ok(InferredInputDriver::External(pos));
             }
         }
     }

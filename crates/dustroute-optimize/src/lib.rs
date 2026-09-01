@@ -1,5 +1,6 @@
 //! Placement and semantic circuit optimizers for DustRoute.
 
+mod contract;
 mod macro_realize;
 mod macro_search;
 mod phased;
@@ -10,12 +11,19 @@ mod reverse;
 mod safety;
 mod semantic;
 
+pub use contract::{
+    AnalogContract, BoundaryContract, ContractCheck, ContractCheckState, LogicalContractMode,
+    MutationContract, OptimizationContract, OptimizationContractAssessment, PulseContract,
+    TimingContract, TimingContractMode, assess_macro_contract,
+};
 pub use macro_realize::{
     ContextualVerificationState, MacroBoundaryDirection, MacroBoundaryPort, MacroPortRoute,
     MacroRealizationError, MacroRealizationVerification, MacroReplacementPlan,
-    MacroStructuralReport, MaterializedMacroReplacement, extract_cell_boundary,
-    extract_model_boundary, materialize_macro_replacement, plan_macro_replacement,
-    resolve_builtin_layout, validate_macro_structure,
+    MacroSteadyStateReport, MacroStructuralReport, MacroTransitionCase, MacroTransitionReport,
+    MaterializedMacroReplacement, extract_cell_boundary, extract_model_boundary,
+    extract_model_boundary_with_context, materialize_macro_replacement, plan_macro_replacement,
+    plan_macro_replacement_with_reserved, resolve_builtin_layout, validate_macro_structure,
+    verify_macro_steady_state, verify_macro_transitions, verify_world_transitions,
 };
 pub use macro_search::{
     MacroReplacementCandidate, ObservedMacroMetrics, find_builtin_verified_macro_replacements,

@@ -25,6 +25,18 @@ Structurally valid plans additionally expose a read-only `materialization`
 preview with the exact reversible patch, added supports, and signal-strength
 repeaters. This still does not authorize application; behavioral and transition
 verification remain mandatory.
+The `steady_state_report` re-analyzes that virtual world, maps newly inferred
+terminals back to the fixed boundary components when inference permits, and
+compares every truth-table row by driving the original boundary source
+positions directly. The explicit boundary contract remains authoritative when
+the replacement topology changes terminal inference.
+After a steady-state pass, `transition_report` exhaustively compares ordered
+input changes for cells with at most four inputs. It includes one-bit changes
+and multi-bit swaps, reporting the first differing tick and both output traces.
+Initial settled simulator states are cached per input assignment.
+Boundary routes also expose `boundary_facing` and `driver_position`. Aligned
+ports require compatible outward faces, and repeaters on input routes face from
+the observed boundary toward the replacement cell.
 
 DustRoute MCP tool results are JSON text. Versioned high-level response
 families use these identifiers:
@@ -99,6 +111,33 @@ that an expired ID can be recreated without observing the world again.
 ## Observed physical optimization
 
 `new_optimization` accepts `wire_length` and `density_then_wire_length`.
+It also accepts an explicit `contract`. Omitted categories use conservative
+defaults, and the fully resolved contract is echoed in the response before any
+world mutation. The contract separates these concerns:
+
+- `logical`: exact steady-state truth-table preservation.
+- `timing`: `exact_trace`, `bounded_delay`, `settled_value_only`, or
+  `preserve_order`; the default is bounded delay with at most five added
+  redstone ticks and a 20-redstone-tick settling deadline.
+- `pulse`: whether pulses may be introduced or removed and their maximum width
+  change; the default permits neither and requires an exact width.
+- `analog`: optional signal-strength preservation.
+- `boundary`: preservation of physical boundary blocks, facing, and external
+  driver positions.
+- `mutation`: fixed focus, temporary expansion permission, maximum changed
+  blocks, and automatic-apply permission. Automatic apply defaults to false.
+
+Every response includes `contract_assessment` with a `passed`, `failed`, or
+`unavailable` result for each category. `unavailable` is deliberately not a
+pass. An operation whose contract is not completely satisfied may be inspected
+as a proposal, but `invoke_operation` rejects it. This keeps an unmeasured
+transition or pulse characteristic from being silently treated as preserved.
+For simple wire-path optimization, DustRoute independently infers the original
+and candidate terminal interfaces, compares their steady truth tables, and then
+exhaustively simulates every ordered transition for up to four inputs. Inferred
+terminal anchors may move inside the focus; comparison follows the comparable
+terminal order while the explicit physical focus and endpoints remain fixed.
+
 The latter reports a three-stage `phase_trace`: `local_density`,
 `connector_recovery`, and `global_compaction`. Search may internally accept a
 denser local candidate whose connectors are temporarily longer. Intermediate
