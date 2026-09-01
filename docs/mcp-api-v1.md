@@ -13,6 +13,12 @@ catalog suggestions ranked by physical size. They are explicitly
 `proposal_only`; the response does not authorize placement or bypass the normal
 preview and contextual transition-verification workflow.
 
+When the inferred terminals are complete, the same object also includes
+`placement_plans`. A plan fixes those observed terminal positions, searches the
+four horizontal rotations and reports a connector skeleton. Plans are
+read-only and `automatic_apply_allowed` remains false while structural,
+steady-state, or transition verification is pending.
+
 DustRoute MCP tool results are JSON text. Versioned high-level response
 families use these identifiers:
 

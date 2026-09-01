@@ -7,8 +7,9 @@ use dustroute_app::DustRouteService;
 use dustroute_optimize::{
     AnchorPolicy, BehavioralVerificationConfig, CompressionAxis, CompressionDirection,
     ObservedMacroMetrics, OptimizationPlan, OptimizationRoutingConfig, OptimizationSafety,
-    TemporalCapabilities, assess_optimization_safety, find_builtin_verified_macro_replacements,
-    optimize_physical_wire_path, realize_staged_optimization_against, verify_realized_optimization,
+    TemporalCapabilities, assess_optimization_safety, extract_model_boundary,
+    find_builtin_verified_macro_replacements, optimize_physical_wire_path, plan_macro_replacement,
+    realize_staged_optimization_against, verify_realized_optimization,
 };
 use dustroute_physical::{BlockKind, Pos};
 use dustroute_physical::{PhysicalBlockChange, PhysicalPatch};
@@ -3121,6 +3122,15 @@ impl DustRouteMcp {
                 ObservedMacroMetrics::from_world(&world),
             )
         });
+        let macro_plans = translated.functional_network.as_ref().and_then(|model| {
+            let boundary = extract_model_boundary(model);
+            macro_candidates.as_ref().map(|candidates| {
+                candidates
+                    .iter()
+                    .filter_map(|candidate| plan_macro_replacement(candidate, &boundary).ok())
+                    .collect::<Vec<_>>()
+            })
+        });
         let focused = target
             .map(|target| focused_role_json(translated, target))
             .unwrap_or(Value::Null);
@@ -3169,6 +3179,26 @@ impl DustRouteMcp {
                         "saved_volume": candidate.saved_volume,
                         "requires_contextual_transition_verification": candidate.requires_contextual_transition_verification,
                     })).collect::<Vec<_>>()
+                    ,"placement_plans": macro_plans.as_ref().map(|plans| plans.iter().map(|plan| json!({
+                        "component_id": plan.component_id,
+                        "origin": plan.placed.origin,
+                        "rotation_y": format!("{:?}", plan.placed.rotation).to_lowercase(),
+                        "total_route_length": plan.total_route_length,
+                        "automatic_apply_allowed": plan.automatic_apply_allowed,
+                        "verification": {
+                            "structural": format!("{:?}", plan.verification.structural).to_lowercase(),
+                            "steady_state": format!("{:?}", plan.verification.steady_state).to_lowercase(),
+                            "transitions": format!("{:?}", plan.verification.transitions).to_lowercase(),
+                        },
+                        "routes": plan.routes.iter().map(|route| json!({
+                            "direction": format!("{:?}", route.boundary.direction).to_lowercase(),
+                            "observed_index": route.boundary.observed_index,
+                            "boundary_position": route.boundary.position,
+                            "candidate_port": route.candidate_port,
+                            "candidate_position": route.candidate_position,
+                            "path": route.path,
+                        })).collect::<Vec<_>>(),
+                    })).collect::<Vec<_>>()).unwrap_or_default(),
                 })),
             );
             object.insert(

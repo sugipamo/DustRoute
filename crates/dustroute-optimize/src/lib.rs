@@ -1,5 +1,6 @@
 //! Placement and semantic circuit optimizers for DustRoute.
 
+mod macro_realize;
 mod macro_search;
 mod phased;
 mod physical;
@@ -9,6 +10,11 @@ mod reverse;
 mod safety;
 mod semantic;
 
+pub use macro_realize::{
+    ContextualVerificationState, MacroBoundaryDirection, MacroBoundaryPort, MacroPortRoute,
+    MacroRealizationError, MacroRealizationVerification, MacroReplacementPlan,
+    extract_cell_boundary, extract_model_boundary, plan_macro_replacement, resolve_builtin_layout,
+};
 pub use macro_search::{
     MacroReplacementCandidate, ObservedMacroMetrics, find_builtin_verified_macro_replacements,
     find_verified_macro_replacements,
