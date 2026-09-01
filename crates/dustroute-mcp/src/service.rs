@@ -6,10 +6,11 @@ use std::sync::Arc;
 use dustroute_app::DustRouteService;
 use dustroute_optimize::{
     AnchorPolicy, BehavioralVerificationConfig, CompressionAxis, CompressionDirection,
-    ObservedMacroMetrics, OptimizationPlan, OptimizationRoutingConfig, OptimizationSafety,
-    TemporalCapabilities, assess_optimization_safety, extract_model_boundary,
-    find_builtin_verified_macro_replacements, optimize_physical_wire_path, plan_macro_replacement,
-    realize_staged_optimization_against, verify_realized_optimization,
+    ContextualVerificationState, ObservedMacroMetrics, OptimizationPlan, OptimizationRoutingConfig,
+    OptimizationSafety, TemporalCapabilities, assess_optimization_safety, extract_model_boundary,
+    find_builtin_verified_macro_replacements, materialize_macro_replacement,
+    optimize_physical_wire_path, plan_macro_replacement, realize_staged_optimization_against,
+    validate_macro_structure, verify_realized_optimization,
 };
 use dustroute_physical::{BlockKind, Pos};
 use dustroute_physical::{PhysicalBlockChange, PhysicalPatch};
@@ -3124,10 +3125,29 @@ impl DustRouteMcp {
         });
         let macro_plans = translated.functional_network.as_ref().and_then(|model| {
             let boundary = extract_model_boundary(model);
+            let boundary_positions = boundary
+                .iter()
+                .map(|port| port.position)
+                .collect::<BTreeSet<_>>();
+            let replaceable = world
+                .positions()
+                .filter(|pos| !boundary_positions.contains(pos))
+                .collect::<BTreeSet<_>>();
             macro_candidates.as_ref().map(|candidates| {
                 candidates
                     .iter()
-                    .filter_map(|candidate| plan_macro_replacement(candidate, &boundary).ok())
+                    .filter_map(|candidate| {
+                        let mut plan = plan_macro_replacement(candidate, &boundary).ok()?;
+                        let structural = validate_macro_structure(&plan, &world, &replaceable);
+                        plan.verification.structural = if structural.valid() {
+                            ContextualVerificationState::Passed
+                        } else {
+                            ContextualVerificationState::Failed
+                        };
+                        let materialized =
+                            materialize_macro_replacement(&plan, &world, &replaceable, 14);
+                        Some((plan, structural, materialized))
+                    })
                     .collect::<Vec<_>>()
             })
         });
@@ -3179,12 +3199,39 @@ impl DustRouteMcp {
                         "saved_volume": candidate.saved_volume,
                         "requires_contextual_transition_verification": candidate.requires_contextual_transition_verification,
                     })).collect::<Vec<_>>()
-                    ,"placement_plans": macro_plans.as_ref().map(|plans| plans.iter().map(|plan| json!({
+                    ,"placement_plans": macro_plans.as_ref().map(|plans| plans.iter().map(|(plan, structural, materialized)| json!({
                         "component_id": plan.component_id,
                         "origin": plan.placed.origin,
                         "rotation_y": format!("{:?}", plan.placed.rotation).to_lowercase(),
                         "total_route_length": plan.total_route_length,
                         "automatic_apply_allowed": plan.automatic_apply_allowed,
+                        "structural_report": {
+                            "valid": structural.valid(),
+                            "candidate_collisions": structural.candidate_collisions,
+                            "route_collisions": structural.route_collisions,
+                            "route_cross_net_contacts": structural.route_cross_net_contacts.iter().map(|(first, second, a, b)| json!({
+                                "first_route": first,
+                                "second_route": second,
+                                "first_position": a,
+                                "second_position": b,
+                            })).collect::<Vec<_>>(),
+                            "candidate_support_issues": structural.candidate_support_issues,
+                            "required_route_supports": structural.required_route_supports,
+                            "blocked_route_supports": structural.blocked_route_supports,
+                        },
+                        "materialization": match materialized {
+                            Ok(materialized) => json!({
+                                "status": "preview_ready",
+                                "change_count": materialized.patch.changes.len(),
+                                "added_supports": materialized.added_supports,
+                                "inserted_repeaters": materialized.inserted_repeaters,
+                                "patch": materialized.patch,
+                            }),
+                            Err(error) => json!({
+                                "status": "unavailable",
+                                "reason": format!("{error:?}"),
+                            }),
+                        },
                         "verification": {
                             "structural": format!("{:?}", plan.verification.structural).to_lowercase(),
                             "steady_state": format!("{:?}", plan.verification.steady_state).to_lowercase(),

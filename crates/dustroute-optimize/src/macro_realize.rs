@@ -1,6 +1,8 @@
 use std::collections::BTreeSet;
 
-use dustroute_physical::Pos;
+use dustroute_physical::{
+    Block, BlockKind, Facing, PhysicalBlockChange, PhysicalPatch, PhysicalPatchReason, Pos, World,
+};
 use dustroute_translate::{FunctionalNetworkModel, PhysicalCell, PlacedCell, RotationY};
 
 use crate::MacroReplacementCandidate;
@@ -53,6 +55,36 @@ pub struct MacroReplacementPlan {
     pub total_route_length: usize,
 }
 
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct MacroStructuralReport {
+    pub candidate_collisions: Vec<Pos>,
+    pub route_collisions: Vec<Pos>,
+    pub route_cross_net_contacts: Vec<(usize, usize, Pos, Pos)>,
+    pub candidate_support_issues: Vec<Pos>,
+    /// Supports that a later materializer may add if their positions are free.
+    pub required_route_supports: Vec<Pos>,
+    pub blocked_route_supports: Vec<Pos>,
+}
+
+impl MacroStructuralReport {
+    #[must_use]
+    pub fn valid(&self) -> bool {
+        self.candidate_collisions.is_empty()
+            && self.route_collisions.is_empty()
+            && self.route_cross_net_contacts.is_empty()
+            && self.candidate_support_issues.is_empty()
+            && self.blocked_route_supports.is_empty()
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MaterializedMacroReplacement {
+    pub world: World,
+    pub patch: PhysicalPatch,
+    pub added_supports: Vec<Pos>,
+    pub inserted_repeaters: Vec<Pos>,
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum MacroRealizationError {
     UnsupportedLayoutReference(String),
@@ -62,6 +94,11 @@ pub enum MacroRealizationError {
     },
     MissingCandidatePort(String),
     NoPlacement,
+    StructurallyInvalid(Box<MacroStructuralReport>),
+    NoRepeaterSite {
+        route: usize,
+        after_steps: usize,
+    },
 }
 
 /// Extracts the replaceable cell's externally visible contract. Support
@@ -203,6 +240,215 @@ pub fn plan_macro_replacement(
     best.ok_or(MacroRealizationError::NoPlacement)
 }
 
+/// Checks a proposal against the observed context without changing it.
+/// `replaceable` is the exact ownership set of the focused implementation;
+/// occupied blocks outside it are immutable obstacles.
+#[must_use]
+pub fn validate_macro_structure(
+    plan: &MacroReplacementPlan,
+    observed: &World,
+    replaceable: &BTreeSet<Pos>,
+) -> MacroStructuralReport {
+    let mut report = MacroStructuralReport::default();
+    let candidate_blocks = plan
+        .placed
+        .blocks()
+        .collect::<std::collections::BTreeMap<_, _>>();
+    for (pos, block) in &candidate_blocks {
+        if observed.get(*pos).is_some_and(|actual| actual != block) && !replaceable.contains(pos) {
+            report.candidate_collisions.push(*pos);
+        }
+    }
+    let mut candidate_world = observed.clone();
+    for pos in replaceable {
+        candidate_world.remove(*pos);
+    }
+    for (pos, block) in &candidate_blocks {
+        candidate_world.set(*pos, block.clone());
+    }
+    report.candidate_support_issues = candidate_world
+        .support_issues()
+        .into_iter()
+        .filter_map(|(pos, _, _)| candidate_blocks.contains_key(&pos).then_some(pos))
+        .collect();
+
+    for (index, route) in plan.routes.iter().enumerate() {
+        for pos in route
+            .path
+            .iter()
+            .copied()
+            .skip(1)
+            .take(route.path.len().saturating_sub(2))
+        {
+            if candidate_blocks.contains_key(&pos)
+                || (observed.kind_at(pos) != BlockKind::Air && !replaceable.contains(&pos))
+            {
+                report.route_collisions.push(pos);
+            }
+            let support = pos.offset(0, -1, 0);
+            if candidate_blocks
+                .get(&support)
+                .or_else(|| {
+                    (!replaceable.contains(&support))
+                        .then(|| observed.get(support))
+                        .flatten()
+                })
+                .is_some_and(|block| block.redstone_traits().supports_dust_on_top)
+            {
+                continue;
+            }
+            if observed.kind_at(support) == BlockKind::Air || replaceable.contains(&support) {
+                report.required_route_supports.push(support);
+            } else {
+                report.blocked_route_supports.push(support);
+            }
+        }
+        for (other_index, other) in plan.routes.iter().enumerate().skip(index + 1) {
+            for first in &route.path {
+                for second in &other.path {
+                    let dx = (first.x - second.x).abs();
+                    let dy = (first.y - second.y).abs();
+                    let dz = (first.z - second.z).abs();
+                    if first == second || (dx + dz == 1 && dy <= 1) {
+                        report
+                            .route_cross_net_contacts
+                            .push((index, other_index, *first, *second));
+                    }
+                }
+            }
+        }
+    }
+    report.candidate_collisions.sort_unstable();
+    report.candidate_collisions.dedup();
+    report.route_collisions.sort_unstable();
+    report.route_collisions.dedup();
+    report.candidate_support_issues.sort_unstable();
+    report.candidate_support_issues.dedup();
+    report.required_route_supports.sort_unstable();
+    report.required_route_supports.dedup();
+    report.blocked_route_supports.sort_unstable();
+    report.blocked_route_supports.dedup();
+    report
+}
+
+/// Converts a structurally valid skeleton into a virtual world and an exact
+/// reversible patch. The observed world itself is never mutated.
+pub fn materialize_macro_replacement(
+    plan: &MacroReplacementPlan,
+    observed: &World,
+    replaceable: &BTreeSet<Pos>,
+    max_wire_run: usize,
+) -> Result<MaterializedMacroReplacement, MacroRealizationError> {
+    let structural = validate_macro_structure(plan, observed, replaceable);
+    if !structural.valid() {
+        return Err(MacroRealizationError::StructurallyInvalid(Box::new(
+            structural,
+        )));
+    }
+    let mut world = observed.clone();
+    for pos in replaceable {
+        world.remove(*pos);
+    }
+    for (pos, block) in plan.placed.blocks() {
+        world.set(pos, block);
+    }
+    for support in &structural.required_route_supports {
+        if world.kind_at(*support) == BlockKind::Air {
+            world.set(*support, Block::new(BlockKind::Solid));
+        }
+    }
+
+    let mut inserted_repeaters = Vec::new();
+    for (route_index, route) in plan.routes.iter().enumerate() {
+        let repeaters = repeater_sites(&route.path, max_wire_run).ok_or(
+            MacroRealizationError::NoRepeaterSite {
+                route: route_index,
+                after_steps: max_wire_run,
+            },
+        )?;
+        for (index, pos) in route
+            .path
+            .iter()
+            .copied()
+            .enumerate()
+            .skip(1)
+            .take(route.path.len().saturating_sub(2))
+        {
+            if let Some(facing) = repeaters.get(&index) {
+                let repeater = world.place(BlockKind::Repeater, pos);
+                repeater.facing = Some(*facing);
+                repeater.delay = Some(1);
+                inserted_repeaters.push(pos);
+            } else {
+                world.place(BlockKind::RedstoneWire, pos);
+            }
+        }
+    }
+    dustroute_translate::update_wire_shapes(&mut world);
+    let positions = observed
+        .positions()
+        .chain(world.positions())
+        .collect::<BTreeSet<_>>();
+    let changes = positions
+        .into_iter()
+        .filter_map(|pos| {
+            let before = observed
+                .get(pos)
+                .cloned()
+                .unwrap_or_else(|| Block::new(BlockKind::Air));
+            let after = world
+                .get(pos)
+                .cloned()
+                .unwrap_or_else(|| Block::new(BlockKind::Air));
+            (before != after).then_some(PhysicalBlockChange { pos, before, after })
+        })
+        .collect();
+    Ok(MaterializedMacroReplacement {
+        world,
+        patch: PhysicalPatch {
+            reason: PhysicalPatchReason::OptimizePlacement,
+            affected_fragments: Vec::new(),
+            confidence_percent: 100,
+            explanation: format!("replace focused implementation with {}", plan.component_id),
+            changes,
+        },
+        added_supports: structural.required_route_supports,
+        inserted_repeaters,
+    })
+}
+
+fn repeater_sites(
+    path: &[Pos],
+    max_wire_run: usize,
+) -> Option<std::collections::BTreeMap<usize, Facing>> {
+    if max_wire_run == 0 {
+        return None;
+    }
+    let mut result = std::collections::BTreeMap::new();
+    let mut last_refresh = 0;
+    while path.len().saturating_sub(1).saturating_sub(last_refresh) > max_wire_run {
+        let upper = (last_refresh + max_wire_run).min(path.len().saturating_sub(2));
+        let site = (last_refresh + 1..=upper).rev().find_map(|index| {
+            facing_between(path[index - 1], path[index])
+                .filter(|facing| facing_between(path[index], path[index + 1]) == Some(*facing))
+                .map(|facing| (index, facing))
+        })?;
+        result.insert(site.0, site.1);
+        last_refresh = site.0;
+    }
+    Some(result)
+}
+
+fn facing_between(from: Pos, to: Pos) -> Option<Facing> {
+    match (to.x - from.x, to.y - from.y, to.z - from.z) {
+        (1, 0, 0) => Some(Facing::East),
+        (-1, 0, 0) => Some(Facing::West),
+        (0, 0, 1) => Some(Facing::South),
+        (0, 0, -1) => Some(Facing::North),
+        _ => None,
+    }
+}
+
 fn mapped_boundary<'a>(
     candidate: &'a MacroReplacementCandidate,
     boundary: &'a [MacroBoundaryPort],
@@ -334,5 +580,86 @@ mod tests {
             plan.verification.transitions,
             ContextualVerificationState::Pending
         );
+
+        let replaceable = baseline.world.positions().collect();
+        let report = validate_macro_structure(&plan, &baseline.world, &replaceable);
+        assert!(report.candidate_collisions.is_empty());
+        assert!(report.blocked_route_supports.is_empty());
+    }
+
+    #[test]
+    fn structural_validation_rejects_immutable_obstacles_and_cross_net_contacts() {
+        let baseline = dustroute_translate::compiled_xor_cell().unwrap();
+        let (low, high) = baseline.world.bounds().unwrap();
+        let analysis = analyze_world_region(&baseline.world, RegionBounds::new(low, high));
+        let model = derive_functional_network(&baseline.world, &analysis, 8, 64).unwrap();
+        let candidate = find_builtin_verified_macro_replacements(
+            &model,
+            "java",
+            "1.21.11",
+            ObservedMacroMetrics::from_world(&baseline.world),
+        )
+        .remove(0);
+        let mut plan =
+            plan_macro_replacement(&candidate, &extract_cell_boundary(&baseline)).unwrap();
+        let (collision, candidate_block) = plan.placed.blocks().next().unwrap();
+        let mut observed = World::new();
+        let obstacle = if candidate_block.kind == BlockKind::Solid {
+            BlockKind::Transparent
+        } else {
+            BlockKind::Solid
+        };
+        observed.set(collision, dustroute_physical::Block::new(obstacle));
+        plan.routes[1].path = plan.routes[0].path.clone();
+
+        let report = validate_macro_structure(&plan, &observed, &BTreeSet::new());
+        assert!(report.candidate_collisions.contains(&collision));
+        assert!(!report.route_cross_net_contacts.is_empty());
+    }
+
+    #[test]
+    fn materializes_supported_wire_refreshes_strength_and_round_trips_patch() {
+        let placed = PlacedCell {
+            cell: dustroute_translate::terminal_cell("source"),
+            origin: Pos::new(0, 0, 0),
+            rotation: RotationY::R0,
+        };
+        let boundary = MacroBoundaryPort {
+            observed_index: 0,
+            name: "out".into(),
+            position: Pos::new(20, 1, 0),
+            direction: MacroBoundaryDirection::Output,
+        };
+        let plan = MacroReplacementPlan {
+            component_id: "test.long-route".into(),
+            placed,
+            routes: vec![MacroPortRoute {
+                boundary: boundary.clone(),
+                candidate_port: "out".into(),
+                candidate_position: Pos::new(0, 1, 0),
+                path: manhattan_path(Pos::new(0, 1, 0), boundary.position),
+            }],
+            verification: MacroRealizationVerification {
+                structural: ContextualVerificationState::Pending,
+                steady_state: ContextualVerificationState::Pending,
+                transitions: ContextualVerificationState::Pending,
+            },
+            automatic_apply_allowed: false,
+            total_route_length: 20,
+        };
+        let mut observed = World::new();
+        observed.set(Pos::new(20, 0, 0), Block::new(BlockKind::Solid));
+        observed.place(BlockKind::RedstoneWire, boundary.position);
+
+        let result = materialize_macro_replacement(&plan, &observed, &BTreeSet::new(), 14).unwrap();
+
+        assert_eq!(result.inserted_repeaters, [Pos::new(14, 1, 0)]);
+        assert_eq!(
+            result.world.kind_at(Pos::new(14, 1, 0)),
+            BlockKind::Repeater
+        );
+        assert!(result.world.support_issues().is_empty());
+        let restored = result.patch.inverse().apply_virtual(&result.world).unwrap();
+        assert_eq!(restored, observed);
     }
 }

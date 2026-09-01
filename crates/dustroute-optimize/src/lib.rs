@@ -13,7 +13,9 @@ mod semantic;
 pub use macro_realize::{
     ContextualVerificationState, MacroBoundaryDirection, MacroBoundaryPort, MacroPortRoute,
     MacroRealizationError, MacroRealizationVerification, MacroReplacementPlan,
-    extract_cell_boundary, extract_model_boundary, plan_macro_replacement, resolve_builtin_layout,
+    MacroStructuralReport, MaterializedMacroReplacement, extract_cell_boundary,
+    extract_model_boundary, materialize_macro_replacement, plan_macro_replacement,
+    resolve_builtin_layout, validate_macro_structure,
 };
 pub use macro_search::{
     MacroReplacementCandidate, ObservedMacroMetrics, find_builtin_verified_macro_replacements,

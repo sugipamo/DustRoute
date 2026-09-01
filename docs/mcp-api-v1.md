@@ -18,6 +18,13 @@ When the inferred terminals are complete, the same object also includes
 four horizontal rotations and reports a connector skeleton. Plans are
 read-only and `automatic_apply_allowed` remains false while structural,
 steady-state, or transition verification is pending.
+Each plan has a `structural_report` listing immutable candidate collisions,
+route collisions, cross-net contacts, invalid cell supports, supports that may
+be added by materialization, and positions where such supports are blocked.
+Structurally valid plans additionally expose a read-only `materialization`
+preview with the exact reversible patch, added supports, and signal-strength
+repeaters. This still does not authorize application; behavioral and transition
+verification remain mandatory.
 
 DustRoute MCP tool results are JSON text. Versioned high-level response
 families use these identifiers:
