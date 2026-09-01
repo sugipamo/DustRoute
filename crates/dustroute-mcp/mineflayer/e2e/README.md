@@ -134,6 +134,8 @@ Scenario files are ordered JSON documents in `scenarios/`. Supported steps are:
 `${result.path.0.value}` references pass dynamic operation IDs between steps.
 Mutation tools still receive `confirm: true` explicitly; the harness never
 weakens MCP preview policy.
+Individual expensive read-only steps may set `timeout_ms`; it remains bounded
+by the scenario author and does not change the MCP server's search budgets.
 
 `DUSTROUTE_E2E_TIMEOUT_MS` configures MCP/scenario waits from 1,000 through
 600,000 milliseconds. Each scenario declares cleanup commands, and temporary

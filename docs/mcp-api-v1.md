@@ -38,6 +38,14 @@ Boundary routes also expose `boundary_facing` and `driver_position`. Aligned
 ports require compatible outward faces, and repeaters on input routes face from
 the observed boundary toward the replacement cell.
 
+Pass a returned candidate `component_id` and the same immutable `circuit_id` to
+`new_macro_optimization` to recompute the placement and issue a normal
+operation ID. The tool reruns structural, steady-state, exhaustive transition,
+boundary-strength, and preservation-contract checks. Successful contracts use
+the standard `show_operation` / `invoke_operation` / `undo_operation`
+lifecycle. A candidate with a failed or unavailable category remains
+previewable but cannot be invoked.
+
 DustRoute MCP tool results are JSON text. Versioned high-level response
 families use these identifiers:
 
@@ -132,11 +140,28 @@ Every response includes `contract_assessment` with a `passed`, `failed`, or
 pass. An operation whose contract is not completely satisfied may be inspected
 as a proposal, but `invoke_operation` rejects it. This keeps an unmeasured
 transition or pulse characteristic from being silently treated as preserved.
+Each non-passing category also exposes stable `reason_codes`. Current codes
+include `too_many_inputs`, `ambiguous_terminal_mapping`,
+`unsupported_physics`, `logical_truth_table_mismatch`,
+`timing_contract_violated`, `new_pulse_introduced`,
+`existing_pulse_removed`, `pulse_width_changed`, `analog_strength_changed`,
+`boundary_structure_invalid`, and `mutation_limit_exceeded`. Human-readable
+`reasons` remain explanatory and must not be used for control flow.
 For simple wire-path optimization, DustRoute independently infers the original
 and candidate terminal interfaces, compares their steady truth tables, and then
 exhaustively simulates every ordered transition for up to four inputs. Inferred
 terminal anchors may move inside the focus; comparison follows the comparable
 terminal order while the explicit physical focus and endpoints remain fixed.
+At application time, the MCP server rescans the preserved boundary records and
+compares block identity plus static properties such as facing, delay, and mode.
+Dynamic power, lit, locked, and dust-arm states are excluded from this physical
+identity comparison. A mismatch causes rejection and rollback.
+
+The optional `search` object bounds physical path exploration with
+`max_expansions`, `max_candidates`, and `max_millis`. Results echo both the
+resolved budget and measured `expansions`, `candidates`, `truncated`, and
+`stop_reason`. Stable stop reasons are `max_expansions`, `max_candidates`, and
+`time_budget`.
 
 The latter reports a three-stage `phase_trace`: `local_density`,
 `connector_recovery`, and `global_compaction`. Search may internally accept a

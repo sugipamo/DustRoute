@@ -43,3 +43,22 @@ for 33 observations per state. Minecraft and DustRoute now agree that the
 imported layout's output remains low for every input combination. The cell is
 still rejected as XOR; matching the broken behavior is simulator validation,
 not component-library promotion.
+
+## Promoting a mismatch into regression evidence
+
+After reviewing an E2E trace, promote it explicitly with a stable name and a
+reason. Existing fixtures are never overwritten:
+
+```console
+cd crates/dustroute-mcp/mineflayer
+npm run promote:differential -- \
+  ../../../../.local/e2e-artifacts/example.trace.json \
+  repeater_edge_mismatch \
+  "Minecraft updates the output one redstone tick later"
+```
+
+This creates a tracked normalized trace and metadata pair under
+`crates/dustroute-translate/tests/differential/`. Rust tests validate every
+promoted pair. The metadata retains the Minecraft version, source artifact,
+and the reason it was promoted, so a simulator correction can cite and retain
+the original counterexample.

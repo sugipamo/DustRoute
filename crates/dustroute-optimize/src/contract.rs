@@ -102,6 +102,7 @@ pub enum ContractCheckState {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ContractCheck {
     pub state: ContractCheckState,
+    pub reason_codes: Vec<String>,
     pub reasons: Vec<String>,
 }
 
@@ -138,35 +139,57 @@ pub fn assess_macro_contract(
     steady: Option<&MacroSteadyStateReport>,
     transitions: Option<&MacroTransitionReport>,
     changed_blocks: usize,
-    analog_strength_verified: bool,
+    analog_strength_verified: Option<bool>,
 ) -> OptimizationContractAssessment {
     let logical = match steady {
         Some(report) if report.state == ContextualVerificationState::Passed => passed(),
-        Some(report) => failed(format!(
-            "{} truth-table assignment(s) differ",
-            report.differing_assignments.len()
-        )),
-        None => unavailable("steady-state truth table was not verified"),
+        Some(report) => failed_code(
+            "logical_truth_table_mismatch",
+            format!(
+                "{} truth-table assignment(s) differ",
+                report.differing_assignments.len()
+            ),
+        ),
+        None => unavailable_code(
+            "steady_state_unavailable",
+            "steady-state truth table was not verified",
+        ),
     };
     let timing = assess_timing(contract.timing, transitions);
     let pulse = assess_pulses(contract.pulse, transitions);
-    let analog = if !contract.analog.preserve_strength || analog_strength_verified {
+    let analog = if !contract.analog.preserve_strength {
         passed()
     } else {
-        unavailable("analog strength preservation was requested but not verified")
+        match analog_strength_verified {
+            Some(true) => passed(),
+            Some(false) => failed_code(
+                "analog_strength_changed",
+                "candidate changes boundary signal strength",
+            ),
+            None => unavailable_code(
+                "analog_strength_unavailable",
+                "analog strength preservation was requested but not verified",
+            ),
+        }
     };
     let boundary = if structural.valid() {
         passed()
     } else {
-        failed("structural or boundary validation failed")
+        failed_code(
+            "boundary_structure_invalid",
+            "structural or boundary validation failed",
+        )
     };
     let mutation = if changed_blocks <= contract.mutation.maximum_changed_blocks {
         passed()
     } else {
-        failed(format!(
-            "{changed_blocks} changed blocks exceeds contract maximum {}",
-            contract.mutation.maximum_changed_blocks
-        ))
+        failed_code(
+            "mutation_limit_exceeded",
+            format!(
+                "{changed_blocks} changed blocks exceeds contract maximum {}",
+                contract.mutation.maximum_changed_blocks
+            ),
+        )
     };
     OptimizationContractAssessment {
         logical,
@@ -183,15 +206,17 @@ fn assess_timing(
     transitions: Option<&MacroTransitionReport>,
 ) -> ContractCheck {
     let Some(report) = transitions else {
-        return unavailable("transition traces were not verified");
+        return unavailable_code(
+            "transition_unavailable",
+            "transition traces were not verified",
+        );
     };
     if report.state == ContextualVerificationState::Pending {
-        return unavailable(
-            report
-                .reason
-                .clone()
-                .unwrap_or_else(|| "transition traces were unavailable".to_owned()),
-        );
+        let reason = report
+            .reason
+            .clone()
+            .unwrap_or_else(|| "transition traces were unavailable".to_owned());
+        return unavailable_code(transition_unavailable_code(&reason), reason);
     }
     let valid = match contract.mode {
         TimingContractMode::ExactTrace => report.differing_cases == 0,
@@ -210,7 +235,10 @@ fn assess_timing(
     if valid {
         passed()
     } else {
-        failed("transition timing violates the selected timing mode")
+        failed_code(
+            "timing_contract_violated",
+            "transition timing violates the selected timing mode",
+        )
     }
 }
 
@@ -219,24 +247,29 @@ fn assess_pulses(
     transitions: Option<&MacroTransitionReport>,
 ) -> ContractCheck {
     let Some(report) = transitions else {
-        return unavailable("pulse traces were not verified");
+        return unavailable_code("pulse_unavailable", "pulse traces were not verified");
     };
     if report.state == ContextualVerificationState::Pending {
-        return unavailable(
-            report
-                .reason
-                .clone()
-                .unwrap_or_else(|| "pulse traces were unavailable".to_owned()),
-        );
+        let reason = report
+            .reason
+            .clone()
+            .unwrap_or_else(|| "pulse traces were unavailable".to_owned());
+        return unavailable_code(transition_unavailable_code(&reason), reason);
     }
     for case in &report.cases {
         let original = transient_widths(&case.original_outputs);
         let candidate = transient_widths(&case.candidate_outputs);
         if !contract.allow_new_pulses && candidate.len() > original.len() {
-            return failed("candidate introduces a new transient pulse");
+            return failed_code(
+                "new_pulse_introduced",
+                "candidate introduces a new transient pulse",
+            );
         }
         if !contract.allow_removed_pulses && candidate.len() < original.len() {
-            return failed("candidate removes an existing transient pulse");
+            return failed_code(
+                "existing_pulse_removed",
+                "candidate removes an existing transient pulse",
+            );
         }
         if original
             .iter()
@@ -245,7 +278,10 @@ fn assess_pulses(
                 original.abs_diff(*candidate) > contract.maximum_width_delta_redstone_ticks
             })
         {
-            return failed("transient pulse width exceeds the allowed delta");
+            return failed_code(
+                "pulse_width_changed",
+                "transient pulse width exceeds the allowed delta",
+            );
         }
     }
     passed()
@@ -298,21 +334,34 @@ fn transient_widths(trace: &[Vec<bool>]) -> Vec<usize> {
 fn passed() -> ContractCheck {
     ContractCheck {
         state: ContractCheckState::Passed,
+        reason_codes: Vec::new(),
         reasons: Vec::new(),
     }
 }
 
-fn failed(reason: impl Into<String>) -> ContractCheck {
+fn failed_code(code: impl Into<String>, reason: impl Into<String>) -> ContractCheck {
     ContractCheck {
         state: ContractCheckState::Failed,
+        reason_codes: vec![code.into()],
         reasons: vec![reason.into()],
     }
 }
 
-fn unavailable(reason: impl Into<String>) -> ContractCheck {
+fn unavailable_code(code: impl Into<String>, reason: impl Into<String>) -> ContractCheck {
     ContractCheck {
         state: ContractCheckState::Unavailable,
+        reason_codes: vec![code.into()],
         reasons: vec![reason.into()],
+    }
+}
+
+fn transition_unavailable_code(reason: &str) -> &'static str {
+    if reason.contains("cannot exhaustively enumerate") || reason.contains("too many inputs") {
+        "too_many_inputs"
+    } else if reason.contains("ambiguous") || reason.contains("not comparable") {
+        "ambiguous_terminal_mapping"
+    } else {
+        "unsupported_physics"
     }
 }
 
@@ -416,7 +465,7 @@ mod tests {
             None,
             None,
             3,
-            false,
+            None,
         );
         assert_eq!(assessment.mutation.state, ContractCheckState::Failed);
     }
@@ -431,6 +480,7 @@ mod tests {
         };
         let assessment = assess_timing(OptimizationContract::default().timing, Some(&report));
         assert_eq!(assessment.state, ContractCheckState::Unavailable);
+        assert_eq!(assessment.reason_codes, ["too_many_inputs"]);
         assert_eq!(assessment.reasons, ["too many inputs"]);
     }
 }

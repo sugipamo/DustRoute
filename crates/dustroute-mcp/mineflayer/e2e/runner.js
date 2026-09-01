@@ -213,13 +213,13 @@ async function runScenario (bot, mcp, scenario) {
         results[step.save || 'gaze'] = await aim(bot, mcp, step, footings)
       } else if (step.kind === 'mcp') {
         const args = resolveReferences(step.arguments || {}, results)
-        results[step.save] = await mcp.callTool(step.tool, args)
+        results[step.save] = await mcp.callTool(step.tool, args, Number(step.timeout_ms || timeoutMs))
         if (process.env.DUSTROUTE_E2E_VERBOSE === 'true') {
           process.stdout.write(`${JSON.stringify({ step: step.save, result: results[step.save] }, null, 2)}\n`)
         }
       } else if (step.kind === 'mcp_error') {
         const args = resolveReferences(step.arguments || {}, results)
-        results[step.save] = await mcp.callToolRaw(step.tool, args)
+        results[step.save] = await mcp.callToolRaw(step.tool, args, Number(step.timeout_ms || timeoutMs))
         if (results[step.save].ok !== false) throw new Error(`${step.tool} unexpectedly succeeded`)
       } else if (step.kind === 'mcp_with_commands') {
         const args = resolveReferences(step.arguments || {}, results)

@@ -48,8 +48,30 @@
       { "path": "planning_policy.final_global_improvement_required", "equals": true },
       { "path": "metrics.wire_blocks_before", "equals": 9 },
       { "path": "metrics.wire_blocks_after", "equals": 5 },
-      { "path": "verification.temporal_requirement_preserved", "equals": true }
+      { "path": "preserved_boundary_blocks", "equals": 4 },
+      { "path": "verification.temporal_requirement_preserved", "equals": true },
+      { "path": "contract_assessment.satisfied", "equals": true },
+      { "path": "contract_assessment.logical.state", "equals": "passed" },
+      { "path": "contract_assessment.timing.state", "equals": "passed" },
+      { "path": "contract_assessment.pulse.state", "equals": "passed" },
+      { "path": "contract_assessment.boundary.state", "equals": "passed" },
+      { "path": "contract_assessment.mutation.state", "equals": "passed" },
+      { "path": "verification.transitions.case_count", "equals": 2 },
+      { "path": "verification.transitions.differing_cases", "equals": 0 }
     ]},
+    { "kind": "command", "commands": [
+      "/setblock 879 104 0 minecraft:lever[face=floor,facing=east,powered=true]"
+    ]},
+    { "kind": "wait", "ticks": 4 },
+    { "kind": "block", "position": { "x": 884, "y": 104, "z": 0 }, "save": "before_strength" },
+    { "kind": "assert", "from": "before_strength", "expect": [
+      { "path": "name", "equals": "redstone_wire" },
+      { "path": "properties.power", "equals": "7" }
+    ]},
+    { "kind": "command", "commands": [
+      "/setblock 879 104 0 minecraft:lever[face=floor,facing=east,powered=false]"
+    ]},
+    { "kind": "wait", "ticks": 4 },
     { "kind": "mcp_error", "tool": "invoke_operation", "arguments": {
       "operation_id": "${plan.operation_id}",
       "confirm": true
@@ -67,7 +89,31 @@
     { "kind": "assert", "from": "applied", "expect": [
       { "path": "ok", "equals": true },
       { "path": "verified", "equals": true },
+      { "path": "boundary_verified", "equals": true },
       { "path": "semantic_verification.equivalent", "equals": true }
+    ]},
+    { "kind": "block", "position": { "x": 880, "y": 104, "z": 0 }, "save": "applied_input_boundary" },
+    { "kind": "block", "position": { "x": 884, "y": 104, "z": 0 }, "save": "applied_output_boundary" },
+    { "kind": "block", "position": { "x": 885, "y": 104, "z": 0 }, "save": "applied_outside_device" },
+    { "kind": "assert", "from": "applied_input_boundary", "expect": [
+      { "path": "name", "equals": "redstone_wire" }
+    ]},
+    { "kind": "assert", "from": "applied_output_boundary", "expect": [
+      { "path": "name", "equals": "redstone_wire" }
+    ]},
+    { "kind": "assert", "from": "applied_outside_device", "expect": [
+      { "path": "name", "equals": "repeater" },
+      { "path": "properties.facing", "equals": "west" },
+      { "path": "properties.delay", "equals": "1" }
+    ]},
+    { "kind": "command", "commands": [
+      "/setblock 879 104 0 minecraft:lever[face=floor,facing=east,powered=true]"
+    ]},
+    { "kind": "wait", "ticks": 4 },
+    { "kind": "block", "position": { "x": 884, "y": 104, "z": 0 }, "save": "after_strength" },
+    { "kind": "assert", "from": "after_strength", "expect": [
+      { "path": "name", "equals": "redstone_wire" },
+      { "path": "properties.power", "equals": "11" }
     ]},
     { "kind": "mcp", "tool": "undo_operation", "arguments": {
       "operation_id": "${plan.operation_id}",
@@ -75,7 +121,38 @@
     }, "save": "undone" },
     { "kind": "assert", "from": "undone", "expect": [
       { "path": "ok", "equals": true },
-      { "path": "verified", "equals": true }
+      { "path": "verified", "equals": true },
+      { "path": "boundary_verified", "equals": true }
+    ]},
+    { "kind": "wait", "ticks": 4 },
+    { "kind": "block", "position": { "x": 884, "y": 104, "z": 0 }, "save": "undo_strength" },
+    { "kind": "assert", "from": "undo_strength", "expect": [
+      { "path": "name", "equals": "redstone_wire" },
+      { "path": "properties.power", "equals": "7" }
+    ]},
+    { "kind": "command", "commands": [
+      "/setblock 879 104 0 minecraft:lever[face=floor,facing=east,powered=false]"
+    ]},
+    { "kind": "wait", "ticks": 4 },
+    { "kind": "mcp_error", "tool": "new_optimization", "arguments": {
+      "circuit_id": "${analysis.circuit_id}",
+      "focus": {
+        "min": {
+          "x": "${analysis.bounds.min.x}",
+          "y": "${analysis.bounds.min.y}",
+          "z": "${analysis.bounds.min.z}"
+        },
+        "max": {
+          "x": "${analysis.bounds.max.x}",
+          "y": "${analysis.bounds.max.y}",
+          "z": "${analysis.bounds.max.z}"
+        }
+      },
+      "objective": "density_then_wire_length",
+      "contract": { "analog": { "preserve_strength": true } }
+    }, "save": "analog_plan" },
+    { "kind": "assert", "from": "analog_plan", "expect": [
+      { "path": "error_code", "equals": "invalid_state" }
     ]}
   ],
   "cleanup": ["/fill 878 102 -1 887 106 3 minecraft:air"]

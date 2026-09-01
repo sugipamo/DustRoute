@@ -23,7 +23,8 @@ pub use macro_realize::{
     MaterializedMacroReplacement, extract_cell_boundary, extract_model_boundary,
     extract_model_boundary_with_context, materialize_macro_replacement, plan_macro_replacement,
     plan_macro_replacement_with_reserved, resolve_builtin_layout, validate_macro_structure,
-    verify_macro_steady_state, verify_macro_transitions, verify_world_transitions,
+    verify_boundary_strengths, verify_macro_steady_state, verify_macro_transitions,
+    verify_world_transitions,
 };
 pub use macro_search::{
     MacroReplacementCandidate, ObservedMacroMetrics, find_builtin_verified_macro_replacements,
@@ -36,7 +37,9 @@ pub use phased::{
 };
 pub use physical::{
     PhasedPhysicalScore, PhasedPhysicalSelection, PhysicalOptimizationPhase,
-    PhysicalWireOptimization, PhysicalWireOptimizationError, optimize_physical_wire_path,
+    PhysicalOptimizationSearchBudget, PhysicalOptimizationSearchStats, PhysicalWireOptimization,
+    PhysicalWireOptimizationError, optimize_physical_wire_path,
+    optimize_physical_wire_path_with_budget, optimize_physical_wire_path_with_constraints,
     select_phased_physical_scores,
 };
 pub use placement::{

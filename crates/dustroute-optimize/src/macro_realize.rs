@@ -828,6 +828,61 @@ pub fn verify_world_transitions(
     )
 }
 
+/// Verifies exact dust signal strength at fixed physical boundary positions
+/// for every inferred steady-state input assignment.
+pub fn verify_boundary_strengths(
+    original: &World,
+    candidate: &World,
+    truth: &InferredTruthTable,
+    positions: &[Pos],
+    settle_ticks: usize,
+) -> Result<(), String> {
+    let (low, high) = original
+        .bounds()
+        .ok_or_else(|| "strength-verification world is empty".to_owned())?;
+    let analysis =
+        dustroute_translate::analyze_world_region(original, RegionBounds::new(low, high));
+    let drivers = truth
+        .inputs
+        .iter()
+        .map(|terminal| dustroute_translate::inferred_input_driver(original, &analysis, terminal))
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())?;
+    for row in &truth.rows {
+        let original_state =
+            settled_state_for_inputs(original, &drivers, &row.inputs, settle_ticks)?;
+        let candidate_state =
+            settled_state_for_inputs(candidate, &drivers, &row.inputs, settle_ticks)?;
+        for position in positions {
+            let before = original_state.strength(*position);
+            let after = candidate_state.strength(*position);
+            if before != after {
+                return Err(format!(
+                    "boundary signal strength at {position:?} changes from {before} to {after} for inputs {:?}",
+                    row.inputs
+                ));
+            }
+        }
+    }
+    Ok(())
+}
+
+fn settled_state_for_inputs(
+    world: &World,
+    drivers: &[dustroute_translate::InferredInputDriver],
+    inputs: &[bool],
+    settle_ticks: usize,
+) -> Result<dustroute_translate::TickState, String> {
+    let mut driven = world.clone();
+    for (driver, powered) in drivers.iter().zip(inputs) {
+        set_driver_in_world(&mut driven, *driver, *powered);
+    }
+    dustroute_translate::update_wire_shapes(&mut driven);
+    dustroute_translate::RedstoneTickSimulator::new(driven)
+        .and_then(|mut simulator| simulator.settle_ticks(settle_ticks))
+        .map_err(|error| error.to_string())
+}
+
 fn compare_transition_contexts(
     input_count: usize,
     original_context: MacroTransitionContext,
