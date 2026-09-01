@@ -1,5 +1,6 @@
 //! Placement and semantic circuit optimizers for DustRoute.
 
+mod macro_search;
 mod phased;
 mod physical;
 mod placement;
@@ -8,6 +9,10 @@ mod reverse;
 mod safety;
 mod semantic;
 
+pub use macro_search::{
+    MacroReplacementCandidate, ObservedMacroMetrics, find_builtin_verified_macro_replacements,
+    find_verified_macro_replacements,
+};
 pub use phased::{
     AnchorPolicy, CompressionAxis, CompressionDirection, DirectionalWeights, OptimizationPhase,
     OptimizationPlan, PhaseOptimizationResult, PhaseScore, StagedOptimizationResult,

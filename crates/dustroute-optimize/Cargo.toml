@@ -8,6 +8,7 @@ repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+dustroute-library = { path = "../dustroute-library" }
 dustroute-physical = { path = "../dustroute-physical" }
 dustroute-translate = { path = "../dustroute-translate" }
 

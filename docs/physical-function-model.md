@@ -27,3 +27,19 @@ The MCP reverse-analysis response exposes this as `physical_function_model`
 when `include_truth_table` is enabled. Large or open-boundary circuits continue
 to skip exhaustive truth-table inference; their physical observations and
 partial local roles remain available without making a complete function claim.
+
+## Macro replacement search
+
+`dustroute-optimize` can search the verified component catalog using the
+functional model. Matching uses the complete truth table, including input and
+output port permutations, rather than local gate labels. Candidates must:
+
+- have physical layout metadata;
+- carry Minecraft E2E evidence;
+- explicitly support the requested edition and version;
+- improve occupied-block count or bounding volume.
+
+The result includes the observed-to-macro port mapping and estimated block and
+volume savings. It remains proposal-only: surrounding placement, routing,
+steady-state equivalence, and every relevant input transition must be verified
+after realization before a mutation plan is allowed.

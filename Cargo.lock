@@ -294,6 +294,7 @@ dependencies = [
 name = "dustroute-optimize"
 version = "0.2.0"
 dependencies = [
+ "dustroute-library",
  "dustroute-physical",
  "dustroute-translate",
 ]

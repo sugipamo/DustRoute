@@ -6,9 +6,9 @@ use std::sync::Arc;
 use dustroute_app::DustRouteService;
 use dustroute_optimize::{
     AnchorPolicy, BehavioralVerificationConfig, CompressionAxis, CompressionDirection,
-    OptimizationPlan, OptimizationRoutingConfig, OptimizationSafety, TemporalCapabilities,
-    assess_optimization_safety, optimize_physical_wire_path, realize_staged_optimization_against,
-    verify_realized_optimization,
+    ObservedMacroMetrics, OptimizationPlan, OptimizationRoutingConfig, OptimizationSafety,
+    TemporalCapabilities, assess_optimization_safety, find_builtin_verified_macro_replacements,
+    optimize_physical_wire_path, realize_staged_optimization_against, verify_realized_optimization,
 };
 use dustroute_physical::{BlockKind, Pos};
 use dustroute_physical::{PhysicalBlockChange, PhysicalPatch};
@@ -3113,6 +3113,14 @@ impl DustRouteMcp {
             .observation
             .dimension = dimension.clone();
         let translated = &staged.reverse;
+        let macro_candidates = translated.functional_network.as_ref().map(|model| {
+            find_builtin_verified_macro_replacements(
+                model,
+                "java",
+                "1.21.11",
+                ObservedMacroMetrics::from_world(&world),
+            )
+        });
         let focused = target
             .map(|target| focused_role_json(translated, target))
             .unwrap_or(Value::Null);
@@ -3144,6 +3152,25 @@ impl DustRouteMcp {
                 json!({ "seed": target, "bounds": bounds_json(bounds) }),
             );
             object.insert("analysis_complete".to_owned(), Value::Bool(!incomplete));
+            object.insert(
+                "macro_replacement_candidates".to_owned(),
+                macro_candidates.as_ref().map_or(Value::Null, |candidates| json!({
+                    "status": "proposal_only",
+                    "realization": "contextual placement and transition verification are required before a mutation plan can be created",
+                    "candidates": candidates.iter().map(|candidate| json!({
+                        "component_id": candidate.component_id.as_str(),
+                        "name": candidate.name,
+                        "kind": candidate.kind,
+                        "layout_reference": candidate.layout_reference,
+                        "input_ports": candidate.input_ports,
+                        "output_ports": candidate.output_ports,
+                        "physical": candidate.physical,
+                        "saved_blocks": candidate.saved_blocks,
+                        "saved_volume": candidate.saved_volume,
+                        "requires_contextual_transition_verification": candidate.requires_contextual_transition_verification,
+                    })).collect::<Vec<_>>()
+                })),
+            );
             object.insert(
                 "next_tools".to_owned(),
                 json!({

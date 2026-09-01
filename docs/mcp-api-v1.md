@@ -7,6 +7,12 @@ depend on multiple inputs or influence multiple outputs. Local gate labels are
 explanatory and do not exclusively own physical blocks. See
 [`physical-function-model.md`](physical-function-model.md).
 
+When that model is available, `convert_from_circuit` also returns
+`macro_replacement_candidates`. These are function-matched, version-compatible
+catalog suggestions ranked by physical size. They are explicitly
+`proposal_only`; the response does not authorize placement or bypass the normal
+preview and contextual transition-verification workflow.
+
 DustRoute MCP tool results are JSON text. Versioned high-level response
 families use these identifiers:
 
