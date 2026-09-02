@@ -18,6 +18,10 @@ harness = false
 name = "analysis_scaling"
 harness = false
 
+[[bench]]
+name = "reverse_observation"
+harness = false
+
 [dependencies]
 dustroute-ir = { path = "../dustroute-ir" }
 dustroute-library = { path = "../dustroute-library" }
