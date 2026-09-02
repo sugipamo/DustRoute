@@ -187,7 +187,7 @@ MCP tool names follow a PowerShell-style Verb-Noun contract written as
 - `start`, `stop`, and `get` manage asynchronous operations.
 - `set` and `clear` manage the current region selection.
 
-`DUSTROUTE_MCP_TOOL_PROFILE=default` exposes the 18 tools intended for normal
+`DUSTROUTE_MCP_TOOL_PROFILE=default` exposes the 19 tools intended for normal
 LLM collaboration. `debug` additionally exposes low-level gaze/discovery,
 operation history, full plan retrieval, asynchronous conversion control, and
 explicit component-removal planning. Debug tools remain implemented but cannot
@@ -287,6 +287,22 @@ connectivity, steady-state semantics, temporal semantics, repair, or placement
 is only partial or unsupported. This lets an MCP client distinguish a complete
 scan from a complete interpretation and present unsupported behavior as an
 explicit limitation instead of guessing.
+
+Reverse analysis is fail-closed at the interface boundary. Live-only blocks
+(`target`, `observer`, daylight detectors, containers, sensors, fluids, and
+rails) are retained in `unsupported_observed_blocks` and never treated as a
+simulated solid. The response's `interface_evidence` lists physical external
+inputs and observable sinks together with their mapped and unmapped positions.
+Truth-table and optimization contracts are unavailable when that evidence is
+incomplete or ambiguous, when no input/output terminal exists, or when no
+transition case was actually exercised. A `Passed` state with zero cases is
+therefore not proof of equivalence.
+
+Input mutations are typed: levers use `set_lever_state`, buttons use
+press/release actions, pressure plates use an explicit level from 0 through 15,
+and open boundaries use an external-power action. The legacy `SetPowered`
+scenario action remains only for fixture compatibility and rejects wires or
+arbitrary blocks instead of silently replacing them.
 
 The `temporal` result reports a lossless timed graph, a traceable steady-state
 projection summary, and whether higher-level logic is `steady_state_safe`,

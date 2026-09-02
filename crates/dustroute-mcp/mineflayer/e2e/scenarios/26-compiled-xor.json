@@ -52,7 +52,7 @@
     { "kind": "block_trace", "save": "trace00_to_10", "duration_redstone_ticks": 64 },
     { "kind": "assert", "from": "trace00_to_10", "expect": [
       { "path": "observations.2.dust_strength", "equals": 0 },
-      { "path": "observations.17.dust_strength", "equals": 15 }
+      { "path": "observations.20.dust_strength", "equals": 15 }
     ]},
     { "kind": "block", "position": { "x": 1250, "y": 107, "z": 0 }, "save": "out10" },
     { "kind": "assert", "from": "out10", "expect": [{ "path": "properties.power", "at_least": 1 }] },

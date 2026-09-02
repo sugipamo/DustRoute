@@ -70,7 +70,7 @@ pub use dustroute_ir::{
 };
 pub use dustroute_minecraft::{
     Block, BlockKind, BlockProperties, BlockRedstoneTraits, Facing, OccupiedShape, Pos,
-    WireConnection, World,
+    WireConnection, World, observed_name_requires_live_observation,
 };
 pub use electrical::{
     DeviceOutputState, InstantaneousElectricalState, MAX_SIGNAL, PoweredBlockState,
@@ -118,7 +118,7 @@ pub use scenario::{
     ScenarioExpectation, ScenarioPulseExpectation, ScenarioRun, ScenarioSafety, ScenarioTrace,
     compare_scenario_traces, run_scenario,
 };
-pub use sim::{RedstoneTickSimulator, TickState};
+pub use sim::{InputMutationError, RedstoneTickSimulator, TickState};
 pub use snapshot::{
     MinecraftSnapshot, MinecraftSnapshotBlock, SnapshotError, world_from_snapshot,
     world_from_snapshot_json,
@@ -129,8 +129,9 @@ pub use wire::{
 };
 pub use world_reverse::{
     FunctionalNetworkModel, InferredInputDriver, InferredOutputFunction, InferredTerminal,
-    InferredTruthTable, PhysicalInfluence, RegionAnalysis, RegionBounds, SignalComponent,
-    SignalDiagnostics, TerminalConfidence, TruthTableComparison, TruthTableError, TruthTableRow,
-    analyze_world_region, analyze_world_region_in_dimension, compare_truth_tables,
-    derive_functional_network, infer_output_expressions, infer_truth_table, inferred_input_driver,
+    InferredTruthTable, InterfaceEvidence, PhysicalInfluence, RegionAnalysis, RegionBounds,
+    SignalComponent, SignalDiagnostics, TerminalConfidence, TruthTableComparison, TruthTableError,
+    TruthTableRow, analyze_world_region, analyze_world_region_in_dimension,
+    apply_inferred_input_driver, compare_truth_tables, derive_functional_network,
+    infer_output_expressions, infer_truth_table, inferred_input_driver,
 };

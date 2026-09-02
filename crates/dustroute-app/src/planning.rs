@@ -28,6 +28,10 @@ pub struct PlacementPlan {
     pub collision_count: usize,
     pub materials: BTreeMap<String, usize>,
     pub undo: UndoPlan,
+    /// Set only after `show_operation` successfully rendered this exact plan.
+    /// The default keeps plans created by older serialized clients unpreviewed.
+    #[serde(default)]
+    pub previewed: bool,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -115,6 +119,7 @@ pub fn plan_world_overlay(
         collision_count,
         materials,
         undo,
+        previewed: false,
     })
 }
 

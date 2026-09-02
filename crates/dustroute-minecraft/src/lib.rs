@@ -11,4 +11,5 @@ pub use blocks::{BlockBehaviorProfile, UpdateModel, behavior_profile};
 pub use world::{
     Block, BlockCapabilities, BlockKind, BlockProperties, BlockRedstoneTraits, CapabilityLevel,
     Facing, ObservationClassification, OccupiedShape, Pos, SupportError, WireConnection, World,
+    observed_name_requires_live_observation,
 };

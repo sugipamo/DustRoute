@@ -58,6 +58,30 @@ pub struct InferredTerminal {
     pub confidence: TerminalConfidence,
 }
 
+/// Evidence that every observed external source and observable sink is
+/// represented by the inferred interface.  This is deliberately separate
+/// from the logical truth table: a table is not a contract unless its
+/// physical boundary is accounted for first.
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+pub struct InterfaceEvidence {
+    pub external_inputs: BTreeSet<Pos>,
+    pub mapped_inputs: BTreeSet<Pos>,
+    pub unmapped_inputs: BTreeSet<Pos>,
+    pub observable_outputs: BTreeSet<Pos>,
+    pub mapped_outputs: BTreeSet<Pos>,
+    pub unmapped_outputs: BTreeSet<Pos>,
+}
+
+impl InterfaceEvidence {
+    #[must_use]
+    pub fn complete(&self) -> bool {
+        self.unmapped_inputs.is_empty()
+            && self.unmapped_outputs.is_empty()
+            && self.external_inputs.len() == self.mapped_inputs.len()
+            && self.observable_outputs.len() == self.mapped_outputs.len()
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SignalComponent {
     pub id: usize,
@@ -76,6 +100,7 @@ pub struct RegionAnalysis {
     pub components: Vec<SignalComponent>,
     pub inputs: Vec<InferredTerminal>,
     pub outputs: Vec<InferredTerminal>,
+    pub interface: InterfaceEvidence,
     pub unsupported: BTreeMap<Pos, BlockKind>,
     pub diagnostics: SignalDiagnostics,
 }
@@ -194,7 +219,24 @@ pub fn compare_truth_tables(
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum TruthTableError {
     TooManyInputs(usize),
+    NoInputs,
+    NoOutputs,
+    UnmappedExternalInputs(Vec<Pos>),
+    UnmappedObservableOutputs(Vec<Pos>),
+    AmbiguousInputMapping {
+        external_inputs: usize,
+        inferred_inputs: usize,
+    },
+    AmbiguousOutputMapping {
+        observable_outputs: usize,
+        inferred_outputs: usize,
+    },
     NoDriverPosition(Pos),
+    InvalidDriver {
+        position: Pos,
+        expected: &'static str,
+        actual: BlockKind,
+    },
     Simulation(String),
 }
 
@@ -202,9 +244,41 @@ impl std::fmt::Display for TruthTableError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::TooManyInputs(count) => write!(f, "cannot enumerate {count} inferred inputs"),
+            Self::NoInputs => f.write_str("cannot verify a circuit without an inferred input"),
+            Self::NoOutputs => f.write_str("cannot verify a circuit without an observable output"),
+            Self::UnmappedExternalInputs(positions) => write!(
+                f,
+                "external input sources are not mapped to inferred terminals: {positions:?}"
+            ),
+            Self::UnmappedObservableOutputs(positions) => write!(
+                f,
+                "observable outputs are not mapped to inferred terminals: {positions:?}"
+            ),
+            Self::AmbiguousInputMapping {
+                external_inputs,
+                inferred_inputs,
+            } => write!(
+                f,
+                "external input mapping is ambiguous: {external_inputs} physical sources map to {inferred_inputs} inferred terminals"
+            ),
+            Self::AmbiguousOutputMapping {
+                observable_outputs,
+                inferred_outputs,
+            } => write!(
+                f,
+                "observable output mapping is ambiguous: {observable_outputs} physical sinks map to {inferred_outputs} inferred terminals"
+            ),
             Self::NoDriverPosition(pos) => {
                 write!(f, "no safe driver position for input at {pos:?}")
             }
+            Self::InvalidDriver {
+                position,
+                expected,
+                actual,
+            } => write!(
+                f,
+                "input driver at {position:?} expected {expected}, found {actual:?}"
+            ),
             Self::Simulation(message) => f.write_str(message),
         }
     }
@@ -218,6 +292,43 @@ pub fn infer_truth_table(
     max_inputs: usize,
     settle_ticks: usize,
 ) -> Result<InferredTruthTable, TruthTableError> {
+    if !analysis.interface.unmapped_inputs.is_empty() {
+        return Err(TruthTableError::UnmappedExternalInputs(
+            analysis.interface.unmapped_inputs.iter().copied().collect(),
+        ));
+    }
+    if !analysis.interface.unmapped_outputs.is_empty() {
+        return Err(TruthTableError::UnmappedObservableOutputs(
+            analysis
+                .interface
+                .unmapped_outputs
+                .iter()
+                .copied()
+                .collect(),
+        ));
+    }
+    if analysis.inputs.is_empty() {
+        return Err(TruthTableError::NoInputs);
+    }
+    if analysis.outputs.is_empty() {
+        return Err(TruthTableError::NoOutputs);
+    }
+    if !analysis.interface.external_inputs.is_empty()
+        && analysis.interface.mapped_inputs.len() != analysis.inputs.len()
+    {
+        return Err(TruthTableError::AmbiguousInputMapping {
+            external_inputs: analysis.interface.external_inputs.len(),
+            inferred_inputs: analysis.inputs.len(),
+        });
+    }
+    if !analysis.interface.observable_outputs.is_empty()
+        && analysis.interface.mapped_outputs.len() != analysis.interface.observable_outputs.len()
+    {
+        return Err(TruthTableError::AmbiguousOutputMapping {
+            observable_outputs: analysis.interface.observable_outputs.len(),
+            inferred_outputs: analysis.outputs.len(),
+        });
+    }
     if analysis.inputs.len() > max_inputs || analysis.inputs.len() >= usize::BITS as usize {
         return Err(TruthTableError::TooManyInputs(analysis.inputs.len()));
     }
@@ -233,21 +344,7 @@ pub fn infer_truth_table(
             .collect();
         let mut driven = world.clone();
         for ((terminal, driver), value) in analysis.inputs.iter().zip(&drivers).zip(&inputs) {
-            match driver {
-                InferredInputDriver::Lever(pos) => {
-                    if let Some(block) = driven.get(*pos).cloned() {
-                        let mut block = block;
-                        block.powered = Some(*value);
-                        driven.set(*pos, block);
-                    }
-                }
-                InferredInputDriver::External(pos) if *value => {
-                    driven.set(*pos, Block::new(BlockKind::RedstoneBlock));
-                }
-                InferredInputDriver::External(pos) => {
-                    driven.remove(*pos);
-                }
-            }
+            apply_inferred_input_driver(&mut driven, *driver, *value)?;
             debug_assert!(
                 analysis.components[terminal.component]
                     .positions
@@ -440,7 +537,98 @@ fn canonical_sum_of_products(table: &InferredTruthTable, output: usize, vars: &[
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum InferredInputDriver {
     Lever(Pos),
+    Button(Pos),
+    PressurePlate(Pos),
     External(Pos),
+}
+
+/// Applies the same physical input driver used by truth-table inference and
+/// transition verification.  Keeping this operation typed prevents a wire or
+/// an arbitrary block from being silently mutated as an input.
+pub fn apply_inferred_input_driver(
+    world: &mut World,
+    driver: InferredInputDriver,
+    powered: bool,
+) -> Result<(), TruthTableError> {
+    match driver {
+        InferredInputDriver::Lever(pos) => {
+            set_stateful_input(world, pos, BlockKind::Lever, powered)
+        }
+        InferredInputDriver::Button(pos) => {
+            set_stateful_input(world, pos, BlockKind::Button, powered)
+        }
+        InferredInputDriver::PressurePlate(pos) => {
+            let Some(block) = world.get(pos).cloned() else {
+                return Err(TruthTableError::InvalidDriver {
+                    position: pos,
+                    expected: "pressure_plate",
+                    actual: BlockKind::Air,
+                });
+            };
+            if block.kind != BlockKind::PressurePlate {
+                return Err(TruthTableError::InvalidDriver {
+                    position: pos,
+                    expected: "pressure_plate",
+                    actual: block.kind,
+                });
+            }
+            let mut changed = block;
+            changed.powered = Some(powered);
+            changed.power_level = Some(if powered { 15 } else { 0 });
+            world.set(pos, changed);
+            Ok(())
+        }
+        InferredInputDriver::External(pos) => {
+            let current = world.kind_at(pos);
+            if !matches!(current, BlockKind::Air | BlockKind::RedstoneBlock) {
+                return Err(TruthTableError::InvalidDriver {
+                    position: pos,
+                    expected: "air or redstone_block for an external driver",
+                    actual: current,
+                });
+            }
+            if powered {
+                world.set(pos, Block::new(BlockKind::RedstoneBlock));
+            } else if world.kind_at(pos) == BlockKind::RedstoneBlock {
+                world.remove(pos);
+            }
+            Ok(())
+        }
+    }
+}
+
+fn set_stateful_input(
+    world: &mut World,
+    pos: Pos,
+    expected: BlockKind,
+    powered: bool,
+) -> Result<(), TruthTableError> {
+    let Some(block) = world.get(pos).cloned() else {
+        return Err(TruthTableError::InvalidDriver {
+            position: pos,
+            expected: match expected {
+                BlockKind::Lever => "lever",
+                BlockKind::Button => "button",
+                _ => "stateful input",
+            },
+            actual: BlockKind::Air,
+        });
+    };
+    if block.kind != expected {
+        return Err(TruthTableError::InvalidDriver {
+            position: pos,
+            expected: match expected {
+                BlockKind::Lever => "lever",
+                BlockKind::Button => "button",
+                _ => "stateful input",
+            },
+            actual: block.kind,
+        });
+    }
+    let mut changed = block;
+    changed.powered = Some(powered);
+    world.set(pos, changed);
+    Ok(())
 }
 
 pub fn inferred_input_driver(
@@ -448,8 +636,13 @@ pub fn inferred_input_driver(
     analysis: &RegionAnalysis,
     terminal: &InferredTerminal,
 ) -> Result<InferredInputDriver, TruthTableError> {
-    if world.kind_at(terminal.anchor) == BlockKind::Lever {
-        return Ok(InferredInputDriver::Lever(terminal.anchor));
+    match world.kind_at(terminal.anchor) {
+        BlockKind::Lever => return Ok(InferredInputDriver::Lever(terminal.anchor)),
+        BlockKind::Button => return Ok(InferredInputDriver::Button(terminal.anchor)),
+        BlockKind::PressurePlate => {
+            return Ok(InferredInputDriver::PressurePlate(terminal.anchor));
+        }
+        _ => {}
     }
     let horizontal = [
         Pos::new(-1, 0, 0),
@@ -518,12 +711,15 @@ pub fn analyze_world_region_in_dimension(
         .collect();
     let redstone_blocks = bounded
         .iter()
-        .filter(|(_, block)| is_redstone_kind(block.kind))
+        .filter(|(_, block)| is_redstone_kind(block.kind) || block.requires_live_observation())
         .map(|(pos, block)| (*pos, block.kind))
         .collect();
     let unsupported = bounded
         .iter()
-        .filter(|(_, block)| matches!(block.kind, BlockKind::Comparator | BlockKind::Piston))
+        .filter(|(_, block)| {
+            matches!(block.kind, BlockKind::Comparator | BlockKind::Piston)
+                || block.requires_live_observation()
+        })
         .map(|(pos, block)| (*pos, block.kind))
         .collect();
     let raw_components = strongly_connected_components(&active_nodes, &functional_edges);
@@ -568,6 +764,7 @@ pub fn analyze_world_region_in_dimension(
     } else {
         (buffered_inputs, buffered_outputs)
     };
+    let interface = interface_evidence(&bounded, &graph, &components, &inputs, &outputs);
     let diagnostics = signal_diagnostics(
         &bounded,
         &graph,
@@ -597,8 +794,72 @@ pub fn analyze_world_region_in_dimension(
         components,
         inputs,
         outputs,
+        interface,
         unsupported,
         diagnostics,
+    }
+}
+
+fn interface_evidence(
+    world: &World,
+    graph: &PhysicalConnectivityGraph,
+    components: &[SignalComponent],
+    inputs: &[InferredTerminal],
+    outputs: &[InferredTerminal],
+) -> InterfaceEvidence {
+    let external_inputs: BTreeSet<_> = world
+        .iter()
+        .filter(|(_, block)| block.is_external_input_source())
+        .map(|(pos, _)| *pos)
+        .collect();
+    let observable_outputs: BTreeSet<_> = world
+        .iter()
+        .filter(|(_, block)| block.is_observable_output())
+        .map(|(pos, _)| *pos)
+        .collect();
+    let mapped_inputs: BTreeSet<_> = external_inputs
+        .iter()
+        .copied()
+        .filter(|position| {
+            inputs.iter().any(|terminal| {
+                terminal.component < components.len()
+                    && components[terminal.component].positions.contains(position)
+            })
+        })
+        .collect();
+    let mapped_outputs: BTreeSet<_> = observable_outputs
+        .iter()
+        .copied()
+        .filter(|position| {
+            outputs.iter().any(|terminal| {
+                terminal.component < components.len()
+                    && components[terminal.component].positions.contains(position)
+            }) || graph.edges.iter().any(|edge| {
+                edge.sink == *position
+                    && outputs.iter().any(|terminal| {
+                        terminal.component < components.len()
+                            && components[terminal.component]
+                                .positions
+                                .contains(&edge.source)
+                    })
+            })
+        })
+        .collect();
+    let unmapped_inputs = external_inputs
+        .difference(&mapped_inputs)
+        .copied()
+        .collect();
+    let unmapped_outputs = observable_outputs
+        .difference(&mapped_outputs)
+        .copied()
+        .collect();
+    InterfaceEvidence {
+        external_inputs,
+        mapped_inputs,
+        unmapped_inputs,
+        observable_outputs,
+        mapped_outputs,
+        unmapped_outputs,
     }
 }
 
@@ -811,6 +1072,8 @@ const fn is_redstone_kind(kind: BlockKind) -> bool {
             | BlockKind::Repeater
             | BlockKind::Comparator
             | BlockKind::Lever
+            | BlockKind::Button
+            | BlockKind::PressurePlate
             | BlockKind::RedstoneBlock
             | BlockKind::Piston
     )
@@ -820,7 +1083,10 @@ fn infer_input(world: &World, component: &SignalComponent) -> Option<InferredTer
     let certain = component.positions.iter().copied().find(|pos| {
         matches!(
             world.kind_at(*pos),
-            BlockKind::Lever | BlockKind::RedstoneBlock
+            BlockKind::Lever
+                | BlockKind::Button
+                | BlockKind::PressurePlate
+                | BlockKind::RedstoneBlock
         )
     });
     let likely = component
@@ -844,7 +1110,7 @@ fn infer_input(world: &World, component: &SignalComponent) -> Option<InferredTer
 }
 
 fn infer_output(world: &World, component: &SignalComponent) -> Option<InferredTerminal> {
-    component
+    let preferred = component
         .positions
         .iter()
         .copied()
@@ -854,7 +1120,15 @@ fn infer_output(world: &World, component: &SignalComponent) -> Option<InferredTe
                 BlockKind::RedstoneWire | BlockKind::Repeater | BlockKind::Piston
             )
         })
-        .max()
+        .max();
+    preferred
+        .or_else(|| {
+            component
+                .positions
+                .iter()
+                .copied()
+                .find(|pos| world.kind_at(*pos) == BlockKind::RedstoneLamp)
+        })
         .map(|anchor| InferredTerminal {
             anchor,
             component: component.id,
@@ -1040,5 +1314,74 @@ mod tests {
         assert!(model.physical_influences.iter().any(|influence| {
             influence.shared_role && influence.input_dependencies == BTreeSet::from([0, 1])
         }));
+    }
+
+    #[test]
+    fn truth_table_requires_non_empty_interface_evidence() {
+        let world = World::new();
+        let analysis = analyze_world_region(
+            &world,
+            RegionBounds::new(Pos::new(-1, -1, -1), Pos::new(1, 1, 1)),
+        );
+        assert_eq!(
+            infer_truth_table(&world, &analysis, 4, 1),
+            Err(TruthTableError::NoInputs)
+        );
+
+        let mut source_only = World::new();
+        source_only.set(Pos::new(0, 0, 0), Block::new(BlockKind::Solid));
+        source_only.set(Pos::new(1, 0, 0), Block::new(BlockKind::Solid));
+        let source = source_only.place(BlockKind::Lever, Pos::new(0, 1, 0));
+        source.powered = Some(false);
+        source_only.place(BlockKind::RedstoneWire, Pos::new(1, 1, 0));
+        update_wire_shapes(&mut source_only);
+        let analysis = analyze_world_region(
+            &source_only,
+            RegionBounds::new(Pos::new(-1, -1, -1), Pos::new(2, 2, 1)),
+        );
+        assert!(!analysis.inputs.is_empty(), "{analysis:#?}");
+        let mut no_outputs = analysis.clone();
+        no_outputs.outputs.clear();
+        assert_eq!(
+            infer_truth_table(&source_only, &no_outputs, 4, 1),
+            Err(TruthTableError::NoOutputs)
+        );
+
+        let mut ambiguous = analysis.clone();
+        ambiguous
+            .interface
+            .external_inputs
+            .insert(Pos::new(9, 9, 9));
+        ambiguous.interface.mapped_inputs.insert(Pos::new(9, 9, 9));
+        assert!(matches!(
+            infer_truth_table(&source_only, &ambiguous, 4, 1),
+            Err(TruthTableError::AmbiguousInputMapping { .. })
+        ));
+    }
+
+    #[test]
+    fn isolated_observable_sink_is_reported_as_unmapped() {
+        let mut world = World::new();
+        world.set(Pos::new(0, 0, 0), Block::new(BlockKind::Solid));
+        world.set(Pos::new(1, 0, 0), Block::new(BlockKind::Solid));
+        let source = world.place(BlockKind::Lever, Pos::new(0, 1, 0));
+        source.powered = Some(false);
+        world.place(BlockKind::RedstoneWire, Pos::new(1, 1, 0));
+        update_wire_shapes(&mut world);
+        world.set(Pos::new(3, 1, 0), Block::new(BlockKind::RedstoneLamp));
+        let analysis = analyze_world_region(
+            &world,
+            RegionBounds::new(Pos::new(-1, -1, -1), Pos::new(4, 2, 1)),
+        );
+        assert!(
+            analysis
+                .interface
+                .unmapped_outputs
+                .contains(&Pos::new(3, 1, 0))
+        );
+        assert!(matches!(
+            infer_truth_table(&world, &analysis, 4, 1),
+            Err(TruthTableError::NoOutputs) | Err(TruthTableError::UnmappedObservableOutputs(_))
+        ));
     }
 }

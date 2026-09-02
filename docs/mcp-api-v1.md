@@ -1,5 +1,21 @@
 # MCP JSON contracts
 
+## Physical interface evidence
+
+Reverse-analysis responses expose `interface_evidence` with the observed
+external input positions, observable output positions, and the mapped or
+unmapped subsets. `unsupported_observed_blocks` preserves namespaced Minecraft
+blocks whose event or state semantics require live observation. These fields
+are evidence, not inferred intent: truth-table, transition, and optimization
+verification must report `unavailable` when a boundary is missing or
+ambiguous. Empty inputs, outputs, or transition cases cannot pass by
+vacuous truth.
+
+Scenario input actions are typed. Use lever state, button press/release,
+pressure-plate level, or external-power actions according to the observed
+driver. The compatibility `SetPowered` action is strict and rejects a wire or
+other arbitrary block.
+
 Reverse-analysis responses may include `physical_function_model` when
 truth-table inference is requested. Its output functions are derived from the
 shared physical network; `shared_physical_components` reports components that
@@ -143,6 +159,8 @@ transition or pulse characteristic from being silently treated as preserved.
 Each non-passing category also exposes stable `reason_codes`. Current codes
 include `too_many_inputs`, `ambiguous_terminal_mapping`,
 `unsupported_physics`, `logical_truth_table_mismatch`,
+`interface_evidence_insufficient`, `transition_evidence_insufficient`,
+`pulse_evidence_insufficient`,
 `timing_contract_violated`, `new_pulse_introduced`,
 `existing_pulse_removed`, `pulse_width_changed`, `analog_strength_changed`,
 `boundary_structure_invalid`, and `mutation_limit_exceeded`. Human-readable

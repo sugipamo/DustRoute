@@ -47,6 +47,16 @@ connectivity, steady-state behavior, temporal behavior, repair, and placement.
 Unsupported semantics make the relevant derived IR stage partial; they do not
 erase the underlying observation.
 
+Contract checks are fail-closed at the physical boundary. Live-only devices
+such as targets, observers, daylight detectors, containers, sensors, fluids,
+and rails remain visible in the snapshot but are marked unsupported for
+simulation, repair, and placement. An inferred truth table is unavailable when
+an external input or observable output is unmapped, when the interface is
+ambiguous, or when there is no input/output evidence; an empty case set is not
+treated as a successful verification. Button and pressure-plate scenarios use
+typed drivers, and weighted plate levels are supplied explicitly because
+entity occupancy is a live-world observation.
+
 `dustroute-translate` exposes `Translator::forward`, `Translator::reverse`, and
 `Translator::verify` as its stable facade. Reverse results carry the canonical
 physical scene alongside traceable gate, expression, functional, signal, and

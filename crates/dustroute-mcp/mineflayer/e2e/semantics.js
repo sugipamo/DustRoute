@@ -34,7 +34,9 @@ async function main () {
     bot.chat(`/gamemode creative ${playerName}`)
     bot.chat(`/tp ${playerName} 0.5 110 0.5`)
     await sleep(1000)
-    await bot.waitForChunksToLoad()
+    // The semantic pack executes server-side and reports through chat; it
+    // does not inspect client block state, so waiting for Mineflayer's full
+    // 25-chunk view would make this check fail on a cold/offline world.
     await sleep(500)
     bot.chat(`/function ${functionName}`)
     const deadline = Date.now() + timeoutMs

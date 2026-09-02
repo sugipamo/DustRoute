@@ -90,7 +90,6 @@ pub struct DustRouteMcp {
     prompt_router: PromptRouter<Self>,
     plans: Arc<Mutex<HashMap<uuid::Uuid, PlacementPlan>>>,
     plan_dimensions: Arc<Mutex<HashMap<uuid::Uuid, String>>>,
-    previewed_plans: Arc<Mutex<BTreeSet<uuid::Uuid>>>,
     applied_plans: Arc<Mutex<HashMap<uuid::Uuid, bool>>>,
     repair_plans: Arc<Mutex<HashMap<uuid::Uuid, StoredRepairPlan>>>,
     transition_plans: Arc<Mutex<HashMap<uuid::Uuid, StoredTransitionPlan>>>,
@@ -1587,6 +1586,8 @@ fn reverse_result_json(
             "component": terminal.component,
             "confidence": format!("{:?}", terminal.confidence).to_lowercase(),
         })).collect::<Vec<_>>(),
+        "interface_evidence": translated.analysis.interface,
+        "unsupported_observed_blocks": translated.analysis.unsupported,
         "outputs": translated.analysis.outputs.iter().map(|terminal| json!({
             "position": terminal.anchor,
             "component": terminal.component,
@@ -1642,7 +1643,6 @@ impl DustRouteMcp {
             prompt_router: Self::prompt_router(),
             plans: Arc::new(Mutex::new(HashMap::new())),
             plan_dimensions: Arc::new(Mutex::new(HashMap::new())),
-            previewed_plans: Arc::new(Mutex::new(BTreeSet::new())),
             applied_plans: Arc::new(Mutex::new(HashMap::new())),
             repair_plans: Arc::new(Mutex::new(HashMap::new())),
             transition_plans: Arc::new(Mutex::new(HashMap::new())),
@@ -1777,10 +1777,7 @@ impl DustRouteMcp {
         if !undo && is_applied {
             return json_text(json!({ "ok": false, "error": "placement plan is already applied" }));
         }
-        if !undo
-            && self.policy.preview_required
-            && !self.previewed_plans.lock().await.contains(&operation_id)
-        {
+        if !undo && self.policy.preview_required && !plan.previewed {
             return error_text(
                 McpErrorCode::InvalidState,
                 "placement must be shown with show_operation before invoke_operation",
@@ -1804,7 +1801,9 @@ impl DustRouteMcp {
             Err(error) => return json_text(json!({ "ok": false, "error": error })),
         };
         if !baseline_matches {
-            self.previewed_plans.lock().await.remove(&operation_id);
+            if let Some(stored) = self.plans.lock().await.get_mut(&operation_id) {
+                stored.previewed = false;
+            }
             return json_text(json!({
                 "ok": false,
                 "error": "placement baseline is stale; preview again before changing the world",
@@ -1862,7 +1861,9 @@ impl DustRouteMcp {
             }));
         }
         self.applied_plans.lock().await.insert(operation_id, !undo);
-        self.previewed_plans.lock().await.remove(&operation_id);
+        if let Some(stored) = self.plans.lock().await.get_mut(&operation_id) {
+            stored.previewed = false;
+        }
         self.operations
             .record_completed(
                 uuid::Uuid::new_v4(),
@@ -1928,7 +1929,13 @@ impl DustRouteMcp {
                 } else {
                     &change.before
                 };
-                !block_matches(world.get(change.pos), expected)
+                let actual = world.get(change.pos);
+                let matches = if verify_after {
+                    block_matches(actual, expected)
+                } else {
+                    placement_baseline_matches(actual, expected)
+                };
+                !matches
             })
             .map(|change| change.pos)
             .collect::<Vec<_>>();
@@ -2687,6 +2694,91 @@ fn block_matches(
         && expected
             .delay
             .is_none_or(|delay| actual.delay == Some(delay))
+}
+
+/// Compare a live block with the state captured by a placement plan.
+///
+/// A plan can contain synthetic blocks produced by the Rust translator while
+/// the live scan contains the namespaced Java block name and all block-state
+/// properties.  Those representation details must not make an untouched plan
+/// stale.  Conversely, static identity (for example stone vs. dirt, repeater
+/// orientation, or delay) must still be checked.  Dynamic power is ignored for
+/// circuit elements because neighbour updates legitimately change it after a
+/// placement, but externally controllable inputs are checked so a user cannot
+/// toggle an input between preview and apply/undo without invalidating the
+/// plan.
+fn placement_baseline_matches(
+    actual: Option<&dustroute_physical::Block>,
+    expected: &dustroute_physical::Block,
+) -> bool {
+    let Some(actual) = actual else {
+        return expected.kind == BlockKind::Air;
+    };
+    if actual.kind != expected.kind {
+        return false;
+    }
+    if expected.kind == BlockKind::Air {
+        return true;
+    }
+
+    // An observed name is authoritative when the plan captured one.  A
+    // synthetic block has no name, so the live name is intentionally allowed.
+    if expected.observed_name.is_some() && actual.observed_name != expected.observed_name {
+        return false;
+    }
+    if (expected.kind != BlockKind::RedstoneTorch
+        && expected
+            .facing
+            .is_some_and(|facing| actual.facing != Some(facing)))
+        || expected
+            .delay
+            .is_some_and(|delay| actual.delay != Some(delay))
+        || expected
+            .support_offset
+            .is_some_and(|support| actual.support_offset != Some(support))
+        || expected
+            .wire_connections
+            .as_ref()
+            .is_some_and(|connections| actual.wire_connections.as_ref() != Some(connections))
+    {
+        return false;
+    }
+
+    // Keep static observed properties useful for stale detection without
+    // comparing neighbour-driven state (power, lamp/torch lit state, wire arm
+    // shape, or repeater lock).
+    const DYNAMIC_PROPERTIES: [&str; 8] = [
+        "power", "powered", "lit", "locked", "north", "east", "south", "west",
+    ];
+    if expected
+        .observed_properties
+        .iter()
+        .filter(|(name, _)| !DYNAMIC_PROPERTIES.contains(&name.as_str()))
+        .any(|(name, value)| actual.observed_properties.get(name) != Some(value))
+    {
+        return false;
+    }
+
+    if matches!(
+        expected.kind,
+        BlockKind::Lever | BlockKind::Button | BlockKind::PressurePlate
+    ) {
+        // Synthetic input blocks default to unpowered in Minecraft.  Treat
+        // that default as part of the captured state so a manual toggle is
+        // detected even when the plan did not carry an explicit `powered`.
+        let expected_powered = expected.powered.unwrap_or(false);
+        if actual.powered != Some(expected_powered) {
+            return false;
+        }
+        if expected.kind == BlockKind::PressurePlate
+            && expected
+                .power_level
+                .is_some_and(|level| actual.power_level != Some(level))
+        {
+            return false;
+        }
+    }
+    true
 }
 
 fn boundary_block_record(
@@ -4754,12 +4846,14 @@ impl DustRouteMcp {
             dustroute_translate::diagnose_scene(&before.scene, circuit.target, circuit.complete);
         let after_diagnostic =
             dustroute_translate::diagnose_scene(&after.scene, circuit.target, circuit.complete);
-        if after_diagnostic.counts.probable_faults > before_diagnostic.counts.probable_faults
+        if !before.unsupported.is_empty()
+            || !after.unsupported.is_empty()
+            || after_diagnostic.counts.probable_faults > before_diagnostic.counts.probable_faults
             || after_diagnostic.counts.unsupported > before_diagnostic.counts.unsupported
         {
             return error_text(
                 McpErrorCode::VerificationFailed,
-                "optimization introduced a new diagnostic fault",
+                "optimization cannot be applied while unsupported physics or a new diagnostic fault is present",
                 false,
             );
         }
@@ -5097,7 +5191,9 @@ impl DustRouteMcp {
         };
         let operation_id = match uuid::Uuid::parse_str(&params.operation_id) {
             Ok(id) => id,
-            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+            Err(error) => {
+                return error_text(McpErrorCode::InvalidArgument, error.to_string(), false);
+            }
         };
         let plan = match self.repair_plan(operation_id).await {
             Ok(Some(plan)) => plan,
@@ -5455,7 +5551,7 @@ impl DustRouteMcp {
         let scenario = dustroute_translate::Scenario {
             label: format!("lever transition at {:?}", plan.lever),
             initial: plan.initial_snapshot.clone(),
-            actions: vec![dustroute_translate::ScenarioAction::SetPowered {
+            actions: vec![dustroute_translate::ScenarioAction::SetLeverState {
                 redstone_tick: 0,
                 position: plan.lever,
                 powered: !plan.original_powered,
@@ -5813,12 +5909,23 @@ impl DustRouteMcp {
             }
         };
         if self.plans.lock().await.contains_key(&operation_id) {
+            if let Some(plan) = self.plans.lock().await.get_mut(&operation_id) {
+                plan.previewed = true;
+            }
             let result = self
                 .get_circuit_placement(Parameters(OperationParams {
                     operation_id: params.operation_id,
                 }))
                 .await;
-            self.previewed_plans.lock().await.insert(operation_id);
+            let preview_succeeded = serde_json::from_str::<Value>(&result)
+                .ok()
+                .and_then(|value| value.get("ok").and_then(Value::as_bool))
+                .unwrap_or(false);
+            if !preview_succeeded {
+                if let Some(plan) = self.plans.lock().await.get_mut(&operation_id) {
+                    plan.previewed = false;
+                }
+            }
             return result;
         }
         if self
@@ -5968,7 +6075,9 @@ impl DustRouteMcp {
     async fn stop_operation(&self, Parameters(params): Parameters<OperationParams>) -> String {
         let operation_id = match uuid::Uuid::parse_str(&params.operation_id) {
             Ok(id) => id,
-            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+            Err(error) => {
+                return error_text(McpErrorCode::InvalidArgument, error.to_string(), false);
+            }
         };
         let cancelled = self.operations.cancel(operation_id).await;
         json_text(json!({ "ok": cancelled, "operation_id": operation_id }))
@@ -6079,6 +6188,39 @@ mod tests {
     }
 
     #[test]
+    fn placement_baseline_rejects_dynamic_state_changes_between_preview_and_apply() {
+        let mut expected = dustroute_physical::Block::new(BlockKind::Lever);
+        expected.facing = Some(dustroute_physical::Facing::North);
+        expected.support_offset = Some(Pos::new(0, -1, 0));
+        expected.powered = Some(false);
+        let mut actual = expected.clone();
+        actual.powered = Some(true);
+        assert!(!placement_baseline_matches(Some(&actual), &expected));
+        assert!(placement_baseline_matches(Some(&expected), &expected));
+        assert!(placement_baseline_matches(
+            None,
+            &dustroute_physical::Block::new(BlockKind::Air)
+        ));
+    }
+
+    #[test]
+    fn placement_baseline_accepts_observed_equivalent_synthetic_blocks() {
+        let mut expected = dustroute_physical::Block::new(BlockKind::RedstoneTorch);
+        expected.facing = Some(dustroute_physical::Facing::East);
+        expected.support_offset = Some(Pos::new(-1, 0, 0));
+        let mut actual = expected.clone();
+        actual.observed_name = Some("minecraft:redstone_wall_torch".to_owned());
+        actual.observed_properties = BTreeMap::from([
+            ("facing".to_owned(), "east".to_owned()),
+            ("lit".to_owned(), "true".to_owned()),
+        ]);
+        actual.observation_classification = dustroute_physical::ObservationClassification::Exact;
+        actual.facing = None;
+        actual.powered = Some(true);
+        assert!(placement_baseline_matches(Some(&actual), &expected));
+    }
+
+    #[test]
     fn transition_trace_json_uses_arrays_for_coordinate_keyed_state() {
         let position = Pos::new(1, 64, -2);
         let trace = dustroute_translate::ScenarioTrace {
@@ -6135,6 +6277,38 @@ mod tests {
         )
         .unwrap();
         assert_eq!(get_result["error_code"], "invalid_argument");
+
+        let show_result: Value = serde_json::from_str(
+            &service
+                .show_operation(Parameters(ShowOperationParams {
+                    operation_id: "not-a-uuid".into(),
+                    player: None,
+                }))
+                .await,
+        )
+        .unwrap();
+        assert_eq!(show_result["error_code"], "invalid_argument");
+
+        let undo_result: Value = serde_json::from_str(
+            &service
+                .undo_operation(Parameters(ConfirmedOperationParams {
+                    operation_id: "not-a-uuid".into(),
+                    confirm: true,
+                }))
+                .await,
+        )
+        .unwrap();
+        assert_eq!(undo_result["error_code"], "invalid_argument");
+
+        let stop_result: Value = serde_json::from_str(
+            &service
+                .stop_operation(Parameters(OperationParams {
+                    operation_id: "not-a-uuid".into(),
+                }))
+                .await,
+        )
+        .unwrap();
+        assert_eq!(stop_result["error_code"], "invalid_argument");
     }
 
     #[tokio::test]
@@ -6171,7 +6345,14 @@ mod tests {
         )
         .unwrap();
         assert_eq!(rejected["error_code"], "invalid_state");
-        assert!(!service.previewed_plans.lock().await.contains(&operation_id));
+        assert!(
+            !service
+                .plans
+                .lock()
+                .await
+                .get(&operation_id)
+                .is_some_and(|plan| plan.previewed)
+        );
 
         let shown: Value = serde_json::from_str(
             &service
@@ -6183,7 +6364,15 @@ mod tests {
         )
         .unwrap();
         assert_eq!(shown["ok"], true);
-        assert!(service.previewed_plans.lock().await.contains(&operation_id));
+        assert_eq!(shown["plan"]["previewed"], true);
+        assert!(
+            service
+                .plans
+                .lock()
+                .await
+                .get(&operation_id)
+                .is_some_and(|plan| plan.previewed)
+        );
     }
 
     #[tokio::test]

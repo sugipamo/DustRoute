@@ -221,6 +221,8 @@ pub fn extract_model_boundary_with_context(
         };
         let driver_position = match driver {
             dustroute_translate::InferredInputDriver::Lever(pos)
+            | dustroute_translate::InferredInputDriver::Button(pos)
+            | dustroute_translate::InferredInputDriver::PressurePlate(pos)
             | dustroute_translate::InferredInputDriver::External(pos) => pos,
         };
         port.driver_position = Some(driver_position);
@@ -669,7 +671,9 @@ pub fn verify_macro_steady_state(
     for expected_row in &expected.rows {
         let mut driven = materialized.clone();
         for (driver, powered) in drivers.iter().zip(&expected_row.inputs) {
-            set_driver_in_world(&mut driven, *driver, *powered);
+            if let Err(error) = set_driver_in_world(&mut driven, *driver, *powered) {
+                return unavailable_steady(&error);
+            }
         }
         dustroute_translate::update_wire_shapes(&mut driven);
         let state = match dustroute_translate::RedstoneTickSimulator::new(driven)
@@ -875,7 +879,7 @@ fn settled_state_for_inputs(
 ) -> Result<dustroute_translate::TickState, String> {
     let mut driven = world.clone();
     for (driver, powered) in drivers.iter().zip(inputs) {
-        set_driver_in_world(&mut driven, *driver, *powered);
+        set_driver_in_world(&mut driven, *driver, *powered)?;
     }
     dustroute_translate::update_wire_shapes(&mut driven);
     dustroute_translate::RedstoneTickSimulator::new(driven)
@@ -1019,6 +1023,12 @@ fn simulate_boundary_transition(
             dustroute_translate::InferredInputDriver::Lever(pos) => simulator
                 .set_powered(*pos, *powered)
                 .map_err(|error| error.to_string())?,
+            dustroute_translate::InferredInputDriver::Button(pos) => simulator
+                .set_button_state(*pos, *powered)
+                .map_err(|error| error.to_string())?,
+            dustroute_translate::InferredInputDriver::PressurePlate(pos) => simulator
+                .set_pressure_plate_level(*pos, if *powered { 15 } else { 0 })
+                .map_err(|error| error.to_string())?,
             dustroute_translate::InferredInputDriver::External(pos) => simulator
                 .set_external_powered(*pos, *powered)
                 .map_err(|error| error.to_string())?,
@@ -1054,7 +1064,7 @@ fn settled_transition_states(
                 .iter()
                 .zip(bits(value, context.drivers.len()))
             {
-                set_driver_in_world(&mut driven, *driver, powered);
+                set_driver_in_world(&mut driven, *driver, powered)?;
             }
             dustroute_translate::update_wire_shapes(&mut driven);
             let mut simulator = dustroute_translate::RedstoneTickSimulator::new(driven)
@@ -1071,21 +1081,9 @@ fn set_driver_in_world(
     world: &mut World,
     driver: dustroute_translate::InferredInputDriver,
     powered: bool,
-) {
-    match driver {
-        dustroute_translate::InferredInputDriver::Lever(pos) => {
-            if let Some(mut block) = world.get(pos).cloned() {
-                block.powered = Some(powered);
-                world.set(pos, block);
-            }
-        }
-        dustroute_translate::InferredInputDriver::External(pos) if powered => {
-            world.set(pos, Block::new(BlockKind::RedstoneBlock));
-        }
-        dustroute_translate::InferredInputDriver::External(pos) => {
-            world.remove(pos);
-        }
-    }
+) -> Result<(), String> {
+    dustroute_translate::apply_inferred_input_driver(world, driver, powered)
+        .map_err(|error| error.to_string())
 }
 
 fn bits(value: usize, count: usize) -> Vec<bool> {

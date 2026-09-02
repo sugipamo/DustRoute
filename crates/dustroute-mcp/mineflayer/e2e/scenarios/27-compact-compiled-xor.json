@@ -13,6 +13,7 @@
       "/tp ${player} 1300 112 3"
     ]},
     { "kind": "rust_cell", "example": "export_compiled_xor", "arguments": [9, 6], "origin": { "x": 1300, "y": 104, "z": 0 }, "settle_game_ticks": 160, "save": "cell" },
+    { "kind": "aim", "position": { "x": 1337.5, "y": 112, "z": 5.5 }, "target": { "x": 1338, "y": 106, "z": 0 } },
     { "kind": "block", "position": { "x": 1338, "y": 107, "z": 0 }, "save": "out00" },
     { "kind": "assert", "from": "out00", "expect": [{ "path": "properties.power", "equals": "0" }] },
 
@@ -20,7 +21,7 @@
     { "kind": "block_trace", "save": "trace00_to_10", "duration_redstone_ticks": 64 },
     { "kind": "assert", "from": "trace00_to_10", "expect": [
       { "path": "observations.2.dust_strength", "equals": 0 },
-      { "path": "observations.17.dust_strength", "equals": 15 }
+      { "path": "observations.20.dust_strength", "equals": 15 }
     ]},
     { "kind": "block", "position": { "x": 1338, "y": 107, "z": 0 }, "save": "out10" },
     { "kind": "assert", "from": "out10", "expect": [{ "path": "properties.power", "at_least": 1 }] },

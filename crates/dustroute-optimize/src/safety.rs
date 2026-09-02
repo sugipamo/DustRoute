@@ -1,4 +1,4 @@
-use dustroute_physical::{PhysicalPatch, TemporalAssessment, TemporalRequirement, World};
+use dustroute_physical::{PhysicalPatch, Pos, TemporalAssessment, TemporalRequirement, World};
 use dustroute_translate::physical::PlacementCircuit;
 
 use crate::{
@@ -37,6 +37,10 @@ pub enum OptimizationSafetyReason {
     BehavioralVerificationUnavailable(String),
     InvalidPhysicalSupport,
     IncompleteObservation,
+    InsufficientBehavioralEvidence,
+    UnsupportedObservedPhysics {
+        blocks: Vec<Pos>,
+    },
     TemporalModelUnavailable {
         required: TemporalRequirement,
         available: TemporalRequirement,
@@ -126,6 +130,29 @@ pub fn assess_optimization_safety(
     if matches!(verification.behavior, BehavioralEquivalence::Mismatch(_)) {
         rejected.push(OptimizationSafetyReason::BehavioralMismatch);
     }
+    if matches!(
+        verification.behavior,
+        BehavioralEquivalence::Verified(ref comparison)
+            if !comparison.comparable
+                || comparison.expected_inputs == 0
+                || comparison.expected_outputs == 0
+                || comparison.actual_inputs == 0
+                || comparison.actual_outputs == 0
+    ) {
+        rejected.push(OptimizationSafetyReason::InsufficientBehavioralEvidence);
+    }
+    let unsupported_blocks = verification
+        .original_analysis
+        .unsupported
+        .keys()
+        .chain(verification.optimized_analysis.unsupported.keys())
+        .copied()
+        .collect::<std::collections::BTreeSet<_>>();
+    if !unsupported_blocks.is_empty() {
+        rejected.push(OptimizationSafetyReason::UnsupportedObservedPhysics {
+            blocks: unsupported_blocks.into_iter().collect(),
+        });
+    }
     if !verification
         .optimized_analysis
         .diagnostics
@@ -187,10 +214,10 @@ mod tests {
             optimized_analysis: analysis,
             behavior: BehavioralEquivalence::Verified(TruthTableComparison {
                 comparable: true,
-                expected_inputs: 0,
-                actual_inputs: 0,
-                expected_outputs: 0,
-                actual_outputs: 0,
+                expected_inputs: 1,
+                actual_inputs: 1,
+                expected_outputs: 1,
+                actual_outputs: 1,
                 differing_rows: 0,
                 differing_bits: 0,
                 terminal_count_delta: 0,
@@ -208,12 +235,19 @@ mod tests {
 
     #[test]
     fn scheduled_and_block_event_circuits_are_preview_only() {
-        for kind in [BlockKind::Repeater, BlockKind::Piston] {
-            let safety =
-                assess_optimization_safety(&verification(kind), TemporalCapabilities::current());
-            assert!(matches!(safety, OptimizationSafety::PreviewOnly { .. }));
-            assert!(!safety.permits_automatic_apply());
-        }
+        let repeater = assess_optimization_safety(
+            &verification(BlockKind::Repeater),
+            TemporalCapabilities::current(),
+        );
+        assert!(matches!(repeater, OptimizationSafety::PreviewOnly { .. }));
+        assert!(!repeater.permits_automatic_apply());
+
+        let piston = assess_optimization_safety(
+            &verification(BlockKind::Piston),
+            TemporalCapabilities::current(),
+        );
+        assert!(matches!(piston, OptimizationSafety::Rejected { .. }));
+        assert!(!piston.permits_automatic_apply());
     }
 
     #[test]

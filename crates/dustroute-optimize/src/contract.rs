@@ -142,7 +142,19 @@ pub fn assess_macro_contract(
     analog_strength_verified: Option<bool>,
 ) -> OptimizationContractAssessment {
     let logical = match steady {
-        Some(report) if report.state == ContextualVerificationState::Passed => passed(),
+        Some(report)
+            if report.state == ContextualVerificationState::Passed
+                && report
+                    .comparison
+                    .as_ref()
+                    .is_some_and(sufficient_comparison) =>
+        {
+            passed()
+        }
+        Some(report) if report.state == ContextualVerificationState::Passed => unavailable_code(
+            "interface_evidence_insufficient",
+            "logical verification passed without at least one input and one output terminal",
+        ),
         Some(report) => failed_code(
             "logical_truth_table_mismatch",
             format!(
@@ -218,6 +230,12 @@ fn assess_timing(
             .unwrap_or_else(|| "transition traces were unavailable".to_owned());
         return unavailable_code(transition_unavailable_code(&reason), reason);
     }
+    if report.cases.is_empty() {
+        return unavailable_code(
+            "transition_evidence_insufficient",
+            "no input transition cases were verified",
+        );
+    }
     let valid = match contract.mode {
         TimingContractMode::ExactTrace => report.differing_cases == 0,
         TimingContractMode::SettledValueOnly => report.cases.iter().all(final_values_match),
@@ -256,6 +274,12 @@ fn assess_pulses(
             .unwrap_or_else(|| "pulse traces were unavailable".to_owned());
         return unavailable_code(transition_unavailable_code(&reason), reason);
     }
+    if report.cases.is_empty() {
+        return unavailable_code(
+            "pulse_evidence_insufficient",
+            "no input transition cases were verified for pulse analysis",
+        );
+    }
     for case in &report.cases {
         let original = transient_widths(&case.original_outputs);
         let candidate = transient_widths(&case.candidate_outputs);
@@ -289,6 +313,14 @@ fn assess_pulses(
 
 fn final_values_match(case: &crate::MacroTransitionCase) -> bool {
     case.original_outputs.last() == case.candidate_outputs.last()
+}
+
+fn sufficient_comparison(comparison: &dustroute_translate::TruthTableComparison) -> bool {
+    comparison.comparable
+        && comparison.expected_inputs > 0
+        && comparison.expected_outputs > 0
+        && comparison.actual_inputs > 0
+        && comparison.actual_outputs > 0
 }
 
 fn settle_tick(trace: &[Vec<bool>]) -> usize {
@@ -482,5 +514,57 @@ mod tests {
         assert_eq!(assessment.state, ContractCheckState::Unavailable);
         assert_eq!(assessment.reason_codes, ["too_many_inputs"]);
         assert_eq!(assessment.reasons, ["too many inputs"]);
+    }
+
+    #[test]
+    fn empty_transition_measurement_is_unavailable_not_vacuously_passed() {
+        let report = MacroTransitionReport {
+            state: ContextualVerificationState::Passed,
+            cases: Vec::new(),
+            differing_cases: 0,
+            reason: None,
+        };
+        let timing = assess_timing(OptimizationContract::default().timing, Some(&report));
+        let pulse = assess_pulses(OptimizationContract::default().pulse, Some(&report));
+        assert_eq!(timing.state, ContractCheckState::Unavailable);
+        assert_eq!(timing.reason_codes, ["transition_evidence_insufficient"]);
+        assert_eq!(pulse.state, ContractCheckState::Unavailable);
+        assert_eq!(pulse.reason_codes, ["pulse_evidence_insufficient"]);
+    }
+
+    #[test]
+    fn passed_steady_measurement_without_interface_evidence_is_unavailable() {
+        let structural = MacroStructuralReport::default();
+        let steady = MacroSteadyStateReport {
+            state: ContextualVerificationState::Passed,
+            comparison: Some(dustroute_translate::TruthTableComparison {
+                comparable: true,
+                expected_inputs: 0,
+                actual_inputs: 0,
+                expected_outputs: 0,
+                actual_outputs: 0,
+                differing_rows: 0,
+                differing_bits: 0,
+                terminal_count_delta: 0,
+                fitness_penalty: 0,
+            }),
+            input_mapping: Vec::new(),
+            output_mapping: Vec::new(),
+            differing_assignments: Vec::new(),
+            reason: None,
+        };
+        let assessment = assess_macro_contract(
+            OptimizationContract::default(),
+            &structural,
+            Some(&steady),
+            None,
+            0,
+            None,
+        );
+        assert_eq!(assessment.logical.state, ContractCheckState::Unavailable);
+        assert_eq!(
+            assessment.logical.reason_codes,
+            ["interface_evidence_insufficient"]
+        );
     }
 }

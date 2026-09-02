@@ -84,8 +84,13 @@ In another shell, run all scenarios:
 cd crates/dustroute-mcp/mineflayer
 DUSTROUTE_SERVER_ADDRESS=127.0.0.1:25565 \
   DUSTROUTE_BOT_BRIDGE=127.0.0.1:25580 \
-  npm run test:e2e
+npm run test:e2e
 ```
+
+The runner discovers the JSON files in `scenarios/` in lexical order (the
+current checkout contains 27 scenarios) and fails on the first assertion or
+cleanup error. Use a subset while debugging and rerun the full set before
+promoting a release.
 
 Pass scenario names to run a subset:
 
