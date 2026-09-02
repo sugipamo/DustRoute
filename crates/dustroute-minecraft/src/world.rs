@@ -245,6 +245,17 @@ impl Block {
     #[must_use]
     pub fn capabilities(&self) -> BlockCapabilities {
         use CapabilityLevel::{Full, NotApplicable, Partial, Unsupported};
+        if self.requires_live_observation() {
+            return BlockCapabilities {
+                observation: Full,
+                physical_classification: Unsupported,
+                connectivity: Unsupported,
+                steady_state: Unsupported,
+                temporal: Unsupported,
+                repair: Unsupported,
+                placement: Unsupported,
+            };
+        }
         match self.kind {
             BlockKind::Air => BlockCapabilities {
                 observation: Full,
@@ -285,17 +296,26 @@ impl Block {
                 repair: Partial,
                 placement: Full,
             },
-            BlockKind::Lever | BlockKind::PressurePlate | BlockKind::RedstoneBlock => {
-                BlockCapabilities {
-                    observation: Full,
-                    physical_classification: Full,
-                    connectivity: Full,
-                    steady_state: Full,
-                    temporal: Full,
-                    repair: Partial,
-                    placement: Full,
-                }
-            }
+            BlockKind::Lever | BlockKind::RedstoneBlock => BlockCapabilities {
+                observation: Full,
+                physical_classification: Full,
+                connectivity: Full,
+                steady_state: Full,
+                temporal: Full,
+                repair: Partial,
+                placement: Full,
+            },
+            BlockKind::PressurePlate => BlockCapabilities {
+                observation: Full,
+                physical_classification: Full,
+                connectivity: Full,
+                steady_state: Full,
+                // Occupancy, entity filtering, and weighted level changes are
+                // observed but not reproduced by the block-only simulator.
+                temporal: Partial,
+                repair: Partial,
+                placement: Full,
+            },
             BlockKind::Button | BlockKind::RedstoneLamp => BlockCapabilities {
                 observation: Full,
                 physical_classification: Full,
@@ -332,6 +352,34 @@ impl Block {
             .map(|offset| pos.offset(offset.x, offset.y, offset.z))
     }
 
+    /// Returns true when the live block identifier is known to have
+    /// redstone-adjacent semantics that this block-only model does not
+    /// reproduce.  The observed name remains available for diagnostics, but
+    /// callers must not silently treat the coarse physical fallback as a
+    /// simulated solid block.
+    #[must_use]
+    pub fn requires_live_observation(&self) -> bool {
+        self.observed_name
+            .as_deref()
+            .is_some_and(observed_name_requires_live_observation)
+    }
+
+    #[must_use]
+    pub const fn is_external_input_source(&self) -> bool {
+        matches!(
+            self.kind,
+            BlockKind::Lever
+                | BlockKind::Button
+                | BlockKind::PressurePlate
+                | BlockKind::RedstoneBlock
+        )
+    }
+
+    #[must_use]
+    pub const fn is_observable_output(&self) -> bool {
+        matches!(self.kind, BlockKind::RedstoneLamp)
+    }
+
     /// Resolves physical redstone behavior from the observed block and its
     /// block state. Synthetic blocks retain the historical kind defaults.
     #[must_use]
@@ -354,6 +402,17 @@ impl Block {
             wire_rise_connection: properties.supports_components.then_some(WireConnection::Up),
             blocks_wire_rise_when_above: self.kind == BlockKind::Solid,
         };
+        if self.requires_live_observation() {
+            traits.occupied_shape = OccupiedShape::FullCube;
+            traits.supports_dust_on_top = false;
+            traits.conducts_weak_power = false;
+            traits.conducts_strong_power = false;
+            traits.strong_power_drives_dust = false;
+            traits.permits_wire_rise_beside = false;
+            traits.wire_rise_connection = None;
+            traits.blocks_wire_rise_when_above = true;
+            return traits;
+        }
         let name = self.observed_name.as_deref().unwrap_or_default();
         if name.ends_with("_slab") {
             let top = self.observed_properties.get("type").map(String::as_str) == Some("top");
@@ -402,6 +461,30 @@ impl Block {
     }
 }
 
+/// Names whose state or event semantics are intentionally outside the
+/// block-only simulator.  Keeping this list in the Minecraft layer prevents
+/// translation, scenario, and optimization code from drifting apart.
+#[must_use]
+pub fn observed_name_requires_live_observation(name: &str) -> bool {
+    let short_name = name.strip_prefix("minecraft:").unwrap_or(name);
+    matches!(
+        short_name,
+        "observer"
+            | "target"
+            | "daylight_detector"
+            | "dispenser"
+            | "dropper"
+            | "hopper"
+            | "slime_block"
+            | "honey_block"
+            | "water"
+            | "lava"
+            | "tripwire_hook"
+            | "sculk_sensor"
+            | "calibrated_sculk_sensor"
+    ) || short_name.ends_with("_rail")
+}
+
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct World {
     blocks: BTreeMap<Pos, Block>,
@@ -436,7 +519,12 @@ impl World {
         let mut block = Block::new(kind);
         if matches!(
             kind,
-            BlockKind::RedstoneWire | BlockKind::Repeater | BlockKind::Comparator
+            BlockKind::RedstoneWire
+                | BlockKind::Repeater
+                | BlockKind::Comparator
+                | BlockKind::Lever
+                | BlockKind::Button
+                | BlockKind::PressurePlate
         ) {
             block.support_offset = Some(Pos::new(0, -1, 0));
         }
@@ -500,6 +588,8 @@ impl World {
                         | BlockKind::Repeater
                         | BlockKind::Comparator
                         | BlockKind::Lever
+                        | BlockKind::Button
+                        | BlockKind::PressurePlate
                 );
                 if !requires {
                     return None;
@@ -559,10 +649,36 @@ mod tests {
             .insert("power".to_owned(), "7".to_owned());
         assert_eq!(
             block.capabilities().physical_classification,
-            CapabilityLevel::Partial
+            CapabilityLevel::Unsupported
         );
         assert_eq!(block.observed_name.as_deref(), Some("minecraft:target"));
         assert_eq!(block.observed_properties["power"], "7");
+    }
+
+    #[test]
+    fn known_redstone_observations_are_fail_closed_and_do_not_conduct() {
+        let mut block = Block::new(BlockKind::Solid);
+        block.observed_name = Some("minecraft:target".to_owned());
+        block.observation_classification = ObservationClassification::Coarse;
+        assert!(block.requires_live_observation());
+        let traits = block.redstone_traits();
+        assert!(!traits.conducts_weak_power);
+        assert!(!traits.conducts_strong_power);
+        assert_eq!(
+            block.capabilities().steady_state,
+            CapabilityLevel::Unsupported
+        );
+    }
+
+    #[test]
+    fn button_and_pressure_plate_require_physical_support() {
+        let mut world = World::new();
+        world.place(BlockKind::Button, Pos::new(0, 1, 0));
+        world.place(BlockKind::PressurePlate, Pos::new(1, 1, 0));
+        assert_eq!(world.support_issues().len(), 2);
+        world.set(Pos::new(0, 0, 0), Block::new(BlockKind::Solid));
+        world.set(Pos::new(1, 0, 0), Block::new(BlockKind::Solid));
+        assert!(world.support_issues().is_empty());
     }
 
     #[test]

@@ -136,7 +136,17 @@ impl OptimizationVerification {
                 .diagnostics
                 .invalid_supports
                 .is_empty()
-            && matches!(self.behavior, BehavioralEquivalence::Verified(_))
+            && self.original_analysis.unsupported.is_empty()
+            && self.optimized_analysis.unsupported.is_empty()
+            && matches!(
+                self.behavior,
+                BehavioralEquivalence::Verified(ref comparison)
+                    if comparison.comparable
+                        && comparison.expected_inputs > 0
+                        && comparison.expected_outputs > 0
+                        && comparison.actual_inputs > 0
+                        && comparison.actual_outputs > 0
+            )
     }
 }
 

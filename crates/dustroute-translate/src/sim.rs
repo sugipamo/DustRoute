@@ -5,10 +5,57 @@ use crate::connectivity::{
     repeater_output_pos,
 };
 use crate::electrical::{
-    DeviceOutputState, InstantaneousElectricalState, InstantaneousSolveDidNotConverge,
-    PoweredBlockState, repeater_input_level, solve_instantaneous, torch_support_is_powered,
+    DeviceOutputState, ElectricalTopology, InstantaneousElectricalState,
+    InstantaneousSolveDidNotConverge, PoweredBlockState, repeater_input_level,
+    solve_instantaneous_with_topology, torch_support_is_powered,
 };
 use crate::world::{BlockKind, Pos, World};
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum InputMutationError {
+    Missing {
+        position: Pos,
+    },
+    WrongKind {
+        position: Pos,
+        expected: &'static str,
+        actual: BlockKind,
+    },
+    InvalidPressureLevel {
+        position: Pos,
+        level: u8,
+    },
+    Solver(InstantaneousSolveDidNotConverge),
+}
+
+impl std::fmt::Display for InputMutationError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Missing { position } => write!(f, "no input block at {position:?}"),
+            Self::WrongKind {
+                position,
+                expected,
+                actual,
+            } => write!(
+                f,
+                "input at {position:?} must be {expected}, found {actual:?}"
+            ),
+            Self::InvalidPressureLevel { position, level } => write!(
+                f,
+                "pressure plate level {level} at {position:?} is outside 0..=15"
+            ),
+            Self::Solver(error) => error.fmt(f),
+        }
+    }
+}
+
+impl std::error::Error for InputMutationError {}
+
+impl From<InstantaneousSolveDidNotConverge> for InputMutationError {
+    fn from(value: InstantaneousSolveDidNotConverge) -> Self {
+        Self::Solver(value)
+    }
+}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TickState {
@@ -42,8 +89,10 @@ impl TickState {
     }
 }
 
+#[derive(Clone)]
 pub struct RedstoneTickSimulator {
     world: World,
+    topology: ElectricalTopology,
     tick: u64,
     repeater_powered: BTreeMap<Pos, bool>,
     repeater_queues: BTreeMap<Pos, VecDeque<bool>>,
@@ -59,6 +108,7 @@ pub struct RedstoneTickSimulator {
 
 impl RedstoneTickSimulator {
     pub fn new(world: World) -> Result<Self, InstantaneousSolveDidNotConverge> {
+        let topology = ElectricalTopology::from_world(&world);
         let devices = DeviceOutputState::initially_lit(&world);
         let repeater_queues = world
             .iter()
@@ -69,7 +119,7 @@ impl RedstoneTickSimulator {
                 (*pos, VecDeque::from(vec![powered; delay]))
             })
             .collect();
-        let instantaneous = solve_instantaneous(&world, &devices, 128)?;
+        let instantaneous = solve_instantaneous_with_topology(&world, &devices, 128, &topology)?;
         let comparator_queues = devices
             .comparator_output
             .keys()
@@ -87,6 +137,7 @@ impl RedstoneTickSimulator {
             .collect();
         Ok(Self {
             world,
+            topology,
             tick: 0,
             repeater_powered: devices.repeater_powered,
             repeater_queues,
@@ -110,7 +161,8 @@ impl RedstoneTickSimulator {
     }
 
     pub fn settle_instantaneous(&mut self) -> Result<TickState, InstantaneousSolveDidNotConverge> {
-        self.instantaneous = solve_instantaneous(&self.world, &self.devices(), 128)?;
+        self.instantaneous =
+            solve_instantaneous_with_topology(&self.world, &self.devices(), 128, &self.topology)?;
         Ok(self.snapshot())
     }
 
@@ -127,6 +179,27 @@ impl RedstoneTickSimulator {
             torch_burnout_candidates: self.torch_burnout_candidates.clone(),
             instantaneous_iterations: self.instantaneous.iterations,
         }
+    }
+
+    /// Returns whether a scheduled device or delayed output still has work
+    /// queued for a future tick.  The queue is initialized with the current
+    /// state, so merely having a repeater/comparator queue is not considered
+    /// pending work; only a queued value that differs from the current output
+    /// keeps the simulator non-quiescent.
+    #[must_use]
+    pub fn has_pending_events(&self) -> bool {
+        self.repeater_queues.iter().any(|(pos, queue)| {
+            queue
+                .iter()
+                .any(|value| self.repeater_powered.get(pos).copied() != Some(*value))
+        }) || self.comparator_queues.iter().any(|(pos, queue)| {
+            queue
+                .iter()
+                .any(|value| self.comparator_output.get(pos).copied() != Some(*value))
+        }) || self
+            .lamp_off_deadline
+            .values()
+            .any(|deadline| *deadline > self.tick)
     }
 
     pub fn advance_tick(&mut self) -> Result<TickState, InstantaneousSolveDidNotConverge> {
@@ -224,7 +297,8 @@ impl RedstoneTickSimulator {
         self.torch_lit = next_torches;
         self.comparator_output = next_comparators;
         self.tick += 1;
-        self.instantaneous = solve_instantaneous(&self.world, &self.devices(), 128)?;
+        self.instantaneous =
+            solve_instantaneous_with_topology(&self.world, &self.devices(), 128, &self.topology)?;
         for (pos, block) in self.world.iter() {
             if block.kind != BlockKind::RedstoneLamp {
                 continue;
@@ -247,13 +321,128 @@ impl RedstoneTickSimulator {
         &mut self,
         pos: Pos,
         powered: bool,
-    ) -> Result<TickState, InstantaneousSolveDidNotConverge> {
-        if let Some(block) = self.world.get(pos).cloned() {
-            let mut changed = block;
-            changed.powered = Some(powered);
-            self.world.set(pos, changed);
+    ) -> Result<TickState, InputMutationError> {
+        let Some(block) = self.world.get(pos).cloned() else {
+            return Err(InputMutationError::Missing { position: pos });
+        };
+        if !matches!(
+            block.kind,
+            BlockKind::Lever | BlockKind::Button | BlockKind::PressurePlate
+        ) {
+            return Err(InputMutationError::WrongKind {
+                position: pos,
+                expected: "lever, button, or pressure_plate",
+                actual: block.kind,
+            });
         }
+        let mut changed = block;
+        changed.powered = Some(powered);
+        if changed.kind == BlockKind::PressurePlate {
+            changed.power_level = Some(if powered { 15 } else { 0 });
+        }
+        self.world.set(pos, changed);
         self.settle_instantaneous()
+            .map_err(InputMutationError::from)
+    }
+
+    pub fn set_lever_state(
+        &mut self,
+        pos: Pos,
+        powered: bool,
+    ) -> Result<TickState, InputMutationError> {
+        self.set_stateful_powered(pos, BlockKind::Lever, powered)
+    }
+
+    pub fn set_button_state(
+        &mut self,
+        pos: Pos,
+        powered: bool,
+    ) -> Result<TickState, InputMutationError> {
+        self.set_stateful_powered(pos, BlockKind::Button, powered)
+    }
+
+    /// Sets a pressure plate's analog redstone level.  Entity occupancy is an
+    /// external concern; the simulator accepts the observed level explicitly.
+    pub fn set_pressure_plate_level(
+        &mut self,
+        pos: Pos,
+        level: u8,
+    ) -> Result<TickState, InputMutationError> {
+        if level > 15 {
+            return Err(InputMutationError::InvalidPressureLevel {
+                position: pos,
+                level,
+            });
+        }
+        let Some(block) = self.world.get(pos).cloned() else {
+            return Err(InputMutationError::Missing { position: pos });
+        };
+        if block.kind != BlockKind::PressurePlate {
+            return Err(InputMutationError::WrongKind {
+                position: pos,
+                expected: "pressure_plate",
+                actual: block.kind,
+            });
+        }
+        let mut changed = block;
+        changed.power_level = Some(level);
+        changed.powered = Some(level > 0);
+        self.world.set(pos, changed);
+        self.settle_instantaneous()
+            .map_err(InputMutationError::from)
+    }
+
+    fn set_stateful_powered(
+        &mut self,
+        pos: Pos,
+        expected: BlockKind,
+        powered: bool,
+    ) -> Result<TickState, InputMutationError> {
+        let Some(block) = self.world.get(pos).cloned() else {
+            return Err(InputMutationError::Missing { position: pos });
+        };
+        if block.kind != expected {
+            return Err(InputMutationError::WrongKind {
+                position: pos,
+                expected: match expected {
+                    BlockKind::Lever => "lever",
+                    BlockKind::Button => "button",
+                    _ => "stateful input",
+                },
+                actual: block.kind,
+            });
+        }
+        let mut changed = block;
+        changed.powered = Some(powered);
+        self.world.set(pos, changed);
+        self.settle_instantaneous()
+            .map_err(InputMutationError::from)
+    }
+
+    /// Drives an inferred open-boundary input without making the temporary
+    /// source part of the circuit's persistent physical representation.
+    pub fn set_external_powered(
+        &mut self,
+        pos: Pos,
+        powered: bool,
+    ) -> Result<TickState, InputMutationError> {
+        let current = self.world.kind_at(pos);
+        if !matches!(current, BlockKind::Air | BlockKind::RedstoneBlock) {
+            return Err(InputMutationError::WrongKind {
+                position: pos,
+                expected: "air or redstone_block for an external driver",
+                actual: current,
+            });
+        }
+        if powered {
+            self.world
+                .set(pos, crate::world::Block::new(BlockKind::RedstoneBlock));
+        } else if self.world.kind_at(pos) == BlockKind::RedstoneBlock {
+            self.world.remove(pos);
+        }
+        self.topology = ElectricalTopology::from_world(&self.world);
+        self.settle_instantaneous()
+            .map_err(InputMutationError::from)
     }
 
     pub fn settle_ticks(
@@ -454,6 +643,35 @@ mod tests {
         assert!(simulator.advance_tick().unwrap().lamp_lit[&Pos::new(2, 1, 0)]);
         assert!(simulator.advance_tick().unwrap().lamp_lit[&Pos::new(2, 1, 0)]);
         assert!(!simulator.advance_tick().unwrap().lamp_lit[&Pos::new(2, 1, 0)]);
+    }
+
+    #[test]
+    fn input_mutations_reject_missing_or_non_input_blocks() {
+        let mut world = World::new();
+        world.set(Pos::new(0, 0, 0), Block::new(BlockKind::Solid));
+        world.place(BlockKind::RedstoneWire, Pos::new(0, 1, 0));
+        let mut simulator = RedstoneTickSimulator::new(world).unwrap();
+        assert!(matches!(
+            simulator.set_powered(Pos::new(0, 1, 0), true),
+            Err(InputMutationError::WrongKind { .. })
+        ));
+        assert!(matches!(
+            simulator.set_lever_state(Pos::new(9, 9, 9), true),
+            Err(InputMutationError::Missing { .. })
+        ));
+    }
+
+    #[test]
+    fn weighted_pressure_plate_level_is_changed_with_its_boolean_state() {
+        let mut world = World::new();
+        world.set(Pos::new(0, 0, 0), Block::new(BlockKind::Solid));
+        world.place(BlockKind::PressurePlate, Pos::new(0, 1, 0));
+        let mut simulator = RedstoneTickSimulator::new(world).unwrap();
+        simulator
+            .set_pressure_plate_level(Pos::new(0, 1, 0), 7)
+            .unwrap();
+        assert_eq!(simulator.snapshot().power(Pos::new(0, 0, 0)).level(), 7);
+        assert!(simulator.snapshot().powered(Pos::new(0, 0, 0)));
     }
 
     #[test]

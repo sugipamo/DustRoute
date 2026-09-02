@@ -18,6 +18,7 @@ pub enum OperationKind {
     RepairProposal,
     RepairApply,
     RepairUndo,
+    OptimizationProposal,
     TransitionProposal,
     TransitionRun,
     TransitionRestore,

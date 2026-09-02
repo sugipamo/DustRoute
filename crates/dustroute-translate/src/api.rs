@@ -1,11 +1,13 @@
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 
+use serde::{Deserialize, Serialize};
+
 use crate::{
     BaselineCompileConfig, BaselineCompileResult, BaselineCompiler, CompileError, Expr,
-    InferredTruthTable, LogicDag, RegionAnalysis, RegionBounds, TruthTableComparison,
-    TruthTableError, World, analyze_world_region, compare_truth_tables, infer_output_expressions,
-    infer_truth_table,
+    FunctionalNetworkModel, InferredTruthTable, LogicDag, RegionAnalysis, RegionBounds,
+    TruthTableBudget, TruthTableComparison, TruthTableError, World, analyze_world_region,
+    compare_truth_tables, derive_functional_network_with_budget,
 };
 use dustroute_ir::TemporalAnalysis;
 
@@ -29,6 +31,13 @@ pub struct ReverseRequest {
     pub infer_truth_table: bool,
     pub max_inputs: usize,
     pub settle_ticks: usize,
+    pub truth_table_budget: TruthTableBudget,
+    /// Whether the observed world is known to cover the requested circuit.
+    ///
+    /// Callers that obtained a component-limited or otherwise partial snapshot
+    /// must set this to `false`; exhaustive functional inference then fails
+    /// closed while the physical and local views remain available.
+    pub observation_complete: bool,
 }
 
 impl ReverseRequest {
@@ -39,6 +48,8 @@ impl ReverseRequest {
             infer_truth_table: false,
             max_inputs: 16,
             settle_ticks: 60,
+            truth_table_budget: TruthTableBudget::DEFAULT,
+            observation_complete: true,
         }
     }
 
@@ -46,6 +57,24 @@ impl ReverseRequest {
     pub const fn with_truth_table(mut self, max_inputs: usize) -> Self {
         self.infer_truth_table = true;
         self.max_inputs = max_inputs;
+        self
+    }
+
+    #[must_use]
+    pub const fn with_settle_ticks(mut self, settle_ticks: usize) -> Self {
+        self.settle_ticks = settle_ticks;
+        self
+    }
+
+    #[must_use]
+    pub const fn with_truth_table_budget(mut self, budget: TruthTableBudget) -> Self {
+        self.truth_table_budget = budget;
+        self
+    }
+
+    #[must_use]
+    pub const fn with_observation_complete(mut self, complete: bool) -> Self {
+        self.observation_complete = complete;
         self
     }
 }
@@ -57,10 +86,24 @@ pub struct ReverseResult {
     pub gate_view: dustroute_ir::GateView,
     pub expression_view: dustroute_ir::ExpressionView,
     pub functional_view: dustroute_ir::FunctionalView,
+    pub functional_network: Option<FunctionalNetworkModel>,
     pub truth_table: Option<InferredTruthTable>,
     pub expressions: Vec<Expr>,
     pub logic: Option<LogicDag>,
     pub truth_table_error: Option<TruthTableError>,
+    /// Semantic caution for interpreting an exhaustive table.  A table is
+    /// still evaluated with the requested settle procedure, but callers must
+    /// distinguish a steady combinational result from a timing/stateful one.
+    pub truth_table_semantics: TruthTableSemantics,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TruthTableSemantics {
+    Combinational,
+    TimingSensitive,
+    Stateful,
+    Unknown,
 }
 
 #[derive(Debug)]
@@ -115,27 +158,52 @@ impl Translator {
         {
             temporal.record_trace(trace, &std::collections::BTreeMap::new());
         }
+        let truth_table_semantics =
+            classify_truth_table_semantics(&temporal, request.observation_complete);
         let mut gate_view = dustroute_ir::recognize_gates(&analysis.scene);
         let mut expression_view = dustroute_ir::derive_expressions(&analysis.scene, &gate_view);
-        let (truth_table, expressions, logic, truth_table_error) = if request.infer_truth_table {
-            match infer_truth_table(world, &analysis, request.max_inputs, request.settle_ticks) {
-                Ok(truth_table) => {
-                    let expressions = infer_output_expressions(&truth_table);
-                    let logic = dustroute_ir::logic_from_expressions(
-                        expressions
-                            .iter()
-                            .cloned()
-                            .enumerate()
-                            .map(|(index, expression)| (format!("o{index}"), expression)),
+        let (functional_network, truth_table, expressions, logic, truth_table_error) =
+            if request.infer_truth_table {
+                let result = if request.observation_complete {
+                    derive_functional_network_with_budget(
+                        world,
+                        &analysis,
+                        request.max_inputs,
+                        request.settle_ticks,
+                        request.truth_table_budget,
                     )
-                    .ok();
-                    (Some(truth_table), expressions, logic, None)
+                } else {
+                    Err(TruthTableError::IncompleteObservation)
+                };
+                match result {
+                    Ok(functional_network) => {
+                        let truth_table = functional_network.truth_table.clone();
+                        let expressions = functional_network
+                            .output_functions
+                            .iter()
+                            .map(|output| output.expression.clone())
+                            .collect::<Vec<_>>();
+                        let logic = dustroute_ir::logic_from_expressions(
+                            expressions
+                                .iter()
+                                .cloned()
+                                .enumerate()
+                                .map(|(index, expression)| (format!("o{index}"), expression)),
+                        )
+                        .ok();
+                        (
+                            Some(functional_network),
+                            Some(truth_table),
+                            expressions,
+                            logic,
+                            None,
+                        )
+                    }
+                    Err(error) => (None, None, Vec::new(), None, Some(error)),
                 }
-                Err(error) => (None, Vec::new(), None, Some(error)),
-            }
-        } else {
-            (None, Vec::new(), None, None)
-        };
+            } else {
+                (None, None, Vec::new(), None, None)
+            };
         if let Some(table) = &truth_table {
             append_truth_table_views(
                 &analysis,
@@ -152,10 +220,12 @@ impl Translator {
             gate_view,
             expression_view,
             functional_view,
+            functional_network,
             truth_table,
             expressions,
             logic,
             truth_table_error,
+            truth_table_semantics,
         }
     }
 
@@ -169,6 +239,20 @@ impl Translator {
             .truth_table
             .as_ref()
             .map(|table| compare_truth_tables(expected, table))
+    }
+}
+
+fn classify_truth_table_semantics(
+    temporal: &TemporalAnalysis,
+    observation_complete: bool,
+) -> TruthTableSemantics {
+    if !observation_complete {
+        return TruthTableSemantics::Unknown;
+    }
+    match temporal.timing.scope {
+        dustroute_ir::TemporalScope::SteadyStateSafe => TruthTableSemantics::Combinational,
+        dustroute_ir::TemporalScope::TimingSensitive => TruthTableSemantics::TimingSensitive,
+        dustroute_ir::TemporalScope::TemporalRequired => TruthTableSemantics::Stateful,
     }
 }
 
@@ -334,9 +418,47 @@ mod tests {
         let bounds = RegionBounds::new(crate::Pos::new(0, 0, 0), crate::Pos::new(1, 1, 1));
         let default_request = ReverseRequest::new(bounds);
         assert!(!default_request.infer_truth_table);
+        assert!(default_request.observation_complete);
         let requested = default_request.with_truth_table(4);
         assert!(requested.infer_truth_table);
         assert_eq!(requested.max_inputs, 4);
+    }
+
+    #[test]
+    fn incomplete_observation_cannot_claim_a_truth_table() {
+        let forward = Translator
+            .forward(&half_adder(), ForwardOptions::default())
+            .unwrap();
+        let (min, max) = forward.compiled.world.bounds().unwrap();
+        let reverse = Translator.reverse(
+            &forward.compiled.world,
+            ReverseRequest::new(RegionBounds::new(min, max))
+                .with_truth_table(4)
+                .with_observation_complete(false),
+        );
+        assert!(reverse.truth_table.is_none());
+        assert!(matches!(
+            reverse.truth_table_error,
+            Some(crate::TruthTableError::IncompleteObservation)
+        ));
+        assert!(reverse.functional_network.is_none());
+        assert_eq!(reverse.truth_table_semantics, TruthTableSemantics::Unknown);
+    }
+
+    #[test]
+    fn reverse_exposes_temporal_caution_for_truth_table_interpretation() {
+        let forward = Translator
+            .forward(&half_adder(), ForwardOptions::default())
+            .unwrap();
+        let (min, max) = forward.compiled.world.bounds().unwrap();
+        let reverse = Translator.reverse(
+            &forward.compiled.world,
+            ReverseRequest::new(RegionBounds::new(min, max)),
+        );
+        assert_eq!(
+            reverse.truth_table_semantics,
+            TruthTableSemantics::Combinational
+        );
     }
 
     #[test]
@@ -386,6 +508,17 @@ mod tests {
             reverse.functional_view
         );
         assert!(reverse.analysis.scene.observation.is_complete());
+        let network = reverse
+            .functional_network
+            .as_ref()
+            .expect("truth-table reverse exposes the physical function model");
+        assert_eq!(network.output_functions.len(), 2);
+        assert!(
+            network
+                .physical_influences
+                .iter()
+                .any(|influence| influence.shared_role)
+        );
     }
 
     #[test]

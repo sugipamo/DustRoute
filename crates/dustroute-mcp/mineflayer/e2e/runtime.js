@@ -90,14 +90,14 @@ class McpStdioClient {
     this.process.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' })}\n`)
   }
 
-  async callTool (name, args = {}) {
-    const parsed = await this.callToolRaw(name, args)
+  async callTool (name, args = {}, timeoutMs = this.timeoutMs) {
+    const parsed = await this.callToolRaw(name, args, timeoutMs)
     if (parsed.ok === false) throw new Error(`${name}: ${parsed.error || JSON.stringify(parsed)}`)
     return parsed
   }
 
-  async callToolRaw (name, args = {}) {
-    const result = await this.request('tools/call', { name, arguments: args })
+  async callToolRaw (name, args = {}, timeoutMs = this.timeoutMs) {
+    const result = await this.request('tools/call', { name, arguments: args }, timeoutMs)
     const text = result.content.find(item => item.type === 'text')
     if (!text) throw new Error(`${name} returned no text content`)
     return JSON.parse(text.text)

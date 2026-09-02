@@ -11,7 +11,7 @@ use crate::{
     InferredTruthTable, MinecraftSnapshot, Pos, RegionBounds, ReverseRequest, ReverseResult,
     Scenario, ScenarioAction, ScenarioCapability, ScenarioDifference, ScenarioExpectation,
     ScenarioRun, ScenarioTrace, Translator, TruthTableComparison, World, compare_scenario_traces,
-    compare_truth_tables, run_scenario,
+    compare_truth_tables, inferred_input_driver, run_scenario, world_from_snapshot,
 };
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -257,33 +257,85 @@ pub fn propose_scenarios(
         .inputs
         .iter()
         .enumerate()
-        .map(|(index, input)| Scenario {
-            label: format!("toggle inferred input {index}"),
-            initial: snapshot.clone(),
-            actions: vec![
-                ScenarioAction::SetPowered {
-                    redstone_tick: 1,
-                    position: input.anchor,
-                    powered: true,
-                },
-                ScenarioAction::SetPowered {
-                    redstone_tick: 5,
-                    position: input.anchor,
-                    powered: false,
-                },
-            ],
-            observe: analysis
-                .reverse
-                .analysis
-                .outputs
-                .iter()
-                .map(|output| output.anchor)
-                .collect(),
-            duration_redstone_ticks: 10,
-            required_capabilities: vec![ScenarioCapability::SteadyPower],
-            expectation: ScenarioExpectation::default(),
+        .filter_map(|(index, input)| {
+            Some(Scenario {
+                label: format!("toggle inferred input {index}"),
+                initial: snapshot.clone(),
+                actions: inferred_input_actions(snapshot, &analysis.reverse.analysis, input)?,
+                observe: analysis
+                    .reverse
+                    .analysis
+                    .outputs
+                    .iter()
+                    .map(|output| output.anchor)
+                    .collect(),
+                duration_redstone_ticks: 10,
+                required_capabilities: vec![ScenarioCapability::SteadyPower],
+                expectation: ScenarioExpectation::default(),
+            })
         })
         .collect()
+}
+
+fn inferred_input_actions(
+    snapshot: &MinecraftSnapshot,
+    analysis: &crate::RegionAnalysis,
+    input: &crate::InferredTerminal,
+) -> Option<Vec<ScenarioAction>> {
+    let Ok(world) = world_from_snapshot(snapshot) else {
+        return None;
+    };
+    let Ok(driver) = inferred_input_driver(&world, analysis, input) else {
+        return None;
+    };
+    Some(match driver {
+        crate::InferredInputDriver::Lever(position) => vec![
+            ScenarioAction::SetLeverState {
+                redstone_tick: 1,
+                position,
+                powered: true,
+            },
+            ScenarioAction::SetLeverState {
+                redstone_tick: 5,
+                position,
+                powered: false,
+            },
+        ],
+        crate::InferredInputDriver::Button(position) => vec![
+            ScenarioAction::PressButton {
+                redstone_tick: 1,
+                position,
+            },
+            ScenarioAction::ReleaseButton {
+                redstone_tick: 5,
+                position,
+            },
+        ],
+        crate::InferredInputDriver::PressurePlate(position) => vec![
+            ScenarioAction::SetPressurePlateLevel {
+                redstone_tick: 1,
+                position,
+                level: 15,
+            },
+            ScenarioAction::SetPressurePlateLevel {
+                redstone_tick: 5,
+                position,
+                level: 0,
+            },
+        ],
+        crate::InferredInputDriver::External(position) => vec![
+            ScenarioAction::SetExternalPower {
+                redstone_tick: 1,
+                position,
+                powered: true,
+            },
+            ScenarioAction::SetExternalPower {
+                redstone_tick: 5,
+                position,
+                powered: false,
+            },
+        ],
+    })
 }
 
 pub fn simulate_scenario(scenario: &Scenario) -> Result<ScenarioRun, String> {

@@ -71,6 +71,102 @@ impl DeviceOutputState {
     }
 }
 
+/// Immutable world topology reused by the tick simulator.
+///
+/// Device state changes on every tick, but the set of observed positions,
+/// wires, conductors, source targets, and wire weak-power targets does not.
+/// Keeping those derived lists outside `solve_instantaneous` avoids rebuilding
+/// them for every fixed-point solve while preserving the existing public
+/// `solve_instantaneous` entry point for one-shot callers.
+#[derive(Clone, Debug)]
+pub(crate) struct ElectricalTopology {
+    positions: Vec<Pos>,
+    wires: Vec<Pos>,
+    conductive_positions: Vec<Pos>,
+    power_sources: Vec<PowerSource>,
+    wire_weak_targets: Vec<Vec<Pos>>,
+}
+
+#[derive(Clone, Debug)]
+struct PowerSource {
+    pos: Pos,
+    strong_targets: Vec<Pos>,
+}
+
+impl ElectricalTopology {
+    pub(crate) fn from_world(world: &World) -> Self {
+        let positions: Vec<_> = world.positions().collect();
+        let wires: Vec<_> = positions
+            .iter()
+            .copied()
+            .filter(|pos| world.kind_at(*pos) == BlockKind::RedstoneWire)
+            .collect();
+        let conductive_positions: Vec<_> = positions
+            .iter()
+            .copied()
+            .filter(|pos| {
+                world.get(*pos).is_some_and(|block| {
+                    let traits = block.redstone_traits();
+                    traits.conducts_weak_power || traits.conducts_strong_power
+                })
+            })
+            .collect();
+        let power_sources: Vec<_> = positions
+            .iter()
+            .filter_map(|pos| {
+                let block = world.get(*pos)?;
+                let targets = match block.kind {
+                    BlockKind::Lever | BlockKind::Button | BlockKind::PressurePlate => {
+                        block.support_pos(*pos).into_iter().collect()
+                    }
+                    BlockKind::Repeater => repeater_output_pos(world, *pos).into_iter().collect(),
+                    BlockKind::Comparator => {
+                        comparator_output_pos(world, *pos).into_iter().collect()
+                    }
+                    BlockKind::RedstoneTorch => vec![pos.offset(0, 1, 0)],
+                    BlockKind::RedstoneBlock => ADJACENT
+                        .into_iter()
+                        .map(|delta| pos.offset(delta.x, delta.y, delta.z))
+                        .collect(),
+                    _ => return None,
+                };
+                let strong_targets = targets
+                    .into_iter()
+                    .filter(|target| {
+                        world
+                            .get(*target)
+                            .is_some_and(|block| block.redstone_traits().conducts_strong_power)
+                    })
+                    .collect();
+                Some(PowerSource {
+                    pos: *pos,
+                    strong_targets,
+                })
+            })
+            .collect();
+        let wire_weak_targets: Vec<_> = wires
+            .iter()
+            .map(|pos| {
+                dust_weak_power_targets(world, *pos)
+                    .into_iter()
+                    .filter(|target| {
+                        world
+                            .get(*target)
+                            .is_some_and(|block| block.redstone_traits().conducts_weak_power)
+                    })
+                    .collect()
+            })
+            .collect();
+        Self {
+            positions,
+            wires,
+            conductive_positions,
+            power_sources,
+            wire_weak_targets,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct InstantaneousElectricalState {
     pub signal_levels: BTreeMap<Pos, u8>,
@@ -142,78 +238,51 @@ fn dust_weak_power_targets(world: &World, pos: Pos) -> Vec<Pos> {
 
 fn compute_powered_blocks(
     world: &World,
+    topology: &ElectricalTopology,
     signals: &BTreeMap<Pos, u8>,
     devices: &DeviceOutputState,
 ) -> BTreeMap<Pos, PoweredBlockState> {
     let mut weak = BTreeMap::<Pos, u8>::new();
     let mut strong = BTreeMap::<Pos, u8>::new();
-    for (pos, block) in world.iter() {
-        let output = component_output_level(world, *pos, devices);
+    for source in &topology.power_sources {
+        let output = component_output_level(world, source.pos, devices);
         if output == 0 {
             continue;
         }
-        let targets: Vec<_> = match block.kind {
-            BlockKind::Lever | BlockKind::Button | BlockKind::PressurePlate => {
-                block.support_pos(*pos).into_iter().collect()
-            }
-            BlockKind::Repeater => repeater_output_pos(world, *pos).into_iter().collect(),
-            BlockKind::Comparator => comparator_output_pos(world, *pos).into_iter().collect(),
-            BlockKind::RedstoneBlock => ADJACENT
-                .into_iter()
-                .map(|delta| pos.offset(delta.x, delta.y, delta.z))
-                .collect(),
-            _ => Vec::new(),
-        };
-        for target in targets.into_iter().filter(|target| {
-            world
-                .get(*target)
-                .is_some_and(|block| block.redstone_traits().conducts_strong_power)
-        }) {
+        for target in &source.strong_targets {
             strong
-                .entry(target)
+                .entry(*target)
                 .and_modify(|value| *value = (*value).max(output))
                 .or_insert(output);
         }
     }
-    for (source, level) in strong.clone() {
+    for (source, level) in &strong {
         for delta in ADJACENT {
             let target = source.offset(delta.x, delta.y, delta.z);
-            if world
-                .get(target)
-                .is_some_and(|block| block.redstone_traits().conducts_weak_power)
-            {
+            if world.get(target).is_some_and(|block| {
+                block.kind != BlockKind::Solid && block.redstone_traits().conducts_weak_power
+            }) {
                 weak.entry(target)
-                    .and_modify(|value| *value = (*value).max(level))
-                    .or_insert(level);
+                    .and_modify(|value| *value = (*value).max(*level))
+                    .or_insert(*level);
             }
         }
     }
-    for (pos, block) in world.iter() {
-        if block.kind != BlockKind::RedstoneWire {
-            continue;
-        }
+    for (pos, targets) in topology.wires.iter().zip(&topology.wire_weak_targets) {
         let level = signals.get(pos).copied().unwrap_or(0);
         if level == 0 {
             continue;
         }
-        for target in dust_weak_power_targets(world, *pos) {
-            if world
-                .get(target)
-                .is_some_and(|block| block.redstone_traits().conducts_weak_power)
-            {
-                weak.entry(target)
-                    .and_modify(|value| *value = (*value).max(level))
-                    .or_insert(level);
-            }
+        for target in targets {
+            weak.entry(*target)
+                .and_modify(|value| *value = (*value).max(level))
+                .or_insert(level);
         }
     }
-    world
+    topology
+        .conductive_positions
         .iter()
-        .filter(|(_, block)| {
-            let traits = block.redstone_traits();
-            traits.conducts_weak_power || traits.conducts_strong_power
-        })
-        .map(|(pos, _)| {
+        .map(|pos| {
             (
                 *pos,
                 PoweredBlockState {
@@ -263,24 +332,30 @@ pub fn solve_instantaneous(
     devices: &DeviceOutputState,
     max_iterations: usize,
 ) -> Result<InstantaneousElectricalState, InstantaneousSolveDidNotConverge> {
-    let positions: Vec<_> = world.positions().collect();
-    let wires: Vec<_> = world
-        .iter()
-        .filter(|(_, block)| block.kind == BlockKind::RedstoneWire)
-        .map(|(pos, _)| *pos)
-        .collect();
-    let mut signals: BTreeMap<_, _> = positions
+    let topology = ElectricalTopology::from_world(world);
+    solve_instantaneous_with_topology(world, devices, max_iterations, &topology)
+}
+
+pub(crate) fn solve_instantaneous_with_topology(
+    world: &World,
+    devices: &DeviceOutputState,
+    max_iterations: usize,
+    topology: &ElectricalTopology,
+) -> Result<InstantaneousElectricalState, InstantaneousSolveDidNotConverge> {
+    let mut signals: BTreeMap<_, _> = topology
+        .positions
         .iter()
         .map(|pos| (*pos, component_output_level(world, *pos, devices)))
         .collect();
     let mut block_power = BTreeMap::new();
     for iteration in 1..=max_iterations {
-        let next_block_power = compute_powered_blocks(world, &signals, devices);
-        let mut next_signals: BTreeMap<_, _> = positions
+        let next_block_power = compute_powered_blocks(world, topology, &signals, devices);
+        let mut next_signals: BTreeMap<_, _> = topology
+            .positions
             .iter()
             .map(|pos| (*pos, component_output_level(world, *pos, devices)))
             .collect();
-        for dust in &wires {
+        for dust in &topology.wires {
             let mut best = 0;
             for facing in HORIZONTAL {
                 let delta = facing.horizontal_offset().expect("horizontal facing");
@@ -305,11 +380,18 @@ pub fn solve_instantaneous(
                 ));
             }
             for facing in HORIZONTAL {
-                if !wire_has_arm(world, *dust, facing) {
-                    continue;
-                }
                 let delta = facing.horizontal_offset().expect("horizontal facing");
                 let neighbor = dust.offset(delta.x, 0, delta.z);
+                let receives_through_arm = wire_has_arm(world, *dust, facing);
+                let receives_from_strong_block = world.get(neighbor).is_some_and(|block| {
+                    block.redstone_traits().strong_power_drives_dust
+                        && next_block_power
+                            .get(&neighbor)
+                            .is_some_and(|power| power.strong > 0)
+                });
+                if !receives_through_arm && !receives_from_strong_block {
+                    continue;
+                }
                 best = best.max(direct_level_into_dust(
                     world,
                     *dust,
@@ -415,6 +497,24 @@ mod tests {
     }
 
     #[test]
+    fn lit_torch_strongly_powers_block_above_and_dust_on_top() {
+        let mut world = World::new();
+        world.set(Pos::new(1, 0, 0), Block::new(BlockKind::Solid));
+        let torch = world.place(BlockKind::RedstoneTorch, Pos::new(0, 0, 0));
+        torch.facing = Some(Facing::West);
+        torch.support_offset = Some(Pos::new(1, 0, 0));
+        world.set(Pos::new(0, 1, 0), Block::new(BlockKind::Solid));
+        world.place(BlockKind::RedstoneWire, Pos::new(0, 2, 0));
+        update_wire_shapes(&mut world);
+
+        let devices = DeviceOutputState::initially_lit(&world);
+        let state = solve_instantaneous(&world, &devices, 128).unwrap();
+
+        assert_eq!(state.power(Pos::new(0, 1, 0)).strong, 15);
+        assert_eq!(state.signal(Pos::new(0, 2, 0)), 15);
+    }
+
+    #[test]
     fn strong_powered_conductor_drives_adjacent_receiver() {
         let mut world = World::new();
         world.set(Pos::new(0, 0, 0), Block::new(BlockKind::RedstoneBlock));
@@ -423,6 +523,33 @@ mod tests {
         let state = solve_instantaneous(&world, &DeviceOutputState::default(), 128).unwrap();
         assert_eq!(state.power(Pos::new(1, 0, 0)).strong, 15);
         assert_eq!(state.power(Pos::new(2, 0, 0)).weak, 15);
+    }
+
+    #[test]
+    fn strong_power_does_not_chain_into_an_adjacent_solid_conductor() {
+        let mut world = World::new();
+        world.set(Pos::new(0, 0, 0), Block::new(BlockKind::RedstoneBlock));
+        world.set(Pos::new(1, 0, 0), Block::new(BlockKind::Solid));
+        world.set(Pos::new(2, 0, 0), Block::new(BlockKind::Solid));
+        let state = solve_instantaneous(&world, &DeviceOutputState::default(), 128).unwrap();
+        assert_eq!(state.power(Pos::new(1, 0, 0)).strong, 15);
+        assert_eq!(state.power(Pos::new(2, 0, 0)), PoweredBlockState::default());
+    }
+
+    #[test]
+    fn dust_reads_adjacent_strong_block_without_visual_arm() {
+        let mut world = World::new();
+        world.set(Pos::new(0, -1, 0), Block::new(BlockKind::Solid));
+        world.place(BlockKind::RedstoneWire, Pos::new(0, 0, 0));
+        world.set(Pos::new(1, 0, 0), Block::new(BlockKind::Solid));
+        world.set(Pos::new(1, -1, 0), Block::new(BlockKind::RedstoneTorch));
+        update_wire_shapes(&mut world);
+        assert!(!wire_has_arm(&world, Pos::new(0, 0, 0), Facing::East));
+
+        let devices = DeviceOutputState::initially_lit(&world);
+        let state = solve_instantaneous(&world, &devices, 128).unwrap();
+        assert_eq!(state.power(Pos::new(1, 0, 0)).strong, 15);
+        assert_eq!(state.signal(Pos::new(0, 0, 0)), 15);
     }
 
     #[test]

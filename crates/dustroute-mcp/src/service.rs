@@ -6,13 +6,22 @@ use std::sync::Arc;
 use dustroute_app::DustRouteService;
 use dustroute_optimize::{
     AnchorPolicy, BehavioralVerificationConfig, CompressionAxis, CompressionDirection,
-    OptimizationPlan, OptimizationRoutingConfig, OptimizationSafety, TemporalCapabilities,
-    assess_optimization_safety, realize_staged_optimization_against, verify_realized_optimization,
+    ContextualVerificationState, ContractCheck, ContractCheckState, MacroSteadyStateReport,
+    MacroStructuralReport, ObservedMacroMetrics, OptimizationContract,
+    OptimizationContractAssessment, OptimizationPlan, OptimizationRoutingConfig,
+    OptimizationSafety, PhysicalOptimizationSearchBudget, TemporalCapabilities, TimingContractMode,
+    assess_macro_contract, assess_optimization_safety, extract_model_boundary_with_context,
+    find_builtin_verified_macro_replacements, materialize_macro_replacement,
+    optimize_physical_wire_path_with_budget, plan_macro_replacement_with_reserved,
+    realize_staged_optimization_against, validate_macro_structure, verify_boundary_strengths,
+    verify_macro_steady_state, verify_macro_transitions, verify_realized_optimization,
+    verify_world_transitions,
 };
 use dustroute_physical::{BlockKind, Pos};
 use dustroute_physical::{PhysicalBlockChange, PhysicalPatch};
 use dustroute_translate::{
-    ForwardOptions, JavaExportConfig, ReverseRequest, java_block_state, world_from_snapshot_json,
+    ForwardOptions, JavaExportConfig, ReverseRequest, TruthTableBudget, java_block_state,
+    world_from_snapshot,
 };
 use rmcp::{
     ServerHandler,
@@ -30,8 +39,8 @@ use tokio::time::{Duration, Instant, sleep};
 
 use crate::McpConfig;
 use crate::api::{
-    DIAGNOSTIC_SCHEMA_V1, ErrorResponse, McpErrorCode, PLACEMENT_SCHEMA_V1, REPAIR_SCHEMA_V1,
-    TRANSITION_SCHEMA_V1, TransitionTraceResponse,
+    DIAGNOSTIC_SCHEMA_V1, ErrorResponse, McpErrorCode, OPTIMIZATION_SCHEMA_V1, PLACEMENT_SCHEMA_V1,
+    REPAIR_CONTEXT_SCHEMA_V1, REPAIR_SCHEMA_V1, TRANSITION_SCHEMA_V1, TransitionTraceResponse,
 };
 use crate::state::PlanStateStore;
 use crate::{
@@ -42,6 +51,12 @@ use crate::{
 };
 
 const MAX_FLAT_ANALYSIS_COMPONENTS: usize = 512;
+const MAX_TRUTH_TABLE_INPUTS: usize = 16;
+const MAX_TRUTH_TABLE_SETTLE_TICKS: usize = 256;
+const MAX_TRUTH_TABLE_ROWS: usize = 65_536;
+const MAX_TRUTH_TABLE_WORK_UNITS: u64 = 100_000_000;
+const MAX_TRUTH_TABLE_SOLVER_ITERATIONS: usize = 10_000_000;
+const MAX_TRUTH_TABLE_ELAPSED_MILLIS: u64 = 300_000;
 const PLACEMENT_VERIFY_ATTEMPTS: usize = 10;
 const PLACEMENT_VERIFY_INTERVAL: Duration = Duration::from_millis(100);
 const CIRCUIT_SNAPSHOT_TTL: Duration = Duration::from_secs(15 * 60);
@@ -82,7 +97,6 @@ pub struct DustRouteMcp {
     prompt_router: PromptRouter<Self>,
     plans: Arc<Mutex<HashMap<uuid::Uuid, PlacementPlan>>>,
     plan_dimensions: Arc<Mutex<HashMap<uuid::Uuid, String>>>,
-    previewed_plans: Arc<Mutex<BTreeSet<uuid::Uuid>>>,
     applied_plans: Arc<Mutex<HashMap<uuid::Uuid, bool>>>,
     repair_plans: Arc<Mutex<HashMap<uuid::Uuid, StoredRepairPlan>>>,
     transition_plans: Arc<Mutex<HashMap<uuid::Uuid, StoredTransitionPlan>>>,
@@ -173,12 +187,46 @@ struct AnalyzeLookedAtParams {
     max_components: Option<usize>,
     /// Maximum Manhattan gap considered for broken connections, from 1 through 16. Defaults to 2.
     fragment_gap: Option<u32>,
-    /// Explicitly enumerate a truth table for a small circuit. Defaults to false.
+    /// Explicitly enumerate a bounded truth table. Defaults to false.
     include_truth_table: Option<bool>,
+    /// Maximum inferred input count for truth-table enumeration. Defaults to 16;
+    /// the row and work budgets may reject a smaller practical budget.
+    truth_table_max_inputs: Option<usize>,
+    /// Settle ticks used by truth-table rows. Defaults to 60, maximum 256.
+    truth_table_settle_ticks: Option<usize>,
+    /// Maximum truth-table rows. Defaults to 256, maximum 65536.
+    truth_table_max_rows: Option<usize>,
+    /// Maximum estimated full-world work units. Defaults to 2,000,000.
+    truth_table_max_work_units: Option<u64>,
+    /// Maximum cumulative instantaneous solver iterations. Defaults to 1,000,000.
+    truth_table_max_solver_iterations: Option<usize>,
+    /// Maximum elapsed time for exhaustive inference in milliseconds. Defaults to 120,000.
+    truth_table_max_elapsed_millis: Option<u64>,
     /// Observation source: gaze (default) or selected_region.
     scope: Option<String>,
     /// Immutable circuit snapshot ID returned by an earlier circuit read. When supplied, gaze is not read again.
     circuit_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+struct StartSelectedRegionConversionParams {
+    /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
+    #[schemars(skip)]
+    player: Option<String>,
+    /// Explicitly enumerate a bounded truth table. Defaults to false.
+    include_truth_table: Option<bool>,
+    /// Maximum inferred input count for truth-table enumeration. Defaults to 16.
+    truth_table_max_inputs: Option<usize>,
+    /// Settle ticks used by truth-table rows. Defaults to 60, maximum 256.
+    truth_table_settle_ticks: Option<usize>,
+    /// Maximum truth-table rows. Defaults to 256, maximum 65536.
+    truth_table_max_rows: Option<usize>,
+    /// Maximum estimated full-world work units. Defaults to 2,000,000.
+    truth_table_max_work_units: Option<u64>,
+    /// Maximum cumulative instantaneous solver iterations. Defaults to 1,000,000.
+    truth_table_max_solver_iterations: Option<usize>,
+    /// Maximum elapsed time for exhaustive inference in milliseconds. Defaults to 120,000.
+    truth_table_max_elapsed_millis: Option<u64>,
 }
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
@@ -293,6 +341,21 @@ struct StoredRepairPlan {
     baseline_truth_table: Option<dustroute_translate::InferredTruthTable>,
     previewed: bool,
     applied: bool,
+    #[serde(default = "default_true")]
+    contract_satisfied: bool,
+    #[serde(default)]
+    preserved_boundary: Vec<BoundaryBlockRecord>,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+struct BoundaryBlockRecord {
+    pos: Pos,
+    name: String,
+    static_properties: BTreeMap<String, String>,
+}
+
+const fn default_true() -> bool {
+    true
 }
 
 #[derive(Clone, Debug)]
@@ -376,6 +439,278 @@ struct ProposeRepairsParams {
 }
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
+struct GetRepairContextParams {
+    /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
+    #[schemars(skip)]
+    player: Option<String>,
+    /// Immutable circuit snapshot used to ground every fact and hypothesis.
+    circuit_id: String,
+    /// Optional repair operation returned by new_repair. When omitted, the highest-ranked current hypothesis is explained.
+    operation_id: Option<String>,
+    /// Maximum Manhattan gap considered for repair evidence. Defaults to 2.
+    max_gap: Option<u32>,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+struct OptimizationFocusParam {
+    min: CoordinateParam,
+    max: CoordinateParam,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+struct NewOptimizationParams {
+    /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
+    #[schemars(skip)]
+    player: Option<String>,
+    /// Immutable observed circuit to optimize.
+    circuit_id: String,
+    /// Inclusive physical region that may change. Every block outside remains fixed.
+    focus: OptimizationFocusParam,
+    /// Currently wire_length. Future objectives will be added explicitly.
+    objective: String,
+    /// Explicit preservation contract. Omitted fields use the documented safe defaults.
+    contract: Option<OptimizationContractParam>,
+    /// Optional bounded-search limits. Omitted fields use safe defaults.
+    search: Option<OptimizationSearchParam>,
+}
+
+#[derive(Debug, Default, Deserialize, schemars::JsonSchema)]
+struct OptimizationSearchParam {
+    max_expansions: Option<usize>,
+    max_candidates: Option<usize>,
+    max_millis: Option<u64>,
+}
+
+fn optimization_search_budget(
+    param: Option<OptimizationSearchParam>,
+) -> Result<PhysicalOptimizationSearchBudget, String> {
+    let mut budget = PhysicalOptimizationSearchBudget::default();
+    if let Some(param) = param {
+        budget.max_expansions = param.max_expansions.unwrap_or(budget.max_expansions);
+        budget.max_candidates = param.max_candidates.unwrap_or(budget.max_candidates);
+        budget.max_millis = param.max_millis.unwrap_or(budget.max_millis);
+    }
+    if !(1..=1_000_000).contains(&budget.max_expansions) {
+        return Err("max_expansions must be 1..=1000000".to_owned());
+    }
+    if !(1..=10_000).contains(&budget.max_candidates) {
+        return Err("max_candidates must be 1..=10000".to_owned());
+    }
+    if !(1..=10_000).contains(&budget.max_millis) {
+        return Err("max_millis must be 1..=10000".to_owned());
+    }
+    Ok(budget)
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+struct NewMacroOptimizationParams {
+    /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
+    #[schemars(skip)]
+    player: Option<String>,
+    /// Immutable observed circuit containing the proposed functional cell.
+    circuit_id: String,
+    /// Candidate component_id returned by convert_from_circuit.
+    component_id: String,
+    /// Explicit preservation contract. Omitted fields use the documented safe defaults.
+    contract: Option<OptimizationContractParam>,
+}
+
+#[derive(Debug, Default, Deserialize, schemars::JsonSchema)]
+struct OptimizationContractParam {
+    logical: Option<LogicalContractParam>,
+    timing: Option<TimingContractParam>,
+    pulse: Option<PulseContractParam>,
+    analog: Option<AnalogContractParam>,
+    boundary: Option<BoundaryContractParam>,
+    mutation: Option<MutationContractParam>,
+}
+
+#[derive(Debug, Default, Deserialize, schemars::JsonSchema)]
+struct LogicalContractParam {
+    /// Currently exact_truth_table.
+    mode: Option<String>,
+}
+
+#[derive(Debug, Default, Deserialize, schemars::JsonSchema)]
+struct TimingContractParam {
+    /// exact_trace, bounded_delay, settled_value_only, or preserve_order.
+    mode: Option<String>,
+    maximum_added_redstone_ticks: Option<usize>,
+    settle_deadline_redstone_ticks: Option<usize>,
+}
+
+#[derive(Debug, Default, Deserialize, schemars::JsonSchema)]
+struct PulseContractParam {
+    allow_new_pulses: Option<bool>,
+    allow_removed_pulses: Option<bool>,
+    maximum_width_delta_redstone_ticks: Option<usize>,
+}
+
+#[derive(Debug, Default, Deserialize, schemars::JsonSchema)]
+struct AnalogContractParam {
+    preserve_strength: Option<bool>,
+}
+
+#[derive(Debug, Default, Deserialize, schemars::JsonSchema)]
+struct BoundaryContractParam {
+    preserve_blocks: Option<bool>,
+    preserve_facing: Option<bool>,
+    preserve_driver_positions: Option<bool>,
+}
+
+#[derive(Debug, Default, Deserialize, schemars::JsonSchema)]
+struct MutationContractParam {
+    focus_only: Option<bool>,
+    allow_temporary_expansion: Option<bool>,
+    maximum_changed_blocks: Option<usize>,
+    automatic_apply: Option<bool>,
+}
+
+fn optimization_contract_from_param(
+    param: Option<OptimizationContractParam>,
+) -> Result<OptimizationContract, String> {
+    let mut contract = OptimizationContract::default();
+    let Some(param) = param else {
+        return Ok(contract);
+    };
+    if let Some(logical) = param.logical
+        && logical
+            .mode
+            .as_deref()
+            .is_some_and(|mode| mode != "exact_truth_table")
+    {
+        return Err(format!(
+            "unknown logical contract mode {:?}",
+            logical.mode.expect("mode was present")
+        ));
+    }
+    if let Some(timing) = param.timing {
+        if let Some(mode) = timing.mode {
+            contract.timing.mode = match mode.as_str() {
+                "exact_trace" => TimingContractMode::ExactTrace,
+                "bounded_delay" => TimingContractMode::BoundedDelay,
+                "settled_value_only" => TimingContractMode::SettledValueOnly,
+                "preserve_order" => TimingContractMode::PreserveOrder,
+                _ => return Err(format!("unknown timing contract mode {mode:?}")),
+            };
+        }
+        if let Some(value) = timing.maximum_added_redstone_ticks {
+            contract.timing.maximum_added_redstone_ticks = value;
+        }
+        if let Some(value) = timing.settle_deadline_redstone_ticks {
+            contract.timing.settle_deadline_redstone_ticks = value;
+        }
+    }
+    if let Some(pulse) = param.pulse {
+        contract.pulse.allow_new_pulses = pulse
+            .allow_new_pulses
+            .unwrap_or(contract.pulse.allow_new_pulses);
+        contract.pulse.allow_removed_pulses = pulse
+            .allow_removed_pulses
+            .unwrap_or(contract.pulse.allow_removed_pulses);
+        contract.pulse.maximum_width_delta_redstone_ticks = pulse
+            .maximum_width_delta_redstone_ticks
+            .unwrap_or(contract.pulse.maximum_width_delta_redstone_ticks);
+    }
+    if let Some(analog) = param.analog {
+        contract.analog.preserve_strength = analog
+            .preserve_strength
+            .unwrap_or(contract.analog.preserve_strength);
+    }
+    if let Some(boundary) = param.boundary {
+        contract.boundary.preserve_blocks = boundary
+            .preserve_blocks
+            .unwrap_or(contract.boundary.preserve_blocks);
+        contract.boundary.preserve_facing = boundary
+            .preserve_facing
+            .unwrap_or(contract.boundary.preserve_facing);
+        contract.boundary.preserve_driver_positions = boundary
+            .preserve_driver_positions
+            .unwrap_or(contract.boundary.preserve_driver_positions);
+    }
+    if let Some(mutation) = param.mutation {
+        contract.mutation.focus_only = mutation.focus_only.unwrap_or(contract.mutation.focus_only);
+        contract.mutation.allow_temporary_expansion = mutation
+            .allow_temporary_expansion
+            .unwrap_or(contract.mutation.allow_temporary_expansion);
+        contract.mutation.maximum_changed_blocks = mutation
+            .maximum_changed_blocks
+            .unwrap_or(contract.mutation.maximum_changed_blocks);
+        contract.mutation.automatic_apply = mutation
+            .automatic_apply
+            .unwrap_or(contract.mutation.automatic_apply);
+    }
+    if contract.mutation.maximum_changed_blocks == 0 {
+        return Err("maximum_changed_blocks must be greater than zero".to_owned());
+    }
+    if contract.timing.maximum_added_redstone_ticks > 256 {
+        return Err("maximum_added_redstone_ticks must be at most 256".to_owned());
+    }
+    if !(1..=256).contains(&contract.timing.settle_deadline_redstone_ticks) {
+        return Err("settle_deadline_redstone_ticks must be 1..=256".to_owned());
+    }
+    if contract.pulse.maximum_width_delta_redstone_ticks > 256 {
+        return Err("maximum_width_delta_redstone_ticks must be at most 256".to_owned());
+    }
+    Ok(contract)
+}
+
+fn optimization_contract_json(contract: OptimizationContract) -> Value {
+    let timing_mode = match contract.timing.mode {
+        TimingContractMode::ExactTrace => "exact_trace",
+        TimingContractMode::BoundedDelay => "bounded_delay",
+        TimingContractMode::SettledValueOnly => "settled_value_only",
+        TimingContractMode::PreserveOrder => "preserve_order",
+    };
+    json!({
+        "logical": { "mode": "exact_truth_table" },
+        "timing": {
+            "mode": timing_mode,
+            "maximum_added_redstone_ticks": contract.timing.maximum_added_redstone_ticks,
+            "settle_deadline_redstone_ticks": contract.timing.settle_deadline_redstone_ticks,
+        },
+        "pulse": {
+            "allow_new_pulses": contract.pulse.allow_new_pulses,
+            "allow_removed_pulses": contract.pulse.allow_removed_pulses,
+            "maximum_width_delta_redstone_ticks": contract.pulse.maximum_width_delta_redstone_ticks,
+        },
+        "analog": { "preserve_strength": contract.analog.preserve_strength },
+        "boundary": {
+            "preserve_blocks": contract.boundary.preserve_blocks,
+            "preserve_facing": contract.boundary.preserve_facing,
+            "preserve_driver_positions": contract.boundary.preserve_driver_positions,
+        },
+        "mutation": {
+            "focus_only": contract.mutation.focus_only,
+            "allow_temporary_expansion": contract.mutation.allow_temporary_expansion,
+            "maximum_changed_blocks": contract.mutation.maximum_changed_blocks,
+            "automatic_apply": contract.mutation.automatic_apply,
+        },
+    })
+}
+
+fn contract_check_json(check: &ContractCheck) -> Value {
+    let state = match check.state {
+        ContractCheckState::Passed => "passed",
+        ContractCheckState::Failed => "failed",
+        ContractCheckState::Unavailable => "unavailable",
+    };
+    json!({ "state": state, "reason_codes": check.reason_codes, "reasons": check.reasons })
+}
+
+fn contract_assessment_json(assessment: &OptimizationContractAssessment) -> Value {
+    json!({
+        "satisfied": assessment.satisfied(),
+        "logical": contract_check_json(&assessment.logical),
+        "timing": contract_check_json(&assessment.timing),
+        "pulse": contract_check_json(&assessment.pulse),
+        "analog": contract_check_json(&assessment.analog),
+        "boundary": contract_check_json(&assessment.boundary),
+        "mutation": contract_check_json(&assessment.mutation),
+    })
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
 struct PreviewRepairParams {
     /// Repair operation UUID returned by new_repair.
     operation_id: String,
@@ -398,6 +733,16 @@ fn json_text(mut value: Value) -> String {
     }
     serde_json::to_string_pretty(&value)
         .unwrap_or_else(|error| json!({ "ok": false, "error": error.to_string() }).to_string())
+}
+
+/// Convert an already decoded bridge snapshot directly into the simulator
+/// world.  Bridge responses are typed before they reach the service, so
+/// serializing them to JSON and parsing the same JSON again only adds copying
+/// and allocation cost on every analysis path.
+fn world_from_snapshot_for_service(
+    snapshot: &dustroute_translate::MinecraftSnapshot,
+) -> Result<dustroute_translate::World, String> {
+    world_from_snapshot(snapshot).map_err(|error| error.to_string())
 }
 
 fn error_text(code: McpErrorCode, message: impl Into<String>, retryable: bool) -> String {
@@ -486,6 +831,87 @@ fn transition_contracts(
 
 fn bounds_json(bounds: dustroute_translate::RegionBounds) -> Value {
     json!({ "min": bounds.min, "max": bounds.max })
+}
+
+fn mark_observation_incomplete(scene: &mut dustroute_physical::PhysicalScene) {
+    for region in &mut scene.observation.regions {
+        region.completeness = dustroute_physical::RegionCompleteness::PartiallyUnavailable;
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+struct TruthTableRequestOptions {
+    include_truth_table: bool,
+    max_inputs: Option<usize>,
+    settle_ticks: Option<usize>,
+    max_rows: Option<usize>,
+    max_work_units: Option<u64>,
+    max_solver_iterations: Option<usize>,
+    max_elapsed_millis: Option<u64>,
+}
+
+fn reverse_request_for_truth_table(
+    bounds: dustroute_translate::RegionBounds,
+    options: TruthTableRequestOptions,
+) -> Result<ReverseRequest, String> {
+    let request = ReverseRequest::new(bounds);
+    if !options.include_truth_table {
+        return Ok(request);
+    }
+    let max_inputs = options.max_inputs.unwrap_or(request.max_inputs);
+    if !(1..=MAX_TRUTH_TABLE_INPUTS).contains(&max_inputs) {
+        return Err(format!(
+            "truth_table_max_inputs must be 1..={MAX_TRUTH_TABLE_INPUTS}"
+        ));
+    }
+    let settle_ticks = options.settle_ticks.unwrap_or(request.settle_ticks);
+    if settle_ticks > MAX_TRUTH_TABLE_SETTLE_TICKS {
+        return Err(format!(
+            "truth_table_settle_ticks must be 0..={MAX_TRUTH_TABLE_SETTLE_TICKS}"
+        ));
+    }
+    let max_rows = options
+        .max_rows
+        .unwrap_or(TruthTableBudget::DEFAULT.max_rows);
+    if !(1..=MAX_TRUTH_TABLE_ROWS).contains(&max_rows) {
+        return Err(format!(
+            "truth_table_max_rows must be 1..={MAX_TRUTH_TABLE_ROWS}"
+        ));
+    }
+    let max_work_units = options.max_work_units.unwrap_or_else(|| {
+        u64::try_from(TruthTableBudget::DEFAULT.max_work_units).unwrap_or(u64::MAX)
+    });
+    if !(1..=MAX_TRUTH_TABLE_WORK_UNITS).contains(&max_work_units) {
+        return Err(format!(
+            "truth_table_max_work_units must be 1..={MAX_TRUTH_TABLE_WORK_UNITS}"
+        ));
+    }
+    let max_solver_iterations = options
+        .max_solver_iterations
+        .unwrap_or(TruthTableBudget::DEFAULT.max_solver_iterations);
+    if !(1..=MAX_TRUTH_TABLE_SOLVER_ITERATIONS).contains(&max_solver_iterations) {
+        return Err(format!(
+            "truth_table_max_solver_iterations must be 1..={MAX_TRUTH_TABLE_SOLVER_ITERATIONS}"
+        ));
+    }
+    let max_elapsed_millis = options.max_elapsed_millis.unwrap_or(
+        TruthTableBudget::DEFAULT
+            .max_elapsed_millis
+            .unwrap_or(120_000),
+    );
+    if !(1..=MAX_TRUTH_TABLE_ELAPSED_MILLIS).contains(&max_elapsed_millis) {
+        return Err(format!(
+            "truth_table_max_elapsed_millis must be 1..={MAX_TRUTH_TABLE_ELAPSED_MILLIS}"
+        ));
+    }
+    Ok(request
+        .with_truth_table(max_inputs)
+        .with_settle_ticks(settle_ticks)
+        .with_truth_table_budget(
+            TruthTableBudget::new(max_rows, u128::from(max_work_units))
+                .with_max_solver_iterations(max_solver_iterations)
+                .with_max_elapsed_millis(Some(max_elapsed_millis)),
+        ))
 }
 
 fn is_supported_redstone_name(name: &str) -> bool {
@@ -908,6 +1334,13 @@ fn hierarchical_result_json(
             }
         },
         "truth_table": null,
+        "truth_table_status": "skipped_large_circuit",
+        "truth_table_skip": {
+            "code": "flat_analysis_component_threshold",
+            "component_count": expansion["components_loaded"],
+            "threshold": MAX_FLAT_ANALYSIS_COMPONENTS,
+            "guidance": "set include_truth_table=true to request bounded exhaustive simulation"
+        },
         "truth_table_skipped": "large circuits use local cells and hierarchical summaries instead of a flat whole-circuit truth table"
     })
 }
@@ -1196,6 +1629,151 @@ fn simulated_terminal_summary(
     }))
 }
 
+fn truth_table_status(translated: &dustroute_translate::ReverseResult) -> &'static str {
+    if translated.truth_table.is_some() {
+        "computed"
+    } else if matches!(
+        translated.truth_table_error.as_ref(),
+        Some(
+            dustroute_translate::TruthTableError::BudgetExceeded { .. }
+                | dustroute_translate::TruthTableError::RuntimeBudgetExceeded { .. }
+                | dustroute_translate::TruthTableError::ElapsedBudgetExceeded { .. }
+        )
+    ) {
+        "budget_exceeded"
+    } else if translated.truth_table_error.is_some() {
+        "unavailable"
+    } else {
+        "not_requested"
+    }
+}
+
+fn json_u128(value: u128) -> Value {
+    u64::try_from(value)
+        .map(|value| json!(value))
+        .unwrap_or_else(|_| Value::String(value.to_string()))
+}
+
+fn truth_table_error_details(error: Option<&dustroute_translate::TruthTableError>) -> Value {
+    let Some(error) = error else {
+        return Value::Null;
+    };
+    match error {
+        dustroute_translate::TruthTableError::BudgetExceeded {
+            rows,
+            max_rows,
+            estimated_work_units,
+            max_work_units,
+        } => json!({
+            "code": "budget_exceeded",
+            "message": error.to_string(),
+            "rows": rows,
+            "max_rows": max_rows,
+            "estimated_work_units": json_u128(*estimated_work_units),
+            "max_work_units": json_u128(*max_work_units),
+        }),
+        dustroute_translate::TruthTableError::RuntimeBudgetExceeded {
+            rows,
+            completed_rows,
+            solver_iterations,
+            max_solver_iterations,
+        } => json!({
+            "code": "runtime_budget_exceeded",
+            "message": error.to_string(),
+            "rows": rows,
+            "completed_rows": completed_rows,
+            "solver_iterations": solver_iterations,
+            "max_solver_iterations": max_solver_iterations,
+        }),
+        dustroute_translate::TruthTableError::ElapsedBudgetExceeded {
+            rows,
+            completed_rows,
+            elapsed_millis,
+            max_elapsed_millis,
+        } => json!({
+            "code": "elapsed_budget_exceeded",
+            "message": error.to_string(),
+            "rows": rows,
+            "completed_rows": completed_rows,
+            "elapsed_millis": json_u128(*elapsed_millis),
+            "max_elapsed_millis": max_elapsed_millis,
+        }),
+        dustroute_translate::TruthTableError::NonSettling {
+            row,
+            settle_ticks,
+            pending_events,
+        } => json!({
+            "code": "non_settling",
+            "message": error.to_string(),
+            "row": row,
+            "settle_ticks": settle_ticks,
+            "pending_events": pending_events,
+        }),
+        dustroute_translate::TruthTableError::TooManyInputs(count) => json!({
+            "code": "too_many_inputs",
+            "message": error.to_string(),
+            "input_count": count,
+        }),
+        dustroute_translate::TruthTableError::IncompleteObservation => {
+            json!({ "code": "incomplete_observation", "message": error.to_string() })
+        }
+        dustroute_translate::TruthTableError::NoInputs => {
+            json!({ "code": "no_inputs", "message": error.to_string() })
+        }
+        dustroute_translate::TruthTableError::NoOutputs => {
+            json!({ "code": "no_outputs", "message": error.to_string() })
+        }
+        dustroute_translate::TruthTableError::UnmappedExternalInputs(positions) => json!({
+            "code": "unmapped_external_inputs",
+            "message": error.to_string(),
+            "positions": positions,
+        }),
+        dustroute_translate::TruthTableError::UnmappedObservableOutputs(positions) => json!({
+            "code": "unmapped_observable_outputs",
+            "message": error.to_string(),
+            "positions": positions,
+        }),
+        dustroute_translate::TruthTableError::AmbiguousInputMapping {
+            external_inputs,
+            inferred_inputs,
+        } => json!({
+            "code": "ambiguous_input_mapping",
+            "message": error.to_string(),
+            "external_input_count": external_inputs,
+            "inferred_input_count": inferred_inputs,
+        }),
+        dustroute_translate::TruthTableError::AmbiguousOutputMapping {
+            observable_outputs,
+            inferred_outputs,
+        } => json!({
+            "code": "ambiguous_output_mapping",
+            "message": error.to_string(),
+            "observable_output_count": observable_outputs,
+            "inferred_output_count": inferred_outputs,
+        }),
+        dustroute_translate::TruthTableError::NoDriverPosition(position) => json!({
+            "code": "no_driver_position",
+            "message": error.to_string(),
+            "position": position,
+        }),
+        dustroute_translate::TruthTableError::InvalidDriver {
+            position,
+            expected,
+            actual,
+        } => json!({
+            "code": "invalid_driver",
+            "message": error.to_string(),
+            "position": position,
+            "expected": expected,
+            "actual": actual,
+        }),
+        dustroute_translate::TruthTableError::Simulation(message) => json!({
+            "code": "simulation_error",
+            "message": message,
+        }),
+    }
+}
+
 fn reverse_result_json(
     bounds: dustroute_translate::RegionBounds,
     translated: &dustroute_translate::ReverseResult,
@@ -1256,6 +1834,23 @@ fn reverse_result_json(
         "gate_view": translated.gate_view,
         "expression_view": translated.expression_view,
         "functional_view": translated.functional_view,
+        "physical_function_model": translated.functional_network.as_ref().map(|model| json!({
+            "output_functions": model.output_functions.iter().map(|output| json!({
+                "output_index": output.output_index,
+                "position": output.terminal.anchor,
+                "expression": output.expression.to_string(),
+                "truth_column": output.truth_column,
+            })).collect::<Vec<_>>(),
+            "shared_physical_components": model.physical_influences.iter()
+                .filter(|influence| influence.shared_role)
+                .map(|influence| json!({
+                    "component": influence.component,
+                    "positions": influence.positions,
+                    "input_dependencies": influence.input_dependencies,
+                    "output_dependencies": influence.output_dependencies,
+                })).collect::<Vec<_>>(),
+            "interpretation": "Output functions are derived from the shared physical network. Physical components are not assigned exclusive gate identities."
+        })),
         "functional_validity": translated.temporal.timing,
         "behavior_ir": {
             "temporal_devices": translated.temporal.behavior.devices,
@@ -1275,6 +1870,8 @@ fn reverse_result_json(
             "component": terminal.component,
             "confidence": format!("{:?}", terminal.confidence).to_lowercase(),
         })).collect::<Vec<_>>(),
+        "interface_evidence": translated.analysis.interface,
+        "unsupported_observed_blocks": translated.analysis.unsupported,
         "outputs": translated.analysis.outputs.iter().map(|terminal| json!({
             "position": terminal.anchor,
             "component": terminal.component,
@@ -1282,11 +1879,14 @@ fn reverse_result_json(
         })).collect::<Vec<_>>(),
         "expressions": translated.expressions.iter().map(ToString::to_string).collect::<Vec<_>>(),
         "logical_role": logical_role_json(translated),
+        "truth_table_semantics": translated.truth_table_semantics,
         "truth_table": translated.truth_table.as_ref().map(|table| table.rows.iter().map(|row| json!({
             "inputs": row.inputs,
             "outputs": row.outputs,
         })).collect::<Vec<_>>()),
+        "truth_table_status": truth_table_status(translated),
         "truth_table_error": translated.truth_table_error.as_ref().map(ToString::to_string),
+        "truth_table_error_details": truth_table_error_details(translated.truth_table_error.as_ref()),
         "diagnostics": {
             "signal_islands": translated.analysis.diagnostics.signal_islands.len(),
             "isolated_redstone": translated.analysis.diagnostics.isolated_redstone.len(),
@@ -1330,7 +1930,6 @@ impl DustRouteMcp {
             prompt_router: Self::prompt_router(),
             plans: Arc::new(Mutex::new(HashMap::new())),
             plan_dimensions: Arc::new(Mutex::new(HashMap::new())),
-            previewed_plans: Arc::new(Mutex::new(BTreeSet::new())),
             applied_plans: Arc::new(Mutex::new(HashMap::new())),
             repair_plans: Arc::new(Mutex::new(HashMap::new())),
             transition_plans: Arc::new(Mutex::new(HashMap::new())),
@@ -1465,10 +2064,7 @@ impl DustRouteMcp {
         if !undo && is_applied {
             return json_text(json!({ "ok": false, "error": "placement plan is already applied" }));
         }
-        if !undo
-            && self.policy.preview_required
-            && !self.previewed_plans.lock().await.contains(&operation_id)
-        {
+        if !undo && self.policy.preview_required && !plan.previewed {
             return error_text(
                 McpErrorCode::InvalidState,
                 "placement must be shown with show_operation before invoke_operation",
@@ -1492,7 +2088,9 @@ impl DustRouteMcp {
             Err(error) => return json_text(json!({ "ok": false, "error": error })),
         };
         if !baseline_matches {
-            self.previewed_plans.lock().await.remove(&operation_id);
+            if let Some(stored) = self.plans.lock().await.get_mut(&operation_id) {
+                stored.previewed = false;
+            }
             return json_text(json!({
                 "ok": false,
                 "error": "placement baseline is stale; preview again before changing the world",
@@ -1550,7 +2148,9 @@ impl DustRouteMcp {
             }));
         }
         self.applied_plans.lock().await.insert(operation_id, !undo);
-        self.previewed_plans.lock().await.remove(&operation_id);
+        if let Some(stored) = self.plans.lock().await.get_mut(&operation_id) {
+            stored.previewed = false;
+        }
         self.operations
             .record_completed(
                 uuid::Uuid::new_v4(),
@@ -1605,9 +2205,7 @@ impl DustRouteMcp {
             .scan_region(min, max, dimension)
             .await
             .map_err(|error| error.to_string())?;
-        let snapshot_json = serde_json::to_string(&snapshot).map_err(|error| error.to_string())?;
-        let (_, world) =
-            world_from_snapshot_json(&snapshot_json).map_err(|error| error.to_string())?;
+        let world = world_from_snapshot_for_service(&snapshot)?;
         let mismatches = changes
             .iter()
             .filter(|change| {
@@ -1616,7 +2214,13 @@ impl DustRouteMcp {
                 } else {
                     &change.before
                 };
-                !block_matches(world.get(change.pos), expected)
+                let actual = world.get(change.pos);
+                let matches = if verify_after {
+                    block_matches(actual, expected)
+                } else {
+                    placement_baseline_matches(actual, expected)
+                };
+                !matches
             })
             .map(|change| change.pos)
             .collect::<Vec<_>>();
@@ -1719,13 +2323,74 @@ impl DustRouteMcp {
             .scan_region(bounds.min, bounds.max, dimension)
             .await
             .map_err(|error| error.to_string())?;
-        let snapshot_json = serde_json::to_string(&snapshot).map_err(|error| error.to_string())?;
-        let (_, world) =
-            world_from_snapshot_json(&snapshot_json).map_err(|error| error.to_string())?;
+        let world = world_from_snapshot_for_service(&snapshot)?;
         let mismatches = changes
             .iter()
             .filter(|change| !block_matches(world.get(change.pos), &change.after))
             .map(|change| change.pos)
+            .collect::<Vec<_>>();
+        Ok((mismatches.is_empty(), mismatches))
+    }
+
+    async fn verify_preserved_boundary(
+        &self,
+        expected: &[BoundaryBlockRecord],
+        dimension: &str,
+    ) -> Result<(bool, Vec<Pos>), String> {
+        if expected.is_empty() {
+            return Ok((true, Vec::new()));
+        }
+        let bounds = dustroute_translate::RegionBounds::new(
+            Pos::new(
+                expected
+                    .iter()
+                    .map(|record| record.pos.x)
+                    .min()
+                    .unwrap_or(0),
+                expected
+                    .iter()
+                    .map(|record| record.pos.y)
+                    .min()
+                    .unwrap_or(0),
+                expected
+                    .iter()
+                    .map(|record| record.pos.z)
+                    .min()
+                    .unwrap_or(0),
+            ),
+            Pos::new(
+                expected
+                    .iter()
+                    .map(|record| record.pos.x)
+                    .max()
+                    .unwrap_or(0),
+                expected
+                    .iter()
+                    .map(|record| record.pos.y)
+                    .max()
+                    .unwrap_or(0),
+                expected
+                    .iter()
+                    .map(|record| record.pos.z)
+                    .max()
+                    .unwrap_or(0),
+            ),
+        );
+        let snapshot = self
+            .bridge
+            .scan_region(bounds.min, bounds.max, dimension)
+            .await
+            .map_err(|error| error.to_string())?;
+        let actual = snapshot
+            .blocks
+            .iter()
+            .map(boundary_block_record)
+            .map(|record| (record.pos, record))
+            .collect::<BTreeMap<_, _>>();
+        let mismatches = expected
+            .iter()
+            .filter(|expected| actual.get(&expected.pos) != Some(*expected))
+            .map(|record| record.pos)
             .collect::<Vec<_>>();
         Ok((mismatches.is_empty(), mismatches))
     }
@@ -1755,7 +2420,18 @@ impl DustRouteMcp {
             Err(error) => return json_text(json!({ "ok": false, "error": error })),
         };
         if !undo && self.policy.preview_required && !plan.previewed {
-            return json_text(json!({ "ok": false, "error": "repair must be previewed first" }));
+            return error_text(
+                McpErrorCode::InvalidState,
+                "repair must be previewed first",
+                false,
+            );
+        }
+        if !undo && !plan.contract_satisfied {
+            return error_text(
+                McpErrorCode::VerificationFailed,
+                "the optimization preservation contract is not fully satisfied",
+                false,
+            );
         }
         if undo && !plan.applied {
             return json_text(json!({ "ok": false, "error": "repair is not applied" }));
@@ -1782,7 +2458,14 @@ impl DustRouteMcp {
             Ok(result) => result,
             Err(error) => return json_text(json!({ "ok": false, "error": error })),
         };
-        if !verified && !undo {
+        let (boundary_verified, boundary_mismatches) = match self
+            .verify_preserved_boundary(&plan.preserved_boundary, &plan.dimension)
+            .await
+        {
+            Ok(result) => result,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+        };
+        if (!verified || !boundary_verified) && !undo {
             let rollback = plan.patch.inverse();
             let rollback_result = self
                 .write_physical_changes(&rollback.changes, &plan.dimension)
@@ -1796,6 +2479,7 @@ impl DustRouteMcp {
                 "ok": false,
                 "error": "repair verification failed; automatic rollback attempted",
                 "mismatches": mismatches,
+                "boundary_mismatches": boundary_mismatches,
                 "rollback_ok": rollback_result.is_ok(),
             }));
         }
@@ -1821,13 +2505,7 @@ impl DustRouteMcp {
             Ok(snapshot) => snapshot,
             Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
         };
-        let post_world = serde_json::to_string(&snapshot)
-            .map_err(|error| error.to_string())
-            .and_then(|snapshot| {
-                world_from_snapshot_json(&snapshot)
-                    .map(|(_, world)| world)
-                    .map_err(|error| error.to_string())
-            });
+        let post_world = world_from_snapshot_for_service(&snapshot);
         let post_analysis = post_world.as_ref().ok().map(|world| {
             let request = if plan.baseline_truth_table.is_some() {
                 ReverseRequest::new(plan.analysis_bounds).with_truth_table(8)
@@ -1878,6 +2556,8 @@ impl DustRouteMcp {
             "operation_id": operation_id,
             "action": if undo { "undo" } else { "apply" },
             "verified": verified,
+            "boundary_verified": boundary_verified,
+            "boundary_mismatches": boundary_mismatches,
             "changed_blocks": patch.changes.len(),
             "fragments_before": plan.fragments_before,
             "fragments_after": fragments_after,
@@ -2293,6 +2973,112 @@ fn block_matches(
             .is_none_or(|delay| actual.delay == Some(delay))
 }
 
+/// Compare a live block with the state captured by a placement plan.
+///
+/// A plan can contain synthetic blocks produced by the Rust translator while
+/// the live scan contains the namespaced Java block name and all block-state
+/// properties.  Those representation details must not make an untouched plan
+/// stale.  Conversely, static identity (for example stone vs. dirt, repeater
+/// orientation, or delay) must still be checked.  Dynamic power is ignored for
+/// circuit elements because neighbour updates legitimately change it after a
+/// placement, but externally controllable inputs are checked so a user cannot
+/// toggle an input between preview and apply/undo without invalidating the
+/// plan.
+fn placement_baseline_matches(
+    actual: Option<&dustroute_physical::Block>,
+    expected: &dustroute_physical::Block,
+) -> bool {
+    let Some(actual) = actual else {
+        return expected.kind == BlockKind::Air;
+    };
+    if actual.kind != expected.kind {
+        return false;
+    }
+    if expected.kind == BlockKind::Air {
+        return true;
+    }
+
+    // An observed name is authoritative when the plan captured one.  A
+    // synthetic block has no name, so the live name is intentionally allowed.
+    if expected.observed_name.is_some() && actual.observed_name != expected.observed_name {
+        return false;
+    }
+    if (expected.kind != BlockKind::RedstoneTorch
+        && expected
+            .facing
+            .is_some_and(|facing| actual.facing != Some(facing)))
+        || expected
+            .delay
+            .is_some_and(|delay| actual.delay != Some(delay))
+        || expected
+            .support_offset
+            .is_some_and(|support| actual.support_offset != Some(support))
+        || expected
+            .wire_connections
+            .as_ref()
+            .is_some_and(|connections| actual.wire_connections.as_ref() != Some(connections))
+    {
+        return false;
+    }
+
+    // Keep static observed properties useful for stale detection without
+    // comparing neighbour-driven state (power, lamp/torch lit state, wire arm
+    // shape, or repeater lock).
+    const DYNAMIC_PROPERTIES: [&str; 8] = [
+        "power", "powered", "lit", "locked", "north", "east", "south", "west",
+    ];
+    if expected
+        .observed_properties
+        .iter()
+        .filter(|(name, _)| !DYNAMIC_PROPERTIES.contains(&name.as_str()))
+        .any(|(name, value)| actual.observed_properties.get(name) != Some(value))
+    {
+        return false;
+    }
+
+    if matches!(
+        expected.kind,
+        BlockKind::Lever | BlockKind::Button | BlockKind::PressurePlate
+    ) {
+        // Synthetic input blocks default to unpowered in Minecraft.  Treat
+        // that default as part of the captured state so a manual toggle is
+        // detected even when the plan did not carry an explicit `powered`.
+        let expected_powered = expected.powered.unwrap_or(false);
+        if actual.powered != Some(expected_powered) {
+            return false;
+        }
+        if expected.kind == BlockKind::PressurePlate
+            && expected
+                .power_level
+                .is_some_and(|level| actual.power_level != Some(level))
+        {
+            return false;
+        }
+    }
+    true
+}
+
+fn boundary_block_record(
+    block: &dustroute_translate::MinecraftSnapshotBlock,
+) -> BoundaryBlockRecord {
+    let static_properties = block
+        .properties
+        .iter()
+        .filter(|(name, _)| {
+            !matches!(
+                name.as_str(),
+                "power" | "powered" | "lit" | "locked" | "north" | "east" | "south" | "west"
+            )
+        })
+        .map(|(name, value)| (name.clone(), value.clone()))
+        .collect();
+    BoundaryBlockRecord {
+        pos: block.pos,
+        name: block.name.clone(),
+        static_properties,
+    }
+}
+
 fn observed_java_block_state(block: &dustroute_translate::MinecraftSnapshotBlock) -> String {
     if block.properties.is_empty() {
         return block.name.clone();
@@ -2621,13 +3407,9 @@ impl DustRouteMcp {
         let scan_bounds =
             dustroute_translate::RegionBounds::new(scan.snapshot.min, scan.snapshot.max);
         let snapshot = scan.snapshot.clone();
-        let snapshot_json = match serde_json::to_string(&snapshot) {
-            Ok(json) => json,
-            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
-        };
-        let (_, world) = match world_from_snapshot_json(&snapshot_json) {
-            Ok(result) => result,
-            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        let world = match world_from_snapshot_for_service(&snapshot) {
+            Ok(world) => world,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
         };
         let analysis = dustroute_translate::analyze_world_region(&world, scan_bounds);
         let discovery = match discover_connected_region(
@@ -2697,13 +3479,9 @@ impl DustRouteMcp {
         let bounds = circuit.bounds;
         let dimension = circuit.dimension;
         let snapshot = circuit.snapshot;
-        let snapshot_json = match serde_json::to_string(&snapshot) {
-            Ok(snapshot) => snapshot,
-            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
-        };
-        let (_, world) = match world_from_snapshot_json(&snapshot_json) {
-            Ok(result) => result,
-            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        let world = match world_from_snapshot_for_service(&snapshot) {
+            Ok(world) => world,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
         };
         let mut analysis = dustroute_translate::analyze_world_region(&world, bounds);
         analysis.scene.observation.dimension = dimension;
@@ -2775,9 +3553,9 @@ impl DustRouteMcp {
                 "retryable": true,
             }));
         }
-        let (_, world) = match world_from_snapshot_json(&snapshot_json) {
-            Ok(result) => result,
-            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        let world = match world_from_snapshot_for_service(&snapshot) {
+            Ok(world) => world,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
         };
         let mut analysis = dustroute_translate::analyze_world_region(&world, bounds);
         analysis.scene.observation.dimension = dimension;
@@ -2947,23 +3725,17 @@ impl DustRouteMcp {
     }
 
     #[tool(
-        description = "Convert a captured or selected physical circuit into bounded physical, mixed-IR, and higher-level identity summaries. Reuse circuit_id to avoid following a moved gaze. Repair and transition planning are separate tools.",
+        description = "Convert a captured or selected physical circuit into bounded physical, mixed-IR, and higher-level identity summaries. Reuse circuit_id to avoid following a moved gaze. Set include_truth_table=true for explicitly bounded exhaustive functional inference, including large circuits. Repair and transition planning are separate tools.",
         annotations(read_only_hint = true, destructive_hint = false)
     )]
     async fn convert_from_circuit(
         &self,
         Parameters(params): Parameters<AnalyzeLookedAtParams>,
     ) -> String {
-        match params.scope.as_deref().unwrap_or("gaze") {
-            "gaze" => {}
-            "selected_region" => {
-                return self
-                    .convert_from_selected_region(Parameters(PlayerParams {
-                        player: params.player,
-                    }))
-                    .await;
-            }
-            _ => {
+        match params.scope.as_deref() {
+            None | Some("gaze") => {}
+            Some("selected_region") => return self.convert_from_selected_region(params).await,
+            Some(_) => {
                 return error_text(
                     McpErrorCode::InvalidArgument,
                     "scope must be gaze or selected_region",
@@ -2991,19 +3763,31 @@ impl DustRouteMcp {
         let bounds = circuit.bounds;
         let dimension = circuit.dimension;
         let snapshot = circuit.snapshot;
-        let snapshot_json = match serde_json::to_string(&snapshot) {
-            Ok(snapshot) => snapshot,
-            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
-        };
-        let (_, world) = match world_from_snapshot_json(&snapshot_json) {
-            Ok(result) => result,
-            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        let world = match world_from_snapshot_for_service(&snapshot) {
+            Ok(world) => world,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
         };
         let discovered_components = circuit.expansion["components_loaded"]
             .as_u64()
             .and_then(|count| usize::try_from(count).ok())
             .unwrap_or(0);
-        if discovered_components > MAX_FLAT_ANALYSIS_COMPONENTS {
+        let request = match reverse_request_for_truth_table(
+            bounds,
+            TruthTableRequestOptions {
+                include_truth_table: params.include_truth_table.unwrap_or(false),
+                max_inputs: params.truth_table_max_inputs,
+                settle_ticks: params.truth_table_settle_ticks,
+                max_rows: params.truth_table_max_rows,
+                max_work_units: params.truth_table_max_work_units,
+                max_solver_iterations: params.truth_table_max_solver_iterations,
+                max_elapsed_millis: params.truth_table_max_elapsed_millis,
+            },
+        ) {
+            Ok(request) => request,
+            Err(error) => return error_text(McpErrorCode::InvalidArgument, error, false),
+        }
+        .with_observation_complete(circuit.complete);
+        if discovered_components > MAX_FLAT_ANALYSIS_COMPONENTS && !request.infer_truth_table {
             let mut analysis = dustroute_translate::analyze_world_region(&world, bounds);
             analysis.scene.observation.dimension = dimension;
             let hierarchy = dustroute_ir::derive_hierarchy(&analysis.scene);
@@ -3038,10 +3822,6 @@ impl DustRouteMcp {
             }
             return json_text(result);
         }
-        let mut request = ReverseRequest::new(bounds);
-        if params.include_truth_table.unwrap_or(false) {
-            request = request.with_truth_table(16);
-        }
         let mut staged = self.app.analyze_physical(&world, request);
         staged.reverse.analysis.scene.observation.dimension = dimension.clone();
         staged
@@ -3058,7 +3838,101 @@ impl DustRouteMcp {
             .scene
             .observation
             .dimension = dimension.clone();
+        if !circuit.complete {
+            mark_observation_incomplete(&mut staged.reverse.analysis.scene);
+            mark_observation_incomplete(&mut staged.hierarchy.physical_snapshot.value.scene);
+            mark_observation_incomplete(&mut staged.hierarchy.physical_graph.value.scene);
+        }
         let translated = &staged.reverse;
+        let macro_candidates = translated.functional_network.as_ref().map(|model| {
+            find_builtin_verified_macro_replacements(
+                model,
+                "java",
+                "1.21.11",
+                ObservedMacroMetrics::from_world(&world),
+            )
+        });
+        let macro_plans = translated.functional_network.as_ref().and_then(|model| {
+            let boundary = extract_model_boundary_with_context(model, &world, &translated.analysis);
+            let reserved = boundary
+                .iter()
+                .filter_map(|port| port.driver_position)
+                .collect::<BTreeSet<_>>();
+            let boundary_positions = boundary
+                .iter()
+                .map(|port| port.position)
+                .collect::<BTreeSet<_>>();
+            let replaceable = world
+                .positions()
+                .filter(|pos| !boundary_positions.contains(pos))
+                .collect::<BTreeSet<_>>();
+            macro_candidates.as_ref().map(|candidates| {
+                candidates
+                    .iter()
+                    .filter_map(|candidate| {
+                        let mut plan =
+                            plan_macro_replacement_with_reserved(candidate, &boundary, &reserved)
+                                .ok()?;
+                        let structural = validate_macro_structure(&plan, &world, &replaceable);
+                        plan.verification.structural = if structural.valid() {
+                            ContextualVerificationState::Passed
+                        } else {
+                            ContextualVerificationState::Failed
+                        };
+                        let materialized =
+                            materialize_macro_replacement(&plan, &world, &replaceable, 14);
+                        let steady_state = materialized.as_ref().ok().map(|materialized| {
+                            verify_macro_steady_state(
+                                &model.truth_table,
+                                &world,
+                                &materialized.world,
+                                8,
+                                64,
+                            )
+                        });
+                        if let Some(report) = &steady_state {
+                            plan.verification.steady_state = report.state;
+                        }
+                        let transitions = materialized.as_ref().ok().and_then(|materialized| {
+                            (plan.verification.steady_state == ContextualVerificationState::Passed)
+                                .then(|| {
+                                    verify_macro_transitions(
+                                        &model.truth_table,
+                                        &world,
+                                        &materialized.world,
+                                        64,
+                                        16,
+                                        4,
+                                    )
+                                })
+                        });
+                        if let Some(report) = &transitions {
+                            plan.verification.transitions = report.state;
+                        }
+                        let contract = OptimizationContract::default();
+                        let contract_assessment = materialized.as_ref().ok().map(|materialized| {
+                            assess_macro_contract(
+                                contract,
+                                &structural,
+                                steady_state.as_ref(),
+                                transitions.as_ref(),
+                                materialized.patch.changes.len(),
+                                None,
+                            )
+                        });
+                        Some((
+                            plan,
+                            structural,
+                            materialized,
+                            steady_state,
+                            transitions,
+                            contract,
+                            contract_assessment,
+                        ))
+                    })
+                    .collect::<Vec<_>>()
+            })
+        });
         let focused = target
             .map(|target| focused_role_json(translated, target))
             .unwrap_or(Value::Null);
@@ -3090,6 +3964,98 @@ impl DustRouteMcp {
                 json!({ "seed": target, "bounds": bounds_json(bounds) }),
             );
             object.insert("analysis_complete".to_owned(), Value::Bool(!incomplete));
+            object.insert(
+                "macro_replacement_candidates".to_owned(),
+                macro_candidates.as_ref().map_or(Value::Null, |candidates| json!({
+                    "status": "proposal_only",
+                    "realization": "contextual placement and transition verification are required before a mutation plan can be created",
+                    "candidates": candidates.iter().map(|candidate| json!({
+                        "component_id": candidate.component_id.as_str(),
+                        "name": candidate.name,
+                        "kind": candidate.kind,
+                        "layout_reference": candidate.layout_reference,
+                        "input_ports": candidate.input_ports,
+                        "output_ports": candidate.output_ports,
+                        "physical": candidate.physical,
+                        "saved_blocks": candidate.saved_blocks,
+                        "saved_volume": candidate.saved_volume,
+                        "requires_contextual_transition_verification": candidate.requires_contextual_transition_verification,
+                    })).collect::<Vec<_>>()
+                    ,"placement_plans": macro_plans.as_ref().map(|plans| plans.iter().map(|(plan, structural, materialized, steady_state, transitions, contract, contract_assessment)| json!({
+                        "component_id": plan.component_id,
+                        "origin": plan.placed.origin,
+                        "rotation_y": format!("{:?}", plan.placed.rotation).to_lowercase(),
+                        "total_route_length": plan.total_route_length,
+                        "automatic_apply_allowed": plan.automatic_apply_allowed,
+                        "contract": optimization_contract_json(*contract),
+                        "contract_assessment": contract_assessment.as_ref().map(contract_assessment_json),
+                        "structural_report": {
+                            "valid": structural.valid(),
+                            "candidate_collisions": structural.candidate_collisions,
+                            "route_collisions": structural.route_collisions,
+                            "route_cross_net_contacts": structural.route_cross_net_contacts.iter().map(|(first, second, a, b)| json!({
+                                "first_route": first,
+                                "second_route": second,
+                                "first_position": a,
+                                "second_position": b,
+                            })).collect::<Vec<_>>(),
+                            "candidate_support_issues": structural.candidate_support_issues,
+                            "required_route_supports": structural.required_route_supports,
+                            "blocked_route_supports": structural.blocked_route_supports,
+                        },
+                        "materialization": match materialized {
+                            Ok(materialized) => json!({
+                                "status": "preview_ready",
+                                "change_count": materialized.patch.changes.len(),
+                                "added_supports": materialized.added_supports,
+                                "inserted_repeaters": materialized.inserted_repeaters,
+                                "patch": materialized.patch,
+                            }),
+                            Err(error) => json!({
+                                "status": "unavailable",
+                                "reason": format!("{error:?}"),
+                            }),
+                        },
+                        "steady_state_report": steady_state.as_ref().map(|report| json!({
+                            "state": format!("{:?}", report.state).to_lowercase(),
+                            "comparison": report.comparison,
+                            "input_mapping": report.input_mapping,
+                            "output_mapping": report.output_mapping,
+                            "differing_assignments": report.differing_assignments,
+                            "reason": report.reason,
+                        })),
+                        "transition_report": transitions.as_ref().map(|report| json!({
+                            "state": format!("{:?}", report.state).to_lowercase(),
+                            "case_count": report.cases.len(),
+                            "differing_cases": report.differing_cases,
+                            "reason": report.reason,
+                            "cases": report.cases.iter().map(|case| json!({
+                                "from": case.from,
+                                "to": case.to,
+                                "equivalent": case.equivalent,
+                                "first_difference_tick": case.first_difference_tick,
+                                "original_outputs": case.original_outputs,
+                                "candidate_outputs": case.candidate_outputs,
+                            })).collect::<Vec<_>>(),
+                        })),
+                        "verification": {
+                            "structural": format!("{:?}", plan.verification.structural).to_lowercase(),
+                            "steady_state": format!("{:?}", plan.verification.steady_state).to_lowercase(),
+                            "transitions": format!("{:?}", plan.verification.transitions).to_lowercase(),
+                        },
+                        "routes": plan.routes.iter().map(|route| json!({
+                            "direction": format!("{:?}", route.boundary.direction).to_lowercase(),
+                            "observed_index": route.boundary.observed_index,
+                            "boundary_position": route.boundary.position,
+                            "boundary_facing": route.boundary.facing,
+                            "driver_position": route.boundary.driver_position,
+                            "candidate_port": route.candidate_port,
+                            "candidate_position": route.candidate_position,
+                            "path": route.path,
+                        })).collect::<Vec<_>>(),
+                    })).collect::<Vec<_>>()).unwrap_or_default(),
+                })),
+            );
             object.insert(
                 "next_tools".to_owned(),
                 json!({
@@ -3250,13 +4216,9 @@ impl DustRouteMcp {
                 return json_text(json!({ "ok": false, "error": error.to_string() }));
             }
         };
-        let snapshot_json = match serde_json::to_string(&snapshot) {
-            Ok(json) => json,
-            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
-        };
-        let (_, existing) = match world_from_snapshot_json(&snapshot_json) {
-            Ok(result) => result,
-            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        let existing = match world_from_snapshot_for_service(&snapshot) {
+            Ok(world) => world,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
         };
         let plan = match plan_world_overlay(
             &existing,
@@ -3409,10 +4371,7 @@ impl DustRouteMcp {
         }
     }
 
-    async fn convert_from_selected_region(
-        &self,
-        Parameters(params): Parameters<PlayerParams>,
-    ) -> String {
+    async fn convert_from_selected_region(&self, params: AnalyzeLookedAtParams) -> String {
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
             Err(error) => return json_text(json!({ "ok": false, "error": error })),
@@ -3458,15 +4417,27 @@ impl DustRouteMcp {
             .iter()
             .filter(|block| is_redstone_candidate_name(&block.name))
             .count();
-        let snapshot_json = match serde_json::to_string(&snapshot) {
-            Ok(json) => json,
-            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        let world = match world_from_snapshot_for_service(&snapshot) {
+            Ok(world) => world,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
         };
-        let (_, world) = match world_from_snapshot_json(&snapshot_json) {
-            Ok(result) => result,
-            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
-        };
-        if redstone_components > MAX_FLAT_ANALYSIS_COMPONENTS {
+        let request = match reverse_request_for_truth_table(
+            bounds,
+            TruthTableRequestOptions {
+                include_truth_table: params.include_truth_table.unwrap_or(false),
+                max_inputs: params.truth_table_max_inputs,
+                settle_ticks: params.truth_table_settle_ticks,
+                max_rows: params.truth_table_max_rows,
+                max_work_units: params.truth_table_max_work_units,
+                max_solver_iterations: params.truth_table_max_solver_iterations,
+                max_elapsed_millis: params.truth_table_max_elapsed_millis,
+            },
+        ) {
+            Ok(request) => request,
+            Err(error) => return error_text(McpErrorCode::InvalidArgument, error, false),
+        }
+        .with_observation_complete(true);
+        if redstone_components > MAX_FLAT_ANALYSIS_COMPONENTS && !request.infer_truth_table {
             let mut analysis = dustroute_translate::analyze_world_region(&world, bounds);
             analysis.scene.observation.dimension = dimension;
             let hierarchy = dustroute_ir::derive_hierarchy(&analysis.scene);
@@ -3487,9 +4458,7 @@ impl DustRouteMcp {
             }
             return json_text(result);
         }
-        let mut staged = self
-            .app
-            .analyze_physical(&world, ReverseRequest::new(bounds));
+        let mut staged = self.app.analyze_physical(&world, request);
         staged.reverse.analysis.scene.observation.dimension = dimension;
         let mut result = reverse_result_json(bounds, &staged.reverse);
         if let Some(object) = result.as_object_mut() {
@@ -3520,13 +4489,9 @@ impl DustRouteMcp {
         let bounds = circuit.bounds;
         let dimension = circuit.dimension;
         let snapshot = circuit.snapshot;
-        let snapshot_json = match serde_json::to_string(&snapshot) {
-            Ok(snapshot) => snapshot,
-            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
-        };
-        let (_, world) = match world_from_snapshot_json(&snapshot_json) {
-            Ok(result) => result,
-            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        let world = match world_from_snapshot_for_service(&snapshot) {
+            Ok(world) => world,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
         };
         let analysis = dustroute_translate::analyze_world_region(&world, bounds);
         let fragments_before = analysis.scene.fragments.len();
@@ -3546,6 +4511,8 @@ impl DustRouteMcp {
                         baseline_truth_table: None,
                         previewed: false,
                         applied: false,
+                        contract_satisfied: true,
+                        preserved_boundary: Vec::new(),
                     },
                 )
                 .await
@@ -3556,13 +4523,18 @@ impl DustRouteMcp {
                 .record_completed(
                     operation_id,
                     OperationKind::RepairProposal,
-                    json!({ "patch": &proposal.patch, "evidence": &proposal.evidence }),
+                    json!({
+                        "patch": &proposal.patch,
+                        "evidence": &proposal.evidence,
+                        "impact": proposal.impact
+                    }),
                 )
                 .await;
             response.push(json!({
                 "operation_id": operation_id,
                 "patch": proposal.patch,
                 "evidence": proposal.evidence,
+                "impact": proposal.impact,
             }));
         }
         json_text(json!({
@@ -3574,6 +4546,818 @@ impl DustRouteMcp {
             "proposal_count": response.len(),
             "proposals": response,
             "next_step": "review a proposal, call show_operation, ask for explicit confirmation, then call invoke_operation with confirm=true"
+        }))
+    }
+
+    #[tool(
+        description = "Explain repair evidence for an immutable circuit as bounded facts, competing hypotheses, counterfactual impact, related physical components, and questions for the player",
+        annotations(read_only_hint = true, destructive_hint = false)
+    )]
+    async fn get_repair_context(
+        &self,
+        Parameters(params): Parameters<GetRepairContextParams>,
+    ) -> String {
+        let player = match self.resolve_player(params.player.as_deref()) {
+            Ok(player) => player,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+        };
+        if let Some(error) = self.authorize_player(&player) {
+            return error;
+        }
+        let max_gap = params.max_gap.unwrap_or(2);
+        if !(1..=8).contains(&max_gap) {
+            return error_text(McpErrorCode::InvalidArgument, "max_gap must be 1..8", false);
+        }
+        let (circuit_id, circuit) = match self.load_circuit(&params.circuit_id, &player).await {
+            Ok(circuit) => circuit,
+            Err(error) => return error_text(McpErrorCode::NotFound, error, false),
+        };
+        let world = match world_from_snapshot_for_service(&circuit.snapshot) {
+            Ok(world) => world,
+            Err(error) => return error_text(McpErrorCode::SerializationFailed, error, false),
+        };
+        let analysis = dustroute_translate::analyze_world_region(&world, circuit.bounds);
+        let diagnostic =
+            dustroute_translate::diagnose_scene(&analysis.scene, circuit.target, circuit.complete);
+        let proposals =
+            dustroute_translate::propose_scene_repairs(&world, &analysis.scene, max_gap);
+        let operation_id = match params.operation_id.as_deref() {
+            Some(value) => match uuid::Uuid::parse_str(value) {
+                Ok(id) => Some(id),
+                Err(error) => {
+                    return error_text(McpErrorCode::InvalidArgument, error.to_string(), false);
+                }
+            },
+            None => None,
+        };
+        let selected_patch = if let Some(operation_id) = operation_id {
+            let plan = match self.repair_plan(operation_id).await {
+                Ok(Some(plan)) => plan,
+                Ok(None) => {
+                    return error_text(McpErrorCode::NotFound, "repair operation not found", false);
+                }
+                Err(error) => return error_text(McpErrorCode::Internal, error, false),
+            };
+            if plan.dimension != circuit.dimension || plan.analysis_bounds != circuit.bounds {
+                return error_text(
+                    McpErrorCode::InvalidArgument,
+                    "operation_id does not belong to this circuit snapshot",
+                    false,
+                );
+            }
+            Some(plan.patch)
+        } else {
+            proposals.first().map(|proposal| proposal.patch.clone())
+        };
+        let selected = selected_patch
+            .as_ref()
+            .and_then(|patch| proposals.iter().find(|proposal| proposal.patch == *patch));
+
+        let relevant_positions = selected
+            .into_iter()
+            .flat_map(|proposal| proposal.patch.changes.iter().map(|change| change.pos))
+            .collect::<Vec<_>>();
+        let related_components = analysis
+            .scene
+            .components
+            .iter()
+            .filter(|component| {
+                relevant_positions.iter().any(|position| {
+                    component.pos.x.abs_diff(position.x)
+                        + component.pos.y.abs_diff(position.y)
+                        + component.pos.z.abs_diff(position.z)
+                        <= 2
+                })
+            })
+            .take(32)
+            .map(|component| {
+                let incoming = analysis
+                    .scene
+                    .connections
+                    .iter()
+                    .filter(|connection| connection.sink.component == component.id)
+                    .map(|connection| {
+                        json!({
+                            "component": connection.source.component,
+                            "transfer": connection.transfer,
+                            "confidence": connection.confidence
+                        })
+                    })
+                    .collect::<Vec<_>>();
+                let outgoing = analysis
+                    .scene
+                    .connections
+                    .iter()
+                    .filter(|connection| connection.source.component == component.id)
+                    .map(|connection| {
+                        json!({
+                            "component": connection.sink.component,
+                            "transfer": connection.transfer,
+                            "confidence": connection.confidence
+                        })
+                    })
+                    .collect::<Vec<_>>();
+                json!({
+                    "id": component.id,
+                    "position": component.pos,
+                    "block": component.block.kind,
+                    "facing": component.block.facing,
+                    "support": component.support,
+                    "incoming": incoming,
+                    "outgoing": outgoing
+                })
+            })
+            .collect::<Vec<_>>();
+
+        let mut hypotheses = Vec::new();
+        if let Some(proposal) = selected {
+            let mut supporting_evidence = vec![format!(
+                "virtual repair contains {} non-conflicting block change(s)",
+                proposal.patch.changes.len()
+            )];
+            if let Some(impact) = proposal.impact {
+                supporting_evidence.push(format!(
+                    "physical fragments change from {} to {}",
+                    impact.fragments_before, impact.fragments_after
+                ));
+                supporting_evidence.push(format!(
+                    "drive-reachable components change from {} to {}",
+                    impact.drive_reachable_components_before,
+                    impact.drive_reachable_components_after
+                ));
+            }
+            let mut contradictions = Vec::new();
+            if diagnostic.counts.awaiting_external_input > 0 {
+                contradictions.push(
+                    "one or more disconnected paths are also valid inferred external-input boundaries"
+                        .to_owned(),
+                );
+            }
+            if proposal
+                .impact
+                .is_some_and(|impact| impact.requires_temporal_validation)
+            {
+                contradictions.push(
+                    "the repaired path contains temporal behavior that still needs a live transition test"
+                        .to_owned(),
+                );
+            }
+            hypotheses.push(json!({
+                "kind": proposal.patch.reason,
+                "confidence_percent": proposal.patch.confidence_percent,
+                "supporting_evidence": supporting_evidence,
+                "contradictions": contradictions,
+                "physical_evidence": proposal.evidence,
+                "counterfactual_impact": proposal.impact,
+                "operation_id": operation_id
+            }));
+        }
+        if diagnostic.counts.awaiting_external_input > 0 {
+            hypotheses.push(json!({
+                "kind": "intentional_external_inputs",
+                "confidence": "plausible",
+                "supporting_evidence": [
+                    "the disconnected paths satisfy the structural rules for inferred input boundaries"
+                ],
+                "contradictions": selected.map_or_else(Vec::new, |proposal| vec![format!(
+                    "the highest-ranked virtual repair improves connectivity with {} block change(s)",
+                    proposal.patch.changes.len()
+                )])
+            }));
+        }
+
+        let gaps = analysis.scene.gap_candidates(max_gap);
+        let mut questions = Vec::new();
+        if diagnostic.counts.awaiting_external_input > 0 && selected.is_some() {
+            questions.push(
+                "Are the disconnected fragments intended as separate inputs, or should the known controllable input drive the downstream path?"
+                    .to_owned(),
+            );
+        }
+        if selected
+            .and_then(|proposal| proposal.impact)
+            .is_some_and(|impact| impact.requires_temporal_validation)
+        {
+            questions.push(
+                "May DustRoute run a previewed transition scenario after repair to verify timing?"
+                    .to_owned(),
+            );
+        }
+        json_text(json!({
+            "schema_version": REPAIR_CONTEXT_SCHEMA_V1,
+            "ok": true,
+            "circuit_id": circuit_id,
+            "operation_id": operation_id,
+            "summary": format!(
+                "{} physical component(s), {} traversal fragment(s), {} nearby gap candidate(s), {} repair hypothesis/hypotheses",
+                analysis.scene.components.len(),
+                analysis.scene.fragments.len(),
+                gaps.len(),
+                hypotheses.len()
+            ),
+            "facts": {
+                "observation_complete": diagnostic.observation_complete,
+                "components": analysis.scene.components.len(),
+                "fragments": analysis.scene.fragments.len(),
+                "gap_candidates": gaps.iter().take(16).collect::<Vec<_>>(),
+                "gap_candidates_truncated": gaps.len() > 16,
+                "diagnostic": diagnostic,
+                "temporal": analysis.scene.temporal_assessment()
+            },
+            "hypotheses": hypotheses,
+            "related_components": related_components,
+            "questions": questions,
+            "next_step": "compare the hypotheses with the player's intent; use show_operation only after choosing a repair hypothesis"
+        }))
+    }
+
+    #[tool(
+        description = "Create a non-mutating, reversible macro replacement operation from a candidate component_id returned by convert_from_circuit",
+        annotations(read_only_hint = true, destructive_hint = false)
+    )]
+    async fn new_macro_optimization(
+        &self,
+        Parameters(params): Parameters<NewMacroOptimizationParams>,
+    ) -> String {
+        let player = match self.resolve_player(params.player.as_deref()) {
+            Ok(player) => player,
+            Err(error) => return error_text(McpErrorCode::InvalidArgument, error, false),
+        };
+        if let Some(error) = self.authorize_player(&player) {
+            return error;
+        }
+        let contract = match optimization_contract_from_param(params.contract) {
+            Ok(contract) => contract,
+            Err(error) => return error_text(McpErrorCode::InvalidArgument, error, false),
+        };
+        let (circuit_id, circuit) = match self.load_circuit(&params.circuit_id, &player).await {
+            Ok(circuit) => circuit,
+            Err(error) => return error_text(McpErrorCode::NotFound, error, false),
+        };
+        let (_, world) = match dustroute_translate::world_from_snapshot(&circuit.snapshot) {
+            Ok(result) => (circuit.snapshot.clone(), result),
+            Err(error) => {
+                return error_text(McpErrorCode::SerializationFailed, error.to_string(), false);
+            }
+        };
+        let staged = self.app.analyze_physical(
+            &world,
+            ReverseRequest::new(circuit.bounds)
+                .with_truth_table(16)
+                .with_observation_complete(circuit.complete),
+        );
+        let Some(model) = staged.reverse.functional_network.as_ref() else {
+            return error_text(
+                McpErrorCode::InvalidState,
+                "a complete inferred functional network is required for macro optimization",
+                false,
+            );
+        };
+        let candidates = find_builtin_verified_macro_replacements(
+            model,
+            "java",
+            "1.21.11",
+            ObservedMacroMetrics::from_world(&world),
+        );
+        let Some(candidate) = candidates
+            .iter()
+            .find(|candidate| candidate.component_id.as_str() == params.component_id)
+        else {
+            return error_text(
+                McpErrorCode::NotFound,
+                "component_id is not a current verified macro replacement candidate",
+                false,
+            );
+        };
+        let boundary = extract_model_boundary_with_context(model, &world, &staged.reverse.analysis);
+        let reserved = boundary
+            .iter()
+            .filter_map(|port| port.driver_position)
+            .collect::<BTreeSet<_>>();
+        let boundary_positions = boundary
+            .iter()
+            .map(|port| port.position)
+            .collect::<BTreeSet<_>>();
+        let replaceable = world
+            .positions()
+            .filter(|position| !boundary_positions.contains(position))
+            .collect::<BTreeSet<_>>();
+        let mut placement =
+            match plan_macro_replacement_with_reserved(candidate, &boundary, &reserved) {
+                Ok(plan) => plan,
+                Err(error) => {
+                    return error_text(
+                        McpErrorCode::InvalidState,
+                        format!("macro placement is unavailable: {error:?}"),
+                        false,
+                    );
+                }
+            };
+        let structural = validate_macro_structure(&placement, &world, &replaceable);
+        if !structural.valid() {
+            return error_text(
+                McpErrorCode::VerificationFailed,
+                "macro replacement failed structural validation",
+                false,
+            );
+        }
+        placement.verification.structural = ContextualVerificationState::Passed;
+        let materialized = match materialize_macro_replacement(&placement, &world, &replaceable, 14)
+        {
+            Ok(materialized) => materialized,
+            Err(error) => {
+                return error_text(
+                    McpErrorCode::VerificationFailed,
+                    format!("macro replacement could not be materialized: {error:?}"),
+                    false,
+                );
+            }
+        };
+        if let Err(error) = self
+            .policy
+            .validate_placement_size(materialized.patch.changes.len())
+        {
+            return error_text(McpErrorCode::PermissionDenied, error.to_string(), false);
+        }
+        let steady =
+            verify_macro_steady_state(&model.truth_table, &world, &materialized.world, 8, 64);
+        let transitions = (steady.state == ContextualVerificationState::Passed).then(|| {
+            verify_macro_transitions(
+                &model.truth_table,
+                &world,
+                &materialized.world,
+                64,
+                contract.timing.settle_deadline_redstone_ticks.max(20),
+                4,
+            )
+        });
+        let strength_verification = verify_boundary_strengths(
+            &world,
+            &materialized.world,
+            &model.truth_table,
+            &boundary_positions.iter().copied().collect::<Vec<_>>(),
+            64,
+        );
+        let assessment = assess_macro_contract(
+            contract,
+            &structural,
+            Some(&steady),
+            transitions.as_ref(),
+            materialized.patch.changes.len(),
+            Some(strength_verification.is_ok()),
+        );
+        let contract_satisfied = assessment.satisfied();
+        let changed_positions = materialized
+            .patch
+            .changes
+            .iter()
+            .map(|change| change.pos)
+            .collect::<BTreeSet<_>>();
+        let preserved_boundary = circuit
+            .snapshot
+            .blocks
+            .iter()
+            .filter(|record| {
+                boundary_positions.contains(&record.pos)
+                    || (!changed_positions.contains(&record.pos)
+                        && world
+                            .get(record.pos)
+                            .is_some_and(|block| block.kind.is_redstone_related()))
+            })
+            .map(boundary_block_record)
+            .collect::<Vec<_>>();
+        let operation_id = uuid::Uuid::new_v4();
+        if let Err(error) = self
+            .store_repair_plan(
+                operation_id,
+                StoredRepairPlan {
+                    patch: materialized.patch.clone(),
+                    dimension: circuit.dimension.clone(),
+                    analysis_bounds: circuit.bounds,
+                    fragments_before: staged.reverse.analysis.scene.fragments.len(),
+                    baseline_truth_table: Some(model.truth_table.clone()),
+                    previewed: false,
+                    applied: false,
+                    contract_satisfied,
+                    preserved_boundary,
+                },
+            )
+            .await
+        {
+            return error_text(McpErrorCode::Internal, error, false);
+        }
+        self.operations
+            .record_completed(
+                operation_id,
+                OperationKind::OptimizationProposal,
+                json!({
+                    "circuit_id": circuit_id,
+                    "component_id": params.component_id,
+                    "patch": materialized.patch,
+                    "contract": optimization_contract_json(contract),
+                    "contract_assessment": contract_assessment_json(&assessment),
+                }),
+            )
+            .await;
+        json_text(json!({
+            "schema_version": OPTIMIZATION_SCHEMA_V1,
+            "ok": true,
+            "circuit_id": circuit_id,
+            "operation_id": operation_id,
+            "optimization_kind": "macro_replacement",
+            "component_id": params.component_id,
+            "name": candidate.name,
+            "contract": optimization_contract_json(contract),
+            "contract_assessment": contract_assessment_json(&assessment),
+            "placement": {
+                "origin": placement.placed.origin,
+                "rotation_y": format!("{:?}", placement.placed.rotation).to_lowercase(),
+                "route_length": placement.total_route_length,
+            },
+            "metrics": {
+                "changed_blocks": materialized.patch.changes.len(),
+                "added_supports": materialized.added_supports.len(),
+                "inserted_repeaters": materialized.inserted_repeaters.len(),
+            },
+            "verification": {
+                "structural": "passed",
+                "steady_state": format!("{:?}", steady.state).to_lowercase(),
+                "transition_cases": transitions.as_ref().map(|report| report.cases.len()),
+                "transition_differences": transitions.as_ref().map(|report| report.differing_cases),
+                "boundary_strength": match strength_verification {
+                    Ok(()) => json!({ "state": "passed" }),
+                    Err(reason) => json!({ "state": "failed", "reason": reason }),
+                },
+            },
+            "patch": materialized.patch,
+            "next_step": if contract_satisfied {
+                "call show_operation, obtain explicit confirmation, then invoke_operation(confirm=true)"
+            } else {
+                "do not invoke; inspect the failed or unavailable contract categories"
+            },
+        }))
+    }
+
+    #[tool(
+        description = "Create a non-mutating, reversible optimization plan for a simple physical dust path inside an explicit focus while fixing everything outside",
+        annotations(read_only_hint = true, destructive_hint = false)
+    )]
+    async fn new_optimization(
+        &self,
+        Parameters(params): Parameters<NewOptimizationParams>,
+    ) -> String {
+        let player = match self.resolve_player(params.player.as_deref()) {
+            Ok(player) => player,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+        };
+        if let Some(error) = self.authorize_player(&player) {
+            return error;
+        }
+        if !matches!(
+            params.objective.as_str(),
+            "wire_length" | "density_then_wire_length"
+        ) {
+            return error_text(
+                McpErrorCode::InvalidArgument,
+                "objective must be wire_length or density_then_wire_length",
+                false,
+            );
+        }
+        let contract = match optimization_contract_from_param(params.contract) {
+            Ok(contract) => contract,
+            Err(error) => return error_text(McpErrorCode::InvalidArgument, error, false),
+        };
+        let search_budget = match optimization_search_budget(params.search) {
+            Ok(budget) => budget,
+            Err(error) => return error_text(McpErrorCode::InvalidArgument, error, false),
+        };
+        let (circuit_id, circuit) = match self.load_circuit(&params.circuit_id, &player).await {
+            Ok(circuit) => circuit,
+            Err(error) => return error_text(McpErrorCode::NotFound, error, false),
+        };
+        let focus = dustroute_translate::RegionBounds::new(
+            Pos::new(params.focus.min.x, params.focus.min.y, params.focus.min.z),
+            Pos::new(params.focus.max.x, params.focus.max.y, params.focus.max.z),
+        );
+        if !circuit.bounds.contains(focus.min) || !circuit.bounds.contains(focus.max) {
+            return error_text(
+                McpErrorCode::InvalidArgument,
+                "focus must be fully contained by the immutable circuit snapshot",
+                false,
+            );
+        }
+        if let Err(error) = self.policy.validate_region(focus) {
+            return error_text(McpErrorCode::PermissionDenied, error.to_string(), false);
+        }
+        let world = match world_from_snapshot_for_service(&circuit.snapshot) {
+            Ok(world) => world,
+            Err(error) => return error_text(McpErrorCode::SerializationFailed, error, false),
+        };
+        let optimization = match optimize_physical_wire_path_with_budget(
+            &world,
+            focus,
+            contract.analog.preserve_strength,
+            search_budget,
+        ) {
+            Ok(optimization) => optimization,
+            Err(error) => {
+                return error_text(
+                    McpErrorCode::InvalidState,
+                    format!("no safe physical wire optimization: {error:?}"),
+                    false,
+                );
+            }
+        };
+        if let Err(error) = self
+            .policy
+            .validate_placement_size(optimization.patch.changes.len())
+        {
+            return error_text(McpErrorCode::PermissionDenied, error.to_string(), false);
+        }
+        if optimization.patch.changes.len() > contract.mutation.maximum_changed_blocks {
+            return error_text(
+                McpErrorCode::VerificationFailed,
+                format!(
+                    "{} changed blocks exceeds contract maximum {}",
+                    optimization.patch.changes.len(),
+                    contract.mutation.maximum_changed_blocks
+                ),
+                false,
+            );
+        }
+        let mut optimized_world = match optimization.patch.apply_virtual(&world) {
+            Ok(world) => world,
+            Err(error) => {
+                return error_text(McpErrorCode::InvalidState, error.to_string(), false);
+            }
+        };
+        dustroute_translate::update_wire_shapes(&mut optimized_world);
+        let before = dustroute_translate::analyze_world_region(&world, circuit.bounds);
+        let after = dustroute_translate::analyze_world_region(&optimized_world, circuit.bounds);
+        let before_temporal = before.scene.temporal_assessment();
+        let after_temporal = after.scene.temporal_assessment();
+        if before_temporal.requirement != after_temporal.requirement {
+            return error_text(
+                McpErrorCode::VerificationFailed,
+                "optimization changed the circuit temporal requirement",
+                false,
+            );
+        }
+        let before_diagnostic =
+            dustroute_translate::diagnose_scene(&before.scene, circuit.target, circuit.complete);
+        let after_diagnostic =
+            dustroute_translate::diagnose_scene(&after.scene, circuit.target, circuit.complete);
+        if !before.unsupported.is_empty()
+            || !after.unsupported.is_empty()
+            || after_diagnostic.counts.probable_faults > before_diagnostic.counts.probable_faults
+            || after_diagnostic.counts.unsupported > before_diagnostic.counts.unsupported
+        {
+            return error_text(
+                McpErrorCode::VerificationFailed,
+                "optimization cannot be applied while unsupported physics or a new diagnostic fault is present",
+                false,
+            );
+        }
+        let before_truth = dustroute_translate::infer_truth_table(&world, &before, 8, 64).ok();
+        let after_truth =
+            dustroute_translate::infer_truth_table(&optimized_world, &after, 8, 64).ok();
+        let semantic = match (&before_truth, &after_truth) {
+            (Some(before), Some(after)) => {
+                let comparison = dustroute_translate::compare_truth_tables(before, after);
+                if !comparison.comparable || comparison.fitness_penalty != 0 {
+                    return error_text(
+                        McpErrorCode::VerificationFailed,
+                        "optimization changed the inferred truth table",
+                        false,
+                    );
+                }
+                json!({ "available": true, "equivalent": true, "comparison": comparison })
+            }
+            _ => json!({
+                "available": false,
+                "reason": "truth-table inference was unavailable; the plan remains preview-only physical-path optimization"
+            }),
+        };
+        let steady_state =
+            before_truth
+                .as_ref()
+                .zip(after_truth.as_ref())
+                .map(|(before_truth, after_truth)| {
+                    let comparison =
+                        dustroute_translate::compare_truth_tables(before_truth, after_truth);
+                    let differing_assignments = before_truth
+                        .rows
+                        .iter()
+                        .zip(&after_truth.rows)
+                        .filter(|(before, after)| before.outputs != after.outputs)
+                        .map(|(before, _)| before.inputs.clone())
+                        .collect();
+                    MacroSteadyStateReport {
+                        state: if comparison.comparable && comparison.differing_bits == 0 {
+                            ContextualVerificationState::Passed
+                        } else {
+                            ContextualVerificationState::Failed
+                        },
+                        comparison: Some(comparison),
+                        input_mapping: (0..before_truth.inputs.len()).collect(),
+                        output_mapping: (0..before_truth.outputs.len()).collect(),
+                        differing_assignments,
+                        reason: None,
+                    }
+                });
+        let transitions = before_truth.as_ref().zip(after_truth.as_ref()).and_then(
+            |(before_truth, after_truth)| {
+                steady_state
+                    .as_ref()
+                    .is_some_and(|report| report.state == ContextualVerificationState::Passed)
+                    .then(|| {
+                        verify_world_transitions(
+                            &world,
+                            before_truth,
+                            &optimized_world,
+                            after_truth,
+                            64,
+                            contract.timing.settle_deadline_redstone_ticks.max(20),
+                            4,
+                        )
+                    })
+            },
+        );
+        let structural = MacroStructuralReport::default();
+        let strength_verification = before_truth.as_ref().map(|truth| {
+            verify_boundary_strengths(
+                &world,
+                &optimized_world,
+                truth,
+                &optimization.fixed_endpoints,
+                64,
+            )
+        });
+        let used_temporary_expansion = optimization
+            .phases
+            .iter()
+            .any(|phase| phase.connector_growth > 0);
+        let mut contract_assessment = assess_macro_contract(
+            contract,
+            &structural,
+            steady_state.as_ref(),
+            transitions.as_ref(),
+            optimization.patch.changes.len(),
+            strength_verification.as_ref().map(Result::is_ok),
+        );
+        if !contract.mutation.allow_temporary_expansion && used_temporary_expansion {
+            contract_assessment.mutation = ContractCheck {
+                state: ContractCheckState::Failed,
+                reason_codes: vec!["temporary_expansion_forbidden".to_owned()],
+                reasons: vec![
+                    "the search used temporary connector expansion forbidden by the contract"
+                        .to_owned(),
+                ],
+            };
+        }
+        let contract_satisfied = contract_assessment.satisfied();
+        let changed_positions = optimization
+            .patch
+            .changes
+            .iter()
+            .map(|change| change.pos)
+            .collect::<BTreeSet<_>>();
+        let fixed_endpoints = optimization
+            .fixed_endpoints
+            .into_iter()
+            .collect::<BTreeSet<_>>();
+        let preserved_boundary = circuit
+            .snapshot
+            .blocks
+            .iter()
+            .filter(|record| {
+                fixed_endpoints.contains(&record.pos)
+                    || (!changed_positions.contains(&record.pos)
+                        && world
+                            .get(record.pos)
+                            .is_some_and(|block| block.kind.is_redstone_related()))
+            })
+            .map(boundary_block_record)
+            .collect::<Vec<_>>();
+        let operation_id = uuid::Uuid::new_v4();
+        let phase_trace = optimization
+            .phases
+            .iter()
+            .map(|phase| {
+                json!({
+                    "name": phase.name,
+                    "accepted": phase.accepted,
+                    "before": {
+                        "bounding_volume": phase.before.bounding_volume,
+                        "occupied_blocks": phase.before.occupied_blocks,
+                        "connector_length": phase.before.connector_length
+                    },
+                    "after": {
+                        "bounding_volume": phase.after.bounding_volume,
+                        "occupied_blocks": phase.after.occupied_blocks,
+                        "connector_length": phase.after.connector_length
+                    },
+                    "connector_growth": phase.connector_growth
+                })
+            })
+            .collect::<Vec<_>>();
+        let fragments_before = before.scene.fragments.len();
+        if let Err(error) = self
+            .store_repair_plan(
+                operation_id,
+                StoredRepairPlan {
+                    patch: optimization.patch.clone(),
+                    dimension: circuit.dimension.clone(),
+                    analysis_bounds: circuit.bounds,
+                    fragments_before,
+                    baseline_truth_table: before_truth,
+                    previewed: false,
+                    applied: false,
+                    contract_satisfied,
+                    preserved_boundary: preserved_boundary.clone(),
+                },
+            )
+            .await
+        {
+            return error_text(McpErrorCode::Internal, error, false);
+        }
+        self.operations
+            .record_completed(
+                operation_id,
+                OperationKind::OptimizationProposal,
+                json!({
+                    "circuit_id": circuit_id,
+                    "focus": bounds_json(focus),
+                    "patch": optimization.patch,
+                    "semantic_verification": semantic,
+                    "contract": optimization_contract_json(contract),
+                    "contract_assessment": contract_assessment_json(&contract_assessment)
+                }),
+            )
+            .await;
+        json_text(json!({
+            "schema_version": OPTIMIZATION_SCHEMA_V1,
+            "ok": true,
+            "circuit_id": circuit_id,
+            "operation_id": operation_id,
+            "objective": params.objective,
+            "contract": optimization_contract_json(contract),
+            "contract_assessment": contract_assessment_json(&contract_assessment),
+            "focus": bounds_json(focus),
+            "outside_focus_fixed": true,
+            "preserved_boundary_blocks": preserved_boundary.len(),
+            "fixed_endpoints": optimization.fixed_endpoints,
+            "metrics": {
+                "wire_blocks_before": optimization.wire_blocks_before,
+                "wire_blocks_after": optimization.wire_blocks_after,
+                "path_length_before": optimization.path_length_before,
+                "path_length_after": optimization.path_length_after,
+                "changed_blocks": optimization.patch.changes.len()
+            },
+            "search": {
+                "budget": {
+                    "max_expansions": search_budget.max_expansions,
+                    "max_candidates": search_budget.max_candidates,
+                    "max_millis": search_budget.max_millis,
+                },
+                "expansions": optimization.search.expansions,
+                "candidates": optimization.search.candidates,
+                "truncated": optimization.search.truncated,
+                "stop_reason": optimization.search.stop_reason,
+            },
+            "phase_trace": phase_trace,
+            "planning_policy": {
+                "temporary_connector_growth_is_internal_only": true,
+                "temporary_connector_growth_budget": optimization.path_length_before / 2,
+                "final_global_improvement_required": true
+            },
+            "patch": optimization.patch,
+            "verification": {
+                "diagnostics_not_worse": true,
+                "temporal_requirement_preserved": true,
+                "temporal_requirement": after_temporal.requirement,
+                "semantic": semantic,
+                "steady_state": steady_state.as_ref().map(|report| json!({
+                    "state": format!("{:?}", report.state).to_lowercase(),
+                    "differing_assignments": report.differing_assignments,
+                    "reason": report.reason,
+                })),
+                "transitions": transitions.as_ref().map(|report| json!({
+                    "state": format!("{:?}", report.state).to_lowercase(),
+                    "case_count": report.cases.len(),
+                    "differing_cases": report.differing_cases,
+                    "reason": report.reason,
+                })),
+                "boundary_strength": strength_verification.as_ref().map(|result| match result {
+                    Ok(()) => json!({ "state": "passed" }),
+                    Err(reason) => json!({ "state": "failed", "reason": reason }),
+                })
+            },
+            "next_step": if contract_satisfied {
+                "call show_operation, explain the fixed focus and verified contract, obtain explicit confirmation, then call invoke_operation(confirm=true)"
+            } else {
+                "do not invoke this operation; satisfy every failed or unavailable contract category first"
+            }
         }))
     }
 
@@ -3612,13 +5396,9 @@ impl DustRouteMcp {
             Ok(snapshot) => snapshot,
             Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
         };
-        let snapshot_json = match serde_json::to_string(&snapshot) {
-            Ok(snapshot) => snapshot,
-            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
-        };
-        let (_, world) = match world_from_snapshot_json(&snapshot_json) {
-            Ok(result) => result,
-            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        let world = match world_from_snapshot_for_service(&snapshot) {
+            Ok(world) => world,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
         };
         let analysis = dustroute_translate::analyze_world_region(&world, bounds);
         let Some(proposal) =
@@ -3640,6 +5420,8 @@ impl DustRouteMcp {
                     baseline_truth_table: None,
                     previewed: false,
                     applied: false,
+                    contract_satisfied: true,
+                    preserved_boundary: Vec::new(),
                 },
             )
             .await
@@ -3666,7 +5448,9 @@ impl DustRouteMcp {
         };
         let operation_id = match uuid::Uuid::parse_str(&params.operation_id) {
             Ok(id) => id,
-            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+            Err(error) => {
+                return error_text(McpErrorCode::InvalidArgument, error.to_string(), false);
+            }
         };
         let plan = match self.repair_plan(operation_id).await {
             Ok(Some(plan)) => plan,
@@ -3900,13 +5684,9 @@ impl DustRouteMcp {
                 "error": "lever state changed since proposal; create a new scenario"
             }));
         }
-        let snapshot_json = match serde_json::to_string(&plan.initial_snapshot) {
-            Ok(snapshot) => snapshot,
-            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
-        };
-        let (_, world) = match world_from_snapshot_json(&snapshot_json) {
-            Ok(value) => value,
-            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        let world = match world_from_snapshot_for_service(&plan.initial_snapshot) {
+            Ok(world) => world,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
         };
         let mut analysis = dustroute_translate::analyze_world_region(&world, plan.bounds);
         analysis.scene.observation.dimension = plan.dimension.clone();
@@ -4024,7 +5804,7 @@ impl DustRouteMcp {
         let scenario = dustroute_translate::Scenario {
             label: format!("lever transition at {:?}", plan.lever),
             initial: plan.initial_snapshot.clone(),
-            actions: vec![dustroute_translate::ScenarioAction::SetPowered {
+            actions: vec![dustroute_translate::ScenarioAction::SetLeverState {
                 redstone_tick: 0,
                 position: plan.lever,
                 powered: !plan.original_powered,
@@ -4241,11 +6021,11 @@ impl DustRouteMcp {
     }
 
     #[tool(
-        description = "Start cancellable reverse analysis of the selected region and return an operation ID for progress polling"
+        description = "Start cancellable reverse analysis of the selected region and return an operation ID for progress polling. Set include_truth_table=true for explicitly bounded exhaustive functional inference, including large regions."
     )]
     async fn start_selected_region_conversion(
         &self,
-        Parameters(params): Parameters<PlayerParams>,
+        Parameters(params): Parameters<StartSelectedRegionConversionParams>,
     ) -> String {
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
@@ -4261,6 +6041,22 @@ impl DustRouteMcp {
         if let Err(error) = self.policy.validate_region(bounds) {
             return json_text(json!({ "ok": false, "error": error.to_string() }));
         }
+        let request = match reverse_request_for_truth_table(
+            bounds,
+            TruthTableRequestOptions {
+                include_truth_table: params.include_truth_table.unwrap_or(false),
+                max_inputs: params.truth_table_max_inputs,
+                settle_ticks: params.truth_table_settle_ticks,
+                max_rows: params.truth_table_max_rows,
+                max_work_units: params.truth_table_max_work_units,
+                max_solver_iterations: params.truth_table_max_solver_iterations,
+                max_elapsed_millis: params.truth_table_max_elapsed_millis,
+            },
+        ) {
+            Ok(request) => request,
+            Err(error) => return error_text(McpErrorCode::InvalidArgument, error, false),
+        }
+        .with_observation_complete(true);
         let operation_id = self
             .operations
             .create(OperationKind::AnalyzeRegion, "queued for snapshot scan")
@@ -4300,17 +6096,10 @@ impl DustRouteMcp {
                     "normalizing Minecraft snapshot",
                 )
                 .await;
-            let snapshot_json = match serde_json::to_string(&snapshot) {
-                Ok(json) => json,
+            let world = match world_from_snapshot_for_service(&snapshot) {
+                Ok(world) => world,
                 Err(error) => {
-                    operations.fail(operation_id, error.to_string()).await;
-                    return;
-                }
-            };
-            let (_, world) = match world_from_snapshot_json(&snapshot_json) {
-                Ok(result) => result,
-                Err(error) => {
-                    operations.fail(operation_id, error.to_string()).await;
+                    operations.fail(operation_id, error).await;
                     return;
                 }
             };
@@ -4319,7 +6108,9 @@ impl DustRouteMcp {
                     operation_id,
                     OperationStatus::Running,
                     50,
-                    if redstone_components > MAX_FLAT_ANALYSIS_COMPONENTS {
+                    if redstone_components > MAX_FLAT_ANALYSIS_COMPONENTS
+                        && !request.infer_truth_table
+                    {
                         "deriving hierarchical circuit views"
                     } else {
                         "analyzing selected circuit"
@@ -4327,7 +6118,8 @@ impl DustRouteMcp {
                 )
                 .await;
             let result = match tokio::task::spawn_blocking(move || {
-                if redstone_components > MAX_FLAT_ANALYSIS_COMPONENTS {
+                if redstone_components > MAX_FLAT_ANALYSIS_COMPONENTS && !request.infer_truth_table
+                {
                     let mut analysis = dustroute_translate::analyze_world_region(&world, bounds);
                     analysis.scene.observation.dimension = dimension;
                     let hierarchy = dustroute_ir::derive_hierarchy(&analysis.scene);
@@ -4344,7 +6136,7 @@ impl DustRouteMcp {
                         None,
                     )
                 } else {
-                    let mut staged = app.analyze_physical(&world, ReverseRequest::new(bounds));
+                    let mut staged = app.analyze_physical(&world, request);
                     staged.reverse.analysis.scene.observation.dimension = dimension;
                     reverse_result_json(bounds, &staged.reverse)
                 }
@@ -4382,12 +6174,23 @@ impl DustRouteMcp {
             }
         };
         if self.plans.lock().await.contains_key(&operation_id) {
+            if let Some(plan) = self.plans.lock().await.get_mut(&operation_id) {
+                plan.previewed = true;
+            }
             let result = self
                 .get_circuit_placement(Parameters(OperationParams {
                     operation_id: params.operation_id,
                 }))
                 .await;
-            self.previewed_plans.lock().await.insert(operation_id);
+            let preview_succeeded = serde_json::from_str::<Value>(&result)
+                .ok()
+                .and_then(|value| value.get("ok").and_then(Value::as_bool))
+                .unwrap_or(false);
+            if !preview_succeeded {
+                if let Some(plan) = self.plans.lock().await.get_mut(&operation_id) {
+                    plan.previewed = false;
+                }
+            }
             return result;
         }
         if self
@@ -4537,7 +6340,9 @@ impl DustRouteMcp {
     async fn stop_operation(&self, Parameters(params): Parameters<OperationParams>) -> String {
         let operation_id = match uuid::Uuid::parse_str(&params.operation_id) {
             Ok(id) => id,
-            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+            Err(error) => {
+                return error_text(McpErrorCode::InvalidArgument, error.to_string(), false);
+            }
         };
         let cancelled = self.operations.cancel(operation_id).await;
         json_text(json!({ "ok": cancelled, "operation_id": operation_id }))
@@ -4569,7 +6374,7 @@ impl DustRouteMcp {
     async fn collaboration_prompt(&self) -> GetPromptResult {
         GetPromptResult::new(vec![PromptMessage::new_text(
             Role::User,
-            "Work with the player on a Minecraft redstone circuit using the PowerShell-style Verb-Noun contract expressed as snake_case. Use get_world for literal visibility, then test_circuit to capture an immutable circuit snapshot and compact health. Reuse its circuit_id for get_circuit_ir, convert_from_circuit, test_circuit_change, new_repair, and new_transition_test; never silently switch back to the current gaze during one task. For mixed IR, pass circuit_id and first request the summary, then pass its analysis_id and a node_id to expand only that node. Treat intrinsic sources, controllable inputs, event inputs, and observation boundaries as distinct. New operations only create plans. Always call show_operation, explain the preview, and obtain explicit confirmation before invoke_operation(confirm=true). Use undo_operation for recovery. For an explicitly selected region, call set_region twice and show_region; reuse the circuit_id returned by show_region. Never infer coordinates from prose when gaze tools can ground them, and never mutate the world without preview and explicit confirmation.".to_owned(),
+            "Work with the player on a Minecraft redstone circuit using the PowerShell-style Verb-Noun contract expressed as snake_case. Use get_world for literal visibility, then test_circuit to capture an immutable circuit snapshot and compact health. Reuse its circuit_id for get_circuit_ir, convert_from_circuit, test_circuit_change, new_repair, get_repair_context, new_optimization, new_macro_optimization, and new_transition_test; never silently switch back to the current gaze during one task. After new_repair, use get_repair_context when physical fragments admit competing repair and external-input hypotheses; present supporting and contradictory evidence and ask the returned questions before choosing. For observed optimization, require an explicit focus, keep everything outside fixed, and explain verification limits. Only pass a macro component_id returned for that same circuit_id. For mixed IR, pass circuit_id and first request the summary, then pass its analysis_id and a node_id to expand only that node. Treat intrinsic sources, controllable inputs, event inputs, and observation boundaries as distinct. New operations only create plans. Always call show_operation, explain the preview, and obtain explicit confirmation before invoke_operation(confirm=true). Use undo_operation for recovery. For an explicitly selected region, call set_region twice and show_region; reuse the circuit_id returned by show_region. Never infer coordinates from prose when gaze tools can ground them, and never mutate the world without preview and explicit confirmation.".to_owned(),
         )])
         .with_description("Safe gaze-grounded DustRoute collaboration workflow")
     }
@@ -4590,7 +6395,7 @@ impl ServerHandler for DustRouteMcp {
             env!("CARGO_PKG_VERSION"),
         ))
         .with_instructions(
-            "Use the collaborate-on-redstone-circuit prompt. Use get_world for raw visibility, test_circuit to capture a stable circuit_id and compact health, then reuse that circuit_id for analysis, hypotheses, repair, and transition planning. New creates a plan, show_operation previews it, invoke_operation requires explicit confirmation, and undo_operation recovers it."
+            "Use the collaborate-on-redstone-circuit prompt. Use get_world for raw visibility, test_circuit to capture a stable circuit_id and compact health, then reuse that circuit_id for analysis, hypotheses, repair, and transition planning. Use get_repair_context to compare repair evidence against intentional-boundary alternatives. New creates a plan, show_operation previews it, invoke_operation requires explicit confirmation, and undo_operation recovers it."
         )
     }
 }
@@ -4606,6 +6411,185 @@ mod tests {
     use tokio::net::TcpListener;
 
     use super::*;
+
+    #[test]
+    fn truth_table_request_is_explicit_and_budgeted_for_large_circuits() {
+        let bounds = dustroute_translate::RegionBounds::new(Pos::new(0, 0, 0), Pos::new(4, 4, 4));
+        let request = reverse_request_for_truth_table(
+            bounds,
+            TruthTableRequestOptions {
+                include_truth_table: true,
+                ..TruthTableRequestOptions::default()
+            },
+        )
+        .expect("default truth-table request");
+        assert!(request.infer_truth_table);
+        assert_eq!(request.max_inputs, 16);
+        assert_eq!(request.settle_ticks, 60);
+        assert_eq!(request.truth_table_budget, TruthTableBudget::DEFAULT);
+
+        let request = reverse_request_for_truth_table(
+            bounds,
+            TruthTableRequestOptions {
+                include_truth_table: true,
+                max_solver_iterations: Some(2_000_000),
+                max_elapsed_millis: Some(30_000),
+                ..TruthTableRequestOptions::default()
+            },
+        )
+        .expect("runtime budgets within the protocol bound");
+        assert_eq!(request.truth_table_budget.max_solver_iterations, 2_000_000);
+        assert_eq!(request.truth_table_budget.max_elapsed_millis, Some(30_000));
+
+        let error = reverse_request_for_truth_table(
+            bounds,
+            TruthTableRequestOptions {
+                include_truth_table: true,
+                max_inputs: Some(17),
+                ..TruthTableRequestOptions::default()
+            },
+        )
+        .expect_err("input count above the protocol bound must fail");
+        assert!(error.contains("truth_table_max_inputs"));
+
+        let error = reverse_request_for_truth_table(
+            bounds,
+            TruthTableRequestOptions {
+                include_truth_table: true,
+                max_solver_iterations: Some(MAX_TRUTH_TABLE_SOLVER_ITERATIONS + 1),
+                ..TruthTableRequestOptions::default()
+            },
+        )
+        .expect_err("solver iteration count above the protocol bound must fail");
+        assert!(error.contains("truth_table_max_solver_iterations"));
+    }
+
+    #[test]
+    fn truth_table_budget_failure_is_structured_in_reverse_json() {
+        let compiled = dustroute_translate::BaselineCompiler::new(
+            dustroute_translate::BaselineCompileConfig::default(),
+        )
+        .compile(&dustroute_translate::half_adder())
+        .expect("half-adder compiles");
+        let (min, max) = compiled.world.bounds().expect("compiled bounds");
+        let bounds = dustroute_translate::RegionBounds::new(min, max);
+        let translated = dustroute_translate::Translator.reverse(
+            &compiled.world,
+            ReverseRequest::new(bounds)
+                .with_truth_table(16)
+                .with_truth_table_budget(TruthTableBudget::new(1, u128::MAX)),
+        );
+        let value = reverse_result_json(bounds, &translated);
+        assert_eq!(value["truth_table_status"], "budget_exceeded");
+        assert_eq!(
+            value["truth_table_error_details"]["code"],
+            "budget_exceeded"
+        );
+        assert_eq!(value["truth_table_error_details"]["rows"], 4);
+        assert_eq!(value["truth_table_error_details"]["max_rows"], 1);
+    }
+
+    #[test]
+    fn truth_table_runtime_budget_failure_is_structured_in_reverse_json() {
+        let compiled = dustroute_translate::BaselineCompiler::new(
+            dustroute_translate::BaselineCompileConfig::default(),
+        )
+        .compile(&dustroute_translate::half_adder())
+        .expect("half-adder compiles");
+        let (min, max) = compiled.world.bounds().expect("compiled bounds");
+        let bounds = dustroute_translate::RegionBounds::new(min, max);
+        let translated = dustroute_translate::Translator.reverse(
+            &compiled.world,
+            ReverseRequest::new(bounds)
+                .with_truth_table(16)
+                .with_truth_table_budget(
+                    TruthTableBudget::new(usize::MAX, u128::MAX)
+                        .with_max_solver_iterations(0)
+                        .with_max_elapsed_millis(None),
+                ),
+        );
+        let value = reverse_result_json(bounds, &translated);
+        assert_eq!(value["truth_table_status"], "budget_exceeded");
+        assert_eq!(
+            value["truth_table_error_details"]["code"],
+            "runtime_budget_exceeded"
+        );
+        assert_eq!(value["truth_table_error_details"]["completed_rows"], 0);
+        assert_eq!(value["truth_table"], Value::Null);
+    }
+
+    #[test]
+    fn optimization_contract_defaults_are_explicit_and_conservative() {
+        let contract = optimization_contract_from_param(None).expect("default contract");
+        assert_eq!(contract.timing.mode, TimingContractMode::BoundedDelay);
+        assert!(!contract.pulse.allow_new_pulses);
+        assert!(!contract.pulse.allow_removed_pulses);
+        assert!(contract.boundary.preserve_driver_positions);
+        assert!(!contract.mutation.automatic_apply);
+    }
+
+    #[test]
+    fn optimization_contract_rejects_an_unknown_logical_mode() {
+        let error = optimization_contract_from_param(Some(OptimizationContractParam {
+            logical: Some(LogicalContractParam {
+                mode: Some("approximate".to_owned()),
+            }),
+            ..OptimizationContractParam::default()
+        }))
+        .expect_err("unknown mode must fail");
+        assert!(error.contains("approximate"));
+    }
+
+    #[test]
+    fn boundary_record_keeps_static_identity_and_ignores_live_power() {
+        let record = boundary_block_record(&dustroute_translate::MinecraftSnapshotBlock {
+            pos: Pos::new(1, 64, 2),
+            name: "minecraft:repeater".to_owned(),
+            properties: BTreeMap::from([
+                ("facing".to_owned(), "west".to_owned()),
+                ("delay".to_owned(), "2".to_owned()),
+                ("powered".to_owned(), "true".to_owned()),
+                ("locked".to_owned(), "false".to_owned()),
+            ]),
+        });
+        assert_eq!(record.static_properties["facing"], "west");
+        assert_eq!(record.static_properties["delay"], "2");
+        assert!(!record.static_properties.contains_key("powered"));
+        assert!(!record.static_properties.contains_key("locked"));
+    }
+
+    #[test]
+    fn placement_baseline_rejects_dynamic_state_changes_between_preview_and_apply() {
+        let mut expected = dustroute_physical::Block::new(BlockKind::Lever);
+        expected.facing = Some(dustroute_physical::Facing::North);
+        expected.support_offset = Some(Pos::new(0, -1, 0));
+        expected.powered = Some(false);
+        let mut actual = expected.clone();
+        actual.powered = Some(true);
+        assert!(!placement_baseline_matches(Some(&actual), &expected));
+        assert!(placement_baseline_matches(Some(&expected), &expected));
+        assert!(placement_baseline_matches(
+            None,
+            &dustroute_physical::Block::new(BlockKind::Air)
+        ));
+    }
+
+    #[test]
+    fn placement_baseline_accepts_observed_equivalent_synthetic_blocks() {
+        let mut expected = dustroute_physical::Block::new(BlockKind::RedstoneTorch);
+        expected.facing = Some(dustroute_physical::Facing::East);
+        expected.support_offset = Some(Pos::new(-1, 0, 0));
+        let mut actual = expected.clone();
+        actual.observed_name = Some("minecraft:redstone_wall_torch".to_owned());
+        actual.observed_properties = BTreeMap::from([
+            ("facing".to_owned(), "east".to_owned()),
+            ("lit".to_owned(), "true".to_owned()),
+        ]);
+        actual.observation_classification = dustroute_physical::ObservationClassification::Exact;
+        actual.facing = None;
+        actual.powered = Some(true);
+        assert!(placement_baseline_matches(Some(&actual), &expected));
+    }
 
     #[test]
     fn transition_trace_json_uses_arrays_for_coordinate_keyed_state() {
@@ -4664,6 +6648,38 @@ mod tests {
         )
         .unwrap();
         assert_eq!(get_result["error_code"], "invalid_argument");
+
+        let show_result: Value = serde_json::from_str(
+            &service
+                .show_operation(Parameters(ShowOperationParams {
+                    operation_id: "not-a-uuid".into(),
+                    player: None,
+                }))
+                .await,
+        )
+        .unwrap();
+        assert_eq!(show_result["error_code"], "invalid_argument");
+
+        let undo_result: Value = serde_json::from_str(
+            &service
+                .undo_operation(Parameters(ConfirmedOperationParams {
+                    operation_id: "not-a-uuid".into(),
+                    confirm: true,
+                }))
+                .await,
+        )
+        .unwrap();
+        assert_eq!(undo_result["error_code"], "invalid_argument");
+
+        let stop_result: Value = serde_json::from_str(
+            &service
+                .stop_operation(Parameters(OperationParams {
+                    operation_id: "not-a-uuid".into(),
+                }))
+                .await,
+        )
+        .unwrap();
+        assert_eq!(stop_result["error_code"], "invalid_argument");
     }
 
     #[tokio::test]
@@ -4700,7 +6716,14 @@ mod tests {
         )
         .unwrap();
         assert_eq!(rejected["error_code"], "invalid_state");
-        assert!(!service.previewed_plans.lock().await.contains(&operation_id));
+        assert!(
+            !service
+                .plans
+                .lock()
+                .await
+                .get(&operation_id)
+                .is_some_and(|plan| plan.previewed)
+        );
 
         let shown: Value = serde_json::from_str(
             &service
@@ -4712,7 +6735,15 @@ mod tests {
         )
         .unwrap();
         assert_eq!(shown["ok"], true);
-        assert!(service.previewed_plans.lock().await.contains(&operation_id));
+        assert_eq!(shown["plan"]["previewed"], true);
+        assert!(
+            service
+                .plans
+                .lock()
+                .await
+                .get(&operation_id)
+                .is_some_and(|plan| plan.previewed)
+        );
     }
 
     #[tokio::test]
@@ -4726,6 +6757,8 @@ mod tests {
         assert!(text.text.contains("get_world"));
         assert!(text.text.contains("test_circuit"));
         assert!(text.text.contains("get_circuit_ir"));
+        assert!(text.text.contains("get_repair_context"));
+        assert!(text.text.contains("new_optimization"));
         assert!(text.text.contains("show_operation"));
         assert!(text.text.contains("confirmation"));
     }
@@ -4755,11 +6788,14 @@ mod tests {
             .map(|tool| tool.name.to_string())
             .collect::<BTreeSet<_>>();
 
-        assert_eq!(default_names.len(), 16);
-        assert_eq!(debug_names.len(), 23);
+        assert_eq!(default_names.len(), 19);
+        assert_eq!(debug_names.len(), 26);
         assert!(default_names.contains("test_circuit"));
         assert!(default_names.contains("get_circuit_ir"));
         assert!(default_names.contains("test_circuit_change"));
+        assert!(default_names.contains("get_repair_context"));
+        assert!(default_names.contains("new_optimization"));
+        assert!(default_names.contains("new_macro_optimization"));
         assert!(default_names.contains("invoke_operation"));
         assert!(!default_names.contains("invoke_repair"));
         for name in DEBUG_ONLY_TOOLS {
@@ -5030,6 +7066,12 @@ mod tests {
                 max_components: Some(64),
                 fragment_gap: Some(2),
                 include_truth_table: Some(false),
+                truth_table_max_inputs: None,
+                truth_table_settle_ticks: None,
+                truth_table_max_rows: None,
+                truth_table_max_work_units: None,
+                truth_table_max_solver_iterations: None,
+                truth_table_max_elapsed_millis: None,
                 scope: None,
                 circuit_id: None,
             }))

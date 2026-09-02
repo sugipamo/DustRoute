@@ -112,6 +112,14 @@ DUSTROUTE_SERVER_ADDRESS=127.0.0.1:25565 \
 if region previews, teleport-based safe approach, and chat messages are needed.
 The bridge listens only on `127.0.0.1:25580`.
 
+`get_bot_status` also returns cumulative bridge metrics under `bot.metrics`.
+They count serialized JSON payload bytes (excluding the line delimiter), total
+and maximum request duration in microseconds, errors, per-method request
+counts, and scan volume/non-air block counts. These counters are intentionally
+bounded to a fixed method set and reset when the Mineflayer bridge process is
+restarted. Use them to distinguish Rust-side analysis cost from repeated
+Mineflayer scans before considering a transport or client replacement.
+
 Before starting MCP, verify the dedicated stack from a local shell:
 
 ```bash
@@ -187,7 +195,7 @@ MCP tool names follow a PowerShell-style Verb-Noun contract written as
 - `start`, `stop`, and `get` manage asynchronous operations.
 - `set` and `clear` manage the current region selection.
 
-`DUSTROUTE_MCP_TOOL_PROFILE=default` exposes the 16 tools intended for normal
+`DUSTROUTE_MCP_TOOL_PROFILE=default` exposes the 19 tools intended for normal
 LLM collaboration. `debug` additionally exposes low-level gaze/discovery,
 operation history, full plan retrieval, asynchronous conversion control, and
 explicit component-removal planning. Debug tools remain implemented but cannot
@@ -207,10 +215,20 @@ Repair and transition plans are separate: use `new_repair` or
 return a TTL-bound immutable `circuit_id`. Reuse that ID for later analysis,
 virtual changes, repair planning, and transition planning so moving the
 player's gaze cannot silently change the target.
-Set `include_truth_table=true` only when a small circuit explicitly needs a
-truth table; local hierarchical inspection is the default. Explicit regions continue to
-use two `set_region` calls and `show_region`, then reuse the returned
-`circuit_id`. Debug clients may call
+Set `include_truth_table=true` when an exhaustive functional result is needed;
+local hierarchical inspection remains the default. The request is bounded by
+`truth_table_max_inputs`, `truth_table_settle_ticks`,
+`truth_table_max_rows`, `truth_table_max_work_units`,
+`truth_table_max_solver_iterations`, and `truth_table_max_elapsed_millis`.
+The latter two cap cumulative fixed-point solver iterations and elapsed time
+in addition to the static work estimate. The same bounded
+request is honored for large circuits instead of being discarded solely because
+the circuit crosses the hierarchical-display threshold. Responses expose
+`truth_table_status` as `computed`, `budget_exceeded`, `unavailable`, or
+`not_requested`; computed responses also include `truth_table_semantics`
+(`combinational`, `timing_sensitive`, `stateful`, or `unknown`). Explicit
+regions continue to use two `set_region` calls and
+`show_region`, then reuse the returned `circuit_id`. Debug clients may call
 `resolve_looked_at_circuit` directly.
 
 For observation debugging, `get_world` starts near the block the
@@ -229,10 +247,21 @@ lists are bounded by `max_listed_blocks`. `resolve_looked_at_circuit` and
 become a directed physical graph, recognized local cells, traceable logic
 expressions, and finally optional functional candidates. Every stage reports
 its own completeness and unresolved count while retaining physical component
-origins. Large circuits deliberately skip a flat whole-circuit truth table and
-return bounded mixed-IR summaries. Call `get_circuit_ir` with `circuit_id` to
-obtain its `analysis_id`, then pass all three of `circuit_id`, `analysis_id`,
-and `node_id` to expand only one region or logic cell.
+origins. Without `include_truth_table`, large circuits return the bounded
+hierarchical summary and report why exhaustive inference was skipped. With the
+flag enabled, the same circuit is sent through bounded functional inference;
+an over-budget request returns `truth_table_status=budget_exceeded` rather than
+running without a limit. Static, runtime-iteration, and elapsed-time limits
+all return structured budget details; any rows accumulated before the limit
+are discarded rather than exposed as a complete table. A component-limited snapshot returns
+`truth_table_status=unavailable` with an `incomplete_observation` error until
+the circuit is expanded. Call `get_circuit_ir` with `circuit_id` to obtain its
+`analysis_id`, then pass all three of `circuit_id`, `analysis_id`, and `node_id`
+to expand only one region or logic cell.
+Rows also require two consecutive unchanged electrical snapshots with no
+queued device event. A window that ends earlier returns
+`truth_table_error_details.code=non_settling` instead of claiming a settled
+functional result.
 
 `signal_liveness` is evaluated independently of physical fragments. It follows
 directed signal edges while preserving whether a source is a controllable
@@ -288,6 +317,22 @@ is only partial or unsupported. This lets an MCP client distinguish a complete
 scan from a complete interpretation and present unsupported behavior as an
 explicit limitation instead of guessing.
 
+Reverse analysis is fail-closed at the interface boundary. Live-only blocks
+(`target`, `observer`, daylight detectors, containers, sensors, fluids, and
+rails) are retained in `unsupported_observed_blocks` and never treated as a
+simulated solid. The response's `interface_evidence` lists physical external
+inputs and observable sinks together with their mapped and unmapped positions.
+Truth-table and optimization contracts are unavailable when that evidence is
+incomplete or ambiguous, when no input/output terminal exists, or when no
+transition case was actually exercised. A `Passed` state with zero cases is
+therefore not proof of equivalence.
+
+Input mutations are typed: levers use `set_lever_state`, buttons use
+press/release actions, pressure plates use an explicit level from 0 through 15,
+and open boundaries use an external-power action. The legacy `SetPowered`
+scenario action remains only for fixture compatibility and rejects wires or
+arbitrary blocks instead of silently replacing them.
+
 The `temporal` result reports a lossless timed graph, a traceable steady-state
 projection summary, and whether higher-level logic is `steady_state_safe`,
 `timing_sensitive`, or `temporal_required`. Repeater delays use redstone ticks
@@ -321,6 +366,9 @@ test_circuit -> capture circuit_id
 
 In the debug profile, long conversions can use
 `start_selected_region_conversion`, `get_operation`, and `stop_operation`.
+The asynchronous conversion accepts the same bounded truth-table options as
+`convert_from_circuit`, so an explicit large-circuit request can run without
+blocking the MCP request while still stopping at its row/work budget.
 `new_placement` returns a block diff, collisions,
 material counts, an operation UUID, and an exact undo plan without changing the
 world. Set its optional `optimize=true` argument to run X-axis directional
@@ -391,12 +439,20 @@ hovers. Post-write block-state and circuit verification still run normally.
 
 ```text
 new_repair(circuit_id)
+  -> get_repair_context(circuit_id, operation_id)
+  -> compare supporting evidence, contradictions, and questions with the player
   -> show_operation
   -> explicit player confirmation
   -> invoke_operation(confirm=true)
   -> automatic block-state rescan and circuit re-analysis
   -> undo_operation(confirm=true), when needed
 ```
+
+`get_repair_context` is read-only and progressively expands one repair
+hypothesis. It returns bounded physical facts, competing interpretations,
+counterfactual impact, nearby directed components, and questions that can
+distinguish an intentional external input from a broken path. It does not
+preview or authorize the operation.
 
 Failed block-state verification triggers an automatic rollback attempt. A
 successful application returns the resulting logical classification and, when
@@ -407,6 +463,22 @@ function.
 A suspected short cannot be inferred safely from geometry alone;
 Debug-only `new_component_removal_plan` is available only for a component the
 player explicitly identifies while looking at it.
+
+## Observed physical optimization
+
+`new_optimization` creates a reversible optimization plan from an immutable
+observed `circuit_id`. The first supported objective is `wire_length`, limited
+to one supported, non-branching dust path inside an explicit focus. Both path
+endpoints and every block outside the focus remain fixed. Candidate generation
+rejects branches, missing support, occupied targets, new redstone adjacency,
+and paths that are not shorter.
+
+Before returning a plan, DustRoute re-analyzes the virtual result, requires the
+diagnostic and temporal classifications not to worsen, and rejects a differing
+inferred truth table when both sides can be enumerated. An unavailable truth
+table is reported explicitly rather than treated as proof. Application uses the
+same `show_operation` / explicit confirmation / `invoke_operation` /
+`undo_operation` lifecycle as repairs.
 
 ## Safety configuration
 

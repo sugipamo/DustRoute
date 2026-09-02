@@ -586,6 +586,11 @@ fn ports_for(block: &Block) -> Vec<PhysicalPort> {
             for face in horizontal {
                 push(PortRole::Output, face, PortChannel::StrongPower);
             }
+            if let Some(face) = support_facing(block.support_offset)
+                && !horizontal.contains(&face)
+            {
+                push(PortRole::Output, face, PortChannel::StrongPower);
+            }
         }
         BlockKind::Piston => {
             for face in horizontal {
@@ -615,6 +620,18 @@ fn ports_for(block: &Block) -> Vec<PhysicalPort> {
         BlockKind::Air => {}
     }
     ports
+}
+
+fn support_facing(offset: Option<Pos>) -> Option<Facing> {
+    match offset? {
+        Pos { x: 1, y: 0, z: 0 } => Some(Facing::East),
+        Pos { x: -1, y: 0, z: 0 } => Some(Facing::West),
+        Pos { x: 0, y: 1, z: 0 } => Some(Facing::Up),
+        Pos { x: 0, y: -1, z: 0 } => Some(Facing::Down),
+        Pos { x: 0, y: 0, z: 1 } => Some(Facing::South),
+        Pos { x: 0, y: 0, z: -1 } => Some(Facing::North),
+        _ => None,
+    }
 }
 
 fn port_connection(
@@ -829,6 +846,49 @@ mod tests {
                 .iter()
                 .any(|port| port.role == PortRole::Output && port.face == Facing::East)
         );
+    }
+
+    #[test]
+    fn floor_button_and_pressure_plate_keep_their_downward_power_port() {
+        for kind in [BlockKind::Button, BlockKind::PressurePlate] {
+            let mut block = Block::new(kind);
+            block.support_offset = Some(Pos::new(0, -1, 0));
+            let topology = VerifiedTopology::from_parts(
+                vec![
+                    PhysicalComponent {
+                        id: ComponentId(0),
+                        pos: Pos::new(0, 1, 0),
+                        block,
+                    },
+                    PhysicalComponent {
+                        id: ComponentId(1),
+                        pos: Pos::new(0, 0, 0),
+                        block: Block::new(BlockKind::Solid),
+                    },
+                ],
+                [PhysicalConnection {
+                    source: ComponentId(0),
+                    sink: ComponentId(1),
+                    kind: ConnectionKind::DirectSource,
+                }],
+            );
+            let scene = PhysicalScene::from_unvalidated_topology(
+                Observation::complete(
+                    "minecraft:overworld",
+                    SceneBounds::new(Pos::new(0, 0, 0), Pos::new(0, 1, 0)),
+                ),
+                &topology,
+            );
+            assert_eq!(scene.connections.len(), 1);
+            let source = scene.component_at(Pos::new(0, 1, 0)).unwrap();
+            let downward = source
+                .ports
+                .iter()
+                .find(|port| port.face == Facing::Down)
+                .expect("floor input has a downward source port");
+            assert_eq!(scene.connections[0].source.port, downward.id);
+            assert_eq!(scene.connections[0].transfer, TransferKind::DirectSignal);
+        }
     }
 
     #[test]

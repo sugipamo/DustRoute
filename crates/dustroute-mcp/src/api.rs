@@ -7,7 +7,9 @@ use serde::Serialize;
 pub const ERROR_SCHEMA_V1: &str = "dustroute.error.v1";
 pub const DIAGNOSTIC_SCHEMA_V1: &str = "dustroute.diagnostic.v1";
 pub const PLACEMENT_SCHEMA_V1: &str = "dustroute.placement.v1";
+pub const OPTIMIZATION_SCHEMA_V1: &str = "dustroute.optimization.v1";
 pub const REPAIR_SCHEMA_V1: &str = "dustroute.repair.v1";
+pub const REPAIR_CONTEXT_SCHEMA_V1: &str = "dustroute.repair-context.v1";
 pub const TRANSITION_SCHEMA_V1: &str = "dustroute.transition.v1";
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]

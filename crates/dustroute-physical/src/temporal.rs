@@ -17,6 +17,10 @@ pub enum TemporalRequirement {
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum TemporalReason {
     IncompleteObservation,
+    UnsupportedObservedComponent {
+        component: ComponentId,
+        observed_name: String,
+    },
     OrderSensitiveComponent {
         component: ComponentId,
         block: BlockKind,
@@ -49,6 +53,18 @@ impl PhysicalScene {
         let mut requirement = TemporalRequirement::SteadyStateSafe;
         let mut reasons = Vec::new();
         for component in &self.components {
+            if component.block.requires_live_observation() {
+                requirement = TemporalRequirement::Unsupported;
+                reasons.push(TemporalReason::UnsupportedObservedComponent {
+                    component: component.id,
+                    observed_name: component
+                        .block
+                        .observed_name
+                        .clone()
+                        .unwrap_or_else(|| "unknown".to_owned()),
+                });
+                continue;
+            }
             let profile = behavior_profile(component.block.kind);
             match profile.update_model {
                 UpdateModel::Passive if !profile.order_sensitive => {}

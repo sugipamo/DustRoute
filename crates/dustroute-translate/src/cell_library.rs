@@ -20,11 +20,16 @@ fn expected(kind: GateKind, inputs: &[bool]) -> bool {
         GateKind::And => inputs.iter().all(|value| *value),
         GateKind::Or => inputs.iter().any(|value| *value),
         GateKind::Nand => !inputs.iter().all(|value| *value),
+        GateKind::Xor => inputs[0] ^ inputs[1],
         _ => false,
     }
 }
 
-fn drive_input(world: &mut crate::world::World, port: &crate::cells::InputPort, value: bool) {
+pub(crate) fn drive_input(
+    world: &mut crate::world::World,
+    port: &crate::cells::InputPort,
+    value: bool,
+) {
     let facing = port.facing.unwrap_or(Facing::West);
     let delta = facing.horizontal_offset().unwrap_or(Pos::new(-1, 0, 0));
     let driver = port.pos.offset(delta.x, delta.y, delta.z);
@@ -46,6 +51,15 @@ fn drive_input(world: &mut crate::world::World, port: &crate::cells::InputPort, 
 
 #[must_use]
 pub fn verify_cell(kind: GateKind, cell: &PhysicalCell) -> CellVerification {
+    verify_cell_with_settle_ticks(kind, cell, 8)
+}
+
+#[must_use]
+pub fn verify_cell_with_settle_ticks(
+    kind: GateKind,
+    cell: &PhysicalCell,
+    settle_ticks: usize,
+) -> CellVerification {
     if cell.outputs.len() != 1 || cell.inputs.len() > usize::BITS as usize {
         return CellVerification {
             valid: false,
@@ -63,7 +77,7 @@ pub fn verify_cell(kind: GateKind, cell: &PhysicalCell) -> CellVerification {
         }
         update_wire_shapes(&mut world);
         let actual = RedstoneTickSimulator::new(world)
-            .and_then(|mut simulator| simulator.settle_ticks(8))
+            .and_then(|mut simulator| simulator.settle_ticks(settle_ticks))
             .is_ok_and(|state| state.strength(cell.outputs[0].pos) > 0);
         let wanted = expected(kind, &inputs);
         cases.push((inputs, wanted, actual));
@@ -77,11 +91,30 @@ pub fn verify_cell(kind: GateKind, cell: &PhysicalCell) -> CellVerification {
 #[derive(Clone, Debug, Default)]
 pub struct CellLibrary {
     candidates: BTreeMap<GateKind, Vec<PhysicalCell>>,
+    verification_ticks: BTreeMap<String, usize>,
 }
 
 impl CellLibrary {
     pub fn add(&mut self, kind: GateKind, cell: PhysicalCell) {
+        self.add_with_settle_ticks(kind, cell, 8);
+    }
+
+    pub fn add_with_settle_ticks(
+        &mut self,
+        kind: GateKind,
+        cell: PhysicalCell,
+        settle_ticks: usize,
+    ) {
+        self.verification_ticks
+            .insert(cell.name.clone(), settle_ticks);
         self.candidates.entry(kind).or_default().push(cell);
+    }
+
+    fn settle_ticks_for(&self, cell: &PhysicalCell) -> usize {
+        self.verification_ticks
+            .get(&cell.name)
+            .copied()
+            .unwrap_or(8)
     }
 
     #[must_use]
@@ -94,7 +127,8 @@ impl CellLibrary {
         self.candidates_for(kind)
             .iter()
             .filter_map(|cell| {
-                let verification = verify_cell(kind, cell);
+                let verification =
+                    verify_cell_with_settle_ticks(kind, cell, self.settle_ticks_for(cell));
                 verification.valid.then_some((cell, verification))
             })
             .collect()
@@ -102,9 +136,9 @@ impl CellLibrary {
 
     #[must_use]
     pub fn choose(&self, kind: GateKind) -> Option<&PhysicalCell> {
-        self.candidates_for(kind)
-            .iter()
-            .find(|cell| verify_cell(kind, cell).valid)
+        self.candidates_for(kind).iter().find(|cell| {
+            verify_cell_with_settle_ticks(kind, cell, self.settle_ticks_for(cell)).valid
+        })
     }
 }
 
@@ -116,6 +150,16 @@ pub fn default_cell_library() -> CellLibrary {
     library.add(GateKind::And, and_cell());
     library.add(GateKind::Or, or_buffered_cell());
     library.add(GateKind::Nand, nand_cell());
+    library.add_with_settle_ticks(
+        GateKind::Xor,
+        crate::cells::compact_compiled_xor_cell().expect("compact XOR baseline compiles"),
+        64,
+    );
+    library.add_with_settle_ticks(
+        GateKind::Xor,
+        crate::cells::compiled_xor_cell().expect("built-in XOR baseline compiles"),
+        64,
+    );
     library
 }
 
@@ -127,12 +171,57 @@ mod tests {
     fn verified_library_covers_primitive_logic_cells() {
         let library = default_cell_library();
         assert!(library.candidates_for(GateKind::Not).len() >= 2);
-        for kind in [GateKind::Not, GateKind::And, GateKind::Or, GateKind::Nand] {
+        for kind in [
+            GateKind::Not,
+            GateKind::And,
+            GateKind::Or,
+            GateKind::Nand,
+            GateKind::Xor,
+        ] {
+            let candidates = library
+                .candidates_for(kind)
+                .iter()
+                .map(|cell| (&cell.name, verify_cell(kind, cell)))
+                .collect::<Vec<_>>();
             assert!(
                 !library.verified_for(kind).is_empty(),
-                "missing verified {kind:?}"
+                "missing verified {kind:?}: {candidates:?}"
             );
         }
         assert_eq!(library.choose(GateKind::Not).unwrap().name, "not_torch_top");
+    }
+
+    #[test]
+    fn rejected_upstream_xor_is_not_selected_by_the_physical_library() {
+        let cell = crate::cells::external_xor_cell();
+        let verification = verify_cell(GateKind::Xor, &cell);
+        assert!(!verification.valid);
+        assert_eq!(
+            verification.cases,
+            vec![
+                (vec![false, false], false, false),
+                (vec![true, false], true, false),
+                (vec![false, true], true, false),
+                (vec![true, true], false, false),
+            ]
+        );
+        assert_eq!(
+            default_cell_library().choose(GateKind::Xor).unwrap().name,
+            "dustroute.xor.compact_compiled.1_21_11"
+        );
+    }
+
+    #[test]
+    fn compiled_baseline_xor_has_the_xor_truth_table() {
+        let cell = crate::cells::compiled_xor_cell().unwrap();
+        let verification = verify_cell_with_settle_ticks(GateKind::Xor, &cell, 64);
+        assert!(verification.valid, "{:?}", verification.cases);
+    }
+
+    #[test]
+    fn compact_compiled_xor_has_the_xor_truth_table() {
+        let cell = crate::cells::compact_compiled_xor_cell().unwrap();
+        let verification = verify_cell_with_settle_ticks(GateKind::Xor, &cell, 64);
+        assert!(verification.valid, "{:?}", verification.cases);
     }
 }

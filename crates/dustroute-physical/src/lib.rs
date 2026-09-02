@@ -13,6 +13,7 @@ pub use circuit::{
 pub use dustroute_minecraft::{
     Block, BlockBehaviorProfile, BlockCapabilities, BlockKind, BlockProperties, CapabilityLevel,
     Facing, ObservationClassification, Pos, UpdateModel, WireConnection, World, behavior_profile,
+    observed_name_requires_live_observation,
 };
 pub use patch::{
     PatchApplyError, PhysicalBlockChange, PhysicalPatch, PhysicalPatchReason, RepairImpact,

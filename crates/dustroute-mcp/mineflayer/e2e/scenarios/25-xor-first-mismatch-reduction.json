@@ -1,0 +1,66 @@
+{
+  "name": "xor_first_mismatch_reduction",
+  "save_artifact": true,
+  "trace_origin": { "x": 980, "y": 104, "z": 0 },
+  "trace_positions": [
+    { "x": 980, "y": 104, "z": 1 },
+    { "x": 980, "y": 106, "z": 1 },
+    { "x": 981, "y": 105, "z": 1 },
+    { "x": 981, "y": 105, "z": 2 },
+    { "x": 981, "y": 106, "z": 2 }
+  ],
+  "steps": [
+    { "kind": "command", "commands": [
+      "/fill 978 103 -1 983 108 4 minecraft:air",
+      "/setblock 980 104 1 minecraft:redstone_wall_torch[facing=west,lit=true]",
+      "/setblock 980 105 1 minecraft:stone_bricks",
+      "/setblock 980 106 1 minecraft:redstone_wire",
+      "/setblock 980 106 2 minecraft:stone_bricks",
+      "/setblock 981 104 1 minecraft:stone_bricks",
+      "/setblock 981 105 1 minecraft:redstone_torch[lit=true]",
+      "/setblock 981 105 2 minecraft:redstone_wire",
+      "/setblock 981 106 2 minecraft:redstone_wall_torch[facing=east,lit=true]",
+      "/tp ${player} 983 107 1"
+    ]},
+    { "kind": "wait", "ticks": 20 },
+    { "kind": "block_trace", "save": "all_candidates", "duration_redstone_ticks": 1 },
+
+    { "kind": "command", "commands": [
+      "/setblock 980 104 1 minecraft:air"
+    ]},
+    { "kind": "wait", "ticks": 10 },
+    { "kind": "block_trace", "save": "without_torch_below_support", "duration_redstone_ticks": 1 },
+    { "kind": "command", "commands": [
+      "/setblock 980 104 1 minecraft:redstone_wall_torch[facing=west,lit=true]"
+    ]},
+    { "kind": "wait", "ticks": 10 },
+
+    { "kind": "command", "commands": [
+      "/setblock 981 105 2 minecraft:air"
+    ]},
+    { "kind": "wait", "ticks": 10 },
+    { "kind": "block_trace", "save": "without_lower_wire", "duration_redstone_ticks": 1 },
+
+    { "kind": "command", "commands": [
+      "/setblock 981 105 2 minecraft:redstone_wire",
+      "/setblock 981 106 2 minecraft:air"
+    ]},
+    { "kind": "wait", "ticks": 10 },
+    { "kind": "block_trace", "save": "without_wall_torch", "duration_redstone_ticks": 1 },
+
+    { "kind": "command", "commands": [
+      "/setblock 981 106 2 minecraft:redstone_wall_torch[facing=east,lit=true]",
+      "/setblock 981 105 1 minecraft:air"
+    ]},
+    { "kind": "wait", "ticks": 10 },
+    { "kind": "block_trace", "save": "without_top_torch", "duration_redstone_ticks": 1 },
+
+    { "kind": "command", "commands": [
+      "/setblock 981 105 1 minecraft:redstone_torch[lit=true]",
+      "/setblock 980 106 2 minecraft:air"
+    ]},
+    { "kind": "wait", "ticks": 10 },
+    { "kind": "block_trace", "save": "without_wall_torch_support", "duration_redstone_ticks": 1 }
+  ],
+  "cleanup": ["/fill 978 103 -1 983 108 4 minecraft:air"]
+}

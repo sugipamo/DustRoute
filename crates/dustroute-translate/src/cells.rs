@@ -398,6 +398,155 @@ pub fn nand_cell() -> PhysicalCell {
     }
 }
 
+/// XOR cell derived from Redstone-Compiler's MIT-licensed
+/// `test/xor-generated.nbt` at commit
+/// `cc997732b82d957a8b5cc80d14c07b375562dd9d`.
+///
+/// The upstream structure's two levers are external input drivers, so this
+/// reusable form exposes their support blocks as block-power input ports.
+#[must_use]
+pub fn external_xor_cell() -> PhysicalCell {
+    use dustroute_library::REDSTONE_COMPILER_XOR_ID;
+
+    let mut world = World::new();
+    let normalize = |x, y, z| Pos::new(x - 5, y, z);
+    for (x, y, z) in [
+        (6, 0, 1),
+        (6, 0, 2),
+        (5, 1, 1),
+        (6, 1, 3),
+        (7, 1, 4),
+        (5, 2, 2),
+        (7, 2, 2),
+        (7, 2, 3),
+        (6, 3, 1),
+        (6, 3, 2),
+        (7, 3, 3),
+        (7, 4, 4),
+    ] {
+        world.set(normalize(x, y, z), Block::new(BlockKind::Solid));
+    }
+    for (x, y, z, facing) in [
+        (5, 0, 1, Facing::West),
+        (5, 3, 1, Facing::West),
+        (7, 1, 3, Facing::East),
+        (6, 2, 2, Facing::East),
+        (7, 3, 1, Facing::East),
+        (7, 3, 4, Facing::South),
+    ] {
+        let torch = world.place(BlockKind::RedstoneTorch, normalize(x, y, z));
+        torch.facing = Some(facing);
+        let outward = facing
+            .horizontal_offset()
+            .expect("wall torch facing is horizontal");
+        torch.support_offset = Some(Pos::new(-outward.x, -outward.y, -outward.z));
+    }
+    let top_torch = world.place(BlockKind::RedstoneTorch, normalize(6, 1, 1));
+    top_torch.facing = Some(Facing::Up);
+    top_torch.support_offset = Some(Pos::new(0, -1, 0));
+    for (x, y, z) in [(6, 1, 2), (7, 3, 2), (5, 2, 1), (7, 2, 4)] {
+        world.place(BlockKind::RedstoneWire, normalize(x, y, z));
+    }
+    crate::wire::update_wire_shapes(&mut world);
+    PhysicalCell {
+        name: REDSTONE_COMPILER_XOR_ID.into(),
+        world,
+        inputs: vec![
+            InputPort {
+                name: "a".into(),
+                pos: normalize(6, 0, 1),
+                kind: PortKind::BlockPower,
+                facing: Some(Facing::North),
+            },
+            InputPort {
+                name: "b".into(),
+                pos: normalize(6, 3, 1),
+                kind: PortKind::BlockPower,
+                facing: Some(Facing::North),
+            },
+        ],
+        outputs: vec![OutputPort {
+            name: "out".into(),
+            pos: normalize(7, 2, 4),
+            kind: PortKind::Wire,
+            facing: Some(Facing::South),
+        }],
+    }
+}
+
+/// Builds a conservative XOR cell from DustRoute's verified primitive cells.
+/// This is intentionally a correctness baseline rather than a compact layout.
+pub fn compiled_xor_cell() -> Result<PhysicalCell, String> {
+    static CELL: std::sync::OnceLock<Result<PhysicalCell, String>> = std::sync::OnceLock::new();
+    CELL.get_or_init(|| {
+        let mut cell = compiled_xor_cell_with_config(crate::BaselineCompileConfig::default())?;
+        cell.name = "dustroute.xor.compiled_baseline.1_21_11".into();
+        Ok(cell)
+    })
+    .clone()
+}
+
+pub fn compact_compiled_xor_cell() -> Result<PhysicalCell, String> {
+    static CELL: std::sync::OnceLock<Result<PhysicalCell, String>> = std::sync::OnceLock::new();
+    CELL.get_or_init(|| {
+        let mut cell = compiled_xor_cell_with_config(crate::BaselineCompileConfig {
+            spacing_x: 9,
+            lane_gap: 6,
+            ..crate::BaselineCompileConfig::default()
+        })?;
+        cell.name = "dustroute.xor.compact_compiled.1_21_11".into();
+        Ok(cell)
+    })
+    .clone()
+}
+
+pub fn compiled_xor_cell_with_config(
+    config: crate::BaselineCompileConfig,
+) -> Result<PhysicalCell, String> {
+    let mut builder = crate::logic::DagBuilder::new();
+    let a = builder.input("a");
+    let b = builder.input("b");
+    let out = builder.gate(GateKind::Xor, &[a, b], Some("xor"));
+    let dag = builder
+        .finish([("out".into(), out)])
+        .map_err(|error| error.to_string())?;
+    let compiled = crate::BaselineCompiler::new(config)
+        .compile(&dag)
+        .map_err(|error| error.to_string())?;
+    let input = |name: &str| {
+        compiled
+            .input_positions
+            .get(name)
+            .copied()
+            .ok_or_else(|| format!("compiled XOR is missing input {name}"))
+            .map(|pos| InputPort {
+                name: name.into(),
+                pos,
+                kind: PortKind::Wire,
+                facing: Some(Facing::West),
+            })
+    };
+    let output = compiled
+        .output_positions
+        .get("out")
+        .copied()
+        .ok_or_else(|| "compiled XOR is missing output out".to_owned())?;
+    Ok(PhysicalCell {
+        name: format!(
+            "dustroute.xor.compiled_baseline.1_21_11.s{}.l{}",
+            config.spacing_x, config.lane_gap
+        ),
+        world: compiled.world,
+        inputs: vec![input("a")?, input("b")?],
+        outputs: vec![OutputPort {
+            name: "out".into(),
+            pos: output,
+            kind: PortKind::Wire,
+            facing: Some(Facing::East),
+        }],
+    })
+}
+
 #[must_use]
 pub fn baseline_cell_for(kind: GateKind) -> Option<PhysicalCell> {
     match kind {

@@ -21,6 +21,7 @@ pub mod minecraft_export;
 pub mod minecraft_semantics;
 pub mod multinet;
 pub mod physical;
+pub mod physics_trace;
 pub mod port_realization;
 pub mod repair;
 pub mod routing;
@@ -42,13 +43,17 @@ pub use analysis::{
 };
 pub use api::{
     ForwardOptions, ForwardResult, ReverseRequest, ReverseResult, TranslateError, Translator,
+    TruthTableSemantics,
 };
 pub use behavior::simulate_behavior_trace;
-pub use cell_library::{CellLibrary, CellVerification, default_cell_library, verify_cell};
+pub use cell_library::{
+    CellLibrary, CellVerification, default_cell_library, verify_cell, verify_cell_with_settle_ticks,
+};
 pub use cells::{
     InputPort, OutputPort, PhysicalCell, PlacedCell, PortKind, RotationY, and_cell,
-    baseline_cell_for, buffered_boundary_cell, nand_cell, not_cell, not_top_cell, or_buffered_cell,
-    terminal_cell,
+    baseline_cell_for, buffered_boundary_cell, compact_compiled_xor_cell, compiled_xor_cell,
+    compiled_xor_cell_with_config, external_xor_cell, nand_cell, not_cell, not_top_cell,
+    or_buffered_cell, terminal_cell,
 };
 pub use circuits::{decoder_1_to_2, full_adder, half_adder, half_subtractor, mux_2_to_1};
 pub use compiler::{BaselineCompileConfig, BaselineCompileResult, BaselineCompiler, CompileError};
@@ -66,7 +71,7 @@ pub use dustroute_ir::{
 };
 pub use dustroute_minecraft::{
     Block, BlockKind, BlockProperties, BlockRedstoneTraits, Facing, OccupiedShape, Pos,
-    WireConnection, World,
+    WireConnection, World, observed_name_requires_live_observation,
 };
 pub use electrical::{
     DeviceOutputState, InstantaneousElectricalState, MAX_SIGNAL, PoweredBlockState,
@@ -91,6 +96,11 @@ pub use physical::{
     CellId, Endpoint, PhysicalError, PlacementCircuit, Route, RouteId, TerminalContract,
     TerminalDirection,
 };
+pub use physics_trace::{
+    PhysicalBlockObservation, PhysicalProperty, PhysicalTrace, PhysicalTraceComparison,
+    PhysicalTraceMismatch, PhysicalValue, TraceSource, compare_physical_traces,
+    simulate_cell_trace, simulate_world_trace, simulator_observations,
+};
 pub use port_realization::{
     PortRealization, PortRealizationError, realize_sink_endpoint, realize_source_endpoint,
     terminal_for_endpoint,
@@ -109,7 +119,7 @@ pub use scenario::{
     ScenarioExpectation, ScenarioPulseExpectation, ScenarioRun, ScenarioSafety, ScenarioTrace,
     compare_scenario_traces, run_scenario,
 };
-pub use sim::{RedstoneTickSimulator, TickState};
+pub use sim::{InputMutationError, RedstoneTickSimulator, TickState};
 pub use snapshot::{
     MinecraftSnapshot, MinecraftSnapshotBlock, SnapshotError, world_from_snapshot,
     world_from_snapshot_json,
@@ -119,8 +129,12 @@ pub use wire::{
     update_wire_shapes, wire_has_arm,
 };
 pub use world_reverse::{
-    InferredTerminal, InferredTruthTable, RegionAnalysis, RegionBounds, SignalComponent,
-    SignalDiagnostics, TerminalConfidence, TruthTableComparison, TruthTableError, TruthTableRow,
-    analyze_world_region, analyze_world_region_in_dimension, compare_truth_tables,
-    infer_output_expressions, infer_truth_table,
+    FunctionalNetworkModel, InferredInputDriver, InferredOutputFunction, InferredTerminal,
+    InferredTruthTable, InterfaceEvidence, PhysicalInfluence, RegionAnalysis, RegionBounds,
+    SignalComponent, SignalDiagnostics, TerminalConfidence, TruthTableBudget, TruthTableComparison,
+    TruthTableError, TruthTableExecutionStats, TruthTableRow, analyze_world_region,
+    analyze_world_region_in_dimension, apply_inferred_input_driver, compare_truth_tables,
+    derive_functional_network, derive_functional_network_with_budget, infer_output_expressions,
+    infer_truth_table, infer_truth_table_with_budget, infer_truth_table_with_budget_and_stats,
+    inferred_input_driver,
 };

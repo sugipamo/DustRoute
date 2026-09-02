@@ -4,6 +4,12 @@ const net = require('node:net')
 const crypto = require('node:crypto')
 const mineflayer = require('mineflayer')
 const { Vec3 } = require('vec3')
+const {
+  createBridgeMetrics,
+  finishRequest,
+  snapshotMetrics,
+  startRequest
+} = require('./metrics')
 
 function minecraftEndpoint () {
   const configured = process.env.DUSTROUTE_SERVER_ADDRESS
@@ -39,6 +45,7 @@ let shuttingDown = false
 let reconnectTimer = null
 let updateRecording = null
 let observedGameTick = 0
+const bridgeMetrics = createBridgeMetrics()
 
 function connectBot () {
   if (shuttingDown) return
@@ -434,7 +441,8 @@ async function dispatch (method, params) {
       port: config.port,
       version: config.version,
       dimension: spawned ? currentDimension() : null,
-      position: spawned ? posJson(bot.entity.position) : null
+      position: spawned ? posJson(bot.entity.position) : null,
+      metrics: snapshotMetrics(bridgeMetrics)
     }
   }
   if (!spawned) throw new Error('Minecraft bot has not spawned')
@@ -519,13 +527,55 @@ const server = net.createServer(socket => {
     if (newline < 0) return
     const line = buffer.slice(0, newline)
     buffer = buffer.slice(newline + 1)
+    const startedAt = process.hrtime.bigint()
+    const requestBytes = Buffer.byteLength(line, 'utf8')
+    let request = null
+    let parseError = null
+    try {
+      request = JSON.parse(line)
+    } catch (error) {
+      parseError = error
+    }
+    const context = startRequest(bridgeMetrics, {
+      method: request && request.method,
+      params: request && request.params,
+      requestBytes
+    })
     Promise.resolve()
-      .then(() => JSON.parse(line))
-      .then(request => dispatch(request.method, request.params || {})
-        .then(result => ({ id: request.id, result }))
-        .catch(error => ({ id: request.id, error: String(error.message || error) })))
-      .then(response => socket.end(`${JSON.stringify(response)}\n`))
-      .catch(error => socket.end(`${JSON.stringify({ error: String(error.message || error) })}\n`))
+      .then(() => {
+        if (parseError) throw parseError
+        return dispatch(request && request.method, (request && request.params) || {})
+          .then(result => ({ id: request && request.id, result }))
+          .catch(error => ({ id: request && request.id, error: String(error.message || error) }))
+      })
+      .then(response => {
+        // Include the current request in the counters returned by status. Its
+        // duration and response size are finalized immediately afterwards.
+        if (context.method === 'status' && response.result && typeof response.result === 'object') {
+          response.result.metrics = snapshotMetrics(bridgeMetrics)
+        }
+        const serialized = `${JSON.stringify(response)}\n`
+        finishRequest(
+          bridgeMetrics,
+          context,
+          response,
+          Buffer.byteLength(serialized.slice(0, -1), 'utf8'),
+          Number((process.hrtime.bigint() - startedAt) / 1000n)
+        )
+        socket.end(serialized)
+      })
+      .catch(error => {
+        const response = { error: String(error.message || error) }
+        const serialized = `${JSON.stringify(response)}\n`
+        finishRequest(
+          bridgeMetrics,
+          context,
+          response,
+          Buffer.byteLength(serialized.slice(0, -1), 'utf8'),
+          Number((process.hrtime.bigint() - startedAt) / 1000n)
+        )
+        socket.end(serialized)
+      })
   })
 })
 

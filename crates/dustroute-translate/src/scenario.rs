@@ -20,7 +20,32 @@ pub enum ScenarioCapability {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum ScenarioAction {
+    /// Legacy boolean input action.  It is retained for fixture compatibility
+    /// but is validated against a real Lever, Button, or PressurePlate.
     SetPowered {
+        redstone_tick: u64,
+        position: Pos,
+        powered: bool,
+    },
+    SetLeverState {
+        redstone_tick: u64,
+        position: Pos,
+        powered: bool,
+    },
+    PressButton {
+        redstone_tick: u64,
+        position: Pos,
+    },
+    ReleaseButton {
+        redstone_tick: u64,
+        position: Pos,
+    },
+    SetPressurePlateLevel {
+        redstone_tick: u64,
+        position: Pos,
+        level: u8,
+    },
+    SetExternalPower {
         redstone_tick: u64,
         position: Pos,
         powered: bool,
@@ -30,7 +55,49 @@ pub enum ScenarioAction {
 impl ScenarioAction {
     const fn tick(&self) -> u64 {
         match self {
-            Self::SetPowered { redstone_tick, .. } => *redstone_tick,
+            Self::SetPowered { redstone_tick, .. }
+            | Self::SetLeverState { redstone_tick, .. }
+            | Self::PressButton { redstone_tick, .. }
+            | Self::ReleaseButton { redstone_tick, .. }
+            | Self::SetPressurePlateLevel { redstone_tick, .. }
+            | Self::SetExternalPower { redstone_tick, .. } => *redstone_tick,
+        }
+    }
+
+    fn apply(&self, simulator: &mut RedstoneTickSimulator) -> Result<(), String> {
+        match self {
+            Self::SetPowered {
+                position, powered, ..
+            } => simulator
+                .set_powered(*position, *powered)
+                .map(|_| ())
+                .map_err(|error| error.to_string()),
+            Self::SetLeverState {
+                position, powered, ..
+            } => simulator
+                .set_lever_state(*position, *powered)
+                .map(|_| ())
+                .map_err(|error| error.to_string()),
+            Self::PressButton { position, .. } => simulator
+                .set_button_state(*position, true)
+                .map(|_| ())
+                .map_err(|error| error.to_string()),
+            Self::ReleaseButton { position, .. } => simulator
+                .set_button_state(*position, false)
+                .map(|_| ())
+                .map_err(|error| error.to_string()),
+            Self::SetPressurePlateLevel {
+                position, level, ..
+            } => simulator
+                .set_pressure_plate_level(*position, *level)
+                .map(|_| ())
+                .map_err(|error| error.to_string()),
+            Self::SetExternalPower {
+                position, powered, ..
+            } => simulator
+                .set_external_powered(*position, *powered)
+                .map(|_| ())
+                .map_err(|error| error.to_string()),
         }
     }
 }
@@ -138,6 +205,11 @@ pub enum ScenarioDifference {
     UnsupportedPhysics {
         blocks: Vec<Pos>,
     },
+    CapabilityUnavailable {
+        capability: ScenarioCapability,
+        blocks: Vec<Pos>,
+        reason: String,
+    },
     TorchBurnoutCandidate {
         blocks: Vec<Pos>,
     },
@@ -153,35 +225,11 @@ pub struct ScenarioRun {
 
 pub fn run_scenario(scenario: &Scenario) -> Result<ScenarioRun, String> {
     let world = world_from_snapshot(&scenario.initial).map_err(|error| error.to_string())?;
-    let explicitly_unsupported = [
-        "minecraft:observer",
-        "minecraft:dispenser",
-        "minecraft:dropper",
-        "minecraft:hopper",
-        "minecraft:slime_block",
-        "minecraft:honey_block",
-        "minecraft:water",
-        "minecraft:lava",
-        "minecraft:tripwire_hook",
-        "minecraft:sculk_sensor",
-        "minecraft:calibrated_sculk_sensor",
-    ];
     let mut unsupported: Vec<_> = world
         .iter()
-        .filter(|(_, block)| block.kind == BlockKind::Piston)
+        .filter(|(_, block)| block.kind == BlockKind::Piston || block.requires_live_observation())
         .map(|(pos, _)| *pos)
         .collect();
-    unsupported.extend(
-        scenario
-            .initial
-            .blocks
-            .iter()
-            .filter(|block| {
-                explicitly_unsupported.contains(&block.name.as_str())
-                    || block.name.ends_with("_rail")
-            })
-            .map(|block| block.pos),
-    );
     if scenario
         .required_capabilities
         .contains(&ScenarioCapability::ExactWithinTickOrder)
@@ -200,6 +248,18 @@ pub fn run_scenario(scenario: &Scenario) -> Result<ScenarioRun, String> {
             }],
         });
     }
+    if let Some((capability, blocks, reason)) = unavailable_capability(&world, scenario) {
+        return Ok(ScenarioRun {
+            label: scenario.label.clone(),
+            safety: ScenarioSafety::LiveObservationRequired,
+            trace: ScenarioTrace::default(),
+            differences: vec![ScenarioDifference::CapabilityUnavailable {
+                capability,
+                blocks,
+                reason,
+            }],
+        });
+    }
     let mut simulator = RedstoneTickSimulator::new(world).map_err(|error| error.to_string())?;
     let mut trace = ScenarioTrace::default();
     let mut previous = BTreeMap::new();
@@ -210,15 +270,7 @@ pub fn run_scenario(scenario: &Scenario) -> Result<ScenarioRun, String> {
             .iter()
             .filter(|action| action.tick() == tick)
         {
-            match action {
-                ScenarioAction::SetPowered {
-                    position, powered, ..
-                } => {
-                    simulator
-                        .set_powered(*position, *powered)
-                        .map_err(|error| error.to_string())?;
-                }
-            }
+            action.apply(&mut simulator)?;
         }
         let state = if tick == 0 {
             simulator.snapshot()
@@ -266,6 +318,106 @@ pub fn run_scenario(scenario: &Scenario) -> Result<ScenarioRun, String> {
         trace,
         differences,
     })
+}
+
+fn unavailable_capability(
+    world: &crate::World,
+    scenario: &Scenario,
+) -> Option<(ScenarioCapability, Vec<Pos>, String)> {
+    for capability in &scenario.required_capabilities {
+        let mut blocks = Vec::new();
+        let reason = match capability {
+            ScenarioCapability::SteadyPower => {
+                for (pos, block) in world
+                    .iter()
+                    .filter(|(_, block)| block.kind.is_redstone_related())
+                {
+                    if block.capabilities().steady_state
+                        == dustroute_minecraft::CapabilityLevel::Unsupported
+                    {
+                        blocks.push(*pos);
+                    }
+                }
+                "steady-state semantics are not available for every observed redstone block"
+            }
+            ScenarioCapability::DirectionalDust => {
+                for (pos, block) in world
+                    .iter()
+                    .filter(|(_, block)| block.kind.is_redstone_related())
+                {
+                    if block.capabilities().connectivity
+                        == dustroute_minecraft::CapabilityLevel::Unsupported
+                    {
+                        blocks.push(*pos);
+                    }
+                }
+                "directional connectivity is not available for every observed redstone block"
+            }
+            ScenarioCapability::RepeaterTiming => {
+                for (pos, block) in world
+                    .iter()
+                    .filter(|(_, block)| block.kind == BlockKind::Repeater)
+                {
+                    if block.facing.is_none() || block.delay.is_none() {
+                        blocks.push(*pos);
+                    }
+                }
+                "repeater direction and delay must be observed before timing simulation"
+            }
+            ScenarioCapability::RepeaterLocking => {
+                for (pos, block) in world
+                    .iter()
+                    .filter(|(_, block)| block.kind == BlockKind::Repeater)
+                {
+                    if block.facing.is_none() {
+                        blocks.push(*pos);
+                    }
+                }
+                "repeater direction must be observed before lock simulation"
+            }
+            ScenarioCapability::TorchTiming => {
+                for (pos, block) in world
+                    .iter()
+                    .filter(|(_, block)| block.kind == BlockKind::RedstoneTorch)
+                {
+                    if block.support_offset.is_none() {
+                        blocks.push(*pos);
+                    }
+                }
+                "torch support direction must be observed before timing simulation"
+            }
+            ScenarioCapability::ComparatorAnalog => {
+                for (pos, block) in world
+                    .iter()
+                    .filter(|(_, block)| block.kind == BlockKind::Comparator)
+                {
+                    if block.facing.is_none() {
+                        blocks.push(*pos);
+                    }
+                }
+                "comparator direction must be observed before analog simulation"
+            }
+            ScenarioCapability::LampObservation => {
+                for (pos, _block) in world
+                    .iter()
+                    .filter(|(_, block)| block.kind == BlockKind::RedstoneLamp)
+                {
+                    if !scenario.observe.contains(pos) {
+                        blocks.push(*pos);
+                    }
+                }
+                "every observed lamp must be included in the scenario observation set"
+            }
+            ScenarioCapability::ExactWithinTickOrder => {
+                blocks.extend(scenario.observe.iter().copied());
+                "exact server-side tick ordering requires live observation"
+            }
+        };
+        if *capability == ScenarioCapability::ExactWithinTickOrder || !blocks.is_empty() {
+            return Some((*capability, blocks, reason.to_owned()));
+        }
+    }
+    None
 }
 
 fn compare_expectation(
@@ -557,5 +709,147 @@ mod tests {
             },
         };
         assert!(run_scenario(&scenario).unwrap().differences.is_empty());
+    }
+
+    #[test]
+    fn typed_button_actions_drive_only_a_button() {
+        let button = Pos::new(0, 1, 0);
+        let scenario = Scenario {
+            label: "button input".into(),
+            initial: MinecraftSnapshot {
+                min: Pos::new(0, 0, 0),
+                max: button,
+                blocks: vec![
+                    MinecraftSnapshotBlock {
+                        pos: Pos::new(0, 0, 0),
+                        name: "minecraft:stone".into(),
+                        properties: BTreeMap::new(),
+                    },
+                    MinecraftSnapshotBlock {
+                        pos: button,
+                        name: "minecraft:stone_button".into(),
+                        properties: BTreeMap::from([
+                            ("face".into(), "floor".into()),
+                            ("facing".into(), "north".into()),
+                            ("powered".into(), "false".into()),
+                        ]),
+                    },
+                ],
+            },
+            actions: vec![
+                ScenarioAction::PressButton {
+                    redstone_tick: 0,
+                    position: button,
+                },
+                ScenarioAction::ReleaseButton {
+                    redstone_tick: 1,
+                    position: button,
+                },
+            ],
+            observe: BTreeSet::from([button]),
+            duration_redstone_ticks: 2,
+            required_capabilities: Vec::new(),
+            expectation: ScenarioExpectation::default(),
+        };
+        let run = run_scenario(&scenario).unwrap();
+        assert_eq!(run.safety, ScenarioSafety::Simulated);
+        assert!(run.differences.is_empty(), "{run:?}");
+    }
+
+    #[test]
+    fn required_repeater_timing_is_gated_when_state_is_missing() {
+        let repeater = Pos::new(0, 1, 0);
+        let scenario = Scenario {
+            label: "incomplete repeater timing".into(),
+            initial: MinecraftSnapshot {
+                min: Pos::new(0, 0, 0),
+                max: repeater,
+                blocks: vec![MinecraftSnapshotBlock {
+                    pos: repeater,
+                    name: "minecraft:repeater".into(),
+                    properties: BTreeMap::new(),
+                }],
+            },
+            actions: Vec::new(),
+            observe: BTreeSet::from([repeater]),
+            duration_redstone_ticks: 1,
+            required_capabilities: vec![ScenarioCapability::RepeaterTiming],
+            expectation: ScenarioExpectation::default(),
+        };
+        let run = run_scenario(&scenario).unwrap();
+        assert_eq!(run.safety, ScenarioSafety::LiveObservationRequired);
+        assert!(matches!(
+            run.differences.as_slice(),
+            [ScenarioDifference::CapabilityUnavailable {
+                capability: ScenarioCapability::RepeaterTiming,
+                blocks,
+                ..
+            }] if blocks == &[repeater]
+        ));
+    }
+
+    #[test]
+    fn target_snapshot_is_live_observation_only() {
+        let scenario = Scenario {
+            label: "target requires live observation".into(),
+            initial: MinecraftSnapshot {
+                min: Pos::new(0, 0, 0),
+                max: Pos::new(0, 0, 0),
+                blocks: vec![MinecraftSnapshotBlock {
+                    pos: Pos::new(0, 0, 0),
+                    name: "minecraft:target".into(),
+                    properties: BTreeMap::new(),
+                }],
+            },
+            actions: Vec::new(),
+            observe: BTreeSet::new(),
+            duration_redstone_ticks: 1,
+            required_capabilities: Vec::new(),
+            expectation: ScenarioExpectation::default(),
+        };
+        let run = run_scenario(&scenario).unwrap();
+        assert_eq!(run.safety, ScenarioSafety::LiveObservationRequired);
+        assert!(matches!(
+            run.differences.as_slice(),
+            [ScenarioDifference::UnsupportedPhysics { blocks }] if blocks == &[Pos::new(0, 0, 0)]
+        ));
+    }
+
+    #[test]
+    fn legacy_set_powered_rejects_a_wire_anchor() {
+        let wire = Pos::new(0, 1, 0);
+        let scenario = Scenario {
+            label: "invalid wire driver".into(),
+            initial: MinecraftSnapshot {
+                min: Pos::new(0, 0, 0),
+                max: wire,
+                blocks: vec![
+                    MinecraftSnapshotBlock {
+                        pos: Pos::new(0, 0, 0),
+                        name: "minecraft:stone".into(),
+                        properties: BTreeMap::new(),
+                    },
+                    MinecraftSnapshotBlock {
+                        pos: wire,
+                        name: "minecraft:redstone_wire".into(),
+                        properties: BTreeMap::new(),
+                    },
+                ],
+            },
+            actions: vec![ScenarioAction::SetPowered {
+                redstone_tick: 0,
+                position: wire,
+                powered: true,
+            }],
+            observe: BTreeSet::new(),
+            duration_redstone_ticks: 0,
+            required_capabilities: Vec::new(),
+            expectation: ScenarioExpectation::default(),
+        };
+        let error = run_scenario(&scenario).expect_err("wire mutation must be rejected");
+        assert!(
+            error.contains("must be lever, button, or pressure_plate"),
+            "{error}"
+        );
     }
 }

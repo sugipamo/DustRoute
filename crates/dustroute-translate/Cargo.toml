@@ -18,8 +18,13 @@ harness = false
 name = "analysis_scaling"
 harness = false
 
+[[bench]]
+name = "reverse_observation"
+harness = false
+
 [dependencies]
 dustroute-ir = { path = "../dustroute-ir" }
+dustroute-library = { path = "../dustroute-library" }
 dustroute-minecraft = { path = "../dustroute-minecraft" }
 dustroute-physical = { path = "../dustroute-physical" }
 serde = { version = "1.0", features = ["derive"] }

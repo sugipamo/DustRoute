@@ -2,6 +2,7 @@
 
 const fs = require('node:fs')
 const path = require('node:path')
+const { execFileSync } = require('node:child_process')
 const mineflayer = require('mineflayer')
 const { Vec3 } = require('vec3')
 const { McpStdioClient, assertExpectation, resolveReferences } = require('./runtime')
@@ -110,6 +111,82 @@ async function aim (bot, mcp, step, footings) {
   throw new Error(`gaze did not settle on ${JSON.stringify(step.target)}; last observed ${JSON.stringify(lastTarget)} from ${JSON.stringify(lastObservation)}`)
 }
 
+function physicalBlockKind (name) {
+  if (name === 'air' || name === 'cave_air' || name === 'void_air') return 'Air'
+  if (name === 'redstone_wire') return 'RedstoneWire'
+  if (name === 'redstone_torch' || name === 'redstone_wall_torch') return 'RedstoneTorch'
+  if (name === 'repeater') return 'Repeater'
+  if (name === 'comparator') return 'Comparator'
+  if (name === 'lever') return 'Lever'
+  if (name.endsWith('_button')) return 'Button'
+  if (name.endsWith('_pressure_plate')) return 'PressurePlate'
+  if (name === 'redstone_lamp') return 'RedstoneLamp'
+  if (name === 'redstone_block') return 'RedstoneBlock'
+  if (name.endsWith('piston')) return 'Piston'
+  if (name.includes('glass') || name === 'barrier') return 'Transparent'
+  return 'Solid'
+}
+
+function normalizePhysicalBlock (block, redstoneTick, origin) {
+  const properties = typeof block.getProperties === 'function' ? block.getProperties() : {}
+  const kind = physicalBlockKind(block.name)
+  return {
+    redstone_tick: redstoneTick,
+    position: {
+      x: block.position.x - xOffset - origin.x,
+      y: block.position.y - origin.y,
+      z: block.position.z - origin.z
+    },
+    block_kind: kind,
+    wire_connections: kind === 'RedstoneWire'
+      ? Object.fromEntries(['north', 'east', 'south', 'west'].map(direction => [direction, String(properties[direction])]))
+      : null,
+    dust_strength: kind === 'RedstoneWire' ? Number(properties.power) : null,
+    powered: ['Lever', 'Button', 'PressurePlate', 'Repeater', 'Comparator', 'RedstoneLamp'].includes(kind)
+      ? properties.powered === true || properties.lit === true
+      : null,
+    torch_lit: kind === 'RedstoneTorch' ? properties.lit === true : null,
+    // Vanilla's client protocol does not expose conductor weak/strong power.
+    weak_power: null,
+    strong_power: null
+  }
+}
+
+async function capturePhysicalTrace (bot, step) {
+  const observations = []
+  const duration = Number(step.duration_redstone_ticks || 0)
+  const origin = step.origin || { x: 0, y: 0, z: 0 }
+  const deadline = Date.now() + 10000
+  while (step.positions.some(raw => !bot.blockAt(new Vec3(raw.x + xOffset, raw.y, raw.z)))) {
+    if (Date.now() >= deadline) throw new Error('trace positions did not load within 10000ms')
+    await sleep(100)
+  }
+  for (let tick = 0; tick <= duration; tick++) {
+    for (const raw of step.positions) {
+      const position = new Vec3(raw.x + xOffset, raw.y, raw.z)
+      const block = bot.blockAt(position)
+      if (!block) throw new Error(`trace block is not loaded at ${position}`)
+      observations.push(normalizePhysicalBlock(block, tick, origin))
+    }
+    if (tick < duration) await bot.waitForTicks(2)
+  }
+  return { source: 'minecraft_java', observations }
+}
+
+async function placeRustCell (bot, step) {
+  const exported = JSON.parse(execFileSync('cargo', [
+    'run', '-q', '-p', 'dustroute-translate', '--example', step.example,
+    '--', ...(step.arguments || []).map(String)
+  ], { cwd: root, encoding: 'utf8' }))
+  const base = { x: step.origin.x + xOffset, y: step.origin.y, z: step.origin.z }
+  for (const relative of exported.commands) {
+    bot.chat(`/execute positioned ${base.x} ${base.y} ${base.z} run ${relative}`)
+    await sleep(Number(step.command_delay_ms || 25))
+  }
+  await sleep(Number(step.settle_game_ticks || 20) * 50)
+  return { ...exported, origin: step.origin }
+}
+
 async function runScenario (bot, mcp, scenario) {
   const results = {}
   const footings = []
@@ -136,13 +213,13 @@ async function runScenario (bot, mcp, scenario) {
         results[step.save || 'gaze'] = await aim(bot, mcp, step, footings)
       } else if (step.kind === 'mcp') {
         const args = resolveReferences(step.arguments || {}, results)
-        results[step.save] = await mcp.callTool(step.tool, args)
+        results[step.save] = await mcp.callTool(step.tool, args, Number(step.timeout_ms || timeoutMs))
         if (process.env.DUSTROUTE_E2E_VERBOSE === 'true') {
           process.stdout.write(`${JSON.stringify({ step: step.save, result: results[step.save] }, null, 2)}\n`)
         }
       } else if (step.kind === 'mcp_error') {
         const args = resolveReferences(step.arguments || {}, results)
-        results[step.save] = await mcp.callToolRaw(step.tool, args)
+        results[step.save] = await mcp.callToolRaw(step.tool, args, Number(step.timeout_ms || timeoutMs))
         if (results[step.save].ok !== false) throw new Error(`${step.tool} unexpectedly succeeded`)
       } else if (step.kind === 'mcp_with_commands') {
         const args = resolveReferences(step.arguments || {}, results)
@@ -157,9 +234,50 @@ async function runScenario (bot, mcp, scenario) {
         for (const expectation of step.expect) assertExpectation(results[step.from], expectation)
       } else if (step.kind === 'wait') {
         await sleep(step.ticks * 50)
+      } else if (step.kind === 'block') {
+        const position = new Vec3(step.position.x + xOffset, step.position.y, step.position.z)
+        const block = bot.blockAt(position)
+        if (!block) throw new Error(`block is not loaded at ${position}`)
+        results[step.save] = {
+          name: block.name,
+          properties: typeof block.getProperties === 'function' ? block.getProperties() : {}
+        }
+      } else if (step.kind === 'block_trace') {
+        results[step.save] = await capturePhysicalTrace(bot, {
+          ...step,
+          positions: step.positions || scenario.trace_positions,
+          origin: step.origin || scenario.trace_origin
+        })
+      } else if (step.kind === 'rust_cell') {
+        results[step.save] = await placeRustCell(bot, step)
+      } else if (step.kind === 'activate') {
+        const position = new Vec3(step.position.x + xOffset, step.position.y, step.position.z)
+        const block = bot.blockAt(position)
+        if (!block) throw new Error(`block is not loaded at ${position}`)
+        await bot.activateBlock(block)
+        await sleep(300)
       } else {
         throw new Error(`unknown scenario step ${step.kind}`)
       }
+    }
+    if (scenario.save_artifact === true) {
+      fs.mkdirSync(artifactDir, { recursive: true })
+      const artifact = path.join(artifactDir, `${scenario.name}-latest.json`)
+      fs.writeFileSync(artifact, JSON.stringify({
+        scenario: scenario.name,
+        run_slot: runSlot,
+        x_offset: xOffset,
+        results
+      }, null, 2))
+      for (const [name, result] of Object.entries(results)) {
+        if (result && result.source === 'minecraft_java' && Array.isArray(result.observations)) {
+          fs.writeFileSync(
+            path.join(artifactDir, `${scenario.name}-${name}.trace.json`),
+            JSON.stringify(result, null, 2)
+          )
+        }
+      }
+      process.stdout.write(`[artifact] ${artifact}\n`)
     }
     process.stdout.write(`[pass] ${scenario.name}\n`)
   } catch (error) {

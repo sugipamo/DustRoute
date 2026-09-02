@@ -13,12 +13,22 @@ The workspace is split by responsibility:
 ```text
 dustroute-physical   canonical PhysicalScene observations, ports, evidence, nets, and fragments
 dustroute-ir         derived Gate/Expression/Functional views and transformations
+dustroute-library    provenance-aware reusable circuit specifications and evidence
 dustroute-translate  forward and reverse translation
 dustroute-optimize   placement and semantic rewrite optimization
 dustroute-app        shared application services for MCP and CLI
 dustroute-mcp        AI-facing MCP server and visible Minecraft bot
 dustroute-cli        command-line integration
 ```
+
+Observed-world optimization supports a conservative phased objective through
+the MCP `new_optimization` tool. With `objective` set to
+`density_then_wire_length`, planning first favors local density, then recovers
+connector cost, and finally requires the whole result to beat the baseline.
+Temporary connector growth exists only inside the search: Minecraft receives
+only the previewed final patch. The live candidate generator currently supports
+a single non-branching dust path with fixed endpoints; broader physical
+component relocation remains future work.
 
 `dustroute-physical` is the source of truth for observed Minecraft circuits.
 `PhysicalScene` records typed ports, evidence, scan frontiers, and incomplete
@@ -36,6 +46,16 @@ partial, unsupported, and non-applicable support for physical classification,
 connectivity, steady-state behavior, temporal behavior, repair, and placement.
 Unsupported semantics make the relevant derived IR stage partial; they do not
 erase the underlying observation.
+
+Contract checks are fail-closed at the physical boundary. Live-only devices
+such as targets, observers, daylight detectors, containers, sensors, fluids,
+and rails remain visible in the snapshot but are marked unsupported for
+simulation, repair, and placement. An inferred truth table is unavailable when
+an external input or observable output is unmapped, when the interface is
+ambiguous, or when there is no input/output evidence; an empty case set is not
+treated as a successful verification. Button and pressure-plate scenarios use
+typed drivers, and weighted plate levels are supplied explicitly because
+entity occupancy is a live-world observation.
 
 `dustroute-translate` exposes `Translator::forward`, `Translator::reverse`, and
 `Translator::verify` as its stable facade. Reverse results carry the canonical
@@ -124,6 +144,9 @@ build, inspect, optimize, and export a circuit incrementally with a user.
 
 ## Development
 
+Minecraft-vs-simulator physical trace comparison is documented in
+[`docs/physics-differential-testing.md`](docs/physics-differential-testing.md).
+
 Rust 1.85 or newer is required. Live Minecraft integration additionally needs
 Node.js 22 with npm and a Java 21 runtime. Verify the toolchain before building:
 
@@ -171,9 +194,15 @@ gap evidence for broken-circuit analysis. Bidirectional dust runs are projected
 into signal components; repeaters, powered blocks, and torch-control edges
 provide direction. Source and sink components become inferred terminals.
 
-The CLI JSON report explicitly requests and contains an exhaustive truth table
-(up to 16 inferred inputs) and a Boolean expression for each output. Library and
-MCP reverse analysis leave truth-table enumeration disabled unless requested.
+The CLI JSON report explicitly requests a bounded exhaustive truth table (up to
+16 inferred inputs) and a Boolean expression for each output. Library and MCP
+reverse analysis leave truth-table enumeration disabled unless requested; MCP
+large-circuit requests are still bounded by row, settle-tick, estimated-work,
+solver-iteration, and elapsed-time budgets and report structured
+status/details when evidence is incomplete or a budget is exceeded. Partial
+truth-table rows are discarded on any runtime limit. Responses classify the
+physical evidence as combinational, timing-sensitive, stateful, or unknown
+before a requested table is interpreted.
 Known functions such as AND, OR, XOR, NAND, and NOT are identified
 directly; other combinational outputs fall back to canonical sum-of-products.
 

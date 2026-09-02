@@ -1,0 +1,83 @@
+{
+  "name": "compiled_xor_java_1_21_11",
+  "save_artifact": true,
+  "trace_origin": { "x": 1200, "y": 104, "z": 0 },
+  "trace_positions": [
+    { "x": 1200, "y": 107, "z": 0 },
+    { "x": 1200, "y": 107, "z": 8 },
+    { "x": 1250, "y": 107, "z": 0 }
+  ],
+  "steps": [
+    { "kind": "command", "commands": [
+      "/fill 1197 103 -3 1253 111 15 minecraft:air",
+      "/tp ${player} 1200 112 4"
+    ]},
+    { "kind": "rust_cell", "example": "export_compiled_xor", "origin": { "x": 1200, "y": 104, "z": 0 }, "settle_game_ticks": 160, "save": "cell" },
+    { "kind": "aim", "position": { "x": 1249.5, "y": 110, "z": 5.5 }, "target": { "x": 1249, "y": 107, "z": 0 } },
+    { "kind": "mcp", "tool": "test_circuit", "arguments": {
+      "max_components": 1024,
+      "fragment_gap": 2
+    }, "save": "analysis" },
+    { "kind": "mcp", "tool": "convert_from_circuit", "arguments": {
+      "circuit_id": "${analysis.circuit_id}",
+      "include_truth_table": true,
+      "max_components": 1024
+    }, "timeout_ms": 300000, "save": "conversion" },
+    { "kind": "mcp", "tool": "new_macro_optimization", "arguments": {
+      "circuit_id": "${analysis.circuit_id}",
+      "component_id": "${conversion.macro_replacement_candidates.candidates.0.component_id}"
+    }, "timeout_ms": 300000, "save": "macro_plan" },
+    { "kind": "assert", "from": "macro_plan", "expect": [
+      { "path": "optimization_kind", "equals": "macro_replacement" },
+      { "path": "contract_assessment.satisfied", "equals": false },
+      { "path": "contract_assessment.logical.state", "equals": "passed" },
+      { "path": "contract_assessment.pulse.state", "equals": "failed" }
+    ]},
+    { "kind": "mcp", "tool": "show_operation", "arguments": {
+      "operation_id": "${macro_plan.operation_id}"
+    }, "save": "macro_preview" },
+    { "kind": "mcp_error", "tool": "invoke_operation", "arguments": {
+      "operation_id": "${macro_plan.operation_id}",
+      "confirm": true
+    }, "save": "macro_rejected" },
+    { "kind": "assert", "from": "macro_rejected", "expect": [
+      { "path": "error_code", "equals": "verification_failed" }
+    ]},
+    { "kind": "block_trace", "save": "trace00", "duration_redstone_ticks": 4 },
+
+    { "kind": "block", "position": { "x": 1250, "y": 107, "z": 0 }, "save": "out00" },
+    { "kind": "assert", "from": "out00", "expect": [{ "path": "properties.power", "equals": "0" }] },
+
+    { "kind": "command", "commands": ["/setblock 1199 107 0 minecraft:redstone_block"] },
+    { "kind": "block_trace", "save": "trace00_to_10", "duration_redstone_ticks": 64 },
+    { "kind": "assert", "from": "trace00_to_10", "expect": [
+      { "path": "observations.2.dust_strength", "equals": 0 },
+      { "path": "observations.20.dust_strength", "equals": 15 }
+    ]},
+    { "kind": "block", "position": { "x": 1250, "y": 107, "z": 0 }, "save": "out10" },
+    { "kind": "assert", "from": "out10", "expect": [{ "path": "properties.power", "at_least": 1 }] },
+
+    { "kind": "command", "commands": [
+      "/setblock 1199 107 0 minecraft:air",
+      "/setblock 1199 107 8 minecraft:redstone_block"
+    ]},
+    { "kind": "block_trace", "save": "trace10_to_01", "duration_redstone_ticks": 64 },
+    { "kind": "assert", "from": "trace10_to_01", "expect": [
+      { "path": "observations.2.dust_strength", "equals": 15 },
+      { "path": "observations.11.dust_strength", "equals": 0 },
+      { "path": "observations.26.dust_strength", "equals": 15 }
+    ]},
+    { "kind": "block", "position": { "x": 1250, "y": 107, "z": 0 }, "save": "out01" },
+    { "kind": "assert", "from": "out01", "expect": [{ "path": "properties.power", "at_least": 1 }] },
+
+    { "kind": "command", "commands": ["/setblock 1199 107 0 minecraft:redstone_block"] },
+    { "kind": "block_trace", "save": "trace01_to_11", "duration_redstone_ticks": 64 },
+    { "kind": "assert", "from": "trace01_to_11", "expect": [
+      { "path": "observations.2.dust_strength", "equals": 15 },
+      { "path": "observations.29.dust_strength", "equals": 0 }
+    ]},
+    { "kind": "block", "position": { "x": 1250, "y": 107, "z": 0 }, "save": "out11" },
+    { "kind": "assert", "from": "out11", "expect": [{ "path": "properties.power", "equals": "0" }] }
+  ],
+  "cleanup": ["/fill 1197 103 -3 1253 111 15 minecraft:air"]
+}
