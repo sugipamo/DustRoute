@@ -13,6 +13,7 @@ pub enum ScenarioCapability {
     RepeaterLocking,
     TorchTiming,
     ComparatorAnalog,
+    ObserverPulse,
     LampObservation,
     ExactWithinTickOrder,
 }
@@ -326,14 +327,19 @@ fn unavailable_capability(
 ) -> Option<(ScenarioCapability, Vec<Pos>, String)> {
     for capability in &scenario.required_capabilities {
         let mut blocks = Vec::new();
+        let missing_observer = *capability == ScenarioCapability::ObserverPulse
+            && !world
+                .iter()
+                .any(|(_, block)| block.kind == BlockKind::Observer);
         let reason = match capability {
             ScenarioCapability::SteadyPower => {
                 for (pos, block) in world
                     .iter()
                     .filter(|(_, block)| block.kind.is_redstone_related())
                 {
-                    if block.capabilities().steady_state
-                        == dustroute_minecraft::CapabilityLevel::Unsupported
+                    if block.kind == BlockKind::Observer
+                        || block.capabilities().steady_state
+                            == dustroute_minecraft::CapabilityLevel::Unsupported
                     {
                         blocks.push(*pos);
                     }
@@ -397,6 +403,17 @@ fn unavailable_capability(
                 }
                 "comparator direction must be observed before analog simulation"
             }
+            ScenarioCapability::ObserverPulse => {
+                for (pos, block) in world
+                    .iter()
+                    .filter(|(_, block)| block.kind == BlockKind::Observer)
+                {
+                    if block.facing.is_none() {
+                        blocks.push(*pos);
+                    }
+                }
+                "observer facing must be observed before pulse simulation"
+            }
             ScenarioCapability::LampObservation => {
                 for (pos, _block) in world
                     .iter()
@@ -413,7 +430,10 @@ fn unavailable_capability(
                 "exact server-side tick ordering requires live observation"
             }
         };
-        if *capability == ScenarioCapability::ExactWithinTickOrder || !blocks.is_empty() {
+        if *capability == ScenarioCapability::ExactWithinTickOrder
+            || missing_observer
+            || !blocks.is_empty()
+        {
             return Some((*capability, blocks, reason.to_owned()));
         }
     }
@@ -709,6 +729,75 @@ mod tests {
             },
         };
         assert!(run_scenario(&scenario).unwrap().differences.is_empty());
+    }
+
+    #[test]
+    fn simulates_an_observer_pulse_from_a_block_state_transition() {
+        let input = Pos::new(0, 1, 0);
+        let observer = Pos::new(1, 1, 0);
+        let output = Pos::new(2, 1, 0);
+        let scenario = Scenario {
+            label: "observer pulse".into(),
+            initial: MinecraftSnapshot {
+                min: Pos::new(0, 0, 0),
+                max: output,
+                blocks: vec![
+                    MinecraftSnapshotBlock {
+                        pos: Pos::new(0, 0, 0),
+                        name: "minecraft:stone".into(),
+                        properties: BTreeMap::new(),
+                    },
+                    MinecraftSnapshotBlock {
+                        pos: Pos::new(2, 0, 0),
+                        name: "minecraft:stone".into(),
+                        properties: BTreeMap::new(),
+                    },
+                    MinecraftSnapshotBlock {
+                        pos: input,
+                        name: "minecraft:lever".into(),
+                        properties: BTreeMap::from([
+                            ("face".into(), "floor".into()),
+                            ("facing".into(), "east".into()),
+                            ("powered".into(), "false".into()),
+                        ]),
+                    },
+                    MinecraftSnapshotBlock {
+                        pos: observer,
+                        name: "minecraft:observer".into(),
+                        properties: BTreeMap::from([
+                            ("facing".into(), "west".into()),
+                            ("powered".into(), "false".into()),
+                        ]),
+                    },
+                    MinecraftSnapshotBlock {
+                        pos: output,
+                        name: "minecraft:redstone_wire".into(),
+                        properties: BTreeMap::new(),
+                    },
+                ],
+            },
+            actions: vec![ScenarioAction::SetLeverState {
+                redstone_tick: 0,
+                position: input,
+                powered: true,
+            }],
+            observe: BTreeSet::from([output]),
+            duration_redstone_ticks: 2,
+            required_capabilities: vec![ScenarioCapability::ObserverPulse],
+            expectation: ScenarioExpectation {
+                final_strengths: BTreeMap::from([(output, 0)]),
+                final_powered: BTreeMap::from([(output, false)]),
+                pulses: vec![ScenarioPulseExpectation {
+                    position: output,
+                    powered: true,
+                    minimum_width_redstone_ticks: 1,
+                    maximum_width_redstone_ticks: 1,
+                }],
+            },
+        };
+        let run = run_scenario(&scenario).unwrap();
+        assert_eq!(run.safety, ScenarioSafety::Simulated);
+        assert!(run.differences.is_empty(), "{run:?}");
     }
 
     #[test]

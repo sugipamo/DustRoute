@@ -59,7 +59,8 @@ pub use circuits::{decoder_1_to_2, full_adder, half_adder, half_subtractor, mux_
 pub use compiler::{BaselineCompileConfig, BaselineCompileResult, BaselineCompiler, CompileError};
 pub use connectivity::{
     ConnectivityEdge, EdgeKind, PhysicalConnectivityGraph, PhysicalStep, PhysicalStepKind,
-    build_physical_circuit, extract_connectivity, physical_step, physical_step_connected,
+    build_physical_circuit, extract_connectivity, observer_input_pos, observer_output_pos,
+    physical_step, physical_step_connected,
 };
 pub use diagnostic::{
     CircuitDiagnosticReport, CircuitDiagnosticStatus, DiagnosticConfidence, DiagnosticCounts,

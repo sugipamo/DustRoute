@@ -21,6 +21,12 @@ The event sequence must retain its cause and ordering evidence. Treating all
 same-tick updates as an unordered set would make direction-dependent and
 location-dependent contraptions impossible to validate.
 
+The current Observer slice follows this boundary: it records the front-face
+state before and after each simulated mutation/tick, schedules a pulse for the
+next redstone tick, and exposes the back-face output as a strong level-15
+source for one redstone tick. It is intentionally not a claim that every
+vanilla same-game-tick ordering or zero-tick interaction is reproduced yet.
+
 ## Evidence from the 1.21.11 implementation surface
 
 The Fabric Yarn 1.21.11 mappings expose the following vanilla structures:
@@ -76,14 +82,14 @@ behavior profile fails at compile time. Initial profiles only classify current
 properties and update mechanisms. Later revisions add versioned transition
 functions and vanilla-derived scenario tests without changing IR APIs.
 
-The first temporal implementation should cover, in order:
+The remaining full-engine implementation should cover, in order:
 
 1. redstone wire immediate update chains;
 2. redstone torch scheduled changes and burnout state;
 3. repeater delay, locking, and scheduling;
 4. comparator scheduling and side inputs;
 5. piston block events, quasi-connectivity, and movement;
-6. observer pulses and movable block interactions.
+6. same-tick observer event ordering and movable block interactions.
 
 ## Validation policy
 

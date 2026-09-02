@@ -48,9 +48,11 @@ Unsupported semantics make the relevant derived IR stage partial; they do not
 erase the underlying observation.
 
 Contract checks are fail-closed at the physical boundary. Live-only devices
-such as targets, observers, daylight detectors, containers, sensors, fluids,
-and rails remain visible in the snapshot but are marked unsupported for
-simulation, repair, and placement. An inferred truth table is unavailable when
+such as targets, daylight detectors, containers, sensors, fluids, and rails
+remain visible in the snapshot but are marked unsupported for simulation,
+repair, and placement. Observers are modeled as directional state-transition
+pulse sources (including a one-redstone-tick pulse); exact server-side update
+ordering still requires live verification. An inferred truth table is unavailable when
 an external input or observable output is unmapped, when the interface is
 ambiguous, or when there is no input/output evidence; an empty case set is not
 treated as a successful verification. Button and pressure-plate scenarios use
@@ -100,7 +102,7 @@ partial, conflicting, and boundary-limited recognition. Functional labels such
 as half adders are optional metadata over the lower-level gates and expressions.
 The physical graph retains component IDs, positions, verified edge evidence,
 and device delays. Independent temporal analysis describes repeaters, torches,
-comparators, pistons, delayed traces, and feedback patterns such as clock and
+comparators, observers, pistons, delayed traces, and feedback patterns such as clock and
 latch candidates. Explicitly requested reverse truth-table expressions can be
 converted back into a `LogicDag`; forward compilation produces the Minecraft
 layout directly.
@@ -112,7 +114,8 @@ physical path. Every analyzed region is classified as `steady_state_safe`,
 `timing_sensitive`, or `temporal_required`. Unequal-delay reconvergence remains
 timing-sensitive; feedback and mechanical devices require temporal
 interpretation. The bounded simulator handles repeater delay and side locking,
-torch delay, basic comparator compare/subtract behavior, and lamp off delay;
+torch delay, basic comparator compare/subtract behavior, observer
+state-transition pulses, and lamp off delay;
 exact within-tick vanilla update ordering remains live-observation evidence.
 Higher-level functional labels are
 therefore explicitly scoped instead of silently discarding timing behavior.

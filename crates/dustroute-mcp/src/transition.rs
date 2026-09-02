@@ -300,6 +300,7 @@ fn strength_state(state: &crate::ObservedBlockState) -> u8 {
                     | "minecraft:lever"
                     | "minecraft:redstone_torch"
                     | "minecraft:redstone_wall_torch"
+                    | "minecraft:observer"
             ) || state.name.ends_with("_button")
                 || state.name.ends_with("_pressure_plate")
             {

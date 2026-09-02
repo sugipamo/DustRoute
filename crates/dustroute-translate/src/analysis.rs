@@ -8,10 +8,11 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    InferredTruthTable, MinecraftSnapshot, Pos, RegionBounds, ReverseRequest, ReverseResult,
-    Scenario, ScenarioAction, ScenarioCapability, ScenarioDifference, ScenarioExpectation,
-    ScenarioRun, ScenarioTrace, Translator, TruthTableComparison, World, compare_scenario_traces,
-    compare_truth_tables, inferred_input_driver, run_scenario, world_from_snapshot,
+    BlockKind, InferredTruthTable, MinecraftSnapshot, Pos, RegionBounds, ReverseRequest,
+    ReverseResult, Scenario, ScenarioAction, ScenarioCapability, ScenarioDifference,
+    ScenarioExpectation, ScenarioRun, ScenarioTrace, Translator, TruthTableComparison, World,
+    compare_scenario_traces, compare_truth_tables, inferred_input_driver, run_scenario,
+    world_from_snapshot,
 };
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -251,6 +252,20 @@ pub fn propose_scenarios(
     snapshot: &MinecraftSnapshot,
     analysis: &PhysicalAnalysis,
 ) -> Vec<Scenario> {
+    // An Observer is not a steady-state source: a lever transition is visible
+    // as a one-redstone-tick pulse at its back. Choose the pulse capability for
+    // generated scenarios so MCP callers do not receive a scenario that is
+    // rejected merely because an Observer is present.
+    let required_capability = world_from_snapshot(snapshot)
+        .ok()
+        .filter(|world| {
+            world
+                .iter()
+                .any(|(_, block)| block.kind == BlockKind::Observer)
+        })
+        .map_or(ScenarioCapability::SteadyPower, |_| {
+            ScenarioCapability::ObserverPulse
+        });
     analysis
         .reverse
         .analysis
@@ -270,7 +285,7 @@ pub fn propose_scenarios(
                     .map(|output| output.anchor)
                     .collect(),
                 duration_redstone_ticks: 10,
-                required_capabilities: vec![ScenarioCapability::SteadyPower],
+                required_capabilities: vec![required_capability],
                 expectation: ScenarioExpectation::default(),
             })
         })
@@ -473,7 +488,7 @@ fn missing_path(from: Pos, to: Pos, reason: &str) -> SignalPath {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ForwardOptions, half_adder};
+    use crate::{ForwardOptions, MinecraftSnapshotBlock, half_adder};
 
     #[test]
     fn facade_preserves_stages_and_classifies_half_adder() {
@@ -572,6 +587,64 @@ mod tests {
             compare_live_trace(&expected, &actual).as_slice(),
             [ScenarioDifference::FinalPowered { .. }]
         ));
+    }
+
+    #[test]
+    fn generated_scenarios_use_observer_pulse_capability() {
+        let snapshot = MinecraftSnapshot {
+            min: Pos::new(0, 0, 0),
+            max: Pos::new(2, 1, 0),
+            blocks: vec![
+                MinecraftSnapshotBlock {
+                    pos: Pos::new(0, 0, 0),
+                    name: "minecraft:stone".into(),
+                    properties: BTreeMap::new(),
+                },
+                MinecraftSnapshotBlock {
+                    pos: Pos::new(1, 0, 0),
+                    name: "minecraft:stone".into(),
+                    properties: BTreeMap::new(),
+                },
+                MinecraftSnapshotBlock {
+                    pos: Pos::new(2, 0, 0),
+                    name: "minecraft:stone".into(),
+                    properties: BTreeMap::new(),
+                },
+                MinecraftSnapshotBlock {
+                    pos: Pos::new(0, 1, 0),
+                    name: "minecraft:lever".into(),
+                    properties: BTreeMap::from([
+                        ("face".into(), "floor".into()),
+                        ("facing".into(), "east".into()),
+                        ("powered".into(), "false".into()),
+                    ]),
+                },
+                MinecraftSnapshotBlock {
+                    pos: Pos::new(1, 1, 0),
+                    name: "minecraft:observer".into(),
+                    properties: BTreeMap::from([
+                        ("facing".into(), "west".into()),
+                        ("powered".into(), "false".into()),
+                    ]),
+                },
+                MinecraftSnapshotBlock {
+                    pos: Pos::new(2, 1, 0),
+                    name: "minecraft:redstone_wire".into(),
+                    properties: BTreeMap::new(),
+                },
+            ],
+        };
+        let world = world_from_snapshot(&snapshot).unwrap();
+        let analysis = analyze_physical_region(
+            &world,
+            ReverseRequest::new(RegionBounds::new(snapshot.min, snapshot.max)),
+        );
+        let scenarios = propose_scenarios(&snapshot, &analysis);
+        assert_eq!(scenarios.len(), 1);
+        assert_eq!(
+            scenarios[0].required_capabilities,
+            vec![ScenarioCapability::ObserverPulse]
+        );
     }
 
     #[test]

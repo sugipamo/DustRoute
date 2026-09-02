@@ -10,6 +10,7 @@ mod air;
 mod button;
 mod comparator;
 mod lever;
+mod observer;
 mod piston;
 mod pressure_plate;
 mod redstone_block;
@@ -52,6 +53,7 @@ pub const fn behavior_profile(kind: BlockKind) -> BlockBehaviorProfile {
         BlockKind::PressurePlate => pressure_plate::PROFILE,
         BlockKind::RedstoneLamp => redstone_lamp::PROFILE,
         BlockKind::RedstoneBlock => redstone_block::PROFILE,
+        BlockKind::Observer => observer::PROFILE,
         BlockKind::Piston => piston::PROFILE,
     }
 }
@@ -70,6 +72,11 @@ mod tests {
             behavior_profile(BlockKind::Piston).update_model,
             UpdateModel::BlockEvent
         );
+        assert_eq!(
+            behavior_profile(BlockKind::Observer).update_model,
+            UpdateModel::ScheduledBlockTick
+        );
+        assert!(behavior_profile(BlockKind::Observer).order_sensitive);
         assert!(behavior_profile(BlockKind::RedstoneWire).order_sensitive);
     }
 }

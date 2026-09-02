@@ -41,6 +41,7 @@ pub enum BlockKind {
     PressurePlate,
     RedstoneLamp,
     RedstoneBlock,
+    Observer,
     Piston,
 }
 
@@ -91,6 +92,18 @@ pub enum Facing {
 }
 
 impl Facing {
+    #[must_use]
+    pub const fn offset(self) -> Pos {
+        match self {
+            Self::North => Pos::new(0, 0, -1),
+            Self::East => Pos::new(1, 0, 0),
+            Self::South => Pos::new(0, 0, 1),
+            Self::West => Pos::new(-1, 0, 0),
+            Self::Up => Pos::new(0, 1, 0),
+            Self::Down => Pos::new(0, -1, 0),
+        }
+    }
+
     #[must_use]
     pub const fn horizontal_offset(self) -> Option<Pos> {
         match self {
@@ -193,6 +206,7 @@ impl BlockKind {
                 | Self::PressurePlate
                 | Self::RedstoneLamp
                 | Self::RedstoneBlock
+                | Self::Observer
                 | Self::Piston
         )
     }
@@ -334,6 +348,17 @@ impl Block {
                 repair: Partial,
                 placement: Full,
             },
+            BlockKind::Observer => BlockCapabilities {
+                observation: Full,
+                physical_classification: Full,
+                connectivity: Full,
+                // An observer is a pulse source, not a steady-state
+                // conductor. Its event semantics are modeled below.
+                steady_state: NotApplicable,
+                temporal: Full,
+                repair: Partial,
+                placement: Full,
+            },
             BlockKind::Piston => BlockCapabilities {
                 observation: Full,
                 physical_classification: Partial,
@@ -391,7 +416,8 @@ impl Block {
                 BlockKind::Solid
                 | BlockKind::Transparent
                 | BlockKind::RedstoneBlock
-                | BlockKind::RedstoneLamp => OccupiedShape::FullCube,
+                | BlockKind::RedstoneLamp
+                | BlockKind::Observer => OccupiedShape::FullCube,
                 _ => OccupiedShape::Partial,
             },
             supports_dust_on_top: properties.supports_components,
@@ -469,8 +495,7 @@ pub fn observed_name_requires_live_observation(name: &str) -> bool {
     let short_name = name.strip_prefix("minecraft:").unwrap_or(name);
     matches!(
         short_name,
-        "observer"
-            | "target"
+        "target"
             | "daylight_detector"
             | "dispenser"
             | "dropper"

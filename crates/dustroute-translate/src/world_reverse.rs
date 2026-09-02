@@ -574,12 +574,28 @@ pub fn infer_truth_table_with_budget_and_stats(
             .map(|index| bits & (1 << index) != 0)
             .collect();
         let phase_started = Instant::now();
-        let mut driven = world.clone();
+        let mut baseline = world.clone();
         add_elapsed_nanos(&mut world_clone_nanos, phase_started);
 
         let phase_started = Instant::now();
-        for ((terminal, driver), value) in analysis.inputs.iter().zip(&drivers).zip(&inputs) {
-            apply_inferred_input_driver(&mut driven, *driver, *value)?;
+        update_wire_shapes(&mut baseline);
+        add_elapsed_nanos(&mut wire_shape_update_nanos, phase_started);
+
+        let phase_started = Instant::now();
+        let mut simulator = RedstoneTickSimulator::new(baseline)
+            .map_err(|error| TruthTableError::Simulation(error.to_string()))?;
+        add_elapsed_nanos(&mut simulator_init_nanos, phase_started);
+
+        let phase_started = Instant::now();
+        let input_states: Vec<_> = drivers
+            .iter()
+            .zip(&inputs)
+            .map(|(driver, value)| (inferred_driver_position(*driver), *value))
+            .collect();
+        simulator
+            .set_input_states(&input_states)
+            .map_err(|error| TruthTableError::Simulation(error.to_string()))?;
+        for (terminal, _driver) in analysis.inputs.iter().zip(&drivers) {
             debug_assert!(
                 analysis.components[terminal.component]
                     .positions
@@ -588,15 +604,7 @@ pub fn infer_truth_table_with_budget_and_stats(
         }
         add_elapsed_nanos(&mut input_drive_nanos, phase_started);
 
-        let phase_started = Instant::now();
-        update_wire_shapes(&mut driven);
-        add_elapsed_nanos(&mut wire_shape_update_nanos, phase_started);
-
-        let phase_started = Instant::now();
-        let mut simulator = RedstoneTickSimulator::new(driven)
-            .map_err(|error| TruthTableError::Simulation(error.to_string()))?;
         let mut state = simulator.snapshot();
-        add_elapsed_nanos(&mut simulator_init_nanos, phase_started);
         solver_iterations = solver_iterations.saturating_add(state.instantaneous_iterations);
         enforce_runtime_budget(budget, rows, completed_rows, solver_iterations, started)?;
         let mut previous_state = state.clone();
@@ -673,6 +681,7 @@ fn same_electrical_state(left: &TickState, right: &TickState) -> bool {
         && left.repeater_powered == right.repeater_powered
         && left.torch_lit == right.torch_lit
         && left.comparator_output == right.comparator_output
+        && left.observer_powered == right.observer_powered
         && left.lamp_lit == right.lamp_lit
         && left.torch_burnout_candidates == right.torch_burnout_candidates
 }
@@ -948,6 +957,15 @@ pub fn apply_inferred_input_driver(
             }
             Ok(())
         }
+    }
+}
+
+const fn inferred_driver_position(driver: InferredInputDriver) -> Pos {
+    match driver {
+        InferredInputDriver::Lever(pos)
+        | InferredInputDriver::Button(pos)
+        | InferredInputDriver::PressurePlate(pos)
+        | InferredInputDriver::External(pos) => pos,
     }
 }
 
@@ -1429,6 +1447,7 @@ const fn is_redstone_kind(kind: BlockKind) -> bool {
             | BlockKind::Button
             | BlockKind::PressurePlate
             | BlockKind::RedstoneBlock
+            | BlockKind::Observer
             | BlockKind::Piston
     )
 }

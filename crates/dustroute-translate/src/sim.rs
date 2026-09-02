@@ -1,15 +1,15 @@
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use crate::connectivity::{
-    comparator_input_pos, comparator_output_pos, device_side_positions, repeater_input_pos,
-    repeater_output_pos,
+    comparator_input_pos, comparator_output_pos, device_side_positions, observer_input_pos,
+    repeater_input_pos, repeater_output_pos,
 };
 use crate::electrical::{
     DeviceOutputState, ElectricalTopology, InstantaneousElectricalState,
     InstantaneousSolveDidNotConverge, PoweredBlockState, repeater_input_level,
     solve_instantaneous_with_topology, torch_support_is_powered,
 };
-use crate::world::{BlockKind, Pos, World};
+use crate::world::{Block, BlockKind, Pos, World};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum InputMutationError {
@@ -65,9 +65,25 @@ pub struct TickState {
     pub repeater_powered: BTreeMap<Pos, bool>,
     pub torch_lit: BTreeMap<Pos, bool>,
     pub comparator_output: BTreeMap<Pos, u8>,
+    pub observer_powered: BTreeMap<Pos, bool>,
     pub lamp_lit: BTreeMap<Pos, bool>,
     pub torch_burnout_candidates: BTreeSet<Pos>,
     pub instantaneous_iterations: usize,
+}
+
+/// State visible to an Observer at its front face. Block identity and
+/// simulator-visible electrical/device state are both retained so a pulse is
+/// scheduled for block-state changes as well as signal transitions.
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct ObserverObservedState {
+    block: Option<Block>,
+    signal: u8,
+    power: PoweredBlockState,
+    repeater_powered: bool,
+    torch_lit: bool,
+    comparator_output: u8,
+    observer_powered: bool,
+    lamp_lit: bool,
 }
 
 impl TickState {
@@ -101,6 +117,10 @@ pub struct RedstoneTickSimulator {
     torch_burnout_candidates: BTreeSet<Pos>,
     comparator_output: BTreeMap<Pos, u8>,
     comparator_queues: BTreeMap<Pos, VecDeque<u8>>,
+    observer_powered: BTreeMap<Pos, bool>,
+    observer_pending: BTreeSet<Pos>,
+    observer_off_deadline: BTreeMap<Pos, u64>,
+    observer_observations: BTreeMap<Pos, ObserverObservedState>,
     lamp_lit: BTreeMap<Pos, bool>,
     lamp_off_deadline: BTreeMap<Pos, u64>,
     instantaneous: InstantaneousElectricalState,
@@ -135,7 +155,7 @@ impl RedstoneTickSimulator {
             .filter(|(_, block)| block.kind == BlockKind::RedstoneLamp)
             .map(|(pos, _)| (*pos, instantaneous.power(*pos).powered()))
             .collect();
-        Ok(Self {
+        let mut simulator = Self {
             world,
             topology,
             tick: 0,
@@ -146,10 +166,16 @@ impl RedstoneTickSimulator {
             torch_burnout_candidates: BTreeSet::new(),
             comparator_output: devices.comparator_output,
             comparator_queues,
+            observer_powered: devices.observer_powered,
+            observer_pending: BTreeSet::new(),
+            observer_off_deadline: BTreeMap::new(),
+            observer_observations: BTreeMap::new(),
             lamp_lit,
             lamp_off_deadline: BTreeMap::new(),
             instantaneous,
-        })
+        };
+        simulator.observer_observations = simulator.observer_states();
+        Ok(simulator)
     }
 
     fn devices(&self) -> DeviceOutputState {
@@ -157,6 +183,7 @@ impl RedstoneTickSimulator {
             repeater_powered: self.repeater_powered.clone(),
             torch_lit: self.torch_lit.clone(),
             comparator_output: self.comparator_output.clone(),
+            observer_powered: self.observer_powered.clone(),
         }
     }
 
@@ -175,6 +202,7 @@ impl RedstoneTickSimulator {
             repeater_powered: self.repeater_powered.clone(),
             torch_lit: self.torch_lit.clone(),
             comparator_output: self.comparator_output.clone(),
+            observer_powered: self.observer_powered.clone(),
             lamp_lit: self.lamp_lit.clone(),
             torch_burnout_candidates: self.torch_burnout_candidates.clone(),
             instantaneous_iterations: self.instantaneous.iterations,
@@ -196,13 +224,19 @@ impl RedstoneTickSimulator {
             queue
                 .iter()
                 .any(|value| self.comparator_output.get(pos).copied() != Some(*value))
-        }) || self
-            .lamp_off_deadline
-            .values()
-            .any(|deadline| *deadline > self.tick)
+        }) || !self.observer_pending.is_empty()
+            || self
+                .observer_off_deadline
+                .values()
+                .any(|deadline| *deadline > self.tick)
+            || self
+                .lamp_off_deadline
+                .values()
+                .any(|deadline| *deadline > self.tick)
     }
 
     pub fn advance_tick(&mut self) -> Result<TickState, InstantaneousSolveDidNotConverge> {
+        let before_observers = self.observer_observations.clone();
         let mut next_repeaters = BTreeMap::new();
         for (pos, block) in self.world.iter() {
             if block.kind != BlockKind::Repeater {
@@ -297,6 +331,19 @@ impl RedstoneTickSimulator {
         self.torch_lit = next_torches;
         self.comparator_output = next_comparators;
         self.tick += 1;
+        let pending_observers = std::mem::take(&mut self.observer_pending);
+        for (pos, deadline) in self.observer_off_deadline.clone() {
+            if deadline <= self.tick {
+                self.observer_powered.insert(pos, false);
+                self.observer_off_deadline.remove(&pos);
+            }
+        }
+        for pos in pending_observers {
+            if self.world.kind_at(pos) == BlockKind::Observer {
+                self.observer_powered.insert(pos, true);
+                self.observer_off_deadline.insert(pos, self.tick + 1);
+            }
+        }
         self.instantaneous =
             solve_instantaneous_with_topology(&self.world, &self.devices(), 128, &self.topology)?;
         for (pos, block) in self.world.iter() {
@@ -314,7 +361,63 @@ impl RedstoneTickSimulator {
                 }
             }
         }
+        self.record_observer_changes(&before_observers);
         Ok(self.snapshot())
+    }
+
+    /// Applies several typed external-input changes as one world mutation
+    /// batch. Observers compare their front-face state once around the whole
+    /// batch, and the electrical fixed point is solved only once; this keeps
+    /// exhaustive truth-table rows from paying one settle pass per input.
+    pub fn set_input_states(
+        &mut self,
+        inputs: &[(Pos, bool)],
+    ) -> Result<TickState, InputMutationError> {
+        let before_observers = self.observer_observations.clone();
+        for (pos, powered) in inputs {
+            let Some(block) = self.world.get(*pos).cloned() else {
+                // An absent position is the representation of an inferred
+                // open-boundary driver. A false value leaves it absent.
+                if *powered {
+                    self.world.set(*pos, Block::new(BlockKind::RedstoneBlock));
+                }
+                continue;
+            };
+            match block.kind {
+                BlockKind::Lever | BlockKind::Button => {
+                    let mut changed = block;
+                    changed.powered = Some(*powered);
+                    self.world.set(*pos, changed);
+                }
+                BlockKind::PressurePlate => {
+                    let mut changed = block;
+                    changed.powered = Some(*powered);
+                    changed.power_level = Some(if *powered { 15 } else { 0 });
+                    self.world.set(*pos, changed);
+                }
+                BlockKind::Air | BlockKind::RedstoneBlock => {
+                    if *powered {
+                        self.world.set(*pos, Block::new(BlockKind::RedstoneBlock));
+                    } else if self.world.kind_at(*pos) == BlockKind::RedstoneBlock {
+                        self.world.remove(*pos);
+                    }
+                }
+                actual => {
+                    return Err(InputMutationError::WrongKind {
+                        position: *pos,
+                        expected: "lever, button, pressure_plate, air, or redstone_block",
+                        actual,
+                    });
+                }
+            }
+        }
+        crate::wire::update_wire_shapes(&mut self.world);
+        self.topology = ElectricalTopology::from_world(&self.world);
+        let state = self
+            .settle_instantaneous()
+            .map_err(InputMutationError::from)?;
+        self.record_observer_changes(&before_observers);
+        Ok(state)
     }
 
     pub fn set_powered(
@@ -322,6 +425,7 @@ impl RedstoneTickSimulator {
         pos: Pos,
         powered: bool,
     ) -> Result<TickState, InputMutationError> {
+        let before_observers = self.observer_observations.clone();
         let Some(block) = self.world.get(pos).cloned() else {
             return Err(InputMutationError::Missing { position: pos });
         };
@@ -341,8 +445,11 @@ impl RedstoneTickSimulator {
             changed.power_level = Some(if powered { 15 } else { 0 });
         }
         self.world.set(pos, changed);
-        self.settle_instantaneous()
-            .map_err(InputMutationError::from)
+        let state = self
+            .settle_instantaneous()
+            .map_err(InputMutationError::from)?;
+        self.record_observer_changes(&before_observers);
+        Ok(state)
     }
 
     pub fn set_lever_state(
@@ -368,6 +475,7 @@ impl RedstoneTickSimulator {
         pos: Pos,
         level: u8,
     ) -> Result<TickState, InputMutationError> {
+        let before_observers = self.observer_observations.clone();
         if level > 15 {
             return Err(InputMutationError::InvalidPressureLevel {
                 position: pos,
@@ -388,8 +496,11 @@ impl RedstoneTickSimulator {
         changed.power_level = Some(level);
         changed.powered = Some(level > 0);
         self.world.set(pos, changed);
-        self.settle_instantaneous()
-            .map_err(InputMutationError::from)
+        let state = self
+            .settle_instantaneous()
+            .map_err(InputMutationError::from)?;
+        self.record_observer_changes(&before_observers);
+        Ok(state)
     }
 
     fn set_stateful_powered(
@@ -398,6 +509,7 @@ impl RedstoneTickSimulator {
         expected: BlockKind,
         powered: bool,
     ) -> Result<TickState, InputMutationError> {
+        let before_observers = self.observer_observations.clone();
         let Some(block) = self.world.get(pos).cloned() else {
             return Err(InputMutationError::Missing { position: pos });
         };
@@ -415,8 +527,11 @@ impl RedstoneTickSimulator {
         let mut changed = block;
         changed.powered = Some(powered);
         self.world.set(pos, changed);
-        self.settle_instantaneous()
-            .map_err(InputMutationError::from)
+        let state = self
+            .settle_instantaneous()
+            .map_err(InputMutationError::from)?;
+        self.record_observer_changes(&before_observers);
+        Ok(state)
     }
 
     /// Drives an inferred open-boundary input without making the temporary
@@ -426,6 +541,7 @@ impl RedstoneTickSimulator {
         pos: Pos,
         powered: bool,
     ) -> Result<TickState, InputMutationError> {
+        let before_observers = self.observer_observations.clone();
         let current = self.world.kind_at(pos);
         if !matches!(current, BlockKind::Air | BlockKind::RedstoneBlock) {
             return Err(InputMutationError::WrongKind {
@@ -440,9 +556,95 @@ impl RedstoneTickSimulator {
         } else if self.world.kind_at(pos) == BlockKind::RedstoneBlock {
             self.world.remove(pos);
         }
+        crate::wire::update_wire_shapes(&mut self.world);
         self.topology = ElectricalTopology::from_world(&self.world);
-        self.settle_instantaneous()
-            .map_err(InputMutationError::from)
+        let state = self
+            .settle_instantaneous()
+            .map_err(InputMutationError::from)?;
+        self.record_observer_changes(&before_observers);
+        Ok(state)
+    }
+
+    /// Applies an observed block-state mutation and schedules any Observer
+    /// whose front face saw the mutation. This is the bridge for future live
+    /// world events; unlike input helpers it accepts arbitrary block kinds.
+    pub fn set_block_state(
+        &mut self,
+        pos: Pos,
+        block: Block,
+    ) -> Result<TickState, InputMutationError> {
+        let before_observers = self.observer_observations.clone();
+        self.world.set(pos, block);
+        crate::wire::update_wire_shapes(&mut self.world);
+        self.topology = ElectricalTopology::from_world(&self.world);
+        if self.world.kind_at(pos) == BlockKind::Observer {
+            let powered = self
+                .world
+                .get(pos)
+                .and_then(|block| block.powered)
+                .unwrap_or(false);
+            self.observer_powered.insert(pos, powered);
+        } else {
+            self.observer_powered.remove(&pos);
+        }
+        self.observer_powered
+            .retain(|observer, _| self.world.kind_at(*observer) == BlockKind::Observer);
+        self.observer_pending
+            .retain(|observer| self.world.kind_at(*observer) == BlockKind::Observer);
+        self.observer_off_deadline
+            .retain(|observer, _| self.world.kind_at(*observer) == BlockKind::Observer);
+        let state = self
+            .settle_instantaneous()
+            .map_err(InputMutationError::from)?;
+        self.record_observer_changes(&before_observers);
+        Ok(state)
+    }
+
+    fn observer_states(&self) -> BTreeMap<Pos, ObserverObservedState> {
+        self.world
+            .iter()
+            .filter(|(_, block)| block.kind == BlockKind::Observer)
+            .map(|(pos, _)| {
+                let observed = observer_input_pos(&self.world, *pos);
+                let block = observed.and_then(|target| self.world.get(target).cloned());
+                let target = observed.unwrap_or(*pos);
+                (
+                    *pos,
+                    ObserverObservedState {
+                        block,
+                        signal: self.instantaneous.signal(target),
+                        power: self.instantaneous.power(target),
+                        repeater_powered: self
+                            .repeater_powered
+                            .get(&target)
+                            .copied()
+                            .unwrap_or(false),
+                        torch_lit: self.torch_lit.get(&target).copied().unwrap_or(false),
+                        comparator_output: self
+                            .comparator_output
+                            .get(&target)
+                            .copied()
+                            .unwrap_or(0),
+                        observer_powered: self
+                            .observer_powered
+                            .get(&target)
+                            .copied()
+                            .unwrap_or(false),
+                        lamp_lit: self.lamp_lit.get(&target).copied().unwrap_or(false),
+                    },
+                )
+            })
+            .collect()
+    }
+
+    fn record_observer_changes(&mut self, before: &BTreeMap<Pos, ObserverObservedState>) {
+        let after = self.observer_states();
+        for (pos, state) in &after {
+            if before.get(pos).is_some_and(|previous| previous != state) {
+                self.observer_pending.insert(*pos);
+            }
+        }
+        self.observer_observations = after;
     }
 
     pub fn settle_ticks(
@@ -489,6 +691,52 @@ mod tests {
                 .strength(Pos::new(1, 0, 0)),
             0
         );
+    }
+
+    #[test]
+    fn observer_emits_a_one_redstone_tick_pulse_after_observed_input_changes() {
+        let mut world = World::new();
+        world.set(Pos::new(0, 0, 0), Block::new(BlockKind::Solid));
+        world.set(Pos::new(2, 0, 0), Block::new(BlockKind::Solid));
+        let lever = world.place(BlockKind::Lever, Pos::new(0, 1, 0));
+        lever.powered = Some(false);
+        let observer = world.place(BlockKind::Observer, Pos::new(1, 1, 0));
+        observer.facing = Some(Facing::East);
+        observer.powered = Some(false);
+        world.place(BlockKind::RedstoneWire, Pos::new(2, 1, 0));
+        update_wire_shapes(&mut world);
+
+        let mut simulator = RedstoneTickSimulator::new(world).unwrap();
+        assert!(!simulator.snapshot().observer_powered[&Pos::new(1, 1, 0)]);
+        simulator.set_lever_state(Pos::new(0, 1, 0), true).unwrap();
+        assert!(!simulator.snapshot().observer_powered[&Pos::new(1, 1, 0)]);
+
+        let high = simulator.advance_tick().unwrap();
+        assert!(high.observer_powered[&Pos::new(1, 1, 0)]);
+        assert_eq!(high.strength(Pos::new(2, 1, 0)), 15);
+
+        let low = simulator.advance_tick().unwrap();
+        assert!(!low.observer_powered[&Pos::new(1, 1, 0)]);
+        assert_eq!(low.strength(Pos::new(2, 1, 0)), 0);
+    }
+
+    #[test]
+    fn observer_detects_an_arbitrary_block_state_mutation() {
+        let mut world = World::new();
+        world.set(Pos::new(1, 0, 0), Block::new(BlockKind::Solid));
+        let observer = world.place(BlockKind::Observer, Pos::new(1, 1, 0));
+        observer.facing = Some(Facing::East);
+        world.place(BlockKind::RedstoneWire, Pos::new(2, 1, 0));
+        update_wire_shapes(&mut world);
+        let mut simulator = RedstoneTickSimulator::new(world).unwrap();
+
+        let mut changed = Block::new(BlockKind::Transparent);
+        changed.observed_name = Some("minecraft:glass".to_owned());
+        simulator
+            .set_block_state(Pos::new(0, 1, 0), changed)
+            .unwrap();
+        let state = simulator.advance_tick().unwrap();
+        assert!(state.observer_powered[&Pos::new(1, 1, 0)]);
     }
 
     #[test]

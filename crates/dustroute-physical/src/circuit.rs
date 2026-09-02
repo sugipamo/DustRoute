@@ -29,6 +29,10 @@ pub enum ConnectionKind {
     DirectionalOutput,
     DirectSource,
     Control,
+    /// A block-state transition observed at the front face of an Observer.
+    ObserverInput,
+    /// The strong pulse emitted from an Observer's back face.
+    ObserverOutput,
     Support,
 }
 

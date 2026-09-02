@@ -318,9 +318,11 @@ scan from a complete interpretation and present unsupported behavior as an
 explicit limitation instead of guessing.
 
 Reverse analysis is fail-closed at the interface boundary. Live-only blocks
-(`target`, `observer`, daylight detectors, containers, sensors, fluids, and
-rails) are retained in `unsupported_observed_blocks` and never treated as a
-simulated solid. The response's `interface_evidence` lists physical external
+(`target`, daylight detectors, containers, sensors, fluids, and rails) are
+retained in `unsupported_observed_blocks` and never treated as a simulated
+solid. Observers are represented as directional state-transition pulse sources
+in the block-only simulator; exact live update ordering remains a preview
+concern. The response's `interface_evidence` lists physical external
 inputs and observable sinks together with their mapped and unmapped positions.
 Truth-table and optimization contracts are unavailable when that evidence is
 incomplete or ambiguous, when no input/output terminal exists, or when no
@@ -339,8 +341,9 @@ projection summary, and whether higher-level logic is `steady_state_safe`,
 (two game ticks each). A steady-state label remains useful for delayed paths,
 but MCP clients must present it as provisional when unequal-delay paths
 reconverge and must not treat feedback or mechanical devices as purely
-combinational logic. Basic repeater locking and comparator analog behavior are
-simulated; exact same-tick update order remains an explicit live-trace result.
+combinational logic. Basic repeater locking, comparator analog behavior, and
+Observer pulses are simulated; exact same-tick update order remains an
+explicit live-trace result.
 
 Transient output distinguishes structural risk from measured behavior. A
 hierarchical scan reports `not_simulated` until transition scenarios have run.

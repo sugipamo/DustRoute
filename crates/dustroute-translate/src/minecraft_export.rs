@@ -209,6 +209,14 @@ pub fn java_block_state(
             "minecraft:redstone_lamp[lit={}]",
             block.powered.unwrap_or(false)
         ),
+        BlockKind::Observer => {
+            let facing = block.facing.unwrap_or(Facing::North).opposite();
+            format!(
+                "minecraft:observer[facing={},powered={}]",
+                facing_name(facing),
+                block.powered.unwrap_or(false)
+            )
+        }
         BlockKind::Piston => format!(
             "minecraft:piston[facing={},extended=false]",
             facing_name(block.facing.unwrap_or(Facing::North))
@@ -246,6 +254,7 @@ pub fn world_setblock_commands(
         BlockKind::Solid
         | BlockKind::Transparent
         | BlockKind::RedstoneBlock
+        | BlockKind::Observer
         | BlockKind::Piston => 0,
         BlockKind::RedstoneTorch | BlockKind::Lever => 2,
         _ => 1,
@@ -282,6 +291,7 @@ pub fn isolated_build_commands(
         "minecraft:redstone_torch",
         "minecraft:redstone_wall_torch",
         "minecraft:lever",
+        "minecraft:observer",
     ] {
         commands.extend(regions.iter().map(|(a, b)| {
             format!(
@@ -527,6 +537,13 @@ mod tests {
         assert_eq!(
             java_block_state(&repeater, &config).unwrap(),
             "minecraft:repeater[delay=2,facing=west,locked=false,powered=false]"
+        );
+        let mut observer = Block::new(BlockKind::Observer);
+        observer.facing = Some(Facing::East);
+        observer.powered = Some(true);
+        assert_eq!(
+            java_block_state(&observer, &config).unwrap(),
+            "minecraft:observer[facing=west,powered=true]"
         );
     }
 

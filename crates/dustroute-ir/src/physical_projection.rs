@@ -11,6 +11,7 @@ pub enum TemporalNodeKind {
     Inverter,
     Delay,
     Comparator,
+    Observer,
     Actuator,
     Conductor,
 }
@@ -61,6 +62,7 @@ pub enum EdgeBehavior {
     DelayedForward,
     DelayedInvert,
     Analog,
+    Pulse,
     Mechanical,
     OrderSensitive,
 }
@@ -139,6 +141,7 @@ pub enum TemporalSemantics {
     DelayedInvert,
     CompareOrSubtract,
     MechanicalActuation,
+    ObserverPulse,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -334,6 +337,7 @@ fn edge_timing(kind: BlockKind, delay: Option<u8>) -> (DelayRange, EdgeBehavior)
         BlockKind::Repeater => EdgeBehavior::DelayedForward,
         BlockKind::RedstoneTorch => EdgeBehavior::DelayedInvert,
         BlockKind::Comparator => EdgeBehavior::Analog,
+        BlockKind::Observer => EdgeBehavior::Pulse,
         BlockKind::Piston => EdgeBehavior::Mechanical,
         BlockKind::RedstoneWire => EdgeBehavior::OrderSensitive,
         BlockKind::Air
@@ -359,7 +363,7 @@ fn timing_assessment(scene: &PhysicalScene, circuit: &TimedCircuit) -> TimingAss
     for component in &scene.components {
         if matches!(
             component.block.kind,
-            BlockKind::Comparator | BlockKind::Piston
+            BlockKind::Comparator | BlockKind::Observer | BlockKind::Piston
         ) {
             reasons.push(TimingReason::StatefulOrMechanicalDevice {
                 component: component.id,
@@ -740,6 +744,7 @@ const fn signal_kind(kind: BlockKind) -> TemporalNodeKind {
         BlockKind::RedstoneTorch => TemporalNodeKind::Inverter,
         BlockKind::Repeater => TemporalNodeKind::Delay,
         BlockKind::Comparator => TemporalNodeKind::Comparator,
+        BlockKind::Observer => TemporalNodeKind::Observer,
         BlockKind::Piston => TemporalNodeKind::Actuator,
         BlockKind::Air | BlockKind::Solid | BlockKind::Transparent | BlockKind::RedstoneLamp => {
             TemporalNodeKind::Conductor
@@ -750,7 +755,7 @@ const fn signal_kind(kind: BlockKind) -> TemporalNodeKind {
 fn component_delay(kind: BlockKind, delay: Option<u8>) -> u8 {
     match kind {
         BlockKind::Repeater => delay.unwrap_or(1),
-        BlockKind::RedstoneTorch | BlockKind::Piston => 1,
+        BlockKind::RedstoneTorch | BlockKind::Observer | BlockKind::Piston => 1,
         _ => 0,
     }
 }
@@ -761,6 +766,7 @@ const fn temporal_semantics(kind: BlockKind) -> Option<TemporalSemantics> {
         BlockKind::RedstoneTorch => Some(TemporalSemantics::DelayedInvert),
         BlockKind::Comparator => Some(TemporalSemantics::CompareOrSubtract),
         BlockKind::Piston => Some(TemporalSemantics::MechanicalActuation),
+        BlockKind::Observer => Some(TemporalSemantics::ObserverPulse),
         _ => None,
     }
 }

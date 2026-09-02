@@ -924,6 +924,7 @@ fn is_supported_redstone_name(name: &str) -> bool {
             | "minecraft:comparator"
             | "minecraft:lever"
             | "minecraft:redstone_block"
+            | "minecraft:observer"
             | "minecraft:piston"
             | "minecraft:sticky_piston"
     )
@@ -2103,6 +2104,7 @@ impl DustRouteMcp {
                 BlockKind::Solid
                 | BlockKind::Transparent
                 | BlockKind::RedstoneBlock
+                | BlockKind::Observer
                 | BlockKind::Piston => 0,
                 BlockKind::RedstoneTorch | BlockKind::Lever => 2,
                 _ => 1,
@@ -2266,6 +2268,7 @@ impl DustRouteMcp {
                 BlockKind::Solid
                 | BlockKind::Transparent
                 | BlockKind::RedstoneBlock
+                | BlockKind::Observer
                 | BlockKind::Piston => 0,
                 BlockKind::RedstoneTorch | BlockKind::Lever => 2,
                 _ => 1,
