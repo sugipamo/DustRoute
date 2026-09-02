@@ -112,6 +112,14 @@ DUSTROUTE_SERVER_ADDRESS=127.0.0.1:25565 \
 if region previews, teleport-based safe approach, and chat messages are needed.
 The bridge listens only on `127.0.0.1:25580`.
 
+`get_bot_status` also returns cumulative bridge metrics under `bot.metrics`.
+They count serialized JSON payload bytes (excluding the line delimiter), total
+and maximum request duration in microseconds, errors, per-method request
+counts, and scan volume/non-air block counts. These counters are intentionally
+bounded to a fixed method set and reset when the Mineflayer bridge process is
+restarted. Use them to distinguish Rust-side analysis cost from repeated
+Mineflayer scans before considering a transport or client replacement.
+
 Before starting MCP, verify the dedicated stack from a local shell:
 
 ```bash

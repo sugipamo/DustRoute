@@ -17,6 +17,30 @@ pub struct BotBridge {
     timeout: Duration,
 }
 
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+pub struct BotBridgeMetrics {
+    #[serde(default)]
+    pub requests_total: u64,
+    #[serde(default)]
+    pub errors_total: u64,
+    #[serde(default)]
+    pub request_bytes: u64,
+    #[serde(default)]
+    pub response_bytes: u64,
+    #[serde(default)]
+    pub total_duration_micros: u64,
+    #[serde(default)]
+    pub max_duration_micros: u64,
+    #[serde(default)]
+    pub scan_requests: u64,
+    #[serde(default)]
+    pub scan_volume_blocks: u64,
+    #[serde(default)]
+    pub scan_non_air_blocks: u64,
+    #[serde(default)]
+    pub requests_by_method: BTreeMap<String, u64>,
+}
+
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct BotStatus {
     pub connected: bool,
@@ -25,6 +49,8 @@ pub struct BotStatus {
     pub port: u16,
     pub version: String,
     pub dimension: Option<String>,
+    #[serde(default)]
+    pub metrics: BotBridgeMetrics,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
@@ -415,6 +441,36 @@ mod tests {
         assert!(status.connected);
         assert_eq!(status.username, "DustRouteBot");
         assert_eq!(status.version, "1.21.11");
+        assert_eq!(status.metrics.requests_total, 0);
+    }
+
+    #[tokio::test]
+    async fn reads_bridge_metrics_from_status() {
+        let address = fake_bridge(json!({
+            "connected": true,
+            "username": "DustRouteBot",
+            "host": "minecraft.test",
+            "port": 25565,
+            "version": "1.21.11",
+            "dimension": "minecraft:overworld",
+            "metrics": {
+                "requests_total": 12,
+                "errors_total": 1,
+                "request_bytes": 1024,
+                "response_bytes": 2048,
+                "total_duration_micros": 3300,
+                "max_duration_micros": 900,
+                "scan_requests": 3,
+                "scan_volume_blocks": 4096,
+                "scan_non_air_blocks": 180,
+                "requests_by_method": { "scan_region": 3 }
+            }
+        }))
+        .await;
+        let status = BotBridge::new(address).status().await.unwrap();
+        assert_eq!(status.metrics.requests_total, 12);
+        assert_eq!(status.metrics.scan_volume_blocks, 4096);
+        assert_eq!(status.metrics.requests_by_method["scan_region"], 3);
     }
 
     #[tokio::test]

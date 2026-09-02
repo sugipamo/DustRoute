@@ -16,8 +16,9 @@ pub use api::{
     REPAIR_SCHEMA_V1, TRANSITION_SCHEMA_V1, TransitionTraceResponse,
 };
 pub use bridge::{
-    BlockUpdateEvent, BotBridge, BotBridgeError, BotStatus, LeverActivation, ObservedBlock,
-    ObservedBlockState, PlayerObservation, UpdateRecording, UpdateRecordingStarted, VisiblePlayer,
+    BlockUpdateEvent, BotBridge, BotBridgeError, BotBridgeMetrics, BotStatus, LeverActivation,
+    ObservedBlock, ObservedBlockState, PlayerObservation, UpdateRecording, UpdateRecordingStarted,
+    VisiblePlayer,
 };
 pub use config::{McpConfig, McpConfigError, McpTransport};
 pub use discovery::{CircuitDiscovery, DiscoveryError, discover_connected_region};

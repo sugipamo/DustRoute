@@ -88,3 +88,50 @@ enumerated rows are discarded and never exposed as a complete truth table.
 Optimization work should start only after recording these values for the target
 world. A change is not considered an improvement if it changes the observable
 contract, the inferred terminal counts, or the truth-table result.
+
+## Live Mineflayer bridge measurements
+
+The visible-bot bridge keeps a bounded cumulative counter set and exposes it
+through the `metrics` member of the `status` response (and therefore through
+the MCP `get_bot_status` tool). The counters reset when the bridge process is
+restarted. Request and response byte counts cover the serialized JSON payload,
+excluding the JSON-lines delimiter.
+
+- `requests_total`, `errors_total`, and `requests_by_method` show call volume
+  and protocol failures without allowing arbitrary method names to grow the
+  map.
+- `request_bytes` and `response_bytes` show payload pressure on the local
+  JSON-lines connection.
+- `total_duration_micros` and `max_duration_micros` measure bridge-side time
+  from request parsing through response serialization. Divide the total by
+  `requests_total` for an approximate average; compare it with the Rust-side
+  analysis timer to separate Mineflayer/bridge work from translation work.
+- `scan_requests`, `scan_volume_blocks`, and `scan_non_air_blocks` quantify
+  how much world scanning was requested and returned. A large volume with a
+  small non-air count indicates that the selected box, rather than the circuit
+  itself, is driving the scan cost.
+
+Record these values before changing the transport. If bridge duration and
+payloads are small while Rust analysis dominates, a custom Minecraft client
+would not address the measured bottleneck. If repeated scans dominate, the
+next bounded intervention is batching or connection reuse while retaining
+Mineflayer as the world-facing client.
+
+As a pre-instrumentation reference, a read-only sample against the local
+1.21.11 test server (2026-09-02, one fresh TCP connection per request) measured
+the following. The first status call includes connection/setup cost; the
+repeated status values are the median and p95 of 25 calls.
+
+| request | round-trip | response payload | result |
+| --- | ---: | ---: | --- |
+| `status` (first) | 3.307 ms | 229 B | connected |
+| `status` (25-call median / p95) | 0.147 / 0.493 ms | 229 B | connected |
+| `get_block` | 0.200 ms | 85 B | available |
+| `scan_region` 16³ | 6.382 ms | 87 B | 0 non-air blocks |
+| `scan_region` 32³ | 34.876 ms | 91 B | 0 non-air blocks |
+| `scan_region` 48³ | 121.104 ms | 86.5 KiB | 1,037 non-air blocks |
+
+This is a baseline rather than a stable benchmark: chunk-cache state,
+coordinates, and server load affect it. The new cumulative bridge metrics
+should be collected after the next normal bridge restart and used for the
+decision about batching; no custom client is justified by this sample alone.

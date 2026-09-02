@@ -21,7 +21,7 @@ use dustroute_physical::{BlockKind, Pos};
 use dustroute_physical::{PhysicalBlockChange, PhysicalPatch};
 use dustroute_translate::{
     ForwardOptions, JavaExportConfig, ReverseRequest, TruthTableBudget, java_block_state,
-    world_from_snapshot_json,
+    world_from_snapshot,
 };
 use rmcp::{
     ServerHandler,
@@ -733,6 +733,16 @@ fn json_text(mut value: Value) -> String {
     }
     serde_json::to_string_pretty(&value)
         .unwrap_or_else(|error| json!({ "ok": false, "error": error.to_string() }).to_string())
+}
+
+/// Convert an already decoded bridge snapshot directly into the simulator
+/// world.  Bridge responses are typed before they reach the service, so
+/// serializing them to JSON and parsing the same JSON again only adds copying
+/// and allocation cost on every analysis path.
+fn world_from_snapshot_for_service(
+    snapshot: &dustroute_translate::MinecraftSnapshot,
+) -> Result<dustroute_translate::World, String> {
+    world_from_snapshot(snapshot).map_err(|error| error.to_string())
 }
 
 fn error_text(code: McpErrorCode, message: impl Into<String>, retryable: bool) -> String {
@@ -2195,9 +2205,7 @@ impl DustRouteMcp {
             .scan_region(min, max, dimension)
             .await
             .map_err(|error| error.to_string())?;
-        let snapshot_json = serde_json::to_string(&snapshot).map_err(|error| error.to_string())?;
-        let (_, world) =
-            world_from_snapshot_json(&snapshot_json).map_err(|error| error.to_string())?;
+        let world = world_from_snapshot_for_service(&snapshot)?;
         let mismatches = changes
             .iter()
             .filter(|change| {
@@ -2315,9 +2323,7 @@ impl DustRouteMcp {
             .scan_region(bounds.min, bounds.max, dimension)
             .await
             .map_err(|error| error.to_string())?;
-        let snapshot_json = serde_json::to_string(&snapshot).map_err(|error| error.to_string())?;
-        let (_, world) =
-            world_from_snapshot_json(&snapshot_json).map_err(|error| error.to_string())?;
+        let world = world_from_snapshot_for_service(&snapshot)?;
         let mismatches = changes
             .iter()
             .filter(|change| !block_matches(world.get(change.pos), &change.after))
@@ -2499,13 +2505,7 @@ impl DustRouteMcp {
             Ok(snapshot) => snapshot,
             Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
         };
-        let post_world = serde_json::to_string(&snapshot)
-            .map_err(|error| error.to_string())
-            .and_then(|snapshot| {
-                world_from_snapshot_json(&snapshot)
-                    .map(|(_, world)| world)
-                    .map_err(|error| error.to_string())
-            });
+        let post_world = world_from_snapshot_for_service(&snapshot);
         let post_analysis = post_world.as_ref().ok().map(|world| {
             let request = if plan.baseline_truth_table.is_some() {
                 ReverseRequest::new(plan.analysis_bounds).with_truth_table(8)
@@ -3407,13 +3407,9 @@ impl DustRouteMcp {
         let scan_bounds =
             dustroute_translate::RegionBounds::new(scan.snapshot.min, scan.snapshot.max);
         let snapshot = scan.snapshot.clone();
-        let snapshot_json = match serde_json::to_string(&snapshot) {
-            Ok(json) => json,
-            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
-        };
-        let (_, world) = match world_from_snapshot_json(&snapshot_json) {
-            Ok(result) => result,
-            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        let world = match world_from_snapshot_for_service(&snapshot) {
+            Ok(world) => world,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
         };
         let analysis = dustroute_translate::analyze_world_region(&world, scan_bounds);
         let discovery = match discover_connected_region(
@@ -3483,13 +3479,9 @@ impl DustRouteMcp {
         let bounds = circuit.bounds;
         let dimension = circuit.dimension;
         let snapshot = circuit.snapshot;
-        let snapshot_json = match serde_json::to_string(&snapshot) {
-            Ok(snapshot) => snapshot,
-            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
-        };
-        let (_, world) = match world_from_snapshot_json(&snapshot_json) {
-            Ok(result) => result,
-            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        let world = match world_from_snapshot_for_service(&snapshot) {
+            Ok(world) => world,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
         };
         let mut analysis = dustroute_translate::analyze_world_region(&world, bounds);
         analysis.scene.observation.dimension = dimension;
@@ -3561,9 +3553,9 @@ impl DustRouteMcp {
                 "retryable": true,
             }));
         }
-        let (_, world) = match world_from_snapshot_json(&snapshot_json) {
-            Ok(result) => result,
-            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        let world = match world_from_snapshot_for_service(&snapshot) {
+            Ok(world) => world,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
         };
         let mut analysis = dustroute_translate::analyze_world_region(&world, bounds);
         analysis.scene.observation.dimension = dimension;
@@ -3771,13 +3763,9 @@ impl DustRouteMcp {
         let bounds = circuit.bounds;
         let dimension = circuit.dimension;
         let snapshot = circuit.snapshot;
-        let snapshot_json = match serde_json::to_string(&snapshot) {
-            Ok(snapshot) => snapshot,
-            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
-        };
-        let (_, world) = match world_from_snapshot_json(&snapshot_json) {
-            Ok(result) => result,
-            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        let world = match world_from_snapshot_for_service(&snapshot) {
+            Ok(world) => world,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
         };
         let discovered_components = circuit.expansion["components_loaded"]
             .as_u64()
@@ -4228,13 +4216,9 @@ impl DustRouteMcp {
                 return json_text(json!({ "ok": false, "error": error.to_string() }));
             }
         };
-        let snapshot_json = match serde_json::to_string(&snapshot) {
-            Ok(json) => json,
-            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
-        };
-        let (_, existing) = match world_from_snapshot_json(&snapshot_json) {
-            Ok(result) => result,
-            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        let existing = match world_from_snapshot_for_service(&snapshot) {
+            Ok(world) => world,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
         };
         let plan = match plan_world_overlay(
             &existing,
@@ -4433,13 +4417,9 @@ impl DustRouteMcp {
             .iter()
             .filter(|block| is_redstone_candidate_name(&block.name))
             .count();
-        let snapshot_json = match serde_json::to_string(&snapshot) {
-            Ok(json) => json,
-            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
-        };
-        let (_, world) = match world_from_snapshot_json(&snapshot_json) {
-            Ok(result) => result,
-            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        let world = match world_from_snapshot_for_service(&snapshot) {
+            Ok(world) => world,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
         };
         let request = match reverse_request_for_truth_table(
             bounds,
@@ -4509,13 +4489,9 @@ impl DustRouteMcp {
         let bounds = circuit.bounds;
         let dimension = circuit.dimension;
         let snapshot = circuit.snapshot;
-        let snapshot_json = match serde_json::to_string(&snapshot) {
-            Ok(snapshot) => snapshot,
-            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
-        };
-        let (_, world) = match world_from_snapshot_json(&snapshot_json) {
-            Ok(result) => result,
-            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        let world = match world_from_snapshot_for_service(&snapshot) {
+            Ok(world) => world,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
         };
         let analysis = dustroute_translate::analyze_world_region(&world, bounds);
         let fragments_before = analysis.scene.fragments.len();
@@ -4596,17 +4572,9 @@ impl DustRouteMcp {
             Ok(circuit) => circuit,
             Err(error) => return error_text(McpErrorCode::NotFound, error, false),
         };
-        let snapshot_json = match serde_json::to_string(&circuit.snapshot) {
-            Ok(snapshot) => snapshot,
-            Err(error) => {
-                return error_text(McpErrorCode::SerializationFailed, error.to_string(), false);
-            }
-        };
-        let (_, world) = match world_from_snapshot_json(&snapshot_json) {
-            Ok(result) => result,
-            Err(error) => {
-                return error_text(McpErrorCode::SerializationFailed, error.to_string(), false);
-            }
+        let world = match world_from_snapshot_for_service(&circuit.snapshot) {
+            Ok(world) => world,
+            Err(error) => return error_text(McpErrorCode::SerializationFailed, error, false),
         };
         let analysis = dustroute_translate::analyze_world_region(&world, circuit.bounds);
         let diagnostic =
@@ -5081,17 +5049,9 @@ impl DustRouteMcp {
         if let Err(error) = self.policy.validate_region(focus) {
             return error_text(McpErrorCode::PermissionDenied, error.to_string(), false);
         }
-        let snapshot_json = match serde_json::to_string(&circuit.snapshot) {
-            Ok(snapshot) => snapshot,
-            Err(error) => {
-                return error_text(McpErrorCode::SerializationFailed, error.to_string(), false);
-            }
-        };
-        let (_, world) = match world_from_snapshot_json(&snapshot_json) {
-            Ok(result) => result,
-            Err(error) => {
-                return error_text(McpErrorCode::SerializationFailed, error.to_string(), false);
-            }
+        let world = match world_from_snapshot_for_service(&circuit.snapshot) {
+            Ok(world) => world,
+            Err(error) => return error_text(McpErrorCode::SerializationFailed, error, false),
         };
         let optimization = match optimize_physical_wire_path_with_budget(
             &world,
@@ -5436,13 +5396,9 @@ impl DustRouteMcp {
             Ok(snapshot) => snapshot,
             Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
         };
-        let snapshot_json = match serde_json::to_string(&snapshot) {
-            Ok(snapshot) => snapshot,
-            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
-        };
-        let (_, world) = match world_from_snapshot_json(&snapshot_json) {
-            Ok(result) => result,
-            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        let world = match world_from_snapshot_for_service(&snapshot) {
+            Ok(world) => world,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
         };
         let analysis = dustroute_translate::analyze_world_region(&world, bounds);
         let Some(proposal) =
@@ -5728,13 +5684,9 @@ impl DustRouteMcp {
                 "error": "lever state changed since proposal; create a new scenario"
             }));
         }
-        let snapshot_json = match serde_json::to_string(&plan.initial_snapshot) {
-            Ok(snapshot) => snapshot,
-            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
-        };
-        let (_, world) = match world_from_snapshot_json(&snapshot_json) {
-            Ok(value) => value,
-            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+        let world = match world_from_snapshot_for_service(&plan.initial_snapshot) {
+            Ok(world) => world,
+            Err(error) => return json_text(json!({ "ok": false, "error": error })),
         };
         let mut analysis = dustroute_translate::analyze_world_region(&world, plan.bounds);
         analysis.scene.observation.dimension = plan.dimension.clone();
@@ -6144,17 +6096,10 @@ impl DustRouteMcp {
                     "normalizing Minecraft snapshot",
                 )
                 .await;
-            let snapshot_json = match serde_json::to_string(&snapshot) {
-                Ok(json) => json,
+            let world = match world_from_snapshot_for_service(&snapshot) {
+                Ok(world) => world,
                 Err(error) => {
-                    operations.fail(operation_id, error.to_string()).await;
-                    return;
-                }
-            };
-            let (_, world) = match world_from_snapshot_json(&snapshot_json) {
-                Ok(result) => result,
-                Err(error) => {
-                    operations.fail(operation_id, error.to_string()).await;
+                    operations.fail(operation_id, error).await;
                     return;
                 }
             };

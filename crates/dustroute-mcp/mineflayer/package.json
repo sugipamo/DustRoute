@@ -5,7 +5,7 @@
   "description": "Visible Minecraft bot bridge for dustroute-mcp",
   "scripts": {
     "start": "node bridge.js",
-    "test": "node --test e2e/runtime.test.js",
+    "test": "node --test e2e/runtime.test.js metrics.test.js",
     "test:e2e": "node e2e/runner.js",
     "test:e2e:semantics": "node e2e/semantics.js",
     "promote:differential": "node e2e/promote-differential.js"

@@ -5,8 +5,9 @@ use crate::connectivity::{
     repeater_output_pos,
 };
 use crate::electrical::{
-    DeviceOutputState, InstantaneousElectricalState, InstantaneousSolveDidNotConverge,
-    PoweredBlockState, repeater_input_level, solve_instantaneous, torch_support_is_powered,
+    DeviceOutputState, ElectricalTopology, InstantaneousElectricalState,
+    InstantaneousSolveDidNotConverge, PoweredBlockState, repeater_input_level,
+    solve_instantaneous_with_topology, torch_support_is_powered,
 };
 use crate::world::{BlockKind, Pos, World};
 
@@ -91,6 +92,7 @@ impl TickState {
 #[derive(Clone)]
 pub struct RedstoneTickSimulator {
     world: World,
+    topology: ElectricalTopology,
     tick: u64,
     repeater_powered: BTreeMap<Pos, bool>,
     repeater_queues: BTreeMap<Pos, VecDeque<bool>>,
@@ -106,6 +108,7 @@ pub struct RedstoneTickSimulator {
 
 impl RedstoneTickSimulator {
     pub fn new(world: World) -> Result<Self, InstantaneousSolveDidNotConverge> {
+        let topology = ElectricalTopology::from_world(&world);
         let devices = DeviceOutputState::initially_lit(&world);
         let repeater_queues = world
             .iter()
@@ -116,7 +119,7 @@ impl RedstoneTickSimulator {
                 (*pos, VecDeque::from(vec![powered; delay]))
             })
             .collect();
-        let instantaneous = solve_instantaneous(&world, &devices, 128)?;
+        let instantaneous = solve_instantaneous_with_topology(&world, &devices, 128, &topology)?;
         let comparator_queues = devices
             .comparator_output
             .keys()
@@ -134,6 +137,7 @@ impl RedstoneTickSimulator {
             .collect();
         Ok(Self {
             world,
+            topology,
             tick: 0,
             repeater_powered: devices.repeater_powered,
             repeater_queues,
@@ -157,7 +161,8 @@ impl RedstoneTickSimulator {
     }
 
     pub fn settle_instantaneous(&mut self) -> Result<TickState, InstantaneousSolveDidNotConverge> {
-        self.instantaneous = solve_instantaneous(&self.world, &self.devices(), 128)?;
+        self.instantaneous =
+            solve_instantaneous_with_topology(&self.world, &self.devices(), 128, &self.topology)?;
         Ok(self.snapshot())
     }
 
@@ -292,7 +297,8 @@ impl RedstoneTickSimulator {
         self.torch_lit = next_torches;
         self.comparator_output = next_comparators;
         self.tick += 1;
-        self.instantaneous = solve_instantaneous(&self.world, &self.devices(), 128)?;
+        self.instantaneous =
+            solve_instantaneous_with_topology(&self.world, &self.devices(), 128, &self.topology)?;
         for (pos, block) in self.world.iter() {
             if block.kind != BlockKind::RedstoneLamp {
                 continue;
@@ -434,6 +440,7 @@ impl RedstoneTickSimulator {
         } else if self.world.kind_at(pos) == BlockKind::RedstoneBlock {
             self.world.remove(pos);
         }
+        self.topology = ElectricalTopology::from_world(&self.world);
         self.settle_instantaneous()
             .map_err(InputMutationError::from)
     }
