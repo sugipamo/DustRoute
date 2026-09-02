@@ -207,10 +207,20 @@ Repair and transition plans are separate: use `new_repair` or
 return a TTL-bound immutable `circuit_id`. Reuse that ID for later analysis,
 virtual changes, repair planning, and transition planning so moving the
 player's gaze cannot silently change the target.
-Set `include_truth_table=true` only when a small circuit explicitly needs a
-truth table; local hierarchical inspection is the default. Explicit regions continue to
-use two `set_region` calls and `show_region`, then reuse the returned
-`circuit_id`. Debug clients may call
+Set `include_truth_table=true` when an exhaustive functional result is needed;
+local hierarchical inspection remains the default. The request is bounded by
+`truth_table_max_inputs`, `truth_table_settle_ticks`,
+`truth_table_max_rows`, `truth_table_max_work_units`,
+`truth_table_max_solver_iterations`, and `truth_table_max_elapsed_millis`.
+The latter two cap cumulative fixed-point solver iterations and elapsed time
+in addition to the static work estimate. The same bounded
+request is honored for large circuits instead of being discarded solely because
+the circuit crosses the hierarchical-display threshold. Responses expose
+`truth_table_status` as `computed`, `budget_exceeded`, `unavailable`, or
+`not_requested`; computed responses also include `truth_table_semantics`
+(`combinational`, `timing_sensitive`, `stateful`, or `unknown`). Explicit
+regions continue to use two `set_region` calls and
+`show_region`, then reuse the returned `circuit_id`. Debug clients may call
 `resolve_looked_at_circuit` directly.
 
 For observation debugging, `get_world` starts near the block the
@@ -229,10 +239,21 @@ lists are bounded by `max_listed_blocks`. `resolve_looked_at_circuit` and
 become a directed physical graph, recognized local cells, traceable logic
 expressions, and finally optional functional candidates. Every stage reports
 its own completeness and unresolved count while retaining physical component
-origins. Large circuits deliberately skip a flat whole-circuit truth table and
-return bounded mixed-IR summaries. Call `get_circuit_ir` with `circuit_id` to
-obtain its `analysis_id`, then pass all three of `circuit_id`, `analysis_id`,
-and `node_id` to expand only one region or logic cell.
+origins. Without `include_truth_table`, large circuits return the bounded
+hierarchical summary and report why exhaustive inference was skipped. With the
+flag enabled, the same circuit is sent through bounded functional inference;
+an over-budget request returns `truth_table_status=budget_exceeded` rather than
+running without a limit. Static, runtime-iteration, and elapsed-time limits
+all return structured budget details; any rows accumulated before the limit
+are discarded rather than exposed as a complete table. A component-limited snapshot returns
+`truth_table_status=unavailable` with an `incomplete_observation` error until
+the circuit is expanded. Call `get_circuit_ir` with `circuit_id` to obtain its
+`analysis_id`, then pass all three of `circuit_id`, `analysis_id`, and `node_id`
+to expand only one region or logic cell.
+Rows also require two consecutive unchanged electrical snapshots with no
+queued device event. A window that ends earlier returns
+`truth_table_error_details.code=non_settling` instead of claiming a settled
+functional result.
 
 `signal_liveness` is evaluated independently of physical fragments. It follows
 directed signal edges while preserving whether a source is a controllable
@@ -337,6 +358,9 @@ test_circuit -> capture circuit_id
 
 In the debug profile, long conversions can use
 `start_selected_region_conversion`, `get_operation`, and `stop_operation`.
+The asynchronous conversion accepts the same bounded truth-table options as
+`convert_from_circuit`, so an explicit large-circuit request can run without
+blocking the MCP request while still stopping at its row/work budget.
 `new_placement` returns a block diff, collisions,
 material counts, an operation UUID, and an exact undo plan without changing the
 world. Set its optional `optimize=true` argument to run X-axis directional

@@ -20,7 +20,8 @@ use dustroute_optimize::{
 use dustroute_physical::{BlockKind, Pos};
 use dustroute_physical::{PhysicalBlockChange, PhysicalPatch};
 use dustroute_translate::{
-    ForwardOptions, JavaExportConfig, ReverseRequest, java_block_state, world_from_snapshot_json,
+    ForwardOptions, JavaExportConfig, ReverseRequest, TruthTableBudget, java_block_state,
+    world_from_snapshot_json,
 };
 use rmcp::{
     ServerHandler,
@@ -50,6 +51,12 @@ use crate::{
 };
 
 const MAX_FLAT_ANALYSIS_COMPONENTS: usize = 512;
+const MAX_TRUTH_TABLE_INPUTS: usize = 16;
+const MAX_TRUTH_TABLE_SETTLE_TICKS: usize = 256;
+const MAX_TRUTH_TABLE_ROWS: usize = 65_536;
+const MAX_TRUTH_TABLE_WORK_UNITS: u64 = 100_000_000;
+const MAX_TRUTH_TABLE_SOLVER_ITERATIONS: usize = 10_000_000;
+const MAX_TRUTH_TABLE_ELAPSED_MILLIS: u64 = 300_000;
 const PLACEMENT_VERIFY_ATTEMPTS: usize = 10;
 const PLACEMENT_VERIFY_INTERVAL: Duration = Duration::from_millis(100);
 const CIRCUIT_SNAPSHOT_TTL: Duration = Duration::from_secs(15 * 60);
@@ -180,12 +187,46 @@ struct AnalyzeLookedAtParams {
     max_components: Option<usize>,
     /// Maximum Manhattan gap considered for broken connections, from 1 through 16. Defaults to 2.
     fragment_gap: Option<u32>,
-    /// Explicitly enumerate a truth table for a small circuit. Defaults to false.
+    /// Explicitly enumerate a bounded truth table. Defaults to false.
     include_truth_table: Option<bool>,
+    /// Maximum inferred input count for truth-table enumeration. Defaults to 16;
+    /// the row and work budgets may reject a smaller practical budget.
+    truth_table_max_inputs: Option<usize>,
+    /// Settle ticks used by truth-table rows. Defaults to 60, maximum 256.
+    truth_table_settle_ticks: Option<usize>,
+    /// Maximum truth-table rows. Defaults to 256, maximum 65536.
+    truth_table_max_rows: Option<usize>,
+    /// Maximum estimated full-world work units. Defaults to 2,000,000.
+    truth_table_max_work_units: Option<u64>,
+    /// Maximum cumulative instantaneous solver iterations. Defaults to 1,000,000.
+    truth_table_max_solver_iterations: Option<usize>,
+    /// Maximum elapsed time for exhaustive inference in milliseconds. Defaults to 120,000.
+    truth_table_max_elapsed_millis: Option<u64>,
     /// Observation source: gaze (default) or selected_region.
     scope: Option<String>,
     /// Immutable circuit snapshot ID returned by an earlier circuit read. When supplied, gaze is not read again.
     circuit_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+struct StartSelectedRegionConversionParams {
+    /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
+    #[schemars(skip)]
+    player: Option<String>,
+    /// Explicitly enumerate a bounded truth table. Defaults to false.
+    include_truth_table: Option<bool>,
+    /// Maximum inferred input count for truth-table enumeration. Defaults to 16.
+    truth_table_max_inputs: Option<usize>,
+    /// Settle ticks used by truth-table rows. Defaults to 60, maximum 256.
+    truth_table_settle_ticks: Option<usize>,
+    /// Maximum truth-table rows. Defaults to 256, maximum 65536.
+    truth_table_max_rows: Option<usize>,
+    /// Maximum estimated full-world work units. Defaults to 2,000,000.
+    truth_table_max_work_units: Option<u64>,
+    /// Maximum cumulative instantaneous solver iterations. Defaults to 1,000,000.
+    truth_table_max_solver_iterations: Option<usize>,
+    /// Maximum elapsed time for exhaustive inference in milliseconds. Defaults to 120,000.
+    truth_table_max_elapsed_millis: Option<u64>,
 }
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
@@ -782,6 +823,87 @@ fn bounds_json(bounds: dustroute_translate::RegionBounds) -> Value {
     json!({ "min": bounds.min, "max": bounds.max })
 }
 
+fn mark_observation_incomplete(scene: &mut dustroute_physical::PhysicalScene) {
+    for region in &mut scene.observation.regions {
+        region.completeness = dustroute_physical::RegionCompleteness::PartiallyUnavailable;
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+struct TruthTableRequestOptions {
+    include_truth_table: bool,
+    max_inputs: Option<usize>,
+    settle_ticks: Option<usize>,
+    max_rows: Option<usize>,
+    max_work_units: Option<u64>,
+    max_solver_iterations: Option<usize>,
+    max_elapsed_millis: Option<u64>,
+}
+
+fn reverse_request_for_truth_table(
+    bounds: dustroute_translate::RegionBounds,
+    options: TruthTableRequestOptions,
+) -> Result<ReverseRequest, String> {
+    let request = ReverseRequest::new(bounds);
+    if !options.include_truth_table {
+        return Ok(request);
+    }
+    let max_inputs = options.max_inputs.unwrap_or(request.max_inputs);
+    if !(1..=MAX_TRUTH_TABLE_INPUTS).contains(&max_inputs) {
+        return Err(format!(
+            "truth_table_max_inputs must be 1..={MAX_TRUTH_TABLE_INPUTS}"
+        ));
+    }
+    let settle_ticks = options.settle_ticks.unwrap_or(request.settle_ticks);
+    if settle_ticks > MAX_TRUTH_TABLE_SETTLE_TICKS {
+        return Err(format!(
+            "truth_table_settle_ticks must be 0..={MAX_TRUTH_TABLE_SETTLE_TICKS}"
+        ));
+    }
+    let max_rows = options
+        .max_rows
+        .unwrap_or(TruthTableBudget::DEFAULT.max_rows);
+    if !(1..=MAX_TRUTH_TABLE_ROWS).contains(&max_rows) {
+        return Err(format!(
+            "truth_table_max_rows must be 1..={MAX_TRUTH_TABLE_ROWS}"
+        ));
+    }
+    let max_work_units = options.max_work_units.unwrap_or_else(|| {
+        u64::try_from(TruthTableBudget::DEFAULT.max_work_units).unwrap_or(u64::MAX)
+    });
+    if !(1..=MAX_TRUTH_TABLE_WORK_UNITS).contains(&max_work_units) {
+        return Err(format!(
+            "truth_table_max_work_units must be 1..={MAX_TRUTH_TABLE_WORK_UNITS}"
+        ));
+    }
+    let max_solver_iterations = options
+        .max_solver_iterations
+        .unwrap_or(TruthTableBudget::DEFAULT.max_solver_iterations);
+    if !(1..=MAX_TRUTH_TABLE_SOLVER_ITERATIONS).contains(&max_solver_iterations) {
+        return Err(format!(
+            "truth_table_max_solver_iterations must be 1..={MAX_TRUTH_TABLE_SOLVER_ITERATIONS}"
+        ));
+    }
+    let max_elapsed_millis = options.max_elapsed_millis.unwrap_or(
+        TruthTableBudget::DEFAULT
+            .max_elapsed_millis
+            .unwrap_or(120_000),
+    );
+    if !(1..=MAX_TRUTH_TABLE_ELAPSED_MILLIS).contains(&max_elapsed_millis) {
+        return Err(format!(
+            "truth_table_max_elapsed_millis must be 1..={MAX_TRUTH_TABLE_ELAPSED_MILLIS}"
+        ));
+    }
+    Ok(request
+        .with_truth_table(max_inputs)
+        .with_settle_ticks(settle_ticks)
+        .with_truth_table_budget(
+            TruthTableBudget::new(max_rows, u128::from(max_work_units))
+                .with_max_solver_iterations(max_solver_iterations)
+                .with_max_elapsed_millis(Some(max_elapsed_millis)),
+        ))
+}
+
 fn is_supported_redstone_name(name: &str) -> bool {
     matches!(
         name,
@@ -1202,6 +1324,13 @@ fn hierarchical_result_json(
             }
         },
         "truth_table": null,
+        "truth_table_status": "skipped_large_circuit",
+        "truth_table_skip": {
+            "code": "flat_analysis_component_threshold",
+            "component_count": expansion["components_loaded"],
+            "threshold": MAX_FLAT_ANALYSIS_COMPONENTS,
+            "guidance": "set include_truth_table=true to request bounded exhaustive simulation"
+        },
         "truth_table_skipped": "large circuits use local cells and hierarchical summaries instead of a flat whole-circuit truth table"
     })
 }
@@ -1490,6 +1619,151 @@ fn simulated_terminal_summary(
     }))
 }
 
+fn truth_table_status(translated: &dustroute_translate::ReverseResult) -> &'static str {
+    if translated.truth_table.is_some() {
+        "computed"
+    } else if matches!(
+        translated.truth_table_error.as_ref(),
+        Some(
+            dustroute_translate::TruthTableError::BudgetExceeded { .. }
+                | dustroute_translate::TruthTableError::RuntimeBudgetExceeded { .. }
+                | dustroute_translate::TruthTableError::ElapsedBudgetExceeded { .. }
+        )
+    ) {
+        "budget_exceeded"
+    } else if translated.truth_table_error.is_some() {
+        "unavailable"
+    } else {
+        "not_requested"
+    }
+}
+
+fn json_u128(value: u128) -> Value {
+    u64::try_from(value)
+        .map(|value| json!(value))
+        .unwrap_or_else(|_| Value::String(value.to_string()))
+}
+
+fn truth_table_error_details(error: Option<&dustroute_translate::TruthTableError>) -> Value {
+    let Some(error) = error else {
+        return Value::Null;
+    };
+    match error {
+        dustroute_translate::TruthTableError::BudgetExceeded {
+            rows,
+            max_rows,
+            estimated_work_units,
+            max_work_units,
+        } => json!({
+            "code": "budget_exceeded",
+            "message": error.to_string(),
+            "rows": rows,
+            "max_rows": max_rows,
+            "estimated_work_units": json_u128(*estimated_work_units),
+            "max_work_units": json_u128(*max_work_units),
+        }),
+        dustroute_translate::TruthTableError::RuntimeBudgetExceeded {
+            rows,
+            completed_rows,
+            solver_iterations,
+            max_solver_iterations,
+        } => json!({
+            "code": "runtime_budget_exceeded",
+            "message": error.to_string(),
+            "rows": rows,
+            "completed_rows": completed_rows,
+            "solver_iterations": solver_iterations,
+            "max_solver_iterations": max_solver_iterations,
+        }),
+        dustroute_translate::TruthTableError::ElapsedBudgetExceeded {
+            rows,
+            completed_rows,
+            elapsed_millis,
+            max_elapsed_millis,
+        } => json!({
+            "code": "elapsed_budget_exceeded",
+            "message": error.to_string(),
+            "rows": rows,
+            "completed_rows": completed_rows,
+            "elapsed_millis": json_u128(*elapsed_millis),
+            "max_elapsed_millis": max_elapsed_millis,
+        }),
+        dustroute_translate::TruthTableError::NonSettling {
+            row,
+            settle_ticks,
+            pending_events,
+        } => json!({
+            "code": "non_settling",
+            "message": error.to_string(),
+            "row": row,
+            "settle_ticks": settle_ticks,
+            "pending_events": pending_events,
+        }),
+        dustroute_translate::TruthTableError::TooManyInputs(count) => json!({
+            "code": "too_many_inputs",
+            "message": error.to_string(),
+            "input_count": count,
+        }),
+        dustroute_translate::TruthTableError::IncompleteObservation => {
+            json!({ "code": "incomplete_observation", "message": error.to_string() })
+        }
+        dustroute_translate::TruthTableError::NoInputs => {
+            json!({ "code": "no_inputs", "message": error.to_string() })
+        }
+        dustroute_translate::TruthTableError::NoOutputs => {
+            json!({ "code": "no_outputs", "message": error.to_string() })
+        }
+        dustroute_translate::TruthTableError::UnmappedExternalInputs(positions) => json!({
+            "code": "unmapped_external_inputs",
+            "message": error.to_string(),
+            "positions": positions,
+        }),
+        dustroute_translate::TruthTableError::UnmappedObservableOutputs(positions) => json!({
+            "code": "unmapped_observable_outputs",
+            "message": error.to_string(),
+            "positions": positions,
+        }),
+        dustroute_translate::TruthTableError::AmbiguousInputMapping {
+            external_inputs,
+            inferred_inputs,
+        } => json!({
+            "code": "ambiguous_input_mapping",
+            "message": error.to_string(),
+            "external_input_count": external_inputs,
+            "inferred_input_count": inferred_inputs,
+        }),
+        dustroute_translate::TruthTableError::AmbiguousOutputMapping {
+            observable_outputs,
+            inferred_outputs,
+        } => json!({
+            "code": "ambiguous_output_mapping",
+            "message": error.to_string(),
+            "observable_output_count": observable_outputs,
+            "inferred_output_count": inferred_outputs,
+        }),
+        dustroute_translate::TruthTableError::NoDriverPosition(position) => json!({
+            "code": "no_driver_position",
+            "message": error.to_string(),
+            "position": position,
+        }),
+        dustroute_translate::TruthTableError::InvalidDriver {
+            position,
+            expected,
+            actual,
+        } => json!({
+            "code": "invalid_driver",
+            "message": error.to_string(),
+            "position": position,
+            "expected": expected,
+            "actual": actual,
+        }),
+        dustroute_translate::TruthTableError::Simulation(message) => json!({
+            "code": "simulation_error",
+            "message": message,
+        }),
+    }
+}
+
 fn reverse_result_json(
     bounds: dustroute_translate::RegionBounds,
     translated: &dustroute_translate::ReverseResult,
@@ -1595,11 +1869,14 @@ fn reverse_result_json(
         })).collect::<Vec<_>>(),
         "expressions": translated.expressions.iter().map(ToString::to_string).collect::<Vec<_>>(),
         "logical_role": logical_role_json(translated),
+        "truth_table_semantics": translated.truth_table_semantics,
         "truth_table": translated.truth_table.as_ref().map(|table| table.rows.iter().map(|row| json!({
             "inputs": row.inputs,
             "outputs": row.outputs,
         })).collect::<Vec<_>>()),
+        "truth_table_status": truth_table_status(translated),
         "truth_table_error": translated.truth_table_error.as_ref().map(ToString::to_string),
+        "truth_table_error_details": truth_table_error_details(translated.truth_table_error.as_ref()),
         "diagnostics": {
             "signal_islands": translated.analysis.diagnostics.signal_islands.len(),
             "isolated_redstone": translated.analysis.diagnostics.isolated_redstone.len(),
@@ -3456,23 +3733,17 @@ impl DustRouteMcp {
     }
 
     #[tool(
-        description = "Convert a captured or selected physical circuit into bounded physical, mixed-IR, and higher-level identity summaries. Reuse circuit_id to avoid following a moved gaze. Repair and transition planning are separate tools.",
+        description = "Convert a captured or selected physical circuit into bounded physical, mixed-IR, and higher-level identity summaries. Reuse circuit_id to avoid following a moved gaze. Set include_truth_table=true for explicitly bounded exhaustive functional inference, including large circuits. Repair and transition planning are separate tools.",
         annotations(read_only_hint = true, destructive_hint = false)
     )]
     async fn convert_from_circuit(
         &self,
         Parameters(params): Parameters<AnalyzeLookedAtParams>,
     ) -> String {
-        match params.scope.as_deref().unwrap_or("gaze") {
-            "gaze" => {}
-            "selected_region" => {
-                return self
-                    .convert_from_selected_region(Parameters(PlayerParams {
-                        player: params.player,
-                    }))
-                    .await;
-            }
-            _ => {
+        match params.scope.as_deref() {
+            None | Some("gaze") => {}
+            Some("selected_region") => return self.convert_from_selected_region(params).await,
+            Some(_) => {
                 return error_text(
                     McpErrorCode::InvalidArgument,
                     "scope must be gaze or selected_region",
@@ -3512,7 +3783,23 @@ impl DustRouteMcp {
             .as_u64()
             .and_then(|count| usize::try_from(count).ok())
             .unwrap_or(0);
-        if discovered_components > MAX_FLAT_ANALYSIS_COMPONENTS {
+        let request = match reverse_request_for_truth_table(
+            bounds,
+            TruthTableRequestOptions {
+                include_truth_table: params.include_truth_table.unwrap_or(false),
+                max_inputs: params.truth_table_max_inputs,
+                settle_ticks: params.truth_table_settle_ticks,
+                max_rows: params.truth_table_max_rows,
+                max_work_units: params.truth_table_max_work_units,
+                max_solver_iterations: params.truth_table_max_solver_iterations,
+                max_elapsed_millis: params.truth_table_max_elapsed_millis,
+            },
+        ) {
+            Ok(request) => request,
+            Err(error) => return error_text(McpErrorCode::InvalidArgument, error, false),
+        }
+        .with_observation_complete(circuit.complete);
+        if discovered_components > MAX_FLAT_ANALYSIS_COMPONENTS && !request.infer_truth_table {
             let mut analysis = dustroute_translate::analyze_world_region(&world, bounds);
             analysis.scene.observation.dimension = dimension;
             let hierarchy = dustroute_ir::derive_hierarchy(&analysis.scene);
@@ -3547,10 +3834,6 @@ impl DustRouteMcp {
             }
             return json_text(result);
         }
-        let mut request = ReverseRequest::new(bounds);
-        if params.include_truth_table.unwrap_or(false) {
-            request = request.with_truth_table(16);
-        }
         let mut staged = self.app.analyze_physical(&world, request);
         staged.reverse.analysis.scene.observation.dimension = dimension.clone();
         staged
@@ -3567,6 +3850,11 @@ impl DustRouteMcp {
             .scene
             .observation
             .dimension = dimension.clone();
+        if !circuit.complete {
+            mark_observation_incomplete(&mut staged.reverse.analysis.scene);
+            mark_observation_incomplete(&mut staged.hierarchy.physical_snapshot.value.scene);
+            mark_observation_incomplete(&mut staged.hierarchy.physical_graph.value.scene);
+        }
         let translated = &staged.reverse;
         let macro_candidates = translated.functional_network.as_ref().map(|model| {
             find_builtin_verified_macro_replacements(
@@ -4099,10 +4387,7 @@ impl DustRouteMcp {
         }
     }
 
-    async fn convert_from_selected_region(
-        &self,
-        Parameters(params): Parameters<PlayerParams>,
-    ) -> String {
+    async fn convert_from_selected_region(&self, params: AnalyzeLookedAtParams) -> String {
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
             Err(error) => return json_text(json!({ "ok": false, "error": error })),
@@ -4156,7 +4441,23 @@ impl DustRouteMcp {
             Ok(result) => result,
             Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
         };
-        if redstone_components > MAX_FLAT_ANALYSIS_COMPONENTS {
+        let request = match reverse_request_for_truth_table(
+            bounds,
+            TruthTableRequestOptions {
+                include_truth_table: params.include_truth_table.unwrap_or(false),
+                max_inputs: params.truth_table_max_inputs,
+                settle_ticks: params.truth_table_settle_ticks,
+                max_rows: params.truth_table_max_rows,
+                max_work_units: params.truth_table_max_work_units,
+                max_solver_iterations: params.truth_table_max_solver_iterations,
+                max_elapsed_millis: params.truth_table_max_elapsed_millis,
+            },
+        ) {
+            Ok(request) => request,
+            Err(error) => return error_text(McpErrorCode::InvalidArgument, error, false),
+        }
+        .with_observation_complete(true);
+        if redstone_components > MAX_FLAT_ANALYSIS_COMPONENTS && !request.infer_truth_table {
             let mut analysis = dustroute_translate::analyze_world_region(&world, bounds);
             analysis.scene.observation.dimension = dimension;
             let hierarchy = dustroute_ir::derive_hierarchy(&analysis.scene);
@@ -4177,9 +4478,7 @@ impl DustRouteMcp {
             }
             return json_text(result);
         }
-        let mut staged = self
-            .app
-            .analyze_physical(&world, ReverseRequest::new(bounds));
+        let mut staged = self.app.analyze_physical(&world, request);
         staged.reverse.analysis.scene.observation.dimension = dimension;
         let mut result = reverse_result_json(bounds, &staged.reverse);
         if let Some(object) = result.as_object_mut() {
@@ -4535,7 +4834,9 @@ impl DustRouteMcp {
         };
         let staged = self.app.analyze_physical(
             &world,
-            ReverseRequest::new(circuit.bounds).with_truth_table(16),
+            ReverseRequest::new(circuit.bounds)
+                .with_truth_table(16)
+                .with_observation_complete(circuit.complete),
         );
         let Some(model) = staged.reverse.functional_network.as_ref() else {
             return error_text(
@@ -5768,11 +6069,11 @@ impl DustRouteMcp {
     }
 
     #[tool(
-        description = "Start cancellable reverse analysis of the selected region and return an operation ID for progress polling"
+        description = "Start cancellable reverse analysis of the selected region and return an operation ID for progress polling. Set include_truth_table=true for explicitly bounded exhaustive functional inference, including large regions."
     )]
     async fn start_selected_region_conversion(
         &self,
-        Parameters(params): Parameters<PlayerParams>,
+        Parameters(params): Parameters<StartSelectedRegionConversionParams>,
     ) -> String {
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
@@ -5788,6 +6089,22 @@ impl DustRouteMcp {
         if let Err(error) = self.policy.validate_region(bounds) {
             return json_text(json!({ "ok": false, "error": error.to_string() }));
         }
+        let request = match reverse_request_for_truth_table(
+            bounds,
+            TruthTableRequestOptions {
+                include_truth_table: params.include_truth_table.unwrap_or(false),
+                max_inputs: params.truth_table_max_inputs,
+                settle_ticks: params.truth_table_settle_ticks,
+                max_rows: params.truth_table_max_rows,
+                max_work_units: params.truth_table_max_work_units,
+                max_solver_iterations: params.truth_table_max_solver_iterations,
+                max_elapsed_millis: params.truth_table_max_elapsed_millis,
+            },
+        ) {
+            Ok(request) => request,
+            Err(error) => return error_text(McpErrorCode::InvalidArgument, error, false),
+        }
+        .with_observation_complete(true);
         let operation_id = self
             .operations
             .create(OperationKind::AnalyzeRegion, "queued for snapshot scan")
@@ -5846,7 +6163,9 @@ impl DustRouteMcp {
                     operation_id,
                     OperationStatus::Running,
                     50,
-                    if redstone_components > MAX_FLAT_ANALYSIS_COMPONENTS {
+                    if redstone_components > MAX_FLAT_ANALYSIS_COMPONENTS
+                        && !request.infer_truth_table
+                    {
                         "deriving hierarchical circuit views"
                     } else {
                         "analyzing selected circuit"
@@ -5854,7 +6173,8 @@ impl DustRouteMcp {
                 )
                 .await;
             let result = match tokio::task::spawn_blocking(move || {
-                if redstone_components > MAX_FLAT_ANALYSIS_COMPONENTS {
+                if redstone_components > MAX_FLAT_ANALYSIS_COMPONENTS && !request.infer_truth_table
+                {
                     let mut analysis = dustroute_translate::analyze_world_region(&world, bounds);
                     analysis.scene.observation.dimension = dimension;
                     let hierarchy = dustroute_ir::derive_hierarchy(&analysis.scene);
@@ -5871,7 +6191,7 @@ impl DustRouteMcp {
                         None,
                     )
                 } else {
-                    let mut staged = app.analyze_physical(&world, ReverseRequest::new(bounds));
+                    let mut staged = app.analyze_physical(&world, request);
                     staged.reverse.analysis.scene.observation.dimension = dimension;
                     reverse_result_json(bounds, &staged.reverse)
                 }
@@ -6146,6 +6466,112 @@ mod tests {
     use tokio::net::TcpListener;
 
     use super::*;
+
+    #[test]
+    fn truth_table_request_is_explicit_and_budgeted_for_large_circuits() {
+        let bounds = dustroute_translate::RegionBounds::new(Pos::new(0, 0, 0), Pos::new(4, 4, 4));
+        let request = reverse_request_for_truth_table(
+            bounds,
+            TruthTableRequestOptions {
+                include_truth_table: true,
+                ..TruthTableRequestOptions::default()
+            },
+        )
+        .expect("default truth-table request");
+        assert!(request.infer_truth_table);
+        assert_eq!(request.max_inputs, 16);
+        assert_eq!(request.settle_ticks, 60);
+        assert_eq!(request.truth_table_budget, TruthTableBudget::DEFAULT);
+
+        let request = reverse_request_for_truth_table(
+            bounds,
+            TruthTableRequestOptions {
+                include_truth_table: true,
+                max_solver_iterations: Some(2_000_000),
+                max_elapsed_millis: Some(30_000),
+                ..TruthTableRequestOptions::default()
+            },
+        )
+        .expect("runtime budgets within the protocol bound");
+        assert_eq!(request.truth_table_budget.max_solver_iterations, 2_000_000);
+        assert_eq!(request.truth_table_budget.max_elapsed_millis, Some(30_000));
+
+        let error = reverse_request_for_truth_table(
+            bounds,
+            TruthTableRequestOptions {
+                include_truth_table: true,
+                max_inputs: Some(17),
+                ..TruthTableRequestOptions::default()
+            },
+        )
+        .expect_err("input count above the protocol bound must fail");
+        assert!(error.contains("truth_table_max_inputs"));
+
+        let error = reverse_request_for_truth_table(
+            bounds,
+            TruthTableRequestOptions {
+                include_truth_table: true,
+                max_solver_iterations: Some(MAX_TRUTH_TABLE_SOLVER_ITERATIONS + 1),
+                ..TruthTableRequestOptions::default()
+            },
+        )
+        .expect_err("solver iteration count above the protocol bound must fail");
+        assert!(error.contains("truth_table_max_solver_iterations"));
+    }
+
+    #[test]
+    fn truth_table_budget_failure_is_structured_in_reverse_json() {
+        let compiled = dustroute_translate::BaselineCompiler::new(
+            dustroute_translate::BaselineCompileConfig::default(),
+        )
+        .compile(&dustroute_translate::half_adder())
+        .expect("half-adder compiles");
+        let (min, max) = compiled.world.bounds().expect("compiled bounds");
+        let bounds = dustroute_translate::RegionBounds::new(min, max);
+        let translated = dustroute_translate::Translator.reverse(
+            &compiled.world,
+            ReverseRequest::new(bounds)
+                .with_truth_table(16)
+                .with_truth_table_budget(TruthTableBudget::new(1, u128::MAX)),
+        );
+        let value = reverse_result_json(bounds, &translated);
+        assert_eq!(value["truth_table_status"], "budget_exceeded");
+        assert_eq!(
+            value["truth_table_error_details"]["code"],
+            "budget_exceeded"
+        );
+        assert_eq!(value["truth_table_error_details"]["rows"], 4);
+        assert_eq!(value["truth_table_error_details"]["max_rows"], 1);
+    }
+
+    #[test]
+    fn truth_table_runtime_budget_failure_is_structured_in_reverse_json() {
+        let compiled = dustroute_translate::BaselineCompiler::new(
+            dustroute_translate::BaselineCompileConfig::default(),
+        )
+        .compile(&dustroute_translate::half_adder())
+        .expect("half-adder compiles");
+        let (min, max) = compiled.world.bounds().expect("compiled bounds");
+        let bounds = dustroute_translate::RegionBounds::new(min, max);
+        let translated = dustroute_translate::Translator.reverse(
+            &compiled.world,
+            ReverseRequest::new(bounds)
+                .with_truth_table(16)
+                .with_truth_table_budget(
+                    TruthTableBudget::new(usize::MAX, u128::MAX)
+                        .with_max_solver_iterations(0)
+                        .with_max_elapsed_millis(None),
+                ),
+        );
+        let value = reverse_result_json(bounds, &translated);
+        assert_eq!(value["truth_table_status"], "budget_exceeded");
+        assert_eq!(
+            value["truth_table_error_details"]["code"],
+            "runtime_budget_exceeded"
+        );
+        assert_eq!(value["truth_table_error_details"]["completed_rows"], 0);
+        assert_eq!(value["truth_table"], Value::Null);
+    }
 
     #[test]
     fn optimization_contract_defaults_are_explicit_and_conservative() {
@@ -6695,6 +7121,12 @@ mod tests {
                 max_components: Some(64),
                 fragment_gap: Some(2),
                 include_truth_table: Some(false),
+                truth_table_max_inputs: None,
+                truth_table_settle_ticks: None,
+                truth_table_max_rows: None,
+                truth_table_max_work_units: None,
+                truth_table_max_solver_iterations: None,
+                truth_table_max_elapsed_millis: None,
                 scope: None,
                 circuit_id: None,
             }))

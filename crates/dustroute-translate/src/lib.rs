@@ -43,6 +43,7 @@ pub use analysis::{
 };
 pub use api::{
     ForwardOptions, ForwardResult, ReverseRequest, ReverseResult, TranslateError, Translator,
+    TruthTableSemantics,
 };
 pub use behavior::simulate_behavior_trace;
 pub use cell_library::{
@@ -130,8 +131,10 @@ pub use wire::{
 pub use world_reverse::{
     FunctionalNetworkModel, InferredInputDriver, InferredOutputFunction, InferredTerminal,
     InferredTruthTable, InterfaceEvidence, PhysicalInfluence, RegionAnalysis, RegionBounds,
-    SignalComponent, SignalDiagnostics, TerminalConfidence, TruthTableComparison, TruthTableError,
-    TruthTableRow, analyze_world_region, analyze_world_region_in_dimension,
-    apply_inferred_input_driver, compare_truth_tables, derive_functional_network,
-    infer_output_expressions, infer_truth_table, inferred_input_driver,
+    SignalComponent, SignalDiagnostics, TerminalConfidence, TruthTableBudget, TruthTableComparison,
+    TruthTableError, TruthTableExecutionStats, TruthTableRow, analyze_world_region,
+    analyze_world_region_in_dimension, apply_inferred_input_driver, compare_truth_tables,
+    derive_functional_network, derive_functional_network_with_budget, infer_output_expressions,
+    infer_truth_table, infer_truth_table_with_budget, infer_truth_table_with_budget_and_stats,
+    inferred_input_driver,
 };

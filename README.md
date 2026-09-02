@@ -194,9 +194,15 @@ gap evidence for broken-circuit analysis. Bidirectional dust runs are projected
 into signal components; repeaters, powered blocks, and torch-control edges
 provide direction. Source and sink components become inferred terminals.
 
-The CLI JSON report explicitly requests and contains an exhaustive truth table
-(up to 16 inferred inputs) and a Boolean expression for each output. Library and
-MCP reverse analysis leave truth-table enumeration disabled unless requested.
+The CLI JSON report explicitly requests a bounded exhaustive truth table (up to
+16 inferred inputs) and a Boolean expression for each output. Library and MCP
+reverse analysis leave truth-table enumeration disabled unless requested; MCP
+large-circuit requests are still bounded by row, settle-tick, estimated-work,
+solver-iteration, and elapsed-time budgets and report structured
+status/details when evidence is incomplete or a budget is exceeded. Partial
+truth-table rows are discarded on any runtime limit. Responses classify the
+physical evidence as combinational, timing-sensitive, stateful, or unknown
+before a requested table is interpreted.
 Known functions such as AND, OR, XOR, NAND, and NOT are identified
 directly; other combinational outputs fall back to canonical sum-of-products.
 

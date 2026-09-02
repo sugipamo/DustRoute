@@ -23,6 +23,38 @@ depend on multiple inputs or influence multiple outputs. Local gate labels are
 explanatory and do not exclusively own physical blocks. See
 [`physical-function-model.md`](physical-function-model.md).
 
+`convert_from_circuit` accepts `include_truth_table=true` for an explicit
+bounded exhaustive request, including circuits that use the hierarchical path
+for their normal summary. Optional `truth_table_max_inputs`,
+`truth_table_settle_ticks`, `truth_table_max_rows`, `truth_table_max_work_units`,
+`truth_table_max_solver_iterations`, and `truth_table_max_elapsed_millis`
+fields tighten or raise the request within the server's hard protocol bounds.
+The latter two are dynamic guards on cumulative fixed-point solver iterations
+and wall-clock time; they complement, rather than replace, the static work
+estimate. The response reports `truth_table_status` as
+`computed`, `budget_exceeded`, `unavailable`, or `not_requested`; a large
+default response uses `skipped_large_circuit` and includes a structured
+`truth_table_skip` reason. Component-limited observations report
+`incomplete_observation` in `truth_table_error_details` and never claim a
+functional result. Static, solver-iteration, and elapsed-time budget failures
+all include a distinct `truth_table_error_details.code` and the number of rows
+completed before the limit. Partial rows are discarded, so a budget failure is
+not a successful verification and never contains a partial table in the
+`truth_table` field.
+The simulator stops early only after two consecutive unchanged electrical
+snapshots with no queued device event. If the requested settle window ends
+before that condition, `truth_table_error_details.code` is `non_settling` and
+the row is not included in a returned table.
+When a table is returned, `truth_table_semantics` is also present as
+`combinational`, `timing_sensitive`, `stateful`, or `unknown`. This is a
+classification of the physical/temporal evidence before enumeration; it does
+not turn a stateful circuit into a combinational proof. A `computed` table is
+therefore the result of the requested settle procedure under that semantic
+caution, not an assertion that all temporal behavior was exhaustively proven.
+The debug-only `start_selected_region_conversion` exposes the same truth-table
+options and performs the bounded analysis in a cancellable background
+operation.
+
 When that model is available, `convert_from_circuit` also returns
 `macro_replacement_candidates`. These are function-matched, version-compatible
 catalog suggestions ranked by physical size. They are explicitly

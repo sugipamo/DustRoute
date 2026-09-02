@@ -24,9 +24,12 @@ future compact hand-built XOR without forcing its shared blocks into artificial
 gate boundaries.
 
 The MCP reverse-analysis response exposes this as `physical_function_model`
-when `include_truth_table` is enabled. Large or open-boundary circuits continue
-to skip exhaustive truth-table inference; their physical observations and
-partial local roles remain available without making a complete function claim.
+when `include_truth_table` is enabled. Open-boundary or unsupported circuits
+still return an unavailable functional result. Large circuits are no longer
+rejected solely by their component count when an exhaustive table is explicitly
+requested; row, tick, estimated-work, solver-iteration, and elapsed-time
+budgets bound the attempt and report `budget_exceeded` when necessary. A
+runtime-limited attempt never returns its partial rows as a complete table.
 
 ## Macro replacement search
 

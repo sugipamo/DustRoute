@@ -176,6 +176,27 @@ impl RedstoneTickSimulator {
         }
     }
 
+    /// Returns whether a scheduled device or delayed output still has work
+    /// queued for a future tick.  The queue is initialized with the current
+    /// state, so merely having a repeater/comparator queue is not considered
+    /// pending work; only a queued value that differs from the current output
+    /// keeps the simulator non-quiescent.
+    #[must_use]
+    pub fn has_pending_events(&self) -> bool {
+        self.repeater_queues.iter().any(|(pos, queue)| {
+            queue
+                .iter()
+                .any(|value| self.repeater_powered.get(pos).copied() != Some(*value))
+        }) || self.comparator_queues.iter().any(|(pos, queue)| {
+            queue
+                .iter()
+                .any(|value| self.comparator_output.get(pos).copied() != Some(*value))
+        }) || self
+            .lamp_off_deadline
+            .values()
+            .any(|deadline| *deadline > self.tick)
+    }
+
     pub fn advance_tick(&mut self) -> Result<TickState, InstantaneousSolveDidNotConverge> {
         let mut next_repeaters = BTreeMap::new();
         for (pos, block) in self.world.iter() {

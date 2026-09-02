@@ -1,4 +1,5 @@
 use std::collections::{BTreeMap, BTreeSet};
+use std::time::Instant;
 
 use serde::{Deserialize, Serialize};
 
@@ -6,7 +7,7 @@ use crate::connectivity::{
     ConnectivityEdge, PhysicalConnectivityGraph, build_physical_circuit, extract_connectivity,
 };
 use crate::expr::Expr;
-use crate::sim::RedstoneTickSimulator;
+use crate::sim::{RedstoneTickSimulator, TickState};
 use crate::wire::update_wire_shapes;
 use crate::world::Block;
 use crate::world::{BlockKind, Pos, World};
@@ -152,6 +153,119 @@ pub struct FunctionalNetworkModel {
     pub physical_influences: Vec<PhysicalInfluence>,
 }
 
+/// Bounds the amount of exhaustive simulation used for reverse translation.
+///
+/// `max_rows` limits the number of input assignments.  `max_work_units` is a
+/// conservative estimate of the full-world work performed by each assignment:
+/// one initial pass plus one pass per requested settle tick over every observed
+/// block.  The estimate is intentionally checked before the first simulator is
+/// created so an oversized request fails closed without allocating a row-sized
+/// set of worlds.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct TruthTableBudget {
+    pub max_rows: usize,
+    pub max_work_units: u128,
+    /// Maximum cumulative instantaneous solver iterations across all rows.
+    ///
+    /// The static work estimate cannot account for feedback loops or other
+    /// circuits that need many fixed-point iterations.  This dynamic guard is
+    /// charged after every simulator step and makes that cost bounded too.
+    pub max_solver_iterations: usize,
+    /// Optional wall-clock budget for exhaustive inference.  The timer starts
+    /// immediately before the first input row is simulated.  A limit is
+    /// intentionally optional at the library layer so callers that already
+    /// enforce their own deadline can opt out.
+    pub max_elapsed_millis: Option<u64>,
+}
+
+/// Runtime counters collected while exhaustive truth-table inference runs.
+///
+/// These counters are intentionally separate from [`InferredTruthTable`]: the
+/// table remains the stable result type, while callers that need to attribute
+/// cost (benchmarks, telemetry, or a UI) can opt into the extended API without
+/// changing existing inference call sites.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct TruthTableExecutionStats {
+    /// Number of input assignments planned by the inference.
+    pub rows_requested: usize,
+    /// Number of rows that were fully simulated and included in the result.
+    pub rows_completed: usize,
+    /// Maximum number of settle ticks requested for each row.
+    pub settle_ticks_requested: usize,
+    /// Total `advance_tick` calls across all completed rows.  Early settling
+    /// can make this lower than `rows_completed * settle_ticks_requested`.
+    pub settle_ticks_executed: usize,
+    /// Sum of instantaneous fixed-point iterations reported by every
+    /// simulator snapshot and tick.
+    pub solver_iterations: usize,
+    /// Time spent cloning the observed world for each input assignment.
+    pub world_clone_nanos: u64,
+    /// Time spent applying inferred input values to each cloned world.
+    pub input_drive_nanos: u64,
+    /// Time spent recomputing redstone wire connection shapes.
+    pub wire_shape_update_nanos: u64,
+    /// Time spent constructing a simulator and taking its initial snapshot.
+    pub simulator_init_nanos: u64,
+    /// Time spent advancing and checking settle ticks.
+    pub settle_nanos: u64,
+    /// Time spent reading output terminals and appending completed rows.
+    pub output_read_nanos: u64,
+    /// Wall-clock duration of inference, rounded down to milliseconds.
+    pub elapsed_millis: u64,
+}
+
+impl Default for TruthTableBudget {
+    fn default() -> Self {
+        Self::DEFAULT
+    }
+}
+
+impl TruthTableBudget {
+    pub const DEFAULT: Self = Self {
+        max_rows: 256,
+        max_work_units: 2_000_000,
+        max_solver_iterations: 1_000_000,
+        max_elapsed_millis: Some(120_000),
+    };
+
+    #[must_use]
+    pub const fn new(max_rows: usize, max_work_units: u128) -> Self {
+        Self {
+            max_rows,
+            max_work_units,
+            max_solver_iterations: Self::DEFAULT.max_solver_iterations,
+            max_elapsed_millis: Self::DEFAULT.max_elapsed_millis,
+        }
+    }
+
+    #[must_use]
+    pub const fn with_max_solver_iterations(mut self, max_solver_iterations: usize) -> Self {
+        self.max_solver_iterations = max_solver_iterations;
+        self
+    }
+
+    #[must_use]
+    pub const fn with_max_elapsed_millis(mut self, max_elapsed_millis: Option<u64>) -> Self {
+        self.max_elapsed_millis = max_elapsed_millis;
+        self
+    }
+
+    #[must_use]
+    pub fn estimate_work_units(
+        self,
+        world_blocks: usize,
+        input_count: usize,
+        settle_ticks: usize,
+    ) -> Option<(usize, u128)> {
+        let input_count = u32::try_from(input_count).ok()?;
+        let rows = 1_usize.checked_shl(input_count)?;
+        let work_units = (rows as u128)
+            .saturating_mul(world_blocks as u128)
+            .saturating_mul((settle_ticks as u128).saturating_add(1));
+        Some((rows, work_units))
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct TruthTableComparison {
     pub comparable: bool,
@@ -219,6 +333,30 @@ pub fn compare_truth_tables(
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum TruthTableError {
     TooManyInputs(usize),
+    BudgetExceeded {
+        rows: usize,
+        max_rows: usize,
+        estimated_work_units: u128,
+        max_work_units: u128,
+    },
+    RuntimeBudgetExceeded {
+        rows: usize,
+        completed_rows: usize,
+        solver_iterations: usize,
+        max_solver_iterations: usize,
+    },
+    ElapsedBudgetExceeded {
+        rows: usize,
+        completed_rows: usize,
+        elapsed_millis: u128,
+        max_elapsed_millis: u64,
+    },
+    NonSettling {
+        row: usize,
+        settle_ticks: usize,
+        pending_events: bool,
+    },
+    IncompleteObservation,
     NoInputs,
     NoOutputs,
     UnmappedExternalInputs(Vec<Pos>),
@@ -244,6 +382,44 @@ impl std::fmt::Display for TruthTableError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::TooManyInputs(count) => write!(f, "cannot enumerate {count} inferred inputs"),
+            Self::BudgetExceeded {
+                rows,
+                max_rows,
+                estimated_work_units,
+                max_work_units,
+            } => write!(
+                f,
+                "truth-table budget exceeded: {rows} rows (max {max_rows}), estimated {estimated_work_units} work units (max {max_work_units})"
+            ),
+            Self::RuntimeBudgetExceeded {
+                rows,
+                completed_rows,
+                solver_iterations,
+                max_solver_iterations,
+            } => write!(
+                f,
+                "truth-table runtime budget exceeded after {completed_rows}/{rows} rows: {solver_iterations} solver iterations (max {max_solver_iterations})"
+            ),
+            Self::ElapsedBudgetExceeded {
+                rows,
+                completed_rows,
+                elapsed_millis,
+                max_elapsed_millis,
+            } => write!(
+                f,
+                "truth-table elapsed-time budget exceeded after {completed_rows}/{rows} rows: {elapsed_millis} ms (max {max_elapsed_millis} ms)"
+            ),
+            Self::NonSettling {
+                row,
+                settle_ticks,
+                pending_events,
+            } => write!(
+                f,
+                "truth-table row {row} did not settle within {settle_ticks} ticks (pending_events={pending_events})"
+            ),
+            Self::IncompleteObservation => {
+                f.write_str("cannot infer a truth table from an incomplete physical observation")
+            }
             Self::NoInputs => f.write_str("cannot verify a circuit without an inferred input"),
             Self::NoOutputs => f.write_str("cannot verify a circuit without an observable output"),
             Self::UnmappedExternalInputs(positions) => write!(
@@ -292,6 +468,39 @@ pub fn infer_truth_table(
     max_inputs: usize,
     settle_ticks: usize,
 ) -> Result<InferredTruthTable, TruthTableError> {
+    infer_truth_table_with_budget(
+        world,
+        analysis,
+        max_inputs,
+        settle_ticks,
+        TruthTableBudget::default(),
+    )
+}
+
+pub fn infer_truth_table_with_budget(
+    world: &World,
+    analysis: &RegionAnalysis,
+    max_inputs: usize,
+    settle_ticks: usize,
+    budget: TruthTableBudget,
+) -> Result<InferredTruthTable, TruthTableError> {
+    infer_truth_table_with_budget_and_stats(world, analysis, max_inputs, settle_ticks, budget)
+        .map(|(table, _stats)| table)
+}
+
+/// Infer a complete truth table and return execution counters alongside it.
+///
+/// This is the instrumented counterpart to [`infer_truth_table_with_budget`].
+/// It shares exactly the same budget checks and fail-closed behavior; the only
+/// difference is that successful callers also receive measured simulation
+/// cost.  Incomplete rows are never returned as a successful table.
+pub fn infer_truth_table_with_budget_and_stats(
+    world: &World,
+    analysis: &RegionAnalysis,
+    max_inputs: usize,
+    settle_ticks: usize,
+    budget: TruthTableBudget,
+) -> Result<(InferredTruthTable, TruthTableExecutionStats), TruthTableError> {
     if !analysis.interface.unmapped_inputs.is_empty() {
         return Err(TruthTableError::UnmappedExternalInputs(
             analysis.interface.unmapped_inputs.iter().copied().collect(),
@@ -332,17 +541,43 @@ pub fn infer_truth_table(
     if analysis.inputs.len() > max_inputs || analysis.inputs.len() >= usize::BITS as usize {
         return Err(TruthTableError::TooManyInputs(analysis.inputs.len()));
     }
+    let (rows, estimated_work_units) = budget
+        .estimate_work_units(world.iter().count(), analysis.inputs.len(), settle_ticks)
+        .ok_or(TruthTableError::TooManyInputs(analysis.inputs.len()))?;
+    if rows > budget.max_rows || estimated_work_units > budget.max_work_units {
+        return Err(TruthTableError::BudgetExceeded {
+            rows,
+            max_rows: budget.max_rows,
+            estimated_work_units,
+            max_work_units: budget.max_work_units,
+        });
+    }
     let drivers = analysis
         .inputs
         .iter()
         .map(|terminal| inferred_input_driver(world, analysis, terminal))
         .collect::<Result<Vec<_>, _>>()?;
-    let mut rows = Vec::new();
-    for bits in 0..(1_usize << analysis.inputs.len()) {
+    let started = Instant::now();
+    let mut solver_iterations = 0_usize;
+    let mut settle_ticks_executed = 0_usize;
+    let mut world_clone_nanos = 0_u64;
+    let mut input_drive_nanos = 0_u64;
+    let mut wire_shape_update_nanos = 0_u64;
+    let mut simulator_init_nanos = 0_u64;
+    let mut settle_nanos = 0_u64;
+    let mut output_read_nanos = 0_u64;
+    let mut truth_table_rows = Vec::new();
+    const STABLE_TICKS_REQUIRED: usize = 2;
+    for (completed_rows, bits) in (0..(1_usize << analysis.inputs.len())).enumerate() {
+        enforce_runtime_budget(budget, rows, completed_rows, solver_iterations, started)?;
         let inputs: Vec<_> = (0..analysis.inputs.len())
             .map(|index| bits & (1 << index) != 0)
             .collect();
+        let phase_started = Instant::now();
         let mut driven = world.clone();
+        add_elapsed_nanos(&mut world_clone_nanos, phase_started);
+
+        let phase_started = Instant::now();
         for ((terminal, driver), value) in analysis.inputs.iter().zip(&drivers).zip(&inputs) {
             apply_inferred_input_driver(&mut driven, *driver, *value)?;
             debug_assert!(
@@ -351,22 +586,124 @@ pub fn infer_truth_table(
                     .contains(&terminal.anchor)
             );
         }
+        add_elapsed_nanos(&mut input_drive_nanos, phase_started);
+
+        let phase_started = Instant::now();
         update_wire_shapes(&mut driven);
-        let state = RedstoneTickSimulator::new(driven)
-            .and_then(|mut simulator| simulator.settle_ticks(settle_ticks))
+        add_elapsed_nanos(&mut wire_shape_update_nanos, phase_started);
+
+        let phase_started = Instant::now();
+        let mut simulator = RedstoneTickSimulator::new(driven)
             .map_err(|error| TruthTableError::Simulation(error.to_string()))?;
+        let mut state = simulator.snapshot();
+        add_elapsed_nanos(&mut simulator_init_nanos, phase_started);
+        solver_iterations = solver_iterations.saturating_add(state.instantaneous_iterations);
+        enforce_runtime_budget(budget, rows, completed_rows, solver_iterations, started)?;
+        let mut previous_state = state.clone();
+        let mut stable_ticks = 0_usize;
+        let phase_started = Instant::now();
+        for _ in 0..settle_ticks {
+            state = simulator
+                .advance_tick()
+                .map_err(|error| TruthTableError::Simulation(error.to_string()))?;
+            settle_ticks_executed = settle_ticks_executed.saturating_add(1);
+            solver_iterations = solver_iterations.saturating_add(state.instantaneous_iterations);
+            enforce_runtime_budget(budget, rows, completed_rows, solver_iterations, started)?;
+            if !simulator.has_pending_events() && same_electrical_state(&state, &previous_state) {
+                stable_ticks += 1;
+            } else {
+                stable_ticks = 0;
+            }
+            previous_state = state.clone();
+            if stable_ticks >= STABLE_TICKS_REQUIRED.min(settle_ticks) {
+                break;
+            }
+        }
+        add_elapsed_nanos(&mut settle_nanos, phase_started);
+        let pending_events = simulator.has_pending_events();
+        if settle_ticks > 0
+            && (pending_events || stable_ticks < STABLE_TICKS_REQUIRED.min(settle_ticks))
+        {
+            return Err(TruthTableError::NonSettling {
+                row: completed_rows,
+                settle_ticks,
+                pending_events,
+            });
+        }
+        let phase_started = Instant::now();
         let outputs = analysis
             .outputs
             .iter()
             .map(|terminal| state.strength(terminal.anchor) > 0)
             .collect();
-        rows.push(TruthTableRow { inputs, outputs });
+        truth_table_rows.push(TruthTableRow { inputs, outputs });
+        add_elapsed_nanos(&mut output_read_nanos, phase_started);
     }
-    Ok(InferredTruthTable {
-        inputs: analysis.inputs.clone(),
-        outputs: analysis.outputs.clone(),
-        rows,
-    })
+    let stats = TruthTableExecutionStats {
+        rows_requested: rows,
+        rows_completed: truth_table_rows.len(),
+        settle_ticks_requested: settle_ticks,
+        settle_ticks_executed,
+        solver_iterations,
+        world_clone_nanos,
+        input_drive_nanos,
+        wire_shape_update_nanos,
+        simulator_init_nanos,
+        settle_nanos,
+        output_read_nanos,
+        elapsed_millis: u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX),
+    };
+    Ok((
+        InferredTruthTable {
+            inputs: analysis.inputs.clone(),
+            outputs: analysis.outputs.clone(),
+            rows: truth_table_rows,
+        },
+        stats,
+    ))
+}
+
+fn add_elapsed_nanos(total: &mut u64, started: Instant) {
+    *total = total.saturating_add(u64::try_from(started.elapsed().as_nanos()).unwrap_or(u64::MAX));
+}
+
+fn same_electrical_state(left: &TickState, right: &TickState) -> bool {
+    left.strengths == right.strengths
+        && left.block_power == right.block_power
+        && left.repeater_powered == right.repeater_powered
+        && left.torch_lit == right.torch_lit
+        && left.comparator_output == right.comparator_output
+        && left.lamp_lit == right.lamp_lit
+        && left.torch_burnout_candidates == right.torch_burnout_candidates
+}
+
+fn enforce_runtime_budget(
+    budget: TruthTableBudget,
+    rows: usize,
+    completed_rows: usize,
+    solver_iterations: usize,
+    started: Instant,
+) -> Result<(), TruthTableError> {
+    if solver_iterations > budget.max_solver_iterations {
+        return Err(TruthTableError::RuntimeBudgetExceeded {
+            rows,
+            completed_rows,
+            solver_iterations,
+            max_solver_iterations: budget.max_solver_iterations,
+        });
+    }
+    if let Some(max_elapsed_millis) = budget.max_elapsed_millis {
+        let elapsed_millis = started.elapsed().as_millis();
+        if elapsed_millis >= u128::from(max_elapsed_millis) {
+            return Err(TruthTableError::ElapsedBudgetExceeded {
+                rows,
+                completed_rows,
+                elapsed_millis,
+                max_elapsed_millis,
+            });
+        }
+    }
+    Ok(())
 }
 
 #[must_use]
@@ -382,7 +719,24 @@ pub fn derive_functional_network(
     max_inputs: usize,
     settle_ticks: usize,
 ) -> Result<FunctionalNetworkModel, TruthTableError> {
-    let truth_table = infer_truth_table(world, analysis, max_inputs, settle_ticks)?;
+    derive_functional_network_with_budget(
+        world,
+        analysis,
+        max_inputs,
+        settle_ticks,
+        TruthTableBudget::default(),
+    )
+}
+
+pub fn derive_functional_network_with_budget(
+    world: &World,
+    analysis: &RegionAnalysis,
+    max_inputs: usize,
+    settle_ticks: usize,
+    budget: TruthTableBudget,
+) -> Result<FunctionalNetworkModel, TruthTableError> {
+    let truth_table =
+        infer_truth_table_with_budget(world, analysis, max_inputs, settle_ticks, budget)?;
     let expressions = infer_output_expressions(&truth_table);
     let output_functions = truth_table
         .outputs
@@ -1357,6 +1711,147 @@ mod tests {
             infer_truth_table(&source_only, &ambiguous, 4, 1),
             Err(TruthTableError::AmbiguousInputMapping { .. })
         ));
+    }
+
+    #[test]
+    fn truth_table_budget_reports_rows_before_simulation() {
+        let budget = TruthTableBudget::new(2, u128::MAX);
+        assert_eq!(budget.estimate_work_units(100, 3, 4), Some((8, 4_000)));
+
+        let compiled = BaselineCompiler::new(BaselineCompileConfig::default())
+            .compile(&half_adder())
+            .unwrap();
+        let (min, max) = compiled.world.bounds().unwrap();
+        let analysis = analyze_world_region(&compiled.world, RegionBounds::new(min, max));
+        let error = infer_truth_table_with_budget(&compiled.world, &analysis, 16, 16, budget)
+            .expect_err("row budget should reject before creating simulators");
+        assert!(matches!(
+            error,
+            TruthTableError::BudgetExceeded {
+                rows: 4,
+                max_rows: 2,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn runtime_budget_fails_closed_without_returning_partial_rows() {
+        let compiled = BaselineCompiler::new(BaselineCompileConfig::default())
+            .compile(&half_adder())
+            .unwrap();
+        let (min, max) = compiled.world.bounds().unwrap();
+        let bounds = RegionBounds::new(min, max);
+        let request = crate::ReverseRequest::new(bounds)
+            .with_truth_table(16)
+            .with_settle_ticks(16)
+            .with_truth_table_budget(
+                TruthTableBudget::new(usize::MAX, u128::MAX)
+                    .with_max_solver_iterations(0)
+                    .with_max_elapsed_millis(None),
+            );
+        let result = crate::Translator.reverse(&compiled.world, request);
+        assert!(result.truth_table.is_none());
+        assert!(result.functional_network.is_none());
+        assert!(matches!(
+            result.truth_table_error,
+            Some(TruthTableError::RuntimeBudgetExceeded {
+                completed_rows: 0,
+                max_solver_iterations: 0,
+                ..
+            })
+        ));
+    }
+
+    #[test]
+    fn elapsed_budget_fails_closed_before_simulation() {
+        let compiled = BaselineCompiler::new(BaselineCompileConfig::default())
+            .compile(&half_adder())
+            .unwrap();
+        let (min, max) = compiled.world.bounds().unwrap();
+        let analysis = analyze_world_region(&compiled.world, RegionBounds::new(min, max));
+        let error = infer_truth_table_with_budget(
+            &compiled.world,
+            &analysis,
+            16,
+            16,
+            TruthTableBudget::new(usize::MAX, u128::MAX)
+                .with_max_solver_iterations(usize::MAX)
+                .with_max_elapsed_millis(Some(0)),
+        )
+        .expect_err("zero elapsed budget must reject before the first row");
+        assert!(matches!(
+            error,
+            TruthTableError::ElapsedBudgetExceeded {
+                completed_rows: 0,
+                max_elapsed_millis: 0,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn incomplete_settle_window_is_not_claimed_as_a_truth_table() {
+        let mut world = World::new();
+        world.fill(
+            Pos::new(0, 0, 0),
+            Pos::new(3, 0, 0),
+            Block::new(BlockKind::Solid),
+        );
+        let lever = world.place(BlockKind::Lever, Pos::new(0, 1, 0));
+        lever.support_offset = Some(Pos::new(0, -1, 0));
+        world.place(BlockKind::RedstoneWire, Pos::new(1, 1, 0));
+        let repeater = world.place(BlockKind::Repeater, Pos::new(2, 1, 0));
+        repeater.facing = Some(crate::Facing::East);
+        repeater.delay = Some(1);
+        world.place(BlockKind::RedstoneWire, Pos::new(3, 1, 0));
+        update_wire_shapes(&mut world);
+        let bounds = RegionBounds::new(Pos::new(0, 0, 0), Pos::new(3, 1, 0));
+        let analysis = analyze_world_region(&world, bounds);
+        assert_eq!(analysis.inputs.len(), 1, "{analysis:#?}");
+        assert_eq!(analysis.outputs.len(), 1, "{analysis:#?}");
+        let error = infer_truth_table_with_budget(
+            &world,
+            &analysis,
+            4,
+            1,
+            TruthTableBudget::new(4, u128::MAX).with_max_elapsed_millis(None),
+        )
+        .expect_err("a changing final tick is not settled evidence");
+        assert!(matches!(
+            error,
+            TruthTableError::NonSettling {
+                row: 1,
+                settle_ticks: 1,
+                pending_events: false,
+            }
+        ));
+    }
+
+    #[test]
+    fn execution_stats_report_actual_settle_work_without_changing_table() {
+        let compiled = BaselineCompiler::new(BaselineCompileConfig::default())
+            .compile(&half_adder())
+            .unwrap();
+        let (min, max) = compiled.world.bounds().unwrap();
+        let analysis = analyze_world_region(&compiled.world, RegionBounds::new(min, max));
+        let (instrumented, stats) = infer_truth_table_with_budget_and_stats(
+            &compiled.world,
+            &analysis,
+            16,
+            16,
+            TruthTableBudget::default(),
+        )
+        .unwrap();
+        let ordinary = infer_truth_table(&compiled.world, &analysis, 16, 16).unwrap();
+
+        assert_eq!(instrumented, ordinary);
+        assert_eq!(stats.rows_requested, 4);
+        assert_eq!(stats.rows_completed, 4);
+        assert_eq!(stats.settle_ticks_requested, 16);
+        assert!(stats.settle_ticks_executed > 0);
+        assert!(stats.settle_ticks_executed <= 4 * stats.settle_ticks_requested);
+        assert!(stats.solver_iterations > 0);
     }
 
     #[test]
