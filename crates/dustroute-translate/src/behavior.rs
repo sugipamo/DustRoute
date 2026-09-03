@@ -87,6 +87,8 @@ pub fn simulate_behavior_trace(
                 events.push(BehaviorEvent {
                     tick: state.tick,
                     sub_tick_order,
+                    game_tick: None,
+                    phase: dustroute_ir::TransitionPhase::Unknown,
                     event_kind,
                     cause,
                     source,
@@ -105,6 +107,11 @@ pub fn simulate_behavior_trace(
         time_unit: TraceTimeUnit::RedstoneTick,
         events,
         stable: !changed_on_last_tick,
+        status: if changed_on_last_tick {
+            dustroute_ir::TraceStatus::InProgress
+        } else {
+            dustroute_ir::TraceStatus::Complete
+        },
     })
 }
 

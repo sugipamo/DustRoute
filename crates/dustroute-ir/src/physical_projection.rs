@@ -209,6 +209,14 @@ pub struct BehaviorEvent {
     /// tick resolution or by a settled baseline observation.
     #[serde(default)]
     pub sub_tick_order: u64,
+    /// Exact Minecraft game tick when available. The legacy `tick` field
+    /// remains in the trace's declared unit.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub game_tick: Option<u64>,
+    /// Coarse scheduler phase. `unknown` means that the source exposed no
+    /// phase evidence, as with a normal live packet observation.
+    #[serde(default, skip_serializing_if = "crate::TransitionPhase::is_unknown")]
+    pub phase: crate::TransitionPhase,
     /// Coarse event classification. Older traces deserialize as a generic
     /// state transition and therefore remain compatible.
     #[serde(default)]
@@ -234,6 +242,10 @@ pub struct BehaviorTrace {
     pub time_unit: TraceTimeUnit,
     pub events: Vec<BehaviorEvent>,
     pub stable: bool,
+    /// Completion state separate from `stable`: a trace can be stable at its
+    /// last observation while still being an incomplete or failed prefix.
+    #[serde(default)]
+    pub status: crate::TraceStatus,
 }
 
 #[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]

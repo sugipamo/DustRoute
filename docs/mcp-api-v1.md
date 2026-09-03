@@ -168,9 +168,14 @@ include a `transitions` array. Each entry has an opaque `id`, the observed
 position, the before/after signal values when a before value is known, and
 `elapsed_from_previous`. `same_tick` entries retain `order_delta`; an
 `exact_ticks` entry is measured in the trace's declared redstone-tick unit.
-The first entry has no elapsed value. Consumers should use this array when
-comparing state-changing edges and use `events` when they need the original
-scenario sequence or provenance fields.
+The response also exposes `status` (`in_progress`, `complete`, or `failed`),
+the declared `time_unit`, and exact live duration when available. Entries from
+live recordings carry `game_tick` and `phase` when known, together with
+`logical_elapsed_from_previous`; these fields preserve game-tick timing even
+when the compatibility `redstone_tick` bucket is rounded. The first entry has
+no elapsed value. Consumers should use this array when comparing state-changing
+edges and use `events` when they need the original scenario sequence or
+provenance fields.
 
 Transition verification reports `steady_state_equivalent` separately from
 `trace_equivalent`. Server/physics observation can place an otherwise immediate
@@ -183,7 +188,8 @@ records `event_kind=state_transition`, `cause=packet_observation`, and
 `source=live_mineflayer`; packet order is evidence, not the internal vanilla
 scheduler cause. Provenance differences are intentionally excluded from
 behavioral equivalence, while state, redstone tick, and within-tick order are
-still compared.
+still compared. Exact game-tick or known-phase differences are reported
+separately; an unknown phase does not become a false mismatch.
 
 Temporal IR responses additionally expose a game-tick `transition_delay` for
 stateful edges and devices. It can be `same_game_tick`, an exact game-tick
@@ -196,6 +202,8 @@ chains with a per-tick microstep budget, and reports a structured failure when
 a child would move back to an earlier phase. A failed event is requeued rather
 than silently consumed; this is an implementation safety contract and does not
 promote MCP piston operations beyond their current `PreviewOnly` status.
+Truncated live recordings are returned with `status=failed`; their accepted
+prefix is evidence only and must not satisfy an exact transition contract.
 When a physics engine is driven from a bounded live snapshot, callers must
 provide the same complete region through `PistonPlanningContext` (or
 `PhysicsEngine::with_piston_planning_region`); an absent coordinate outside that

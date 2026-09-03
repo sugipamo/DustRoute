@@ -231,6 +231,8 @@ mod tests {
                 BehaviorEvent {
                     tick: 0,
                     sub_tick_order: 0,
+                    game_tick: None,
+                    phase: crate::TransitionPhase::Unknown,
                     event_kind: crate::EventKind::StateTransition,
                     cause: crate::EventCause::Unknown,
                     source: crate::EventSource::Unknown,
@@ -241,6 +243,8 @@ mod tests {
                 BehaviorEvent {
                     tick: 3,
                     sub_tick_order: 0,
+                    game_tick: None,
+                    phase: crate::TransitionPhase::Unknown,
                     event_kind: crate::EventKind::StateTransition,
                     cause: crate::EventCause::Unknown,
                     source: crate::EventSource::Unknown,
@@ -251,6 +255,8 @@ mod tests {
                 BehaviorEvent {
                     tick: 4,
                     sub_tick_order: 0,
+                    game_tick: None,
+                    phase: crate::TransitionPhase::Unknown,
                     event_kind: crate::EventKind::StateTransition,
                     cause: crate::EventCause::Unknown,
                     source: crate::EventSource::Unknown,
@@ -260,6 +266,7 @@ mod tests {
                 },
             ],
             stable: true,
+            status: crate::TraceStatus::Complete,
         }
     }
 

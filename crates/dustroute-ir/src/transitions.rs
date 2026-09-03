@@ -12,7 +12,9 @@ use std::collections::BTreeMap;
 use dustroute_physical::ComponentId;
 use serde::{Deserialize, Serialize};
 
-use crate::{BehaviorEvent, BehaviorTrace, EventCause, EventKind, EventSource, TraceTimeUnit};
+use crate::{
+    BehaviorEvent, BehaviorTrace, EventCause, EventKind, EventSource, TraceStatus, TraceTimeUnit,
+};
 
 /// Stable identity within one transition trace.
 #[derive(
@@ -20,12 +22,47 @@ use crate::{BehaviorEvent, BehaviorTrace, EventCause, EventKind, EventSource, Tr
 )]
 pub struct TransitionId(pub u64);
 
+/// Scheduler phase associated with a logical transition.
+///
+/// `Unknown` is intentional for packet observations that preserve game-tick
+/// and packet order but cannot identify the vanilla scheduler phase. The
+/// remaining variants mirror the coarse phase vocabulary of the Minecraft
+/// physics boundary without making this cross-layer IR depend on that crate.
+#[derive(
+    Clone, Copy, Debug, Default, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum TransitionPhase {
+    #[default]
+    Unknown,
+    External,
+    NeighborUpdate,
+    ScheduledTick,
+    BlockEvent,
+    BlockEntity,
+    Observation,
+}
+
+impl TransitionPhase {
+    #[must_use]
+    pub const fn is_unknown(&self) -> bool {
+        matches!(self, Self::Unknown)
+    }
+}
+
 /// Position of an observed transition in the trace's declared time unit.
 #[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct TransitionTime {
     pub tick: u64,
     #[serde(default)]
     pub sub_tick_order: u64,
+    /// Exact Minecraft game tick when the source provides it. `tick` keeps
+    /// the compatibility unit declared by the containing trace.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub game_tick: Option<u64>,
+    /// Coarse scheduler phase. Unknown is omitted from legacy JSON.
+    #[serde(default, skip_serializing_if = "TransitionPhase::is_unknown")]
+    pub phase: TransitionPhase,
 }
 
 /// Elapsed time between two observed transitions.
@@ -74,6 +111,44 @@ impl TransitionElapsed {
     }
 }
 
+/// Exact elapsed ordering in the Minecraft game-tick coordinate, independent
+/// of the trace's compatibility tick unit.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum LogicalElapsed {
+    SameGameTick {
+        from_phase: TransitionPhase,
+        to_phase: TransitionPhase,
+        order_delta: u64,
+    },
+    ExactGameTicks {
+        game_ticks: u64,
+    },
+}
+
+impl LogicalElapsed {
+    #[must_use]
+    pub fn between(previous: TransitionTime, current: TransitionTime) -> Option<Self> {
+        let (Some(previous_tick), Some(current_tick)) = (previous.game_tick, current.game_tick)
+        else {
+            return None;
+        };
+        if previous_tick == current_tick {
+            Some(Self::SameGameTick {
+                from_phase: previous.phase,
+                to_phase: current.phase,
+                order_delta: current
+                    .sub_tick_order
+                    .saturating_sub(previous.sub_tick_order),
+            })
+        } else {
+            Some(Self::ExactGameTicks {
+                game_ticks: current_tick.saturating_sub(previous_tick),
+            })
+        }
+    }
+}
+
 /// One state-changing observation in a transition-first trace.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct TransitionRecord {
@@ -83,6 +158,10 @@ pub struct TransitionRecord {
     /// optional because a live boundary may start after the prior state.
     #[serde(default)]
     pub elapsed_from_previous: Option<TransitionElapsed>,
+    /// Lossless elapsed ordering when the source supplied exact game-tick
+    /// coordinates. This is optional for legacy redstone-tick traces.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub logical_elapsed_from_previous: Option<LogicalElapsed>,
     pub component: ComponentId,
     #[serde(default)]
     pub from_powered: Option<bool>,
@@ -105,6 +184,10 @@ pub struct TransitionTrace {
     pub time_unit: TraceTimeUnit,
     pub transitions: Vec<TransitionRecord>,
     pub stable: bool,
+    /// Explicit completion state. `stable` remains for compatibility; callers
+    /// must use this status for fail-closed checks.
+    #[serde(default)]
+    pub status: TraceStatus,
 }
 
 impl TransitionTrace {
@@ -123,12 +206,16 @@ impl TransitionTrace {
                 let time = TransitionTime {
                     tick: event.tick,
                     sub_tick_order: event.sub_tick_order,
+                    game_tick: event.game_tick,
+                    phase: event.phase,
                 };
                 let record = TransitionRecord {
                     id: TransitionId(index as u64),
                     time,
                     elapsed_from_previous: previous_time
                         .map(|previous| TransitionElapsed::between(previous, time)),
+                    logical_elapsed_from_previous: previous_time
+                        .and_then(|previous| LogicalElapsed::between(previous, time)),
                     component: event.component,
                     from_powered: previous_by_component.insert(event.component, event.powered),
                     powered: event.powered,
@@ -146,6 +233,7 @@ impl TransitionTrace {
             time_unit: trace.time_unit,
             transitions,
             stable: trace.stable,
+            status: trace.status.clone(),
         }
     }
 
@@ -163,6 +251,8 @@ impl TransitionTrace {
                 .map(|transition| BehaviorEvent {
                     tick: transition.time.tick,
                     sub_tick_order: transition.time.sub_tick_order,
+                    game_tick: transition.time.game_tick,
+                    phase: transition.time.phase,
                     event_kind: transition.event_kind,
                     cause: transition.cause,
                     source: transition.source,
@@ -172,6 +262,7 @@ impl TransitionTrace {
                 })
                 .collect(),
             stable: self.stable,
+            status: self.status.clone(),
         }
     }
 
@@ -187,6 +278,11 @@ impl TransitionTrace {
 
     pub fn iter(&self) -> impl Iterator<Item = &TransitionRecord> {
         self.transitions.iter()
+    }
+
+    #[must_use]
+    pub const fn status(&self) -> &TraceStatus {
+        &self.status
     }
 }
 
@@ -212,6 +308,8 @@ mod tests {
                 BehaviorEvent {
                     tick: 3,
                     sub_tick_order: 0,
+                    game_tick: Some(20),
+                    phase: TransitionPhase::BlockEvent,
                     event_kind: EventKind::PulseStart,
                     cause: EventCause::ObserverFrontStateChange,
                     source: EventSource::Simulator,
@@ -222,6 +320,8 @@ mod tests {
                 BehaviorEvent {
                     tick: 3,
                     sub_tick_order: 1,
+                    game_tick: Some(20),
+                    phase: TransitionPhase::BlockEvent,
                     event_kind: EventKind::PulseEnd,
                     cause: EventCause::ObserverFrontStateChange,
                     source: EventSource::Simulator,
@@ -231,6 +331,7 @@ mod tests {
                 },
             ],
             stable: true,
+            status: TraceStatus::Complete,
         };
         let transitions = trace.transition_trace();
         assert_eq!(transitions.len(), 2);
@@ -240,6 +341,14 @@ mod tests {
         assert_eq!(
             transitions.transitions[1].elapsed_from_previous,
             Some(TransitionElapsed::SameTick { order_delta: 1 })
+        );
+        assert_eq!(
+            transitions.transitions[1].logical_elapsed_from_previous,
+            Some(LogicalElapsed::SameGameTick {
+                from_phase: TransitionPhase::BlockEvent,
+                to_phase: TransitionPhase::BlockEvent,
+                order_delta: 1,
+            })
         );
         assert_eq!(transitions.to_behavior_trace(), trace);
     }
@@ -253,6 +362,8 @@ mod tests {
                 BehaviorEvent {
                     tick: 1,
                     sub_tick_order: 0,
+                    game_tick: None,
+                    phase: TransitionPhase::Unknown,
                     event_kind: EventKind::StateTransition,
                     cause: EventCause::Unknown,
                     source: EventSource::Unknown,
@@ -263,6 +374,8 @@ mod tests {
                 BehaviorEvent {
                     tick: 4,
                     sub_tick_order: 0,
+                    game_tick: None,
+                    phase: TransitionPhase::Unknown,
                     event_kind: EventKind::SignalPropagation,
                     cause: EventCause::RepeaterDelay,
                     source: EventSource::Simulator,
@@ -272,10 +385,62 @@ mod tests {
                 },
             ],
             stable: true,
+            status: TraceStatus::Complete,
         };
         assert_eq!(
             trace.transition_trace().transitions[1].elapsed_from_previous,
             Some(TransitionElapsed::ExactTicks { ticks: 3 })
+        );
+    }
+
+    #[test]
+    fn preserves_exact_game_tick_elapsed_in_a_redstone_tick_view() {
+        let trace = BehaviorTrace {
+            label: "live game tick evidence".to_owned(),
+            time_unit: TraceTimeUnit::RedstoneTick,
+            events: vec![
+                BehaviorEvent {
+                    tick: 0,
+                    sub_tick_order: 0,
+                    game_tick: Some(100),
+                    phase: TransitionPhase::Observation,
+                    event_kind: EventKind::StateTransition,
+                    cause: EventCause::PacketObservation,
+                    source: EventSource::LiveMineflayer,
+                    cause_sequence: None,
+                    component: ComponentId(1),
+                    powered: false,
+                },
+                BehaviorEvent {
+                    tick: 1,
+                    sub_tick_order: 0,
+                    game_tick: Some(103),
+                    phase: TransitionPhase::Observation,
+                    event_kind: EventKind::StateTransition,
+                    cause: EventCause::PacketObservation,
+                    source: EventSource::LiveMineflayer,
+                    cause_sequence: None,
+                    component: ComponentId(1),
+                    powered: true,
+                },
+            ],
+            stable: true,
+            status: TraceStatus::Complete,
+        };
+        let transitions = trace.transition_trace();
+        assert_eq!(
+            transitions.transitions[1].elapsed_from_previous,
+            Some(TransitionElapsed::ExactTicks { ticks: 1 })
+        );
+        assert_eq!(
+            transitions.transitions[1].logical_elapsed_from_previous,
+            Some(LogicalElapsed::ExactGameTicks { game_ticks: 3 })
+        );
+        let json = serde_json::to_value(&transitions).unwrap();
+        assert_eq!(json["transitions"][1]["time"]["game_tick"], 103);
+        assert_eq!(
+            json["transitions"][1]["logical_elapsed_from_previous"]["game_ticks"],
+            3
         );
     }
 }

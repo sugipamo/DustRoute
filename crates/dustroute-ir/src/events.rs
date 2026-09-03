@@ -9,6 +9,39 @@
 
 use serde::{Deserialize, Serialize};
 
+/// Completion state for an observed or simulated trace.
+///
+/// A prefix that stopped because the observation was incomplete or an
+/// execution failed must not be consumed as a complete behavioral contract.
+/// Keeping the status in the shared IR lets MCP and optimizer callers make
+/// that distinction without inferring it from an empty event list.
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum TraceStatus {
+    /// The producer has not drained the source yet, or the trace is a prefix
+    /// whose completion is not known at this boundary.
+    #[default]
+    InProgress,
+    /// The producer observed the requested boundary completely.
+    Complete,
+    /// The producer stopped with a rejected event, truncated observation, or
+    /// another explicit failure. The accepted prefix remains useful evidence
+    /// but is not a complete run.
+    Failed { error: String },
+}
+
+impl TraceStatus {
+    #[must_use]
+    pub const fn is_complete(&self) -> bool {
+        matches!(self, Self::Complete)
+    }
+
+    #[must_use]
+    pub const fn is_failed(&self) -> bool {
+        matches!(self, Self::Failed { .. })
+    }
+}
+
 #[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum EventKind {

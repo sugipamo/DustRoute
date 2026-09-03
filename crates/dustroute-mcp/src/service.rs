@@ -761,6 +761,9 @@ fn scenario_trace_json(trace: &dustroute_translate::ScenarioTrace) -> Value {
         json!({
             "serialization_error": error.to_string(),
             "duration_redstone_ticks": trace.duration_redstone_ticks,
+            "duration_game_ticks": trace.duration_game_ticks,
+            "time_unit": trace.time_unit,
+            "status": trace.status.clone(),
             "events": [],
             "transitions": [],
             "final_strengths": [],
@@ -6713,9 +6716,12 @@ mod tests {
         let position = Pos::new(1, 64, -2);
         let trace = dustroute_translate::ScenarioTrace {
             duration_redstone_ticks: 2,
+            duration_game_ticks: None,
+            time_unit: dustroute_ir::TraceTimeUnit::RedstoneTick,
             events: Vec::new(),
             final_strengths: BTreeMap::from([(position, 15)]),
             final_powered: BTreeMap::from([(position, true)]),
+            status: dustroute_ir::TraceStatus::Complete,
         };
 
         let value = scenario_trace_json(&trace);

@@ -62,17 +62,23 @@ clock. It is no longer the identity of the behavior being compared.
 6. **IR and simulator projection**
 
    `dustroute-ir::TransitionTrace` projects legacy `BehaviorTrace` events into
-   records with an opaque ID, before/after values, and elapsed ordering. The
-   conversion back to `BehaviorTrace` is explicit and lossless for the current
-   evidence. `dustroute-translate::simulate_transition_trace` is the new
-   transition-oriented entry point; `simulate_behavior_trace` remains the
-   compatibility adapter.
+   records with an opaque ID, before/after values, elapsed ordering, exact
+   game-tick coordinates when available, and a coarse scheduler phase. The
+   shared `TraceStatus` distinguishes `in_progress`, `complete`, and `failed`
+   prefixes. The conversion back to `BehaviorTrace` is explicit and lossless
+   for the current evidence. `dustroute-translate::simulate_transition_trace`
+   is the new transition-oriented entry point; `simulate_behavior_trace`
+   remains the compatibility adapter.
 
 7. **MCP and optimization surfaces**
 
    MCP transition responses retain the old `events` array and add a
    transition-first `transitions` array with IDs, before/after values, and
-   elapsed same-tick or tick intervals. Optimization reports expose
+   elapsed same-tick or tick intervals. Each entry also carries exact
+   `game_tick`/`phase` evidence when available, and `logical_elapsed` keeps
+   game-tick intervals even when the compatibility `redstone_tick` is rounded.
+   The response envelope exposes `time_unit`, exact live duration when known,
+   and `TraceStatus`. Optimization reports expose
    `original_transitions` and `candidate_transitions`; the new
    `exact_transitions` timing contract compares state-changing edges and their
    sampled times without requiring every intermediate sample to match.
@@ -81,10 +87,12 @@ clock. It is no longer the identity of the behavior being compared.
 
 `TransitionElapsed::Zero`/`same_tick` means that the game tick did not advance;
 the order delta is still significant. `ExactGameTicks` (Minecraft) or
-`ExactTicks` (IR/MCP) is measured in the trace's declared unit. A range or
-`Unavailable` value is not an immediate transition and must not satisfy an
-exact timing contract. The first transition has no predecessor and therefore
-has no elapsed value.
+`ExactTicks` (IR/MCP) is measured in the trace's declared unit. IR records also
+carry `LogicalElapsed` when exact game ticks are available, so a live event at
+game tick 103 is not reduced to a redstone-tick bucket. A range or `Unavailable`
+value is not an immediate transition and must not satisfy an exact timing
+contract. The first transition has no predecessor and therefore has no elapsed
+value.
 
 `StateId` intentionally does not include the pending event queue yet. A
 checkpoint retains the queue, current logical time, scheduler counters, and
@@ -114,6 +122,11 @@ After a successful drain, the traces are marked `complete`.
 No existing tick fields are removed in this phase. A hard cut is only safe
 after live event provenance, queue checkpointing, and all downstream consumers
 can consume transition records directly.
+
+The compatibility `redstone_tick` fields on scenario traces remain display and
+comparison coordinates. Live recordings additionally preserve `game_tick` and
+phase/order evidence; consumers that need causal timing must use those exact
+fields rather than reconstructing them from a rounded redstone tick.
 
 ## Deliberately deferred
 

@@ -4,7 +4,7 @@ use std::fmt::{Display, Formatter};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
-use dustroute_ir::{EventCause, EventKind, EventSource};
+use dustroute_ir::{EventCause, EventKind, EventSource, TransitionPhase};
 use dustroute_physical::Pos;
 use dustroute_translate::MinecraftSnapshot;
 use serde::{Deserialize, Serialize};
@@ -129,6 +129,11 @@ pub struct BlockUpdateEvent {
     /// same-tick transitions distinguishable for later temporal analysis.
     #[serde(default)]
     pub sub_tick_order: u64,
+    /// Scheduler phase is normally unavailable from Mineflayer packet
+    /// updates. A future instrumented bridge may provide it without changing
+    /// the recording shape.
+    #[serde(default, skip_serializing_if = "TransitionPhase::is_unknown")]
+    pub phase: TransitionPhase,
     /// Coarse classification of the packet-visible transition.
     #[serde(default)]
     pub event_kind: EventKind,

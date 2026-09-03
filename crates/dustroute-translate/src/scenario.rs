@@ -1,6 +1,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use dustroute_ir::{EventCause, EventKind, EventSource};
+use dustroute_ir::{
+    EventCause, EventKind, EventSource, TraceStatus, TraceTimeUnit, TransitionPhase,
+};
 use serde::{Deserialize, Serialize};
 
 use crate::{BlockKind, MinecraftSnapshot, Pos, RedstoneTickSimulator, world_from_snapshot};
@@ -152,6 +154,14 @@ pub struct ScenarioEvent {
     /// Mineflayer packet order.
     #[serde(default)]
     pub sub_tick_order: u64,
+    /// Exact server game tick when the event came from a live recording. The
+    /// redstone-tick field above remains the compatibility display coordinate.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub game_tick: Option<u64>,
+    /// Scheduler phase when available. Packet observations normally leave it
+    /// unknown because Mineflayer does not expose the vanilla queue.
+    #[serde(default, skip_serializing_if = "TransitionPhase::is_unknown")]
+    pub phase: TransitionPhase,
     /// Coarse event classification retained independently from electrical
     /// state so a pulse edge is not mistaken for a steady signal.
     #[serde(default)]
@@ -175,9 +185,16 @@ pub struct ScenarioEvent {
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct ScenarioTrace {
     pub duration_redstone_ticks: u64,
+    /// Exact live duration, if the source supplied game-tick boundaries.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub duration_game_ticks: Option<u64>,
+    #[serde(default)]
+    pub time_unit: TraceTimeUnit,
     pub events: Vec<ScenarioEvent>,
     pub final_strengths: BTreeMap<Pos, u8>,
     pub final_powered: BTreeMap<Pos, bool>,
+    #[serde(default)]
+    pub status: TraceStatus,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -201,6 +218,18 @@ pub enum ScenarioDifference {
         position: Pos,
         expected: u64,
         actual: u64,
+    },
+    EventGameTick {
+        index: usize,
+        position: Pos,
+        expected: u64,
+        actual: u64,
+    },
+    EventPhase {
+        index: usize,
+        position: Pos,
+        expected: TransitionPhase,
+        actual: TransitionPhase,
     },
     EventOrder {
         index: usize,
@@ -240,6 +269,10 @@ pub enum ScenarioDifference {
     TorchBurnoutCandidate {
         blocks: Vec<Pos>,
     },
+    TraceStatusMismatch {
+        expected: TraceStatus,
+        actual: TraceStatus,
+    },
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -269,7 +302,12 @@ pub fn run_scenario(scenario: &Scenario) -> Result<ScenarioRun, String> {
         return Ok(ScenarioRun {
             label: scenario.label.clone(),
             safety: ScenarioSafety::LiveObservationRequired,
-            trace: ScenarioTrace::default(),
+            trace: ScenarioTrace {
+                status: TraceStatus::Failed {
+                    error: "scenario contains unsupported physics".to_owned(),
+                },
+                ..ScenarioTrace::default()
+            },
             differences: vec![ScenarioDifference::UnsupportedPhysics {
                 blocks: unsupported,
             }],
@@ -279,7 +317,12 @@ pub fn run_scenario(scenario: &Scenario) -> Result<ScenarioRun, String> {
         return Ok(ScenarioRun {
             label: scenario.label.clone(),
             safety: ScenarioSafety::LiveObservationRequired,
-            trace: ScenarioTrace::default(),
+            trace: ScenarioTrace {
+                status: TraceStatus::Failed {
+                    error: reason.clone(),
+                },
+                ..ScenarioTrace::default()
+            },
             differences: vec![ScenarioDifference::CapabilityUnavailable {
                 capability,
                 blocks,
@@ -332,6 +375,8 @@ pub fn run_scenario(scenario: &Scenario) -> Result<ScenarioRun, String> {
                 trace.events.push(ScenarioEvent {
                     redstone_tick: tick,
                     sub_tick_order,
+                    game_tick: None,
+                    phase: TransitionPhase::Unknown,
                     event_kind,
                     cause,
                     source,
@@ -350,6 +395,7 @@ pub fn run_scenario(scenario: &Scenario) -> Result<ScenarioRun, String> {
         }
     }
     trace.duration_redstone_ticks = scenario.duration_redstone_ticks;
+    trace.status = TraceStatus::Complete;
     let mut differences = compare_expectation(&scenario.expectation, &trace);
     let burnout: Vec<_> = simulator
         .snapshot()
@@ -606,6 +652,12 @@ pub fn compare_scenario_traces(
         },
         actual,
     );
+    if expected.status != actual.status {
+        differences.push(ScenarioDifference::TraceStatusMismatch {
+            expected: expected.status.clone(),
+            actual: actual.status.clone(),
+        });
+    }
     if expected.events.len() != actual.events.len() {
         differences.push(ScenarioDifference::EventCount {
             expected: expected.events.len(),
@@ -640,6 +692,29 @@ pub fn compare_scenario_traces(
     actual_unordered.sort();
     let only_order_differs = expected_unordered == actual_unordered;
     for (index, (expected, actual)) in expected.events.iter().zip(&actual.events).enumerate() {
+        if let (Some(expected_tick), Some(actual_tick)) = (expected.game_tick, actual.game_tick)
+            && expected_tick != actual_tick
+        {
+            differences.push(ScenarioDifference::EventGameTick {
+                index,
+                position: expected.position,
+                expected: expected_tick,
+                actual: actual_tick,
+            });
+            continue;
+        }
+        if !expected.phase.is_unknown()
+            && !actual.phase.is_unknown()
+            && expected.phase != actual.phase
+        {
+            differences.push(ScenarioDifference::EventPhase {
+                index,
+                position: expected.position,
+                expected: expected.phase,
+                actual: actual.phase,
+            });
+            continue;
+        }
         // Event provenance describes how the trace was produced and is not a
         // behavioral mismatch: a live packet necessarily says
         // `packet_observation`, while the simulator says
@@ -1020,10 +1095,14 @@ mod tests {
         let second = Pos::new(1, 1, 0);
         let expected = ScenarioTrace {
             duration_redstone_ticks: 1,
+            duration_game_ticks: None,
+            time_unit: TraceTimeUnit::RedstoneTick,
             events: vec![
                 ScenarioEvent {
                     redstone_tick: 1,
                     sub_tick_order: 0,
+                    game_tick: None,
+                    phase: TransitionPhase::Unknown,
                     event_kind: EventKind::SignalPropagation,
                     cause: EventCause::SimulatorPropagation,
                     source: EventSource::Simulator,
@@ -1036,6 +1115,8 @@ mod tests {
                 ScenarioEvent {
                     redstone_tick: 1,
                     sub_tick_order: 1,
+                    game_tick: None,
+                    phase: TransitionPhase::Unknown,
                     event_kind: EventKind::SignalPropagation,
                     cause: EventCause::SimulatorPropagation,
                     source: EventSource::Simulator,
@@ -1048,6 +1129,7 @@ mod tests {
             ],
             final_strengths: BTreeMap::from([(first, 15), (second, 15)]),
             final_powered: BTreeMap::from([(first, true), (second, true)]),
+            status: TraceStatus::Complete,
         };
         let mut actual = expected.clone();
         actual.events[0].sub_tick_order = 1;
@@ -1069,6 +1151,8 @@ mod tests {
             events: vec![ScenarioEvent {
                 redstone_tick: 1,
                 sub_tick_order: 0,
+                game_tick: None,
+                phase: TransitionPhase::Unknown,
                 event_kind: EventKind::SignalPropagation,
                 cause: EventCause::SimulatorPropagation,
                 source: EventSource::Simulator,
@@ -1081,6 +1165,9 @@ mod tests {
             final_strengths: BTreeMap::from([(position, 15)]),
             final_powered: BTreeMap::from([(position, true)]),
             duration_redstone_ticks: 1,
+            duration_game_ticks: None,
+            time_unit: TraceTimeUnit::RedstoneTick,
+            status: TraceStatus::Complete,
         };
         let mut actual = expected.clone();
         actual.events[0].cause = EventCause::PacketObservation;

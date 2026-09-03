@@ -16,7 +16,7 @@ pub use derived::{
     FunctionalKind, FunctionalView, GateEvidence, GateId, GateView, RecognitionStatus,
     RecognizedGate, RecognizedGateKind, classify_function, derive_expressions, recognize_gates,
 };
-pub use events::{EventCause, EventKind, EventSource};
+pub use events::{EventCause, EventKind, EventSource, TraceStatus};
 
 pub use expr::{
     Expr, ExprToLogicError, best_by_size, logic_from_expressions, rewrites_once, search_equivalents,
@@ -42,5 +42,6 @@ pub use transient::{
     TransientVerdict, assess_transients, observe_pulses,
 };
 pub use transitions::{
-    TransitionElapsed, TransitionId, TransitionRecord, TransitionTime, TransitionTrace,
+    LogicalElapsed, TransitionElapsed, TransitionId, TransitionPhase, TransitionRecord,
+    TransitionTime, TransitionTrace,
 };
