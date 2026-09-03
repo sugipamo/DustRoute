@@ -283,6 +283,15 @@ one `diagnostic.recommended_next_action` ahead of detailed evidence. Use
 `convert_from_circuit` only when higher-level logical interpretation is needed.
 Use `test_circuit_change` for one or more non-mutating block substitutions.
 
+Both `test_circuit` and the flat `convert_from_circuit` response also expose
+`focused_explanation`. It contains the physical block identity, local role,
+directed incoming/outgoing edges, mapped input/output candidates, bounded paths
+from inputs to the focus and from the focus to outputs, temporal requirements,
+nearby temporal devices, and explicit caveats. The hierarchical large-circuit
+path keeps the same shape but leaves terminal/path arrays empty and states that
+flat inference was skipped; this is an intentional bounded result, not a
+claim that no terminals exist.
+
 Example response shape:
 
 ```json
@@ -341,9 +350,21 @@ projection summary, and whether higher-level logic is `steady_state_safe`,
 (two game ticks each). A steady-state label remains useful for delayed paths,
 but MCP clients must present it as provisional when unequal-delay paths
 reconverge and must not treat feedback or mechanical devices as purely
-combinational logic. Basic repeater locking, comparator analog behavior, and
-Observer pulses are simulated; exact same-tick update order remains an
-explicit live-trace result.
+combinational logic. The temporal projection also exposes a
+game-tick-based `transition_delay`: `same_game_tick` is an ordered zero-delay
+transition, while `game_tick_range` and `unavailable` preserve variable or
+unmeasured timing without rounding it into a redstone tick. Piston motion is
+currently `unavailable` at this IR boundary and remains preview-only until a
+1.21.11 start/completion trace is verified. Basic repeater locking, comparator
+analog behavior, and Observer pulses are simulated; exact same-tick update
+order remains an explicit live-trace result. The Minecraft physics layer
+retains a coarse event `phase` and deterministic `sub_tick_order`, rejects a
+zero-delay phase reversal, and bounds same-tick chains with a microstep budget.
+Rejected physics events stay queued; this is fail-closed bookkeeping and not a
+claim that MCP can currently execute piston, QC/BUD, or formal 0-tick actions.
+Low-level callers that derive a physics world from a bounded live scan must
+pass that complete boundary to `PistonPlanningContext` or the engine's
+`with_piston_planning_region` builder; outside coordinates remain Unknown.
 
 Transient output distinguishes structural risk from measured behavior. A
 hierarchical scan reports `not_simulated` until transition scenarios have run.
@@ -405,10 +426,12 @@ test_circuit -> capture circuit_id
 
 The bridge uses Mineflayer's normal block activation rather than changing a
 `powered` state with `/setblock`. The bot must be within 5.5 blocks of the
-lever. Observations record packet-visible block updates with sequence numbers
-and a Mineflayer physics-tick clock. Conversion rounds these observations into
-the internal simulator's redstone-tick unit while retaining within-tick order
-as separate evidence. Runs are bounded to 200 game ticks and 65,536 events.
+lever. Observations record packet-visible block updates with sequence numbers,
+a Mineflayer physics-tick clock, and `sub_tick_order` within that clock tick.
+Conversion rounds these observations into the internal simulator's
+redstone-tick unit while retaining within-tick order as separate evidence.
+That order is a causal clue, not an exact vanilla scheduler trace. Runs are
+bounded to 200 game ticks and 65,536 events.
 TNT, fire, water, and lava reject a scenario. Pistons, observers,
 containers with activation behavior, and unsupported sensors remain
 preview-only. Every run captures the original snapshot and reports failure
@@ -419,8 +442,18 @@ An explicit `undo_operation(confirm=true)` first retries the natural
 reverse operation, then reapplies the bounded pre-test block states only when
 the region still differs, and verifies the complete region again.
 `scenario_verification` contains the normalized live trace, simulated trace,
-typed differences, and an `equivalent` flag. Same-tick ordering differences are
-retained rather than silently treated as electrical mismatches.
+typed differences, and an `equivalent` flag. The response also includes a
+transition-first `transitions` array: each state-changing event has an opaque
+ID, before/after signal values when available, and elapsed ordering. A
+`same_tick` elapsed value retains its within-tick order delta; a later
+`exact_ticks` value is measured in the trace's redstone-tick unit. Same-tick
+ordering differences are retained rather than silently treated as electrical
+mismatches.
+Each trace event additionally carries `event_kind`, `cause`, `source`, and an
+optional `cause_sequence`. Live Mineflayer events use
+`cause=packet_observation` and `source=live_mineflayer`; they do not claim to
+know the vanilla scheduler cause. Event provenance is explanatory metadata and
+does not by itself make an otherwise matching live/simulated trace unequal.
 
 ## Physical repair workflow
 

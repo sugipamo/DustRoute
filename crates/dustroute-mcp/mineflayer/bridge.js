@@ -84,9 +84,21 @@ function connectBot () {
       recording.truncated = true
       return
     }
+    const gameTick = observedGameTick
+    if (recording.lastGameTick !== gameTick) {
+      recording.lastGameTick = gameTick
+      recording.nextSubTickOrder = 0
+    }
+    const subTickOrder = recording.nextSubTickOrder
+    recording.nextSubTickOrder += 1
     recording.events.push({
       sequence: recording.seenEvents,
-      game_tick: observedGameTick,
+      game_tick: gameTick,
+      sub_tick_order: subTickOrder,
+      event_kind: 'state_transition',
+      cause: 'packet_observation',
+      source: 'live_mineflayer',
+      cause_sequence: null,
       pos: posJson(block.position),
       before: blockRecord(oldBlock),
       after: blockRecord(newBlock)
@@ -394,6 +406,8 @@ function startUpdateRecording (params) {
     maxEvents,
     seenEvents: 0,
     truncated: false,
+    lastGameTick: null,
+    nextSubTickOrder: 0,
     startedGameTick: observedGameTick,
     events: []
   }

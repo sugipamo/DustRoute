@@ -1,15 +1,42 @@
 use serde::{Deserialize, Serialize};
 
-use crate::Pos;
+use crate::{PistonAction, PistonPlan, Pos};
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 pub struct EventId(pub u64);
+
+/// Coarse scheduler phase used to order events that share a game tick.
+///
+/// The enum is deliberately separate from [`PhysicsEventKind`]: two events
+/// with similar payloads may be delivered by different sources in a future
+/// versioned scheduler.  The initial order is a deterministic model boundary,
+/// not a claim that packet observation exposes vanilla's complete scheduler.
+#[derive(
+    Clone, Copy, Debug, Default, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum PhysicsEventPhase {
+    #[default]
+    External,
+    NeighborUpdate,
+    ScheduledTick,
+    BlockEvent,
+    BlockEntity,
+    Observation,
+}
 
 #[derive(
     Clone, Copy, Debug, Default, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize,
 )]
 pub struct PhysicsTime {
     pub game_tick: u64,
+    /// Coarse event phase within `game_tick`.  It is ordered before the
+    /// deterministic insertion sequence below.
+    #[serde(default)]
+    pub phase: PhysicsEventPhase,
+    /// Deterministic sequence within the same game tick and phase.
+    /// Zero is valid and is not a duration.
+    #[serde(default)]
     pub sub_tick_order: u64,
 }
 
@@ -24,10 +51,38 @@ pub enum BlockEventKind {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum PhysicsEventKind {
-    NeighborUpdate { source: Pos },
+    NeighborUpdate {
+        source: Pos,
+    },
     ScheduledBlockTick,
-    BlockEvent { event: BlockEventKind },
-    UserAction { action: String },
+    BlockEvent {
+        event: BlockEventKind,
+    },
+    /// Internal completion event emitted after a piston has entered its
+    /// moving state. The plan is rebased against that start state and is
+    /// revalidated atomically when this event executes.
+    PistonComplete {
+        action: PistonAction,
+        plan: Box<PistonPlan>,
+    },
+    UserAction {
+        action: String,
+    },
+}
+
+impl PhysicsEventKind {
+    /// Returns the default scheduler phase for this event kind.  Callers that
+    /// have stronger source evidence may use the queue's explicit phase API.
+    #[must_use]
+    pub const fn default_phase(&self) -> PhysicsEventPhase {
+        match self {
+            Self::NeighborUpdate { .. } => PhysicsEventPhase::NeighborUpdate,
+            Self::ScheduledBlockTick => PhysicsEventPhase::ScheduledTick,
+            Self::BlockEvent { .. } => PhysicsEventPhase::BlockEvent,
+            Self::PistonComplete { .. } => PhysicsEventPhase::BlockEntity,
+            Self::UserAction { .. } => PhysicsEventPhase::External,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -48,7 +103,14 @@ pub struct PhysicsEvent {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct QueuedEvent {
+    /// Delay in game ticks from the parent event. Zero is valid and means the
+    /// event stays in the same game tick; the queue assigns the next
+    /// `sub_tick_order` so causal order is still observable.
     pub delay_ticks: u64,
     pub target: Pos,
+    /// Explicit phase for the child event.  The handler normally uses the
+    /// phase implied by its kind, but keeping it on the queued edge allows a
+    /// versioned scheduler to model a source-specific phase later.
+    pub phase: PhysicsEventPhase,
     pub kind: PhysicsEventKind,
 }

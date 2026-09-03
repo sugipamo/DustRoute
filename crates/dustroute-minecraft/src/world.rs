@@ -45,6 +45,46 @@ pub enum BlockKind {
     Piston,
 }
 
+/// The two piston variants exposed by Java Edition.  The variant is kept as
+/// physical state rather than inferred from a logical gate so sticky
+/// retraction cannot be silently lost during translation.
+#[derive(
+    Clone, Copy, Debug, Default, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum PistonVariant {
+    #[default]
+    Normal,
+    Sticky,
+}
+
+/// Stable and transient piston states.  The event engine currently applies a
+/// plan atomically, but the moving states are part of the contract so later
+/// block-event traces can expose the vanilla intermediate state honestly.
+#[derive(
+    Clone, Copy, Debug, Default, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum PistonState {
+    #[default]
+    Retracted,
+    Extended,
+    Extending,
+    Retracting,
+}
+
+impl PistonState {
+    #[must_use]
+    pub const fn is_extended(self) -> bool {
+        matches!(self, Self::Extended | Self::Extending)
+    }
+
+    #[must_use]
+    pub const fn is_stable(self) -> bool {
+        matches!(self, Self::Retracted | Self::Extended)
+    }
+}
+
 /// How completely DustRoute can use an observed block at a specific analysis
 /// boundary. Observation is kept even when later semantic stages are not
 /// supported.
@@ -237,6 +277,15 @@ pub struct Block {
     pub delay: Option<u8>,
     pub support_offset: Option<Pos>,
     pub wire_connections: Option<BTreeMap<Facing, WireConnection>>,
+    /// Present only for `BlockKind::Piston`; omitted from serialized output for
+    /// other blocks to preserve the compact legacy representation.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub piston_variant: Option<PistonVariant>,
+    /// Present only for `BlockKind::Piston`.  Moving piston/head blocks are
+    /// represented by the transient state rather than being mistaken for a
+    /// stable ordinary block.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub piston_state: Option<PistonState>,
 }
 
 impl Block {
@@ -253,6 +302,14 @@ impl Block {
             delay: None,
             support_offset: None,
             wire_connections: None,
+            piston_variant: match kind {
+                BlockKind::Piston => Some(PistonVariant::Normal),
+                _ => None,
+            },
+            piston_state: match kind {
+                BlockKind::Piston => Some(PistonState::Retracted),
+                _ => None,
+            },
         }
     }
 
@@ -560,6 +617,43 @@ impl World {
     #[must_use]
     pub fn get(&self, pos: Pos) -> Option<&Block> {
         self.blocks.get(&pos)
+    }
+
+    /// Returns a mutable block for signal-state updates.  Callers that change
+    /// geometry should prefer `WorldDelta::apply`, which validates and commits
+    /// an atomic shape transition.
+    pub fn get_mut(&mut self, pos: Pos) -> Option<&mut Block> {
+        self.blocks.get_mut(&pos)
+    }
+
+    /// Returns the content-derived identity of the current geometric shape.
+    /// Signal-only fields are intentionally excluded; see [`ShapeId`].
+    #[must_use]
+    pub fn shape_id(&self) -> crate::ShapeId {
+        crate::delta::shape_id(self)
+    }
+
+    /// Returns the content-derived identity of the complete observed state,
+    /// including signal fields. Use this when a transition's endpoints must
+    /// distinguish a powered and an unpowered version of the same shape.
+    #[must_use]
+    pub fn state_id(&self) -> crate::StateId {
+        crate::delta::state_id(self)
+    }
+
+    /// Captures this world as an immutable shape view.  The snapshot still
+    /// retains observed signal fields for compatibility, while its identity
+    /// is geometry-oriented.
+    #[must_use]
+    pub fn as_shape(&self) -> crate::Shape {
+        crate::Shape::new(self.clone())
+    }
+
+    /// Applies an atomic geometry/state delta.  This method is intentionally
+    /// thin so every caller shares the same stale-state and duplicate-change
+    /// checks.
+    pub fn apply_delta(&mut self, delta: &crate::WorldDelta) -> Result<(), crate::WorldDeltaError> {
+        delta.apply(self)
     }
 
     #[must_use]

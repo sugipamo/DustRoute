@@ -533,7 +533,7 @@ struct LogicalContractParam {
 
 #[derive(Debug, Default, Deserialize, schemars::JsonSchema)]
 struct TimingContractParam {
-    /// exact_trace, bounded_delay, settled_value_only, or preserve_order.
+    /// exact_trace, exact_transitions, bounded_delay, settled_value_only, or preserve_order.
     mode: Option<String>,
     maximum_added_redstone_ticks: Option<usize>,
     settle_deadline_redstone_ticks: Option<usize>,
@@ -588,6 +588,7 @@ fn optimization_contract_from_param(
         if let Some(mode) = timing.mode {
             contract.timing.mode = match mode.as_str() {
                 "exact_trace" => TimingContractMode::ExactTrace,
+                "exact_transitions" => TimingContractMode::ExactTransitions,
                 "bounded_delay" => TimingContractMode::BoundedDelay,
                 "settled_value_only" => TimingContractMode::SettledValueOnly,
                 "preserve_order" => TimingContractMode::PreserveOrder,
@@ -658,6 +659,7 @@ fn optimization_contract_from_param(
 fn optimization_contract_json(contract: OptimizationContract) -> Value {
     let timing_mode = match contract.timing.mode {
         TimingContractMode::ExactTrace => "exact_trace",
+        TimingContractMode::ExactTransitions => "exact_transitions",
         TimingContractMode::BoundedDelay => "bounded_delay",
         TimingContractMode::SettledValueOnly => "settled_value_only",
         TimingContractMode::PreserveOrder => "preserve_order",
@@ -760,6 +762,7 @@ fn scenario_trace_json(trace: &dustroute_translate::ScenarioTrace) -> Value {
             "serialization_error": error.to_string(),
             "duration_redstone_ticks": trace.duration_redstone_ticks,
             "events": [],
+            "transitions": [],
             "final_strengths": [],
             "final_powered": [],
         })
@@ -1114,6 +1117,46 @@ fn focused_role_json(translated: &dustroute_translate::ReverseResult, target: Po
     })
 }
 
+fn focused_explanation_json(
+    analysis: &dustroute_translate::PhysicalAnalysis,
+    target: Pos,
+    analysis_complete: bool,
+) -> Value {
+    serde_json::to_value(dustroute_translate::explain_focused_component(
+        analysis,
+        target,
+        analysis_complete,
+    ))
+    .unwrap_or_else(|error| {
+        json!({
+            "position": target,
+            "status": "unavailable",
+            "reason": format!("focused explanation serialization failed: {error}"),
+        })
+    })
+}
+
+fn focused_scene_explanation_json(
+    scene: &dustroute_physical::PhysicalScene,
+    hierarchy: &dustroute_ir::HierarchicalIr,
+    target: Pos,
+    analysis_complete: bool,
+) -> Value {
+    serde_json::to_value(dustroute_translate::explain_focused_scene(
+        scene,
+        hierarchy,
+        target,
+        analysis_complete,
+    ))
+    .unwrap_or_else(|error| {
+        json!({
+            "position": target,
+            "status": "unavailable",
+            "reason": format!("focused explanation serialization failed: {error}"),
+        })
+    })
+}
+
 fn focused_hierarchy_role_json(
     scene: &dustroute_physical::PhysicalScene,
     hierarchy: &dustroute_ir::HierarchicalIr,
@@ -1270,12 +1313,17 @@ fn hierarchical_result_json(
             *counts.entry(representation).or_insert(0_usize) += 1;
             counts
         });
+    let analysis_complete =
+        expansion["limit_reached"] != Value::Bool(true) && scene.observation.is_complete();
+    let focused_explanation = focus
+        .map(|target| focused_scene_explanation_json(scene, hierarchy, target, analysis_complete));
     json!({
         "ok": true,
         "analysis_mode": "hierarchical_local_first",
         "bounds": bounds_json(bounds),
         "analysis_complete": expansion["limit_reached"] != Value::Bool(true),
         "focused_component": focused,
+        "focused_explanation": focused_explanation,
         "expansion": expansion,
         "block_capabilities": capability_report_json(scene),
         "signal_liveness": signal_liveness_json(scene, focus),
@@ -3458,7 +3506,7 @@ impl DustRouteMcp {
     }
 
     #[tool(
-        description = "Capture or reuse an immutable circuit snapshot and return a compact health summary. Omit circuit_id to capture the current gaze; pass the returned circuit_id to keep later analysis on the same circuit",
+        description = "Capture or reuse an immutable circuit snapshot and return a compact health summary plus bounded focused_explanation (local role, directed edges, terminal candidates, paths, and timing caveats). Omit circuit_id to capture the current gaze; pass the returned circuit_id to keep later analysis on the same circuit",
         annotations(read_only_hint = true, destructive_hint = false)
     )]
     async fn test_circuit(&self, Parameters(params): Parameters<DiagnoseLookedAtParams>) -> String {
@@ -3490,6 +3538,13 @@ impl DustRouteMcp {
         analysis.scene.observation.dimension = dimension;
         let complete = circuit.complete;
         let diagnostic = dustroute_translate::diagnose_scene(&analysis.scene, target, complete);
+        let focused_explanation = target.map(|target| {
+            let focused = self.app.analyze_physical(
+                &world,
+                ReverseRequest::new(bounds).with_observation_complete(complete),
+            );
+            focused_explanation_json(&focused, target, complete)
+        });
         json_text(json!({
             "ok": true,
             "schema_version": DIAGNOSTIC_SCHEMA_V1,
@@ -3501,6 +3556,7 @@ impl DustRouteMcp {
             "bounds": bounds_json(bounds),
             "expansion": circuit.expansion,
             "diagnostic": diagnostic,
+            "focused_explanation": focused_explanation,
             "detail_tools": {
                 "full_conversion": "convert_from_circuit",
                 "raw_observation": "get_world",
@@ -3728,7 +3784,7 @@ impl DustRouteMcp {
     }
 
     #[tool(
-        description = "Convert a captured or selected physical circuit into bounded physical, mixed-IR, and higher-level identity summaries. Reuse circuit_id to avoid following a moved gaze. Set include_truth_table=true for explicitly bounded exhaustive functional inference, including large circuits. Repair and transition planning are separate tools.",
+        description = "Convert a captured or selected physical circuit into bounded physical, mixed-IR, and higher-level identity summaries with focused_explanation for the gaze target. Reuse circuit_id to avoid following a moved gaze. Set include_truth_table=true for explicitly bounded exhaustive functional inference, including large circuits. Repair and transition planning are separate tools.",
         annotations(read_only_hint = true, destructive_hint = false)
     )]
     async fn convert_from_circuit(
@@ -3962,6 +4018,12 @@ impl DustRouteMcp {
                 .unwrap_or(Value::Null),
             );
             object.insert("focused_component".to_owned(), focused);
+            if let Some(target) = target {
+                object.insert(
+                    "focused_explanation".to_owned(),
+                    focused_explanation_json(&staged, target, !incomplete),
+                );
+            }
             object.insert(
                 "discovery".to_owned(),
                 json!({ "seed": target, "bounds": bounds_json(bounds) }),
@@ -4037,6 +4099,26 @@ impl DustRouteMcp {
                                 "to": case.to,
                                 "equivalent": case.equivalent,
                                 "first_difference_tick": case.first_difference_tick,
+                                "original_transitions": case
+                                    .original_transition_edges()
+                                    .iter()
+                                    .map(|transition| json!({
+                                        "at_tick": transition.at_tick,
+                                        "from": transition.from,
+                                        "to": transition.to,
+                                        "elapsed_from_previous": transition.elapsed_from_previous,
+                                    }))
+                                    .collect::<Vec<_>>(),
+                                "candidate_transitions": case
+                                    .candidate_transition_edges()
+                                    .iter()
+                                    .map(|transition| json!({
+                                        "at_tick": transition.at_tick,
+                                        "from": transition.from,
+                                        "to": transition.to,
+                                        "elapsed_from_previous": transition.elapsed_from_previous,
+                                    }))
+                                    .collect::<Vec<_>>(),
                                 "original_outputs": case.original_outputs,
                                 "candidate_outputs": case.candidate_outputs,
                             })).collect::<Vec<_>>(),
@@ -5665,11 +5747,24 @@ impl DustRouteMcp {
             }));
         }
         if plan.safety.safety != TransitionSafety::Ready {
-            return json_text(json!({
-                "ok": false,
-                "error": "scenario is preview-only because the region contains temporal or unsupported devices",
-                "safety": plan.safety
-            }));
+            let mut response = match serde_json::to_value(ErrorResponse::new(
+                McpErrorCode::InvalidState,
+                "scenario is preview-only because the region contains temporal or unsupported devices",
+                false,
+            )) {
+                Ok(value) => value,
+                Err(error) => {
+                    return error_text(McpErrorCode::Internal, error.to_string(), false);
+                }
+            };
+            let safety = match serde_json::to_value(&plan.safety) {
+                Ok(value) => value,
+                Err(error) => return error_text(McpErrorCode::Internal, error.to_string(), false),
+            };
+            if let Some(object) = response.as_object_mut() {
+                object.insert("safety".to_owned(), safety);
+            }
+            return json_text(response);
         }
         let current = match self.bridge.get_block(plan.lever, &plan.dimension).await {
             Ok(block) => block,
@@ -5796,6 +5891,7 @@ impl DustRouteMcp {
             ),
         );
         let transient = dustroute_ir::assess_transients(&trace, &contracts);
+        let transition_trace = trace.transition_trace();
         let observe = plan
             .initial_snapshot
             .blocks
@@ -5861,6 +5957,7 @@ impl DustRouteMcp {
                 "truncated": recording.truncated
             },
             "trace": trace,
+            "transition_trace": transition_trace,
             "transient_assessment": transient,
             "scenario_verification": {
                 "scenario": scenario,
@@ -6544,6 +6641,23 @@ mod tests {
     }
 
     #[test]
+    fn optimization_contract_accepts_transition_edge_comparison() {
+        let contract = optimization_contract_from_param(Some(OptimizationContractParam {
+            timing: Some(TimingContractParam {
+                mode: Some("exact_transitions".to_owned()),
+                ..TimingContractParam::default()
+            }),
+            ..OptimizationContractParam::default()
+        }))
+        .unwrap();
+        assert_eq!(contract.timing.mode, TimingContractMode::ExactTransitions);
+        assert_eq!(
+            optimization_contract_json(contract)["timing"]["mode"],
+            "exact_transitions"
+        );
+    }
+
+    #[test]
     fn boundary_record_keeps_static_identity_and_ignores_live_power() {
         let record = boundary_block_record(&dustroute_translate::MinecraftSnapshotBlock {
             pos: Pos::new(1, 64, 2),
@@ -7129,6 +7243,9 @@ mod tests {
         assert_eq!(value["diagnostic"]["observation_complete"], true);
         assert!(value["diagnostic"]["counts"].is_object());
         assert!(value["diagnostic"]["recommended_next_action"].is_object());
+        assert!(value["focused_explanation"]["role"].is_object());
+        assert!(value["focused_explanation"]["incoming"].is_array());
+        assert!(value["focused_explanation"]["paths_to_outputs"].is_array());
         let circuit_id = value["circuit_id"].as_str().unwrap().to_owned();
         let ir: Value = serde_json::from_str(
             &service
@@ -7212,6 +7329,8 @@ mod tests {
         assert!(value["diagnostic"]["counts"].is_object());
         assert!(value["diagnostic"]["findings"].is_array());
         assert!(value["diagnostic"]["recommended_next_action"].is_object());
+        assert!(value["focused_explanation"]["role"].is_object());
+        assert!(value["focused_explanation"]["caveats"].is_array());
     }
 
     #[tokio::test]

@@ -21,6 +21,12 @@ mod repeater;
 mod solid;
 mod transparent;
 
+pub use piston::{
+    DEFAULT_PISTON_MOTION_PROFILE, PISTON_PUSH_LIMIT, PistonAction, PistonBlockMove, PistonError,
+    PistonMotionProfile, PistonMotionProfileError, PistonPlan, PistonPlanningContext,
+    observed_name_is_immovable, piston_state, piston_variant, plan_piston, plan_piston_in_region,
+};
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum UpdateModel {
     Passive,

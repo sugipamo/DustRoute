@@ -10,7 +10,10 @@ use zip::write::SimpleFileOptions;
 
 use crate::compiler::BaselineCompileResult;
 use crate::logic::LogicError;
-use crate::world::{Block, BlockKind, Facing, Pos, WireConnection, World};
+use crate::world::{
+    Block, BlockKind, Facing, PistonVariant, Pos, WireConnection, World, piston_state,
+    piston_variant,
+};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct JavaExportConfig {
@@ -217,10 +220,17 @@ pub fn java_block_state(
                 block.powered.unwrap_or(false)
             )
         }
-        BlockKind::Piston => format!(
-            "minecraft:piston[facing={},extended=false]",
-            facing_name(block.facing.unwrap_or(Facing::North))
-        ),
+        BlockKind::Piston => {
+            let name = match piston_variant(block) {
+                PistonVariant::Normal => "minecraft:piston",
+                PistonVariant::Sticky => "minecraft:sticky_piston",
+            };
+            let extended = piston_state(block).is_extended();
+            format!(
+                "{name}[facing={},extended={extended}]",
+                facing_name(block.facing.unwrap_or(Facing::North))
+            )
+        }
     };
     Ok(state)
 }

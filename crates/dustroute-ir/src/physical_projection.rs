@@ -1,7 +1,11 @@
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
-use dustroute_physical::{BlockKind, ComponentId, PhysicalScene, Pos, TransferKind};
+use dustroute_physical::{
+    BlockKind, ComponentId, ConnectionKind, PhysicalScene, Pos, TransferKind,
+};
 use serde::{Deserialize, Serialize};
+
+use crate::TransitionTrace;
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -26,6 +30,7 @@ pub struct TemporalNode {
 struct TemporalDependency {
     pub source: ComponentId,
     pub sink: ComponentId,
+    pub kind: ConnectionKind,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
@@ -67,11 +72,46 @@ pub enum EdgeBehavior {
     OrderSensitive,
 }
 
+/// A transition delay expressed in the scheduler's base unit rather than as
+/// an integer redstone-tick convenience value.  `SameGameTick` is an ordered
+/// zero-game-tick transition; its exact position is carried by
+/// [`BehaviorEvent::sub_tick_order`].  `GameTickRange` is intentionally kept
+/// as a range because a state transition may depend on the observed trigger
+/// and re-trigger timing.  `Unavailable` is fail-closed and must not be
+/// interpreted as an immediate transition.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum TransitionDelay {
+    ExactGameTicks {
+        game_ticks: u64,
+    },
+    GameTickRange {
+        minimum_game_ticks: u64,
+        maximum_game_ticks: u64,
+    },
+    SameGameTick,
+    Unavailable {
+        reason: String,
+    },
+}
+
+impl Default for TransitionDelay {
+    fn default() -> Self {
+        Self::Unavailable {
+            reason: "timing has not been verified".to_owned(),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct TimedEdge {
     pub source: ComponentId,
     pub sink: ComponentId,
     pub delay: DelayRange,
+    /// Scheduler-aware timing. `delay` remains for the legacy redstone-tick
+    /// projection and must not be used when this field is unavailable.
+    #[serde(default)]
+    pub transition_delay: TransitionDelay,
     pub behavior: EdgeBehavior,
     pub physical_components: BTreeSet<ComponentId>,
 }
@@ -123,6 +163,11 @@ pub enum TimingReason {
         component: ComponentId,
         block: BlockKind,
     },
+    TransitionTimingUnavailable {
+        component: ComponentId,
+        block: BlockKind,
+        reason: String,
+    },
     LockedRepeater {
         component: ComponentId,
     },
@@ -150,11 +195,34 @@ pub struct TemporalDevice {
     pub physical_position: Pos,
     pub semantics: TemporalSemantics,
     pub minimum_delay_redstone_ticks: u8,
+    /// A zero-capable, game-tick-based timing contract. The legacy scalar
+    /// above is retained for existing consumers and is not authoritative for
+    /// mechanical devices.
+    #[serde(default)]
+    pub transition_delay: TransitionDelay,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct BehaviorEvent {
     pub tick: u64,
+    /// Ordering within `tick`. Zero is used by traces that only have coarse
+    /// tick resolution or by a settled baseline observation.
+    #[serde(default)]
+    pub sub_tick_order: u64,
+    /// Coarse event classification. Older traces deserialize as a generic
+    /// state transition and therefore remain compatible.
+    #[serde(default)]
+    pub event_kind: crate::EventKind,
+    /// Causal evidence. `unknown` is intentional when the scheduler cause is
+    /// not exposed by the source of the trace.
+    #[serde(default)]
+    pub cause: crate::EventCause,
+    #[serde(default)]
+    pub source: crate::EventSource,
+    /// Optional parent event in a causal trace. Current traces leave this
+    /// unset until a scheduler-aware event engine can provide it honestly.
+    #[serde(default)]
+    pub cause_sequence: Option<u64>,
     pub component: ComponentId,
     pub powered: bool,
 }
@@ -240,6 +308,7 @@ impl TemporalAnalysis {
             .map(|edge| TemporalDependency {
                 source: edge.source.component,
                 sink: edge.sink.component,
+                kind: connection_kind(edge.transfer),
             })
             .collect();
         let evidence = scene
@@ -265,6 +334,7 @@ impl TemporalAnalysis {
                     physical_position: c.pos,
                     semantics,
                     minimum_delay_redstone_ticks: component_delay(c.block.kind, c.block.delay),
+                    transition_delay: component_transition_delay(c.block.kind, c.block.delay),
                 })
             })
             .collect::<Vec<_>>();
@@ -298,6 +368,17 @@ impl TemporalAnalysis {
             .push(crate::assess_transients(&trace, contracts));
         self.behavior.traces.push(trace);
     }
+
+    /// Records a transition-first trace while retaining the legacy behavior
+    /// projection used by transient analysis. This adapter is deliberately
+    /// explicit: no tick samples or missing before-values are synthesized.
+    pub fn record_transition_trace(
+        &mut self,
+        trace: TransitionTrace,
+        contracts: &BTreeMap<ComponentId, crate::SignalIntent>,
+    ) {
+        self.record_trace(trace.to_behavior_trace(), contracts);
+    }
 }
 
 fn timed_circuit(scene: &PhysicalScene, dependencies: &TemporalDependencyGraph) -> TimedCircuit {
@@ -311,11 +392,18 @@ fn timed_circuit(scene: &PhysicalScene, dependencies: &TemporalDependencyGraph) 
         .iter()
         .map(|edge| {
             let source = by_id[&edge.source];
-            let (delay, behavior) = edge_timing(source.block.kind, source.block.delay);
+            let sink = by_id[&edge.sink];
+            let (delay, transition_delay, behavior) = edge_timing(
+                source.block.kind,
+                sink.block.kind,
+                edge.kind,
+                source.block.delay,
+            );
             TimedEdge {
                 source: edge.source,
                 sink: edge.sink,
                 delay,
+                transition_delay,
                 behavior,
                 physical_components: BTreeSet::from([edge.source, edge.sink]),
             }
@@ -327,29 +415,87 @@ fn timed_circuit(scene: &PhysicalScene, dependencies: &TemporalDependencyGraph) 
     }
 }
 
-fn edge_timing(kind: BlockKind, delay: Option<u8>) -> (DelayRange, EdgeBehavior) {
-    let ticks = u32::from(component_delay(kind, delay));
+fn connection_kind(transfer: TransferKind) -> ConnectionKind {
+    match transfer {
+        TransferKind::DustPropagation => ConnectionKind::Dust,
+        TransferKind::DirectSignal => ConnectionKind::DirectSource,
+        TransferKind::WeakPower => ConnectionKind::WeakPower,
+        TransferKind::StrongPower => ConnectionKind::StrongPower,
+        TransferKind::DirectionalDevice => ConnectionKind::DirectionalOutput,
+        TransferKind::SideControl => ConnectionKind::Control,
+        TransferKind::Observation => ConnectionKind::ObserverInput,
+        TransferKind::StructuralSupport => ConnectionKind::Support,
+    }
+}
+
+fn edge_timing(
+    source_kind: BlockKind,
+    sink_kind: BlockKind,
+    connection: ConnectionKind,
+    delay: Option<u8>,
+) -> (DelayRange, TransitionDelay, EdgeBehavior) {
+    let ticks = u32::from(component_delay(source_kind, delay));
     let range = DelayRange {
         minimum_redstone_ticks: ticks,
         maximum_redstone_ticks: ticks,
     };
-    let behavior = match kind {
-        BlockKind::Repeater => EdgeBehavior::DelayedForward,
-        BlockKind::RedstoneTorch => EdgeBehavior::DelayedInvert,
-        BlockKind::Comparator => EdgeBehavior::Analog,
-        BlockKind::Observer => EdgeBehavior::Pulse,
-        BlockKind::Piston => EdgeBehavior::Mechanical,
-        BlockKind::RedstoneWire => EdgeBehavior::OrderSensitive,
-        BlockKind::Air
-        | BlockKind::Solid
-        | BlockKind::Transparent
-        | BlockKind::Lever
-        | BlockKind::Button
-        | BlockKind::PressurePlate
-        | BlockKind::RedstoneLamp
-        | BlockKind::RedstoneBlock => EdgeBehavior::Immediate,
+    let transition_delay = edge_transition_delay(source_kind, sink_kind, connection, delay);
+    let behavior = if connection == ConnectionKind::PistonInput || sink_kind == BlockKind::Piston {
+        EdgeBehavior::Mechanical
+    } else {
+        match source_kind {
+            BlockKind::Repeater => EdgeBehavior::DelayedForward,
+            BlockKind::RedstoneTorch => EdgeBehavior::DelayedInvert,
+            BlockKind::Comparator => EdgeBehavior::Analog,
+            BlockKind::Observer => EdgeBehavior::Pulse,
+            BlockKind::Piston => EdgeBehavior::Mechanical,
+            BlockKind::RedstoneWire => EdgeBehavior::OrderSensitive,
+            BlockKind::Air
+            | BlockKind::Solid
+            | BlockKind::Transparent
+            | BlockKind::Lever
+            | BlockKind::Button
+            | BlockKind::PressurePlate
+            | BlockKind::RedstoneLamp
+            | BlockKind::RedstoneBlock => EdgeBehavior::Immediate,
+        }
     };
-    (range, behavior)
+    (range, transition_delay, behavior)
+}
+
+fn edge_transition_delay(
+    source_kind: BlockKind,
+    sink_kind: BlockKind,
+    connection: ConnectionKind,
+    delay: Option<u8>,
+) -> TransitionDelay {
+    if connection == ConnectionKind::PistonInput
+        || sink_kind == BlockKind::Piston
+        || source_kind == BlockKind::Piston
+    {
+        return TransitionDelay::Unavailable {
+            reason:
+                "piston motion has phase-dependent timing; a live block-event trace is required"
+                    .to_owned(),
+        };
+    }
+    component_transition_delay(source_kind, delay)
+}
+
+fn component_transition_delay(kind: BlockKind, delay: Option<u8>) -> TransitionDelay {
+    match kind {
+        BlockKind::Repeater => TransitionDelay::ExactGameTicks {
+            game_ticks: u64::from(delay.unwrap_or(1)) * 2,
+        },
+        BlockKind::RedstoneTorch | BlockKind::Observer => {
+            TransitionDelay::ExactGameTicks { game_ticks: 2 }
+        }
+        BlockKind::Piston => TransitionDelay::Unavailable {
+            reason: "piston start/completion timing is not in the stable structural subset"
+                .to_owned(),
+        },
+        _ => TransitionDelay::SameGameTick,
+    }
 }
 
 fn timing_assessment(scene: &PhysicalScene, circuit: &TimedCircuit) -> TimingAssessment {
@@ -368,6 +514,15 @@ fn timing_assessment(scene: &PhysicalScene, circuit: &TimedCircuit) -> TimingAss
             reasons.push(TimingReason::StatefulOrMechanicalDevice {
                 component: component.id,
                 block: component.block.kind,
+            });
+        }
+        if component.block.kind == BlockKind::Piston {
+            reasons.push(TimingReason::TransitionTimingUnavailable {
+                component: component.id,
+                block: component.block.kind,
+                reason:
+                    "piston start/completion timing is not verified in the stable structural subset"
+                        .to_owned(),
             });
         }
         if component.block.kind == BlockKind::Repeater
@@ -389,6 +544,7 @@ fn timing_assessment(scene: &PhysicalScene, circuit: &TimedCircuit) -> TimingAss
             reason,
             TimingReason::Feedback { .. }
                 | TimingReason::StatefulOrMechanicalDevice { .. }
+                | TimingReason::TransitionTimingUnavailable { .. }
                 | TimingReason::LockedRepeater { .. }
         )
     }) {
@@ -755,7 +911,12 @@ const fn signal_kind(kind: BlockKind) -> TemporalNodeKind {
 fn component_delay(kind: BlockKind, delay: Option<u8>) -> u8 {
     match kind {
         BlockKind::Repeater => delay.unwrap_or(1),
-        BlockKind::RedstoneTorch | BlockKind::Observer | BlockKind::Piston => 1,
+        BlockKind::RedstoneTorch | BlockKind::Observer => 1,
+        // Keep the legacy scalar conservative. Piston timing is represented
+        // by `TransitionDelay::Unavailable` until its phase profile is
+        // measured and implemented; `1` would falsely claim one redstone
+        // tick and hide the 1.5-tick/short-pulse boundary.
+        BlockKind::Piston => 0,
         _ => 0,
     }
 }
@@ -819,6 +980,10 @@ mod tests {
             3
         );
         assert_eq!(
+            projection.behavior.devices[0].transition_delay,
+            TransitionDelay::ExactGameTicks { game_ticks: 6 }
+        );
+        assert_eq!(
             projection.behavior.patterns,
             vec![BehaviorPattern::DelayedPath]
         );
@@ -826,6 +991,115 @@ mod tests {
             projection.behavior.physical_origins[&ComponentId(1)],
             Pos::new(1, 64, 0)
         );
+    }
+
+    #[test]
+    fn projects_a_direct_piston_input_as_mechanical_and_temporal() {
+        let mut piston = Block::new(BlockKind::Piston);
+        piston.facing = Some(dustroute_physical::Facing::East);
+        let topology = VerifiedTopology::from_parts(
+            vec![
+                PhysicalComponent {
+                    id: ComponentId(0),
+                    pos: Pos::new(0, 64, 0),
+                    block: Block::new(BlockKind::Lever),
+                },
+                PhysicalComponent {
+                    id: ComponentId(1),
+                    pos: Pos::new(1, 64, 0),
+                    block: piston,
+                },
+            ],
+            [PhysicalConnection {
+                source: ComponentId(0),
+                sink: ComponentId(1),
+                kind: ConnectionKind::PistonInput,
+            }],
+        );
+        let analysis = analyze(&topology);
+        assert_eq!(analysis.timing.scope, TemporalScope::TemporalRequired);
+        assert!(analysis.timing.reasons.iter().any(|reason| matches!(
+            reason,
+            TimingReason::TransitionTimingUnavailable {
+                component: ComponentId(1),
+                block: BlockKind::Piston,
+                ..
+            }
+        )));
+        let edge = analysis
+            .timed_circuit
+            .edges
+            .iter()
+            .find(|edge| edge.source == ComponentId(0) && edge.sink == ComponentId(1))
+            .expect("direct piston input edge");
+        assert_eq!(edge.behavior, EdgeBehavior::Mechanical);
+        assert!(matches!(
+            edge.transition_delay,
+            TransitionDelay::Unavailable { .. }
+        ));
+        let device = analysis
+            .behavior
+            .devices
+            .iter()
+            .find(|device| device.component == ComponentId(1))
+            .expect("piston temporal device");
+        assert_eq!(device.semantics, TemporalSemantics::MechanicalActuation);
+        assert!(matches!(
+            device.transition_delay,
+            TransitionDelay::Unavailable { .. }
+        ));
+        assert_eq!(device.minimum_delay_redstone_ticks, 0);
+    }
+
+    #[test]
+    fn immediate_edges_are_explicitly_same_game_tick() {
+        let topology = VerifiedTopology::from_parts(
+            vec![
+                PhysicalComponent {
+                    id: ComponentId(0),
+                    pos: Pos::new(0, 64, 0),
+                    block: Block::new(BlockKind::Lever),
+                },
+                PhysicalComponent {
+                    id: ComponentId(1),
+                    pos: Pos::new(1, 64, 0),
+                    block: Block::new(BlockKind::RedstoneWire),
+                },
+            ],
+            [PhysicalConnection {
+                source: ComponentId(0),
+                sink: ComponentId(1),
+                kind: ConnectionKind::DirectSource,
+            }],
+        );
+        let analysis = analyze(&topology);
+        let edge = analysis
+            .timed_circuit
+            .edges
+            .iter()
+            .find(|edge| edge.source == ComponentId(0) && edge.sink == ComponentId(1))
+            .expect("direct source edge");
+        assert_eq!(edge.transition_delay, TransitionDelay::SameGameTick);
+    }
+
+    #[test]
+    fn transition_delay_preserves_zero_and_variable_intervals() {
+        let zero = TransitionDelay::ExactGameTicks { game_ticks: 0 };
+        let variable = TransitionDelay::GameTickRange {
+            minimum_game_ticks: 0,
+            maximum_game_ticks: 3,
+        };
+        assert!(matches!(
+            zero,
+            TransitionDelay::ExactGameTicks { game_ticks: 0 }
+        ));
+        assert!(matches!(
+            variable,
+            TransitionDelay::GameTickRange {
+                minimum_game_ticks: 0,
+                maximum_game_ticks: 3
+            }
+        ));
     }
 
     #[test]

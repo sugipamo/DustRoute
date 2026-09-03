@@ -6,7 +6,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::wire::update_wire_shapes;
 use crate::world::{
-    Block, BlockKind, Facing, ObservationClassification, Pos, WireConnection, World,
+    Block, BlockKind, Facing, ObservationClassification, PistonState, PistonVariant, Pos,
+    WireConnection, World,
 };
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -184,7 +185,19 @@ fn block_from_record(record: &MinecraftSnapshotBlock) -> Result<Block, SnapshotE
             block.facing = Some(property_facing(record)?.opposite());
             block.powered = property_bool(record, "powered");
         }
-        BlockKind::Piston => block.facing = Some(property_facing(record)?),
+        BlockKind::Piston => {
+            block.facing = Some(property_facing(record)?);
+            block.piston_variant = Some(if short_name == "sticky_piston" {
+                PistonVariant::Sticky
+            } else {
+                PistonVariant::Normal
+            });
+            block.piston_state = Some(if property_bool(record, "extended") == Some(true) {
+                PistonState::Extended
+            } else {
+                PistonState::Retracted
+            });
+        }
         _ => {}
     }
     Ok(block)

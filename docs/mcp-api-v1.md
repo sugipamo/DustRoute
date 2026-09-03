@@ -23,6 +23,17 @@ depend on multiple inputs or influence multiple outputs. Local gate labels are
 explanatory and do not exclusively own physical blocks. See
 [`physical-function-model.md`](physical-function-model.md).
 
+Focused responses from `test_circuit` and flat `convert_from_circuit` include a
+bounded `focused_explanation`. Its `role` identifies the local signal role,
+`incoming` and `outgoing` preserve adjacent directed physical edges, and
+`input_candidates`/`output_candidates` expose the mapped interface evidence.
+`paths_from_inputs` and `paths_to_outputs` are capped path explanations rather
+than a complete graph dump. `timing`, `temporal_devices`,
+`observation_complete`, and `caveats` must be shown to an LLM or user before a
+logical label is treated as certain. The hierarchical large-circuit response
+uses the same shape but explicitly reports that flat terminal/path inference
+was skipped; empty candidate arrays are not proof of an input-free circuit.
+
 `convert_from_circuit` accepts `include_truth_table=true` for an explicit
 bounded exhaustive request, including circuits that use the hierarchical path
 for their normal summary. Optional `truth_table_max_inputs`,
@@ -152,10 +163,43 @@ This representation is required even for empty state. It prevents non-string
 map keys from reaching `serde_json` and keeps live and simulated traces in the
 same shape.
 
+In addition to the compatibility `events` array, transition-test responses
+include a `transitions` array. Each entry has an opaque `id`, the observed
+position, the before/after signal values when a before value is known, and
+`elapsed_from_previous`. `same_tick` entries retain `order_delta`; an
+`exact_ticks` entry is measured in the trace's declared redstone-tick unit.
+The first entry has no elapsed value. Consumers should use this array when
+comparing state-changing edges and use `events` when they need the original
+scenario sequence or provenance fields.
+
 Transition verification reports `steady_state_equivalent` separately from
 `trace_equivalent`. Server/physics observation can place an otherwise immediate
 dust update on either side of a redstone-tick sampling boundary; this remains a
 visible trace difference without incorrectly claiming a final-state mismatch.
+
+Trace events carry optional provenance fields in addition to tick and state:
+`event_kind`, `cause`, `source`, and `cause_sequence`. A Mineflayer bridge
+records `event_kind=state_transition`, `cause=packet_observation`, and
+`source=live_mineflayer`; packet order is evidence, not the internal vanilla
+scheduler cause. Provenance differences are intentionally excluded from
+behavioral equivalence, while state, redstone tick, and within-tick order are
+still compared.
+
+Temporal IR responses additionally expose a game-tick `transition_delay` for
+stateful edges and devices. It can be `same_game_tick`, an exact game-tick
+value, a bounded game-tick range, or `unavailable`; clients must not infer an
+immediate transition from an unavailable legacy redstone-tick scalar. Piston
+motion remains preview-only until the target Minecraft version has a verified
+start/completion trace. The lower-level Minecraft physics engine retains
+`phase` and `sub_tick_order` for same-game-tick evidence, bounds zero-delay
+chains with a per-tick microstep budget, and reports a structured failure when
+a child would move back to an earlier phase. A failed event is requeued rather
+than silently consumed; this is an implementation safety contract and does not
+promote MCP piston operations beyond their current `PreviewOnly` status.
+When a physics engine is driven from a bounded live snapshot, callers must
+provide the same complete region through `PistonPlanningContext` (or
+`PhysicsEngine::with_piston_planning_region`); an absent coordinate outside that
+region is `unknown_space`, not an empty block.
 
 ## Mutation lifecycle
 
@@ -172,8 +216,10 @@ defaults, and the fully resolved contract is echoed in the response before any
 world mutation. The contract separates these concerns:
 
 - `logical`: exact steady-state truth-table preservation.
-- `timing`: `exact_trace`, `bounded_delay`, `settled_value_only`, or
-  `preserve_order`; the default is bounded delay with at most five added
+- `timing`: `exact_trace`, `exact_transitions`, `bounded_delay`, `settled_value_only`, or
+  `preserve_order`; `exact_transitions` compares only state-changing edges and
+  their observed transition times, while `exact_trace` compares every sampled
+  output value. The default is bounded delay with at most five added
   redstone ticks and a 20-redstone-tick settling deadline.
 - `pulse`: whether pulses may be introduced or removed and their maximum width
   change; the default permits neither and requires an exact width.

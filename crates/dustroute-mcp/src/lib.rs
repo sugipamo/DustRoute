@@ -13,7 +13,7 @@ pub mod transition;
 
 pub use api::{
     DIAGNOSTIC_SCHEMA_V1, ERROR_SCHEMA_V1, ErrorResponse, McpErrorCode, PLACEMENT_SCHEMA_V1,
-    REPAIR_SCHEMA_V1, TRANSITION_SCHEMA_V1, TransitionTraceResponse,
+    REPAIR_SCHEMA_V1, ScenarioTransitionResponse, TRANSITION_SCHEMA_V1, TransitionTraceResponse,
 };
 pub use bridge::{
     BlockUpdateEvent, BotBridge, BotBridgeError, BotBridgeMetrics, BotStatus, LeverActivation,

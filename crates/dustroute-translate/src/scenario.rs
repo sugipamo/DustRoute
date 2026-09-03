@@ -1,5 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 
+use dustroute_ir::{EventCause, EventKind, EventSource};
 use serde::{Deserialize, Serialize};
 
 use crate::{BlockKind, MinecraftSnapshot, Pos, RedstoneTickSimulator, world_from_snapshot};
@@ -146,6 +147,25 @@ pub enum ScenarioSafety {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct ScenarioEvent {
     pub redstone_tick: u64,
+    /// Ordering within the corresponding game/redstone tick. Simulator
+    /// traces use the observation iteration order; live traces preserve the
+    /// Mineflayer packet order.
+    #[serde(default)]
+    pub sub_tick_order: u64,
+    /// Coarse event classification retained independently from electrical
+    /// state so a pulse edge is not mistaken for a steady signal.
+    #[serde(default)]
+    pub event_kind: EventKind,
+    /// Causal evidence available at the scenario boundary. `unknown` is
+    /// valid for a live packet trace whose server scheduler is opaque.
+    #[serde(default)]
+    pub cause: EventCause,
+    #[serde(default)]
+    pub source: EventSource,
+    /// Optional parent event sequence. It is unset until a scheduler-aware
+    /// event producer can provide a trustworthy causal link.
+    #[serde(default)]
+    pub cause_sequence: Option<u64>,
     pub sequence: u64,
     pub position: Pos,
     pub strength: u8,
@@ -186,6 +206,12 @@ pub enum ScenarioDifference {
         index: usize,
         expected_position: Pos,
         actual_position: Pos,
+    },
+    EventSubTickOrder {
+        index: usize,
+        position: Pos,
+        expected: u64,
+        actual: u64,
     },
     Event {
         index: usize,
@@ -261,11 +287,16 @@ pub fn run_scenario(scenario: &Scenario) -> Result<ScenarioRun, String> {
             }],
         });
     }
+    let block_kinds = world
+        .iter()
+        .map(|(position, block)| (*position, block.kind))
+        .collect::<BTreeMap<_, _>>();
     let mut simulator = RedstoneTickSimulator::new(world).map_err(|error| error.to_string())?;
     let mut trace = ScenarioTrace::default();
     let mut previous = BTreeMap::new();
     let mut sequence = 0;
     for tick in 0..=scenario.duration_redstone_ticks {
+        let mut sub_tick_order = 0;
         for action in scenario
             .actions
             .iter()
@@ -283,14 +314,35 @@ pub fn run_scenario(scenario: &Scenario) -> Result<ScenarioRun, String> {
         for position in &scenario.observe {
             let value = (state.strength(*position), state.powered(*position));
             if previous.get(position).copied() != Some(value) {
+                let previous_value = previous.get(position).copied();
+                let (event_kind, cause, source) = if tick == 0 && previous_value.is_none() {
+                    (
+                        EventKind::StateTransition,
+                        EventCause::InitialSnapshot,
+                        EventSource::InitialSnapshot,
+                    )
+                } else {
+                    let (event_kind, cause) = simulated_event_metadata(
+                        block_kinds.get(position).copied(),
+                        previous_value,
+                        value,
+                    );
+                    (event_kind, cause, EventSource::Simulator)
+                };
                 trace.events.push(ScenarioEvent {
                     redstone_tick: tick,
+                    sub_tick_order,
+                    event_kind,
+                    cause,
+                    source,
+                    cause_sequence: None,
                     sequence,
                     position: *position,
                     strength: value.0,
                     powered: value.1,
                 });
                 sequence += 1;
+                sub_tick_order += 1;
                 previous.insert(*position, value);
             }
             trace.final_strengths.insert(*position, value.0);
@@ -319,6 +371,36 @@ pub fn run_scenario(scenario: &Scenario) -> Result<ScenarioRun, String> {
         trace,
         differences,
     })
+}
+
+fn simulated_event_metadata(
+    block_kind: Option<BlockKind>,
+    previous: Option<(u8, bool)>,
+    value: (u8, bool),
+) -> (EventKind, EventCause) {
+    if matches!(
+        block_kind,
+        Some(BlockKind::Lever | BlockKind::Button | BlockKind::PressurePlate)
+    ) {
+        return (EventKind::ExternalAction, EventCause::ExternalInput);
+    }
+    if block_kind == Some(BlockKind::Observer) {
+        let event_kind = if value.1 && previous.is_none_or(|(_, powered)| !powered) {
+            EventKind::PulseStart
+        } else if !value.1 && previous.is_some_and(|(_, powered)| powered) {
+            EventKind::PulseEnd
+        } else {
+            EventKind::StateTransition
+        };
+        return (event_kind, EventCause::ObserverFrontStateChange);
+    }
+    if block_kind == Some(BlockKind::Repeater) {
+        return (EventKind::SignalPropagation, EventCause::RepeaterDelay);
+    }
+    (
+        EventKind::SignalPropagation,
+        EventCause::SimulatorPropagation,
+    )
 }
 
 fn unavailable_capability(
@@ -558,8 +640,31 @@ pub fn compare_scenario_traces(
     actual_unordered.sort();
     let only_order_differs = expected_unordered == actual_unordered;
     for (index, (expected, actual)) in expected.events.iter().zip(&actual.events).enumerate() {
-        if expected != actual {
-            if only_order_differs {
+        // Event provenance describes how the trace was produced and is not a
+        // behavioral mismatch: a live packet necessarily says
+        // `packet_observation`, while the simulator says
+        // `simulator_propagation`. Compare the observable state and ordering
+        // separately so provenance never invalidates an otherwise equivalent
+        // live/simulated trace.
+        let observable_match = expected.redstone_tick == actual.redstone_tick
+            && expected.sub_tick_order == actual.sub_tick_order
+            && expected.position == actual.position
+            && expected.strength == actual.strength
+            && expected.powered == actual.powered;
+        if !observable_match {
+            if expected.redstone_tick == actual.redstone_tick
+                && expected.position == actual.position
+                && expected.strength == actual.strength
+                && expected.powered == actual.powered
+                && expected.sub_tick_order != actual.sub_tick_order
+            {
+                differences.push(ScenarioDifference::EventSubTickOrder {
+                    index,
+                    position: expected.position,
+                    expected: expected.sub_tick_order,
+                    actual: actual.sub_tick_order,
+                });
+            } else if only_order_differs {
                 differences.push(ScenarioDifference::EventOrder {
                     index,
                     expected_position: expected.position,
@@ -674,6 +779,11 @@ mod tests {
         let run = run_scenario(&scenario).unwrap();
         assert_eq!(run.safety, ScenarioSafety::Simulated);
         assert!(run.differences.is_empty(), "{run:?}");
+        assert!(run.trace.events.iter().any(|event| {
+            event.event_kind == EventKind::SignalPropagation
+                && event.cause == EventCause::SimulatorPropagation
+                && event.source == EventSource::Simulator
+        }));
         assert!(compare_scenario_traces(&run.trace, &run.trace).is_empty());
     }
 
@@ -902,6 +1012,90 @@ mod tests {
             run.differences.as_slice(),
             [ScenarioDifference::UnsupportedPhysics { blocks }] if blocks == &[Pos::new(0, 0, 0)]
         ));
+    }
+
+    #[test]
+    fn reports_same_tick_order_as_evidence_without_changing_state_mismatch() {
+        let first = Pos::new(0, 1, 0);
+        let second = Pos::new(1, 1, 0);
+        let expected = ScenarioTrace {
+            duration_redstone_ticks: 1,
+            events: vec![
+                ScenarioEvent {
+                    redstone_tick: 1,
+                    sub_tick_order: 0,
+                    event_kind: EventKind::SignalPropagation,
+                    cause: EventCause::SimulatorPropagation,
+                    source: EventSource::Simulator,
+                    cause_sequence: None,
+                    sequence: 0,
+                    position: first,
+                    strength: 15,
+                    powered: true,
+                },
+                ScenarioEvent {
+                    redstone_tick: 1,
+                    sub_tick_order: 1,
+                    event_kind: EventKind::SignalPropagation,
+                    cause: EventCause::SimulatorPropagation,
+                    source: EventSource::Simulator,
+                    cause_sequence: None,
+                    sequence: 1,
+                    position: second,
+                    strength: 15,
+                    powered: true,
+                },
+            ],
+            final_strengths: BTreeMap::from([(first, 15), (second, 15)]),
+            final_powered: BTreeMap::from([(first, true), (second, true)]),
+        };
+        let mut actual = expected.clone();
+        actual.events[0].sub_tick_order = 1;
+        actual.events[1].sub_tick_order = 0;
+        let differences = compare_scenario_traces(&expected, &actual);
+        assert_eq!(differences.len(), 2);
+        assert!(
+            differences.iter().all(|difference| matches!(
+                difference,
+                ScenarioDifference::EventSubTickOrder { .. }
+            ))
+        );
+    }
+
+    #[test]
+    fn provenance_differences_do_not_break_behavioral_equivalence() {
+        let position = Pos::new(0, 1, 0);
+        let expected = ScenarioTrace {
+            events: vec![ScenarioEvent {
+                redstone_tick: 1,
+                sub_tick_order: 0,
+                event_kind: EventKind::SignalPropagation,
+                cause: EventCause::SimulatorPropagation,
+                source: EventSource::Simulator,
+                cause_sequence: None,
+                sequence: 0,
+                position,
+                strength: 15,
+                powered: true,
+            }],
+            final_strengths: BTreeMap::from([(position, 15)]),
+            final_powered: BTreeMap::from([(position, true)]),
+            duration_redstone_ticks: 1,
+        };
+        let mut actual = expected.clone();
+        actual.events[0].cause = EventCause::PacketObservation;
+        actual.events[0].source = EventSource::LiveMineflayer;
+        actual.events[0].cause_sequence = Some(7);
+        assert!(compare_scenario_traces(&expected, &actual).is_empty());
+    }
+
+    #[test]
+    fn legacy_scenario_event_json_defaults_to_coarse_order() {
+        let event: ScenarioEvent = serde_json::from_str(
+            r#"{"redstone_tick":3,"sequence":4,"position":{"x":0,"y":1,"z":0},"strength":15,"powered":true}"#,
+        )
+        .unwrap();
+        assert_eq!(event.sub_tick_order, 0);
     }
 
     #[test]

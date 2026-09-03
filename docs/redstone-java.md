@@ -295,6 +295,28 @@ event execution
 | immovable block           | cancellation                  |
 | piston facing obstruction | activation exception          |
 
+DustRouteの第1段階では、上表のうち通常の水平Extend/Retractを、安定した
+通常ブロックだけに限定して `PistonPlan -> WorldDelta` として扱う。Planは
+読み取り専用で、適用時には親`ShapeId`と各座標のbefore状態を再検証する。
+複数ブロックの押し出しは座標ごとの最終差分へ畳み込む一方、移動関係と
+dirty regionは保持し、後続の差分トポロジー更新へ渡せるようにする。
+PhysicsEngine経由ではBlock Eventのtickに最終形状を即時適用せず、まず
+`Extending`/`Retracting`状態を記録し、モーションプロファイルの移動区間
+（初期値は2 game ticks）後に完了`WorldDelta`を適用する。Power/updateから
+Block Eventまでの初期遅延は0または1 game tickになり得るため、移動区間と
+分離して扱う。E2Eの`piston_motion_trace`は、固定1.21.11サーバー上でこの
+移動区間を測定し、入力から開始までの区間も別に記録する。これらは実機の
+全ケースを網羅するまでモデル値であり、MCPのReady判定には使わない。
+QC/BUD、slime/honey、moving piston head、Entity/Block Entity、0-tickは
+この契約に含めず、物理・MCPの判定は引き続きPreviewOnlyとする。
+
+PhysicsEngineのイベントキューは `game_tick`、粗い `phase`、phase内の
+`sub_tick_order` を分離して保持する。同tickの遅延0イベントが既に処理済み
+の前段phaseへ戻る場合は `CausalOrderViolation` として拒否し、入力イベント
+をキューから黙って失わない。ピストン専用runnerへ別種イベントが混在した
+場合も、部分適用前に拒否する。これは安全な決定性境界であり、バニラの全
+スケジューラ順序や0-tick再現を意味しない。
+
 QCによる「update待ちpiston」はまさにBUD回路の根幹です。([Minecraft Wiki][1])
 
 ---

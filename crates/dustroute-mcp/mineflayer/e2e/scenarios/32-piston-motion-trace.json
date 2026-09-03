@@ -1,0 +1,66 @@
+{
+  "name": "piston_motion_trace",
+  "save_artifact": true,
+  "steps": [
+    {
+      "kind": "command",
+      "commands": [
+        "/fill 650 102 -2 657 106 2 minecraft:air",
+        "/fill 650 103 -2 657 103 2 minecraft:stone",
+        "/setblock 652 104 0 minecraft:lever[face=floor,facing=east,powered=false]",
+        "/setblock 653 104 0 minecraft:piston[facing=east,extended=false]",
+        "/setblock 654 104 0 minecraft:stone"
+      ]
+    },
+    {
+      "kind": "aim",
+      "position": { "x": 650.5, "y": 108, "z": 4.5 },
+      "target": { "x": 653, "y": 104, "z": 0 }
+    },
+    {
+      "kind": "activate_trace",
+      "position": { "x": 652, "y": 104, "z": 0 },
+      "actor_position": { "x": 650, "y": 104, "z": 0 },
+      "observe_positions": [
+        { "x": 653, "y": 104, "z": 0 },
+        { "x": 654, "y": 104, "z": 0 },
+        { "x": 655, "y": 104, "z": 0 }
+      ],
+      "duration_game_ticks": 12,
+      "origin": { "x": 650, "y": 104, "z": 0 },
+      "save": "trace"
+    },
+    {
+      "kind": "assert",
+      "from": "trace",
+      "expect": [
+        { "path": "source", "equals": "minecraft_java" },
+        { "path": "duration_game_ticks", "equals": 12 },
+        { "path": "activation.after_powered", "equals": true },
+        { "path": "piston_timing.start_to_completion_game_ticks", "equals": 2 }
+      ]
+    },
+    { "kind": "block", "position": { "x": 653, "y": 104, "z": 0 }, "save": "piston" },
+    { "kind": "block", "position": { "x": 654, "y": 104, "z": 0 }, "save": "source" },
+    { "kind": "block", "position": { "x": 655, "y": 104, "z": 0 }, "save": "destination" },
+    {
+      "kind": "assert",
+      "from": "piston",
+      "expect": [
+        { "path": "name", "equals": "piston" },
+        { "path": "properties.extended", "equals": true }
+      ]
+    },
+    {
+      "kind": "assert",
+      "from": "source",
+      "expect": [{ "path": "name", "equals": "piston_head" }]
+    },
+    {
+      "kind": "assert",
+      "from": "destination",
+      "expect": [{ "path": "name", "equals": "stone" }]
+    }
+  ],
+  "cleanup": ["/fill 650 102 -2 657 106 2 minecraft:air"]
+}

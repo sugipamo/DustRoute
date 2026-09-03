@@ -4,6 +4,7 @@ use std::fmt::{Display, Formatter};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
+use dustroute_ir::{EventCause, EventKind, EventSource};
 use dustroute_physical::Pos;
 use dustroute_translate::MinecraftSnapshot;
 use serde::{Deserialize, Serialize};
@@ -123,6 +124,24 @@ pub struct UpdateRecordingStarted {
 pub struct BlockUpdateEvent {
     pub sequence: u64,
     pub game_tick: u64,
+    /// Packet order within the observed physics/game tick. Mineflayer cannot
+    /// identify the vanilla scheduler cause, but preserving this order keeps
+    /// same-tick transitions distinguishable for later temporal analysis.
+    #[serde(default)]
+    pub sub_tick_order: u64,
+    /// Coarse classification of the packet-visible transition.
+    #[serde(default)]
+    pub event_kind: EventKind,
+    /// The strongest cause known at the bridge boundary. Mineflayer only
+    /// exposes the packet observation itself, not the vanilla scheduler.
+    #[serde(default)]
+    pub cause: EventCause,
+    #[serde(default)]
+    pub source: EventSource,
+    /// Reserved for a scheduler-aware bridge; packet observations have no
+    /// trustworthy parent event yet.
+    #[serde(default)]
+    pub cause_sequence: Option<u64>,
     pub pos: Pos,
     pub before: Option<ObservedBlockState>,
     pub after: Option<ObservedBlockState>,

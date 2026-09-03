@@ -19,12 +19,12 @@ pub use contract::{
 pub use macro_realize::{
     ContextualVerificationState, MacroBoundaryDirection, MacroBoundaryPort, MacroPortRoute,
     MacroRealizationError, MacroRealizationVerification, MacroReplacementPlan,
-    MacroSteadyStateReport, MacroStructuralReport, MacroTransitionCase, MacroTransitionReport,
-    MaterializedMacroReplacement, extract_cell_boundary, extract_model_boundary,
-    extract_model_boundary_with_context, materialize_macro_replacement, plan_macro_replacement,
-    plan_macro_replacement_with_reserved, resolve_builtin_layout, validate_macro_structure,
-    verify_boundary_strengths, verify_macro_steady_state, verify_macro_transitions,
-    verify_world_transitions,
+    MacroSteadyStateReport, MacroStructuralReport, MacroTransitionCase, MacroTransitionEdge,
+    MacroTransitionReport, MaterializedMacroReplacement, extract_cell_boundary,
+    extract_model_boundary, extract_model_boundary_with_context, materialize_macro_replacement,
+    plan_macro_replacement, plan_macro_replacement_with_reserved, resolve_builtin_layout,
+    validate_macro_structure, verify_boundary_strengths, verify_macro_steady_state,
+    verify_macro_transitions, verify_world_transitions,
 };
 pub use macro_search::{
     MacroReplacementCandidate, ObservedMacroMetrics, find_builtin_verified_macro_replacements,

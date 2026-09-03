@@ -1,0 +1,37 @@
+{
+  "name": "piston_transition_preview_only",
+  "steps": [
+    { "kind": "command", "commands": [
+      "/fill 638 102 -2 645 106 2 minecraft:air",
+      "/fill 638 103 -2 645 103 2 minecraft:stone",
+      "/setblock 640 104 0 minecraft:lever[face=floor,facing=east,powered=false]",
+      "/setblock 641 104 0 minecraft:piston[facing=east,extended=false]",
+      "/setblock 642 104 0 minecraft:stone"
+    ]},
+    { "kind": "aim", "position": { "x": 641.5, "y": 108, "z": 4.5 }, "target": { "x": 641, "y": 104, "z": 0 } },
+    { "kind": "block", "position": { "x": 641, "y": 104, "z": 0 }, "save": "before" },
+    { "kind": "mcp", "tool": "test_circuit", "arguments": { "max_components": 64, "fragment_gap": 2 }, "save": "circuit" },
+    { "kind": "assert", "from": "circuit", "expect": [
+      { "path": "ok", "equals": true },
+      { "path": "diagnostic.observation_complete", "equals": true },
+      { "path": "expansion.components_loaded", "at_least": 2 }
+    ]},
+    { "kind": "mcp", "tool": "new_transition_test", "arguments": { "circuit_id": "${circuit.circuit_id}", "observation_ticks": 12 }, "save": "proposal" },
+    { "kind": "assert", "from": "proposal", "expect": [
+      { "path": "ok", "equals": true },
+      { "path": "proposals.0.safety.safety", "equals": "preview_only" }
+    ]},
+    { "kind": "mcp", "tool": "show_operation", "arguments": { "operation_id": "${proposal.proposals.0.operation_id}" }, "save": "preview" },
+    { "kind": "mcp_error", "tool": "invoke_operation", "arguments": { "operation_id": "${proposal.proposals.0.operation_id}", "confirm": true }, "save": "rejected" },
+    { "kind": "assert", "from": "rejected", "expect": [
+      { "path": "ok", "equals": false },
+      { "path": "error_code", "equals": "invalid_state" }
+    ]},
+    { "kind": "block", "position": { "x": 641, "y": 104, "z": 0 }, "save": "after" },
+    { "kind": "assert", "from": "after", "expect": [
+      { "path": "name", "equals": "piston" },
+      { "path": "properties.extended", "equals": false }
+    ]}
+  ],
+  "cleanup": ["/fill 638 102 -2 645 106 2 minecraft:air"]
+}

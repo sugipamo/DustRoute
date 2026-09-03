@@ -36,16 +36,17 @@ pub mod world {
 pub mod world_reverse;
 
 pub use analysis::{
-    BooleanFunction, FocusedRole, FunctionalClassification, LocalSignalRole, LogicalRole,
-    PhysicalAnalysis, SemanticEquivalence, SignalPath, analyze_physical_region,
-    classify_focused_role, classify_truth_table, compare_live_trace, derive_local_logic,
+    BooleanFunction, FocusedConnection, FocusedExplanation, FocusedPath, FocusedRole,
+    FunctionalClassification, LocalSignalRole, LogicalRole, PhysicalAnalysis, SemanticEquivalence,
+    SignalPath, analyze_physical_region, classify_focused_role, classify_truth_table,
+    compare_live_trace, derive_local_logic, explain_focused_component, explain_focused_scene,
     explain_signal_path, propose_scenarios, simulate_scenario, verify_semantic_equivalence,
 };
 pub use api::{
     ForwardOptions, ForwardResult, ReverseRequest, ReverseResult, TranslateError, Translator,
     TruthTableSemantics,
 };
-pub use behavior::simulate_behavior_trace;
+pub use behavior::{simulate_behavior_trace, simulate_transition_trace};
 pub use cell_library::{
     CellLibrary, CellVerification, default_cell_library, verify_cell, verify_cell_with_settle_ticks,
 };
@@ -60,19 +61,23 @@ pub use compiler::{BaselineCompileConfig, BaselineCompileResult, BaselineCompile
 pub use connectivity::{
     ConnectivityEdge, EdgeKind, PhysicalConnectivityGraph, PhysicalStep, PhysicalStepKind,
     build_physical_circuit, extract_connectivity, observer_input_pos, observer_output_pos,
-    physical_step, physical_step_connected,
+    physical_step, physical_step_connected, piston_input_connected,
 };
 pub use diagnostic::{
     CircuitDiagnosticReport, CircuitDiagnosticStatus, DiagnosticConfidence, DiagnosticCounts,
     DiagnosticFinding, DiagnosticHealth, RecommendedAction, RecommendedActionKind, diagnose_scene,
 };
 pub use dustroute_ir::{
-    DagBuilder, Expr, GateKind, LogicDag, LogicError, LogicNode, NodeId, best_by_size,
-    rewrites_once, search_equivalents,
+    DagBuilder, EventCause, EventKind, EventSource, Expr, GateKind, LogicDag, LogicError,
+    LogicNode, NodeId, TransitionDelay, TransitionElapsed, TransitionId, TransitionRecord,
+    TransitionTime, TransitionTrace, best_by_size, rewrites_once, search_equivalents,
 };
 pub use dustroute_minecraft::{
-    Block, BlockKind, BlockProperties, BlockRedstoneTraits, Facing, OccupiedShape, Pos,
-    WireConnection, World, observed_name_requires_live_observation,
+    Block, BlockChange, BlockKind, BlockMove, BlockProperties, BlockRedstoneTraits, ChangeReason,
+    DEFAULT_PISTON_MOTION_PROFILE, DeltaCause, Facing, OccupiedShape, PistonAction, PistonError,
+    PistonMotionProfile, PistonMotionProfileError, PistonPlan, PistonPlanningContext, PistonState,
+    PistonVariant, Pos, Region, RegionSet, Shape, ShapeId, WireConnection, World, WorldDelta,
+    WorldDeltaError, observed_name_requires_live_observation,
 };
 pub use electrical::{
     DeviceOutputState, InstantaneousElectricalState, MAX_SIGNAL, PoweredBlockState,

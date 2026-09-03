@@ -88,7 +88,7 @@ npm run test:e2e
 ```
 
 The runner discovers the JSON files in `scenarios/` in lexical order (the
-current checkout contains 27 scenarios) and fails on the first assertion or
+current checkout contains 32 scenarios) and fails on the first assertion or
 cleanup error. Use a subset while debugging and rerun the full set before
 promoting a release.
 
@@ -106,6 +106,29 @@ continued MCP availability after the run:
 
 ```bash
 npm run test:e2e -- transition_run_and_restore
+```
+
+Observer scenarios use a second visible Mineflayer client as the dummy player.
+`observer_dummy_transition` checks raw Observer state, a normal lever
+activation, and the one-redstone-tick pulse. `observer_chain_dummy_transition`
+and `observer_repeater_preview_only` extend that trace through another Observer
+or a delayed repeater; they also verify that the MCP transition plan remains
+`preview_only` and cannot be invoked automatically. `piston_transition_preview_only`
+performs the same safety check for a piston and confirms that no block movement
+occurs when invocation is rejected. `piston_motion_trace` directly activates a
+normal piston with the visible test player and stores a bounded Java trace,
+including block updates and within-game-tick ordering. It is an observation
+fixture only. On the pinned 1.21.11 test server it asserts the observed
+2-game-tick start-to-head-completion interval and reports the input-to-start
+interval separately; those measurements must be promoted to a verified profile
+before piston timing can become MCP-ready.
+
+Run these bounded live checks after rebuilding the Rust binary and restarting
+the visible bridge so the bridge's within-tick order field is active:
+
+```bash
+cargo build -p dustroute-mcp
+npm run test:e2e -- observer_dummy_transition observer_chain_dummy_transition observer_repeater_preview_only piston_transition_preview_only
 ```
 
 When the exported semantics Data Pack is installed and enabled in the test
@@ -135,6 +158,12 @@ Scenario files are ordered JSON documents in `scenarios/`. Supported steps are:
 - `assert`: compare a saved result using `equals`, `at_least`, `at_most`, or
   `exists`.
 - `wait`: wait a number of Mineflayer physics ticks.
+- `activate_trace`: move the dummy player if requested, activate a normal
+  player input, and record observed block states for a bounded number of game
+  ticks. Events include `game_tick`, `sub_tick_order`, `event_kind`, `cause`,
+  `source`, and optional `cause_sequence`; the latter provenance fields are
+  packet-order evidence, not a claim about the internal vanilla scheduler
+  cause.
 
 `${result.path.0.value}` references pass dynamic operation IDs between steps.
 Mutation tools still receive `confirm: true` explicitly; the harness never

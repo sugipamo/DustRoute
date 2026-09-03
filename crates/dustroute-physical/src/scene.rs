@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     Block, BlockCapabilities, BlockKind, CapabilityLevel, ComponentId, ConnectionKind, Facing,
     FragmentId, GapCandidate, GapEvidence, PhysicalComponent, PhysicalFragment, PhysicalNet, Pos,
-    VerifiedTopology, WireConnection,
+    RegionSet, VerifiedTopology, WireConnection,
 };
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -281,6 +281,20 @@ impl PhysicalScene {
     #[must_use]
     pub fn physical_traversal_groups(&self) -> &[PhysicalFragment] {
         &self.fragments
+    }
+
+    /// Returns physical components whose local topology may be invalidated by
+    /// a Minecraft-layer delta.  This is intentionally a read-only selector:
+    /// rebuilding/remapping the affected graph remains a separate operation,
+    /// so callers cannot mistake a dirty set for a completed incremental
+    /// analysis.
+    #[must_use]
+    pub fn components_in_dirty_regions(&self, regions: &RegionSet) -> BTreeSet<ComponentId> {
+        self.components
+            .iter()
+            .filter(|component| regions.contains(component.pos))
+            .map(|component| component.id)
+            .collect()
     }
 
     #[must_use]
@@ -719,6 +733,7 @@ fn port_connection(
             ConnectionKind::Control => "java.redstone.side_or_support_control",
             ConnectionKind::ObserverInput => "java.redstone.observer.block_state_observation",
             ConnectionKind::ObserverOutput => "java.redstone.observer.strong_pulse",
+            ConnectionKind::PistonInput => "java.redstone.piston_input",
             ConnectionKind::Support => "java.block.structural_support",
         }
         .to_owned(),
@@ -792,6 +807,7 @@ const fn transfer_kind(kind: ConnectionKind) -> TransferKind {
         ConnectionKind::Control => TransferKind::SideControl,
         ConnectionKind::ObserverInput => TransferKind::Observation,
         ConnectionKind::ObserverOutput => TransferKind::StrongPower,
+        ConnectionKind::PistonInput => TransferKind::DirectionalDevice,
         ConnectionKind::Support => TransferKind::StructuralSupport,
     }
 }
@@ -815,7 +831,38 @@ fn facing_between(source: Pos, sink: Pos) -> Option<Facing> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{PhysicalComponent, PhysicalConnection};
+    use crate::{PhysicalComponent, PhysicalConnection, RegionSet};
+
+    #[test]
+    fn dirty_regions_select_local_components_without_claiming_rebuild() {
+        let topology = VerifiedTopology::from_parts(
+            vec![
+                PhysicalComponent {
+                    id: ComponentId(0),
+                    pos: Pos::new(0, 64, 0),
+                    block: Block::new(BlockKind::Piston),
+                },
+                PhysicalComponent {
+                    id: ComponentId(1),
+                    pos: Pos::new(8, 64, 0),
+                    block: Block::new(BlockKind::RedstoneWire),
+                },
+            ],
+            [],
+        );
+        let scene = PhysicalScene::from_unvalidated_topology(
+            Observation::complete(
+                "minecraft:overworld",
+                SceneBounds::new(Pos::new(-2, 62, -2), Pos::new(10, 66, 2)),
+            ),
+            &topology,
+        );
+        let dirty = RegionSet::around_positions([Pos::new(0, 64, 0)], 1);
+        assert_eq!(
+            scene.components_in_dirty_regions(&dirty),
+            BTreeSet::from([ComponentId(0)])
+        );
+    }
 
     #[test]
     fn world_support_is_valid_even_when_support_is_not_a_signal_component() {
