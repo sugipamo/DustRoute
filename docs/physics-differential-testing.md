@@ -82,6 +82,19 @@ conformance requires an `EventTrace`. Likewise, incomplete or failed model
 traces cannot produce a complete-match claim. Comparison results are evidence
 only and never mutate scheduler or delay profiles.
 
+The current world-driven redstone boundary is intentionally narrower than a
+full server capture. `PhysicsEngine::schedule_world_change` records an
+explicit external block mutation, and `run_redstone_propagation` propagates
+only the six-neighbor steady-state subset for horizontal wire levels and lamp
+state before handing a powered wire to the existing piston runner. The wire
+queue is iterated to a fixed point, with the engine's microstep budget acting
+as the termination guard. This path is suitable for regressions such as
+`Lever -> Wire -> Piston` and `Lever -> Wire -> Lamp`; it must not be used as
+evidence for repeater/comparator/observer timing, quasi-connectivity, BUD, or
+Vanilla's complete neighbor-update order. Incomplete observed regions and
+missing signal/connection properties remain failed/unavailable rather than
+being normalized to an unpowered circuit.
+
 ### Current 1.21.11 scenario conformance
 
 The integration test `transition_conformance` rebuilds both promoted scenarios

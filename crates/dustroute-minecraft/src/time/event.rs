@@ -52,6 +52,12 @@ pub enum BlockEventKind {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum PhysicsEventKind {
+    /// Applies one externally supplied block-state change and emits bounded
+    /// redstone neighbor updates. This is the explicit world-mutation
+    /// boundary for the world-driven propagation runner.
+    WorldChange {
+        after: Box<crate::Block>,
+    },
     /// Applies a typed external redstone source edge, then emits neighbor
     /// updates for adjacent pistons.  This is the input boundary for the
     /// redstone-driven piston runner; it does not model upstream propagation.
@@ -84,6 +90,7 @@ impl PhysicsEventKind {
     #[must_use]
     pub const fn default_phase(&self) -> PhysicsEventPhase {
         match self {
+            Self::WorldChange { .. } => PhysicsEventPhase::External,
             Self::RedstoneInput { .. } => PhysicsEventPhase::External,
             Self::NeighborUpdate { .. } => PhysicsEventPhase::NeighborUpdate,
             Self::ScheduledBlockTick => PhysicsEventPhase::ScheduledTick,

@@ -13,9 +13,11 @@ use super::{
 };
 use crate::{
     Block, BlockKind, ChangeReason, DEFAULT_PISTON_MOTION_PROFILE, PistonAction, PistonError,
-    PistonMotionProfile, PistonMotionProfileError, Pos, Region, ShapeId, World, WorldDelta,
-    WorldDeltaError, direct_piston_neighbors, piston_input_powered_in_region, piston_state,
-    plan_piston, plan_piston_in_region, redstone_input_delta,
+    PistonMotionProfile, PistonMotionProfileError, Pos, RedstonePropagationError, Region, ShapeId,
+    World, WorldDelta, WorldDeltaError, direct_piston_neighbors, external_world_delta,
+    piston_input_powered_in_region, piston_state, plan_piston, plan_piston_in_region,
+    redstone_input_delta, redstone_lamp_delta, redstone_position_known, redstone_update_positions,
+    redstone_wire_delta,
 };
 
 /// Default guard for zero-delay event chains. This is deliberately separate
@@ -38,6 +40,13 @@ pub struct EventOutcome {
     /// dirty-region metadata.
     pub delta: Option<WorldDelta>,
     pub queued: Vec<QueuedEvent>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum RedstoneRunnerMode {
+    PistonOnly,
+    DirectPiston,
+    Propagation,
 }
 
 /// A complete, in-memory execution snapshot for [`PhysicsEngine`].
@@ -258,6 +267,7 @@ pub enum PhysicsEngineError {
     },
     InvalidPistonMotionProfile(PistonMotionProfileError),
     Piston(Box<PistonError>),
+    Redstone(Box<RedstonePropagationError>),
     WorldDelta(Box<WorldDeltaError>),
     /// The handler returned mutually exclusive output forms or duplicate
     /// coordinate changes for one atomic event.
@@ -292,6 +302,7 @@ impl Display for PhysicsEngineError {
             ),
             Self::InvalidPistonMotionProfile(error) => write!(formatter, "{error}"),
             Self::Piston(error) => write!(formatter, "piston event failed: {error}"),
+            Self::Redstone(error) => write!(formatter, "redstone propagation failed: {error}"),
             Self::WorldDelta(error) => write!(formatter, "world delta failed: {error}"),
             Self::InvalidOutcome => write!(
                 formatter,
@@ -307,6 +318,12 @@ impl Error for PhysicsEngineError {}
 impl From<PistonError> for PhysicsEngineError {
     fn from(value: PistonError) -> Self {
         Self::Piston(Box::new(value))
+    }
+}
+
+impl From<RedstonePropagationError> for PhysicsEngineError {
+    fn from(value: RedstonePropagationError) -> Self {
+        Self::Redstone(Box::new(value))
     }
 }
 
@@ -663,6 +680,26 @@ impl PhysicsEngine {
             PistonAction::Retract => BlockEventKind::PistonRetract,
         };
         self.schedule_external(game_tick, target, PhysicsEventKind::BlockEvent { event })
+    }
+
+    /// Schedules an externally observed World mutation. The mutation is
+    /// applied only by [`Self::run_redstone_propagation`], which then emits
+    /// bounded neighbor updates for the affected redstone neighborhood.
+    /// `World::set` remains a snapshot-construction primitive and does not
+    /// implicitly enqueue physics work.
+    pub fn schedule_world_change(
+        &mut self,
+        game_tick: u64,
+        position: Pos,
+        after: Block,
+    ) -> super::EventId {
+        self.schedule_external(
+            game_tick,
+            position,
+            PhysicsEventKind::WorldChange {
+                after: Box::new(after),
+            },
+        )
     }
 
     /// Schedules a typed external redstone input edge.  The redstone-driven
@@ -1040,7 +1077,7 @@ impl PhysicsEngine {
     /// that need mixed behavior should use `run_until_idle_checked` with a
     /// handler for every event phase.
     pub fn run_piston_events(&mut self) -> Result<(), PhysicsEngineError> {
-        self.run_piston_events_with_inputs(false)
+        self.run_piston_events_with_mode(RedstoneRunnerMode::PistonOnly)
     }
 
     /// Runs a directly redstone-driven piston queue. A `RedstoneInput` event
@@ -1049,13 +1086,27 @@ impl PhysicsEngine {
     /// schedules the required piston Block Event; the existing moving and
     /// completion phases then perform the actual movement.
     pub fn run_redstone_piston_events(&mut self) -> Result<(), PhysicsEngineError> {
-        self.run_piston_events_with_inputs(true)
+        self.run_piston_events_with_mode(RedstoneRunnerMode::DirectPiston)
     }
 
-    fn run_piston_events_with_inputs(
+    /// Runs the bounded world-driven redstone subset. External World changes
+    /// and typed source edges are propagated through local wire/lamp
+    /// reevaluation until no more neighbor updates are queued; piston block
+    /// events then reuse the existing moving/stable state machine.
+    ///
+    /// The runner intentionally excludes repeater/comparator/observer timing,
+    /// quasi-connectivity, vertical piston activation, and other Vanilla
+    /// semantics that require a version-specific scheduler or live evidence.
+    pub fn run_redstone_propagation(&mut self) -> Result<(), PhysicsEngineError> {
+        self.run_piston_events_with_mode(RedstoneRunnerMode::Propagation)
+    }
+
+    fn run_piston_events_with_mode(
         &mut self,
-        redstone_inputs: bool,
+        mode: RedstoneRunnerMode,
     ) -> Result<(), PhysicsEngineError> {
+        let redstone_inputs = !matches!(mode, RedstoneRunnerMode::PistonOnly);
+        let propagation = matches!(mode, RedstoneRunnerMode::Propagation);
         if let Err(error) = self.piston_motion_profile.validate() {
             let error = PhysicsEngineError::from(error);
             self.mark_trace_failed(&error);
@@ -1076,7 +1127,8 @@ impl PhysicsEngine {
                         event.kind,
                         PhysicsEventKind::RedstoneInput { .. }
                             | PhysicsEventKind::NeighborUpdate { .. }
-                    );
+                    )
+                    || propagation && matches!(event.kind, PhysicsEventKind::WorldChange { .. });
                 !(piston_event || redstone_input_event)
             })
             .cloned();
@@ -1097,8 +1149,33 @@ impl PhysicsEngine {
         let activation_game_ticks = self.piston_motion_profile.initial_delay_max_game_ticks;
         let planning_region = self.piston_planning_region;
         self.run_until_idle_checked(move |event, world| match &event.kind {
+            PhysicsEventKind::WorldChange { after } if propagation => {
+                redstone_position_known(planning_region, event.target)?;
+                let delta = external_world_delta(world, event.target, after);
+                let queued = if let Some(delta) = &delta {
+                    let mut updated = world.clone();
+                    delta.apply(&mut updated)?;
+                    let positions = redstone_update_positions(event.target, true);
+                    preflight_redstone_targets(&updated, planning_region, &positions)?;
+                    queue_redstone_neighbors(event.target, true)
+                } else {
+                    Vec::new()
+                };
+                Ok(EventOutcome {
+                    changes: Vec::new(),
+                    delta,
+                    queued,
+                })
+            }
             PhysicsEventKind::RedstoneInput { powered } if redstone_inputs => {
-                let neighbors = direct_piston_neighbors(world, planning_region, event.target)?;
+                if propagation {
+                    redstone_position_known(planning_region, event.target)?;
+                }
+                let neighbors = if propagation {
+                    Vec::new()
+                } else {
+                    direct_piston_neighbors(world, planning_region, event.target)?
+                };
                 let delta = redstone_input_delta(world, event.target, *powered)?;
                 // Validate every affected piston against the post-edge source
                 // state before returning the outcome. An incomplete side must
@@ -1109,26 +1186,42 @@ impl PhysicsEngine {
                 if let Some(delta) = &delta {
                     let mut updated = world.clone();
                     delta.apply(&mut updated)?;
-                    for piston in &neighbors {
-                        let _ = piston_input_powered_in_region(&updated, planning_region, *piston)?;
+                    if propagation {
+                        let positions = redstone_update_positions(event.target, false);
+                        preflight_redstone_targets(&updated, planning_region, &positions)?;
+                    } else {
+                        for piston in &neighbors {
+                            let _ =
+                                piston_input_powered_in_region(&updated, planning_region, *piston)?;
+                        }
                     }
                 } else {
-                    for piston in &neighbors {
-                        let _ = piston_input_powered_in_region(world, planning_region, *piston)?;
+                    if propagation {
+                        let positions = redstone_update_positions(event.target, false);
+                        preflight_redstone_targets(world, planning_region, &positions)?;
+                    } else {
+                        for piston in &neighbors {
+                            let _ =
+                                piston_input_powered_in_region(world, planning_region, *piston)?;
+                        }
                     }
                 }
                 let queued = if delta.is_some() {
-                    neighbors
-                        .into_iter()
-                        .map(|target| QueuedEvent {
-                            delay_ticks: 0,
-                            target,
-                            phase: PhysicsEventPhase::NeighborUpdate,
-                            kind: PhysicsEventKind::NeighborUpdate {
-                                source: event.target,
-                            },
-                        })
-                        .collect()
+                    if propagation {
+                        queue_redstone_neighbors(event.target, false)
+                    } else {
+                        neighbors
+                            .into_iter()
+                            .map(|target| QueuedEvent {
+                                delay_ticks: 0,
+                                target,
+                                phase: PhysicsEventPhase::NeighborUpdate,
+                                kind: PhysicsEventKind::NeighborUpdate {
+                                    source: event.target,
+                                },
+                            })
+                            .collect()
+                    }
                 } else {
                     Vec::new()
                 };
@@ -1139,6 +1232,31 @@ impl PhysicsEngine {
                 })
             }
             PhysicsEventKind::NeighborUpdate { .. } if redstone_inputs => {
+                if propagation {
+                    match world.kind_at(event.target) {
+                        BlockKind::RedstoneWire => {
+                            let delta = redstone_wire_delta(world, event.target, planning_region)?;
+                            let queued = delta
+                                .as_ref()
+                                .map(|_| queue_redstone_neighbors(event.target, false))
+                                .unwrap_or_default();
+                            return Ok(EventOutcome {
+                                changes: Vec::new(),
+                                delta,
+                                queued,
+                            });
+                        }
+                        BlockKind::RedstoneLamp => {
+                            let delta = redstone_lamp_delta(world, event.target, planning_region)?;
+                            return Ok(EventOutcome {
+                                changes: Vec::new(),
+                                delta,
+                                queued: Vec::new(),
+                            });
+                        }
+                        _ => {}
+                    }
+                }
                 let Some(piston) = world.get(event.target) else {
                     return Ok(EventOutcome::default());
                 };
@@ -1271,6 +1389,41 @@ impl PhysicsEngine {
     }
 }
 
+fn queue_redstone_neighbors(source: Pos, include_self: bool) -> Vec<QueuedEvent> {
+    redstone_update_positions(source, include_self)
+        .into_iter()
+        .map(|target| QueuedEvent {
+            delay_ticks: 0,
+            target,
+            phase: PhysicsEventPhase::NeighborUpdate,
+            kind: PhysicsEventKind::NeighborUpdate { source },
+        })
+        .collect()
+}
+
+fn preflight_redstone_targets(
+    world: &World,
+    known_region: Option<Region>,
+    positions: &[Pos],
+) -> Result<(), PhysicsEngineError> {
+    for position in positions {
+        redstone_position_known(known_region, *position)?;
+        match world.kind_at(*position) {
+            BlockKind::RedstoneWire => {
+                let _ = redstone_wire_delta(world, *position, known_region)?;
+            }
+            BlockKind::RedstoneLamp => {
+                let _ = redstone_lamp_delta(world, *position, known_region)?;
+            }
+            BlockKind::Piston => {
+                let _ = piston_input_powered_in_region(world, known_region, *position)?;
+            }
+            _ => {}
+        }
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1293,6 +1446,28 @@ mod tests {
         world.set(Pos::new(1, 1, 0), Block::new(BlockKind::Solid));
         let known_region = Region::new(Pos::new(-1, 0, -1), Pos::new(2, 2, 1));
         (world, piston_pos, input_pos, known_region)
+    }
+
+    fn world_driven_wire_piston_world() -> (World, Pos, Pos, Pos, Region) {
+        let piston_pos = Pos::new(0, 1, 0);
+        let wire_pos = Pos::new(-1, 1, 0);
+        let input_pos = Pos::new(-2, 1, 0);
+        let mut world = World::new();
+        for x in -2..=3 {
+            world.set(Pos::new(x, 0, 0), Block::new(BlockKind::Solid));
+        }
+        let mut piston = Block::new(BlockKind::Piston);
+        piston.facing = Some(crate::Facing::East);
+        piston.piston_variant = Some(crate::PistonVariant::Normal);
+        piston.piston_state = Some(PistonState::Retracted);
+        world.set(piston_pos, piston);
+        let mut input = Block::new(BlockKind::Lever);
+        input.powered = Some(false);
+        world.set(input_pos, input);
+        world.set(wire_pos, Block::new(BlockKind::RedstoneWire));
+        world.set(Pos::new(1, 1, 0), Block::new(BlockKind::Solid));
+        let known_region = Region::new(Pos::new(-3, 0, -1), Pos::new(4, 2, 1));
+        (world, piston_pos, wire_pos, input_pos, known_region)
     }
 
     #[test]
@@ -2256,6 +2431,210 @@ mod tests {
                 event: BlockEventKind::PistonExtend
             })
         ));
+    }
+
+    #[test]
+    fn world_change_propagates_through_wire_into_piston() {
+        let (world, piston_pos, wire_pos, input_pos, known_region) =
+            world_driven_wire_piston_world();
+        let mut engine = PhysicsEngine::new(world, 128).with_piston_planning_region(known_region);
+        let input = {
+            let mut block = Block::new(BlockKind::Lever);
+            block.powered = Some(true);
+            block
+        };
+        let world_change_id = engine.schedule_world_change(0, input_pos, input);
+        engine.run_redstone_propagation().unwrap();
+
+        assert_eq!(
+            engine
+                .world()
+                .get(wire_pos)
+                .and_then(|block| block.power_level),
+            Some(15)
+        );
+        assert_eq!(
+            engine.world().kind_at(Pos::new(1, 1, 0)),
+            BlockKind::PistonHead
+        );
+        assert_eq!(
+            piston_state(engine.world().get(piston_pos).unwrap()),
+            PistonState::Extended
+        );
+        assert_eq!(engine.event_trace().records[0].event.id, world_change_id);
+        assert!(matches!(
+            engine.event_trace().records[0].event.kind,
+            PhysicsEventKind::WorldChange { .. }
+        ));
+        assert!(engine.event_trace().records.iter().any(|record| {
+            matches!(
+                record.event.kind,
+                PhysicsEventKind::NeighborUpdate { source } if source == wire_pos
+            )
+        }));
+        assert!(engine.trace_status().is_complete());
+    }
+
+    #[test]
+    fn typed_redstone_input_can_enter_the_same_world_propagation_runner() {
+        let (world, piston_pos, wire_pos, input_pos, known_region) =
+            world_driven_wire_piston_world();
+        let mut engine = PhysicsEngine::new(world, 128).with_piston_planning_region(known_region);
+        engine.schedule_redstone_input(0, input_pos, true);
+        engine.run_redstone_propagation().unwrap();
+
+        assert_eq!(
+            engine
+                .world()
+                .get(wire_pos)
+                .and_then(|block| block.power_level),
+            Some(15)
+        );
+        assert_eq!(
+            piston_state(engine.world().get(piston_pos).unwrap()),
+            PistonState::Extended
+        );
+    }
+
+    #[test]
+    fn world_change_off_reaches_wire_and_retracts_piston() {
+        let (world, piston_pos, wire_pos, input_pos, known_region) =
+            world_driven_wire_piston_world();
+        let mut engine = PhysicsEngine::new(world, 256).with_piston_planning_region(known_region);
+        let mut on = Block::new(BlockKind::Lever);
+        on.powered = Some(true);
+        engine.schedule_world_change(0, input_pos, on);
+        engine.run_redstone_propagation().unwrap();
+
+        let mut off = Block::new(BlockKind::Lever);
+        off.powered = Some(false);
+        engine.schedule_world_change(engine.time().game_tick + 1, input_pos, off);
+        engine.run_redstone_propagation().unwrap();
+
+        assert_eq!(
+            engine
+                .world()
+                .get(wire_pos)
+                .and_then(|block| block.power_level),
+            Some(0)
+        );
+        assert_eq!(
+            piston_state(engine.world().get(piston_pos).unwrap()),
+            PistonState::Retracted
+        );
+        assert_eq!(engine.world().kind_at(Pos::new(1, 1, 0)), BlockKind::Air);
+        assert!(engine.trace_status().is_complete());
+    }
+
+    #[test]
+    fn world_driven_wire_fixed_point_powers_lamp_and_decays_on_removal() {
+        let input_pos = Pos::new(0, 1, 0);
+        let wire_positions = [Pos::new(1, 1, 0), Pos::new(2, 1, 0), Pos::new(3, 1, 0)];
+        let lamp_pos = Pos::new(4, 1, 0);
+        let mut world = World::new();
+        for x in 0..=4 {
+            world.set(Pos::new(x, 0, 0), Block::new(BlockKind::Solid));
+        }
+        let mut input = Block::new(BlockKind::Lever);
+        input.powered = Some(false);
+        world.set(input_pos, input);
+        for position in wire_positions {
+            world.set(position, Block::new(BlockKind::RedstoneWire));
+        }
+        world.set(lamp_pos, Block::new(BlockKind::RedstoneLamp));
+        let known_region = Region::new(Pos::new(-1, 0, -1), Pos::new(5, 2, 1));
+        let mut engine = PhysicsEngine::new(world, 256).with_piston_planning_region(known_region);
+
+        let mut on = Block::new(BlockKind::Lever);
+        on.powered = Some(true);
+        engine.schedule_world_change(0, input_pos, on);
+        engine.run_redstone_propagation().unwrap();
+        assert_eq!(
+            wire_positions
+                .iter()
+                .map(|position| engine.world().get(*position).unwrap().power_level)
+                .collect::<Vec<_>>(),
+            [Some(15), Some(14), Some(13)]
+        );
+        assert_eq!(
+            engine.world().get(lamp_pos).and_then(|block| block.powered),
+            Some(true)
+        );
+
+        let mut off = Block::new(BlockKind::Lever);
+        off.powered = Some(false);
+        engine.schedule_world_change(1, input_pos, off);
+        engine.run_redstone_propagation().unwrap();
+        assert_eq!(
+            wire_positions
+                .iter()
+                .map(|position| engine.world().get(*position).unwrap().power_level)
+                .collect::<Vec<_>>(),
+            [Some(0), Some(0), Some(0)]
+        );
+        assert_eq!(
+            engine.world().get(lamp_pos).and_then(|block| block.powered),
+            Some(false)
+        );
+    }
+
+    #[test]
+    fn propagation_rejects_a_wire_outside_the_complete_region_before_mutation() {
+        let (world, _piston_pos, _wire_pos, input_pos, _known_region) =
+            world_driven_wire_piston_world();
+        let known_region = Region::new(Pos::new(-2, 0, -1), Pos::new(-2, 2, 1));
+        let mut engine =
+            PhysicsEngine::new(world.clone(), 64).with_piston_planning_region(known_region);
+        let mut on = Block::new(BlockKind::Lever);
+        on.powered = Some(true);
+        let event_id = engine.schedule_world_change(0, input_pos, on);
+        let error = engine.run_redstone_propagation().unwrap_err();
+
+        assert!(matches!(
+            error,
+            PhysicsEngineError::Redstone(error)
+                if matches!(error.as_ref(), RedstonePropagationError::UnknownState { .. })
+        ));
+        assert_eq!(engine.world(), &world);
+        assert_eq!(engine.pending_event_count(), 1);
+        assert_eq!(engine.queue.peek().map(|event| event.id), Some(event_id));
+        assert!(engine.trace_status().is_failed());
+    }
+
+    #[test]
+    fn propagation_rejects_an_observed_wire_without_connection_shape() {
+        let input_pos = Pos::new(0, 1, 0);
+        let wire_pos = Pos::new(1, 1, 0);
+        let mut world = World::new();
+        world.set(Pos::new(0, 0, 0), Block::new(BlockKind::Solid));
+        let mut input = Block::new(BlockKind::Lever);
+        input.powered = Some(false);
+        world.set(input_pos, input);
+        world.set(Pos::new(1, 0, 0), Block::new(BlockKind::Solid));
+        let mut wire = Block::new(BlockKind::RedstoneWire);
+        wire.observed_name = Some("minecraft:redstone_wire".to_owned());
+        wire.observation_classification = crate::ObservationClassification::Exact;
+        wire.power_level = Some(0);
+        world.set(wire_pos, wire);
+        let known_region = Region::new(Pos::new(-1, 0, -1), Pos::new(2, 2, 1));
+        let mut engine =
+            PhysicsEngine::new(world.clone(), 64).with_piston_planning_region(known_region);
+        let mut on = Block::new(BlockKind::Lever);
+        on.powered = Some(true);
+        let event_id = engine.schedule_world_change(0, input_pos, on);
+        let error = engine.run_redstone_propagation().unwrap_err();
+
+        assert!(matches!(
+            error,
+            PhysicsEngineError::Redstone(error)
+                if matches!(
+                    error.as_ref(),
+                    RedstonePropagationError::UnknownState { position, .. }
+                        if *position == wire_pos
+                )
+        ));
+        assert_eq!(engine.world(), &world);
+        assert_eq!(engine.queue.peek().map(|event| event.id), Some(event_id));
     }
 
     #[test]

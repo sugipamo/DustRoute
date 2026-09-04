@@ -13,6 +13,7 @@ mod lever;
 mod observer;
 mod piston;
 mod pressure_plate;
+mod redstone;
 mod redstone_block;
 mod redstone_lamp;
 mod redstone_torch;
@@ -28,8 +29,15 @@ pub use piston::{
     plan_piston_in_region,
 };
 
+pub use redstone::RedstonePropagationError;
+
 pub(crate) use piston::{
     direct_piston_neighbors, piston_input_powered_in_region, redstone_input_delta,
+};
+
+pub(crate) use redstone::{
+    external_world_delta, redstone_lamp_delta, redstone_position_known, redstone_update_positions,
+    redstone_wire_delta,
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

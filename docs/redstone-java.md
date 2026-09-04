@@ -1,5 +1,10 @@
 はい。まずは **Java Edition の高精度レッドストーン回路シミュレータ向け**に、実装仕様表として切ります。
 
+現在の実行可能な伝播境界は、`PhysicsEngine::schedule_world_change` または
+`schedule_redstone_input` から始まる、水平6近傍更新・Wire信号再計算・Lamp/Piston反応の
+固定点MVPです。Repeater、Comparator、Observerの上流伝播やQC/BUDは、下表の仕様候補であり、
+まだこの実行境界には含めません。
+
 重要なのは、「入力→出力」だけではなく **何を契機に再評価されるか／どのイベントキューに乗るか／同tick内の順序を保存する必要があるか** です。QCはJava版固有で、piston・dropper・dispenserが対象です。また「論理上poweredだがupdateを受けていないため未作動」という状態が実在します。([Minecraft Wiki][1])
 
 ### コア仕様表

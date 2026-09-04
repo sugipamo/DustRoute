@@ -185,15 +185,29 @@ typed external source edge, applies only the supported direct source mutation,
 and emits a horizontal `NeighborUpdate` for each adjacent directionally
 connected piston. The neighbor phase re-queries all four direct inputs before
 queuing a `PistonExtend` or `PistonRetract` Block Event, so an unrelated
-powered input is not lost when another source turns off. This is intentionally
-not an upstream redstone solver: wire propagation, quasi-connectivity, BUD,
-observer pulse generation, and retrigger/reversal remain outside this runner.
-Duplicate Block Events are retained in `EventTrace`; an event that arrives
-after the piston has already entered the requested or moving state is a
-successful `NoTransition`, preserving evidence without applying the motion
-twice. A supplied `Region` is checked before a source edge is applied and
-again at piston planning; missing boundaries and unsupported observed source
-metadata stay explicit errors rather than inferred Air or unpowered state.
+powered input is not lost when another source turns off. Duplicate Block
+Events are retained in `EventTrace`; an event that arrives after the piston has
+already entered the requested or moving state is a successful `NoTransition`,
+preserving evidence without applying the motion twice.
+
+The bounded world-driven propagation MVP is exposed through
+`schedule_world_change` and `run_redstone_propagation`. A WorldChange is the
+explicit mutation boundary: it is applied as a validated `WorldDelta`, then
+the six neighboring positions (and the changed position when it may be a
+wire) receive deterministic `NeighborUpdate` events. The supported steady
+state kernel reevaluates horizontal redstone-wire levels (15 down to 0 with
+one level lost per wire) and lamp powered state, and feeds a changed wire back
+into the same queue until it reaches a fixed point. Typed `RedstoneInput`
+events can use this runner as well, so a synthetic `Lever -> Wire -> Piston`
+path no longer needs the caller to identify the piston action.
+
+The MVP is bounded by `with_piston_planning_region` when a complete observed
+region is supplied and by the engine's per-tick microstep budget. Coordinates
+outside that region, missing observed wire shape, or missing observed signal
+state are explicit errors; they are never inferred as Air or unpowered. The
+kernel does not claim upstream repeater/comparator/observer timing,
+quasi-connectivity, BUD, vertical activation, or continuous mechanical
+downstream propagation. Those remain versioned follow-up contracts.
 
 `run_until_idle_checked` treats one event as the unit of failure isolation. If
 the handler rejects an event, a delta fails its before-state check, or an
