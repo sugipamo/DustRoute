@@ -1,0 +1,69 @@
+{
+  "schema_version": "dustroute.3x3-piston-shuttle-fanout.v1",
+  "minecraft_version": "1.21.11",
+  "id": "lever_controlled_one_to_three_to_nine_piston_shuttle",
+  "evidence": "designed_control_contract",
+  "coordinate_convention": {
+    "door_plane_z": 0,
+    "open_direction": "south",
+    "close_direction": "north",
+    "width_axis": "x",
+    "height_axis": "y",
+    "travel_axis": "z"
+  },
+  "control": {
+    "lever": {"x": -22, "y": 4, "z": 0},
+    "open_source": {"x": -22, "y": 1, "z": -6},
+    "close_source": {"x": -22, "y": 1, "z": 7},
+    "pulse_width_game_ticks": 80,
+    "row_order": [0, 1, 2],
+    "open_branch_z": -6,
+    "close_branch_z": 7,
+    "branch_lane_z_open": [-7, -6, -9],
+    "branch_lane_z_close": [8, 7, 10],
+    "branch_first_repeater_x": -18,
+    "trunk_repeater_counts": [9, 15, 21],
+    "trunk_repeater_delay_redstone_ticks": 1,
+    "leaf_repeater_z_open": [-5, -4, -3, -2],
+    "leaf_repeater_z_close": [6, 5, 4, 3],
+    "leaf_delay_redstone_ticks": [
+      [[1, 1, 1, 1], [1, 1, 2, 2], [1, 2, 2, 3]],
+      [[1, 1, 1, 1], [1, 1, 2, 2], [1, 2, 2, 3]],
+      [[1, 1, 1, 1], [1, 1, 2, 2], [1, 2, 2, 3]]
+    ],
+    "fanout_levels": [1, 3, 9]
+  },
+  "cells": [
+    {"x": 0, "y": 0}, {"x": 1, "y": 0}, {"x": 2, "y": 0},
+    {"x": 0, "y": 1}, {"x": 1, "y": 1}, {"x": 2, "y": 1},
+    {"x": 0, "y": 2}, {"x": 1, "y": 2}, {"x": 2, "y": 2}
+  ],
+  "expected": {
+    "closed_door_z": 0,
+    "open_door_z": 1,
+    "stable_pistons_retracted": true,
+    "pending_events_after_settle": 0
+  },
+  "scope": {
+    "supported": [
+      "one_lever_edge_to_three_trunk_sources",
+      "one_to_three_to_nine_wire_repeater_fanout",
+      "serialised_nine_cell_open_and_close",
+      "explicit_branch_delay_and_order",
+      "deterministic_fanout",
+      "stable_edge_idempotence",
+      "fail_closed_observation_boundary"
+    ],
+    "out_of_scope": [
+      "same_tick_multi_piston_completion_rebase",
+      "scheduler_profile_or_delay_profile_semantics",
+      "qc_bud",
+      "slime_honey",
+      "complete_vanilla_wire_topology",
+      "observer_replacement",
+      "moving_interruption_or_reversal",
+      "automatic_physical_correction_from_observed_mismatch"
+    ]
+  },
+  "stop_condition": "If the selected fanout requires same-tick completion rebasing, scheduler meaning changes, or any listed out-of-scope behavior, stop without implementing that dependency and report it as a separate goal."
+}

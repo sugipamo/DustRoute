@@ -22,6 +22,7 @@ pub mod minecraft_semantics;
 pub mod multinet;
 pub mod physical;
 pub mod physics_trace;
+pub mod piston_door;
 pub mod port_realization;
 pub mod repair;
 pub mod routing;
@@ -113,6 +114,11 @@ pub use physics_trace::{
     PhysicalBlockObservation, PhysicalProperty, PhysicalTrace, PhysicalTraceComparison,
     PhysicalTraceMismatch, PhysicalValue, TraceSource, compare_physical_traces,
     simulate_cell_trace, simulate_world_trace, simulator_observations,
+};
+pub use piston_door::{
+    DEFAULT_PISTON_DOOR_EVENT_BUDGET, PISTON_DOOR_FANOUT_SCHEMA, PistonDoorCell, PistonDoorControl,
+    PistonDoorCoordinateConvention, PistonDoorExpected, PistonDoorScenario,
+    PistonDoorScenarioError, PistonDoorScope, PistonDoorWorld,
 };
 pub use port_realization::{
     PortRealization, PortRealizationError, realize_sink_endpoint, realize_source_endpoint,

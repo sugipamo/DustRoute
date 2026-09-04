@@ -27,7 +27,7 @@ Each cell has two independent pistons:
   - the north-facing **close pusher** at `(x, y, 2)` later extends, moving the
     block from `z=1` back to `z=0`, then retracts as a normal piston.
 
-The candidate control layout places one repeater directly behind each pusher:
+The candidate direct control layout places one repeater directly behind each pusher:
 `(x, y, -2)` facing south for the open channel and `(x, y, 3)` facing north
 for the close channel. Their rear input anchors are the next block outward
 (`z=-3` and `z=4`). These coordinates make the output-to-piston relation
@@ -43,6 +43,16 @@ blocks. It is large, but it is a mechanically valid baseline for the user's
 
 The coordinate-level fixture is
 [`reference_3x3_noncompact_piston_shuttle.json`](../crates/dustroute-translate/tests/fixtures/reference_3x3_noncompact_piston_shuttle.json).
+
+The executable control slices are documented in
+[`single-cell-piston-shuttle.md`](single-cell-piston-shuttle.md) and
+[`3x3-piston-shuttle-fanout.md`](3x3-piston-shuttle-fanout.md). The latter
+connects one Lever edge to a bounded serial `1 → 3 → 9` wire/repeater fanout
+for both open and close sides, then reuses these same mechanical coordinates.
+The direct 18-channel layout described by this mechanical fixture remains an
+unverified Vanilla wiring claim; the fanout fixture is the explicitly
+supported designed control topology and can be executed through
+`PistonDoorScenario::run_cycle`.
 
 ## Stable states
 
@@ -80,8 +90,9 @@ Vanilla scheduler phase from packet order.
 
 The electrical timeline has four corresponding repeater-output groups. The
 extend groups use a one-redstone-tick path and the delayed-return groups use two
-redstone ticks. All four are marked `out_of_scope` until a concrete lever edge,
-pulse generator, and 18-way wire fanout are observed and implemented.
+redstone ticks. The separately versioned fanout scenario supplies a designed,
+serial `1 → 3 → 9` control topology; this does not promote the direct
+18-channel layout to a Vanilla-verified claim.
 
 ## Current DustRoute classification
 
@@ -92,8 +103,8 @@ pulse generator, and 18-way wire fanout are observed and implemented.
 | Nine horizontal north-facing close extensions | **supported_serial_only** | Same one-block push rule in the opposite direction |
 | Nine final normal retractions | **supported_serial_only** | Stable closed panel and head removal |
 | Nine independent piston completions in one game tick | **missing** | Strict `WorldDelta` parent-shape validation requires a batch rebase |
-| Lever ON/OFF → two timed pulses per side | **out-of-scope** | No pulse sequencer or normal-piston edge generator in the bounded runner |
-| One lever → 18 independently delayed piston channels | **missing** | The repeater model is one horizontal rear-input/front-output path, not a verified 18-branch topology |
+| Lever ON/OFF → two timed pulses per side | **supported_for_declared_fanout** | `PistonDoorScenario::run_cycle` uses the bounded `LeverPulseSequence` edge boundary |
+| One lever → 18 independently delayed piston channels | **supported_for_declared_fanout_only** | The serial `1 → 3 → 9` fanout is a designed scenario topology; the direct 18-channel layout remains unverified |
 | Complete Vanilla wiring/order, QC/BUD, moving interruption/reversal, slime/honey, entities | **out-of-scope** | Explicitly excluded by the Goal |
 
 The `control_contract` in the fixture records the electrical prerequisite: 18
@@ -102,12 +113,12 @@ design requirement, not a measured Vanilla scheduler claim.
 
 ## Stop condition applied
 
-The declared work ends at the first electrical gap. This change adds only the
-reference fixture and the bounded serial mechanical replay test. It does **not**
-add a multi-piston batch rebase, pulse sequencer, torch inverter, full repeater
-fanout, or lever-driven 3×3 E2E.
-If a later replay requires one of those capabilities, implementation must stop
-and the missing contract must be reported before expanding the Goal.
+The declared fanout work ends at the first semantic gap. It adds the reusable
+scenario executor and a bounded serial lever-driven 3×3 E2E, but does **not**
+add a multi-piston batch rebase, full Vanilla repeater fanout, or direct-layout
+electrical verification. If a later replay requires one of those capabilities,
+implementation must stop and the missing contract must be reported before
+expanding the Goal.
 
 For context, public build references also illustrate why a real 3×3 door should
 not be reduced to “three pistons”: beginner-oriented designs use nine sticky

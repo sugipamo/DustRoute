@@ -1,0 +1,52 @@
+{
+  "schema_version": "dustroute.single-cell-piston-shuttle.v1",
+  "minecraft_version": "1.21.11",
+  "id": "lever_controlled_single_cell_normal_piston_shuttle",
+  "evidence": "designed_control_contract",
+  "coordinates": {
+    "lever": {"x": 2, "y": 1, "z": 0},
+    "door_block_closed": {"x": 0, "y": 1, "z": 0},
+    "door_block_open": {"x": 0, "y": 1, "z": 1},
+    "open_piston": {"x": 0, "y": 1, "z": -1},
+    "open_repeater": {"x": 0, "y": 1, "z": -2},
+    "open_wire": {"x": 0, "y": 1, "z": -3},
+    "open_source": {"x": 0, "y": 1, "z": -4},
+    "close_piston": {"x": 0, "y": 1, "z": 2},
+    "close_repeater": {"x": 0, "y": 1, "z": 3},
+    "close_wire": {"x": 0, "y": 1, "z": 4},
+    "close_source": {"x": 0, "y": 1, "z": 5}
+  },
+  "piston_facing": {
+    "open": "South",
+    "close": "North"
+  },
+  "repeater_delay_redstone_ticks": 1,
+  "pulse_width_game_ticks": 8,
+  "expected": {
+    "closed_lever_powered": false,
+    "open_lever_powered": true,
+    "stable_pistons_retracted": true,
+    "pending_events_after_settle": 0,
+    "open_settle_game_tick": 13,
+    "closed_settle_game_tick": 27
+  },
+  "scope": {
+    "supported": [
+      "one_lever_edge_to_one_source_pulse",
+      "wire_to_repeater_to_normal_piston",
+      "serial_single_cell_open_and_close",
+      "stable_edge_idempotence"
+    ],
+    "out_of_scope": [
+      "observer",
+      "comparator",
+      "repeater_lock",
+      "qc_bud",
+      "zero_tick",
+      "slime_honey",
+      "moving_interruption_or_reversal",
+      "multi_piston_completion_rebase",
+      "nine_cell_fanout"
+    ]
+  }
+}

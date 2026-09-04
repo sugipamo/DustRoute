@@ -271,6 +271,12 @@ pub enum PhysicsEngineError {
     Piston(Box<PistonError>),
     Redstone(Box<RedstonePropagationError>),
     WorldDelta(Box<WorldDeltaError>),
+    /// A lever-to-pulse control event is malformed.  Keeping this separate
+    /// from redstone propagation errors makes an invalid control contract
+    /// explicit instead of silently changing the pulse timing.
+    InvalidLeverPulseSequence {
+        reason: String,
+    },
     /// The handler returned mutually exclusive output forms or duplicate
     /// coordinate changes for one atomic event.
     InvalidOutcome,
@@ -306,6 +312,9 @@ impl Display for PhysicsEngineError {
             Self::Piston(error) => write!(formatter, "piston event failed: {error}"),
             Self::Redstone(error) => write!(formatter, "redstone propagation failed: {error}"),
             Self::WorldDelta(error) => write!(formatter, "world delta failed: {error}"),
+            Self::InvalidLeverPulseSequence { reason } => {
+                write!(formatter, "invalid lever pulse sequence: {reason}")
+            }
             Self::InvalidOutcome => write!(
                 formatter,
                 "event outcome cannot contain both changes and a delta"
@@ -722,6 +731,40 @@ impl PhysicsEngine {
         )
     }
 
+    /// Schedules a generic lever-edge pulse sequence for the world-driven
+    /// propagation runner.  The lever state is changed once, then the
+    /// selected output source(s) receive a high edge followed by a low edge
+    /// after `pulse_width_game_ticks`.  Each source continues through the
+    /// ordinary wire/repeater/neighbor-update path; this method does not
+    /// schedule a piston action directly.
+    ///
+    /// `on_sources` are used for an off-to-on edge and `off_sources` for an
+    /// on-to-off edge. The bounded 3×3 fanout uses one root source per edge
+    /// and builds the three-way split in the world; callers may still provide
+    /// multiple independent roots when that is part of their declared
+    /// contract. A zero pulse width is rejected when the runner executes the
+    /// event rather than being silently rounded to a scheduler tick.
+    pub fn schedule_lever_pulse_sequence(
+        &mut self,
+        game_tick: u64,
+        lever: Pos,
+        powered: bool,
+        on_sources: impl IntoIterator<Item = Pos>,
+        off_sources: impl IntoIterator<Item = Pos>,
+        pulse_width_game_ticks: u64,
+    ) -> super::EventId {
+        self.schedule_external(
+            game_tick,
+            lever,
+            PhysicsEventKind::LeverPulseSequence {
+                powered,
+                on_sources: on_sources.into_iter().collect(),
+                off_sources: off_sources.into_iter().collect(),
+                pulse_width_game_ticks,
+            },
+        )
+    }
+
     pub fn run_until_idle(
         &mut self,
         mut handler: impl FnMut(&PhysicsEvent, &World) -> EventOutcome,
@@ -1091,11 +1134,11 @@ impl PhysicsEngine {
         self.run_piston_events_with_mode(RedstoneRunnerMode::DirectPiston)
     }
 
-    /// Runs the bounded world-driven redstone subset. External World changes
-    /// and typed source edges are propagated through local wire/lamp
-    /// reevaluation (including the bounded vertical wire offset-neighbors)
-    /// until no more neighbor updates are queued; piston block events then
-    /// reuse the existing moving/stable state machine.
+    /// Runs the bounded world-driven redstone subset. External World changes,
+    /// typed source edges, and generic lever pulse sequences are propagated
+    /// through local wire/lamp reevaluation (including the bounded vertical
+    /// wire offset-neighbors) until no more neighbor updates are queued;
+    /// piston block events then reuse the existing moving/stable state machine.
     ///
     /// The runner models one bounded repeater path (horizontal rear input,
     /// front output, and 1..=4 redstone-tick delay) alongside the existing
@@ -1137,7 +1180,8 @@ impl PhysicsEngine {
                     || propagation
                         && matches!(
                             event.kind,
-                            PhysicsEventKind::WorldChange { .. }
+                            PhysicsEventKind::LeverPulseSequence { .. }
+                                | PhysicsEventKind::WorldChange { .. }
                                 | PhysicsEventKind::RepeaterTick { .. }
                         );
                 !(piston_event || redstone_input_event)
@@ -1160,6 +1204,106 @@ impl PhysicsEngine {
         let activation_game_ticks = self.piston_motion_profile.initial_delay_max_game_ticks;
         let planning_region = self.piston_planning_region;
         self.run_until_idle_checked(move |event, world| match &event.kind {
+            PhysicsEventKind::LeverPulseSequence {
+                powered,
+                on_sources,
+                off_sources,
+                pulse_width_game_ticks,
+            } if propagation => {
+                if *pulse_width_game_ticks == 0 {
+                    return Err(PhysicsEngineError::InvalidLeverPulseSequence {
+                        reason: "pulse width must be greater than zero game ticks".to_owned(),
+                    });
+                }
+                let Some(lever) = world.get(event.target) else {
+                    return Err(PhysicsEngineError::InvalidLeverPulseSequence {
+                        reason: format!("lever is missing at {:?}", event.target),
+                    });
+                };
+                if lever.kind != BlockKind::Lever {
+                    return Err(PhysicsEngineError::InvalidLeverPulseSequence {
+                        reason: format!(
+                            "pulse target {:?} must be a Lever, found {:?}",
+                            event.target, lever.kind
+                        ),
+                    });
+                }
+                let sources = if *powered { on_sources } else { off_sources };
+                if sources.is_empty() {
+                    return Err(PhysicsEngineError::InvalidLeverPulseSequence {
+                        reason: format!(
+                            "{} edge has no pulse output source",
+                            if *powered { "on" } else { "off" }
+                        ),
+                    });
+                }
+                let mut unique_sources = BTreeSet::new();
+                if sources
+                    .iter()
+                    .any(|source| *source == event.target || !unique_sources.insert(*source))
+                {
+                    return Err(PhysicsEngineError::InvalidLeverPulseSequence {
+                        reason: "pulse output sources must be unique and distinct from the lever"
+                            .to_owned(),
+                    });
+                }
+
+                // Validate the lever transition and every source edge before
+                // returning the parent outcome.  A malformed source must not
+                // leave the lever changed while the pulse children are
+                // impossible to execute.
+                let lever_delta = redstone_input_delta(world, event.target, *powered)?;
+                let mut staged = world.clone();
+                if let Some(delta) = &lever_delta {
+                    delta.apply(&mut staged)?;
+                    let positions = redstone_update_positions(event.target, false);
+                    preflight_redstone_targets(&staged, planning_region, &positions)?;
+                } else {
+                    let positions = redstone_update_positions(event.target, false);
+                    preflight_redstone_targets(&staged, planning_region, &positions)?;
+                }
+
+                for source in sources {
+                    let high = redstone_input_delta(&staged, *source, true)?;
+                    let mut high_world = staged.clone();
+                    if let Some(delta) = &high {
+                        delta.apply(&mut high_world)?;
+                    }
+                    let positions = redstone_update_positions(*source, false);
+                    preflight_redstone_targets(&high_world, planning_region, &positions)?;
+                    // The low edge is checked against the high-edge state so
+                    // both halves of the pulse have a known source contract.
+                    let _ = redstone_input_delta(&high_world, *source, false)?;
+                }
+
+                // A stable lever value is an intentional no-op.  In
+                // particular, do not emit another high/low pulse merely
+                // because the caller repeated the same input state.
+                if lever_delta.is_none() {
+                    return Ok(EventOutcome::default());
+                }
+
+                let mut queued = queue_redstone_neighbors(event.target, false);
+                for source in sources {
+                    queued.push(QueuedEvent {
+                        delay_ticks: 0,
+                        target: *source,
+                        phase: PhysicsEventPhase::External,
+                        kind: PhysicsEventKind::RedstoneInput { powered: true },
+                    });
+                    queued.push(QueuedEvent {
+                        delay_ticks: *pulse_width_game_ticks,
+                        target: *source,
+                        phase: PhysicsEventPhase::External,
+                        kind: PhysicsEventKind::RedstoneInput { powered: false },
+                    });
+                }
+                Ok(EventOutcome {
+                    changes: Vec::new(),
+                    delta: lever_delta,
+                    queued,
+                })
+            }
             PhysicsEventKind::WorldChange { after } if propagation => {
                 redstone_position_known(planning_region, event.target)?;
                 let delta = external_world_delta(world, event.target, after);

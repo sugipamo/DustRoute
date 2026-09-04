@@ -64,6 +64,18 @@ pub enum PhysicsEventKind {
     RedstoneInput {
         powered: bool,
     },
+    /// Applies a stable lever edge and emits a bounded high/low pulse on the
+    /// selected output sources.  The output sources are ordinary redstone
+    /// blocks (or wires) and continue through the normal propagation path;
+    /// this event only supplies the generic edge-to-pulse control boundary.
+    /// `on_sources` are pulsed for an off-to-on edge and `off_sources` for an
+    /// on-to-off edge.  The source is the event target (the lever position).
+    LeverPulseSequence {
+        powered: bool,
+        on_sources: Vec<Pos>,
+        off_sources: Vec<Pos>,
+        pulse_width_game_ticks: u64,
+    },
     NeighborUpdate {
         source: Pos,
     },
@@ -98,6 +110,7 @@ impl PhysicsEventKind {
         match self {
             Self::WorldChange { .. } => PhysicsEventPhase::External,
             Self::RedstoneInput { .. } => PhysicsEventPhase::External,
+            Self::LeverPulseSequence { .. } => PhysicsEventPhase::External,
             Self::NeighborUpdate { .. } => PhysicsEventPhase::NeighborUpdate,
             Self::ScheduledBlockTick => PhysicsEventPhase::ScheduledTick,
             Self::RepeaterTick { .. } => PhysicsEventPhase::ScheduledTick,

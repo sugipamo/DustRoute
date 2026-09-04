@@ -190,6 +190,24 @@ Events are retained in `EventTrace`; an event that arrives after the piston has
 already entered the requested or moving state is a successful `NoTransition`,
 preserving evidence without applying the motion twice.
 
+The bounded one-cell shuttle control is exposed through
+`schedule_lever_pulse_sequence`. A `LeverPulseSequence` changes a persistent
+Lever once and emits high/low `RedstoneInput` edges on the selected source
+block(s); those edges still pass through the ordinary wire, Repeater,
+neighbor-update, and piston Block Event handlers. The source lists make the
+control contract reusable for the bounded fanout fixture, which uses one root
+source for each edge. A repeated stable Lever value is retained as a
+no-op and does not schedule another pulse. This is an explicit control-boundary
+primitive, not a claim that the current runner reproduces every Vanilla pulse
+generator or wiring topology.
+
+The bounded 3×3 fanout scenario reuses this same event with one root source per
+edge and supplies the `1 → 3 → 9` wire/repeater topology in
+`3x3-piston-shuttle-fanout.md`. `PistonDoorScenario::from_json` and
+`run_cycle` provide the reusable layout/execution boundary; its serialized
+branches avoid the separate same-tick completion-rebase problem. The direct
+18-channel Vanilla layout is still not claimed.
+
 The bounded world-driven propagation MVP is exposed through
 `schedule_world_change` and `run_redstone_propagation`. A WorldChange is the
 explicit mutation boundary: it is applied as a validated `WorldDelta`, then
