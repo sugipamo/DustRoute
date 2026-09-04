@@ -60,7 +60,7 @@ pub const fn behavior_profile(kind: BlockKind) -> BlockBehaviorProfile {
         BlockKind::RedstoneLamp => redstone_lamp::PROFILE,
         BlockKind::RedstoneBlock => redstone_block::PROFILE,
         BlockKind::Observer => observer::PROFILE,
-        BlockKind::Piston => piston::PROFILE,
+        BlockKind::Piston | BlockKind::PistonHead | BlockKind::MovingPiston => piston::PROFILE,
     }
 }
 

@@ -188,6 +188,19 @@ wiring, direction errors, missing support, inversion, signal merges, delayed
 paths, unsupported devices, and scan boundaries without requiring a running
 Minecraft server.
 
+Reviewed 1.21.11 timing observations are kept separately in the same directory
+as `scheduler_1_21_11_observed_*.json` plus matching metadata. They preserve
+relative game-tick and Mineflayer packet-order evidence; the internal scheduler
+phase remains unknown and the versioned profile remains explicitly modelled.
+
+Server-side Vanilla instrumentation uses the companion repository
+`/root/DustRoute-minecraft-instrumentation`. Its normalized artifacts retain a
+capture-integrity map distinguishing complete, partial, and unavailable
+streams; bounded or heartbeat-omitted captures are never treated as proof that
+an absent event did not occur. See
+[`docs/vanilla-instrumentation.md`](docs/vanilla-instrumentation.md) for the
+promotion contract and transport procedure.
+
 ## Reverse analysis
 
 `analyze-snapshot` accepts a bounded Minecraft block snapshot and reconstructs

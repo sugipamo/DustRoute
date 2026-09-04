@@ -10,6 +10,7 @@ use crate::electrical::{
     solve_instantaneous_with_topology, torch_support_is_powered,
 };
 use crate::world::{Block, BlockKind, Pos, World};
+use dustroute_minecraft::time::{PhysicsEventPhase, PhysicsTime, SchedulerProfile};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum InputMutationError {
@@ -100,8 +101,187 @@ impl TickState {
     #[must_use]
     pub fn powered(&self, pos: Pos) -> bool {
         self.lamp_lit.get(&pos).copied().unwrap_or(false)
+            || self.repeater_powered.get(&pos).copied().unwrap_or(false)
+            || self.torch_lit.get(&pos).copied().unwrap_or(false)
+            || self.comparator_output.get(&pos).copied().unwrap_or(0) > 0
+            || self.observer_powered.get(&pos).copied().unwrap_or(false)
             || self.strength(pos) > 0
             || self.power(pos).powered()
+    }
+}
+
+/// The canonical unit emitted by the translate simulator.
+///
+/// A simulator step consumes one scheduler event and exposes the result as an
+/// ordered before/after edge. A step can be a `NoOp`: time advanced or a
+/// boundary was prepared while no observable electrical/device state changed.
+/// Keeping that distinction explicit prevents callers from manufacturing a
+/// transition merely because a tick elapsed.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct SimulationTransition {
+    /// Scheduler coordinate of the event that produced this edge.
+    pub time: PhysicsTime,
+    /// Block/scheduler event that was consumed. The boundary and resolve
+    /// variants are intentionally visible so callers can distinguish a
+    /// device update from a time-only compatibility step.
+    pub event_kind: SimulationEventKind,
+    pub from: TickState,
+    pub to: TickState,
+    pub kind: SimulationTransitionKind,
+}
+
+impl SimulationTransition {
+    fn new(
+        time: PhysicsTime,
+        event_kind: SimulationEventKind,
+        from: TickState,
+        to: TickState,
+    ) -> Self {
+        let changed = from.strengths != to.strengths
+            || from.block_power != to.block_power
+            || from.repeater_powered != to.repeater_powered
+            || from.torch_lit != to.torch_lit
+            || from.comparator_output != to.comparator_output
+            || from.observer_powered != to.observer_powered
+            || from.lamp_lit != to.lamp_lit
+            || from.torch_burnout_candidates != to.torch_burnout_candidates;
+        Self {
+            time,
+            event_kind,
+            from,
+            to,
+            kind: if changed {
+                SimulationTransitionKind::Changed
+            } else {
+                SimulationTransitionKind::NoOp
+            },
+        }
+    }
+
+    #[must_use]
+    pub const fn is_noop(&self) -> bool {
+        matches!(self.kind, SimulationTransitionKind::NoOp)
+    }
+
+    #[must_use]
+    pub const fn elapsed_ticks(&self) -> u64 {
+        self.to.tick.saturating_sub(self.from.tick)
+    }
+
+    #[must_use]
+    pub fn before_powered(&self, pos: Pos) -> bool {
+        self.from.powered(pos)
+    }
+
+    #[must_use]
+    pub fn after_powered(&self, pos: Pos) -> bool {
+        self.to.powered(pos)
+    }
+}
+
+/// Whether a compatibility scheduler step changed an observable state.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum SimulationTransitionKind {
+    Changed,
+    NoOp,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum SimulationEventKind {
+    /// Advances the compatibility redstone-tick boundary and prepares the
+    /// block-specific events for that boundary.
+    CompatibilityBoundary,
+    /// Applies the delayed repeater outputs prepared at the boundary.
+    RepeaterUpdate,
+    /// Applies the delayed comparator outputs prepared at the boundary.
+    ComparatorUpdate,
+    /// Applies torch output changes and updates the burnout observation.
+    TorchUpdate,
+    /// Turns an Observer off at the end of its pulse.
+    ObserverPulseEnd,
+    /// Turns an Observer on for a newly detected front-face change.
+    ObserverPulseStart,
+    /// Resolves the instantaneous electrical state after device updates.
+    SignalResolve,
+    /// Applies lamp on/off behavior after signal resolution.
+    LampUpdate,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct SimulationEvent {
+    time: PhysicsTime,
+    kind: SimulationEventKind,
+}
+
+/// State prepared by one compatibility boundary and consumed by the
+/// block-specific events scheduled at that boundary. Computing all delayed
+/// outputs from the same pre-boundary electrical state preserves the existing
+/// synchronous kernel while exposing each commit as its own event.
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct PendingBoundary {
+    game_tick: u64,
+    before_observers: BTreeMap<Pos, ObserverObservedState>,
+    repeater_requested: BTreeMap<Pos, bool>,
+    next_repeaters: BTreeMap<Pos, bool>,
+    comparator_requested: BTreeMap<Pos, u8>,
+    next_comparators: BTreeMap<Pos, u8>,
+    next_torches: BTreeMap<Pos, bool>,
+    pending_observers: BTreeSet<Pos>,
+    observers_to_off: BTreeSet<Pos>,
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+struct SimulationEventQueue {
+    events: BTreeMap<u64, BTreeMap<PhysicsEventPhase, VecDeque<SimulationEvent>>>,
+    next_sub_tick_order: BTreeMap<u64, u64>,
+}
+
+impl SimulationEventQueue {
+    fn is_empty(&self) -> bool {
+        self.events.is_empty()
+    }
+
+    fn schedule(&mut self, game_tick: u64, phase: PhysicsEventPhase, kind: SimulationEventKind) {
+        self.events
+            .entry(game_tick)
+            .or_default()
+            .entry(phase)
+            .or_default()
+            .push_back(SimulationEvent {
+                time: PhysicsTime {
+                    game_tick,
+                    phase,
+                    sub_tick_order: 0,
+                },
+                kind,
+            });
+    }
+
+    fn pop(&mut self, profile: &SchedulerProfile) -> Option<SimulationEvent> {
+        let game_tick = *self.events.first_key_value()?.0;
+        let phases = self.events.get_mut(&game_tick).expect("game tick exists");
+        let phase = *phases
+            .iter()
+            .min_by_key(|(phase, _)| profile.phase_rank(**phase))?
+            .0;
+        let queue = phases.get_mut(&phase).expect("phase exists");
+        let mut event = queue.pop_front().expect("phase queue is non-empty");
+        if queue.is_empty() {
+            phases.remove(&phase);
+        }
+        if phases.is_empty() {
+            self.events.remove(&game_tick);
+        }
+        // Compatibility events are monotonic. Once an event from a newer
+        // game tick is selected, counters for older ticks can never receive
+        // another child event. Dropping them keeps long simulations bounded
+        // without changing the order of events that remain eligible.
+        self.next_sub_tick_order
+            .retain(|queued_tick, _| *queued_tick >= game_tick);
+        let sub_tick_order = self.next_sub_tick_order.entry(game_tick).or_default();
+        event.time.sub_tick_order = *sub_tick_order;
+        *sub_tick_order = sub_tick_order.saturating_add(1);
+        Some(event)
     }
 }
 
@@ -110,6 +290,10 @@ pub struct RedstoneTickSimulator {
     world: World,
     topology: ElectricalTopology,
     tick: u64,
+    scheduler_profile: SchedulerProfile,
+    current_time: PhysicsTime,
+    event_queue: SimulationEventQueue,
+    pending_boundary: Option<PendingBoundary>,
     repeater_powered: BTreeMap<Pos, bool>,
     repeater_queues: BTreeMap<Pos, VecDeque<bool>>,
     torch_lit: BTreeMap<Pos, bool>,
@@ -159,6 +343,10 @@ impl RedstoneTickSimulator {
             world,
             topology,
             tick: 0,
+            scheduler_profile: SchedulerProfile::default(),
+            current_time: PhysicsTime::default(),
+            event_queue: SimulationEventQueue::default(),
+            pending_boundary: None,
             repeater_powered: devices.repeater_powered,
             repeater_queues,
             torch_lit: devices.torch_lit,
@@ -185,6 +373,39 @@ impl RedstoneTickSimulator {
             comparator_output: self.comparator_output.clone(),
             observer_powered: self.observer_powered.clone(),
         }
+    }
+
+    /// Returns the ordering policy used by the compatibility event queue.
+    #[must_use]
+    pub const fn scheduler_profile(&self) -> SchedulerProfile {
+        self.scheduler_profile
+    }
+
+    /// Overrides the event-ordering policy for a controlled fixture. Block
+    /// delays remain owned by their device models and are not changed here.
+    #[must_use]
+    pub fn with_scheduler_profile(mut self, profile: SchedulerProfile) -> Self {
+        self.scheduler_profile = profile;
+        self
+    }
+
+    /// Logical scheduler coordinate of the last processed event.
+    #[must_use]
+    pub const fn time(&self) -> PhysicsTime {
+        self.current_time
+    }
+
+    /// Number of queued compatibility events. The normal stepping API
+    /// creates the next clock event lazily, so this is usually zero between
+    /// calls and does not make a stable circuit appear non-quiescent.
+    #[must_use]
+    pub fn pending_scheduler_events(&self) -> usize {
+        self.event_queue
+            .events
+            .values()
+            .flat_map(BTreeMap::values)
+            .map(VecDeque::len)
+            .sum()
     }
 
     pub fn settle_instantaneous(&mut self) -> Result<TickState, InstantaneousSolveDidNotConverge> {
@@ -216,15 +437,19 @@ impl RedstoneTickSimulator {
     /// keeps the simulator non-quiescent.
     #[must_use]
     pub fn has_pending_events(&self) -> bool {
-        self.repeater_queues.iter().any(|(pos, queue)| {
-            queue
-                .iter()
-                .any(|value| self.repeater_powered.get(pos).copied() != Some(*value))
-        }) || self.comparator_queues.iter().any(|(pos, queue)| {
-            queue
-                .iter()
-                .any(|value| self.comparator_output.get(pos).copied() != Some(*value))
-        }) || !self.observer_pending.is_empty()
+        !self.event_queue.is_empty()
+            || self.pending_boundary.is_some()
+            || self.repeater_queues.iter().any(|(pos, queue)| {
+                queue
+                    .iter()
+                    .any(|value| self.repeater_powered.get(pos).copied() != Some(*value))
+            })
+            || self.comparator_queues.iter().any(|(pos, queue)| {
+                queue
+                    .iter()
+                    .any(|value| self.comparator_output.get(pos).copied() != Some(*value))
+            })
+            || !self.observer_pending.is_empty()
             || self
                 .observer_off_deadline
                 .values()
@@ -235,8 +460,67 @@ impl RedstoneTickSimulator {
                 .any(|deadline| *deadline > self.tick)
     }
 
-    pub fn advance_tick(&mut self) -> Result<TickState, InstantaneousSolveDidNotConverge> {
+    /// Executes one canonical scheduler event. A compatibility boundary is
+    /// followed by block-specific events at the same game tick; callers can
+    /// therefore observe delayed device updates without making the legacy
+    /// redstone tick the primary execution unit.
+    pub fn step_event(&mut self) -> Result<SimulationTransition, InstantaneousSolveDidNotConverge> {
+        debug_assert!(self.scheduler_profile.validate().is_ok());
+        if self.event_queue.is_empty() {
+            debug_assert!(self.pending_boundary.is_none());
+            let next_game_tick = self
+                .scheduler_profile
+                .game_tick_after_delay(self.current_time.game_tick, 2);
+            self.event_queue.schedule(
+                next_game_tick,
+                PhysicsEventPhase::ScheduledTick,
+                SimulationEventKind::CompatibilityBoundary,
+            );
+        }
+        let event = self
+            .event_queue
+            .pop(&self.scheduler_profile)
+            .expect("next compatibility event is queued");
+        self.current_time = event.time;
+        let before = self.snapshot();
+        match event.kind {
+            SimulationEventKind::CompatibilityBoundary => {
+                self.prepare_boundary(event.time.game_tick);
+            }
+            SimulationEventKind::RepeaterUpdate => self.apply_repeater_update(),
+            SimulationEventKind::ComparatorUpdate => self.apply_comparator_update(),
+            SimulationEventKind::TorchUpdate => self.apply_torch_update(),
+            SimulationEventKind::ObserverPulseEnd => self.apply_observer_pulse_end(),
+            SimulationEventKind::ObserverPulseStart => self.apply_observer_pulse_start(),
+            SimulationEventKind::SignalResolve => {
+                self.instantaneous = solve_instantaneous_with_topology(
+                    &self.world,
+                    &self.devices(),
+                    128,
+                    &self.topology,
+                )?;
+            }
+            SimulationEventKind::LampUpdate => self.apply_lamp_update(),
+        }
+        self.finish_boundary_if_drained();
+        Ok(SimulationTransition::new(
+            event.time,
+            event.kind,
+            before,
+            self.snapshot(),
+        ))
+    }
+
+    /// Calculates one synchronous compatibility boundary without mutating
+    /// delayed device output queues. Each prepared value is committed by its
+    /// corresponding block event, preserving the old result while exposing a
+    /// real event boundary to transition consumers.
+    fn prepare_boundary(&mut self, game_tick: u64) {
+        debug_assert!(self.pending_boundary.is_none());
+        self.tick = self.tick.saturating_add(1);
         let before_observers = self.observer_observations.clone();
+
+        let mut repeater_requested = BTreeMap::new();
         let mut next_repeaters = BTreeMap::new();
         for (pos, block) in self.world.iter() {
             if block.kind != BlockKind::Repeater {
@@ -260,14 +544,17 @@ impl RedstoneTickSimulator {
                 );
                 continue;
             }
-            let queue = self
+            repeater_requested.insert(*pos, requested);
+            let mut queue = self
                 .repeater_queues
-                .get_mut(pos)
+                .get(pos)
+                .cloned()
                 .expect("repeater queue initialized");
             queue.pop_front();
             queue.push_back(requested);
             next_repeaters.insert(*pos, queue.front().copied().unwrap_or(requested));
         }
+
         let next_torches: BTreeMap<_, _> = self
             .world
             .iter()
@@ -279,21 +566,8 @@ impl RedstoneTickSimulator {
                 )
             })
             .collect();
-        for (pos, next) in &next_torches {
-            if self.torch_lit.get(pos).copied() != Some(*next) {
-                let toggles = self.torch_toggle_ticks.entry(*pos).or_default();
-                toggles.push_back(self.tick + 1);
-                while toggles
-                    .front()
-                    .is_some_and(|tick| self.tick + 1 - tick > 30)
-                {
-                    toggles.pop_front();
-                }
-                if toggles.len() >= 8 {
-                    self.torch_burnout_candidates.insert(*pos);
-                }
-            }
-        }
+
+        let mut comparator_requested = BTreeMap::new();
         let mut next_comparators = BTreeMap::new();
         for (pos, block) in self.world.iter() {
             if block.kind != BlockKind::Comparator {
@@ -319,33 +593,206 @@ impl RedstoneTickSimulator {
                 } else {
                     0
                 };
-            let queue = self
+            comparator_requested.insert(*pos, requested);
+            let mut queue = self
                 .comparator_queues
-                .get_mut(pos)
+                .get(pos)
+                .cloned()
                 .expect("comparator queue initialized");
             queue.pop_front();
             queue.push_back(requested);
             next_comparators.insert(*pos, queue.front().copied().unwrap_or(requested));
         }
-        self.repeater_powered = next_repeaters;
-        self.torch_lit = next_torches;
-        self.comparator_output = next_comparators;
-        self.tick += 1;
+
         let pending_observers = std::mem::take(&mut self.observer_pending);
-        for (pos, deadline) in self.observer_off_deadline.clone() {
-            if deadline <= self.tick {
+        let observers_to_off = self
+            .observer_off_deadline
+            .iter()
+            .filter_map(|(pos, deadline)| (*deadline <= self.tick).then_some(*pos))
+            .collect();
+        self.pending_boundary = Some(PendingBoundary {
+            game_tick,
+            before_observers,
+            repeater_requested,
+            next_repeaters,
+            comparator_requested,
+            next_comparators,
+            next_torches,
+            pending_observers,
+            observers_to_off,
+        });
+
+        if !self
+            .pending_boundary
+            .as_ref()
+            .is_some_and(|pending| pending.next_repeaters.is_empty())
+        {
+            self.schedule_pending_event(
+                game_tick,
+                PhysicsEventPhase::ScheduledTick,
+                SimulationEventKind::RepeaterUpdate,
+            );
+        }
+        if !self
+            .pending_boundary
+            .as_ref()
+            .is_some_and(|pending| pending.next_comparators.is_empty())
+        {
+            self.schedule_pending_event(
+                game_tick,
+                PhysicsEventPhase::ScheduledTick,
+                SimulationEventKind::ComparatorUpdate,
+            );
+        }
+        if !self
+            .pending_boundary
+            .as_ref()
+            .is_some_and(|pending| pending.next_torches.is_empty())
+        {
+            self.schedule_pending_event(
+                game_tick,
+                PhysicsEventPhase::ScheduledTick,
+                SimulationEventKind::TorchUpdate,
+            );
+        }
+        if !self
+            .pending_boundary
+            .as_ref()
+            .is_some_and(|pending| pending.observers_to_off.is_empty())
+        {
+            self.schedule_pending_event(
+                game_tick,
+                PhysicsEventPhase::BlockEvent,
+                SimulationEventKind::ObserverPulseEnd,
+            );
+        }
+        if !self
+            .pending_boundary
+            .as_ref()
+            .is_some_and(|pending| pending.pending_observers.is_empty())
+        {
+            self.schedule_pending_event(
+                game_tick,
+                PhysicsEventPhase::BlockEvent,
+                SimulationEventKind::ObserverPulseStart,
+            );
+        }
+        self.schedule_pending_event(
+            game_tick,
+            PhysicsEventPhase::Observation,
+            SimulationEventKind::SignalResolve,
+        );
+        self.schedule_pending_event(
+            game_tick,
+            PhysicsEventPhase::Observation,
+            SimulationEventKind::LampUpdate,
+        );
+    }
+
+    fn schedule_pending_event(
+        &mut self,
+        game_tick: u64,
+        phase: PhysicsEventPhase,
+        kind: SimulationEventKind,
+    ) {
+        self.event_queue.schedule(game_tick, phase, kind);
+    }
+
+    fn apply_repeater_update(&mut self) {
+        let Some(pending) = self.pending_boundary.as_ref() else {
+            return;
+        };
+        for (pos, requested) in &pending.repeater_requested {
+            let queue = self
+                .repeater_queues
+                .get_mut(pos)
+                .expect("repeater queue initialized");
+            queue.pop_front();
+            queue.push_back(*requested);
+        }
+        self.repeater_powered = pending.next_repeaters.clone();
+    }
+
+    fn apply_comparator_update(&mut self) {
+        let Some(pending) = self.pending_boundary.as_ref() else {
+            return;
+        };
+        for (pos, requested) in &pending.comparator_requested {
+            let queue = self
+                .comparator_queues
+                .get_mut(pos)
+                .expect("comparator queue initialized");
+            queue.pop_front();
+            queue.push_back(*requested);
+        }
+        self.comparator_output = pending.next_comparators.clone();
+    }
+
+    fn apply_torch_update(&mut self) {
+        let Some(next_torches) = self
+            .pending_boundary
+            .as_ref()
+            .map(|pending| pending.next_torches.clone())
+        else {
+            return;
+        };
+        for (pos, next) in &next_torches {
+            if self.torch_lit.get(pos).copied() != Some(*next) {
+                let toggles = self.torch_toggle_ticks.entry(*pos).or_default();
+                toggles.push_back(self.tick);
+                while toggles
+                    .front()
+                    .is_some_and(|toggle_tick| self.tick.saturating_sub(*toggle_tick) > 30)
+                {
+                    toggles.pop_front();
+                }
+                if toggles.len() >= 8 {
+                    self.torch_burnout_candidates.insert(*pos);
+                }
+            }
+        }
+        self.torch_lit = next_torches;
+    }
+
+    fn apply_observer_pulse_end(&mut self) {
+        let Some(positions) = self
+            .pending_boundary
+            .as_ref()
+            .map(|pending| pending.observers_to_off.clone())
+        else {
+            return;
+        };
+        for pos in positions {
+            if self.world.kind_at(pos) == BlockKind::Observer
+                && self
+                    .observer_off_deadline
+                    .get(&pos)
+                    .is_some_and(|deadline| *deadline <= self.tick)
+            {
                 self.observer_powered.insert(pos, false);
                 self.observer_off_deadline.remove(&pos);
             }
         }
-        for pos in pending_observers {
+    }
+
+    fn apply_observer_pulse_start(&mut self) {
+        let Some(positions) = self
+            .pending_boundary
+            .as_ref()
+            .map(|pending| pending.pending_observers.clone())
+        else {
+            return;
+        };
+        for pos in positions {
             if self.world.kind_at(pos) == BlockKind::Observer {
                 self.observer_powered.insert(pos, true);
-                self.observer_off_deadline.insert(pos, self.tick + 1);
+                self.observer_off_deadline
+                    .insert(pos, self.tick.saturating_add(1));
             }
         }
-        self.instantaneous =
-            solve_instantaneous_with_topology(&self.world, &self.devices(), 128, &self.topology)?;
+    }
+
+    fn apply_lamp_update(&mut self) {
         for (pos, block) in self.world.iter() {
             if block.kind != BlockKind::RedstoneLamp {
                 continue;
@@ -354,15 +801,70 @@ impl RedstoneTickSimulator {
                 self.lamp_lit.insert(*pos, true);
                 self.lamp_off_deadline.remove(pos);
             } else if self.lamp_lit.get(pos).copied().unwrap_or(false) {
-                let deadline = *self.lamp_off_deadline.entry(*pos).or_insert(self.tick + 2);
+                let deadline = *self
+                    .lamp_off_deadline
+                    .entry(*pos)
+                    .or_insert(self.tick.saturating_add(2));
                 if self.tick >= deadline {
                     self.lamp_lit.insert(*pos, false);
                     self.lamp_off_deadline.remove(pos);
                 }
             }
         }
-        self.record_observer_changes(&before_observers);
-        Ok(self.snapshot())
+        self.finish_boundary_if_drained();
+    }
+
+    fn finish_boundary_if_drained(&mut self) {
+        if !self.event_queue.is_empty() {
+            return;
+        }
+        if let Some(pending) = self.pending_boundary.take() {
+            debug_assert_eq!(pending.game_tick, self.current_time.game_tick);
+            self.record_observer_changes(&pending.before_observers);
+        }
+    }
+
+    /// Drains the current compatibility boundary by repeatedly using
+    /// [`Self::step_event`]. The returned list is used by the transition trace
+    /// projection, while the public tick API only returns its final state.
+    pub(crate) fn advance_tick_events(
+        &mut self,
+    ) -> Result<Vec<SimulationTransition>, InstantaneousSolveDidNotConverge> {
+        let target_tick = if self.pending_boundary.is_some() {
+            self.tick
+        } else {
+            self.tick.saturating_add(1)
+        };
+        let mut steps = Vec::new();
+        loop {
+            let step = self.step_event()?;
+            steps.push(step);
+            if self.pending_boundary.is_none()
+                && self.event_queue.is_empty()
+                && self.tick >= target_tick
+            {
+                break;
+            }
+        }
+        Ok(steps)
+    }
+
+    /// Transition-first alias for one scheduler event. It never drains
+    /// multiple events to reach the next state-changing edge; a successful
+    /// no-op event is returned explicitly in the `SimulationTransition`.
+    pub fn step_transition(
+        &mut self,
+    ) -> Result<SimulationTransition, InstantaneousSolveDidNotConverge> {
+        self.step_event()
+    }
+
+    /// Compatibility projection of one complete historical redstone tick.
+    pub fn advance_tick(&mut self) -> Result<TickState, InstantaneousSolveDidNotConverge> {
+        Ok(self
+            .advance_tick_events()?
+            .last()
+            .map(|step| step.to.clone())
+            .unwrap_or_else(|| self.snapshot()))
     }
 
     /// Applies several typed external-input changes as one world mutation
@@ -669,6 +1171,106 @@ mod tests {
     use crate::world::{Block, Facing};
 
     use super::*;
+
+    #[test]
+    fn transition_step_matches_legacy_tick_projection_and_retains_noop() {
+        let world = World::new();
+        let mut transition_simulator = RedstoneTickSimulator::new(world.clone()).unwrap();
+        let mut legacy_simulator = RedstoneTickSimulator::new(world).unwrap();
+        let before = transition_simulator.snapshot();
+
+        let transition = transition_simulator.step_transition().unwrap();
+        let legacy_after = legacy_simulator.advance_tick().unwrap();
+
+        assert_eq!(transition.from, before);
+        assert_eq!(transition.to, legacy_after);
+        assert_eq!(transition.time.game_tick, 2);
+        assert_eq!(transition.time.phase, PhysicsEventPhase::ScheduledTick);
+        assert_eq!(transition.elapsed_ticks(), 1);
+        assert!(transition.is_noop());
+        assert_eq!(transition.kind, SimulationTransitionKind::NoOp);
+    }
+
+    #[test]
+    fn transition_step_reports_device_change_without_changing_legacy_result() {
+        let mut world = World::new();
+        world.set(Pos::new(0, 0, 0), Block::new(BlockKind::Solid));
+        let lever = world.place(BlockKind::Lever, Pos::new(-1, 0, 0));
+        lever.powered = Some(true);
+        lever.support_offset = Some(Pos::new(1, 0, 0));
+        let torch = world.place(BlockKind::RedstoneTorch, Pos::new(1, 0, 0));
+        torch.facing = Some(Facing::East);
+        torch.support_offset = Some(Pos::new(-1, 0, 0));
+
+        let mut transition_simulator = RedstoneTickSimulator::new(world.clone()).unwrap();
+        let mut legacy_simulator = RedstoneTickSimulator::new(world).unwrap();
+        let boundary = transition_simulator.step_transition().unwrap();
+        let remaining = transition_simulator.advance_tick_events().unwrap();
+        let legacy_after = legacy_simulator.advance_tick().unwrap();
+
+        assert_eq!(
+            boundary.event_kind,
+            SimulationEventKind::CompatibilityBoundary
+        );
+        assert!(boundary.is_noop());
+        assert_eq!(remaining.last().map(|step| &step.to), Some(&legacy_after));
+        assert!(remaining.iter().any(|step| {
+            step.event_kind == SimulationEventKind::TorchUpdate
+                && step.kind == SimulationTransitionKind::Changed
+                && step.from.torch_lit.get(&Pos::new(1, 0, 0)) == Some(&true)
+                && step.to.torch_lit.get(&Pos::new(1, 0, 0)) == Some(&false)
+        }));
+    }
+
+    #[test]
+    fn compatibility_clock_does_not_accumulate_completed_tick_counters() {
+        let mut simulator = RedstoneTickSimulator::new(World::new()).unwrap();
+        for _ in 0..128 {
+            simulator.advance_tick().unwrap();
+        }
+        assert!(simulator.event_queue.next_sub_tick_order.len() <= 1);
+        assert_eq!(simulator.time().game_tick, 256);
+    }
+
+    #[test]
+    fn scheduler_events_expose_block_specific_boundaries() {
+        let mut world = World::new();
+        world.set(Pos::new(0, 0, 0), Block::new(BlockKind::Solid));
+        let observer = world.place(BlockKind::Observer, Pos::new(1, 0, 0));
+        observer.facing = Some(Facing::East);
+        let repeater = world.place(BlockKind::Repeater, Pos::new(3, 0, 0));
+        repeater.facing = Some(Facing::East);
+        repeater.delay = Some(1);
+        let comparator = world.place(BlockKind::Comparator, Pos::new(5, 0, 0));
+        comparator.facing = Some(Facing::East);
+        world.place(BlockKind::RedstoneTorch, Pos::new(7, 0, 0));
+        world.set(Pos::new(9, 0, 0), Block::new(BlockKind::RedstoneLamp));
+
+        let mut simulator = RedstoneTickSimulator::new(world).unwrap();
+        let mut changed = Block::new(BlockKind::Transparent);
+        changed.observed_name = Some("minecraft:glass".to_owned());
+        simulator
+            .set_block_state(Pos::new(0, 0, 0), changed)
+            .unwrap();
+
+        let steps = simulator.advance_tick_events().unwrap();
+        let kinds = steps.iter().map(|step| step.event_kind).collect::<Vec<_>>();
+        for expected in [
+            SimulationEventKind::CompatibilityBoundary,
+            SimulationEventKind::RepeaterUpdate,
+            SimulationEventKind::ComparatorUpdate,
+            SimulationEventKind::TorchUpdate,
+            SimulationEventKind::ObserverPulseStart,
+            SimulationEventKind::SignalResolve,
+            SimulationEventKind::LampUpdate,
+        ] {
+            assert!(
+                kinds.contains(&expected),
+                "missing {expected:?} in {kinds:?}"
+            );
+        }
+        assert!(steps.iter().all(|step| step.time.game_tick == 2));
+    }
 
     #[test]
     fn torch_changes_only_on_tick() {

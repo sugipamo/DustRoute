@@ -51,6 +51,7 @@ pub enum MinecraftExportError {
     InvalidResourceName(String),
     TooManyInputs(usize),
     UnsupportedFacing(Facing),
+    UnsupportedTransientBlock(BlockKind),
 }
 
 impl Display for MinecraftExportError {
@@ -67,6 +68,12 @@ impl Display for MinecraftExportError {
             ),
             Self::UnsupportedFacing(facing) => {
                 write!(f, "unsupported horizontal facing: {facing:?}")
+            }
+            Self::UnsupportedTransientBlock(kind) => {
+                write!(
+                    f,
+                    "cannot export transient block without block-entity data: {kind:?}"
+                )
             }
         }
     }
@@ -230,6 +237,30 @@ pub fn java_block_state(
                 "{name}[facing={},extended={extended}]",
                 facing_name(block.facing.unwrap_or(Facing::North))
             )
+        }
+        BlockKind::PistonHead => {
+            let state = block.piston_head.as_ref();
+            let facing = state
+                .map(|state| state.facing)
+                .or(block.facing)
+                .unwrap_or(Facing::North);
+            let variant = state
+                .map(|state| state.variant)
+                .unwrap_or_else(|| piston_variant(block));
+            let short = state.is_some_and(|state| state.short);
+            format!(
+                "minecraft:piston_head[facing={},short={short},type={}]",
+                facing_name(facing),
+                match variant {
+                    PistonVariant::Normal => "normal",
+                    PistonVariant::Sticky => "sticky",
+                }
+            )
+        }
+        BlockKind::MovingPiston => {
+            return Err(MinecraftExportError::UnsupportedTransientBlock(
+                BlockKind::MovingPiston,
+            ));
         }
     };
     Ok(state)
@@ -555,6 +586,17 @@ mod tests {
             java_block_state(&observer, &config).unwrap(),
             "minecraft:observer[facing=west,powered=true]"
         );
+        let head = Block::piston_head(Facing::East, PistonVariant::Sticky, false);
+        assert_eq!(
+            java_block_state(&head, &config).unwrap(),
+            "minecraft:piston_head[facing=east,short=false,type=sticky]"
+        );
+        assert!(matches!(
+            java_block_state(&Block::new(BlockKind::MovingPiston), &config),
+            Err(MinecraftExportError::UnsupportedTransientBlock(
+                BlockKind::MovingPiston
+            ))
+        ));
     }
 
     #[test]

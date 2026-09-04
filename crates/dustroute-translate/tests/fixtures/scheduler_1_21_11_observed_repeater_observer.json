@@ -1,0 +1,193 @@
+{
+  "schema_version": "dustroute.scheduler-observation-fixture.v1",
+  "minecraft_version": "1.21.11",
+  "profile_id": "minecraft_java1_21_11_modelled",
+  "profile_evidence": "modelled",
+  "evidence": "observed",
+  "source": "live_mineflayer",
+  "scenario": "observer_repeater_preview_only",
+  "source_artifact": ".local/e2e-artifacts/observer_repeater_preview_only-latest.json",
+  "clock": {
+    "unit": "game_tick",
+    "origin": "normal_player_activation",
+    "absolute_ticks_omitted": true,
+    "scheduler_phase": null,
+    "scheduler_phase_evidence": "unknown"
+  },
+  "input": {
+    "kind": "lever",
+    "transition": "off_to_on",
+    "activation_is_baseline": true
+  },
+  "events": [
+    {
+      "sequence": 1,
+      "kind": "lever_state",
+      "position": { "x": 0, "y": 0, "z": 0 },
+      "relative_game_tick": 1,
+      "sub_tick_order": 0,
+      "scheduler_phase": null,
+      "changed": true,
+      "before": {
+        "name": "lever",
+        "properties": { "powered": false, "facing": "east", "face": "floor" }
+      },
+      "after": {
+        "name": "lever",
+        "properties": { "powered": true, "facing": "east", "face": "floor" }
+      }
+    },
+    {
+      "sequence": 2,
+      "kind": "lever_state_noop",
+      "position": { "x": 0, "y": 0, "z": 0 },
+      "relative_game_tick": 1,
+      "sub_tick_order": 1,
+      "scheduler_phase": null,
+      "changed": false,
+      "before": {
+        "name": "lever",
+        "properties": { "powered": true, "facing": "east", "face": "floor" }
+      },
+      "after": {
+        "name": "lever",
+        "properties": { "powered": true, "facing": "east", "face": "floor" }
+      }
+    },
+    {
+      "sequence": 3,
+      "kind": "wire_powered",
+      "position": { "x": 1, "y": 0, "z": 0 },
+      "relative_game_tick": 1,
+      "sub_tick_order": 2,
+      "scheduler_phase": null,
+      "changed": true,
+      "before": {
+        "name": "redstone_wire",
+        "properties": { "west": "side", "south": "none", "power": "0", "north": "none", "east": "side" }
+      },
+      "after": {
+        "name": "redstone_wire",
+        "properties": { "west": "side", "south": "none", "power": "15", "north": "none", "east": "side" }
+      }
+    },
+    {
+      "sequence": 4,
+      "kind": "wire_powered",
+      "position": { "x": 3, "y": 0, "z": 0 },
+      "relative_game_tick": 4,
+      "sub_tick_order": 0,
+      "scheduler_phase": null,
+      "changed": true,
+      "before": {
+        "name": "redstone_wire",
+        "properties": { "west": "side", "south": "none", "power": "0", "north": "none", "east": "side" }
+      },
+      "after": {
+        "name": "redstone_wire",
+        "properties": { "west": "side", "south": "none", "power": "15", "north": "none", "east": "side" }
+      }
+    },
+    {
+      "sequence": 5,
+      "kind": "repeater_powered",
+      "position": { "x": 2, "y": 0, "z": 0 },
+      "relative_game_tick": 4,
+      "sub_tick_order": 1,
+      "scheduler_phase": null,
+      "changed": true,
+      "before": {
+        "name": "repeater",
+        "properties": { "powered": false, "locked": false, "facing": "west", "delay": "2" }
+      },
+      "after": {
+        "name": "repeater",
+        "properties": { "powered": true, "locked": false, "facing": "west", "delay": "2" }
+      }
+    },
+    {
+      "sequence": 6,
+      "kind": "lamp_lit",
+      "position": { "x": 5, "y": 0, "z": 0 },
+      "relative_game_tick": 6,
+      "sub_tick_order": 0,
+      "scheduler_phase": null,
+      "changed": true,
+      "before": {
+        "name": "redstone_lamp",
+        "properties": { "lit": false }
+      },
+      "after": {
+        "name": "redstone_lamp",
+        "properties": { "lit": true }
+      }
+    },
+    {
+      "sequence": 7,
+      "kind": "observer_pulse_start",
+      "position": { "x": 4, "y": 0, "z": 0 },
+      "relative_game_tick": 6,
+      "sub_tick_order": 1,
+      "scheduler_phase": null,
+      "changed": true,
+      "before": {
+        "name": "observer",
+        "properties": { "powered": false, "facing": "west" }
+      },
+      "after": {
+        "name": "observer",
+        "properties": { "powered": true, "facing": "west" }
+      }
+    },
+    {
+      "sequence": 8,
+      "kind": "observer_pulse_end",
+      "position": { "x": 4, "y": 0, "z": 0 },
+      "relative_game_tick": 8,
+      "sub_tick_order": 0,
+      "scheduler_phase": null,
+      "changed": true,
+      "before": {
+        "name": "observer",
+        "properties": { "powered": true, "facing": "west" }
+      },
+      "after": {
+        "name": "observer",
+        "properties": { "powered": false, "facing": "west" }
+      }
+    },
+    {
+      "sequence": 9,
+      "kind": "lamp_unlit",
+      "position": { "x": 5, "y": 0, "z": 0 },
+      "relative_game_tick": 12,
+      "sub_tick_order": 0,
+      "scheduler_phase": null,
+      "changed": true,
+      "before": {
+        "name": "redstone_lamp",
+        "properties": { "lit": true }
+      },
+      "after": {
+        "name": "redstone_lamp",
+        "properties": { "lit": false }
+      }
+    }
+  ],
+  "measurements": {
+    "input_to_repeater_power_game_ticks": 4,
+    "wire_to_repeater_power_game_ticks": 3,
+    "input_to_lamp_on_game_ticks": 6,
+    "repeater_to_observer_start_game_ticks": 2,
+    "observer_pulse_game_ticks": 2,
+    "observer_start_to_lamp_off_game_ticks": 6,
+    "input_to_lamp_off_game_ticks": 12
+  },
+  "notes": [
+    "This is one bounded packet observation from the pinned Java 1.21.11 test server.",
+    "relative_game_tick is measured from the normal player activation call; absolute server ticks are intentionally omitted.",
+    "sub_tick_order is Mineflayer blockUpdate packet order, not the internal vanilla scheduler order.",
+    "The modelled profile remains separate: this fixture must not promote any scheduler phase to observed Vanilla semantics.",
+    "The repeated lever update is retained as an observed no-op rather than being silently discarded."
+  ]
+}

@@ -1,0 +1,86 @@
+{
+  "schema_version": "dustroute.scheduler-observation-fixture.v1",
+  "minecraft_version": "1.21.11",
+  "profile_id": "minecraft_java1_21_11_modelled",
+  "profile_evidence": "modelled",
+  "evidence": "observed",
+  "source": "live_mineflayer",
+  "scenario": "piston_motion_trace",
+  "source_artifact": ".local/e2e-artifacts/piston_motion_trace-latest.json",
+  "clock": {
+    "unit": "game_tick",
+    "origin": "normal_player_activation",
+    "absolute_ticks_omitted": true,
+    "scheduler_phase": null,
+    "scheduler_phase_evidence": "unknown"
+  },
+  "input": {
+    "kind": "lever",
+    "transition": "off_to_on",
+    "activation_is_baseline": true
+  },
+  "events": [
+    {
+      "sequence": 1,
+      "kind": "piston_start",
+      "position": { "x": 3, "y": 0, "z": 0 },
+      "relative_game_tick": 1,
+      "sub_tick_order": 0,
+      "scheduler_phase": null,
+      "changed": true,
+      "before": {
+        "name": "piston",
+        "properties": { "facing": "east", "extended": false }
+      },
+      "after": {
+        "name": "piston",
+        "properties": { "facing": "east", "extended": true }
+      }
+    },
+    {
+      "sequence": 2,
+      "kind": "piston_block_move",
+      "position": { "x": 5, "y": 0, "z": 0 },
+      "relative_game_tick": 3,
+      "sub_tick_order": 0,
+      "scheduler_phase": null,
+      "changed": true,
+      "before": {
+        "name": "air",
+        "properties": {}
+      },
+      "after": {
+        "name": "stone",
+        "properties": {}
+      }
+    },
+    {
+      "sequence": 3,
+      "kind": "piston_head_completion",
+      "position": { "x": 4, "y": 0, "z": 0 },
+      "relative_game_tick": 3,
+      "sub_tick_order": 1,
+      "scheduler_phase": null,
+      "changed": true,
+      "before": {
+        "name": "stone",
+        "properties": {}
+      },
+      "after": {
+        "name": "piston_head",
+        "properties": { "type": "normal", "short": false, "facing": "east" }
+      }
+    }
+  ],
+  "measurements": {
+    "input_to_piston_start_game_ticks": 1,
+    "piston_start_to_stable_completion_game_ticks": 2,
+    "completion_same_tick_event_count": 2
+  },
+  "notes": [
+    "This is one bounded packet observation from the pinned Java 1.21.11 test server.",
+    "The measured two-game-tick interval is the start-to-stable-block-state observation, not a claim about continuous moving-piston animation.",
+    "sub_tick_order is Mineflayer blockUpdate packet order, not the internal vanilla scheduler order.",
+    "Piston quasi-connectivity, re-trigger/reversal, entities, slime/honey, and moving-piston collision semantics remain outside this fixture."
+  ]
+}

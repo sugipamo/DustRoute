@@ -8,8 +8,8 @@ use super::queue::QueuePopCheckpoint;
 use super::{
     BlockEventKind, EventCause, EventExecutionStatus, EventRecord, EventTrace, PhysicsEvent,
     PhysicsEventKind, PhysicsEventPhase, PhysicsEventQueue, PhysicsTime, QueuedEvent,
-    StateTransition, TraceStatus, TransitionElapsed, TransitionId, TransitionRecord,
-    TransitionStep, TransitionTrace,
+    SchedulerProfile, SchedulerProfileError, StateTransition, TraceStatus, TransitionElapsed,
+    TransitionId, TransitionRecord, TransitionStep, TransitionTrace,
 };
 use crate::{
     Block, BlockKind, ChangeReason, DEFAULT_PISTON_MOTION_PROFILE, PistonAction, PistonError,
@@ -63,6 +63,7 @@ pub struct ExecutionCheckpoint {
     processed_events: usize,
     max_microsteps_per_game_tick: usize,
     microsteps_this_game_tick: usize,
+    scheduler_profile: SchedulerProfile,
     piston_motion_profile: PistonMotionProfile,
     piston_planning_region: Option<Region>,
 }
@@ -96,7 +97,9 @@ impl ExecutionCheckpoint {
     /// Pending events are returned in the same order in which the scheduler
     /// would execute them. Event IDs are preserved for exact restoration.
     pub fn pending_events(&self) -> impl Iterator<Item = &PhysicsEvent> {
-        self.queue.iter()
+        self.queue
+            .ordered_events(&self.scheduler_profile)
+            .into_iter()
     }
 
     #[must_use]
@@ -112,6 +115,11 @@ impl ExecutionCheckpoint {
     #[must_use]
     pub const fn max_microsteps_per_game_tick(&self) -> usize {
         self.max_microsteps_per_game_tick
+    }
+
+    #[must_use]
+    pub const fn scheduler_profile(&self) -> SchedulerProfile {
+        self.scheduler_profile
     }
 
     #[must_use]
@@ -143,9 +151,14 @@ impl ExecutionCheckpoint {
         ExecutionStateKey::from_parts(
             self.world.state_id(),
             self.current_time,
-            self.queue.iter().map(PendingEventKey::from).collect(),
+            self.queue
+                .ordered_events(&self.scheduler_profile)
+                .into_iter()
+                .map(PendingEventKey::from)
+                .collect(),
             self.queue
                 .next_sub_tick_orders_from(self.current_time.game_tick),
+            self.scheduler_profile,
             self.piston_motion_profile,
             self.piston_planning_region,
         )
@@ -166,6 +179,7 @@ pub struct ExecutionStateKey {
     pub current_time: PhysicsTime,
     pub pending_events: Vec<PendingEventKey>,
     pub next_sub_tick_orders: BTreeMap<u64, u64>,
+    pub scheduler_profile: SchedulerProfile,
     pub piston_motion_profile: PistonMotionProfile,
     pub piston_planning_region: Option<Region>,
 }
@@ -176,6 +190,7 @@ impl ExecutionStateKey {
         current_time: PhysicsTime,
         pending_events: Vec<PendingEventKey>,
         next_sub_tick_orders: BTreeMap<u64, u64>,
+        scheduler_profile: SchedulerProfile,
         piston_motion_profile: PistonMotionProfile,
         piston_planning_region: Option<Region>,
     ) -> Self {
@@ -184,6 +199,7 @@ impl ExecutionStateKey {
             current_time,
             pending_events,
             next_sub_tick_orders,
+            scheduler_profile,
             piston_motion_profile,
             piston_planning_region,
         }
@@ -245,6 +261,7 @@ pub enum PhysicsEngineError {
     /// The handler returned mutually exclusive output forms or duplicate
     /// coordinate changes for one atomic event.
     InvalidOutcome,
+    InvalidSchedulerProfile(SchedulerProfileError),
 }
 
 impl Display for PhysicsEngineError {
@@ -279,6 +296,7 @@ impl Display for PhysicsEngineError {
                 formatter,
                 "event outcome cannot contain both changes and a delta"
             ),
+            Self::InvalidSchedulerProfile(error) => write!(formatter, "{error}"),
         }
     }
 }
@@ -300,6 +318,12 @@ impl From<PistonMotionProfileError> for PhysicsEngineError {
 impl From<WorldDeltaError> for PhysicsEngineError {
     fn from(value: WorldDeltaError) -> Self {
         Self::WorldDelta(Box::new(value))
+    }
+}
+
+impl From<SchedulerProfileError> for PhysicsEngineError {
+    fn from(value: SchedulerProfileError) -> Self {
+        Self::InvalidSchedulerProfile(value)
     }
 }
 
@@ -342,6 +366,7 @@ pub struct PhysicsEngine {
     processed_events: usize,
     max_microsteps_per_game_tick: usize,
     microsteps_this_game_tick: usize,
+    scheduler_profile: SchedulerProfile,
     piston_motion_profile: PistonMotionProfile,
     piston_planning_region: Option<Region>,
 }
@@ -363,6 +388,7 @@ impl PhysicsEngine {
             processed_events: 0,
             max_microsteps_per_game_tick: DEFAULT_MAX_MICROSTEPS_PER_GAME_TICK,
             microsteps_this_game_tick: 0,
+            scheduler_profile: SchedulerProfile::default(),
             piston_motion_profile: DEFAULT_PISTON_MOTION_PROFILE,
             piston_planning_region: None,
         }
@@ -387,6 +413,7 @@ impl PhysicsEngine {
             processed_events: self.processed_events,
             max_microsteps_per_game_tick: self.max_microsteps_per_game_tick,
             microsteps_this_game_tick: self.microsteps_this_game_tick,
+            scheduler_profile: self.scheduler_profile,
             piston_motion_profile: self.piston_motion_profile,
             piston_planning_region: self.piston_planning_region,
         }
@@ -409,6 +436,7 @@ impl PhysicsEngine {
         self.processed_events = checkpoint.processed_events;
         self.max_microsteps_per_game_tick = checkpoint.max_microsteps_per_game_tick;
         self.microsteps_this_game_tick = checkpoint.microsteps_this_game_tick;
+        self.scheduler_profile = checkpoint.scheduler_profile;
         self.piston_motion_profile = checkpoint.piston_motion_profile;
         self.piston_planning_region = checkpoint.piston_planning_region;
     }
@@ -421,12 +449,34 @@ impl PhysicsEngine {
         ExecutionStateKey::from_parts(
             self.world.state_id(),
             self.current_time,
-            self.queue.iter().map(PendingEventKey::from).collect(),
+            self.queue
+                .ordered_events(&self.scheduler_profile)
+                .into_iter()
+                .map(PendingEventKey::from)
+                .collect(),
             self.queue
                 .next_sub_tick_orders_from(self.current_time.game_tick),
+            self.scheduler_profile,
             self.piston_motion_profile,
             self.piston_planning_region,
         )
+    }
+
+    /// Returns the event-ordering policy used by this engine. Block-specific
+    /// delays are intentionally exposed through their own physics profiles.
+    #[must_use]
+    pub const fn scheduler_profile(&self) -> SchedulerProfile {
+        self.scheduler_profile
+    }
+
+    /// Overrides the ordering policy for a controlled simulation or a
+    /// version-specific fixture. The profile is validated when the next
+    /// event step starts; this keeps the builder-style API compatible with
+    /// the existing piston profile configuration.
+    #[must_use]
+    pub fn with_scheduler_profile(mut self, profile: SchedulerProfile) -> Self {
+        self.scheduler_profile = profile;
+        self
     }
 
     /// Returns the motion profile used when a piston Block Event queues its
@@ -582,7 +632,10 @@ impl PhysicsEngine {
         kind: PhysicsEventKind,
     ) -> Result<super::EventId, PhysicsEngineError> {
         let effective_tick = game_tick.max(self.current_time.game_tick);
-        if effective_tick == self.current_time.game_tick && phase < self.current_time.phase {
+        if effective_tick == self.current_time.game_tick
+            && self.scheduler_profile.phase_rank(phase)
+                < self.scheduler_profile.phase_rank(self.current_time.phase)
+        {
             let error = PhysicsEngineError::CausalOrderViolation {
                 parent: self.current_time,
                 child_phase: phase,
@@ -623,6 +676,11 @@ impl PhysicsEngine {
         &mut self,
         mut handler: impl FnMut(&PhysicsEvent, &World) -> Result<EventOutcome, PhysicsEngineError>,
     ) -> Result<(), PhysicsEngineError> {
+        if let Err(error) = self.scheduler_profile.validate() {
+            let error = PhysicsEngineError::from(error);
+            self.mark_trace_failed(&error);
+            return Err(error);
+        }
         while !self.queue.is_empty() {
             self.step_transition(&mut handler)?;
         }
@@ -643,6 +701,11 @@ impl PhysicsEngine {
         &mut self,
         handler: &mut impl FnMut(&PhysicsEvent, &World) -> Result<EventOutcome, PhysicsEngineError>,
     ) -> Result<Option<TransitionStep>, PhysicsEngineError> {
+        if let Err(error) = self.scheduler_profile.validate() {
+            let error = PhysicsEngineError::from(error);
+            self.mark_trace_failed(&error);
+            return Err(error);
+        }
         if self.queue.is_empty() {
             if !self.trace_status().is_failed() {
                 self.mark_trace_complete();
@@ -653,12 +716,15 @@ impl PhysicsEngine {
             let error = PhysicsEngineError::EventLimitExceeded {
                 limit: self.max_events,
                 processed: self.processed_events,
-                next_time: self.queue.next_time(),
+                next_time: self.queue.next_time_with_profile(&self.scheduler_profile),
             };
             self.mark_trace_failed(&error);
             return Err(error);
         }
-        let next_time = self.queue.next_time().expect("queue is non-empty");
+        let next_time = self
+            .queue
+            .next_time_with_profile(&self.scheduler_profile)
+            .expect("queue is non-empty");
         if next_time.game_tick != self.current_time.game_tick {
             self.microsteps_this_game_tick = 0;
         }
@@ -676,9 +742,11 @@ impl PhysicsEngine {
         let previous_microsteps = self.microsteps_this_game_tick;
         let (event, pop_checkpoint) = self
             .queue
-            .pop_with_checkpoint()
+            .pop_with_checkpoint_in_profile(&self.scheduler_profile)
             .expect("queue is non-empty");
-        if event.time.game_tick == previous_time.game_tick && event.time.phase < previous_time.phase
+        if event.time.game_tick == previous_time.game_tick
+            && self.scheduler_profile.phase_rank(event.time.phase)
+                < self.scheduler_profile.phase_rank(previous_time.phase)
         {
             let error = PhysicsEngineError::CausalOrderViolation {
                 parent: previous_time,
@@ -707,11 +775,15 @@ impl PhysicsEngine {
                 return Err(error);
             }
         };
-        if let Some(queued) = outcome
-            .queued
-            .iter()
-            .find(|queued| queued.delay_ticks == 0 && queued.phase < event.time.phase)
-        {
+        if let Some(queued) = outcome.queued.iter().find(|queued| {
+            queued.delay_ticks == 0
+                && self
+                    .scheduler_profile
+                    .game_tick_after_delay(event.time.game_tick, 0)
+                    == event.time.game_tick
+                && self.scheduler_profile.phase_rank(queued.phase)
+                    < self.scheduler_profile.phase_rank(event.time.phase)
+        }) {
             let child_phase = queued.phase;
             let error = PhysicsEngineError::CausalOrderViolation {
                 parent: self.current_time,
@@ -853,7 +925,8 @@ impl PhysicsEngine {
 
         for queued in outcome.queued {
             self.queue.schedule_in_phase(
-                event.time.game_tick.saturating_add(queued.delay_ticks),
+                self.scheduler_profile
+                    .game_tick_after_delay(event.time.game_tick, queued.delay_ticks),
                 queued.target,
                 EventCause::Event { id: event.id },
                 queued.phase,
@@ -1051,8 +1124,63 @@ impl PhysicsEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::time::PhysicsEventKind;
+    use crate::time::{PhysicsEventKind, ZeroDelayPolicy};
     use crate::{PistonState, piston_state};
+
+    #[test]
+    fn scheduler_profile_is_retained_in_checkpoint_and_state_key() {
+        let profile = SchedulerProfile::minecraft_java_1_21_11_modelled();
+        let engine = PhysicsEngine::new(World::new(), 8).with_scheduler_profile(profile);
+        assert_eq!(engine.scheduler_profile(), profile);
+        assert_eq!(engine.checkpoint().scheduler_profile(), profile);
+        assert_eq!(engine.execution_state_key().scheduler_profile, profile);
+    }
+
+    #[test]
+    fn zero_delay_policy_can_move_child_to_next_game_tick() {
+        let profile = SchedulerProfile {
+            zero_delay: ZeroDelayPolicy::NextGameTick,
+            ..SchedulerProfile::default()
+        };
+        let pos = Pos::new(1, 2, 3);
+        let mut engine = PhysicsEngine::new(World::new(), 8).with_scheduler_profile(profile);
+        engine.schedule_external(
+            4,
+            pos,
+            PhysicsEventKind::UserAction {
+                action: "parent".to_owned(),
+            },
+        );
+        let mut handler = |event: &PhysicsEvent, _world: &World| {
+            let queued = matches!(
+                &event.kind,
+                PhysicsEventKind::UserAction { action } if action == "parent"
+            )
+            .then_some(QueuedEvent {
+                delay_ticks: 0,
+                target: pos,
+                phase: PhysicsEventPhase::Observation,
+                kind: PhysicsEventKind::UserAction {
+                    action: "child".to_owned(),
+                },
+            })
+            .into_iter()
+            .collect();
+            Ok(EventOutcome {
+                queued,
+                ..EventOutcome::default()
+            })
+        };
+
+        let first = engine.step_transition(&mut handler).unwrap().unwrap();
+        let second = engine.step_transition(&mut handler).unwrap().unwrap();
+        assert_eq!(first.event.event.time.game_tick, 4);
+        assert_eq!(second.event.event.time.game_tick, 5);
+        assert_eq!(
+            second.event.event.time.phase,
+            PhysicsEventPhase::Observation
+        );
+    }
 
     #[test]
     fn records_same_tick_transitions_in_causal_order() {
@@ -1610,7 +1738,10 @@ mod tests {
         let mut engine = PhysicsEngine::new(world, 8);
         let event_id = engine.schedule_piston_action(4, piston_pos, PistonAction::Extend);
         engine.run_piston_events().unwrap();
-        assert_eq!(engine.world().kind_at(Pos::new(1, 1, 0)), BlockKind::Air);
+        assert_eq!(
+            engine.world().kind_at(Pos::new(1, 1, 0)),
+            BlockKind::PistonHead
+        );
         assert_eq!(engine.world().kind_at(Pos::new(2, 1, 0)), BlockKind::Solid);
         assert_eq!(
             piston_state(engine.world().get(piston_pos).unwrap()),
@@ -1619,21 +1750,26 @@ mod tests {
         let completion_tick =
             4 + crate::DEFAULT_PISTON_MOTION_PROFILE.stable_completion_delay_game_ticks();
         assert_eq!(engine.time().game_tick, completion_tick);
-        assert_eq!(engine.trace().len(), 4);
+        assert_eq!(engine.trace().len(), 6);
         assert_eq!(engine.trace()[0].cause, event_id);
         assert_eq!(engine.trace()[0].time.game_tick, 4);
         assert_eq!(
             piston_state(&engine.trace()[0].after),
             PistonState::Extending
         );
-        assert!(engine.trace()[1..].iter().all(|transition| {
+        assert!(
+            engine.trace()[1..3].iter().all(|transition| {
+                transition.time.game_tick == 4 && transition.cause == event_id
+            })
+        );
+        assert!(engine.trace()[3..].iter().all(|transition| {
             transition.time.game_tick == completion_tick && transition.cause != event_id
         }));
         assert_eq!(engine.shape_transitions().len(), 2);
         let start = &engine.shape_transitions()[0];
         assert_eq!(start.cause, event_id);
         assert_ne!(start.from, start.to);
-        assert!(start.delta.moves.is_empty());
+        assert_eq!(start.delta.moves.len(), 1);
         let completion = &engine.shape_transitions()[1];
         assert_ne!(completion.cause, event_id);
         assert_ne!(completion.from, completion.to);

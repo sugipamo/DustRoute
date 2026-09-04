@@ -1,0 +1,93 @@
+{
+  "schema_version": "dustroute.vanilla-instrumentation.v1",
+  "minecraft_version": "1.21.11",
+  "evidence": "observed_internal",
+  "source": "vanilla_server_instrumentation",
+  "scenario": "bounded_capture_contract",
+  "source_artifact": "capture.ndjson.gz",
+  "instrumentation": {
+    "method": "fabric_mixin",
+    "mapping_namespace": "named",
+    "build_id": "fabric-loom-1.17.20-yarn-1.21.11+build.6-loader-0.19.5",
+    "target_class": "WorldTickScheduler;World;AbstractBlockState;PistonBlockEntity;ServerCommonNetworkHandler",
+    "target_member": "tick(BiConsumer);setBlockState;neighborUpdate;tick;finish;sendPacket"
+  },
+  "clock": {
+    "unit": "game_tick",
+    "activation_origin": "server_input_received",
+    "absolute_ticks_omitted": true
+  },
+  "input": {
+    "kind": "player_interact_block",
+    "position": { "x": 0, "y": 64, "z": 0 },
+    "activation_game_tick": 0,
+    "first_redstone_change_game_tick": null,
+    "first_packet_update_game_tick": null
+  },
+  "capture": {
+    "mode": "bounded",
+    "heartbeat_mode": "omitted",
+    "capture_state": "closed",
+    "pre_roll_ticks": 2,
+    "max_ticks_after_input": 4,
+    "drain_ticks": 1,
+    "input_observed": true,
+    "artifact_start_present": true,
+    "artifact_end_present": true,
+    "sequence_contiguous": false,
+    "sequence_gap_count": 3,
+    "last_sequence": 5,
+    "suppressed_records": 3,
+    "evicted_records": 0,
+    "write_errors": 0,
+    "stream_completeness": {
+      "input_packet": "partial",
+      "ordered_tick": "partial",
+      "block_state_change": "partial",
+      "neighbor_update": "unavailable",
+      "piston_state": "unavailable",
+      "outbound_block_update": "unavailable",
+      "heartbeat": "partial"
+    }
+  },
+  "ordered_ticks": [
+    {
+      "sequence": 1,
+      "trigger_game_tick": -2,
+      "execution_game_tick": -1,
+      "priority": "NORMAL",
+      "sub_tick_order": -4,
+      "position": { "x": 1, "y": 64, "z": 0 },
+      "block_name": "minecraft:repeater",
+      "event_kind": "scheduled_tick",
+      "scheduler": "block",
+      "phase": null,
+      "phase_evidence": "unknown"
+    }
+  ],
+  "state_events": [
+    {
+      "sequence": 1,
+      "game_tick": -2,
+      "sub_tick_order": 0,
+      "position": { "x": 1, "y": 64, "z": 0 },
+      "source": "World.setBlockState",
+      "before": { "name": "minecraft:stone", "properties": {} },
+      "after": { "name": "minecraft:dirt", "properties": {} },
+      "changed": true,
+      "ordered_tick_sequence": 1
+    }
+  ],
+  "piston_states": [],
+  "neighbor_updates": [],
+  "completeness": {
+    "ordered_ticks": false,
+    "input_timing": false,
+    "state_events": true,
+    "piston_state": false,
+    "neighbor_updates": false
+  },
+  "notes": [
+    "Synthetic contract fixture for bounded pre-roll and partial stream evidence; not a scheduler profile."
+  ]
+}

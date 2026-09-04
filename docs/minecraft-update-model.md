@@ -45,9 +45,11 @@ state before and after each simulated mutation/tick, schedules a pulse for the
 next redstone tick, and exposes the back-face output as a strong level-15
 source for one redstone tick. Live Mineflayer recordings now preserve packet
 order within the observed game tick as `sub_tick_order`, together with an
-explicit `event_kind`, `cause`, and `source`. Translation keeps those fields
-when comparing traces and reserves an optional `cause_sequence` for a future
-scheduler-aware producer. This is ordering/provenance evidence only:
+explicit `event_kind`, `cause`, and `source`. Translation also accepts
+server-side OrderedTick causal references for
+`dustroute.vanilla-instrumentation.v1` artifacts. Causal IDs remain
+source-local and are compared only by their grouping relationship, never as
+cross-source scalar IDs. This is ordering/provenance evidence only:
 Mineflayer does not expose the internal vanilla scheduler cause, so it is
 intentionally not a claim that every same-game-tick or zero-tick interaction is
 reproduced.
@@ -128,11 +130,12 @@ staged world, then commits the clone in one operation.  A failed plan cannot
 leave a partially moved chain.
 
 `PistonPlan` is read-only and produces this delta without mutating the source
-world.  The first supported subset remains deliberately narrow: horizontal
-normal/sticky pistons, stable states, ordinary exact blocks, and the Java
-12-block push limit.  Piston heads/moving block states, quasi-connectivity,
-BUD, slime/honey, entities, block entities, and zero-tick ordering remain
-outside the executable contract and must stay `PreviewOnly`.
+world.  The supported subset remains deliberately narrow: horizontal
+normal/sticky pistons, ordinary exact blocks, and the Java 12-block push limit.
+Stable `PistonHead` blocks and discrete `MovingPiston` block-entity metadata
+are now explicit in the start/completion deltas. Continuous animation and
+collision, quasi-connectivity, BUD, slime/honey, entities, and zero-tick
+ordering remain outside the executable contract and must stay `PreviewOnly`.
 
 Live piston planning must also carry a complete static observation boundary.
 `PistonPlanningContext` treats an absent block as Air only inside its declared
@@ -145,9 +148,10 @@ fall back to the unchecked planner.
 
 The physics engine records both coordinate transitions and a
 `ShapeTransition { from, to, delta, cause }` for each accepted phase.  A piston
-Block Event first produces a state-only transition to `Extending` or
-`Retracting`, then queues a completion event whose rebased `WorldDelta` moves
-the ordinary blocks atomically.  This is the seam for a future
+Block Event first produces a transient transition to `Extending` or
+`Retracting`, installing typed `MovingPiston` carriers, then queues a
+completion event whose rebased `WorldDelta` resolves the carriers to stable
+ordinary blocks and `PistonHead` state.  This is the seam for a future
 `AnalysisState::update(WorldDelta)` path.  The current graph builder may
 conservatively rebuild its affected scene; it must not claim incremental
 completeness until dirty-region invalidation and stable component remapping are
@@ -223,10 +227,13 @@ game-tick activation-side range from a `2` game-tick stable block-state
 completion interval. The activation range is informational until an upper
 scheduler supplies an observed Block Event; it is not silently consumed by
 `schedule_piston_action`. The stable interval is not the continuous
-moving-piston animation duration. The pinned E2E fixture currently measures
-the 2-game-tick final block-state interval, but this must not be promoted to a
-timed or MCP-ready result until start, completion, short-pulse, and re-trigger
-behavior are all verified on 1.21.11.
+moving-piston animation duration. The tracked
+`scheduler_1_21_11_observed_piston.json` fixture records one measured start and
+stable-completion interval, while the repeater/observer fixture records the
+corresponding device pulse edges. These are packet-order regressions only:
+start/completion short pulses, re-trigger behavior, and the internal Vanilla
+phase order still require independent evidence before a timed or MCP-ready
+result can be claimed.
 
 Physical IR must consume observations produced by this engine, but the engine
 must not depend on PhysicalScene, Gate IR, or optimizer types.

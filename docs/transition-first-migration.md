@@ -67,8 +67,14 @@ clock. It is no longer the identity of the behavior being compared.
    shared `TraceStatus` distinguishes `in_progress`, `complete`, and `failed`
    prefixes. The conversion back to `BehaviorTrace` is explicit and lossless
    for the current evidence. `dustroute-translate::simulate_transition_trace`
-   is the new transition-oriented entry point; `simulate_behavior_trace`
-   remains the compatibility adapter.
+   is the canonical transition-oriented entry point. Its simulator advances
+   through one compatibility scheduler event at a time via
+   `RedstoneTickSimulator::step_event` (`step_transition` is an alias). A
+   compatibility boundary prepares delayed values, then schedules
+   `RepeaterUpdate`, `ComparatorUpdate`, `TorchUpdate`, Observer pulse,
+   signal-resolution, and lamp events at the same game tick.
+   `simulate_behavior_trace` remains the compatibility adapter and is
+   projected from that result.
 
 7. **MCP and optimization surfaces**
 
@@ -83,9 +89,20 @@ clock. It is no longer the identity of the behavior being compared.
    `exact_transitions` timing contract compares state-changing edges and their
    sampled times without requiring every intermediate sample to match.
 
+8. **Versioned scheduler boundary**
+
+   `dustroute-minecraft::time::SchedulerProfile` owns only event ordering:
+   phase order, same-phase insertion order, and the placement rule for a
+   zero-delay child. `SchedulerProfileId` and `SchedulerEvidence` make the
+   version and confidence explicit. The default `DustRouteDeterministicV1`
+   profile is reproducible and `Modelled`; the
+   `MinecraftJava1_21_11Modelled` profile is version-labelled but does not
+   claim complete vanilla evidence. Piston activation/movement, repeater,
+   and Observer durations remain in their block physics models.
+
 ## Time and failure semantics
 
-`TransitionElapsed::Zero`/`same_tick` means that the game tick did not advance;
+`TransitionElapsed::SameTick`/`same_tick` means that the game tick did not advance;
 the order delta is still significant. `ExactGameTicks` (Minecraft) or
 `ExactTicks` (IR/MCP) is measured in the trace's declared unit. IR records also
 carry `LogicalElapsed` when exact game ticks are available, so a live event at
@@ -100,12 +117,35 @@ profile together with the world before restoring an execution. The
 history-independent `ExecutionStateKey` is the appropriate comparison seam;
 `StateId` remains a World-only content hash.
 
-An event step is transactional with respect to the scheduler and World. If a
-handler, delta validation, or phase-order check rejects the event, the event
-and its sub-tick counter are restored and the previous logical time remains
-unchanged. The accepted prefix is retained for diagnostics, while both traces
-are marked `failed` so a caller cannot mistake that prefix for a complete run.
-After a successful drain, the traces are marked `complete`.
+The scheduler profile is part of an `ExecutionCheckpoint` and its
+`ExecutionStateKey`. Pending events are ordered through the active profile,
+not by relying on the enum declaration order. A profile must define each
+phase exactly once before an event step can execute. Zero-delay policy is
+therefore explicit: the default keeps a child in the same game tick and lets
+phase/insertion order distinguish it from its parent; another profile may
+move it to the next game tick.
+
+9. **Translate event clock**
+
+   `RedstoneTickSimulator` now owns a small scheduler queue rather than
+   advancing an implicit counter directly. `step_event()` consumes exactly
+   one event, records its `PhysicsTime` and `SimulationEventKind`, and returns
+   the before/after `SimulationTransition`; `step_transition()` is an alias
+   with the same one-event contract. The compatibility boundary occurs every
+   two game ticks and its block-specific child events share that game tick.
+   This is an event-clock seam, not yet a complete Vanilla sub-tick model.
+   `advance_tick()` and `settle_ticks()` drain the child events and remain
+   projections for older callers.
+
+`PhysicsEngine::step_transition` remains transactional with respect to its
+scheduler and World. If a handler, delta validation, or phase-order check
+rejects an event, the event and its sub-tick counter are restored and the
+previous logical time remains unchanged. The accepted prefix is retained for
+diagnostics, while both traces are marked `failed` so a caller cannot mistake
+that prefix for a complete run. After a successful drain, the traces are
+marked `complete`. The translate compatibility step has no caller-provided
+handler yet; its solver error is returned directly, and a checkpoint/rollback
+surface for that simulator is a later hardening task.
 
 ## Compatibility map
 
@@ -131,17 +171,20 @@ fields rather than reconstructing them from a rounded redstone tick.
 ## Deliberately deferred
 
 This migration does not claim formal support for 0-tick circuits, quasi-
-connectivity, BUD, piston moving entities, slime/honey interactions, entity
-collisions, or a complete vanilla scheduler order. Those require a separate
+connectivity, BUD, continuous piston moving-entity collision, slime/honey
+interactions, entity collisions, or a complete vanilla scheduler order. Those require a separate
 versioned physics contract and real 1.21.11 regression traces. The current
 microstep limit and phase-order check are safety bounds, not a proof of those
 behaviors.
 
 ## Next hardening gate
 
-The next safe increment is to feed measured activation-delay ranges into the
-transition ledger and to add a versioned scheduler profile. Only then should
-the translate simulator be rewritten internally to emit transitions directly
-rather than adapting its existing tick loop. MCP can then promote
+The translate layer now has a transition-first execution seam and an explicit
+compatibility event queue. Its compatibility boundary is still one historical
+redstone-tick boundary, but block-specific child events already retain their
+same-game-tick phase/order. The next increment is to feed a versioned scheduler
+profile and measured activation-delay ranges into the transition ledger. That
+will allow the internal step to consume real event phases and zero-game-tick
+ordering rather than only exposing a tick-sized before/after edge. MCP can then promote
 `exact_transitions` from sampled output comparison to a server-backed contract
 without changing the public compatibility fields.

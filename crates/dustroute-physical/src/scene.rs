@@ -655,7 +655,7 @@ fn ports_for(block: &Block) -> Vec<PhysicalPort> {
                 push(PortRole::Bidirectional, face, PortChannel::WeakPower);
             }
         }
-        BlockKind::Air => {}
+        BlockKind::Air | BlockKind::PistonHead | BlockKind::MovingPiston => {}
     }
     ports
 }

@@ -29,6 +29,8 @@ pub mod routing_resources;
 pub mod scenario;
 pub mod sim;
 pub mod snapshot;
+pub mod transition_conformance;
+pub mod vanilla_instrumentation;
 pub mod wire;
 pub mod world {
     pub use dustroute_minecraft::*;
@@ -72,12 +74,17 @@ pub use dustroute_ir::{
     LogicNode, NodeId, TransitionDelay, TransitionElapsed, TransitionId, TransitionRecord,
     TransitionTime, TransitionTrace, best_by_size, rewrites_once, search_equivalents,
 };
+pub use dustroute_minecraft::time::{
+    PhysicsEventPhase, PhysicsTime, SamePhaseOrder, SchedulerEvidence, SchedulerProfile,
+    SchedulerProfileError, SchedulerProfileId, ZeroDelayPolicy,
+};
 pub use dustroute_minecraft::{
     Block, BlockChange, BlockKind, BlockMove, BlockProperties, BlockRedstoneTraits, ChangeReason,
-    DEFAULT_PISTON_MOTION_PROFILE, DeltaCause, Facing, OccupiedShape, PistonAction, PistonError,
-    PistonMotionProfile, PistonMotionProfileError, PistonPlan, PistonPlanningContext, PistonState,
-    PistonVariant, Pos, Region, RegionSet, Shape, ShapeId, WireConnection, World, WorldDelta,
-    WorldDeltaError, observed_name_requires_live_observation,
+    DEFAULT_PISTON_MOTION_PROFILE, DeltaCause, Facing, OccupiedShape, PistonAction,
+    PistonBlockEntityState, PistonError, PistonHeadState, PistonMotionProfile,
+    PistonMotionProfileError, PistonPlan, PistonPlanningContext, PistonState, PistonVariant, Pos,
+    Region, RegionSet, Shape, ShapeId, WireConnection, World, WorldDelta, WorldDeltaError,
+    observed_name_requires_live_observation,
 };
 pub use electrical::{
     DeviceOutputState, InstantaneousElectricalState, MAX_SIGNAL, PoweredBlockState,
@@ -125,10 +132,29 @@ pub use scenario::{
     ScenarioExpectation, ScenarioPulseExpectation, ScenarioRun, ScenarioSafety, ScenarioTrace,
     compare_scenario_traces, run_scenario,
 };
-pub use sim::{InputMutationError, RedstoneTickSimulator, TickState};
+pub use sim::{
+    InputMutationError, RedstoneTickSimulator, SimulationEventKind, SimulationTransition,
+    SimulationTransitionKind, TickState,
+};
 pub use snapshot::{
     MinecraftSnapshot, MinecraftSnapshotBlock, SnapshotError, world_from_snapshot,
     world_from_snapshot_json,
+};
+pub use transition_conformance::{
+    ConformanceField, ConformanceIssue, ConformanceStatus, NormalizedBlockState,
+    NormalizedNeighborUpdate, NormalizedPistonState, NormalizedTransition,
+    NormalizedTransitionTrace, ObservedSchedulerFixture, SameTickOrderEvidence,
+    TransitionConformance, TransitionEvidence, compare_transition_traces,
+    normalize_observed_fixture, normalize_transition_trace,
+    normalize_vanilla_instrumentation_artifact, observed_fixture_from_json,
+};
+pub use vanilla_instrumentation::{
+    InputTimingObservation, InstrumentationCapture, InstrumentationClock,
+    InstrumentationCompleteness, InstrumentationEvidence, InstrumentationMethod,
+    InstrumentedBlockState, InstrumentedStateEvent, NeighborUpdateObservation,
+    OrderedTickObservation, PistonStateKind, PistonStateObservation, StreamCompleteness,
+    VANILLA_INSTRUMENTATION_SCHEMA, VanillaInstrumentationArtifact, VanillaInstrumentationMetadata,
+    parse_and_validate_instrumentation,
 };
 pub use wire::{
     DustTransfer, dust_connected, dust_transfer, dust_transmits, infer_wire_connection,

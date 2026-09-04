@@ -21,6 +21,7 @@ pub use blocks::{
 };
 pub use world::{
     Block, BlockCapabilities, BlockKind, BlockProperties, BlockRedstoneTraits, CapabilityLevel,
-    Facing, ObservationClassification, OccupiedShape, PistonState, PistonVariant, Pos,
-    SupportError, WireConnection, World, observed_name_requires_live_observation,
+    Facing, ObservationClassification, OccupiedShape, PistonBlockEntityState, PistonHeadState,
+    PistonState, PistonVariant, Pos, SupportError, WireConnection, World,
+    observed_name_requires_live_observation,
 };

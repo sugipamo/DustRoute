@@ -460,7 +460,9 @@ fn edge_timing(
             BlockKind::RedstoneTorch => EdgeBehavior::DelayedInvert,
             BlockKind::Comparator => EdgeBehavior::Analog,
             BlockKind::Observer => EdgeBehavior::Pulse,
-            BlockKind::Piston => EdgeBehavior::Mechanical,
+            BlockKind::Piston | BlockKind::PistonHead | BlockKind::MovingPiston => {
+                EdgeBehavior::Mechanical
+            }
             BlockKind::RedstoneWire => EdgeBehavior::OrderSensitive,
             BlockKind::Air
             | BlockKind::Solid
@@ -914,9 +916,12 @@ const fn signal_kind(kind: BlockKind) -> TemporalNodeKind {
         BlockKind::Comparator => TemporalNodeKind::Comparator,
         BlockKind::Observer => TemporalNodeKind::Observer,
         BlockKind::Piston => TemporalNodeKind::Actuator,
-        BlockKind::Air | BlockKind::Solid | BlockKind::Transparent | BlockKind::RedstoneLamp => {
-            TemporalNodeKind::Conductor
-        }
+        BlockKind::Air
+        | BlockKind::Solid
+        | BlockKind::Transparent
+        | BlockKind::RedstoneLamp
+        | BlockKind::PistonHead
+        | BlockKind::MovingPiston => TemporalNodeKind::Conductor,
     }
 }
 

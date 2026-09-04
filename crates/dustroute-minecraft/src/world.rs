@@ -43,6 +43,11 @@ pub enum BlockKind {
     RedstoneBlock,
     Observer,
     Piston,
+    /// Stable piston head block emitted after an extension completes.
+    PistonHead,
+    /// Transient moving-piston block used while a piston block entity is
+    /// animating. The carried block and direction live in `piston_entity`.
+    MovingPiston,
 }
 
 /// The two piston variants exposed by Java Edition.  The variant is kept as
@@ -83,6 +88,32 @@ impl PistonState {
     pub const fn is_stable(self) -> bool {
         matches!(self, Self::Retracted | Self::Extended)
     }
+}
+
+/// Stable piston-head state. Vanilla exposes the head as an independent
+/// block after an extension completes; keeping it typed prevents a completed
+/// piston from collapsing back to `Air` at the head coordinate.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct PistonHeadState {
+    pub facing: Facing,
+    pub variant: PistonVariant,
+    /// The short head shape used by a retracting piston. Continuous collision
+    /// geometry is intentionally outside this discrete simulator.
+    #[serde(default)]
+    pub short: bool,
+}
+
+/// Discrete representation of metadata carried by a vanilla
+/// `PistonBlockEntity`. Continuous interpolation is deliberately out of scope
+/// for this block-only model; `progress` is a stable 0/1 boundary marker.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct PistonBlockEntityState {
+    pub pushed_block: Box<Block>,
+    pub facing: Facing,
+    pub extending: bool,
+    pub source: bool,
+    #[serde(default)]
+    pub progress: u8,
 }
 
 /// How completely DustRoute can use an observed block at a specific analysis
@@ -286,6 +317,12 @@ pub struct Block {
     /// stable ordinary block.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub piston_state: Option<PistonState>,
+    /// Present for a stable `BlockKind::PistonHead`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub piston_head: Option<PistonHeadState>,
+    /// Present for a transient `BlockKind::MovingPiston`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub piston_entity: Option<Box<PistonBlockEntityState>>,
 }
 
 impl Block {
@@ -310,7 +347,31 @@ impl Block {
                 BlockKind::Piston => Some(PistonState::Retracted),
                 _ => None,
             },
+            piston_head: None,
+            piston_entity: None,
         }
+    }
+
+    #[must_use]
+    pub fn piston_head(facing: Facing, variant: PistonVariant, short: bool) -> Self {
+        let mut block = Self::new(BlockKind::PistonHead);
+        block.facing = Some(facing);
+        block.piston_variant = Some(variant);
+        block.piston_head = Some(PistonHeadState {
+            facing,
+            variant,
+            short,
+        });
+        block
+    }
+
+    #[must_use]
+    pub fn moving_piston(state: PistonBlockEntityState) -> Self {
+        let mut block = Self::new(BlockKind::MovingPiston);
+        block.facing = Some(state.facing);
+        block.piston_variant = state.pushed_block.piston_variant;
+        block.piston_entity = Some(Box::new(state));
+        block
     }
 
     #[must_use]
@@ -422,6 +483,24 @@ impl Block {
                 connectivity: Partial,
                 steady_state: Unsupported,
                 temporal: Unsupported,
+                repair: Unsupported,
+                placement: Unsupported,
+            },
+            BlockKind::PistonHead => BlockCapabilities {
+                observation: Full,
+                physical_classification: Partial,
+                connectivity: Partial,
+                steady_state: Partial,
+                temporal: Partial,
+                repair: Unsupported,
+                placement: Unsupported,
+            },
+            BlockKind::MovingPiston => BlockCapabilities {
+                observation: Full,
+                physical_classification: Partial,
+                connectivity: Unsupported,
+                steady_state: Unsupported,
+                temporal: Partial,
                 repair: Unsupported,
                 placement: Unsupported,
             },
@@ -539,6 +618,15 @@ impl Block {
             traits.conducts_weak_power = false;
             traits.conducts_strong_power = false;
             traits.strong_power_drives_dust = false;
+        }
+        if matches!(self.kind, BlockKind::PistonHead | BlockKind::MovingPiston) {
+            // The current model does not reproduce the directional collision
+            // shape or moving-entity support rules; do not let either typed
+            // piston part create an inferred wire rise.
+            traits.supports_dust_on_top = false;
+            traits.permits_wire_rise_beside = false;
+            traits.wire_rise_connection = None;
+            traits.blocks_wire_rise_when_above = true;
         }
         traits
     }

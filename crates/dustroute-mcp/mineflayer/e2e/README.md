@@ -144,6 +144,24 @@ The collector fails on any `FAIL` message, a missing `DUSTROUTE COMPLETE`, an
 unexpected PASS count, disconnect, or timeout. It deliberately reads player
 chat because these assertions are not emitted to the server console.
 
+### Promoting measured timing
+
+`activate_trace` with `save_artifact: true` also writes an ignored JSON artifact
+with relative-to-input game-tick timing and within-tick packet order. After a
+human review, promote a trace into the tracked scheduler-observation fixtures:
+
+```bash
+npm run promote:scheduler -- \
+  ../../../.local/e2e-artifacts/observer_repeater_preview_only-latest.json \
+  trace scheduler_1_21_11_observed_repeater_observer \
+  "Capture repeater and observer timing on the pinned 1.21.11 server"
+```
+
+The command refuses to overwrite an existing fixture. It preserves no absolute
+server tick, keeps no-op updates, and marks the internal scheduler phase as
+unknown. These observations strengthen delay regression coverage but do not
+promote the modelled scheduler profile to a Vanilla-complete implementation.
+
 ## Scenario contract
 
 Scenario files are ordered JSON documents in `scenarios/`. Supported steps are:

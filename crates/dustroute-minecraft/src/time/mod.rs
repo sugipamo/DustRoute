@@ -3,6 +3,7 @@
 mod engine;
 mod event;
 mod queue;
+mod scheduler;
 mod trace;
 mod transition;
 
@@ -15,6 +16,10 @@ pub use event::{
     PhysicsTime, QueuedEvent,
 };
 pub use queue::PhysicsEventQueue;
+pub use scheduler::{
+    SamePhaseOrder, SchedulerEvidence, SchedulerProfile, SchedulerProfileError, SchedulerProfileId,
+    ZeroDelayPolicy,
+};
 pub use trace::StateTransition;
 pub use transition::{
     EventExecutionStatus, EventRecord, EventTrace, TraceStatus, TransitionElapsed, TransitionId,

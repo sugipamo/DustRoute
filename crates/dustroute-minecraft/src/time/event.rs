@@ -9,7 +9,8 @@ pub struct EventId(pub u64);
 ///
 /// The enum is deliberately separate from [`PhysicsEventKind`]: two events
 /// with similar payloads may be delivered by different sources in a future
-/// versioned scheduler.  The initial order is a deterministic model boundary,
+/// versioned scheduler. [`super::SchedulerProfile`] supplies the active phase
+/// order; the declaration order is only the compatibility profile's default,
 /// not a claim that packet observation exposes vanilla's complete scheduler.
 #[derive(
     Clone, Copy, Debug, Default, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize,
@@ -71,8 +72,9 @@ pub enum PhysicsEventKind {
 }
 
 impl PhysicsEventKind {
-    /// Returns the default scheduler phase for this event kind.  Callers that
-    /// have stronger source evidence may use the queue's explicit phase API.
+    /// Returns the default scheduler phase for this event kind. Callers that
+    /// have stronger source evidence may use the queue's explicit phase API;
+    /// the active [`super::SchedulerProfile`] decides when that phase runs.
     #[must_use]
     pub const fn default_phase(&self) -> PhysicsEventPhase {
         match self {
@@ -103,9 +105,10 @@ pub struct PhysicsEvent {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct QueuedEvent {
-    /// Delay in game ticks from the parent event. Zero is valid and means the
-    /// event stays in the same game tick; the queue assigns the next
-    /// `sub_tick_order` so causal order is still observable.
+    /// Delay in game ticks from the parent event. Zero is valid. The active
+    /// scheduler profile decides whether it stays in the same game tick or
+    /// crosses to the next one; phase and `sub_tick_order` retain the causal
+    /// order either way.
     pub delay_ticks: u64,
     pub target: Pos,
     /// Explicit phase for the child event.  The handler normally uses the

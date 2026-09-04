@@ -1,0 +1,54 @@
+{
+  "schema_version": "dustroute.scheduler-fixture.v1",
+  "minecraft_version": "1.21.11",
+  "profile_id": "minecraft_java1_21_11_modelled",
+  "evidence": "modelled",
+  "source": "DustRouteDeterministicV1",
+  "events": [
+    {
+      "kind": "compatibility_boundary",
+      "phase": "scheduled_tick",
+      "delay_game_ticks": 2
+    },
+    {
+      "kind": "repeater_update",
+      "phase": "scheduled_tick",
+      "delay_game_ticks": 0
+    },
+    {
+      "kind": "comparator_update",
+      "phase": "scheduled_tick",
+      "delay_game_ticks": 0
+    },
+    {
+      "kind": "torch_update",
+      "phase": "scheduled_tick",
+      "delay_game_ticks": 0
+    },
+    {
+      "kind": "observer_pulse_end",
+      "phase": "block_event",
+      "delay_game_ticks": 0
+    },
+    {
+      "kind": "observer_pulse_start",
+      "phase": "block_event",
+      "delay_game_ticks": 0
+    },
+    {
+      "kind": "signal_resolve",
+      "phase": "observation",
+      "delay_game_ticks": 0
+    },
+    {
+      "kind": "lamp_update",
+      "phase": "observation",
+      "delay_game_ticks": 0
+    }
+  ],
+  "notes": [
+    "The fixture freezes the current DustRoute compatibility boundary, not complete vanilla scheduler order.",
+    "The Java 1.21.11 profile remains modelled until a live fixture measures each phase.",
+    "A zero delay here means same game tick; it does not claim support for zero-tick circuits."
+  ]
+}

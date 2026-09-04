@@ -182,8 +182,9 @@ pub type PistonBlockMove = BlockMove;
 /// it. The initial supported subset deliberately models stable piston states
 /// and ordinary movable blocks only. The plan's `delta` is the stable
 /// completion transition; [`Self::start_delta`] exposes the separate moving
-/// state used by the event engine. Intermediate piston-head and moving-block
-/// geometry remains an explicit future extension of this contract.
+/// state used by the event engine. Stable piston heads and transient moving
+/// block entities are retained in the two deltas rather than collapsed into
+/// a single body-state change.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct PistonPlan {
     pub parent_shape: ShapeId,
@@ -196,6 +197,10 @@ pub struct PistonPlan {
     pub moved: Vec<PistonBlockMove>,
     pub piston_before: Block,
     pub piston_after: Block,
+    /// Transient moving-piston transition. Plans deserialized from an older
+    /// schema may omit it and use the legacy body-only start transition.
+    #[serde(default)]
+    pub moving_delta: Option<WorldDelta>,
     pub delta: WorldDelta,
 }
 
@@ -223,11 +228,15 @@ impl PistonPlan {
         &self.delta
     }
 
-    /// Returns the state transition at the beginning of an actuation. No
-    /// blocks move yet; this records the vanilla moving state so observers and
-    /// a later completion event cannot be collapsed into the trigger tick.
+    /// Returns the state transition at the beginning of an actuation. The
+    /// coordinate changes install Vanilla-like moving carriers (and retain
+    /// logical move relations) so observers and a later completion event
+    /// cannot be collapsed into the trigger tick.
     #[must_use]
     pub fn start_delta(&self) -> WorldDelta {
+        if let Some(delta) = &self.moving_delta {
+            return delta.clone();
+        }
         let mut piston_after = self.piston_before.clone();
         set_piston_state(
             &mut piston_after,
@@ -278,14 +287,8 @@ impl PistonPlan {
                 position: self.piston,
             });
         }
-        for movement in &self.moved {
-            if world.get(movement.from) != Some(&movement.block) {
-                return Err(PistonError::StalePlan {
-                    position: movement.from,
-                });
-            }
-        }
-        for change in &self.delta.changes {
+        let start = self.start_delta();
+        for change in &start.changes {
             if change.position == self.piston {
                 continue;
             }
@@ -293,7 +296,7 @@ impl PistonPlan {
                 .get(change.position)
                 .cloned()
                 .unwrap_or_else(|| Block::new(BlockKind::Air));
-            if actual != change.before {
+            if actual != change.after {
                 return Err(PistonError::StalePlan {
                     position: change.position,
                 });
@@ -550,6 +553,7 @@ fn plan_piston_with_region(
         moved,
         piston_before: piston,
         piston_after,
+        moving_delta: None,
         delta: WorldDelta::empty(
             parent_shape,
             match action {
@@ -559,6 +563,7 @@ fn plan_piston_with_region(
         ),
     };
     plan.delta = piston_delta(world, &plan);
+    plan.moving_delta = Some(piston_start_delta(world, &plan));
     Ok(plan)
 }
 
@@ -569,18 +574,21 @@ fn piston_delta(world: &World, plan: &PistonPlan) -> WorldDelta {
     // logical relation in `moves`.
     let mut by_position = BTreeMap::<Pos, BlockChange>::new();
     for movement in &plan.moved {
+        let source_before = world
+            .get(movement.from)
+            .cloned()
+            .unwrap_or_else(|| Block::new(BlockKind::Air));
         let source = by_position
             .entry(movement.from)
             .or_insert_with(|| BlockChange {
                 position: movement.from,
-                before: movement.block.clone(),
+                before: source_before,
                 after: Block::new(BlockKind::Air),
                 reason: ChangeReason::PistonMove {
                     from: movement.from,
                     to: movement.to,
                 },
             });
-        source.before = movement.block.clone();
         source.after = Block::new(BlockKind::Air);
         source.reason = ChangeReason::PistonMove {
             from: movement.from,
@@ -619,6 +627,50 @@ fn piston_delta(world: &World, plan: &PistonPlan) -> WorldDelta {
         },
     );
 
+    let head_position = plan.piston.offset(
+        plan.facing.offset().x,
+        plan.facing.offset().y,
+        plan.facing.offset().z,
+    );
+    let head_before = world
+        .get(head_position)
+        .cloned()
+        .unwrap_or_else(|| Block::new(BlockKind::Air));
+    let head_after = match plan.action {
+        PistonAction::Extend => piston_head_block(&plan.piston_before, plan.facing, plan.variant),
+        PistonAction::Retract => plan
+            .moved
+            .iter()
+            .find(|movement| movement.to == head_position)
+            .map(|movement| movement.block.clone())
+            .unwrap_or_else(|| Block::new(BlockKind::Air)),
+    };
+    if head_before != head_after {
+        let entry = by_position
+            .entry(head_position)
+            .or_insert_with(|| BlockChange {
+                position: head_position,
+                before: head_before,
+                after: head_after.clone(),
+                reason: if plan.action == PistonAction::Retract && !plan.moved.is_empty() {
+                    ChangeReason::PistonMove {
+                        from: plan.moved[0].from,
+                        to: plan.moved[0].to,
+                    }
+                } else {
+                    ChangeReason::PistonState {
+                        piston: plan.piston,
+                    }
+                },
+            });
+        entry.after = head_after;
+        if plan.action == PistonAction::Extend || plan.moved.is_empty() {
+            entry.reason = ChangeReason::PistonState {
+                piston: plan.piston,
+            };
+        }
+    }
+
     let mut changes = Vec::with_capacity(by_position.len());
     let mut added = BTreeSet::new();
     for movement in &plan.moved {
@@ -631,8 +683,12 @@ fn piston_delta(world: &World, plan: &PistonPlan) -> WorldDelta {
     if added.insert(plan.piston) {
         changes.push(by_position[&plan.piston].clone());
     }
-    let mut affected = Vec::with_capacity(plan.moved.len() * 2 + 1);
+    if added.insert(head_position) {
+        changes.push(by_position[&head_position].clone());
+    }
+    let mut affected = Vec::with_capacity(plan.moved.len() * 2 + 2);
     affected.push(plan.piston);
+    affected.push(head_position);
     for movement in &plan.moved {
         affected.push(movement.from);
         affected.push(movement.to);
@@ -651,6 +707,196 @@ fn piston_delta(world: &World, plan: &PistonPlan) -> WorldDelta {
             .collect(),
         dirty_region: RegionSet::around_positions(affected, 1),
         cause: delta_cause(plan.action, plan.piston),
+    }
+}
+
+/// Builds the transient world state installed when the block event starts.
+/// Each moved destination becomes a `MovingPiston` carrying the original
+/// block, while the head coordinate carries a typed piston-head state. This
+/// keeps stable block identity and block-entity metadata distinct without
+/// pretending to model the continuous animation progress.
+fn piston_start_delta(world: &World, plan: &PistonPlan) -> WorldDelta {
+    let mut by_position = BTreeMap::<Pos, BlockChange>::new();
+    for movement in &plan.moved {
+        let source_before = world
+            .get(movement.from)
+            .cloned()
+            .unwrap_or_else(|| Block::new(BlockKind::Air));
+        by_position.insert(
+            movement.from,
+            BlockChange {
+                position: movement.from,
+                before: source_before,
+                after: if plan.action == PistonAction::Retract {
+                    moving_block(movement.block.clone(), plan.facing, false, false, 1)
+                } else {
+                    Block::new(BlockKind::Air)
+                },
+                reason: ChangeReason::PistonMove {
+                    from: movement.from,
+                    to: movement.to,
+                },
+            },
+        );
+        let destination_before = world
+            .get(movement.to)
+            .cloned()
+            .unwrap_or_else(|| Block::new(BlockKind::Air));
+        by_position.insert(
+            movement.to,
+            BlockChange {
+                position: movement.to,
+                before: destination_before,
+                after: moving_block(
+                    movement.block.clone(),
+                    plan.facing,
+                    plan.action == PistonAction::Extend,
+                    false,
+                    if plan.action == PistonAction::Extend {
+                        0
+                    } else {
+                        1
+                    },
+                ),
+                reason: ChangeReason::PistonMove {
+                    from: movement.from,
+                    to: movement.to,
+                },
+            },
+        );
+    }
+
+    let head_position = plan.piston.offset(
+        plan.facing.offset().x,
+        plan.facing.offset().y,
+        plan.facing.offset().z,
+    );
+    let head_before = world
+        .get(head_position)
+        .cloned()
+        .unwrap_or_else(|| Block::new(BlockKind::Air));
+    by_position.insert(
+        head_position,
+        BlockChange {
+            position: head_position,
+            before: head_before,
+            after: moving_block(
+                piston_head_block(&plan.piston_before, plan.facing, plan.variant),
+                plan.facing,
+                plan.action == PistonAction::Extend,
+                true,
+                if plan.action == PistonAction::Extend {
+                    0
+                } else {
+                    1
+                },
+            ),
+            reason: ChangeReason::PistonState {
+                piston: plan.piston,
+            },
+        },
+    );
+
+    let mut piston_after = plan.piston_before.clone();
+    set_piston_state(
+        &mut piston_after,
+        match plan.action {
+            PistonAction::Extend => PistonState::Extending,
+            PistonAction::Retract => PistonState::Retracting,
+        },
+    );
+    by_position.insert(
+        plan.piston,
+        BlockChange {
+            position: plan.piston,
+            before: plan.piston_before.clone(),
+            after: piston_after,
+            reason: ChangeReason::PistonState {
+                piston: plan.piston,
+            },
+        },
+    );
+
+    let mut changes = Vec::with_capacity(by_position.len());
+    let mut added = BTreeSet::new();
+    if added.insert(plan.piston) {
+        changes.push(by_position[&plan.piston].clone());
+    }
+    for movement in &plan.moved {
+        for position in [movement.from, movement.to] {
+            if added.insert(position) {
+                changes.push(by_position[&position].clone());
+            }
+        }
+    }
+    if added.insert(head_position) {
+        changes.push(by_position[&head_position].clone());
+    }
+    let mut affected = Vec::with_capacity(changes.len());
+    affected.extend(changes.iter().map(|change| change.position));
+    WorldDelta {
+        parent_shape: plan.parent_shape,
+        changes,
+        moves: plan
+            .moved
+            .iter()
+            .map(|movement| BlockMove {
+                from: movement.from,
+                to: movement.to,
+                block: movement.block.clone(),
+            })
+            .collect(),
+        dirty_region: RegionSet::around_positions(affected, 1),
+        cause: delta_cause(plan.action, plan.piston),
+    }
+}
+
+fn moving_block(
+    pushed_block: Block,
+    facing: Facing,
+    extending: bool,
+    source: bool,
+    progress: u8,
+) -> Block {
+    Block::moving_piston(crate::PistonBlockEntityState {
+        pushed_block: Box::new(pushed_block),
+        facing,
+        extending,
+        source,
+        progress,
+    })
+}
+
+fn piston_head_block(piston: &Block, facing: Facing, variant: PistonVariant) -> Block {
+    let mut head = Block::piston_head(facing, variant, false);
+    if piston.observed_name.is_some() {
+        head.observed_name = Some("minecraft:piston_head".to_owned());
+        head.observation_classification = piston.observation_classification;
+        head.observed_properties
+            .insert("facing".to_owned(), facing_name(facing).to_owned());
+        head.observed_properties
+            .insert("type".to_owned(), variant_name(variant).to_owned());
+        head.observed_properties
+            .insert("short".to_owned(), "false".to_owned());
+    }
+    head
+}
+
+fn facing_name(facing: Facing) -> &'static str {
+    match facing {
+        Facing::North => "north",
+        Facing::East => "east",
+        Facing::South => "south",
+        Facing::West => "west",
+        Facing::Up => "up",
+        Facing::Down => "down",
+    }
+}
+
+fn variant_name(variant: PistonVariant) -> &'static str {
+    match variant {
+        PistonVariant::Normal => "normal",
+        PistonVariant::Sticky => "sticky",
     }
 }
 
@@ -703,7 +949,9 @@ fn retraction_moves(
 ) -> Result<Vec<PistonBlockMove>, PistonError> {
     let destination = piston.offset(offset.x, offset.y, offset.z);
     ensure_known(known_region, destination)?;
-    if let Some(block) = world.get(destination) {
+    if let Some(block) = world.get(destination)
+        && !is_piston_head(block)
+    {
         return Err(PistonError::DestinationOccupied {
             position: destination,
             kind: block.kind,
@@ -720,6 +968,14 @@ fn retraction_moves(
         to: destination,
         block,
     }])
+}
+
+fn is_piston_head(block: &Block) -> bool {
+    block.kind == BlockKind::PistonHead
+        || block
+            .observed_name
+            .as_deref()
+            .is_some_and(|name| name.trim_start_matches("minecraft:") == "piston_head")
 }
 
 fn ensure_known(known_region: Option<Region>, position: Pos) -> Result<(), PistonError> {
@@ -803,33 +1059,19 @@ fn non_signal_properties(properties: &BTreeMap<String, String>) -> BTreeMap<Stri
 }
 
 fn validate_plan(plan: &PistonPlan, world: &World) -> Result<(), PistonError> {
-    if world.shape_id() != plan.parent_shape {
+    if world.shape_id() != plan.delta.parent_shape {
         return Err(PistonError::StalePlan {
             position: plan.piston,
         });
     }
-    if world.get(plan.piston) != Some(&plan.piston_before) {
-        return Err(PistonError::StalePlan {
-            position: plan.piston,
-        });
-    }
-    let source_positions = plan
-        .moved
-        .iter()
-        .map(|movement| movement.from)
-        .collect::<BTreeSet<_>>();
-    for movement in &plan.moved {
-        if world.get(movement.from) != Some(&movement.block) {
+    for change in &plan.delta.changes {
+        let actual = world
+            .get(change.position)
+            .cloned()
+            .unwrap_or_else(|| Block::new(BlockKind::Air));
+        if actual != change.before {
             return Err(PistonError::StalePlan {
-                position: movement.from,
-            });
-        }
-        if let Some(block) = world.get(movement.to)
-            && !source_positions.contains(&movement.to)
-        {
-            return Err(PistonError::DestinationOccupied {
-                position: movement.to,
-                kind: block.kind,
+                position: change.position,
             });
         }
     }
@@ -861,7 +1103,7 @@ mod tests {
         assert_eq!(plan.moved[0].from, Pos::new(1, 1, 0));
         assert_eq!(plan.moved[0].to, Pos::new(2, 1, 0));
         plan.apply(&mut world).unwrap();
-        assert_eq!(world.kind_at(Pos::new(1, 1, 0)), BlockKind::Air);
+        assert_eq!(world.kind_at(Pos::new(1, 1, 0)), BlockKind::PistonHead);
         assert_eq!(world.kind_at(Pos::new(2, 1, 0)), BlockKind::Solid);
         assert_eq!(
             piston_state(world.get(piston).unwrap()),
@@ -936,7 +1178,7 @@ mod tests {
         assert_eq!(plan.delta.changes.len(), 4);
         assert_eq!(plan.delta.moves.len(), 2);
         plan.apply(&mut world).unwrap();
-        assert_eq!(world.kind_at(Pos::new(1, 1, 0)), BlockKind::Air);
+        assert_eq!(world.kind_at(Pos::new(1, 1, 0)), BlockKind::PistonHead);
         assert_eq!(world.kind_at(Pos::new(2, 1, 0)), BlockKind::Solid);
         assert_eq!(world.kind_at(Pos::new(3, 1, 0)), BlockKind::Transparent);
     }
@@ -963,6 +1205,91 @@ mod tests {
             piston_state(world.get(piston).unwrap()),
             PistonState::Retracted
         );
+    }
+
+    #[test]
+    fn sticky_retraction_transitions_through_typed_head_and_block_entities() {
+        let (mut world, piston) = retracted_piston(PistonVariant::Sticky);
+        let body = world.get(piston).cloned().unwrap();
+        let mut extended = body;
+        extended.piston_state = Some(PistonState::Extended);
+        world.set(piston, extended.clone());
+        let head = Pos::new(1, 1, 0);
+        world.set(
+            head,
+            Block::piston_head(Facing::East, PistonVariant::Sticky, false),
+        );
+        world.set(Pos::new(2, 1, 0), Block::new(BlockKind::Solid));
+
+        let plan = plan_piston(&world, piston, PistonAction::Retract).unwrap();
+        let start = plan.start_delta();
+        start.apply(&mut world).unwrap();
+        assert_eq!(world.kind_at(head), BlockKind::MovingPiston);
+        assert_eq!(world.kind_at(Pos::new(2, 1, 0)), BlockKind::MovingPiston);
+        assert_eq!(
+            world
+                .get(head)
+                .and_then(|block| block.piston_entity.as_deref())
+                .map(|entity| entity.extending),
+            Some(false)
+        );
+
+        let completion = plan.completion_plan(&world).unwrap();
+        completion.apply(&mut world).unwrap();
+        assert_eq!(world.kind_at(head), BlockKind::Solid);
+        assert_eq!(world.kind_at(Pos::new(2, 1, 0)), BlockKind::Air);
+        assert_eq!(
+            piston_state(world.get(piston).unwrap()),
+            PistonState::Retracted
+        );
+    }
+
+    #[test]
+    fn normal_retraction_removes_typed_head_through_a_moving_state() {
+        let (mut world, piston) = retracted_piston(PistonVariant::Normal);
+        let mut extended = world.get(piston).cloned().unwrap();
+        extended.piston_state = Some(PistonState::Extended);
+        world.set(piston, extended);
+        let head = Pos::new(1, 1, 0);
+        world.set(
+            head,
+            Block::piston_head(Facing::East, PistonVariant::Normal, false),
+        );
+
+        let plan = plan_piston(&world, piston, PistonAction::Retract).unwrap();
+        plan.start_delta().apply(&mut world).unwrap();
+        assert_eq!(world.kind_at(head), BlockKind::MovingPiston);
+        let completion = plan.completion_plan(&world).unwrap();
+        completion.apply(&mut world).unwrap();
+        assert_eq!(world.kind_at(head), BlockKind::Air);
+        assert_eq!(
+            piston_state(world.get(piston).unwrap()),
+            PistonState::Retracted
+        );
+    }
+
+    #[test]
+    fn extension_start_exposes_head_and_moving_block_metadata() {
+        let (mut world, piston) = retracted_piston(PistonVariant::Normal);
+        let source = Pos::new(1, 1, 0);
+        let destination = Pos::new(2, 1, 0);
+        world.set(source, Block::new(BlockKind::Solid));
+        let plan = plan_piston(&world, piston, PistonAction::Extend).unwrap();
+        let start = plan.start_delta();
+        start.apply(&mut world).unwrap();
+        let head = world.get(source).unwrap();
+        assert_eq!(head.kind, BlockKind::MovingPiston);
+        assert!(head.piston_entity.as_deref().is_some_and(|entity| {
+            entity.source && entity.extending && entity.pushed_block.kind == BlockKind::PistonHead
+        }));
+        let moved = world.get(destination).unwrap();
+        assert!(moved.piston_entity.as_deref().is_some_and(|entity| {
+            !entity.source && entity.extending && entity.pushed_block.kind == BlockKind::Solid
+        }));
+        let completion = plan.completion_plan(&world).unwrap();
+        completion.apply(&mut world).unwrap();
+        assert_eq!(world.kind_at(source), BlockKind::PistonHead);
+        assert_eq!(world.kind_at(destination), BlockKind::Solid);
     }
 
     #[test]

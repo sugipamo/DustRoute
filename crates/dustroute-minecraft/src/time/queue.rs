@@ -1,6 +1,9 @@
 use std::collections::{BTreeMap, VecDeque};
 
-use super::{EventCause, EventId, PhysicsEvent, PhysicsEventKind, PhysicsEventPhase, PhysicsTime};
+use super::{
+    EventCause, EventId, PhysicsEvent, PhysicsEventKind, PhysicsEventPhase, PhysicsTime,
+    SchedulerProfile,
+};
 use crate::Pos;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -39,18 +42,35 @@ impl PhysicsEventQueue {
 
     #[must_use]
     pub fn next_time(&self) -> Option<PhysicsTime> {
-        self.events
-            .first_key_value()
-            .and_then(|(_, phases)| phases.first_key_value())
-            .and_then(|(_, events)| events.front())
-            .map(|event| event.time)
+        self.next_time_with_profile(&SchedulerProfile::default())
+    }
+
+    /// Returns the next event according to a versioned phase order.
+    pub(crate) fn next_time_with_profile(&self, profile: &SchedulerProfile) -> Option<PhysicsTime> {
+        self.events.first_key_value().and_then(|(_, phases)| {
+            phases
+                .iter()
+                .min_by_key(|(phase, _)| profile.phase_rank(**phase))
+                .and_then(|(_, events)| events.front())
+                .map(|event| event.time)
+        })
     }
 
     #[must_use]
     pub fn peek(&self) -> Option<&PhysicsEvent> {
+        self.peek_with_profile(&SchedulerProfile::default())
+    }
+
+    /// Returns the next pending event according to a versioned phase order.
+    #[must_use]
+    pub fn peek_with_profile(&self, profile: &SchedulerProfile) -> Option<&PhysicsEvent> {
         self.events
             .first_key_value()
-            .and_then(|(_, phases)| phases.first_key_value())
+            .and_then(|(_, phases)| {
+                phases
+                    .iter()
+                    .min_by_key(|(phase, _)| profile.phase_rank(**phase))
+            })
             .and_then(|(_, events)| events.front())
     }
 
@@ -59,10 +79,24 @@ impl PhysicsEventQueue {
     /// runner can preflight a specialized handler without consuming or
     /// reordering the queue.
     pub fn iter(&self) -> impl Iterator<Item = &PhysicsEvent> {
-        self.events
+        self.ordered_events(&SchedulerProfile::default())
+            .into_iter()
+    }
+
+    /// Returns pending events in the order selected by `profile`. Stable sort
+    /// preserves insertion order for events sharing one phase.
+    pub(crate) fn ordered_events<'a>(
+        &'a self,
+        profile: &SchedulerProfile,
+    ) -> Vec<&'a PhysicsEvent> {
+        let mut events = self
+            .events
             .values()
             .flat_map(BTreeMap::values)
             .flat_map(VecDeque::iter)
+            .collect::<Vec<_>>();
+        events.sort_by_key(|event| (event.time.game_tick, profile.phase_rank(event.time.phase)));
+        events
     }
 
     /// Returns insertion counters for the current and future game ticks.
@@ -118,17 +152,25 @@ impl PhysicsEventQueue {
     }
 
     pub fn pop(&mut self) -> Option<PhysicsEvent> {
-        self.pop_with_checkpoint().map(|(event, _)| event)
+        self.pop_with_profile(&SchedulerProfile::default())
     }
 
-    /// Pops an event and returns the scheduler bookkeeping required to put
-    /// the pop back exactly as it was.  This is intentionally crate-private;
-    /// public callers should use `pop`, while `PhysicsEngine` uses the token
-    /// to provide atomic error handling around a handler invocation.
-    pub(crate) fn pop_with_checkpoint(&mut self) -> Option<(PhysicsEvent, QueuePopCheckpoint)> {
+    /// Pops the next event according to a versioned phase order.
+    pub(crate) fn pop_with_profile(&mut self, profile: &SchedulerProfile) -> Option<PhysicsEvent> {
+        self.pop_with_checkpoint_in_profile(profile)
+            .map(|(event, _)| event)
+    }
+
+    pub(crate) fn pop_with_checkpoint_in_profile(
+        &mut self,
+        profile: &SchedulerProfile,
+    ) -> Option<(PhysicsEvent, QueuePopCheckpoint)> {
         let game_tick = *self.events.first_key_value()?.0;
         let phases = self.events.get_mut(&game_tick).expect("key exists");
-        let phase = *phases.first_key_value()?.0;
+        let phase = *phases
+            .iter()
+            .min_by_key(|(phase, _)| profile.phase_rank(**phase))?
+            .0;
         let queue = phases.get_mut(&phase).expect("phase exists");
         let mut event = queue.pop_front().expect("non-empty phase queue");
         if queue.is_empty() {
@@ -259,6 +301,48 @@ mod tests {
             events.each_ref().map(|event| event.time.sub_tick_order),
             [0, 1, 2]
         );
+    }
+
+    #[test]
+    fn custom_profile_controls_same_tick_phase_order() {
+        let mut queue = PhysicsEventQueue::default();
+        let profile = SchedulerProfile {
+            phase_order: [
+                PhysicsEventPhase::BlockEvent,
+                PhysicsEventPhase::External,
+                PhysicsEventPhase::NeighborUpdate,
+                PhysicsEventPhase::ScheduledTick,
+                PhysicsEventPhase::BlockEntity,
+                PhysicsEventPhase::Observation,
+            ],
+            ..SchedulerProfile::default()
+        };
+        queue.schedule_in_phase(
+            2,
+            Pos::new(1, 0, 0),
+            EventCause::External,
+            PhysicsEventPhase::External,
+            PhysicsEventKind::UserAction {
+                action: "external".to_owned(),
+            },
+        );
+        queue.schedule_in_phase(
+            2,
+            Pos::new(2, 0, 0),
+            EventCause::External,
+            PhysicsEventPhase::BlockEvent,
+            PhysicsEventKind::BlockEvent {
+                event: super::super::BlockEventKind::Custom {
+                    event_type: 1,
+                    data: 0,
+                },
+            },
+        );
+
+        let first = queue.pop_with_profile(&profile).unwrap();
+        let second = queue.pop_with_profile(&profile).unwrap();
+        assert_eq!(first.time.phase, PhysicsEventPhase::BlockEvent);
+        assert_eq!(second.time.phase, PhysicsEventPhase::External);
     }
 
     #[test]

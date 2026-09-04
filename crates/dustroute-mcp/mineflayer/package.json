@@ -8,7 +8,8 @@
     "test": "node --test e2e/runtime.test.js metrics.test.js",
     "test:e2e": "node e2e/runner.js",
     "test:e2e:semantics": "node e2e/semantics.js",
-    "promote:differential": "node e2e/promote-differential.js"
+    "promote:differential": "node e2e/promote-differential.js",
+    "promote:scheduler": "node e2e/promote-scheduler-observation.js"
   },
   "dependencies": {
     "mineflayer": "4.37.1"

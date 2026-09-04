@@ -296,15 +296,52 @@ impl WorldDelta {
             }
         }
         for movement in &self.moves {
-            if !self
+            let source = self
                 .changes
                 .iter()
-                .any(|change| change.position == movement.from && change.before == movement.block)
-                || !self
-                    .changes
-                    .iter()
-                    .any(|change| change.position == movement.to && change.after == movement.block)
-            {
+                .find(|change| change.position == movement.from);
+            let destination = self
+                .changes
+                .iter()
+                .find(|change| change.position == movement.to);
+            let source_match = source.is_some_and(|change| {
+                represents_moved_block(&change.before, &movement.block)
+                    || represents_moved_block(&change.after, &movement.block)
+            });
+            let destination_match = destination.is_some_and(|change| {
+                represents_moved_block(&change.before, &movement.block)
+                    || represents_moved_block(&change.after, &movement.block)
+            });
+            // At extension start (and at the first completion coordinate),
+            // the source position is occupied by the moving piston head while
+            // the carried block is represented at its destination. Keep this
+            // one explicit exception instead of weakening ordinary move
+            // validation for arbitrary deltas.
+            let source_is_moving_head = source.is_some_and(|change| {
+                change.before.kind == BlockKind::MovingPiston
+                    || change.after.kind == BlockKind::MovingPiston
+            }) && source.is_some_and(|change| {
+                [&change.before, &change.after].into_iter().any(|block| {
+                    block.kind == BlockKind::MovingPiston
+                        && block
+                            .piston_entity
+                            .as_deref()
+                            .is_some_and(|entity| entity.pushed_block.kind == BlockKind::PistonHead)
+                })
+            });
+            let destination_is_moving_head = destination.is_some_and(|change| {
+                [&change.before, &change.after].into_iter().any(|block| {
+                    block.kind == BlockKind::MovingPiston
+                        && block
+                            .piston_entity
+                            .as_deref()
+                            .is_some_and(|entity| entity.pushed_block.kind == BlockKind::PistonHead)
+                })
+            });
+            let represented = (source_match && destination_match)
+                || (source_is_moving_head && destination_match)
+                || (source_match && destination_is_moving_head);
+            if !represented {
                 return Err(WorldDeltaError::MoveNotRepresented {
                     from: movement.from,
                     to: movement.to,
@@ -332,6 +369,15 @@ impl WorldDelta {
         self.apply(&mut staged)?;
         Ok(staged.shape_id())
     }
+}
+
+fn represents_moved_block(actual: &Block, expected: &Block) -> bool {
+    actual == expected
+        || (actual.kind == BlockKind::MovingPiston
+            && actual
+                .piston_entity
+                .as_deref()
+                .is_some_and(|entity| entity.pushed_block.as_ref() == expected))
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -409,6 +455,7 @@ pub(crate) fn shape_id(world: &World) -> ShapeId {
         }
         hash_option_value(&mut hash, block.piston_variant);
         hash_option_value(&mut hash, block.piston_state);
+        hash_piston_parts(&mut hash, block, false);
         for (key, value) in &block.observed_properties {
             if is_signal_property(block.kind, key) {
                 continue;
@@ -450,6 +497,7 @@ pub(crate) fn state_id(world: &World) -> StateId {
         }
         hash_option_value(&mut hash, block.piston_variant);
         hash_option_value(&mut hash, block.piston_state);
+        hash_piston_parts(&mut hash, block, true);
         for (key, value) in &block.observed_properties {
             hash_option_string(&mut hash, Some(key));
             hash_option_string(&mut hash, Some(value));
@@ -457,6 +505,57 @@ pub(crate) fn state_id(world: &World) -> StateId {
         hash_value(&mut hash, 0xff_u8);
     }
     StateId(hash)
+}
+
+fn hash_piston_parts(hash: &mut u64, block: &Block, include_signal: bool) {
+    if let Some(head) = &block.piston_head {
+        hash_value(hash, true);
+        hash_value(hash, head.facing);
+        hash_value(hash, head.variant);
+        hash_value(hash, head.short);
+    } else {
+        hash_value(hash, false);
+    }
+    if let Some(entity) = &block.piston_entity {
+        hash_value(hash, true);
+        hash_value(hash, entity.facing);
+        hash_value(hash, entity.extending);
+        hash_value(hash, entity.source);
+        hash_value(hash, entity.progress);
+        hash_carried_block(hash, &entity.pushed_block, include_signal);
+    } else {
+        hash_value(hash, false);
+    }
+}
+
+fn hash_carried_block(hash: &mut u64, block: &Block, include_signal: bool) {
+    hash_value(hash, block.kind);
+    hash_option_string(hash, block.observed_name.as_deref());
+    hash_value(hash, block.observation_classification);
+    hash_option_value(hash, block.facing);
+    if include_signal {
+        hash_option_value(hash, block.powered);
+        hash_option_value(hash, block.power_level);
+    }
+    hash_option_value(hash, block.delay);
+    hash_option_value(hash, block.support_offset);
+    hash_option_value(hash, block.piston_variant);
+    hash_option_value(hash, block.piston_state);
+    if let Some(head) = &block.piston_head {
+        hash_value(hash, true);
+        hash_value(hash, head.facing);
+        hash_value(hash, head.variant);
+        hash_value(hash, head.short);
+    } else {
+        hash_value(hash, false);
+    }
+    for (key, value) in &block.observed_properties {
+        if !include_signal && is_signal_property(block.kind, key) {
+            continue;
+        }
+        hash_option_string(hash, Some(key));
+        hash_option_string(hash, Some(value));
+    }
 }
 
 fn is_signal_property(kind: BlockKind, key: &str) -> bool {
