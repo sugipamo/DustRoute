@@ -194,20 +194,25 @@ The bounded world-driven propagation MVP is exposed through
 `schedule_world_change` and `run_redstone_propagation`. A WorldChange is the
 explicit mutation boundary: it is applied as a validated `WorldDelta`, then
 the six neighboring positions (and the changed position when it may be a
-wire) receive deterministic `NeighborUpdate` events. The supported steady
-state kernel reevaluates horizontal redstone-wire levels (15 down to 0 with
-one level lost per wire) and lamp powered state, and feeds a changed wire back
-into the same queue until it reaches a fixed point. Typed `RedstoneInput`
-events can use this runner as well, so a synthetic `Lever -> Wire -> Piston`
-path no longer needs the caller to identify the piston action.
+wire) receive deterministic `NeighborUpdate` events. The supported kernel
+reevaluates horizontal redstone-wire levels (15 down to 0 with one level lost
+per wire) and lamp powered state, and feeds a changed wire back into the same
+queue until it reaches a fixed point. A basic horizontal Repeater path is now
+also executable: its rear input is sampled on a neighbor update, a
+`RepeaterTick { expected_powered }` is scheduled after 1..=4 redstone ticks
+(2 game ticks per redstone tick), and only a still-current input may change the
+front output. Typed `RedstoneInput` events can use this runner as well, so a
+synthetic `Lever -> Wire -> Repeater -> Wire -> Lamp/Piston` path no longer
+needs the caller to identify the intermediate repeater or piston action.
 
 The MVP is bounded by `with_piston_planning_region` when a complete observed
 region is supplied and by the engine's per-tick microstep budget. Coordinates
-outside that region, missing observed wire shape, or missing observed signal
-state are explicit errors; they are never inferred as Air or unpowered. The
-kernel does not claim upstream repeater/comparator/observer timing,
-quasi-connectivity, BUD, vertical activation, or continuous mechanical
-downstream propagation. Those remain versioned follow-up contracts.
+outside that region, missing observed wire shape, missing repeater direction or
+delay, or missing observed signal state are explicit errors; they are never
+inferred as Air or unpowered. The kernel does not claim repeater side-locking,
+comparator/observer timing, quasi-connectivity, BUD, vertical activation, or
+continuous mechanical downstream propagation. Those remain versioned
+follow-up contracts.
 
 `run_until_idle_checked` treats one event as the unit of failure isolation. If
 the handler rejects an event, a delta fails its before-state check, or an
@@ -279,11 +284,13 @@ functions and vanilla-derived scenario tests without changing IR APIs.
 The remaining full-engine implementation should cover, in order:
 
 1. redstone wire immediate update chains;
-2. redstone torch scheduled changes and burnout state;
-3. repeater delay, locking, and scheduling;
-4. comparator scheduling and side inputs;
-5. piston block events, quasi-connectivity, and movement;
-6. same-tick observer event ordering and movable block interactions.
+2. basic repeater delay and directional scheduling (implemented in the bounded
+   world-driven runner);
+3. redstone torch scheduled changes and burnout state;
+4. repeater side-locking and 0-tick behavior;
+5. comparator scheduling and side inputs;
+6. piston block events, quasi-connectivity, and movement;
+7. same-tick observer event ordering and movable block interactions.
 
 ## Validation policy
 

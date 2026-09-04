@@ -16,7 +16,9 @@ use crate::{
     PistonMotionProfile, PistonMotionProfileError, Pos, RedstonePropagationError, Region, ShapeId,
     World, WorldDelta, WorldDeltaError, direct_piston_neighbors, external_world_delta,
     piston_input_powered_in_region, piston_state, plan_piston, plan_piston_in_region,
-    redstone_input_delta, redstone_lamp_delta, redstone_position_known, redstone_update_positions,
+    redstone_input_delta, redstone_lamp_delta, redstone_position_known,
+    redstone_repeater_delay_game_ticks, redstone_repeater_delta, redstone_repeater_input_powered,
+    redstone_repeater_output_position, redstone_repeater_powered, redstone_update_positions,
     redstone_wire_delta,
 };
 
@@ -1094,9 +1096,12 @@ impl PhysicsEngine {
     /// reevaluation until no more neighbor updates are queued; piston block
     /// events then reuse the existing moving/stable state machine.
     ///
-    /// The runner intentionally excludes repeater/comparator/observer timing,
+    /// The runner models one bounded repeater path (horizontal rear input,
+    /// front output, and 1..=4 redstone-tick delay) alongside the existing
+    /// wire/lamp/piston subset. Repeater locking, comparator/observer timing,
     /// quasi-connectivity, vertical piston activation, and other Vanilla
-    /// semantics that require a version-specific scheduler or live evidence.
+    /// semantics that require a version-specific scheduler or live evidence
+    /// remain outside the contract.
     pub fn run_redstone_propagation(&mut self) -> Result<(), PhysicsEngineError> {
         self.run_piston_events_with_mode(RedstoneRunnerMode::Propagation)
     }
@@ -1128,7 +1133,12 @@ impl PhysicsEngine {
                         PhysicsEventKind::RedstoneInput { .. }
                             | PhysicsEventKind::NeighborUpdate { .. }
                     )
-                    || propagation && matches!(event.kind, PhysicsEventKind::WorldChange { .. });
+                    || propagation
+                        && matches!(
+                            event.kind,
+                            PhysicsEventKind::WorldChange { .. }
+                                | PhysicsEventKind::RepeaterTick { .. }
+                        );
                 !(piston_event || redstone_input_event)
             })
             .cloned();
@@ -1238,7 +1248,13 @@ impl PhysicsEngine {
                             let delta = redstone_wire_delta(world, event.target, planning_region)?;
                             let queued = delta
                                 .as_ref()
-                                .map(|_| queue_redstone_neighbors(event.target, false))
+                                .map(|_| {
+                                    queue_redstone_neighbors_in_phase(
+                                        event.target,
+                                        false,
+                                        event.time.phase,
+                                    )
+                                })
                                 .unwrap_or_default();
                             return Ok(EventOutcome {
                                 changes: Vec::new(),
@@ -1252,6 +1268,35 @@ impl PhysicsEngine {
                                 changes: Vec::new(),
                                 delta,
                                 queued: Vec::new(),
+                            });
+                        }
+                        BlockKind::Repeater => {
+                            let expected_powered = redstone_repeater_input_powered(
+                                world,
+                                event.target,
+                                planning_region,
+                            )?;
+                            let current_powered = redstone_repeater_powered(world, event.target)?;
+                            if current_powered == expected_powered {
+                                return Ok(EventOutcome::default());
+                            }
+                            let delay_game_ticks =
+                                redstone_repeater_delay_game_ticks(world, event.target)?;
+                            let output = redstone_repeater_output_position(
+                                world,
+                                event.target,
+                                planning_region,
+                            )?;
+                            preflight_redstone_targets(world, planning_region, &[output])?;
+                            return Ok(EventOutcome {
+                                changes: Vec::new(),
+                                delta: None,
+                                queued: vec![QueuedEvent {
+                                    delay_ticks: delay_game_ticks,
+                                    target: event.target,
+                                    phase: PhysicsEventPhase::ScheduledTick,
+                                    kind: PhysicsEventKind::RepeaterTick { expected_powered },
+                                }],
                             });
                         }
                         _ => {}
@@ -1289,6 +1334,48 @@ impl PhysicsEngine {
                 Ok(EventOutcome {
                     changes: Vec::new(),
                     delta: None,
+                    queued,
+                })
+            }
+            PhysicsEventKind::RepeaterTick { expected_powered } if propagation => {
+                let current_input =
+                    redstone_repeater_input_powered(world, event.target, planning_region)?;
+                // The input edge that created this scheduled tick may have
+                // been reversed before the delay elapsed. Retain the event
+                // as evidence, but do not apply an obsolete output pulse.
+                if current_input != *expected_powered {
+                    return Ok(EventOutcome::default());
+                }
+                let output =
+                    redstone_repeater_output_position(world, event.target, planning_region)?;
+                preflight_redstone_targets(world, planning_region, &[output])?;
+                let delta = redstone_repeater_delta(
+                    world,
+                    event.target,
+                    *expected_powered,
+                    planning_region,
+                )?;
+                let queued = delta
+                    .as_ref()
+                    .map(|_| {
+                        vec![QueuedEvent {
+                            delay_ticks: 0,
+                            target: output,
+                            // Neighbor updates emitted by a scheduled tick
+                            // remain in the same tick's scheduled phase. This
+                            // preserves causal order under the deterministic
+                            // phase model while allowing the front wire/lamp
+                            // or piston to react immediately after the tick.
+                            phase: PhysicsEventPhase::ScheduledTick,
+                            kind: PhysicsEventKind::NeighborUpdate {
+                                source: event.target,
+                            },
+                        }]
+                    })
+                    .unwrap_or_default();
+                Ok(EventOutcome {
+                    changes: Vec::new(),
+                    delta,
                     queued,
                 })
             }
@@ -1390,12 +1477,20 @@ impl PhysicsEngine {
 }
 
 fn queue_redstone_neighbors(source: Pos, include_self: bool) -> Vec<QueuedEvent> {
+    queue_redstone_neighbors_in_phase(source, include_self, PhysicsEventPhase::NeighborUpdate)
+}
+
+fn queue_redstone_neighbors_in_phase(
+    source: Pos,
+    include_self: bool,
+    phase: PhysicsEventPhase,
+) -> Vec<QueuedEvent> {
     redstone_update_positions(source, include_self)
         .into_iter()
         .map(|target| QueuedEvent {
             delay_ticks: 0,
             target,
-            phase: PhysicsEventPhase::NeighborUpdate,
+            phase,
             kind: PhysicsEventKind::NeighborUpdate { source },
         })
         .collect()
@@ -1411,12 +1506,33 @@ fn preflight_redstone_targets(
         match world.kind_at(*position) {
             BlockKind::RedstoneWire => {
                 let _ = redstone_wire_delta(world, *position, known_region)?;
+                // A changed wire can be the rear input of an adjacent
+                // repeater. Validate that delayed boundary before accepting
+                // the upstream delta, so malformed repeater observations do
+                // not leave a partially propagated source edge behind.
+                for neighbor in redstone_update_positions(*position, false) {
+                    if world.kind_at(neighbor) == BlockKind::Repeater {
+                        let _ = redstone_repeater_input_powered(world, neighbor, known_region)?;
+                        let _ = redstone_repeater_powered(world, neighbor)?;
+                        let _ = redstone_repeater_delay_game_ticks(world, neighbor)?;
+                        let output =
+                            redstone_repeater_output_position(world, neighbor, known_region)?;
+                        redstone_position_known(known_region, output)?;
+                    }
+                }
             }
             BlockKind::RedstoneLamp => {
                 let _ = redstone_lamp_delta(world, *position, known_region)?;
             }
             BlockKind::Piston => {
                 let _ = piston_input_powered_in_region(world, known_region, *position)?;
+            }
+            BlockKind::Repeater => {
+                let _ = redstone_repeater_input_powered(world, *position, known_region)?;
+                let _ = redstone_repeater_powered(world, *position)?;
+                let _ = redstone_repeater_delay_game_ticks(world, *position)?;
+                let output = redstone_repeater_output_position(world, *position, known_region)?;
+                redstone_position_known(known_region, output)?;
             }
             _ => {}
         }
@@ -1468,6 +1584,38 @@ mod tests {
         world.set(Pos::new(1, 1, 0), Block::new(BlockKind::Solid));
         let known_region = Region::new(Pos::new(-3, 0, -1), Pos::new(4, 2, 1));
         (world, piston_pos, wire_pos, input_pos, known_region)
+    }
+
+    fn world_driven_repeater_world(delay: u8) -> (World, Pos, Pos, Pos, Pos, Region) {
+        let source_pos = Pos::new(-2, 1, 0);
+        let input_wire_pos = Pos::new(-1, 1, 0);
+        let repeater_pos = Pos::new(0, 1, 0);
+        let output_wire_pos = Pos::new(1, 1, 0);
+        let lamp_pos = Pos::new(2, 1, 0);
+        let mut world = World::new();
+        for x in -2..=2 {
+            world.set(Pos::new(x, 0, 0), Block::new(BlockKind::Solid));
+        }
+        let mut source = Block::new(BlockKind::Lever);
+        source.powered = Some(false);
+        world.set(source_pos, source);
+        world.set(input_wire_pos, Block::new(BlockKind::RedstoneWire));
+        let mut repeater = Block::new(BlockKind::Repeater);
+        repeater.facing = Some(crate::Facing::East);
+        repeater.powered = Some(false);
+        repeater.delay = Some(delay);
+        world.set(repeater_pos, repeater);
+        world.set(output_wire_pos, Block::new(BlockKind::RedstoneWire));
+        world.set(lamp_pos, Block::new(BlockKind::RedstoneLamp));
+        let known_region = Region::new(Pos::new(-3, 0, -1), Pos::new(3, 2, 1));
+        (
+            world,
+            source_pos,
+            input_wire_pos,
+            repeater_pos,
+            output_wire_pos,
+            known_region,
+        )
     }
 
     #[test]
@@ -2576,6 +2724,283 @@ mod tests {
             engine.world().get(lamp_pos).and_then(|block| block.powered),
             Some(false)
         );
+    }
+
+    #[test]
+    fn repeater_delay_is_two_game_ticks_per_redstone_tick() {
+        for delay in 1..=4 {
+            let (world, source_pos, input_wire_pos, repeater_pos, output_wire_pos, known_region) =
+                world_driven_repeater_world(delay);
+            let mut engine =
+                PhysicsEngine::new(world, 256).with_piston_planning_region(known_region);
+            let mut on = Block::new(BlockKind::Lever);
+            on.powered = Some(true);
+            engine.schedule_world_change(0, source_pos, on);
+            engine.run_redstone_propagation().unwrap();
+
+            assert_eq!(
+                engine
+                    .world()
+                    .get(input_wire_pos)
+                    .and_then(|block| block.power_level),
+                Some(15)
+            );
+            assert_eq!(
+                engine
+                    .world()
+                    .get(repeater_pos)
+                    .and_then(|block| block.powered),
+                Some(true)
+            );
+            assert_eq!(
+                engine
+                    .world()
+                    .get(output_wire_pos)
+                    .and_then(|block| block.power_level),
+                Some(15)
+            );
+            assert_eq!(
+                engine
+                    .world()
+                    .get(Pos::new(2, 1, 0))
+                    .and_then(|block| block.powered),
+                Some(true)
+            );
+            let tick = engine
+                .event_trace()
+                .records
+                .iter()
+                .find(|record| matches!(record.event.kind, PhysicsEventKind::RepeaterTick { .. }))
+                .expect("repeater scheduled tick should be retained in the event trace");
+            assert_eq!(tick.event.time.game_tick, u64::from(delay) * 2);
+            let repeater_transition = engine
+                .transition_trace()
+                .records
+                .iter()
+                .find(|record| {
+                    record
+                        .changes
+                        .iter()
+                        .any(|change| change.position == repeater_pos)
+                })
+                .expect("repeater output transition should be retained");
+            assert_eq!(
+                repeater_transition.cause,
+                Some(crate::DeltaCause::RepeaterTick {
+                    repeater: repeater_pos
+                })
+            );
+            assert!(engine.trace_status().is_complete());
+        }
+    }
+
+    #[test]
+    fn repeater_off_edge_is_delayed_and_reaches_lamp() {
+        let (world, source_pos, _input_wire_pos, repeater_pos, output_wire_pos, known_region) =
+            world_driven_repeater_world(2);
+        let mut engine = PhysicsEngine::new(world, 256).with_piston_planning_region(known_region);
+        let mut on = Block::new(BlockKind::Lever);
+        on.powered = Some(true);
+        engine.schedule_world_change(0, source_pos, on);
+        engine.run_redstone_propagation().unwrap();
+        let off_tick = engine.time().game_tick + 1;
+        let mut off = Block::new(BlockKind::Lever);
+        off.powered = Some(false);
+        engine.schedule_world_change(off_tick, source_pos, off);
+        engine.run_redstone_propagation().unwrap();
+
+        assert_eq!(
+            engine
+                .world()
+                .get(repeater_pos)
+                .and_then(|block| block.powered),
+            Some(false)
+        );
+        assert_eq!(
+            engine
+                .world()
+                .get(output_wire_pos)
+                .and_then(|block| block.power_level)
+                .unwrap_or(0),
+            0
+        );
+        assert_eq!(
+            engine
+                .world()
+                .get(Pos::new(2, 1, 0))
+                .and_then(|block| block.powered),
+            Some(false)
+        );
+        assert!(engine.trace_status().is_complete());
+    }
+
+    #[test]
+    fn repeater_output_drives_a_piston_block_event() {
+        let (mut world, source_pos, _input_wire_pos, _repeater_pos, _output_wire_pos, known_region) =
+            world_driven_repeater_world(1);
+        world.remove(Pos::new(2, 1, 0));
+        let piston_pos = Pos::new(2, 1, 0);
+        let mut piston = Block::new(BlockKind::Piston);
+        piston.facing = Some(crate::Facing::East);
+        piston.piston_state = Some(PistonState::Retracted);
+        world.set(piston_pos, piston);
+        let mut engine = PhysicsEngine::new(world, 256).with_piston_planning_region(known_region);
+        let mut on = Block::new(BlockKind::Lever);
+        on.powered = Some(true);
+        engine.schedule_world_change(0, source_pos, on);
+        engine.run_redstone_propagation().unwrap();
+
+        assert_eq!(
+            piston_state(engine.world().get(piston_pos).unwrap()),
+            PistonState::Extended
+        );
+        assert_eq!(
+            engine.world().kind_at(Pos::new(3, 1, 0)),
+            BlockKind::PistonHead
+        );
+        let block_event = engine
+            .event_trace()
+            .records
+            .iter()
+            .find(|record| {
+                matches!(
+                    record.event.kind,
+                    PhysicsEventKind::BlockEvent {
+                        event: BlockEventKind::PistonExtend
+                    }
+                )
+            })
+            .expect("repeater output should reach the piston block-event boundary");
+        assert_eq!(block_event.event.time.game_tick, 3);
+        assert_eq!(block_event.event.time.phase, PhysicsEventPhase::BlockEvent);
+        assert_eq!(
+            engine
+                .transition_trace()
+                .records
+                .iter()
+                .filter(|record| record.time.game_tick == 2)
+                .count(),
+            2
+        );
+        assert!(engine.trace_status().is_complete());
+    }
+
+    #[test]
+    fn stale_repeater_tick_is_a_retained_noop_after_input_reversal() {
+        let (world, source_pos, _input_wire_pos, repeater_pos, output_wire_pos, known_region) =
+            world_driven_repeater_world(1);
+        let mut engine = PhysicsEngine::new(world, 256).with_piston_planning_region(known_region);
+        let mut on = Block::new(BlockKind::Lever);
+        on.powered = Some(true);
+        engine.schedule_world_change(0, source_pos, on);
+        let mut off = Block::new(BlockKind::Lever);
+        off.powered = Some(false);
+        engine.schedule_world_change(1, source_pos, off);
+        engine.run_redstone_propagation().unwrap();
+
+        assert_eq!(
+            engine
+                .world()
+                .get(repeater_pos)
+                .and_then(|block| block.powered),
+            Some(false)
+        );
+        assert_eq!(
+            engine
+                .world()
+                .get(output_wire_pos)
+                .and_then(|block| block.power_level)
+                .unwrap_or(0),
+            0
+        );
+        let stale = engine
+            .event_trace()
+            .records
+            .iter()
+            .find(|record| {
+                matches!(
+                    record.event.kind,
+                    PhysicsEventKind::RepeaterTick {
+                        expected_powered: true
+                    }
+                )
+            })
+            .expect("reversed input should leave the original tick as evidence");
+        assert_eq!(stale.status, EventExecutionStatus::NoTransition);
+        assert!(engine.trace_status().is_complete());
+    }
+
+    #[test]
+    fn repeater_rejects_vertical_facing_before_world_mutation() {
+        let (mut world, source_pos, _input_wire_pos, repeater_pos, _output_wire_pos, known_region) =
+            world_driven_repeater_world(1);
+        world.get_mut(repeater_pos).unwrap().facing = Some(crate::Facing::Up);
+        let before = world.clone();
+        let mut engine = PhysicsEngine::new(world, 128).with_piston_planning_region(known_region);
+        let mut on = Block::new(BlockKind::Lever);
+        on.powered = Some(true);
+        let event_id = engine.schedule_world_change(0, source_pos, on);
+        let error = engine.run_redstone_propagation().unwrap_err();
+
+        assert!(matches!(
+            error,
+            PhysicsEngineError::Redstone(error)
+                if matches!(error.as_ref(), RedstonePropagationError::UnsupportedComponent {
+                    position, kind: BlockKind::Repeater, ..
+                } if *position == repeater_pos)
+        ));
+        assert_eq!(engine.world(), &before);
+        assert_eq!(engine.pending_event_count(), 1);
+        assert_eq!(engine.queue.peek().map(|event| event.id), Some(event_id));
+    }
+
+    #[test]
+    fn repeater_rejects_invalid_delay_before_world_mutation() {
+        let (world, source_pos, _input_wire_pos, repeater_pos, _output_wire_pos, known_region) =
+            world_driven_repeater_world(0);
+        let before = world.clone();
+        let mut engine = PhysicsEngine::new(world, 128).with_piston_planning_region(known_region);
+        let mut on = Block::new(BlockKind::Lever);
+        on.powered = Some(true);
+        let event_id = engine.schedule_world_change(0, source_pos, on);
+        let error = engine.run_redstone_propagation().unwrap_err();
+
+        assert!(matches!(
+            error,
+            PhysicsEngineError::Redstone(error)
+                if matches!(error.as_ref(), RedstonePropagationError::InvalidRepeaterDelay {
+                    position, delay: 0
+                } if *position == repeater_pos)
+        ));
+        assert_eq!(engine.world(), &before);
+        assert_eq!(engine.pending_event_count(), 1);
+        assert_eq!(engine.queue.peek().map(|event| event.id), Some(event_id));
+    }
+
+    #[test]
+    fn repeater_rejects_an_output_outside_the_complete_region() {
+        let (world, source_pos, _input_wire_pos, _repeater_pos, _output_wire_pos, _) =
+            world_driven_repeater_world(1);
+        let before = world.clone();
+        // The source, input wire, and repeater are known, but the repeater's
+        // front output at x=1 is intentionally outside the observation.
+        let known_region = Region::new(Pos::new(-3, 0, -1), Pos::new(0, 2, 1));
+        let mut engine = PhysicsEngine::new(world, 128).with_piston_planning_region(known_region);
+        let mut on = Block::new(BlockKind::Lever);
+        on.powered = Some(true);
+        let event_id = engine.schedule_world_change(0, source_pos, on);
+        let error = engine.run_redstone_propagation().unwrap_err();
+
+        assert!(matches!(
+            error,
+            PhysicsEngineError::Redstone(error)
+                if matches!(error.as_ref(), RedstonePropagationError::UnknownState {
+                    position, ..
+                } if *position == Pos::new(1, 1, 0))
+        ));
+        assert_eq!(engine.world(), &before);
+        assert_eq!(engine.pending_event_count(), 1);
+        assert_eq!(engine.queue.peek().map(|event| event.id), Some(event_id));
     }
 
     #[test]

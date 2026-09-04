@@ -1,10 +1,11 @@
 //! Bounded redstone signal propagation helpers.
 //!
-//! This module intentionally models only the steady-state, block-only subset
-//! needed by the world-driven runner.  It does not attempt to reproduce the
-//! complete Java update engine (quasi-connectivity, repeater timing, observer
-//! pulses, or comparator calculation).  Unknown observed state is returned as
-//! an error instead of being silently treated as an unpowered source.
+//! This module intentionally models only the bounded, block-only subset needed
+//! by the world-driven runner.  Repeater timing is limited to one directional
+//! rear-input/front-output path; locking, observer pulses, comparator
+//! calculation, and quasi-connectivity remain outside the contract. Unknown
+//! observed state is returned as an error instead of being silently treated as
+//! an unpowered source.
 
 use std::collections::BTreeSet;
 use std::error::Error;
@@ -41,6 +42,10 @@ pub enum RedstonePropagationError {
         kind: BlockKind,
         reason: String,
     },
+    InvalidRepeaterDelay {
+        position: Pos,
+        delay: u8,
+    },
 }
 
 impl Display for RedstonePropagationError {
@@ -62,6 +67,11 @@ impl Display for RedstonePropagationError {
             } => write!(
                 formatter,
                 "redstone propagation for {kind:?} at ({}, {}, {}) is outside the MVP: {reason}",
+                position.x, position.y, position.z
+            ),
+            Self::InvalidRepeaterDelay { position, delay } => write!(
+                formatter,
+                "repeater at ({}, {}, {}) has invalid delay {delay}; expected 1..=4 redstone ticks",
                 position.x, position.y, position.z
             ),
         }
@@ -165,7 +175,7 @@ pub(crate) fn redstone_wire_delta(
                 wire_level(source, source_position)?.saturating_sub(1)
             }
         } else {
-            source_signal(source, source_position)?
+            source_signal_toward(source, source_position, facing.opposite())?
         };
         expected = expected.max(signal);
     }
@@ -225,6 +235,217 @@ pub(crate) fn redstone_lamp_delta(
     Ok(Some(signal_delta(world, position, block.clone(), after)))
 }
 
+/// Returns the repeater's validated output direction and output coordinate.
+/// DustRoute stores repeater `facing` as the signal-flow direction (the
+/// snapshot importer converts Java's block-state orientation at the boundary).
+pub(crate) fn redstone_repeater_output_position(
+    world: &World,
+    position: Pos,
+    known_region: Option<Region>,
+) -> Result<Pos, RedstonePropagationError> {
+    ensure_known(known_region, position, BlockKind::Repeater)?;
+    let block = world
+        .get(position)
+        .ok_or_else(|| RedstonePropagationError::UnknownState {
+            position,
+            kind: BlockKind::Repeater,
+            reason: "repeater block is missing".to_owned(),
+        })?;
+    if block.kind != BlockKind::Repeater {
+        return Err(RedstonePropagationError::UnsupportedComponent {
+            position,
+            kind: block.kind,
+            reason: "repeater evaluator received a non-repeater target".to_owned(),
+        });
+    }
+    let facing = repeater_facing(block, position)?;
+    let offset = facing.offset();
+    let output = position.offset(offset.x, offset.y, offset.z);
+    ensure_known(known_region, output, BlockKind::Air)?;
+    Ok(output)
+}
+
+/// Returns the signal currently present at a repeater's rear input. The
+/// repeater's internal `facing` points toward its output, so the input is the
+/// opposite horizontal neighbor. Wire input is read at its full dust level;
+/// attenuation belongs to wire-to-wire propagation, not the repeater boundary.
+pub(crate) fn redstone_repeater_input_powered(
+    world: &World,
+    position: Pos,
+    known_region: Option<Region>,
+) -> Result<bool, RedstonePropagationError> {
+    ensure_known(known_region, position, BlockKind::Repeater)?;
+    let block = world
+        .get(position)
+        .ok_or_else(|| RedstonePropagationError::UnknownState {
+            position,
+            kind: BlockKind::Repeater,
+            reason: "repeater block is missing".to_owned(),
+        })?;
+    if block.kind != BlockKind::Repeater {
+        return Err(RedstonePropagationError::UnsupportedComponent {
+            position,
+            kind: block.kind,
+            reason: "repeater evaluator received a non-repeater target".to_owned(),
+        });
+    }
+    let facing = repeater_facing(block, position)?;
+    let input_facing = facing.opposite();
+    let offset = input_facing.offset();
+    let input = position.offset(offset.x, offset.y, offset.z);
+    ensure_known(known_region, input, BlockKind::Air)?;
+    let Some(source) = world.get(input) else {
+        return Ok(false);
+    };
+
+    let signal = match source.kind {
+        BlockKind::RedstoneWire => {
+            if !wire_connects(source, input, facing)? {
+                0
+            } else {
+                wire_level(source, input)?
+            }
+        }
+        BlockKind::Repeater => {
+            // A repeater only emits in its own front direction. Other
+            // directional components are intentionally left to the existing
+            // conservative source model for this bounded goal.
+            source_signal_toward(source, input, facing)?
+        }
+        _ => source_signal(source, input)?,
+    };
+    Ok(signal > 0)
+}
+
+/// Returns the current stable output state of a repeater. Synthetic blocks
+/// default to unpowered; observed blocks must expose a powered state.
+pub(crate) fn redstone_repeater_powered(
+    world: &World,
+    position: Pos,
+) -> Result<bool, RedstonePropagationError> {
+    let block = world
+        .get(position)
+        .ok_or_else(|| RedstonePropagationError::UnknownState {
+            position,
+            kind: BlockKind::Repeater,
+            reason: "repeater block is missing".to_owned(),
+        })?;
+    if block.kind != BlockKind::Repeater {
+        return Err(RedstonePropagationError::UnsupportedComponent {
+            position,
+            kind: block.kind,
+            reason: "repeater state evaluator received a non-repeater target".to_owned(),
+        });
+    }
+    block
+        .powered
+        .or_else(|| observed_bool_property(block, "powered"))
+        .or_else(|| block.observed_name.is_none().then_some(false))
+        .ok_or_else(|| RedstonePropagationError::UnknownState {
+            position,
+            kind: block.kind,
+            reason: "repeater powered state is missing".to_owned(),
+        })
+}
+
+/// Resolves a repeater's configured delay to game ticks. Java's repeater delay
+/// is expressed in redstone ticks, while this engine's scheduler clock is in
+/// game ticks; the bounded model uses the exact 2:1 conversion.
+pub(crate) fn redstone_repeater_delay_game_ticks(
+    world: &World,
+    position: Pos,
+) -> Result<u64, RedstonePropagationError> {
+    let block = world
+        .get(position)
+        .ok_or_else(|| RedstonePropagationError::UnknownState {
+            position,
+            kind: BlockKind::Repeater,
+            reason: "repeater block is missing".to_owned(),
+        })?;
+    if block.kind != BlockKind::Repeater {
+        return Err(RedstonePropagationError::UnsupportedComponent {
+            position,
+            kind: block.kind,
+            reason: "repeater delay evaluator received a non-repeater target".to_owned(),
+        });
+    }
+    let delay = block
+        .delay
+        .or_else(|| observed_u8_property(block, "delay"))
+        .or_else(|| block.observed_name.is_none().then_some(1))
+        .ok_or_else(|| RedstonePropagationError::UnknownState {
+            position,
+            kind: block.kind,
+            reason: "repeater delay is missing".to_owned(),
+        })?;
+    if !(1..=4).contains(&delay) {
+        return Err(RedstonePropagationError::InvalidRepeaterDelay { position, delay });
+    }
+    Ok(u64::from(delay) * 2)
+}
+
+/// Builds the signal-only state transition applied when a repeater's delayed
+/// tick is still current. Input revalidation happens in the event runner;
+/// this helper only constructs the atomic before/after delta.
+pub(crate) fn redstone_repeater_delta(
+    world: &World,
+    position: Pos,
+    expected_powered: bool,
+    known_region: Option<Region>,
+) -> Result<Option<WorldDelta>, RedstonePropagationError> {
+    let block = world
+        .get(position)
+        .ok_or_else(|| RedstonePropagationError::UnknownState {
+            position,
+            kind: BlockKind::Repeater,
+            reason: "repeater block is missing".to_owned(),
+        })?;
+    if block.kind != BlockKind::Repeater {
+        return Err(RedstonePropagationError::UnsupportedComponent {
+            position,
+            kind: block.kind,
+            reason: "repeater delta received a non-repeater target".to_owned(),
+        });
+    }
+    let _ = redstone_repeater_output_position(world, position, known_region)?;
+    let _ = repeater_facing(block, position)?;
+    let current = redstone_repeater_powered(world, position)?;
+    if current == expected_powered {
+        return Ok(None);
+    }
+    let mut after = block.clone();
+    after.powered = Some(expected_powered);
+    if after.observed_name.is_some() {
+        after
+            .observed_properties
+            .insert("powered".to_owned(), expected_powered.to_string());
+    }
+    Ok(Some(repeater_signal_delta(
+        world,
+        position,
+        block.clone(),
+        after,
+    )))
+}
+
+fn repeater_facing(block: &Block, position: Pos) -> Result<Facing, RedstonePropagationError> {
+    let facing = block
+        .facing
+        .ok_or_else(|| RedstonePropagationError::UnknownState {
+            position,
+            kind: block.kind,
+            reason: "repeater facing is missing".to_owned(),
+        })?;
+    if facing.horizontal_offset().is_none() {
+        return Err(RedstonePropagationError::UnsupportedComponent {
+            position,
+            kind: block.kind,
+            reason: "only horizontal repeater directions are supported".to_owned(),
+        });
+    }
+    Ok(facing)
+}
+
 fn signal_delta(world: &World, position: Pos, before: Block, after: Block) -> WorldDelta {
     WorldDelta {
         parent_shape: world.shape_id(),
@@ -237,6 +458,21 @@ fn signal_delta(world: &World, position: Pos, before: Block, after: Block) -> Wo
         moves: Vec::new(),
         dirty_region: RegionSet::around_positions([position], 1),
         cause: DeltaCause::NeighborUpdate,
+    }
+}
+
+fn repeater_signal_delta(world: &World, position: Pos, before: Block, after: Block) -> WorldDelta {
+    WorldDelta {
+        parent_shape: world.shape_id(),
+        changes: vec![BlockChange {
+            position,
+            before,
+            after,
+            reason: ChangeReason::RepeaterState { repeater: position },
+        }],
+        moves: Vec::new(),
+        dirty_region: RegionSet::around_positions([position], 1),
+        cause: DeltaCause::RepeaterTick { repeater: position },
     }
 }
 
@@ -268,7 +504,7 @@ fn received_signal(
                 wire_level(source, source_position)?.saturating_sub(1)
             }
         } else {
-            source_signal(source, source_position)?
+            source_signal_toward(source, source_position, facing.opposite())?
         };
         signal = signal.max(candidate);
     }
@@ -293,8 +529,9 @@ fn source_signal(block: &Block, position: Pos) -> Result<u8, RedstonePropagation
             .or_else(|| observed_bool_property(block, "powered"))
             .or_else(|| block.observed_name.is_none().then_some(false))
             .map(|powered| u8::from(powered) * 15),
-        // These components can be observed as already powered, but their
-        // upstream timing/calculation is intentionally a later goal.
+        // These components can be observed as already powered. Repeater
+        // timing is handled by the bounded runner; comparator/observer source
+        // calculation remains a later goal.
         BlockKind::Repeater | BlockKind::Comparator | BlockKind::Observer => block
             .power_level
             .or_else(|| {
@@ -311,6 +548,33 @@ fn source_signal(block: &Block, position: Pos) -> Result<u8, RedstonePropagation
         kind: block.kind,
         reason: "source power state is missing".to_owned(),
     })
+}
+
+fn source_signal_toward(
+    block: &Block,
+    position: Pos,
+    toward: Facing,
+) -> Result<u8, RedstonePropagationError> {
+    if matches!(
+        block.kind,
+        BlockKind::Repeater | BlockKind::Comparator | BlockKind::Observer
+    ) {
+        let facing = match block.facing {
+            Some(facing) => facing,
+            None if block.observed_name.is_some() => {
+                return Err(RedstonePropagationError::UnknownState {
+                    position,
+                    kind: block.kind,
+                    reason: "observed directional source has no facing".to_owned(),
+                });
+            }
+            None => return Ok(0),
+        };
+        if facing != toward {
+            return Ok(0);
+        }
+    }
+    source_signal(block, position)
 }
 
 fn wire_level(block: &Block, position: Pos) -> Result<u8, RedstonePropagationError> {

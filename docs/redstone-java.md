@@ -1,9 +1,10 @@
 はい。まずは **Java Edition の高精度レッドストーン回路シミュレータ向け**に、実装仕様表として切ります。
 
 現在の実行可能な伝播境界は、`PhysicsEngine::schedule_world_change` または
-`schedule_redstone_input` から始まる、水平6近傍更新・Wire信号再計算・Lamp/Piston反応の
-固定点MVPです。Repeater、Comparator、Observerの上流伝播やQC/BUDは、下表の仕様候補であり、
-まだこの実行境界には含めません。
+`schedule_redstone_input` から始まる、水平6近傍更新・Wire信号再計算・Lamp/Piston反応に、
+単一の水平Repeater（背面入力→前面出力、1–4 redstone tick遅延）を加えた固定点MVPです。
+Repeaterの側面lock、Comparator/Observerの上流伝播、QC/BUDは、下表の仕様候補であり、まだ
+この実行境界には含めません。
 
 重要なのは、「入力→出力」だけではなく **何を契機に再評価されるか／どのイベントキューに乗るか／同tick内の順序を保存する必要があるか** です。QCはJava版固有で、piston・dropper・dispenserが対象です。また「論理上poweredだがupdateを受けていないため未作動」という状態が実在します。([Minecraft Wiki][1])
 
@@ -13,7 +14,7 @@
 | ---------------------------- | -------------------------- | ---------------------------------- | --------------- | ------------------------ | ----------------------------------------------- | ------ |
 | **Redstone Dust**            | 周囲から signal 0–15           | `power :: 0..15`, 接続shape          | 基本即時            | 周辺block update / power変化 | 単純BFS禁止。**update order** が回路結果に影響               | **S**  |
 | **Solid / Conductive Block** | strong/weak power          | block自体に永続signal stateを持つというより照会対象 | 即時              | 周囲へのactivation条件         | `strongPower` / `weakPower` を分離                 | **S**  |
-| **Repeater**                 | 背面入力、側面lock                | powered / delay / locked / facing  | 1–4 RS ticks    | scheduled tick、前方power   | 入力変化時に即出力を書換えない                                 | **S**  |
+| **Repeater**                 | 背面入力、側面lock                | powered / delay / locked / facing  | 1–4 RS ticks    | scheduled tick、前方power   | 基本経路は実装済み。側面lockは未対応                         | **S**  |
 | **Comparator**               | rear、side、container signal | mode / powered / outputLevel       | scheduled       | 前方power/update           | analog 0–15必須。repeaterとはtick priority差があるケース    | **S**  |
 | **Torch**                    | attached blockのpower       | lit/unlit、burnout履歴                | tick依存          | 周辺power/update           | burnoutには**時系列履歴**が必要                           | A      |
 | **Observer**                 | 観測面のblock-state変化          | powered                            | pulse           | scheduled pulse/update   | redstone powerでなく **block state transition**を見る | **S**  |

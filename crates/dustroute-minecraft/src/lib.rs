@@ -23,7 +23,9 @@ pub use blocks::{
 
 pub(crate) use blocks::{
     direct_piston_neighbors, external_world_delta, piston_input_powered_in_region,
-    redstone_input_delta, redstone_lamp_delta, redstone_position_known, redstone_update_positions,
+    redstone_input_delta, redstone_lamp_delta, redstone_position_known,
+    redstone_repeater_delay_game_ticks, redstone_repeater_delta, redstone_repeater_input_powered,
+    redstone_repeater_output_position, redstone_repeater_powered, redstone_update_positions,
     redstone_wire_delta,
 };
 pub use world::{

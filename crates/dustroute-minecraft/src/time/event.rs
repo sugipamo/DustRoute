@@ -68,6 +68,12 @@ pub enum PhysicsEventKind {
         source: Pos,
     },
     ScheduledBlockTick,
+    /// A repeater's delayed state update. The expected input is captured when
+    /// the tick is scheduled so a later input edge can invalidate a stale
+    /// event instead of applying an obsolete pulse.
+    RepeaterTick {
+        expected_powered: bool,
+    },
     BlockEvent {
         event: BlockEventKind,
     },
@@ -94,6 +100,7 @@ impl PhysicsEventKind {
             Self::RedstoneInput { .. } => PhysicsEventPhase::External,
             Self::NeighborUpdate { .. } => PhysicsEventPhase::NeighborUpdate,
             Self::ScheduledBlockTick => PhysicsEventPhase::ScheduledTick,
+            Self::RepeaterTick { .. } => PhysicsEventPhase::ScheduledTick,
             Self::BlockEvent { .. } => PhysicsEventPhase::BlockEvent,
             Self::PistonComplete { .. } => PhysicsEventPhase::BlockEntity,
             Self::UserAction { .. } => PhysicsEventPhase::External,

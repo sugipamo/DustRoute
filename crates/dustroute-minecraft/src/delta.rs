@@ -201,6 +201,9 @@ pub enum ChangeReason {
     },
     ExternalInput,
     NeighborUpdate,
+    RepeaterState {
+        repeater: crate::Pos,
+    },
 }
 
 /// Mechanical cause of a shape transition.  Event IDs remain in the time
@@ -219,6 +222,9 @@ pub enum DeltaCause {
     },
     External,
     NeighborUpdate,
+    RepeaterTick {
+        repeater: crate::Pos,
+    },
 }
 
 /// One coordinate's expected before/after state.  Air is represented by
