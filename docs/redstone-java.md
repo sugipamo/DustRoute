@@ -2,7 +2,10 @@
 
 現在の実行可能な伝播境界は、`PhysicsEngine::schedule_world_change` または
 `schedule_redstone_input` から始まる、水平6近傍更新・Wire信号再計算・Lamp/Piston反応に、
-単一の水平Repeater（背面入力→前面出力、1–4 redstone tick遅延）を加えた固定点MVPです。
+既存のwire形状とblock traitに基づく限定的な上下Wire rise/fall、さらに単一の水平Repeater
+（背面入力→前面出力、1–4 redstone tick遅延）を加えた固定点MVPです。
+上下接続では、変更Wireから既存の斜めoffset-neighbor Wireへも更新を伝播します。
+完全なVanilla wire topologyを実装したものではありません。
 Repeaterの側面lock、Comparator/Observerの上流伝播、QC/BUDは、下表の仕様候補であり、まだ
 この実行境界には含めません。
 

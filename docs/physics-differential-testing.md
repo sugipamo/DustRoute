@@ -85,16 +85,20 @@ only and never mutate scheduler or delay profiles.
 The current world-driven redstone boundary is intentionally narrower than a
 full server capture. `PhysicsEngine::schedule_world_change` records an
 explicit external block mutation, and `run_redstone_propagation` propagates
-the six-neighbor steady-state subset for horizontal wire levels and lamp state
-before handing a powered wire to the existing piston runner. It also models a
-single horizontal Repeater rear-input/front-output path: a neighbor update
+the six-neighbor steady-state subset for horizontal wire levels and lamp state,
+with a bounded vertical wire rise/fall path over the imported wire-shape and
+block-trait metadata, before handing a powered wire to the existing piston
+runner. Changed wires enqueue existing diagonal offset-neighbor wires so the
+path can reach a fixed point without claiming complete Vanilla topology. It
+also models a single horizontal Repeater rear-input/front-output path: a neighbor update
 queues a 1..=4 redstone-tick delayed `RepeaterTick`, measured as two game ticks
 per redstone tick, and the tick revalidates the current input before changing
 the output. The wire queue is iterated to a fixed point, with the engine's
 microstep budget acting as the termination guard. This path is suitable for
-regressions such as `Lever -> Wire -> Repeater -> Wire -> Lamp/Piston`; it must
-not be used as evidence for repeater locking, comparator/observer timing,
-quasi-connectivity, BUD, or Vanilla's complete neighbor-update order.
+regressions such as `Lever -> Wire -> Repeater -> Wire -> Lamp/Piston` and
+three-branch vertical wire feeds; it must not be used as evidence for full wire
+topology, repeater locking, comparator/observer timing, quasi-connectivity,
+BUD, or Vanilla's complete neighbor-update order.
 Incomplete observed regions and missing signal/connection properties remain
 failed/unavailable rather than being normalized to an unpowered circuit.
 

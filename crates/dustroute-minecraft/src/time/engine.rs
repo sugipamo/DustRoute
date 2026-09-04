@@ -19,7 +19,7 @@ use crate::{
     redstone_input_delta, redstone_lamp_delta, redstone_position_known,
     redstone_repeater_delay_game_ticks, redstone_repeater_delta, redstone_repeater_input_powered,
     redstone_repeater_output_position, redstone_repeater_powered, redstone_update_positions,
-    redstone_wire_delta,
+    redstone_wire_delta, redstone_wire_update_positions,
 };
 
 /// Default guard for zero-delay event chains. This is deliberately separate
@@ -1093,8 +1093,9 @@ impl PhysicsEngine {
 
     /// Runs the bounded world-driven redstone subset. External World changes
     /// and typed source edges are propagated through local wire/lamp
-    /// reevaluation until no more neighbor updates are queued; piston block
-    /// events then reuse the existing moving/stable state machine.
+    /// reevaluation (including the bounded vertical wire offset-neighbors)
+    /// until no more neighbor updates are queued; piston block events then
+    /// reuse the existing moving/stable state machine.
     ///
     /// The runner models one bounded repeater path (horizontal rear input,
     /// front output, and 1..=4 redstone-tick delay) alongside the existing
@@ -1249,7 +1250,8 @@ impl PhysicsEngine {
                             let queued = delta
                                 .as_ref()
                                 .map(|_| {
-                                    queue_redstone_neighbors_in_phase(
+                                    queue_redstone_wire_neighbors_in_phase(
+                                        world,
                                         event.target,
                                         false,
                                         event.time.phase,
@@ -1480,6 +1482,29 @@ fn queue_redstone_neighbors(source: Pos, include_self: bool) -> Vec<QueuedEvent>
     queue_redstone_neighbors_in_phase(source, include_self, PhysicsEventPhase::NeighborUpdate)
 }
 
+fn queue_redstone_wire_neighbors_in_phase(
+    world: &World,
+    source: Pos,
+    include_self: bool,
+    phase: PhysicsEventPhase,
+) -> Vec<QueuedEvent> {
+    let direct = redstone_update_positions(source, include_self)
+        .into_iter()
+        .collect::<BTreeSet<_>>();
+    redstone_wire_update_positions(source, include_self)
+        .into_iter()
+        .filter(|target| {
+            direct.contains(target) || world.kind_at(*target) == BlockKind::RedstoneWire
+        })
+        .map(|target| QueuedEvent {
+            delay_ticks: 0,
+            target,
+            phase,
+            kind: PhysicsEventKind::NeighborUpdate { source },
+        })
+        .collect()
+}
+
 fn queue_redstone_neighbors_in_phase(
     source: Pos,
     include_self: bool,
@@ -1506,18 +1531,20 @@ fn preflight_redstone_targets(
         match world.kind_at(*position) {
             BlockKind::RedstoneWire => {
                 let _ = redstone_wire_delta(world, *position, known_region)?;
-                // A changed wire can be the rear input of an adjacent
-                // repeater. Validate that delayed boundary before accepting
-                // the upstream delta, so malformed repeater observations do
-                // not leave a partially propagated source edge behind.
-                for neighbor in redstone_update_positions(*position, false) {
-                    if world.kind_at(neighbor) == BlockKind::Repeater {
-                        let _ = redstone_repeater_input_powered(world, neighbor, known_region)?;
-                        let _ = redstone_repeater_powered(world, neighbor)?;
-                        let _ = redstone_repeater_delay_game_ticks(world, neighbor)?;
-                        let output =
-                            redstone_repeater_output_position(world, neighbor, known_region)?;
-                        redstone_position_known(known_region, output)?;
+                // A changed wire can reach an adjacent wire through either a
+                // direct or bounded vertical offset-neighbor relation. Validate
+                // those existing targets before accepting the upstream delta,
+                // so malformed observed shapes remain fail-closed rather than
+                // leaving a partially propagated source edge behind.
+                for neighbor in redstone_wire_update_positions(*position, false) {
+                    match world.kind_at(neighbor) {
+                        BlockKind::RedstoneWire => {
+                            let _ = redstone_wire_delta(world, neighbor, known_region)?;
+                        }
+                        BlockKind::Repeater => {
+                            preflight_repeater_target(world, known_region, neighbor)?;
+                        }
+                        _ => {}
                     }
                 }
             }
@@ -1528,15 +1555,24 @@ fn preflight_redstone_targets(
                 let _ = piston_input_powered_in_region(world, known_region, *position)?;
             }
             BlockKind::Repeater => {
-                let _ = redstone_repeater_input_powered(world, *position, known_region)?;
-                let _ = redstone_repeater_powered(world, *position)?;
-                let _ = redstone_repeater_delay_game_ticks(world, *position)?;
-                let output = redstone_repeater_output_position(world, *position, known_region)?;
-                redstone_position_known(known_region, output)?;
+                preflight_repeater_target(world, known_region, *position)?;
             }
             _ => {}
         }
     }
+    Ok(())
+}
+
+fn preflight_repeater_target(
+    world: &World,
+    known_region: Option<Region>,
+    position: Pos,
+) -> Result<(), PhysicsEngineError> {
+    let _ = redstone_repeater_input_powered(world, position, known_region)?;
+    let _ = redstone_repeater_powered(world, position)?;
+    let _ = redstone_repeater_delay_game_ticks(world, position)?;
+    let output = redstone_repeater_output_position(world, position, known_region)?;
+    redstone_position_known(known_region, output)?;
     Ok(())
 }
 
@@ -1614,6 +1650,36 @@ mod tests {
             input_wire_pos,
             repeater_pos,
             output_wire_pos,
+            known_region,
+        )
+    }
+
+    fn vertical_wire_branch_world() -> (World, Pos, [Pos; 3], [Pos; 3], Region) {
+        let source_pos = Pos::new(0, 1, 0);
+        let lower_positions = [Pos::new(1, 1, -1), Pos::new(1, 1, 0), Pos::new(1, 1, 1)];
+        let upper_positions = [Pos::new(2, 2, -1), Pos::new(2, 2, 0), Pos::new(2, 2, 1)];
+        let lamp_positions = [Pos::new(3, 2, -1), Pos::new(3, 2, 0), Pos::new(3, 2, 1)];
+        let mut world = World::new();
+        let mut source = Block::new(BlockKind::Lever);
+        source.powered = Some(false);
+        world.set(source_pos, source);
+        for z in -1..=1 {
+            world.set(Pos::new(1, 0, z), Block::new(BlockKind::Solid));
+            world.set(Pos::new(2, 1, z), Block::new(BlockKind::Solid));
+        }
+        for position in lower_positions {
+            world.set(position, Block::new(BlockKind::RedstoneWire));
+        }
+        for (position, lamp) in upper_positions.into_iter().zip(lamp_positions) {
+            world.set(position, Block::new(BlockKind::RedstoneWire));
+            world.set(lamp, Block::new(BlockKind::RedstoneLamp));
+        }
+        let known_region = Region::new(Pos::new(-1, 0, -2), Pos::new(4, 3, 2));
+        (
+            world,
+            source_pos,
+            lower_positions,
+            upper_positions,
             known_region,
         )
     }
@@ -2724,6 +2790,138 @@ mod tests {
             engine.world().get(lamp_pos).and_then(|block| block.powered),
             Some(false)
         );
+    }
+
+    #[test]
+    fn world_driven_vertical_wire_branches_reach_three_lamps() {
+        let (world, source_pos, lower_positions, upper_positions, known_region) =
+            vertical_wire_branch_world();
+        let lamp_positions = [Pos::new(3, 2, -1), Pos::new(3, 2, 0), Pos::new(3, 2, 1)];
+        let mut engine = PhysicsEngine::new(world, 1024).with_piston_planning_region(known_region);
+        let mut on = Block::new(BlockKind::Lever);
+        on.powered = Some(true);
+        engine.schedule_world_change(0, source_pos, on);
+        engine.run_redstone_propagation().unwrap();
+
+        assert_eq!(
+            lower_positions
+                .iter()
+                .map(|position| engine.world().get(*position).unwrap().power_level)
+                .collect::<Vec<_>>(),
+            [Some(14), Some(15), Some(14)]
+        );
+        assert_eq!(
+            upper_positions
+                .iter()
+                .map(|position| engine.world().get(*position).unwrap().power_level)
+                .collect::<Vec<_>>(),
+            [Some(13), Some(14), Some(13)]
+        );
+        assert!(lamp_positions.iter().all(|position| {
+            engine
+                .world()
+                .get(*position)
+                .and_then(|block| block.powered)
+                == Some(true)
+        }));
+        assert!(engine.event_trace().records.iter().any(|record| {
+            matches!(record.event.kind, PhysicsEventKind::NeighborUpdate { .. })
+                && record.event.target == upper_positions[1]
+        }));
+
+        let mut off = Block::new(BlockKind::Lever);
+        off.powered = Some(false);
+        engine.schedule_world_change(engine.time().game_tick + 1, source_pos, off);
+        engine.run_redstone_propagation().unwrap();
+        assert!(lower_positions.iter().all(|position| {
+            engine
+                .world()
+                .get(*position)
+                .and_then(|block| block.power_level)
+                == Some(0)
+        }));
+        assert!(upper_positions.iter().all(|position| {
+            engine
+                .world()
+                .get(*position)
+                .and_then(|block| block.power_level)
+                == Some(0)
+        }));
+        assert!(lamp_positions.iter().all(|position| {
+            engine
+                .world()
+                .get(*position)
+                .and_then(|block| block.powered)
+                == Some(false)
+        }));
+        assert!(engine.trace_status().is_complete());
+    }
+
+    #[test]
+    fn vertical_wire_propagation_is_deterministic() {
+        let (world_a, source_a, _lower_a, _upper_a, known_a) = vertical_wire_branch_world();
+        let (world_b, source_b, _lower_b, _upper_b, known_b) = vertical_wire_branch_world();
+        let mut first = PhysicsEngine::new(world_a, 1024).with_piston_planning_region(known_a);
+        let mut second = PhysicsEngine::new(world_b, 1024).with_piston_planning_region(known_b);
+        let mut on = Block::new(BlockKind::Lever);
+        on.powered = Some(true);
+        first.schedule_world_change(0, source_a, on.clone());
+        second.schedule_world_change(0, source_b, on);
+        first.run_redstone_propagation().unwrap();
+        second.run_redstone_propagation().unwrap();
+        assert_eq!(first.world(), second.world());
+        assert_eq!(first.event_trace(), second.event_trace());
+        assert_eq!(first.transition_trace(), second.transition_trace());
+    }
+
+    #[test]
+    fn vertical_wire_propagation_fails_closed_outside_observed_region() {
+        let (world, source_pos, _lower_positions, _upper_positions, _) =
+            vertical_wire_branch_world();
+        let before = world.clone();
+        let known_region = Region::new(Pos::new(-1, 0, -2), Pos::new(1, 3, 2));
+        let mut engine = PhysicsEngine::new(world, 256).with_piston_planning_region(known_region);
+        let mut on = Block::new(BlockKind::Lever);
+        on.powered = Some(true);
+        let event_id = engine.schedule_world_change(0, source_pos, on);
+        let error = engine.run_redstone_propagation().unwrap_err();
+
+        assert!(matches!(
+            error,
+            PhysicsEngineError::Redstone(error)
+                if matches!(error.as_ref(), RedstonePropagationError::UnknownState { .. })
+        ));
+        assert_eq!(engine.world(), &before);
+        assert_eq!(engine.pending_event_count(), 1);
+        assert_eq!(engine.queue.peek().map(|event| event.id), Some(event_id));
+        assert!(engine.trace_status().is_failed());
+    }
+
+    #[test]
+    fn vertical_wire_propagation_rejects_an_observed_diagonal_without_shape() {
+        let (mut world, source_pos, _lower_positions, upper_positions, known_region) =
+            vertical_wire_branch_world();
+        let upper = world.get_mut(upper_positions[1]).unwrap();
+        upper.observed_name = Some("minecraft:redstone_wire".to_owned());
+        upper.observation_classification = crate::ObservationClassification::Exact;
+        upper.power_level = Some(0);
+        let before = world.clone();
+        let mut engine = PhysicsEngine::new(world, 256).with_piston_planning_region(known_region);
+        let mut on = Block::new(BlockKind::Lever);
+        on.powered = Some(true);
+        let event_id = engine.schedule_world_change(0, source_pos, on);
+        let error = engine.run_redstone_propagation().unwrap_err();
+
+        assert!(matches!(
+            error,
+            PhysicsEngineError::Redstone(error)
+                if matches!(error.as_ref(), RedstonePropagationError::UnknownState {
+                    position, ..
+                } if *position == upper_positions[1])
+        ));
+        assert_eq!(engine.world(), &before);
+        assert_eq!(engine.pending_event_count(), 1);
+        assert_eq!(engine.queue.peek().map(|event| event.id), Some(event_id));
     }
 
     #[test]

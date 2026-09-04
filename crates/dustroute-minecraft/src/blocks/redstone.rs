@@ -95,6 +95,23 @@ pub(crate) fn redstone_update_positions(position: Pos, include_self: bool) -> Ve
     positions.into_iter().collect()
 }
 
+/// Returns the bounded wire neighborhood used by the world-driven solver.
+///
+/// A rising or falling dust connection is offset both horizontally and
+/// vertically, so it is not one of the six direct block neighbors.  Keeping
+/// this helper separate from [`redstone_update_positions`] preserves the
+/// legacy direct-neighbor contract while making the extra causal edges
+/// explicit for wire propagation.
+pub(crate) fn redstone_wire_update_positions(position: Pos, include_self: bool) -> Vec<Pos> {
+    let mut positions = BTreeSet::from_iter(redstone_update_positions(position, include_self));
+    for facing in HORIZONTAL_FACINGS {
+        let offset = facing.offset();
+        positions.insert(position.offset(offset.x, 1, offset.z));
+        positions.insert(position.offset(offset.x, -1, offset.z));
+    }
+    positions.into_iter().collect()
+}
+
 /// Validates that a propagation lookup is inside the caller's complete
 /// observation boundary. A missing block is Air only after this check has
 /// succeeded; coordinates outside the boundary remain unknown.
@@ -136,9 +153,11 @@ pub(crate) fn external_world_delta(
 }
 
 /// Recomputes one wire's steady-state power from adjacent supported sources
-/// and wires.  Wire power is the maximum adjacent input, with one level lost
-/// when the input is another wire.  The event runner repeatedly applies these
-/// local deltas until the queue reaches a fixed point.
+/// and wires. Wire power is the maximum adjacent input, with one level lost
+/// when the input is another wire. The bounded vertical rise/fall relation is
+/// evaluated from the same local wire-shape and block-trait metadata. The
+/// event runner repeatedly applies these local deltas until the queue reaches
+/// a fixed point.
 pub(crate) fn redstone_wire_delta(
     world: &World,
     position: Pos,
@@ -162,22 +181,54 @@ pub(crate) fn redstone_wire_delta(
         let offset = facing.offset();
         let source_position = position.offset(offset.x, offset.y, offset.z);
         ensure_known(known_region, source_position, BlockKind::Air)?;
-        let Some(source) = world.get(source_position) else {
-            continue;
-        };
-        if !wire_connects(block, position, facing)? {
-            continue;
-        }
-        let signal = if source.kind == BlockKind::RedstoneWire {
-            if !wire_connects(source, source_position, facing.opposite())? {
-                0
-            } else {
-                wire_level(source, source_position)?.saturating_sub(1)
+        if wire_connects(block, position, facing)? {
+            if let Some(source) = world.get(source_position) {
+                let signal = if source.kind == BlockKind::RedstoneWire {
+                    if !wire_connects(source, source_position, facing.opposite())? {
+                        0
+                    } else {
+                        wire_level(source, source_position)?.saturating_sub(1)
+                    }
+                } else {
+                    source_signal_toward(source, source_position, facing.opposite())?
+                };
+                expected = expected.max(signal);
             }
-        } else {
-            source_signal_toward(source, source_position, facing.opposite())?
-        };
-        expected = expected.max(signal);
+        }
+
+        // A wire rise/fall is a diagonal offset-neighbor relation.  The
+        // horizontal arm itself is represented by the support block's
+        // versioned redstone traits; only the bounded geometry captured by
+        // `vertical_wire_transfer` is evaluated here.
+        let lower_source = position.offset(-offset.x, -1, -offset.z);
+        if vertical_wire_transfer(
+            world,
+            lower_source,
+            position,
+            facing,
+            VerticalDustTransfer::Rise,
+            known_region,
+        )? {
+            let source = world
+                .get(lower_source)
+                .expect("vertical transfer validated a wire source");
+            expected = expected.max(wire_level(source, lower_source)?.saturating_sub(1));
+        }
+
+        let upper_source = position.offset(-offset.x, 1, -offset.z);
+        if vertical_wire_transfer(
+            world,
+            upper_source,
+            position,
+            facing,
+            VerticalDustTransfer::FallThroughConductor,
+            known_region,
+        )? {
+            let source = world
+                .get(upper_source)
+                .expect("vertical transfer validated a wire source");
+            expected = expected.max(wire_level(source, upper_source)?.saturating_sub(1));
+        }
     }
 
     if current == expected {
@@ -607,6 +658,190 @@ fn wire_connects(
     }
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum VerticalDustTransfer {
+    Rise,
+    FallThroughConductor,
+}
+
+/// Resolves a wire arm while retaining the shape information needed by the
+/// bounded vertical dust rules.  Observed wires must carry an explicit shape;
+/// synthetic wires may use the conservative local inference shared with the
+/// translation layer.
+fn resolved_wire_connection(
+    world: &World,
+    position: Pos,
+    toward: Facing,
+    known_region: Option<Region>,
+) -> Result<WireConnection, RedstonePropagationError> {
+    ensure_known(known_region, position, BlockKind::RedstoneWire)?;
+    let Some(block) = world.get(position) else {
+        return Ok(WireConnection::None);
+    };
+    if block.kind != BlockKind::RedstoneWire {
+        return Ok(WireConnection::None);
+    }
+    if let Some(connections) = &block.wire_connections {
+        return Ok(connections
+            .get(&toward)
+            .copied()
+            .unwrap_or(WireConnection::None));
+    }
+    if block.observed_name.is_some() {
+        return Err(RedstonePropagationError::UnknownState {
+            position,
+            kind: block.kind,
+            reason: "observed wire connection shape is missing".to_owned(),
+        });
+    }
+    infer_synthetic_wire_connection(world, position, toward, known_region)
+}
+
+/// Conservative local shape inference for synthetic wires.  This is the
+/// same bounded side/rise/fall geometry used by the translate crate; it does
+/// not attempt full version-specific wire topology or update ordering.
+fn infer_synthetic_wire_connection(
+    world: &World,
+    position: Pos,
+    toward: Facing,
+    known_region: Option<Region>,
+) -> Result<WireConnection, RedstonePropagationError> {
+    let Some(offset) = toward.horizontal_offset() else {
+        return Ok(WireConnection::None);
+    };
+    let side = position.offset(offset.x, 0, offset.z);
+    ensure_known(known_region, side, BlockKind::Air)?;
+    if world.kind_at(side) == BlockKind::RedstoneWire || component_connects(world, side, toward) {
+        return Ok(WireConnection::Side);
+    }
+
+    let side_above = side.offset(0, 1, 0);
+    ensure_known(known_region, side_above, BlockKind::Air)?;
+    let source_above = position.offset(0, 1, 0);
+    ensure_known(known_region, source_above, BlockKind::Air)?;
+    if let Some(rise_shape) = world
+        .get(side)
+        .and_then(|block| block.redstone_traits().wire_rise_connection)
+        .filter(|_| world.kind_at(side_above) == BlockKind::RedstoneWire)
+        .filter(|_| {
+            !world
+                .get(source_above)
+                .is_some_and(|block| block.redstone_traits().blocks_wire_rise_when_above)
+        })
+    {
+        return Ok(rise_shape);
+    }
+
+    let side_below = side.offset(0, -1, 0);
+    ensure_known(known_region, side_below, BlockKind::Air)?;
+    if world.kind_at(side) == BlockKind::Air && world.kind_at(side_below) == BlockKind::RedstoneWire
+    {
+        return Ok(WireConnection::Side);
+    }
+    Ok(WireConnection::None)
+}
+
+fn component_connects(world: &World, position: Pos, toward: Facing) -> bool {
+    let block = world.get(position);
+    match block.map(|block| block.kind) {
+        Some(
+            BlockKind::Lever
+            | BlockKind::Button
+            | BlockKind::PressurePlate
+            | BlockKind::RedstoneTorch
+            | BlockKind::RedstoneBlock,
+        ) => true,
+        Some(BlockKind::Observer) => block
+            .and_then(|block| block.facing)
+            .is_some_and(|facing| facing == toward.opposite()),
+        Some(BlockKind::Repeater | BlockKind::Comparator) => block
+            .and_then(|block| block.facing)
+            .is_some_and(|facing| facing == toward || facing == toward.opposite()),
+        _ => false,
+    }
+}
+
+/// Checks one diagonal dust relation.  The helper deliberately returns only
+/// a boolean: callers apply the ordinary one-level wire attenuation after the
+/// relation has been proven.  Every inspected coordinate is checked against
+/// the complete observed region before it is interpreted as Air.
+fn vertical_wire_transfer(
+    world: &World,
+    source: Pos,
+    sink: Pos,
+    facing: Facing,
+    transfer: VerticalDustTransfer,
+    known_region: Option<Region>,
+) -> Result<bool, RedstonePropagationError> {
+    ensure_known(known_region, source, BlockKind::RedstoneWire)?;
+    ensure_known(known_region, sink, BlockKind::RedstoneWire)?;
+    if world.kind_at(source) != BlockKind::RedstoneWire
+        || world.kind_at(sink) != BlockKind::RedstoneWire
+    {
+        return Ok(false);
+    }
+    let offset = facing
+        .horizontal_offset()
+        .expect("vertical dust transfer requires a horizontal facing");
+    let side = source.offset(offset.x, 0, offset.z);
+
+    match transfer {
+        VerticalDustTransfer::Rise => {
+            if sink != side.offset(0, 1, 0) {
+                return Ok(false);
+            }
+            ensure_known(known_region, side, BlockKind::Air)?;
+            ensure_known(known_region, side.offset(0, 1, 0), BlockKind::RedstoneWire)?;
+            ensure_known(known_region, source.offset(0, 1, 0), BlockKind::Air)?;
+            let expected = world
+                .get(side)
+                .and_then(|block| block.redstone_traits().wire_rise_connection);
+            if expected.is_none()
+                || expected
+                    != Some(resolved_wire_connection(
+                        world,
+                        source,
+                        facing,
+                        known_region,
+                    )?)
+            {
+                return Ok(false);
+            }
+            if world
+                .get(source.offset(0, 1, 0))
+                .is_some_and(|block| block.redstone_traits().blocks_wire_rise_when_above)
+            {
+                return Ok(false);
+            }
+            Ok(true)
+        }
+        VerticalDustTransfer::FallThroughConductor => {
+            if sink != side.offset(0, -1, 0) {
+                return Ok(false);
+            }
+            let source_below = source.offset(0, -1, 0);
+            ensure_known(known_region, source_below, BlockKind::Air)?;
+            ensure_known(known_region, side, BlockKind::Air)?;
+            ensure_known(known_region, side.offset(0, -1, 0), BlockKind::RedstoneWire)?;
+            let expected = world
+                .get(source_below)
+                .and_then(|block| block.redstone_traits().wire_rise_connection);
+            let lower_to_upper = expected.is_some()
+                && expected
+                    == Some(resolved_wire_connection(
+                        world,
+                        sink,
+                        facing.opposite(),
+                        known_region,
+                    )?);
+            let support_conducts = world
+                .get(source_below)
+                .is_some_and(|block| block.redstone_traits().strong_power_drives_dust);
+            Ok(lower_to_upper && support_conducts)
+        }
+    }
+}
+
 fn ensure_known(
     known_region: Option<Region>,
     position: Pos,
@@ -671,5 +906,40 @@ mod tests {
             .expect("first wire should power second wire");
         second.apply(&mut world).unwrap();
         assert_eq!(world.get(second_wire).unwrap().power_level, Some(14));
+    }
+
+    #[test]
+    fn synthetic_wire_supports_bounded_rise_and_fall_through_conductor() {
+        let lower = Pos::new(0, 1, 0);
+        let upper = Pos::new(1, 2, 0);
+        let mut world = World::new();
+        world.set(Pos::new(0, 0, 0), Block::new(BlockKind::Solid));
+        world.set(Pos::new(1, 1, 0), Block::new(BlockKind::Solid));
+        let mut lower_wire = Block::new(BlockKind::RedstoneWire);
+        lower_wire.power_level = Some(15);
+        world.set(lower, lower_wire);
+        world.set(upper, Block::new(BlockKind::RedstoneWire));
+
+        let rise = redstone_wire_delta(&world, upper, None)
+            .unwrap()
+            .expect("lower wire should power the rising wire");
+        rise.apply(&mut world).unwrap();
+        assert_eq!(world.get(upper).unwrap().power_level, Some(14));
+
+        world.get_mut(lower).unwrap().power_level = Some(0);
+        let fall = redstone_wire_delta(&world, lower, None)
+            .unwrap()
+            .expect("upper wire should power the lower wire through a conductor");
+        fall.apply(&mut world).unwrap();
+        assert_eq!(world.get(lower).unwrap().power_level, Some(13));
+    }
+
+    #[test]
+    fn wire_update_positions_include_vertical_offset_neighbors() {
+        let position = Pos::new(2, 3, 4);
+        let positions = redstone_wire_update_positions(position, false);
+        assert_eq!(positions.len(), 14);
+        assert!(positions.contains(&position.offset(1, 1, 0)));
+        assert!(positions.contains(&position.offset(-1, -1, 0)));
     }
 }
