@@ -172,6 +172,9 @@ cargo run -p dustroute-cli -- eval mux2 a=1 b=0 s=0
 cargo run -p dustroute-cli -- export half-adder target/half-adder.zip ro_half_rust
 cargo run -p dustroute-cli -- export-semantics target/semantics.zip ro_sem
 cargo run -p dustroute-cli -- analyze-snapshot snapshot.json
+cargo run -p dustroute-cli -- run-piston-door crates/dustroute-translate/tests/fixtures/3x3_piston_shuttle_fanout.json cycle
+# Use '-' to read JSON from stdin; --translate applies a layout offset.
+cat scenario.json | cargo run -p dustroute-cli -- run-piston-door - open --translate 37,11,29
 cargo run -p dustroute-mcp
 ```
 
@@ -219,6 +222,21 @@ status/details when evidence is incomplete or a budget is exceeded. Partial
 truth-table rows are discarded on any runtime limit. Responses classify the
 physical evidence as combinational, timing-sensitive, stateful, or unknown
 before a requested table is interpreted.
+
+## Scenario execution
+
+`run-piston-door` loads the versioned `PistonDoorScenario` contract and uses
+the same library executor as the integration tests. The mode defaults to
+`cycle` (`closed → open → closed`) and can be set to `open` for the first
+stable phase. The command emits one machine-readable JSON document containing
+the scenario identity, planning region, initial and final world states,
+`TransitionTrace`, `EventTrace`, and trace status. Invalid or unsupported
+layouts return structured `error.code`, `error.stage`, and `error.message`
+fields and a non-zero exit status. `--translate x,y,z` reuses the same
+scenario at another origin; it does not infer or optimize a new door layout.
+
+The current fanout is a designed serial `1 → 3 → 9` topology and does not
+claim complete Vanilla wiring or same-tick multi-piston completion semantics.
 Known functions such as AND, OR, XOR, NAND, and NOT are identified
 directly; other combinational outputs fall back to canonical sum-of-products.
 
