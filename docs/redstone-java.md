@@ -300,15 +300,39 @@ DustRouteの第1段階では、上表のうち通常の水平Extend/Retractを�
 読み取り専用で、適用時には親`ShapeId`と各座標のbefore状態を再検証する。
 複数ブロックの押し出しは座標ごとの最終差分へ畳み込む一方、移動関係と
 dirty regionは保持し、後続の差分トポロジー更新へ渡せるようにする。
-PhysicsEngine経由ではBlock Eventのtickに最終形状を即時適用せず、まず
-`Extending`/`Retracting`状態を記録し、モーションプロファイルの移動区間
-（初期値は2 game ticks）後に完了`WorldDelta`を適用する。Power/updateから
-Block Eventまでの初期遅延は0または1 game tickになり得るため、移動区間と
-分離して扱う。E2Eの`piston_motion_trace`は、固定1.21.11サーバー上でこの
-移動区間を測定し、入力から開始までの区間も別に記録する。これらは実機の
-全ケースを網羅するまでモデル値であり、MCPのReady判定には使わない。
-QC/BUD、slime/honey、moving piston head、Entity/Block Entity、0-tickは
-この契約に含めず、物理・MCPの判定は引き続きPreviewOnlyとする。
+`PhysicsEngine::schedule_redstone_input` と
+`run_redstone_piston_events` を使う場合は、直接隣接したlever、wire、
+repeater、comparator、observer、button、pressure plate、redstone torch、
+redstone blockなどの入力edgeを次の因果列へ投影する。
+
+```text
+RedstoneInput
+    ↓
+NeighborUpdate (直接隣接piston)
+    ↓
+PistonExtend / PistonRetract BlockEvent
+    ↓
+Extending / Retracting + MovingPiston
+    ↓
+PistonComplete + stable PistonHead
+```
+
+入力のpowered値は隣接更新時に四方向の直接入力を再集約するため、別の
+入力が残っている場合に誤って収縮しない。Block Eventの重複はイベント証拠
+として保持しつつ、既に移動中のpistonではno-opとして扱う。入力からBlock
+Eventまでの初期遅延はモデル化した0--1 game tickの範囲から上限値を選び、
+移動区間（初期値は2 game ticks）とは分離する。これは決定的な近似であり、
+自動で`SchedulerProfile`や`DelayProfile`を変更しない。
+
+ライブ観測では`with_piston_planning_region`で完全な静的観測境界を渡す。
+境界外の入力は適用前に、移動先の不足や方向情報が欠落したobserved source、
+未対応の入力は各段階で`unknown_space`/`unknown_input`/
+`unsupported_input`としてfail-closedにする。入力後に移動計画が拒否された
+場合も、既に受理した入力イベントまでをprefixとして保持し、pistonの動作は
+部分適用しない。明示的な`PistonAction` schedule APIも互換層として残る。
+QC/BUD、slime/honey、moving piston headの連続衝突、Entity、0-tick内部順序、
+上流redstone伝播はこの契約に含めず、物理・MCPの判定は引き続きPreviewOnly
+とする。
 
 PhysicsEngineのイベントキューは `game_tick`、粗い `phase`、phase内の
 `sub_tick_order` を分離して保持する。同tickの遅延0イベントが既に処理済み

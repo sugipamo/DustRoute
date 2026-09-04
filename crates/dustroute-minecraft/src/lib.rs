@@ -16,8 +16,12 @@ pub use delta::{
 pub use blocks::{
     BlockBehaviorProfile, DEFAULT_PISTON_MOTION_PROFILE, PISTON_PUSH_LIMIT, PistonAction,
     PistonBlockMove, PistonError, PistonMotionProfile, PistonMotionProfileError, PistonPlan,
-    PistonPlanningContext, UpdateModel, behavior_profile, observed_name_is_immovable, piston_state,
-    piston_variant, plan_piston, plan_piston_in_region,
+    PistonPlanningContext, UpdateModel, behavior_profile, observed_name_is_immovable,
+    piston_input_connected, piston_state, piston_variant, plan_piston, plan_piston_in_region,
+};
+
+pub(crate) use blocks::{
+    direct_piston_neighbors, piston_input_powered_in_region, redstone_input_delta,
 };
 pub use world::{
     Block, BlockCapabilities, BlockKind, BlockProperties, BlockRedstoneTraits, CapabilityLevel,

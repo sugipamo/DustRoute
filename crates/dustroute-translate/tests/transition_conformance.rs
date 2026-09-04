@@ -271,17 +271,23 @@ fn piston_fixture_is_connected_to_engine_transition_trace() {
 
 #[test]
 fn piston_instrumentation_fixture_compares_typed_moving_and_stable_states() {
+    let input_pos = Pos::new(652, 104, 0);
     let piston_pos = Pos::new(653, 104, 0);
     let mut world = World::new();
+    let mut lever = Block::new(BlockKind::Lever);
+    lever.powered = Some(false);
+    world.set(input_pos, lever);
     let mut piston = Block::new(BlockKind::Piston);
     piston.facing = Some(Facing::East);
     world.set(piston_pos, piston);
     let mut stone = Block::new(BlockKind::Solid);
     stone.observed_name = Some("minecraft:stone".into());
     world.set(Pos::new(654, 104, 0), stone);
-    let mut engine = PhysicsEngine::new(world, 8);
-    engine.schedule_piston_action(1, piston_pos, PistonAction::Extend);
-    engine.run_piston_events().unwrap();
+    let known_region =
+        dustroute_minecraft::Region::new(Pos::new(651, 103, -1), Pos::new(655, 105, 1));
+    let mut engine = PhysicsEngine::new(world, 16).with_piston_planning_region(known_region);
+    engine.schedule_redstone_input(0, input_pos, true);
+    engine.run_redstone_piston_events().unwrap();
 
     let artifact = dustroute_translate::parse_and_validate_instrumentation(include_str!(
         "fixtures/vanilla_1_21_11_offline_piston_input.json"
@@ -290,8 +296,11 @@ fn piston_instrumentation_fixture_compares_typed_moving_and_stable_states() {
     let mut observed = dustroute_translate::normalize_vanilla_instrumentation_artifact(&artifact);
     observed
         .transitions
-        .retain(|transition| transition.position != Pos::new(652, 104, 0));
-    let modelled = normalize_transition_trace(engine.transition_trace(), 0);
+        .retain(|transition| transition.position != input_pos);
+    let mut modelled = normalize_transition_trace(engine.transition_trace(), 0);
+    modelled
+        .transitions
+        .retain(|transition| transition.position != input_pos);
     assert_eq!(observed.piston_states.len(), 3);
     assert_eq!(modelled.piston_states.len(), 3);
     let result = compare_transition_traces(&observed, &modelled);

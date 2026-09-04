@@ -179,6 +179,22 @@ in-memory restoration. `PhysicsEngine::execution_state_key()` is the
 history-independent comparison view; it includes pending event payload/order
 without treating trace-only IDs as physical state.
 
+The redstone-driven piston boundary is exposed separately through
+`schedule_redstone_input` and `run_redstone_piston_events`. It accepts one
+typed external source edge, applies only the supported direct source mutation,
+and emits a horizontal `NeighborUpdate` for each adjacent directionally
+connected piston. The neighbor phase re-queries all four direct inputs before
+queuing a `PistonExtend` or `PistonRetract` Block Event, so an unrelated
+powered input is not lost when another source turns off. This is intentionally
+not an upstream redstone solver: wire propagation, quasi-connectivity, BUD,
+observer pulse generation, and retrigger/reversal remain outside this runner.
+Duplicate Block Events are retained in `EventTrace`; an event that arrives
+after the piston has already entered the requested or moving state is a
+successful `NoTransition`, preserving evidence without applying the motion
+twice. A supplied `Region` is checked before a source edge is applied and
+again at piston planning; missing boundaries and unsupported observed source
+metadata stay explicit errors rather than inferred Air or unpowered state.
+
 `run_until_idle_checked` treats one event as the unit of failure isolation. If
 the handler rejects an event, a delta fails its before-state check, or an
 outcome violates the phase contract, the triggering event and its scheduler

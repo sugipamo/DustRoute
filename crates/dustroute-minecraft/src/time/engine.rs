@@ -14,7 +14,8 @@ use super::{
 use crate::{
     Block, BlockKind, ChangeReason, DEFAULT_PISTON_MOTION_PROFILE, PistonAction, PistonError,
     PistonMotionProfile, PistonMotionProfileError, Pos, Region, ShapeId, World, WorldDelta,
-    WorldDeltaError, plan_piston, plan_piston_in_region,
+    WorldDeltaError, direct_piston_neighbors, piston_input_powered_in_region, piston_state,
+    plan_piston, plan_piston_in_region, redstone_input_delta,
 };
 
 /// Default guard for zero-delay event chains. This is deliberately separate
@@ -487,9 +488,11 @@ impl PhysicsEngine {
         self.piston_motion_profile
     }
 
-    /// Overrides the completion profile for a controlled simulation or a
-    /// version-specific fixture. A zero movement interval is valid for future
-    /// same-tick experiments, but remains outside the formal piston subset.
+    /// Overrides the piston activation/completion profile for a controlled
+    /// simulation or a version-specific fixture. The direct redstone runner
+    /// uses `initial_delay_max_game_ticks` as its deterministic activation
+    /// delay. A zero movement interval is valid for future same-tick
+    /// experiments, but remains outside the formal piston subset.
     #[must_use]
     pub fn with_piston_motion_profile(mut self, profile: PistonMotionProfile) -> Self {
         self.piston_motion_profile = profile;
@@ -660,6 +663,24 @@ impl PhysicsEngine {
             PistonAction::Retract => BlockEventKind::PistonRetract,
         };
         self.schedule_external(game_tick, target, PhysicsEventKind::BlockEvent { event })
+    }
+
+    /// Schedules a typed external redstone input edge.  The redstone-driven
+    /// runner consumes this event, applies the source mutation, and emits
+    /// direct neighbor updates for adjacent pistons.  Callers do not need to
+    /// choose a piston action; the neighbor-update phase derives extend or
+    /// retract from the aggregate input state.
+    pub fn schedule_redstone_input(
+        &mut self,
+        game_tick: u64,
+        source: Pos,
+        powered: bool,
+    ) -> super::EventId {
+        self.schedule_external(
+            game_tick,
+            source,
+            PhysicsEventKind::RedstoneInput { powered },
+        )
     }
 
     pub fn run_until_idle(
@@ -1012,13 +1033,29 @@ impl PhysicsEngine {
         record
     }
 
-    /// Runs the queued built-in piston events. A piston Block Event first
-    /// records `Extending`/`Retracting` and queues a completion event after the
-    /// current motion profile. The completion applies the stable movement
-    /// delta atomically. Other event kinds are rejected without being lost;
-    /// callers that need mixed behavior should use `run_until_idle_checked`
-    /// with a handler for every event phase.
+    /// Runs queued piston Block Events. A piston Block Event first records
+    /// `Extending`/`Retracting` and queues a completion event after the current
+    /// motion profile. The completion applies the stable movement delta
+    /// atomically. Other event kinds are rejected without being lost; callers
+    /// that need mixed behavior should use `run_until_idle_checked` with a
+    /// handler for every event phase.
     pub fn run_piston_events(&mut self) -> Result<(), PhysicsEngineError> {
+        self.run_piston_events_with_inputs(false)
+    }
+
+    /// Runs a directly redstone-driven piston queue. A `RedstoneInput` event
+    /// mutates one supported source and emits horizontal `NeighborUpdate`
+    /// events. Each neighbor update queries all directly connected inputs and
+    /// schedules the required piston Block Event; the existing moving and
+    /// completion phases then perform the actual movement.
+    pub fn run_redstone_piston_events(&mut self) -> Result<(), PhysicsEngineError> {
+        self.run_piston_events_with_inputs(true)
+    }
+
+    fn run_piston_events_with_inputs(
+        &mut self,
+        redstone_inputs: bool,
+    ) -> Result<(), PhysicsEngineError> {
         if let Err(error) = self.piston_motion_profile.validate() {
             let error = PhysicsEngineError::from(error);
             self.mark_trace_failed(&error);
@@ -1028,12 +1065,19 @@ impl PhysicsEngine {
             .queue
             .iter()
             .find(|event| {
-                !matches!(
+                let piston_event = matches!(
                     event.kind,
                     PhysicsEventKind::BlockEvent {
                         event: BlockEventKind::PistonExtend | BlockEventKind::PistonRetract
                     } | PhysicsEventKind::PistonComplete { .. }
-                )
+                );
+                let redstone_input_event = redstone_inputs
+                    && matches!(
+                        event.kind,
+                        PhysicsEventKind::RedstoneInput { .. }
+                            | PhysicsEventKind::NeighborUpdate { .. }
+                    );
+                !(piston_event || redstone_input_event)
             })
             .cloned();
         if let Some(event) = unsupported_event {
@@ -1047,11 +1091,106 @@ impl PhysicsEngine {
         let movement_game_ticks = self
             .piston_motion_profile
             .stable_completion_delay_game_ticks();
+        // The activation interval is currently a modelled range. Selecting
+        // its upper bound gives a deterministic conservative path while
+        // retaining the range in the profile for later measured scheduling.
+        let activation_game_ticks = self.piston_motion_profile.initial_delay_max_game_ticks;
         let planning_region = self.piston_planning_region;
         self.run_until_idle_checked(move |event, world| match &event.kind {
+            PhysicsEventKind::RedstoneInput { powered } if redstone_inputs => {
+                let neighbors = direct_piston_neighbors(world, planning_region, event.target)?;
+                let delta = redstone_input_delta(world, event.target, *powered)?;
+                // Validate every affected piston against the post-edge source
+                // state before returning the outcome. An incomplete side must
+                // not leave a powered input mutation behind when its neighbor
+                // cannot be evaluated; querying the staged world also lets a
+                // previously absent observed `powered` property become known
+                // from this explicit external edge.
+                if let Some(delta) = &delta {
+                    let mut updated = world.clone();
+                    delta.apply(&mut updated)?;
+                    for piston in &neighbors {
+                        let _ = piston_input_powered_in_region(&updated, planning_region, *piston)?;
+                    }
+                } else {
+                    for piston in &neighbors {
+                        let _ = piston_input_powered_in_region(world, planning_region, *piston)?;
+                    }
+                }
+                let queued = if delta.is_some() {
+                    neighbors
+                        .into_iter()
+                        .map(|target| QueuedEvent {
+                            delay_ticks: 0,
+                            target,
+                            phase: PhysicsEventPhase::NeighborUpdate,
+                            kind: PhysicsEventKind::NeighborUpdate {
+                                source: event.target,
+                            },
+                        })
+                        .collect()
+                } else {
+                    Vec::new()
+                };
+                Ok(EventOutcome {
+                    changes: Vec::new(),
+                    delta,
+                    queued,
+                })
+            }
+            PhysicsEventKind::NeighborUpdate { .. } if redstone_inputs => {
+                let Some(piston) = world.get(event.target) else {
+                    return Ok(EventOutcome::default());
+                };
+                if piston.kind != BlockKind::Piston {
+                    return Ok(EventOutcome::default());
+                }
+                let powered = piston_input_powered_in_region(world, planning_region, event.target)?;
+                let action = match (piston_state(piston), powered) {
+                    (crate::PistonState::Retracted, true) => Some(PistonAction::Extend),
+                    (crate::PistonState::Extended, false) => Some(PistonAction::Retract),
+                    // A moving piston deliberately ignores a new edge in this
+                    // first integration; interruption/reversal is a later
+                    // versioned contract.
+                    _ => None,
+                };
+                let queued = action
+                    .map(|action| QueuedEvent {
+                        delay_ticks: activation_game_ticks,
+                        target: event.target,
+                        phase: PhysicsEventPhase::BlockEvent,
+                        kind: PhysicsEventKind::BlockEvent {
+                            event: match action {
+                                PistonAction::Extend => BlockEventKind::PistonExtend,
+                                PistonAction::Retract => BlockEventKind::PistonRetract,
+                            },
+                        },
+                    })
+                    .into_iter()
+                    .collect();
+                Ok(EventOutcome {
+                    changes: Vec::new(),
+                    delta: None,
+                    queued,
+                })
+            }
             PhysicsEventKind::BlockEvent {
                 event: BlockEventKind::PistonExtend,
             } => {
+                if redstone_inputs
+                    && world.get(event.target).is_some_and(|piston| {
+                        piston.kind == BlockKind::Piston
+                            && !matches!(piston_state(piston), crate::PistonState::Retracted)
+                    })
+                {
+                    // Multiple source edges may deliver the same powered
+                    // neighbor update before the first Block Event runs.
+                    // Vanilla retains those events as evidence, but the
+                    // already-moving piston must not turn the duplicate into
+                    // a failed run.  Interruption/reversal remains outside
+                    // this subset and is represented as a no-op here.
+                    return Ok(EventOutcome::default());
+                }
                 let plan = match planning_region {
                     Some(region) => {
                         plan_piston_in_region(world, region, event.target, PistonAction::Extend)?
@@ -1079,6 +1218,17 @@ impl PhysicsEngine {
             PhysicsEventKind::BlockEvent {
                 event: BlockEventKind::PistonRetract,
             } => {
+                if redstone_inputs
+                    && world.get(event.target).is_some_and(|piston| {
+                        piston.kind == BlockKind::Piston
+                            && !matches!(piston_state(piston), crate::PistonState::Extended)
+                    })
+                {
+                    // See the extension branch above: a duplicate retract or
+                    // a reverse edge during motion is retained as a no-op
+                    // event, while the actual completion remains atomic.
+                    return Ok(EventOutcome::default());
+                }
                 let plan = match planning_region {
                     Some(region) => {
                         plan_piston_in_region(world, region, event.target, PistonAction::Retract)?
@@ -1126,6 +1276,24 @@ mod tests {
     use super::*;
     use crate::time::{PhysicsEventKind, ZeroDelayPolicy};
     use crate::{PistonState, piston_state};
+
+    fn redstone_piston_world(variant: crate::PistonVariant) -> (World, Pos, Pos, Region) {
+        let piston_pos = Pos::new(0, 1, 0);
+        let input_pos = Pos::new(-1, 1, 0);
+        let mut world = World::new();
+        world.set(Pos::new(0, 0, 0), Block::new(BlockKind::Solid));
+        let mut piston = Block::new(BlockKind::Piston);
+        piston.facing = Some(crate::Facing::East);
+        piston.piston_variant = Some(variant);
+        piston.piston_state = Some(PistonState::Retracted);
+        world.set(piston_pos, piston);
+        let mut lever = Block::new(BlockKind::Lever);
+        lever.powered = Some(false);
+        world.set(input_pos, lever);
+        world.set(Pos::new(1, 1, 0), Block::new(BlockKind::Solid));
+        let known_region = Region::new(Pos::new(-1, 0, -1), Pos::new(2, 2, 1));
+        (world, piston_pos, input_pos, known_region)
+    }
 
     #[test]
     fn scheduler_profile_is_retained_in_checkpoint_and_state_key() {
@@ -1797,6 +1965,297 @@ mod tests {
         );
         assert_ne!(transitions[1].from_state, transitions[1].to_state);
         assert_eq!(transitions[1].moves.len(), 1);
+    }
+
+    #[test]
+    fn redstone_input_drives_normal_piston_through_neighbor_block_event_and_completion() {
+        let (world, piston_pos, input_pos, known_region) =
+            redstone_piston_world(crate::PistonVariant::Normal);
+        let mut engine = PhysicsEngine::new(world, 16).with_piston_planning_region(known_region);
+        let input_id = engine.schedule_redstone_input(0, input_pos, true);
+        engine.run_redstone_piston_events().unwrap();
+
+        assert_eq!(
+            engine.world().kind_at(Pos::new(1, 1, 0)),
+            BlockKind::PistonHead
+        );
+        assert_eq!(engine.world().kind_at(Pos::new(2, 1, 0)), BlockKind::Solid);
+        assert_eq!(
+            piston_state(engine.world().get(piston_pos).unwrap()),
+            PistonState::Extended
+        );
+        assert_eq!(engine.time().game_tick, 3);
+        assert!(engine.trace_status().is_complete());
+        assert_eq!(engine.transition_trace().len(), 3);
+
+        let events = &engine.event_trace().records;
+        assert_eq!(events.len(), 4);
+        assert_eq!(events[0].event.id, input_id);
+        assert!(matches!(
+            events[0].event.kind,
+            PhysicsEventKind::RedstoneInput { powered: true }
+        ));
+        assert_eq!(events[0].event.cause, EventCause::External);
+        assert!(matches!(
+            events[1].event.kind,
+            PhysicsEventKind::NeighborUpdate { source } if source == input_pos
+        ));
+        assert_eq!(events[1].event.cause, EventCause::Event { id: input_id });
+        assert!(matches!(
+            events[2].event.kind,
+            PhysicsEventKind::BlockEvent {
+                event: BlockEventKind::PistonExtend
+            }
+        ));
+        assert_eq!(
+            events[2].event.cause,
+            EventCause::Event {
+                id: events[1].event.id
+            }
+        );
+        assert!(matches!(
+            events[3].event.kind,
+            PhysicsEventKind::PistonComplete {
+                action: PistonAction::Extend,
+                ..
+            }
+        ));
+        assert_eq!(
+            events[3].event.cause,
+            EventCause::Event {
+                id: events[2].event.id
+            }
+        );
+        assert_eq!(events[0].event.time.game_tick, 0);
+        assert_eq!(events[1].event.time.game_tick, 0);
+        assert_eq!(events[2].event.time.game_tick, 1);
+        assert_eq!(events[3].event.time.game_tick, 3);
+        assert_eq!(
+            engine.transition_trace().records[0].changes[0].reason,
+            ChangeReason::ExternalInput
+        );
+    }
+
+    #[test]
+    fn redstone_input_off_retracts_normal_and_sticky_pistons() {
+        for variant in [crate::PistonVariant::Normal, crate::PistonVariant::Sticky] {
+            let (world, piston_pos, input_pos, known_region) = redstone_piston_world(variant);
+            let mut engine =
+                PhysicsEngine::new(world, 32).with_piston_planning_region(known_region);
+            engine.schedule_redstone_input(0, input_pos, true);
+            engine.run_redstone_piston_events().unwrap();
+            let off_tick = engine.time().game_tick.saturating_add(1);
+            engine.schedule_redstone_input(off_tick, input_pos, false);
+            engine.run_redstone_piston_events().unwrap();
+
+            assert_eq!(
+                piston_state(engine.world().get(piston_pos).unwrap()),
+                PistonState::Retracted,
+                "variant {variant:?} should retract"
+            );
+            assert_eq!(
+                engine.world().kind_at(Pos::new(1, 1, 0)),
+                if variant == crate::PistonVariant::Sticky {
+                    BlockKind::Solid
+                } else {
+                    BlockKind::Air
+                }
+            );
+            assert_eq!(
+                engine.world().kind_at(Pos::new(2, 1, 0)),
+                if variant == crate::PistonVariant::Sticky {
+                    BlockKind::Air
+                } else {
+                    BlockKind::Solid
+                }
+            );
+            assert_eq!(engine.event_trace().records.len(), 8);
+            assert!(matches!(
+                engine.event_trace().records[6].event.kind,
+                PhysicsEventKind::BlockEvent {
+                    event: BlockEventKind::PistonRetract
+                }
+            ));
+        }
+    }
+
+    #[test]
+    fn simultaneous_direct_inputs_do_not_schedule_duplicate_piston_motion() {
+        let (mut world, piston_pos, west_input, known_region) =
+            redstone_piston_world(crate::PistonVariant::Normal);
+        let north_input = Pos::new(0, 1, -1);
+        let mut north_lever = Block::new(BlockKind::Lever);
+        north_lever.powered = Some(false);
+        world.set(north_input, north_lever);
+        let mut engine = PhysicsEngine::new(world, 32).with_piston_planning_region(known_region);
+        engine.schedule_redstone_input(0, west_input, true);
+        engine.schedule_redstone_input(0, north_input, true);
+
+        engine.run_redstone_piston_events().unwrap();
+
+        assert_eq!(
+            piston_state(engine.world().get(piston_pos).unwrap()),
+            PistonState::Extended
+        );
+        assert_eq!(
+            engine.world().kind_at(Pos::new(1, 1, 0)),
+            BlockKind::PistonHead
+        );
+        assert_eq!(
+            engine
+                .event_trace()
+                .records
+                .iter()
+                .filter(|record| {
+                    matches!(
+                        record.event.kind,
+                        PhysicsEventKind::BlockEvent {
+                            event: BlockEventKind::PistonExtend
+                        }
+                    )
+                })
+                .count(),
+            2,
+            "both neighbor updates are retained as evidence"
+        );
+        assert!(engine.trace_status().is_complete());
+    }
+
+    #[test]
+    fn turning_one_input_off_does_not_retract_while_another_stays_powered() {
+        let (mut world, piston_pos, west_input, known_region) =
+            redstone_piston_world(crate::PistonVariant::Normal);
+        let north_input = Pos::new(0, 1, -1);
+        let mut north_lever = Block::new(BlockKind::Lever);
+        north_lever.powered = Some(false);
+        world.set(north_input, north_lever);
+        let mut engine = PhysicsEngine::new(world, 32).with_piston_planning_region(known_region);
+        engine.schedule_redstone_input(0, west_input, true);
+        engine.run_redstone_piston_events().unwrap();
+
+        let north_tick = engine.time().game_tick.saturating_add(1);
+        engine.schedule_redstone_input(north_tick, north_input, true);
+        engine.run_redstone_piston_events().unwrap();
+        let off_tick = engine.time().game_tick.saturating_add(1);
+        engine.schedule_redstone_input(off_tick, west_input, false);
+        engine.run_redstone_piston_events().unwrap();
+
+        assert_eq!(
+            piston_state(engine.world().get(piston_pos).unwrap()),
+            PistonState::Extended
+        );
+        assert_eq!(
+            engine.world().kind_at(Pos::new(1, 1, 0)),
+            BlockKind::PistonHead
+        );
+        assert_eq!(engine.world().kind_at(Pos::new(2, 1, 0)), BlockKind::Solid);
+        assert!(engine.trace_status().is_complete());
+        assert!(!engine.event_trace().records.iter().any(|record| {
+            matches!(
+                record.event.kind,
+                PhysicsEventKind::BlockEvent {
+                    event: BlockEventKind::PistonRetract
+                }
+            )
+        }));
+    }
+
+    #[test]
+    fn observed_source_power_is_resolved_from_the_explicit_input_edge() {
+        let (mut world, piston_pos, input_pos, known_region) =
+            redstone_piston_world(crate::PistonVariant::Normal);
+        let input = world.get_mut(input_pos).expect("helper creates the input");
+        input.observed_name = Some("minecraft:lever".to_owned());
+        input.observation_classification = crate::ObservationClassification::Exact;
+        input.observed_properties.clear();
+        let mut engine = PhysicsEngine::new(world, 16).with_piston_planning_region(known_region);
+        engine.schedule_redstone_input(0, input_pos, true);
+        engine.run_redstone_piston_events().unwrap();
+
+        assert_eq!(
+            piston_state(engine.world().get(piston_pos).unwrap()),
+            PistonState::Extended
+        );
+        assert_eq!(
+            engine
+                .world()
+                .get(input_pos)
+                .and_then(|block| block.powered),
+            Some(true)
+        );
+    }
+
+    #[test]
+    fn redstone_runner_rejects_unknown_input_boundary_before_mutation() {
+        let (world, _piston_pos, input_pos, _) =
+            redstone_piston_world(crate::PistonVariant::Normal);
+        let known_region = Region::new(Pos::new(0, 0, -1), Pos::new(2, 2, 1));
+        let mut engine =
+            PhysicsEngine::new(world.clone(), 16).with_piston_planning_region(known_region);
+        let input_id = engine.schedule_redstone_input(0, input_pos, true);
+        let error = engine.run_redstone_piston_events().unwrap_err();
+
+        assert!(matches!(
+            error,
+            PhysicsEngineError::Piston(error)
+                if matches!(error.as_ref(), PistonError::UnknownSpace { position }
+                    if *position == input_pos)
+        ));
+        assert_eq!(engine.world(), &world);
+        assert_eq!(engine.pending_event_count(), 1);
+        assert_eq!(engine.event_trace().records.len(), 0);
+        assert!(engine.event_trace().status.is_failed());
+        assert_eq!(
+            engine.execution_state_key().pending_events[0].kind,
+            PhysicsEventKind::RedstoneInput { powered: true }
+        );
+        assert_eq!(
+            engine
+                .checkpoint()
+                .pending_events()
+                .next()
+                .map(|event| event.id),
+            Some(input_id)
+        );
+    }
+
+    #[test]
+    fn redstone_runner_keeps_piston_stationary_when_block_event_is_obstructed() {
+        let (mut world, piston_pos, input_pos, known_region) =
+            redstone_piston_world(crate::PistonVariant::Normal);
+        world.set(Pos::new(1, 1, 0), Block::new(BlockKind::RedstoneWire));
+        let mut engine =
+            PhysicsEngine::new(world.clone(), 16).with_piston_planning_region(known_region);
+        engine.schedule_redstone_input(0, input_pos, true);
+        let error = engine.run_redstone_piston_events().unwrap_err();
+
+        assert!(matches!(
+            error,
+            PhysicsEngineError::Piston(error)
+                if matches!(error.as_ref(), PistonError::UnsupportedMovingBlock { position, kind, .. }
+                    if *position == Pos::new(1, 1, 0) && *kind == BlockKind::RedstoneWire)
+        ));
+        assert_eq!(engine.world().kind_at(piston_pos), BlockKind::Piston);
+        assert_eq!(
+            piston_state(engine.world().get(piston_pos).unwrap()),
+            PistonState::Retracted
+        );
+        assert_eq!(engine.world().kind_at(input_pos), BlockKind::Lever);
+        assert_eq!(
+            engine
+                .world()
+                .get(input_pos)
+                .and_then(|block| block.powered),
+            Some(true)
+        );
+        assert!(engine.trace_status().is_failed());
+        assert_eq!(engine.pending_event_count(), 1);
+        assert!(matches!(
+            engine.queue.peek().map(|event| &event.kind),
+            Some(PhysicsEventKind::BlockEvent {
+                event: BlockEventKind::PistonExtend
+            })
+        ));
     }
 
     #[test]

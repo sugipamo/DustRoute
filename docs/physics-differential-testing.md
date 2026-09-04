@@ -91,7 +91,12 @@ advances by two game ticks. The Piston case uses `PhysicsEngine` and its actual
 `TransitionTrace`. Java `west` facing maps to the simulator's internal `east`
 signal direction for Repeaters and Observers, while Piston facing is retained.
 
-The resulting differences are intentionally retained as diagnostics:
+The piston regression now drives the model through
+`PhysicsEngine::schedule_redstone_input` and
+`run_redstone_piston_events`; the adapter removes only the external lever
+transition because the promoted fixture treats player activation as its
+baseline. The resulting differences are intentionally retained as
+diagnostics:
 
 - The Repeater/Observer model changes the first wire immediately at the input
   boundary (`0` modelled versus `1` observed game tick). Later transition

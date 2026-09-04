@@ -7,8 +7,8 @@ use serde::{Deserialize, Serialize};
 use super::{BlockBehaviorProfile, UpdateModel};
 use crate::{
     Block, BlockChange, BlockKind, BlockMove, BlockProperties, ChangeReason, DeltaCause, Facing,
-    ObservationClassification, PistonState, PistonVariant, Pos, Region, RegionSet, ShapeId, World,
-    WorldDelta, WorldDeltaError,
+    ObservationClassification, PistonState, PistonVariant, Pos, Region, RegionSet, ShapeId,
+    WireConnection, World, WorldDelta, WorldDeltaError,
 };
 
 pub(super) const PROFILE: BlockBehaviorProfile = BlockBehaviorProfile {
@@ -93,9 +93,10 @@ impl PistonMotionProfile {
         Ok(())
     }
 
-    /// Returns the activation-side interval. The current Block Event runner
-    /// does not consume it because it starts after activation has already
-    /// been resolved by an upper scheduler.
+    /// Returns the activation-side interval. The direct redstone-driven
+    /// runner currently selects the upper bound for a deterministic,
+    /// conservative schedule; the range remains available until a
+    /// version-specific scheduler supplies stronger phase evidence.
     #[must_use]
     pub const fn activation_delay_game_ticks(self) -> (u64, u64) {
         (
@@ -328,9 +329,21 @@ pub enum PistonError {
     MissingPiston {
         position: Pos,
     },
+    MissingInput {
+        position: Pos,
+    },
     WrongBlock {
         position: Pos,
         actual: BlockKind,
+    },
+    UnsupportedInput {
+        position: Pos,
+        kind: BlockKind,
+        reason: String,
+    },
+    UnknownInput {
+        position: Pos,
+        reason: String,
     },
     UnsupportedFacing {
         position: Pos,
@@ -375,9 +388,28 @@ impl Display for PistonError {
                 "no piston exists at ({}, {}, {})",
                 position.x, position.y, position.z
             ),
+            Self::MissingInput { position } => write!(
+                formatter,
+                "no redstone input exists at ({}, {}, {})",
+                position.x, position.y, position.z
+            ),
             Self::WrongBlock { position, actual } => write!(
                 formatter,
                 "expected a piston at ({}, {}, {}), found {actual:?}",
+                position.x, position.y, position.z
+            ),
+            Self::UnsupportedInput {
+                position,
+                kind,
+                reason,
+            } => write!(
+                formatter,
+                "redstone input {kind:?} at ({}, {}, {}) is outside the piston input subset: {reason}",
+                position.x, position.y, position.z
+            ),
+            Self::UnknownInput { position, reason } => write!(
+                formatter,
+                "redstone input at ({}, {}, {}) is unavailable: {reason}",
                 position.x, position.y, position.z
             ),
             Self::UnsupportedFacing { position, facing } => write!(
@@ -465,6 +497,304 @@ pub fn piston_state(block: &Block) -> PistonState {
             .filter(|extended| *extended)
             .map_or(PistonState::Retracted, |_| PistonState::Extended)
     })
+}
+
+const HORIZONTAL_FACINGS: [Facing; 4] = [Facing::North, Facing::East, Facing::South, Facing::West];
+
+/// Returns whether a source block is directly connected to a piston.  This is
+/// intentionally narrower than Vanilla activation: it only admits horizontal
+/// adjacency and never performs quasi-connectivity or update propagation.
+#[must_use]
+pub fn piston_input_connected(world: &World, source: Pos, piston: Pos) -> bool {
+    piston_input_connection(world, source, piston).unwrap_or(false)
+}
+
+/// Resolves the direct physical connection while retaining an explicit error
+/// for observed state whose directional metadata is unavailable.  Synthetic
+/// wires without a rendered connection map remain usable for small unit
+/// worlds; observed wires must carry their map so an incomplete scan cannot
+/// be treated as a valid piston input.
+fn piston_input_connection(world: &World, source: Pos, piston: Pos) -> Result<bool, PistonError> {
+    if world.kind_at(piston) != BlockKind::Piston {
+        return Ok(false);
+    }
+    let Some(direction) = horizontal_facing_between(source, piston) else {
+        return Ok(false);
+    };
+    let Some(block) = world.get(source) else {
+        return Ok(false);
+    };
+    match block.kind {
+        BlockKind::RedstoneWire => match &block.wire_connections {
+            Some(connections) => Ok(connections
+                .get(&direction)
+                .is_some_and(|connection| *connection != WireConnection::None)),
+            None if block.observed_name.is_some() => Err(PistonError::UnknownInput {
+                position: source,
+                reason: "observed wire connection shape is missing".to_owned(),
+            }),
+            None => Ok(true),
+        },
+        BlockKind::Repeater | BlockKind::Comparator | BlockKind::Observer => {
+            let Some(facing) = block.facing else {
+                if block.observed_name.is_some() {
+                    return Err(PistonError::UnknownInput {
+                        position: source,
+                        reason: "observed directional input has no facing".to_owned(),
+                    });
+                }
+                return Ok(false);
+            };
+            Ok(facing == direction)
+        }
+        BlockKind::Lever
+        | BlockKind::Button
+        | BlockKind::PressurePlate
+        | BlockKind::RedstoneBlock
+        | BlockKind::RedstoneTorch => Ok(true),
+        _ => Ok(false),
+    }
+}
+
+/// Resolves the aggregate direct-input state for one piston.  If a complete
+/// live observation region is supplied, every horizontal side is checked
+/// before returning; a missing side is therefore `UnknownSpace`, not an
+/// inferred unpowered input.
+pub(crate) fn piston_input_powered_in_region(
+    world: &World,
+    known_region: Option<Region>,
+    piston: Pos,
+) -> Result<bool, PistonError> {
+    ensure_known(known_region, piston)?;
+    let piston_block = world
+        .get(piston)
+        .ok_or(PistonError::MissingPiston { position: piston })?;
+    if piston_block.kind != BlockKind::Piston {
+        return Err(PistonError::WrongBlock {
+            position: piston,
+            actual: piston_block.kind,
+        });
+    }
+    let facing = piston_block.facing.ok_or(PistonError::UnsupportedFacing {
+        position: piston,
+        facing: Facing::North,
+    })?;
+    if facing.horizontal_offset().is_none() {
+        return Err(PistonError::UnsupportedFacing {
+            position: piston,
+            facing,
+        });
+    }
+
+    for direction in HORIZONTAL_FACINGS {
+        let offset = direction.offset();
+        let source = piston.offset(offset.x, offset.y, offset.z);
+        ensure_known(known_region, source)?;
+        let Some(block) = world.get(source) else {
+            continue;
+        };
+        if piston_input_connection(world, source, piston)? && source_output_powered(block, source)?
+        {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
+/// Returns the horizontal piston targets that must be re-evaluated after a
+/// source mutation.  The caller performs the aggregate power query at the
+/// neighbor-update boundary, so another still-powered source is preserved.
+pub(crate) fn direct_piston_neighbors(
+    world: &World,
+    known_region: Option<Region>,
+    source: Pos,
+) -> Result<Vec<Pos>, PistonError> {
+    ensure_known(known_region, source)?;
+    let mut neighbors = Vec::new();
+    for direction in HORIZONTAL_FACINGS {
+        let offset = direction.offset();
+        let piston = source.offset(offset.x, offset.y, offset.z);
+        if world.kind_at(piston) != BlockKind::Piston {
+            continue;
+        }
+        ensure_known(known_region, piston)?;
+        if piston_input_connection(world, source, piston)? {
+            neighbors.push(piston);
+        }
+    }
+    Ok(neighbors)
+}
+
+/// Builds the external input mutation used by the redstone-driven event
+/// runner.  A no-op input produces no delta and therefore no neighbor update.
+pub(crate) fn redstone_input_delta(
+    world: &World,
+    position: Pos,
+    powered: bool,
+) -> Result<Option<WorldDelta>, PistonError> {
+    let before = world
+        .get(position)
+        .cloned()
+        .ok_or(PistonError::MissingInput { position })?;
+    let after = redstone_input_after(position, &before, powered)?;
+    if before == after {
+        return Ok(None);
+    }
+    Ok(Some(WorldDelta {
+        parent_shape: world.shape_id(),
+        changes: vec![BlockChange {
+            position,
+            before,
+            after,
+            reason: ChangeReason::ExternalInput,
+        }],
+        moves: Vec::new(),
+        dirty_region: RegionSet::around_positions([position], 1),
+        cause: DeltaCause::External,
+    }))
+}
+
+fn horizontal_facing_between(source: Pos, sink: Pos) -> Option<Facing> {
+    if source.y != sink.y {
+        return None;
+    }
+    match (sink.x - source.x, sink.z - source.z) {
+        (1, 0) => Some(Facing::East),
+        (-1, 0) => Some(Facing::West),
+        (0, 1) => Some(Facing::South),
+        (0, -1) => Some(Facing::North),
+        _ => None,
+    }
+}
+
+fn source_output_powered(block: &Block, position: Pos) -> Result<bool, PistonError> {
+    let value = match block.kind {
+        BlockKind::RedstoneBlock => Some(block.powered.unwrap_or(true)),
+        BlockKind::RedstoneWire => block
+            .power_level
+            .or_else(|| observed_u8_property(block, "power"))
+            .map(|power| power > 0)
+            .or_else(|| block.observed_name.is_none().then_some(false)),
+        BlockKind::PressurePlate => block
+            .power_level
+            .or_else(|| observed_u8_property(block, "power"))
+            .map(|power| power > 0)
+            .or_else(|| {
+                block
+                    .powered
+                    .or_else(|| observed_bool_property(block, "powered"))
+            })
+            .or_else(|| block.observed_name.is_none().then_some(false)),
+        BlockKind::RedstoneTorch => block
+            .powered
+            .or_else(|| observed_bool_property(block, "lit"))
+            .or_else(|| block.observed_name.is_none().then_some(true)),
+        BlockKind::Comparator => block
+            .power_level
+            .or_else(|| block.powered.map(|powered| u8::from(powered) * 15))
+            .or_else(|| {
+                observed_bool_property(block, "powered").map(|powered| u8::from(powered) * 15)
+            })
+            .map(|power| power > 0)
+            .or_else(|| block.observed_name.is_none().then_some(false)),
+        BlockKind::Lever | BlockKind::Button | BlockKind::Repeater | BlockKind::Observer => block
+            .powered
+            .or_else(|| observed_bool_property(block, "powered"))
+            .or_else(|| block.observed_name.is_none().then_some(false)),
+        _ => Some(false),
+    };
+    value.ok_or_else(|| PistonError::UnknownInput {
+        position,
+        reason: "observed source power state is missing".to_owned(),
+    })
+}
+
+fn observed_bool_property(block: &Block, key: &str) -> Option<bool> {
+    block
+        .observed_properties
+        .get(key)
+        .and_then(|value| value.parse::<bool>().ok())
+}
+
+fn observed_u8_property(block: &Block, key: &str) -> Option<u8> {
+    block
+        .observed_properties
+        .get(key)
+        .and_then(|value| value.parse::<u8>().ok())
+}
+
+fn redstone_input_after(position: Pos, block: &Block, powered: bool) -> Result<Block, PistonError> {
+    match block.kind {
+        BlockKind::RedstoneBlock => {
+            if block.observed_name.is_some() && !powered {
+                return Err(PistonError::UnsupportedInput {
+                    position,
+                    kind: BlockKind::RedstoneBlock,
+                    reason: "an observed redstone block has no unpowered block state".to_owned(),
+                });
+            }
+            let mut changed = block.clone();
+            changed.powered = Some(powered);
+            Ok(changed)
+        }
+        BlockKind::RedstoneWire
+        | BlockKind::RedstoneTorch
+        | BlockKind::Repeater
+        | BlockKind::Comparator
+        | BlockKind::Lever
+        | BlockKind::Button
+        | BlockKind::PressurePlate
+        | BlockKind::Observer => {
+            let mut changed = block.clone();
+            match changed.kind {
+                BlockKind::RedstoneWire => {
+                    changed.power_level = Some(if powered { 15 } else { 0 });
+                    if changed.observed_name.is_some() {
+                        changed.observed_properties.insert(
+                            "power".to_owned(),
+                            if powered { "15" } else { "0" }.to_owned(),
+                        );
+                    }
+                }
+                BlockKind::PressurePlate => {
+                    changed.powered = Some(powered);
+                    changed.power_level = Some(if powered { 15 } else { 0 });
+                    set_observed_bool(&mut changed, "powered", powered);
+                }
+                BlockKind::RedstoneTorch => {
+                    changed.powered = Some(powered);
+                    set_observed_bool(&mut changed, "lit", powered);
+                }
+                BlockKind::Comparator => {
+                    changed.powered = Some(powered);
+                    changed.power_level = Some(if powered {
+                        changed.power_level.unwrap_or(15)
+                    } else {
+                        0
+                    });
+                    set_observed_bool(&mut changed, "powered", powered);
+                }
+                _ => {
+                    changed.powered = Some(powered);
+                    set_observed_bool(&mut changed, "powered", powered);
+                }
+            }
+            Ok(changed)
+        }
+        kind => Err(PistonError::UnsupportedInput {
+            position,
+            kind,
+            reason: "only direct redstone source blocks can be driven".to_owned(),
+        }),
+    }
+}
+
+fn set_observed_bool(block: &mut Block, key: &str, value: bool) {
+    if block.observed_name.is_some() {
+        block
+            .observed_properties
+            .insert(key.to_owned(), value.to_string());
+    }
 }
 
 /// Builds a movement plan without mutating `world`.
@@ -1319,5 +1649,107 @@ mod tests {
             plan.completion_plan(&world),
             Err(PistonError::StalePlan { position }) if position == piston
         ));
+    }
+
+    #[test]
+    fn direct_input_power_query_accepts_supported_source_blocks() {
+        let piston = Pos::new(0, 1, 0);
+        let known_region = Region::new(Pos::new(-1, 0, -1), Pos::new(1, 2, 1));
+        for kind in [
+            BlockKind::Lever,
+            BlockKind::RedstoneWire,
+            BlockKind::Repeater,
+            BlockKind::Comparator,
+            BlockKind::Observer,
+            BlockKind::RedstoneTorch,
+            BlockKind::RedstoneBlock,
+        ] {
+            let mut world = World::new();
+            let mut piston_block = Block::new(BlockKind::Piston);
+            piston_block.facing = Some(Facing::East);
+            world.set(piston, piston_block);
+            let mut source = Block::new(kind);
+            source.powered = Some(true);
+            source.power_level = (kind == BlockKind::RedstoneWire).then_some(15);
+            if matches!(
+                kind,
+                BlockKind::Repeater | BlockKind::Comparator | BlockKind::Observer
+            ) {
+                source.facing = Some(Facing::East);
+            }
+            world.set(Pos::new(-1, 1, 0), source);
+            assert_eq!(
+                piston_input_powered_in_region(&world, Some(known_region), piston),
+                Ok(true),
+                "source kind {kind:?} should drive an adjacent piston"
+            );
+        }
+    }
+
+    #[test]
+    fn direct_input_power_query_rejects_wrong_direction_and_missing_observation() {
+        let piston = Pos::new(0, 1, 0);
+        let known_region = Region::new(Pos::new(-1, 0, -1), Pos::new(1, 2, 1));
+        let mut world = World::new();
+        let mut piston_block = Block::new(BlockKind::Piston);
+        piston_block.facing = Some(Facing::East);
+        world.set(piston, piston_block);
+
+        let mut repeater = Block::new(BlockKind::Repeater);
+        repeater.facing = Some(Facing::West);
+        repeater.powered = Some(true);
+        world.set(Pos::new(-1, 1, 0), repeater);
+        assert_eq!(
+            piston_input_powered_in_region(&world, Some(known_region), piston),
+            Ok(false)
+        );
+
+        let mut observed_wire = Block::new(BlockKind::RedstoneWire);
+        observed_wire.observed_name = Some("minecraft:redstone_wire".to_owned());
+        observed_wire.observation_classification = ObservationClassification::Exact;
+        observed_wire.power_level = Some(15);
+        world.set(Pos::new(-1, 1, 0), observed_wire);
+        assert!(matches!(
+            piston_input_powered_in_region(&world, Some(known_region), piston),
+            Err(PistonError::UnknownInput { position, .. }) if position == Pos::new(-1, 1, 0)
+        ));
+    }
+
+    #[test]
+    fn direct_input_power_query_fails_closed_for_an_incomplete_region() {
+        let piston = Pos::new(0, 1, 0);
+        let mut world = World::new();
+        let mut piston_block = Block::new(BlockKind::Piston);
+        piston_block.facing = Some(Facing::East);
+        world.set(piston, piston_block);
+        let incomplete = Region::new(Pos::new(0, 0, -1), Pos::new(1, 2, 1));
+        assert!(matches!(
+            piston_input_powered_in_region(&world, Some(incomplete), piston),
+            Err(PistonError::UnknownSpace { position }) if position == Pos::new(-1, 1, 0)
+        ));
+    }
+
+    #[test]
+    fn redstone_input_delta_preserves_signal_only_geometry() {
+        let position = Pos::new(-1, 1, 0);
+        let mut world = World::new();
+        let mut lever = Block::new(BlockKind::Lever);
+        lever.powered = Some(false);
+        world.set(position, lever.clone());
+        let delta = redstone_input_delta(&world, position, true)
+            .unwrap()
+            .expect("turning a lever on should produce a delta");
+        assert_eq!(delta.cause, DeltaCause::External);
+        assert_eq!(delta.changes[0].reason, ChangeReason::ExternalInput);
+        assert_eq!(delta.changes[0].before, lever);
+        assert_eq!(delta.changes[0].after.powered, Some(true));
+        assert_eq!(delta.parent_shape, world.shape_id());
+        let mut changed = world.clone();
+        delta.apply(&mut changed).unwrap();
+        assert_eq!(
+            changed.get(position).and_then(|block| block.powered),
+            Some(true)
+        );
+        assert_eq!(changed.shape_id(), world.shape_id());
     }
 }
