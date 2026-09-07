@@ -230,21 +230,43 @@ mod tests {
             events: vec![
                 BehaviorEvent {
                     tick: 0,
+                    sub_tick_order: 0,
+                    game_tick: None,
+                    phase: crate::TransitionPhase::Unknown,
+                    event_kind: crate::EventKind::StateTransition,
+                    cause: crate::EventCause::Unknown,
+                    source: crate::EventSource::Unknown,
+                    cause_sequence: None,
                     component: ComponentId(7),
                     powered: true,
                 },
                 BehaviorEvent {
                     tick: 3,
+                    sub_tick_order: 0,
+                    game_tick: None,
+                    phase: crate::TransitionPhase::Unknown,
+                    event_kind: crate::EventKind::StateTransition,
+                    cause: crate::EventCause::Unknown,
+                    source: crate::EventSource::Unknown,
+                    cause_sequence: None,
                     component: ComponentId(7),
                     powered: false,
                 },
                 BehaviorEvent {
                     tick: 4,
+                    sub_tick_order: 0,
+                    game_tick: None,
+                    phase: crate::TransitionPhase::Unknown,
+                    event_kind: crate::EventKind::StateTransition,
+                    cause: crate::EventCause::Unknown,
+                    source: crate::EventSource::Unknown,
+                    cause_sequence: None,
                     component: ComponentId(7),
                     powered: true,
                 },
             ],
             stable: true,
+            status: crate::TraceStatus::Complete,
         }
     }
 

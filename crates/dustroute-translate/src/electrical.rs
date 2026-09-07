@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 
-use crate::connectivity::{comparator_output_pos, repeater_output_pos};
+use crate::connectivity::{comparator_output_pos, observer_output_pos, repeater_output_pos};
 use crate::wire::{HORIZONTAL, dust_transmits, wire_has_arm};
 use crate::world::{BlockKind, Pos, World};
 
@@ -39,6 +39,7 @@ pub struct DeviceOutputState {
     pub repeater_powered: BTreeMap<Pos, bool>,
     pub torch_lit: BTreeMap<Pos, bool>,
     pub comparator_output: BTreeMap<Pos, u8>,
+    pub observer_powered: BTreeMap<Pos, bool>,
 }
 
 impl DeviceOutputState {
@@ -66,6 +67,11 @@ impl DeviceOutputState {
                             .unwrap_or_else(|| u8::from(block.powered.unwrap_or(false)) * 15),
                     )
                 })
+                .collect(),
+            observer_powered: world
+                .iter()
+                .filter(|(_, block)| block.kind == BlockKind::Observer)
+                .map(|(pos, block)| (*pos, block.powered.unwrap_or(false)))
                 .collect(),
         }
     }
@@ -123,6 +129,7 @@ impl ElectricalTopology {
                     BlockKind::Comparator => {
                         comparator_output_pos(world, *pos).into_iter().collect()
                     }
+                    BlockKind::Observer => observer_output_pos(world, *pos).into_iter().collect(),
                     BlockKind::RedstoneTorch => vec![pos.offset(0, 1, 0)],
                     BlockKind::RedstoneBlock => ADJACENT
                         .into_iter()
@@ -221,6 +228,9 @@ fn component_output_level(world: &World, pos: Pos, devices: &DeviceOutputState) 
             MAX_SIGNAL
         }
         BlockKind::Comparator => devices.comparator_output.get(&pos).copied().unwrap_or(0),
+        BlockKind::Observer if devices.observer_powered.get(&pos).copied().unwrap_or(false) => {
+            MAX_SIGNAL
+        }
         _ => 0,
     }
 }
@@ -311,6 +321,9 @@ fn direct_level_into_dust(
             component_output_level(world, neighbor, devices)
         }
         BlockKind::Comparator if comparator_output_pos(world, neighbor) == Some(dust) => {
+            component_output_level(world, neighbor, devices)
+        }
+        BlockKind::Observer if observer_output_pos(world, neighbor) == Some(dust) => {
             component_output_level(world, neighbor, devices)
         }
         _ if world

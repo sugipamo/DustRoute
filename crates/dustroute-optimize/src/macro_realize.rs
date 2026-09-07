@@ -111,6 +111,32 @@ pub struct MacroTransitionCase {
     pub first_difference_tick: Option<usize>,
 }
 
+/// One observed output edge in a macro transition case. The sampled output
+/// arrays remain available for compatibility, while this view makes the
+/// state-changing edges and their elapsed sample intervals explicit.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MacroTransitionEdge {
+    pub at_tick: usize,
+    pub from: Vec<bool>,
+    pub to: Vec<bool>,
+    pub elapsed_from_previous: Option<usize>,
+}
+
+impl MacroTransitionCase {
+    /// Extracts state-changing edges from a sampled output trace. The first
+    /// edge has no predecessor; subsequent intervals are measured in the
+    /// trace's sampling unit (currently redstone ticks).
+    #[must_use]
+    pub fn original_transition_edges(&self) -> Vec<MacroTransitionEdge> {
+        transition_edges(&self.original_outputs)
+    }
+
+    #[must_use]
+    pub fn candidate_transition_edges(&self) -> Vec<MacroTransitionEdge> {
+        transition_edges(&self.candidate_outputs)
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MacroTransitionReport {
     pub state: ContextualVerificationState,
@@ -964,6 +990,27 @@ fn compare_transition_contexts(
     }
 }
 
+fn transition_edges(trace: &[Vec<bool>]) -> Vec<MacroTransitionEdge> {
+    let mut previous_edge_tick = None;
+    trace
+        .windows(2)
+        .enumerate()
+        .filter(|(_, pair)| pair[0] != pair[1])
+        .map(|(index, pair)| {
+            let at_tick = index + 1;
+            let edge = MacroTransitionEdge {
+                at_tick,
+                from: pair[0].clone(),
+                to: pair[1].clone(),
+                elapsed_from_previous: previous_edge_tick
+                    .map(|previous| at_tick.saturating_sub(previous)),
+            };
+            previous_edge_tick = Some(at_tick);
+            edge
+        })
+        .collect()
+}
+
 struct MacroTransitionContext {
     world: World,
     drivers: Vec<dustroute_translate::InferredInputDriver>,
@@ -1619,5 +1666,17 @@ mod tests {
                 .iter()
                 .any(|case| { case.from == [true, false] && case.to == [false, true] })
         );
+        let case = report
+            .cases
+            .iter()
+            .find(|case| case.from == [false, false] && case.to == [true, false])
+            .expect("single-input transition case");
+        let edges = case.original_transition_edges();
+        assert!(!edges.is_empty());
+        assert_eq!(edges[0].elapsed_from_previous, None);
+        assert!(edges.windows(2).all(|pair| {
+            pair[1].at_tick > pair[0].at_tick
+                && pair[1].elapsed_from_previous == Some(pair[1].at_tick - pair[0].at_tick)
+        }));
     }
 }

@@ -1,0 +1,205 @@
+{
+  "schema_version": "dustroute.vanilla-instrumentation.v1",
+  "minecraft_version": "1.21.11",
+  "evidence": "observed_internal",
+  "source": "vanilla_server_instrumentation",
+  "scenario": "piston_motion_trace",
+  "source_artifact": ".local/instrumentation/piston_motion_trace-run-slot0.ndjson",
+  "instrumentation": {
+    "method": "fabric_mixin",
+    "mapping_namespace": "named",
+    "build_id": "fabric-loom-1.17.20-yarn-1.21.11+build.6-loader-0.19.5",
+    "target_class": "WorldTickScheduler;World;AbstractBlockState;PistonBlockEntity;ServerCommonNetworkHandler",
+    "target_member": "tick(BiConsumer);setBlockState;neighborUpdate;tick;finish;sendPacket"
+  },
+  "clock": {
+    "unit": "game_tick",
+    "activation_origin": "server_input_received",
+    "absolute_ticks_omitted": true
+  },
+  "input": {
+    "kind": "player_interact_block",
+    "position": { "x": 652, "y": 104, "z": 0 },
+    "activation_game_tick": 0,
+    "first_redstone_change_game_tick": 0,
+    "first_packet_update_game_tick": 0
+  },
+  "ordered_ticks": [],
+  "state_events": [
+    {
+      "sequence": 1,
+      "game_tick": 0,
+      "sub_tick_order": 0,
+      "position": { "x": 652, "y": 104, "z": 0 },
+      "source": "World.setBlockState",
+      "before": { "name": "minecraft:lever", "properties": { "face": "floor", "facing": "east", "powered": false } },
+      "after": { "name": "minecraft:lever", "properties": { "face": "floor", "facing": "east", "powered": true } },
+      "changed": true
+    },
+    {
+      "sequence": 2,
+      "game_tick": 1,
+      "sub_tick_order": 0,
+      "position": { "x": 655, "y": 104, "z": 0 },
+      "source": "World.setBlockState",
+      "before": { "name": "minecraft:air", "properties": {} },
+      "after": { "name": "minecraft:moving_piston", "properties": { "facing": "east", "type": "normal" } },
+      "changed": true
+    },
+    {
+      "sequence": 3,
+      "game_tick": 1,
+      "sub_tick_order": 1,
+      "position": { "x": 654, "y": 104, "z": 0 },
+      "source": "World.setBlockState",
+      "before": { "name": "minecraft:stone", "properties": {} },
+      "after": { "name": "minecraft:moving_piston", "properties": { "facing": "east", "type": "normal" } },
+      "changed": true
+    },
+    {
+      "sequence": 4,
+      "game_tick": 1,
+      "sub_tick_order": 2,
+      "position": { "x": 653, "y": 104, "z": 0 },
+      "source": "World.setBlockState",
+      "before": { "name": "minecraft:piston", "properties": { "extended": false, "facing": "east" } },
+      "after": { "name": "minecraft:piston", "properties": { "extended": true, "facing": "east" } },
+      "changed": true
+    },
+    {
+      "sequence": 5,
+      "game_tick": 3,
+      "sub_tick_order": 0,
+      "position": { "x": 655, "y": 104, "z": 0 },
+      "source": "World.setBlockState",
+      "before": { "name": "minecraft:moving_piston", "properties": { "facing": "east", "type": "normal" } },
+      "after": { "name": "minecraft:stone", "properties": {} },
+      "changed": true
+    },
+    {
+      "sequence": 6,
+      "game_tick": 3,
+      "sub_tick_order": 1,
+      "position": { "x": 654, "y": 104, "z": 0 },
+      "source": "World.setBlockState",
+      "before": { "name": "minecraft:moving_piston", "properties": { "facing": "east", "type": "normal" } },
+      "after": { "name": "minecraft:piston_head", "properties": { "facing": "east", "short": false, "type": "normal" } },
+      "changed": true
+    }
+  ],
+  "piston_states": [
+    {
+      "sequence": 1,
+      "game_tick": 1,
+      "position": { "x": 655, "y": 104, "z": 0 },
+      "state_kind": "moving",
+      "body": { "name": "minecraft:moving_piston", "properties": { "facing": "east", "type": "normal" } },
+      "head": null,
+      "moving_block": { "name": "minecraft:stone", "properties": {} },
+      "block_entity_present": true,
+      "block_entity_extending": true
+    },
+    {
+      "sequence": 2,
+      "game_tick": 1,
+      "position": { "x": 654, "y": 104, "z": 0 },
+      "state_kind": "moving",
+      "body": { "name": "minecraft:moving_piston", "properties": { "facing": "east", "type": "normal" } },
+      "head": { "name": "minecraft:piston_head", "properties": { "facing": "east", "short": false, "type": "normal" } },
+      "moving_block": null,
+      "block_entity_present": true,
+      "block_entity_extending": true
+    },
+    {
+      "sequence": 3,
+      "game_tick": 3,
+      "position": { "x": 653, "y": 104, "z": 0 },
+      "state_kind": "stable",
+      "body": { "name": "minecraft:piston", "properties": { "extended": true, "facing": "east" } },
+      "head": { "name": "minecraft:piston_head", "properties": { "facing": "east", "short": false, "type": "normal" } },
+      "moving_block": null,
+      "block_entity_present": false,
+      "block_entity_extending": null
+    }
+  ],
+  "neighbor_updates": [
+    {
+      "sequence": 1,
+      "game_tick": 0,
+      "sub_tick_order": 0,
+      "position": { "x": 651, "y": 104, "z": 0 },
+      "target": { "name": "minecraft:air", "properties": {} },
+      "source_block": "minecraft:lever",
+      "orientation": null,
+      "notify": false
+    },
+    {
+      "sequence": 2,
+      "game_tick": 0,
+      "sub_tick_order": 1,
+      "position": { "x": 653, "y": 104, "z": 0 },
+      "target": {
+        "name": "minecraft:piston",
+        "properties": { "extended": false, "facing": "east" }
+      },
+      "source_block": "minecraft:lever",
+      "orientation": null,
+      "notify": false
+    },
+    {
+      "sequence": 3,
+      "game_tick": 0,
+      "sub_tick_order": 2,
+      "position": { "x": 652, "y": 103, "z": 0 },
+      "target": { "name": "minecraft:stone", "properties": {} },
+      "source_block": "minecraft:lever",
+      "orientation": null,
+      "notify": false
+    },
+    {
+      "sequence": 4,
+      "game_tick": 0,
+      "sub_tick_order": 3,
+      "position": { "x": 652, "y": 105, "z": 0 },
+      "target": { "name": "minecraft:air", "properties": {} },
+      "source_block": "minecraft:lever",
+      "orientation": null,
+      "notify": false
+    },
+    {
+      "sequence": 5,
+      "game_tick": 0,
+      "sub_tick_order": 4,
+      "position": { "x": 652, "y": 104, "z": -1 },
+      "target": { "name": "minecraft:air", "properties": {} },
+      "source_block": "minecraft:lever",
+      "orientation": null,
+      "notify": false
+    },
+    {
+      "sequence": 6,
+      "game_tick": 0,
+      "sub_tick_order": 5,
+      "position": { "x": 652, "y": 104, "z": 1 },
+      "target": { "name": "minecraft:air", "properties": {} },
+      "source_block": "minecraft:lever",
+      "orientation": null,
+      "notify": false
+    }
+  ],
+  "completeness": {
+    "ordered_ticks": false,
+    "input_timing": true,
+    "state_events": true,
+    "piston_state": true,
+    "neighbor_updates": false
+  },
+  "notes": [
+    "Promoted from the bounded offline Mineflayer plus Fabric 1.21.11 capture.",
+    "All game ticks are relative to the first server-side input receipt; raw NDJSON is retained outside Git.",
+    "The bounded piston interval contained no OrderedTick callback, so ordered_ticks remains unavailable rather than inferred.",
+    "Server outbound BlockUpdateS2CPacket timing and Mineflayer client blockUpdate order are separate evidence families.",
+    "Neighbor callback order is filtered to the observed redstone/Piston scope; source positions and callbacks outside that filter remain unavailable.",
+    "This fixture does not change SchedulerProfile or DelayProfile."
+  ]
+}

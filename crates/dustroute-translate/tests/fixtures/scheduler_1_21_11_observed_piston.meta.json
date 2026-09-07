@@ -1,0 +1,8 @@
+{
+  "schema_version": "dustroute.scheduler-observation-metadata.v1",
+  "minecraft_version": "1.21.11",
+  "fixture": "crates/dustroute-translate/tests/fixtures/scheduler_1_21_11_observed_piston.json",
+  "source_artifact": ".local/e2e-artifacts/piston_motion_trace-latest.json",
+  "source_result": "trace",
+  "reason": "Capture the separate input-to-start and start-to-stable-completion intervals, including same-game-tick piston completion packet order, on the pinned 1.21.11 server."
+}

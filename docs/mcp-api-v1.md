@@ -1,5 +1,8 @@
 # MCP JSON contracts
 
+For the public tool inventory and end-to-end usage, see the [公開機能ガイド](mcp-public-features.md). This document records detailed response contracts.
+
+
 ## Physical interface evidence
 
 Reverse-analysis responses expose `interface_evidence` with the observed
@@ -22,6 +25,17 @@ shared physical network; `shared_physical_components` reports components that
 depend on multiple inputs or influence multiple outputs. Local gate labels are
 explanatory and do not exclusively own physical blocks. See
 [`physical-function-model.md`](physical-function-model.md).
+
+Focused responses from `test_circuit` and flat `convert_from_circuit` include a
+bounded `focused_explanation`. Its `role` identifies the local signal role,
+`incoming` and `outgoing` preserve adjacent directed physical edges, and
+`input_candidates`/`output_candidates` expose the mapped interface evidence.
+`paths_from_inputs` and `paths_to_outputs` are capped path explanations rather
+than a complete graph dump. `timing`, `temporal_devices`,
+`observation_complete`, and `caveats` must be shown to an LLM or user before a
+logical label is treated as certain. The hierarchical large-circuit response
+uses the same shape but explicitly reports that flat terminal/path inference
+was skipped; empty candidate arrays are not proof of an input-free circuit.
 
 `convert_from_circuit` accepts `include_truth_table=true` for an explicit
 bounded exhaustive request, including circuits that use the hierarchical path
@@ -152,10 +166,51 @@ This representation is required even for empty state. It prevents non-string
 map keys from reaching `serde_json` and keeps live and simulated traces in the
 same shape.
 
+In addition to the compatibility `events` array, transition-test responses
+include a `transitions` array. Each entry has an opaque `id`, the observed
+position, the before/after signal values when a before value is known, and
+`elapsed_from_previous`. `same_tick` entries retain `order_delta`; an
+`exact_ticks` entry is measured in the trace's declared redstone-tick unit.
+The response also exposes `status` (`in_progress`, `complete`, or `failed`),
+the declared `time_unit`, and exact live duration when available. Entries from
+live recordings carry `game_tick` and `phase` when known, together with
+`logical_elapsed_from_previous`; these fields preserve game-tick timing even
+when the compatibility `redstone_tick` bucket is rounded. The first entry has
+no elapsed value. Consumers should use this array when comparing state-changing
+edges and use `events` when they need the original scenario sequence or
+provenance fields.
+
 Transition verification reports `steady_state_equivalent` separately from
 `trace_equivalent`. Server/physics observation can place an otherwise immediate
 dust update on either side of a redstone-tick sampling boundary; this remains a
 visible trace difference without incorrectly claiming a final-state mismatch.
+
+Trace events carry optional provenance fields in addition to tick and state:
+`event_kind`, `cause`, `source`, and `cause_sequence`. A Mineflayer bridge
+records `event_kind=state_transition`, `cause=packet_observation`, and
+`source=live_mineflayer`; packet order is evidence, not the internal vanilla
+scheduler cause. Provenance differences are intentionally excluded from
+behavioral equivalence, while state, redstone tick, and within-tick order are
+still compared. Exact game-tick or known-phase differences are reported
+separately; an unknown phase does not become a false mismatch.
+
+Temporal IR responses additionally expose a game-tick `transition_delay` for
+stateful edges and devices. It can be `same_game_tick`, an exact game-tick
+value, a bounded game-tick range, or `unavailable`; clients must not infer an
+immediate transition from an unavailable legacy redstone-tick scalar. Piston
+motion remains preview-only until the target Minecraft version has a verified
+start/completion trace. The lower-level Minecraft physics engine retains
+`phase` and `sub_tick_order` for same-game-tick evidence, bounds zero-delay
+chains with a per-tick microstep budget, and reports a structured failure when
+a child would move back to an earlier phase. A failed event is requeued rather
+than silently consumed; this is an implementation safety contract and does not
+promote MCP piston operations beyond their current `PreviewOnly` status.
+Truncated live recordings are returned with `status=failed`; their accepted
+prefix is evidence only and must not satisfy an exact transition contract.
+When a physics engine is driven from a bounded live snapshot, callers must
+provide the same complete region through `PistonPlanningContext` (or
+`PhysicsEngine::with_piston_planning_region`); an absent coordinate outside that
+region is `unknown_space`, not an empty block.
 
 ## Mutation lifecycle
 
@@ -172,8 +227,10 @@ defaults, and the fully resolved contract is echoed in the response before any
 world mutation. The contract separates these concerns:
 
 - `logical`: exact steady-state truth-table preservation.
-- `timing`: `exact_trace`, `bounded_delay`, `settled_value_only`, or
-  `preserve_order`; the default is bounded delay with at most five added
+- `timing`: `exact_trace`, `exact_transitions`, `bounded_delay`, `settled_value_only`, or
+  `preserve_order`; `exact_transitions` compares only state-changing edges and
+  their observed transition times, while `exact_trace` compares every sampled
+  output value. The default is bounded delay with at most five added
   redstone ticks and a 20-redstone-tick settling deadline.
 - `pulse`: whether pulses may be introduced or removed and their maximum width
   change; the default permits neither and requires an exact width.
@@ -224,3 +281,39 @@ The current observed-world candidate generator handles one non-branching
 redstone-dust path with fixed endpoints inside an explicit focus. The phased
 score selector is more general, but arbitrary component relocation is not yet
 part of this API.
+
+## Mechanism interpretation through existing observation tools
+
+`show_region`, `test_circuit`, and `convert_from_circuit` include `mechanisms`.
+A known stable piston layout has `kind: piston_door`, an exact contract match,
+and an observed `state`. Other piston regions have
+`kind: unidentified_piston_mechanism`, null state/contract, and candidate
+assessments explaining why recognition was not established. This is observation,
+not mutation authorization. The current recognizer checks the entire observed
+region; it does not yet split arbitrary scenes into separate mechanisms.
+
+`show_region` captures fresh blocks. Conversion with a `circuit_id` preserves
+that snapshot; recapture explicitly for current state. No dedicated door-state
+read endpoint is exposed. See [the candidate observation schema](piston-door-mcp-v1.md#reverse-observation).
+
+`unsupported_observed_blocks` is an array of `{position, block}` records,
+including an empty array when no unsupported blocks exist. Coordinate-keyed
+objects could not serialize nonempty observations and have been replaced.
+
+## Hypothetical revision contract
+
+`test_circuit_change` accepts exactly one `circuit_id` or `revision_id`, plus
+`changes` with full replacement `properties`. It returns a saved
+`dustroute.circuit-revision.v1` record (`analysis_mode: virtual_circuit_revision`)
+with `revision_id`, `parent_revision_ids`, `base_observation_id`, exact changes
+and `validation.before` / `validation.after`. This replaces the old transient
+`before`, `after`, and `steady_state_simulation` response fields. Read the same
+record with `get_circuit_revision`; optional `include_snapshot` returns blocks.
+Both endpoints are hypothetical-only. See [the revision contract](circuit-revisions.md).
+
+Revision records may now include retained `base_snapshot` evidence.
+`new_placement` accepts `revision_id` instead of a built-in `circuit` name and
+returns a separately validated common placement operation. It requires current
+world agreement with that evidence and shared placement validation; revision
+IDs are still not operation IDs or live circuit IDs. Legacy revisions without
+base evidence cannot be reflected.

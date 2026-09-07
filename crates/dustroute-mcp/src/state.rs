@@ -31,7 +31,7 @@ impl PlanStateStore {
         Self::new(base.join(scope), ttl_seconds)
     }
 
-    fn new(root: PathBuf, ttl_seconds: u64) -> Self {
+    pub(crate) fn new(root: PathBuf, ttl_seconds: u64) -> Self {
         Self { root, ttl_seconds }
     }
 

@@ -1,5 +1,14 @@
 はい。まずは **Java Edition の高精度レッドストーン回路シミュレータ向け**に、実装仕様表として切ります。
 
+現在の実行可能な伝播境界は、`PhysicsEngine::schedule_world_change` または
+`schedule_redstone_input` から始まる、水平6近傍更新・Wire信号再計算・Lamp/Piston反応に、
+既存のwire形状とblock traitに基づく限定的な上下Wire rise/fall、さらに単一の水平Repeater
+（背面入力→前面出力、1–4 redstone tick遅延）を加えた固定点MVPです。
+上下接続では、変更Wireから既存の斜めoffset-neighbor Wireへも更新を伝播します。
+完全なVanilla wire topologyを実装したものではありません。
+Repeaterの側面lock、Comparator/Observerの上流伝播、QC/BUDは、下表の仕様候補であり、まだ
+この実行境界には含めません。
+
 重要なのは、「入力→出力」だけではなく **何を契機に再評価されるか／どのイベントキューに乗るか／同tick内の順序を保存する必要があるか** です。QCはJava版固有で、piston・dropper・dispenserが対象です。また「論理上poweredだがupdateを受けていないため未作動」という状態が実在します。([Minecraft Wiki][1])
 
 ### コア仕様表
@@ -8,7 +17,7 @@
 | ---------------------------- | -------------------------- | ---------------------------------- | --------------- | ------------------------ | ----------------------------------------------- | ------ |
 | **Redstone Dust**            | 周囲から signal 0–15           | `power :: 0..15`, 接続shape          | 基本即時            | 周辺block update / power変化 | 単純BFS禁止。**update order** が回路結果に影響               | **S**  |
 | **Solid / Conductive Block** | strong/weak power          | block自体に永続signal stateを持つというより照会対象 | 即時              | 周囲へのactivation条件         | `strongPower` / `weakPower` を分離                 | **S**  |
-| **Repeater**                 | 背面入力、側面lock                | powered / delay / locked / facing  | 1–4 RS ticks    | scheduled tick、前方power   | 入力変化時に即出力を書換えない                                 | **S**  |
+| **Repeater**                 | 背面入力、側面lock                | powered / delay / locked / facing  | 1–4 RS ticks    | scheduled tick、前方power   | 基本経路は実装済み。側面lockは未対応                         | **S**  |
 | **Comparator**               | rear、side、container signal | mode / powered / outputLevel       | scheduled       | 前方power/update           | analog 0–15必須。repeaterとはtick priority差があるケース    | **S**  |
 | **Torch**                    | attached blockのpower       | lit/unlit、burnout履歴                | tick依存          | 周辺power/update           | burnoutには**時系列履歴**が必要                           | A      |
 | **Observer**                 | 観測面のblock-state変化          | powered                            | pulse           | scheduled pulse/update   | redstone powerでなく **block state transition**を見る | **S**  |
@@ -294,6 +303,52 @@ event execution
 | push limit                | movable set                   |
 | immovable block           | cancellation                  |
 | piston facing obstruction | activation exception          |
+
+DustRouteの第1段階では、上表のうち通常の水平Extend/Retractを、安定した
+通常ブロックだけに限定して `PistonPlan -> WorldDelta` として扱う。Planは
+読み取り専用で、適用時には親`ShapeId`と各座標のbefore状態を再検証する。
+複数ブロックの押し出しは座標ごとの最終差分へ畳み込む一方、移動関係と
+dirty regionは保持し、後続の差分トポロジー更新へ渡せるようにする。
+`PhysicsEngine::schedule_redstone_input` と
+`run_redstone_piston_events` を使う場合は、直接隣接したlever、wire、
+repeater、comparator、observer、button、pressure plate、redstone torch、
+redstone blockなどの入力edgeを次の因果列へ投影する。
+
+```text
+RedstoneInput
+    ↓
+NeighborUpdate (直接隣接piston)
+    ↓
+PistonExtend / PistonRetract BlockEvent
+    ↓
+Extending / Retracting + MovingPiston
+    ↓
+PistonComplete + stable PistonHead
+```
+
+入力のpowered値は隣接更新時に四方向の直接入力を再集約するため、別の
+入力が残っている場合に誤って収縮しない。Block Eventの重複はイベント証拠
+として保持しつつ、既に移動中のpistonではno-opとして扱う。入力からBlock
+Eventまでの初期遅延はモデル化した0--1 game tickの範囲から上限値を選び、
+移動区間（初期値は2 game ticks）とは分離する。これは決定的な近似であり、
+自動で`SchedulerProfile`や`DelayProfile`を変更しない。
+
+ライブ観測では`with_piston_planning_region`で完全な静的観測境界を渡す。
+境界外の入力は適用前に、移動先の不足や方向情報が欠落したobserved source、
+未対応の入力は各段階で`unknown_space`/`unknown_input`/
+`unsupported_input`としてfail-closedにする。入力後に移動計画が拒否された
+場合も、既に受理した入力イベントまでをprefixとして保持し、pistonの動作は
+部分適用しない。明示的な`PistonAction` schedule APIも互換層として残る。
+QC/BUD、slime/honey、moving piston headの連続衝突、Entity、0-tick内部順序、
+上流redstone伝播はこの契約に含めず、物理・MCPの判定は引き続きPreviewOnly
+とする。
+
+PhysicsEngineのイベントキューは `game_tick`、粗い `phase`、phase内の
+`sub_tick_order` を分離して保持する。同tickの遅延0イベントが既に処理済み
+の前段phaseへ戻る場合は `CausalOrderViolation` として拒否し、入力イベント
+をキューから黙って失わない。ピストン専用runnerへ別種イベントが混在した
+場合も、部分適用前に拒否する。これは安全な決定性境界であり、バニラの全
+スケジューラ順序や0-tick再現を意味しない。
 
 QCによる「update待ちpiston」はまさにBUD回路の根幹です。([Minecraft Wiki][1])
 

@@ -1,6 +1,9 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use dustroute_ir::{BehaviorEvent, BehaviorTrace, TraceTimeUnit};
+use dustroute_ir::{
+    BehaviorEvent, BehaviorTrace, EventCause, EventKind, EventSource, TraceStatus, TraceTimeUnit,
+    TransitionPhase,
+};
 use dustroute_physical::{ComponentId, PhysicalScene};
 use dustroute_translate::{MinecraftSnapshot, ScenarioEvent, ScenarioTrace};
 use serde::{Deserialize, Serialize};
@@ -130,9 +133,16 @@ pub fn scenario_trace_from_recording_with_initial(
 ) -> ScenarioTrace {
     let mut trace = ScenarioTrace {
         duration_redstone_ticks,
+        duration_game_ticks: Some(
+            recording
+                .stopped_game_tick
+                .saturating_sub(recording.started_game_tick),
+        ),
+        time_unit: TraceTimeUnit::RedstoneTick,
         ..ScenarioTrace::default()
     };
     let mut last = BTreeMap::new();
+    let mut initial_sub_tick_order = 0;
     for position in observe {
         let snapshot_state = initial
             .and_then(|snapshot| snapshot.blocks.iter().find(|block| block.pos == *position))
@@ -153,10 +163,13 @@ pub fn scenario_trace_from_recording_with_initial(
                     });
                 (strength, strength > 0)
             });
-        let event_state = recording
+        let initial_event = recording
             .events
             .iter()
             .find(|event| event.pos == *position)
+            .cloned();
+        let event_state = initial_event
+            .as_ref()
             .and_then(|event| event.before.as_ref())
             .map(|before| {
                 (
@@ -165,24 +178,65 @@ pub fn scenario_trace_from_recording_with_initial(
                 )
             });
         if let Some(value) = event_state.or(snapshot_state) {
+            let (event_kind, cause, source, cause_sequence, game_tick, phase) = initial_event
+                .as_ref()
+                .map(|event| {
+                    (
+                        event.event_kind,
+                        event.cause,
+                        event.source,
+                        event.cause_sequence,
+                        Some(event.game_tick),
+                        event.phase,
+                    )
+                })
+                .unwrap_or((
+                    EventKind::StateTransition,
+                    EventCause::InitialSnapshot,
+                    EventSource::InitialSnapshot,
+                    None,
+                    Some(recording.started_game_tick),
+                    TransitionPhase::Unknown,
+                ));
             last.insert(*position, value);
             trace.events.push(ScenarioEvent {
                 redstone_tick: 0,
+                sub_tick_order: initial_sub_tick_order,
+                game_tick,
+                phase,
+                event_kind,
+                cause,
+                source,
+                cause_sequence,
                 sequence: trace.events.len() as u64,
                 position: *position,
                 strength: value.0,
                 powered: value.1,
             });
+            initial_sub_tick_order += 1;
         }
     }
-    for update in recording.events.iter().filter(|event| {
-        observe.contains(&event.pos)
-            && event
-                .game_tick
-                .saturating_sub(recording.started_game_tick)
-                .div_ceil(2)
-                <= duration_redstone_ticks
-    }) {
+    let mut updates = recording
+        .events
+        .iter()
+        .filter(|event| {
+            observe.contains(&event.pos)
+                && event
+                    .game_tick
+                    .saturating_sub(recording.started_game_tick)
+                    .div_ceil(2)
+                    <= duration_redstone_ticks
+        })
+        .collect::<Vec<_>>();
+    updates.sort_by_key(|event| {
+        (
+            event.game_tick,
+            event.phase,
+            event.sub_tick_order,
+            event.sequence,
+        )
+    });
+    for update in updates {
         let Some(after) = update.after.as_ref() else {
             continue;
         };
@@ -198,6 +252,8 @@ pub fn scenario_trace_from_recording_with_initial(
                 .iter_mut()
                 .find(|event| event.position == update.pos && event.redstone_tick == 0)
         {
+            initial.game_tick = Some(update.game_tick);
+            initial.phase = update.phase;
             initial.strength = value.0;
             initial.powered = value.1;
             last.insert(update.pos, value);
@@ -205,6 +261,13 @@ pub fn scenario_trace_from_recording_with_initial(
         }
         trace.events.push(ScenarioEvent {
             redstone_tick,
+            sub_tick_order: update.sub_tick_order,
+            game_tick: Some(update.game_tick),
+            phase: update.phase,
+            event_kind: update.event_kind,
+            cause: update.cause,
+            source: update.source,
+            cause_sequence: update.cause_sequence,
             sequence: trace.events.len() as u64,
             position: update.pos,
             strength: value.0,
@@ -217,6 +280,13 @@ pub fn scenario_trace_from_recording_with_initial(
         trace.final_strengths.insert(*position, strength);
         trace.final_powered.insert(*position, powered);
     }
+    trace.status = if recording.truncated {
+        TraceStatus::Failed {
+            error: "live update recording was truncated before the requested boundary".to_owned(),
+        }
+    } else {
+        TraceStatus::Complete
+    };
     trace
 }
 
@@ -237,6 +307,16 @@ pub fn behavior_trace_from_recording(
             by_component.entry(*component).or_default().push(event);
         }
     }
+    for updates in by_component.values_mut() {
+        updates.sort_by_key(|event| {
+            (
+                event.game_tick,
+                event.phase,
+                event.sub_tick_order,
+                event.sequence,
+            )
+        });
+    }
     let mut events = Vec::new();
     for (component, updates) in by_component {
         let Some(first) = updates.first() else {
@@ -245,6 +325,13 @@ pub fn behavior_trace_from_recording(
         if let Some(powered) = first.before.as_ref().and_then(powered_state) {
             events.push(BehaviorEvent {
                 tick: first.game_tick.saturating_sub(recording.started_game_tick),
+                sub_tick_order: first.sub_tick_order,
+                game_tick: Some(first.game_tick),
+                phase: first.phase,
+                event_kind: first.event_kind,
+                cause: first.cause,
+                source: first.source,
+                cause_sequence: first.cause_sequence,
                 component,
                 powered,
             });
@@ -259,18 +346,40 @@ pub fn behavior_trace_from_recording(
             }
             events.push(BehaviorEvent {
                 tick: update.game_tick.saturating_sub(recording.started_game_tick),
+                sub_tick_order: update.sub_tick_order,
+                game_tick: Some(update.game_tick),
+                phase: update.phase,
+                event_kind: update.event_kind,
+                cause: update.cause,
+                source: update.source,
+                cause_sequence: update.cause_sequence,
                 component,
                 powered,
             });
             previous = Some(powered);
         }
     }
-    events.sort_by_key(|event| (event.tick, event.component));
+    events.sort_by_key(|event| {
+        (
+            event.game_tick.unwrap_or(event.tick),
+            event.phase,
+            event.sub_tick_order,
+            event.component,
+        )
+    });
     BehaviorTrace {
         label: label.into(),
         time_unit: TraceTimeUnit::GameTick,
         events,
         stable: !recording.truncated,
+        status: if recording.truncated {
+            TraceStatus::Failed {
+                error: "live update recording was truncated before the requested boundary"
+                    .to_owned(),
+            }
+        } else {
+            TraceStatus::Complete
+        },
     }
 }
 
@@ -300,6 +409,7 @@ fn strength_state(state: &crate::ObservedBlockState) -> u8 {
                     | "minecraft:lever"
                     | "minecraft:redstone_torch"
                     | "minecraft:redstone_wall_torch"
+                    | "minecraft:observer"
             ) || state.name.ends_with("_button")
                 || state.name.ends_with("_pressure_plate")
             {
@@ -385,6 +495,12 @@ mod tests {
                 BlockUpdateEvent {
                     sequence: 1,
                     game_tick: 101,
+                    sub_tick_order: 0,
+                    phase: TransitionPhase::Unknown,
+                    event_kind: EventKind::StateTransition,
+                    cause: EventCause::PacketObservation,
+                    source: EventSource::LiveMineflayer,
+                    cause_sequence: None,
                     pos: Pos::new(0, 1, 0),
                     before: Some(state("0")),
                     after: Some(state("15")),
@@ -392,6 +508,12 @@ mod tests {
                 BlockUpdateEvent {
                     sequence: 2,
                     game_tick: 102,
+                    sub_tick_order: 0,
+                    phase: TransitionPhase::Unknown,
+                    event_kind: EventKind::StateTransition,
+                    cause: EventCause::PacketObservation,
+                    source: EventSource::LiveMineflayer,
+                    cause_sequence: None,
                     pos: Pos::new(0, 1, 0),
                     before: Some(state("15")),
                     after: Some(state("0")),
@@ -420,6 +542,12 @@ mod tests {
             events: vec![BlockUpdateEvent {
                 sequence: 4,
                 game_tick: 103,
+                sub_tick_order: 0,
+                phase: TransitionPhase::Unknown,
+                event_kind: EventKind::StateTransition,
+                cause: EventCause::PacketObservation,
+                source: EventSource::LiveMineflayer,
+                cause_sequence: None,
                 pos,
                 before: Some(state("false")),
                 after: Some(state("true")),
@@ -428,8 +556,46 @@ mod tests {
         let trace = scenario_trace_from_recording(&recording, &BTreeSet::from([pos]), 2);
         assert_eq!(trace.events[0].redstone_tick, 0);
         assert_eq!(trace.events[1].redstone_tick, 2);
+        assert_eq!(trace.events[0].game_tick, Some(103));
+        assert_eq!(trace.events[1].game_tick, Some(103));
         assert_eq!(trace.events[1].sequence, 1);
+        assert_eq!(trace.duration_game_ticks, Some(12));
+        assert_eq!(trace.status, TraceStatus::Complete);
         assert_eq!(trace.final_strengths[&pos], 15);
+    }
+
+    #[test]
+    fn truncated_live_recording_cannot_claim_a_complete_transition_trace() {
+        let pos = Pos::new(1, 1, 0);
+        let mut recording = UpdateRecording {
+            recording_id: "truncated".to_owned(),
+            started_game_tick: 40,
+            stopped_game_tick: 42,
+            seen_events: 2,
+            truncated: true,
+            events: vec![BlockUpdateEvent {
+                sequence: 1,
+                game_tick: 40,
+                sub_tick_order: 0,
+                phase: TransitionPhase::Unknown,
+                event_kind: EventKind::StateTransition,
+                cause: EventCause::PacketObservation,
+                source: EventSource::LiveMineflayer,
+                cause_sequence: None,
+                pos,
+                before: None,
+                after: Some(ObservedBlockState {
+                    name: "minecraft:redstone_wire".to_owned(),
+                    properties: BTreeMap::from([("power".to_owned(), "15".to_owned())]),
+                }),
+            }],
+        };
+        let trace = scenario_trace_from_recording(&recording, &BTreeSet::from([pos]), 1);
+        assert!(trace.status.is_failed());
+        assert!(!trace.status.is_complete());
+        recording.truncated = false;
+        let complete = scenario_trace_from_recording(&recording, &BTreeSet::from([pos]), 1);
+        assert_eq!(complete.status, TraceStatus::Complete);
     }
 
     #[test]
@@ -448,6 +614,12 @@ mod tests {
             events: vec![BlockUpdateEvent {
                 sequence: 1,
                 game_tick: 100,
+                sub_tick_order: 0,
+                phase: TransitionPhase::Unknown,
+                event_kind: EventKind::StateTransition,
+                cause: EventCause::PacketObservation,
+                source: EventSource::LiveMineflayer,
+                cause_sequence: None,
                 pos,
                 before: Some(state("false")),
                 after: Some(state("true")),
@@ -457,6 +629,7 @@ mod tests {
         let trace = scenario_trace_from_recording(&recording, &BTreeSet::from([pos]), 2);
         assert_eq!(trace.events.len(), 1);
         assert_eq!(trace.events[0].redstone_tick, 0);
+        assert_eq!(trace.events[0].game_tick, Some(100));
         assert!(trace.events[0].powered);
     }
 

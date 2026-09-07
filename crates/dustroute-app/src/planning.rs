@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 
-use dustroute_physical::{Block, BlockKind, Pos, World};
+use dustroute_physical::{Block, BlockKind, Pos, ValidatedWorld, World, WorldValidationError};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -34,14 +34,16 @@ pub struct PlacementPlan {
     pub previewed: bool,
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum PlanningError {
     BlockLimitExceeded { limit: usize, actual: usize },
+    InvalidWorld(WorldValidationError),
 }
 
 impl Display for PlanningError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::InvalidWorld(error) => Display::fmt(error, f),
             Self::BlockLimitExceeded { limit, actual } => {
                 write!(
                     f,
@@ -53,6 +55,37 @@ impl Display for PlanningError {
 }
 
 impl Error for PlanningError {}
+
+/// Exact edits validated against a complete baseline. Serialized plans are
+/// proposals, never proof: invoke must reconstruct this type from a fresh scan.
+#[derive(Clone, Debug)]
+pub struct ValidatedBlockChanges {
+    changes: Vec<BlockChange>,
+}
+
+impl ValidatedBlockChanges {
+    pub fn new(existing: &World, changes: Vec<BlockChange>) -> Result<Self, WorldValidationError> {
+        let mut candidate = existing.clone();
+        let mut positions = std::collections::BTreeSet::new();
+        for change in &changes {
+            if !positions.insert(change.pos) {
+                return Err(WorldValidationError {
+                    issues: vec![dustroute_physical::WorldValidationIssue::DuplicateChange {
+                        position: change.pos,
+                    }],
+                });
+            }
+            candidate.set(change.pos, change.after.clone());
+        }
+        let _validated = ValidatedWorld::try_from(candidate)?;
+        Ok(Self { changes })
+    }
+
+    #[must_use]
+    pub fn changes(&self) -> &[BlockChange] {
+        &self.changes
+    }
+}
 
 #[must_use]
 pub fn relocate_world(source: &World, origin: Pos) -> World {
@@ -68,7 +101,7 @@ pub fn relocate_world(source: &World, origin: Pos) -> World {
 
 pub fn plan_world_overlay(
     existing: &World,
-    proposed_local: &World,
+    proposed_local: &ValidatedWorld,
     origin: Pos,
     max_blocks: usize,
 ) -> Result<PlacementPlan, PlanningError> {
@@ -99,6 +132,7 @@ pub fn plan_world_overlay(
         });
     }
     let operation_id = Uuid::new_v4();
+    ValidatedBlockChanges::new(existing, changes.clone()).map_err(PlanningError::InvalidWorld)?;
     let collision_count = changes.iter().filter(|change| change.collision).count();
     let undo = UndoPlan {
         operation_id,
@@ -128,13 +162,52 @@ mod tests {
     use super::*;
 
     #[test]
+    fn removing_a_support_is_rejected_even_when_the_wire_is_not_in_the_patch() {
+        let support = Pos::new(0, 0, 0);
+        let mut baseline = World::new();
+        baseline.place(BlockKind::Solid, support);
+        baseline.place(BlockKind::RedstoneWire, Pos::new(0, 1, 0));
+        let change = BlockChange {
+            pos: support,
+            before: baseline.get(support).unwrap().clone(),
+            after: Block::new(BlockKind::Air),
+            collision: false,
+        };
+        assert!(ValidatedBlockChanges::new(&baseline, vec![change]).is_err());
+    }
+
+    #[test]
+    fn serialized_plan_edits_are_not_validation_evidence() {
+        let mut proposed = World::new();
+        proposed.place(BlockKind::Solid, Pos::new(0, 0, 0));
+        let plan = plan_world_overlay(
+            &World::new(),
+            &ValidatedWorld::try_from(proposed).unwrap(),
+            Pos::new(0, 0, 0),
+            10,
+        )
+        .unwrap();
+        // PlacementPlan is mutable/untrusted even if it originally came from
+        // a validated candidate. Only exact revalidated edits can be invoked.
+        let mut changed = plan.changes;
+        changed[0].after = Block::new(BlockKind::Repeater);
+        assert!(ValidatedBlockChanges::new(&World::new(), changed).is_err());
+    }
+
+    #[test]
     fn plans_overlay_collisions_materials_and_exact_undo() {
         let mut existing = World::new();
         existing.set(Pos::new(11, 64, 10), Block::new(BlockKind::Transparent));
         let mut proposed = World::new();
         proposed.set(Pos::new(0, 0, 0), Block::new(BlockKind::Solid));
         proposed.set(Pos::new(1, 0, 0), Block::new(BlockKind::RedstoneBlock));
-        let plan = plan_world_overlay(&existing, &proposed, Pos::new(10, 64, 10), 10).unwrap();
+        let plan = plan_world_overlay(
+            &existing,
+            &ValidatedWorld::try_from(proposed).unwrap(),
+            Pos::new(10, 64, 10),
+            10,
+        )
+        .unwrap();
         assert_eq!(plan.changes.len(), 2);
         assert_eq!(plan.collision_count, 1);
         assert_eq!(plan.materials["Solid"], 1);
@@ -155,7 +228,12 @@ mod tests {
         proposed.set(Pos::new(0, 0, 0), Block::new(BlockKind::Solid));
         proposed.set(Pos::new(1, 0, 0), Block::new(BlockKind::Solid));
         assert_eq!(
-            plan_world_overlay(&World::new(), &proposed, Pos::new(0, 0, 0), 1),
+            plan_world_overlay(
+                &World::new(),
+                &ValidatedWorld::try_from(proposed).unwrap(),
+                Pos::new(0, 0, 0),
+                1
+            ),
             Err(PlanningError::BlockLimitExceeded {
                 limit: 1,
                 actual: 2

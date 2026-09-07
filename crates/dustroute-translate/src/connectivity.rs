@@ -20,6 +20,10 @@ pub enum PhysicalStepKind {
     RepeaterToBlock,
     ComparatorToBlock,
     SourceToDust,
+    ObserverInput,
+    ObserverToDust,
+    ObserverToBlock,
+    PistonInput,
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -42,6 +46,9 @@ pub enum EdgeKind {
     DirectSource,
     TorchControl,
     LeverOutput,
+    ObserverInput,
+    ObserverOutput,
+    PistonInput,
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -169,6 +176,59 @@ pub fn comparator_output_pos(world: &World, pos: Pos) -> Option<Pos> {
     Some(pos.offset(delta.x, 0, delta.z))
 }
 
+/// Position observed by an observer. `Block::facing` uses the common
+/// DustRoute convention of pointing toward the output/back of a directional
+/// device, so the observation face is its opposite.
+#[must_use]
+pub fn observer_input_pos(world: &World, pos: Pos) -> Option<Pos> {
+    let block = world.get(pos)?;
+    if block.kind != BlockKind::Observer {
+        return None;
+    }
+    let delta = block.facing?.opposite().offset();
+    Some(pos.offset(delta.x, delta.y, delta.z))
+}
+
+/// Position powered by an observer's strong output pulse.
+#[must_use]
+pub fn observer_output_pos(world: &World, pos: Pos) -> Option<Pos> {
+    let block = world.get(pos)?;
+    if block.kind != BlockKind::Observer {
+        return None;
+    }
+    let delta = block.facing?.offset();
+    Some(pos.offset(delta.x, delta.y, delta.z))
+}
+
+/// Returns whether `source` is a directly connected redstone source for the
+/// Piston at `piston`. Quasi-connectivity and update propagation are excluded
+/// from this first physical projection; only an adjacent, directionally
+/// verified input is admitted.
+#[must_use]
+pub fn piston_input_connected(world: &World, source: Pos, piston: Pos) -> bool {
+    if world.kind_at(piston) != BlockKind::Piston {
+        return false;
+    }
+    let Some(facing) = horizontal_facing_between(piston, source) else {
+        return false;
+    };
+    let Some(source_block) = world.get(source) else {
+        return false;
+    };
+    match source_block.kind {
+        BlockKind::RedstoneWire => wire_has_arm(world, source, facing.opposite()),
+        BlockKind::Repeater => repeater_output_pos(world, source) == Some(piston),
+        BlockKind::Comparator => comparator_output_pos(world, source) == Some(piston),
+        BlockKind::Observer => observer_output_pos(world, source) == Some(piston),
+        BlockKind::Lever
+        | BlockKind::Button
+        | BlockKind::PressurePlate
+        | BlockKind::RedstoneBlock
+        | BlockKind::RedstoneTorch => true,
+        _ => false,
+    }
+}
+
 #[must_use]
 pub fn device_side_positions(world: &World, pos: Pos) -> Option<[Pos; 2]> {
     let facing = world.get(pos)?.facing?;
@@ -186,7 +246,28 @@ pub fn device_side_positions(world: &World, pos: Pos) -> Option<[Pos; 2]> {
 pub fn physical_step(world: &World, source: Pos, sink: Pos) -> Option<PhysicalStep> {
     let a = world.kind_at(source);
     let b = world.kind_at(sink);
-    let kind = if a == BlockKind::RedstoneWire && b == BlockKind::RedstoneWire {
+    let kind = if b == BlockKind::Piston && piston_input_connected(world, source, sink) {
+        Some(PhysicalStepKind::PistonInput)
+    } else if b == BlockKind::Observer && observer_input_pos(world, sink) == Some(source) {
+        Some(PhysicalStepKind::ObserverInput)
+    } else if a == BlockKind::Observer && b == BlockKind::RedstoneWire {
+        (observer_output_pos(world, source) == Some(sink))
+            .then_some(PhysicalStepKind::ObserverToDust)
+    } else if a == BlockKind::Observer && matches!(b, BlockKind::Repeater | BlockKind::Comparator) {
+        let input = match b {
+            BlockKind::Repeater => repeater_input_pos(world, sink),
+            BlockKind::Comparator => comparator_input_pos(world, sink),
+            _ => None,
+        };
+        (input == Some(source)).then_some(PhysicalStepKind::ObserverToBlock)
+    } else if a == BlockKind::Observer
+        && world
+            .get(sink)
+            .is_some_and(|block| block.redstone_traits().conducts_strong_power)
+    {
+        (observer_output_pos(world, source) == Some(sink))
+            .then_some(PhysicalStepKind::ObserverToBlock)
+    } else if a == BlockKind::RedstoneWire && b == BlockKind::RedstoneWire {
         dust_transfer(world, source, sink).map(|transfer| match transfer {
             DustTransfer::Horizontal => PhysicalStepKind::Dust,
             DustTransfer::Rise => PhysicalStepKind::DustRise,
@@ -285,6 +366,11 @@ pub fn extract_connectivity(world: &World) -> PhysicalConnectivityGraph {
                     PhysicalStepKind::DustToBlock => EdgeKind::DustToBlockWeak,
                     PhysicalStepKind::BlockToRepeater => EdgeKind::BlockToRepeater,
                     PhysicalStepKind::SourceToDust => EdgeKind::DirectSource,
+                    PhysicalStepKind::ObserverInput => EdgeKind::ObserverInput,
+                    PhysicalStepKind::ObserverToDust | PhysicalStepKind::ObserverToBlock => {
+                        EdgeKind::ObserverOutput
+                    }
+                    PhysicalStepKind::PistonInput => EdgeKind::PistonInput,
                 };
                 edges.insert(ConnectivityEdge {
                     source: *source,
@@ -330,13 +416,14 @@ pub fn extract_connectivity(world: &World) -> PhysicalConnectivityGraph {
 // one-block dust rises/falls, or the block directly below dust. Keeping this
 // finite stencil explicit prevents connectivity extraction from comparing
 // every world block with every other world block.
-const LOCAL_CONNECTION_OFFSETS: [(i32, i32, i32); 13] = [
+const LOCAL_CONNECTION_OFFSETS: [(i32, i32, i32); 14] = [
     (-1, -1, 0),
     (-1, 0, 0),
     (-1, 1, 0),
     (0, -1, -1),
     (0, -1, 0),
     (0, -1, 1),
+    (0, 1, 0),
     (0, 0, -1),
     (0, 0, 1),
     (0, 1, -1),
@@ -370,6 +457,7 @@ pub fn build_physical_circuit(
                     | BlockKind::PressurePlate
                     | BlockKind::RedstoneLamp
                     | BlockKind::RedstoneBlock
+                    | BlockKind::Observer
                     | BlockKind::Piston
             );
             (redstone_related || edge_positions.contains(pos)).then_some(*pos)
@@ -403,6 +491,9 @@ pub fn build_physical_circuit(
             EdgeKind::RepeaterOutput => ConnectionKind::DirectionalOutput,
             EdgeKind::DirectSource | EdgeKind::LeverOutput => ConnectionKind::DirectSource,
             EdgeKind::TorchControl => ConnectionKind::Control,
+            EdgeKind::ObserverInput => ConnectionKind::ObserverInput,
+            EdgeKind::ObserverOutput => ConnectionKind::ObserverOutput,
+            EdgeKind::PistonInput => ConnectionKind::PistonInput,
         };
         Some(PhysicalConnection { source, sink, kind })
     });
@@ -426,23 +517,27 @@ mod tests {
                     continue;
                 }
                 if let Some(step) = physical_step(world, *source, *sink) {
-                    let kind = match step.kind {
-                        PhysicalStepKind::Dust => EdgeKind::Dust,
-                        PhysicalStepKind::DustRise => EdgeKind::DustRise,
-                        PhysicalStepKind::DustFallThroughConductor => {
-                            EdgeKind::DustFallThroughConductor
-                        }
-                        PhysicalStepKind::DustToRepeater | PhysicalStepKind::DustToComparator => {
-                            EdgeKind::RepeaterInput
-                        }
-                        PhysicalStepKind::RepeaterToDust
-                        | PhysicalStepKind::RepeaterToBlock
-                        | PhysicalStepKind::ComparatorToDust
-                        | PhysicalStepKind::ComparatorToBlock => EdgeKind::RepeaterOutput,
-                        PhysicalStepKind::DustToBlock => EdgeKind::DustToBlockWeak,
-                        PhysicalStepKind::BlockToRepeater => EdgeKind::BlockToRepeater,
-                        PhysicalStepKind::SourceToDust => EdgeKind::DirectSource,
-                    };
+                    let kind =
+                        match step.kind {
+                            PhysicalStepKind::Dust => EdgeKind::Dust,
+                            PhysicalStepKind::DustRise => EdgeKind::DustRise,
+                            PhysicalStepKind::DustFallThroughConductor => {
+                                EdgeKind::DustFallThroughConductor
+                            }
+                            PhysicalStepKind::DustToRepeater
+                            | PhysicalStepKind::DustToComparator => EdgeKind::RepeaterInput,
+                            PhysicalStepKind::RepeaterToDust
+                            | PhysicalStepKind::RepeaterToBlock
+                            | PhysicalStepKind::ComparatorToDust
+                            | PhysicalStepKind::ComparatorToBlock => EdgeKind::RepeaterOutput,
+                            PhysicalStepKind::DustToBlock => EdgeKind::DustToBlockWeak,
+                            PhysicalStepKind::BlockToRepeater => EdgeKind::BlockToRepeater,
+                            PhysicalStepKind::SourceToDust => EdgeKind::DirectSource,
+                            PhysicalStepKind::ObserverInput => EdgeKind::ObserverInput,
+                            PhysicalStepKind::ObserverToDust
+                            | PhysicalStepKind::ObserverToBlock => EdgeKind::ObserverOutput,
+                            PhysicalStepKind::PistonInput => EdgeKind::PistonInput,
+                        };
                     edges.insert(ConnectivityEdge {
                         source: *source,
                         sink: *sink,
@@ -518,6 +613,75 @@ mod tests {
         let graph = extract_connectivity(&world);
         assert!(graph.can_reach(Pos::new(0, 1, 0), Pos::new(2, 1, 0)));
         assert!(!graph.can_reach(Pos::new(2, 1, 0), Pos::new(0, 1, 0)));
+    }
+
+    #[test]
+    fn observer_keeps_observation_and_output_directional() {
+        let mut world = World::new();
+        world.set(Pos::new(0, 0, 0), Block::new(BlockKind::Solid));
+        world.set(Pos::new(2, 0, 0), Block::new(BlockKind::Solid));
+        world.place(BlockKind::Lever, Pos::new(0, 1, 0));
+        let observer = world.place(BlockKind::Observer, Pos::new(1, 1, 0));
+        observer.facing = Some(Facing::East);
+        world.place(BlockKind::RedstoneWire, Pos::new(2, 1, 0));
+        update_wire_shapes(&mut world);
+
+        assert_eq!(
+            observer_input_pos(&world, Pos::new(1, 1, 0)),
+            Some(Pos::new(0, 1, 0))
+        );
+        assert_eq!(
+            observer_output_pos(&world, Pos::new(1, 1, 0)),
+            Some(Pos::new(2, 1, 0))
+        );
+        assert_eq!(
+            physical_step(&world, Pos::new(0, 1, 0), Pos::new(1, 1, 0)).map(|step| step.kind),
+            Some(PhysicalStepKind::ObserverInput)
+        );
+        assert_eq!(
+            physical_step(&world, Pos::new(1, 1, 0), Pos::new(2, 1, 0)).map(|step| step.kind),
+            Some(PhysicalStepKind::ObserverToDust)
+        );
+        let graph = extract_connectivity(&world);
+        assert!(graph.can_reach(Pos::new(0, 1, 0), Pos::new(2, 1, 0)));
+        assert!(!graph.can_reach(Pos::new(2, 1, 0), Pos::new(0, 1, 0)));
+        let topology = build_physical_circuit(&world, &graph);
+        assert!(
+            topology
+                .connections
+                .iter()
+                .any(|connection| connection.kind == ConnectionKind::ObserverInput)
+        );
+        assert!(
+            topology
+                .connections
+                .iter()
+                .any(|connection| connection.kind == ConnectionKind::ObserverOutput)
+        );
+    }
+
+    #[test]
+    fn piston_accepts_only_a_direct_directionally_verified_input() {
+        let mut world = World::new();
+        world.set(Pos::new(0, 0, 0), Block::new(BlockKind::Solid));
+        world.set(Pos::new(1, 0, 0), Block::new(BlockKind::Solid));
+        world.place(BlockKind::Lever, Pos::new(0, 1, 0));
+        let piston = world.place(BlockKind::Piston, Pos::new(1, 1, 0));
+        piston.facing = Some(Facing::East);
+        assert!(piston_input_connected(
+            &world,
+            Pos::new(0, 1, 0),
+            Pos::new(1, 1, 0)
+        ));
+        assert_eq!(
+            physical_step(&world, Pos::new(0, 1, 0), Pos::new(1, 1, 0)).map(|step| step.kind),
+            Some(PhysicalStepKind::PistonInput)
+        );
+        assert!(!piston_input_connected(
+            &world,
+            Pos::new(0, 2, 0),
+            Pos::new(1, 1, 0)
+        ));
     }
 
     #[test]

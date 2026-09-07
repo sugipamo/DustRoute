@@ -10,7 +10,10 @@ use zip::write::SimpleFileOptions;
 
 use crate::compiler::BaselineCompileResult;
 use crate::logic::LogicError;
-use crate::world::{Block, BlockKind, Facing, Pos, WireConnection, World};
+use crate::world::{
+    Block, BlockKind, Facing, PistonVariant, Pos, WireConnection, piston_state, piston_variant,
+};
+use dustroute_minecraft::{ValidatedWorld, WorldValidationError};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct JavaExportConfig {
@@ -41,6 +44,7 @@ impl Default for JavaExportConfig {
 
 #[derive(Debug)]
 pub enum MinecraftExportError {
+    InvalidWorld(WorldValidationError),
     Io(io::Error),
     Zip(zip::result::ZipError),
     Logic(LogicError),
@@ -48,11 +52,13 @@ pub enum MinecraftExportError {
     InvalidResourceName(String),
     TooManyInputs(usize),
     UnsupportedFacing(Facing),
+    UnsupportedTransientBlock(BlockKind),
 }
 
 impl Display for MinecraftExportError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::InvalidWorld(error) => Display::fmt(error, f),
             Self::Io(error) => Display::fmt(error, f),
             Self::Zip(error) => Display::fmt(error, f),
             Self::Logic(error) => Display::fmt(error, f),
@@ -65,11 +71,22 @@ impl Display for MinecraftExportError {
             Self::UnsupportedFacing(facing) => {
                 write!(f, "unsupported horizontal facing: {facing:?}")
             }
+            Self::UnsupportedTransientBlock(kind) => {
+                write!(
+                    f,
+                    "cannot export transient block without block-entity data: {kind:?}"
+                )
+            }
         }
     }
 }
 
 impl Error for MinecraftExportError {}
+impl From<WorldValidationError> for MinecraftExportError {
+    fn from(error: WorldValidationError) -> Self {
+        Self::InvalidWorld(error)
+    }
+}
 impl From<io::Error> for MinecraftExportError {
     fn from(value: io::Error) -> Self {
         Self::Io(value)
@@ -209,10 +226,49 @@ pub fn java_block_state(
             "minecraft:redstone_lamp[lit={}]",
             block.powered.unwrap_or(false)
         ),
-        BlockKind::Piston => format!(
-            "minecraft:piston[facing={},extended=false]",
-            facing_name(block.facing.unwrap_or(Facing::North))
-        ),
+        BlockKind::Observer => {
+            let facing = block.facing.unwrap_or(Facing::North).opposite();
+            format!(
+                "minecraft:observer[facing={},powered={}]",
+                facing_name(facing),
+                block.powered.unwrap_or(false)
+            )
+        }
+        BlockKind::Piston => {
+            let name = match piston_variant(block) {
+                PistonVariant::Normal => "minecraft:piston",
+                PistonVariant::Sticky => "minecraft:sticky_piston",
+            };
+            let extended = piston_state(block).is_extended();
+            format!(
+                "{name}[facing={},extended={extended}]",
+                facing_name(block.facing.unwrap_or(Facing::North))
+            )
+        }
+        BlockKind::PistonHead => {
+            let state = block.piston_head.as_ref();
+            let facing = state
+                .map(|state| state.facing)
+                .or(block.facing)
+                .unwrap_or(Facing::North);
+            let variant = state
+                .map(|state| state.variant)
+                .unwrap_or_else(|| piston_variant(block));
+            let short = state.is_some_and(|state| state.short);
+            format!(
+                "minecraft:piston_head[facing={},short={short},type={}]",
+                facing_name(facing),
+                match variant {
+                    PistonVariant::Normal => "normal",
+                    PistonVariant::Sticky => "sticky",
+                }
+            )
+        }
+        BlockKind::MovingPiston => {
+            return Err(MinecraftExportError::UnsupportedTransientBlock(
+                BlockKind::MovingPiston,
+            ));
+        }
     };
     Ok(state)
 }
@@ -238,14 +294,22 @@ fn xyz(pos: Pos, config: &JavaExportConfig) -> String {
     )
 }
 
+/// Full-world export accepts only placement-validated initial worlds.
+/// `java_block_state` remains a low-level formatter, not placement approval.
+///
+/// ```compile_fail
+/// use dustroute_translate::{World, JavaExportConfig, world_setblock_commands};
+/// world_setblock_commands(&World::new(), &JavaExportConfig::default()).unwrap();
+/// ```
 pub fn world_setblock_commands(
-    world: &World,
+    world: &ValidatedWorld,
     config: &JavaExportConfig,
 ) -> Result<Vec<String>, MinecraftExportError> {
     let priority = |kind| match kind {
         BlockKind::Solid
         | BlockKind::Transparent
         | BlockKind::RedstoneBlock
+        | BlockKind::Observer
         | BlockKind::Piston => 0,
         BlockKind::RedstoneTorch | BlockKind::Lever => 2,
         _ => 1,
@@ -265,7 +329,7 @@ pub fn world_setblock_commands(
 }
 
 pub fn isolated_build_commands(
-    world: &World,
+    world: &ValidatedWorld,
     config: &JavaExportConfig,
 ) -> Result<Vec<String>, MinecraftExportError> {
     let Some((world_low, world_high)) = world.bounds() else {
@@ -282,6 +346,7 @@ pub fn isolated_build_commands(
         "minecraft:redstone_torch",
         "minecraft:redstone_wall_torch",
         "minecraft:lever",
+        "minecraft:observer",
     ] {
         commands.extend(regions.iter().map(|(a, b)| {
             format!(
@@ -513,6 +578,7 @@ pub fn compiled_circuit_datapack(
 
 #[cfg(test)]
 mod tests {
+    use crate::World;
     use crate::circuits::half_adder;
     use crate::compiler::{BaselineCompileConfig, BaselineCompiler};
 
@@ -528,6 +594,24 @@ mod tests {
             java_block_state(&repeater, &config).unwrap(),
             "minecraft:repeater[delay=2,facing=west,locked=false,powered=false]"
         );
+        let mut observer = Block::new(BlockKind::Observer);
+        observer.facing = Some(Facing::East);
+        observer.powered = Some(true);
+        assert_eq!(
+            java_block_state(&observer, &config).unwrap(),
+            "minecraft:observer[facing=west,powered=true]"
+        );
+        let head = Block::piston_head(Facing::East, PistonVariant::Sticky, false);
+        assert_eq!(
+            java_block_state(&head, &config).unwrap(),
+            "minecraft:piston_head[facing=east,short=false,type=sticky]"
+        );
+        assert!(matches!(
+            java_block_state(&Block::new(BlockKind::MovingPiston), &config),
+            Err(MinecraftExportError::UnsupportedTransientBlock(
+                BlockKind::MovingPiston
+            ))
+        ));
     }
 
     #[test]
@@ -535,7 +619,11 @@ mod tests {
         let mut world = World::new();
         world.set(Pos::new(0, 0, 0), Block::new(BlockKind::Solid));
         world.place(BlockKind::RedstoneWire, Pos::new(0, 1, 0));
-        let commands = isolated_build_commands(&world, &JavaExportConfig::default()).unwrap();
+        let commands = isolated_build_commands(
+            &ValidatedWorld::try_from(world).unwrap(),
+            &JavaExportConfig::default(),
+        )
+        .unwrap();
         let component_clear = commands
             .iter()
             .position(|line| line.ends_with("replace minecraft:redstone_wire"))

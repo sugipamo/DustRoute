@@ -68,7 +68,7 @@ fn observe(
         .compile(&dag)
         .unwrap_or_else(|error| panic!("{circuit} failed to compile: {error}"));
     let compile_ms = elapsed_ms(started);
-    let mut world = compiled.world;
+    let mut world = compiled.world.into_world();
     if let Some(target_blocks) = pad_world_to {
         pad_world_with_non_conductive_blocks(&mut world, target_blocks);
     }

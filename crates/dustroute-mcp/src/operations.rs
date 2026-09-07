@@ -20,6 +20,8 @@ pub enum OperationKind {
     RepairUndo,
     OptimizationProposal,
     TransitionProposal,
+    PistonDoorProposal,
+    PistonDoorRun,
     TransitionRun,
     TransitionRestore,
 }

@@ -30,6 +30,7 @@
       { "path": "scenario_verification.steady_state_equivalent", "equals": true },
       { "path": "scenario_verification.trace_equivalent", "exists": true },
       { "path": "scenario_verification.live_trace.final_strengths.0.position", "exists": true },
+      { "path": "scenario_verification.live_trace.transitions.0.id", "equals": 0 },
       { "path": "restoration.verified", "equals": true }
     ]},
     { "kind": "mcp", "tool": "get_bot_status", "arguments": {}, "save": "status" },

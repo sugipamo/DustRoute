@@ -6,7 +6,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::wire::update_wire_shapes;
 use crate::world::{
-    Block, BlockKind, Facing, ObservationClassification, Pos, WireConnection, World,
+    Block, BlockKind, Facing, ObservationClassification, PistonState, PistonVariant, Pos,
+    WireConnection, World,
 };
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -79,7 +80,10 @@ fn block_from_record(record: &MinecraftSnapshotBlock) -> Result<Block, SnapshotE
         }
         "redstone_lamp" => (BlockKind::RedstoneLamp, ObservationClassification::Exact),
         "redstone_block" => (BlockKind::RedstoneBlock, ObservationClassification::Exact),
+        "observer" => (BlockKind::Observer, ObservationClassification::Exact),
         "piston" | "sticky_piston" => (BlockKind::Piston, ObservationClassification::Exact),
+        "piston_head" => (BlockKind::PistonHead, ObservationClassification::Exact),
+        "moving_piston" => (BlockKind::MovingPiston, ObservationClassification::Exact),
         "glass" | "tinted_glass" => (BlockKind::Transparent, ObservationClassification::Exact),
         name if name.ends_with("_slab") || name.ends_with("_stairs") => {
             (BlockKind::Transparent, ObservationClassification::Exact)
@@ -177,7 +181,56 @@ fn block_from_record(record: &MinecraftSnapshotBlock) -> Result<Block, SnapshotE
             block.support_offset = Some(Pos::new(0, -1, 0));
         }
         BlockKind::RedstoneLamp => block.powered = property_bool(record, "lit"),
-        BlockKind::Piston => block.facing = Some(property_facing(record)?),
+        BlockKind::Observer => {
+            // Minecraft's `facing` is the observation/front direction. The
+            // internal directional convention points toward output/back.
+            block.facing = Some(property_facing(record)?.opposite());
+            block.powered = property_bool(record, "powered");
+        }
+        BlockKind::Piston => {
+            block.facing = Some(property_facing(record)?);
+            block.piston_variant = Some(if short_name == "sticky_piston" {
+                PistonVariant::Sticky
+            } else {
+                PistonVariant::Normal
+            });
+            block.piston_state = Some(if property_bool(record, "extended") == Some(true) {
+                PistonState::Extended
+            } else {
+                PistonState::Retracted
+            });
+        }
+        BlockKind::PistonHead => {
+            let facing = property_facing(record)?;
+            let variant = if record.properties.get("type").map(String::as_str) == Some("sticky") {
+                PistonVariant::Sticky
+            } else {
+                PistonVariant::Normal
+            };
+            let short = property_bool(record, "short").unwrap_or(false);
+            block.facing = Some(facing);
+            block.piston_variant = Some(variant);
+            block.piston_head = Some(dustroute_minecraft::PistonHeadState {
+                facing,
+                variant,
+                short,
+            });
+        }
+        BlockKind::MovingPiston => {
+            // A static block snapshot exposes the moving block state but not
+            // the PistonBlockEntity NBT (pushed block/progress). Retain the
+            // typed block and raw properties, while leaving the entity field
+            // absent so consumers can distinguish unavailable metadata from
+            // an observed Air payload.
+            block.facing = Some(property_facing(record)?);
+            block.piston_variant = Some(
+                if record.properties.get("type").map(String::as_str) == Some("sticky") {
+                    PistonVariant::Sticky
+                } else {
+                    PistonVariant::Normal
+                },
+            );
+        }
         _ => {}
     }
     Ok(block)
@@ -223,6 +276,8 @@ const fn facing_name(facing: Facing) -> &'static str {
 
 #[cfg(test)]
 mod tests {
+    use dustroute_minecraft::CapabilityLevel;
+
     use super::*;
 
     #[test]
@@ -312,5 +367,60 @@ mod tests {
         .unwrap();
         assert_eq!(lamp.kind, BlockKind::RedstoneLamp);
         assert_eq!(lamp.powered, Some(true));
+    }
+
+    #[test]
+    fn imports_observer_front_as_internal_back_and_keeps_power_state() {
+        let observer = block_from_record(&MinecraftSnapshotBlock {
+            pos: Pos::new(1, 1, 0),
+            name: "minecraft:observer".to_owned(),
+            properties: BTreeMap::from([
+                ("facing".to_owned(), "west".to_owned()),
+                ("powered".to_owned(), "true".to_owned()),
+            ]),
+        })
+        .unwrap();
+        assert_eq!(observer.kind, BlockKind::Observer);
+        assert_eq!(observer.facing, Some(Facing::East));
+        assert_eq!(observer.powered, Some(true));
+        assert_eq!(observer.capabilities().temporal, CapabilityLevel::Full);
+    }
+
+    #[test]
+    fn imports_piston_head_as_typed_stable_state() {
+        let head = block_from_record(&MinecraftSnapshotBlock {
+            pos: Pos::new(1, 0, 0),
+            name: "minecraft:piston_head".to_owned(),
+            properties: BTreeMap::from([
+                ("facing".to_owned(), "east".to_owned()),
+                ("type".to_owned(), "sticky".to_owned()),
+                ("short".to_owned(), "false".to_owned()),
+            ]),
+        })
+        .unwrap();
+        assert_eq!(head.kind, BlockKind::PistonHead);
+        assert_eq!(head.facing, Some(Facing::East));
+        assert_eq!(head.piston_variant, Some(PistonVariant::Sticky));
+        assert_eq!(
+            head.piston_head.as_ref().map(|state| state.short),
+            Some(false)
+        );
+    }
+
+    #[test]
+    fn imports_moving_piston_without_fabricating_missing_entity_nbt() {
+        let moving = block_from_record(&MinecraftSnapshotBlock {
+            pos: Pos::new(1, 0, 0),
+            name: "minecraft:moving_piston".to_owned(),
+            properties: BTreeMap::from([
+                ("facing".to_owned(), "east".to_owned()),
+                ("type".to_owned(), "normal".to_owned()),
+            ]),
+        })
+        .unwrap();
+        assert_eq!(moving.kind, BlockKind::MovingPiston);
+        assert_eq!(moving.facing, Some(Facing::East));
+        assert!(moving.piston_entity.is_none());
+        assert_eq!(moving.capabilities().temporal, CapabilityLevel::Partial);
     }
 }

@@ -1,0 +1,418 @@
+{
+  "execution_mode": "offline_diagnostic",
+  "mutations": [
+    {
+      "diagnostic_rebased_validation_error": null,
+      "error": null,
+      "mutation": "none",
+      "shape_changed": false,
+      "unchanged_on_rejection": true
+    },
+    {
+      "diagnostic_rebased_validation_error": null,
+      "error": "world shape changed (expected ShapeId(6265339557823984736), found ShapeId(3429379054512735725))",
+      "mutation": "distant_geometry",
+      "shape_changed": true,
+      "unchanged_on_rejection": true
+    },
+    {
+      "diagnostic_rebased_validation_error": null,
+      "error": null,
+      "mutation": "distant_signal",
+      "shape_changed": false,
+      "unchanged_on_rejection": true
+    },
+    {
+      "diagnostic_rebased_validation_error": null,
+      "error": "world shape changed (expected ShapeId(6265339557823984736), found ShapeId(16137251232403067174))",
+      "mutation": "other_piston_start",
+      "shape_changed": true,
+      "unchanged_on_rejection": true
+    },
+    {
+      "diagnostic_rebased_validation_error": "world delta before-state mismatch at (2, 1, 0)",
+      "error": "world shape changed (expected ShapeId(6265339557823984736), found ShapeId(16354336800356877348))",
+      "mutation": "destination_replaced",
+      "shape_changed": true,
+      "unchanged_on_rejection": true
+    },
+    {
+      "diagnostic_rebased_validation_error": "world delta before-state mismatch at (1, 1, 0)",
+      "error": "world shape changed (expected ShapeId(6265339557823984736), found ShapeId(15435697897606289899))",
+      "mutation": "moving_source_removed",
+      "shape_changed": true,
+      "unchanged_on_rejection": true
+    }
+  ],
+  "schedules": [
+    {
+      "action": "extend",
+      "error": "world delta failed: world shape changed (expected ShapeId(6265339557823984736), found ShapeId(16137251232403067174))",
+      "gap_ticks": 0,
+      "pending": 2,
+      "reverse_order": false,
+      "trace_status": {
+        "error": "world delta failed: world shape changed (expected ShapeId(6265339557823984736), found ShapeId(16137251232403067174))",
+        "kind": "failed"
+      },
+      "transitions": [
+        {
+          "id": 0,
+          "time": {
+            "game_tick": 0,
+            "phase": "block_event",
+            "sub_tick_order": 0
+          },
+          "from_shape": 9473951418265757114,
+          "to_shape": 6265339557823984736
+        },
+        {
+          "id": 1,
+          "time": {
+            "game_tick": 0,
+            "phase": "block_event",
+            "sub_tick_order": 1
+          },
+          "from_shape": 6265339557823984736,
+          "to_shape": 16137251232403067174
+        }
+      ]
+    },
+    {
+      "action": "extend",
+      "error": "world delta failed: world shape changed (expected ShapeId(6265339557823984736), found ShapeId(16137251232403067174))",
+      "gap_ticks": 1,
+      "pending": 2,
+      "reverse_order": false,
+      "trace_status": {
+        "error": "world delta failed: world shape changed (expected ShapeId(6265339557823984736), found ShapeId(16137251232403067174))",
+        "kind": "failed"
+      },
+      "transitions": [
+        {
+          "id": 0,
+          "time": {
+            "game_tick": 0,
+            "phase": "block_event",
+            "sub_tick_order": 0
+          },
+          "from_shape": 9473951418265757114,
+          "to_shape": 6265339557823984736
+        },
+        {
+          "id": 1,
+          "time": {
+            "game_tick": 1,
+            "phase": "block_event",
+            "sub_tick_order": 0
+          },
+          "from_shape": 6265339557823984736,
+          "to_shape": 16137251232403067174
+        }
+      ]
+    },
+    {
+      "action": "extend",
+      "error": "world delta failed: world shape changed (expected ShapeId(6265339557823984736), found ShapeId(16137251232403067174))",
+      "gap_ticks": 2,
+      "pending": 2,
+      "reverse_order": false,
+      "trace_status": {
+        "error": "world delta failed: world shape changed (expected ShapeId(6265339557823984736), found ShapeId(16137251232403067174))",
+        "kind": "failed"
+      },
+      "transitions": [
+        {
+          "id": 0,
+          "time": {
+            "game_tick": 0,
+            "phase": "block_event",
+            "sub_tick_order": 0
+          },
+          "from_shape": 9473951418265757114,
+          "to_shape": 6265339557823984736
+        },
+        {
+          "id": 1,
+          "time": {
+            "game_tick": 2,
+            "phase": "block_event",
+            "sub_tick_order": 0
+          },
+          "from_shape": 6265339557823984736,
+          "to_shape": 16137251232403067174
+        }
+      ]
+    },
+    {
+      "action": "extend",
+      "error": null,
+      "gap_ticks": 3,
+      "pending": 0,
+      "reverse_order": false,
+      "trace_status": {
+        "kind": "complete"
+      },
+      "transitions": [
+        {
+          "id": 0,
+          "time": {
+            "game_tick": 0,
+            "phase": "block_event",
+            "sub_tick_order": 0
+          },
+          "from_shape": 9473951418265757114,
+          "to_shape": 6265339557823984736
+        },
+        {
+          "id": 1,
+          "time": {
+            "game_tick": 2,
+            "phase": "block_entity",
+            "sub_tick_order": 0
+          },
+          "from_shape": 6265339557823984736,
+          "to_shape": 2228718776111317432
+        },
+        {
+          "id": 2,
+          "time": {
+            "game_tick": 3,
+            "phase": "block_event",
+            "sub_tick_order": 0
+          },
+          "from_shape": 2228718776111317432,
+          "to_shape": 1472331618934545102
+        },
+        {
+          "id": 3,
+          "time": {
+            "game_tick": 5,
+            "phase": "block_entity",
+            "sub_tick_order": 0
+          },
+          "from_shape": 1472331618934545102,
+          "to_shape": 1628446211242165140
+        }
+      ]
+    },
+    {
+      "action": "extend",
+      "error": "world delta failed: world shape changed (expected ShapeId(7899177533064108198), found ShapeId(16137251232403067174))",
+      "gap_ticks": 0,
+      "pending": 2,
+      "reverse_order": true,
+      "trace_status": {
+        "error": "world delta failed: world shape changed (expected ShapeId(7899177533064108198), found ShapeId(16137251232403067174))",
+        "kind": "failed"
+      },
+      "transitions": [
+        {
+          "id": 0,
+          "time": {
+            "game_tick": 0,
+            "phase": "block_event",
+            "sub_tick_order": 0
+          },
+          "from_shape": 9473951418265757114,
+          "to_shape": 7899177533064108198
+        },
+        {
+          "id": 1,
+          "time": {
+            "game_tick": 0,
+            "phase": "block_event",
+            "sub_tick_order": 1
+          },
+          "from_shape": 7899177533064108198,
+          "to_shape": 16137251232403067174
+        }
+      ]
+    },
+    {
+      "action": "retract",
+      "error": "world delta failed: world shape changed (expected ShapeId(6862984037352516231), found ShapeId(15063231621529170326))",
+      "gap_ticks": 0,
+      "pending": 2,
+      "reverse_order": false,
+      "trace_status": {
+        "error": "world delta failed: world shape changed (expected ShapeId(6862984037352516231), found ShapeId(15063231621529170326))",
+        "kind": "failed"
+      },
+      "transitions": [
+        {
+          "id": 0,
+          "time": {
+            "game_tick": 0,
+            "phase": "block_event",
+            "sub_tick_order": 0
+          },
+          "from_shape": 1628446211242165140,
+          "to_shape": 6862984037352516231
+        },
+        {
+          "id": 1,
+          "time": {
+            "game_tick": 0,
+            "phase": "block_event",
+            "sub_tick_order": 1
+          },
+          "from_shape": 6862984037352516231,
+          "to_shape": 15063231621529170326
+        }
+      ]
+    },
+    {
+      "action": "retract",
+      "error": "world delta failed: world shape changed (expected ShapeId(6862984037352516231), found ShapeId(15063231621529170326))",
+      "gap_ticks": 1,
+      "pending": 2,
+      "reverse_order": false,
+      "trace_status": {
+        "error": "world delta failed: world shape changed (expected ShapeId(6862984037352516231), found ShapeId(15063231621529170326))",
+        "kind": "failed"
+      },
+      "transitions": [
+        {
+          "id": 0,
+          "time": {
+            "game_tick": 0,
+            "phase": "block_event",
+            "sub_tick_order": 0
+          },
+          "from_shape": 1628446211242165140,
+          "to_shape": 6862984037352516231
+        },
+        {
+          "id": 1,
+          "time": {
+            "game_tick": 1,
+            "phase": "block_event",
+            "sub_tick_order": 0
+          },
+          "from_shape": 6862984037352516231,
+          "to_shape": 15063231621529170326
+        }
+      ]
+    },
+    {
+      "action": "retract",
+      "error": "world delta failed: world shape changed (expected ShapeId(6862984037352516231), found ShapeId(15063231621529170326))",
+      "gap_ticks": 2,
+      "pending": 2,
+      "reverse_order": false,
+      "trace_status": {
+        "error": "world delta failed: world shape changed (expected ShapeId(6862984037352516231), found ShapeId(15063231621529170326))",
+        "kind": "failed"
+      },
+      "transitions": [
+        {
+          "id": 0,
+          "time": {
+            "game_tick": 0,
+            "phase": "block_event",
+            "sub_tick_order": 0
+          },
+          "from_shape": 1628446211242165140,
+          "to_shape": 6862984037352516231
+        },
+        {
+          "id": 1,
+          "time": {
+            "game_tick": 2,
+            "phase": "block_event",
+            "sub_tick_order": 0
+          },
+          "from_shape": 6862984037352516231,
+          "to_shape": 15063231621529170326
+        }
+      ]
+    },
+    {
+      "action": "retract",
+      "error": null,
+      "gap_ticks": 3,
+      "pending": 0,
+      "reverse_order": false,
+      "trace_status": {
+        "kind": "complete"
+      },
+      "transitions": [
+        {
+          "id": 0,
+          "time": {
+            "game_tick": 0,
+            "phase": "block_event",
+            "sub_tick_order": 0
+          },
+          "from_shape": 1628446211242165140,
+          "to_shape": 6862984037352516231
+        },
+        {
+          "id": 1,
+          "time": {
+            "game_tick": 2,
+            "phase": "block_entity",
+            "sub_tick_order": 0
+          },
+          "from_shape": 6862984037352516231,
+          "to_shape": 6457164064412330074
+        },
+        {
+          "id": 2,
+          "time": {
+            "game_tick": 3,
+            "phase": "block_event",
+            "sub_tick_order": 0
+          },
+          "from_shape": 6457164064412330074,
+          "to_shape": 694666404853700271
+        },
+        {
+          "id": 3,
+          "time": {
+            "game_tick": 5,
+            "phase": "block_entity",
+            "sub_tick_order": 0
+          },
+          "from_shape": 694666404853700271,
+          "to_shape": 9473951418265757114
+        }
+      ]
+    },
+    {
+      "action": "retract",
+      "error": "world delta failed: world shape changed (expected ShapeId(18288641346990829849), found ShapeId(15063231621529170326))",
+      "gap_ticks": 0,
+      "pending": 2,
+      "reverse_order": true,
+      "trace_status": {
+        "error": "world delta failed: world shape changed (expected ShapeId(18288641346990829849), found ShapeId(15063231621529170326))",
+        "kind": "failed"
+      },
+      "transitions": [
+        {
+          "id": 0,
+          "time": {
+            "game_tick": 0,
+            "phase": "block_event",
+            "sub_tick_order": 0
+          },
+          "from_shape": 1628446211242165140,
+          "to_shape": 18288641346990829849
+        },
+        {
+          "id": 1,
+          "time": {
+            "game_tick": 0,
+            "phase": "block_event",
+            "sub_tick_order": 1
+          },
+          "from_shape": 18288641346990829849,
+          "to_shape": 15063231621529170326
+        }
+      ]
+    }
+  ],
+  "schema_version": "dustroute.piston-completion-isolation.v1"
+}

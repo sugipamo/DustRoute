@@ -1,0 +1,245 @@
+{
+  "schema_version": "dustroute.piston-low-layer-live.v1",
+  "captured_at": "2026-09-05T07:22:55.259Z",
+  "minecraft_version": "1.21.11",
+  "git_head": "3200c3f924a54cf40000068ba31617980c05993e",
+  "offset": {
+    "x": 1100,
+    "y": 180,
+    "z": 1000
+  },
+  "timing_evidence": "wall-clock and packet order only; no exact-tick equivalence claim",
+  "cleanup_verified": true,
+  "status": "stopped_first_difference",
+  "comparison_scope": "all 54 cells in each bounded region; block identity plus facing/extended/type/powered as applicable",
+  "trials": [
+    {
+      "case_id": "01-normal-stone",
+      "repetition": 0,
+      "fixture_sha256": "39dd4a2aebe6105c724d58a3aa652f2126e4a072a2e521cdf4ea8f56d4743a9f",
+      "initial_difference_count": 0,
+      "phases": [
+        {
+          "powered": true,
+          "expected_mechanics": true,
+          "difference_count": 0,
+          "simulator_error": null,
+          "differences": []
+        },
+        {
+          "powered": false,
+          "expected_mechanics": true,
+          "difference_count": 0,
+          "simulator_error": null,
+          "differences": []
+        }
+      ]
+    },
+    {
+      "case_id": "01-normal-stone",
+      "repetition": 1,
+      "fixture_sha256": "39dd4a2aebe6105c724d58a3aa652f2126e4a072a2e521cdf4ea8f56d4743a9f",
+      "initial_difference_count": 0,
+      "phases": [
+        {
+          "powered": true,
+          "expected_mechanics": true,
+          "difference_count": 0,
+          "simulator_error": null,
+          "differences": []
+        },
+        {
+          "powered": false,
+          "expected_mechanics": true,
+          "difference_count": 0,
+          "simulator_error": null,
+          "differences": []
+        }
+      ]
+    },
+    {
+      "case_id": "01-normal-stone",
+      "repetition": 2,
+      "fixture_sha256": "39dd4a2aebe6105c724d58a3aa652f2126e4a072a2e521cdf4ea8f56d4743a9f",
+      "initial_difference_count": 0,
+      "phases": [
+        {
+          "powered": true,
+          "expected_mechanics": true,
+          "difference_count": 0,
+          "simulator_error": null,
+          "differences": []
+        },
+        {
+          "powered": false,
+          "expected_mechanics": true,
+          "difference_count": 0,
+          "simulator_error": null,
+          "differences": []
+        }
+      ]
+    },
+    {
+      "case_id": "02-sticky-stone",
+      "repetition": 0,
+      "fixture_sha256": "165d51dcdf9d6f27dd05034e6b111ac7d9a4147f275ae0f4417daa5d304f4d81",
+      "initial_difference_count": 0,
+      "phases": [
+        {
+          "powered": true,
+          "expected_mechanics": true,
+          "difference_count": 0,
+          "simulator_error": null,
+          "differences": []
+        },
+        {
+          "powered": false,
+          "expected_mechanics": true,
+          "difference_count": 0,
+          "simulator_error": null,
+          "differences": []
+        }
+      ]
+    },
+    {
+      "case_id": "02-sticky-stone",
+      "repetition": 1,
+      "fixture_sha256": "165d51dcdf9d6f27dd05034e6b111ac7d9a4147f275ae0f4417daa5d304f4d81",
+      "initial_difference_count": 0,
+      "phases": [
+        {
+          "powered": true,
+          "expected_mechanics": true,
+          "difference_count": 0,
+          "simulator_error": null,
+          "differences": []
+        },
+        {
+          "powered": false,
+          "expected_mechanics": true,
+          "difference_count": 0,
+          "simulator_error": null,
+          "differences": []
+        }
+      ]
+    },
+    {
+      "case_id": "02-sticky-stone",
+      "repetition": 2,
+      "fixture_sha256": "165d51dcdf9d6f27dd05034e6b111ac7d9a4147f275ae0f4417daa5d304f4d81",
+      "initial_difference_count": 0,
+      "phases": [
+        {
+          "powered": true,
+          "expected_mechanics": true,
+          "difference_count": 0,
+          "simulator_error": null,
+          "differences": []
+        },
+        {
+          "powered": false,
+          "expected_mechanics": true,
+          "difference_count": 0,
+          "simulator_error": null,
+          "differences": []
+        }
+      ]
+    },
+    {
+      "case_id": "03-sticky-piston",
+      "repetition": 0,
+      "fixture_sha256": "7ea0e94814ce58f29bf29e8eb02b270e96a3ce8713814c254247334e17b82398",
+      "initial_difference_count": 0,
+      "phases": [
+        {
+          "powered": true,
+          "expected_mechanics": true,
+          "difference_count": 3,
+          "simulator_error": "piston event failed: block Piston at (1, 0, 0) is outside the piston subset: the first piston subset moves ordinary non-redstone blocks only",
+          "differences": [
+            {
+              "actual": {
+                "pos": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "name": "minecraft:sticky_piston",
+                "properties": {
+                  "facing": "east",
+                  "extended": true
+                }
+              },
+              "expected": {
+                "name": "minecraft:sticky_piston",
+                "pos": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "properties": {
+                  "extended": false,
+                  "facing": "east"
+                }
+              }
+            },
+            {
+              "actual": {
+                "pos": {
+                  "x": 1,
+                  "y": 0,
+                  "z": 0
+                },
+                "name": "minecraft:piston_head",
+                "properties": {
+                  "type": "sticky",
+                  "facing": "east"
+                }
+              },
+              "expected": {
+                "name": "minecraft:piston",
+                "pos": {
+                  "x": 1,
+                  "y": 0,
+                  "z": 0
+                },
+                "properties": {
+                  "extended": false,
+                  "facing": "north"
+                }
+              }
+            },
+            {
+              "actual": {
+                "pos": {
+                  "x": 2,
+                  "y": 0,
+                  "z": 0
+                },
+                "name": "minecraft:piston",
+                "properties": {
+                  "facing": "north",
+                  "extended": false
+                }
+              },
+              "expected": {
+                "name": "minecraft:air",
+                "pos": {
+                  "x": 2,
+                  "y": 0,
+                  "z": 0
+                },
+                "properties": {}
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "not_run": [
+    "case 03 retraction",
+    "case 03 repetitions 2 and 3",
+    "two-piston compound operation"
+  ]
+}

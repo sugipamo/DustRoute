@@ -1,0 +1,942 @@
+{
+  "captured_at": "2026-09-07T12:37:21.115Z",
+  "trials": [
+    [
+      {
+        "activation_error": null,
+        "automatic_rollback": false,
+        "observation": {
+          "issues": [],
+          "next_action": "create_previewed_operation",
+          "schema_version": "dustroute.piston-observation.v1",
+          "state": "closed"
+        },
+        "observed_state": "closed",
+        "ok": true,
+        "operation_id": "68065c1e-9dab-4f56-83b5-e54875d2995f",
+        "retry_allowed": false,
+        "scan_error": null,
+        "status": "verified",
+        "target": "closed",
+        "verification_error": null,
+        "verified": true,
+        "wait_error": null,
+        "fresh_observation": {
+          "bounds": {
+            "max": {
+              "x": 1107,
+              "y": 183,
+              "z": 1006
+            },
+            "min": {
+              "x": 1097,
+              "y": 178,
+              "z": 996
+            }
+          },
+          "circuit_expires_in_seconds": 900,
+          "circuit_id": "d8d70c43-13df-4346-9fca-1a19a92ca698",
+          "mechanisms": [
+            {
+              "candidate_assessments": [
+                {
+                  "contract": "piston_door_v1",
+                  "observation": {
+                    "issues": [],
+                    "next_action": "create_previewed_operation",
+                    "schema_version": "dustroute.piston-observation.v1",
+                    "state": "closed"
+                  }
+                }
+              ],
+              "contract": "piston_door_v1",
+              "kind": "piston_door",
+              "mutation_authorized": false,
+              "recognition": "exact_contract_match",
+              "scope": "entire_observed_region",
+              "state": "closed"
+            }
+          ],
+          "ok": true,
+          "preview": {
+            "max": {
+              "x": 1107,
+              "y": 183,
+              "z": 1006
+            },
+            "min": {
+              "x": 1097,
+              "y": 178,
+              "z": 996
+            },
+            "particle_corners": 8
+          },
+          "source": "fresh_scan"
+        },
+        "mechanisms": [
+          {
+            "candidate_assessments": [
+              {
+                "contract": "piston_door_v1",
+                "observation": {
+                  "issues": [],
+                  "next_action": "create_previewed_operation",
+                  "schema_version": "dustroute.piston-observation.v1",
+                  "state": "closed"
+                }
+              }
+            ],
+            "contract": "piston_door_v1",
+            "kind": "piston_door",
+            "mutation_authorized": false,
+            "recognition": "exact_contract_match",
+            "scope": "entire_observed_region",
+            "state": "closed"
+          }
+        ]
+      },
+      {
+        "activation_error": null,
+        "automatic_rollback": false,
+        "observation": {
+          "issues": [],
+          "next_action": "create_previewed_operation",
+          "schema_version": "dustroute.piston-observation.v1",
+          "state": "open"
+        },
+        "observed_state": "open",
+        "ok": true,
+        "operation_id": "f4d577cc-f8ce-4d09-94de-6c4f555b0137",
+        "retry_allowed": false,
+        "scan_error": null,
+        "status": "verified",
+        "target": "open",
+        "verification_error": null,
+        "verified": true,
+        "wait_error": null,
+        "fresh_observation": {
+          "bounds": {
+            "max": {
+              "x": 1107,
+              "y": 183,
+              "z": 1006
+            },
+            "min": {
+              "x": 1097,
+              "y": 178,
+              "z": 996
+            }
+          },
+          "circuit_expires_in_seconds": 900,
+          "circuit_id": "d7312c02-f2fe-419b-aa2a-b5b4dfa67ca3",
+          "mechanisms": [
+            {
+              "candidate_assessments": [
+                {
+                  "contract": "piston_door_v1",
+                  "observation": {
+                    "issues": [],
+                    "next_action": "create_previewed_operation",
+                    "schema_version": "dustroute.piston-observation.v1",
+                    "state": "open"
+                  }
+                }
+              ],
+              "contract": "piston_door_v1",
+              "kind": "piston_door",
+              "mutation_authorized": false,
+              "recognition": "exact_contract_match",
+              "scope": "entire_observed_region",
+              "state": "open"
+            }
+          ],
+          "ok": true,
+          "preview": {
+            "max": {
+              "x": 1107,
+              "y": 183,
+              "z": 1006
+            },
+            "min": {
+              "x": 1097,
+              "y": 178,
+              "z": 996
+            },
+            "particle_corners": 8
+          },
+          "source": "fresh_scan"
+        },
+        "mechanisms": [
+          {
+            "candidate_assessments": [
+              {
+                "contract": "piston_door_v1",
+                "observation": {
+                  "issues": [],
+                  "next_action": "create_previewed_operation",
+                  "schema_version": "dustroute.piston-observation.v1",
+                  "state": "open"
+                }
+              }
+            ],
+            "contract": "piston_door_v1",
+            "kind": "piston_door",
+            "mutation_authorized": false,
+            "recognition": "exact_contract_match",
+            "scope": "entire_observed_region",
+            "state": "open"
+          }
+        ]
+      },
+      {
+        "activation_error": null,
+        "automatic_rollback": false,
+        "observation": {
+          "issues": [],
+          "next_action": "create_previewed_operation",
+          "schema_version": "dustroute.piston-observation.v1",
+          "state": "closed"
+        },
+        "observed_state": "closed",
+        "ok": true,
+        "operation_id": "2db23a75-cc56-4711-8039-c52bc238dce8",
+        "retry_allowed": false,
+        "scan_error": null,
+        "status": "verified",
+        "target": "closed",
+        "verification_error": null,
+        "verified": true,
+        "wait_error": null,
+        "fresh_observation": {
+          "bounds": {
+            "max": {
+              "x": 1107,
+              "y": 183,
+              "z": 1006
+            },
+            "min": {
+              "x": 1097,
+              "y": 178,
+              "z": 996
+            }
+          },
+          "circuit_expires_in_seconds": 900,
+          "circuit_id": "0d0fcd71-a84a-4240-9337-acf4db55fa08",
+          "mechanisms": [
+            {
+              "candidate_assessments": [
+                {
+                  "contract": "piston_door_v1",
+                  "observation": {
+                    "issues": [],
+                    "next_action": "create_previewed_operation",
+                    "schema_version": "dustroute.piston-observation.v1",
+                    "state": "closed"
+                  }
+                }
+              ],
+              "contract": "piston_door_v1",
+              "kind": "piston_door",
+              "mutation_authorized": false,
+              "recognition": "exact_contract_match",
+              "scope": "entire_observed_region",
+              "state": "closed"
+            }
+          ],
+          "ok": true,
+          "preview": {
+            "max": {
+              "x": 1107,
+              "y": 183,
+              "z": 1006
+            },
+            "min": {
+              "x": 1097,
+              "y": 178,
+              "z": 996
+            },
+            "particle_corners": 8
+          },
+          "source": "fresh_scan"
+        },
+        "mechanisms": [
+          {
+            "candidate_assessments": [
+              {
+                "contract": "piston_door_v1",
+                "observation": {
+                  "issues": [],
+                  "next_action": "create_previewed_operation",
+                  "schema_version": "dustroute.piston-observation.v1",
+                  "state": "closed"
+                }
+              }
+            ],
+            "contract": "piston_door_v1",
+            "kind": "piston_door",
+            "mutation_authorized": false,
+            "recognition": "exact_contract_match",
+            "scope": "entire_observed_region",
+            "state": "closed"
+          }
+        ]
+      }
+    ],
+    [
+      {
+        "activation_error": null,
+        "automatic_rollback": false,
+        "observation": {
+          "issues": [],
+          "next_action": "create_previewed_operation",
+          "schema_version": "dustroute.piston-observation.v1",
+          "state": "closed"
+        },
+        "observed_state": "closed",
+        "ok": true,
+        "operation_id": "815f9aa2-fe24-47c4-8764-898d4e10e795",
+        "retry_allowed": false,
+        "scan_error": null,
+        "status": "verified",
+        "target": "closed",
+        "verification_error": null,
+        "verified": true,
+        "wait_error": null,
+        "fresh_observation": {
+          "bounds": {
+            "max": {
+              "x": 1107,
+              "y": 183,
+              "z": 1006
+            },
+            "min": {
+              "x": 1097,
+              "y": 178,
+              "z": 996
+            }
+          },
+          "circuit_expires_in_seconds": 900,
+          "circuit_id": "4213ba5e-7dd4-4633-9c8a-edd32a459fbc",
+          "mechanisms": [
+            {
+              "candidate_assessments": [
+                {
+                  "contract": "piston_door_v1",
+                  "observation": {
+                    "issues": [],
+                    "next_action": "create_previewed_operation",
+                    "schema_version": "dustroute.piston-observation.v1",
+                    "state": "closed"
+                  }
+                }
+              ],
+              "contract": "piston_door_v1",
+              "kind": "piston_door",
+              "mutation_authorized": false,
+              "recognition": "exact_contract_match",
+              "scope": "entire_observed_region",
+              "state": "closed"
+            }
+          ],
+          "ok": true,
+          "preview": {
+            "max": {
+              "x": 1107,
+              "y": 183,
+              "z": 1006
+            },
+            "min": {
+              "x": 1097,
+              "y": 178,
+              "z": 996
+            },
+            "particle_corners": 8
+          },
+          "source": "fresh_scan"
+        },
+        "mechanisms": [
+          {
+            "candidate_assessments": [
+              {
+                "contract": "piston_door_v1",
+                "observation": {
+                  "issues": [],
+                  "next_action": "create_previewed_operation",
+                  "schema_version": "dustroute.piston-observation.v1",
+                  "state": "closed"
+                }
+              }
+            ],
+            "contract": "piston_door_v1",
+            "kind": "piston_door",
+            "mutation_authorized": false,
+            "recognition": "exact_contract_match",
+            "scope": "entire_observed_region",
+            "state": "closed"
+          }
+        ]
+      },
+      {
+        "activation_error": null,
+        "automatic_rollback": false,
+        "observation": {
+          "issues": [],
+          "next_action": "create_previewed_operation",
+          "schema_version": "dustroute.piston-observation.v1",
+          "state": "open"
+        },
+        "observed_state": "open",
+        "ok": true,
+        "operation_id": "7ee6337f-6a86-4af3-bbf1-fe514f419a95",
+        "retry_allowed": false,
+        "scan_error": null,
+        "status": "verified",
+        "target": "open",
+        "verification_error": null,
+        "verified": true,
+        "wait_error": null,
+        "fresh_observation": {
+          "bounds": {
+            "max": {
+              "x": 1107,
+              "y": 183,
+              "z": 1006
+            },
+            "min": {
+              "x": 1097,
+              "y": 178,
+              "z": 996
+            }
+          },
+          "circuit_expires_in_seconds": 900,
+          "circuit_id": "30c1e097-cb54-41c1-a77c-aeaadec8376a",
+          "mechanisms": [
+            {
+              "candidate_assessments": [
+                {
+                  "contract": "piston_door_v1",
+                  "observation": {
+                    "issues": [],
+                    "next_action": "create_previewed_operation",
+                    "schema_version": "dustroute.piston-observation.v1",
+                    "state": "open"
+                  }
+                }
+              ],
+              "contract": "piston_door_v1",
+              "kind": "piston_door",
+              "mutation_authorized": false,
+              "recognition": "exact_contract_match",
+              "scope": "entire_observed_region",
+              "state": "open"
+            }
+          ],
+          "ok": true,
+          "preview": {
+            "max": {
+              "x": 1107,
+              "y": 183,
+              "z": 1006
+            },
+            "min": {
+              "x": 1097,
+              "y": 178,
+              "z": 996
+            },
+            "particle_corners": 8
+          },
+          "source": "fresh_scan"
+        },
+        "mechanisms": [
+          {
+            "candidate_assessments": [
+              {
+                "contract": "piston_door_v1",
+                "observation": {
+                  "issues": [],
+                  "next_action": "create_previewed_operation",
+                  "schema_version": "dustroute.piston-observation.v1",
+                  "state": "open"
+                }
+              }
+            ],
+            "contract": "piston_door_v1",
+            "kind": "piston_door",
+            "mutation_authorized": false,
+            "recognition": "exact_contract_match",
+            "scope": "entire_observed_region",
+            "state": "open"
+          }
+        ]
+      },
+      {
+        "activation_error": null,
+        "automatic_rollback": false,
+        "observation": {
+          "issues": [],
+          "next_action": "create_previewed_operation",
+          "schema_version": "dustroute.piston-observation.v1",
+          "state": "closed"
+        },
+        "observed_state": "closed",
+        "ok": true,
+        "operation_id": "714c7bce-b3af-4d7f-8ecf-8b19427fd229",
+        "retry_allowed": false,
+        "scan_error": null,
+        "status": "verified",
+        "target": "closed",
+        "verification_error": null,
+        "verified": true,
+        "wait_error": null,
+        "fresh_observation": {
+          "bounds": {
+            "max": {
+              "x": 1107,
+              "y": 183,
+              "z": 1006
+            },
+            "min": {
+              "x": 1097,
+              "y": 178,
+              "z": 996
+            }
+          },
+          "circuit_expires_in_seconds": 900,
+          "circuit_id": "cb498f72-90a0-4870-97de-21ab9a04bc9e",
+          "mechanisms": [
+            {
+              "candidate_assessments": [
+                {
+                  "contract": "piston_door_v1",
+                  "observation": {
+                    "issues": [],
+                    "next_action": "create_previewed_operation",
+                    "schema_version": "dustroute.piston-observation.v1",
+                    "state": "closed"
+                  }
+                }
+              ],
+              "contract": "piston_door_v1",
+              "kind": "piston_door",
+              "mutation_authorized": false,
+              "recognition": "exact_contract_match",
+              "scope": "entire_observed_region",
+              "state": "closed"
+            }
+          ],
+          "ok": true,
+          "preview": {
+            "max": {
+              "x": 1107,
+              "y": 183,
+              "z": 1006
+            },
+            "min": {
+              "x": 1097,
+              "y": 178,
+              "z": 996
+            },
+            "particle_corners": 8
+          },
+          "source": "fresh_scan"
+        },
+        "mechanisms": [
+          {
+            "candidate_assessments": [
+              {
+                "contract": "piston_door_v1",
+                "observation": {
+                  "issues": [],
+                  "next_action": "create_previewed_operation",
+                  "schema_version": "dustroute.piston-observation.v1",
+                  "state": "closed"
+                }
+              }
+            ],
+            "contract": "piston_door_v1",
+            "kind": "piston_door",
+            "mutation_authorized": false,
+            "recognition": "exact_contract_match",
+            "scope": "entire_observed_region",
+            "state": "closed"
+          }
+        ]
+      }
+    ],
+    [
+      {
+        "activation_error": null,
+        "automatic_rollback": false,
+        "observation": {
+          "issues": [],
+          "next_action": "create_previewed_operation",
+          "schema_version": "dustroute.piston-observation.v1",
+          "state": "closed"
+        },
+        "observed_state": "closed",
+        "ok": true,
+        "operation_id": "7508b652-2f81-4303-b96a-cc6ca37b9fcc",
+        "retry_allowed": false,
+        "scan_error": null,
+        "status": "verified",
+        "target": "closed",
+        "verification_error": null,
+        "verified": true,
+        "wait_error": null,
+        "fresh_observation": {
+          "bounds": {
+            "max": {
+              "x": 1107,
+              "y": 183,
+              "z": 1006
+            },
+            "min": {
+              "x": 1097,
+              "y": 178,
+              "z": 996
+            }
+          },
+          "circuit_expires_in_seconds": 900,
+          "circuit_id": "ed19125e-8038-4299-a2d7-cb3c7f0ff094",
+          "mechanisms": [
+            {
+              "candidate_assessments": [
+                {
+                  "contract": "piston_door_v1",
+                  "observation": {
+                    "issues": [],
+                    "next_action": "create_previewed_operation",
+                    "schema_version": "dustroute.piston-observation.v1",
+                    "state": "closed"
+                  }
+                }
+              ],
+              "contract": "piston_door_v1",
+              "kind": "piston_door",
+              "mutation_authorized": false,
+              "recognition": "exact_contract_match",
+              "scope": "entire_observed_region",
+              "state": "closed"
+            }
+          ],
+          "ok": true,
+          "preview": {
+            "max": {
+              "x": 1107,
+              "y": 183,
+              "z": 1006
+            },
+            "min": {
+              "x": 1097,
+              "y": 178,
+              "z": 996
+            },
+            "particle_corners": 8
+          },
+          "source": "fresh_scan"
+        },
+        "mechanisms": [
+          {
+            "candidate_assessments": [
+              {
+                "contract": "piston_door_v1",
+                "observation": {
+                  "issues": [],
+                  "next_action": "create_previewed_operation",
+                  "schema_version": "dustroute.piston-observation.v1",
+                  "state": "closed"
+                }
+              }
+            ],
+            "contract": "piston_door_v1",
+            "kind": "piston_door",
+            "mutation_authorized": false,
+            "recognition": "exact_contract_match",
+            "scope": "entire_observed_region",
+            "state": "closed"
+          }
+        ]
+      },
+      {
+        "activation_error": null,
+        "automatic_rollback": false,
+        "observation": {
+          "issues": [],
+          "next_action": "create_previewed_operation",
+          "schema_version": "dustroute.piston-observation.v1",
+          "state": "open"
+        },
+        "observed_state": "open",
+        "ok": true,
+        "operation_id": "2ec55c25-f820-45e1-86bb-691e142895d3",
+        "retry_allowed": false,
+        "scan_error": null,
+        "status": "verified",
+        "target": "open",
+        "verification_error": null,
+        "verified": true,
+        "wait_error": null,
+        "fresh_observation": {
+          "bounds": {
+            "max": {
+              "x": 1107,
+              "y": 183,
+              "z": 1006
+            },
+            "min": {
+              "x": 1097,
+              "y": 178,
+              "z": 996
+            }
+          },
+          "circuit_expires_in_seconds": 900,
+          "circuit_id": "9356ad64-36ca-4763-80b1-b6bebb246d3c",
+          "mechanisms": [
+            {
+              "candidate_assessments": [
+                {
+                  "contract": "piston_door_v1",
+                  "observation": {
+                    "issues": [],
+                    "next_action": "create_previewed_operation",
+                    "schema_version": "dustroute.piston-observation.v1",
+                    "state": "open"
+                  }
+                }
+              ],
+              "contract": "piston_door_v1",
+              "kind": "piston_door",
+              "mutation_authorized": false,
+              "recognition": "exact_contract_match",
+              "scope": "entire_observed_region",
+              "state": "open"
+            }
+          ],
+          "ok": true,
+          "preview": {
+            "max": {
+              "x": 1107,
+              "y": 183,
+              "z": 1006
+            },
+            "min": {
+              "x": 1097,
+              "y": 178,
+              "z": 996
+            },
+            "particle_corners": 8
+          },
+          "source": "fresh_scan"
+        },
+        "mechanisms": [
+          {
+            "candidate_assessments": [
+              {
+                "contract": "piston_door_v1",
+                "observation": {
+                  "issues": [],
+                  "next_action": "create_previewed_operation",
+                  "schema_version": "dustroute.piston-observation.v1",
+                  "state": "open"
+                }
+              }
+            ],
+            "contract": "piston_door_v1",
+            "kind": "piston_door",
+            "mutation_authorized": false,
+            "recognition": "exact_contract_match",
+            "scope": "entire_observed_region",
+            "state": "open"
+          }
+        ]
+      },
+      {
+        "activation_error": null,
+        "automatic_rollback": false,
+        "observation": {
+          "issues": [],
+          "next_action": "create_previewed_operation",
+          "schema_version": "dustroute.piston-observation.v1",
+          "state": "closed"
+        },
+        "observed_state": "closed",
+        "ok": true,
+        "operation_id": "18668756-4b16-42e4-a3ef-aeebe9eda831",
+        "retry_allowed": false,
+        "scan_error": null,
+        "status": "verified",
+        "target": "closed",
+        "verification_error": null,
+        "verified": true,
+        "wait_error": null,
+        "fresh_observation": {
+          "bounds": {
+            "max": {
+              "x": 1107,
+              "y": 183,
+              "z": 1006
+            },
+            "min": {
+              "x": 1097,
+              "y": 178,
+              "z": 996
+            }
+          },
+          "circuit_expires_in_seconds": 900,
+          "circuit_id": "09007f35-71d4-4beb-9986-6df5ce3c0ad4",
+          "mechanisms": [
+            {
+              "candidate_assessments": [
+                {
+                  "contract": "piston_door_v1",
+                  "observation": {
+                    "issues": [],
+                    "next_action": "create_previewed_operation",
+                    "schema_version": "dustroute.piston-observation.v1",
+                    "state": "closed"
+                  }
+                }
+              ],
+              "contract": "piston_door_v1",
+              "kind": "piston_door",
+              "mutation_authorized": false,
+              "recognition": "exact_contract_match",
+              "scope": "entire_observed_region",
+              "state": "closed"
+            }
+          ],
+          "ok": true,
+          "preview": {
+            "max": {
+              "x": 1107,
+              "y": 183,
+              "z": 1006
+            },
+            "min": {
+              "x": 1097,
+              "y": 178,
+              "z": 996
+            },
+            "particle_corners": 8
+          },
+          "source": "fresh_scan"
+        },
+        "mechanisms": [
+          {
+            "candidate_assessments": [
+              {
+                "contract": "piston_door_v1",
+                "observation": {
+                  "issues": [],
+                  "next_action": "create_previewed_operation",
+                  "schema_version": "dustroute.piston-observation.v1",
+                  "state": "closed"
+                }
+              }
+            ],
+            "contract": "piston_door_v1",
+            "kind": "piston_door",
+            "mutation_authorized": false,
+            "recognition": "exact_contract_match",
+            "scope": "entire_observed_region",
+            "state": "closed"
+          }
+        ]
+      }
+    ]
+  ],
+  "cleanup_verified": true,
+  "first_gaze": {
+    "observation": {
+      "dimension": "minecraft:overworld",
+      "distance": 4.000000000000002,
+      "eye_position": {
+        "x": 1094.5,
+        "y": 181.62,
+        "z": 996.5
+      },
+      "pitch": -0.723044773847096,
+      "player": "dustroutetest",
+      "reacquired": false,
+      "targeted_block": {
+        "x": 1097,
+        "y": 178,
+        "z": 996
+      },
+      "targeted_face": null,
+      "yaw": 4.570491895921688
+    },
+    "ok": true
+  },
+  "second_gaze": {
+    "observation": {
+      "dimension": "minecraft:overworld",
+      "distance": 4.000000000000002,
+      "eye_position": {
+        "x": 1104.5,
+        "y": 186.62,
+        "z": 1006.5
+      },
+      "pitch": -0.723044773847096,
+      "player": "dustroutetest",
+      "reacquired": false,
+      "targeted_block": {
+        "x": 1107,
+        "y": 183,
+        "z": 1006
+      },
+      "targeted_face": null,
+      "yaw": 4.570491895921688
+    },
+    "ok": true
+  },
+  "noop": {
+    "changed": false,
+    "observation": {
+      "issues": [],
+      "next_action": "create_previewed_operation",
+      "schema_version": "dustroute.piston-observation.v1",
+      "state": "closed"
+    },
+    "observed_state": "closed",
+    "ok": true,
+    "operation_id": "71446691-8be6-4c24-b2a4-8e5c4f52a5c7",
+    "state": "closed",
+    "verified": true
+  },
+  "stale": {
+    "error": "snapshot differs from the verified door v1 layout or is not fully settled",
+    "error_code": "internal",
+    "observation": {
+      "issues": [
+        {
+          "code": "unexpected_block",
+          "message": "block identity differs from both stable states",
+          "position": {
+            "x": 1097,
+            "y": 178,
+            "z": 996
+          }
+        }
+      ],
+      "next_action": "inspect_configuration",
+      "schema_version": "dustroute.piston-observation.v1",
+      "state": "configuration_mismatch"
+    },
+    "ok": false,
+    "retryable": false,
+    "schema_version": "dustroute.error.v1"
+  },
+  "status": "passed",
+  "binary_sha256": "dd56ac184a207574a1a3b5506948b29c8ccd96166d3e91931eedfc3844f781d2",
+  "contract_sha256": "b1f26c466742df40c4e90ac5a0bd76baa60c6571d4d0c1f84dfb8a0556475fef",
+  "minecraft_version": "1.21.11",
+  "verified_gates": [
+    "preview required",
+    "single-use operation",
+    "already-at-target no-op",
+    "guard changed after preview rejects activation",
+    "show_region fresh mechanism state matches all nine operations",
+    "convert_from_circuit identifies piston_door and matching state from each captured circuit"
+  ]
+}

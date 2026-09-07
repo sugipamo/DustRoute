@@ -1,0 +1,62 @@
+{
+  "schema_version": "dustroute.piston-completion-followup.v1",
+  "status": "stopped_new_event_limit",
+  "physics_change": "completion-time local revalidation before rebuilding the delta; shared WorldDelta validation unchanged",
+  "phases": [
+    {
+      "error": null,
+      "pending_events": 0,
+      "powered": true,
+      "trace_status": {
+        "kind": "complete"
+      }
+    },
+    {
+      "error": null,
+      "pending_events": 0,
+      "powered": false,
+      "trace_status": {
+        "kind": "complete"
+      }
+    },
+    {
+      "error": "Minecraft physics event limit 512 exceeded",
+      "pending_events": 3,
+      "powered": true,
+      "trace_status": {
+        "error": "Minecraft physics event limit 512 exceeded",
+        "kind": "failed"
+      }
+    }
+  ],
+  "recorded_events": 512,
+  "last_event": {
+    "event": {
+      "cause": {
+        "id": 497,
+        "kind": "event"
+      },
+      "id": 511,
+      "kind": {
+        "kind": "neighbor_update",
+        "source": {
+          "x": 4,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "target": {
+        "x": 4,
+        "y": 2,
+        "z": 1
+      },
+      "time": {
+        "game_tick": 9,
+        "phase": "neighbor_update",
+        "sub_tick_order": 61
+      }
+    },
+    "status": "no_transition"
+  },
+  "live_run": false
+}

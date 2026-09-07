@@ -88,7 +88,7 @@ npm run test:e2e
 ```
 
 The runner discovers the JSON files in `scenarios/` in lexical order (the
-current checkout contains 27 scenarios) and fails on the first assertion or
+current checkout contains 32 scenarios) and fails on the first assertion or
 cleanup error. Use a subset while debugging and rerun the full set before
 promoting a release.
 
@@ -108,6 +108,29 @@ continued MCP availability after the run:
 npm run test:e2e -- transition_run_and_restore
 ```
 
+Observer scenarios use a second visible Mineflayer client as the dummy player.
+`observer_dummy_transition` checks raw Observer state, a normal lever
+activation, and the one-redstone-tick pulse. `observer_chain_dummy_transition`
+and `observer_repeater_preview_only` extend that trace through another Observer
+or a delayed repeater; they also verify that the MCP transition plan remains
+`preview_only` and cannot be invoked automatically. `piston_transition_preview_only`
+performs the same safety check for a piston and confirms that no block movement
+occurs when invocation is rejected. `piston_motion_trace` directly activates a
+normal piston with the visible test player and stores a bounded Java trace,
+including block updates and within-game-tick ordering. It is an observation
+fixture only. On the pinned 1.21.11 test server it asserts the observed
+2-game-tick start-to-head-completion interval and reports the input-to-start
+interval separately; those measurements must be promoted to a verified profile
+before piston timing can become MCP-ready.
+
+Run these bounded live checks after rebuilding the Rust binary and restarting
+the visible bridge so the bridge's within-tick order field is active:
+
+```bash
+cargo build -p dustroute-mcp
+npm run test:e2e -- observer_dummy_transition observer_chain_dummy_transition observer_repeater_preview_only piston_transition_preview_only
+```
+
 When the exported semantics Data Pack is installed and enabled in the test
 world, collect its player-chat results automatically with:
 
@@ -121,7 +144,32 @@ The collector fails on any `FAIL` message, a missing `DUSTROUTE COMPLETE`, an
 unexpected PASS count, disconnect, or timeout. It deliberately reads player
 chat because these assertions are not emitted to the server console.
 
+### Promoting measured timing
+
+`activate_trace` with `save_artifact: true` also writes an ignored JSON artifact
+with relative-to-input game-tick timing and within-tick packet order. After a
+human review, promote a trace into the tracked scheduler-observation fixtures:
+
+```bash
+npm run promote:scheduler -- \
+  ../../../.local/e2e-artifacts/observer_repeater_preview_only-latest.json \
+  trace scheduler_1_21_11_observed_repeater_observer \
+  "Capture repeater and observer timing on the pinned 1.21.11 server"
+```
+
+The command refuses to overwrite an existing fixture. It preserves no absolute
+server tick, keeps no-op updates, and marks the internal scheduler phase as
+unknown. These observations strengthen delay regression coverage but do not
+promote the modelled scheduler profile to a Vanilla-complete implementation.
+
 ## Scenario contract
+
+The separate fixed-door diagnostic is documented in
+[`docs/3x3-piston-door-live-validation.md`](../../../../docs/3x3-piston-door-live-validation.md).
+It compares the designed simulator fixture with live placement and three
+open/close attempts. It uses only the local test actor, preserves MCP's
+preview-only restriction, and reports known contract gaps rather than treating
+successful diagnostic execution as proof of a working door.
 
 Scenario files are ordered JSON documents in `scenarios/`. Supported steps are:
 
@@ -135,6 +183,12 @@ Scenario files are ordered JSON documents in `scenarios/`. Supported steps are:
 - `assert`: compare a saved result using `equals`, `at_least`, `at_most`, or
   `exists`.
 - `wait`: wait a number of Mineflayer physics ticks.
+- `activate_trace`: move the dummy player if requested, activate a normal
+  player input, and record observed block states for a bounded number of game
+  ticks. Events include `game_tick`, `sub_tick_order`, `event_kind`, `cause`,
+  `source`, and optional `cause_sequence`; the latter provenance fields are
+  packet-order evidence, not a claim about the internal vanilla scheduler
+  cause.
 
 `${result.path.0.value}` references pass dynamic operation IDs between steps.
 Mutation tools still receive `confirm: true` explicitly; the harness never
@@ -153,3 +207,31 @@ response during a run.
 Tracked files contain only harness code and deterministic scenario definitions.
 The server JAR, world, logs, node_modules, MCP state, and credentials remain
 under ignored local directories.
+
+
+### Restricted 1x2 door through MCP
+
+With the private Java server and normal visible bridge running, build
+`cargo build -p dustroute-mcp` and run
+`node crates/dustroute-mcp/mineflayer/e2e/piston-door-mcp-live.js` from the repo
+root. This uses actual stdio MCP tools and the bridge for three independently
+built door trials, missing-preview/replay rejection, no-op, and stale-preview
+rejection. The actor only builds inside its verified empty guard at
+`1097..1107,178..183,996..1006`, selects it using temporary gaze markers, and
+clears the region afterward. Results are written to
+`.local/e2e-artifacts/piston-door-mcp-latest.json`.
+
+The private Java 1.21.11 integration `node e2e/piston-placement-mcp-live.js`
+uses `new_placement(circuit: piston-door-1x2)` to build the door, then observes,
+operates, and undoes it through existing MCP tools in three trials. Only the
+selection markers and external ground anchor are prepared by the actor; door
+blocks are placed by MCP. It checks the empty test region before building and
+verifies cleanup. Requires the private server, bridge and current MCP binary;
+it writes `.local/e2e-artifacts/piston-placement-mcp-latest.json`.
+
+`node e2e/revision-placement-mcp-live.js` tests the private Java 1.21.11
+observe → parent/child revision → `new_placement(revision_id)` → preview →
+apply → undo flow, including cumulative additions/deletions and repeater delay
+changes. It checks full-context drift rejection before apply and undo in three
+trials, verifies restoration and cleanup, and writes
+`.local/e2e-artifacts/revision-placement-mcp-latest.json`.

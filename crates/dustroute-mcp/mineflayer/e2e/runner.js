@@ -40,9 +40,15 @@ if (!Number.isInteger(timeoutMs) || timeoutMs < 1000 || timeoutMs > 600000) thro
 function connectPlayer () {
   return new Promise((resolve, reject) => {
     const bot = mineflayer.createBot({ host, port, username: playerName, auth: 'offline', version, hideErrors: false })
+    // `bot.time.age` is only refreshed by periodic time-update packets on
+    // some Mineflayer protocol versions.  Physics-sensitive fixtures need a
+    // per-tick clock, so keep an independent counter driven by physicsTick.
+    bot.dustrouteGameTick = 0
+    bot.on('physicsTick', () => { bot.dustrouteGameTick += 1 })
     const timer = setTimeout(() => reject(new Error('test player spawn timed out')), 30000)
     bot.once('spawn', async () => {
       try {
+        bot.dustrouteGameTick = Number((bot.time && bot.time.age) || 0)
         await bot.waitForChunksToLoad()
         bot.chat(`/gamemode creative ${playerName}`)
         await bot.waitForTicks(2)
@@ -54,6 +60,12 @@ function connectPlayer () {
     bot.once('kicked', reason => reject(new Error(`test player kicked: ${String(reason)}`)))
     bot.on('end', reason => { bot.dustrouteDisconnectReason = String(reason) })
   })
+}
+
+function currentGameTick (bot) {
+  return Number.isFinite(bot.dustrouteGameTick)
+    ? bot.dustrouteGameTick
+    : Number((bot.time && bot.time.age) || 0)
 }
 
 function sleep (milliseconds) {
@@ -120,6 +132,7 @@ function physicalBlockKind (name) {
   if (name === 'lever') return 'Lever'
   if (name.endsWith('_button')) return 'Button'
   if (name.endsWith('_pressure_plate')) return 'PressurePlate'
+  if (name === 'observer') return 'Observer'
   if (name === 'redstone_lamp') return 'RedstoneLamp'
   if (name === 'redstone_block') return 'RedstoneBlock'
   if (name.endsWith('piston')) return 'Piston'
@@ -142,13 +155,164 @@ function normalizePhysicalBlock (block, redstoneTick, origin) {
       ? Object.fromEntries(['north', 'east', 'south', 'west'].map(direction => [direction, String(properties[direction])]))
       : null,
     dust_strength: kind === 'RedstoneWire' ? Number(properties.power) : null,
-    powered: ['Lever', 'Button', 'PressurePlate', 'Repeater', 'Comparator', 'RedstoneLamp'].includes(kind)
+    powered: ['Lever', 'Button', 'PressurePlate', 'Repeater', 'Comparator', 'Observer', 'RedstoneLamp'].includes(kind)
       ? properties.powered === true || properties.lit === true
       : null,
     torch_lit: kind === 'RedstoneTorch' ? properties.lit === true : null,
     // Vanilla's client protocol does not expose conductor weak/strong power.
     weak_power: null,
     strong_power: null
+  }
+}
+
+function traceBlockState (block) {
+  if (!block) return null
+  const properties = typeof block.getProperties === 'function' ? block.getProperties() : {}
+  const kind = physicalBlockKind(block.name)
+  return {
+    name: block.name,
+    block_kind: kind,
+    properties,
+    powered: ['Lever', 'Button', 'PressurePlate', 'Repeater', 'Comparator', 'Observer'].includes(kind)
+      ? properties.powered === true
+      : kind === 'RedstoneLamp' ? properties.lit === true : null,
+    lit: kind === 'RedstoneLamp' ? properties.lit === true : null
+  }
+}
+
+function relativePosition (position, origin) {
+  return {
+    x: position.x - xOffset - origin.x,
+    y: position.y - origin.y,
+    z: position.z - origin.z
+  }
+}
+
+async function captureActivationTrace (bot, step) {
+  const activationPosition = new Vec3(
+    step.position.x + xOffset,
+    step.position.y,
+    step.position.z
+  )
+  const origin = step.origin || { x: 0, y: 0, z: 0 }
+  const observed = (step.observe_positions || [step.position]).map(raw => ({
+    raw,
+    position: new Vec3(raw.x + xOffset, raw.y, raw.z)
+  }))
+  const deadline = Date.now() + 10000
+  while ([activationPosition, ...observed.map(item => item.position)].some(position => !bot.blockAt(position))) {
+    if (Date.now() >= deadline) throw new Error('activation trace positions did not load within 10000ms')
+    await sleep(100)
+  }
+
+  if (step.actor_position) {
+    bot.chat(`/tp ${playerName} ${step.actor_position.x + xOffset} ${step.actor_position.y} ${step.actor_position.z}`)
+    await sleep(Number(step.actor_settle_ms || 500))
+    bot.creative.startFlying()
+  }
+  const lookAt = step.look_at || step.position
+  await bot.lookAt(new Vec3(lookAt.x + xOffset + 0.5, lookAt.y + 0.5, lookAt.z + 0.5), true)
+
+  const events = []
+  let lastGameTick = null
+  let nextSubTickOrder = 0
+  const onBlockUpdate = (oldBlock, newBlock) => {
+    const block = newBlock || oldBlock
+    const match = observed.find(item => block && item.position.equals(block.position))
+    if (!match) return
+    const gameTick = currentGameTick(bot)
+    if (lastGameTick !== gameTick) {
+      lastGameTick = gameTick
+      nextSubTickOrder = 0
+    }
+    events.push({
+      sequence: events.length + 1,
+      game_tick: gameTick,
+      sub_tick_order: nextSubTickOrder,
+      event_kind: 'state_transition',
+      cause: 'packet_observation',
+      source: 'live_mineflayer',
+      cause_sequence: null,
+      position: relativePosition(block.position, origin),
+      before: traceBlockState(oldBlock),
+      after: traceBlockState(newBlock)
+    })
+    nextSubTickOrder += 1
+  }
+  bot.on('blockUpdate', onBlockUpdate)
+  let activation
+  let activationGameTick
+  const observations = []
+  try {
+    const block = bot.blockAt(activationPosition)
+    if (!block) throw new Error(`activation block is not loaded at ${activationPosition}`)
+    const before = traceBlockState(block)
+    activationGameTick = currentGameTick(bot)
+    await bot.activateBlock(block)
+    const duration = Number(step.duration_game_ticks || 20)
+    if (!Number.isInteger(duration) || duration < 1 || duration > 200) {
+      throw new Error('duration_game_ticks must be 1..200')
+    }
+    for (let tick = 0; tick <= duration; tick++) {
+      observations.push({
+        game_tick: currentGameTick(bot),
+        redstone_tick: Math.floor(tick / 2),
+        blocks: observed.map(item => ({
+          position: relativePosition(item.position, origin),
+          state: traceBlockState(bot.blockAt(item.position))
+        }))
+      })
+      if (tick < duration) await bot.waitForTicks(1)
+    }
+    const afterBlock = bot.blockAt(activationPosition)
+    activation = {
+      position: relativePosition(activationPosition, origin),
+      game_tick: activationGameTick,
+      before_powered: before && before.powered,
+      after_powered: traceBlockState(afterBlock) && traceBlockState(afterBlock).powered
+    }
+  } finally {
+    bot.removeListener('blockUpdate', onBlockUpdate)
+  }
+
+  const stateFor = kind => events.some(event => event.after && event.after.block_kind === kind && event.after.powered === true)
+  const stateOffFor = kind => events.some(event => event.after && event.after.block_kind === kind && event.after.powered === false)
+  const lampOn = events.some(event => event.after && event.after.block_kind === 'RedstoneLamp' && event.after.lit === true)
+  const lampOff = events.some(event => event.after && event.after.block_kind === 'RedstoneLamp' && event.after.lit === false)
+  const finalBlocks = observations.at(-1).blocks
+  const finalStates = Object.fromEntries(finalBlocks.map(item => [
+    `${item.position.x},${item.position.y},${item.position.z}`,
+    item.state
+  ]))
+  const pistonStart = events.find(event =>
+    event.after && event.after.name === 'piston' && event.after.properties && event.after.properties.extended === true)
+  const pistonCompletion = events.find(event => event.after && event.after.name === 'piston_head')
+  const pistonTiming = pistonStart && pistonCompletion
+    ? {
+        input_game_tick: activationGameTick,
+        start_game_tick: pistonStart.game_tick,
+        completion_game_tick: pistonCompletion.game_tick,
+        input_to_start_game_ticks: pistonStart.game_tick - activationGameTick,
+        start_to_completion_game_ticks: pistonCompletion.game_tick - pistonStart.game_tick,
+        start_sub_tick_order: pistonStart.sub_tick_order,
+        completion_sub_tick_order: pistonCompletion.sub_tick_order
+      }
+    : null
+  return {
+    source: 'minecraft_java',
+    action: 'normal_player_activate_block',
+    activation,
+    duration_game_ticks: Number(step.duration_game_ticks || 20),
+    observer_pulse: stateFor('Observer') && stateOffFor('Observer'),
+    observer_activated: stateFor('Observer'),
+    repeater_pulse: stateFor('Repeater') && stateOffFor('Repeater'),
+    repeater_activated: stateFor('Repeater'),
+    lamp_pulse: lampOn && lampOff,
+    lamp_activated: lampOn,
+    piston_timing: pistonTiming,
+    events,
+    observations,
+    final_states: finalStates
   }
 }
 
@@ -248,6 +412,8 @@ async function runScenario (bot, mcp, scenario) {
           positions: step.positions || scenario.trace_positions,
           origin: step.origin || scenario.trace_origin
         })
+      } else if (step.kind === 'activate_trace') {
+        results[step.save] = await captureActivationTrace(bot, step)
       } else if (step.kind === 'rust_cell') {
         results[step.save] = await placeRustCell(bot, step)
       } else if (step.kind === 'activate') {

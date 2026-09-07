@@ -1,0 +1,59 @@
+{
+  "name": "observer_repeater_preview_only",
+  "save_artifact": true,
+  "steps": [
+    { "kind": "command", "commands": [
+      "/fill 618 102 -2 628 106 2 minecraft:air",
+      "/fill 618 103 -2 628 103 2 minecraft:stone",
+      "/setblock 620 104 0 minecraft:lever[face=floor,facing=east,powered=false]",
+      "/setblock 621 104 0 minecraft:redstone_wire",
+      "/setblock 622 104 0 minecraft:repeater[facing=west,delay=2,locked=false,powered=false]",
+      "/setblock 623 104 0 minecraft:redstone_wire",
+      "/setblock 624 104 0 minecraft:observer[facing=west,powered=false]",
+      "/setblock 625 104 0 minecraft:redstone_lamp[lit=false]"
+    ]},
+    { "kind": "aim", "position": { "x": 628.5, "y": 106, "z": 0.5 }, "target": { "x": 625, "y": 104, "z": 0 } },
+    { "kind": "mcp", "tool": "test_circuit", "arguments": { "max_components": 64, "fragment_gap": 2 }, "save": "circuit" },
+    { "kind": "assert", "from": "circuit", "expect": [
+      { "path": "ok", "equals": true },
+      { "path": "diagnostic.observation_complete", "equals": true },
+      { "path": "expansion.components_loaded", "at_least": 6 },
+      { "path": "diagnostic.counts.unsupported", "equals": 0 },
+      { "path": "diagnostic.counts.probable_faults", "equals": 0 }
+    ]},
+    { "kind": "mcp", "tool": "new_transition_test", "arguments": { "circuit_id": "${circuit.circuit_id}", "observation_ticks": 30 }, "save": "proposal" },
+    { "kind": "assert", "from": "proposal", "expect": [
+      { "path": "ok", "equals": true },
+      { "path": "proposals.0.safety.safety", "equals": "preview_only" }
+    ]},
+    { "kind": "mcp", "tool": "show_operation", "arguments": { "operation_id": "${proposal.proposals.0.operation_id}" }, "save": "preview" },
+    { "kind": "assert", "from": "preview", "expect": [
+      { "path": "ok", "equals": true },
+      { "path": "warning", "exists": true }
+    ]},
+    { "kind": "mcp_error", "tool": "invoke_operation", "arguments": { "operation_id": "${proposal.proposals.0.operation_id}", "confirm": true }, "save": "rejected" },
+    { "kind": "assert", "from": "rejected", "expect": [
+      { "path": "ok", "equals": false },
+      { "path": "error_code", "equals": "invalid_state" }
+    ]},
+    { "kind": "activate_trace", "position": { "x": 620, "y": 104, "z": 0 }, "actor_position": { "x": 618, "y": 104, "z": 0 }, "observe_positions": [
+      { "x": 620, "y": 104, "z": 0 },
+      { "x": 621, "y": 104, "z": 0 },
+      { "x": 622, "y": 104, "z": 0 },
+      { "x": 623, "y": 104, "z": 0 },
+      { "x": 624, "y": 104, "z": 0 },
+      { "x": 625, "y": 104, "z": 0 }
+    ], "origin": { "x": 620, "y": 104, "z": 0 }, "duration_game_ticks": 30, "save": "trace" },
+    { "kind": "assert", "from": "trace", "expect": [
+      { "path": "activation.before_powered", "equals": false },
+      { "path": "activation.after_powered", "equals": true },
+      { "path": "observer_pulse", "equals": true },
+      { "path": "repeater_activated", "equals": true },
+      { "path": "lamp_pulse", "equals": true },
+      { "path": "final_states.2,0,0.block_kind", "equals": "Repeater" },
+      { "path": "final_states.4,0,0.block_kind", "equals": "Observer" },
+      { "path": "final_states.5,0,0.lit", "equals": false }
+    ]}
+  ],
+  "cleanup": ["/fill 618 102 -2 628 106 2 minecraft:air"]
+}

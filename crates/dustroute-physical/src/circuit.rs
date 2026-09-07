@@ -29,6 +29,13 @@ pub enum ConnectionKind {
     DirectionalOutput,
     DirectSource,
     Control,
+    /// A block-state transition observed at the front face of an Observer.
+    ObserverInput,
+    /// The strong pulse emitted from an Observer's back face.
+    ObserverOutput,
+    /// A direct redstone input into a Piston. Mechanical movement is modeled
+    /// separately from this electrical trigger.
+    PistonInput,
     Support,
 }
 

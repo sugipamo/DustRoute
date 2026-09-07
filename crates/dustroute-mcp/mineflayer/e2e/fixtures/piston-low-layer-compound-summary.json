@@ -1,0 +1,173 @@
+{
+  "schema_version": "dustroute.piston-low-layer-live.v1",
+  "captured_at": "2026-09-05T07:36:57.120Z",
+  "minecraft_version": "1.21.11",
+  "git_head": "3200c3f924a54cf40000068ba31617980c05993e",
+  "offset": {
+    "x": 1100,
+    "y": 180,
+    "z": 1000
+  },
+  "timing_evidence": "wall-clock and packet order only; no exact-tick equivalence claim",
+  "cleanup_verified": true,
+  "status": "all_declared_cases_matched",
+  "comparison_scope": "all 108 cells after each of four sequential edges; stable block identity and facing/extended/type/powered",
+  "trials": [
+    {
+      "case_id": "04-moved-piston-actuation",
+      "repetition": 0,
+      "fixture_sha256": "6c12d638bba1a81946904fd697d08f252315ab7583e67ac6d8178716a7255df6",
+      "initial_difference_count": 0,
+      "phases": [
+        {
+          "input": {
+            "x": -1,
+            "y": 0,
+            "z": 0
+          },
+          "powered": true,
+          "expected_mechanics": true,
+          "simulator_error": null,
+          "differences": []
+        },
+        {
+          "input": {
+            "x": 2,
+            "y": 0,
+            "z": 1
+          },
+          "powered": true,
+          "expected_mechanics": true,
+          "simulator_error": null,
+          "differences": []
+        },
+        {
+          "input": {
+            "x": 2,
+            "y": 0,
+            "z": 1
+          },
+          "powered": false,
+          "expected_mechanics": true,
+          "simulator_error": null,
+          "differences": []
+        },
+        {
+          "input": {
+            "x": -1,
+            "y": 0,
+            "z": 0
+          },
+          "powered": false,
+          "expected_mechanics": true,
+          "simulator_error": null,
+          "differences": []
+        }
+      ]
+    },
+    {
+      "case_id": "04-moved-piston-actuation",
+      "repetition": 1,
+      "fixture_sha256": "6c12d638bba1a81946904fd697d08f252315ab7583e67ac6d8178716a7255df6",
+      "initial_difference_count": 0,
+      "phases": [
+        {
+          "input": {
+            "x": -1,
+            "y": 0,
+            "z": 0
+          },
+          "powered": true,
+          "expected_mechanics": true,
+          "simulator_error": null,
+          "differences": []
+        },
+        {
+          "input": {
+            "x": 2,
+            "y": 0,
+            "z": 1
+          },
+          "powered": true,
+          "expected_mechanics": true,
+          "simulator_error": null,
+          "differences": []
+        },
+        {
+          "input": {
+            "x": 2,
+            "y": 0,
+            "z": 1
+          },
+          "powered": false,
+          "expected_mechanics": true,
+          "simulator_error": null,
+          "differences": []
+        },
+        {
+          "input": {
+            "x": -1,
+            "y": 0,
+            "z": 0
+          },
+          "powered": false,
+          "expected_mechanics": true,
+          "simulator_error": null,
+          "differences": []
+        }
+      ]
+    },
+    {
+      "case_id": "04-moved-piston-actuation",
+      "repetition": 2,
+      "fixture_sha256": "6c12d638bba1a81946904fd697d08f252315ab7583e67ac6d8178716a7255df6",
+      "initial_difference_count": 0,
+      "phases": [
+        {
+          "input": {
+            "x": -1,
+            "y": 0,
+            "z": 0
+          },
+          "powered": true,
+          "expected_mechanics": true,
+          "simulator_error": null,
+          "differences": []
+        },
+        {
+          "input": {
+            "x": 2,
+            "y": 0,
+            "z": 1
+          },
+          "powered": true,
+          "expected_mechanics": true,
+          "simulator_error": null,
+          "differences": []
+        },
+        {
+          "input": {
+            "x": 2,
+            "y": 0,
+            "z": 1
+          },
+          "powered": false,
+          "expected_mechanics": true,
+          "simulator_error": null,
+          "differences": []
+        },
+        {
+          "input": {
+            "x": -1,
+            "y": 0,
+            "z": 0
+          },
+          "powered": false,
+          "expected_mechanics": true,
+          "simulator_error": null,
+          "differences": []
+        }
+      ]
+    }
+  ]
+}

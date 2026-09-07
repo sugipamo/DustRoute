@@ -439,7 +439,12 @@ pub fn semantics_datapack(config: &JavaExportConfig) -> Result<DataPack, Minecra
         let tag = format!("{}_{}_origin", config.namespace, probe.name);
         pack.insert_text(
             format!("{root}/_build.mcfunction"),
-            isolated_build_commands(&probe.world, config)?.join("\n") + "\n",
+            isolated_build_commands(
+                &dustroute_minecraft::ValidatedWorld::try_from(probe.world.clone())?,
+                config,
+            )?
+            .join("\n")
+                + "\n",
         );
         pack.insert_text(
             format!("{root}/_stimulate.mcfunction"),

@@ -118,6 +118,7 @@ pub fn simulator_observations(
                         .get(position)
                         .map(|level| *level > 0),
                     BlockKind::RedstoneLamp => state.lamp_lit.get(position).copied(),
+                    BlockKind::Observer => state.observer_powered.get(position).copied(),
                     _ => None,
                 },
                 torch_lit: (block.kind == BlockKind::RedstoneTorch)

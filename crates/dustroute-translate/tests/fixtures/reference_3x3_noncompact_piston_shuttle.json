@@ -1,0 +1,169 @@
+{
+  "schema_version": "dustroute.reference-3x3-door.v1",
+  "minecraft_version": "1.21.11",
+  "id": "noncompact_two_sided_normal_piston_shuttle",
+  "evidence": "designed_mechanism",
+  "description": "A deliberately non-compact 3x3 door reference. Each of the nine ordinary door blocks is moved one block south by a normal piston, that piston retracts without pulling, and a second normal piston later moves the block north again.",
+  "coordinate_convention": {
+    "door_plane_z": 0,
+    "open_direction": "south",
+    "close_direction": "north",
+    "width_axis": "x",
+    "height_axis": "y",
+    "travel_axis": "z"
+  },
+  "components": {
+    "door_blocks": [
+      {"x": 0, "y": 0, "z": 0},
+      {"x": 1, "y": 0, "z": 0},
+      {"x": 2, "y": 0, "z": 0},
+      {"x": 0, "y": 1, "z": 0},
+      {"x": 1, "y": 1, "z": 0},
+      {"x": 2, "y": 1, "z": 0},
+      {"x": 0, "y": 2, "z": 0},
+      {"x": 1, "y": 2, "z": 0},
+      {"x": 2, "y": 2, "z": 0}
+    ],
+    "open_pushers": [
+      {"position": {"x": 0, "y": 0, "z": -1}, "facing": "south", "variant": "normal"},
+      {"position": {"x": 1, "y": 0, "z": -1}, "facing": "south", "variant": "normal"},
+      {"position": {"x": 2, "y": 0, "z": -1}, "facing": "south", "variant": "normal"},
+      {"position": {"x": 0, "y": 1, "z": -1}, "facing": "south", "variant": "normal"},
+      {"position": {"x": 1, "y": 1, "z": -1}, "facing": "south", "variant": "normal"},
+      {"position": {"x": 2, "y": 1, "z": -1}, "facing": "south", "variant": "normal"},
+      {"position": {"x": 0, "y": 2, "z": -1}, "facing": "south", "variant": "normal"},
+      {"position": {"x": 1, "y": 2, "z": -1}, "facing": "south", "variant": "normal"},
+      {"position": {"x": 2, "y": 2, "z": -1}, "facing": "south", "variant": "normal"}
+    ],
+    "close_pushers": [
+      {"position": {"x": 0, "y": 0, "z": 2}, "facing": "north", "variant": "normal"},
+      {"position": {"x": 1, "y": 0, "z": 2}, "facing": "north", "variant": "normal"},
+      {"position": {"x": 2, "y": 0, "z": 2}, "facing": "north", "variant": "normal"},
+      {"position": {"x": 0, "y": 1, "z": 2}, "facing": "north", "variant": "normal"},
+      {"position": {"x": 1, "y": 1, "z": 2}, "facing": "north", "variant": "normal"},
+      {"position": {"x": 2, "y": 1, "z": 2}, "facing": "north", "variant": "normal"},
+      {"position": {"x": 0, "y": 2, "z": 2}, "facing": "north", "variant": "normal"},
+      {"position": {"x": 1, "y": 2, "z": 2}, "facing": "north", "variant": "normal"},
+      {"position": {"x": 2, "y": 2, "z": 2}, "facing": "north", "variant": "normal"}
+    ],
+    "control_repeaters": {
+      "open_outputs": [
+        {"position": {"x": 0, "y": 0, "z": -2}, "facing": "south", "target_role": "open_push"},
+        {"position": {"x": 1, "y": 0, "z": -2}, "facing": "south", "target_role": "open_push"},
+        {"position": {"x": 2, "y": 0, "z": -2}, "facing": "south", "target_role": "open_push"},
+        {"position": {"x": 0, "y": 1, "z": -2}, "facing": "south", "target_role": "open_push"},
+        {"position": {"x": 1, "y": 1, "z": -2}, "facing": "south", "target_role": "open_push"},
+        {"position": {"x": 2, "y": 1, "z": -2}, "facing": "south", "target_role": "open_push"},
+        {"position": {"x": 0, "y": 2, "z": -2}, "facing": "south", "target_role": "open_push"},
+        {"position": {"x": 1, "y": 2, "z": -2}, "facing": "south", "target_role": "open_push"},
+        {"position": {"x": 2, "y": 2, "z": -2}, "facing": "south", "target_role": "open_push"}
+      ],
+      "close_outputs": [
+        {"position": {"x": 0, "y": 0, "z": 3}, "facing": "north", "target_role": "close_push"},
+        {"position": {"x": 1, "y": 0, "z": 3}, "facing": "north", "target_role": "close_push"},
+        {"position": {"x": 2, "y": 0, "z": 3}, "facing": "north", "target_role": "close_push"},
+        {"position": {"x": 0, "y": 1, "z": 3}, "facing": "north", "target_role": "close_push"},
+        {"position": {"x": 1, "y": 1, "z": 3}, "facing": "north", "target_role": "close_push"},
+        {"position": {"x": 2, "y": 1, "z": 3}, "facing": "north", "target_role": "close_push"},
+        {"position": {"x": 0, "y": 2, "z": 3}, "facing": "north", "target_role": "close_push"},
+        {"position": {"x": 1, "y": 2, "z": 3}, "facing": "north", "target_role": "close_push"},
+        {"position": {"x": 2, "y": 2, "z": 3}, "facing": "north", "target_role": "close_push"}
+      ]
+    }
+  },
+  "states": {
+    "closed": {
+      "door_block_z": 0,
+      "open_pushers": "retracted",
+      "close_pushers": "retracted",
+      "passage_plane_z": 0
+    },
+    "open": {
+      "door_block_z": 1,
+      "open_pushers": "retracted",
+      "close_pushers": "retracted",
+      "passage_plane_z": 0
+    }
+  },
+  "timeline": [
+    {
+      "id": "open_extend",
+      "trigger": "lever_on_derived_pulse",
+      "role": "open_push",
+      "action": "extend",
+      "schedule_game_tick": 0,
+      "expected_completion_game_tick": 26,
+      "expected_stable_state": "open_pushers_extended_door_at_z1"
+    },
+    {
+      "id": "open_retract",
+      "trigger": "lever_on_delayed_return_pulse",
+      "role": "open_push",
+      "action": "retract",
+      "schedule_game_tick": 27,
+      "expected_completion_game_tick": 53,
+      "expected_stable_state": "open"
+    },
+    {
+      "id": "close_extend",
+      "trigger": "lever_off_derived_pulse",
+      "role": "close_push",
+      "action": "extend",
+      "schedule_game_tick": 54,
+      "expected_completion_game_tick": 80,
+      "expected_stable_state": "close_pushers_extended_door_at_z0"
+    },
+    {
+      "id": "close_retract",
+      "trigger": "lever_off_delayed_return_pulse",
+      "role": "close_push",
+      "action": "retract",
+      "schedule_game_tick": 81,
+      "expected_completion_game_tick": 107,
+      "expected_stable_state": "closed"
+    }
+  ],
+  "control_contract": {
+    "input": "lever",
+    "lever_edges": [
+      {"transition": "off_to_on", "game_tick": 0},
+      {"transition": "on_to_off", "game_tick": 54}
+    ],
+    "repeater_count": 18,
+    "delayed_return_repeater_ticks": 2,
+    "fanout_channels": 18,
+    "status": "out_of_scope",
+    "first_gap": "pulse_sequencer_and_18_way_fanout",
+    "reason": "The current propagation contract executes one horizontal repeater path and steady wire updates, but does not provide a lever edge to two timed normal-piston pulses per door block or prove a complete 18-branch wiring topology."
+  },
+  "control_timeline": [
+    {"id": "open_extend_repeater_output", "source": "lever_on", "repeater_role": "open_outputs", "delay_redstone_ticks": 1, "target_role": "open_push", "status": "out_of_scope"},
+    {"id": "open_retract_repeater_output", "source": "lever_on", "repeater_role": "open_outputs", "delay_redstone_ticks": 2, "target_role": "open_push", "status": "out_of_scope"},
+    {"id": "close_extend_repeater_output", "source": "lever_off", "repeater_role": "close_outputs", "delay_redstone_ticks": 1, "target_role": "close_push", "status": "out_of_scope"},
+    {"id": "close_retract_repeater_output", "source": "lever_off", "repeater_role": "close_outputs", "delay_redstone_ticks": 2, "target_role": "close_push", "status": "out_of_scope"}
+  ],
+  "mechanical_replay": {
+    "mode": "serial_per_cell",
+    "inter_action_gap_game_ticks": 1,
+    "same_tick_batch_status": "missing",
+    "same_tick_batch_reason": "A completion delta retains a strict parent ShapeId. Starting nine pistons in one game tick changes that shape before all completions execute, so the current engine fails closed instead of rebasing the batch implicitly."
+  },
+  "classification": [
+    {"id": "open_extend", "status": "supported_serial_only", "reason": "Nine independent horizontal normal pistons each push one exact ordinary block one step south when replayed one at a time."},
+    {"id": "open_retract", "status": "supported_serial_only", "reason": "Normal piston retraction removes its head and leaves the pushed block at z=1 when replayed one at a time."},
+    {"id": "close_extend", "status": "supported_serial_only", "reason": "Nine independent horizontal normal pistons each push one exact ordinary block one step north when replayed one at a time."},
+    {"id": "close_retract", "status": "supported_serial_only", "reason": "Normal piston retraction removes its head and leaves the block at the closed plane when replayed one at a time."},
+    {"id": "nine_piston_same_tick_batch", "status": "missing", "reason": "The strict WorldDelta parent-shape check rejects same-tick completion of all nine independently started pistons; batch rebasing is not implemented in this goal."},
+    {"id": "lever_to_pulse_sequence", "status": "out_of_scope", "reason": "Automatic pulse generation and reversal from a persistent Lever ON/OFF state are not part of the bounded propagation runner."},
+    {"id": "18_way_repeater_fanout", "status": "missing", "reason": "The bounded repeater implementation supports a single horizontal rear-input/front-output path; a complete 18-branch topology has not been declared or verified."}
+  ],
+  "replay": {
+    "engine": "dustroute_minecraft::time::PhysicsEngine",
+    "method": "schedule_piston_action",
+    "profile_initial_delay_game_ticks": {"minimum": 0, "maximum": 1},
+    "profile_stable_completion_game_ticks": 2,
+    "mechanical_replay_status": "supported_serial_only",
+    "electrical_replay_status": "stopped_at_first_gap"
+  },
+  "stop_condition": "Do not implement the pulse sequencer, repeater fanout, torch inversion, or full lever-driven E2E in this goal. Stop and report if any of those are required before the mechanical fixture can be extended."
+}

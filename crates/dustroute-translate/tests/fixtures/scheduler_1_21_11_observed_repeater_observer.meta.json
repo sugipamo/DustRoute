@@ -1,0 +1,8 @@
+{
+  "schema_version": "dustroute.scheduler-observation-metadata.v1",
+  "minecraft_version": "1.21.11",
+  "fixture": "crates/dustroute-translate/tests/fixtures/scheduler_1_21_11_observed_repeater_observer.json",
+  "source_artifact": ".local/e2e-artifacts/observer_repeater_preview_only-latest.json",
+  "source_result": "trace",
+  "reason": "Capture repeater delay, same-game-tick lamp/observer order, observer pulse width, and retained no-op packet evidence on the pinned 1.21.11 server."
+}

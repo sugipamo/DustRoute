@@ -41,7 +41,79 @@ pub enum BlockKind {
     PressurePlate,
     RedstoneLamp,
     RedstoneBlock,
+    Observer,
     Piston,
+    /// Stable piston head block emitted after an extension completes.
+    PistonHead,
+    /// Transient moving-piston block used while a piston block entity is
+    /// animating. The carried block and direction live in `piston_entity`.
+    MovingPiston,
+}
+
+/// The two piston variants exposed by Java Edition.  The variant is kept as
+/// physical state rather than inferred from a logical gate so sticky
+/// retraction cannot be silently lost during translation.
+#[derive(
+    Clone, Copy, Debug, Default, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum PistonVariant {
+    #[default]
+    Normal,
+    Sticky,
+}
+
+/// Stable and transient piston states.  The event engine currently applies a
+/// plan atomically, but the moving states are part of the contract so later
+/// block-event traces can expose the vanilla intermediate state honestly.
+#[derive(
+    Clone, Copy, Debug, Default, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum PistonState {
+    #[default]
+    Retracted,
+    Extended,
+    Extending,
+    Retracting,
+}
+
+impl PistonState {
+    #[must_use]
+    pub const fn is_extended(self) -> bool {
+        matches!(self, Self::Extended | Self::Extending)
+    }
+
+    #[must_use]
+    pub const fn is_stable(self) -> bool {
+        matches!(self, Self::Retracted | Self::Extended)
+    }
+}
+
+/// Stable piston-head state. Vanilla exposes the head as an independent
+/// block after an extension completes; keeping it typed prevents a completed
+/// piston from collapsing back to `Air` at the head coordinate.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct PistonHeadState {
+    pub facing: Facing,
+    pub variant: PistonVariant,
+    /// The short head shape used by a retracting piston. Continuous collision
+    /// geometry is intentionally outside this discrete simulator.
+    #[serde(default)]
+    pub short: bool,
+}
+
+/// Discrete representation of metadata carried by a vanilla
+/// `PistonBlockEntity`. Continuous interpolation is deliberately out of scope
+/// for this block-only model; `progress` is a stable 0/1 boundary marker.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct PistonBlockEntityState {
+    pub pushed_block: Box<Block>,
+    pub facing: Facing,
+    pub extending: bool,
+    pub source: bool,
+    #[serde(default)]
+    pub progress: u8,
 }
 
 /// How completely DustRoute can use an observed block at a specific analysis
@@ -91,6 +163,18 @@ pub enum Facing {
 }
 
 impl Facing {
+    #[must_use]
+    pub const fn offset(self) -> Pos {
+        match self {
+            Self::North => Pos::new(0, 0, -1),
+            Self::East => Pos::new(1, 0, 0),
+            Self::South => Pos::new(0, 0, 1),
+            Self::West => Pos::new(-1, 0, 0),
+            Self::Up => Pos::new(0, 1, 0),
+            Self::Down => Pos::new(0, -1, 0),
+        }
+    }
+
     #[must_use]
     pub const fn horizontal_offset(self) -> Option<Pos> {
         match self {
@@ -193,6 +277,7 @@ impl BlockKind {
                 | Self::PressurePlate
                 | Self::RedstoneLamp
                 | Self::RedstoneBlock
+                | Self::Observer
                 | Self::Piston
         )
     }
@@ -223,6 +308,21 @@ pub struct Block {
     pub delay: Option<u8>,
     pub support_offset: Option<Pos>,
     pub wire_connections: Option<BTreeMap<Facing, WireConnection>>,
+    /// Present only for `BlockKind::Piston`; omitted from serialized output for
+    /// other blocks to preserve the compact legacy representation.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub piston_variant: Option<PistonVariant>,
+    /// Present only for `BlockKind::Piston`.  Moving piston/head blocks are
+    /// represented by the transient state rather than being mistaken for a
+    /// stable ordinary block.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub piston_state: Option<PistonState>,
+    /// Present for a stable `BlockKind::PistonHead`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub piston_head: Option<PistonHeadState>,
+    /// Present for a transient `BlockKind::MovingPiston`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub piston_entity: Option<Box<PistonBlockEntityState>>,
 }
 
 impl Block {
@@ -239,7 +339,39 @@ impl Block {
             delay: None,
             support_offset: None,
             wire_connections: None,
+            piston_variant: match kind {
+                BlockKind::Piston => Some(PistonVariant::Normal),
+                _ => None,
+            },
+            piston_state: match kind {
+                BlockKind::Piston => Some(PistonState::Retracted),
+                _ => None,
+            },
+            piston_head: None,
+            piston_entity: None,
         }
+    }
+
+    #[must_use]
+    pub fn piston_head(facing: Facing, variant: PistonVariant, short: bool) -> Self {
+        let mut block = Self::new(BlockKind::PistonHead);
+        block.facing = Some(facing);
+        block.piston_variant = Some(variant);
+        block.piston_head = Some(PistonHeadState {
+            facing,
+            variant,
+            short,
+        });
+        block
+    }
+
+    #[must_use]
+    pub fn moving_piston(state: PistonBlockEntityState) -> Self {
+        let mut block = Self::new(BlockKind::MovingPiston);
+        block.facing = Some(state.facing);
+        block.piston_variant = state.pushed_block.piston_variant;
+        block.piston_entity = Some(Box::new(state));
+        block
     }
 
     #[must_use]
@@ -334,12 +466,41 @@ impl Block {
                 repair: Partial,
                 placement: Full,
             },
+            BlockKind::Observer => BlockCapabilities {
+                observation: Full,
+                physical_classification: Full,
+                connectivity: Full,
+                // An observer is a pulse source, not a steady-state
+                // conductor. Its event semantics are modeled below.
+                steady_state: NotApplicable,
+                temporal: Full,
+                repair: Partial,
+                placement: Full,
+            },
             BlockKind::Piston => BlockCapabilities {
                 observation: Full,
                 physical_classification: Partial,
                 connectivity: Partial,
                 steady_state: Unsupported,
                 temporal: Unsupported,
+                repair: Unsupported,
+                placement: Unsupported,
+            },
+            BlockKind::PistonHead => BlockCapabilities {
+                observation: Full,
+                physical_classification: Partial,
+                connectivity: Partial,
+                steady_state: Partial,
+                temporal: Partial,
+                repair: Unsupported,
+                placement: Unsupported,
+            },
+            BlockKind::MovingPiston => BlockCapabilities {
+                observation: Full,
+                physical_classification: Partial,
+                connectivity: Unsupported,
+                steady_state: Unsupported,
+                temporal: Partial,
                 repair: Unsupported,
                 placement: Unsupported,
             },
@@ -391,7 +552,8 @@ impl Block {
                 BlockKind::Solid
                 | BlockKind::Transparent
                 | BlockKind::RedstoneBlock
-                | BlockKind::RedstoneLamp => OccupiedShape::FullCube,
+                | BlockKind::RedstoneLamp
+                | BlockKind::Observer => OccupiedShape::FullCube,
                 _ => OccupiedShape::Partial,
             },
             supports_dust_on_top: properties.supports_components,
@@ -457,6 +619,15 @@ impl Block {
             traits.conducts_strong_power = false;
             traits.strong_power_drives_dust = false;
         }
+        if matches!(self.kind, BlockKind::PistonHead | BlockKind::MovingPiston) {
+            // The current model does not reproduce the directional collision
+            // shape or moving-entity support rules; do not let either typed
+            // piston part create an inferred wire rise.
+            traits.supports_dust_on_top = false;
+            traits.permits_wire_rise_beside = false;
+            traits.wire_rise_connection = None;
+            traits.blocks_wire_rise_when_above = true;
+        }
         traits
     }
 }
@@ -469,8 +640,7 @@ pub fn observed_name_requires_live_observation(name: &str) -> bool {
     let short_name = name.strip_prefix("minecraft:").unwrap_or(name);
     matches!(
         short_name,
-        "observer"
-            | "target"
+        "target"
             | "daylight_detector"
             | "dispenser"
             | "dropper"
@@ -535,6 +705,43 @@ impl World {
     #[must_use]
     pub fn get(&self, pos: Pos) -> Option<&Block> {
         self.blocks.get(&pos)
+    }
+
+    /// Returns a mutable block for signal-state updates.  Callers that change
+    /// geometry should prefer `WorldDelta::apply`, which validates and commits
+    /// an atomic shape transition.
+    pub fn get_mut(&mut self, pos: Pos) -> Option<&mut Block> {
+        self.blocks.get_mut(&pos)
+    }
+
+    /// Returns the content-derived identity of the current geometric shape.
+    /// Signal-only fields are intentionally excluded; see [`ShapeId`].
+    #[must_use]
+    pub fn shape_id(&self) -> crate::ShapeId {
+        crate::delta::shape_id(self)
+    }
+
+    /// Returns the content-derived identity of the complete observed state,
+    /// including signal fields. Use this when a transition's endpoints must
+    /// distinguish a powered and an unpowered version of the same shape.
+    #[must_use]
+    pub fn state_id(&self) -> crate::StateId {
+        crate::delta::state_id(self)
+    }
+
+    /// Captures this world as an immutable shape view.  The snapshot still
+    /// retains observed signal fields for compatibility, while its identity
+    /// is geometry-oriented.
+    #[must_use]
+    pub fn as_shape(&self) -> crate::Shape {
+        crate::Shape::new(self.clone())
+    }
+
+    /// Applies an atomic geometry/state delta.  This method is intentionally
+    /// thin so every caller shares the same stale-state and duplicate-change
+    /// checks.
+    pub fn apply_delta(&mut self, delta: &crate::WorldDelta) -> Result<(), crate::WorldDeltaError> {
+        delta.apply(self)
     }
 
     #[must_use]

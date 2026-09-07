@@ -26,6 +26,9 @@ fn component_connects(world: &World, pos: Pos, direction: Facing) -> bool {
             | BlockKind::RedstoneTorch
             | BlockKind::RedstoneBlock,
         ) => true,
+        Some(BlockKind::Observer) => block
+            .and_then(|block| block.facing)
+            .is_some_and(|facing| facing == direction.opposite()),
         Some(BlockKind::Repeater | BlockKind::Comparator) => block
             .and_then(|block| block.facing)
             .is_some_and(|facing| facing == direction || facing == direction.opposite()),

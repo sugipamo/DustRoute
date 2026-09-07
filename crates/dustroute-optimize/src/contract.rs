@@ -11,6 +11,9 @@ pub enum LogicalContractMode {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum TimingContractMode {
     ExactTrace,
+    /// Compare only state-changing edges and their sampled transition times.
+    /// This is the transition-first alternative to comparing every sample.
+    ExactTransitions,
     BoundedDelay,
     SettledValueOnly,
     PreserveOrder,
@@ -238,6 +241,10 @@ fn assess_timing(
     }
     let valid = match contract.mode {
         TimingContractMode::ExactTrace => report.differing_cases == 0,
+        TimingContractMode::ExactTransitions => report
+            .cases
+            .iter()
+            .all(|case| case.original_transition_edges() == case.candidate_transition_edges()),
         TimingContractMode::SettledValueOnly => report.cases.iter().all(final_values_match),
         TimingContractMode::BoundedDelay => report.cases.iter().all(|case| {
             final_values_match(case)
@@ -247,7 +254,8 @@ fn assess_timing(
                 && settle_tick(&case.candidate_outputs) <= contract.settle_deadline_redstone_ticks
         }),
         TimingContractMode::PreserveOrder => report.cases.iter().all(|case| {
-            transitions_of(&case.original_outputs) == transitions_of(&case.candidate_outputs)
+            transition_signature(&case.original_transition_edges())
+                == transition_signature(&case.candidate_transition_edges())
         }),
     };
     if valid {
@@ -333,11 +341,10 @@ fn settle_tick(trace: &[Vec<bool>]) -> usize {
         .map_or(0, |index| index + 1)
 }
 
-fn transitions_of(trace: &[Vec<bool>]) -> Vec<Vec<bool>> {
-    trace
-        .windows(2)
-        .filter(|pair| pair[0] != pair[1])
-        .map(|pair| pair[1].clone())
+fn transition_signature(edges: &[crate::MacroTransitionEdge]) -> Vec<(Vec<bool>, Vec<bool>)> {
+    edges
+        .iter()
+        .map(|edge| (edge.from.clone(), edge.to.clone()))
         .collect()
 }
 
@@ -471,8 +478,17 @@ mod tests {
             },
             Some(&report),
         );
+        let exact_transitions = assess_timing(
+            TimingContract {
+                mode: TimingContractMode::ExactTransitions,
+                maximum_added_redstone_ticks: 0,
+                settle_deadline_redstone_ticks: 4,
+            },
+            Some(&report),
+        );
         assert_eq!(bounded.state, ContractCheckState::Passed);
         assert_eq!(exact.state, ContractCheckState::Failed);
+        assert_eq!(exact_transitions.state, ContractCheckState::Failed);
     }
 
     #[test]

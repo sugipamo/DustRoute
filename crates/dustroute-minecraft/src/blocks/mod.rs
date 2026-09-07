@@ -10,8 +10,10 @@ mod air;
 mod button;
 mod comparator;
 mod lever;
+mod observer;
 mod piston;
 mod pressure_plate;
+mod redstone;
 mod redstone_block;
 mod redstone_lamp;
 mod redstone_torch;
@@ -19,6 +21,26 @@ mod redstone_wire;
 mod repeater;
 mod solid;
 mod transparent;
+
+pub use piston::{
+    DEFAULT_PISTON_MOTION_PROFILE, PISTON_PUSH_LIMIT, PistonAction, PistonBlockMove, PistonError,
+    PistonMotionProfile, PistonMotionProfileError, PistonPlan, PistonPlanningContext,
+    observed_name_is_immovable, piston_input_connected, piston_state, piston_variant, plan_piston,
+    plan_piston_in_region,
+};
+
+pub use redstone::RedstonePropagationError;
+
+pub(crate) use piston::{
+    direct_piston_neighbors, piston_input_powered_in_region, redstone_input_delta,
+};
+
+pub(crate) use redstone::{
+    external_world_delta, redstone_lamp_delta, redstone_position_known,
+    redstone_repeater_delay_game_ticks, redstone_repeater_delta, redstone_repeater_input_powered,
+    redstone_repeater_output_position, redstone_repeater_powered, redstone_update_positions,
+    redstone_wire_delta, redstone_wire_update_positions,
+};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum UpdateModel {
@@ -52,7 +74,8 @@ pub const fn behavior_profile(kind: BlockKind) -> BlockBehaviorProfile {
         BlockKind::PressurePlate => pressure_plate::PROFILE,
         BlockKind::RedstoneLamp => redstone_lamp::PROFILE,
         BlockKind::RedstoneBlock => redstone_block::PROFILE,
-        BlockKind::Piston => piston::PROFILE,
+        BlockKind::Observer => observer::PROFILE,
+        BlockKind::Piston | BlockKind::PistonHead | BlockKind::MovingPiston => piston::PROFILE,
     }
 }
 
@@ -70,6 +93,11 @@ mod tests {
             behavior_profile(BlockKind::Piston).update_model,
             UpdateModel::BlockEvent
         );
+        assert_eq!(
+            behavior_profile(BlockKind::Observer).update_model,
+            UpdateModel::ScheduledBlockTick
+        );
+        assert!(behavior_profile(BlockKind::Observer).order_sensitive);
         assert!(behavior_profile(BlockKind::RedstoneWire).order_sensitive);
     }
 }

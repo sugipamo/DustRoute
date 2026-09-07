@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     Block, BlockCapabilities, BlockKind, CapabilityLevel, ComponentId, ConnectionKind, Facing,
     FragmentId, GapCandidate, GapEvidence, PhysicalComponent, PhysicalFragment, PhysicalNet, Pos,
-    VerifiedTopology, WireConnection,
+    RegionSet, VerifiedTopology, WireConnection,
 };
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -171,6 +171,7 @@ pub enum PortChannel {
     RedstoneSignal,
     WeakPower,
     StrongPower,
+    Observation,
     Mechanical,
     Structural,
 }
@@ -208,6 +209,9 @@ pub enum TransferKind {
     StrongPower,
     DirectionalDevice,
     SideControl,
+    /// A block-state observation edge into an Observer. This is not a power
+    /// transfer and must not be folded into an electrical net.
+    Observation,
     StructuralSupport,
 }
 
@@ -277,6 +281,20 @@ impl PhysicalScene {
     #[must_use]
     pub fn physical_traversal_groups(&self) -> &[PhysicalFragment] {
         &self.fragments
+    }
+
+    /// Returns physical components whose local topology may be invalidated by
+    /// a Minecraft-layer delta.  This is intentionally a read-only selector:
+    /// rebuilding/remapping the affected graph remains a separate operation,
+    /// so callers cannot mistake a dirty set for a completed incremental
+    /// analysis.
+    #[must_use]
+    pub fn components_in_dirty_regions(&self, regions: &RegionSet) -> BTreeSet<ComponentId> {
+        self.components
+            .iter()
+            .filter(|component| regions.contains(component.pos))
+            .map(|component| component.id)
+            .collect()
     }
 
     #[must_use]
@@ -532,6 +550,21 @@ fn ports_for(block: &Block) -> Vec<PhysicalPort> {
         });
     };
     let horizontal = [Facing::North, Facing::East, Facing::South, Facing::West];
+    if block.kind != BlockKind::Air {
+        // Observation is a state relation, not an electrical conductor. Keep
+        // a face-addressable port on every present block so an Observer's
+        // input edge remains representable even for an otherwise inert solid.
+        for face in [
+            Facing::North,
+            Facing::East,
+            Facing::South,
+            Facing::West,
+            Facing::Up,
+            Facing::Down,
+        ] {
+            push(PortRole::Output, face, PortChannel::Observation);
+        }
+    }
     match block.kind {
         BlockKind::RedstoneWire => {
             for face in horizontal {
@@ -602,6 +635,11 @@ fn ports_for(block: &Block) -> Vec<PhysicalPort> {
                 PortChannel::Mechanical,
             );
         }
+        BlockKind::Observer => {
+            let output = block.facing.unwrap_or(Facing::North);
+            push(PortRole::Output, output, PortChannel::StrongPower);
+            push(PortRole::Input, output.opposite(), PortChannel::Observation);
+        }
         BlockKind::Solid | BlockKind::Transparent | BlockKind::RedstoneLamp => {
             if !block.redstone_traits().conducts_weak_power {
                 return ports;
@@ -617,7 +655,7 @@ fn ports_for(block: &Block) -> Vec<PhysicalPort> {
                 push(PortRole::Bidirectional, face, PortChannel::WeakPower);
             }
         }
-        BlockKind::Air => {}
+        BlockKind::Air | BlockKind::PistonHead | BlockKind::MovingPiston => {}
     }
     ports
 }
@@ -693,6 +731,9 @@ fn port_connection(
             ConnectionKind::DirectionalOutput => "java.redstone.directional_output",
             ConnectionKind::DirectSource => "java.redstone.direct_source",
             ConnectionKind::Control => "java.redstone.side_or_support_control",
+            ConnectionKind::ObserverInput => "java.redstone.observer.block_state_observation",
+            ConnectionKind::ObserverOutput => "java.redstone.observer.strong_pulse",
+            ConnectionKind::PistonInput => "java.redstone.piston_input",
             ConnectionKind::Support => "java.block.structural_support",
         }
         .to_owned(),
@@ -726,6 +767,23 @@ fn select_port(
                     matches!(port.role, PortRole::Output | PortRole::Bidirectional)
                 }
                 ConnectionKind::Control => port.role == PortRole::Control,
+                ConnectionKind::ObserverInput if outgoing => {
+                    port.channel == PortChannel::Observation && port.role == PortRole::Output
+                }
+                ConnectionKind::ObserverInput => {
+                    port.channel == PortChannel::Observation && port.role == PortRole::Input
+                }
+                ConnectionKind::ObserverOutput if outgoing => {
+                    port.channel == PortChannel::StrongPower && port.role == PortRole::Output
+                }
+                ConnectionKind::ObserverOutput => {
+                    matches!(
+                        port.channel,
+                        PortChannel::RedstoneSignal
+                            | PortChannel::WeakPower
+                            | PortChannel::StrongPower
+                    ) && matches!(port.role, PortRole::Input | PortRole::Bidirectional)
+                }
                 _ if outgoing => matches!(port.role, PortRole::Output | PortRole::Bidirectional),
                 _ => matches!(
                     port.role,
@@ -747,6 +805,9 @@ const fn transfer_kind(kind: ConnectionKind) -> TransferKind {
         }
         ConnectionKind::DirectSource => TransferKind::DirectSignal,
         ConnectionKind::Control => TransferKind::SideControl,
+        ConnectionKind::ObserverInput => TransferKind::Observation,
+        ConnectionKind::ObserverOutput => TransferKind::StrongPower,
+        ConnectionKind::PistonInput => TransferKind::DirectionalDevice,
         ConnectionKind::Support => TransferKind::StructuralSupport,
     }
 }
@@ -770,7 +831,38 @@ fn facing_between(source: Pos, sink: Pos) -> Option<Facing> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{PhysicalComponent, PhysicalConnection};
+    use crate::{PhysicalComponent, PhysicalConnection, RegionSet};
+
+    #[test]
+    fn dirty_regions_select_local_components_without_claiming_rebuild() {
+        let topology = VerifiedTopology::from_parts(
+            vec![
+                PhysicalComponent {
+                    id: ComponentId(0),
+                    pos: Pos::new(0, 64, 0),
+                    block: Block::new(BlockKind::Piston),
+                },
+                PhysicalComponent {
+                    id: ComponentId(1),
+                    pos: Pos::new(8, 64, 0),
+                    block: Block::new(BlockKind::RedstoneWire),
+                },
+            ],
+            [],
+        );
+        let scene = PhysicalScene::from_unvalidated_topology(
+            Observation::complete(
+                "minecraft:overworld",
+                SceneBounds::new(Pos::new(-2, 62, -2), Pos::new(10, 66, 2)),
+            ),
+            &topology,
+        );
+        let dirty = RegionSet::around_positions([Pos::new(0, 64, 0)], 1);
+        assert_eq!(
+            scene.components_in_dirty_regions(&dirty),
+            BTreeSet::from([ComponentId(0)])
+        );
+    }
 
     #[test]
     fn world_support_is_valid_even_when_support_is_not_a_signal_component() {
@@ -846,6 +938,74 @@ mod tests {
                 .iter()
                 .any(|port| port.role == PortRole::Output && port.face == Facing::East)
         );
+    }
+
+    #[test]
+    fn observer_ports_keep_front_observation_separate_from_back_power() {
+        let mut observer_block = Block::new(BlockKind::Observer);
+        observer_block.facing = Some(Facing::East);
+        let topology = VerifiedTopology::from_parts(
+            vec![
+                PhysicalComponent {
+                    id: ComponentId(0),
+                    pos: Pos::new(0, 1, 0),
+                    block: Block::new(BlockKind::Solid),
+                },
+                PhysicalComponent {
+                    id: ComponentId(1),
+                    pos: Pos::new(1, 1, 0),
+                    block: observer_block,
+                },
+                PhysicalComponent {
+                    id: ComponentId(2),
+                    pos: Pos::new(2, 1, 0),
+                    block: Block::new(BlockKind::RedstoneWire),
+                },
+            ],
+            [
+                PhysicalConnection {
+                    source: ComponentId(0),
+                    sink: ComponentId(1),
+                    kind: ConnectionKind::ObserverInput,
+                },
+                PhysicalConnection {
+                    source: ComponentId(1),
+                    sink: ComponentId(2),
+                    kind: ConnectionKind::ObserverOutput,
+                },
+            ],
+        );
+        let scene = PhysicalScene::from_unvalidated_topology(
+            Observation::complete(
+                "minecraft:overworld",
+                SceneBounds::new(Pos::new(0, 0, 0), Pos::new(2, 2, 0)),
+            ),
+            &topology,
+        );
+        assert_eq!(scene.connections.len(), 2);
+        assert!(
+            scene
+                .connections
+                .iter()
+                .any(|connection| connection.transfer == TransferKind::Observation)
+        );
+        assert!(
+            scene
+                .connections
+                .iter()
+                .any(|connection| connection.transfer == TransferKind::StrongPower)
+        );
+        let observer = scene.component_at(Pos::new(1, 1, 0)).unwrap();
+        assert!(observer.ports.iter().any(|port| {
+            port.role == PortRole::Input
+                && port.face == Facing::West
+                && port.channel == PortChannel::Observation
+        }));
+        assert!(observer.ports.iter().any(|port| {
+            port.role == PortRole::Output
+                && port.face == Facing::East
+                && port.channel == PortChannel::StrongPower
+        }));
     }
 
     #[test]
