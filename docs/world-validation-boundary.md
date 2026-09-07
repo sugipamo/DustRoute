@@ -63,9 +63,9 @@ of every external driver, or race-free server updates. Existing collision
 reports, routing checks, transition policy, and post-write verification remain
 necessary. The proof is for the checked initial state, not all future events.
 
-## Piston-door behavior change
+## Diagnostic 3×3 scenarios
 
-The current v1 door scenario uses unsupported wiring and a synthetic
+The retained `PistonDoorScenario` 3×3 diagnostic schema uses unsupported wiring and a synthetic
 `LeverPulseSequence`. Its `validate_placement`, `run_open`, and `run_cycle`
 fail before execution with structured issues, including
 `synthetic_input_driver`. A future real controller needs its own input
@@ -90,3 +90,19 @@ Runtime regressions cover loss of support after edits, tampered plan contents,
 shared capability/state failures, default door rejection before trace creation,
 and the explicitly labelled diagnostic replay. The existing circuit compiler,
 semantics export, observation, and repair tests exercise the valid paths.
+
+## Fixed 1×2 placement and revision reflection
+
+The fixed `piston-door-1x2` preset uses a private, immutable
+`ValidatedDoorPlacement` proof for its exact Java 1.21.11 open-state template
+and complete empty guard. It retains ordinary structural/state checks and
+permits only the fixed template's pistons; it does not construct a generic
+`ValidatedWorld` or widen piston capabilities. The same template still fails
+general placement validation. See [the fixed contract](piston-door-mcp-v1.md).
+
+Revision reflection reconstructs the cumulative diff from retained base
+observation evidence, requires a fresh exact match and one-block context, and
+uses `ValidatedBlockChanges` before writing. Full-context pre/post checks and
+consumed write attempts supplement the existing placement/undo flow. A saved
+revision or its diagnostic result is not itself a mutation proof. See
+[revision placement](circuit-revisions.md#reflecting-a-revision-through-existing-placement-tools).

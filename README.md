@@ -51,6 +51,8 @@ DustRouteは、Minecraft内のbotとMCP対応のAIクライアントをつない
 
 ## もっと詳しく
 
+技術文書の一覧は [Documentation](docs/README.md) にまとめています。
+
 | 知りたいこと | 読むもの |
 | --- | --- |
 | 利用できる機能・操作の順番・保存期限 | [公開機能ガイド](docs/mcp-public-features.md) |

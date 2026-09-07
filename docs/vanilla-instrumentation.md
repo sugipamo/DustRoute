@@ -5,10 +5,10 @@ not expose the Java server's `OrderedTick` queue. This document defines the
 stronger artifact that a server-side hook must produce before DustRoute can
 make an internal scheduler or Piston-state claim.
 
-## Current environment boundary
+## Recorded probe provenance
 
-The server-side probe is maintained in the separate companion repository
-`/root/DustRoute-minecraft-instrumentation`. It is a Fabric Loom project pinned
+The recorded server-side probe comes from the separate companion repository
+`DustRoute-minecraft-instrumentation`. Its recorded Fabric Loom build was pinned
 to Minecraft `1.21.11`, Yarn `1.21.11+build.6`, Fabric Loader `0.19.5`, and Loom
 `1.17.20`. The probe hooks the vanilla scheduler, redstone/Piston state paths,
 the filtered `AbstractBlockState.neighborUpdate` execution path, and relevant
@@ -16,8 +16,7 @@ server outbound block updates, then emits raw NDJSON; the Rust crate in this
 repository remains the normalization, validation, and comparison boundary.
 
 The local probe runs with `online-mode=false`, so it does not require Microsoft
-authentication. An authenticated client or an online-mode server is outside
-this goal and must not be required for a fixture to pass.
+authentication. An authenticated client or an online-mode server is not a requirement of this repository’s offline fixture validation.
 
 Validate an artifact with:
 

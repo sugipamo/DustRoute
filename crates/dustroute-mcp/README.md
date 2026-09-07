@@ -37,7 +37,7 @@ The default profile exposes all tools above. Debug-only discovery and asynchrono
 | `analysis_id`, `node_id`, `component_id` | Identifiers scoped to an analysis | Use only with the observation/analysis that returned them. |
 | `operation_id` | A particular proposal or execution record | Use the common operation lifecycle. Do not substitute a revision ID. |
 
-A `circuit_id` is held in memory for 15 minutes and may be evicted at the 64-record limit. Revisions use the scoped state store, default TTL one hour, and survive restart under the same state scope. Reads do not extend expiry. Most operation plans are in memory and are lost on restart. Revision placement, fixed-door placement and door activation proposals have five-minute pre-execution lifetimes; do not assume all other operation kinds share this TTL. See the [lifetime and recovery tables](../../docs/mcp-public-features.md#idと保存の違い) for details.
+A `circuit_id` is held in memory for 15 minutes and may be evicted at the 64-record limit. Revisions use the scoped state store, default TTL one hour, and survive restart under the same state scope. Reads do not extend expiry. Most operation plans are in memory and are lost on restart. Revision placement, fixed-door placement and door activation proposals have five-minute pre-execution lifetimes; do not assume all other operation kinds share this TTL. See the [lifetime and recovery tables](../../docs/mcp-public-features.md#ids-and-retention) for details.
 
 ## Create and refine a hypothetical circuit
 

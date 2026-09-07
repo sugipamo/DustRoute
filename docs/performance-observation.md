@@ -1,4 +1,4 @@
-# Pre-optimization performance observation
+# Performance observation
 
 This repository keeps performance measurements separate from optimization
 changes. The purpose of the observation pass is to identify the dominant phase

@@ -165,7 +165,7 @@ promote the modelled scheduler profile to a Vanilla-complete implementation.
 ## Scenario contract
 
 The separate fixed-door diagnostic is documented in
-[`docs/3x3-piston-door-live-validation.md`](../../../../docs/3x3-piston-door-live-validation.md).
+[`docs/piston-diagnostics.md`](../../../../docs/piston-diagnostics.md).
 It compares the designed simulator fixture with live placement and three
 open/close attempts. It uses only the local test actor, preserves MCP's
 preview-only restriction, and reports known contract gaps rather than treating

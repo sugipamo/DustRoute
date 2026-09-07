@@ -29,7 +29,7 @@ Upper layers never replace or mutate the physical observation.
 
 ## Core physical API
 
-`dustroute-physical` will expose:
+`dustroute-physical` exposes:
 
 - `PhysicalScene`, the root for an observed area containing zero or more circuit
   fragments.
@@ -64,7 +64,7 @@ open frontier. Local physical and gate results remain usable.
 
 ## Derived IR API
 
-`dustroute-ir` will expose three views:
+`dustroute-ir` exposes three views:
 
 - `GateView`: `AND`, `OR`, `NOT`, `XOR`, and other local recognitions, including
   partial and conflicting candidates.
@@ -94,7 +94,8 @@ state and proposed placement state from being confused at API boundaries.
 2. local signal role and recognized gates;
 3. expressions with unresolved portions retained;
 4. optional functional candidates;
-5. physical diagnostics and non-mutating repair proposals.
+5. physical diagnostics and next-tool guidance. Repair proposals are created
+   separately with `new_repair`.
 
 The MCP server must not turn `unclassified` into “not a circuit.” It explains
 recognized local structure and the reason higher-level classification is absent.

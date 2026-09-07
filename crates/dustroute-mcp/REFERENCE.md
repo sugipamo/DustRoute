@@ -370,7 +370,7 @@ Existing observation tools return `mechanisms`: `show_region` captures current
 selected blocks, `test_circuit` provides compact interpretation, and
 `convert_from_circuit` interprets the immutable snapshot. Exact known layouts
 are recognized; other piston structures remain unidentified. See
-[the observation contract](../../docs/piston-door-mcp-v1.md#reverse-observation).
+[the observation contract](../../docs/piston-door-mcp-v1.md#observe-and-interpret).
 
 
 `new_placement({"revision_id":"..."})` plans a saved revision's cumulative

@@ -1,6 +1,6 @@
 # MCP JSON contracts
 
-For the public tool inventory and end-to-end usage, see the [公開機能ガイド](mcp-public-features.md). This document records detailed response contracts.
+For the public tool inventory and end-to-end usage, see the [public feature guide](mcp-public-features.md). This document records detailed response contracts.
 
 
 ## Physical interface evidence
@@ -294,7 +294,7 @@ region; it does not yet split arbitrary scenes into separate mechanisms.
 
 `show_region` captures fresh blocks. Conversion with a `circuit_id` preserves
 that snapshot; recapture explicitly for current state. No dedicated door-state
-read endpoint is exposed. See [the candidate observation schema](piston-door-mcp-v1.md#reverse-observation).
+read endpoint is exposed. See [the candidate observation schema](piston-door-mcp-v1.md#observe-and-interpret).
 
 `unsupported_observed_blocks` is an array of `{position, block}` records,
 including an empty array when no unsupported blocks exist. Coordinate-keyed
