@@ -6,7 +6,9 @@
 pub mod blocks;
 mod delta;
 pub mod time;
+mod validation;
 mod world;
+pub use validation::{ValidatedWorld, WorldValidationError, WorldValidationIssue};
 
 pub use delta::{
     BlockChange, BlockMove, ChangeReason, DeltaCause, Region, RegionSet, Shape, ShapeId, StateId,

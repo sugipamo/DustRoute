@@ -20,6 +20,7 @@ pub mod liveness;
 pub mod minecraft_export;
 pub mod minecraft_semantics;
 pub mod multinet;
+pub mod observed_piston_door;
 pub mod physical;
 pub mod physics_trace;
 pub mod piston_door;
@@ -84,7 +85,8 @@ pub use dustroute_minecraft::{
     DEFAULT_PISTON_MOTION_PROFILE, DeltaCause, Facing, OccupiedShape, PistonAction,
     PistonBlockEntityState, PistonError, PistonHeadState, PistonMotionProfile,
     PistonMotionProfileError, PistonPlan, PistonPlanningContext, PistonState, PistonVariant, Pos,
-    Region, RegionSet, Shape, ShapeId, WireConnection, World, WorldDelta, WorldDeltaError,
+    Region, RegionSet, Shape, ShapeId, ValidatedWorld, WireConnection, World, WorldDelta,
+    WorldDeltaError, WorldValidationError, WorldValidationIssue,
     observed_name_requires_live_observation,
 };
 pub use electrical::{
@@ -105,6 +107,15 @@ pub use multinet::{
     BrokenStep, LegalityReport, MultiNetRouting, NetId, RerouteEvent, RipupRoutingError,
     RipupRoutingResult, RoutedNet, RoutingJob, materialize_multinet, route_jobs_ripup,
     route_jobs_ripup_with_fixed, route_net_tree, validate_routing_legality,
+};
+pub use observed_piston_door::{
+    OBSERVED_PISTON_DOOR_SCHEMA, ObservedBlockEvidence, ObservedPiston, ObservedPistonCellState,
+    ObservedPistonDoor, ObservedPistonDoorCandidate, ObservedPistonDoorCell,
+    ObservedPistonDoorControl, ObservedPistonDoorGeometry, ObservedPistonDoorObservation,
+    ObservedPistonDoorOrientation, ObservedPistonDoorOrientationStatus,
+    ObservedPistonDoorRecognitionError, ObservedPistonDoorState, ObservedPistonInputEdge,
+    ObservedPistonRole, ObservedPistonState, ObservedRecognitionStatus,
+    recognize_observed_piston_door,
 };
 pub use physical::{
     CellId, Endpoint, PhysicalError, PlacementCircuit, Route, RouteId, TerminalContract,
@@ -175,4 +186,10 @@ pub use world_reverse::{
     derive_functional_network, derive_functional_network_with_budget, infer_output_expressions,
     infer_truth_table, infer_truth_table_with_budget, infer_truth_table_with_budget_and_stats,
     inferred_input_driver,
+};
+
+pub mod piston_observation;
+pub use piston_observation::{
+    PistonObservation, PistonObservationContract, PistonObservationIssue, PistonObservationState,
+    observe_piston_mechanism,
 };

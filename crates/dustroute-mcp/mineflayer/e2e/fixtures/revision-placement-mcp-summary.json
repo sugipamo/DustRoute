@@ -1,0 +1,2497 @@
+{
+  "captured_at": "2026-09-07T13:34:30.418Z",
+  "trials": [
+    {
+      "parent": {
+        "analysis_complete": true,
+        "analysis_mode": "virtual_circuit_revision",
+        "base_observation_id": "52aa9869-f9f2-40be-8e5a-08babc8e069d",
+        "bounds": {
+          "max": {
+            "x": 1107,
+            "y": 183,
+            "z": 1006
+          },
+          "min": {
+            "x": 1097,
+            "y": 178,
+            "z": 996
+          }
+        },
+        "changes": [
+          {
+            "after": {
+              "name": "minecraft:repeater",
+              "pos": {
+                "x": 1100,
+                "y": 181,
+                "z": 1000
+              },
+              "properties": {
+                "delay": "2",
+                "facing": "north",
+                "locked": "false",
+                "powered": "false"
+              }
+            },
+            "before": {
+              "name": "minecraft:repeater",
+              "pos": {
+                "x": 1100,
+                "y": 181,
+                "z": 1000
+              },
+              "properties": {
+                "delay": "1",
+                "facing": "north",
+                "locked": "false",
+                "powered": "false"
+              }
+            },
+            "position": {
+              "x": 1100,
+              "y": 181,
+              "z": 1000
+            }
+          }
+        ],
+        "dimension": "minecraft:overworld",
+        "live_world_evidence": false,
+        "mutation_performed": false,
+        "ok": true,
+        "parent_revision_ids": [],
+        "placement_authorized": false,
+        "retention": "DUSTROUTE_PLAN_TTL_SECONDS (default 3600 seconds); reads do not extend lifetime",
+        "revision_id": "e2558839-77a1-477e-b3dd-b6528329cae5",
+        "schema_version": "dustroute.circuit-revision.v1",
+        "validation": {
+          "after": {
+            "placement_issues": [],
+            "property_validation": "simulator-supported properties only; not an exhaustive Java block-state schema",
+            "simulation": {
+              "result": {
+                "inputs": [],
+                "outputs": [],
+                "ticks": 64
+              },
+              "status": "simulated"
+            },
+            "status": "structurally_valid",
+            "summary": {
+              "diagnostic_counts": {
+                "awaiting_external_input": 0,
+                "healthy": 0,
+                "incomplete_observation": 0,
+                "probable_faults": 1,
+                "unsupported": 0
+              },
+              "health": "degraded",
+              "identity": {
+                "analysis_complete": true,
+                "classification_level": "local_gate_network",
+                "higher_level_candidate_count": 0,
+                "higher_level_candidate_samples": [],
+                "higher_level_candidates_truncated": false,
+                "interpretation": "primary_candidate is a ranked registered pattern; sampled local gates and mixed_ir node references provide bounded drill-down evidence",
+                "local_gate_count": 1,
+                "local_gate_counts": {
+                  "buffer": 1
+                },
+                "local_gate_samples": [
+                  {
+                    "confidence": "medium",
+                    "id": 0,
+                    "input_count": 0,
+                    "kind": "buffer",
+                    "output_count": 0,
+                    "physical_component_count": 1,
+                    "physical_components": [
+                      0
+                    ],
+                    "status": "partial"
+                  }
+                ],
+                "local_gates_truncated": false,
+                "primary_candidate": null,
+                "repair_available": false,
+                "repair_candidate_count": 0,
+                "temporal_validity": {
+                  "reasons": [],
+                  "scope": "steady_state_safe"
+                },
+                "uncertainty_reasons": [
+                  "no_registered_higher_level_pattern_matched"
+                ]
+              },
+              "mixed_ir": {
+                "edges": 0,
+                "nodes": 1,
+                "physical_components": 1,
+                "recognized_components": 1,
+                "representations": {
+                  "timed_cell": 1
+                },
+                "unresolved_components": 0
+              },
+              "probable_faults": [
+                {
+                  "block": "Repeater",
+                  "component": 0,
+                  "confidence": "high",
+                  "evidence": [
+                    "disconnected_required_input"
+                  ],
+                  "inferred": false,
+                  "position": {
+                    "x": 1100,
+                    "y": 181,
+                    "z": 1000
+                  },
+                  "reason": "required directional input has no physical connection",
+                  "related_components": [],
+                  "status": "probable_fault"
+                }
+              ],
+              "source_counts": {}
+            }
+          },
+          "before": {
+            "placement_issues": [],
+            "property_validation": "simulator-supported properties only; not an exhaustive Java block-state schema",
+            "simulation": {
+              "result": {
+                "inputs": [],
+                "outputs": [],
+                "ticks": 64
+              },
+              "status": "simulated"
+            },
+            "status": "structurally_valid",
+            "summary": {
+              "diagnostic_counts": {
+                "awaiting_external_input": 0,
+                "healthy": 0,
+                "incomplete_observation": 0,
+                "probable_faults": 1,
+                "unsupported": 0
+              },
+              "health": "degraded",
+              "identity": {
+                "analysis_complete": true,
+                "classification_level": "local_gate_network",
+                "higher_level_candidate_count": 0,
+                "higher_level_candidate_samples": [],
+                "higher_level_candidates_truncated": false,
+                "interpretation": "primary_candidate is a ranked registered pattern; sampled local gates and mixed_ir node references provide bounded drill-down evidence",
+                "local_gate_count": 1,
+                "local_gate_counts": {
+                  "buffer": 1
+                },
+                "local_gate_samples": [
+                  {
+                    "confidence": "medium",
+                    "id": 0,
+                    "input_count": 0,
+                    "kind": "buffer",
+                    "output_count": 0,
+                    "physical_component_count": 1,
+                    "physical_components": [
+                      0
+                    ],
+                    "status": "partial"
+                  }
+                ],
+                "local_gates_truncated": false,
+                "primary_candidate": null,
+                "repair_available": false,
+                "repair_candidate_count": 0,
+                "temporal_validity": {
+                  "reasons": [],
+                  "scope": "steady_state_safe"
+                },
+                "uncertainty_reasons": [
+                  "no_registered_higher_level_pattern_matched"
+                ]
+              },
+              "mixed_ir": {
+                "edges": 0,
+                "nodes": 1,
+                "physical_components": 1,
+                "recognized_components": 1,
+                "representations": {
+                  "timed_cell": 1
+                },
+                "unresolved_components": 0
+              },
+              "probable_faults": [
+                {
+                  "block": "Repeater",
+                  "component": 0,
+                  "confidence": "high",
+                  "evidence": [
+                    "disconnected_required_input"
+                  ],
+                  "inferred": false,
+                  "position": {
+                    "x": 1100,
+                    "y": 181,
+                    "z": 1000
+                  },
+                  "reason": "required directional input has no physical connection",
+                  "related_components": [],
+                  "status": "probable_fault"
+                }
+              ],
+              "source_counts": {}
+            }
+          },
+          "scope": "initial_state_only; no functional equivalence or live-world guarantee",
+          "simulation_ticks": 64
+        }
+      },
+      "revision": {
+        "analysis_complete": true,
+        "analysis_mode": "virtual_circuit_revision",
+        "base_observation_id": "52aa9869-f9f2-40be-8e5a-08babc8e069d",
+        "bounds": {
+          "max": {
+            "x": 1107,
+            "y": 183,
+            "z": 1006
+          },
+          "min": {
+            "x": 1097,
+            "y": 178,
+            "z": 996
+          }
+        },
+        "changes": [
+          {
+            "after": null,
+            "before": {
+              "name": "minecraft:stone",
+              "pos": {
+                "x": 1101,
+                "y": 180,
+                "z": 1000
+              },
+              "properties": {}
+            },
+            "position": {
+              "x": 1101,
+              "y": 180,
+              "z": 1000
+            }
+          },
+          {
+            "after": {
+              "name": "minecraft:stone",
+              "pos": {
+                "x": 1102,
+                "y": 180,
+                "z": 1000
+              },
+              "properties": {}
+            },
+            "before": null,
+            "position": {
+              "x": 1102,
+              "y": 180,
+              "z": 1000
+            }
+          }
+        ],
+        "dimension": "minecraft:overworld",
+        "live_world_evidence": false,
+        "mutation_performed": false,
+        "ok": true,
+        "parent_revision_ids": [
+          "e2558839-77a1-477e-b3dd-b6528329cae5"
+        ],
+        "placement_authorized": false,
+        "retention": "DUSTROUTE_PLAN_TTL_SECONDS (default 3600 seconds); reads do not extend lifetime",
+        "revision_id": "e6712346-57ab-46b9-a86e-bd9a9c2859f5",
+        "schema_version": "dustroute.circuit-revision.v1",
+        "validation": {
+          "after": {
+            "placement_issues": [],
+            "property_validation": "simulator-supported properties only; not an exhaustive Java block-state schema",
+            "simulation": {
+              "result": {
+                "inputs": [],
+                "outputs": [],
+                "ticks": 64
+              },
+              "status": "simulated"
+            },
+            "status": "structurally_valid",
+            "summary": {
+              "diagnostic_counts": {
+                "awaiting_external_input": 0,
+                "healthy": 0,
+                "incomplete_observation": 0,
+                "probable_faults": 1,
+                "unsupported": 0
+              },
+              "health": "degraded",
+              "identity": {
+                "analysis_complete": true,
+                "classification_level": "local_gate_network",
+                "higher_level_candidate_count": 0,
+                "higher_level_candidate_samples": [],
+                "higher_level_candidates_truncated": false,
+                "interpretation": "primary_candidate is a ranked registered pattern; sampled local gates and mixed_ir node references provide bounded drill-down evidence",
+                "local_gate_count": 1,
+                "local_gate_counts": {
+                  "buffer": 1
+                },
+                "local_gate_samples": [
+                  {
+                    "confidence": "medium",
+                    "id": 0,
+                    "input_count": 0,
+                    "kind": "buffer",
+                    "output_count": 0,
+                    "physical_component_count": 1,
+                    "physical_components": [
+                      0
+                    ],
+                    "status": "partial"
+                  }
+                ],
+                "local_gates_truncated": false,
+                "primary_candidate": null,
+                "repair_available": false,
+                "repair_candidate_count": 0,
+                "temporal_validity": {
+                  "reasons": [],
+                  "scope": "steady_state_safe"
+                },
+                "uncertainty_reasons": [
+                  "no_registered_higher_level_pattern_matched"
+                ]
+              },
+              "mixed_ir": {
+                "edges": 0,
+                "nodes": 1,
+                "physical_components": 1,
+                "recognized_components": 1,
+                "representations": {
+                  "timed_cell": 1
+                },
+                "unresolved_components": 0
+              },
+              "probable_faults": [
+                {
+                  "block": "Repeater",
+                  "component": 0,
+                  "confidence": "high",
+                  "evidence": [
+                    "disconnected_required_input"
+                  ],
+                  "inferred": false,
+                  "position": {
+                    "x": 1100,
+                    "y": 181,
+                    "z": 1000
+                  },
+                  "reason": "required directional input has no physical connection",
+                  "related_components": [],
+                  "status": "probable_fault"
+                }
+              ],
+              "source_counts": {}
+            }
+          },
+          "before": {
+            "placement_issues": [],
+            "property_validation": "simulator-supported properties only; not an exhaustive Java block-state schema",
+            "simulation": {
+              "result": {
+                "inputs": [],
+                "outputs": [],
+                "ticks": 64
+              },
+              "status": "simulated"
+            },
+            "status": "structurally_valid",
+            "summary": {
+              "diagnostic_counts": {
+                "awaiting_external_input": 0,
+                "healthy": 0,
+                "incomplete_observation": 0,
+                "probable_faults": 1,
+                "unsupported": 0
+              },
+              "health": "degraded",
+              "identity": {
+                "analysis_complete": true,
+                "classification_level": "local_gate_network",
+                "higher_level_candidate_count": 0,
+                "higher_level_candidate_samples": [],
+                "higher_level_candidates_truncated": false,
+                "interpretation": "primary_candidate is a ranked registered pattern; sampled local gates and mixed_ir node references provide bounded drill-down evidence",
+                "local_gate_count": 1,
+                "local_gate_counts": {
+                  "buffer": 1
+                },
+                "local_gate_samples": [
+                  {
+                    "confidence": "medium",
+                    "id": 0,
+                    "input_count": 0,
+                    "kind": "buffer",
+                    "output_count": 0,
+                    "physical_component_count": 1,
+                    "physical_components": [
+                      0
+                    ],
+                    "status": "partial"
+                  }
+                ],
+                "local_gates_truncated": false,
+                "primary_candidate": null,
+                "repair_available": false,
+                "repair_candidate_count": 0,
+                "temporal_validity": {
+                  "reasons": [],
+                  "scope": "steady_state_safe"
+                },
+                "uncertainty_reasons": [
+                  "no_registered_higher_level_pattern_matched"
+                ]
+              },
+              "mixed_ir": {
+                "edges": 0,
+                "nodes": 1,
+                "physical_components": 1,
+                "recognized_components": 1,
+                "representations": {
+                  "timed_cell": 1
+                },
+                "unresolved_components": 0
+              },
+              "probable_faults": [
+                {
+                  "block": "Repeater",
+                  "component": 0,
+                  "confidence": "high",
+                  "evidence": [
+                    "disconnected_required_input"
+                  ],
+                  "inferred": false,
+                  "position": {
+                    "x": 1100,
+                    "y": 181,
+                    "z": 1000
+                  },
+                  "reason": "required directional input has no physical connection",
+                  "related_components": [],
+                  "status": "probable_fault"
+                }
+              ],
+              "source_counts": {}
+            }
+          },
+          "scope": "initial_state_only; no functional equivalence or live-world guarantee",
+          "simulation_ticks": 64
+        }
+      },
+      "proposal": {
+        "base_observation_id": "52aa9869-f9f2-40be-8e5a-08babc8e069d",
+        "bounds": {
+          "max": {
+            "x": 1108,
+            "y": 184,
+            "z": 1007
+          },
+          "min": {
+            "x": 1096,
+            "y": 177,
+            "z": 995
+          }
+        },
+        "next_step": "show_operation then invoke_operation(confirm=true)",
+        "ok": true,
+        "operation_id": "90aa9e8e-53e3-4aed-be67-6b4a521356d9",
+        "plan": {
+          "changes": [
+            {
+              "after": {
+                "delay": 2,
+                "facing": "South",
+                "kind": "Repeater",
+                "observation_classification": "exact",
+                "observed_name": "minecraft:repeater",
+                "observed_properties": {
+                  "delay": "2",
+                  "facing": "north",
+                  "locked": "false",
+                  "powered": "false"
+                },
+                "power_level": null,
+                "powered": false,
+                "support_offset": {
+                  "x": 0,
+                  "y": -1,
+                  "z": 0
+                },
+                "wire_connections": null
+              },
+              "before": {
+                "delay": 1,
+                "facing": "South",
+                "kind": "Repeater",
+                "observation_classification": "exact",
+                "observed_name": "minecraft:repeater",
+                "observed_properties": {
+                  "delay": "1",
+                  "facing": "north",
+                  "locked": "false",
+                  "powered": "false"
+                },
+                "power_level": null,
+                "powered": false,
+                "support_offset": {
+                  "x": 0,
+                  "y": -1,
+                  "z": 0
+                },
+                "wire_connections": null
+              },
+              "collision": true,
+              "pos": {
+                "x": 1100,
+                "y": 181,
+                "z": 1000
+              }
+            },
+            {
+              "after": {
+                "delay": null,
+                "facing": null,
+                "kind": "Air",
+                "observation_classification": "synthetic",
+                "observed_name": null,
+                "observed_properties": {},
+                "power_level": null,
+                "powered": null,
+                "support_offset": null,
+                "wire_connections": null
+              },
+              "before": {
+                "delay": null,
+                "facing": null,
+                "kind": "Solid",
+                "observation_classification": "exact",
+                "observed_name": "minecraft:stone",
+                "observed_properties": {},
+                "power_level": null,
+                "powered": null,
+                "support_offset": null,
+                "wire_connections": null
+              },
+              "collision": true,
+              "pos": {
+                "x": 1101,
+                "y": 180,
+                "z": 1000
+              }
+            },
+            {
+              "after": {
+                "delay": null,
+                "facing": null,
+                "kind": "Solid",
+                "observation_classification": "exact",
+                "observed_name": "minecraft:stone",
+                "observed_properties": {},
+                "power_level": null,
+                "powered": null,
+                "support_offset": null,
+                "wire_connections": null
+              },
+              "before": {
+                "delay": null,
+                "facing": null,
+                "kind": "Air",
+                "observation_classification": "synthetic",
+                "observed_name": null,
+                "observed_properties": {},
+                "power_level": null,
+                "powered": null,
+                "support_offset": null,
+                "wire_connections": null
+              },
+              "collision": false,
+              "pos": {
+                "x": 1102,
+                "y": 180,
+                "z": 1000
+              }
+            }
+          ],
+          "collision_count": 2,
+          "materials": {
+            "minecraft:repeater": 1,
+            "minecraft:stone": 1
+          },
+          "operation_id": "90aa9e8e-53e3-4aed-be67-6b4a521356d9",
+          "origin": {
+            "x": 1097,
+            "y": 178,
+            "z": 996
+          },
+          "previewed": false,
+          "undo": {
+            "changes": [
+              {
+                "after": {
+                  "delay": 1,
+                  "facing": "South",
+                  "kind": "Repeater",
+                  "observation_classification": "exact",
+                  "observed_name": "minecraft:repeater",
+                  "observed_properties": {
+                    "delay": "1",
+                    "facing": "north",
+                    "locked": "false",
+                    "powered": "false"
+                  },
+                  "power_level": null,
+                  "powered": false,
+                  "support_offset": {
+                    "x": 0,
+                    "y": -1,
+                    "z": 0
+                  },
+                  "wire_connections": null
+                },
+                "before": {
+                  "delay": 2,
+                  "facing": "South",
+                  "kind": "Repeater",
+                  "observation_classification": "exact",
+                  "observed_name": "minecraft:repeater",
+                  "observed_properties": {
+                    "delay": "2",
+                    "facing": "north",
+                    "locked": "false",
+                    "powered": "false"
+                  },
+                  "power_level": null,
+                  "powered": false,
+                  "support_offset": {
+                    "x": 0,
+                    "y": -1,
+                    "z": 0
+                  },
+                  "wire_connections": null
+                },
+                "collision": false,
+                "pos": {
+                  "x": 1100,
+                  "y": 181,
+                  "z": 1000
+                }
+              },
+              {
+                "after": {
+                  "delay": null,
+                  "facing": null,
+                  "kind": "Solid",
+                  "observation_classification": "exact",
+                  "observed_name": "minecraft:stone",
+                  "observed_properties": {},
+                  "power_level": null,
+                  "powered": null,
+                  "support_offset": null,
+                  "wire_connections": null
+                },
+                "before": {
+                  "delay": null,
+                  "facing": null,
+                  "kind": "Air",
+                  "observation_classification": "synthetic",
+                  "observed_name": null,
+                  "observed_properties": {},
+                  "power_level": null,
+                  "powered": null,
+                  "support_offset": null,
+                  "wire_connections": null
+                },
+                "collision": false,
+                "pos": {
+                  "x": 1101,
+                  "y": 180,
+                  "z": 1000
+                }
+              },
+              {
+                "after": {
+                  "delay": null,
+                  "facing": null,
+                  "kind": "Air",
+                  "observation_classification": "synthetic",
+                  "observed_name": null,
+                  "observed_properties": {},
+                  "power_level": null,
+                  "powered": null,
+                  "support_offset": null,
+                  "wire_connections": null
+                },
+                "before": {
+                  "delay": null,
+                  "facing": null,
+                  "kind": "Solid",
+                  "observation_classification": "exact",
+                  "observed_name": "minecraft:stone",
+                  "observed_properties": {},
+                  "power_level": null,
+                  "powered": null,
+                  "support_offset": null,
+                  "wire_connections": null
+                },
+                "collision": false,
+                "pos": {
+                  "x": 1102,
+                  "y": 180,
+                  "z": 1000
+                }
+              }
+            ],
+            "operation_id": "90aa9e8e-53e3-4aed-be67-6b4a521356d9"
+          }
+        },
+        "read_only": false,
+        "revision_id": "e6712346-57ab-46b9-a86e-bd9a9c2859f5",
+        "validation_scope": "modeled placement and exact context; not functional equivalence"
+      },
+      "unpreviewed": {
+        "error": "placement must be shown with show_operation before invoke_operation",
+        "error_code": "invalid_state",
+        "ok": false,
+        "retryable": false,
+        "schema_version": "dustroute.error.v1"
+      },
+      "stale": {
+        "error": "revision placement context changed or result differs; inspect current world",
+        "error_code": "internal",
+        "ok": false,
+        "retryable": false,
+        "schema_version": "dustroute.error.v1"
+      },
+      "applied": {
+        "action": "apply",
+        "bridge": {
+          "submitted_changes": 3
+        },
+        "changed_blocks": 3,
+        "dimension": "minecraft:overworld",
+        "ok": true,
+        "operation_id": "90aa9e8e-53e3-4aed-be67-6b4a521356d9",
+        "schema_version": "dustroute.placement.v1",
+        "verified": true
+      },
+      "staleUndo": {
+        "error": "revision placement context changed or result differs; inspect current world",
+        "error_code": "internal",
+        "ok": false,
+        "retryable": false,
+        "schema_version": "dustroute.error.v1"
+      },
+      "restored": {
+        "action": "undo",
+        "bridge": {
+          "submitted_changes": 3
+        },
+        "changed_blocks": 3,
+        "dimension": "minecraft:overworld",
+        "ok": true,
+        "operation_id": "90aa9e8e-53e3-4aed-be67-6b4a521356d9",
+        "schema_version": "dustroute.placement.v1",
+        "verified": true
+      }
+    },
+    {
+      "parent": {
+        "analysis_complete": true,
+        "analysis_mode": "virtual_circuit_revision",
+        "base_observation_id": "2464ee35-5b7f-4e62-a84c-6161035fce9e",
+        "bounds": {
+          "max": {
+            "x": 1107,
+            "y": 183,
+            "z": 1006
+          },
+          "min": {
+            "x": 1097,
+            "y": 178,
+            "z": 996
+          }
+        },
+        "changes": [
+          {
+            "after": {
+              "name": "minecraft:repeater",
+              "pos": {
+                "x": 1100,
+                "y": 181,
+                "z": 1000
+              },
+              "properties": {
+                "delay": "2",
+                "facing": "north",
+                "locked": "false",
+                "powered": "false"
+              }
+            },
+            "before": {
+              "name": "minecraft:repeater",
+              "pos": {
+                "x": 1100,
+                "y": 181,
+                "z": 1000
+              },
+              "properties": {
+                "delay": "1",
+                "facing": "north",
+                "locked": "false",
+                "powered": "false"
+              }
+            },
+            "position": {
+              "x": 1100,
+              "y": 181,
+              "z": 1000
+            }
+          }
+        ],
+        "dimension": "minecraft:overworld",
+        "live_world_evidence": false,
+        "mutation_performed": false,
+        "ok": true,
+        "parent_revision_ids": [],
+        "placement_authorized": false,
+        "retention": "DUSTROUTE_PLAN_TTL_SECONDS (default 3600 seconds); reads do not extend lifetime",
+        "revision_id": "fec6a83d-25c6-4c79-b6e5-742afe434921",
+        "schema_version": "dustroute.circuit-revision.v1",
+        "validation": {
+          "after": {
+            "placement_issues": [],
+            "property_validation": "simulator-supported properties only; not an exhaustive Java block-state schema",
+            "simulation": {
+              "result": {
+                "inputs": [],
+                "outputs": [],
+                "ticks": 64
+              },
+              "status": "simulated"
+            },
+            "status": "structurally_valid",
+            "summary": {
+              "diagnostic_counts": {
+                "awaiting_external_input": 0,
+                "healthy": 0,
+                "incomplete_observation": 0,
+                "probable_faults": 1,
+                "unsupported": 0
+              },
+              "health": "degraded",
+              "identity": {
+                "analysis_complete": true,
+                "classification_level": "local_gate_network",
+                "higher_level_candidate_count": 0,
+                "higher_level_candidate_samples": [],
+                "higher_level_candidates_truncated": false,
+                "interpretation": "primary_candidate is a ranked registered pattern; sampled local gates and mixed_ir node references provide bounded drill-down evidence",
+                "local_gate_count": 1,
+                "local_gate_counts": {
+                  "buffer": 1
+                },
+                "local_gate_samples": [
+                  {
+                    "confidence": "medium",
+                    "id": 0,
+                    "input_count": 0,
+                    "kind": "buffer",
+                    "output_count": 0,
+                    "physical_component_count": 1,
+                    "physical_components": [
+                      0
+                    ],
+                    "status": "partial"
+                  }
+                ],
+                "local_gates_truncated": false,
+                "primary_candidate": null,
+                "repair_available": false,
+                "repair_candidate_count": 0,
+                "temporal_validity": {
+                  "reasons": [],
+                  "scope": "steady_state_safe"
+                },
+                "uncertainty_reasons": [
+                  "no_registered_higher_level_pattern_matched"
+                ]
+              },
+              "mixed_ir": {
+                "edges": 0,
+                "nodes": 1,
+                "physical_components": 1,
+                "recognized_components": 1,
+                "representations": {
+                  "timed_cell": 1
+                },
+                "unresolved_components": 0
+              },
+              "probable_faults": [
+                {
+                  "block": "Repeater",
+                  "component": 0,
+                  "confidence": "high",
+                  "evidence": [
+                    "disconnected_required_input"
+                  ],
+                  "inferred": false,
+                  "position": {
+                    "x": 1100,
+                    "y": 181,
+                    "z": 1000
+                  },
+                  "reason": "required directional input has no physical connection",
+                  "related_components": [],
+                  "status": "probable_fault"
+                }
+              ],
+              "source_counts": {}
+            }
+          },
+          "before": {
+            "placement_issues": [],
+            "property_validation": "simulator-supported properties only; not an exhaustive Java block-state schema",
+            "simulation": {
+              "result": {
+                "inputs": [],
+                "outputs": [],
+                "ticks": 64
+              },
+              "status": "simulated"
+            },
+            "status": "structurally_valid",
+            "summary": {
+              "diagnostic_counts": {
+                "awaiting_external_input": 0,
+                "healthy": 0,
+                "incomplete_observation": 0,
+                "probable_faults": 1,
+                "unsupported": 0
+              },
+              "health": "degraded",
+              "identity": {
+                "analysis_complete": true,
+                "classification_level": "local_gate_network",
+                "higher_level_candidate_count": 0,
+                "higher_level_candidate_samples": [],
+                "higher_level_candidates_truncated": false,
+                "interpretation": "primary_candidate is a ranked registered pattern; sampled local gates and mixed_ir node references provide bounded drill-down evidence",
+                "local_gate_count": 1,
+                "local_gate_counts": {
+                  "buffer": 1
+                },
+                "local_gate_samples": [
+                  {
+                    "confidence": "medium",
+                    "id": 0,
+                    "input_count": 0,
+                    "kind": "buffer",
+                    "output_count": 0,
+                    "physical_component_count": 1,
+                    "physical_components": [
+                      0
+                    ],
+                    "status": "partial"
+                  }
+                ],
+                "local_gates_truncated": false,
+                "primary_candidate": null,
+                "repair_available": false,
+                "repair_candidate_count": 0,
+                "temporal_validity": {
+                  "reasons": [],
+                  "scope": "steady_state_safe"
+                },
+                "uncertainty_reasons": [
+                  "no_registered_higher_level_pattern_matched"
+                ]
+              },
+              "mixed_ir": {
+                "edges": 0,
+                "nodes": 1,
+                "physical_components": 1,
+                "recognized_components": 1,
+                "representations": {
+                  "timed_cell": 1
+                },
+                "unresolved_components": 0
+              },
+              "probable_faults": [
+                {
+                  "block": "Repeater",
+                  "component": 0,
+                  "confidence": "high",
+                  "evidence": [
+                    "disconnected_required_input"
+                  ],
+                  "inferred": false,
+                  "position": {
+                    "x": 1100,
+                    "y": 181,
+                    "z": 1000
+                  },
+                  "reason": "required directional input has no physical connection",
+                  "related_components": [],
+                  "status": "probable_fault"
+                }
+              ],
+              "source_counts": {}
+            }
+          },
+          "scope": "initial_state_only; no functional equivalence or live-world guarantee",
+          "simulation_ticks": 64
+        }
+      },
+      "revision": {
+        "analysis_complete": true,
+        "analysis_mode": "virtual_circuit_revision",
+        "base_observation_id": "2464ee35-5b7f-4e62-a84c-6161035fce9e",
+        "bounds": {
+          "max": {
+            "x": 1107,
+            "y": 183,
+            "z": 1006
+          },
+          "min": {
+            "x": 1097,
+            "y": 178,
+            "z": 996
+          }
+        },
+        "changes": [
+          {
+            "after": null,
+            "before": {
+              "name": "minecraft:stone",
+              "pos": {
+                "x": 1101,
+                "y": 180,
+                "z": 1000
+              },
+              "properties": {}
+            },
+            "position": {
+              "x": 1101,
+              "y": 180,
+              "z": 1000
+            }
+          },
+          {
+            "after": {
+              "name": "minecraft:stone",
+              "pos": {
+                "x": 1102,
+                "y": 180,
+                "z": 1000
+              },
+              "properties": {}
+            },
+            "before": null,
+            "position": {
+              "x": 1102,
+              "y": 180,
+              "z": 1000
+            }
+          }
+        ],
+        "dimension": "minecraft:overworld",
+        "live_world_evidence": false,
+        "mutation_performed": false,
+        "ok": true,
+        "parent_revision_ids": [
+          "fec6a83d-25c6-4c79-b6e5-742afe434921"
+        ],
+        "placement_authorized": false,
+        "retention": "DUSTROUTE_PLAN_TTL_SECONDS (default 3600 seconds); reads do not extend lifetime",
+        "revision_id": "c950e6c0-b98f-464e-8d35-5b78b659cadb",
+        "schema_version": "dustroute.circuit-revision.v1",
+        "validation": {
+          "after": {
+            "placement_issues": [],
+            "property_validation": "simulator-supported properties only; not an exhaustive Java block-state schema",
+            "simulation": {
+              "result": {
+                "inputs": [],
+                "outputs": [],
+                "ticks": 64
+              },
+              "status": "simulated"
+            },
+            "status": "structurally_valid",
+            "summary": {
+              "diagnostic_counts": {
+                "awaiting_external_input": 0,
+                "healthy": 0,
+                "incomplete_observation": 0,
+                "probable_faults": 1,
+                "unsupported": 0
+              },
+              "health": "degraded",
+              "identity": {
+                "analysis_complete": true,
+                "classification_level": "local_gate_network",
+                "higher_level_candidate_count": 0,
+                "higher_level_candidate_samples": [],
+                "higher_level_candidates_truncated": false,
+                "interpretation": "primary_candidate is a ranked registered pattern; sampled local gates and mixed_ir node references provide bounded drill-down evidence",
+                "local_gate_count": 1,
+                "local_gate_counts": {
+                  "buffer": 1
+                },
+                "local_gate_samples": [
+                  {
+                    "confidence": "medium",
+                    "id": 0,
+                    "input_count": 0,
+                    "kind": "buffer",
+                    "output_count": 0,
+                    "physical_component_count": 1,
+                    "physical_components": [
+                      0
+                    ],
+                    "status": "partial"
+                  }
+                ],
+                "local_gates_truncated": false,
+                "primary_candidate": null,
+                "repair_available": false,
+                "repair_candidate_count": 0,
+                "temporal_validity": {
+                  "reasons": [],
+                  "scope": "steady_state_safe"
+                },
+                "uncertainty_reasons": [
+                  "no_registered_higher_level_pattern_matched"
+                ]
+              },
+              "mixed_ir": {
+                "edges": 0,
+                "nodes": 1,
+                "physical_components": 1,
+                "recognized_components": 1,
+                "representations": {
+                  "timed_cell": 1
+                },
+                "unresolved_components": 0
+              },
+              "probable_faults": [
+                {
+                  "block": "Repeater",
+                  "component": 0,
+                  "confidence": "high",
+                  "evidence": [
+                    "disconnected_required_input"
+                  ],
+                  "inferred": false,
+                  "position": {
+                    "x": 1100,
+                    "y": 181,
+                    "z": 1000
+                  },
+                  "reason": "required directional input has no physical connection",
+                  "related_components": [],
+                  "status": "probable_fault"
+                }
+              ],
+              "source_counts": {}
+            }
+          },
+          "before": {
+            "placement_issues": [],
+            "property_validation": "simulator-supported properties only; not an exhaustive Java block-state schema",
+            "simulation": {
+              "result": {
+                "inputs": [],
+                "outputs": [],
+                "ticks": 64
+              },
+              "status": "simulated"
+            },
+            "status": "structurally_valid",
+            "summary": {
+              "diagnostic_counts": {
+                "awaiting_external_input": 0,
+                "healthy": 0,
+                "incomplete_observation": 0,
+                "probable_faults": 1,
+                "unsupported": 0
+              },
+              "health": "degraded",
+              "identity": {
+                "analysis_complete": true,
+                "classification_level": "local_gate_network",
+                "higher_level_candidate_count": 0,
+                "higher_level_candidate_samples": [],
+                "higher_level_candidates_truncated": false,
+                "interpretation": "primary_candidate is a ranked registered pattern; sampled local gates and mixed_ir node references provide bounded drill-down evidence",
+                "local_gate_count": 1,
+                "local_gate_counts": {
+                  "buffer": 1
+                },
+                "local_gate_samples": [
+                  {
+                    "confidence": "medium",
+                    "id": 0,
+                    "input_count": 0,
+                    "kind": "buffer",
+                    "output_count": 0,
+                    "physical_component_count": 1,
+                    "physical_components": [
+                      0
+                    ],
+                    "status": "partial"
+                  }
+                ],
+                "local_gates_truncated": false,
+                "primary_candidate": null,
+                "repair_available": false,
+                "repair_candidate_count": 0,
+                "temporal_validity": {
+                  "reasons": [],
+                  "scope": "steady_state_safe"
+                },
+                "uncertainty_reasons": [
+                  "no_registered_higher_level_pattern_matched"
+                ]
+              },
+              "mixed_ir": {
+                "edges": 0,
+                "nodes": 1,
+                "physical_components": 1,
+                "recognized_components": 1,
+                "representations": {
+                  "timed_cell": 1
+                },
+                "unresolved_components": 0
+              },
+              "probable_faults": [
+                {
+                  "block": "Repeater",
+                  "component": 0,
+                  "confidence": "high",
+                  "evidence": [
+                    "disconnected_required_input"
+                  ],
+                  "inferred": false,
+                  "position": {
+                    "x": 1100,
+                    "y": 181,
+                    "z": 1000
+                  },
+                  "reason": "required directional input has no physical connection",
+                  "related_components": [],
+                  "status": "probable_fault"
+                }
+              ],
+              "source_counts": {}
+            }
+          },
+          "scope": "initial_state_only; no functional equivalence or live-world guarantee",
+          "simulation_ticks": 64
+        }
+      },
+      "proposal": {
+        "base_observation_id": "2464ee35-5b7f-4e62-a84c-6161035fce9e",
+        "bounds": {
+          "max": {
+            "x": 1108,
+            "y": 184,
+            "z": 1007
+          },
+          "min": {
+            "x": 1096,
+            "y": 177,
+            "z": 995
+          }
+        },
+        "next_step": "show_operation then invoke_operation(confirm=true)",
+        "ok": true,
+        "operation_id": "189dd277-0022-4366-84fe-4e1fd00651de",
+        "plan": {
+          "changes": [
+            {
+              "after": {
+                "delay": 2,
+                "facing": "South",
+                "kind": "Repeater",
+                "observation_classification": "exact",
+                "observed_name": "minecraft:repeater",
+                "observed_properties": {
+                  "delay": "2",
+                  "facing": "north",
+                  "locked": "false",
+                  "powered": "false"
+                },
+                "power_level": null,
+                "powered": false,
+                "support_offset": {
+                  "x": 0,
+                  "y": -1,
+                  "z": 0
+                },
+                "wire_connections": null
+              },
+              "before": {
+                "delay": 1,
+                "facing": "South",
+                "kind": "Repeater",
+                "observation_classification": "exact",
+                "observed_name": "minecraft:repeater",
+                "observed_properties": {
+                  "delay": "1",
+                  "facing": "north",
+                  "locked": "false",
+                  "powered": "false"
+                },
+                "power_level": null,
+                "powered": false,
+                "support_offset": {
+                  "x": 0,
+                  "y": -1,
+                  "z": 0
+                },
+                "wire_connections": null
+              },
+              "collision": true,
+              "pos": {
+                "x": 1100,
+                "y": 181,
+                "z": 1000
+              }
+            },
+            {
+              "after": {
+                "delay": null,
+                "facing": null,
+                "kind": "Air",
+                "observation_classification": "synthetic",
+                "observed_name": null,
+                "observed_properties": {},
+                "power_level": null,
+                "powered": null,
+                "support_offset": null,
+                "wire_connections": null
+              },
+              "before": {
+                "delay": null,
+                "facing": null,
+                "kind": "Solid",
+                "observation_classification": "exact",
+                "observed_name": "minecraft:stone",
+                "observed_properties": {},
+                "power_level": null,
+                "powered": null,
+                "support_offset": null,
+                "wire_connections": null
+              },
+              "collision": true,
+              "pos": {
+                "x": 1101,
+                "y": 180,
+                "z": 1000
+              }
+            },
+            {
+              "after": {
+                "delay": null,
+                "facing": null,
+                "kind": "Solid",
+                "observation_classification": "exact",
+                "observed_name": "minecraft:stone",
+                "observed_properties": {},
+                "power_level": null,
+                "powered": null,
+                "support_offset": null,
+                "wire_connections": null
+              },
+              "before": {
+                "delay": null,
+                "facing": null,
+                "kind": "Air",
+                "observation_classification": "synthetic",
+                "observed_name": null,
+                "observed_properties": {},
+                "power_level": null,
+                "powered": null,
+                "support_offset": null,
+                "wire_connections": null
+              },
+              "collision": false,
+              "pos": {
+                "x": 1102,
+                "y": 180,
+                "z": 1000
+              }
+            }
+          ],
+          "collision_count": 2,
+          "materials": {
+            "minecraft:repeater": 1,
+            "minecraft:stone": 1
+          },
+          "operation_id": "189dd277-0022-4366-84fe-4e1fd00651de",
+          "origin": {
+            "x": 1097,
+            "y": 178,
+            "z": 996
+          },
+          "previewed": false,
+          "undo": {
+            "changes": [
+              {
+                "after": {
+                  "delay": 1,
+                  "facing": "South",
+                  "kind": "Repeater",
+                  "observation_classification": "exact",
+                  "observed_name": "minecraft:repeater",
+                  "observed_properties": {
+                    "delay": "1",
+                    "facing": "north",
+                    "locked": "false",
+                    "powered": "false"
+                  },
+                  "power_level": null,
+                  "powered": false,
+                  "support_offset": {
+                    "x": 0,
+                    "y": -1,
+                    "z": 0
+                  },
+                  "wire_connections": null
+                },
+                "before": {
+                  "delay": 2,
+                  "facing": "South",
+                  "kind": "Repeater",
+                  "observation_classification": "exact",
+                  "observed_name": "minecraft:repeater",
+                  "observed_properties": {
+                    "delay": "2",
+                    "facing": "north",
+                    "locked": "false",
+                    "powered": "false"
+                  },
+                  "power_level": null,
+                  "powered": false,
+                  "support_offset": {
+                    "x": 0,
+                    "y": -1,
+                    "z": 0
+                  },
+                  "wire_connections": null
+                },
+                "collision": false,
+                "pos": {
+                  "x": 1100,
+                  "y": 181,
+                  "z": 1000
+                }
+              },
+              {
+                "after": {
+                  "delay": null,
+                  "facing": null,
+                  "kind": "Solid",
+                  "observation_classification": "exact",
+                  "observed_name": "minecraft:stone",
+                  "observed_properties": {},
+                  "power_level": null,
+                  "powered": null,
+                  "support_offset": null,
+                  "wire_connections": null
+                },
+                "before": {
+                  "delay": null,
+                  "facing": null,
+                  "kind": "Air",
+                  "observation_classification": "synthetic",
+                  "observed_name": null,
+                  "observed_properties": {},
+                  "power_level": null,
+                  "powered": null,
+                  "support_offset": null,
+                  "wire_connections": null
+                },
+                "collision": false,
+                "pos": {
+                  "x": 1101,
+                  "y": 180,
+                  "z": 1000
+                }
+              },
+              {
+                "after": {
+                  "delay": null,
+                  "facing": null,
+                  "kind": "Air",
+                  "observation_classification": "synthetic",
+                  "observed_name": null,
+                  "observed_properties": {},
+                  "power_level": null,
+                  "powered": null,
+                  "support_offset": null,
+                  "wire_connections": null
+                },
+                "before": {
+                  "delay": null,
+                  "facing": null,
+                  "kind": "Solid",
+                  "observation_classification": "exact",
+                  "observed_name": "minecraft:stone",
+                  "observed_properties": {},
+                  "power_level": null,
+                  "powered": null,
+                  "support_offset": null,
+                  "wire_connections": null
+                },
+                "collision": false,
+                "pos": {
+                  "x": 1102,
+                  "y": 180,
+                  "z": 1000
+                }
+              }
+            ],
+            "operation_id": "189dd277-0022-4366-84fe-4e1fd00651de"
+          }
+        },
+        "read_only": false,
+        "revision_id": "c950e6c0-b98f-464e-8d35-5b78b659cadb",
+        "validation_scope": "modeled placement and exact context; not functional equivalence"
+      },
+      "unpreviewed": {
+        "error": "placement must be shown with show_operation before invoke_operation",
+        "error_code": "invalid_state",
+        "ok": false,
+        "retryable": false,
+        "schema_version": "dustroute.error.v1"
+      },
+      "stale": {
+        "error": "revision placement context changed or result differs; inspect current world",
+        "error_code": "internal",
+        "ok": false,
+        "retryable": false,
+        "schema_version": "dustroute.error.v1"
+      },
+      "applied": {
+        "action": "apply",
+        "bridge": {
+          "submitted_changes": 3
+        },
+        "changed_blocks": 3,
+        "dimension": "minecraft:overworld",
+        "ok": true,
+        "operation_id": "189dd277-0022-4366-84fe-4e1fd00651de",
+        "schema_version": "dustroute.placement.v1",
+        "verified": true
+      },
+      "staleUndo": {
+        "error": "revision placement context changed or result differs; inspect current world",
+        "error_code": "internal",
+        "ok": false,
+        "retryable": false,
+        "schema_version": "dustroute.error.v1"
+      },
+      "restored": {
+        "action": "undo",
+        "bridge": {
+          "submitted_changes": 3
+        },
+        "changed_blocks": 3,
+        "dimension": "minecraft:overworld",
+        "ok": true,
+        "operation_id": "189dd277-0022-4366-84fe-4e1fd00651de",
+        "schema_version": "dustroute.placement.v1",
+        "verified": true
+      }
+    },
+    {
+      "parent": {
+        "analysis_complete": true,
+        "analysis_mode": "virtual_circuit_revision",
+        "base_observation_id": "d97b68b9-b6f0-4478-bb7e-892510adf674",
+        "bounds": {
+          "max": {
+            "x": 1107,
+            "y": 183,
+            "z": 1006
+          },
+          "min": {
+            "x": 1097,
+            "y": 178,
+            "z": 996
+          }
+        },
+        "changes": [
+          {
+            "after": {
+              "name": "minecraft:repeater",
+              "pos": {
+                "x": 1100,
+                "y": 181,
+                "z": 1000
+              },
+              "properties": {
+                "delay": "2",
+                "facing": "north",
+                "locked": "false",
+                "powered": "false"
+              }
+            },
+            "before": {
+              "name": "minecraft:repeater",
+              "pos": {
+                "x": 1100,
+                "y": 181,
+                "z": 1000
+              },
+              "properties": {
+                "delay": "1",
+                "facing": "north",
+                "locked": "false",
+                "powered": "false"
+              }
+            },
+            "position": {
+              "x": 1100,
+              "y": 181,
+              "z": 1000
+            }
+          }
+        ],
+        "dimension": "minecraft:overworld",
+        "live_world_evidence": false,
+        "mutation_performed": false,
+        "ok": true,
+        "parent_revision_ids": [],
+        "placement_authorized": false,
+        "retention": "DUSTROUTE_PLAN_TTL_SECONDS (default 3600 seconds); reads do not extend lifetime",
+        "revision_id": "fc4042be-9f7d-477a-a779-d2165fd15e24",
+        "schema_version": "dustroute.circuit-revision.v1",
+        "validation": {
+          "after": {
+            "placement_issues": [],
+            "property_validation": "simulator-supported properties only; not an exhaustive Java block-state schema",
+            "simulation": {
+              "result": {
+                "inputs": [],
+                "outputs": [],
+                "ticks": 64
+              },
+              "status": "simulated"
+            },
+            "status": "structurally_valid",
+            "summary": {
+              "diagnostic_counts": {
+                "awaiting_external_input": 0,
+                "healthy": 0,
+                "incomplete_observation": 0,
+                "probable_faults": 1,
+                "unsupported": 0
+              },
+              "health": "degraded",
+              "identity": {
+                "analysis_complete": true,
+                "classification_level": "local_gate_network",
+                "higher_level_candidate_count": 0,
+                "higher_level_candidate_samples": [],
+                "higher_level_candidates_truncated": false,
+                "interpretation": "primary_candidate is a ranked registered pattern; sampled local gates and mixed_ir node references provide bounded drill-down evidence",
+                "local_gate_count": 1,
+                "local_gate_counts": {
+                  "buffer": 1
+                },
+                "local_gate_samples": [
+                  {
+                    "confidence": "medium",
+                    "id": 0,
+                    "input_count": 0,
+                    "kind": "buffer",
+                    "output_count": 0,
+                    "physical_component_count": 1,
+                    "physical_components": [
+                      0
+                    ],
+                    "status": "partial"
+                  }
+                ],
+                "local_gates_truncated": false,
+                "primary_candidate": null,
+                "repair_available": false,
+                "repair_candidate_count": 0,
+                "temporal_validity": {
+                  "reasons": [],
+                  "scope": "steady_state_safe"
+                },
+                "uncertainty_reasons": [
+                  "no_registered_higher_level_pattern_matched"
+                ]
+              },
+              "mixed_ir": {
+                "edges": 0,
+                "nodes": 1,
+                "physical_components": 1,
+                "recognized_components": 1,
+                "representations": {
+                  "timed_cell": 1
+                },
+                "unresolved_components": 0
+              },
+              "probable_faults": [
+                {
+                  "block": "Repeater",
+                  "component": 0,
+                  "confidence": "high",
+                  "evidence": [
+                    "disconnected_required_input"
+                  ],
+                  "inferred": false,
+                  "position": {
+                    "x": 1100,
+                    "y": 181,
+                    "z": 1000
+                  },
+                  "reason": "required directional input has no physical connection",
+                  "related_components": [],
+                  "status": "probable_fault"
+                }
+              ],
+              "source_counts": {}
+            }
+          },
+          "before": {
+            "placement_issues": [],
+            "property_validation": "simulator-supported properties only; not an exhaustive Java block-state schema",
+            "simulation": {
+              "result": {
+                "inputs": [],
+                "outputs": [],
+                "ticks": 64
+              },
+              "status": "simulated"
+            },
+            "status": "structurally_valid",
+            "summary": {
+              "diagnostic_counts": {
+                "awaiting_external_input": 0,
+                "healthy": 0,
+                "incomplete_observation": 0,
+                "probable_faults": 1,
+                "unsupported": 0
+              },
+              "health": "degraded",
+              "identity": {
+                "analysis_complete": true,
+                "classification_level": "local_gate_network",
+                "higher_level_candidate_count": 0,
+                "higher_level_candidate_samples": [],
+                "higher_level_candidates_truncated": false,
+                "interpretation": "primary_candidate is a ranked registered pattern; sampled local gates and mixed_ir node references provide bounded drill-down evidence",
+                "local_gate_count": 1,
+                "local_gate_counts": {
+                  "buffer": 1
+                },
+                "local_gate_samples": [
+                  {
+                    "confidence": "medium",
+                    "id": 0,
+                    "input_count": 0,
+                    "kind": "buffer",
+                    "output_count": 0,
+                    "physical_component_count": 1,
+                    "physical_components": [
+                      0
+                    ],
+                    "status": "partial"
+                  }
+                ],
+                "local_gates_truncated": false,
+                "primary_candidate": null,
+                "repair_available": false,
+                "repair_candidate_count": 0,
+                "temporal_validity": {
+                  "reasons": [],
+                  "scope": "steady_state_safe"
+                },
+                "uncertainty_reasons": [
+                  "no_registered_higher_level_pattern_matched"
+                ]
+              },
+              "mixed_ir": {
+                "edges": 0,
+                "nodes": 1,
+                "physical_components": 1,
+                "recognized_components": 1,
+                "representations": {
+                  "timed_cell": 1
+                },
+                "unresolved_components": 0
+              },
+              "probable_faults": [
+                {
+                  "block": "Repeater",
+                  "component": 0,
+                  "confidence": "high",
+                  "evidence": [
+                    "disconnected_required_input"
+                  ],
+                  "inferred": false,
+                  "position": {
+                    "x": 1100,
+                    "y": 181,
+                    "z": 1000
+                  },
+                  "reason": "required directional input has no physical connection",
+                  "related_components": [],
+                  "status": "probable_fault"
+                }
+              ],
+              "source_counts": {}
+            }
+          },
+          "scope": "initial_state_only; no functional equivalence or live-world guarantee",
+          "simulation_ticks": 64
+        }
+      },
+      "revision": {
+        "analysis_complete": true,
+        "analysis_mode": "virtual_circuit_revision",
+        "base_observation_id": "d97b68b9-b6f0-4478-bb7e-892510adf674",
+        "bounds": {
+          "max": {
+            "x": 1107,
+            "y": 183,
+            "z": 1006
+          },
+          "min": {
+            "x": 1097,
+            "y": 178,
+            "z": 996
+          }
+        },
+        "changes": [
+          {
+            "after": null,
+            "before": {
+              "name": "minecraft:stone",
+              "pos": {
+                "x": 1101,
+                "y": 180,
+                "z": 1000
+              },
+              "properties": {}
+            },
+            "position": {
+              "x": 1101,
+              "y": 180,
+              "z": 1000
+            }
+          },
+          {
+            "after": {
+              "name": "minecraft:stone",
+              "pos": {
+                "x": 1102,
+                "y": 180,
+                "z": 1000
+              },
+              "properties": {}
+            },
+            "before": null,
+            "position": {
+              "x": 1102,
+              "y": 180,
+              "z": 1000
+            }
+          }
+        ],
+        "dimension": "minecraft:overworld",
+        "live_world_evidence": false,
+        "mutation_performed": false,
+        "ok": true,
+        "parent_revision_ids": [
+          "fc4042be-9f7d-477a-a779-d2165fd15e24"
+        ],
+        "placement_authorized": false,
+        "retention": "DUSTROUTE_PLAN_TTL_SECONDS (default 3600 seconds); reads do not extend lifetime",
+        "revision_id": "067a3ebd-ebe3-4ed5-82af-3bbbc391cd61",
+        "schema_version": "dustroute.circuit-revision.v1",
+        "validation": {
+          "after": {
+            "placement_issues": [],
+            "property_validation": "simulator-supported properties only; not an exhaustive Java block-state schema",
+            "simulation": {
+              "result": {
+                "inputs": [],
+                "outputs": [],
+                "ticks": 64
+              },
+              "status": "simulated"
+            },
+            "status": "structurally_valid",
+            "summary": {
+              "diagnostic_counts": {
+                "awaiting_external_input": 0,
+                "healthy": 0,
+                "incomplete_observation": 0,
+                "probable_faults": 1,
+                "unsupported": 0
+              },
+              "health": "degraded",
+              "identity": {
+                "analysis_complete": true,
+                "classification_level": "local_gate_network",
+                "higher_level_candidate_count": 0,
+                "higher_level_candidate_samples": [],
+                "higher_level_candidates_truncated": false,
+                "interpretation": "primary_candidate is a ranked registered pattern; sampled local gates and mixed_ir node references provide bounded drill-down evidence",
+                "local_gate_count": 1,
+                "local_gate_counts": {
+                  "buffer": 1
+                },
+                "local_gate_samples": [
+                  {
+                    "confidence": "medium",
+                    "id": 0,
+                    "input_count": 0,
+                    "kind": "buffer",
+                    "output_count": 0,
+                    "physical_component_count": 1,
+                    "physical_components": [
+                      0
+                    ],
+                    "status": "partial"
+                  }
+                ],
+                "local_gates_truncated": false,
+                "primary_candidate": null,
+                "repair_available": false,
+                "repair_candidate_count": 0,
+                "temporal_validity": {
+                  "reasons": [],
+                  "scope": "steady_state_safe"
+                },
+                "uncertainty_reasons": [
+                  "no_registered_higher_level_pattern_matched"
+                ]
+              },
+              "mixed_ir": {
+                "edges": 0,
+                "nodes": 1,
+                "physical_components": 1,
+                "recognized_components": 1,
+                "representations": {
+                  "timed_cell": 1
+                },
+                "unresolved_components": 0
+              },
+              "probable_faults": [
+                {
+                  "block": "Repeater",
+                  "component": 0,
+                  "confidence": "high",
+                  "evidence": [
+                    "disconnected_required_input"
+                  ],
+                  "inferred": false,
+                  "position": {
+                    "x": 1100,
+                    "y": 181,
+                    "z": 1000
+                  },
+                  "reason": "required directional input has no physical connection",
+                  "related_components": [],
+                  "status": "probable_fault"
+                }
+              ],
+              "source_counts": {}
+            }
+          },
+          "before": {
+            "placement_issues": [],
+            "property_validation": "simulator-supported properties only; not an exhaustive Java block-state schema",
+            "simulation": {
+              "result": {
+                "inputs": [],
+                "outputs": [],
+                "ticks": 64
+              },
+              "status": "simulated"
+            },
+            "status": "structurally_valid",
+            "summary": {
+              "diagnostic_counts": {
+                "awaiting_external_input": 0,
+                "healthy": 0,
+                "incomplete_observation": 0,
+                "probable_faults": 1,
+                "unsupported": 0
+              },
+              "health": "degraded",
+              "identity": {
+                "analysis_complete": true,
+                "classification_level": "local_gate_network",
+                "higher_level_candidate_count": 0,
+                "higher_level_candidate_samples": [],
+                "higher_level_candidates_truncated": false,
+                "interpretation": "primary_candidate is a ranked registered pattern; sampled local gates and mixed_ir node references provide bounded drill-down evidence",
+                "local_gate_count": 1,
+                "local_gate_counts": {
+                  "buffer": 1
+                },
+                "local_gate_samples": [
+                  {
+                    "confidence": "medium",
+                    "id": 0,
+                    "input_count": 0,
+                    "kind": "buffer",
+                    "output_count": 0,
+                    "physical_component_count": 1,
+                    "physical_components": [
+                      0
+                    ],
+                    "status": "partial"
+                  }
+                ],
+                "local_gates_truncated": false,
+                "primary_candidate": null,
+                "repair_available": false,
+                "repair_candidate_count": 0,
+                "temporal_validity": {
+                  "reasons": [],
+                  "scope": "steady_state_safe"
+                },
+                "uncertainty_reasons": [
+                  "no_registered_higher_level_pattern_matched"
+                ]
+              },
+              "mixed_ir": {
+                "edges": 0,
+                "nodes": 1,
+                "physical_components": 1,
+                "recognized_components": 1,
+                "representations": {
+                  "timed_cell": 1
+                },
+                "unresolved_components": 0
+              },
+              "probable_faults": [
+                {
+                  "block": "Repeater",
+                  "component": 0,
+                  "confidence": "high",
+                  "evidence": [
+                    "disconnected_required_input"
+                  ],
+                  "inferred": false,
+                  "position": {
+                    "x": 1100,
+                    "y": 181,
+                    "z": 1000
+                  },
+                  "reason": "required directional input has no physical connection",
+                  "related_components": [],
+                  "status": "probable_fault"
+                }
+              ],
+              "source_counts": {}
+            }
+          },
+          "scope": "initial_state_only; no functional equivalence or live-world guarantee",
+          "simulation_ticks": 64
+        }
+      },
+      "proposal": {
+        "base_observation_id": "d97b68b9-b6f0-4478-bb7e-892510adf674",
+        "bounds": {
+          "max": {
+            "x": 1108,
+            "y": 184,
+            "z": 1007
+          },
+          "min": {
+            "x": 1096,
+            "y": 177,
+            "z": 995
+          }
+        },
+        "next_step": "show_operation then invoke_operation(confirm=true)",
+        "ok": true,
+        "operation_id": "ecff9c1f-6444-4ed3-8d14-dc3c729d3345",
+        "plan": {
+          "changes": [
+            {
+              "after": {
+                "delay": 2,
+                "facing": "South",
+                "kind": "Repeater",
+                "observation_classification": "exact",
+                "observed_name": "minecraft:repeater",
+                "observed_properties": {
+                  "delay": "2",
+                  "facing": "north",
+                  "locked": "false",
+                  "powered": "false"
+                },
+                "power_level": null,
+                "powered": false,
+                "support_offset": {
+                  "x": 0,
+                  "y": -1,
+                  "z": 0
+                },
+                "wire_connections": null
+              },
+              "before": {
+                "delay": 1,
+                "facing": "South",
+                "kind": "Repeater",
+                "observation_classification": "exact",
+                "observed_name": "minecraft:repeater",
+                "observed_properties": {
+                  "delay": "1",
+                  "facing": "north",
+                  "locked": "false",
+                  "powered": "false"
+                },
+                "power_level": null,
+                "powered": false,
+                "support_offset": {
+                  "x": 0,
+                  "y": -1,
+                  "z": 0
+                },
+                "wire_connections": null
+              },
+              "collision": true,
+              "pos": {
+                "x": 1100,
+                "y": 181,
+                "z": 1000
+              }
+            },
+            {
+              "after": {
+                "delay": null,
+                "facing": null,
+                "kind": "Air",
+                "observation_classification": "synthetic",
+                "observed_name": null,
+                "observed_properties": {},
+                "power_level": null,
+                "powered": null,
+                "support_offset": null,
+                "wire_connections": null
+              },
+              "before": {
+                "delay": null,
+                "facing": null,
+                "kind": "Solid",
+                "observation_classification": "exact",
+                "observed_name": "minecraft:stone",
+                "observed_properties": {},
+                "power_level": null,
+                "powered": null,
+                "support_offset": null,
+                "wire_connections": null
+              },
+              "collision": true,
+              "pos": {
+                "x": 1101,
+                "y": 180,
+                "z": 1000
+              }
+            },
+            {
+              "after": {
+                "delay": null,
+                "facing": null,
+                "kind": "Solid",
+                "observation_classification": "exact",
+                "observed_name": "minecraft:stone",
+                "observed_properties": {},
+                "power_level": null,
+                "powered": null,
+                "support_offset": null,
+                "wire_connections": null
+              },
+              "before": {
+                "delay": null,
+                "facing": null,
+                "kind": "Air",
+                "observation_classification": "synthetic",
+                "observed_name": null,
+                "observed_properties": {},
+                "power_level": null,
+                "powered": null,
+                "support_offset": null,
+                "wire_connections": null
+              },
+              "collision": false,
+              "pos": {
+                "x": 1102,
+                "y": 180,
+                "z": 1000
+              }
+            }
+          ],
+          "collision_count": 2,
+          "materials": {
+            "minecraft:repeater": 1,
+            "minecraft:stone": 1
+          },
+          "operation_id": "ecff9c1f-6444-4ed3-8d14-dc3c729d3345",
+          "origin": {
+            "x": 1097,
+            "y": 178,
+            "z": 996
+          },
+          "previewed": false,
+          "undo": {
+            "changes": [
+              {
+                "after": {
+                  "delay": 1,
+                  "facing": "South",
+                  "kind": "Repeater",
+                  "observation_classification": "exact",
+                  "observed_name": "minecraft:repeater",
+                  "observed_properties": {
+                    "delay": "1",
+                    "facing": "north",
+                    "locked": "false",
+                    "powered": "false"
+                  },
+                  "power_level": null,
+                  "powered": false,
+                  "support_offset": {
+                    "x": 0,
+                    "y": -1,
+                    "z": 0
+                  },
+                  "wire_connections": null
+                },
+                "before": {
+                  "delay": 2,
+                  "facing": "South",
+                  "kind": "Repeater",
+                  "observation_classification": "exact",
+                  "observed_name": "minecraft:repeater",
+                  "observed_properties": {
+                    "delay": "2",
+                    "facing": "north",
+                    "locked": "false",
+                    "powered": "false"
+                  },
+                  "power_level": null,
+                  "powered": false,
+                  "support_offset": {
+                    "x": 0,
+                    "y": -1,
+                    "z": 0
+                  },
+                  "wire_connections": null
+                },
+                "collision": false,
+                "pos": {
+                  "x": 1100,
+                  "y": 181,
+                  "z": 1000
+                }
+              },
+              {
+                "after": {
+                  "delay": null,
+                  "facing": null,
+                  "kind": "Solid",
+                  "observation_classification": "exact",
+                  "observed_name": "minecraft:stone",
+                  "observed_properties": {},
+                  "power_level": null,
+                  "powered": null,
+                  "support_offset": null,
+                  "wire_connections": null
+                },
+                "before": {
+                  "delay": null,
+                  "facing": null,
+                  "kind": "Air",
+                  "observation_classification": "synthetic",
+                  "observed_name": null,
+                  "observed_properties": {},
+                  "power_level": null,
+                  "powered": null,
+                  "support_offset": null,
+                  "wire_connections": null
+                },
+                "collision": false,
+                "pos": {
+                  "x": 1101,
+                  "y": 180,
+                  "z": 1000
+                }
+              },
+              {
+                "after": {
+                  "delay": null,
+                  "facing": null,
+                  "kind": "Air",
+                  "observation_classification": "synthetic",
+                  "observed_name": null,
+                  "observed_properties": {},
+                  "power_level": null,
+                  "powered": null,
+                  "support_offset": null,
+                  "wire_connections": null
+                },
+                "before": {
+                  "delay": null,
+                  "facing": null,
+                  "kind": "Solid",
+                  "observation_classification": "exact",
+                  "observed_name": "minecraft:stone",
+                  "observed_properties": {},
+                  "power_level": null,
+                  "powered": null,
+                  "support_offset": null,
+                  "wire_connections": null
+                },
+                "collision": false,
+                "pos": {
+                  "x": 1102,
+                  "y": 180,
+                  "z": 1000
+                }
+              }
+            ],
+            "operation_id": "ecff9c1f-6444-4ed3-8d14-dc3c729d3345"
+          }
+        },
+        "read_only": false,
+        "revision_id": "067a3ebd-ebe3-4ed5-82af-3bbbc391cd61",
+        "validation_scope": "modeled placement and exact context; not functional equivalence"
+      },
+      "unpreviewed": {
+        "error": "placement must be shown with show_operation before invoke_operation",
+        "error_code": "invalid_state",
+        "ok": false,
+        "retryable": false,
+        "schema_version": "dustroute.error.v1"
+      },
+      "stale": {
+        "error": "revision placement context changed or result differs; inspect current world",
+        "error_code": "internal",
+        "ok": false,
+        "retryable": false,
+        "schema_version": "dustroute.error.v1"
+      },
+      "applied": {
+        "action": "apply",
+        "bridge": {
+          "submitted_changes": 3
+        },
+        "changed_blocks": 3,
+        "dimension": "minecraft:overworld",
+        "ok": true,
+        "operation_id": "ecff9c1f-6444-4ed3-8d14-dc3c729d3345",
+        "schema_version": "dustroute.placement.v1",
+        "verified": true
+      },
+      "staleUndo": {
+        "error": "revision placement context changed or result differs; inspect current world",
+        "error_code": "internal",
+        "ok": false,
+        "retryable": false,
+        "schema_version": "dustroute.error.v1"
+      },
+      "restored": {
+        "action": "undo",
+        "bridge": {
+          "submitted_changes": 3
+        },
+        "changed_blocks": 3,
+        "dimension": "minecraft:overworld",
+        "ok": true,
+        "operation_id": "ecff9c1f-6444-4ed3-8d14-dc3c729d3345",
+        "schema_version": "dustroute.placement.v1",
+        "verified": true
+      }
+    }
+  ],
+  "cleanup_verified": true,
+  "first_gaze": {
+    "observation": {
+      "dimension": "minecraft:overworld",
+      "distance": 4.000000000000002,
+      "eye_position": {
+        "x": 1094.5,
+        "y": 181.62,
+        "z": 996.5
+      },
+      "pitch": -0.723044773847096,
+      "player": "dustroutetest",
+      "reacquired": false,
+      "targeted_block": {
+        "x": 1097,
+        "y": 178,
+        "z": 996
+      },
+      "targeted_face": null,
+      "yaw": 4.570491895921688
+    },
+    "ok": true
+  },
+  "second_gaze": {
+    "observation": {
+      "dimension": "minecraft:overworld",
+      "distance": 4.000000000000002,
+      "eye_position": {
+        "x": 1104.5,
+        "y": 186.62,
+        "z": 1006.5
+      },
+      "pitch": -0.723044773847096,
+      "player": "dustroutetest",
+      "reacquired": false,
+      "targeted_block": {
+        "x": 1107,
+        "y": 183,
+        "z": 1006
+      },
+      "targeted_face": null,
+      "yaw": 4.570491895921688
+    },
+    "ok": true
+  },
+  "status": "passed",
+  "minecraft_version": "1.21.11",
+  "binary_sha256": "00ef227e9920eba19e79c2ed42cc19ce0de4a9c7fba3f1dcbfbd301740018279",
+  "verified_gates": [
+    "cumulative parent and child diff",
+    "repeater property change, block addition and deletion",
+    "common preview required",
+    "changed full context rejects apply",
+    "changed full context rejects undo",
+    "exact original blocks restored"
+  ]
+}

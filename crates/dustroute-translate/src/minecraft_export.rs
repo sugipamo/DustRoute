@@ -11,9 +11,9 @@ use zip::write::SimpleFileOptions;
 use crate::compiler::BaselineCompileResult;
 use crate::logic::LogicError;
 use crate::world::{
-    Block, BlockKind, Facing, PistonVariant, Pos, WireConnection, World, piston_state,
-    piston_variant,
+    Block, BlockKind, Facing, PistonVariant, Pos, WireConnection, piston_state, piston_variant,
 };
+use dustroute_minecraft::{ValidatedWorld, WorldValidationError};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct JavaExportConfig {
@@ -44,6 +44,7 @@ impl Default for JavaExportConfig {
 
 #[derive(Debug)]
 pub enum MinecraftExportError {
+    InvalidWorld(WorldValidationError),
     Io(io::Error),
     Zip(zip::result::ZipError),
     Logic(LogicError),
@@ -57,6 +58,7 @@ pub enum MinecraftExportError {
 impl Display for MinecraftExportError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::InvalidWorld(error) => Display::fmt(error, f),
             Self::Io(error) => Display::fmt(error, f),
             Self::Zip(error) => Display::fmt(error, f),
             Self::Logic(error) => Display::fmt(error, f),
@@ -80,6 +82,11 @@ impl Display for MinecraftExportError {
 }
 
 impl Error for MinecraftExportError {}
+impl From<WorldValidationError> for MinecraftExportError {
+    fn from(error: WorldValidationError) -> Self {
+        Self::InvalidWorld(error)
+    }
+}
 impl From<io::Error> for MinecraftExportError {
     fn from(value: io::Error) -> Self {
         Self::Io(value)
@@ -287,8 +294,15 @@ fn xyz(pos: Pos, config: &JavaExportConfig) -> String {
     )
 }
 
+/// Full-world export accepts only placement-validated initial worlds.
+/// `java_block_state` remains a low-level formatter, not placement approval.
+///
+/// ```compile_fail
+/// use dustroute_translate::{World, JavaExportConfig, world_setblock_commands};
+/// world_setblock_commands(&World::new(), &JavaExportConfig::default()).unwrap();
+/// ```
 pub fn world_setblock_commands(
-    world: &World,
+    world: &ValidatedWorld,
     config: &JavaExportConfig,
 ) -> Result<Vec<String>, MinecraftExportError> {
     let priority = |kind| match kind {
@@ -315,7 +329,7 @@ pub fn world_setblock_commands(
 }
 
 pub fn isolated_build_commands(
-    world: &World,
+    world: &ValidatedWorld,
     config: &JavaExportConfig,
 ) -> Result<Vec<String>, MinecraftExportError> {
     let Some((world_low, world_high)) = world.bounds() else {
@@ -564,6 +578,7 @@ pub fn compiled_circuit_datapack(
 
 #[cfg(test)]
 mod tests {
+    use crate::World;
     use crate::circuits::half_adder;
     use crate::compiler::{BaselineCompileConfig, BaselineCompiler};
 
@@ -604,7 +619,11 @@ mod tests {
         let mut world = World::new();
         world.set(Pos::new(0, 0, 0), Block::new(BlockKind::Solid));
         world.place(BlockKind::RedstoneWire, Pos::new(0, 1, 0));
-        let commands = isolated_build_commands(&world, &JavaExportConfig::default()).unwrap();
+        let commands = isolated_build_commands(
+            &ValidatedWorld::try_from(world).unwrap(),
+            &JavaExportConfig::default(),
+        )
+        .unwrap();
         let component_clear = commands
             .iter()
             .position(|line| line.ends_with("replace minecraft:redstone_wire"))

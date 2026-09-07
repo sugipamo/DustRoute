@@ -277,7 +277,8 @@ fn fixture_freezes_the_single_cell_control_contract() {
 fn lever_on_drives_one_cell_open_pulse_through_wire_repeater_and_piston() {
     let fixture = fixture();
     let (world, known_region) = build_world(&fixture);
-    let mut engine = PhysicsEngine::new(world, 256).with_piston_planning_region(known_region);
+    let mut engine =
+        PhysicsEngine::new_diagnostic(world, 256).with_piston_planning_region(known_region);
     let input_id = engine.schedule_lever_pulse_sequence(
         0,
         fixture.coordinates.lever,
@@ -348,7 +349,8 @@ fn lever_on_drives_one_cell_open_pulse_through_wire_repeater_and_piston() {
 fn lever_off_drives_the_return_pulse_and_round_trips_to_closed() {
     let fixture = fixture();
     let (world, known_region) = build_world(&fixture);
-    let mut engine = PhysicsEngine::new(world, 512).with_piston_planning_region(known_region);
+    let mut engine =
+        PhysicsEngine::new_diagnostic(world, 512).with_piston_planning_region(known_region);
 
     engine.schedule_lever_pulse_sequence(
         0,
@@ -415,7 +417,8 @@ fn lever_off_drives_the_return_pulse_and_round_trips_to_closed() {
 fn stable_lever_edge_is_idempotent_without_a_second_pulse() {
     let fixture = fixture();
     let (world, known_region) = build_world(&fixture);
-    let mut engine = PhysicsEngine::new(world, 512).with_piston_planning_region(known_region);
+    let mut engine =
+        PhysicsEngine::new_diagnostic(world, 512).with_piston_planning_region(known_region);
     engine.schedule_lever_pulse_sequence(
         0,
         fixture.coordinates.lever,
@@ -460,7 +463,8 @@ fn malformed_pulse_width_fails_closed_before_changing_the_world() {
     let fixture = fixture();
     let (world, known_region) = build_world(&fixture);
     let before = world.clone();
-    let mut engine = PhysicsEngine::new(world, 64).with_piston_planning_region(known_region);
+    let mut engine =
+        PhysicsEngine::new_diagnostic(world, 64).with_piston_planning_region(known_region);
     let event_id = engine.schedule_lever_pulse_sequence(
         0,
         fixture.coordinates.lever,
@@ -495,7 +499,8 @@ fn malformed_pulse_width_fails_closed_before_changing_the_world() {
 fn lever_pulse_sequence_is_not_accepted_by_the_direct_piston_runner() {
     let fixture = fixture();
     let (world, known_region) = build_world(&fixture);
-    let mut engine = PhysicsEngine::new(world, 64).with_piston_planning_region(known_region);
+    let mut engine =
+        PhysicsEngine::new_diagnostic(world, 64).with_piston_planning_region(known_region);
     let event_id = engine.schedule_lever_pulse_sequence(
         0,
         fixture.coordinates.lever,

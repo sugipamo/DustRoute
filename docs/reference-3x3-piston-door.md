@@ -52,7 +52,7 @@ for both open and close sides, then reuses these same mechanical coordinates.
 The direct 18-channel layout described by this mechanical fixture remains an
 unverified Vanilla wiring claim; the fanout fixture is the explicitly
 supported designed control topology and can be executed through
-`PistonDoorScenario::run_cycle`.
+`PistonDoorScenario::run_cycle_diagnostic`.
 
 ## Stable states
 
@@ -103,7 +103,7 @@ serial `1 → 3 → 9` control topology; this does not promote the direct
 | Nine horizontal north-facing close extensions | **supported_serial_only** | Same one-block push rule in the opposite direction |
 | Nine final normal retractions | **supported_serial_only** | Stable closed panel and head removal |
 | Nine independent piston completions in one game tick | **missing** | Strict `WorldDelta` parent-shape validation requires a batch rebase |
-| Lever ON/OFF → two timed pulses per side | **supported_for_declared_fanout** | `PistonDoorScenario::run_cycle` uses the bounded `LeverPulseSequence` edge boundary |
+| Lever ON/OFF → two timed pulses per side | **supported_for_declared_fanout** | `PistonDoorScenario::run_cycle_diagnostic` uses the bounded `LeverPulseSequence` edge boundary |
 | One lever → 18 independently delayed piston channels | **supported_for_declared_fanout_only** | The serial `1 → 3 → 9` fanout is a designed scenario topology; the direct 18-channel layout remains unverified |
 | Complete Vanilla wiring/order, QC/BUD, moving interruption/reversal, slime/honey, entities | **out-of-scope** | Explicitly excluded by the Goal |
 

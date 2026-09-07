@@ -14,8 +14,9 @@ pub use dustroute_minecraft::{
     Block, BlockBehaviorProfile, BlockCapabilities, BlockChange, BlockKind, BlockMove,
     BlockProperties, CapabilityLevel, ChangeReason, DEFAULT_PISTON_MOTION_PROFILE, DeltaCause,
     Facing, ObservationClassification, PistonMotionProfile, PistonMotionProfileError,
-    PistonPlanningContext, Pos, Region, RegionSet, Shape, ShapeId, UpdateModel, WireConnection,
-    World, WorldDelta, WorldDeltaError, behavior_profile, observed_name_requires_live_observation,
+    PistonPlanningContext, Pos, Region, RegionSet, Shape, ShapeId, UpdateModel, ValidatedWorld,
+    WireConnection, World, WorldDelta, WorldDeltaError, WorldValidationError, WorldValidationIssue,
+    behavior_profile, observed_name_requires_live_observation,
 };
 pub use patch::{
     PatchApplyError, PhysicalBlockChange, PhysicalPatch, PhysicalPatchReason, RepairImpact,

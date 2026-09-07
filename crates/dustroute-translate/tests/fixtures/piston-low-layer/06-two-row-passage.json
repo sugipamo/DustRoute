@@ -1,0 +1,973 @@
+{
+  "schema_version": "dustroute.piston-low-layer-case.v1",
+  "id": "06-two-row-passage",
+  "minecraft_version": "1.21.11",
+  "initial": {
+    "min": {
+      "x": -2,
+      "y": -1,
+      "z": -3
+    },
+    "max": {
+      "x": 6,
+      "y": 2,
+      "z": 2
+    },
+    "blocks": [
+      {
+        "pos": {
+          "x": -1,
+          "y": -1,
+          "z": 0
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 0,
+          "y": -1,
+          "z": 0
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 1,
+          "y": -1,
+          "z": 0
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 2,
+          "y": -1,
+          "z": -2
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 2,
+          "y": -1,
+          "z": -1
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 2,
+          "y": -1,
+          "z": 0
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 2,
+          "y": -1,
+          "z": 1
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 2,
+          "y": -1,
+          "z": 2
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": -1,
+          "y": 0,
+          "z": 0
+        },
+        "name": "minecraft:lever",
+        "properties": {
+          "face": "floor",
+          "facing": "east",
+          "powered": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "name": "minecraft:sticky_piston",
+        "properties": {
+          "facing": "east",
+          "extended": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 1,
+          "y": 0,
+          "z": -2
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 1,
+          "y": 0,
+          "z": -1
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 1,
+          "y": 0,
+          "z": 0
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 1,
+          "y": 0,
+          "z": 1
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 1,
+          "y": 0,
+          "z": 2
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 3,
+          "y": 0,
+          "z": -2
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 3,
+          "y": 0,
+          "z": -1
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 3,
+          "y": 0,
+          "z": 0
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 3,
+          "y": 0,
+          "z": 1
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 3,
+          "y": 0,
+          "z": 2
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 5,
+          "y": 0,
+          "z": 0
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 1,
+          "y": 1,
+          "z": -2
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 1,
+          "y": 1,
+          "z": -1
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 1,
+          "y": 1,
+          "z": 2
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 3,
+          "y": 1,
+          "z": -2
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 3,
+          "y": 1,
+          "z": -1
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 3,
+          "y": 1,
+          "z": 0
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 3,
+          "y": 1,
+          "z": 1
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 3,
+          "y": 1,
+          "z": 2
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 4,
+          "y": 1,
+          "z": 0
+        },
+        "name": "minecraft:sticky_piston",
+        "properties": {
+          "facing": "west",
+          "extended": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 5,
+          "y": 1,
+          "z": 0
+        },
+        "name": "minecraft:lever",
+        "properties": {
+          "face": "floor",
+          "facing": "west",
+          "powered": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 2,
+          "y": 2,
+          "z": -2
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 2,
+          "y": 2,
+          "z": -1
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 2,
+          "y": 2,
+          "z": 0
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 2,
+          "y": 2,
+          "z": 1
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 2,
+          "y": 2,
+          "z": 2
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      }
+    ]
+  },
+  "actions": [
+    {
+      "input": {
+        "x": -1,
+        "y": 0,
+        "z": 0
+      },
+      "powered": true
+    },
+    {
+      "input": {
+        "x": 5,
+        "y": 1,
+        "z": 0
+      },
+      "powered": true
+    },
+    {
+      "input": {
+        "x": -1,
+        "y": 0,
+        "z": 0
+      },
+      "powered": false
+    },
+    {
+      "input": {
+        "x": 5,
+        "y": 1,
+        "z": 0
+      },
+      "powered": false
+    },
+    {
+      "input": {
+        "x": -1,
+        "y": 0,
+        "z": 0
+      },
+      "powered": true
+    },
+    {
+      "input": {
+        "x": 5,
+        "y": 1,
+        "z": 0
+      },
+      "powered": true
+    }
+  ],
+  "settle_ms": 1500,
+  "properties": [
+    "facing",
+    "extended",
+    "type",
+    "powered"
+  ],
+  "comparison": "full 216-cell region; independently controlled opposing pistons, two-row solid panel, sequential close/open/reclose and walking",
+  "expected": {
+    "phases": [
+      [
+        {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:sticky_piston",
+          "properties": {
+            "facing": "east",
+            "extended": true
+          }
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:piston_head",
+          "properties": {
+            "facing": "east",
+            "type": "sticky"
+          }
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:stone",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:lever",
+          "properties": {
+            "powered": true
+          }
+        },
+        {
+          "pos": {
+            "x": 4,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:sticky_piston",
+          "properties": {
+            "facing": "west",
+            "extended": false
+          }
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:stone",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 5,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:lever",
+          "properties": {
+            "powered": false
+          }
+        }
+      ],
+      [
+        {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:sticky_piston",
+          "properties": {
+            "facing": "east",
+            "extended": true
+          }
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:piston_head",
+          "properties": {
+            "facing": "east",
+            "type": "sticky"
+          }
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:stone",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:lever",
+          "properties": {
+            "powered": true
+          }
+        },
+        {
+          "pos": {
+            "x": 4,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:sticky_piston",
+          "properties": {
+            "facing": "west",
+            "extended": true
+          }
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:piston_head",
+          "properties": {
+            "facing": "west",
+            "type": "sticky"
+          }
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:stone",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 5,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:lever",
+          "properties": {
+            "powered": true
+          }
+        }
+      ],
+      [
+        {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:sticky_piston",
+          "properties": {
+            "facing": "east",
+            "extended": false
+          }
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:stone",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:lever",
+          "properties": {
+            "powered": false
+          }
+        },
+        {
+          "pos": {
+            "x": 4,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:sticky_piston",
+          "properties": {
+            "facing": "west",
+            "extended": true
+          }
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:piston_head",
+          "properties": {
+            "facing": "west",
+            "type": "sticky"
+          }
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:stone",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 5,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:lever",
+          "properties": {
+            "powered": true
+          }
+        }
+      ],
+      [
+        {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:sticky_piston",
+          "properties": {
+            "facing": "east",
+            "extended": false
+          }
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:stone",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:lever",
+          "properties": {
+            "powered": false
+          }
+        },
+        {
+          "pos": {
+            "x": 4,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:sticky_piston",
+          "properties": {
+            "facing": "west",
+            "extended": false
+          }
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:stone",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 5,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:lever",
+          "properties": {
+            "powered": false
+          }
+        }
+      ],
+      [
+        {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:sticky_piston",
+          "properties": {
+            "facing": "east",
+            "extended": true
+          }
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:piston_head",
+          "properties": {
+            "facing": "east",
+            "type": "sticky"
+          }
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:stone",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:lever",
+          "properties": {
+            "powered": true
+          }
+        },
+        {
+          "pos": {
+            "x": 4,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:sticky_piston",
+          "properties": {
+            "facing": "west",
+            "extended": false
+          }
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:stone",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 5,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:lever",
+          "properties": {
+            "powered": false
+          }
+        }
+      ],
+      [
+        {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:sticky_piston",
+          "properties": {
+            "facing": "east",
+            "extended": true
+          }
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:piston_head",
+          "properties": {
+            "facing": "east",
+            "type": "sticky"
+          }
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:stone",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:lever",
+          "properties": {
+            "powered": true
+          }
+        },
+        {
+          "pos": {
+            "x": 4,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:sticky_piston",
+          "properties": {
+            "facing": "west",
+            "extended": true
+          }
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:piston_head",
+          "properties": {
+            "facing": "west",
+            "type": "sticky"
+          }
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:stone",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 5,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:lever",
+          "properties": {
+            "powered": true
+          }
+        }
+      ]
+    ]
+  },
+  "passage": {
+    "open_by_phase": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      false
+    ],
+    "start": {
+      "x": 2.5,
+      "y": 0,
+      "z": -1.5
+    },
+    "end": {
+      "x": 2.5,
+      "y": 0,
+      "z": 1.5
+    }
+  }
+}

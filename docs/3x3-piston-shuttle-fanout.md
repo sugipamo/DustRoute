@@ -6,6 +6,12 @@ Vanilla redstone topology. The contract is executable through the reusable
 `dustroute_translate::PistonDoorScenario` API; the integration test is only a
 consumer of that API.
 
+Live validation now confirms that this fixture is not directly buildable:
+unsupported stacked wiring disappears on Java placement, and the lever's
+remote pulse generation is a simulator input driver. See
+[`3x3-piston-door-live-validation.md`](3x3-piston-door-live-validation.md)
+for the mechanical success, wiring failures, and next implementation boundary.
+
 ## Control shape
 
 The fixture uses one external lever edge as the input boundary. The runner
@@ -43,7 +49,7 @@ fanout fixture adds only the bounded electrical prefix.
 ## Execution contract
 
 `PistonDoorScenario::from_json` validates the versioned layout and
-`PistonDoorScenario::run_cycle` is the common `closed → open → closed`
+`PistonDoorScenario::run_cycle_diagnostic` is the common `closed → open → closed`
 execution path. `PistonDoorScenario::translated` can move the same topology to
 another origin without changing the executor.
 

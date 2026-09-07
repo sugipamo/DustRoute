@@ -1,0 +1,145 @@
+{
+  "schema_version": "dustroute.piston-single-input-blocker.v1",
+  "case_id": "07-single-input-two-row",
+  "fixture_sha256": "eaf1fb7eb60be57089e0e0f65f4771d721ecdf3b93609dbad47880c2faf77a70",
+  "execution_mode": "diagnostic",
+  "status": "stopped_simulator_failure_before_live",
+  "error": "world delta failed: world shape changed (expected ShapeId(3549725866577530643), found ShapeId(5164404354780996130))",
+  "pending_events": 2,
+  "trace_status": {
+    "error": "world delta failed: world shape changed (expected ShapeId(3549725866577530643), found ShapeId(5164404354780996130))",
+    "kind": "failed"
+  },
+  "last_transitions": [
+    {
+      "id": 10,
+      "time": {
+        "game_tick": 2,
+        "phase": "block_event",
+        "sub_tick_order": 0
+      },
+      "trigger": 63,
+      "from_shape": 5881300288493805453,
+      "to_shape": 3549725866577530643
+    },
+    {
+      "id": 11,
+      "time": {
+        "game_tick": 2,
+        "phase": "block_event",
+        "sub_tick_order": 1
+      },
+      "trigger": 64,
+      "from_shape": 3549725866577530643,
+      "to_shape": 5164404354780996130
+    }
+  ],
+  "wire_power_after_failure": [
+    {
+      "name": "minecraft:redstone_wire",
+      "pos": {
+        "x": 0,
+        "y": 0,
+        "z": 1
+      },
+      "properties": {
+        "power": 11
+      }
+    },
+    {
+      "name": "minecraft:redstone_wire",
+      "pos": {
+        "x": 0,
+        "y": 0,
+        "z": 2
+      },
+      "properties": {
+        "power": 12
+      }
+    },
+    {
+      "name": "minecraft:redstone_wire",
+      "pos": {
+        "x": 0,
+        "y": 0,
+        "z": 3
+      },
+      "properties": {
+        "power": 13
+      }
+    },
+    {
+      "name": "minecraft:redstone_wire",
+      "pos": {
+        "x": 1,
+        "y": 0,
+        "z": 3
+      },
+      "properties": {
+        "power": 14
+      }
+    },
+    {
+      "name": "minecraft:redstone_wire",
+      "pos": {
+        "x": 2,
+        "y": 0,
+        "z": 3
+      },
+      "properties": {
+        "power": 15
+      }
+    },
+    {
+      "name": "minecraft:redstone_wire",
+      "pos": {
+        "x": 3,
+        "y": 0,
+        "z": 3
+      },
+      "properties": {
+        "power": 14
+      }
+    },
+    {
+      "name": "minecraft:redstone_wire",
+      "pos": {
+        "x": 4,
+        "y": 0,
+        "z": 2
+      },
+      "properties": {
+        "power": 12
+      }
+    },
+    {
+      "name": "minecraft:redstone_wire",
+      "pos": {
+        "x": 4,
+        "y": 0,
+        "z": 3
+      },
+      "properties": {
+        "power": 13
+      }
+    },
+    {
+      "name": "minecraft:redstone_wire",
+      "pos": {
+        "x": 4,
+        "y": 1,
+        "z": 1
+      },
+      "properties": {
+        "power": 11
+      }
+    }
+  ],
+  "live_run": false,
+  "not_run": [
+    "live closed/open/reclosed state comparison",
+    "walking checks",
+    "repeated trials"
+  ],
+  "interpretation": "Completion delta retains whole-world parent shape from motion start; starting the second independent piston changes that shape before the first completion applies."
+}

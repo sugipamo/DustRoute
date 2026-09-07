@@ -211,7 +211,9 @@ fn fanout_cells_match_the_reference_3x3_mechanical_fixture() {
 #[test]
 fn common_runner_drives_all_nine_cells_open_through_two_level_fanout() {
     let scenario = scenario();
-    let engine = scenario.run_open().expect("open fanout should settle");
+    let engine = scenario
+        .run_open_diagnostic()
+        .expect("open fanout should settle");
     assert_open(&scenario, &engine);
     assert_eq!(
         engine.world().get(scenario.control.lever).unwrap().powered,
@@ -255,7 +257,9 @@ fn common_runner_drives_all_nine_cells_open_through_two_level_fanout() {
 #[test]
 fn common_runner_keeps_piston_starts_and_completions_serial() {
     let scenario = scenario();
-    let engine = scenario.run_open().expect("open fanout should settle");
+    let engine = scenario
+        .run_open_diagnostic()
+        .expect("open fanout should settle");
     let starts = piston_block_event_times(&engine, BlockEventKind::PistonExtend);
     assert_eq!(starts.len(), scenario.cells.len());
     assert_eq!(
@@ -289,7 +293,9 @@ fn common_runner_keeps_piston_starts_and_completions_serial() {
 #[test]
 fn common_runner_round_trips_all_nine_cells() {
     let scenario = scenario();
-    let engine = scenario.run_cycle().expect("fanout cycle should settle");
+    let engine = scenario
+        .run_cycle_diagnostic()
+        .expect("fanout cycle should settle");
     assert_closed(&scenario, &engine);
     assert_eq!(
         engine.world().get(scenario.control.lever).unwrap().powered,
@@ -316,7 +322,7 @@ fn common_runner_round_trips_all_nine_cells() {
 fn translated_scenario_reuses_the_same_execution_path() {
     let scenario = scenario().translated(Pos::new(37, 11, 29));
     let engine = scenario
-        .run_cycle()
+        .run_cycle_diagnostic()
         .expect("translated fanout should settle");
     assert_closed(&scenario, &engine);
     assert_eq!(scenario.control.lever, Pos::new(15, 15, 29));
@@ -327,8 +333,8 @@ fn translated_scenario_reuses_the_same_execution_path() {
 #[test]
 fn fanout_replay_is_deterministic() {
     let scenario = scenario();
-    let first = scenario.run_cycle().unwrap();
-    let second = scenario.run_cycle().unwrap();
+    let first = scenario.run_cycle_diagnostic().unwrap();
+    let second = scenario.run_cycle_diagnostic().unwrap();
     assert_eq!(first.world(), second.world());
     assert_eq!(first.event_trace(), second.event_trace());
     assert_eq!(first.transition_trace(), second.transition_trace());
@@ -337,7 +343,7 @@ fn fanout_replay_is_deterministic() {
 #[test]
 fn stable_lever_edge_is_idempotent_after_open() {
     let scenario = scenario();
-    let mut engine = scenario.run_open().unwrap();
+    let mut engine = scenario.run_open_diagnostic().unwrap();
     let transitions_before = engine.transition_trace().len();
     let events_before = engine.event_trace().len();
     let event_id = engine.schedule_lever_pulse_sequence(
@@ -371,7 +377,7 @@ fn malformed_source_fails_closed_before_lever_mutation() {
     let invalid_source = Pos::new(50, 1, 0);
     world.set(invalid_source, unobserved_source);
     let before = world.clone();
-    let mut engine = dustroute_minecraft::time::PhysicsEngine::new(world, 256)
+    let mut engine = dustroute_minecraft::time::PhysicsEngine::new_diagnostic(world, 256)
         .with_piston_planning_region(known_region);
     let event_id = engine.schedule_lever_pulse_sequence(
         0,
@@ -411,7 +417,25 @@ fn malformed_scenario_is_rejected_without_falling_back_to_a_different_layout() {
     let mut scenario = scenario();
     scenario.control.leaf_delay_redstone_ticks[0][0][0] = 0;
     let error = scenario
-        .run_open()
+        .run_open_diagnostic()
         .expect_err("zero repeater delay must fail closed");
     assert!(matches!(error, PistonDoorScenarioError::Invalid { .. }));
+}
+
+#[test]
+fn normal_execution_rejects_the_unbuildable_model_before_running() {
+    for result in [scenario().run_open(), scenario().run_cycle()] {
+        let error = result.unwrap_err();
+        let dustroute_translate::PistonDoorScenarioError::Validation(error) = error else {
+            panic!("expected validation failure")
+        };
+        assert!(error.issues.iter().any(|issue| matches!(
+            issue,
+            dustroute_translate::WorldValidationIssue::InvalidSupport { .. }
+        )));
+        assert!(error.issues.iter().any(|issue| matches!(
+            issue,
+            dustroute_translate::WorldValidationIssue::SyntheticInputDriver { .. }
+        )));
+    }
 }

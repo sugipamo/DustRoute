@@ -118,7 +118,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
     if command != "eval" {
         return Err(
-            "usage: dustroute-cli eval CIRCUIT key=0|1 ... | export CIRCUIT OUTPUT.zip [namespace] | export-semantics OUTPUT.zip [namespace] | analyze-snapshot SNAPSHOT.json | run-piston-door SCENARIO.json [open|cycle] [--translate x,y,z]"
+            "usage: dustroute-cli eval CIRCUIT key=0|1 ... | export CIRCUIT OUTPUT.zip [namespace] | export-semantics OUTPUT.zip [namespace] | analyze-snapshot SNAPSHOT.json | run-piston-door SCENARIO.json [open|cycle] [--translate x,y,z] [--diagnostic]"
                 .into(),
         );
     }
@@ -149,9 +149,11 @@ fn run_piston_door_report(args: impl IntoIterator<Item = String>) -> Value {
     };
     let mut mode = None;
     let mut translation = None;
+    let mut diagnostic = false;
     while let Some(argument) = args.next() {
         match argument.as_str() {
             "open" | "cycle" if mode.is_none() => mode = Some(argument),
+            "--diagnostic" if !diagnostic => diagnostic = true,
             "--translate" => {
                 let Some(offset) = args.next() else {
                     return piston_door_failure(
@@ -222,9 +224,16 @@ fn run_piston_door_report(args: impl IntoIterator<Item = String>) -> Value {
     };
     let initial_state = world_state_json(materialized.world());
     let known_region = materialized.known_region();
-    let engine = match mode {
-        "open" => scenario.run_open(),
-        "cycle" => scenario.run_cycle(),
+    let validation_error = match scenario.validate_placement() {
+        Ok(_) => None,
+        Err(error) if diagnostic => Some(error),
+        Err(error) => return piston_door_error("validation", error),
+    };
+    let engine = match (mode, diagnostic) {
+        ("open", false) => scenario.run_open(),
+        ("cycle", false) => scenario.run_cycle(),
+        ("open", true) => scenario.run_open_diagnostic(),
+        ("cycle", true) => scenario.run_cycle_diagnostic(),
         _ => unreachable!("mode is validated while parsing arguments"),
     };
     let engine = match engine {
@@ -233,7 +242,9 @@ fn run_piston_door_report(args: impl IntoIterator<Item = String>) -> Value {
     };
     json!({
         "ok": true,
-        "status": "complete",
+        "status": if diagnostic { "diagnostic_complete" } else { "complete" },
+        "execution_mode": if diagnostic { "diagnostic" } else { "validated" },
+        "placement_validation": validation_error.map(|error| piston_door_error("validation", error)),
         "command": "run-piston-door",
         "report_schema": PISTON_DOOR_EXECUTION_REPORT_SCHEMA,
         "mode": mode,
@@ -281,7 +292,14 @@ fn world_state_json(world: &dustroute_translate::World) -> Value {
 }
 
 fn piston_door_error(stage: &str, error: PistonDoorScenarioError) -> Value {
+    if let PistonDoorScenarioError::Validation(validation) = &error {
+        let mut response =
+            piston_door_failure("validation", &error.to_string(), "world_validation_failed");
+        response["error"]["issues"] = json!(validation.issues);
+        return response;
+    }
     let code = match error {
+        PistonDoorScenarioError::Validation(_) => unreachable!(),
         PistonDoorScenarioError::Json(_) => "invalid_json",
         PistonDoorScenarioError::Invalid { .. } => "invalid_scenario",
         PistonDoorScenarioError::Collision { .. } => "layout_collision",

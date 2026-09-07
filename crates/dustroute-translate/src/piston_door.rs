@@ -16,6 +16,7 @@ use dustroute_minecraft::{
     Block, BlockKind, Facing, PISTON_PUSH_LIMIT, PistonState, PistonVariant, Pos, Region,
     WireConnection, World, piston_state,
 };
+use dustroute_minecraft::{ValidatedWorld, WorldValidationError, WorldValidationIssue};
 use serde::{Deserialize, Serialize};
 
 /// Schema accepted by [`PistonDoorScenario::from_json`].
@@ -124,6 +125,7 @@ pub enum PistonDoorScenarioError {
         requested: BlockKind,
     },
     EmptyWorld,
+    Validation(WorldValidationError),
     Physics(PhysicsEngineError),
 }
 
@@ -143,6 +145,7 @@ impl Display for PistonDoorScenarioError {
                 "piston-door layout collision at {position:?}: {existing:?} vs {requested:?}"
             ),
             Self::EmptyWorld => write!(formatter, "piston-door layout produced an empty world"),
+            Self::Validation(error) => Display::fmt(error, formatter),
             Self::Physics(error) => write!(formatter, "piston-door execution failed: {error}"),
         }
     }
@@ -164,6 +167,22 @@ impl From<PhysicsEngineError> for PistonDoorScenarioError {
 }
 
 impl PistonDoorScenario {
+    /// Validate the materialized world and the input implementation together.
+    /// This scenario schema declares a synthetic remote pulse driver, so it
+    /// cannot currently produce a live-ready execution candidate.
+    pub fn validate_placement(&self) -> Result<ValidatedWorld, PistonDoorScenarioError> {
+        let materialized = self.build_world()?;
+        let mut issues = materialized.world.placement_issues();
+        issues.push(WorldValidationIssue::SyntheticInputDriver {
+            reason:
+                "LeverPulseSequence injects remote root pulses; no physical controller is declared"
+                    .into(),
+        });
+        Err(PistonDoorScenarioError::Validation(WorldValidationError {
+            issues,
+        }))
+    }
+
     /// Parses and validates the versioned scenario contract.
     pub fn from_json(json: &str) -> Result<Self, PistonDoorScenarioError> {
         let scenario: Self = serde_json::from_str(json)
@@ -535,9 +554,23 @@ impl PistonDoorScenario {
 
     /// Runs only the Lever ON/open half and returns the settled engine.
     pub fn run_open(&self) -> Result<PhysicsEngine, PistonDoorScenarioError> {
+        let world = self.validate_placement()?;
+        self.run_open_engine(PhysicsEngine::new(world, DEFAULT_PISTON_DOOR_EVENT_BUDGET))
+    }
+
+    /// Explicit model-only replay. Success does not certify a buildable layout.
+    pub fn run_open_diagnostic(&self) -> Result<PhysicsEngine, PistonDoorScenarioError> {
         let materialized = self.build_world()?;
-        let mut engine = PhysicsEngine::new(materialized.world, DEFAULT_PISTON_DOOR_EVENT_BUDGET)
-            .with_piston_planning_region(materialized.known_region);
+        self.run_open_engine(
+            PhysicsEngine::new_diagnostic(materialized.world, DEFAULT_PISTON_DOOR_EVENT_BUDGET)
+                .with_piston_planning_region(materialized.known_region),
+        )
+    }
+
+    fn run_open_engine(
+        &self,
+        mut engine: PhysicsEngine,
+    ) -> Result<PhysicsEngine, PistonDoorScenarioError> {
         engine.schedule_lever_pulse_sequence(
             0,
             self.control.lever,
@@ -553,7 +586,18 @@ impl PistonDoorScenario {
 
     /// Runs the complete common execution path: closed -> open -> closed.
     pub fn run_cycle(&self) -> Result<PhysicsEngine, PistonDoorScenarioError> {
-        let mut engine = self.run_open()?;
+        self.finish_cycle(self.run_open()?)
+    }
+
+    /// Explicit model-only cycle using the synthetic pulse input contract.
+    pub fn run_cycle_diagnostic(&self) -> Result<PhysicsEngine, PistonDoorScenarioError> {
+        self.finish_cycle(self.run_open_diagnostic()?)
+    }
+
+    fn finish_cycle(
+        &self,
+        mut engine: PhysicsEngine,
+    ) -> Result<PhysicsEngine, PistonDoorScenarioError> {
         let off_tick = engine.time().game_tick + 1;
         engine.schedule_lever_pulse_sequence(
             off_tick,

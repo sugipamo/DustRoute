@@ -1,6 +1,6 @@
 use std::collections::BTreeSet;
 
-use dustroute_minecraft::time::{PhysicsEngine, PhysicsEngineError, TraceStatus};
+use dustroute_minecraft::time::{PhysicsEngine, TraceStatus};
 use dustroute_minecraft::{
     Block, BlockKind, Facing, PistonAction, PistonState, PistonVariant, Pos, Region, World,
     piston_state,
@@ -297,7 +297,8 @@ fn assert_stable_step(reference: &ReferenceFixture, engine: &PhysicsEngine, step
 
 fn run_mechanical_replay(reference: &ReferenceFixture) -> PhysicsEngine {
     let (world, known_region) = build_world(reference);
-    let mut engine = PhysicsEngine::new(world, 512).with_piston_planning_region(known_region);
+    let mut engine =
+        PhysicsEngine::new_diagnostic(world, 512).with_piston_planning_region(known_region);
     for step in &reference.timeline {
         let mut next_schedule_tick = step.schedule_game_tick;
         for piston in role_positions(reference, &step.role) {
@@ -528,23 +529,32 @@ fn reference_mechanical_replay_reaches_open_and_closed_states_deterministically(
 }
 
 #[test]
-fn same_tick_nine_piston_batch_fails_closed_without_implicit_rebase() {
+fn same_tick_nine_piston_batch_completes_with_local_revalidation() {
     let reference = fixture();
     let (world, known_region) = build_world(&reference);
-    let mut engine = PhysicsEngine::new(world, 512).with_piston_planning_region(known_region);
+    let mut engine =
+        PhysicsEngine::new_diagnostic(world, 512).with_piston_planning_region(known_region);
     for piston in &reference.components.open_pushers {
         engine.schedule_piston_action(0, piston.position, PistonAction::Extend);
     }
 
-    let error = engine
-        .run_piston_events()
-        .expect_err("same-tick completion must remain an explicit missing capability");
-    assert!(matches!(error, PhysicsEngineError::WorldDelta(_)));
-    assert!(engine.trace_status().is_failed());
-    assert_eq!(
-        reference.mechanical_replay.same_tick_batch_status,
-        "missing"
+    engine.run_piston_events().unwrap();
+    assert!(engine.trace_status().is_complete());
+    assert_eq!(engine.pending_event_count(), 0);
+    assert_eq!(engine.transition_trace().len(), 18);
+    assert_panel_position(&reference, &engine, 1);
+    assert_pusher_state(
+        &reference.components.open_pushers,
+        &engine,
+        PistonState::Extended,
     );
+    assert_pusher_state(
+        &reference.components.close_pushers,
+        &engine,
+        PistonState::Retracted,
+    );
+    // The fixture's serial-only classification is historical evidence;
+    // this direct mechanical check does not promote its electrical contract.
 }
 
 #[test]

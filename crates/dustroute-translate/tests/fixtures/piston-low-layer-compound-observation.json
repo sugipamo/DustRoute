@@ -1,0 +1,3996 @@
+{
+  "schema_version": "dustroute.piston-compound-observation.v1",
+  "captured_at": "2026-09-05T07:36:57.120Z",
+  "minecraft_version": "1.21.11",
+  "fixture_sha256": "6c12d638bba1a81946904fd697d08f252315ab7583e67ac6d8178716a7255df6",
+  "phases": [
+    {
+      "input": {
+        "x": -1,
+        "y": 0,
+        "z": 0
+      },
+      "powered": true,
+      "expected": [
+        {
+          "pos": {
+            "x": -2,
+            "y": -1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": -1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": -1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": -1,
+            "z": 0
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": -1,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": -1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 0,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 0,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 0,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 0,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 0,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 1,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": -1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": -1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": -1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": -1,
+            "z": 0
+          },
+          "name": "minecraft:stone",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": -1,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": -1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 0,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 0,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 0,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:lever",
+          "properties": {
+            "powered": true,
+            "facing": "east"
+          }
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 0,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 0,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 1,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": -1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": -1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": -1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": -1,
+            "z": 0
+          },
+          "name": "minecraft:stone",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": -1,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": -1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:sticky_piston",
+          "properties": {
+            "facing": "east",
+            "extended": true
+          }
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 1,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": -1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": -1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": -1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": -1,
+            "z": 0
+          },
+          "name": "minecraft:stone",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": -1,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": -1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 0,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 0,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 0,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:piston_head",
+          "properties": {
+            "type": "sticky",
+            "facing": "east"
+          }
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 0,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 0,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": -1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": -1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": -1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": -1,
+            "z": 0
+          },
+          "name": "minecraft:stone",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": -1,
+            "z": 1
+          },
+          "name": "minecraft:stone",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": -1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 0,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 0,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 0,
+            "z": -1
+          },
+          "name": "minecraft:stone",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:piston",
+          "properties": {
+            "facing": "north",
+            "extended": false
+          }
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 0,
+            "z": 1
+          },
+          "name": "minecraft:lever",
+          "properties": {
+            "powered": false,
+            "facing": "north"
+          }
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 0,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 1,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": -1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": -1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": -1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": -1,
+            "z": 0
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": -1,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": -1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 0,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 0,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 0,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 0,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 0,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 1,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        }
+      ]
+    },
+    {
+      "input": {
+        "x": 2,
+        "y": 0,
+        "z": 1
+      },
+      "powered": true,
+      "expected": [
+        {
+          "pos": {
+            "x": -2,
+            "y": -1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": -1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": -1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": -1,
+            "z": 0
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": -1,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": -1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 0,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 0,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 0,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 0,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 0,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 1,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": -1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": -1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": -1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": -1,
+            "z": 0
+          },
+          "name": "minecraft:stone",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": -1,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": -1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 0,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 0,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 0,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:lever",
+          "properties": {
+            "powered": true,
+            "facing": "east"
+          }
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 0,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 0,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 1,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": -1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": -1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": -1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": -1,
+            "z": 0
+          },
+          "name": "minecraft:stone",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": -1,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": -1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:sticky_piston",
+          "properties": {
+            "facing": "east",
+            "extended": true
+          }
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 1,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": -1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": -1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": -1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": -1,
+            "z": 0
+          },
+          "name": "minecraft:stone",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": -1,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": -1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 0,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 0,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 0,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:piston_head",
+          "properties": {
+            "type": "sticky",
+            "facing": "east"
+          }
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 0,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 0,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": -1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": -1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": -1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": -1,
+            "z": 0
+          },
+          "name": "minecraft:stone",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": -1,
+            "z": 1
+          },
+          "name": "minecraft:stone",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": -1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 0,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 0,
+            "z": -2
+          },
+          "name": "minecraft:stone",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 0,
+            "z": -1
+          },
+          "name": "minecraft:piston_head",
+          "properties": {
+            "type": "normal",
+            "facing": "north"
+          }
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:piston",
+          "properties": {
+            "facing": "north",
+            "extended": true
+          }
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 0,
+            "z": 1
+          },
+          "name": "minecraft:lever",
+          "properties": {
+            "powered": true,
+            "facing": "north"
+          }
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 0,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 1,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": -1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": -1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": -1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": -1,
+            "z": 0
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": -1,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": -1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 0,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 0,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 0,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 0,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 0,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 1,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        }
+      ]
+    },
+    {
+      "input": {
+        "x": 2,
+        "y": 0,
+        "z": 1
+      },
+      "powered": false,
+      "expected": [
+        {
+          "pos": {
+            "x": -2,
+            "y": -1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": -1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": -1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": -1,
+            "z": 0
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": -1,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": -1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 0,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 0,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 0,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 0,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 0,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 1,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": -1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": -1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": -1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": -1,
+            "z": 0
+          },
+          "name": "minecraft:stone",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": -1,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": -1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 0,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 0,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 0,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:lever",
+          "properties": {
+            "powered": true,
+            "facing": "east"
+          }
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 0,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 0,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 1,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": -1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": -1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": -1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": -1,
+            "z": 0
+          },
+          "name": "minecraft:stone",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": -1,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": -1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:sticky_piston",
+          "properties": {
+            "facing": "east",
+            "extended": true
+          }
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 1,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": -1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": -1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": -1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": -1,
+            "z": 0
+          },
+          "name": "minecraft:stone",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": -1,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": -1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 0,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 0,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 0,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:piston_head",
+          "properties": {
+            "type": "sticky",
+            "facing": "east"
+          }
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 0,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 0,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": -1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": -1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": -1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": -1,
+            "z": 0
+          },
+          "name": "minecraft:stone",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": -1,
+            "z": 1
+          },
+          "name": "minecraft:stone",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": -1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 0,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 0,
+            "z": -2
+          },
+          "name": "minecraft:stone",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 0,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:piston",
+          "properties": {
+            "facing": "north",
+            "extended": false
+          }
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 0,
+            "z": 1
+          },
+          "name": "minecraft:lever",
+          "properties": {
+            "powered": false,
+            "facing": "north"
+          }
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 0,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 1,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": -1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": -1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": -1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": -1,
+            "z": 0
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": -1,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": -1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 0,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 0,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 0,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 0,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 0,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 1,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        }
+      ]
+    },
+    {
+      "input": {
+        "x": -1,
+        "y": 0,
+        "z": 0
+      },
+      "powered": false,
+      "expected": [
+        {
+          "pos": {
+            "x": -2,
+            "y": -1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": -1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": -1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": -1,
+            "z": 0
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": -1,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": -1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 0,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 0,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 0,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 0,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 0,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 1,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -2,
+            "y": 1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": -1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": -1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": -1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": -1,
+            "z": 0
+          },
+          "name": "minecraft:stone",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": -1,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": -1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 0,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 0,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 0,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:lever",
+          "properties": {
+            "powered": false,
+            "facing": "east"
+          }
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 0,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 0,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 1,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -1,
+            "y": 1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": -1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": -1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": -1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": -1,
+            "z": 0
+          },
+          "name": "minecraft:stone",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": -1,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": -1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:sticky_piston",
+          "properties": {
+            "facing": "east",
+            "extended": false
+          }
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 0,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 1,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 0,
+            "y": 1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": -1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": -1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": -1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": -1,
+            "z": 0
+          },
+          "name": "minecraft:stone",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": -1,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": -1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 0,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 0,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 0,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:piston",
+          "properties": {
+            "facing": "north",
+            "extended": false
+          }
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 0,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 0,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 1,
+            "y": 1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": -1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": -1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": -1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": -1,
+            "z": 0
+          },
+          "name": "minecraft:stone",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": -1,
+            "z": 1
+          },
+          "name": "minecraft:stone",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": -1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 0,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 0,
+            "z": -2
+          },
+          "name": "minecraft:stone",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 0,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 0,
+            "z": 1
+          },
+          "name": "minecraft:lever",
+          "properties": {
+            "powered": false,
+            "facing": "north"
+          }
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 0,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 1,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 2,
+            "y": 1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": -1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": -1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": -1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": -1,
+            "z": 0
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": -1,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": -1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 0,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 0,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 0,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 0,
+            "z": 0
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 0,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 0,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 1,
+            "z": -3
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 1,
+            "z": -2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 1,
+            "z": -1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 1,
+            "z": 0
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 1,
+            "z": 1
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": 3,
+            "y": 1,
+            "z": 2
+          },
+          "name": "minecraft:air",
+          "properties": {}
+        }
+      ]
+    }
+  ]
+}

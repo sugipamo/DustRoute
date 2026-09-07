@@ -11,7 +11,8 @@ use dustroute_translate::{
 };
 
 pub use planning::{
-    BlockChange, PlacementPlan, PlanningError, UndoPlan, plan_world_overlay, relocate_world,
+    BlockChange, PlacementPlan, PlanningError, UndoPlan, ValidatedBlockChanges, plan_world_overlay,
+    relocate_world,
 };
 
 #[derive(Clone, Copy, Debug, Default)]

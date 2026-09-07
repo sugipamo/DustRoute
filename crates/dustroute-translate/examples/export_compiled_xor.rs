@@ -31,7 +31,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "bounds": cell.world.bounds(),
             "inputs": cell.inputs.iter().map(|port| json!({"name": port.name, "position": port.pos})).collect::<Vec<_>>(),
             "outputs": cell.outputs.iter().map(|port| json!({"name": port.name, "position": port.pos})).collect::<Vec<_>>(),
-            "commands": world_setblock_commands(&cell.world, &config)?,
+            "commands": world_setblock_commands(&dustroute_minecraft::ValidatedWorld::try_from(cell.world.clone())?, &config)?,
         }))?
     );
     Ok(())

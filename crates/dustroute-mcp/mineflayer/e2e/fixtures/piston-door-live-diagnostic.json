@@ -1,0 +1,492 @@
+{
+  "schema_version": "dustroute.piston-door-live-diagnostic.v1",
+  "captured_at": "2026-09-05T06:43:29.853Z",
+  "minecraft_version": "1.21.11",
+  "git_head": "3200c3f924a54cf40000068ba31617980c05993e",
+  "fixture_sha256": "e4f1fe21473326bb8646237c8ae2121f01b5f80129959e556dee5bc2bb29df11",
+  "scenario_id": "lever_controlled_one_to_three_to_nine_piston_shuttle",
+  "offset": {
+    "x": 1000,
+    "y": 180,
+    "z": 1000
+  },
+  "region": {
+    "low": {
+      "x": -25,
+      "y": -2,
+      "z": -12
+    },
+    "high": {
+      "x": 5,
+      "y": 6,
+      "z": 13
+    }
+  },
+  "simulation": {
+    "status": "complete",
+    "trace_status": {
+      "kind": "complete"
+    }
+  },
+  "evidence": "packet-visible states; wall-clock settling, not server scheduler timing",
+  "status": "blocked_by_materialization_and_controller_contract",
+  "cleanup_verified": true,
+  "summary_only": true,
+  "diagnostic_script_sha256": "503f9a02f1bba672780228f2c7c1df37989e3d97402dc7113b283d7a9c1bab5c",
+  "support_below_counts": {
+    "Repeater": {
+      "Air": 114,
+      "Repeater": 48
+    },
+    "RedstoneWire": {
+      "Air": 48,
+      "Solid": 4,
+      "RedstoneWire": 14,
+      "Repeater": 6
+    },
+    "Lever": {
+      "Air": 1
+    }
+  },
+  "source_contract": [
+    {
+      "block": {
+        "delay": null,
+        "facing": null,
+        "kind": "RedstoneBlock",
+        "observation_classification": "synthetic",
+        "observed_name": null,
+        "observed_properties": {},
+        "power_level": null,
+        "powered": false,
+        "support_offset": null,
+        "wire_connections": null
+      },
+      "position": {
+        "x": -22,
+        "y": 1,
+        "z": -6
+      }
+    },
+    {
+      "block": {
+        "delay": null,
+        "facing": null,
+        "kind": "RedstoneBlock",
+        "observation_classification": "synthetic",
+        "observed_name": null,
+        "observed_properties": {},
+        "power_level": null,
+        "powered": false,
+        "support_offset": null,
+        "wire_connections": null
+      },
+      "position": {
+        "x": -22,
+        "y": 1,
+        "z": 7
+      }
+    }
+  ],
+  "materialization": {
+    "expected_blocks": 268,
+    "name_mismatch_count": 230,
+    "mismatches": [
+      {
+        "expected": "RedstoneWire",
+        "actual": "air",
+        "count": 68
+      },
+      {
+        "expected": "Repeater",
+        "actual": "air",
+        "count": 162
+      }
+    ]
+  },
+  "mechanical_cycles": [
+    {
+      "cycle": 0,
+      "driver": "command-injected rear power; no lever/fanout",
+      "open": {
+        "expected_z": 1,
+        "matches": true,
+        "closed_plane": {
+          "air": 9
+        },
+        "open_plane": {
+          "stone": 9
+        },
+        "retracted_piston_count": 18
+      },
+      "closed": {
+        "expected_z": 0,
+        "matches": true,
+        "closed_plane": {
+          "stone": 9
+        },
+        "open_plane": {
+          "air": 9
+        },
+        "retracted_piston_count": 18
+      }
+    },
+    {
+      "cycle": 1,
+      "driver": "command-injected rear power; no lever/fanout",
+      "open": {
+        "expected_z": 1,
+        "matches": true,
+        "closed_plane": {
+          "air": 9
+        },
+        "open_plane": {
+          "stone": 9
+        },
+        "retracted_piston_count": 18
+      },
+      "closed": {
+        "expected_z": 0,
+        "matches": true,
+        "closed_plane": {
+          "stone": 9
+        },
+        "open_plane": {
+          "air": 9
+        },
+        "retracted_piston_count": 18
+      }
+    },
+    {
+      "cycle": 2,
+      "driver": "command-injected rear power; no lever/fanout",
+      "open": {
+        "expected_z": 1,
+        "matches": true,
+        "closed_plane": {
+          "air": 9
+        },
+        "open_plane": {
+          "stone": 9
+        },
+        "retracted_piston_count": 18
+      },
+      "closed": {
+        "expected_z": 0,
+        "matches": true,
+        "closed_plane": {
+          "stone": 9
+        },
+        "open_plane": {
+          "air": 9
+        },
+        "retracted_piston_count": 18
+      }
+    }
+  ],
+  "lever_probe_added_support": {
+    "x": -22,
+    "y": 3,
+    "z": 0
+  },
+  "lever_cycles": [
+    {
+      "cycle": 0,
+      "states": [
+        {
+          "powered": true,
+          "actual_lever": {
+            "position": {
+              "x": -22,
+              "y": 4,
+              "z": 0
+            },
+            "name": "lever",
+            "properties": {
+              "powered": true,
+              "facing": "north",
+              "face": "floor"
+            }
+          },
+          "panel": {
+            "expected_z": 1,
+            "matches": false,
+            "closed_plane": {
+              "stone": 9
+            },
+            "open_plane": {
+              "air": 9
+            },
+            "retracted_piston_count": 18
+          },
+          "roots": [
+            {
+              "position": {
+                "x": -22,
+                "y": 1,
+                "z": -6
+              },
+              "name": "redstone_block",
+              "properties": {}
+            },
+            {
+              "position": {
+                "x": -22,
+                "y": 1,
+                "z": 7
+              },
+              "name": "redstone_block",
+              "properties": {}
+            }
+          ]
+        },
+        {
+          "powered": false,
+          "actual_lever": {
+            "position": {
+              "x": -22,
+              "y": 4,
+              "z": 0
+            },
+            "name": "lever",
+            "properties": {
+              "powered": false,
+              "facing": "north",
+              "face": "floor"
+            }
+          },
+          "panel": {
+            "expected_z": 0,
+            "matches": true,
+            "closed_plane": {
+              "stone": 9
+            },
+            "open_plane": {
+              "air": 9
+            },
+            "retracted_piston_count": 18
+          },
+          "roots": [
+            {
+              "position": {
+                "x": -22,
+                "y": 1,
+                "z": -6
+              },
+              "name": "redstone_block",
+              "properties": {}
+            },
+            {
+              "position": {
+                "x": -22,
+                "y": 1,
+                "z": 7
+              },
+              "name": "redstone_block",
+              "properties": {}
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "cycle": 1,
+      "states": [
+        {
+          "powered": true,
+          "actual_lever": {
+            "position": {
+              "x": -22,
+              "y": 4,
+              "z": 0
+            },
+            "name": "lever",
+            "properties": {
+              "powered": true,
+              "facing": "north",
+              "face": "floor"
+            }
+          },
+          "panel": {
+            "expected_z": 1,
+            "matches": false,
+            "closed_plane": {
+              "stone": 9
+            },
+            "open_plane": {
+              "air": 9
+            },
+            "retracted_piston_count": 18
+          },
+          "roots": [
+            {
+              "position": {
+                "x": -22,
+                "y": 1,
+                "z": -6
+              },
+              "name": "redstone_block",
+              "properties": {}
+            },
+            {
+              "position": {
+                "x": -22,
+                "y": 1,
+                "z": 7
+              },
+              "name": "redstone_block",
+              "properties": {}
+            }
+          ]
+        },
+        {
+          "powered": false,
+          "actual_lever": {
+            "position": {
+              "x": -22,
+              "y": 4,
+              "z": 0
+            },
+            "name": "lever",
+            "properties": {
+              "powered": false,
+              "facing": "north",
+              "face": "floor"
+            }
+          },
+          "panel": {
+            "expected_z": 0,
+            "matches": true,
+            "closed_plane": {
+              "stone": 9
+            },
+            "open_plane": {
+              "air": 9
+            },
+            "retracted_piston_count": 18
+          },
+          "roots": [
+            {
+              "position": {
+                "x": -22,
+                "y": 1,
+                "z": -6
+              },
+              "name": "redstone_block",
+              "properties": {}
+            },
+            {
+              "position": {
+                "x": -22,
+                "y": 1,
+                "z": 7
+              },
+              "name": "redstone_block",
+              "properties": {}
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "cycle": 2,
+      "states": [
+        {
+          "powered": true,
+          "actual_lever": {
+            "position": {
+              "x": -22,
+              "y": 4,
+              "z": 0
+            },
+            "name": "lever",
+            "properties": {
+              "powered": true,
+              "facing": "north",
+              "face": "floor"
+            }
+          },
+          "panel": {
+            "expected_z": 1,
+            "matches": false,
+            "closed_plane": {
+              "stone": 9
+            },
+            "open_plane": {
+              "air": 9
+            },
+            "retracted_piston_count": 18
+          },
+          "roots": [
+            {
+              "position": {
+                "x": -22,
+                "y": 1,
+                "z": -6
+              },
+              "name": "redstone_block",
+              "properties": {}
+            },
+            {
+              "position": {
+                "x": -22,
+                "y": 1,
+                "z": 7
+              },
+              "name": "redstone_block",
+              "properties": {}
+            }
+          ]
+        },
+        {
+          "powered": false,
+          "actual_lever": {
+            "position": {
+              "x": -22,
+              "y": 4,
+              "z": 0
+            },
+            "name": "lever",
+            "properties": {
+              "powered": false,
+              "facing": "north",
+              "face": "floor"
+            }
+          },
+          "panel": {
+            "expected_z": 0,
+            "matches": true,
+            "closed_plane": {
+              "stone": 9
+            },
+            "open_plane": {
+              "air": 9
+            },
+            "retracted_piston_count": 18
+          },
+          "roots": [
+            {
+              "position": {
+                "x": -22,
+                "y": 1,
+                "z": -6
+              },
+              "name": "redstone_block",
+              "properties": {}
+            },
+            {
+              "position": {
+                "x": -22,
+                "y": 1,
+                "z": 7
+              },
+              "name": "redstone_block",
+              "properties": {}
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "packet_update_count": 845
+}

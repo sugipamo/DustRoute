@@ -1,5 +1,8 @@
 # MCP JSON contracts
 
+For the public tool inventory and end-to-end usage, see the [公開機能ガイド](mcp-public-features.md). This document records detailed response contracts.
+
+
 ## Physical interface evidence
 
 Reverse-analysis responses expose `interface_evidence` with the observed
@@ -278,3 +281,39 @@ The current observed-world candidate generator handles one non-branching
 redstone-dust path with fixed endpoints inside an explicit focus. The phased
 score selector is more general, but arbitrary component relocation is not yet
 part of this API.
+
+## Mechanism interpretation through existing observation tools
+
+`show_region`, `test_circuit`, and `convert_from_circuit` include `mechanisms`.
+A known stable piston layout has `kind: piston_door`, an exact contract match,
+and an observed `state`. Other piston regions have
+`kind: unidentified_piston_mechanism`, null state/contract, and candidate
+assessments explaining why recognition was not established. This is observation,
+not mutation authorization. The current recognizer checks the entire observed
+region; it does not yet split arbitrary scenes into separate mechanisms.
+
+`show_region` captures fresh blocks. Conversion with a `circuit_id` preserves
+that snapshot; recapture explicitly for current state. No dedicated door-state
+read endpoint is exposed. See [the candidate observation schema](piston-door-mcp-v1.md#reverse-observation).
+
+`unsupported_observed_blocks` is an array of `{position, block}` records,
+including an empty array when no unsupported blocks exist. Coordinate-keyed
+objects could not serialize nonempty observations and have been replaced.
+
+## Hypothetical revision contract
+
+`test_circuit_change` accepts exactly one `circuit_id` or `revision_id`, plus
+`changes` with full replacement `properties`. It returns a saved
+`dustroute.circuit-revision.v1` record (`analysis_mode: virtual_circuit_revision`)
+with `revision_id`, `parent_revision_ids`, `base_observation_id`, exact changes
+and `validation.before` / `validation.after`. This replaces the old transient
+`before`, `after`, and `steady_state_simulation` response fields. Read the same
+record with `get_circuit_revision`; optional `include_snapshot` returns blocks.
+Both endpoints are hypothetical-only. See [the revision contract](circuit-revisions.md).
+
+Revision records may now include retained `base_snapshot` evidence.
+`new_placement` accepts `revision_id` instead of a built-in `circuit` name and
+returns a separately validated common placement operation. It requires current
+world agreement with that evidence and shared placement validation; revision
+IDs are still not operation IDs or live circuit IDs. Legacy revisions without
+base evidence cannot be reflected.

@@ -1,0 +1,410 @@
+{
+  "schema_version": "dustroute.piston-event-budget-diagnostic.v1",
+  "event_limit_scope": "cumulative for engine lifetime",
+  "case_id": "07-single-input-two-row",
+  "cycles": 20,
+  "event_budget": 20480,
+  "total_processed": 9000,
+  "phases": [
+    {
+      "error": null,
+      "pending_events": 0,
+      "phase_events": 67,
+      "powered": true,
+      "processed_events": 67,
+      "trace_status": {
+        "kind": "complete"
+      }
+    },
+    {
+      "error": null,
+      "pending_events": 0,
+      "phase_events": 383,
+      "powered": false,
+      "processed_events": 450,
+      "trace_status": {
+        "kind": "complete"
+      }
+    },
+    {
+      "error": null,
+      "pending_events": 0,
+      "phase_events": 67,
+      "powered": true,
+      "processed_events": 517,
+      "trace_status": {
+        "kind": "complete"
+      }
+    },
+    {
+      "error": null,
+      "pending_events": 0,
+      "phase_events": 383,
+      "powered": false,
+      "processed_events": 900,
+      "trace_status": {
+        "kind": "complete"
+      }
+    },
+    {
+      "error": null,
+      "pending_events": 0,
+      "phase_events": 67,
+      "powered": true,
+      "processed_events": 967,
+      "trace_status": {
+        "kind": "complete"
+      }
+    },
+    {
+      "error": null,
+      "pending_events": 0,
+      "phase_events": 383,
+      "powered": false,
+      "processed_events": 1350,
+      "trace_status": {
+        "kind": "complete"
+      }
+    },
+    {
+      "error": null,
+      "pending_events": 0,
+      "phase_events": 67,
+      "powered": true,
+      "processed_events": 1417,
+      "trace_status": {
+        "kind": "complete"
+      }
+    },
+    {
+      "error": null,
+      "pending_events": 0,
+      "phase_events": 383,
+      "powered": false,
+      "processed_events": 1800,
+      "trace_status": {
+        "kind": "complete"
+      }
+    },
+    {
+      "error": null,
+      "pending_events": 0,
+      "phase_events": 67,
+      "powered": true,
+      "processed_events": 1867,
+      "trace_status": {
+        "kind": "complete"
+      }
+    },
+    {
+      "error": null,
+      "pending_events": 0,
+      "phase_events": 383,
+      "powered": false,
+      "processed_events": 2250,
+      "trace_status": {
+        "kind": "complete"
+      }
+    },
+    {
+      "error": null,
+      "pending_events": 0,
+      "phase_events": 67,
+      "powered": true,
+      "processed_events": 2317,
+      "trace_status": {
+        "kind": "complete"
+      }
+    },
+    {
+      "error": null,
+      "pending_events": 0,
+      "phase_events": 383,
+      "powered": false,
+      "processed_events": 2700,
+      "trace_status": {
+        "kind": "complete"
+      }
+    },
+    {
+      "error": null,
+      "pending_events": 0,
+      "phase_events": 67,
+      "powered": true,
+      "processed_events": 2767,
+      "trace_status": {
+        "kind": "complete"
+      }
+    },
+    {
+      "error": null,
+      "pending_events": 0,
+      "phase_events": 383,
+      "powered": false,
+      "processed_events": 3150,
+      "trace_status": {
+        "kind": "complete"
+      }
+    },
+    {
+      "error": null,
+      "pending_events": 0,
+      "phase_events": 67,
+      "powered": true,
+      "processed_events": 3217,
+      "trace_status": {
+        "kind": "complete"
+      }
+    },
+    {
+      "error": null,
+      "pending_events": 0,
+      "phase_events": 383,
+      "powered": false,
+      "processed_events": 3600,
+      "trace_status": {
+        "kind": "complete"
+      }
+    },
+    {
+      "error": null,
+      "pending_events": 0,
+      "phase_events": 67,
+      "powered": true,
+      "processed_events": 3667,
+      "trace_status": {
+        "kind": "complete"
+      }
+    },
+    {
+      "error": null,
+      "pending_events": 0,
+      "phase_events": 383,
+      "powered": false,
+      "processed_events": 4050,
+      "trace_status": {
+        "kind": "complete"
+      }
+    },
+    {
+      "error": null,
+      "pending_events": 0,
+      "phase_events": 67,
+      "powered": true,
+      "processed_events": 4117,
+      "trace_status": {
+        "kind": "complete"
+      }
+    },
+    {
+      "error": null,
+      "pending_events": 0,
+      "phase_events": 383,
+      "powered": false,
+      "processed_events": 4500,
+      "trace_status": {
+        "kind": "complete"
+      }
+    },
+    {
+      "error": null,
+      "pending_events": 0,
+      "phase_events": 67,
+      "powered": true,
+      "processed_events": 4567,
+      "trace_status": {
+        "kind": "complete"
+      }
+    },
+    {
+      "error": null,
+      "pending_events": 0,
+      "phase_events": 383,
+      "powered": false,
+      "processed_events": 4950,
+      "trace_status": {
+        "kind": "complete"
+      }
+    },
+    {
+      "error": null,
+      "pending_events": 0,
+      "phase_events": 67,
+      "powered": true,
+      "processed_events": 5017,
+      "trace_status": {
+        "kind": "complete"
+      }
+    },
+    {
+      "error": null,
+      "pending_events": 0,
+      "phase_events": 383,
+      "powered": false,
+      "processed_events": 5400,
+      "trace_status": {
+        "kind": "complete"
+      }
+    },
+    {
+      "error": null,
+      "pending_events": 0,
+      "phase_events": 67,
+      "powered": true,
+      "processed_events": 5467,
+      "trace_status": {
+        "kind": "complete"
+      }
+    },
+    {
+      "error": null,
+      "pending_events": 0,
+      "phase_events": 383,
+      "powered": false,
+      "processed_events": 5850,
+      "trace_status": {
+        "kind": "complete"
+      }
+    },
+    {
+      "error": null,
+      "pending_events": 0,
+      "phase_events": 67,
+      "powered": true,
+      "processed_events": 5917,
+      "trace_status": {
+        "kind": "complete"
+      }
+    },
+    {
+      "error": null,
+      "pending_events": 0,
+      "phase_events": 383,
+      "powered": false,
+      "processed_events": 6300,
+      "trace_status": {
+        "kind": "complete"
+      }
+    },
+    {
+      "error": null,
+      "pending_events": 0,
+      "phase_events": 67,
+      "powered": true,
+      "processed_events": 6367,
+      "trace_status": {
+        "kind": "complete"
+      }
+    },
+    {
+      "error": null,
+      "pending_events": 0,
+      "phase_events": 383,
+      "powered": false,
+      "processed_events": 6750,
+      "trace_status": {
+        "kind": "complete"
+      }
+    },
+    {
+      "error": null,
+      "pending_events": 0,
+      "phase_events": 67,
+      "powered": true,
+      "processed_events": 6817,
+      "trace_status": {
+        "kind": "complete"
+      }
+    },
+    {
+      "error": null,
+      "pending_events": 0,
+      "phase_events": 383,
+      "powered": false,
+      "processed_events": 7200,
+      "trace_status": {
+        "kind": "complete"
+      }
+    },
+    {
+      "error": null,
+      "pending_events": 0,
+      "phase_events": 67,
+      "powered": true,
+      "processed_events": 7267,
+      "trace_status": {
+        "kind": "complete"
+      }
+    },
+    {
+      "error": null,
+      "pending_events": 0,
+      "phase_events": 383,
+      "powered": false,
+      "processed_events": 7650,
+      "trace_status": {
+        "kind": "complete"
+      }
+    },
+    {
+      "error": null,
+      "pending_events": 0,
+      "phase_events": 67,
+      "powered": true,
+      "processed_events": 7717,
+      "trace_status": {
+        "kind": "complete"
+      }
+    },
+    {
+      "error": null,
+      "pending_events": 0,
+      "phase_events": 383,
+      "powered": false,
+      "processed_events": 8100,
+      "trace_status": {
+        "kind": "complete"
+      }
+    },
+    {
+      "error": null,
+      "pending_events": 0,
+      "phase_events": 67,
+      "powered": true,
+      "processed_events": 8167,
+      "trace_status": {
+        "kind": "complete"
+      }
+    },
+    {
+      "error": null,
+      "pending_events": 0,
+      "phase_events": 383,
+      "powered": false,
+      "processed_events": 8550,
+      "trace_status": {
+        "kind": "complete"
+      }
+    },
+    {
+      "error": null,
+      "pending_events": 0,
+      "phase_events": 67,
+      "powered": true,
+      "processed_events": 8617,
+      "trace_status": {
+        "kind": "complete"
+      }
+    },
+    {
+      "error": null,
+      "pending_events": 0,
+      "phase_events": 383,
+      "powered": false,
+      "processed_events": 9000,
+      "trace_status": {
+        "kind": "complete"
+      }
+    }
+  ]
+}

@@ -1,0 +1,111 @@
+{
+  "schema_version": "dustroute.piston-low-layer-case.v1",
+  "id": "01-normal-stone",
+  "minecraft_version": "1.21.11",
+  "initial": {
+    "min": {
+      "x": -2,
+      "y": -1,
+      "z": -1
+    },
+    "max": {
+      "x": 3,
+      "y": 1,
+      "z": 1
+    },
+    "blocks": [
+      {
+        "pos": {
+          "x": -1,
+          "y": -1,
+          "z": 0
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 0,
+          "y": -1,
+          "z": 0
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 1,
+          "y": -1,
+          "z": 0
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 2,
+          "y": -1,
+          "z": 0
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": -1,
+          "y": 0,
+          "z": 0
+        },
+        "name": "minecraft:lever",
+        "properties": {
+          "face": "floor",
+          "facing": "east",
+          "powered": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "name": "minecraft:piston",
+        "properties": {
+          "facing": "east",
+          "extended": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 1,
+          "y": 0,
+          "z": 0
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      }
+    ]
+  },
+  "input": {
+    "x": -1,
+    "y": 0,
+    "z": 0
+  },
+  "actions": [
+    true,
+    false
+  ],
+  "settle_ms": 1500,
+  "properties": [
+    "facing",
+    "extended",
+    "type",
+    "powered"
+  ],
+  "comparison": "full bounded region, block identities and listed stable properties; timing is recorded but not asserted",
+  "expected": {
+    "extended_target_x": 2,
+    "retracted_target_x": 2,
+    "target_name": "minecraft:stone"
+  }
+}

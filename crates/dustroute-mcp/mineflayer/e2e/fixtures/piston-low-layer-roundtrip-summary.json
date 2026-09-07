@@ -1,0 +1,86 @@
+{
+  "schema_version": "dustroute.piston-low-layer-live.v1",
+  "captured_at": "2026-09-05T07:31:43.729Z",
+  "minecraft_version": "1.21.11",
+  "git_head": "3200c3f924a54cf40000068ba31617980c05993e",
+  "offset": {
+    "x": 1100,
+    "y": 180,
+    "z": 1000
+  },
+  "timing_evidence": "wall-clock and packet order only; no exact-tick equivalence claim",
+  "cleanup_verified": true,
+  "status": "all_declared_cases_matched",
+  "comparison_scope": "all 54 cells in each bounded region; block identity plus facing/extended/type/powered as applicable",
+  "trials": [
+    {
+      "case_id": "03-sticky-piston",
+      "repetition": 0,
+      "fixture_sha256": "7ea0e94814ce58f29bf29e8eb02b270e96a3ce8713814c254247334e17b82398",
+      "initial_difference_count": 0,
+      "phases": [
+        {
+          "powered": true,
+          "expected_mechanics": true,
+          "simulator_error": null,
+          "differences": [],
+          "difference_count": 0
+        },
+        {
+          "powered": false,
+          "expected_mechanics": true,
+          "simulator_error": null,
+          "differences": [],
+          "difference_count": 0
+        }
+      ]
+    },
+    {
+      "case_id": "03-sticky-piston",
+      "repetition": 1,
+      "fixture_sha256": "7ea0e94814ce58f29bf29e8eb02b270e96a3ce8713814c254247334e17b82398",
+      "initial_difference_count": 0,
+      "phases": [
+        {
+          "powered": true,
+          "expected_mechanics": true,
+          "simulator_error": null,
+          "differences": [],
+          "difference_count": 0
+        },
+        {
+          "powered": false,
+          "expected_mechanics": true,
+          "simulator_error": null,
+          "differences": [],
+          "difference_count": 0
+        }
+      ]
+    },
+    {
+      "case_id": "03-sticky-piston",
+      "repetition": 2,
+      "fixture_sha256": "7ea0e94814ce58f29bf29e8eb02b270e96a3ce8713814c254247334e17b82398",
+      "initial_difference_count": 0,
+      "phases": [
+        {
+          "powered": true,
+          "expected_mechanics": true,
+          "simulator_error": null,
+          "differences": [],
+          "difference_count": 0
+        },
+        {
+          "powered": false,
+          "expected_mechanics": true,
+          "simulator_error": null,
+          "differences": [],
+          "difference_count": 0
+        }
+      ]
+    }
+  ],
+  "not_run": [
+    "two-piston compound operation"
+  ]
+}

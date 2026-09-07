@@ -11,7 +11,8 @@ use crate::multinet::{
 use crate::physical::{CellId, PhysicalError, PlacementCircuit, TerminalDirection};
 use crate::port_realization::PortRealizationError;
 use crate::routing::RouterConfig;
-use crate::world::{Pos, World};
+use crate::world::Pos;
+use dustroute_minecraft::{ValidatedWorld, WorldValidationError};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct BaselineCompileConfig {
@@ -40,7 +41,7 @@ pub struct BaselineCompileResult {
     pub primitive_dag: LogicDag,
     pub physical: PlacementCircuit,
     pub routing: MultiNetRouting,
-    pub world: World,
+    pub world: ValidatedWorld,
     pub node_to_cell: BTreeMap<NodeId, CellId>,
     pub input_positions: BTreeMap<String, Pos>,
     pub output_positions: BTreeMap<String, Pos>,
@@ -56,6 +57,7 @@ pub enum CompileError {
     Ripup(RipupRoutingError),
     MissingCell(GateKind),
     Illegal(LegalityReport),
+    InvalidWorld(WorldValidationError),
 }
 
 impl Display for CompileError {
@@ -67,6 +69,7 @@ impl Display for CompileError {
             Self::Routing(error) => Display::fmt(error, f),
             Self::Ripup(error) => Display::fmt(error, f),
             Self::MissingCell(kind) => write!(f, "no baseline cell for {kind:?}"),
+            Self::InvalidWorld(error) => Display::fmt(error, f),
             Self::Illegal(report) => write!(f, "compiled routing is illegal: {report:?}"),
         }
     }
@@ -212,6 +215,7 @@ impl BaselineCompiler {
         if !legality.valid() {
             return Err(CompileError::Illegal(legality));
         }
+        let world = ValidatedWorld::try_from(world).map_err(CompileError::InvalidWorld)?;
         let input_positions = primitive
             .nodes()
             .iter()
@@ -348,7 +352,7 @@ mod tests {
             (true, false, false, true),
             (true, true, true, false),
         ] {
-            let mut world = result.world.clone();
+            let mut world = result.world.clone().into_world();
             for (name, value) in [("a", a), ("b", b)] {
                 if value {
                     world.set(
@@ -390,7 +394,7 @@ mod tests {
         let result = BaselineCompiler::new(BaselineCompileConfig::default())
             .compile(&mux_2_to_1())
             .unwrap();
-        let mut world = result.world.clone();
+        let mut world = result.world.clone().into_world();
         world.set(
             result.input_positions["s"].offset(-1, 0, 0),
             Block::new(BlockKind::RedstoneBlock),

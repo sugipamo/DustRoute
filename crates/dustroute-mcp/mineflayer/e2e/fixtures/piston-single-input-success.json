@@ -1,0 +1,299 @@
+{
+  "schema_version": "dustroute.piston-low-layer-live.v1",
+  "captured_at": "2026-09-05T10:45:43.131Z",
+  "minecraft_version": "1.21.11",
+  "git_head": "3200c3f924a54cf40000068ba31617980c05993e",
+  "offset": {
+    "x": 1100,
+    "y": 180,
+    "z": 1000
+  },
+  "timing_evidence": "wall-clock and packet order only; no exact-tick equivalence claim",
+  "cleanup_verified": true,
+  "status": "all_declared_cases_matched",
+  "comparison_scope": "324 cells, piston and lever state plus dust power; three independent close/open/reclose trials with walking",
+  "trials": [
+    {
+      "case_id": "07-single-input-two-row",
+      "repetition": 0,
+      "fixture_sha256": "eaf1fb7eb60be57089e0e0f65f4771d721ecdf3b93609dbad47880c2faf77a70",
+      "initial_difference_count": 0,
+      "phases": [
+        {
+          "input": {
+            "x": 2,
+            "y": 0,
+            "z": 4
+          },
+          "powered": true,
+          "expected_mechanics": true,
+          "simulator_error": null,
+          "differences": [],
+          "traversal": {
+            "expected_open": false,
+            "before": {
+              "x": 2.5,
+              "y": 0,
+              "z": -1.5
+            },
+            "after": {
+              "x": 2.5000000000227374,
+              "y": 0,
+              "z": -0.2999999999999545
+            },
+            "crossed": false,
+            "blocked": true,
+            "matched": true,
+            "evidence": "adventure mode, forward only, no jump/flight; client position after correction settling"
+          }
+        },
+        {
+          "input": {
+            "x": 2,
+            "y": 0,
+            "z": 4
+          },
+          "powered": false,
+          "expected_mechanics": true,
+          "simulator_error": null,
+          "differences": [],
+          "traversal": {
+            "expected_open": true,
+            "before": {
+              "x": 2.5,
+              "y": 0,
+              "z": -1.5
+            },
+            "after": {
+              "x": 2.5000000000227374,
+              "y": 0,
+              "z": 2.810304338595188
+            },
+            "crossed": true,
+            "blocked": false,
+            "matched": true,
+            "evidence": "adventure mode, forward only, no jump/flight; client position after correction settling"
+          }
+        },
+        {
+          "input": {
+            "x": 2,
+            "y": 0,
+            "z": 4
+          },
+          "powered": true,
+          "expected_mechanics": true,
+          "simulator_error": null,
+          "differences": [],
+          "traversal": {
+            "expected_open": false,
+            "before": {
+              "x": 2.5,
+              "y": 0,
+              "z": -1.5
+            },
+            "after": {
+              "x": 2.5000000000227374,
+              "y": 0,
+              "z": -0.2999999999999545
+            },
+            "crossed": false,
+            "blocked": true,
+            "matched": true,
+            "evidence": "adventure mode, forward only, no jump/flight; client position after correction settling"
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "07-single-input-two-row",
+      "repetition": 1,
+      "fixture_sha256": "eaf1fb7eb60be57089e0e0f65f4771d721ecdf3b93609dbad47880c2faf77a70",
+      "initial_difference_count": 0,
+      "phases": [
+        {
+          "input": {
+            "x": 2,
+            "y": 0,
+            "z": 4
+          },
+          "powered": true,
+          "expected_mechanics": true,
+          "simulator_error": null,
+          "differences": [],
+          "traversal": {
+            "expected_open": false,
+            "before": {
+              "x": 2.5,
+              "y": 0,
+              "z": -1.5
+            },
+            "after": {
+              "x": 2.500000000027285,
+              "y": 0,
+              "z": -0.2999999999999545
+            },
+            "crossed": false,
+            "blocked": true,
+            "matched": true,
+            "evidence": "adventure mode, forward only, no jump/flight; client position after correction settling"
+          }
+        },
+        {
+          "input": {
+            "x": 2,
+            "y": 0,
+            "z": 4
+          },
+          "powered": false,
+          "expected_mechanics": true,
+          "simulator_error": null,
+          "differences": [],
+          "traversal": {
+            "expected_open": true,
+            "before": {
+              "x": 2.5,
+              "y": 0,
+              "z": -1.5
+            },
+            "after": {
+              "x": 2.5000000000259206,
+              "y": 0,
+              "z": 2.594445254593438
+            },
+            "crossed": true,
+            "blocked": false,
+            "matched": true,
+            "evidence": "adventure mode, forward only, no jump/flight; client position after correction settling"
+          }
+        },
+        {
+          "input": {
+            "x": 2,
+            "y": 0,
+            "z": 4
+          },
+          "powered": true,
+          "expected_mechanics": true,
+          "simulator_error": null,
+          "differences": [],
+          "traversal": {
+            "expected_open": false,
+            "before": {
+              "x": 2.5,
+              "y": 0,
+              "z": -1.5
+            },
+            "after": {
+              "x": 2.500000000027285,
+              "y": 0,
+              "z": -0.2999999999999545
+            },
+            "crossed": false,
+            "blocked": true,
+            "matched": true,
+            "evidence": "adventure mode, forward only, no jump/flight; client position after correction settling"
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "07-single-input-two-row",
+      "repetition": 2,
+      "fixture_sha256": "eaf1fb7eb60be57089e0e0f65f4771d721ecdf3b93609dbad47880c2faf77a70",
+      "initial_difference_count": 0,
+      "phases": [
+        {
+          "input": {
+            "x": 2,
+            "y": 0,
+            "z": 4
+          },
+          "powered": true,
+          "expected_mechanics": true,
+          "simulator_error": null,
+          "differences": [],
+          "traversal": {
+            "expected_open": false,
+            "before": {
+              "x": 2.5,
+              "y": 0,
+              "z": -1.5
+            },
+            "after": {
+              "x": 2.500000000028649,
+              "y": 0,
+              "z": -0.2999999999999545
+            },
+            "crossed": false,
+            "blocked": true,
+            "matched": true,
+            "evidence": "adventure mode, forward only, no jump/flight; client position after correction settling"
+          }
+        },
+        {
+          "input": {
+            "x": 2,
+            "y": 0,
+            "z": 4
+          },
+          "powered": false,
+          "expected_mechanics": true,
+          "simulator_error": null,
+          "differences": [],
+          "traversal": {
+            "expected_open": true,
+            "before": {
+              "x": 2.5,
+              "y": 0,
+              "z": -1.5
+            },
+            "after": {
+              "x": 2.5000000000318323,
+              "y": 0,
+              "z": 2.810304338595188
+            },
+            "crossed": true,
+            "blocked": false,
+            "matched": true,
+            "evidence": "adventure mode, forward only, no jump/flight; client position after correction settling"
+          }
+        },
+        {
+          "input": {
+            "x": 2,
+            "y": 0,
+            "z": 4
+          },
+          "powered": true,
+          "expected_mechanics": true,
+          "simulator_error": null,
+          "differences": [],
+          "traversal": {
+            "expected_open": false,
+            "before": {
+              "x": 2.5,
+              "y": 0,
+              "z": -1.5
+            },
+            "after": {
+              "x": 2.5000000000318323,
+              "y": 0,
+              "z": -0.2999999999999545
+            },
+            "crossed": false,
+            "blocked": true,
+            "matched": true,
+            "evidence": "adventure mode, forward only, no jump/flight; client position after correction settling"
+          }
+        }
+      ]
+    }
+  ],
+  "source_sha256": {
+    "crates/dustroute-minecraft/src/blocks/piston.rs": "97582b2d3b34c63aec96e5a308d569f3b302de9ef17a00a2228c6e3d678a4151",
+    "crates/dustroute-minecraft/src/time/engine.rs": "5e3b4551ee9bb5f1c42ff08e7dbfe3adbb51ecba95a4456ba241751feb0872bb",
+    "crates/dustroute-translate/examples/piston_low_layer_replay.rs": "a906bfabb7af46a81e3b3b41f345b506607573e40760e41627e691cc76be615b",
+    "crates/dustroute-mcp/mineflayer/e2e/piston-low-layer-live.js": "844798d6312dccc1e0e95c92b331e765fbbc4e6d782f9c1fe46923db996c1800"
+  }
+}

@@ -25,13 +25,18 @@ fn report(output: std::process::Output) -> Value {
 #[test]
 fn cycle_command_executes_fixture_and_returns_machine_readable_traces() {
     let output = cli()
-        .args(["run-piston-door", FIXTURE, "cycle"])
+        .args(["run-piston-door", FIXTURE, "cycle", "--diagnostic"])
         .output()
         .expect("run-piston-door should start");
     assert!(output.status.success());
     let report = report(output);
     assert_eq!(report["ok"], true);
-    assert_eq!(report["status"], "complete");
+    assert_eq!(report["status"], "diagnostic_complete");
+    assert_eq!(report["execution_mode"], "diagnostic");
+    assert_eq!(
+        report["placement_validation"]["error"]["code"],
+        "world_validation_failed"
+    );
     assert_eq!(
         report["report_schema"],
         "dustroute.piston-door-execution-report.v1"
@@ -62,6 +67,7 @@ fn open_command_accepts_translated_layouts() {
         .args([
             "run-piston-door",
             FIXTURE,
+            "--diagnostic",
             "open",
             "--translate",
             "37,11,29",
@@ -91,7 +97,7 @@ fn open_command_accepts_translated_layouts() {
 #[test]
 fn open_command_accepts_json_from_stdin() {
     let mut child = cli()
-        .args(["run-piston-door", "-", "open"])
+        .args(["run-piston-door", "-", "open", "--diagnostic"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .spawn()
@@ -155,4 +161,24 @@ fn invalid_mode_or_option_returns_structured_argument_error() {
     assert_eq!(report["ok"], false);
     assert_eq!(report["error"]["code"], "invalid_arguments");
     assert_eq!(report["error"]["stage"], "arguments");
+}
+
+#[test]
+fn default_execution_returns_structured_validation_failure() {
+    let output = cli()
+        .args(["run-piston-door", FIXTURE, "cycle"])
+        .output()
+        .unwrap();
+    assert!(!output.status.success());
+    let report = report(output);
+    assert_eq!(report["error"]["code"], "world_validation_failed");
+    assert_eq!(report["error"]["stage"], "validation");
+    assert!(
+        report["error"]["issues"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|i| i["code"] == "synthetic_input_driver")
+    );
+    assert!(report.get("event_trace").is_none());
 }

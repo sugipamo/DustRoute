@@ -401,8 +401,22 @@ pub struct PhysicsEngine {
 }
 
 impl PhysicsEngine {
+    /// Starts from a checked initial placement. Raw observations and synthetic
+    /// model fixtures must explicitly use `new_diagnostic`.
+    ///
+    /// ```compile_fail
+    /// use dustroute_minecraft::{World, time::PhysicsEngine};
+    /// PhysicsEngine::new(World::new(), 100);
+    /// ```
     #[must_use]
-    pub fn new(world: World, max_events: usize) -> Self {
+    pub fn new(world: crate::ValidatedWorld, max_events: usize) -> Self {
+        Self::new_diagnostic(world.into_world(), max_events)
+    }
+
+    /// Runs an unvalidated model for diagnostics. Completion is not placement
+    /// or live-execution approval; export and placement must validate again.
+    #[must_use]
+    pub fn new_diagnostic(world: World, max_events: usize) -> Self {
         Self {
             world,
             queue: PhysicsEventQueue::default(),
@@ -1610,7 +1624,7 @@ impl PhysicsEngine {
                 }
                 Ok(EventOutcome {
                     changes: Vec::new(),
-                    delta: Some(plan.world_delta().clone()),
+                    delta: Some(plan.completion_plan(world)?.world_delta().clone()),
                     queued: Vec::new(),
                 })
             }
@@ -1831,7 +1845,7 @@ mod tests {
     #[test]
     fn scheduler_profile_is_retained_in_checkpoint_and_state_key() {
         let profile = SchedulerProfile::minecraft_java_1_21_11_modelled();
-        let engine = PhysicsEngine::new(World::new(), 8).with_scheduler_profile(profile);
+        let engine = PhysicsEngine::new_diagnostic(World::new(), 8).with_scheduler_profile(profile);
         assert_eq!(engine.scheduler_profile(), profile);
         assert_eq!(engine.checkpoint().scheduler_profile(), profile);
         assert_eq!(engine.execution_state_key().scheduler_profile, profile);
@@ -1844,7 +1858,8 @@ mod tests {
             ..SchedulerProfile::default()
         };
         let pos = Pos::new(1, 2, 3);
-        let mut engine = PhysicsEngine::new(World::new(), 8).with_scheduler_profile(profile);
+        let mut engine =
+            PhysicsEngine::new_diagnostic(World::new(), 8).with_scheduler_profile(profile);
         engine.schedule_external(
             4,
             pos,
@@ -1886,7 +1901,7 @@ mod tests {
     #[test]
     fn records_same_tick_transitions_in_causal_order() {
         let pos = Pos::new(1, 2, 3);
-        let mut engine = PhysicsEngine::new(World::new(), 8);
+        let mut engine = PhysicsEngine::new_diagnostic(World::new(), 8);
         engine.schedule_external(
             10,
             pos,
@@ -1929,7 +1944,7 @@ mod tests {
     #[test]
     fn step_transition_exposes_elapsed_time_and_noop_events_separately() {
         let pos = Pos::new(1, 2, 3);
-        let mut engine = PhysicsEngine::new(World::new(), 8);
+        let mut engine = PhysicsEngine::new_diagnostic(World::new(), 8);
         engine.schedule_external(
             10,
             pos,
@@ -2022,7 +2037,7 @@ mod tests {
     #[test]
     fn stops_an_unbounded_update_chain() {
         let pos = Pos::new(0, 0, 0);
-        let mut engine = PhysicsEngine::new(World::new(), 3);
+        let mut engine = PhysicsEngine::new_diagnostic(World::new(), 3);
         engine.schedule_external(0, pos, PhysicsEventKind::ScheduledBlockTick);
         let error = engine
             .run_until_idle(|_, _| EventOutcome {
@@ -2045,7 +2060,7 @@ mod tests {
     #[test]
     fn piston_runner_rejects_without_consuming_non_piston_events() {
         let pos = Pos::new(0, 0, 0);
-        let mut engine = PhysicsEngine::new(World::new(), 8);
+        let mut engine = PhysicsEngine::new_diagnostic(World::new(), 8);
         let event_id =
             engine.schedule_external(4, pos, PhysicsEventKind::NeighborUpdate { source: pos });
         let error = engine.run_piston_events().unwrap_err();
@@ -2069,7 +2084,7 @@ mod tests {
         piston.facing = Some(crate::Facing::East);
         world.set(piston_pos, piston);
         world.set(Pos::new(1, 1, 0), Block::new(BlockKind::Solid));
-        let mut engine = PhysicsEngine::new(world.clone(), 8);
+        let mut engine = PhysicsEngine::new_diagnostic(world.clone(), 8);
         let piston_event = engine.schedule_piston_action(0, piston_pos, PistonAction::Extend);
         let other_event = engine.schedule_external(
             1,
@@ -2101,7 +2116,7 @@ mod tests {
     #[test]
     fn zero_delay_child_cannot_move_back_to_an_earlier_phase() {
         let pos = Pos::new(0, 0, 0);
-        let mut engine = PhysicsEngine::new(World::new(), 8);
+        let mut engine = PhysicsEngine::new_diagnostic(World::new(), 8);
         engine.schedule_external_in_phase(
             4,
             pos,
@@ -2151,7 +2166,8 @@ mod tests {
             initial_delay_max_game_ticks: 1,
             movement_game_ticks: 0,
         };
-        let mut engine = PhysicsEngine::new(world, 8).with_piston_motion_profile(profile);
+        let mut engine =
+            PhysicsEngine::new_diagnostic(world, 8).with_piston_motion_profile(profile);
         let event_id = engine.schedule_piston_action(4, piston_pos, PistonAction::Extend);
 
         let error = engine.run_piston_events().unwrap_err();
@@ -2179,8 +2195,8 @@ mod tests {
         world.set(piston_pos, piston);
         world.set(Pos::new(1, 1, 0), Block::new(BlockKind::Solid));
         let known_region = Region::new(Pos::new(-1, 0, -1), Pos::new(1, 2, 1));
-        let mut engine =
-            PhysicsEngine::new(world.clone(), 8).with_piston_planning_region(known_region);
+        let mut engine = PhysicsEngine::new_diagnostic(world.clone(), 8)
+            .with_piston_planning_region(known_region);
         let event_id = engine.schedule_piston_action(0, piston_pos, PistonAction::Extend);
 
         let error = engine.run_piston_events().unwrap_err();
@@ -2198,7 +2214,7 @@ mod tests {
     #[test]
     fn checkpoint_round_trip_restores_world_queue_and_trace_cursors() {
         let pos = Pos::new(2, 0, 0);
-        let mut engine = PhysicsEngine::new(World::new(), 8);
+        let mut engine = PhysicsEngine::new_diagnostic(World::new(), 8);
         engine.schedule_external(
             4,
             pos,
@@ -2233,7 +2249,7 @@ mod tests {
     #[test]
     fn rejected_step_restores_scheduler_state_and_retry_order() {
         let pos = Pos::new(2, 0, 0);
-        let mut engine = PhysicsEngine::new(World::new(), 8);
+        let mut engine = PhysicsEngine::new_diagnostic(World::new(), 8);
         engine.schedule_external(0, pos, PhysicsEventKind::ScheduledBlockTick);
         let mut warmup = |_: &PhysicsEvent, _: &World| Ok(EventOutcome::default());
         engine.step_transition(&mut warmup).unwrap();
@@ -2279,7 +2295,7 @@ mod tests {
     #[test]
     fn legacy_outcome_duplicate_changes_are_rejected_atomically() {
         let pos = Pos::new(2, 0, 0);
-        let mut engine = PhysicsEngine::new(World::new(), 8);
+        let mut engine = PhysicsEngine::new_diagnostic(World::new(), 8);
         engine.schedule_external(1, pos, PhysicsEventKind::ScheduledBlockTick);
         let before = engine.execution_state_key();
         let mut handler = |_: &PhysicsEvent, _: &World| {
@@ -2311,8 +2327,8 @@ mod tests {
     fn execution_keys_distinguish_same_world_with_different_pending_work() {
         let pos = Pos::new(0, 0, 0);
         let world = World::new();
-        let first = PhysicsEngine::new(world.clone(), 8);
-        let mut second = PhysicsEngine::new(world, 8);
+        let first = PhysicsEngine::new_diagnostic(world.clone(), 8);
+        let mut second = PhysicsEngine::new_diagnostic(world, 8);
         second.schedule_external(2, pos, PhysicsEventKind::ScheduledBlockTick);
         assert_ne!(first.execution_state_key(), second.execution_state_key());
         assert_eq!(first.state_id(), second.state_id());
@@ -2321,7 +2337,7 @@ mod tests {
     #[test]
     fn checked_external_schedule_rejects_a_past_same_tick_phase() {
         let pos = Pos::new(0, 0, 0);
-        let mut engine = PhysicsEngine::new(World::new(), 8);
+        let mut engine = PhysicsEngine::new_diagnostic(World::new(), 8);
         engine.schedule_external_in_phase(
             4,
             pos,
@@ -2363,7 +2379,7 @@ mod tests {
     #[test]
     fn unchecked_external_phase_regression_is_rejected_before_handler() {
         let pos = Pos::new(0, 0, 0);
-        let mut engine = PhysicsEngine::new(World::new(), 8);
+        let mut engine = PhysicsEngine::new_diagnostic(World::new(), 8);
         engine.schedule_external_in_phase(
             4,
             pos,
@@ -2400,7 +2416,8 @@ mod tests {
     #[test]
     fn same_tick_microstep_budget_is_independent_from_total_event_budget() {
         let pos = Pos::new(0, 0, 0);
-        let mut engine = PhysicsEngine::new(World::new(), 100).with_max_microsteps_per_game_tick(2);
+        let mut engine =
+            PhysicsEngine::new_diagnostic(World::new(), 100).with_max_microsteps_per_game_tick(2);
         engine.schedule_external(4, pos, PhysicsEventKind::ScheduledBlockTick);
         let error = engine
             .run_until_idle(|_, _| EventOutcome {
@@ -2436,7 +2453,7 @@ mod tests {
         piston.facing = Some(crate::Facing::East);
         world.set(piston_pos, piston);
         world.set(Pos::new(1, 1, 0), Block::new(BlockKind::Solid));
-        let mut engine = PhysicsEngine::new(world, 8);
+        let mut engine = PhysicsEngine::new_diagnostic(world, 8);
         let event_id = engine.schedule_piston_action(4, piston_pos, PistonAction::Extend);
         engine.run_piston_events().unwrap();
         assert_eq!(
@@ -2504,7 +2521,8 @@ mod tests {
     fn redstone_input_drives_normal_piston_through_neighbor_block_event_and_completion() {
         let (world, piston_pos, input_pos, known_region) =
             redstone_piston_world(crate::PistonVariant::Normal);
-        let mut engine = PhysicsEngine::new(world, 16).with_piston_planning_region(known_region);
+        let mut engine =
+            PhysicsEngine::new_diagnostic(world, 16).with_piston_planning_region(known_region);
         let input_id = engine.schedule_redstone_input(0, input_pos, true);
         engine.run_redstone_piston_events().unwrap();
 
@@ -2574,7 +2592,7 @@ mod tests {
         for variant in [crate::PistonVariant::Normal, crate::PistonVariant::Sticky] {
             let (world, piston_pos, input_pos, known_region) = redstone_piston_world(variant);
             let mut engine =
-                PhysicsEngine::new(world, 32).with_piston_planning_region(known_region);
+                PhysicsEngine::new_diagnostic(world, 32).with_piston_planning_region(known_region);
             engine.schedule_redstone_input(0, input_pos, true);
             engine.run_redstone_piston_events().unwrap();
             let off_tick = engine.time().game_tick.saturating_add(1);
@@ -2620,7 +2638,8 @@ mod tests {
         let mut north_lever = Block::new(BlockKind::Lever);
         north_lever.powered = Some(false);
         world.set(north_input, north_lever);
-        let mut engine = PhysicsEngine::new(world, 32).with_piston_planning_region(known_region);
+        let mut engine =
+            PhysicsEngine::new_diagnostic(world, 32).with_piston_planning_region(known_region);
         engine.schedule_redstone_input(0, west_input, true);
         engine.schedule_redstone_input(0, north_input, true);
 
@@ -2662,7 +2681,8 @@ mod tests {
         let mut north_lever = Block::new(BlockKind::Lever);
         north_lever.powered = Some(false);
         world.set(north_input, north_lever);
-        let mut engine = PhysicsEngine::new(world, 32).with_piston_planning_region(known_region);
+        let mut engine =
+            PhysicsEngine::new_diagnostic(world, 32).with_piston_planning_region(known_region);
         engine.schedule_redstone_input(0, west_input, true);
         engine.run_redstone_piston_events().unwrap();
 
@@ -2701,7 +2721,8 @@ mod tests {
         input.observed_name = Some("minecraft:lever".to_owned());
         input.observation_classification = crate::ObservationClassification::Exact;
         input.observed_properties.clear();
-        let mut engine = PhysicsEngine::new(world, 16).with_piston_planning_region(known_region);
+        let mut engine =
+            PhysicsEngine::new_diagnostic(world, 16).with_piston_planning_region(known_region);
         engine.schedule_redstone_input(0, input_pos, true);
         engine.run_redstone_piston_events().unwrap();
 
@@ -2723,8 +2744,8 @@ mod tests {
         let (world, _piston_pos, input_pos, _) =
             redstone_piston_world(crate::PistonVariant::Normal);
         let known_region = Region::new(Pos::new(0, 0, -1), Pos::new(2, 2, 1));
-        let mut engine =
-            PhysicsEngine::new(world.clone(), 16).with_piston_planning_region(known_region);
+        let mut engine = PhysicsEngine::new_diagnostic(world.clone(), 16)
+            .with_piston_planning_region(known_region);
         let input_id = engine.schedule_redstone_input(0, input_pos, true);
         let error = engine.run_redstone_piston_events().unwrap_err();
 
@@ -2757,8 +2778,8 @@ mod tests {
         let (mut world, piston_pos, input_pos, known_region) =
             redstone_piston_world(crate::PistonVariant::Normal);
         world.set(Pos::new(1, 1, 0), Block::new(BlockKind::RedstoneWire));
-        let mut engine =
-            PhysicsEngine::new(world.clone(), 16).with_piston_planning_region(known_region);
+        let mut engine = PhysicsEngine::new_diagnostic(world.clone(), 16)
+            .with_piston_planning_region(known_region);
         engine.schedule_redstone_input(0, input_pos, true);
         let error = engine.run_redstone_piston_events().unwrap_err();
 
@@ -2795,7 +2816,8 @@ mod tests {
     fn world_change_propagates_through_wire_into_piston() {
         let (world, piston_pos, wire_pos, input_pos, known_region) =
             world_driven_wire_piston_world();
-        let mut engine = PhysicsEngine::new(world, 128).with_piston_planning_region(known_region);
+        let mut engine =
+            PhysicsEngine::new_diagnostic(world, 128).with_piston_planning_region(known_region);
         let input = {
             let mut block = Block::new(BlockKind::Lever);
             block.powered = Some(true);
@@ -2837,7 +2859,8 @@ mod tests {
     fn typed_redstone_input_can_enter_the_same_world_propagation_runner() {
         let (world, piston_pos, wire_pos, input_pos, known_region) =
             world_driven_wire_piston_world();
-        let mut engine = PhysicsEngine::new(world, 128).with_piston_planning_region(known_region);
+        let mut engine =
+            PhysicsEngine::new_diagnostic(world, 128).with_piston_planning_region(known_region);
         engine.schedule_redstone_input(0, input_pos, true);
         engine.run_redstone_propagation().unwrap();
 
@@ -2858,7 +2881,8 @@ mod tests {
     fn world_change_off_reaches_wire_and_retracts_piston() {
         let (world, piston_pos, wire_pos, input_pos, known_region) =
             world_driven_wire_piston_world();
-        let mut engine = PhysicsEngine::new(world, 256).with_piston_planning_region(known_region);
+        let mut engine =
+            PhysicsEngine::new_diagnostic(world, 256).with_piston_planning_region(known_region);
         let mut on = Block::new(BlockKind::Lever);
         on.powered = Some(true);
         engine.schedule_world_change(0, input_pos, on);
@@ -2901,7 +2925,8 @@ mod tests {
         }
         world.set(lamp_pos, Block::new(BlockKind::RedstoneLamp));
         let known_region = Region::new(Pos::new(-1, 0, -1), Pos::new(5, 2, 1));
-        let mut engine = PhysicsEngine::new(world, 256).with_piston_planning_region(known_region);
+        let mut engine =
+            PhysicsEngine::new_diagnostic(world, 256).with_piston_planning_region(known_region);
 
         let mut on = Block::new(BlockKind::Lever);
         on.powered = Some(true);
@@ -2941,7 +2966,8 @@ mod tests {
         let (world, source_pos, lower_positions, upper_positions, known_region) =
             vertical_wire_branch_world();
         let lamp_positions = [Pos::new(3, 2, -1), Pos::new(3, 2, 0), Pos::new(3, 2, 1)];
-        let mut engine = PhysicsEngine::new(world, 1024).with_piston_planning_region(known_region);
+        let mut engine =
+            PhysicsEngine::new_diagnostic(world, 1024).with_piston_planning_region(known_region);
         let mut on = Block::new(BlockKind::Lever);
         on.powered = Some(true);
         engine.schedule_world_change(0, source_pos, on);
@@ -3005,8 +3031,10 @@ mod tests {
     fn vertical_wire_propagation_is_deterministic() {
         let (world_a, source_a, _lower_a, _upper_a, known_a) = vertical_wire_branch_world();
         let (world_b, source_b, _lower_b, _upper_b, known_b) = vertical_wire_branch_world();
-        let mut first = PhysicsEngine::new(world_a, 1024).with_piston_planning_region(known_a);
-        let mut second = PhysicsEngine::new(world_b, 1024).with_piston_planning_region(known_b);
+        let mut first =
+            PhysicsEngine::new_diagnostic(world_a, 1024).with_piston_planning_region(known_a);
+        let mut second =
+            PhysicsEngine::new_diagnostic(world_b, 1024).with_piston_planning_region(known_b);
         let mut on = Block::new(BlockKind::Lever);
         on.powered = Some(true);
         first.schedule_world_change(0, source_a, on.clone());
@@ -3024,7 +3052,8 @@ mod tests {
             vertical_wire_branch_world();
         let before = world.clone();
         let known_region = Region::new(Pos::new(-1, 0, -2), Pos::new(1, 3, 2));
-        let mut engine = PhysicsEngine::new(world, 256).with_piston_planning_region(known_region);
+        let mut engine =
+            PhysicsEngine::new_diagnostic(world, 256).with_piston_planning_region(known_region);
         let mut on = Block::new(BlockKind::Lever);
         on.powered = Some(true);
         let event_id = engine.schedule_world_change(0, source_pos, on);
@@ -3050,7 +3079,8 @@ mod tests {
         upper.observation_classification = crate::ObservationClassification::Exact;
         upper.power_level = Some(0);
         let before = world.clone();
-        let mut engine = PhysicsEngine::new(world, 256).with_piston_planning_region(known_region);
+        let mut engine =
+            PhysicsEngine::new_diagnostic(world, 256).with_piston_planning_region(known_region);
         let mut on = Block::new(BlockKind::Lever);
         on.powered = Some(true);
         let event_id = engine.schedule_world_change(0, source_pos, on);
@@ -3074,7 +3104,7 @@ mod tests {
             let (world, source_pos, input_wire_pos, repeater_pos, output_wire_pos, known_region) =
                 world_driven_repeater_world(delay);
             let mut engine =
-                PhysicsEngine::new(world, 256).with_piston_planning_region(known_region);
+                PhysicsEngine::new_diagnostic(world, 256).with_piston_planning_region(known_region);
             let mut on = Block::new(BlockKind::Lever);
             on.powered = Some(true);
             engine.schedule_world_change(0, source_pos, on);
@@ -3140,7 +3170,8 @@ mod tests {
     fn repeater_off_edge_is_delayed_and_reaches_lamp() {
         let (world, source_pos, _input_wire_pos, repeater_pos, output_wire_pos, known_region) =
             world_driven_repeater_world(2);
-        let mut engine = PhysicsEngine::new(world, 256).with_piston_planning_region(known_region);
+        let mut engine =
+            PhysicsEngine::new_diagnostic(world, 256).with_piston_planning_region(known_region);
         let mut on = Block::new(BlockKind::Lever);
         on.powered = Some(true);
         engine.schedule_world_change(0, source_pos, on);
@@ -3186,7 +3217,8 @@ mod tests {
         piston.facing = Some(crate::Facing::East);
         piston.piston_state = Some(PistonState::Retracted);
         world.set(piston_pos, piston);
-        let mut engine = PhysicsEngine::new(world, 256).with_piston_planning_region(known_region);
+        let mut engine =
+            PhysicsEngine::new_diagnostic(world, 256).with_piston_planning_region(known_region);
         let mut on = Block::new(BlockKind::Lever);
         on.powered = Some(true);
         engine.schedule_world_change(0, source_pos, on);
@@ -3231,7 +3263,8 @@ mod tests {
     fn stale_repeater_tick_is_a_retained_noop_after_input_reversal() {
         let (world, source_pos, _input_wire_pos, repeater_pos, output_wire_pos, known_region) =
             world_driven_repeater_world(1);
-        let mut engine = PhysicsEngine::new(world, 256).with_piston_planning_region(known_region);
+        let mut engine =
+            PhysicsEngine::new_diagnostic(world, 256).with_piston_planning_region(known_region);
         let mut on = Block::new(BlockKind::Lever);
         on.powered = Some(true);
         engine.schedule_world_change(0, source_pos, on);
@@ -3278,7 +3311,8 @@ mod tests {
             world_driven_repeater_world(1);
         world.get_mut(repeater_pos).unwrap().facing = Some(crate::Facing::Up);
         let before = world.clone();
-        let mut engine = PhysicsEngine::new(world, 128).with_piston_planning_region(known_region);
+        let mut engine =
+            PhysicsEngine::new_diagnostic(world, 128).with_piston_planning_region(known_region);
         let mut on = Block::new(BlockKind::Lever);
         on.powered = Some(true);
         let event_id = engine.schedule_world_change(0, source_pos, on);
@@ -3301,7 +3335,8 @@ mod tests {
         let (world, source_pos, _input_wire_pos, repeater_pos, _output_wire_pos, known_region) =
             world_driven_repeater_world(0);
         let before = world.clone();
-        let mut engine = PhysicsEngine::new(world, 128).with_piston_planning_region(known_region);
+        let mut engine =
+            PhysicsEngine::new_diagnostic(world, 128).with_piston_planning_region(known_region);
         let mut on = Block::new(BlockKind::Lever);
         on.powered = Some(true);
         let event_id = engine.schedule_world_change(0, source_pos, on);
@@ -3327,7 +3362,8 @@ mod tests {
         // The source, input wire, and repeater are known, but the repeater's
         // front output at x=1 is intentionally outside the observation.
         let known_region = Region::new(Pos::new(-3, 0, -1), Pos::new(0, 2, 1));
-        let mut engine = PhysicsEngine::new(world, 128).with_piston_planning_region(known_region);
+        let mut engine =
+            PhysicsEngine::new_diagnostic(world, 128).with_piston_planning_region(known_region);
         let mut on = Block::new(BlockKind::Lever);
         on.powered = Some(true);
         let event_id = engine.schedule_world_change(0, source_pos, on);
@@ -3350,8 +3386,8 @@ mod tests {
         let (world, _piston_pos, _wire_pos, input_pos, _known_region) =
             world_driven_wire_piston_world();
         let known_region = Region::new(Pos::new(-2, 0, -1), Pos::new(-2, 2, 1));
-        let mut engine =
-            PhysicsEngine::new(world.clone(), 64).with_piston_planning_region(known_region);
+        let mut engine = PhysicsEngine::new_diagnostic(world.clone(), 64)
+            .with_piston_planning_region(known_region);
         let mut on = Block::new(BlockKind::Lever);
         on.powered = Some(true);
         let event_id = engine.schedule_world_change(0, input_pos, on);
@@ -3384,8 +3420,8 @@ mod tests {
         wire.power_level = Some(0);
         world.set(wire_pos, wire);
         let known_region = Region::new(Pos::new(-1, 0, -1), Pos::new(2, 2, 1));
-        let mut engine =
-            PhysicsEngine::new(world.clone(), 64).with_piston_planning_region(known_region);
+        let mut engine = PhysicsEngine::new_diagnostic(world.clone(), 64)
+            .with_piston_planning_region(known_region);
         let mut on = Block::new(BlockKind::Lever);
         on.powered = Some(true);
         let event_id = engine.schedule_world_change(0, input_pos, on);
@@ -3418,7 +3454,8 @@ mod tests {
             initial_delay_max_game_ticks: 0,
             movement_game_ticks: 0,
         };
-        let mut engine = PhysicsEngine::new(world, 8).with_piston_motion_profile(profile);
+        let mut engine =
+            PhysicsEngine::new_diagnostic(world, 8).with_piston_motion_profile(profile);
         let event_id = engine.schedule_piston_action(4, piston_pos, PistonAction::Extend);
         engine.run_piston_events().unwrap();
         assert_eq!(engine.shape_transitions().len(), 2);
@@ -3440,7 +3477,7 @@ mod tests {
         piston.facing = Some(crate::Facing::East);
         world.set(piston_pos, piston);
         world.set(Pos::new(1, 1, 0), Block::new(BlockKind::RedstoneWire));
-        let mut engine = PhysicsEngine::new(world.clone(), 8);
+        let mut engine = PhysicsEngine::new_diagnostic(world.clone(), 8);
         let event_id = engine.schedule_piston_action(0, piston_pos, PistonAction::Extend);
         let error = engine.run_piston_events().unwrap_err();
         assert!(matches!(

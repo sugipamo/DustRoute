@@ -238,7 +238,7 @@ fn piston_fixture_is_connected_to_engine_transition_trace() {
     let mut stone = Block::new(BlockKind::Solid);
     stone.observed_name = Some("minecraft:stone".into());
     world.set(Pos::new(4, 0, 0), stone);
-    let mut engine = PhysicsEngine::new(world, 8);
+    let mut engine = PhysicsEngine::new_diagnostic(world, 8);
     engine.schedule_piston_action(1, piston_pos, PistonAction::Extend);
     engine.run_piston_events().unwrap();
     assert_eq!(engine.transition_trace().status, TraceStatus::Complete);
@@ -285,7 +285,8 @@ fn piston_instrumentation_fixture_compares_typed_moving_and_stable_states() {
     world.set(Pos::new(654, 104, 0), stone);
     let known_region =
         dustroute_minecraft::Region::new(Pos::new(651, 103, -1), Pos::new(655, 105, 1));
-    let mut engine = PhysicsEngine::new(world, 16).with_piston_planning_region(known_region);
+    let mut engine =
+        PhysicsEngine::new_diagnostic(world, 16).with_piston_planning_region(known_region);
     engine.schedule_redstone_input(0, input_pos, true);
     engine.run_redstone_piston_events().unwrap();
 

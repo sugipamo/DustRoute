@@ -1647,7 +1647,7 @@ mod tests {
         let bounds = RegionBounds::new(min, max);
         let healthy_analysis = analyze_world_region(&compiled.world, bounds);
         let healthy = infer_truth_table(&compiled.world, &healthy_analysis, 16, 16).unwrap();
-        let mut broken_world = compiled.world.clone();
+        let mut broken_world = compiled.world.clone().into_world();
         let (torch, support) = broken_world
             .iter()
             .find(|(_, block)| block.kind == BlockKind::RedstoneTorch)

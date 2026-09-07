@@ -180,8 +180,9 @@ pub type PistonBlockMove = BlockMove;
 
 /// A validated, read-only movement plan. Creating a plan does not mutate the
 /// world; `apply` performs an all-or-nothing stale-plan check before changing
-/// it. The initial supported subset deliberately models stable piston states
-/// and ordinary movable blocks only. The plan's `delta` is the stable
+/// it. The supported subset models ordinary movable blocks and one isolated
+/// unpowered, explicitly retracted horizontal normal-piston
+/// payload. The plan's `delta` is the stable
 /// completion transition; [`Self::start_delta`] exposes the separate moving
 /// state used by the event engine. Stable piston heads and transient moving
 /// block entities are retained in the two deltas rather than collapsed into
@@ -262,10 +263,10 @@ impl PistonPlan {
         }
     }
 
-    /// Rebases the stable completion plan after [`Self::start_delta`] has
-    /// been applied.  The moved blocks are still checked against their
-    /// original states, so an external mutation during the moving interval
-    /// fails closed instead of applying a stale chain.
+    /// Revalidates the motion's local preconditions against the current world
+    /// before rebuilding a stable completion delta. Call at completion time;
+    /// unrelated world changes are allowed, but altered moving carriers,
+    /// body geometry, legacy payload cells and empty pull sources are rejected.
     pub fn completion_plan(&self, world: &World) -> Result<Self, PistonError> {
         let Some(piston) = world.get(self.piston).cloned() else {
             return Err(PistonError::StalePlan {
@@ -301,6 +302,38 @@ impl PistonPlan {
                 return Err(PistonError::StalePlan {
                     position: change.position,
                 });
+            }
+        }
+        // Legacy body-only starts do not reserve payload cells. Validate
+        // their original before-states before rebuilding a completion delta.
+        for change in &self.delta.changes {
+            if start
+                .changes
+                .iter()
+                .any(|started| started.position == change.position)
+            {
+                continue;
+            }
+            let actual = world
+                .get(change.position)
+                .cloned()
+                .unwrap_or_else(|| Block::new(BlockKind::Air));
+            if actual != change.before {
+                return Err(PistonError::StalePlan {
+                    position: change.position,
+                });
+            }
+        }
+        // A no-payload sticky retraction reads an empty cell beyond its head
+        // without writing it. Retain that negative planning dependency too.
+        if self.action == PistonAction::Retract
+            && self.variant == PistonVariant::Sticky
+            && self.moved.is_empty()
+        {
+            let offset = self.facing.offset();
+            let source = self.piston.offset(offset.x * 2, offset.y * 2, offset.z * 2);
+            if world.kind_at(source) != BlockKind::Air {
+                return Err(PistonError::StalePlan { position: source });
             }
         }
         let mut completion = self.clone();
@@ -1260,6 +1293,18 @@ fn extension_moves(
         contiguous.push((cursor, block));
         cursor = cursor.offset(offset.x, offset.y, offset.z);
     }
+    // The measured piston-payload contract covers one isolated retracted
+    // body only. Do not silently extend it to mixed chains or multiple bodies.
+    if contiguous.len() != 1
+        && let Some((position, block)) =
+            contiguous.iter().find(|(_, b)| b.kind == BlockKind::Piston)
+    {
+        return Err(PistonError::UnsupportedMovingBlock {
+            position: *position,
+            kind: block.kind,
+            reason: "piston payload extension supports a single isolated body only".into(),
+        });
+    }
     Ok(contiguous
         .into_iter()
         .rev()
@@ -1316,11 +1361,28 @@ fn ensure_known(known_region: Option<Region>, position: Pos) -> Result<(), Pisto
 }
 
 fn ensure_movable(position: Pos, block: &Block) -> Result<(), PistonError> {
-    if !matches!(block.kind, BlockKind::Solid | BlockKind::Transparent) {
+    let supported_piston = block.kind == BlockKind::Piston
+        && block.piston_state == Some(PistonState::Retracted)
+        && block.piston_variant == Some(PistonVariant::Normal)
+        && block
+            .facing
+            .is_some_and(|facing| facing.horizontal_offset().is_some())
+        && block.powered != Some(true)
+        && block.piston_head.is_none()
+        && block.piston_entity.is_none()
+        && block
+            .observed_name
+            .as_deref()
+            .is_none_or(|name| matches!(name, "minecraft:piston" | "piston"))
+        && block
+            .observed_properties
+            .get("extended")
+            .is_none_or(|state| state == "false");
+    if !matches!(block.kind, BlockKind::Solid | BlockKind::Transparent) && !supported_piston {
         return Err(PistonError::UnsupportedMovingBlock {
             position,
             kind: block.kind,
-            reason: "the first piston subset moves ordinary non-redstone blocks only".to_owned(),
+            reason: "movement supports ordinary blocks; push/pull additionally supports one unpowered, explicitly retracted horizontal normal-piston payload".to_owned(),
         });
     }
     if block.observation_classification == ObservationClassification::Coarse {
@@ -1376,6 +1438,8 @@ fn piston_geometry_matches(actual: &Block, expected: &Block) -> bool {
         && actual.support_offset == expected.support_offset
         && actual.wire_connections == expected.wire_connections
         && actual.piston_variant == expected.piston_variant
+        && actual.piston_head == expected.piston_head
+        && actual.piston_entity == expected.piston_entity
         && non_signal_properties(&actual.observed_properties)
             == non_signal_properties(&expected.observed_properties)
 }
@@ -1422,6 +1486,86 @@ mod tests {
         piston.piston_state = Some(PistonState::Retracted);
         world.set(piston_pos, piston);
         (world, piston_pos)
+    }
+
+    #[test]
+    fn piston_payload_movement_keeps_unverified_cases_rejected() {
+        let (base, driver) = retracted_piston(PistonVariant::Sticky);
+        let mut payload = Block::new(BlockKind::Piston);
+        payload.facing = Some(Facing::North);
+        let mut cases = Vec::new();
+        for state in [
+            PistonState::Extended,
+            PistonState::Extending,
+            PistonState::Retracting,
+        ] {
+            let mut b = payload.clone();
+            b.piston_state = Some(state);
+            cases.push(b);
+        }
+        let mut b = payload.clone();
+        b.piston_state = None;
+        cases.push(b);
+        let mut b = payload.clone();
+        b.piston_variant = Some(PistonVariant::Sticky);
+        cases.push(b);
+        let mut b = payload.clone();
+        b.facing = Some(Facing::Up);
+        cases.push(b);
+        let mut b = payload.clone();
+        b.powered = Some(true);
+        cases.push(b);
+        let mut b = payload.clone();
+        b.observation_classification = ObservationClassification::Coarse;
+        cases.push(b);
+        let mut b = payload.clone();
+        b.observed_properties
+            .insert("extended".into(), "true".into());
+        cases.push(b);
+        for b in cases {
+            // The same state restrictions apply to pushing and sticky pulling.
+            let mut pulling = base.clone();
+            pulling.set(Pos::new(1, 1, 0), payload.clone());
+            plan_piston(&pulling, driver, PistonAction::Extend)
+                .unwrap()
+                .apply(&mut pulling)
+                .unwrap();
+            pulling.set(Pos::new(2, 1, 0), b.clone());
+            let before_pull = pulling.clone();
+            assert!(matches!(
+                plan_piston(&pulling, driver, PistonAction::Retract),
+                Err(PistonError::UnsupportedMovingBlock { .. })
+            ));
+            assert_eq!(pulling, before_pull);
+            let mut world = base.clone();
+            world.set(Pos::new(1, 1, 0), b);
+            let before = world.clone();
+            assert!(matches!(
+                plan_piston(&world, driver, PistonAction::Extend),
+                Err(PistonError::UnsupportedMovingBlock { .. })
+            ));
+            assert_eq!(world, before);
+        }
+        let mut world = base.clone();
+        world.set(Pos::new(1, 1, 0), payload.clone());
+        world.set(Pos::new(2, 1, 0), Block::new(BlockKind::Solid));
+        assert!(matches!(
+            plan_piston(&world, driver, PistonAction::Extend),
+            Err(PistonError::UnsupportedMovingBlock { .. })
+        ));
+
+        let mut world = base;
+        world.set(Pos::new(1, 1, 0), payload.clone());
+        plan_piston(&world, driver, PistonAction::Extend)
+            .unwrap()
+            .apply(&mut world)
+            .unwrap();
+        plan_piston(&world, driver, PistonAction::Retract)
+            .unwrap()
+            .apply(&mut world)
+            .unwrap();
+        assert_eq!(world.get(Pos::new(1, 1, 0)), Some(&payload));
+        assert_eq!(world.kind_at(Pos::new(2, 1, 0)), BlockKind::Air);
     }
 
     #[test]

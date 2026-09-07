@@ -164,6 +164,13 @@ promote the modelled scheduler profile to a Vanilla-complete implementation.
 
 ## Scenario contract
 
+The separate fixed-door diagnostic is documented in
+[`docs/3x3-piston-door-live-validation.md`](../../../../docs/3x3-piston-door-live-validation.md).
+It compares the designed simulator fixture with live placement and three
+open/close attempts. It uses only the local test actor, preserves MCP's
+preview-only restriction, and reports known contract gaps rather than treating
+successful diagnostic execution as proof of a working door.
+
 Scenario files are ordered JSON documents in `scenarios/`. Supported steps are:
 
 - `command`: issue fixture-building commands as the actor.
@@ -200,3 +207,31 @@ response during a run.
 Tracked files contain only harness code and deterministic scenario definitions.
 The server JAR, world, logs, node_modules, MCP state, and credentials remain
 under ignored local directories.
+
+
+### Restricted 1x2 door through MCP
+
+With the private Java server and normal visible bridge running, build
+`cargo build -p dustroute-mcp` and run
+`node crates/dustroute-mcp/mineflayer/e2e/piston-door-mcp-live.js` from the repo
+root. This uses actual stdio MCP tools and the bridge for three independently
+built door trials, missing-preview/replay rejection, no-op, and stale-preview
+rejection. The actor only builds inside its verified empty guard at
+`1097..1107,178..183,996..1006`, selects it using temporary gaze markers, and
+clears the region afterward. Results are written to
+`.local/e2e-artifacts/piston-door-mcp-latest.json`.
+
+The private Java 1.21.11 integration `node e2e/piston-placement-mcp-live.js`
+uses `new_placement(circuit: piston-door-1x2)` to build the door, then observes,
+operates, and undoes it through existing MCP tools in three trials. Only the
+selection markers and external ground anchor are prepared by the actor; door
+blocks are placed by MCP. It checks the empty test region before building and
+verifies cleanup. Requires the private server, bridge and current MCP binary;
+it writes `.local/e2e-artifacts/piston-placement-mcp-latest.json`.
+
+`node e2e/revision-placement-mcp-live.js` tests the private Java 1.21.11
+observe → parent/child revision → `new_placement(revision_id)` → preview →
+apply → undo flow, including cumulative additions/deletions and repeater delay
+changes. It checks full-context drift rejection before apply and undo in three
+trials, verifies restoration and cleanup, and writes
+`.local/e2e-artifacts/revision-placement-mcp-latest.json`.

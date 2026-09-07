@@ -1,0 +1,3881 @@
+{
+  "captured_at": "2026-09-07T12:53:56.342Z",
+  "trials": [
+    [
+      {
+        "activation_error": null,
+        "automatic_rollback": false,
+        "observation": {
+          "issues": [],
+          "next_action": "create_previewed_operation",
+          "schema_version": "dustroute.piston-observation.v1",
+          "state": "closed"
+        },
+        "observed_state": "closed",
+        "ok": true,
+        "operation_id": "40b6e69d-34c7-4750-8acc-d19c1c81e6ac",
+        "retry_allowed": false,
+        "scan_error": null,
+        "status": "verified",
+        "target": "closed",
+        "verification_error": null,
+        "verified": true,
+        "wait_error": null,
+        "fresh_observation": {
+          "bounds": {
+            "max": {
+              "x": 1107,
+              "y": 183,
+              "z": 1006
+            },
+            "min": {
+              "x": 1097,
+              "y": 178,
+              "z": 996
+            }
+          },
+          "circuit_expires_in_seconds": 900,
+          "circuit_id": "4002d7c3-0bdb-4e58-a000-40d37d1df61b",
+          "mechanisms": [
+            {
+              "candidate_assessments": [
+                {
+                  "contract": "piston_door_v1",
+                  "observation": {
+                    "issues": [],
+                    "next_action": "create_previewed_operation",
+                    "schema_version": "dustroute.piston-observation.v1",
+                    "state": "closed"
+                  }
+                }
+              ],
+              "contract": "piston_door_v1",
+              "kind": "piston_door",
+              "mutation_authorized": false,
+              "recognition": "exact_contract_match",
+              "scope": "entire_observed_region",
+              "state": "closed"
+            }
+          ],
+          "ok": true,
+          "preview": {
+            "max": {
+              "x": 1107,
+              "y": 183,
+              "z": 1006
+            },
+            "min": {
+              "x": 1097,
+              "y": 178,
+              "z": 996
+            },
+            "particle_corners": 8
+          },
+          "source": "fresh_scan"
+        },
+        "mechanisms": [
+          {
+            "candidate_assessments": [
+              {
+                "contract": "piston_door_v1",
+                "observation": {
+                  "issues": [],
+                  "next_action": "create_previewed_operation",
+                  "schema_version": "dustroute.piston-observation.v1",
+                  "state": "closed"
+                }
+              }
+            ],
+            "contract": "piston_door_v1",
+            "kind": "piston_door",
+            "mutation_authorized": false,
+            "recognition": "exact_contract_match",
+            "scope": "entire_observed_region",
+            "state": "closed"
+          }
+        ]
+      },
+      {
+        "activation_error": null,
+        "automatic_rollback": false,
+        "observation": {
+          "issues": [],
+          "next_action": "create_previewed_operation",
+          "schema_version": "dustroute.piston-observation.v1",
+          "state": "open"
+        },
+        "observed_state": "open",
+        "ok": true,
+        "operation_id": "5bb47c24-779b-4faa-813d-1417c76117ab",
+        "retry_allowed": false,
+        "scan_error": null,
+        "status": "verified",
+        "target": "open",
+        "verification_error": null,
+        "verified": true,
+        "wait_error": null,
+        "fresh_observation": {
+          "bounds": {
+            "max": {
+              "x": 1107,
+              "y": 183,
+              "z": 1006
+            },
+            "min": {
+              "x": 1097,
+              "y": 178,
+              "z": 996
+            }
+          },
+          "circuit_expires_in_seconds": 900,
+          "circuit_id": "d927d718-890c-4f49-9a67-cbf60e43422c",
+          "mechanisms": [
+            {
+              "candidate_assessments": [
+                {
+                  "contract": "piston_door_v1",
+                  "observation": {
+                    "issues": [],
+                    "next_action": "create_previewed_operation",
+                    "schema_version": "dustroute.piston-observation.v1",
+                    "state": "open"
+                  }
+                }
+              ],
+              "contract": "piston_door_v1",
+              "kind": "piston_door",
+              "mutation_authorized": false,
+              "recognition": "exact_contract_match",
+              "scope": "entire_observed_region",
+              "state": "open"
+            }
+          ],
+          "ok": true,
+          "preview": {
+            "max": {
+              "x": 1107,
+              "y": 183,
+              "z": 1006
+            },
+            "min": {
+              "x": 1097,
+              "y": 178,
+              "z": 996
+            },
+            "particle_corners": 8
+          },
+          "source": "fresh_scan"
+        },
+        "mechanisms": [
+          {
+            "candidate_assessments": [
+              {
+                "contract": "piston_door_v1",
+                "observation": {
+                  "issues": [],
+                  "next_action": "create_previewed_operation",
+                  "schema_version": "dustroute.piston-observation.v1",
+                  "state": "open"
+                }
+              }
+            ],
+            "contract": "piston_door_v1",
+            "kind": "piston_door",
+            "mutation_authorized": false,
+            "recognition": "exact_contract_match",
+            "scope": "entire_observed_region",
+            "state": "open"
+          }
+        ]
+      },
+      {
+        "activation_error": null,
+        "automatic_rollback": false,
+        "observation": {
+          "issues": [],
+          "next_action": "create_previewed_operation",
+          "schema_version": "dustroute.piston-observation.v1",
+          "state": "closed"
+        },
+        "observed_state": "closed",
+        "ok": true,
+        "operation_id": "26111195-ac93-4267-bc81-1ff1167196ea",
+        "retry_allowed": false,
+        "scan_error": null,
+        "status": "verified",
+        "target": "closed",
+        "verification_error": null,
+        "verified": true,
+        "wait_error": null,
+        "fresh_observation": {
+          "bounds": {
+            "max": {
+              "x": 1107,
+              "y": 183,
+              "z": 1006
+            },
+            "min": {
+              "x": 1097,
+              "y": 178,
+              "z": 996
+            }
+          },
+          "circuit_expires_in_seconds": 900,
+          "circuit_id": "e4212cd8-cd1f-49f8-8e25-814d34f0d830",
+          "mechanisms": [
+            {
+              "candidate_assessments": [
+                {
+                  "contract": "piston_door_v1",
+                  "observation": {
+                    "issues": [],
+                    "next_action": "create_previewed_operation",
+                    "schema_version": "dustroute.piston-observation.v1",
+                    "state": "closed"
+                  }
+                }
+              ],
+              "contract": "piston_door_v1",
+              "kind": "piston_door",
+              "mutation_authorized": false,
+              "recognition": "exact_contract_match",
+              "scope": "entire_observed_region",
+              "state": "closed"
+            }
+          ],
+          "ok": true,
+          "preview": {
+            "max": {
+              "x": 1107,
+              "y": 183,
+              "z": 1006
+            },
+            "min": {
+              "x": 1097,
+              "y": 178,
+              "z": 996
+            },
+            "particle_corners": 8
+          },
+          "source": "fresh_scan"
+        },
+        "mechanisms": [
+          {
+            "candidate_assessments": [
+              {
+                "contract": "piston_door_v1",
+                "observation": {
+                  "issues": [],
+                  "next_action": "create_previewed_operation",
+                  "schema_version": "dustroute.piston-observation.v1",
+                  "state": "closed"
+                }
+              }
+            ],
+            "contract": "piston_door_v1",
+            "kind": "piston_door",
+            "mutation_authorized": false,
+            "recognition": "exact_contract_match",
+            "scope": "entire_observed_region",
+            "state": "closed"
+          }
+        ]
+      }
+    ],
+    [
+      {
+        "activation_error": null,
+        "automatic_rollback": false,
+        "observation": {
+          "issues": [],
+          "next_action": "create_previewed_operation",
+          "schema_version": "dustroute.piston-observation.v1",
+          "state": "closed"
+        },
+        "observed_state": "closed",
+        "ok": true,
+        "operation_id": "2e6c3cdc-e4bd-437f-8239-5e42c2df2162",
+        "retry_allowed": false,
+        "scan_error": null,
+        "status": "verified",
+        "target": "closed",
+        "verification_error": null,
+        "verified": true,
+        "wait_error": null,
+        "fresh_observation": {
+          "bounds": {
+            "max": {
+              "x": 1107,
+              "y": 183,
+              "z": 1006
+            },
+            "min": {
+              "x": 1097,
+              "y": 178,
+              "z": 996
+            }
+          },
+          "circuit_expires_in_seconds": 900,
+          "circuit_id": "e03d2107-55f4-4071-b127-5556982ed805",
+          "mechanisms": [
+            {
+              "candidate_assessments": [
+                {
+                  "contract": "piston_door_v1",
+                  "observation": {
+                    "issues": [],
+                    "next_action": "create_previewed_operation",
+                    "schema_version": "dustroute.piston-observation.v1",
+                    "state": "closed"
+                  }
+                }
+              ],
+              "contract": "piston_door_v1",
+              "kind": "piston_door",
+              "mutation_authorized": false,
+              "recognition": "exact_contract_match",
+              "scope": "entire_observed_region",
+              "state": "closed"
+            }
+          ],
+          "ok": true,
+          "preview": {
+            "max": {
+              "x": 1107,
+              "y": 183,
+              "z": 1006
+            },
+            "min": {
+              "x": 1097,
+              "y": 178,
+              "z": 996
+            },
+            "particle_corners": 8
+          },
+          "source": "fresh_scan"
+        },
+        "mechanisms": [
+          {
+            "candidate_assessments": [
+              {
+                "contract": "piston_door_v1",
+                "observation": {
+                  "issues": [],
+                  "next_action": "create_previewed_operation",
+                  "schema_version": "dustroute.piston-observation.v1",
+                  "state": "closed"
+                }
+              }
+            ],
+            "contract": "piston_door_v1",
+            "kind": "piston_door",
+            "mutation_authorized": false,
+            "recognition": "exact_contract_match",
+            "scope": "entire_observed_region",
+            "state": "closed"
+          }
+        ]
+      },
+      {
+        "activation_error": null,
+        "automatic_rollback": false,
+        "observation": {
+          "issues": [],
+          "next_action": "create_previewed_operation",
+          "schema_version": "dustroute.piston-observation.v1",
+          "state": "open"
+        },
+        "observed_state": "open",
+        "ok": true,
+        "operation_id": "fc2140d9-bbb7-4e1e-ac1f-fd5fb4f00152",
+        "retry_allowed": false,
+        "scan_error": null,
+        "status": "verified",
+        "target": "open",
+        "verification_error": null,
+        "verified": true,
+        "wait_error": null,
+        "fresh_observation": {
+          "bounds": {
+            "max": {
+              "x": 1107,
+              "y": 183,
+              "z": 1006
+            },
+            "min": {
+              "x": 1097,
+              "y": 178,
+              "z": 996
+            }
+          },
+          "circuit_expires_in_seconds": 900,
+          "circuit_id": "1db4637d-04b3-4c72-91d9-340832fbb3e4",
+          "mechanisms": [
+            {
+              "candidate_assessments": [
+                {
+                  "contract": "piston_door_v1",
+                  "observation": {
+                    "issues": [],
+                    "next_action": "create_previewed_operation",
+                    "schema_version": "dustroute.piston-observation.v1",
+                    "state": "open"
+                  }
+                }
+              ],
+              "contract": "piston_door_v1",
+              "kind": "piston_door",
+              "mutation_authorized": false,
+              "recognition": "exact_contract_match",
+              "scope": "entire_observed_region",
+              "state": "open"
+            }
+          ],
+          "ok": true,
+          "preview": {
+            "max": {
+              "x": 1107,
+              "y": 183,
+              "z": 1006
+            },
+            "min": {
+              "x": 1097,
+              "y": 178,
+              "z": 996
+            },
+            "particle_corners": 8
+          },
+          "source": "fresh_scan"
+        },
+        "mechanisms": [
+          {
+            "candidate_assessments": [
+              {
+                "contract": "piston_door_v1",
+                "observation": {
+                  "issues": [],
+                  "next_action": "create_previewed_operation",
+                  "schema_version": "dustroute.piston-observation.v1",
+                  "state": "open"
+                }
+              }
+            ],
+            "contract": "piston_door_v1",
+            "kind": "piston_door",
+            "mutation_authorized": false,
+            "recognition": "exact_contract_match",
+            "scope": "entire_observed_region",
+            "state": "open"
+          }
+        ]
+      },
+      {
+        "activation_error": null,
+        "automatic_rollback": false,
+        "observation": {
+          "issues": [],
+          "next_action": "create_previewed_operation",
+          "schema_version": "dustroute.piston-observation.v1",
+          "state": "closed"
+        },
+        "observed_state": "closed",
+        "ok": true,
+        "operation_id": "25acb96a-e409-4920-aef9-1c32d71a32ac",
+        "retry_allowed": false,
+        "scan_error": null,
+        "status": "verified",
+        "target": "closed",
+        "verification_error": null,
+        "verified": true,
+        "wait_error": null,
+        "fresh_observation": {
+          "bounds": {
+            "max": {
+              "x": 1107,
+              "y": 183,
+              "z": 1006
+            },
+            "min": {
+              "x": 1097,
+              "y": 178,
+              "z": 996
+            }
+          },
+          "circuit_expires_in_seconds": 900,
+          "circuit_id": "8eee18b4-93d1-4408-bad3-25a3442e09e0",
+          "mechanisms": [
+            {
+              "candidate_assessments": [
+                {
+                  "contract": "piston_door_v1",
+                  "observation": {
+                    "issues": [],
+                    "next_action": "create_previewed_operation",
+                    "schema_version": "dustroute.piston-observation.v1",
+                    "state": "closed"
+                  }
+                }
+              ],
+              "contract": "piston_door_v1",
+              "kind": "piston_door",
+              "mutation_authorized": false,
+              "recognition": "exact_contract_match",
+              "scope": "entire_observed_region",
+              "state": "closed"
+            }
+          ],
+          "ok": true,
+          "preview": {
+            "max": {
+              "x": 1107,
+              "y": 183,
+              "z": 1006
+            },
+            "min": {
+              "x": 1097,
+              "y": 178,
+              "z": 996
+            },
+            "particle_corners": 8
+          },
+          "source": "fresh_scan"
+        },
+        "mechanisms": [
+          {
+            "candidate_assessments": [
+              {
+                "contract": "piston_door_v1",
+                "observation": {
+                  "issues": [],
+                  "next_action": "create_previewed_operation",
+                  "schema_version": "dustroute.piston-observation.v1",
+                  "state": "closed"
+                }
+              }
+            ],
+            "contract": "piston_door_v1",
+            "kind": "piston_door",
+            "mutation_authorized": false,
+            "recognition": "exact_contract_match",
+            "scope": "entire_observed_region",
+            "state": "closed"
+          }
+        ]
+      }
+    ],
+    [
+      {
+        "activation_error": null,
+        "automatic_rollback": false,
+        "observation": {
+          "issues": [],
+          "next_action": "create_previewed_operation",
+          "schema_version": "dustroute.piston-observation.v1",
+          "state": "closed"
+        },
+        "observed_state": "closed",
+        "ok": true,
+        "operation_id": "825c3e6f-7a18-46b2-ae9f-5d61f4c9a7f0",
+        "retry_allowed": false,
+        "scan_error": null,
+        "status": "verified",
+        "target": "closed",
+        "verification_error": null,
+        "verified": true,
+        "wait_error": null,
+        "fresh_observation": {
+          "bounds": {
+            "max": {
+              "x": 1107,
+              "y": 183,
+              "z": 1006
+            },
+            "min": {
+              "x": 1097,
+              "y": 178,
+              "z": 996
+            }
+          },
+          "circuit_expires_in_seconds": 900,
+          "circuit_id": "fd717fe7-d5dd-44e3-947e-853edd729948",
+          "mechanisms": [
+            {
+              "candidate_assessments": [
+                {
+                  "contract": "piston_door_v1",
+                  "observation": {
+                    "issues": [],
+                    "next_action": "create_previewed_operation",
+                    "schema_version": "dustroute.piston-observation.v1",
+                    "state": "closed"
+                  }
+                }
+              ],
+              "contract": "piston_door_v1",
+              "kind": "piston_door",
+              "mutation_authorized": false,
+              "recognition": "exact_contract_match",
+              "scope": "entire_observed_region",
+              "state": "closed"
+            }
+          ],
+          "ok": true,
+          "preview": {
+            "max": {
+              "x": 1107,
+              "y": 183,
+              "z": 1006
+            },
+            "min": {
+              "x": 1097,
+              "y": 178,
+              "z": 996
+            },
+            "particle_corners": 8
+          },
+          "source": "fresh_scan"
+        },
+        "mechanisms": [
+          {
+            "candidate_assessments": [
+              {
+                "contract": "piston_door_v1",
+                "observation": {
+                  "issues": [],
+                  "next_action": "create_previewed_operation",
+                  "schema_version": "dustroute.piston-observation.v1",
+                  "state": "closed"
+                }
+              }
+            ],
+            "contract": "piston_door_v1",
+            "kind": "piston_door",
+            "mutation_authorized": false,
+            "recognition": "exact_contract_match",
+            "scope": "entire_observed_region",
+            "state": "closed"
+          }
+        ]
+      },
+      {
+        "activation_error": null,
+        "automatic_rollback": false,
+        "observation": {
+          "issues": [],
+          "next_action": "create_previewed_operation",
+          "schema_version": "dustroute.piston-observation.v1",
+          "state": "open"
+        },
+        "observed_state": "open",
+        "ok": true,
+        "operation_id": "a04437e8-60ae-488f-b290-a0447755913f",
+        "retry_allowed": false,
+        "scan_error": null,
+        "status": "verified",
+        "target": "open",
+        "verification_error": null,
+        "verified": true,
+        "wait_error": null,
+        "fresh_observation": {
+          "bounds": {
+            "max": {
+              "x": 1107,
+              "y": 183,
+              "z": 1006
+            },
+            "min": {
+              "x": 1097,
+              "y": 178,
+              "z": 996
+            }
+          },
+          "circuit_expires_in_seconds": 900,
+          "circuit_id": "be1927a8-c46b-43f7-b5d5-bcec1b850978",
+          "mechanisms": [
+            {
+              "candidate_assessments": [
+                {
+                  "contract": "piston_door_v1",
+                  "observation": {
+                    "issues": [],
+                    "next_action": "create_previewed_operation",
+                    "schema_version": "dustroute.piston-observation.v1",
+                    "state": "open"
+                  }
+                }
+              ],
+              "contract": "piston_door_v1",
+              "kind": "piston_door",
+              "mutation_authorized": false,
+              "recognition": "exact_contract_match",
+              "scope": "entire_observed_region",
+              "state": "open"
+            }
+          ],
+          "ok": true,
+          "preview": {
+            "max": {
+              "x": 1107,
+              "y": 183,
+              "z": 1006
+            },
+            "min": {
+              "x": 1097,
+              "y": 178,
+              "z": 996
+            },
+            "particle_corners": 8
+          },
+          "source": "fresh_scan"
+        },
+        "mechanisms": [
+          {
+            "candidate_assessments": [
+              {
+                "contract": "piston_door_v1",
+                "observation": {
+                  "issues": [],
+                  "next_action": "create_previewed_operation",
+                  "schema_version": "dustroute.piston-observation.v1",
+                  "state": "open"
+                }
+              }
+            ],
+            "contract": "piston_door_v1",
+            "kind": "piston_door",
+            "mutation_authorized": false,
+            "recognition": "exact_contract_match",
+            "scope": "entire_observed_region",
+            "state": "open"
+          }
+        ]
+      },
+      {
+        "activation_error": null,
+        "automatic_rollback": false,
+        "observation": {
+          "issues": [],
+          "next_action": "create_previewed_operation",
+          "schema_version": "dustroute.piston-observation.v1",
+          "state": "closed"
+        },
+        "observed_state": "closed",
+        "ok": true,
+        "operation_id": "3c85015e-5205-45df-b669-1157c97deae0",
+        "retry_allowed": false,
+        "scan_error": null,
+        "status": "verified",
+        "target": "closed",
+        "verification_error": null,
+        "verified": true,
+        "wait_error": null,
+        "fresh_observation": {
+          "bounds": {
+            "max": {
+              "x": 1107,
+              "y": 183,
+              "z": 1006
+            },
+            "min": {
+              "x": 1097,
+              "y": 178,
+              "z": 996
+            }
+          },
+          "circuit_expires_in_seconds": 900,
+          "circuit_id": "bf2fe652-012c-46a4-8756-699323ffff03",
+          "mechanisms": [
+            {
+              "candidate_assessments": [
+                {
+                  "contract": "piston_door_v1",
+                  "observation": {
+                    "issues": [],
+                    "next_action": "create_previewed_operation",
+                    "schema_version": "dustroute.piston-observation.v1",
+                    "state": "closed"
+                  }
+                }
+              ],
+              "contract": "piston_door_v1",
+              "kind": "piston_door",
+              "mutation_authorized": false,
+              "recognition": "exact_contract_match",
+              "scope": "entire_observed_region",
+              "state": "closed"
+            }
+          ],
+          "ok": true,
+          "preview": {
+            "max": {
+              "x": 1107,
+              "y": 183,
+              "z": 1006
+            },
+            "min": {
+              "x": 1097,
+              "y": 178,
+              "z": 996
+            },
+            "particle_corners": 8
+          },
+          "source": "fresh_scan"
+        },
+        "mechanisms": [
+          {
+            "candidate_assessments": [
+              {
+                "contract": "piston_door_v1",
+                "observation": {
+                  "issues": [],
+                  "next_action": "create_previewed_operation",
+                  "schema_version": "dustroute.piston-observation.v1",
+                  "state": "closed"
+                }
+              }
+            ],
+            "contract": "piston_door_v1",
+            "kind": "piston_door",
+            "mutation_authorized": false,
+            "recognition": "exact_contract_match",
+            "scope": "entire_observed_region",
+            "state": "closed"
+          }
+        ]
+      }
+    ]
+  ],
+  "placements": [
+    {
+      "placement": {
+        "anchor": {
+          "x": 1100,
+          "y": 177,
+          "z": 1000
+        },
+        "bounds": {
+          "max": {
+            "x": 1107,
+            "y": 183,
+            "z": 1006
+          },
+          "min": {
+            "x": 1097,
+            "y": 178,
+            "z": 996
+          }
+        },
+        "changed_blocks": 55,
+        "changes": [
+          {
+            "pos": {
+              "x": 1099,
+              "y": 179,
+              "z": 1000
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 179,
+              "z": 1000
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 179,
+              "z": 1001
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 179,
+              "z": 1002
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 179,
+              "z": 1003
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 179,
+              "z": 1000
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 179,
+              "z": 1003
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 179,
+              "z": 998
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 179,
+              "z": 999
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 179,
+              "z": 1000
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 179,
+              "z": 1001
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 179,
+              "z": 1002
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 179,
+              "z": 1003
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 179,
+              "z": 1004
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 179,
+              "z": 1003
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1104,
+              "y": 179,
+              "z": 1002
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1104,
+              "y": 179,
+              "z": 1003
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 180,
+              "z": 998
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 180,
+              "z": 999
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 180,
+              "z": 1000
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 180,
+              "z": 1001
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 180,
+              "z": 1002
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 180,
+              "z": 998
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 180,
+              "z": 999
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 180,
+              "z": 1000
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 180,
+              "z": 1001
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 180,
+              "z": 1002
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1104,
+              "y": 180,
+              "z": 1001
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1105,
+              "y": 180,
+              "z": 1000
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 181,
+              "z": 998
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 181,
+              "z": 999
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 181,
+              "z": 1001
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 181,
+              "z": 1002
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 181,
+              "z": 998
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 181,
+              "z": 999
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 181,
+              "z": 1000
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 181,
+              "z": 1001
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 181,
+              "z": 1002
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 182,
+              "z": 998
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 182,
+              "z": 999
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 182,
+              "z": 1000
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 182,
+              "z": 1001
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 182,
+              "z": 1002
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 180,
+              "z": 1000
+            },
+            "state": "minecraft:sticky_piston[extended=false,facing=east]"
+          },
+          {
+            "pos": {
+              "x": 1104,
+              "y": 181,
+              "z": 1000
+            },
+            "state": "minecraft:sticky_piston[extended=false,facing=west]"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 180,
+              "z": 1001
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 180,
+              "z": 1002
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 180,
+              "z": 1003
+            },
+            "state": "minecraft:redstone_wire[east=side,north=side,power=0,south=none,west=none]"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 180,
+              "z": 1003
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 180,
+              "z": 1003
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=side,west=side]"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 180,
+              "z": 1003
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 1104,
+              "y": 180,
+              "z": 1002
+            },
+            "state": "minecraft:redstone_wire[east=none,north=up,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 1104,
+              "y": 180,
+              "z": 1003
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 1104,
+              "y": 181,
+              "z": 1001
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 180,
+              "z": 1004
+            },
+            "state": "minecraft:lever[face=floor,facing=north,powered=false]"
+          }
+        ],
+        "circuit": "piston-door-1x2",
+        "collision_count": 0,
+        "initial_state": "open",
+        "materials": {
+          "minecraft:lever": 1,
+          "minecraft:redstone_wire": 9,
+          "minecraft:sticky_piston": 2,
+          "minecraft:stone": 43
+        },
+        "next_step": "show_operation, then invoke_operation(confirm=true)",
+        "ok": true,
+        "operation_id": "ddc0e390-0196-453a-bbf6-39e063dd984b",
+        "origin": {
+          "x": 1100,
+          "y": 180,
+          "z": 1000
+        },
+        "placement_note": "origin is three blocks above the gaze target to preserve an empty guard above the ground",
+        "read_only": false,
+        "undo_change_count": 55,
+        "undo_changes": [
+          {
+            "pos": {
+              "x": 1102,
+              "y": 180,
+              "z": 1004
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1104,
+              "y": 181,
+              "z": 1001
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1104,
+              "y": 180,
+              "z": 1003
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1104,
+              "y": 180,
+              "z": 1002
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 180,
+              "z": 1003
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 180,
+              "z": 1003
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 180,
+              "z": 1003
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 180,
+              "z": 1003
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 180,
+              "z": 1002
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 180,
+              "z": 1001
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1104,
+              "y": 181,
+              "z": 1000
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 180,
+              "z": 1000
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 182,
+              "z": 1002
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 182,
+              "z": 1001
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 182,
+              "z": 1000
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 182,
+              "z": 999
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 182,
+              "z": 998
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 181,
+              "z": 1002
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 181,
+              "z": 1001
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 181,
+              "z": 1000
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 181,
+              "z": 999
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 181,
+              "z": 998
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 181,
+              "z": 1002
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 181,
+              "z": 1001
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 181,
+              "z": 999
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 181,
+              "z": 998
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1105,
+              "y": 180,
+              "z": 1000
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1104,
+              "y": 180,
+              "z": 1001
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 180,
+              "z": 1002
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 180,
+              "z": 1001
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 180,
+              "z": 1000
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 180,
+              "z": 999
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 180,
+              "z": 998
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 180,
+              "z": 1002
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 180,
+              "z": 1001
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 180,
+              "z": 1000
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 180,
+              "z": 999
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 180,
+              "z": 998
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1104,
+              "y": 179,
+              "z": 1003
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1104,
+              "y": 179,
+              "z": 1002
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 179,
+              "z": 1003
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 179,
+              "z": 1004
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 179,
+              "z": 1003
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 179,
+              "z": 1002
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 179,
+              "z": 1001
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 179,
+              "z": 1000
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 179,
+              "z": 999
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 179,
+              "z": 998
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 179,
+              "z": 1003
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 179,
+              "z": 1000
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 179,
+              "z": 1003
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 179,
+              "z": 1002
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 179,
+              "z": 1001
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 179,
+              "z": 1000
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1099,
+              "y": 179,
+              "z": 1000
+            },
+            "state": "minecraft:air"
+          }
+        ]
+      },
+      "applied": {
+        "automatic_rollback": false,
+        "bounds": {
+          "max": {
+            "x": 1107,
+            "y": 183,
+            "z": 1006
+          },
+          "min": {
+            "x": 1097,
+            "y": 178,
+            "z": 996
+          }
+        },
+        "ok": true,
+        "operation_id": "ddc0e390-0196-453a-bbf6-39e063dd984b",
+        "retry_allowed": false,
+        "status": "verified",
+        "undo": false,
+        "verification_error": null,
+        "verified": true,
+        "wait_error": null,
+        "write_error": null
+      },
+      "stalePlacement": {
+        "error": "placement and guard must be entirely empty",
+        "error_code": "internal",
+        "ok": false,
+        "retryable": false,
+        "schema_version": "dustroute.error.v1"
+      }
+    },
+    {
+      "placement": {
+        "anchor": {
+          "x": 1100,
+          "y": 177,
+          "z": 1000
+        },
+        "bounds": {
+          "max": {
+            "x": 1107,
+            "y": 183,
+            "z": 1006
+          },
+          "min": {
+            "x": 1097,
+            "y": 178,
+            "z": 996
+          }
+        },
+        "changed_blocks": 55,
+        "changes": [
+          {
+            "pos": {
+              "x": 1099,
+              "y": 179,
+              "z": 1000
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 179,
+              "z": 1000
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 179,
+              "z": 1001
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 179,
+              "z": 1002
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 179,
+              "z": 1003
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 179,
+              "z": 1000
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 179,
+              "z": 1003
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 179,
+              "z": 998
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 179,
+              "z": 999
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 179,
+              "z": 1000
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 179,
+              "z": 1001
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 179,
+              "z": 1002
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 179,
+              "z": 1003
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 179,
+              "z": 1004
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 179,
+              "z": 1003
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1104,
+              "y": 179,
+              "z": 1002
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1104,
+              "y": 179,
+              "z": 1003
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 180,
+              "z": 998
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 180,
+              "z": 999
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 180,
+              "z": 1000
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 180,
+              "z": 1001
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 180,
+              "z": 1002
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 180,
+              "z": 998
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 180,
+              "z": 999
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 180,
+              "z": 1000
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 180,
+              "z": 1001
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 180,
+              "z": 1002
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1104,
+              "y": 180,
+              "z": 1001
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1105,
+              "y": 180,
+              "z": 1000
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 181,
+              "z": 998
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 181,
+              "z": 999
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 181,
+              "z": 1001
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 181,
+              "z": 1002
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 181,
+              "z": 998
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 181,
+              "z": 999
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 181,
+              "z": 1000
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 181,
+              "z": 1001
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 181,
+              "z": 1002
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 182,
+              "z": 998
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 182,
+              "z": 999
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 182,
+              "z": 1000
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 182,
+              "z": 1001
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 182,
+              "z": 1002
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 180,
+              "z": 1000
+            },
+            "state": "minecraft:sticky_piston[extended=false,facing=east]"
+          },
+          {
+            "pos": {
+              "x": 1104,
+              "y": 181,
+              "z": 1000
+            },
+            "state": "minecraft:sticky_piston[extended=false,facing=west]"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 180,
+              "z": 1001
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 180,
+              "z": 1002
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 180,
+              "z": 1003
+            },
+            "state": "minecraft:redstone_wire[east=side,north=side,power=0,south=none,west=none]"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 180,
+              "z": 1003
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 180,
+              "z": 1003
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=side,west=side]"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 180,
+              "z": 1003
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 1104,
+              "y": 180,
+              "z": 1002
+            },
+            "state": "minecraft:redstone_wire[east=none,north=up,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 1104,
+              "y": 180,
+              "z": 1003
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 1104,
+              "y": 181,
+              "z": 1001
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 180,
+              "z": 1004
+            },
+            "state": "minecraft:lever[face=floor,facing=north,powered=false]"
+          }
+        ],
+        "circuit": "piston-door-1x2",
+        "collision_count": 0,
+        "initial_state": "open",
+        "materials": {
+          "minecraft:lever": 1,
+          "minecraft:redstone_wire": 9,
+          "minecraft:sticky_piston": 2,
+          "minecraft:stone": 43
+        },
+        "next_step": "show_operation, then invoke_operation(confirm=true)",
+        "ok": true,
+        "operation_id": "0f54d6bd-5a51-42b4-9ec3-2ca74c2595ca",
+        "origin": {
+          "x": 1100,
+          "y": 180,
+          "z": 1000
+        },
+        "placement_note": "origin is three blocks above the gaze target to preserve an empty guard above the ground",
+        "read_only": false,
+        "undo_change_count": 55,
+        "undo_changes": [
+          {
+            "pos": {
+              "x": 1102,
+              "y": 180,
+              "z": 1004
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1104,
+              "y": 181,
+              "z": 1001
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1104,
+              "y": 180,
+              "z": 1003
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1104,
+              "y": 180,
+              "z": 1002
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 180,
+              "z": 1003
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 180,
+              "z": 1003
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 180,
+              "z": 1003
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 180,
+              "z": 1003
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 180,
+              "z": 1002
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 180,
+              "z": 1001
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1104,
+              "y": 181,
+              "z": 1000
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 180,
+              "z": 1000
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 182,
+              "z": 1002
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 182,
+              "z": 1001
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 182,
+              "z": 1000
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 182,
+              "z": 999
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 182,
+              "z": 998
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 181,
+              "z": 1002
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 181,
+              "z": 1001
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 181,
+              "z": 1000
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 181,
+              "z": 999
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 181,
+              "z": 998
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 181,
+              "z": 1002
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 181,
+              "z": 1001
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 181,
+              "z": 999
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 181,
+              "z": 998
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1105,
+              "y": 180,
+              "z": 1000
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1104,
+              "y": 180,
+              "z": 1001
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 180,
+              "z": 1002
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 180,
+              "z": 1001
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 180,
+              "z": 1000
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 180,
+              "z": 999
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 180,
+              "z": 998
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 180,
+              "z": 1002
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 180,
+              "z": 1001
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 180,
+              "z": 1000
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 180,
+              "z": 999
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 180,
+              "z": 998
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1104,
+              "y": 179,
+              "z": 1003
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1104,
+              "y": 179,
+              "z": 1002
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 179,
+              "z": 1003
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 179,
+              "z": 1004
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 179,
+              "z": 1003
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 179,
+              "z": 1002
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 179,
+              "z": 1001
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 179,
+              "z": 1000
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 179,
+              "z": 999
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 179,
+              "z": 998
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 179,
+              "z": 1003
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 179,
+              "z": 1000
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 179,
+              "z": 1003
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 179,
+              "z": 1002
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 179,
+              "z": 1001
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 179,
+              "z": 1000
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1099,
+              "y": 179,
+              "z": 1000
+            },
+            "state": "minecraft:air"
+          }
+        ]
+      },
+      "applied": {
+        "automatic_rollback": false,
+        "bounds": {
+          "max": {
+            "x": 1107,
+            "y": 183,
+            "z": 1006
+          },
+          "min": {
+            "x": 1097,
+            "y": 178,
+            "z": 996
+          }
+        },
+        "ok": true,
+        "operation_id": "0f54d6bd-5a51-42b4-9ec3-2ca74c2595ca",
+        "retry_allowed": false,
+        "status": "verified",
+        "undo": false,
+        "verification_error": null,
+        "verified": true,
+        "wait_error": null,
+        "write_error": null
+      },
+      "stalePlacement": {
+        "error": "placement and guard must be entirely empty",
+        "error_code": "internal",
+        "ok": false,
+        "retryable": false,
+        "schema_version": "dustroute.error.v1"
+      }
+    },
+    {
+      "placement": {
+        "anchor": {
+          "x": 1100,
+          "y": 177,
+          "z": 1000
+        },
+        "bounds": {
+          "max": {
+            "x": 1107,
+            "y": 183,
+            "z": 1006
+          },
+          "min": {
+            "x": 1097,
+            "y": 178,
+            "z": 996
+          }
+        },
+        "changed_blocks": 55,
+        "changes": [
+          {
+            "pos": {
+              "x": 1099,
+              "y": 179,
+              "z": 1000
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 179,
+              "z": 1000
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 179,
+              "z": 1001
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 179,
+              "z": 1002
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 179,
+              "z": 1003
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 179,
+              "z": 1000
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 179,
+              "z": 1003
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 179,
+              "z": 998
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 179,
+              "z": 999
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 179,
+              "z": 1000
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 179,
+              "z": 1001
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 179,
+              "z": 1002
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 179,
+              "z": 1003
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 179,
+              "z": 1004
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 179,
+              "z": 1003
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1104,
+              "y": 179,
+              "z": 1002
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1104,
+              "y": 179,
+              "z": 1003
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 180,
+              "z": 998
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 180,
+              "z": 999
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 180,
+              "z": 1000
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 180,
+              "z": 1001
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 180,
+              "z": 1002
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 180,
+              "z": 998
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 180,
+              "z": 999
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 180,
+              "z": 1000
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 180,
+              "z": 1001
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 180,
+              "z": 1002
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1104,
+              "y": 180,
+              "z": 1001
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1105,
+              "y": 180,
+              "z": 1000
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 181,
+              "z": 998
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 181,
+              "z": 999
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 181,
+              "z": 1001
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 181,
+              "z": 1002
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 181,
+              "z": 998
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 181,
+              "z": 999
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 181,
+              "z": 1000
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 181,
+              "z": 1001
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 181,
+              "z": 1002
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 182,
+              "z": 998
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 182,
+              "z": 999
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 182,
+              "z": 1000
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 182,
+              "z": 1001
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 182,
+              "z": 1002
+            },
+            "state": "minecraft:stone"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 180,
+              "z": 1000
+            },
+            "state": "minecraft:sticky_piston[extended=false,facing=east]"
+          },
+          {
+            "pos": {
+              "x": 1104,
+              "y": 181,
+              "z": 1000
+            },
+            "state": "minecraft:sticky_piston[extended=false,facing=west]"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 180,
+              "z": 1001
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 180,
+              "z": 1002
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 180,
+              "z": 1003
+            },
+            "state": "minecraft:redstone_wire[east=side,north=side,power=0,south=none,west=none]"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 180,
+              "z": 1003
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 180,
+              "z": 1003
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=side,west=side]"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 180,
+              "z": 1003
+            },
+            "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 1104,
+              "y": 180,
+              "z": 1002
+            },
+            "state": "minecraft:redstone_wire[east=none,north=up,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 1104,
+              "y": 180,
+              "z": 1003
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=none,west=side]"
+          },
+          {
+            "pos": {
+              "x": 1104,
+              "y": 181,
+              "z": 1001
+            },
+            "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 180,
+              "z": 1004
+            },
+            "state": "minecraft:lever[face=floor,facing=north,powered=false]"
+          }
+        ],
+        "circuit": "piston-door-1x2",
+        "collision_count": 0,
+        "initial_state": "open",
+        "materials": {
+          "minecraft:lever": 1,
+          "minecraft:redstone_wire": 9,
+          "minecraft:sticky_piston": 2,
+          "minecraft:stone": 43
+        },
+        "next_step": "show_operation, then invoke_operation(confirm=true)",
+        "ok": true,
+        "operation_id": "1ae5e4c3-3fbb-4513-8c2e-4173e1c2a941",
+        "origin": {
+          "x": 1100,
+          "y": 180,
+          "z": 1000
+        },
+        "placement_note": "origin is three blocks above the gaze target to preserve an empty guard above the ground",
+        "read_only": false,
+        "undo_change_count": 55,
+        "undo_changes": [
+          {
+            "pos": {
+              "x": 1102,
+              "y": 180,
+              "z": 1004
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1104,
+              "y": 181,
+              "z": 1001
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1104,
+              "y": 180,
+              "z": 1003
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1104,
+              "y": 180,
+              "z": 1002
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 180,
+              "z": 1003
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 180,
+              "z": 1003
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 180,
+              "z": 1003
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 180,
+              "z": 1003
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 180,
+              "z": 1002
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 180,
+              "z": 1001
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1104,
+              "y": 181,
+              "z": 1000
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 180,
+              "z": 1000
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 182,
+              "z": 1002
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 182,
+              "z": 1001
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 182,
+              "z": 1000
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 182,
+              "z": 999
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 182,
+              "z": 998
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 181,
+              "z": 1002
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 181,
+              "z": 1001
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 181,
+              "z": 1000
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 181,
+              "z": 999
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 181,
+              "z": 998
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 181,
+              "z": 1002
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 181,
+              "z": 1001
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 181,
+              "z": 999
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 181,
+              "z": 998
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1105,
+              "y": 180,
+              "z": 1000
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1104,
+              "y": 180,
+              "z": 1001
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 180,
+              "z": 1002
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 180,
+              "z": 1001
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 180,
+              "z": 1000
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 180,
+              "z": 999
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 180,
+              "z": 998
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 180,
+              "z": 1002
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 180,
+              "z": 1001
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 180,
+              "z": 1000
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 180,
+              "z": 999
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 180,
+              "z": 998
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1104,
+              "y": 179,
+              "z": 1003
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1104,
+              "y": 179,
+              "z": 1002
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1103,
+              "y": 179,
+              "z": 1003
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 179,
+              "z": 1004
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 179,
+              "z": 1003
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 179,
+              "z": 1002
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 179,
+              "z": 1001
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 179,
+              "z": 1000
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 179,
+              "z": 999
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1102,
+              "y": 179,
+              "z": 998
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 179,
+              "z": 1003
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1101,
+              "y": 179,
+              "z": 1000
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 179,
+              "z": 1003
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 179,
+              "z": 1002
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 179,
+              "z": 1001
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1100,
+              "y": 179,
+              "z": 1000
+            },
+            "state": "minecraft:air"
+          },
+          {
+            "pos": {
+              "x": 1099,
+              "y": 179,
+              "z": 1000
+            },
+            "state": "minecraft:air"
+          }
+        ]
+      },
+      "applied": {
+        "automatic_rollback": false,
+        "bounds": {
+          "max": {
+            "x": 1107,
+            "y": 183,
+            "z": 1006
+          },
+          "min": {
+            "x": 1097,
+            "y": 178,
+            "z": 996
+          }
+        },
+        "ok": true,
+        "operation_id": "1ae5e4c3-3fbb-4513-8c2e-4173e1c2a941",
+        "retry_allowed": false,
+        "status": "verified",
+        "undo": false,
+        "verification_error": null,
+        "verified": true,
+        "wait_error": null,
+        "write_error": null
+      },
+      "stalePlacement": {
+        "error": "placement and guard must be entirely empty",
+        "error_code": "internal",
+        "ok": false,
+        "retryable": false,
+        "schema_version": "dustroute.error.v1"
+      }
+    }
+  ],
+  "undos": [
+    {
+      "closedUndo": {
+        "error": "restore the exact open state before undoing placement",
+        "error_code": "internal",
+        "ok": false,
+        "retryable": false,
+        "schema_version": "dustroute.error.v1"
+      },
+      "restored": {
+        "automatic_rollback": false,
+        "bounds": {
+          "max": {
+            "x": 1107,
+            "y": 183,
+            "z": 1006
+          },
+          "min": {
+            "x": 1097,
+            "y": 178,
+            "z": 996
+          }
+        },
+        "ok": true,
+        "operation_id": "ddc0e390-0196-453a-bbf6-39e063dd984b",
+        "retry_allowed": false,
+        "status": "verified",
+        "undo": true,
+        "verification_error": null,
+        "verified": true,
+        "wait_error": null,
+        "write_error": null
+      }
+    },
+    {
+      "closedUndo": {
+        "error": "restore the exact open state before undoing placement",
+        "error_code": "internal",
+        "ok": false,
+        "retryable": false,
+        "schema_version": "dustroute.error.v1"
+      },
+      "restored": {
+        "automatic_rollback": false,
+        "bounds": {
+          "max": {
+            "x": 1107,
+            "y": 183,
+            "z": 1006
+          },
+          "min": {
+            "x": 1097,
+            "y": 178,
+            "z": 996
+          }
+        },
+        "ok": true,
+        "operation_id": "0f54d6bd-5a51-42b4-9ec3-2ca74c2595ca",
+        "retry_allowed": false,
+        "status": "verified",
+        "undo": true,
+        "verification_error": null,
+        "verified": true,
+        "wait_error": null,
+        "write_error": null
+      }
+    },
+    {
+      "closedUndo": {
+        "error": "restore the exact open state before undoing placement",
+        "error_code": "internal",
+        "ok": false,
+        "retryable": false,
+        "schema_version": "dustroute.error.v1"
+      },
+      "restored": {
+        "automatic_rollback": false,
+        "bounds": {
+          "max": {
+            "x": 1107,
+            "y": 183,
+            "z": 1006
+          },
+          "min": {
+            "x": 1097,
+            "y": 178,
+            "z": 996
+          }
+        },
+        "ok": true,
+        "operation_id": "1ae5e4c3-3fbb-4513-8c2e-4173e1c2a941",
+        "retry_allowed": false,
+        "status": "verified",
+        "undo": true,
+        "verification_error": null,
+        "verified": true,
+        "wait_error": null,
+        "write_error": null
+      }
+    }
+  ],
+  "cleanup_verified": true,
+  "first_gaze": {
+    "observation": {
+      "dimension": "minecraft:overworld",
+      "distance": 4.000000000000002,
+      "eye_position": {
+        "x": 1094.5,
+        "y": 181.62,
+        "z": 996.5
+      },
+      "pitch": -0.723044773847096,
+      "player": "dustroutetest",
+      "reacquired": false,
+      "targeted_block": {
+        "x": 1097,
+        "y": 178,
+        "z": 996
+      },
+      "targeted_face": null,
+      "yaw": 4.570491895921688
+    },
+    "ok": true
+  },
+  "second_gaze": {
+    "observation": {
+      "dimension": "minecraft:overworld",
+      "distance": 4.000000000000002,
+      "eye_position": {
+        "x": 1104.5,
+        "y": 186.62,
+        "z": 1006.5
+      },
+      "pitch": -0.723044773847096,
+      "player": "dustroutetest",
+      "reacquired": false,
+      "targeted_block": {
+        "x": 1107,
+        "y": 183,
+        "z": 1006
+      },
+      "targeted_face": null,
+      "yaw": 4.570491895921688
+    },
+    "ok": true
+  },
+  "status": "passed",
+  "minecraft_version": "1.21.11",
+  "binary_sha256": "2b1df7e0638aebd116392c1bf97b1ebd93396a51d49a93c340be775aa0834c1e",
+  "contract_sha256": "b1f26c466742df40c4e90ac5a0bd76baa60c6571d4d0c1f84dfb8a0556475fef",
+  "verified_gates": [
+    "new_placement builds exact open state",
+    "preview required",
+    "whole empty guard checked before writes",
+    "show_region and convert_from_circuit recognize constructed door",
+    "close/open/close plus reopen through normal lever operation",
+    "closed state rejects placement undo",
+    "exact open state permits undo",
+    "entire guard empty after undo"
+  ]
+}

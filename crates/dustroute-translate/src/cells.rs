@@ -536,7 +536,7 @@ pub fn compiled_xor_cell_with_config(
             "dustroute.xor.compiled_baseline.1_21_11.s{}.l{}",
             config.spacing_x, config.lane_gap
         ),
-        world: compiled.world,
+        world: compiled.world.into_world(),
         inputs: vec![input("a")?, input("b")?],
         outputs: vec![OutputPort {
             name: "out".into(),

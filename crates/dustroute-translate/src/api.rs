@@ -526,7 +526,7 @@ mod tests {
         let forward = Translator
             .forward(&half_adder(), ForwardOptions::default())
             .unwrap();
-        let mut world = forward.compiled.world.clone();
+        let mut world = forward.compiled.world.clone().into_world();
         let missing = world
             .iter()
             .find_map(|(pos, block)| {
