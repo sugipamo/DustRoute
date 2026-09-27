@@ -110,7 +110,7 @@ pub(super) fn added(
 ) -> Result<RuntimeOutcome<PistonEvent>, RuntimeError> {
     let block = view.block(pos)?;
     let mut jobs = VecDeque::new();
-    if crate::device_program::program(block.kind).is_some() {
+    if crate::device_program::program(&block).is_some() {
         return Ok(RuntimeOutcome {
             callbacks: vec![super::devices::event(
                 pos,

@@ -44,6 +44,7 @@ Git history; diagnostic fixtures have not been promoted into public capability.
 | [Piston transient conformance](piston-transient-conformance.md) | Measured input boundaries, carrier progress and callback-visible state comparisons |
 | [Movable piston bodies](piston-payload-conformance.md) | All-facing ordinary/sticky payloads, shared chains, double-extender evidence and subsequent redstone integration |
 | [Downloaded 3×3 reference door](reference-3x3-door-audit.md) | Static inventory, exact coordinates and implementation/validation history |
+| [Typed device definitions](typed-device-runtime.md) | Rust constants, compile-time contracts, atomic properties, analog signals and concrete variant selection |
 | [Data-driven block execution](data-driven-block-runtime.md) | Declarative queries, finite tables, ordered effects, lamp/observer migration and stone-button extension |
 | [Native lamp and observer callbacks](native-device-callbacks.md) | Shared scheduler integration and source-backed device callbacks |
 | [Staged piston movement](staged-piston-motion.md) | Complete reference-door comparison, moving observers and resumable movement writes |

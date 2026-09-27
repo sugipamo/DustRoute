@@ -85,7 +85,7 @@ pub(super) fn notify(
         return Ok(out);
     };
     let block = view.block(job.target)?;
-    if let Some(program) = crate::device_program::program(block.kind) {
+    if let Some(program) = crate::device_program::program(&block) {
         let callback = if job.shape {
             crate::device_program::Callback::Shape
         } else {

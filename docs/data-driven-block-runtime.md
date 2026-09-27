@@ -1,5 +1,9 @@
 # Data-driven block execution migration
 
+This records the completed v7 migration. Current v8 execution uses
+[Rust constant definitions](typed-device-runtime.md), replacing the device JSON
+authoring described below and adding multi-property and analog primitives.
+
 Started 2026-09-27 on `codex/data-driven-block-runtime` from develop
 `8e56da75c25900ee25e5b4ef6dbeb8ee374e69f4`.
 
@@ -97,7 +101,7 @@ The actual world scheduler and piston motion algorithm remain shared Rust code.
 Wire/repeater callbacks and the separate fixed-geometry proof models have not
 been migrated to this new device vocabulary.
 
-Current execution and root-exploration profiles are **v7**. The execution profile
+At completion of this migration, execution and root-exploration profiles were **v7**. The execution profile
 pins `dustroute.device-programs.java-1-21-11.v1` and fourteen law roles, adding the
 stone-button law. Existing lamp/observer laws and recorded observations are
 unchanged. Saved electrical v1–v6 contexts are rejected; this does not change the

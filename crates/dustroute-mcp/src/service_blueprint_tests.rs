@@ -345,7 +345,7 @@ async fn custom_electrical_construction_rechecks_adoption_baseline_settings_and_
     assert_eq!(planned["ok"], true, "{planned}");
     assert_eq!(
         planned["execution_context"]["profile"],
-        "dustroute.piston-electrical-root-exploration.v7"
+        "dustroute.piston-electrical-root-exploration.v8"
     );
     let id = planned["operation_id"].clone();
     assert_eq!(
@@ -1124,7 +1124,7 @@ async fn runtime_blueprint_review_and_adoption_preserve_child_failures_after_res
                 .input_schema,
         )
         .unwrap();
-        assert!(schema.contains("dustroute.piston-electrical-root-exploration.v7"));
+        assert!(schema.contains("dustroute.piston-electrical-root-exploration.v8"));
         assert!(!schema.contains("dustroute.horizontal-piston-root-exploration.v1"));
         let imported=call(&client,"test_circuit_change",json!({"blueprint":{"action":"import","records":{
             "types":fixture.catalog.type_revisions().collect::<Vec<_>>(),
@@ -1154,7 +1154,7 @@ async fn runtime_blueprint_review_and_adoption_preserve_child_failures_after_res
         );
         assert_eq!(
             inspected["result"]["validation"]["placement_validation_profile"],
-            "dustroute.piston-electrical-callbacks.java-1-21-11.v7"
+            "dustroute.piston-electrical-callbacks.java-1-21-11.v8"
         );
         assert_eq!(
             inspected["result"]["world_execution_context"],

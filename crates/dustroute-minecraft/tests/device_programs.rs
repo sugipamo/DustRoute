@@ -91,9 +91,12 @@ fn definitions_reject_unbound_outputs_invalid_domains_and_prewrite_mutations() {
                 .get_mut(&Callback::Shape)
                 .unwrap()
                 .effects
-                .push(Effect::WritePower {
+                .push(Effect::WriteState {
                     when: Value::Constant { number: 1 },
-                    powered: Value::Constant { number: 1 },
+                    values: vec![(
+                        Property::Bool(BoolProperty::Powered),
+                        Value::Constant { number: 1 },
+                    )],
                     notifications: WriteNotifications::Shapes,
                 }),
             3 => {

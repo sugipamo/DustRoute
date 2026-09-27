@@ -79,7 +79,7 @@ fn validate_initial(view: RuntimeView<'_>) -> Result<(), RuntimeError> {
                 "unsupported initial evidence at {pos:?}"
             )));
         }
-        if crate::device_program::program(block.kind).is_some() {
+        if crate::device_program::program(block).is_some() {
             continue;
         }
         match block.kind {
@@ -230,7 +230,7 @@ fn handle(
                             | BlockKind::PistonHead
                             | BlockKind::RedstoneWire
                             | BlockKind::Repeater
-                    ) || crate::device_program::program(b.kind)
+                    ) || crate::device_program::program(b)
                         .is_some_and(|p| p.definition.initial_neighbor_update)
                 })
                 .map(|(p, _)| NeighborJob {
@@ -610,9 +610,7 @@ fn finish_or_advance(
         if after.kind == BlockKind::PistonHead && !head_supported(view, pos, &after)? {
             after = Block::new(BlockKind::Air);
         }
-        if crate::device_program::program(after.kind)
-            .is_some_and(|p| p.definition.preprocess_shapes)
-        {
+        if crate::device_program::program(&after).is_some_and(|p| p.definition.preprocess_shapes) {
             // postProcessState evaluates all six neighbor directions before
             // the arrival write. Its facing-side observer callback can enqueue
             // a destination tick even though that cell is still moving.

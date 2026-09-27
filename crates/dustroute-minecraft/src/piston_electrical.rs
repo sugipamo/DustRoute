@@ -107,10 +107,10 @@ pub fn validate_evidence(block: &Block) -> Result<(), RuntimeError> {
         .as_deref()
         .map(|n| n.strip_prefix("minecraft:").unwrap_or(n));
     let property = |key: &str| block.observed_properties.get(key).map(String::as_str);
-    if let Some(program) = crate::device_program::program(block.kind) {
+    if let Some(program) = crate::device_program::program(block) {
         use crate::device_program::Orientation;
         let definition = &program.definition;
-        let powered = power(block)? != 0;
+        definition.validate_state(block).map_err(invalid)?;
         let direction_valid = match definition.orientation {
             Orientation::None => true,
             Orientation::Output => block.facing.is_some(),
@@ -137,10 +137,7 @@ pub fn validate_evidence(block: &Block) -> Result<(), RuntimeError> {
                         && facing.is_some_and(|d| property("facing") == Some(self::name(d)))
                 }
             };
-            definition.observed_names.iter().any(|n| n == name)
-                && orientation
-                && property(&definition.power_property).and_then(|s| s.parse::<bool>().ok())
-                    == Some(powered)
+            definition.observed_names.iter().any(|n| n == name) && orientation
         });
         return if direction_valid && properties_valid {
             Ok(())
@@ -242,12 +239,12 @@ pub fn validate_evidence(block: &Block) -> Result<(), RuntimeError> {
 /// Not the generic historical block traits: Java explicitly excludes pistons
 /// and redstone blocks from isSolidBlock, despite their full collision shapes.
 pub fn conducts(block: &Block) -> bool {
-    crate::device_program::program(block.kind)
+    crate::device_program::program(block)
         .map_or(block.kind == BlockKind::Solid, |p| p.definition.conducts)
 }
 
 pub fn full_face(block: &Block, side: Facing) -> bool {
-    if let Some(program) = crate::device_program::program(block.kind) {
+    if let Some(program) = crate::device_program::program(block) {
         return program.definition.full_support;
     }
     match block.kind {
@@ -332,31 +329,8 @@ impl<'a> ElectricalWorld<'a> {
             wire_connected: false,
             wires_enabled,
         };
-        if let Some(program) = crate::device_program::program(block.kind) {
-            use crate::device_program::Signal;
-            let level = power(&block)?;
-            return Ok(match program.definition.signal {
-                Signal::None => Emission { weak: 0, strong: 0 },
-                Signal::Output => {
-                    let signal = if block.facing == Some(query.opposite()) {
-                        level
-                    } else {
-                        0
-                    };
-                    Emission {
-                        weak: signal,
-                        strong: signal,
-                    }
-                }
-                Signal::Attached => Emission {
-                    weak: level,
-                    strong: if query == support(&block)?.opposite() {
-                        level
-                    } else {
-                        0
-                    },
-                },
-            });
+        if let Some(program) = crate::device_program::program(&block) {
+            return program.definition.emission(&block, query).map_err(invalid);
         }
         match block.kind {
             BlockKind::Lever => {
@@ -416,6 +390,17 @@ impl<'a> ElectricalWorld<'a> {
         Ok(false)
     }
 
+    /// Maximum incoming analog signal, including conductor-mediated strong power.
+    /// Unlike a Boolean query this must inspect all six faces, even after finding
+    /// a nonzero value. Unknown space is an error, never an implicit zero.
+    pub fn receiving_level(&self, pos: Pos) -> Result<u8, RuntimeError> {
+        let mut level = 0;
+        for side in SIDES {
+            level = level.max(self.emitted(along(pos, side)?, side, true)?);
+        }
+        Ok(level)
+    }
+
     pub fn piston_powered(&self, pos: Pos) -> Result<bool, RuntimeError> {
         let block = self.block(pos)?;
         if block.kind != BlockKind::Piston {
@@ -453,7 +438,7 @@ impl<'a> ElectricalWorld<'a> {
     }
 
     fn wire_connects(block: &Block, side: Facing) -> bool {
-        if let Some(program) = crate::device_program::program(block.kind) {
+        if let Some(program) = crate::device_program::program(block) {
             return match program.definition.signal {
                 crate::device_program::Signal::None => false,
                 crate::device_program::Signal::Output => block.facing == Some(side.opposite()),

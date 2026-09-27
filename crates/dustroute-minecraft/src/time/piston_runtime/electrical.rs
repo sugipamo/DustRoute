@@ -45,21 +45,29 @@ pub(super) fn wire_offset_jobs(
 pub(super) fn validate_scope(view: RuntimeView<'_>, fresh: bool) -> Result<(), RuntimeError> {
     let electrical = world(view)?;
     for (pos, block) in view.world().iter() {
-        if let Some(program) = crate::device_program::program(block.kind) {
+        if let Some(program) = crate::device_program::program(block) {
             let definition = &program.definition;
             if fresh && definition.fresh_powered_requires_history && block.powered == Some(true) {
                 return Err(unsupported(
                     "powered device needs its pending history; resume a checkpoint",
                 ));
             }
-            if definition.handlers.values().any(|h| {
-                h.inputs
-                    .iter()
-                    .any(|i| matches!(i.sample, crate::device_program::Query::ReceivingPower))
-            }) {
-                electrical.receiving_power(*pos)?;
-            }
             for handler in definition.handlers.values() {
+                for input in &handler.inputs {
+                    use crate::device_program::Query;
+                    match input.sample {
+                        Query::ReceivingPower => {
+                            electrical.receiving_power(*pos)?;
+                        }
+                        Query::ReceivingLevel => {
+                            electrical.receiving_level(*pos)?;
+                        }
+                        Query::SideLevel { side } => {
+                            electrical.emitted(along(*pos, side, 1)?, side, true)?;
+                        }
+                        _ => {}
+                    }
+                }
                 for effect in &handler.effects {
                     if let crate::device_program::Effect::Notify { targets, .. } = effect {
                         super::devices::notification_jobs(view, *pos, block, *targets)?;
@@ -92,7 +100,7 @@ pub(super) fn validate_scope(view: RuntimeView<'_>, fresh: bool) -> Result<(), R
         if matches!(
             block.kind,
             BlockKind::Lever | BlockKind::RedstoneWire | BlockKind::Repeater
-        ) || crate::device_program::program(block.kind).is_some_and(|p| {
+        ) || crate::device_program::program(block).is_some_and(|p| {
             p.definition.orientation == crate::device_program::Orientation::Attached
         }) {
             let offset = block

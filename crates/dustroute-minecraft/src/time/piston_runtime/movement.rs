@@ -87,7 +87,9 @@ pub(super) fn step(
             }
             // WorldChunk invokes onStateReplaced with MOVED before the
             // enclosing setBlockState reaches its shape pass.
-            if before.kind != after.kind && crate::device_program::program(before.kind).is_some() {
+            if BlockIdentity::of(&before) != BlockIdentity::of(&after)
+                && crate::device_program::program(&before).is_some()
+            {
                 out.callbacks.push(call(
                     pos,
                     PistonEvent::Notify {

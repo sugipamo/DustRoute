@@ -61,7 +61,7 @@ fn motion_time_laws_are_immutable_executable_blueprint_revisions() {
         HalfProgress::Zero
     );
     let context = WorldExecutionContext::for_profile(
-        WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V7,
+        WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V8,
     );
     assert_eq!(
         context.synchronous_runtime_profile(),

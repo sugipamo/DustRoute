@@ -122,19 +122,19 @@ pub(super) fn initialization_request(
     // that pulse. Simulate this actual request and verify the complete
     // settled world. Never alter the declared Assembly or use strict
     // writes; later changes to watched cells can still trigger pulses.
-    if let Some(program) = dustroute_minecraft::device_program::program(block.kind)
+    if let Some(program) = dustroute_minecraft::device_program::program(&block)
         && let Some(initialization) = &program.definition().command_initialization
         && block.powered == Some(initialization.declared_powered)
     {
-        let property = &program.definition().power_property;
+        let property = program.definition().primary_power.name();
         let powered = initialization.requested_powered;
         block.powered = Some(powered);
         block
             .observed_properties
-            .insert(property.clone(), powered.to_string());
+            .insert(property.into(), powered.to_string());
         requested
             .properties
-            .insert(property.clone(), powered.to_string());
+            .insert(property.into(), powered.to_string());
     }
     (block, snapshot_state(&requested))
 }

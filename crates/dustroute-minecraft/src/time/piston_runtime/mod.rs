@@ -17,7 +17,10 @@ use crate::{Block, Facing, Pos, Region, World};
 pub(crate) use adapter::ElectricalPistonAdapter;
 pub use movement::MotionPlan;
 
-pub const ELECTRICAL_PROFILE: &str = "dustroute.piston-electrical-callbacks.java-1-21-11.v7";
+pub const ELECTRICAL_PROFILE: &str = "dustroute.piston-electrical-callbacks.java-1-21-11.v8";
+
+#[cfg(test)]
+mod device_capability_tests;
 /// All six body directions share one electrical world and synchronous queue.
 /// Live placement requires fresh target review and verified observations.
 pub struct ElectricalPistonRuntime(SynchronousWorldRuntime<ElectricalPistonAdapter>);
@@ -110,7 +113,7 @@ impl ElectricalPistonRuntime {
     }
     pub fn execution_context(&self) -> crate::execution_context::WorldExecutionContext {
         crate::execution_context::WorldExecutionContext::for_profile(
-            crate::execution_context::WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V7,
+            crate::execution_context::WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V8,
         )
     }
 }
@@ -206,7 +209,7 @@ pub fn new_piston_runtime(
     limits: RuntimeLimits,
 ) -> Result<ElectricalPistonRuntime, RuntimeError> {
     crate::execution_context::WorldExecutionContext::for_profile(
-        crate::execution_context::WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V7,
+        crate::execution_context::WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V8,
     )
     .validate()
     .map_err(RuntimeError::Invalid)?;

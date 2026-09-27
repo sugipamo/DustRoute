@@ -8,7 +8,14 @@ use serde::{Deserialize, Serialize};
 use crate::law::{LawProgram, finite::FiniteLaw};
 use crate::{Block, BlockKind};
 
-pub const REVISION: &str = "dustroute.device-programs.java-1-21-11.v1";
+pub(crate) mod builtin_laws;
+mod builtins;
+pub mod schema;
+mod state;
+pub use state::{BoolProperty, Property, SignalLevel};
+
+pub const REVISION: &str = "dustroute.device-programs.java-1-21-11.v2";
+pub const BUILTIN_DEVICES: [schema::CheckedDevice; 3] = builtins::DEVICES;
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -21,7 +28,7 @@ pub enum Callback {
     Use,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Copy, Debug, Deserialize)]
 #[serde(tag = "query", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Query {
     Constant { value: u16 },
@@ -29,6 +36,9 @@ pub enum Query {
     ReceivingPower,
     TickQueued,
     SourceAtFront,
+    State { property: Property },
+    ReceivingLevel,
+    SideLevel { side: crate::Facing },
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -71,9 +81,9 @@ pub enum NotifyTargets {
 #[derive(Clone, Debug, Deserialize)]
 #[serde(tag = "effect", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Effect {
-    WritePower {
+    WriteState {
         when: Value,
-        powered: Value,
+        values: Vec<(Property, Value)>,
         notifications: WriteNotifications,
     },
     Schedule {
@@ -124,7 +134,11 @@ pub struct DeviceDefinition {
     pub kind: BlockKind,
     pub observed_names: Vec<String>,
     pub law: String,
-    pub power_property: String,
+    pub primary_power: BoolProperty,
+    pub properties: Vec<Property>,
+    pub synthetic: bool,
+    pub predicates: Vec<(Property, u16)>,
+    pub signal_level: SignalLevel,
     pub orientation: Orientation,
     pub signal: Signal,
     pub conducts: bool,
@@ -138,8 +152,8 @@ pub struct DeviceDefinition {
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub enum ResolvedEffect {
-    WritePower {
-        powered: bool,
+    WriteState {
+        values: Vec<(Property, u16)>,
         notifications: WriteNotifications,
     },
     Schedule {
@@ -194,7 +208,22 @@ impl DeviceProgram {
                 .collect::<BTreeSet<_>>()
                 .len()
                 != definition.observed_names.len()
-            || !matches!(definition.power_property.as_str(), "lit" | "powered")
+            || !definition
+                .properties
+                .contains(&Property::Bool(definition.primary_power))
+            || !definition
+                .properties
+                .contains(&definition.signal_level.property())
+            || definition
+                .properties
+                .iter()
+                .enumerate()
+                .any(|(i, p)| definition.properties[..i].contains(p))
+            || definition.predicates.iter().enumerate().any(|(i, (p, v))| {
+                !definition.properties.contains(p)
+                    || *v > p.maximum()
+                    || definition.predicates[..i].iter().any(|(q, _)| p == q)
+            })
             || definition.handlers.is_empty()
         {
             return Err("invalid device definition identity or state property".into());
@@ -213,6 +242,13 @@ impl DeviceProgram {
             for input in &handler.inputs {
                 let maximum = match input.sample {
                     Query::Constant { value } => value,
+                    Query::State { property } => {
+                        if !definition.properties.contains(&property) {
+                            return Err("undeclared device state query".into());
+                        }
+                        property.maximum()
+                    }
+                    Query::ReceivingLevel | Query::SideLevel { .. } => 15,
                     _ => 1,
                 };
                 if maximum > input.maximum {
@@ -226,8 +262,10 @@ impl DeviceProgram {
                 if matches!(
                     callback,
                     Callback::Removed | Callback::Shape | Callback::Added
-                ) && matches!(input.sample, Query::ReceivingPower)
-                {
+                ) && matches!(
+                    input.sample,
+                    Query::ReceivingPower | Query::ReceivingLevel | Query::SideLevel { .. }
+                ) {
                     return Err(
                         "detached/lifecycle query cannot assume an installed receiver".into(),
                     );
@@ -247,14 +285,22 @@ impl DeviceProgram {
             let mut writes = 0;
             for effect in &handler.effects {
                 match effect {
-                    Effect::WritePower { when, powered, .. } => {
+                    Effect::WriteState { when, values, .. } => {
                         writes += 1;
                         if bound(when)? > 1
-                            || bound(powered)? > 1
+                            || values.is_empty()
                             || writes > 1
                             || *callback == Callback::Removed
                         {
-                            return Err("invalid device power write".into());
+                            return Err("invalid device state write".into());
+                        }
+                        for (index, (property, value)) in values.iter().enumerate() {
+                            if !definition.properties.contains(property)
+                                || bound(value)? > property.maximum()
+                                || values[..index].iter().any(|(p, _)| p == property)
+                            {
+                                return Err("invalid device property assignment".into());
+                            }
                         }
                     }
                     Effect::Schedule { delay, priority } => {
@@ -310,9 +356,10 @@ impl DeviceProgram {
         before: &Block,
         mut sample: impl FnMut(&Query) -> Result<u16, String>,
     ) -> Result<Option<DeviceRun>, String> {
-        if before.kind != self.definition.kind {
+        if !self.definition.matches(before) {
             return Err("device definition does not match block kind".into());
         }
+        self.definition.validate_state(before)?;
         let Some(handler) = self.definition.handlers.get(&callback) else {
             return Ok(None);
         };
@@ -338,12 +385,12 @@ impl DeviceProgram {
             .effects
             .iter()
             .filter_map(|effect| match effect {
-                Effect::WritePower {
+                Effect::WriteState {
                     when,
-                    powered,
+                    values,
                     notifications,
-                } => (value(when) != 0).then_some(ResolvedEffect::WritePower {
-                    powered: value(powered) != 0,
+                } => (value(when) != 0).then_some(ResolvedEffect::WriteState {
+                    values: values.iter().map(|(p, v)| (*p, value(v))).collect(),
                     notifications: *notifications,
                 }),
                 Effect::Schedule { delay, priority } => {
@@ -367,35 +414,41 @@ impl DeviceProgram {
     }
 }
 
+impl DeviceDefinition {
+    pub fn matches(&self, block: &Block) -> bool {
+        block.kind == self.kind
+            && match block.observed_name.as_deref() {
+                Some(name) => self
+                    .observed_names
+                    .iter()
+                    .any(|n| n == name.strip_prefix("minecraft:").unwrap_or(name)),
+                None => self.synthetic,
+            }
+            && self
+                .predicates
+                .iter()
+                .all(|(p, v)| self.state(block, *p) == Ok(*v))
+    }
+}
+
 pub fn definitions() -> &'static [DeviceDefinition; 3] {
     static DEFINITIONS: OnceLock<[DeviceDefinition; 3]> = OnceLock::new();
-    DEFINITIONS.get_or_init(|| {
-        [
-            include_str!("../devices/lamp-java-1-21-11-v1.json"),
-            include_str!("../devices/observer-java-1-21-11-v1.json"),
-            include_str!("../devices/stone-button-java-1-21-11-v1.json"),
-        ]
-        .map(|json| serde_json::from_str(json).expect("embedded device definition"))
-    })
+    DEFINITIONS.get_or_init(|| builtins::DEVICES.map(|d| d.definition()))
 }
 
 pub fn programs() -> &'static [DeviceProgram; 3] {
     static PROGRAMS: OnceLock<[DeviceProgram; 3]> = OnceLock::new();
-    PROGRAMS.get_or_init(|| {
-        definitions().clone().map(|definition| {
-            let index = crate::device_callback_law::LAW_IDS
-                .iter()
-                .position(|id| *id == definition.law)
-                .expect("pinned device law identity");
-            DeviceProgram::compile(
-                definition,
-                &crate::device_callback_law::builtin_programs()[index],
-            )
-            .expect("compiled device definition")
-        })
-    })
+    PROGRAMS.get_or_init(|| builtins::DEVICES.map(|d| d.compile()))
 }
 
-pub fn program(kind: BlockKind) -> Option<&'static DeviceProgram> {
-    programs().iter().find(|p| p.definition.kind == kind)
+/// Concrete identity and state select the program; unknown variants never fall
+/// back to a different material. Ambiguity fails closed, even for custom slices.
+pub fn select<'a>(programs: &'a [DeviceProgram], block: &Block) -> Option<&'a DeviceProgram> {
+    let mut matches = programs.iter().filter(|p| p.definition.matches(block));
+    let selected = matches.next()?;
+    matches.next().is_none().then_some(selected)
+}
+
+pub fn program(block: &Block) -> Option<&'static DeviceProgram> {
+    select(programs(), block)
 }

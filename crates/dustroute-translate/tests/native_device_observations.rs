@@ -1,12 +1,14 @@
 //! Local callback law checks against directly instrumented target decisions.
 //! Delivery conformance is checked separately against retained runtime traces.
-use dustroute_minecraft::device_program::{Callback, Query, ResolvedEffect, program};
+use dustroute_minecraft::device_program::{
+    BoolProperty, Callback, Property, Query, ResolvedEffect, program,
+};
 use dustroute_minecraft::{Block, BlockKind};
 
 fn decision(callback: Callback, powered: bool, queued: bool, front: bool) -> Vec<ResolvedEffect> {
     let mut block = Block::new(BlockKind::Observer);
     block.powered = Some(powered);
-    program(block.kind)
+    program(&block)
         .unwrap()
         .prepare(callback, &block, |query| {
             Ok(match query {
@@ -14,7 +16,10 @@ fn decision(callback: Callback, powered: bool, queued: bool, front: bool) -> Vec
                 Query::Powered => powered.into(),
                 Query::TickQueued => queued.into(),
                 Query::SourceAtFront => front.into(),
-                Query::ReceivingPower => panic!("observer must not sample receiver power"),
+                Query::ReceivingPower
+                | Query::ReceivingLevel
+                | Query::SideLevel { .. }
+                | Query::State { .. } => panic!("unexpected observer query"),
             })
         })
         .unwrap()
@@ -110,7 +115,11 @@ fn recorded_shape_admission_and_pulse_writes_agree_with_native_observer_law() {
                 let next_powered = effect
                     .iter()
                     .find_map(|e| match e {
-                        ResolvedEffect::WritePower { powered, .. } => Some(*powered),
+                        ResolvedEffect::WriteState { values, .. } => {
+                            values.iter().find_map(|(p, v)| {
+                                (*p == Property::Bool(BoolProperty::Powered)).then_some(*v != 0)
+                            })
+                        }
                         _ => None,
                     })
                     .expect("observed write");

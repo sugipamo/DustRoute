@@ -161,7 +161,7 @@ fn device_program_runtime_rejects_the_previous_adapter_checkpoint() {
     struct PreviousAdapter;
     impl RuntimeAdapter for PreviousAdapter {
         type Payload = PistonEvent;
-        const REVISION: &'static str = "dustroute.piston-electrical-callbacks.java-1-21-11.v6";
+        const REVISION: &'static str = "dustroute.piston-electrical-callbacks.java-1-21-11.v7";
         fn validate_initial(_: RuntimeView<'_>) -> Result<(), RuntimeError> {
             Ok(())
         }

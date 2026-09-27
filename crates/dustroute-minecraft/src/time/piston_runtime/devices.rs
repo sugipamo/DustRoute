@@ -13,13 +13,24 @@ fn prepare(
     callback: Callback,
     source: Option<Pos>,
 ) -> Result<Option<DeviceRun>, RuntimeError> {
-    let Some(program) = device_program::program(before.kind) else {
+    let Some(program) = device_program::program(before) else {
         return if callback == Callback::Use {
             Err(unsupported("device has no use handler"))
         } else {
             Ok(None)
         };
     };
+    prepare_program(view, pos, before, callback, source, program)
+}
+
+pub(super) fn prepare_program(
+    view: RuntimeView<'_>,
+    pos: Pos,
+    before: &Block,
+    callback: Callback,
+    source: Option<Pos>,
+    program: &device_program::DeviceProgram,
+) -> Result<Option<DeviceRun>, RuntimeError> {
     if callback == Callback::Use && !program.definition.handlers.contains_key(&callback) {
         return Err(unsupported("device has no use handler"));
     }
@@ -28,13 +39,26 @@ fn prepare(
             let read = || -> Result<u16, RuntimeError> {
                 Ok(match query {
                     Query::Constant { value } => *value,
-                    Query::Powered => before
-                        .powered
-                        .ok_or_else(|| unsupported("device power required"))?
-                        .into(),
+                    Query::Powered => program
+                        .definition
+                        .state(
+                            before,
+                            crate::device_program::Property::Bool(program.definition.primary_power),
+                        )
+                        .map_err(unsupported)?,
+                    Query::State { property } => program
+                        .definition
+                        .state(before, *property)
+                        .map_err(unsupported)?,
                     Query::ReceivingPower => {
                         super::electrical::world(view)?.receiving_power(pos)?.into()
                     }
+                    Query::ReceivingLevel => {
+                        super::electrical::world(view)?.receiving_level(pos)?.into()
+                    }
+                    Query::SideLevel { side } => super::electrical::world(view)?
+                        .emitted(along(pos, *side, 1)?, *side, true)?
+                        .into(),
                     Query::TickQueued => view
                         .block_tick_queued(pos, &BlockIdentity::of(before))
                         .into(),
@@ -121,10 +145,19 @@ pub(super) fn notification_jobs(
 pub(super) fn step(
     view: RuntimeView<'_>,
     pos: Pos,
-    mut run: DeviceRun,
+    run: DeviceRun,
 ) -> Result<RuntimeOutcome<PistonEvent>, RuntimeError> {
-    let program = device_program::program(run.before.kind)
+    let program = device_program::program(&run.before)
         .ok_or_else(|| unsupported("missing continuation device"))?;
+    step_program(view, pos, run, program)
+}
+
+pub(super) fn step_program(
+    view: RuntimeView<'_>,
+    pos: Pos,
+    mut run: DeviceRun,
+    program: &device_program::DeviceProgram,
+) -> Result<RuntimeOutcome<PistonEvent>, RuntimeError> {
     if run.revision != device_program::REVISION || run.definition != program.definition.id {
         return Err(unsupported("device continuation revision mismatch"));
     }
@@ -134,8 +167,8 @@ pub(super) fn step(
     };
     run.next += 1;
     match effect {
-        ResolvedEffect::WritePower {
-            powered,
+        ResolvedEffect::WriteState {
+            values,
             notifications,
         } => {
             // A definition admits at most one write, before its nested effects.
@@ -143,14 +176,10 @@ pub(super) fn step(
             if view.block(pos)? != *run.before {
                 return Err(unsupported("device changed before its write"));
             }
-            let mut after = *run.before.clone();
-            after.powered = Some(powered);
-            if after.observed_name.is_some() {
-                after.observed_properties.insert(
-                    program.definition.power_property.clone(),
-                    powered.to_string(),
-                );
-            }
+            let after = program
+                .definition
+                .write_state(&run.before, &values)
+                .map_err(unsupported)?;
             let mut jobs = VecDeque::new();
             if notifications == WriteNotifications::NeighborsAndShapes {
                 jobs.extend(super::notifications::adjacent_jobs(
@@ -200,7 +229,7 @@ pub(super) fn preprocess(
     requested: &Block,
     source: Pos,
 ) -> Result<Vec<QueueRequest<PistonEvent>>, RuntimeError> {
-    if !device_program::program(requested.kind).is_some_and(|p| p.definition.preprocess_shapes) {
+    if !device_program::program(requested).is_some_and(|p| p.definition.preprocess_shapes) {
         return Ok(vec![]);
     }
     let Some(run) = prepare(view, pos, requested, Callback::Shape, Some(source))? else {

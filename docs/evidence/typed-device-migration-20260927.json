@@ -1,0 +1,272 @@
+{
+  "schema": "dustroute.typed-device-migration-evidence.v1",
+  "date": "2026-09-27",
+  "branch": "codex/data-driven-block-runtime",
+  "execution_profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v8",
+  "device_program_revision": "dustroute.device-programs.java-1-21-11.v2",
+  "scope": "Rust constant definitions, atomic declared properties, analog queries/emission, concrete variant selection; no new Minecraft blocks",
+  "rust_test_count": 309,
+  "rust_doctest_count": 11,
+  "new_compile_fail_examples": 8,
+  "python_test_count": 14,
+  "new_capability_cases": {
+    "levels": 16,
+    "initial_lit_states": 2,
+    "representations": [
+      "synthetic",
+      "observed"
+    ],
+    "restore": "every microstep including state-selected continuation and pending tick"
+  },
+  "commands": [
+    {
+      "command": [
+        "cargo",
+        "fmt",
+        "--all"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 1.39,
+      "log": "check-0.log"
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-minecraft",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 22.51,
+      "log": "check-1.log"
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-library",
+        "--test",
+        "execution_context",
+        "--test",
+        "executable_laws",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 17.88,
+      "log": "check-2.log"
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-translate",
+        "--test",
+        "native_device_observations",
+        "--test",
+        "execution_context",
+        "--test",
+        "electrical_piston_construction",
+        "--test",
+        "command_placement_regression",
+        "--test",
+        "ordinary_reference_door",
+        "--test",
+        "electrical_piston_relocation",
+        "--test",
+        "runtime_adoption",
+        "--test",
+        "unified_piston_behavior",
+        "--test",
+        "location_behavior",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 84.16,
+      "log": "check-3.log"
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-mcp",
+        "--lib",
+        "service::blueprint_tests::",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 483.0,
+      "log": "check-4.log"
+    },
+    {
+      "command": [
+        "cargo",
+        "build",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-translate",
+        "--example",
+        "compare_electrical_pistons"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 10.47,
+      "log": "check-5.log"
+    },
+    {
+      "command": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tools",
+        "-p",
+        "test_*.py"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 66.29,
+      "log": "check-6.log"
+    },
+    {
+      "command": [
+        "cargo",
+        "clippy",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "--workspace",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 33.36,
+      "log": "check-7.log"
+    },
+    {
+      "command": [
+        "cargo",
+        "fmt",
+        "--all",
+        "--",
+        "--check"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 1.64,
+      "log": "check-8.log"
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.01,
+      "log": "check-9.log"
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-minecraft",
+        "--lib",
+        "device_capability_tests",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 3.84,
+      "log": "followup-0.log"
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-minecraft",
+        "--test",
+        "typed_device_definitions",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 2.55,
+      "log": "followup-1.log"
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-library",
+        "--test",
+        "execution_context",
+        "--test",
+        "executable_laws",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 6.8,
+      "log": "followup-2.log"
+    }
+  ],
+  "implementation_sha256": {
+    "crates/dustroute-minecraft/src/device_program.rs": "60fc609047666943c4bd0348d4f59f0dfb7e7d9ef86996312ac2f2425b1bd323",
+    "crates/dustroute-minecraft/src/device_program/schema.rs": "4c170beca63f954ed8e39cb19cf8c02b6682b8acdb7e202556e37cba5398b9d2",
+    "crates/dustroute-minecraft/src/device_program/state.rs": "bee03c127eddbff1bbad7c757941d2d27a43a8dbaecf8ed032e6661e3d491077",
+    "crates/dustroute-minecraft/src/device_program/builtins.rs": "42195ab3890c7ebc46a524732ddf4eded15b23e91da8de3ced1f55dad0c0d284",
+    "crates/dustroute-minecraft/src/device_program/builtin_laws.rs": "e182165d5fada571cb1840b4074df88d81b9bec1e49f34a8db2e42a1a39063c6",
+    "crates/dustroute-minecraft/src/law/static_program.rs": "19433d7a0b9bf402c32ad95c27bdd14690816d0609923b4593cea1f7d4fd6655",
+    "crates/dustroute-minecraft/src/time/piston_runtime/devices.rs": "6d5a761bd40972eaa3d4a5a8fcd0b15d3c2fa1e17cfcbe8d1b78ab407653ac23",
+    "crates/dustroute-minecraft/src/time/piston_runtime/device_capability_tests.rs": "72f253ef6bb91c87363c3d8d4d1a61f78c30e65cf8c85fb7bf0ecbf1f0091c16"
+  },
+  "limits": [
+    "No live Minecraft server or new live trial",
+    "Test-only multi-state devices are not in the production registry",
+    "Full workspace test suite not run; full Minecraft crate and scoped downstream regressions run",
+    "Law programs and catalog schema unchanged; previous v7 execution contexts rejected"
+  ]
+}

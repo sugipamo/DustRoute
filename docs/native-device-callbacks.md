@@ -1,7 +1,7 @@
 # Native lamp and stationary observer callbacks
 
 This records the original device-law implementation and its evidence. Current
-execution uses the [v7 declarative device programs](data-driven-block-runtime.md);
+execution uses the [v8 Rust constant device programs](typed-device-runtime.md);
 the original v1 lamp/observer laws and raw observations remain unchanged.
 
 The common electrical piston runtime implements lamps and stationary/moving
