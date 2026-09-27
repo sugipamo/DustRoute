@@ -4,21 +4,20 @@ use std::fmt::{Display, Formatter};
 
 use serde::{Deserialize, Serialize};
 
-use super::{BlockBehaviorProfile, UpdateModel};
+use super::{TemporalProfile, UpdateModel};
+use crate::execution_context::bounded_world_laws;
 use crate::{
-    Block, BlockChange, BlockKind, BlockMove, BlockProperties, ChangeReason, DeltaCause, Facing,
-    ObservationClassification, PistonState, PistonVariant, Pos, Region, RegionSet, ShapeId,
-    WireConnection, World, WorldDelta, WorldDeltaError,
+    Block, BlockChange, BlockKind, BlockMove, ChangeReason, DeltaCause, Facing, PistonState,
+    PistonVariant, Pos, Region, RegionSet, ShapeId, World, WorldDelta, WorldDeltaError,
 };
 
-pub(super) const PROFILE: BlockBehaviorProfile = BlockBehaviorProfile {
-    properties: BlockProperties::support_only(true),
+pub(super) const PROFILE: TemporalProfile = TemporalProfile {
     update_model: UpdateModel::BlockEvent,
     order_sensitive: true,
 };
 
-/// The Java piston push limit. A plan fails closed when the contiguous set
-/// would exceed this limit instead of silently moving a prefix.
+/// Compatibility view of the pinned v1 limit. Execution reads the immutable
+/// motion program; tests keep this historical public constant in agreement.
 pub const PISTON_PUSH_LIMIT: usize = 12;
 
 /// A phase-aware piston motion profile.  The initial delay is a range because
@@ -63,17 +62,13 @@ impl Error for PistonMotionProfileError {}
 
 impl Default for PistonMotionProfile {
     fn default() -> Self {
-        Self {
-            initial_delay_min_game_ticks: 0,
-            initial_delay_max_game_ticks: 1,
-            movement_game_ticks: 2,
-        }
+        bounded_world_laws().piston.default_motion_profile()
     }
 }
 
-/// The initial Java profile used by the event engine. One redstone tick is
-/// two game ticks; the profile keeps the phase range separate from the
-/// movement interval so a later measured version can replace either value.
+/// Historical public view of the initial Java profile. Engine construction
+/// reads the pinned motion program via Default; this constant stays available
+/// to old callers and is checked against that program by regression tests.
 pub const DEFAULT_PISTON_MOTION_PROFILE: PistonMotionProfile = PistonMotionProfile {
     initial_delay_min_game_ticks: 0,
     initial_delay_max_game_ticks: 1,
@@ -146,25 +141,10 @@ impl PistonPlanningContext {
 /// known `bedrock` observation from being mistaken for an ordinary `Solid`.
 #[must_use]
 pub fn observed_name_is_immovable(name: &str) -> bool {
-    let short_name = name.strip_prefix("minecraft:").unwrap_or(name);
-    matches!(
-        short_name,
-        "bedrock"
-            | "obsidian"
-            | "crying_obsidian"
-            | "reinforced_deepslate"
-            | "end_portal_frame"
-            | "end_portal"
-            | "nether_portal"
-            | "moving_piston"
-            | "piston_head"
-            | "barrier"
-            | "structure_block"
-            | "jigsaw"
-            | "command_block"
-            | "chain_command_block"
-            | "repeating_command_block"
-    )
+    bounded_world_laws()
+        .piston
+        .immovable_name(name)
+        .expect("pinned piston name predicates")
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
@@ -242,10 +222,7 @@ impl PistonPlan {
         let mut piston_after = self.piston_before.clone();
         set_piston_state(
             &mut piston_after,
-            match self.action {
-                PistonAction::Extend => PistonState::Extending,
-                PistonAction::Retract => PistonState::Retracting,
-            },
+            bounded_world_laws().piston.moving_state(self.action),
         );
         WorldDelta {
             parent_shape: self.parent_shape,
@@ -258,7 +235,13 @@ impl PistonPlan {
                 },
             }],
             moves: Vec::new(),
-            dirty_region: RegionSet::around_positions([self.piston], 1),
+            dirty_region: RegionSet::around_positions(
+                [self.piston],
+                bounded_world_laws()
+                    .piston
+                    .motion_effects(self.action)
+                    .dirty_radius,
+            ),
             cause: delta_cause(self.action, self.piston),
         }
     }
@@ -273,10 +256,7 @@ impl PistonPlan {
                 position: self.piston,
             });
         };
-        let expected_state = match self.action {
-            PistonAction::Extend => PistonState::Extending,
-            PistonAction::Retract => PistonState::Retracting,
-        };
+        let expected_state = bounded_world_laws().piston.moving_state(self.action);
         if piston_state(&piston) != expected_state {
             return Err(PistonError::StalePlan {
                 position: self.piston,
@@ -326,12 +306,17 @@ impl PistonPlan {
         }
         // A no-payload sticky retraction reads an empty cell beyond its head
         // without writing it. Retain that negative planning dependency too.
-        if self.action == PistonAction::Retract
-            && self.variant == PistonVariant::Sticky
-            && self.moved.is_empty()
-        {
+        if bounded_world_laws().piston.pulls(self.action, self.variant) && self.moved.is_empty() {
             let offset = self.facing.offset();
-            let source = self.piston.offset(offset.x * 2, offset.y * 2, offset.z * 2);
+            let distance = bounded_world_laws()
+                .piston
+                .motion_effects(self.action)
+                .pull_from;
+            let source = self.piston.offset(
+                offset.x * distance,
+                offset.y * distance,
+                offset.z * distance,
+            );
             if world.kind_at(source) != BlockKind::Air {
                 return Err(PistonError::StalePlan { position: source });
             }
@@ -551,42 +536,24 @@ fn piston_input_connection(world: &World, source: Pos, piston: Pos) -> Result<bo
     if world.kind_at(piston) != BlockKind::Piston {
         return Ok(false);
     }
-    let Some(direction) = horizontal_facing_between(source, piston) else {
+    let Some(direction) = facing_between(source, piston) else {
         return Ok(false);
     };
     let Some(block) = world.get(source) else {
         return Ok(false);
     };
-    match block.kind {
-        BlockKind::RedstoneWire => match &block.wire_connections {
-            Some(connections) => Ok(connections
-                .get(&direction)
-                .is_some_and(|connection| *connection != WireConnection::None)),
-            None if block.observed_name.is_some() => Err(PistonError::UnknownInput {
-                position: source,
-                reason: "observed wire connection shape is missing".to_owned(),
-            }),
-            None => Ok(true),
-        },
-        BlockKind::Repeater | BlockKind::Comparator | BlockKind::Observer => {
-            let Some(facing) = block.facing else {
-                if block.observed_name.is_some() {
-                    return Err(PistonError::UnknownInput {
-                        position: source,
-                        reason: "observed directional input has no facing".to_owned(),
-                    });
-                }
-                return Ok(false);
-            };
-            Ok(facing == direction)
-        }
-        BlockKind::Lever
-        | BlockKind::Button
-        | BlockKind::PressurePlate
-        | BlockKind::RedstoneBlock
-        | BlockKind::RedstoneTorch => Ok(true),
-        _ => Ok(false),
-    }
+    bounded_world_laws()
+        .piston
+        .input_connected(block, direction)
+        .map_err(|code| PistonError::UnknownInput {
+            position: source,
+            reason: match code {
+                1 => "observed wire connection shape is missing",
+                2 => "observed directional input has no facing",
+                _ => unreachable!("compiled connection error bounds"),
+            }
+            .to_owned(),
+        })
 }
 
 /// Resolves the aggregate direct-input state for one piston.  If a complete
@@ -618,8 +585,18 @@ pub(crate) fn piston_input_powered_in_region(
             facing,
         });
     }
+    piston_input_powered_from(world, known_region, piston, facing, &HORIZONTAL_FACINGS)
+}
 
-    for direction in HORIZONTAL_FACINGS {
+fn piston_input_powered_from(
+    world: &World,
+    known_region: Option<Region>,
+    piston: Pos,
+    _facing: Facing,
+    directions: &[Facing],
+) -> Result<bool, PistonError> {
+    let mut powered = false;
+    for &direction in directions {
         let offset = direction.offset();
         let source = piston.offset(offset.x, offset.y, offset.z);
         ensure_known(known_region, source)?;
@@ -628,10 +605,10 @@ pub(crate) fn piston_input_powered_in_region(
         };
         if piston_input_connection(world, source, piston)? && source_output_powered(block, source)?
         {
-            return Ok(true);
+            powered = true;
         }
     }
-    Ok(false)
+    Ok(powered)
 }
 
 /// Returns the horizontal piston targets that must be re-evaluated after a
@@ -687,20 +664,34 @@ pub(crate) fn redstone_input_delta(
     }))
 }
 
-fn horizontal_facing_between(source: Pos, sink: Pos) -> Option<Facing> {
-    if source.y != sink.y {
-        return None;
-    }
-    match (sink.x - source.x, sink.z - source.z) {
-        (1, 0) => Some(Facing::East),
-        (-1, 0) => Some(Facing::West),
-        (0, 1) => Some(Facing::South),
-        (0, -1) => Some(Facing::North),
+fn facing_between(source: Pos, sink: Pos) -> Option<Facing> {
+    match (sink.x - source.x, sink.y - source.y, sink.z - source.z) {
+        (1, 0, 0) => Some(Facing::East),
+        (-1, 0, 0) => Some(Facing::West),
+        (0, 0, 1) => Some(Facing::South),
+        (0, 0, -1) => Some(Facing::North),
+        (0, 1, 0) => Some(Facing::Up),
+        (0, -1, 0) => Some(Facing::Down),
         _ => None,
     }
 }
 
 fn source_output_powered(block: &Block, position: Pos) -> Result<bool, PistonError> {
+    let analog = match block.kind {
+        BlockKind::RedstoneWire | BlockKind::PressurePlate => block
+            .power_level
+            .or_else(|| observed_u8_property(block, "power")),
+        BlockKind::Comparator => block.power_level,
+        _ => None,
+    };
+    if let Some(level) = analog {
+        super::redstone::checked_signal_level(block, position, level).map_err(|error| {
+            PistonError::UnknownInput {
+                position,
+                reason: error.to_string(),
+            }
+        })?;
+    }
     let value = match block.kind {
         BlockKind::RedstoneBlock => Some(block.powered.unwrap_or(true)),
         BlockKind::RedstoneWire => block
@@ -877,13 +868,7 @@ fn plan_piston_with_region(
         return Err(PistonError::UnsupportedFacing { position, facing });
     };
     let before = piston_state(&piston);
-    if !before.is_stable()
-        || matches!(
-            (action, before),
-            (PistonAction::Extend, PistonState::Extended)
-                | (PistonAction::Retract, PistonState::Retracted)
-        )
-    {
+    if !bounded_world_laws().piston.permits(before, action) {
         return Err(PistonError::InvalidState {
             position,
             action,
@@ -893,15 +878,12 @@ fn plan_piston_with_region(
     let variant = piston_variant(&piston);
     let moved = match action {
         PistonAction::Extend => extension_moves(world, known_region, position, offset)?,
-        PistonAction::Retract if variant == PistonVariant::Sticky => {
+        PistonAction::Retract if bounded_world_laws().piston.pulls(action, variant) => {
             retraction_moves(world, known_region, position, offset)?
         }
         PistonAction::Retract => Vec::new(),
     };
-    let after = match action {
-        PistonAction::Extend => PistonState::Extended,
-        PistonAction::Retract => PistonState::Retracted,
-    };
+    let after = bounded_world_laws().piston.stable_state(action);
     let mut piston_after = piston.clone();
     set_piston_state(&mut piston_after, after);
     let parent_shape = world.shape_id();
@@ -931,6 +913,7 @@ fn plan_piston_with_region(
 }
 
 fn piston_delta(world: &World, plan: &PistonPlan) -> WorldDelta {
+    let effects = bounded_world_laws().piston.motion_effects(plan.action);
     // A coordinate can be both the source of one block and the destination of
     // another in a push chain.  WorldDelta is a final-state diff, so collapse
     // those two operations into one before/after entry while retaining every
@@ -991,22 +974,22 @@ fn piston_delta(world: &World, plan: &PistonPlan) -> WorldDelta {
     );
 
     let head_position = plan.piston.offset(
-        plan.facing.offset().x,
-        plan.facing.offset().y,
-        plan.facing.offset().z,
+        plan.facing.offset().x * effects.head,
+        plan.facing.offset().y * effects.head,
+        plan.facing.offset().z * effects.head,
     );
     let head_before = world
         .get(head_position)
         .cloned()
         .unwrap_or_else(|| Block::new(BlockKind::Air));
-    let head_after = match plan.action {
-        PistonAction::Extend => piston_head_block(&plan.piston_before, plan.facing, plan.variant),
-        PistonAction::Retract => plan
-            .moved
+    let head_after = if effects.head_is_payload {
+        plan.moved
             .iter()
             .find(|movement| movement.to == head_position)
             .map(|movement| movement.block.clone())
-            .unwrap_or_else(|| Block::new(BlockKind::Air)),
+            .unwrap_or_else(|| Block::new(BlockKind::Air))
+    } else {
+        piston_head_block(&plan.piston_before, plan.facing, plan.variant)
     };
     if head_before != head_after {
         let entry = by_position
@@ -1068,7 +1051,7 @@ fn piston_delta(world: &World, plan: &PistonPlan) -> WorldDelta {
                 block: movement.block.clone(),
             })
             .collect(),
-        dirty_region: RegionSet::around_positions(affected, 1),
+        dirty_region: RegionSet::around_positions(affected, effects.dirty_radius),
         cause: delta_cause(plan.action, plan.piston),
     }
 }
@@ -1079,6 +1062,7 @@ fn piston_delta(world: &World, plan: &PistonPlan) -> WorldDelta {
 /// keeps stable block identity and block-entity metadata distinct without
 /// pretending to model the continuous animation progress.
 fn piston_start_delta(world: &World, plan: &PistonPlan) -> WorldDelta {
+    let effects = bounded_world_laws().piston.motion_effects(plan.action);
     let mut by_position = BTreeMap::<Pos, BlockChange>::new();
     for movement in &plan.moved {
         let source_before = world
@@ -1090,8 +1074,14 @@ fn piston_start_delta(world: &World, plan: &PistonPlan) -> WorldDelta {
             BlockChange {
                 position: movement.from,
                 before: source_before,
-                after: if plan.action == PistonAction::Retract {
-                    moving_block(movement.block.clone(), plan.facing, false, false, 1)
+                after: if effects.source_carrier {
+                    moving_block(
+                        movement.block.clone(),
+                        plan.facing,
+                        effects.extending,
+                        false,
+                        effects.progress,
+                    )
                 } else {
                     Block::new(BlockKind::Air)
                 },
@@ -1110,17 +1100,17 @@ fn piston_start_delta(world: &World, plan: &PistonPlan) -> WorldDelta {
             BlockChange {
                 position: movement.to,
                 before: destination_before,
-                after: moving_block(
-                    movement.block.clone(),
-                    plan.facing,
-                    plan.action == PistonAction::Extend,
-                    false,
-                    if plan.action == PistonAction::Extend {
-                        0
-                    } else {
-                        1
-                    },
-                ),
+                after: if effects.destination_carrier {
+                    moving_block(
+                        movement.block.clone(),
+                        plan.facing,
+                        effects.extending,
+                        false,
+                        effects.progress,
+                    )
+                } else {
+                    movement.block.clone()
+                },
                 reason: ChangeReason::PistonMove {
                     from: movement.from,
                     to: movement.to,
@@ -1130,9 +1120,9 @@ fn piston_start_delta(world: &World, plan: &PistonPlan) -> WorldDelta {
     }
 
     let head_position = plan.piston.offset(
-        plan.facing.offset().x,
-        plan.facing.offset().y,
-        plan.facing.offset().z,
+        plan.facing.offset().x * effects.head,
+        plan.facing.offset().y * effects.head,
+        plan.facing.offset().z * effects.head,
     );
     let head_before = world
         .get(head_position)
@@ -1143,17 +1133,17 @@ fn piston_start_delta(world: &World, plan: &PistonPlan) -> WorldDelta {
         BlockChange {
             position: head_position,
             before: head_before,
-            after: moving_block(
-                piston_head_block(&plan.piston_before, plan.facing, plan.variant),
-                plan.facing,
-                plan.action == PistonAction::Extend,
-                true,
-                if plan.action == PistonAction::Extend {
-                    0
-                } else {
-                    1
-                },
-            ),
+            after: if effects.head_carrier {
+                moving_block(
+                    piston_head_block(&plan.piston_before, plan.facing, plan.variant),
+                    plan.facing,
+                    effects.extending,
+                    true,
+                    effects.progress,
+                )
+            } else {
+                piston_head_block(&plan.piston_before, plan.facing, plan.variant)
+            },
             reason: ChangeReason::PistonState {
                 piston: plan.piston,
             },
@@ -1163,10 +1153,7 @@ fn piston_start_delta(world: &World, plan: &PistonPlan) -> WorldDelta {
     let mut piston_after = plan.piston_before.clone();
     set_piston_state(
         &mut piston_after,
-        match plan.action {
-            PistonAction::Extend => PistonState::Extending,
-            PistonAction::Retract => PistonState::Retracting,
-        },
+        bounded_world_laws().piston.moving_state(plan.action),
     );
     by_position.insert(
         plan.piston,
@@ -1209,7 +1196,7 @@ fn piston_start_delta(world: &World, plan: &PistonPlan) -> WorldDelta {
                 block: movement.block.clone(),
             })
             .collect(),
-        dirty_region: RegionSet::around_positions(affected, 1),
+        dirty_region: RegionSet::around_positions(affected, effects.dirty_radius),
         cause: delta_cause(plan.action, plan.piston),
     }
 }
@@ -1276,16 +1263,22 @@ fn extension_moves(
     piston: Pos,
     offset: Pos,
 ) -> Result<Vec<PistonBlockMove>, PistonError> {
-    let mut cursor = piston.offset(offset.x, offset.y, offset.z);
+    let laws = bounded_world_laws().piston;
+    let effects = laws.motion_effects(PistonAction::Extend);
+    let mut cursor = piston.offset(
+        offset.x * effects.head,
+        offset.y * effects.head,
+        offset.z * effects.head,
+    );
     let mut contiguous = Vec::new();
     loop {
         ensure_known(known_region, cursor)?;
         let Some(block) = world.get(cursor).cloned() else {
             break;
         };
-        if contiguous.len() == PISTON_PUSH_LIMIT {
+        if !laws.can_push_next(contiguous.len()) {
             return Err(PistonError::PushLimitExceeded {
-                limit: PISTON_PUSH_LIMIT,
+                limit: laws.push_limit(),
                 attempted: contiguous.len() + 1,
             });
         }
@@ -1295,13 +1288,19 @@ fn extension_moves(
     }
     // The measured piston-payload contract covers one isolated retracted
     // body only. Do not silently extend it to mixed chains or multiple bodies.
-    if contiguous.len() != 1
-        && let Some((position, block)) =
-            contiguous.iter().find(|(_, b)| b.kind == BlockKind::Piston)
-    {
+    if !laws.chain_supported(
+        contiguous.len(),
+        contiguous.iter().any(|(_, b)| b.kind == BlockKind::Piston),
+    ) {
+        let (position, kind) = contiguous
+            .iter()
+            .find(|(_, b)| b.kind == BlockKind::Piston)
+            .or_else(|| contiguous.first())
+            .map(|(pos, block)| (*pos, block.kind))
+            .unwrap_or((piston, BlockKind::Piston));
         return Err(PistonError::UnsupportedMovingBlock {
-            position: *position,
-            kind: block.kind,
+            position,
+            kind,
             reason: "piston payload extension supports a single isolated body only".into(),
         });
     }
@@ -1310,7 +1309,11 @@ fn extension_moves(
         .rev()
         .map(|(from, block)| PistonBlockMove {
             from,
-            to: from.offset(offset.x, offset.y, offset.z),
+            to: from.offset(
+                offset.x * effects.push_step,
+                offset.y * effects.push_step,
+                offset.z * effects.push_step,
+            ),
             block,
         })
         .collect())
@@ -1322,7 +1325,14 @@ fn retraction_moves(
     piston: Pos,
     offset: Pos,
 ) -> Result<Vec<PistonBlockMove>, PistonError> {
-    let destination = piston.offset(offset.x, offset.y, offset.z);
+    let effects = bounded_world_laws()
+        .piston
+        .motion_effects(PistonAction::Retract);
+    let destination = piston.offset(
+        offset.x * effects.pull_to,
+        offset.y * effects.pull_to,
+        offset.z * effects.pull_to,
+    );
     ensure_known(known_region, destination)?;
     if let Some(block) = world.get(destination)
         && !is_piston_head(block)
@@ -1332,7 +1342,11 @@ fn retraction_moves(
             kind: block.kind,
         });
     }
-    let source = destination.offset(offset.x, offset.y, offset.z);
+    let source = piston.offset(
+        offset.x * effects.pull_from,
+        offset.y * effects.pull_from,
+        offset.z * effects.pull_from,
+    );
     ensure_known(known_region, source)?;
     let Some(block) = world.get(source).cloned() else {
         return Ok(Vec::new());
@@ -1361,57 +1375,25 @@ fn ensure_known(known_region: Option<Region>, position: Pos) -> Result<(), Pisto
 }
 
 fn ensure_movable(position: Pos, block: &Block) -> Result<(), PistonError> {
-    let supported_piston = block.kind == BlockKind::Piston
-        && block.piston_state == Some(PistonState::Retracted)
-        && block.piston_variant == Some(PistonVariant::Normal)
-        && block
-            .facing
-            .is_some_and(|facing| facing.horizontal_offset().is_some())
-        && block.powered != Some(true)
-        && block.piston_head.is_none()
-        && block.piston_entity.is_none()
-        && block
-            .observed_name
-            .as_deref()
-            .is_none_or(|name| matches!(name, "minecraft:piston" | "piston"))
-        && block
-            .observed_properties
-            .get("extended")
-            .is_none_or(|state| state == "false");
-    if !matches!(block.kind, BlockKind::Solid | BlockKind::Transparent) && !supported_piston {
-        return Err(PistonError::UnsupportedMovingBlock {
-            position,
-            kind: block.kind,
-            reason: "movement supports ordinary blocks; push/pull additionally supports one unpowered, explicitly retracted horizontal normal-piston payload".to_owned(),
-        });
-    }
-    if block.observation_classification == ObservationClassification::Coarse {
-        return Err(PistonError::UnsupportedMovingBlock {
-            position,
-            kind: block.kind,
-            reason: "coarse observed block identity is not safe to move".to_owned(),
-        });
-    }
-    if block.requires_live_observation() {
-        return Err(PistonError::UnsupportedMovingBlock {
-            position,
-            kind: block.kind,
-            reason: "the block requires live behavior outside this block-only planner".to_owned(),
-        });
-    }
-    if block
-        .observed_name
-        .as_deref()
-        .is_some_and(observed_name_is_immovable)
+    let reason = match bounded_world_laws()
+        .piston
+        .payload_rejection(block)
+        .expect("pinned piston payload law")
     {
-        return Err(PistonError::UnsupportedMovingBlock {
-            position,
-            kind: block.kind,
-            reason: "the observed block is immovable in the supported Java piston subset"
-                .to_owned(),
-        });
-    }
-    Ok(())
+        0 => return Ok(()),
+        1 => {
+            "movement supports ordinary blocks; push/pull additionally supports one unpowered, explicitly retracted horizontal normal-piston payload"
+        }
+        2 => "coarse observed block identity is not safe to move",
+        3 => "the block requires live behavior outside this block-only planner",
+        4 => "the observed block is immovable in the supported Java piston subset",
+        _ => unreachable!("compiled payload rejection bounds"),
+    };
+    Err(PistonError::UnsupportedMovingBlock {
+        position,
+        kind: block.kind,
+        reason: reason.to_owned(),
+    })
 }
 
 fn set_piston_state(block: &mut Block, state: PistonState) {
@@ -1475,6 +1457,7 @@ fn validate_plan(plan: &PistonPlan, world: &World) -> Result<(), PistonError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ObservationClassification;
 
     fn retracted_piston(variant: PistonVariant) -> (World, Pos) {
         let piston_pos = Pos::new(0, 1, 0);

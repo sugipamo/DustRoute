@@ -1,5 +1,6 @@
 //! Placement and semantic circuit optimizers for DustRoute.
 
+pub mod blueprint_reduction;
 mod contract;
 mod macro_realize;
 mod macro_search;
@@ -22,13 +23,15 @@ pub use macro_realize::{
     MacroSteadyStateReport, MacroStructuralReport, MacroTransitionCase, MacroTransitionEdge,
     MacroTransitionReport, MaterializedMacroReplacement, extract_cell_boundary,
     extract_model_boundary, extract_model_boundary_with_context, materialize_macro_replacement,
-    plan_macro_replacement, plan_macro_replacement_with_reserved, resolve_builtin_layout,
+    materialize_macro_replacement_in_assembly, materialize_macro_replacement_in_known_regions,
+    plan_blueprint_replacement, plan_macro_replacement, plan_macro_replacement_in_catalog,
+    plan_macro_replacement_with_reserved, resolve_blueprint_layout, resolve_builtin_layout,
     validate_macro_structure, verify_boundary_strengths, verify_macro_steady_state,
     verify_macro_transitions, verify_world_transitions,
 };
 pub use macro_search::{
     MacroReplacementCandidate, ObservedMacroMetrics, find_builtin_verified_macro_replacements,
-    find_verified_macro_replacements,
+    find_verified_macro_replacements, find_verified_macro_replacements_in_catalog,
 };
 pub use phased::{
     AnchorPolicy, CompressionAxis, CompressionDirection, DirectionalWeights, OptimizationPhase,
@@ -50,7 +53,8 @@ pub use placement::{
 pub use realize::{
     BehavioralEquivalence, BehavioralVerificationConfig, OptimizationRealizationError,
     OptimizationRoutingConfig, OptimizationVerification, RealizedOptimization, optimization_patch,
-    realize_staged_optimization_against, verify_realized_optimization,
+    realize_staged_optimization_against, realize_staged_optimization_with_library,
+    verify_realized_optimization,
 };
 pub use reverse::{
     PhysicalRegion, RewriteReport, SemanticFragment, SemanticRewrite, eliminate_double_not,

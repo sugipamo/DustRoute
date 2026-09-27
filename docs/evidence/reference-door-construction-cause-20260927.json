@@ -1,0 +1,1810 @@
+{
+  "schema_version": "dustroute.reference-door-construction-cause.v1",
+  "date": "2026-09-27",
+  "scope": "Cause investigation and concrete proposal only; no production implementation or live-world operation.",
+  "production_planner_unchanged": {
+    "path": "crates/dustroute-translate/src/piston_construction.rs",
+    "sha256": "69a0353eef07f03c7942c55486c24eee08e581840717de7fb3b46aa52860104e"
+  },
+  "diagnostic_example": {
+    "path": "crates/dustroute-translate/examples/audit_reference_door_construction.rs",
+    "sha256": "5f1cf26f8fe81df08d5459475c9cced007b59bf70b64bf961e810d75fd15ed01"
+  },
+  "target_source_audit": {
+    "artifact": "/root/.gradle/caches/fabric-loom/minecraftMaven/net/minecraft/minecraft-merged/1.21.11-net.fabricmc.yarn.1_21_11.1.21.11+build.6-v2/minecraft-merged-1.21.11-net.fabricmc.yarn.1_21_11.1.21.11+build.6-v2.jar",
+    "jar_sha256": "5b4aa12131a872a25dc32e7f017373d6e83502f6919154769296dd3de6af8c1b",
+    "class_sha256": {
+      "ObserverBlock": "1f9131ba4d62b58289cc1673d2e76229678b05b357a5958857b99e8fe3a42baa",
+      "AbstractRedstoneGateBlock": "1650b9eacd97788b5be6fad0164e71834191298daadcecb2fac90c7c117cfa3d",
+      "RepeaterBlock": "2ab7b5c657ba0e701258b58870b9d4611d10d9dd5e57b6db3c84c296dcd73b67",
+      "PistonBlock": "00cadea51e97b910da939da68b97c591843675ced0619145a4bb7c412c31cd02",
+      "piston/PistonHandler": "d0647b9d63b2d81c4f7cc0508e9327a8fd1419e5d6ff09ac55aa4d6ad0fe5ee3"
+    },
+    "disassembly": ".local/e2e-artifacts/reference-door-construction-target-20260927.javap",
+    "disassembly_sha256": "e5fbbb51316955a9a6268bf4bdf9129352e96e6fdc902e0f63a9f6b38db06b3e"
+  },
+  "experiments": [
+    {
+      "variant": "baseline",
+      "build_steps": 43,
+      "delta_records": 90,
+      "matches_after_build": false,
+      "matches_after_initialization": false,
+      "build_difference": [
+        {
+          "position": {
+            "x": 0,
+            "y": 5,
+            "z": 0
+          },
+          "expected": [
+            "minecraft:smooth_quartz",
+            {}
+          ],
+          "actual": [
+            "minecraft:air",
+            {}
+          ]
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 6,
+            "z": 0
+          },
+          "expected": [
+            "minecraft:air",
+            {}
+          ],
+          "actual": [
+            "minecraft:smooth_quartz",
+            {}
+          ]
+        }
+      ],
+      "final_difference": [
+        {
+          "position": {
+            "x": 0,
+            "y": 5,
+            "z": 0
+          },
+          "expected": [
+            "minecraft:smooth_quartz",
+            {}
+          ],
+          "actual": [
+            "minecraft:air",
+            {}
+          ]
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 6,
+            "z": 0
+          },
+          "expected": [
+            "minecraft:air",
+            {}
+          ],
+          "actual": [
+            "minecraft:smooth_quartz",
+            {}
+          ]
+        }
+      ],
+      "teardown_steps": 0,
+      "teardown_error": null,
+      "empty_after_teardown": false,
+      "order_34_to_43": [
+        {
+          "step": 34,
+          "position": {
+            "x": 0,
+            "y": 2,
+            "z": -1
+          },
+          "name": "minecraft:observer",
+          "end_tick": 0
+        },
+        {
+          "step": 35,
+          "position": {
+            "x": 0,
+            "y": 3,
+            "z": -1
+          },
+          "name": "minecraft:repeater",
+          "end_tick": 0
+        },
+        {
+          "step": 36,
+          "position": {
+            "x": 0,
+            "y": 2,
+            "z": 0
+          },
+          "name": "minecraft:observer",
+          "end_tick": 20
+        },
+        {
+          "step": 37,
+          "position": {
+            "x": 0,
+            "y": 2,
+            "z": 1
+          },
+          "name": "minecraft:redstone_lamp",
+          "end_tick": 42
+        },
+        {
+          "step": 38,
+          "position": {
+            "x": 0,
+            "y": 3,
+            "z": 1
+          },
+          "name": "minecraft:observer",
+          "end_tick": 42
+        },
+        {
+          "step": 39,
+          "position": {
+            "x": 0,
+            "y": 4,
+            "z": -2
+          },
+          "name": "minecraft:observer",
+          "end_tick": 42
+        },
+        {
+          "step": 40,
+          "position": {
+            "x": 0,
+            "y": 4,
+            "z": -1
+          },
+          "name": "minecraft:observer",
+          "end_tick": 42
+        },
+        {
+          "step": 41,
+          "position": {
+            "x": 0,
+            "y": 5,
+            "z": 2
+          },
+          "name": "minecraft:observer",
+          "end_tick": 42
+        },
+        {
+          "step": 42,
+          "position": {
+            "x": 0,
+            "y": 9,
+            "z": -2
+          },
+          "name": "minecraft:observer",
+          "end_tick": 42
+        },
+        {
+          "step": 43,
+          "position": {
+            "x": 0,
+            "y": 9,
+            "z": 2
+          },
+          "name": "minecraft:observer",
+          "end_tick": 42
+        }
+      ]
+    },
+    {
+      "variant": "swap-observers",
+      "build_steps": 43,
+      "delta_records": 69,
+      "matches_after_build": false,
+      "matches_after_initialization": false,
+      "build_difference": [
+        {
+          "position": {
+            "x": 0,
+            "y": 5,
+            "z": 0
+          },
+          "expected": [
+            "minecraft:smooth_quartz",
+            {}
+          ],
+          "actual": [
+            "minecraft:air",
+            {}
+          ]
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 6,
+            "z": 0
+          },
+          "expected": [
+            "minecraft:air",
+            {}
+          ],
+          "actual": [
+            "minecraft:smooth_quartz",
+            {}
+          ]
+        }
+      ],
+      "final_difference": [
+        {
+          "position": {
+            "x": 0,
+            "y": 5,
+            "z": 0
+          },
+          "expected": [
+            "minecraft:smooth_quartz",
+            {}
+          ],
+          "actual": [
+            "minecraft:air",
+            {}
+          ]
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 6,
+            "z": 0
+          },
+          "expected": [
+            "minecraft:air",
+            {}
+          ],
+          "actual": [
+            "minecraft:smooth_quartz",
+            {}
+          ]
+        }
+      ],
+      "teardown_steps": 0,
+      "teardown_error": null,
+      "empty_after_teardown": false,
+      "order_34_to_43": [
+        {
+          "step": 34,
+          "position": {
+            "x": 0,
+            "y": 2,
+            "z": 0
+          },
+          "name": "minecraft:observer",
+          "end_tick": 0
+        },
+        {
+          "step": 35,
+          "position": {
+            "x": 0,
+            "y": 2,
+            "z": -1
+          },
+          "name": "minecraft:observer",
+          "end_tick": 0
+        },
+        {
+          "step": 36,
+          "position": {
+            "x": 0,
+            "y": 3,
+            "z": -1
+          },
+          "name": "minecraft:repeater",
+          "end_tick": 0
+        },
+        {
+          "step": 37,
+          "position": {
+            "x": 0,
+            "y": 2,
+            "z": 1
+          },
+          "name": "minecraft:redstone_lamp",
+          "end_tick": 22
+        },
+        {
+          "step": 38,
+          "position": {
+            "x": 0,
+            "y": 3,
+            "z": 1
+          },
+          "name": "minecraft:observer",
+          "end_tick": 22
+        },
+        {
+          "step": 39,
+          "position": {
+            "x": 0,
+            "y": 4,
+            "z": -2
+          },
+          "name": "minecraft:observer",
+          "end_tick": 22
+        },
+        {
+          "step": 40,
+          "position": {
+            "x": 0,
+            "y": 4,
+            "z": -1
+          },
+          "name": "minecraft:observer",
+          "end_tick": 22
+        },
+        {
+          "step": 41,
+          "position": {
+            "x": 0,
+            "y": 5,
+            "z": 2
+          },
+          "name": "minecraft:observer",
+          "end_tick": 22
+        },
+        {
+          "step": 42,
+          "position": {
+            "x": 0,
+            "y": 9,
+            "z": -2
+          },
+          "name": "minecraft:observer",
+          "end_tick": 22
+        },
+        {
+          "step": 43,
+          "position": {
+            "x": 0,
+            "y": 9,
+            "z": 2
+          },
+          "name": "minecraft:observer",
+          "end_tick": 22
+        }
+      ]
+    },
+    {
+      "variant": "watched-first",
+      "build_steps": 43,
+      "delta_records": 43,
+      "matches_after_build": true,
+      "matches_after_initialization": true,
+      "build_difference": [],
+      "final_difference": [],
+      "teardown_steps": 43,
+      "teardown_error": null,
+      "empty_after_teardown": true,
+      "order_34_to_43": [
+        {
+          "step": 34,
+          "position": {
+            "x": 0,
+            "y": 2,
+            "z": 1
+          },
+          "name": "minecraft:redstone_lamp",
+          "end_tick": 0
+        },
+        {
+          "step": 35,
+          "position": {
+            "x": 0,
+            "y": 2,
+            "z": 0
+          },
+          "name": "minecraft:observer",
+          "end_tick": 0
+        },
+        {
+          "step": 36,
+          "position": {
+            "x": 0,
+            "y": 2,
+            "z": -1
+          },
+          "name": "minecraft:observer",
+          "end_tick": 0
+        },
+        {
+          "step": 37,
+          "position": {
+            "x": 0,
+            "y": 3,
+            "z": -1
+          },
+          "name": "minecraft:repeater",
+          "end_tick": 0
+        },
+        {
+          "step": 38,
+          "position": {
+            "x": 0,
+            "y": 3,
+            "z": 1
+          },
+          "name": "minecraft:observer",
+          "end_tick": 0
+        },
+        {
+          "step": 39,
+          "position": {
+            "x": 0,
+            "y": 4,
+            "z": -2
+          },
+          "name": "minecraft:observer",
+          "end_tick": 0
+        },
+        {
+          "step": 40,
+          "position": {
+            "x": 0,
+            "y": 4,
+            "z": -1
+          },
+          "name": "minecraft:observer",
+          "end_tick": 0
+        },
+        {
+          "step": 41,
+          "position": {
+            "x": 0,
+            "y": 5,
+            "z": 2
+          },
+          "name": "minecraft:observer",
+          "end_tick": 0
+        },
+        {
+          "step": 42,
+          "position": {
+            "x": 0,
+            "y": 9,
+            "z": -2
+          },
+          "name": "minecraft:observer",
+          "end_tick": 0
+        },
+        {
+          "step": 43,
+          "position": {
+            "x": 0,
+            "y": 9,
+            "z": 2
+          },
+          "name": "minecraft:observer",
+          "end_tick": 0
+        }
+      ]
+    },
+    {
+      "variant": "reset-cycle",
+      "build_steps": 43,
+      "delta_records": 90,
+      "matches_after_build": false,
+      "matches_after_initialization": false,
+      "build_difference": [
+        {
+          "position": {
+            "x": 0,
+            "y": 5,
+            "z": 0
+          },
+          "expected": [
+            "minecraft:smooth_quartz",
+            {}
+          ],
+          "actual": [
+            "minecraft:air",
+            {}
+          ]
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 6,
+            "z": 0
+          },
+          "expected": [
+            "minecraft:air",
+            {}
+          ],
+          "actual": [
+            "minecraft:smooth_quartz",
+            {}
+          ]
+        }
+      ],
+      "final_difference": [
+        {
+          "position": {
+            "x": 0,
+            "y": 4,
+            "z": 0
+          },
+          "expected": [
+            "minecraft:sticky_piston",
+            {
+              "extended": "false",
+              "facing": "up"
+            }
+          ],
+          "actual": [
+            "minecraft:air",
+            {}
+          ]
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 5,
+            "z": -1
+          },
+          "expected": [
+            "minecraft:smooth_quartz",
+            {}
+          ],
+          "actual": [
+            "minecraft:sticky_piston",
+            {
+              "extended": "false",
+              "facing": "up"
+            }
+          ]
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 5,
+            "z": 0
+          },
+          "expected": [
+            "minecraft:smooth_quartz",
+            {}
+          ],
+          "actual": [
+            "minecraft:air",
+            {}
+          ]
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 6,
+            "z": 0
+          },
+          "expected": [
+            "minecraft:air",
+            {}
+          ],
+          "actual": [
+            "minecraft:smooth_quartz",
+            {}
+          ]
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 7,
+            "z": 0
+          },
+          "expected": [
+            "minecraft:air",
+            {}
+          ],
+          "actual": [
+            "minecraft:smooth_quartz",
+            {}
+          ]
+        }
+      ],
+      "teardown_steps": 0,
+      "teardown_error": null,
+      "empty_after_teardown": false,
+      "order_34_to_43": [
+        {
+          "step": 34,
+          "position": {
+            "x": 0,
+            "y": 2,
+            "z": -1
+          },
+          "name": "minecraft:observer",
+          "end_tick": 0
+        },
+        {
+          "step": 35,
+          "position": {
+            "x": 0,
+            "y": 3,
+            "z": -1
+          },
+          "name": "minecraft:repeater",
+          "end_tick": 0
+        },
+        {
+          "step": 36,
+          "position": {
+            "x": 0,
+            "y": 2,
+            "z": 0
+          },
+          "name": "minecraft:observer",
+          "end_tick": 20
+        },
+        {
+          "step": 37,
+          "position": {
+            "x": 0,
+            "y": 2,
+            "z": 1
+          },
+          "name": "minecraft:redstone_lamp",
+          "end_tick": 42
+        },
+        {
+          "step": 38,
+          "position": {
+            "x": 0,
+            "y": 3,
+            "z": 1
+          },
+          "name": "minecraft:observer",
+          "end_tick": 42
+        },
+        {
+          "step": 39,
+          "position": {
+            "x": 0,
+            "y": 4,
+            "z": -2
+          },
+          "name": "minecraft:observer",
+          "end_tick": 42
+        },
+        {
+          "step": 40,
+          "position": {
+            "x": 0,
+            "y": 4,
+            "z": -1
+          },
+          "name": "minecraft:observer",
+          "end_tick": 42
+        },
+        {
+          "step": 41,
+          "position": {
+            "x": 0,
+            "y": 5,
+            "z": 2
+          },
+          "name": "minecraft:observer",
+          "end_tick": 42
+        },
+        {
+          "step": 42,
+          "position": {
+            "x": 0,
+            "y": 9,
+            "z": -2
+          },
+          "name": "minecraft:observer",
+          "end_tick": 42
+        },
+        {
+          "step": 43,
+          "position": {
+            "x": 0,
+            "y": 9,
+            "z": 2
+          },
+          "name": "minecraft:observer",
+          "end_tick": 42
+        }
+      ]
+    }
+  ],
+  "step_36_trace_anchors": [
+    {
+      "id": 614,
+      "cause": null,
+      "root": 614,
+      "time": {
+        "game_tick": 0,
+        "section": "external"
+      },
+      "kind": "input",
+      "target": {
+        "x": 0,
+        "y": 2,
+        "z": 0
+      },
+      "event": "ElectricalInstall",
+      "changes": [
+        {
+          "position": {
+            "x": 0,
+            "y": 2,
+            "z": 0
+          },
+          "before": {
+            "delay": null,
+            "facing": null,
+            "kind": "Air",
+            "observation_classification": "synthetic",
+            "observed_name": null,
+            "observed_properties": {},
+            "power_level": null,
+            "powered": null,
+            "support_offset": null,
+            "wire_connections": null
+          },
+          "after": {
+            "delay": null,
+            "facing": "North",
+            "kind": "Observer",
+            "observation_classification": "exact",
+            "observed_name": "minecraft:observer",
+            "observed_properties": {
+              "facing": "south",
+              "powered": "false"
+            },
+            "power_level": null,
+            "powered": false,
+            "support_offset": null,
+            "wire_connections": null
+          }
+        }
+      ]
+    },
+    {
+      "id": 625,
+      "cause": 624,
+      "root": 614,
+      "time": {
+        "game_tick": 0,
+        "section": "external"
+      },
+      "kind": "continuation",
+      "target": {
+        "x": 0,
+        "y": 2,
+        "z": 0
+      },
+      "event": "Notify",
+      "changes": []
+    },
+    {
+      "id": 626,
+      "cause": 625,
+      "root": 626,
+      "time": {
+        "game_tick": 2,
+        "section": "block_ticks"
+      },
+      "kind": "scheduled_tick",
+      "target": {
+        "x": 0,
+        "y": 2,
+        "z": -1
+      },
+      "event": "ObserverTick",
+      "changes": [
+        {
+          "position": {
+            "x": 0,
+            "y": 2,
+            "z": -1
+          },
+          "before": {
+            "delay": null,
+            "facing": "North",
+            "kind": "Observer",
+            "observation_classification": "exact",
+            "observed_name": "minecraft:observer",
+            "observed_properties": {
+              "facing": "south",
+              "powered": "false"
+            },
+            "power_level": null,
+            "powered": false,
+            "support_offset": null,
+            "wire_connections": null
+          },
+          "after": {
+            "delay": null,
+            "facing": "North",
+            "kind": "Observer",
+            "observation_classification": "exact",
+            "observed_name": "minecraft:observer",
+            "observed_properties": {
+              "facing": "south",
+              "powered": "true"
+            },
+            "power_level": null,
+            "powered": true,
+            "support_offset": null,
+            "wire_connections": null
+          }
+        }
+      ]
+    },
+    {
+      "id": 637,
+      "cause": 630,
+      "root": 637,
+      "time": {
+        "game_tick": 4,
+        "section": "block_ticks"
+      },
+      "kind": "scheduled_tick",
+      "target": {
+        "x": 0,
+        "y": 2,
+        "z": -1
+      },
+      "event": "ObserverTick",
+      "changes": [
+        {
+          "position": {
+            "x": 0,
+            "y": 2,
+            "z": -1
+          },
+          "before": {
+            "delay": null,
+            "facing": "North",
+            "kind": "Observer",
+            "observation_classification": "exact",
+            "observed_name": "minecraft:observer",
+            "observed_properties": {
+              "facing": "south",
+              "powered": "true"
+            },
+            "power_level": null,
+            "powered": true,
+            "support_offset": null,
+            "wire_connections": null
+          },
+          "after": {
+            "delay": null,
+            "facing": "North",
+            "kind": "Observer",
+            "observation_classification": "exact",
+            "observed_name": "minecraft:observer",
+            "observed_properties": {
+              "facing": "south",
+              "powered": "false"
+            },
+            "power_level": null,
+            "powered": false,
+            "support_offset": null,
+            "wire_connections": null
+          }
+        }
+      ]
+    },
+    {
+      "id": 641,
+      "cause": 640,
+      "root": 626,
+      "time": {
+        "game_tick": 2,
+        "section": "block_ticks"
+      },
+      "kind": "continuation",
+      "target": {
+        "x": 0,
+        "y": 2,
+        "z": -1
+      },
+      "event": "Notify",
+      "changes": []
+    },
+    {
+      "id": 642,
+      "cause": 641,
+      "root": 626,
+      "time": {
+        "game_tick": 2,
+        "section": "block_ticks"
+      },
+      "kind": "continuation",
+      "target": {
+        "x": 0,
+        "y": 2,
+        "z": -1
+      },
+      "event": "Notify",
+      "changes": [
+        {
+          "position": {
+            "x": 0,
+            "y": 3,
+            "z": -2
+          },
+          "before": {
+            "delay": null,
+            "facing": null,
+            "kind": "RedstoneWire",
+            "observation_classification": "exact",
+            "observed_name": "minecraft:redstone_wire",
+            "observed_properties": {
+              "east": "none",
+              "north": "side",
+              "power": "0",
+              "south": "side",
+              "west": "none"
+            },
+            "power_level": 0,
+            "powered": null,
+            "support_offset": {
+              "x": 0,
+              "y": -1,
+              "z": 0
+            },
+            "wire_connections": {
+              "East": "None",
+              "North": "Side",
+              "South": "Side",
+              "West": "None"
+            }
+          },
+          "after": {
+            "delay": null,
+            "facing": null,
+            "kind": "RedstoneWire",
+            "observation_classification": "exact",
+            "observed_name": "minecraft:redstone_wire",
+            "observed_properties": {
+              "east": "none",
+              "north": "side",
+              "power": "15",
+              "south": "side",
+              "west": "none"
+            },
+            "power_level": 15,
+            "powered": null,
+            "support_offset": {
+              "x": 0,
+              "y": -1,
+              "z": 0
+            },
+            "wire_connections": {
+              "East": "None",
+              "North": "Side",
+              "South": "Side",
+              "West": "None"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 673,
+      "cause": 672,
+      "root": 626,
+      "time": {
+        "game_tick": 2,
+        "section": "block_ticks"
+      },
+      "kind": "continuation",
+      "target": {
+        "x": 0,
+        "y": 3,
+        "z": -2
+      },
+      "event": "Notify",
+      "changes": []
+    },
+    {
+      "id": 674,
+      "cause": 673,
+      "root": 674,
+      "time": {
+        "game_tick": 10,
+        "section": "block_ticks"
+      },
+      "kind": "scheduled_tick",
+      "target": {
+        "x": 0,
+        "y": 3,
+        "z": -1
+      },
+      "event": "ElectricalRepeaterTick",
+      "changes": [
+        {
+          "position": {
+            "x": 0,
+            "y": 3,
+            "z": -1
+          },
+          "before": {
+            "delay": 4,
+            "facing": "South",
+            "kind": "Repeater",
+            "observation_classification": "exact",
+            "observed_name": "minecraft:repeater",
+            "observed_properties": {
+              "delay": "4",
+              "facing": "north",
+              "locked": "false",
+              "powered": "false"
+            },
+            "power_level": null,
+            "powered": false,
+            "support_offset": {
+              "x": 0,
+              "y": -1,
+              "z": 0
+            },
+            "wire_connections": null
+          },
+          "after": {
+            "delay": 4,
+            "facing": "South",
+            "kind": "Repeater",
+            "observation_classification": "exact",
+            "observed_name": "minecraft:repeater",
+            "observed_properties": {
+              "delay": "4",
+              "facing": "north",
+              "locked": "false",
+              "powered": "true"
+            },
+            "power_level": null,
+            "powered": true,
+            "support_offset": {
+              "x": 0,
+              "y": -1,
+              "z": 0
+            },
+            "wire_connections": null
+          }
+        }
+      ]
+    },
+    {
+      "id": 754,
+      "cause": 674,
+      "root": 754,
+      "time": {
+        "game_tick": 18,
+        "section": "block_ticks"
+      },
+      "kind": "scheduled_tick",
+      "target": {
+        "x": 0,
+        "y": 3,
+        "z": -1
+      },
+      "event": "ElectricalRepeaterTick",
+      "changes": [
+        {
+          "position": {
+            "x": 0,
+            "y": 3,
+            "z": -1
+          },
+          "before": {
+            "delay": 4,
+            "facing": "South",
+            "kind": "Repeater",
+            "observation_classification": "exact",
+            "observed_name": "minecraft:repeater",
+            "observed_properties": {
+              "delay": "4",
+              "facing": "north",
+              "locked": "false",
+              "powered": "true"
+            },
+            "power_level": null,
+            "powered": true,
+            "support_offset": {
+              "x": 0,
+              "y": -1,
+              "z": 0
+            },
+            "wire_connections": null
+          },
+          "after": {
+            "delay": 4,
+            "facing": "South",
+            "kind": "Repeater",
+            "observation_classification": "exact",
+            "observed_name": "minecraft:repeater",
+            "observed_properties": {
+              "delay": "4",
+              "facing": "north",
+              "locked": "false",
+              "powered": "false"
+            },
+            "power_level": null,
+            "powered": false,
+            "support_offset": {
+              "x": 0,
+              "y": -1,
+              "z": 0
+            },
+            "wire_connections": null
+          }
+        }
+      ]
+    },
+    {
+      "id": 756,
+      "cause": 755,
+      "root": 756,
+      "time": {
+        "game_tick": 10,
+        "section": "block_events"
+      },
+      "kind": "block_event",
+      "target": {
+        "x": 0,
+        "y": 3,
+        "z": 0
+      },
+      "event": "Block",
+      "changes": []
+    },
+    {
+      "id": 768,
+      "cause": 756,
+      "root": 756,
+      "time": {
+        "game_tick": 10,
+        "section": "block_events"
+      },
+      "kind": "continuation",
+      "target": {
+        "x": 0,
+        "y": 3,
+        "z": 0
+      },
+      "event": "Motion",
+      "changes": [
+        {
+          "position": {
+            "x": 0,
+            "y": 6,
+            "z": 0
+          },
+          "before": {
+            "delay": null,
+            "facing": null,
+            "kind": "Air",
+            "observation_classification": "synthetic",
+            "observed_name": null,
+            "observed_properties": {},
+            "power_level": null,
+            "powered": null,
+            "support_offset": null,
+            "wire_connections": null
+          },
+          "after": {
+            "delay": null,
+            "facing": "Up",
+            "kind": "MovingPiston",
+            "observation_classification": "synthetic",
+            "observed_name": null,
+            "observed_properties": {},
+            "piston_variant": "normal",
+            "power_level": null,
+            "powered": null,
+            "support_offset": null,
+            "wire_connections": null
+          }
+        }
+      ]
+    },
+    {
+      "id": 779,
+      "cause": 777,
+      "root": 756,
+      "time": {
+        "game_tick": 10,
+        "section": "block_events"
+      },
+      "kind": "continuation",
+      "target": {
+        "x": 0,
+        "y": 3,
+        "z": 0
+      },
+      "event": "Motion",
+      "changes": [
+        {
+          "position": {
+            "x": 0,
+            "y": 5,
+            "z": 0
+          },
+          "before": {
+            "delay": null,
+            "facing": null,
+            "kind": "Solid",
+            "observation_classification": "exact",
+            "observed_name": "minecraft:smooth_quartz",
+            "observed_properties": {},
+            "power_level": null,
+            "powered": null,
+            "support_offset": null,
+            "wire_connections": null
+          },
+          "after": {
+            "delay": null,
+            "facing": "Up",
+            "kind": "MovingPiston",
+            "observation_classification": "synthetic",
+            "observed_name": null,
+            "observed_properties": {},
+            "piston_variant": "normal",
+            "power_level": null,
+            "powered": null,
+            "support_offset": null,
+            "wire_connections": null
+          }
+        }
+      ]
+    },
+    {
+      "id": 790,
+      "cause": 788,
+      "root": 756,
+      "time": {
+        "game_tick": 10,
+        "section": "block_events"
+      },
+      "kind": "continuation",
+      "target": {
+        "x": 0,
+        "y": 3,
+        "z": 0
+      },
+      "event": "Motion",
+      "changes": [
+        {
+          "position": {
+            "x": 0,
+            "y": 4,
+            "z": 0
+          },
+          "before": {
+            "delay": null,
+            "facing": "Up",
+            "kind": "Piston",
+            "observation_classification": "exact",
+            "observed_name": "minecraft:sticky_piston",
+            "observed_properties": {
+              "extended": "false",
+              "facing": "up"
+            },
+            "piston_state": "retracted",
+            "piston_variant": "sticky",
+            "power_level": null,
+            "powered": null,
+            "support_offset": null,
+            "wire_connections": null
+          },
+          "after": {
+            "delay": null,
+            "facing": "Up",
+            "kind": "MovingPiston",
+            "observation_classification": "synthetic",
+            "observed_name": null,
+            "observed_properties": {},
+            "piston_variant": "sticky",
+            "power_level": null,
+            "powered": null,
+            "support_offset": null,
+            "wire_connections": null
+          }
+        }
+      ]
+    },
+    {
+      "id": 837,
+      "cause": 834,
+      "root": 837,
+      "time": {
+        "game_tick": 12,
+        "section": "block_entities"
+      },
+      "kind": "carrier_tick",
+      "target": {
+        "x": 0,
+        "y": 6,
+        "z": 0
+      },
+      "event": "CarrierTick",
+      "changes": [
+        {
+          "position": {
+            "x": 0,
+            "y": 6,
+            "z": 0
+          },
+          "before": {
+            "delay": null,
+            "facing": "Up",
+            "kind": "MovingPiston",
+            "observation_classification": "synthetic",
+            "observed_name": null,
+            "observed_properties": {},
+            "piston_entity": {
+              "extending": true,
+              "facing": "Up",
+              "progress": 0,
+              "pushed_block": {
+                "delay": null,
+                "facing": null,
+                "kind": "Solid",
+                "observation_classification": "exact",
+                "observed_name": "minecraft:smooth_quartz",
+                "observed_properties": {},
+                "power_level": null,
+                "powered": null,
+                "support_offset": null,
+                "wire_connections": null
+              },
+              "source": false
+            },
+            "piston_variant": "normal",
+            "power_level": null,
+            "powered": null,
+            "support_offset": null,
+            "wire_connections": null
+          },
+          "after": {
+            "delay": null,
+            "facing": null,
+            "kind": "Solid",
+            "observation_classification": "exact",
+            "observed_name": "minecraft:smooth_quartz",
+            "observed_properties": {},
+            "power_level": null,
+            "powered": null,
+            "support_offset": null,
+            "wire_connections": null
+          }
+        }
+      ]
+    },
+    {
+      "id": 838,
+      "cause": 835,
+      "root": 838,
+      "time": {
+        "game_tick": 12,
+        "section": "block_entities"
+      },
+      "kind": "carrier_tick",
+      "target": {
+        "x": 0,
+        "y": 5,
+        "z": 0
+      },
+      "event": "CarrierTick",
+      "changes": [
+        {
+          "position": {
+            "x": 0,
+            "y": 5,
+            "z": 0
+          },
+          "before": {
+            "delay": null,
+            "facing": "Up",
+            "kind": "MovingPiston",
+            "observation_classification": "synthetic",
+            "observed_name": null,
+            "observed_properties": {},
+            "piston_entity": {
+              "extending": true,
+              "facing": "Up",
+              "progress": 0,
+              "pushed_block": {
+                "delay": null,
+                "facing": "Up",
+                "kind": "Piston",
+                "observation_classification": "exact",
+                "observed_name": "minecraft:sticky_piston",
+                "observed_properties": {
+                  "extended": "false",
+                  "facing": "up"
+                },
+                "piston_state": "retracted",
+                "piston_variant": "sticky",
+                "power_level": null,
+                "powered": null,
+                "support_offset": null,
+                "wire_connections": null
+              },
+              "source": false
+            },
+            "piston_variant": "normal",
+            "power_level": null,
+            "powered": null,
+            "support_offset": null,
+            "wire_connections": null
+          },
+          "after": {
+            "delay": null,
+            "facing": "Up",
+            "kind": "Piston",
+            "observation_classification": "exact",
+            "observed_name": "minecraft:sticky_piston",
+            "observed_properties": {
+              "extended": "false",
+              "facing": "up"
+            },
+            "piston_state": "retracted",
+            "piston_variant": "sticky",
+            "power_level": null,
+            "powered": null,
+            "support_offset": null,
+            "wire_connections": null
+          }
+        }
+      ]
+    },
+    {
+      "id": 882,
+      "cause": 881,
+      "root": 882,
+      "time": {
+        "game_tick": 18,
+        "section": "block_events"
+      },
+      "kind": "block_event",
+      "target": {
+        "x": 0,
+        "y": 3,
+        "z": 0
+      },
+      "event": "Block",
+      "changes": []
+    },
+    {
+      "id": 917,
+      "cause": 916,
+      "root": 882,
+      "time": {
+        "game_tick": 18,
+        "section": "block_events"
+      },
+      "kind": "continuation",
+      "target": {
+        "x": 0,
+        "y": 3,
+        "z": 0
+      },
+      "event": "Motion",
+      "changes": [
+        {
+          "position": {
+            "x": 0,
+            "y": 4,
+            "z": 0
+          },
+          "before": {
+            "delay": null,
+            "facing": null,
+            "kind": "Air",
+            "observation_classification": "synthetic",
+            "observed_name": null,
+            "observed_properties": {},
+            "power_level": null,
+            "powered": null,
+            "support_offset": null,
+            "wire_connections": null
+          },
+          "after": {
+            "delay": null,
+            "facing": "Up",
+            "kind": "MovingPiston",
+            "observation_classification": "synthetic",
+            "observed_name": null,
+            "observed_properties": {},
+            "piston_variant": "normal",
+            "power_level": null,
+            "powered": null,
+            "support_offset": null,
+            "wire_connections": null
+          }
+        }
+      ]
+    },
+    {
+      "id": 928,
+      "cause": 926,
+      "root": 882,
+      "time": {
+        "game_tick": 18,
+        "section": "block_events"
+      },
+      "kind": "continuation",
+      "target": {
+        "x": 0,
+        "y": 3,
+        "z": 0
+      },
+      "event": "Motion",
+      "changes": [
+        {
+          "position": {
+            "x": 0,
+            "y": 5,
+            "z": 0
+          },
+          "before": {
+            "delay": null,
+            "facing": "Up",
+            "kind": "Piston",
+            "observation_classification": "exact",
+            "observed_name": "minecraft:sticky_piston",
+            "observed_properties": {
+              "extended": "false",
+              "facing": "up"
+            },
+            "piston_state": "retracted",
+            "piston_variant": "sticky",
+            "power_level": null,
+            "powered": null,
+            "support_offset": null,
+            "wire_connections": null
+          },
+          "after": {
+            "delay": null,
+            "facing": null,
+            "kind": "Air",
+            "observation_classification": "synthetic",
+            "observed_name": null,
+            "observed_properties": {},
+            "power_level": null,
+            "powered": null,
+            "support_offset": null,
+            "wire_connections": null
+          }
+        }
+      ]
+    },
+    {
+      "id": 945,
+      "cause": 943,
+      "root": 945,
+      "time": {
+        "game_tick": 20,
+        "section": "block_entities"
+      },
+      "kind": "carrier_tick",
+      "target": {
+        "x": 0,
+        "y": 3,
+        "z": 0
+      },
+      "event": "CarrierTick",
+      "changes": [
+        {
+          "position": {
+            "x": 0,
+            "y": 3,
+            "z": 0
+          },
+          "before": {
+            "delay": null,
+            "facing": "Up",
+            "kind": "MovingPiston",
+            "observation_classification": "synthetic",
+            "observed_name": null,
+            "observed_properties": {},
+            "piston_entity": {
+              "extending": false,
+              "facing": "Up",
+              "progress": 0,
+              "pushed_block": {
+                "delay": null,
+                "facing": "Up",
+                "kind": "Piston",
+                "observation_classification": "exact",
+                "observed_name": "minecraft:sticky_piston",
+                "observed_properties": {
+                  "extended": "false",
+                  "facing": "up"
+                },
+                "piston_state": "retracted",
+                "piston_variant": "sticky",
+                "power_level": null,
+                "powered": null,
+                "support_offset": null,
+                "wire_connections": null
+              },
+              "source": true
+            },
+            "piston_variant": "sticky",
+            "power_level": null,
+            "powered": null,
+            "support_offset": null,
+            "wire_connections": null
+          },
+          "after": {
+            "delay": null,
+            "facing": "Up",
+            "kind": "Piston",
+            "observation_classification": "exact",
+            "observed_name": "minecraft:sticky_piston",
+            "observed_properties": {
+              "extended": "false",
+              "facing": "up"
+            },
+            "piston_state": "retracted",
+            "piston_variant": "sticky",
+            "power_level": null,
+            "powered": null,
+            "support_offset": null,
+            "wire_connections": null
+          }
+        }
+      ]
+    },
+    {
+      "id": 946,
+      "cause": 944,
+      "root": 946,
+      "time": {
+        "game_tick": 20,
+        "section": "block_entities"
+      },
+      "kind": "carrier_tick",
+      "target": {
+        "x": 0,
+        "y": 4,
+        "z": 0
+      },
+      "event": "CarrierTick",
+      "changes": [
+        {
+          "position": {
+            "x": 0,
+            "y": 4,
+            "z": 0
+          },
+          "before": {
+            "delay": null,
+            "facing": "Up",
+            "kind": "MovingPiston",
+            "observation_classification": "synthetic",
+            "observed_name": null,
+            "observed_properties": {},
+            "piston_entity": {
+              "extending": false,
+              "facing": "Up",
+              "progress": 0,
+              "pushed_block": {
+                "delay": null,
+                "facing": "Up",
+                "kind": "Piston",
+                "observation_classification": "exact",
+                "observed_name": "minecraft:sticky_piston",
+                "observed_properties": {
+                  "extended": "false",
+                  "facing": "up"
+                },
+                "piston_state": "retracted",
+                "piston_variant": "sticky",
+                "power_level": null,
+                "powered": null,
+                "support_offset": null,
+                "wire_connections": null
+              },
+              "source": false
+            },
+            "piston_variant": "normal",
+            "power_level": null,
+            "powered": null,
+            "support_offset": null,
+            "wire_connections": null
+          },
+          "after": {
+            "delay": null,
+            "facing": "Up",
+            "kind": "Piston",
+            "observation_classification": "exact",
+            "observed_name": "minecraft:sticky_piston",
+            "observed_properties": {
+              "extended": "false",
+              "facing": "up"
+            },
+            "piston_state": "retracted",
+            "piston_variant": "sticky",
+            "power_level": null,
+            "powered": null,
+            "support_offset": null,
+            "wire_connections": null
+          }
+        }
+      ]
+    }
+  ],
+  "artifacts": [
+    {
+      "variant": "baseline",
+      "path": ".local/e2e-artifacts/reference-door-construction-cause-baseline-20260927.json",
+      "sha256": "10f734a2c5c96bb5a364d5893562714044eb946c83bad946fc94db57803957ed",
+      "bytes": 1249921
+    },
+    {
+      "variant": "swap-observers",
+      "path": ".local/e2e-artifacts/reference-door-construction-cause-swap-observers-20260927.json",
+      "sha256": "45b01caf131a8edb2020aa5e355db02c21971087997169c930a7d7441f282027",
+      "bytes": 776750
+    },
+    {
+      "variant": "watched-first",
+      "path": ".local/e2e-artifacts/reference-door-construction-cause-watched-first-20260927.json",
+      "sha256": "3619e4e4acad6a368230494cfb2e4772aecc1525652675d0a289f8a868d5fb46",
+      "bytes": 293095
+    },
+    {
+      "variant": "reset-cycle",
+      "path": ".local/e2e-artifacts/reference-door-construction-cause-reset-cycle-20260927.json",
+      "sha256": "fc0d839fc637119b49790ed6bdeab81aee0cdc4ee251ca33354806cf4dc9a796",
+      "bytes": 1258537
+    }
+  ],
+  "checks": [
+    {
+      "command": "cargo build --offline --locked -j 1 --package dustroute-translate --example audit_reference_door_construction",
+      "exit_code": 0,
+      "log": "/tmp/dustroute-construction-cause-build-final.log",
+      "log_sha256": "4eb42f384641c2b0322fa902c0f290815244376edfb7a9158d076a26a8b3df58"
+    },
+    {
+      "command": "cargo clippy --offline --locked -j 1 --package dustroute-translate --example audit_reference_door_construction -- -D warnings",
+      "exit_code": 0,
+      "log": "/tmp/dustroute-construction-cause-clippy.log",
+      "log_sha256": "999d700ee4d6424fce8f1b11712ad815ca193583655077137b1634ce91dff27b"
+    },
+    {
+      "command": "cargo fmt --package dustroute-translate -- --check",
+      "exit_code": 0,
+      "log": "/tmp/dustroute-construction-cause-fmt.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "git diff --check",
+      "exit_code": 0,
+      "log": "/tmp/dustroute-construction-cause-diff-check.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "assertions": "All four expected outcomes, exact whole-world differences, 43-step empty teardown, causal IDs/times and unchanged production planner were checked.",
+  "recommended_change": "Preserve support requirements and rank tie-breaking; additionally prefer construction of a declared occupied watched cell before its observer, then validate the entire callback sequence/final world and teardown. Reject dependency cycles or unsuccessful candidates.",
+  "not_implemented": [
+    "Observer-front precedence in production planner",
+    "General construction search",
+    "Automatic reset/control actions",
+    "Changes to physics, profiles or Blueprint input requirements"
+  ],
+  "limitations": [
+    "Single fixture/location/orientation model experiments; diagnostic mirrors current ranking/support selection, not a shared production entry point for permutations.",
+    "No new live server capture; inspected source rules are consistent with this trace but do not replace sequence conformance evidence.",
+    "Reset experiment is one ON/OFF attempt at existing model input boundaries, not proof that all reset strategies fail.",
+    "Adoption remains undetermined under its existing arbitrary-input contract; public MCP/live environment verification remains pending."
+  ]
+}

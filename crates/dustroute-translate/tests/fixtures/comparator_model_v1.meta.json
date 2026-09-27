@@ -1,0 +1,18 @@
+{
+  "kind": "pre_migration_model_regression",
+  "captured_on": "2026-09-20",
+  "source": "Working tree on codex/blueprint-architecture after repeater migration and before comparator law migration",
+  "command": "cargo run -q -p dustroute-translate --example audit_comparator_world_model",
+  "harness": "../support/comparator_models.rs",
+  "fixture": "comparator_model_v1.jsonl",
+  "cases": 48,
+  "modes": ["compare", "subtract", null, "unknown"],
+  "initial_levels": [0, 7, 15],
+  "rotations": ["r0", "r90", "r180", "r270"],
+  "samples_per_case": 10,
+  "inputs_row": ["rear", "side_a", "side_b"],
+  "initial_snapshot_row": ["main output", "follower output", "front wire strength", "pending work"],
+  "event_row": ["PhysicsTime", "event kind", "transition kind", "main before", "main after", "follower before", "follower after", "pending work"],
+  "settled_row": ["main front wire strength", "follower front wire strength", "pending work"],
+  "scope": "Compatibility model regression, not a live Minecraft observation. Expected data was captured before replacing the Rust comparator formula. Do not regenerate it after semantic changes merely to pass the test."
+}

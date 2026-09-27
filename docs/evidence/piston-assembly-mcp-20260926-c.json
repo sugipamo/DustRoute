@@ -1,0 +1,219 @@
+{
+  "schema_version": "dustroute.custom-assembly-live-evidence.v1",
+  "run_id": "mixed-assembly-mcp-20260926-c",
+  "status": "passed",
+  "origin": {
+    "x": 32512,
+    "y": 180,
+    "z": 1000
+  },
+  "known_region": {
+    "min": {
+      "x": 32507,
+      "y": 178,
+      "z": 994
+    },
+    "max": {
+      "x": 32517,
+      "y": 192,
+      "z": 1022
+    }
+  },
+  "server": {
+    "connected": true,
+    "username": "DustRouteBot",
+    "host": "127.0.0.1",
+    "port": 25565,
+    "version": "1.21.11",
+    "dimension": "minecraft:overworld",
+    "enabled_features": [
+      "minecraft:vanilla"
+    ],
+    "position": {
+      "x": 628.5,
+      "y": -60,
+      "z": 0.5
+    },
+    "metrics": {
+      "requests_total": 4,
+      "errors_total": 0,
+      "request_bytes": 152,
+      "response_bytes": 2046,
+      "total_duration_micros": 2770,
+      "max_duration_micros": 2526,
+      "scan_requests": 0,
+      "scan_volume_blocks": 0,
+      "scan_non_air_blocks": 0,
+      "requests_by_method": {
+        "status": 4,
+        "visible_players": 0,
+        "approach_player": 0,
+        "observe_player": 0,
+        "scan_region": 0,
+        "get_block": 0,
+        "activate_lever": 0,
+        "approach_lever": 0,
+        "wait_ticks": 0,
+        "start_update_recording": 0,
+        "stop_update_recording": 0,
+        "preview_region": 0,
+        "write_blocks": 0,
+        "place_physical_blocks": 0,
+        "unknown": 0
+      }
+    }
+  },
+  "calls": [
+    {
+      "name": "test_circuit_change",
+      "ok": true
+    },
+    {
+      "name": "test_circuit_change",
+      "ok": true,
+      "operation_id": "61aae9e2-0566-4ed0-a20d-1f24a5abdec4"
+    },
+    {
+      "name": "show_operation",
+      "ok": true,
+      "operation_id": "61aae9e2-0566-4ed0-a20d-1f24a5abdec4"
+    },
+    {
+      "name": "invoke_operation",
+      "ok": true,
+      "operation_id": "61aae9e2-0566-4ed0-a20d-1f24a5abdec4"
+    },
+    {
+      "name": "new_placement",
+      "ok": true,
+      "operation_id": "78e8e8f4-fed1-4c02-88c8-ef296620888b"
+    },
+    {
+      "name": "invoke_operation",
+      "ok": false,
+      "error": "construction needs an unused preview; undo needs a verified application"
+    },
+    {
+      "name": "show_operation",
+      "ok": true,
+      "operation_id": "78e8e8f4-fed1-4c02-88c8-ef296620888b"
+    },
+    {
+      "name": "invoke_operation",
+      "ok": false,
+      "error": "construction state or surrounding world differs from the verified plan; inspect before continuing"
+    },
+    {
+      "name": "invoke_operation",
+      "ok": true,
+      "operation_id": "78e8e8f4-fed1-4c02-88c8-ef296620888b",
+      "status": "verified",
+      "verified_steps": 14,
+      "total_steps": 14,
+      "error": null,
+      "undo": false
+    },
+    {
+      "name": "undo_operation",
+      "ok": false,
+      "error": "construction state or surrounding world differs from the verified plan; inspect before continuing"
+    },
+    {
+      "name": "undo_operation",
+      "ok": true,
+      "operation_id": "78e8e8f4-fed1-4c02-88c8-ef296620888b",
+      "status": "verified",
+      "verified_steps": 14,
+      "total_steps": 14,
+      "error": null,
+      "undo": true
+    }
+  ],
+  "applied_inputs": [
+    {
+      "position": {
+        "x": 32512,
+        "y": 181,
+        "z": 997
+      },
+      "powered": true,
+      "game_tick": 37872,
+      "packet_sequence": 9655,
+      "write_sequence": 9705
+    },
+    {
+      "position": {
+        "x": 32512,
+        "y": 181,
+        "z": 997
+      },
+      "powered": false,
+      "game_tick": 37963,
+      "packet_sequence": 10875,
+      "write_sequence": 10925
+    }
+  ],
+  "body_readbacks": [
+    {
+      "position": {
+        "x": 32512,
+        "y": 181,
+        "z": 997
+      },
+      "powered": true,
+      "evidence": "actual application ticks retained in server capture",
+      "body_readback": {
+        "name": "sticky_piston",
+        "properties": {
+          "facing": "up",
+          "extended": true
+        }
+      }
+    },
+    {
+      "position": {
+        "x": 32512,
+        "y": 181,
+        "z": 997
+      },
+      "powered": false,
+      "evidence": "actual application ticks retained in server capture",
+      "body_readback": {
+        "name": "sticky_piston",
+        "properties": {
+          "facing": "up",
+          "extended": false
+        }
+      }
+    }
+  ],
+  "restart": null,
+  "rotation": "r90",
+  "cleanup": {
+    "region_empty": true,
+    "force_load_removed": true
+  },
+  "artifacts_sha256": {
+    ".raw.ndjson": "873a36f862ba5a16b99ac0f129caaef57da7b890837d7233b163058162fbeaca",
+    ".server.log": "267011012617727940f415ff302d0293304f012375b81e1da8bebbab974934f5",
+    ".bridge.log": "4e5ed61636366e4821f8ad4f24a50eff0c1efea7d88a89fb346d0965be12a2ea",
+    ".client.json": "ebe8bceb3477f1f98570be57b0600a9fa0228ea816a96ef25275e2d244504812",
+    ".fixture.json": "90632878efc3075a7aab2abed1e7d9421aef29c67ce7573f24e538d02b0bc54a"
+  },
+  "actor_sha256": "a3326f14fed4a063c7d526dec58408884e5f085a96d1ba52f06d6523fed68b38",
+  "capture_footer": {
+    "kind": "artifact_end",
+    "capture_mode": "bounded",
+    "capture_state": "closed",
+    "input_observed": true,
+    "anchor_game_tick": 37872,
+    "end_game_tick": 38034,
+    "last_sequence": 16034,
+    "emitted_records": 2227,
+    "suppressed_records": 4188,
+    "evicted_records": 9619,
+    "write_errors": 0,
+    "heartbeat_mode": "full"
+  },
+  "evidence_limit": "Public MCP per-stage whole-region verification and client body readback after applied inputs. Client sample ticks are not server ticks; bounded server capture omits earlier construction and is not complete tick-internal evidence."
+}

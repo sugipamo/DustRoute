@@ -1,10 +1,13 @@
 //! MCP-facing orchestration for a visible Minecraft bot.
 
 pub mod api;
+mod assembly_registry;
+mod blueprint_mcp;
 pub mod bridge;
 pub mod config;
 pub mod discovery;
 pub mod operations;
+mod piston_assembly;
 pub mod piston_door;
 pub mod policy;
 mod revision;

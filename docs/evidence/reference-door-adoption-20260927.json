@@ -1,0 +1,750 @@
+{
+  "schema_version": "dustroute.reference-door-adoption-audit.v1",
+  "date": "2026-09-27",
+  "source_archive_sha256": "2f4e45868baa6d06c3fa197c88db50a7de2e57e5180eb15fea267e21d254e8c6",
+  "outcome": "not_adopted",
+  "implementation_stop": "Construction planning may require substantial changes; no planner, physics or verifier redesign begun.",
+  "scope": {
+    "shared_adoption_core": true,
+    "separate_process_archive_revalidation": true,
+    "public_mcp_transport": false,
+    "live_target_environment_check": false,
+    "live_world_writes": false,
+    "user_catalog_writes": false
+  },
+  "budget": {
+    "max_states": 65536,
+    "max_steps": 1000000,
+    "max_elapsed_seconds": 30
+  },
+  "candidate": {
+    "base": "reference-door.state.v1",
+    "proposed": "reference-door.state.v2",
+    "block_count": 43,
+    "requirements": "RepeatedSettling: arbitrary input changes at completed roots, eventual nine Air cells for OFF and nine Solid cells for ON. Solid predicate does not assert exact quartz identity.",
+    "historical_pass_reused": false
+  },
+  "construction": {
+    "error": "sequential construction does not reach the declared fresh-world result",
+    "status": "failed"
+  },
+  "runtime_review": {
+    "arrangement": [
+      {
+        "detail": "complete actual world accepted by the native initial-placement gate",
+        "kind": "placement",
+        "status": "passed"
+      },
+      {
+        "detail": "no complete reachable physical graph; snapshots and successful prefixes cannot certify whole-realization behavior",
+        "kind": "behavior",
+        "status": "undetermined"
+      }
+    ],
+    "behavior": [
+      {
+        "instance": [
+          "root",
+          "mechanism"
+        ],
+        "report": {
+          "counterexample": null,
+          "detail": "elapsed verification budget exhausted; no timing deadline was imposed",
+          "evaluated_steps": 2048,
+          "graph_closed": false,
+          "reachable_states": 1727,
+          "status": "undetermined",
+          "type_revision": "reference-door.aperture-repeated-settling.v1"
+        }
+      }
+    ],
+    "context": {
+      "initial_condition": "fresh_construction",
+      "input_levers": [
+        {
+          "x": 0,
+          "y": 11,
+          "z": 0
+        }
+      ],
+      "known_region": {
+        "max": {
+          "x": 2,
+          "y": 13,
+          "z": 5
+        },
+        "min": {
+          "x": -2,
+          "y": 0,
+          "z": -5
+        }
+      },
+      "profile": "dustroute.piston-electrical-root-exploration.v5",
+      "root_limits": {
+        "max_call_depth": 512,
+        "max_microsteps": 100000,
+        "max_pending": 10000
+      }
+    },
+    "occurrences": [
+      [
+        [
+          "root"
+        ],
+        {
+          "checks": [
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 2, z: -2 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 2, z: -1 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 2, z: 0 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 2, z: 1 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 2, z: 2 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 3, z: -2 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 3, z: -1 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 3, z: 0 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 3, z: 1 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 3, z: 2 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 4, z: -2 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 4, z: -1 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 4, z: 0 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 4, z: 1 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 4, z: 2 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 5, z: -2 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 5, z: -1 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 5, z: 0 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 5, z: 1 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 5, z: 2 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 6, z: -3 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 6, z: -2 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 6, z: 2 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 6, z: 3 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 7, z: -3 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 7, z: -2 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 7, z: 2 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 7, z: 3 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 8, z: -3 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 8, z: -2 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 8, z: 2 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 8, z: 3 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 9, z: -3 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 9, z: -2 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 9, z: -1 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 9, z: 0 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 9, z: 1 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 9, z: 2 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 9, z: 3 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 10, z: -1 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 10, z: 0 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 10, z: 1 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 11, z: 0 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            }
+          ],
+          "revision": "reference-door.parent.v2"
+        }
+      ],
+      [
+        [
+          "root",
+          "mechanism"
+        ],
+        {
+          "checks": [
+            {
+              "detail": "declared laws selected by this world context",
+              "kind": "physical_law",
+              "status": "passed"
+            },
+            {
+              "detail": "[InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"mechanism\"))]: {\"type_revision\":\"reference-door.aperture-repeated-settling.v1\",\"status\":\"undetermined\",\"reachable_states\":1727,\"evaluated_steps\":2048,\"graph_closed\":false,\"detail\":\"elapsed verification budget exhausted; no timing deadline was imposed\",\"counterexample\":null}",
+              "kind": "behavior",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 2, z: -2 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 2, z: -1 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 2, z: 0 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 2, z: 1 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 2, z: 2 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 3, z: -2 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 3, z: -1 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 3, z: 0 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 3, z: 1 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 3, z: 2 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 4, z: -2 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 4, z: -1 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 4, z: 0 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 4, z: 1 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 4, z: 2 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 5, z: -2 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 5, z: -1 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 5, z: 0 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 5, z: 1 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 5, z: 2 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 6, z: -3 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 6, z: -2 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 6, z: 2 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 6, z: 3 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 7, z: -3 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 7, z: -2 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 7, z: 2 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 7, z: 3 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 8, z: -3 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 8, z: -2 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 8, z: 2 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 8, z: 3 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 9, z: -3 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 9, z: -2 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 9, z: -1 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 9, z: 0 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 9, z: 1 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 9, z: 2 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 9, z: 3 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 10, z: -1 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 10, z: 0 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 10, z: 1 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 11, z: 0 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "placement",
+              "status": "undetermined"
+            },
+            {
+              "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"mechanism\"))], port: \"control\" } at Pos { x: 0, y: 11, z: 0 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "port",
+              "status": "undetermined"
+            },
+            {
+              "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"mechanism\"))], port: \"aperture_0_0\" } at Pos { x: 0, y: 6, z: -1 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "port",
+              "status": "undetermined"
+            },
+            {
+              "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"mechanism\"))], port: \"aperture_0_1\" } at Pos { x: 0, y: 6, z: 0 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "port",
+              "status": "undetermined"
+            },
+            {
+              "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"mechanism\"))], port: \"aperture_0_2\" } at Pos { x: 0, y: 6, z: 1 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "port",
+              "status": "undetermined"
+            },
+            {
+              "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"mechanism\"))], port: \"aperture_1_0\" } at Pos { x: 0, y: 7, z: -1 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "port",
+              "status": "undetermined"
+            },
+            {
+              "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"mechanism\"))], port: \"aperture_1_1\" } at Pos { x: 0, y: 7, z: 0 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "port",
+              "status": "undetermined"
+            },
+            {
+              "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"mechanism\"))], port: \"aperture_1_2\" } at Pos { x: 0, y: 7, z: 1 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "port",
+              "status": "undetermined"
+            },
+            {
+              "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"mechanism\"))], port: \"aperture_2_0\" } at Pos { x: 0, y: 8, z: -1 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "port",
+              "status": "undetermined"
+            },
+            {
+              "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"mechanism\"))], port: \"aperture_2_1\" } at Pos { x: 0, y: 8, z: 0 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "port",
+              "status": "undetermined"
+            },
+            {
+              "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"mechanism\"))], port: \"aperture_2_2\" } at Pos { x: 0, y: 8, z: 1 }; no contradiction observed, but the physical graph was not closed",
+              "kind": "port",
+              "status": "undetermined"
+            }
+          ],
+          "revision": "reference-door.mechanism.v2"
+        }
+      ]
+    ],
+    "status": "undetermined"
+  },
+  "adoption_attempts": [
+    {
+      "attempt": "first",
+      "status": "undetermined",
+      "proposal_status": "open",
+      "candidate_published": false,
+      "original_catalog_unchanged": true,
+      "validation_events": 1,
+      "behavior_reports": [
+        {
+          "type_revision": "reference-door.aperture-repeated-settling.v1",
+          "status": "undetermined",
+          "reachable_states": 1827,
+          "evaluated_steps": 2189,
+          "graph_closed": false,
+          "detail": "elapsed verification budget exhausted; no timing deadline was imposed",
+          "counterexample": null
+        }
+      ]
+    },
+    {
+      "attempt": "restart",
+      "status": "undetermined",
+      "proposal_status": "open",
+      "candidate_published": false,
+      "original_catalog_unchanged": true,
+      "validation_events": 2,
+      "behavior_reports": [
+        {
+          "type_revision": "reference-door.aperture-repeated-settling.v1",
+          "status": "undetermined",
+          "reachable_states": 1703,
+          "evaluated_steps": 2012,
+          "graph_closed": false,
+          "detail": "elapsed verification budget exhausted; no timing deadline was imposed",
+          "counterexample": null
+        }
+      ]
+    }
+  ],
+  "regression_tests": {
+    "passed": 2,
+    "failed": 0,
+    "scope": "Literal geometry and source-reference archive retention; one complete settled cycle through the candidate bindings. Not arbitrary-input proof."
+  },
+  "checks": [
+    {
+      "command": "cargo build --offline --locked -j 1 --package dustroute-translate --example audit_reference_door_adoption",
+      "exit_code": 0,
+      "log": "/tmp/dustroute-reference-adoption-build.log",
+      "log_sha256": "c771fae245f71be0c6aad8bfb0241797dcde8d4416cea65636cd7d42da343182"
+    },
+    {
+      "command": "cargo test --offline --locked -j 1 --package dustroute-translate --test reference_door_adoption -- --test-threads=2",
+      "exit_code": 0,
+      "log": "/tmp/dustroute-reference-adoption-tests.log",
+      "log_sha256": "1dc510e9fec9cd2f5c446272cac99adce31a865e6c31a01b90aa8f397b094792"
+    },
+    {
+      "command": "cargo clippy --offline --locked -j 1 --package dustroute-translate --example audit_reference_door_adoption --test reference_door_adoption -- -D warnings",
+      "exit_code": 0,
+      "log": "/tmp/dustroute-reference-adoption-clippy.log",
+      "log_sha256": "b1b06bdd148f23c577cabb2a74bd0590949a6eb48b2f1a7efb057cf64feb12de"
+    },
+    {
+      "command": "cargo fmt --package dustroute-translate -- --check",
+      "exit_code": 0,
+      "log": "/tmp/dustroute-reference-adoption-fmt.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "git diff --check",
+      "exit_code": 0,
+      "log": "/tmp/dustroute-reference-adoption-diff-check.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": ".local/e2e-artifacts/reference-door-adoption-candidate-20260927.json",
+      "sha256": "b0655e4619ca95b67c47c698b528e565ef7823c2e301f4b6bcbbe06b99f171cf",
+      "bytes": 893041
+    },
+    {
+      "path": ".local/e2e-artifacts/reference-door-adoption-construction-20260927.json",
+      "sha256": "543ea53f04ff3ece6c33c052ae0a23e21888a08ef3e1f2d13a0584e967f9c1b9",
+      "bytes": 110
+    },
+    {
+      "path": ".local/e2e-artifacts/reference-door-adoption-review-20260927.json",
+      "sha256": "a9456b4af82d1ea27a0e84972f368b0b4f6cf997d260c59e5f3b573cd2e11ffc",
+      "bytes": 30610
+    },
+    {
+      "path": ".local/e2e-artifacts/reference-door-adoption-first-20260927.json",
+      "sha256": "8a0e224e2d2e241ff5888ba2faeaae0d64f88580b38dd008e32a4ba905db52b7",
+      "bytes": 535686
+    },
+    {
+      "path": ".local/e2e-artifacts/reference-door-adoption-restart-20260927.json",
+      "sha256": "619cdc0cdaac40dab1298233e7b41e8968cfd6b2ba6bb795f3eef541dcd2921e",
+      "bytes": 573104
+    }
+  ],
+  "sources": [
+    {
+      "path": "crates/dustroute-translate/tests/fixtures/reference-3x3-bobiloosky-v1.json",
+      "sha256": "ded824e424947bc12d3060e6f5242207a22ec7abe123c9e90ce73f9e7c0ef900"
+    },
+    {
+      "path": "crates/dustroute-translate/tests/support/reference_door_blueprint.rs",
+      "sha256": "276960f00caf183e3c343c65fa82c7a816e9d12567af780417dd7b5d377da2bd"
+    },
+    {
+      "path": "crates/dustroute-translate/examples/audit_reference_door_adoption.rs",
+      "sha256": "487ed595ce3a3e7471b6c7bcac9508974f69e71952ad79460c0de0d39029aa77"
+    },
+    {
+      "path": "crates/dustroute-translate/tests/reference_door_adoption.rs",
+      "sha256": "068d67b59792bd777afea7adf65d6ea9bb839764da3f6695efff44b75906072d"
+    },
+    {
+      "path": "crates/dustroute-translate/src/piston_construction.rs",
+      "sha256": "2edc3c23f9d80003d08afd162ad634af095a98777ff580d6c77dca85eb89731d"
+    },
+    {
+      "path": "crates/dustroute-translate/src/runtime_behavior.rs",
+      "sha256": "45fea93656f3b4d2c92fd44ed3a4fea85e6c1101529db3985ec0e5c227d1c54f"
+    },
+    {
+      "path": "crates/dustroute-translate/src/runtime_review.rs",
+      "sha256": "369ed319c1211f3c88edbbebdad43e0f57f3571e51269df8f7583a022389cbf9"
+    },
+    {
+      "path": "crates/dustroute-translate/src/blueprint_update.rs",
+      "sha256": "6ea378b0f8217652c1711cbbd4d3f9d1e902713ade16578e5a7b54c73322e7d2"
+    },
+    {
+      "path": "crates/dustroute-translate/src/behavior_type.rs",
+      "sha256": "d76506727e25a74c162c12e54e799e63ee2861ff0948c88aa9d2eef739b14c2e"
+    },
+    {
+      "path": "crates/dustroute-mcp/src/blueprint_mcp.rs",
+      "sha256": "bf2d0e69a846686c4780c9813ab0d992661676d20b63ce1d3a3c46f5d425cc32"
+    }
+  ]
+}

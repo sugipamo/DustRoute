@@ -1,0 +1,4702 @@
+{
+  "schema_version": "dustroute.reference-door-command-placement.v1",
+  "evidence_scope": "Observed /setblock pre-write scheduling and resulting displacement. Selected contiguous raw window; model expected snapshots do not reconstruct hidden live history.",
+  "minecraft_version": "1.21.11",
+  "origin": {
+    "x": 61000,
+    "y": 180,
+    "z": 1000
+  },
+  "region": {
+    "min": {
+      "x": 60998,
+      "y": 180,
+      "z": 995
+    },
+    "max": {
+      "x": 61002,
+      "y": 193,
+      "z": 1005
+    }
+  },
+  "verified_prefix_steps": 37,
+  "attempted_stage": 38,
+  "expected_after_verified_prefix": {
+    "blocks": [
+      {
+        "name": "minecraft:cyan_wool",
+        "pos": {
+          "x": 61000,
+          "y": 182,
+          "z": 998
+        },
+        "properties": {}
+      },
+      {
+        "name": "minecraft:observer",
+        "pos": {
+          "x": 61000,
+          "y": 182,
+          "z": 999
+        },
+        "properties": {
+          "facing": "south",
+          "powered": "false"
+        }
+      },
+      {
+        "name": "minecraft:observer",
+        "pos": {
+          "x": 61000,
+          "y": 182,
+          "z": 1000
+        },
+        "properties": {
+          "facing": "south",
+          "powered": "false"
+        }
+      },
+      {
+        "name": "minecraft:redstone_lamp",
+        "pos": {
+          "x": 61000,
+          "y": 182,
+          "z": 1001
+        },
+        "properties": {
+          "lit": "false"
+        }
+      },
+      {
+        "name": "minecraft:cyan_wool",
+        "pos": {
+          "x": 61000,
+          "y": 182,
+          "z": 1002
+        },
+        "properties": {}
+      },
+      {
+        "name": "minecraft:redstone_wire",
+        "pos": {
+          "x": 61000,
+          "y": 183,
+          "z": 998
+        },
+        "properties": {
+          "east": "none",
+          "north": "side",
+          "power": "0",
+          "south": "side",
+          "west": "none"
+        }
+      },
+      {
+        "name": "minecraft:repeater",
+        "pos": {
+          "x": 61000,
+          "y": 183,
+          "z": 999
+        },
+        "properties": {
+          "delay": "4",
+          "facing": "north",
+          "locked": "false",
+          "powered": "false"
+        }
+      },
+      {
+        "name": "minecraft:sticky_piston",
+        "pos": {
+          "x": 61000,
+          "y": 183,
+          "z": 1000
+        },
+        "properties": {
+          "extended": "false",
+          "facing": "up"
+        }
+      },
+      {
+        "name": "minecraft:redstone_wire",
+        "pos": {
+          "x": 61000,
+          "y": 183,
+          "z": 1002
+        },
+        "properties": {
+          "east": "side",
+          "north": "side",
+          "power": "0",
+          "south": "side",
+          "west": "side"
+        }
+      },
+      {
+        "name": "minecraft:sticky_piston",
+        "pos": {
+          "x": 61000,
+          "y": 184,
+          "z": 1000
+        },
+        "properties": {
+          "extended": "false",
+          "facing": "up"
+        }
+      },
+      {
+        "name": "minecraft:cyan_wool",
+        "pos": {
+          "x": 61000,
+          "y": 184,
+          "z": 1001
+        },
+        "properties": {}
+      },
+      {
+        "name": "minecraft:cyan_wool",
+        "pos": {
+          "x": 61000,
+          "y": 184,
+          "z": 1002
+        },
+        "properties": {}
+      },
+      {
+        "name": "minecraft:sticky_piston",
+        "pos": {
+          "x": 61000,
+          "y": 185,
+          "z": 998
+        },
+        "properties": {
+          "extended": "false",
+          "facing": "south"
+        }
+      },
+      {
+        "name": "minecraft:smooth_quartz",
+        "pos": {
+          "x": 61000,
+          "y": 185,
+          "z": 999
+        },
+        "properties": {}
+      },
+      {
+        "name": "minecraft:smooth_quartz",
+        "pos": {
+          "x": 61000,
+          "y": 185,
+          "z": 1000
+        },
+        "properties": {}
+      },
+      {
+        "name": "minecraft:smooth_quartz",
+        "pos": {
+          "x": 61000,
+          "y": 185,
+          "z": 1001
+        },
+        "properties": {}
+      },
+      {
+        "name": "minecraft:sticky_piston",
+        "pos": {
+          "x": 61000,
+          "y": 186,
+          "z": 997
+        },
+        "properties": {
+          "extended": "false",
+          "facing": "south"
+        }
+      },
+      {
+        "name": "minecraft:smooth_quartz",
+        "pos": {
+          "x": 61000,
+          "y": 186,
+          "z": 998
+        },
+        "properties": {}
+      },
+      {
+        "name": "minecraft:smooth_quartz",
+        "pos": {
+          "x": 61000,
+          "y": 186,
+          "z": 1002
+        },
+        "properties": {}
+      },
+      {
+        "name": "minecraft:sticky_piston",
+        "pos": {
+          "x": 61000,
+          "y": 186,
+          "z": 1003
+        },
+        "properties": {
+          "extended": "false",
+          "facing": "north"
+        }
+      },
+      {
+        "name": "minecraft:sticky_piston",
+        "pos": {
+          "x": 61000,
+          "y": 187,
+          "z": 997
+        },
+        "properties": {
+          "extended": "false",
+          "facing": "south"
+        }
+      },
+      {
+        "name": "minecraft:smooth_quartz",
+        "pos": {
+          "x": 61000,
+          "y": 187,
+          "z": 998
+        },
+        "properties": {}
+      },
+      {
+        "name": "minecraft:smooth_quartz",
+        "pos": {
+          "x": 61000,
+          "y": 187,
+          "z": 1002
+        },
+        "properties": {}
+      },
+      {
+        "name": "minecraft:sticky_piston",
+        "pos": {
+          "x": 61000,
+          "y": 187,
+          "z": 1003
+        },
+        "properties": {
+          "extended": "false",
+          "facing": "north"
+        }
+      },
+      {
+        "name": "minecraft:cyan_wool",
+        "pos": {
+          "x": 61000,
+          "y": 188,
+          "z": 997
+        },
+        "properties": {}
+      },
+      {
+        "name": "minecraft:smooth_quartz",
+        "pos": {
+          "x": 61000,
+          "y": 188,
+          "z": 998
+        },
+        "properties": {}
+      },
+      {
+        "name": "minecraft:smooth_quartz",
+        "pos": {
+          "x": 61000,
+          "y": 188,
+          "z": 1002
+        },
+        "properties": {}
+      },
+      {
+        "name": "minecraft:cyan_wool",
+        "pos": {
+          "x": 61000,
+          "y": 188,
+          "z": 1003
+        },
+        "properties": {}
+      },
+      {
+        "name": "minecraft:redstone_wire",
+        "pos": {
+          "x": 61000,
+          "y": 189,
+          "z": 997
+        },
+        "properties": {
+          "east": "none",
+          "north": "side",
+          "power": "0",
+          "south": "side",
+          "west": "none"
+        }
+      },
+      {
+        "name": "minecraft:smooth_quartz",
+        "pos": {
+          "x": 61000,
+          "y": 189,
+          "z": 999
+        },
+        "properties": {}
+      },
+      {
+        "name": "minecraft:smooth_quartz",
+        "pos": {
+          "x": 61000,
+          "y": 189,
+          "z": 1000
+        },
+        "properties": {}
+      },
+      {
+        "name": "minecraft:smooth_quartz",
+        "pos": {
+          "x": 61000,
+          "y": 189,
+          "z": 1001
+        },
+        "properties": {}
+      },
+      {
+        "name": "minecraft:redstone_wire",
+        "pos": {
+          "x": 61000,
+          "y": 189,
+          "z": 1003
+        },
+        "properties": {
+          "east": "none",
+          "north": "side",
+          "power": "0",
+          "south": "side",
+          "west": "none"
+        }
+      },
+      {
+        "name": "minecraft:sticky_piston",
+        "pos": {
+          "x": 61000,
+          "y": 190,
+          "z": 999
+        },
+        "properties": {
+          "extended": "false",
+          "facing": "down"
+        }
+      },
+      {
+        "name": "minecraft:sticky_piston",
+        "pos": {
+          "x": 61000,
+          "y": 190,
+          "z": 1000
+        },
+        "properties": {
+          "extended": "false",
+          "facing": "down"
+        }
+      },
+      {
+        "name": "minecraft:sticky_piston",
+        "pos": {
+          "x": 61000,
+          "y": 190,
+          "z": 1001
+        },
+        "properties": {
+          "extended": "false",
+          "facing": "down"
+        }
+      },
+      {
+        "name": "minecraft:lever",
+        "pos": {
+          "x": 61000,
+          "y": 191,
+          "z": 1000
+        },
+        "properties": {
+          "face": "floor",
+          "facing": "east",
+          "powered": "false"
+        }
+      }
+    ],
+    "max": {
+      "x": 61002,
+      "y": 193,
+      "z": 1005
+    },
+    "min": {
+      "x": 60998,
+      "y": 180,
+      "z": 995
+    }
+  },
+  "attempted_step": {
+    "expected": {
+      "blocks": [
+        {
+          "name": "minecraft:cyan_wool",
+          "pos": {
+            "x": 61000,
+            "y": 182,
+            "z": 998
+          },
+          "properties": {}
+        },
+        {
+          "name": "minecraft:observer",
+          "pos": {
+            "x": 61000,
+            "y": 182,
+            "z": 999
+          },
+          "properties": {
+            "facing": "south",
+            "powered": "false"
+          }
+        },
+        {
+          "name": "minecraft:observer",
+          "pos": {
+            "x": 61000,
+            "y": 182,
+            "z": 1000
+          },
+          "properties": {
+            "facing": "south",
+            "powered": "false"
+          }
+        },
+        {
+          "name": "minecraft:redstone_lamp",
+          "pos": {
+            "x": 61000,
+            "y": 182,
+            "z": 1001
+          },
+          "properties": {
+            "lit": "false"
+          }
+        },
+        {
+          "name": "minecraft:cyan_wool",
+          "pos": {
+            "x": 61000,
+            "y": 182,
+            "z": 1002
+          },
+          "properties": {}
+        },
+        {
+          "name": "minecraft:redstone_wire",
+          "pos": {
+            "x": 61000,
+            "y": 183,
+            "z": 998
+          },
+          "properties": {
+            "east": "none",
+            "north": "side",
+            "power": "0",
+            "south": "side",
+            "west": "none"
+          }
+        },
+        {
+          "name": "minecraft:repeater",
+          "pos": {
+            "x": 61000,
+            "y": 183,
+            "z": 999
+          },
+          "properties": {
+            "delay": "4",
+            "facing": "north",
+            "locked": "false",
+            "powered": "false"
+          }
+        },
+        {
+          "name": "minecraft:sticky_piston",
+          "pos": {
+            "x": 61000,
+            "y": 183,
+            "z": 1000
+          },
+          "properties": {
+            "extended": "false",
+            "facing": "up"
+          }
+        },
+        {
+          "name": "minecraft:observer",
+          "pos": {
+            "x": 61000,
+            "y": 183,
+            "z": 1001
+          },
+          "properties": {
+            "facing": "down",
+            "powered": "false"
+          }
+        },
+        {
+          "name": "minecraft:redstone_wire",
+          "pos": {
+            "x": 61000,
+            "y": 183,
+            "z": 1002
+          },
+          "properties": {
+            "east": "side",
+            "north": "side",
+            "power": "0",
+            "south": "side",
+            "west": "side"
+          }
+        },
+        {
+          "name": "minecraft:sticky_piston",
+          "pos": {
+            "x": 61000,
+            "y": 184,
+            "z": 1000
+          },
+          "properties": {
+            "extended": "false",
+            "facing": "up"
+          }
+        },
+        {
+          "name": "minecraft:cyan_wool",
+          "pos": {
+            "x": 61000,
+            "y": 184,
+            "z": 1001
+          },
+          "properties": {}
+        },
+        {
+          "name": "minecraft:cyan_wool",
+          "pos": {
+            "x": 61000,
+            "y": 184,
+            "z": 1002
+          },
+          "properties": {}
+        },
+        {
+          "name": "minecraft:sticky_piston",
+          "pos": {
+            "x": 61000,
+            "y": 185,
+            "z": 998
+          },
+          "properties": {
+            "extended": "false",
+            "facing": "south"
+          }
+        },
+        {
+          "name": "minecraft:smooth_quartz",
+          "pos": {
+            "x": 61000,
+            "y": 185,
+            "z": 999
+          },
+          "properties": {}
+        },
+        {
+          "name": "minecraft:smooth_quartz",
+          "pos": {
+            "x": 61000,
+            "y": 185,
+            "z": 1000
+          },
+          "properties": {}
+        },
+        {
+          "name": "minecraft:smooth_quartz",
+          "pos": {
+            "x": 61000,
+            "y": 185,
+            "z": 1001
+          },
+          "properties": {}
+        },
+        {
+          "name": "minecraft:sticky_piston",
+          "pos": {
+            "x": 61000,
+            "y": 186,
+            "z": 997
+          },
+          "properties": {
+            "extended": "false",
+            "facing": "south"
+          }
+        },
+        {
+          "name": "minecraft:smooth_quartz",
+          "pos": {
+            "x": 61000,
+            "y": 186,
+            "z": 998
+          },
+          "properties": {}
+        },
+        {
+          "name": "minecraft:smooth_quartz",
+          "pos": {
+            "x": 61000,
+            "y": 186,
+            "z": 1002
+          },
+          "properties": {}
+        },
+        {
+          "name": "minecraft:sticky_piston",
+          "pos": {
+            "x": 61000,
+            "y": 186,
+            "z": 1003
+          },
+          "properties": {
+            "extended": "false",
+            "facing": "north"
+          }
+        },
+        {
+          "name": "minecraft:sticky_piston",
+          "pos": {
+            "x": 61000,
+            "y": 187,
+            "z": 997
+          },
+          "properties": {
+            "extended": "false",
+            "facing": "south"
+          }
+        },
+        {
+          "name": "minecraft:smooth_quartz",
+          "pos": {
+            "x": 61000,
+            "y": 187,
+            "z": 998
+          },
+          "properties": {}
+        },
+        {
+          "name": "minecraft:smooth_quartz",
+          "pos": {
+            "x": 61000,
+            "y": 187,
+            "z": 1002
+          },
+          "properties": {}
+        },
+        {
+          "name": "minecraft:sticky_piston",
+          "pos": {
+            "x": 61000,
+            "y": 187,
+            "z": 1003
+          },
+          "properties": {
+            "extended": "false",
+            "facing": "north"
+          }
+        },
+        {
+          "name": "minecraft:cyan_wool",
+          "pos": {
+            "x": 61000,
+            "y": 188,
+            "z": 997
+          },
+          "properties": {}
+        },
+        {
+          "name": "minecraft:smooth_quartz",
+          "pos": {
+            "x": 61000,
+            "y": 188,
+            "z": 998
+          },
+          "properties": {}
+        },
+        {
+          "name": "minecraft:smooth_quartz",
+          "pos": {
+            "x": 61000,
+            "y": 188,
+            "z": 1002
+          },
+          "properties": {}
+        },
+        {
+          "name": "minecraft:cyan_wool",
+          "pos": {
+            "x": 61000,
+            "y": 188,
+            "z": 1003
+          },
+          "properties": {}
+        },
+        {
+          "name": "minecraft:redstone_wire",
+          "pos": {
+            "x": 61000,
+            "y": 189,
+            "z": 997
+          },
+          "properties": {
+            "east": "none",
+            "north": "side",
+            "power": "0",
+            "south": "side",
+            "west": "none"
+          }
+        },
+        {
+          "name": "minecraft:smooth_quartz",
+          "pos": {
+            "x": 61000,
+            "y": 189,
+            "z": 999
+          },
+          "properties": {}
+        },
+        {
+          "name": "minecraft:smooth_quartz",
+          "pos": {
+            "x": 61000,
+            "y": 189,
+            "z": 1000
+          },
+          "properties": {}
+        },
+        {
+          "name": "minecraft:smooth_quartz",
+          "pos": {
+            "x": 61000,
+            "y": 189,
+            "z": 1001
+          },
+          "properties": {}
+        },
+        {
+          "name": "minecraft:redstone_wire",
+          "pos": {
+            "x": 61000,
+            "y": 189,
+            "z": 1003
+          },
+          "properties": {
+            "east": "none",
+            "north": "side",
+            "power": "0",
+            "south": "side",
+            "west": "none"
+          }
+        },
+        {
+          "name": "minecraft:sticky_piston",
+          "pos": {
+            "x": 61000,
+            "y": 190,
+            "z": 999
+          },
+          "properties": {
+            "extended": "false",
+            "facing": "down"
+          }
+        },
+        {
+          "name": "minecraft:sticky_piston",
+          "pos": {
+            "x": 61000,
+            "y": 190,
+            "z": 1000
+          },
+          "properties": {
+            "extended": "false",
+            "facing": "down"
+          }
+        },
+        {
+          "name": "minecraft:sticky_piston",
+          "pos": {
+            "x": 61000,
+            "y": 190,
+            "z": 1001
+          },
+          "properties": {
+            "extended": "false",
+            "facing": "down"
+          }
+        },
+        {
+          "name": "minecraft:lever",
+          "pos": {
+            "x": 61000,
+            "y": 191,
+            "z": 1000
+          },
+          "properties": {
+            "face": "floor",
+            "facing": "east",
+            "powered": "false"
+          }
+        }
+      ],
+      "max": {
+        "x": 61002,
+        "y": 193,
+        "z": 1005
+      },
+      "min": {
+        "x": 60998,
+        "y": 180,
+        "z": 995
+      }
+    },
+    "position": {
+      "x": 61000,
+      "y": 183,
+      "z": 1001
+    },
+    "state": "minecraft:observer[facing=down,powered=false]",
+    "wait_ticks": 4
+  },
+  "installation_game_tick": 76039,
+  "failure_response": {
+    "automatic_rollback": false,
+    "bounds": {
+      "max": {
+        "x": 61002,
+        "y": 193,
+        "z": 1005
+      },
+      "min": {
+        "x": 60998,
+        "y": 180,
+        "z": 995
+      }
+    },
+    "error": "construction state or surrounding world differs from the verified plan; inspect before continuing",
+    "error_code": "internal",
+    "instance_id": "0435a805-3aa2-4d77-ba2c-902a02fe7928",
+    "ok": false,
+    "operation_id": "0435a805-3aa2-4d77-ba2c-902a02fe7928",
+    "record_revision": 39,
+    "retry_allowed": false,
+    "retryable": false,
+    "schema_version": "dustroute.error.v1",
+    "status": "needs_inspection",
+    "total_steps": 43,
+    "undo": false,
+    "verified_steps": 37
+  },
+  "failure_observations": [
+    {
+      "client_wait_ticks": 0,
+      "snapshot": {
+        "min": {
+          "x": 60998,
+          "y": 180,
+          "z": 995
+        },
+        "max": {
+          "x": 61002,
+          "y": 193,
+          "z": 1005
+        },
+        "blocks": [
+          {
+            "pos": {
+              "x": 61000,
+              "y": 182,
+              "z": 998
+            },
+            "name": "minecraft:cyan_wool",
+            "properties": {}
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 182,
+              "z": 999
+            },
+            "name": "minecraft:observer",
+            "properties": {
+              "powered": "false",
+              "facing": "south"
+            }
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 182,
+              "z": 1000
+            },
+            "name": "minecraft:observer",
+            "properties": {
+              "powered": "false",
+              "facing": "south"
+            }
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 182,
+              "z": 1001
+            },
+            "name": "minecraft:redstone_lamp",
+            "properties": {
+              "lit": "false"
+            }
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 182,
+              "z": 1002
+            },
+            "name": "minecraft:cyan_wool",
+            "properties": {}
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 183,
+              "z": 998
+            },
+            "name": "minecraft:redstone_wire",
+            "properties": {
+              "west": "none",
+              "south": "side",
+              "power": "0",
+              "north": "side",
+              "east": "none"
+            }
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 183,
+              "z": 999
+            },
+            "name": "minecraft:repeater",
+            "properties": {
+              "powered": "false",
+              "locked": "false",
+              "facing": "north",
+              "delay": "4"
+            }
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 183,
+              "z": 1000
+            },
+            "name": "minecraft:sticky_piston",
+            "properties": {
+              "facing": "up",
+              "extended": "false"
+            }
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 183,
+              "z": 1001
+            },
+            "name": "minecraft:observer",
+            "properties": {
+              "powered": "false",
+              "facing": "down"
+            }
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 183,
+              "z": 1002
+            },
+            "name": "minecraft:redstone_wire",
+            "properties": {
+              "west": "side",
+              "south": "side",
+              "power": "0",
+              "north": "side",
+              "east": "side"
+            }
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 184,
+              "z": 1000
+            },
+            "name": "minecraft:sticky_piston",
+            "properties": {
+              "facing": "up",
+              "extended": "false"
+            }
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 184,
+              "z": 1001
+            },
+            "name": "minecraft:cyan_wool",
+            "properties": {}
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 184,
+              "z": 1002
+            },
+            "name": "minecraft:cyan_wool",
+            "properties": {}
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 185,
+              "z": 998
+            },
+            "name": "minecraft:sticky_piston",
+            "properties": {
+              "facing": "south",
+              "extended": "false"
+            }
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 185,
+              "z": 999
+            },
+            "name": "minecraft:smooth_quartz",
+            "properties": {}
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 185,
+              "z": 1001
+            },
+            "name": "minecraft:smooth_quartz",
+            "properties": {}
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 186,
+              "z": 997
+            },
+            "name": "minecraft:sticky_piston",
+            "properties": {
+              "facing": "south",
+              "extended": "false"
+            }
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 186,
+              "z": 998
+            },
+            "name": "minecraft:smooth_quartz",
+            "properties": {}
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 186,
+              "z": 1000
+            },
+            "name": "minecraft:smooth_quartz",
+            "properties": {}
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 186,
+              "z": 1002
+            },
+            "name": "minecraft:smooth_quartz",
+            "properties": {}
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 186,
+              "z": 1003
+            },
+            "name": "minecraft:sticky_piston",
+            "properties": {
+              "facing": "north",
+              "extended": "false"
+            }
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 187,
+              "z": 997
+            },
+            "name": "minecraft:sticky_piston",
+            "properties": {
+              "facing": "south",
+              "extended": "false"
+            }
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 187,
+              "z": 998
+            },
+            "name": "minecraft:smooth_quartz",
+            "properties": {}
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 187,
+              "z": 1002
+            },
+            "name": "minecraft:smooth_quartz",
+            "properties": {}
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 187,
+              "z": 1003
+            },
+            "name": "minecraft:sticky_piston",
+            "properties": {
+              "facing": "north",
+              "extended": "false"
+            }
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 188,
+              "z": 997
+            },
+            "name": "minecraft:cyan_wool",
+            "properties": {}
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 188,
+              "z": 998
+            },
+            "name": "minecraft:smooth_quartz",
+            "properties": {}
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 188,
+              "z": 1002
+            },
+            "name": "minecraft:smooth_quartz",
+            "properties": {}
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 188,
+              "z": 1003
+            },
+            "name": "minecraft:cyan_wool",
+            "properties": {}
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 189,
+              "z": 997
+            },
+            "name": "minecraft:redstone_wire",
+            "properties": {
+              "west": "none",
+              "south": "side",
+              "power": "0",
+              "north": "side",
+              "east": "none"
+            }
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 189,
+              "z": 999
+            },
+            "name": "minecraft:smooth_quartz",
+            "properties": {}
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 189,
+              "z": 1000
+            },
+            "name": "minecraft:smooth_quartz",
+            "properties": {}
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 189,
+              "z": 1001
+            },
+            "name": "minecraft:smooth_quartz",
+            "properties": {}
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 189,
+              "z": 1003
+            },
+            "name": "minecraft:redstone_wire",
+            "properties": {
+              "west": "none",
+              "south": "side",
+              "power": "0",
+              "north": "side",
+              "east": "none"
+            }
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 190,
+              "z": 999
+            },
+            "name": "minecraft:sticky_piston",
+            "properties": {
+              "facing": "down",
+              "extended": "false"
+            }
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 190,
+              "z": 1000
+            },
+            "name": "minecraft:sticky_piston",
+            "properties": {
+              "facing": "down",
+              "extended": "false"
+            }
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 190,
+              "z": 1001
+            },
+            "name": "minecraft:sticky_piston",
+            "properties": {
+              "facing": "down",
+              "extended": "false"
+            }
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 191,
+              "z": 1000
+            },
+            "name": "minecraft:lever",
+            "properties": {
+              "powered": "false",
+              "facing": "east",
+              "face": "floor"
+            }
+          }
+        ],
+        "unknown": [],
+        "complete": true
+      }
+    },
+    {
+      "client_wait_ticks": 100,
+      "snapshot": {
+        "min": {
+          "x": 60998,
+          "y": 180,
+          "z": 995
+        },
+        "max": {
+          "x": 61002,
+          "y": 193,
+          "z": 1005
+        },
+        "blocks": [
+          {
+            "pos": {
+              "x": 61000,
+              "y": 182,
+              "z": 998
+            },
+            "name": "minecraft:cyan_wool",
+            "properties": {}
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 182,
+              "z": 999
+            },
+            "name": "minecraft:observer",
+            "properties": {
+              "powered": "false",
+              "facing": "south"
+            }
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 182,
+              "z": 1000
+            },
+            "name": "minecraft:observer",
+            "properties": {
+              "powered": "false",
+              "facing": "south"
+            }
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 182,
+              "z": 1001
+            },
+            "name": "minecraft:redstone_lamp",
+            "properties": {
+              "lit": "false"
+            }
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 182,
+              "z": 1002
+            },
+            "name": "minecraft:cyan_wool",
+            "properties": {}
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 183,
+              "z": 998
+            },
+            "name": "minecraft:redstone_wire",
+            "properties": {
+              "west": "none",
+              "south": "side",
+              "power": "0",
+              "north": "side",
+              "east": "none"
+            }
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 183,
+              "z": 999
+            },
+            "name": "minecraft:repeater",
+            "properties": {
+              "powered": "false",
+              "locked": "false",
+              "facing": "north",
+              "delay": "4"
+            }
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 183,
+              "z": 1000
+            },
+            "name": "minecraft:sticky_piston",
+            "properties": {
+              "facing": "up",
+              "extended": "false"
+            }
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 183,
+              "z": 1001
+            },
+            "name": "minecraft:observer",
+            "properties": {
+              "powered": "false",
+              "facing": "down"
+            }
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 183,
+              "z": 1002
+            },
+            "name": "minecraft:redstone_wire",
+            "properties": {
+              "west": "side",
+              "south": "side",
+              "power": "0",
+              "north": "side",
+              "east": "side"
+            }
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 184,
+              "z": 1000
+            },
+            "name": "minecraft:sticky_piston",
+            "properties": {
+              "facing": "up",
+              "extended": "false"
+            }
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 184,
+              "z": 1001
+            },
+            "name": "minecraft:cyan_wool",
+            "properties": {}
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 184,
+              "z": 1002
+            },
+            "name": "minecraft:cyan_wool",
+            "properties": {}
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 185,
+              "z": 998
+            },
+            "name": "minecraft:sticky_piston",
+            "properties": {
+              "facing": "south",
+              "extended": "false"
+            }
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 185,
+              "z": 999
+            },
+            "name": "minecraft:smooth_quartz",
+            "properties": {}
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 185,
+              "z": 1001
+            },
+            "name": "minecraft:smooth_quartz",
+            "properties": {}
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 186,
+              "z": 997
+            },
+            "name": "minecraft:sticky_piston",
+            "properties": {
+              "facing": "south",
+              "extended": "false"
+            }
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 186,
+              "z": 998
+            },
+            "name": "minecraft:smooth_quartz",
+            "properties": {}
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 186,
+              "z": 1000
+            },
+            "name": "minecraft:smooth_quartz",
+            "properties": {}
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 186,
+              "z": 1002
+            },
+            "name": "minecraft:smooth_quartz",
+            "properties": {}
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 186,
+              "z": 1003
+            },
+            "name": "minecraft:sticky_piston",
+            "properties": {
+              "facing": "north",
+              "extended": "false"
+            }
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 187,
+              "z": 997
+            },
+            "name": "minecraft:sticky_piston",
+            "properties": {
+              "facing": "south",
+              "extended": "false"
+            }
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 187,
+              "z": 998
+            },
+            "name": "minecraft:smooth_quartz",
+            "properties": {}
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 187,
+              "z": 1002
+            },
+            "name": "minecraft:smooth_quartz",
+            "properties": {}
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 187,
+              "z": 1003
+            },
+            "name": "minecraft:sticky_piston",
+            "properties": {
+              "facing": "north",
+              "extended": "false"
+            }
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 188,
+              "z": 997
+            },
+            "name": "minecraft:cyan_wool",
+            "properties": {}
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 188,
+              "z": 998
+            },
+            "name": "minecraft:smooth_quartz",
+            "properties": {}
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 188,
+              "z": 1002
+            },
+            "name": "minecraft:smooth_quartz",
+            "properties": {}
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 188,
+              "z": 1003
+            },
+            "name": "minecraft:cyan_wool",
+            "properties": {}
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 189,
+              "z": 997
+            },
+            "name": "minecraft:redstone_wire",
+            "properties": {
+              "west": "none",
+              "south": "side",
+              "power": "0",
+              "north": "side",
+              "east": "none"
+            }
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 189,
+              "z": 999
+            },
+            "name": "minecraft:smooth_quartz",
+            "properties": {}
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 189,
+              "z": 1000
+            },
+            "name": "minecraft:smooth_quartz",
+            "properties": {}
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 189,
+              "z": 1001
+            },
+            "name": "minecraft:smooth_quartz",
+            "properties": {}
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 189,
+              "z": 1003
+            },
+            "name": "minecraft:redstone_wire",
+            "properties": {
+              "west": "none",
+              "south": "side",
+              "power": "0",
+              "north": "side",
+              "east": "none"
+            }
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 190,
+              "z": 999
+            },
+            "name": "minecraft:sticky_piston",
+            "properties": {
+              "facing": "down",
+              "extended": "false"
+            }
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 190,
+              "z": 1000
+            },
+            "name": "minecraft:sticky_piston",
+            "properties": {
+              "facing": "down",
+              "extended": "false"
+            }
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 190,
+              "z": 1001
+            },
+            "name": "minecraft:sticky_piston",
+            "properties": {
+              "facing": "down",
+              "extended": "false"
+            }
+          },
+          {
+            "pos": {
+              "x": 61000,
+              "y": 191,
+              "z": 1000
+            },
+            "name": "minecraft:lever",
+            "properties": {
+              "powered": "false",
+              "facing": "east",
+              "face": "floor"
+            }
+          }
+        ],
+        "unknown": [],
+        "complete": true
+      }
+    }
+  ],
+  "capture_header": {
+    "kind": "artifact_start",
+    "schema": "dustroute.vanilla-instrumentation.v1",
+    "minecraft_version": "1.21.11",
+    "started_at": "2026-09-27T10:50:36.049768224Z",
+    "transient_trace": "dustroute.piston-transient.v1",
+    "trace_bounds": "60998,180,995,61002,193,1005",
+    "capture_mode": "continuous",
+    "max_ticks_after_input": null,
+    "pre_roll_ticks": 2,
+    "drain_ticks": 2,
+    "heartbeat_mode": "full"
+  },
+  "capture_footer": {
+    "kind": "artifact_end",
+    "capture_mode": "continuous",
+    "capture_state": "closed_no_input",
+    "input_observed": false,
+    "anchor_game_tick": null,
+    "end_game_tick": null,
+    "last_sequence": 16796,
+    "emitted_records": 16796,
+    "suppressed_records": 0,
+    "evicted_records": 0,
+    "write_errors": 0,
+    "heartbeat_mode": "full"
+  },
+  "raw_window": [
+    {
+      "kind": "server_world_tick",
+      "sequence": 12179,
+      "dimension": "minecraft:overworld",
+      "game_tick": 76038,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12180,
+      "dimension": "minecraft:overworld",
+      "scheduler": "block",
+      "time": 76039,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12181,
+      "dimension": "minecraft:overworld",
+      "scheduler": "fluid",
+      "time": 76039,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12182,
+      "dimension": "minecraft:overworld",
+      "game_tick": 76039,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12183,
+      "dimension": "minecraft:the_end",
+      "game_tick": 76039,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12184,
+      "dimension": "minecraft:the_end",
+      "scheduler": "block",
+      "time": 76039,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12185,
+      "dimension": "minecraft:the_end",
+      "scheduler": "fluid",
+      "time": 76039,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12186,
+      "dimension": "minecraft:the_end",
+      "game_tick": 76039,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12187,
+      "dimension": "minecraft:the_nether",
+      "game_tick": 76039,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12188,
+      "dimension": "minecraft:the_nether",
+      "scheduler": "block",
+      "time": 76039,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12189,
+      "dimension": "minecraft:the_nether",
+      "scheduler": "fluid",
+      "time": 76039,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12190,
+      "dimension": "minecraft:the_nether",
+      "game_tick": 76039,
+      "phase": "end"
+    },
+    {
+      "kind": "observer_callback",
+      "sequence": 12191,
+      "game_tick": 76039,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=183, z=1001}",
+      "event": "shape",
+      "state": "Block{minecraft:air}",
+      "queued": false,
+      "ticking": false,
+      "side": "west",
+      "source": "Mutable{x=60999, y=183, z=1001}",
+      "argument_state": "Block{minecraft:observer}[facing=down,powered=false]"
+    },
+    {
+      "kind": "observer_callback",
+      "sequence": 12192,
+      "game_tick": 76039,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=183, z=1001}",
+      "event": "shape",
+      "state": "Block{minecraft:air}",
+      "queued": false,
+      "ticking": false,
+      "side": "east",
+      "source": "Mutable{x=61001, y=183, z=1001}",
+      "argument_state": "Block{minecraft:observer}[facing=down,powered=false]"
+    },
+    {
+      "kind": "observer_callback",
+      "sequence": 12193,
+      "game_tick": 76039,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=183, z=1001}",
+      "event": "shape",
+      "state": "Block{minecraft:air}",
+      "queued": false,
+      "ticking": false,
+      "side": "north",
+      "source": "Mutable{x=61000, y=183, z=1000}",
+      "argument_state": "Block{minecraft:observer}[facing=down,powered=false]"
+    },
+    {
+      "kind": "observer_callback",
+      "sequence": 12194,
+      "game_tick": 76039,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=183, z=1001}",
+      "event": "shape",
+      "state": "Block{minecraft:air}",
+      "queued": false,
+      "ticking": false,
+      "side": "south",
+      "source": "Mutable{x=61000, y=183, z=1002}",
+      "argument_state": "Block{minecraft:observer}[facing=down,powered=false]"
+    },
+    {
+      "kind": "observer_callback",
+      "sequence": 12195,
+      "game_tick": 76039,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=183, z=1001}",
+      "event": "shape",
+      "state": "Block{minecraft:air}",
+      "queued": false,
+      "ticking": false,
+      "side": "down",
+      "source": "Mutable{x=61000, y=182, z=1001}",
+      "argument_state": "Block{minecraft:observer}[facing=down,powered=false]"
+    },
+    {
+      "kind": "observer_callback",
+      "sequence": 12196,
+      "game_tick": 76039,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=183, z=1001}",
+      "event": "schedule_before",
+      "state": "Block{minecraft:air}",
+      "queued": false,
+      "ticking": false
+    },
+    {
+      "kind": "observer_callback",
+      "sequence": 12197,
+      "game_tick": 76039,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=183, z=1001}",
+      "event": "schedule_after",
+      "state": "Block{minecraft:air}",
+      "queued": true,
+      "ticking": false
+    },
+    {
+      "kind": "observer_callback",
+      "sequence": 12198,
+      "game_tick": 76039,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=183, z=1001}",
+      "event": "shape",
+      "state": "Block{minecraft:air}",
+      "queued": true,
+      "ticking": false,
+      "side": "up",
+      "source": "Mutable{x=61000, y=184, z=1001}",
+      "argument_state": "Block{minecraft:observer}[facing=down,powered=false]"
+    },
+    {
+      "kind": "state_commit",
+      "sequence": 12199,
+      "game_tick": 76039,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=183, z=1001}",
+      "before": "Block{minecraft:air}",
+      "after": "Block{minecraft:observer}[facing=down,powered=false]",
+      "flags": 258
+    },
+    {
+      "kind": "block_state_change",
+      "sequence": 12200,
+      "game_tick": 76039,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=183, z=1001}",
+      "before": "Block{minecraft:air}",
+      "after": "Block{minecraft:observer}[facing=down,powered=false]",
+      "changed": true,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12201,
+      "game_tick": 76039,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=60999, y=183, z=1001}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:observer",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12202,
+      "game_tick": 76039,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61001, y=183, z=1001}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:observer",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12203,
+      "game_tick": 76039,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=182, z=1001}",
+      "target": "Block{minecraft:redstone_lamp}[lit=false]",
+      "source_block": "minecraft:observer",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12204,
+      "game_tick": 76039,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=184, z=1001}",
+      "target": "Block{minecraft:cyan_wool}",
+      "source_block": "minecraft:observer",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12205,
+      "game_tick": 76039,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=183, z=1000}",
+      "target": "Block{minecraft:sticky_piston}[extended=false,facing=up]",
+      "source_block": "minecraft:observer",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12206,
+      "game_tick": 76039,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=183, z=1002}",
+      "target": "Block{minecraft:redstone_wire}[east=side,north=side,power=0,south=side,west=side]",
+      "source_block": "minecraft:observer",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12207,
+      "dimension": "minecraft:overworld",
+      "game_tick": 76039,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12208,
+      "dimension": "minecraft:overworld",
+      "scheduler": "block",
+      "time": 76040,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12209,
+      "dimension": "minecraft:overworld",
+      "scheduler": "fluid",
+      "time": 76040,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "outbound_block_update",
+      "sequence": 12210,
+      "game_tick": 76040,
+      "dimension": "minecraft:overworld",
+      "packet_type": "BlockUpdateS2CPacket",
+      "position": "BlockPos{x=61000, y=183, z=1001}",
+      "state": "Block{minecraft:observer}[facing=down,powered=false]",
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "outbound_block_update",
+      "sequence": 12211,
+      "game_tick": 76040,
+      "dimension": "minecraft:overworld",
+      "packet_type": "BlockUpdateS2CPacket",
+      "position": "BlockPos{x=61000, y=183, z=1001}",
+      "state": "Block{minecraft:observer}[facing=down,powered=false]",
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12212,
+      "dimension": "minecraft:overworld",
+      "game_tick": 76040,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12213,
+      "dimension": "minecraft:the_end",
+      "game_tick": 76040,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12214,
+      "dimension": "minecraft:the_end",
+      "scheduler": "block",
+      "time": 76040,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12215,
+      "dimension": "minecraft:the_end",
+      "scheduler": "fluid",
+      "time": 76040,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12216,
+      "dimension": "minecraft:the_end",
+      "game_tick": 76040,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12217,
+      "dimension": "minecraft:the_nether",
+      "game_tick": 76040,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12218,
+      "dimension": "minecraft:the_nether",
+      "scheduler": "block",
+      "time": 76040,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12219,
+      "dimension": "minecraft:the_nether",
+      "scheduler": "fluid",
+      "time": 76040,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12220,
+      "dimension": "minecraft:the_nether",
+      "game_tick": 76040,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12221,
+      "dimension": "minecraft:overworld",
+      "game_tick": 76040,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12222,
+      "dimension": "minecraft:overworld",
+      "scheduler": "block",
+      "time": 76041,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick",
+      "sequence": 12223,
+      "trigger_game_tick": 76041,
+      "execution_game_tick": 76041,
+      "priority": "NORMAL",
+      "sub_tick_order": 4,
+      "dimension": "minecraft:overworld",
+      "scheduler": "block",
+      "position": "BlockPos{x=61000, y=183, z=1001}",
+      "type": "minecraft:observer"
+    },
+    {
+      "kind": "observer_callback",
+      "sequence": 12224,
+      "game_tick": 76041,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=183, z=1001}",
+      "event": "tick",
+      "state": "Block{minecraft:observer}[facing=down,powered=false]",
+      "queued": false,
+      "ticking": false
+    },
+    {
+      "kind": "state_commit",
+      "sequence": 12225,
+      "game_tick": 76041,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=183, z=1001}",
+      "before": "Block{minecraft:observer}[facing=down,powered=false]",
+      "after": "Block{minecraft:observer}[facing=down,powered=true]",
+      "flags": 2
+    },
+    {
+      "kind": "block_state_change",
+      "sequence": 12226,
+      "game_tick": 76041,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=183, z=1001}",
+      "before": "Block{minecraft:observer}[facing=down,powered=false]",
+      "after": "Block{minecraft:observer}[facing=down,powered=true]",
+      "changed": true,
+      "ordered_tick_sequence": 12223
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12227,
+      "game_tick": 76041,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=184, z=1001}",
+      "target": "Block{minecraft:cyan_wool}",
+      "source_block": "minecraft:observer",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": 12223
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12228,
+      "game_tick": 76041,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=60999, y=184, z=1001}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:observer",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": 12223
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12229,
+      "game_tick": 76041,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61001, y=184, z=1001}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:observer",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": 12223
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12230,
+      "game_tick": 76041,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=185, z=1001}",
+      "target": "Block{minecraft:smooth_quartz}",
+      "source_block": "minecraft:observer",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": 12223
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12231,
+      "game_tick": 76041,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=184, z=1000}",
+      "target": "Block{minecraft:sticky_piston}[extended=false,facing=up]",
+      "source_block": "minecraft:observer",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": 12223
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12232,
+      "game_tick": 76041,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=184, z=1002}",
+      "target": "Block{minecraft:cyan_wool}",
+      "source_block": "minecraft:observer",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": 12223
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12233,
+      "dimension": "minecraft:overworld",
+      "scheduler": "fluid",
+      "time": 76041,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "outbound_block_update",
+      "sequence": 12234,
+      "game_tick": 76041,
+      "dimension": "minecraft:overworld",
+      "packet_type": "BlockUpdateS2CPacket",
+      "position": "BlockPos{x=61000, y=183, z=1001}",
+      "state": "Block{minecraft:observer}[facing=down,powered=true]",
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "outbound_block_update",
+      "sequence": 12235,
+      "game_tick": 76041,
+      "dimension": "minecraft:overworld",
+      "packet_type": "BlockUpdateS2CPacket",
+      "position": "BlockPos{x=61000, y=183, z=1001}",
+      "state": "Block{minecraft:observer}[facing=down,powered=true]",
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "piston_event",
+      "sequence": 12236,
+      "game_tick": 76041,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=184, z=1000}",
+      "event_type": 0,
+      "event_data": 1,
+      "stage": "begin",
+      "result": null
+    },
+    {
+      "kind": "state_commit",
+      "sequence": 12237,
+      "game_tick": 76041,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=186, z=1000}",
+      "before": "Block{minecraft:air}",
+      "after": "Block{minecraft:moving_piston}[facing=up,type=normal]",
+      "flags": 324
+    },
+    {
+      "kind": "block_state_change",
+      "sequence": 12238,
+      "game_tick": 76041,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=186, z=1000}",
+      "before": "Block{minecraft:air}",
+      "after": "Block{minecraft:moving_piston}[facing=up,type=normal]",
+      "changed": true,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "state_commit",
+      "sequence": 12239,
+      "game_tick": 76041,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=185, z=1000}",
+      "before": "Block{minecraft:smooth_quartz}",
+      "after": "Block{minecraft:moving_piston}[facing=up,type=sticky]",
+      "flags": 324
+    },
+    {
+      "kind": "block_state_change",
+      "sequence": 12240,
+      "game_tick": 76041,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=185, z=1000}",
+      "before": "Block{minecraft:smooth_quartz}",
+      "after": "Block{minecraft:moving_piston}[facing=up,type=sticky]",
+      "changed": true,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12241,
+      "game_tick": 76041,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=60999, y=185, z=1000}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:smooth_quartz",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12242,
+      "game_tick": 76041,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61001, y=185, z=1000}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:smooth_quartz",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12243,
+      "game_tick": 76041,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=184, z=1000}",
+      "target": "Block{minecraft:sticky_piston}[extended=false,facing=up]",
+      "source_block": "minecraft:smooth_quartz",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12244,
+      "game_tick": 76041,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=186, z=1000}",
+      "target": "Block{minecraft:moving_piston}[facing=up,type=normal]",
+      "source_block": "minecraft:smooth_quartz",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12245,
+      "game_tick": 76041,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=185, z=999}",
+      "target": "Block{minecraft:smooth_quartz}",
+      "source_block": "minecraft:smooth_quartz",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12246,
+      "game_tick": 76041,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=185, z=1001}",
+      "target": "Block{minecraft:smooth_quartz}",
+      "source_block": "minecraft:smooth_quartz",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12247,
+      "game_tick": 76041,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=60999, y=185, z=1000}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:piston_head",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12248,
+      "game_tick": 76041,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61001, y=185, z=1000}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:piston_head",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12249,
+      "game_tick": 76041,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=184, z=1000}",
+      "target": "Block{minecraft:sticky_piston}[extended=false,facing=up]",
+      "source_block": "minecraft:piston_head",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12250,
+      "game_tick": 76041,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=186, z=1000}",
+      "target": "Block{minecraft:moving_piston}[facing=up,type=normal]",
+      "source_block": "minecraft:piston_head",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12251,
+      "game_tick": 76041,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=185, z=999}",
+      "target": "Block{minecraft:smooth_quartz}",
+      "source_block": "minecraft:piston_head",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12252,
+      "game_tick": 76041,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=185, z=1001}",
+      "target": "Block{minecraft:smooth_quartz}",
+      "source_block": "minecraft:piston_head",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "state_commit",
+      "sequence": 12253,
+      "game_tick": 76041,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=184, z=1000}",
+      "before": "Block{minecraft:sticky_piston}[extended=false,facing=up]",
+      "after": "Block{minecraft:sticky_piston}[extended=true,facing=up]",
+      "flags": 67
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12254,
+      "game_tick": 76041,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=60999, y=184, z=1000}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:sticky_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12255,
+      "game_tick": 76041,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61001, y=184, z=1000}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:sticky_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12256,
+      "game_tick": 76041,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=183, z=1000}",
+      "target": "Block{minecraft:sticky_piston}[extended=false,facing=up]",
+      "source_block": "minecraft:sticky_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12257,
+      "game_tick": 76041,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=185, z=1000}",
+      "target": "Block{minecraft:moving_piston}[facing=up,type=sticky]",
+      "source_block": "minecraft:sticky_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12258,
+      "game_tick": 76041,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=184, z=999}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:sticky_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12259,
+      "game_tick": 76041,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=184, z=1001}",
+      "target": "Block{minecraft:cyan_wool}",
+      "source_block": "minecraft:sticky_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "block_state_change",
+      "sequence": 12260,
+      "game_tick": 76041,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=184, z=1000}",
+      "before": "Block{minecraft:sticky_piston}[extended=false,facing=up]",
+      "after": "Block{minecraft:sticky_piston}[extended=true,facing=up]",
+      "changed": true,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "piston_event",
+      "sequence": 12261,
+      "game_tick": 76041,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=184, z=1000}",
+      "event_type": 0,
+      "event_data": 1,
+      "stage": "end",
+      "result": true
+    },
+    {
+      "kind": "carrier_trace",
+      "sequence": 12262,
+      "game_tick": 76041,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=186, z=1000}",
+      "operation": "tick",
+      "stage": "begin",
+      "progress": 0.0,
+      "last_progress": 0.0,
+      "saved_world_time": 0,
+      "extending": true,
+      "source": false,
+      "removed": false,
+      "payload": "Block{minecraft:smooth_quartz}",
+      "state": "Block{minecraft:moving_piston}[facing=up,type=normal]"
+    },
+    {
+      "kind": "piston_state",
+      "sequence": 12263,
+      "game_tick": 76041,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=186, z=1000}",
+      "phase": "moving_begin",
+      "body": "Block{minecraft:moving_piston}[facing=up,type=normal]",
+      "pushed_block": "Block{minecraft:smooth_quartz}",
+      "extending": true,
+      "source": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "piston_state",
+      "sequence": 12264,
+      "game_tick": 76041,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=186, z=1000}",
+      "phase": "moving_end",
+      "body": "Block{minecraft:moving_piston}[facing=up,type=normal]",
+      "pushed_block": "Block{minecraft:smooth_quartz}",
+      "extending": true,
+      "source": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "carrier_trace",
+      "sequence": 12265,
+      "game_tick": 76041,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=186, z=1000}",
+      "operation": "tick",
+      "stage": "end",
+      "progress": 0.5,
+      "last_progress": 0.0,
+      "saved_world_time": 76041,
+      "extending": true,
+      "source": false,
+      "removed": false,
+      "payload": "Block{minecraft:smooth_quartz}",
+      "state": "Block{minecraft:moving_piston}[facing=up,type=normal]"
+    },
+    {
+      "kind": "carrier_trace",
+      "sequence": 12266,
+      "game_tick": 76041,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=185, z=1000}",
+      "operation": "tick",
+      "stage": "begin",
+      "progress": 0.0,
+      "last_progress": 0.0,
+      "saved_world_time": 0,
+      "extending": true,
+      "source": true,
+      "removed": false,
+      "payload": "Block{minecraft:piston_head}[facing=up,short=false,type=sticky]",
+      "state": "Block{minecraft:moving_piston}[facing=up,type=sticky]"
+    },
+    {
+      "kind": "piston_state",
+      "sequence": 12267,
+      "game_tick": 76041,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=185, z=1000}",
+      "phase": "moving_begin",
+      "body": "Block{minecraft:moving_piston}[facing=up,type=sticky]",
+      "pushed_block": "Block{minecraft:piston_head}[facing=up,short=false,type=sticky]",
+      "extending": true,
+      "source": true,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "piston_state",
+      "sequence": 12268,
+      "game_tick": 76041,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=185, z=1000}",
+      "phase": "moving_end",
+      "body": "Block{minecraft:moving_piston}[facing=up,type=sticky]",
+      "pushed_block": "Block{minecraft:piston_head}[facing=up,short=false,type=sticky]",
+      "extending": true,
+      "source": true,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "carrier_trace",
+      "sequence": 12269,
+      "game_tick": 76041,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=185, z=1000}",
+      "operation": "tick",
+      "stage": "end",
+      "progress": 0.5,
+      "last_progress": 0.0,
+      "saved_world_time": 76041,
+      "extending": true,
+      "source": true,
+      "removed": false,
+      "payload": "Block{minecraft:piston_head}[facing=up,short=false,type=sticky]",
+      "state": "Block{minecraft:moving_piston}[facing=up,type=sticky]"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12270,
+      "dimension": "minecraft:overworld",
+      "game_tick": 76041,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12271,
+      "dimension": "minecraft:the_end",
+      "game_tick": 76041,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12272,
+      "dimension": "minecraft:the_end",
+      "scheduler": "block",
+      "time": 76041,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12273,
+      "dimension": "minecraft:the_end",
+      "scheduler": "fluid",
+      "time": 76041,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12274,
+      "dimension": "minecraft:the_end",
+      "game_tick": 76041,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12275,
+      "dimension": "minecraft:the_nether",
+      "game_tick": 76041,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12276,
+      "dimension": "minecraft:the_nether",
+      "scheduler": "block",
+      "time": 76041,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12277,
+      "dimension": "minecraft:the_nether",
+      "scheduler": "fluid",
+      "time": 76041,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12278,
+      "dimension": "minecraft:the_nether",
+      "game_tick": 76041,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12279,
+      "dimension": "minecraft:overworld",
+      "game_tick": 76041,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12280,
+      "dimension": "minecraft:overworld",
+      "scheduler": "block",
+      "time": 76042,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12281,
+      "dimension": "minecraft:overworld",
+      "scheduler": "fluid",
+      "time": 76042,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "outbound_block_update",
+      "sequence": 12282,
+      "game_tick": 76042,
+      "dimension": "minecraft:overworld",
+      "packet_type": "BlockUpdateS2CPacket",
+      "position": "BlockPos{x=61000, y=184, z=1000}",
+      "state": "Block{minecraft:sticky_piston}[extended=true,facing=up]",
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "outbound_block_update",
+      "sequence": 12283,
+      "game_tick": 76042,
+      "dimension": "minecraft:overworld",
+      "packet_type": "BlockUpdateS2CPacket",
+      "position": "BlockPos{x=61000, y=184, z=1000}",
+      "state": "Block{minecraft:sticky_piston}[extended=true,facing=up]",
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "carrier_trace",
+      "sequence": 12284,
+      "game_tick": 76042,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=186, z=1000}",
+      "operation": "tick",
+      "stage": "begin",
+      "progress": 0.5,
+      "last_progress": 0.0,
+      "saved_world_time": 76041,
+      "extending": true,
+      "source": false,
+      "removed": false,
+      "payload": "Block{minecraft:smooth_quartz}",
+      "state": "Block{minecraft:moving_piston}[facing=up,type=normal]"
+    },
+    {
+      "kind": "piston_state",
+      "sequence": 12285,
+      "game_tick": 76042,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=186, z=1000}",
+      "phase": "moving_begin",
+      "body": "Block{minecraft:moving_piston}[facing=up,type=normal]",
+      "pushed_block": "Block{minecraft:smooth_quartz}",
+      "extending": true,
+      "source": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "piston_state",
+      "sequence": 12286,
+      "game_tick": 76042,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=186, z=1000}",
+      "phase": "moving_end",
+      "body": "Block{minecraft:moving_piston}[facing=up,type=normal]",
+      "pushed_block": "Block{minecraft:smooth_quartz}",
+      "extending": true,
+      "source": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "carrier_trace",
+      "sequence": 12287,
+      "game_tick": 76042,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=186, z=1000}",
+      "operation": "tick",
+      "stage": "end",
+      "progress": 1.0,
+      "last_progress": 0.5,
+      "saved_world_time": 76042,
+      "extending": true,
+      "source": false,
+      "removed": false,
+      "payload": "Block{minecraft:smooth_quartz}",
+      "state": "Block{minecraft:moving_piston}[facing=up,type=normal]"
+    },
+    {
+      "kind": "carrier_trace",
+      "sequence": 12288,
+      "game_tick": 76042,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=185, z=1000}",
+      "operation": "tick",
+      "stage": "begin",
+      "progress": 0.5,
+      "last_progress": 0.0,
+      "saved_world_time": 76041,
+      "extending": true,
+      "source": true,
+      "removed": false,
+      "payload": "Block{minecraft:piston_head}[facing=up,short=false,type=sticky]",
+      "state": "Block{minecraft:moving_piston}[facing=up,type=sticky]"
+    },
+    {
+      "kind": "piston_state",
+      "sequence": 12289,
+      "game_tick": 76042,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=185, z=1000}",
+      "phase": "moving_begin",
+      "body": "Block{minecraft:moving_piston}[facing=up,type=sticky]",
+      "pushed_block": "Block{minecraft:piston_head}[facing=up,short=false,type=sticky]",
+      "extending": true,
+      "source": true,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "piston_state",
+      "sequence": 12290,
+      "game_tick": 76042,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=185, z=1000}",
+      "phase": "moving_end",
+      "body": "Block{minecraft:moving_piston}[facing=up,type=sticky]",
+      "pushed_block": "Block{minecraft:piston_head}[facing=up,short=false,type=sticky]",
+      "extending": true,
+      "source": true,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "carrier_trace",
+      "sequence": 12291,
+      "game_tick": 76042,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=185, z=1000}",
+      "operation": "tick",
+      "stage": "end",
+      "progress": 1.0,
+      "last_progress": 0.5,
+      "saved_world_time": 76042,
+      "extending": true,
+      "source": true,
+      "removed": false,
+      "payload": "Block{minecraft:piston_head}[facing=up,short=false,type=sticky]",
+      "state": "Block{minecraft:moving_piston}[facing=up,type=sticky]"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12292,
+      "dimension": "minecraft:overworld",
+      "game_tick": 76042,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12293,
+      "dimension": "minecraft:the_end",
+      "game_tick": 76042,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12294,
+      "dimension": "minecraft:the_end",
+      "scheduler": "block",
+      "time": 76042,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12295,
+      "dimension": "minecraft:the_end",
+      "scheduler": "fluid",
+      "time": 76042,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12296,
+      "dimension": "minecraft:the_end",
+      "game_tick": 76042,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12297,
+      "dimension": "minecraft:the_nether",
+      "game_tick": 76042,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12298,
+      "dimension": "minecraft:the_nether",
+      "scheduler": "block",
+      "time": 76042,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12299,
+      "dimension": "minecraft:the_nether",
+      "scheduler": "fluid",
+      "time": 76042,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12300,
+      "dimension": "minecraft:the_nether",
+      "game_tick": 76042,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12301,
+      "dimension": "minecraft:overworld",
+      "game_tick": 76042,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12302,
+      "dimension": "minecraft:overworld",
+      "scheduler": "block",
+      "time": 76043,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick",
+      "sequence": 12303,
+      "trigger_game_tick": 76043,
+      "execution_game_tick": 76043,
+      "priority": "NORMAL",
+      "sub_tick_order": 5,
+      "dimension": "minecraft:overworld",
+      "scheduler": "block",
+      "position": "BlockPos{x=61000, y=183, z=1001}",
+      "type": "minecraft:observer"
+    },
+    {
+      "kind": "observer_callback",
+      "sequence": 12304,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=183, z=1001}",
+      "event": "tick",
+      "state": "Block{minecraft:observer}[facing=down,powered=true]",
+      "queued": false,
+      "ticking": false
+    },
+    {
+      "kind": "state_commit",
+      "sequence": 12305,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=183, z=1001}",
+      "before": "Block{minecraft:observer}[facing=down,powered=true]",
+      "after": "Block{minecraft:observer}[facing=down,powered=false]",
+      "flags": 2
+    },
+    {
+      "kind": "block_state_change",
+      "sequence": 12306,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=183, z=1001}",
+      "before": "Block{minecraft:observer}[facing=down,powered=true]",
+      "after": "Block{minecraft:observer}[facing=down,powered=false]",
+      "changed": true,
+      "ordered_tick_sequence": 12303
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12307,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=184, z=1001}",
+      "target": "Block{minecraft:cyan_wool}",
+      "source_block": "minecraft:observer",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": 12303
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12308,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=60999, y=184, z=1001}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:observer",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": 12303
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12309,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61001, y=184, z=1001}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:observer",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": 12303
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12310,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=185, z=1001}",
+      "target": "Block{minecraft:smooth_quartz}",
+      "source_block": "minecraft:observer",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": 12303
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12311,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=184, z=1000}",
+      "target": "Block{minecraft:sticky_piston}[extended=true,facing=up]",
+      "source_block": "minecraft:observer",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": 12303
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12312,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=184, z=1002}",
+      "target": "Block{minecraft:cyan_wool}",
+      "source_block": "minecraft:observer",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": 12303
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12313,
+      "dimension": "minecraft:overworld",
+      "scheduler": "fluid",
+      "time": 76043,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "outbound_block_update",
+      "sequence": 12314,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "packet_type": "BlockUpdateS2CPacket",
+      "position": "BlockPos{x=61000, y=183, z=1001}",
+      "state": "Block{minecraft:observer}[facing=down,powered=false]",
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "outbound_block_update",
+      "sequence": 12315,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "packet_type": "BlockUpdateS2CPacket",
+      "position": "BlockPos{x=61000, y=183, z=1001}",
+      "state": "Block{minecraft:observer}[facing=down,powered=false]",
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "piston_event",
+      "sequence": 12316,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=184, z=1000}",
+      "event_type": 2,
+      "event_data": 1,
+      "stage": "begin",
+      "result": null
+    },
+    {
+      "kind": "carrier_trace",
+      "sequence": 12317,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=185, z=1000}",
+      "operation": "finish",
+      "stage": "begin",
+      "progress": 1.0,
+      "last_progress": 0.5,
+      "saved_world_time": 76042,
+      "extending": true,
+      "source": true,
+      "removed": false,
+      "payload": "Block{minecraft:piston_head}[facing=up,short=false,type=sticky]",
+      "state": "Block{minecraft:moving_piston}[facing=up,type=sticky]"
+    },
+    {
+      "kind": "state_commit",
+      "sequence": 12318,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=185, z=1000}",
+      "before": "Block{minecraft:moving_piston}[facing=up,type=sticky]",
+      "after": "Block{minecraft:air}",
+      "flags": 3
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12319,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=60999, y=185, z=1000}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:moving_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12320,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61001, y=185, z=1000}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:moving_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12321,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=184, z=1000}",
+      "target": "Block{minecraft:sticky_piston}[extended=true,facing=up]",
+      "source_block": "minecraft:moving_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12322,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=186, z=1000}",
+      "target": "Block{minecraft:moving_piston}[facing=up,type=normal]",
+      "source_block": "minecraft:moving_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12323,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=185, z=999}",
+      "target": "Block{minecraft:smooth_quartz}",
+      "source_block": "minecraft:moving_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12324,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=185, z=1001}",
+      "target": "Block{minecraft:smooth_quartz}",
+      "source_block": "minecraft:moving_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "block_state_change",
+      "sequence": 12325,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=185, z=1000}",
+      "before": "Block{minecraft:moving_piston}[facing=up,type=sticky]",
+      "after": "Block{minecraft:air}",
+      "changed": true,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12326,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=185, z=1000}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:air",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "piston_state",
+      "sequence": 12327,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=185, z=1000}",
+      "phase": "completion",
+      "body": "Block{minecraft:moving_piston}[facing=up,type=sticky]",
+      "pushed_block": "Block{minecraft:piston_head}[facing=up,short=false,type=sticky]",
+      "extending": true,
+      "source": true,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "carrier_trace",
+      "sequence": 12328,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=185, z=1000}",
+      "operation": "finish",
+      "stage": "end",
+      "progress": 1.0,
+      "last_progress": 1.0,
+      "saved_world_time": 76042,
+      "extending": true,
+      "source": true,
+      "removed": true,
+      "payload": "Block{minecraft:piston_head}[facing=up,short=false,type=sticky]",
+      "state": "Block{minecraft:air}"
+    },
+    {
+      "kind": "state_commit",
+      "sequence": 12329,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=184, z=1000}",
+      "before": "Block{minecraft:sticky_piston}[extended=true,facing=up]",
+      "after": "Block{minecraft:moving_piston}[facing=up,type=sticky]",
+      "flags": 276
+    },
+    {
+      "kind": "block_state_change",
+      "sequence": 12330,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=184, z=1000}",
+      "before": "Block{minecraft:sticky_piston}[extended=true,facing=up]",
+      "after": "Block{minecraft:moving_piston}[facing=up,type=sticky]",
+      "changed": true,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12331,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=60999, y=184, z=1000}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:moving_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12332,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61001, y=184, z=1000}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:moving_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12333,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=183, z=1000}",
+      "target": "Block{minecraft:sticky_piston}[extended=false,facing=up]",
+      "source_block": "minecraft:moving_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12334,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=185, z=1000}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:moving_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12335,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=184, z=999}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:moving_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12336,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=184, z=1001}",
+      "target": "Block{minecraft:cyan_wool}",
+      "source_block": "minecraft:moving_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "carrier_trace",
+      "sequence": 12337,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=186, z=1000}",
+      "operation": "finish",
+      "stage": "begin",
+      "progress": 1.0,
+      "last_progress": 0.5,
+      "saved_world_time": 76042,
+      "extending": true,
+      "source": false,
+      "removed": false,
+      "payload": "Block{minecraft:smooth_quartz}",
+      "state": "Block{minecraft:moving_piston}[facing=up,type=normal]"
+    },
+    {
+      "kind": "state_commit",
+      "sequence": 12338,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=186, z=1000}",
+      "before": "Block{minecraft:moving_piston}[facing=up,type=normal]",
+      "after": "Block{minecraft:smooth_quartz}",
+      "flags": 3
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12339,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=60999, y=186, z=1000}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:moving_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12340,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61001, y=186, z=1000}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:moving_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12341,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=185, z=1000}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:moving_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12342,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=187, z=1000}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:moving_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12343,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=186, z=999}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:moving_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12344,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=186, z=1001}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:moving_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "block_state_change",
+      "sequence": 12345,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=186, z=1000}",
+      "before": "Block{minecraft:moving_piston}[facing=up,type=normal]",
+      "after": "Block{minecraft:smooth_quartz}",
+      "changed": true,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12346,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=186, z=1000}",
+      "target": "Block{minecraft:smooth_quartz}",
+      "source_block": "minecraft:smooth_quartz",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "piston_state",
+      "sequence": 12347,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=186, z=1000}",
+      "phase": "completion",
+      "body": "Block{minecraft:moving_piston}[facing=up,type=normal]",
+      "pushed_block": "Block{minecraft:smooth_quartz}",
+      "extending": true,
+      "source": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "carrier_trace",
+      "sequence": 12348,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=186, z=1000}",
+      "operation": "finish",
+      "stage": "end",
+      "progress": 1.0,
+      "last_progress": 1.0,
+      "saved_world_time": 76042,
+      "extending": true,
+      "source": false,
+      "removed": true,
+      "payload": "Block{minecraft:smooth_quartz}",
+      "state": "Block{minecraft:smooth_quartz}"
+    },
+    {
+      "kind": "piston_event",
+      "sequence": 12349,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=184, z=1000}",
+      "event_type": 2,
+      "event_data": 1,
+      "stage": "end",
+      "result": true
+    },
+    {
+      "kind": "carrier_trace",
+      "sequence": 12350,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=184, z=1000}",
+      "operation": "tick",
+      "stage": "begin",
+      "progress": 0.0,
+      "last_progress": 0.0,
+      "saved_world_time": 0,
+      "extending": false,
+      "source": true,
+      "removed": false,
+      "payload": "Block{minecraft:sticky_piston}[extended=false,facing=up]",
+      "state": "Block{minecraft:moving_piston}[facing=up,type=sticky]"
+    },
+    {
+      "kind": "piston_state",
+      "sequence": 12351,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=184, z=1000}",
+      "phase": "moving_begin",
+      "body": "Block{minecraft:moving_piston}[facing=up,type=sticky]",
+      "pushed_block": "Block{minecraft:sticky_piston}[extended=false,facing=up]",
+      "extending": false,
+      "source": true,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "piston_state",
+      "sequence": 12352,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=184, z=1000}",
+      "phase": "moving_end",
+      "body": "Block{minecraft:moving_piston}[facing=up,type=sticky]",
+      "pushed_block": "Block{minecraft:sticky_piston}[extended=false,facing=up]",
+      "extending": false,
+      "source": true,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "carrier_trace",
+      "sequence": 12353,
+      "game_tick": 76043,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=184, z=1000}",
+      "operation": "tick",
+      "stage": "end",
+      "progress": 0.5,
+      "last_progress": 0.0,
+      "saved_world_time": 76043,
+      "extending": false,
+      "source": true,
+      "removed": false,
+      "payload": "Block{minecraft:sticky_piston}[extended=false,facing=up]",
+      "state": "Block{minecraft:moving_piston}[facing=up,type=sticky]"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12354,
+      "dimension": "minecraft:overworld",
+      "game_tick": 76043,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12355,
+      "dimension": "minecraft:the_end",
+      "game_tick": 76043,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12356,
+      "dimension": "minecraft:the_end",
+      "scheduler": "block",
+      "time": 76043,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12357,
+      "dimension": "minecraft:the_end",
+      "scheduler": "fluid",
+      "time": 76043,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12358,
+      "dimension": "minecraft:the_end",
+      "game_tick": 76043,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12359,
+      "dimension": "minecraft:the_nether",
+      "game_tick": 76043,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12360,
+      "dimension": "minecraft:the_nether",
+      "scheduler": "block",
+      "time": 76043,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12361,
+      "dimension": "minecraft:the_nether",
+      "scheduler": "fluid",
+      "time": 76043,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12362,
+      "dimension": "minecraft:the_nether",
+      "game_tick": 76043,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12363,
+      "dimension": "minecraft:overworld",
+      "game_tick": 76043,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12364,
+      "dimension": "minecraft:overworld",
+      "scheduler": "block",
+      "time": 76044,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12365,
+      "dimension": "minecraft:overworld",
+      "scheduler": "fluid",
+      "time": 76044,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "carrier_trace",
+      "sequence": 12366,
+      "game_tick": 76044,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=184, z=1000}",
+      "operation": "tick",
+      "stage": "begin",
+      "progress": 0.5,
+      "last_progress": 0.0,
+      "saved_world_time": 76043,
+      "extending": false,
+      "source": true,
+      "removed": false,
+      "payload": "Block{minecraft:sticky_piston}[extended=false,facing=up]",
+      "state": "Block{minecraft:moving_piston}[facing=up,type=sticky]"
+    },
+    {
+      "kind": "piston_state",
+      "sequence": 12367,
+      "game_tick": 76044,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=184, z=1000}",
+      "phase": "moving_begin",
+      "body": "Block{minecraft:moving_piston}[facing=up,type=sticky]",
+      "pushed_block": "Block{minecraft:sticky_piston}[extended=false,facing=up]",
+      "extending": false,
+      "source": true,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "piston_state",
+      "sequence": 12368,
+      "game_tick": 76044,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=184, z=1000}",
+      "phase": "moving_end",
+      "body": "Block{minecraft:moving_piston}[facing=up,type=sticky]",
+      "pushed_block": "Block{minecraft:sticky_piston}[extended=false,facing=up]",
+      "extending": false,
+      "source": true,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "carrier_trace",
+      "sequence": 12369,
+      "game_tick": 76044,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=184, z=1000}",
+      "operation": "tick",
+      "stage": "end",
+      "progress": 1.0,
+      "last_progress": 0.5,
+      "saved_world_time": 76044,
+      "extending": false,
+      "source": true,
+      "removed": false,
+      "payload": "Block{minecraft:sticky_piston}[extended=false,facing=up]",
+      "state": "Block{minecraft:moving_piston}[facing=up,type=sticky]"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12370,
+      "dimension": "minecraft:overworld",
+      "game_tick": 76044,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12371,
+      "dimension": "minecraft:the_end",
+      "game_tick": 76044,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12372,
+      "dimension": "minecraft:the_end",
+      "scheduler": "block",
+      "time": 76044,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12373,
+      "dimension": "minecraft:the_end",
+      "scheduler": "fluid",
+      "time": 76044,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12374,
+      "dimension": "minecraft:the_end",
+      "game_tick": 76044,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12375,
+      "dimension": "minecraft:the_nether",
+      "game_tick": 76044,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12376,
+      "dimension": "minecraft:the_nether",
+      "scheduler": "block",
+      "time": 76044,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12377,
+      "dimension": "minecraft:the_nether",
+      "scheduler": "fluid",
+      "time": 76044,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12378,
+      "dimension": "minecraft:the_nether",
+      "game_tick": 76044,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12379,
+      "dimension": "minecraft:overworld",
+      "game_tick": 76044,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12380,
+      "dimension": "minecraft:overworld",
+      "scheduler": "block",
+      "time": 76045,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12381,
+      "dimension": "minecraft:overworld",
+      "scheduler": "fluid",
+      "time": 76045,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "carrier_trace",
+      "sequence": 12382,
+      "game_tick": 76045,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=184, z=1000}",
+      "operation": "tick",
+      "stage": "begin",
+      "progress": 1.0,
+      "last_progress": 0.5,
+      "saved_world_time": 76044,
+      "extending": false,
+      "source": true,
+      "removed": false,
+      "payload": "Block{minecraft:sticky_piston}[extended=false,facing=up]",
+      "state": "Block{minecraft:moving_piston}[facing=up,type=sticky]"
+    },
+    {
+      "kind": "piston_state",
+      "sequence": 12383,
+      "game_tick": 76045,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=184, z=1000}",
+      "phase": "moving_begin",
+      "body": "Block{minecraft:moving_piston}[facing=up,type=sticky]",
+      "pushed_block": "Block{minecraft:sticky_piston}[extended=false,facing=up]",
+      "extending": false,
+      "source": true,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "state_commit",
+      "sequence": 12384,
+      "game_tick": 76045,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=184, z=1000}",
+      "before": "Block{minecraft:moving_piston}[facing=up,type=sticky]",
+      "after": "Block{minecraft:sticky_piston}[extended=false,facing=up]",
+      "flags": 67
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12385,
+      "game_tick": 76045,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=60999, y=184, z=1000}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:moving_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12386,
+      "game_tick": 76045,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61001, y=184, z=1000}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:moving_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12387,
+      "game_tick": 76045,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=183, z=1000}",
+      "target": "Block{minecraft:sticky_piston}[extended=false,facing=up]",
+      "source_block": "minecraft:moving_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12388,
+      "game_tick": 76045,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=185, z=1000}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:moving_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12389,
+      "game_tick": 76045,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=184, z=999}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:moving_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12390,
+      "game_tick": 76045,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=184, z=1001}",
+      "target": "Block{minecraft:cyan_wool}",
+      "source_block": "minecraft:moving_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "block_state_change",
+      "sequence": 12391,
+      "game_tick": 76045,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=184, z=1000}",
+      "before": "Block{minecraft:moving_piston}[facing=up,type=sticky]",
+      "after": "Block{minecraft:sticky_piston}[extended=false,facing=up]",
+      "changed": true,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 12392,
+      "game_tick": 76045,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=184, z=1000}",
+      "target": "Block{minecraft:sticky_piston}[extended=false,facing=up]",
+      "source_block": "minecraft:sticky_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "piston_state",
+      "sequence": 12393,
+      "game_tick": 76045,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=184, z=1000}",
+      "phase": "completion",
+      "body": "Block{minecraft:moving_piston}[facing=up,type=sticky]",
+      "pushed_block": "Block{minecraft:sticky_piston}[extended=false,facing=up]",
+      "extending": false,
+      "source": true,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "carrier_trace",
+      "sequence": 12394,
+      "game_tick": 76045,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=61000, y=184, z=1000}",
+      "operation": "tick",
+      "stage": "end",
+      "progress": 1.0,
+      "last_progress": 1.0,
+      "saved_world_time": 76045,
+      "extending": false,
+      "source": true,
+      "removed": true,
+      "payload": "Block{minecraft:sticky_piston}[extended=false,facing=up]",
+      "state": "Block{minecraft:sticky_piston}[extended=false,facing=up]"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12395,
+      "dimension": "minecraft:overworld",
+      "game_tick": 76045,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12396,
+      "dimension": "minecraft:the_end",
+      "game_tick": 76045,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12397,
+      "dimension": "minecraft:the_end",
+      "scheduler": "block",
+      "time": 76045,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12398,
+      "dimension": "minecraft:the_end",
+      "scheduler": "fluid",
+      "time": 76045,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12399,
+      "dimension": "minecraft:the_end",
+      "game_tick": 76045,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12400,
+      "dimension": "minecraft:the_nether",
+      "game_tick": 76045,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12401,
+      "dimension": "minecraft:the_nether",
+      "scheduler": "block",
+      "time": 76045,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12402,
+      "dimension": "minecraft:the_nether",
+      "scheduler": "fluid",
+      "time": 76045,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12403,
+      "dimension": "minecraft:the_nether",
+      "game_tick": 76045,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12404,
+      "dimension": "minecraft:overworld",
+      "game_tick": 76045,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12405,
+      "dimension": "minecraft:overworld",
+      "scheduler": "block",
+      "time": 76046,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12406,
+      "dimension": "minecraft:overworld",
+      "scheduler": "fluid",
+      "time": 76046,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "outbound_block_update",
+      "sequence": 12407,
+      "game_tick": 76046,
+      "dimension": "minecraft:overworld",
+      "packet_type": "BlockUpdateS2CPacket",
+      "position": "BlockPos{x=61000, y=184, z=1000}",
+      "state": "Block{minecraft:sticky_piston}[extended=false,facing=up]",
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "outbound_block_update",
+      "sequence": 12408,
+      "game_tick": 76046,
+      "dimension": "minecraft:overworld",
+      "packet_type": "BlockUpdateS2CPacket",
+      "position": "BlockPos{x=61000, y=184, z=1000}",
+      "state": "Block{minecraft:sticky_piston}[extended=false,facing=up]",
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12409,
+      "dimension": "minecraft:overworld",
+      "game_tick": 76046,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12410,
+      "dimension": "minecraft:the_end",
+      "game_tick": 76046,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12411,
+      "dimension": "minecraft:the_end",
+      "scheduler": "block",
+      "time": 76046,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12412,
+      "dimension": "minecraft:the_end",
+      "scheduler": "fluid",
+      "time": 76046,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12413,
+      "dimension": "minecraft:the_end",
+      "game_tick": 76046,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12414,
+      "dimension": "minecraft:the_nether",
+      "game_tick": 76046,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12415,
+      "dimension": "minecraft:the_nether",
+      "scheduler": "block",
+      "time": 76046,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12416,
+      "dimension": "minecraft:the_nether",
+      "scheduler": "fluid",
+      "time": 76046,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12417,
+      "dimension": "minecraft:the_nether",
+      "game_tick": 76046,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12418,
+      "dimension": "minecraft:overworld",
+      "game_tick": 76046,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12419,
+      "dimension": "minecraft:overworld",
+      "scheduler": "block",
+      "time": 76047,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12420,
+      "dimension": "minecraft:overworld",
+      "scheduler": "fluid",
+      "time": 76047,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12421,
+      "dimension": "minecraft:overworld",
+      "game_tick": 76047,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12422,
+      "dimension": "minecraft:the_end",
+      "game_tick": 76047,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12423,
+      "dimension": "minecraft:the_end",
+      "scheduler": "block",
+      "time": 76047,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12424,
+      "dimension": "minecraft:the_end",
+      "scheduler": "fluid",
+      "time": 76047,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12425,
+      "dimension": "minecraft:the_end",
+      "game_tick": 76047,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12426,
+      "dimension": "minecraft:the_nether",
+      "game_tick": 76047,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12427,
+      "dimension": "minecraft:the_nether",
+      "scheduler": "block",
+      "time": 76047,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12428,
+      "dimension": "minecraft:the_nether",
+      "scheduler": "fluid",
+      "time": 76047,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12429,
+      "dimension": "minecraft:the_nether",
+      "game_tick": 76047,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12430,
+      "dimension": "minecraft:overworld",
+      "game_tick": 76047,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12431,
+      "dimension": "minecraft:overworld",
+      "scheduler": "block",
+      "time": 76048,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12432,
+      "dimension": "minecraft:overworld",
+      "scheduler": "fluid",
+      "time": 76048,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12433,
+      "dimension": "minecraft:overworld",
+      "game_tick": 76048,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12434,
+      "dimension": "minecraft:the_end",
+      "game_tick": 76048,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12435,
+      "dimension": "minecraft:the_end",
+      "scheduler": "block",
+      "time": 76048,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12436,
+      "dimension": "minecraft:the_end",
+      "scheduler": "fluid",
+      "time": 76048,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12437,
+      "dimension": "minecraft:the_end",
+      "game_tick": 76048,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12438,
+      "dimension": "minecraft:the_nether",
+      "game_tick": 76048,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12439,
+      "dimension": "minecraft:the_nether",
+      "scheduler": "block",
+      "time": 76048,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12440,
+      "dimension": "minecraft:the_nether",
+      "scheduler": "fluid",
+      "time": 76048,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12441,
+      "dimension": "minecraft:the_nether",
+      "game_tick": 76048,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12442,
+      "dimension": "minecraft:overworld",
+      "game_tick": 76048,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12443,
+      "dimension": "minecraft:overworld",
+      "scheduler": "block",
+      "time": 76049,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12444,
+      "dimension": "minecraft:overworld",
+      "scheduler": "fluid",
+      "time": 76049,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12445,
+      "dimension": "minecraft:overworld",
+      "game_tick": 76049,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12446,
+      "dimension": "minecraft:the_end",
+      "game_tick": 76049,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12447,
+      "dimension": "minecraft:the_end",
+      "scheduler": "block",
+      "time": 76049,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12448,
+      "dimension": "minecraft:the_end",
+      "scheduler": "fluid",
+      "time": 76049,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12449,
+      "dimension": "minecraft:the_end",
+      "game_tick": 76049,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12450,
+      "dimension": "minecraft:the_nether",
+      "game_tick": 76049,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12451,
+      "dimension": "minecraft:the_nether",
+      "scheduler": "block",
+      "time": 76049,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12452,
+      "dimension": "minecraft:the_nether",
+      "scheduler": "fluid",
+      "time": 76049,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12453,
+      "dimension": "minecraft:the_nether",
+      "game_tick": 76049,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12454,
+      "dimension": "minecraft:overworld",
+      "game_tick": 76049,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12455,
+      "dimension": "minecraft:overworld",
+      "scheduler": "block",
+      "time": 76050,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12456,
+      "dimension": "minecraft:overworld",
+      "scheduler": "fluid",
+      "time": 76050,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12457,
+      "dimension": "minecraft:overworld",
+      "game_tick": 76050,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12458,
+      "dimension": "minecraft:the_end",
+      "game_tick": 76050,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12459,
+      "dimension": "minecraft:the_end",
+      "scheduler": "block",
+      "time": 76050,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12460,
+      "dimension": "minecraft:the_end",
+      "scheduler": "fluid",
+      "time": 76050,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12461,
+      "dimension": "minecraft:the_end",
+      "game_tick": 76050,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12462,
+      "dimension": "minecraft:the_nether",
+      "game_tick": 76050,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12463,
+      "dimension": "minecraft:the_nether",
+      "scheduler": "block",
+      "time": 76050,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12464,
+      "dimension": "minecraft:the_nether",
+      "scheduler": "fluid",
+      "time": 76050,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12465,
+      "dimension": "minecraft:the_nether",
+      "game_tick": 76050,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12466,
+      "dimension": "minecraft:overworld",
+      "game_tick": 76050,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12467,
+      "dimension": "minecraft:overworld",
+      "scheduler": "block",
+      "time": 76051,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 12468,
+      "dimension": "minecraft:overworld",
+      "scheduler": "fluid",
+      "time": 76051,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 12469,
+      "dimension": "minecraft:overworld",
+      "game_tick": 76051,
+      "phase": "end"
+    }
+  ],
+  "raw_sha256": "adb49f2b3e2a04a41fe51b96f46667e8a10c5a5d04b3867e329117744efd32f6",
+  "cleanup": {
+    "region_empty": true,
+    "force_load_removed": true
+  }
+}

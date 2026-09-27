@@ -2,7 +2,10 @@ use std::collections::BTreeMap;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 
-use crate::cells::{PlacedCell, RotationY, baseline_cell_for};
+use crate::assembly::{AssemblyValidationError, validate_assembly_occurrences};
+use crate::blueprint::blueprint_cell_for_routing;
+use crate::blueprint_connection::BlueprintConnectionError;
+use crate::cells::{PhysicalCell, PlacedCell, RotationY};
 use crate::logic::{GateKind, LogicDag, LogicError, NodeId};
 use crate::multinet::{
     LegalityReport, MultiNetError, MultiNetRouting, NetId, RipupRoutingError, RoutingJob,
@@ -12,6 +15,9 @@ use crate::physical::{CellId, PhysicalError, PlacementCircuit, TerminalDirection
 use crate::port_realization::PortRealizationError;
 use crate::routing::RouterConfig;
 use crate::world::Pos;
+use dustroute_library::assembly::Assembly;
+use dustroute_library::blueprint::{BlueprintCatalog, BlueprintError, BlueprintRevisionId};
+use dustroute_library::builtin_blueprints::*;
 use dustroute_minecraft::{ValidatedWorld, WorldValidationError};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -46,6 +52,12 @@ pub struct BaselineCompileResult {
     pub input_positions: BTreeMap<String, Pos>,
     pub output_positions: BTreeMap<String, Pos>,
     pub legality: LegalityReport,
+    /// Source revisions selected by the normal compiler, not a claim that every
+    /// stored block state survives routing unchanged. Explicit raw authoring
+    /// sources leave this empty; no identity is inferred from matching geometry.
+    pub blueprint_revisions: BTreeMap<CellId, BlueprintRevisionId>,
+    /// Composed actual state and pinned source occurrences; absent for raw authoring.
+    pub assembly: Option<Assembly>,
 }
 
 #[derive(Debug)]
@@ -58,6 +70,9 @@ pub enum CompileError {
     MissingCell(GateKind),
     Illegal(LegalityReport),
     InvalidWorld(WorldValidationError),
+    Blueprint(BlueprintError),
+    Connection(BlueprintConnectionError),
+    Review(Box<crate::promotion::PromotionReport>),
 }
 
 impl Display for CompileError {
@@ -71,6 +86,9 @@ impl Display for CompileError {
             Self::MissingCell(kind) => write!(f, "no baseline cell for {kind:?}"),
             Self::InvalidWorld(error) => Display::fmt(error, f),
             Self::Illegal(report) => write!(f, "compiled routing is illegal: {report:?}"),
+            Self::Blueprint(error) => Display::fmt(error, f),
+            Self::Connection(error) => Display::fmt(error, f),
+            Self::Review(report) => write!(f, "blueprint occurrence review failed: {report:?}"),
         }
     }
 }
@@ -113,13 +131,114 @@ impl BaselineCompiler {
     }
 
     pub fn compile(&self, abstract_dag: &LogicDag) -> Result<BaselineCompileResult, CompileError> {
+        self.compile_with_blueprints(
+            abstract_dag,
+            builtin_blueprints(),
+            &baseline_blueprint_selection(),
+        )
+    }
+
+    /// Uses catalog-discovered gate realizations. The selected IDs are frozen
+    /// in the result; existing source/assembly records are never updated.
+    pub fn compile_with_library(
+        &self,
+        abstract_dag: &LogicDag,
+        library: &crate::cell_library::CellLibrary,
+        boundaries: &BTreeMap<GateKind, BlueprintRevisionId>,
+    ) -> Result<BaselineCompileResult, CompileError> {
+        let catalog = library.catalog().ok_or_else(|| {
+            CompileError::Blueprint(BlueprintError::Invalid(
+                "blueprint compilation requires a source catalog".into(),
+            ))
+        })?;
+        let mut selection = boundaries.clone();
+        for node in abstract_dag.lower_xor()?.nodes() {
+            if selection.contains_key(&node.kind) {
+                continue;
+            }
+            let selected = library
+                .choose(node.kind)
+                .ok_or(CompileError::MissingCell(node.kind))?;
+            selection.insert(
+                node.kind,
+                selected.source_revision.clone().ok_or_else(|| {
+                    CompileError::Blueprint(BlueprintError::Invalid(
+                        "candidate has no source revision".into(),
+                    ))
+                })?,
+            );
+        }
+        self.compile_with_blueprints(abstract_dag, catalog, &selection)
+    }
+
+    /// Resolves pinned realizations, routes them, then checks physical connection
+    /// requirements before returning. Selection is a planning decision; this
+    /// method never infers logical meaning from a connection type or label.
+    pub fn compile_with_blueprints(
+        &self,
+        abstract_dag: &LogicDag,
+        catalog: &BlueprintCatalog,
+        selection: &BTreeMap<GateKind, BlueprintRevisionId>,
+    ) -> Result<BaselineCompileResult, CompileError> {
+        let mut cells = BTreeMap::new();
+        for (kind, id) in selection {
+            let mut cell =
+                blueprint_cell_for_routing(catalog, id).map_err(CompileError::Blueprint)?;
+            // Preserve the established terminal display names.
+            match kind {
+                GateKind::Input => cell.name = "input_buffer".into(),
+                GateKind::Output => cell.name = "output".into(),
+                _ => {}
+            }
+            cells.insert(*kind, cell);
+        }
+        let mut compiled =
+            self.compile_with_cell_source(abstract_dag, |kind| cells.get(&kind).cloned())?;
+        compiled.blueprint_revisions = compiled
+            .physical
+            .cells
+            .iter()
+            .map(|(cell, node)| (*cell, selection[&node.logical_kind].clone()))
+            .collect();
+        let assembly = compiled
+            .capture_assembly_in_catalog(catalog, "Compiled circuit")
+            .map_err(CompileError::Blueprint)?;
+        validate_assembly_occurrences(catalog, &assembly).map_err(|error| match error {
+            AssemblyValidationError::Blueprint(error) => CompileError::Blueprint(error),
+            AssemblyValidationError::World(error) => CompileError::InvalidWorld(error),
+            AssemblyValidationError::Connection { error, .. } => CompileError::Connection(error),
+            AssemblyValidationError::Review(report) => CompileError::Review(report),
+            AssemblyValidationError::UnboundRequirement(port) => {
+                CompileError::Blueprint(BlueprintError::Invalid(format!(
+                    "consumer requirements on unconnected port {} need an upstream source",
+                    port.port,
+                )))
+            }
+            AssemblyValidationError::UnboundSourceConnection { source, sink } => {
+                CompileError::Blueprint(BlueprintError::Invalid(format!(
+                    "missing internal source connection {source:?} -> {sink:?}"
+                )))
+            }
+        })?;
+        compiled.assembly = Some(assembly);
+        Ok(compiled)
+    }
+
+    /// Compiles using an explicit cell source. Offline blueprint generation uses
+    /// primitive generators here, so it never re-enters the runtime catalog.
+    /// The normal routing and world-validation gates are unchanged.
+    pub fn compile_with_cell_source(
+        &self,
+        abstract_dag: &LogicDag,
+        cell_source: impl Fn(GateKind) -> Option<PhysicalCell>,
+    ) -> Result<BaselineCompileResult, CompileError> {
         let primitive = abstract_dag.lower_xor()?;
         let origins =
             fanout_aware_origins(&primitive, self.config.spacing_x, self.config.lane_gap)?;
         let mut physical = PlacementCircuit::new();
         let mut node_to_cell = BTreeMap::new();
         for node in primitive.nodes() {
-            let cell = baseline_cell_for(node.kind).ok_or(CompileError::MissingCell(node.kind))?;
+            let cell = cell_source(node.kind).ok_or(CompileError::MissingCell(node.kind))?;
             let id = physical.add_cell(
                 node.kind,
                 PlacedCell {
@@ -149,7 +268,8 @@ impl BaselineCompiler {
                 2,
                 i32::try_from(index).expect("output index fits i32") * self.config.lane_gap * 3,
             );
-            let cell = baseline_cell_for(GateKind::Output).expect("output baseline cell");
+            let cell =
+                cell_source(GateKind::Output).ok_or(CompileError::MissingCell(GateKind::Output))?;
             let output_cell = physical.add_cell(
                 GateKind::Output,
                 PlacedCell {
@@ -248,8 +368,40 @@ impl BaselineCompiler {
             input_positions,
             output_positions,
             legality,
+            blueprint_revisions: BTreeMap::new(),
+            assembly: None,
         })
     }
+}
+
+#[must_use]
+pub fn baseline_blueprint_selection() -> BTreeMap<GateKind, BlueprintRevisionId> {
+    use std::sync::OnceLock;
+    static SELECTION: OnceLock<BTreeMap<GateKind, BlueprintRevisionId>> = OnceLock::new();
+    SELECTION
+        .get_or_init(|| {
+            let library = crate::cell_library::default_cell_library();
+            let mut selection: BTreeMap<_, _> = [
+                (GateKind::Input, BUFFER_REVISION),
+                (GateKind::Output, BUFFER_REVISION),
+            ]
+            .into_iter()
+            .map(|(kind, id)| {
+                (
+                    kind,
+                    BlueprintRevisionId::new(id).expect("valid built-in ID"),
+                )
+            })
+            .collect();
+            for kind in [GateKind::Not, GateKind::And, GateKind::Or, GateKind::Nand] {
+                let cell = library
+                    .choose(kind)
+                    .expect("built-in gate has a verified realization");
+                selection.insert(kind, cell.source_revision.clone().expect("catalog source"));
+            }
+            selection
+        })
+        .clone()
 }
 
 fn fanout_aware_origins(

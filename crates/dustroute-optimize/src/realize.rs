@@ -17,7 +17,7 @@ use dustroute_translate::world_reverse::{
 };
 use dustroute_translate::{RedstoneTickSimulator, TruthTableRow, update_wire_shapes};
 
-use crate::phased::optimize_staged_windowed_with_validator;
+use crate::phased::optimize_staged_windowed_with_library;
 use crate::{OptimizationPlan, StagedOptimizationResult};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -44,6 +44,7 @@ pub enum OptimizationRealizationError {
     Physical(PhysicalError),
     Routing(String),
     IllegalRouting(LegalityReport),
+    Blueprint(String),
     SourceMismatch {
         position: dustroute_physical::Pos,
         expected: Box<Block>,
@@ -63,6 +64,7 @@ impl Display for OptimizationRealizationError {
             Self::IllegalRouting(_) => {
                 formatter.write_str("optimized routing is electrically illegal")
             }
+            Self::Blueprint(message) => write!(formatter, "blueprint validation failed: {message}"),
             Self::SourceMismatch { position, .. } => {
                 write!(formatter, "observed source differs at {position:?}")
             }
@@ -93,6 +95,31 @@ pub struct RealizedOptimization {
     pub routing: MultiNetRouting,
     pub legality: LegalityReport,
     pub world: World,
+}
+
+impl RealizedOptimization {
+    /// Retains selected source revisions after movement, rotation and cell
+    /// replacement. This is proposal data; type checks use the caller's catalog.
+    pub fn capture_assembly(
+        &self,
+    ) -> Result<dustroute_library::assembly::Assembly, dustroute_library::blueprint::BlueprintError>
+    {
+        self.capture_assembly_in_catalog(dustroute_library::builtin_blueprints::builtin_blueprints())
+    }
+
+    pub fn capture_assembly_in_catalog(
+        &self,
+        catalog: &dustroute_library::blueprint::BlueprintCatalog,
+    ) -> Result<dustroute_library::assembly::Assembly, dustroute_library::blueprint::BlueprintError>
+    {
+        dustroute_translate::assembly::capture_placement_assembly(
+            &self.optimization.circuit,
+            &self.routing,
+            &self.world,
+            "Optimized circuit",
+        )?
+        .with_source_connections(catalog)
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -198,23 +225,63 @@ pub fn realize_staged_optimization_against(
     plan: &OptimizationPlan,
     config: OptimizationRoutingConfig,
 ) -> Result<RealizedOptimization, OptimizationRealizationError> {
-    let verification_config = BehavioralVerificationConfig::default();
-    let optimization = optimize_staged_windowed_with_validator(circuit, plan, 8, 4, |candidate| {
-        let focus = changed_cells(circuit, candidate);
-        let Ok(candidate_world) =
-            route_and_materialize_focused(candidate, original_routing, &focus, config)
-                .map(|(_, _, world)| world)
-        else {
-            return false;
-        };
-        behavior_matches(
-            original_world,
-            circuit,
-            &candidate_world,
-            candidate,
-            verification_config,
+    realize_staged_optimization_with_library(
+        circuit,
+        original_world,
+        original_routing,
+        plan,
+        config,
+        &dustroute_translate::cell_library::default_cell_library(),
+    )
+}
+
+/// Searches catalog revisions while retaining nested source contracts. A
+/// successful return is an in-memory proposal, not adoption or live application.
+pub fn realize_staged_optimization_with_library(
+    circuit: &PlacementCircuit,
+    original_world: &World,
+    original_routing: &MultiNetRouting,
+    plan: &OptimizationPlan,
+    config: OptimizationRoutingConfig,
+    library: &dustroute_translate::cell_library::CellLibrary,
+) -> Result<RealizedOptimization, OptimizationRealizationError> {
+    let catalog = library.catalog().ok_or_else(|| {
+        OptimizationRealizationError::Blueprint(
+            "catalog-based optimization requires immutable source definitions".into(),
         )
-    });
+    })?;
+    let validate = |candidate: &PlacementCircuit, routing: &MultiNetRouting, world: &World| {
+        let assembly = dustroute_translate::assembly::capture_placement_assembly(
+            candidate,
+            routing,
+            world,
+            "Optimization candidate",
+        )
+        .and_then(|assembly| assembly.with_source_connections(catalog))
+        .map_err(|error| OptimizationRealizationError::Blueprint(error.to_string()))?;
+        dustroute_translate::assembly::validate_assembly_occurrences(catalog, &assembly)
+            .map_err(|error| OptimizationRealizationError::Blueprint(error.to_string()))?;
+        Ok::<_, OptimizationRealizationError>(())
+    };
+    validate(circuit, original_routing, original_world)?;
+    let verification_config = BehavioralVerificationConfig::default();
+    let optimization =
+        optimize_staged_windowed_with_library(circuit, plan, library, 8, 4, |candidate| {
+            let focus = changed_cells(circuit, candidate);
+            let Ok((routing, _, candidate_world)) =
+                route_and_materialize_focused(candidate, original_routing, &focus, config)
+            else {
+                return false;
+            };
+            validate(candidate, &routing, &candidate_world).is_ok()
+                && behavior_matches(
+                    original_world,
+                    circuit,
+                    &candidate_world,
+                    candidate,
+                    verification_config,
+                )
+        });
     if optimization
         .phases
         .iter()
@@ -230,6 +297,7 @@ pub fn realize_staged_optimization_against(
     let focus = changed_cells(circuit, &optimization.circuit);
     let (routing, legality, world) =
         route_and_materialize_focused(&optimization.circuit, original_routing, &focus, config)?;
+    validate(&optimization.circuit, &routing, &world)?;
     Ok(RealizedOptimization {
         optimization,
         routing,
@@ -856,6 +924,17 @@ mod tests {
             verification.behavior
         );
         assert!(verification.verified());
+        let assembly = realized.capture_assembly().unwrap();
+        let checked = dustroute_translate::assembly::validate_assembly(
+            dustroute_library::builtin_blueprints::builtin_blueprints(),
+            &assembly,
+        )
+        .unwrap();
+        assert_eq!(checked.into_world(), realized.world);
+        assert_eq!(
+            assembly.instances.len(),
+            realized.optimization.circuit.cells.len()
+        );
     }
 
     #[test]

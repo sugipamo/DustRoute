@@ -50,6 +50,9 @@ pub struct BotStatus {
     pub port: u16,
     pub version: String,
     pub dimension: Option<String>,
+    /// Server configuration packet, absent until actually observed.
+    #[serde(default)]
+    pub enabled_features: Option<Vec<String>>,
     #[serde(default)]
     pub metrics: BotBridgeMetrics,
 }

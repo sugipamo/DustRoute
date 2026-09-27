@@ -1,0 +1,10 @@
+{
+  "kind": "pre_migration_model_diagnostic",
+  "captured_on": "2026-09-21",
+  "source": "Working tree on codex/blueprint-architecture after the piston low-layer migration, before Phase 4b production changes",
+  "command": "cargo run -q -p dustroute-translate --example audit_bounded_dust_strength",
+  "fixture": "bounded_dust_strength_pre_migration.jsonl",
+  "source_levels": [0, 1, 14, 15, 16, 255],
+  "layout": "Supplied east-facing comparator output feeding two horizontal wires; the bounded runner samples its supplied level and does not calculate comparator timing or output",
+  "scope": "Local diagnostic evidence only. Values above 15 are rejected by existing placement validation; the diagnostic runner deliberately bypasses that gate. These rows record the current native u8 calculation and the separately evaluated Blueprint DustLaw adapter. They are not valid Minecraft signal claims or passing placement expectations. No production law, context, event ordering, or validation behavior was changed."
+}

@@ -1,0 +1,85 @@
+{
+  "kind": "static_bytecode_audit",
+  "audited_on": "2026-09-26",
+  "minecraft_version": "1.21.11",
+  "yarn_mappings": "1.21.11+build.6",
+  "redstone_experiments": false,
+  "named_merged_jar": "minecraft-merged-1.21.11-net.fabricmc.yarn.1_21_11.1.21.11+build.6-v2.jar",
+  "named_merged_jar_sha256": "5b4aa12131a872a25dc32e7f017373d6e83502f6919154769296dd3de6af8c1b",
+  "named_class_sha256": {
+    "net.minecraft.block.AbstractRedstoneGateBlock": "1650b9eacd97788b5be6fad0164e71834191298daadcecb2fac90c7c117cfa3d",
+    "net.minecraft.block.RepeaterBlock": "2ab7b5c657ba0e701258b58870b9d4611d10d9dd5e57b6db3c84c296dcd73b67",
+    "net.minecraft.world.block.WireOrientation": "0deb8f9540f2927e4a758bee10890f684aa589dc4550e3d8413f180c80d407d8",
+    "net.minecraft.block.RedstoneWireBlock": "0583da64d1ca29a6da959b09b4f6b74d53f8542e81f3f32f557ec332931f77ea",
+    "net.minecraft.block.LeverBlock": "47870b3317b33b9eb5e3b2b0e3a54b2effa2c3fbdd443b8e00aff265dc34ebf6",
+    "net.minecraft.block.PistonBlock": "00cadea51e97b910da939da68b97c591843675ced0619145a4bb7c412c31cd02",
+    "net.minecraft.world.RedstoneView": "4c83d65faabca6acf8c841c350d60fefe0e765725f7dc171298c18e21d6b2c53",
+    "net.minecraft.block.AbstractBlock$AbstractBlockState": "aeb7c519d37fc54dd11e082751e721711fe2b452bb0a2d6110e8b7eda0638615",
+    "net.minecraft.world.DefaultRedstoneController": "95db49b6424b5d1d589d529e88614b6143d579d38314803fc9602e42b7859c74",
+    "net.minecraft.world.RedstoneController": "969095f833b9dc464a9e0e729f95534770c105ab25f601d73dca5731dd89454e",
+    "net.minecraft.util.math.Vec3i": "22a4b77a9071bd68b8cfcc6571b492bddfce4ad68b78ef958456b95e670de9ef",
+    "net.minecraft.util.math.Direction": "fa6ef148357f7211ff4581ac98900dd4bae84234e83008a3c8366208a168912c",
+    "net.minecraft.world.tick.ChunkTickScheduler": "85abbcaf7ff54cfdddd264b62c3fece872ded0e29746bfec43db6e05548a5683",
+    "net.minecraft.world.tick.WorldTickScheduler": "d040f7b19521f3501d45ee62d785fcc5c631d88ac7ccf15876577b114834018b",
+    "net.minecraft.block.Blocks": "12384e63a34df092eef2375056e63b2d398cf8f210cf6e2df2af64be8cc3621b",
+    "net.minecraft.block.AbstractBlock": "a005796ef429f0b0a7bd7398b3c06da4847619118a11d46286eb6640c50db6a8",
+    "net.minecraft.block.AbstractBlock$Settings": "d4f9035d372a911995bcc4b6ea44725d030b9f0ef951a3d0d7385758492781fe",
+    "net.minecraft.block.TransparentBlock": "5c10c046bc52155716b1dfcfa71ae8cfebcd60f7f116d3c6652f8d45ab913c9d",
+    "net.minecraft.block.PistonExtensionBlock": "cb3ecd2c13301868d900a6e874891db1ce59323dc13499947b0772ec52ad132c",
+    "net.minecraft.block.PistonHeadBlock": "d71a4265c315f6ab25f2964bb9575278bce24a347055971d24ffc2fa48b09a8b",
+    "net.minecraft.util.math.Direction$Type": "d3d03eb6ed5411fcf4a84cc342432a0d755f2a0e5d61ad24266b0f1e629f9f3b",
+    "net.minecraft.world.World": "745b101ac1d0231555831f0fcf65e98e89ffd18d45facce363d31243592cad11",
+    "net.minecraft.world.block.NeighborUpdater": "288328dcd874eea9005fe034f0715c2681f3af7e932c4d73484065b06b516b9e",
+    "net.minecraft.world.block.ChainRestrictedNeighborUpdater": "659bedb473d4f2a2b3cbb1cb23cd190346bb0682ebc0f30f45a9c2a926c24f04",
+    "net.minecraft.block.Block": "50db238ead15fdf94b4de48fc34023ef16ebb3b9d5f24d5c4f32c8ae103eddbb",
+    "net.minecraft.world.chunk.WorldChunk": "ac2873369f78d13129bc4651058bf95230770f168e4b56b9f2a50f00b2e1c5b0"
+  },
+  "inspection": "javap -p -c; Blocks bootstrap #8 additionally checked with javap -p -v",
+  "findings": [
+    {
+      "method": "RedstoneView.getEmittedRedstonePower/getReceivedStrongRedstonePower",
+      "requirement": "weak source emission is combined with immediate strong input only for isSolidBlock sources; no recursive strong relay through solids"
+    },
+    {
+      "method": "Blocks.createPistonSettings/<clinit>/bootstrap #8",
+      "requirement": "piston and redstone_block solidBlock predicates use Blocks.never; geometric full cube is not enough to establish electrical conduction"
+    },
+    {
+      "method": "PistonBlock.shouldExtend",
+      "requirement": "five eligible adjacent queries, own position DOWN, five above-body queries excluding DOWN; front exclusion only applies to adjacent scan"
+    },
+    {
+      "method": "RedstoneWireBlock.getWeakRedstonePower/getStrongRedstonePower/getPlacementState",
+      "requirement": "DOWN query zero, UP power, horizontal recomputed opposite arm; strong equals weak; dot/cross shape is stateful even with no electrical sources"
+    },
+    {
+      "method": "RedstoneWireBlock.getStrongPower / RedstoneController.calculateWirePowerAt",
+      "requirement": "temporarily disable all dust emission during non-wire power sampling; direct/conductor source maximum vs horizontal/up/down neighboring wire power minus one, independent of retained arm map"
+    },
+    {
+      "method": "DefaultRedstoneController.update / Vec3i.hashCode",
+      "requirement": "notify around a Java HashSet of changed wire and six adjacent cells, inserted self D U N S W E; coordinate-dependent HashSet iteration precedes six-way updater order; relocation needs new physical review"
+    },
+    {
+      "method": "AbstractRedstoneGateBlock.scheduledTick/updatePowered",
+      "requirement": "delivered unpowered repeater turns ON even after input falls, then queues OFF; lock checked at request/delivery; priority extremely-high for target-not-aligned, very-high for OFF, high for ON"
+    },
+    {
+      "method": "AbstractRedstoneGateBlock.getPower/getMaxInputLevelSides/updateTarget",
+      "requirement": "input opposite internal output; rear wire raw power accepted; only side gates lock repeaters; notify output target then five neighbors excluding return edge"
+    },
+    {
+      "method": "ChunkTickScheduler.scheduleTick / WorldTickScheduler.isTicking",
+      "requirement": "pending same block/position deduplicated across times; due-current-tick membership prevents extra neighbor-triggered request before delivery; delivery explicitly schedules short-pulse OFF"
+    },
+    {
+      "method": "LeverBlock.updateNeighbors",
+      "requirement": "source six-way notifications then support six-way notifications; conductor emission does not itself broadcast global updates"
+    },
+    {
+      "method": "World.setBlockState / WorldChunk.setBlockState / RedstoneWireBlock.prepare/getStateForNeighborUpdate",
+      "requirement": "flags 2 calls gate onBlockAdded before old.prepare/new.shape/new.prepare; flags 3 adds ordinary neighbors before shapes; wire prepare visits connected-arm diagonals and shape callbacks preserve dot/cross history"
+    }
+  ],
+  "evidence_limit": "Static source and finite-rule checks only; no mixed live conformance or public placement support implied."
+}

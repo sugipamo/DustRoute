@@ -1,0 +1,86 @@
+{
+  "schema_version": "dustroute.native-device-checks.v1",
+  "unique_rust_tests_passed": 261,
+  "python_tests_passed": 9,
+  "full_workspace_tests_run": false,
+  "checks": [
+    {
+      "command": "cargo test --offline --locked -p dustroute-minecraft --tests -j 1 -- --test-threads=2",
+      "passed": 217,
+      "log": "/tmp/dustroute-native-devices-minecraft-tests.log",
+      "sha256": "b66dcc74e8357055fe3ee696adaac9c9bc645ea54ce1711e504d1edfede31f25"
+    },
+    {
+      "command": "cargo test --offline --locked -j 1 -p dustroute-library --test execution_context --test executable_laws",
+      "passed": 18,
+      "log": "/tmp/dustroute-native-devices-library-tests.log",
+      "sha256": "c8eba9d8b57a42e0b871ba268657dde240e5ff167d9642b3b39307d944ede780"
+    },
+    {
+      "command": "cargo test --offline --locked -j 1 -p dustroute-translate --test native_device_observations --test reference_door_materials --test execution_context --test unified_piston_behavior --test electrical_piston_observations",
+      "passed": 13,
+      "log": "/tmp/dustroute-native-devices-translate-tests.log",
+      "sha256": "b11e371403e0766f28b24d74f10d489b8bf3a343d13ec695d12d96d388cb3b3a"
+    },
+    {
+      "command": "cargo test --offline --locked -j 1 -p dustroute-mcp --lib blueprint_tests -- --test-threads=2",
+      "passed": 13,
+      "log": "/tmp/dustroute-native-devices-mcp-tests.log",
+      "sha256": "cd90d415dee1c445034928e0bce91b670e66bdc9bc5a2ee85fb6b23645a17ec5"
+    },
+    {
+      "label": "native final focused rerun (already counted above)",
+      "command": "cargo test --offline --locked -j 1 -p dustroute-minecraft --test native_device_runtime -- --test-threads=2",
+      "exit_code": 0,
+      "log": "/tmp/dustroute-native-device-focused-tests.log",
+      "sha256": "7edb0ec524682eb49bf70dc19bad7db1b9a117e56357609bd1954f54de86d708"
+    },
+    {
+      "label": "python transient regression",
+      "command": "python3 -m unittest discover -s tools -p test_piston_transients.py",
+      "exit_code": 0,
+      "log": "/tmp/dustroute-native-devices-transient-tests.log",
+      "sha256": "b5a286f8aa598405574968b1e7f5675482e8bc32e3674169fabf4138f0c51a2d"
+    },
+    {
+      "label": "python reference comparison gates",
+      "command": "python3 -m unittest discover -s tools -p test_reference_door_comparison.py",
+      "exit_code": 0,
+      "log": "/tmp/dustroute-native-devices-reference-comparison-tests.log",
+      "sha256": "cbe4b84d897ac017db0552ccb3a31855ff0fb172bc344c967c4c4c92eb19e624"
+    },
+    {
+      "label": "clippy",
+      "command": "cargo clippy --offline --locked --workspace --all-targets -j 1 -- -D warnings",
+      "exit_code": 0,
+      "log": "/tmp/dustroute-native-devices-clippy.log",
+      "sha256": "8d414d6108f364ae5bcf6724a41775b78b27cdcf43e511eaa6f6b2ee2e93db91"
+    },
+    {
+      "label": "format",
+      "command": "cargo fmt --all -- --check",
+      "exit_code": 0,
+      "log": "/tmp/dustroute-native-devices-fmt.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "instrumentation classes",
+      "command": "./gradlew classes --offline --max-workers=1 --console=plain",
+      "exit_code": 0,
+      "log": "/tmp/dustroute-native-devices-instrumentation-build.log",
+      "sha256": "ac697bf3c7e6c1f458d66ebd675e5ea6484f96f15c7f60c156104ac8dfb43488"
+    }
+  ],
+  "additional_checks": [
+    "git diff --check",
+    "source/probe/comparison artifact SHA-256 verification"
+  ],
+  "nonpassing_diagnostic": {
+    "report": "reference-door-native-comparison-20260927.json",
+    "classification": "tick_end_mismatch",
+    "ticks_compared": 381,
+    "mismatched_ticks": 238,
+    "final_region_matches": false
+  },
+  "stop": "Movement write/notification staging is a newly identified substantial change; not implemented pending user review. Goal remains incomplete."
+}

@@ -1,0 +1,188 @@
+{
+  "inputs": {
+    "known": 1,
+    "block_record": 1,
+    "signal": 1,
+    "weak": 1,
+    "strong": 1,
+    "repeater": 1,
+    "torch": 1,
+    "comparator": 1,
+    "observer": 1,
+    "lamp": 1,
+    "present": 1,
+    "due": 1
+  },
+  "registers": {
+    "notify": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "apply": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "powered": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "deadline": {
+      "initial": 0,
+      "maximum": 2
+    },
+    "after": {
+      "initial": 0,
+      "maximum": 65535
+    }
+  },
+  "histories": {},
+  "handlers": {
+    "observe": [
+      {
+        "op": "set",
+        "register": "notify",
+        "value": {
+          "op": "and",
+          "left": {
+            "op": "input",
+            "name": "known"
+          },
+          "right": {
+            "op": "maximum",
+            "left": {
+              "op": "maximum",
+              "left": {
+                "op": "maximum",
+                "left": {
+                  "op": "maximum",
+                  "left": {
+                    "op": "maximum",
+                    "left": {
+                      "op": "maximum",
+                      "left": {
+                        "op": "maximum",
+                        "left": {
+                          "op": "maximum",
+                          "left": {
+                            "op": "maximum",
+                            "left": {
+                              "op": "constant",
+                              "value": 0
+                            },
+                            "right": {
+                              "op": "input",
+                              "name": "block_record"
+                            }
+                          },
+                          "right": {
+                            "op": "input",
+                            "name": "signal"
+                          }
+                        },
+                        "right": {
+                          "op": "input",
+                          "name": "weak"
+                        }
+                      },
+                      "right": {
+                        "op": "input",
+                        "name": "strong"
+                      }
+                    },
+                    "right": {
+                      "op": "input",
+                      "name": "repeater"
+                    }
+                  },
+                  "right": {
+                    "op": "input",
+                    "name": "torch"
+                  }
+                },
+                "right": {
+                  "op": "input",
+                  "name": "comparator"
+                }
+              },
+              "right": {
+                "op": "input",
+                "name": "observer"
+              }
+            },
+            "right": {
+              "op": "input",
+              "name": "lamp"
+            }
+          }
+        }
+      }
+    ],
+    "start": [
+      {
+        "op": "set",
+        "register": "apply",
+        "value": {
+          "op": "input",
+          "name": "present"
+        }
+      },
+      {
+        "op": "set",
+        "register": "powered",
+        "value": {
+          "op": "constant",
+          "value": 1
+        }
+      },
+      {
+        "op": "set",
+        "register": "deadline",
+        "value": {
+          "op": "constant",
+          "value": 1
+        }
+      },
+      {
+        "op": "set",
+        "register": "after",
+        "value": {
+          "op": "constant",
+          "value": 1
+        }
+      }
+    ],
+    "end": [
+      {
+        "op": "set",
+        "register": "apply",
+        "value": {
+          "op": "and",
+          "left": {
+            "op": "input",
+            "name": "present"
+          },
+          "right": {
+            "op": "input",
+            "name": "due"
+          }
+        }
+      },
+      {
+        "op": "set",
+        "register": "powered",
+        "value": {
+          "op": "constant",
+          "value": 0
+        }
+      },
+      {
+        "op": "set",
+        "register": "deadline",
+        "value": {
+          "op": "constant",
+          "value": 2
+        }
+      }
+    ]
+  }
+}

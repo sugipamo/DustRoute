@@ -1,0 +1,24 @@
+{
+  "inputs": {
+    "powered": 1
+  },
+  "registers": {
+    "lit": {
+      "initial": 0,
+      "maximum": 1
+    }
+  },
+  "histories": {},
+  "handlers": {
+    "evaluate": [
+      {
+        "op": "set",
+        "register": "lit",
+        "value": {
+          "op": "input",
+          "name": "powered"
+        }
+      }
+    ]
+  }
+}

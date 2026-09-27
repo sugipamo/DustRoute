@@ -1,0 +1,1355 @@
+{
+  "schema_version": "dustroute.reference-door-short-live-comparison.v1",
+  "date": "2026-09-27",
+  "minecraft_version": "1.21.11",
+  "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v5",
+  "classification": "all_six_measured_pulses_match_including_incorrect_off_aperture",
+  "cases": [
+    {
+      "requested_game_ticks": 1,
+      "applied_game_ticks": 1,
+      "origin": {
+        "x": 52000,
+        "y": 180,
+        "z": 1000
+      },
+      "applied_inputs": [
+        {
+          "position": {
+            "x": 52000,
+            "y": 191,
+            "z": 1000
+          },
+          "powered": true,
+          "tick": 0
+        },
+        {
+          "position": {
+            "x": 52000,
+            "y": 191,
+            "z": 1000
+          },
+          "powered": false,
+          "tick": 1
+        }
+      ],
+      "outcome": {
+        "input": 1,
+        "sample_tick": 81,
+        "aperture": "closed",
+        "occupied_aperture": [
+          {
+            "position": [
+              52000,
+              186,
+              999
+            ],
+            "state": [
+              "minecraft:smooth_quartz",
+              []
+            ]
+          },
+          {
+            "position": [
+              52000,
+              186,
+              1000
+            ],
+            "state": [
+              "minecraft:smooth_quartz",
+              []
+            ]
+          },
+          {
+            "position": [
+              52000,
+              186,
+              1001
+            ],
+            "state": [
+              "minecraft:smooth_quartz",
+              []
+            ]
+          },
+          {
+            "position": [
+              52000,
+              187,
+              999
+            ],
+            "state": [
+              "minecraft:smooth_quartz",
+              []
+            ]
+          },
+          {
+            "position": [
+              52000,
+              187,
+              1000
+            ],
+            "state": [
+              "minecraft:smooth_quartz",
+              []
+            ]
+          },
+          {
+            "position": [
+              52000,
+              187,
+              1001
+            ],
+            "state": [
+              "minecraft:smooth_quartz",
+              []
+            ]
+          },
+          {
+            "position": [
+              52000,
+              188,
+              999
+            ],
+            "state": [
+              "minecraft:smooth_quartz",
+              []
+            ]
+          },
+          {
+            "position": [
+              52000,
+              188,
+              1000
+            ],
+            "state": [
+              "minecraft:smooth_quartz",
+              []
+            ]
+          },
+          {
+            "position": [
+              52000,
+              188,
+              1001
+            ],
+            "state": [
+              "minecraft:smooth_quartz",
+              []
+            ]
+          }
+        ],
+        "full_initial_region_restored": false
+      },
+      "occupied_relative": [
+        {
+          "relative_position": {
+            "x": 0,
+            "y": 6,
+            "z": -1
+          },
+          "state": [
+            "minecraft:smooth_quartz",
+            []
+          ]
+        },
+        {
+          "relative_position": {
+            "x": 0,
+            "y": 6,
+            "z": 0
+          },
+          "state": [
+            "minecraft:smooth_quartz",
+            []
+          ]
+        },
+        {
+          "relative_position": {
+            "x": 0,
+            "y": 6,
+            "z": 1
+          },
+          "state": [
+            "minecraft:smooth_quartz",
+            []
+          ]
+        },
+        {
+          "relative_position": {
+            "x": 0,
+            "y": 7,
+            "z": -1
+          },
+          "state": [
+            "minecraft:smooth_quartz",
+            []
+          ]
+        },
+        {
+          "relative_position": {
+            "x": 0,
+            "y": 7,
+            "z": 0
+          },
+          "state": [
+            "minecraft:smooth_quartz",
+            []
+          ]
+        },
+        {
+          "relative_position": {
+            "x": 0,
+            "y": 7,
+            "z": 1
+          },
+          "state": [
+            "minecraft:smooth_quartz",
+            []
+          ]
+        },
+        {
+          "relative_position": {
+            "x": 0,
+            "y": 8,
+            "z": -1
+          },
+          "state": [
+            "minecraft:smooth_quartz",
+            []
+          ]
+        },
+        {
+          "relative_position": {
+            "x": 0,
+            "y": 8,
+            "z": 0
+          },
+          "state": [
+            "minecraft:smooth_quartz",
+            []
+          ]
+        },
+        {
+          "relative_position": {
+            "x": 0,
+            "y": 8,
+            "z": 1
+          },
+          "state": [
+            "minecraft:smooth_quartz",
+            []
+          ]
+        }
+      ],
+      "ticks_compared": 82,
+      "palette_writes": {
+        "observed_writes": 130,
+        "model_writes": 130,
+        "first_mismatch": null
+      },
+      "callback_projection": {
+        "scope": "piston events, carrier tick/finish boundaries and ordinary notifications to piston, head, moving piston, wire and repeater; complete callback-visible block states",
+        "observed_events": 541,
+        "model_events": 541,
+        "first_mismatch": null,
+        "classification": "matched_callback_projection"
+      },
+      "model_restoration_verified": true,
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_stopped_normally": true,
+      "capture_end": {
+        "kind": "artifact_end",
+        "capture_mode": "bounded",
+        "capture_state": "closed",
+        "input_observed": true,
+        "anchor_game_tick": 68004,
+        "end_game_tick": 68127,
+        "last_sequence": 12081,
+        "emitted_records": 4128,
+        "suppressed_records": 4871,
+        "evicted_records": 3082,
+        "write_errors": 0,
+        "heartbeat_mode": "full"
+      },
+      "capture_tool_loaded_sha256": "fb9cdef07e998f512182fa567e03f747285eba1da5ae0cb82d6ea535c823d7b5",
+      "capture_tool_source": ".local/e2e-artifacts/reference-door-short-capture-tool-initial-20260927.py",
+      "capture_summary_tool_sha256": "fb9cdef07e998f512182fa567e03f747285eba1da5ae0cb82d6ea535c823d7b5",
+      "source_version_note": null,
+      "artifacts": [
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-1-20260927.fixture.json",
+          "sha256": "feb8be2ccedc673a1d555483addaa4343cdd878af331fb8bd77497eb60b836a1",
+          "bytes": 10360
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-1-20260927.raw.ndjson",
+          "sha256": "83ca8ebf5642b67253f7495ff51eab92d12138f4d324341424493582ea941ed5",
+          "bytes": 969269
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-1-20260927.client.json",
+          "sha256": "3fa6ab6e5ef8d68eafe529e833d15ba59010743d1c27befffcd53eeef4f006e6",
+          "bytes": 15307360
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-1-20260927.server.log",
+          "sha256": "208d13ab389331dd61940a9ea628862f2b41ae2c9564f8eb13c52b2bda5fff7a",
+          "bytes": 10064
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-1-20260927.summary.json",
+          "sha256": "3bf6ebe1b15eaac0ca927e0e76b5bde18bd3012924139182ce6b60032678af1f",
+          "bytes": 4418
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-1-20260927.reference.json",
+          "sha256": "0cf1b4532c5106820dc259686158061caa46a6760bc020524cf56b034a60e39e",
+          "bytes": 1267042
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-1-20260927.observed.json",
+          "sha256": "9efadf0689f21201b7ce0f384a8741be5df8af4a346e278ef5e003d9eaaaaf0d",
+          "bytes": 319798
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-1-20260927.input.json",
+          "sha256": "eefe63bac404d004e66bda341b2acba10add54496d7b0fec7cfa4305dd56ac5e",
+          "bytes": 10017
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-1-20260927.model.json",
+          "sha256": "6ff5a8f73e0626f1aef029b05c6cc046e9ab1adbdfab65cf504ed6ab29dc9cc8",
+          "bytes": 11159463
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-1-20260927.comparison.json",
+          "sha256": "04d8bf0c518e2db50c2d0b54a6ec74ea7ff6f7f2fc4e6f585d28d0c624932439",
+          "bytes": 1949
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-1-20260927.callbacks.json",
+          "sha256": "17c202e8bf7e2c2f262250860676be91e953ef0d5ef2faaa590a8e012781a425",
+          "bytes": 1589414
+        }
+      ],
+      "commands": [
+        "python3 tools/observe_reference_door.py --fixture .local/e2e-artifacts/reference-door-short-1-20260927.fixture.json --run-id reference-door-short-1-20260927 --x 52000 --interrupted",
+        "python3 tools/compare_reference_door_interruption.py --prefix .local/e2e-artifacts/reference-door-short-1-20260927"
+      ],
+      "command_exit_codes": [
+        0,
+        0
+      ]
+    },
+    {
+      "requested_game_ticks": 3,
+      "applied_game_ticks": 3,
+      "origin": {
+        "x": 53000,
+        "y": 180,
+        "z": 1000
+      },
+      "applied_inputs": [
+        {
+          "position": {
+            "x": 53000,
+            "y": 191,
+            "z": 1000
+          },
+          "powered": true,
+          "tick": 0
+        },
+        {
+          "position": {
+            "x": 53000,
+            "y": 191,
+            "z": 1000
+          },
+          "powered": false,
+          "tick": 3
+        }
+      ],
+      "outcome": {
+        "input": 1,
+        "sample_tick": 83,
+        "aperture": "partial",
+        "occupied_aperture": [
+          {
+            "position": [
+              53000,
+              186,
+              1000
+            ],
+            "state": [
+              "minecraft:smooth_quartz",
+              []
+            ]
+          },
+          {
+            "position": [
+              53000,
+              187,
+              1000
+            ],
+            "state": [
+              "minecraft:smooth_quartz",
+              []
+            ]
+          }
+        ],
+        "full_initial_region_restored": false
+      },
+      "occupied_relative": [
+        {
+          "relative_position": {
+            "x": 0,
+            "y": 6,
+            "z": 0
+          },
+          "state": [
+            "minecraft:smooth_quartz",
+            []
+          ]
+        },
+        {
+          "relative_position": {
+            "x": 0,
+            "y": 7,
+            "z": 0
+          },
+          "state": [
+            "minecraft:smooth_quartz",
+            []
+          ]
+        }
+      ],
+      "ticks_compared": 84,
+      "palette_writes": {
+        "observed_writes": 190,
+        "model_writes": 190,
+        "first_mismatch": null
+      },
+      "callback_projection": {
+        "scope": "piston events, carrier tick/finish boundaries and ordinary notifications to piston, head, moving piston, wire and repeater; complete callback-visible block states",
+        "observed_events": 819,
+        "model_events": 819,
+        "first_mismatch": null,
+        "classification": "matched_callback_projection"
+      },
+      "model_restoration_verified": true,
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_stopped_normally": true,
+      "capture_end": {
+        "kind": "artifact_end",
+        "capture_mode": "bounded",
+        "capture_state": "closed",
+        "input_observed": true,
+        "anchor_game_tick": 68813,
+        "end_game_tick": 68938,
+        "last_sequence": 13224,
+        "emitted_records": 5187,
+        "suppressed_records": 4619,
+        "evicted_records": 3418,
+        "write_errors": 0,
+        "heartbeat_mode": "full"
+      },
+      "capture_tool_loaded_sha256": "fb9cdef07e998f512182fa567e03f747285eba1da5ae0cb82d6ea535c823d7b5",
+      "capture_tool_source": ".local/e2e-artifacts/reference-door-short-capture-tool-initial-20260927.py",
+      "capture_summary_tool_sha256": "fb9cdef07e998f512182fa567e03f747285eba1da5ae0cb82d6ea535c823d7b5",
+      "source_version_note": null,
+      "artifacts": [
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-3-20260927.fixture.json",
+          "sha256": "cc39e782907bfae27884e7b68b4aa686fc802f6956179b5cb2e3aa0a5a128109",
+          "bytes": 10360
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-3-20260927.raw.ndjson",
+          "sha256": "6d045d055cdef7f0fbbba657a388029136b872f4d3157befaecb25efae37fcef",
+          "bytes": 1290388
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-3-20260927.client.json",
+          "sha256": "2aee9d177d87e0b261d025114e2f460414fd37ca2b9a8e5319d56da19b0bc840",
+          "bytes": 15328761
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-3-20260927.server.log",
+          "sha256": "fcc124cc79b540edc409e079700a86b2983f8ab8f3c9565ef35638e95a43c430",
+          "bytes": 10020
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-3-20260927.summary.json",
+          "sha256": "8f7675b3ac4e910baadf6c33d743b6877e5323124b55766747e54915e0672615",
+          "bytes": 3036
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-3-20260927.reference.json",
+          "sha256": "d6bbdb05d6c4efcb7558bddfa50562405f8f35aef7dc5ca925b880c21a03b385",
+          "bytes": 1382030
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-3-20260927.observed.json",
+          "sha256": "37edab5e32ee3e329e773dee6f59a223b6b0fa29fc20587757422ddb3ed856a6",
+          "bytes": 474260
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-3-20260927.input.json",
+          "sha256": "a9d43950b387d6285de78e0ea5a7ab7d620ad9a92e154e38911fbc1081a76fb0",
+          "bytes": 10017
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-3-20260927.model.json",
+          "sha256": "f83def235ad464048d842bf28c7faa8d7b1119a9030b2b4a7f2d1152446c85c2",
+          "bytes": 17358723
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-3-20260927.comparison.json",
+          "sha256": "c62d48b566bc28aa6fa711bcf5338501af315648c3a64ecde634cc245df6fa68",
+          "bytes": 1949
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-3-20260927.callbacks.json",
+          "sha256": "bfd607ab3057d8bb3121060fd7e87059810006a3c89cd4b2a892587c8f885d6f",
+          "bytes": 2351799
+        }
+      ],
+      "commands": [
+        "python3 tools/observe_reference_door.py --fixture .local/e2e-artifacts/reference-door-short-3-20260927.fixture.json --run-id reference-door-short-3-20260927 --x 53000 --interrupted",
+        "python3 tools/compare_reference_door_interruption.py --prefix .local/e2e-artifacts/reference-door-short-3-20260927"
+      ],
+      "command_exit_codes": [
+        0,
+        0
+      ]
+    },
+    {
+      "requested_game_ticks": 12,
+      "applied_game_ticks": 12,
+      "origin": {
+        "x": 54000,
+        "y": 180,
+        "z": 1000
+      },
+      "applied_inputs": [
+        {
+          "position": {
+            "x": 54000,
+            "y": 191,
+            "z": 1000
+          },
+          "powered": true,
+          "tick": 0
+        },
+        {
+          "position": {
+            "x": 54000,
+            "y": 191,
+            "z": 1000
+          },
+          "powered": false,
+          "tick": 12
+        }
+      ],
+      "outcome": {
+        "input": 1,
+        "sample_tick": 92,
+        "aperture": "open",
+        "occupied_aperture": [],
+        "full_initial_region_restored": true
+      },
+      "occupied_relative": [],
+      "ticks_compared": 93,
+      "palette_writes": {
+        "observed_writes": 267,
+        "model_writes": 267,
+        "first_mismatch": null
+      },
+      "callback_projection": {
+        "scope": "piston events, carrier tick/finish boundaries and ordinary notifications to piston, head, moving piston, wire and repeater; complete callback-visible block states",
+        "observed_events": 1089,
+        "model_events": 1089,
+        "first_mismatch": null,
+        "classification": "matched_callback_projection"
+      },
+      "model_restoration_verified": true,
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_stopped_normally": true,
+      "capture_end": {
+        "kind": "artifact_end",
+        "capture_mode": "bounded",
+        "capture_state": "closed",
+        "input_observed": true,
+        "anchor_game_tick": 69575,
+        "end_game_tick": 69709,
+        "last_sequence": 14238,
+        "emitted_records": 6417,
+        "suppressed_records": 4739,
+        "evicted_records": 3082,
+        "write_errors": 0,
+        "heartbeat_mode": "full"
+      },
+      "capture_tool_loaded_sha256": "fb9cdef07e998f512182fa567e03f747285eba1da5ae0cb82d6ea535c823d7b5",
+      "capture_tool_source": ".local/e2e-artifacts/reference-door-short-capture-tool-initial-20260927.py",
+      "capture_summary_tool_sha256": "83aca535c7b2cf1c2ef2776959534fa0db19e567912b1042e5015ea23d6999b5",
+      "source_version_note": "Only pre-launch fixture guards and docstring were added on disk while this process was already running; its original end-of-run source hash describes that newer file. The executed initial source is retained separately. Future captures now pin this hash at startup.",
+      "artifacts": [
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-12-20260927.fixture.json",
+          "sha256": "26a2ad560f62b513960895c2caaba7e94edae05ffe4f0b189e8e0529c0109e28",
+          "bytes": 10362
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-12-20260927.raw.ndjson",
+          "sha256": "02fb2500e02ad92a14d37c0a210dc5940626260e6a194b74b322d1e4a0b0228d",
+          "bytes": 1648788
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-12-20260927.client.json",
+          "sha256": "f1cbede0ea684e2ba0e9c2105c4656b7cac85036e231e29cbc6e26c84a6f1458",
+          "bytes": 15355503
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-12-20260927.server.log",
+          "sha256": "286ded76b66aa09985e44f7bb467064602086b2de9fe305c1a59860e80503fae",
+          "bytes": 10066
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-12-20260927.summary.json",
+          "sha256": "c17044b782c6b4e27ec6f2046c5f677ad3ec0776a913535332d79d3264c4860b",
+          "bytes": 2636
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-12-20260927.reference.json",
+          "sha256": "77048f35460fb6ea16de8671f58452e0215bb077b1c5406fb407c92669f10ed7",
+          "bytes": 1604008
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-12-20260927.observed.json",
+          "sha256": "ea1411d4b7de6ba6a7c768931b712b07ca460d33752245c486533e61a90ff2df",
+          "bytes": 564234
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-12-20260927.input.json",
+          "sha256": "2aa80631509720a1355c5c00ac4147addbc0d55f0bfff3f29bbdff9ab489e4e0",
+          "bytes": 10018
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-12-20260927.model.json",
+          "sha256": "1a42bff4a4e67448b1fc08903494185a5459150eb8710ea67e0f904fbf23d9d3",
+          "bytes": 22316867
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-12-20260927.comparison.json",
+          "sha256": "3e67e36638932f725faf295595aad0617a101b4fc4d33340ab1f166b8bd85d28",
+          "bytes": 1956
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-12-20260927.callbacks.json",
+          "sha256": "3b1c48d5bb4f932f23f666c54f2461bc559429af2a47bc62db03f381d6d16142",
+          "bytes": 3314808
+        }
+      ],
+      "commands": [
+        "python3 tools/observe_reference_door.py --fixture .local/e2e-artifacts/reference-door-short-12-20260927.fixture.json --run-id reference-door-short-12-20260927 --x 54000 --interrupted",
+        "python3 tools/compare_reference_door_interruption.py --prefix .local/e2e-artifacts/reference-door-short-12-20260927"
+      ],
+      "command_exit_codes": [
+        0,
+        0
+      ]
+    },
+    {
+      "requested_game_ticks": 14,
+      "applied_game_ticks": 14,
+      "origin": {
+        "x": 55000,
+        "y": 180,
+        "z": 1000
+      },
+      "applied_inputs": [
+        {
+          "position": {
+            "x": 55000,
+            "y": 191,
+            "z": 1000
+          },
+          "powered": true,
+          "tick": 0
+        },
+        {
+          "position": {
+            "x": 55000,
+            "y": 191,
+            "z": 1000
+          },
+          "powered": false,
+          "tick": 14
+        }
+      ],
+      "outcome": {
+        "input": 1,
+        "sample_tick": 94,
+        "aperture": "partial",
+        "occupied_aperture": [
+          {
+            "position": [
+              55000,
+              186,
+              1000
+            ],
+            "state": [
+              "minecraft:smooth_quartz",
+              []
+            ]
+          },
+          {
+            "position": [
+              55000,
+              187,
+              1000
+            ],
+            "state": [
+              "minecraft:smooth_quartz",
+              []
+            ]
+          }
+        ],
+        "full_initial_region_restored": false
+      },
+      "occupied_relative": [
+        {
+          "relative_position": {
+            "x": 0,
+            "y": 6,
+            "z": 0
+          },
+          "state": [
+            "minecraft:smooth_quartz",
+            []
+          ]
+        },
+        {
+          "relative_position": {
+            "x": 0,
+            "y": 7,
+            "z": 0
+          },
+          "state": [
+            "minecraft:smooth_quartz",
+            []
+          ]
+        }
+      ],
+      "ticks_compared": 95,
+      "palette_writes": {
+        "observed_writes": 244,
+        "model_writes": 244,
+        "first_mismatch": null
+      },
+      "callback_projection": {
+        "scope": "piston events, carrier tick/finish boundaries and ordinary notifications to piston, head, moving piston, wire and repeater; complete callback-visible block states",
+        "observed_events": 1016,
+        "model_events": 1016,
+        "first_mismatch": null,
+        "classification": "matched_callback_projection"
+      },
+      "model_restoration_verified": true,
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_stopped_normally": true,
+      "capture_end": {
+        "kind": "artifact_end",
+        "capture_mode": "bounded",
+        "capture_state": "closed",
+        "input_observed": true,
+        "anchor_game_tick": 70350,
+        "end_game_tick": 70486,
+        "last_sequence": 13944,
+        "emitted_records": 6195,
+        "suppressed_records": 4739,
+        "evicted_records": 3010,
+        "write_errors": 0,
+        "heartbeat_mode": "full"
+      },
+      "capture_tool_loaded_sha256": "83aca535c7b2cf1c2ef2776959534fa0db19e567912b1042e5015ea23d6999b5",
+      "capture_tool_source": ".local/e2e-artifacts/reference-door-short-capture-tool-preflight-20260927.py",
+      "capture_summary_tool_sha256": "83aca535c7b2cf1c2ef2776959534fa0db19e567912b1042e5015ea23d6999b5",
+      "source_version_note": null,
+      "artifacts": [
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-14-20260927.fixture.json",
+          "sha256": "296c4317a780215f3203a4bbbd9e2e76196e44af9779a1b698690e7c7a5cce1f",
+          "bytes": 10362
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-14-20260927.raw.ndjson",
+          "sha256": "b016419ee62683f9e012a7f2548d97dae53eb02ad59c7f971dea93deb6d260c7",
+          "bytes": 1572776
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-14-20260927.client.json",
+          "sha256": "37ea9882ab9fb63417630534eee745b92e407508da0f8dd03d1cd1c2fcc9184f",
+          "bytes": 15350574
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-14-20260927.server.log",
+          "sha256": "5fcba01f315ff2192161d789d5f3d68310bb71fbbccc77106c72fb29b5f9a50f",
+          "bytes": 10022
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-14-20260927.summary.json",
+          "sha256": "36f593612483062981a03e3b69cc5af77516574b24ea88b89bd03885d95676b9",
+          "bytes": 3042
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-14-20260927.reference.json",
+          "sha256": "2447d1b00ba9435fafbf04ff997998227f98c2500abc2f770282edba6f747e2d",
+          "bytes": 1603751
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-14-20260927.observed.json",
+          "sha256": "3b5c8c67026d678009be883a8250aca4060ecadba5143015c31b3e66cd69c277",
+          "bytes": 498453
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-14-20260927.input.json",
+          "sha256": "712ffda2a89ee661237225c70acb9490c822b958372ce5ddc1fc10412419bd6e",
+          "bytes": 10018
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-14-20260927.model.json",
+          "sha256": "802a6760dcb09985116e20d4e587e2d2f0569ab74560eecb6189217ca2f1f169",
+          "bytes": 21099759
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-14-20260927.comparison.json",
+          "sha256": "d6e257afc1dbd9d73433f8e57311ba98205ae4b7068a9a225589d64550d6c87b",
+          "bytes": 1956
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-14-20260927.callbacks.json",
+          "sha256": "e8470488b91b8f8a54f58f600270d9ea60b3c397c368e6af3057cce26aaadd4c",
+          "bytes": 3074296
+        }
+      ],
+      "commands": [
+        "python3 tools/observe_reference_door.py --fixture .local/e2e-artifacts/reference-door-short-14-20260927.fixture.json --run-id reference-door-short-14-20260927 --x 55000 --interrupted",
+        "python3 tools/compare_reference_door_interruption.py --prefix .local/e2e-artifacts/reference-door-short-14-20260927"
+      ],
+      "command_exit_codes": [
+        0,
+        0
+      ]
+    },
+    {
+      "requested_game_ticks": 20,
+      "applied_game_ticks": 20,
+      "origin": {
+        "x": 56000,
+        "y": 180,
+        "z": 1000
+      },
+      "applied_inputs": [
+        {
+          "position": {
+            "x": 56000,
+            "y": 191,
+            "z": 1000
+          },
+          "powered": true,
+          "tick": 0
+        },
+        {
+          "position": {
+            "x": 56000,
+            "y": 191,
+            "z": 1000
+          },
+          "powered": false,
+          "tick": 20
+        }
+      ],
+      "outcome": {
+        "input": 1,
+        "sample_tick": 100,
+        "aperture": "open",
+        "occupied_aperture": [],
+        "full_initial_region_restored": true
+      },
+      "occupied_relative": [],
+      "ticks_compared": 101,
+      "palette_writes": {
+        "observed_writes": 262,
+        "model_writes": 262,
+        "first_mismatch": null
+      },
+      "callback_projection": {
+        "scope": "piston events, carrier tick/finish boundaries and ordinary notifications to piston, head, moving piston, wire and repeater; complete callback-visible block states",
+        "observed_events": 1060,
+        "model_events": 1060,
+        "first_mismatch": null,
+        "classification": "matched_callback_projection"
+      },
+      "model_restoration_verified": true,
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_stopped_normally": true,
+      "capture_end": {
+        "kind": "artifact_end",
+        "capture_mode": "bounded",
+        "capture_state": "closed",
+        "input_observed": true,
+        "anchor_game_tick": 71118,
+        "end_game_tick": 71260,
+        "last_sequence": 14063,
+        "emitted_records": 6434,
+        "suppressed_records": 4727,
+        "evicted_records": 2902,
+        "write_errors": 0,
+        "heartbeat_mode": "full"
+      },
+      "capture_tool_loaded_sha256": "83aca535c7b2cf1c2ef2776959534fa0db19e567912b1042e5015ea23d6999b5",
+      "capture_tool_source": ".local/e2e-artifacts/reference-door-short-capture-tool-preflight-20260927.py",
+      "capture_summary_tool_sha256": "83aca535c7b2cf1c2ef2776959534fa0db19e567912b1042e5015ea23d6999b5",
+      "source_version_note": null,
+      "artifacts": [
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-20-20260927.fixture.json",
+          "sha256": "667f3302775add4e56af0023abbb733433c47c2f2f82fe93c5856fb8b8f1a200",
+          "bytes": 10362
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-20-20260927.raw.ndjson",
+          "sha256": "e1e5363e2ab0184a0f576ee4d69d40345dde0b472ae9f8cf08e7e3184cacb9f7",
+          "bytes": 1634357
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-20-20260927.client.json",
+          "sha256": "197301365fe69e500a06e52313edee2a23dd61fc08a91f594130f25385519c89",
+          "bytes": 15354114
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-20-20260927.server.log",
+          "sha256": "79f06fc4b96a6f15460ef367d70c3a5520952f03ef0527194a68d20acfa4518c",
+          "bytes": 10067
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-20-20260927.summary.json",
+          "sha256": "1dc9bc0d5b69607adf34b67344989d086e8f9150fb728b135f3fa6590786d7f6",
+          "bytes": 2638
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-20-20260927.reference.json",
+          "sha256": "08a9dcfeed43fddc5cc23bc299d30792f57755e40e301139c0ed397910c89b03",
+          "bytes": 1709253
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-20-20260927.observed.json",
+          "sha256": "87162fa0346fe10a8f4de2563ac7b9046793d5137c0a4bac102ef2a5830bd3b1",
+          "bytes": 568673
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-20-20260927.input.json",
+          "sha256": "9d4e294f7476c95a52528f3874539d45a0fa9af3b2e45257dfadce22f6d8961f",
+          "bytes": 10018
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-20-20260927.model.json",
+          "sha256": "63ddc114cdcc4ca1101039255c3db840a3694af8cce601061ff5d60b469b070f",
+          "bytes": 22034233
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-20-20260927.comparison.json",
+          "sha256": "ddc8c7d4ccf6cbea22c9a6cb1e4c1d3008adc266fb6ff8494bfa62ae9453ffab",
+          "bytes": 1957
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-20-20260927.callbacks.json",
+          "sha256": "193255edaa33efb5813e79e8bb3d2add13394e70c0e8c8137b5495e3ccc84cef",
+          "bytes": 3271061
+        }
+      ],
+      "commands": [
+        "python3 tools/observe_reference_door.py --fixture .local/e2e-artifacts/reference-door-short-20-20260927.fixture.json --run-id reference-door-short-20-20260927 --x 56000 --interrupted",
+        "python3 tools/compare_reference_door_interruption.py --prefix .local/e2e-artifacts/reference-door-short-20-20260927"
+      ],
+      "command_exit_codes": [
+        0,
+        0
+      ]
+    },
+    {
+      "requested_game_ticks": 100,
+      "applied_game_ticks": 100,
+      "origin": {
+        "x": 57000,
+        "y": 180,
+        "z": 1000
+      },
+      "applied_inputs": [
+        {
+          "position": {
+            "x": 57000,
+            "y": 191,
+            "z": 1000
+          },
+          "powered": true,
+          "tick": 0
+        },
+        {
+          "position": {
+            "x": 57000,
+            "y": 191,
+            "z": 1000
+          },
+          "powered": false,
+          "tick": 100
+        }
+      ],
+      "outcome": {
+        "input": 1,
+        "sample_tick": 180,
+        "aperture": "open",
+        "occupied_aperture": [],
+        "full_initial_region_restored": true
+      },
+      "occupied_relative": [],
+      "ticks_compared": 181,
+      "palette_writes": {
+        "observed_writes": 262,
+        "model_writes": 262,
+        "first_mismatch": null
+      },
+      "callback_projection": {
+        "scope": "piston events, carrier tick/finish boundaries and ordinary notifications to piston, head, moving piston, wire and repeater; complete callback-visible block states",
+        "observed_events": 1059,
+        "model_events": 1059,
+        "first_mismatch": null,
+        "classification": "matched_callback_projection"
+      },
+      "model_restoration_verified": true,
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_stopped_normally": true,
+      "capture_end": {
+        "kind": "artifact_end",
+        "capture_mode": "bounded",
+        "capture_state": "closed",
+        "input_observed": true,
+        "anchor_game_tick": 71899,
+        "end_game_tick": 72121,
+        "last_sequence": 14113,
+        "emitted_records": 7396,
+        "suppressed_records": 3719,
+        "evicted_records": 2998,
+        "write_errors": 0,
+        "heartbeat_mode": "full"
+      },
+      "capture_tool_loaded_sha256": "83aca535c7b2cf1c2ef2776959534fa0db19e567912b1042e5015ea23d6999b5",
+      "capture_tool_source": ".local/e2e-artifacts/reference-door-short-capture-tool-preflight-20260927.py",
+      "capture_summary_tool_sha256": "83aca535c7b2cf1c2ef2776959534fa0db19e567912b1042e5015ea23d6999b5",
+      "source_version_note": null,
+      "artifacts": [
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-100-20260927.fixture.json",
+          "sha256": "98f1db5fc27b8410bfe32a3d7bb0b24226b8ecf1b309d211e02ca3cc9bf3b87d",
+          "bytes": 10364
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-100-20260927.raw.ndjson",
+          "sha256": "58a3e76f7abf08605ed9daab3c35d36e3a6d988e155f6ac8940cd487608638e6",
+          "bytes": 1752233
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-100-20260927.client.json",
+          "sha256": "dd0b4c4b9623b4395792ee2138134011b0efc9e94e577d931c500d62dfb6bb5f",
+          "bytes": 15353553
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-100-20260927.server.log",
+          "sha256": "9171e9641cdf3e7a1f14a30d445caae0514a4c4c635d0c2036a21efb5d6d43a4",
+          "bytes": 10024
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-100-20260927.summary.json",
+          "sha256": "6be11476198925dc65b199ff70c4f4db4880bec1a4e0c66333a95f55128de022",
+          "bytes": 2644
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-100-20260927.reference.json",
+          "sha256": "c7bb749948d9a7383551e12efb69f72aed24d84dc9a77e78234c00c759d8163e",
+          "bytes": 2864818
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-100-20260927.observed.json",
+          "sha256": "142edb7e1293b2070028be3c19dfa112419f0adee959febb4ddae53eadcf233f",
+          "bytes": 617092
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-100-20260927.input.json",
+          "sha256": "199cb2d83b1d2251ea1b486b006e18a39db1160ccd31ad655d97ff37c1fb483f",
+          "bytes": 10019
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-100-20260927.model.json",
+          "sha256": "e25a7d819d57d001b62abf51aca1e9f14ec3f2cb8a9ba2dad3ffca5ff9a548fa",
+          "bytes": 22030869
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-100-20260927.comparison.json",
+          "sha256": "e997c97da2afc39e108dc2c4acd7aafe66fd59df72aec2f54e1889752fd32564",
+          "bytes": 1962
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-short-100-20260927.callbacks.json",
+          "sha256": "60051ff868366d3ce06fe0c71aacba94bf8bc8577b2c10214f158e275c2a1673",
+          "bytes": 3266901
+        }
+      ],
+      "commands": [
+        "python3 tools/observe_reference_door.py --fixture .local/e2e-artifacts/reference-door-short-100-20260927.fixture.json --run-id reference-door-short-100-20260927 --x 57000 --interrupted",
+        "python3 tools/compare_reference_door_interruption.py --prefix .local/e2e-artifacts/reference-door-short-100-20260927"
+      ],
+      "command_exit_codes": [
+        0,
+        0
+      ]
+    }
+  ],
+  "totals": {
+    "cases": 6,
+    "ticks_compared": 636,
+    "palette_writes": 1355,
+    "callback_carrier_boundaries": 5584,
+    "model_restorations_verified": 6,
+    "normal_server_stops": 6
+  },
+  "retained_fixture": {
+    "path": "crates/dustroute-translate/tests/fixtures/reference-door-short-live-v1.json",
+    "sha256": "267933135ba193bf8e441637a419626e94950638afffeb5c21fe15e28968d856",
+    "bytes": 7285390
+  },
+  "checks": [
+    {
+      "command": "cargo build --offline --locked -j 1 --package dustroute-translate --example compare_electrical_pistons",
+      "exit_code": 0,
+      "tests_passed": null,
+      "log": {
+        "path": "/tmp/dustroute-door-short-live-build.log",
+        "sha256": "46e0f550822dba5d558551578ddfc35f4512b42f0abb4edda14dc86b0d550432",
+        "bytes": 157
+      }
+    },
+    {
+      "command": "python3 -m unittest discover -s tools -p 'test_reference_door*.py'",
+      "exit_code": 0,
+      "tests_passed": 5,
+      "log": {
+        "path": "/tmp/dustroute-door-short-python-tests.log",
+        "sha256": "4a6e24127b8fe50e1e3f6f3f76325bbbce22c66c188cbb4ce2f154bcb38d0eae",
+        "bytes": 104
+      }
+    },
+    {
+      "command": "python3 -m py_compile tools/observe_reference_door.py tools/compare_reference_door_interruption.py tools/test_reference_door_interruptions.py",
+      "exit_code": 0,
+      "tests_passed": null,
+      "log": {
+        "path": "/tmp/dustroute-door-short-syntax.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      }
+    },
+    {
+      "command": "git diff --check",
+      "exit_code": 0,
+      "tests_passed": null,
+      "log": {
+        "path": "/tmp/dustroute-door-short-diff-check.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      }
+    }
+  ],
+  "sources": [
+    {
+      "path": "tools/observe_reference_door.py",
+      "sha256": "e9ae849341e2078611ca5cc7aceaa8bb64d1de9a2c90e1177af7586031ca81cf",
+      "bytes": 10615
+    },
+    {
+      "path": "tools/compare_reference_door_interruption.py",
+      "sha256": "d842912f38f5f2cece1013cea3fcfccea231815d66f398d12650b574c985a3dd",
+      "bytes": 3532
+    },
+    {
+      "path": "tools/test_reference_door_interruptions.py",
+      "sha256": "0ce4b7024909a6627b351f78831d9f77157b275516bb57fc2f02c266efa46b43",
+      "bytes": 4885
+    },
+    {
+      "path": "tools/compare_reference_door.py",
+      "sha256": "e59ca819bc2bee6496c38ae6790bcfa26cbadcdbcbbb1dca81e635a0ed065e9c",
+      "bytes": 7437
+    },
+    {
+      "path": "tools/compare_piston_transients.py",
+      "sha256": "0834435f04048dd53c6eb76f7f66c0f9a1a770fc0a2d159ad4e9b448b663e521",
+      "bytes": 15667
+    },
+    {
+      "path": "tools/instrumented_server.py",
+      "sha256": "e83097f238fe9d170809c79fdb6aafa731887e4691285e3e9c32d2e60efe830c",
+      "bytes": 3765
+    },
+    {
+      "path": "crates/dustroute-mcp/mineflayer/e2e/piston-mixed-live.js",
+      "sha256": "df2c99c818ffa5dcee043647e27e669d3602374ab3ed92f0dd250bd80f87fa43",
+      "bytes": 8321
+    },
+    {
+      "path": "crates/dustroute-translate/examples/compare_electrical_pistons.rs",
+      "sha256": "709ef3852ebed0647e58c241ca07fd783a04606d17e4e328a9d446a575e2396a",
+      "bytes": 4829
+    },
+    {
+      "path": "crates/dustroute-minecraft/src/time/piston_runtime/mod.rs",
+      "sha256": "1a2b8a6b3444d57eddb6094fdb1cffdf911069b4244c9eea5cf1a96b4854b805",
+      "bytes": 7666
+    },
+    {
+      "path": "crates/dustroute-minecraft/src/time/piston_runtime/devices.rs",
+      "sha256": "e372e52cda043f7810470322c182e12d7011fc6a4da7d8b943dc22415d5953d1",
+      "bytes": 4866
+    },
+    {
+      "path": "crates/dustroute-minecraft/src/time/piston_runtime/movement.rs",
+      "sha256": "8aaa562de24962950ff5df75630640e152d62ae453aebb33bab61971bbc40ad8",
+      "bytes": 5013
+    }
+  ],
+  "instrumentation_sources": [
+    {
+      "path": "/root/DustRoute-minecraft-instrumentation/build.gradle",
+      "sha256": "f722876c5f961dd6557292526936e8e3a8d4154b22f45d19c59c482e47debb19",
+      "bytes": 817
+    },
+    {
+      "path": "/root/DustRoute-minecraft-instrumentation/gradle.properties",
+      "sha256": "bc3b225b1c58f0b6a613a6e3a89abb07267b1ddc50cbf597b7e7eb24a5c5121f",
+      "bytes": 249
+    },
+    {
+      "path": "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/InstrumentationLog.java",
+      "sha256": "4896331f77b7f1be0f5462bfa3e7fada4e4eac510c1bc6f946395ef9c7a719d1",
+      "bytes": 13699
+    },
+    {
+      "path": "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/CaptureController.java",
+      "sha256": "ae6c13af15a194097822f0c4925271575b3df314f296ca46cf8c2570a696d9d8",
+      "bytes": 12383
+    },
+    {
+      "path": "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/mixin/WorldChunkMixin.java",
+      "sha256": "09fa3f45e45007356ba9ddbea246234d0d147a3e4a0028eeb2afbc0ac7219b53",
+      "bytes": 1850
+    },
+    {
+      "path": "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/mixin/ServerWorldMixin.java",
+      "sha256": "c2d11c0129335c36a2d08fd28a3ff51682e28821c7e7b8f62c36bd61ddf2dc39",
+      "bytes": 1966
+    },
+    {
+      "path": "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/mixin/ServerPlayNetworkHandlerMixin.java",
+      "sha256": "51b701457fff1f7c376206c6277c209013d1a5e93e8a33e1c03f682671630807",
+      "bytes": 2440
+    },
+    {
+      "path": "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/mixin/PistonBlockMixin.java",
+      "sha256": "90d4e22e4a7958412f1df8df1e12d9f52655ac71cd0266d787461b27bb853728",
+      "bytes": 1695
+    },
+    {
+      "path": "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/mixin/PistonBlockEntityMixin.java",
+      "sha256": "a2d57320171b6b6979b396bd9b8a62655ce19be9283aaa60a6da6f7d66d6e246",
+      "bytes": 4282
+    },
+    {
+      "path": "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/mixin/ObserverBlockMixin.java",
+      "sha256": "7be6e71ac12bf927e650fdd1f277c774642acaf8227663dfb2ae23755489a0f1",
+      "bytes": 3114
+    }
+  ],
+  "capture_tool_versions": [
+    {
+      "path": ".local/e2e-artifacts/reference-door-short-capture-tool-initial-20260927.py",
+      "sha256": "fb9cdef07e998f512182fa567e03f747285eba1da5ae0cb82d6ea535c823d7b5",
+      "bytes": 10198
+    },
+    {
+      "path": ".local/e2e-artifacts/reference-door-short-capture-tool-preflight-20260927.py",
+      "sha256": "83aca535c7b2cf1c2ef2776959534fa0db19e567912b1042e5015ea23d6999b5",
+      "bytes": 10569
+    }
+  ],
+  "unchanged_adoption_and_exploration_sources": [
+    {
+      "path": "crates/dustroute-translate/src/runtime_behavior.rs",
+      "sha256": "45fea93656f3b4d2c92fd44ed3a4fea85e6c1101529db3985ec0e5c227d1c54f"
+    },
+    {
+      "path": "crates/dustroute-translate/src/runtime_review.rs",
+      "sha256": "369ed319c1211f3c88edbbebdad43e0f57f3571e51269df8f7583a022389cbf9"
+    },
+    {
+      "path": "crates/dustroute-translate/src/blueprint_update.rs",
+      "sha256": "6ea378b0f8217652c1711cbbd4d3f9d1e902713ade16578e5a7b54c73322e7d2"
+    },
+    {
+      "path": "crates/dustroute-translate/src/behavior_type.rs",
+      "sha256": "d76506727e25a74c162c12e54e799e63ee2861ff0948c88aa9d2eef739b14c2e"
+    },
+    {
+      "path": "crates/dustroute-mcp/src/blueprint_mcp.rs",
+      "sha256": "bf2d0e69a846686c4780c9813ab0d992661676d20b63ce1d3a3c46f5d425cc32"
+    }
+  ],
+  "runtime_or_contract_changed": false,
+  "adoption_performed": false,
+  "user_catalog_changed": false,
+  "scope": [
+    "Exact fresh 43-block geometry after strict initialization and warmup; not ordinary construction.",
+    "Actual paired packet/lever-write times at verified after-world-tick boundaries.",
+    "Continuous tick-end states through 80 game ticks after OFF, matched against final whole-region readback after 100 client ticks.",
+    "All ordered palette writes plus the declared ordinary callback/event/carrier projection; not every possible callback or entity interaction.",
+    "Replay from both suspended checkpoint and normalized moving behavior state."
+  ],
+  "limits": [
+    "Six independent single ON/OFF pulses do not prove arbitrary sequences or a safe minimum interval.",
+    "The separate root-model counterexample and all 33 earlier model pulse cases were not individually captured live.",
+    "No reference-door live sequential construction, adoption, MCP placement/readback/undo verification."
+  ],
+  "next_step": "Design an explicit allowed-input/completion protocol, or a new circuit revision, before any substantial implementation. Existing unrestricted requirement remains unchanged."
+}

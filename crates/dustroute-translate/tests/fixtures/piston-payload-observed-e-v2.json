@@ -1,0 +1,6704 @@
+{
+  "schema_version": "dustroute.piston-transient-observation.v2",
+  "run_id": "piston-payload-20260927-e",
+  "minecraft_version": "1.21.11",
+  "classification_after_measured_boundary_replay": "matched_transient_projection",
+  "evidence_boundary": "event/carrier boundaries and ordinary callbacks to active components; whole known block state; not every setter or shape callback",
+  "initial": {
+    "min": {
+      "x": 41147,
+      "y": 180,
+      "z": 995
+    },
+    "max": {
+      "x": 41159,
+      "y": 191,
+      "z": 1005
+    },
+    "blocks": [
+      {
+        "pos": {
+          "x": 41152,
+          "y": 183,
+          "z": 999
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 41152,
+          "y": 184,
+          "z": 999
+        },
+        "name": "minecraft:lever",
+        "properties": {
+          "powered": "false",
+          "facing": "north",
+          "face": "floor"
+        }
+      },
+      {
+        "pos": {
+          "x": 41152,
+          "y": 184,
+          "z": 1000
+        },
+        "name": "minecraft:piston",
+        "properties": {
+          "facing": "east",
+          "extended": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 41153,
+          "y": 183,
+          "z": 1001
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 41153,
+          "y": 184,
+          "z": 1000
+        },
+        "name": "minecraft:sticky_piston",
+        "properties": {
+          "facing": "up",
+          "extended": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 41153,
+          "y": 184,
+          "z": 1001
+        },
+        "name": "minecraft:lever",
+        "properties": {
+          "powered": "false",
+          "facing": "north",
+          "face": "floor"
+        }
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "tick": 1,
+      "position": {
+        "x": 41152,
+        "y": 184,
+        "z": 999
+      },
+      "powered": true,
+      "after_world_tick": true
+    },
+    {
+      "tick": 1,
+      "position": {
+        "x": 41153,
+        "y": 184,
+        "z": 1001
+      },
+      "powered": true,
+      "after_world_tick": true
+    }
+  ],
+  "observed_final": {
+    "min": {
+      "x": 41147,
+      "y": 180,
+      "z": 995
+    },
+    "max": {
+      "x": 41159,
+      "y": 191,
+      "z": 1005
+    },
+    "blocks": [
+      {
+        "pos": {
+          "x": 41152,
+          "y": 183,
+          "z": 999
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 41152,
+          "y": 184,
+          "z": 999
+        },
+        "name": "minecraft:lever",
+        "properties": {
+          "powered": "true",
+          "facing": "north",
+          "face": "floor"
+        }
+      },
+      {
+        "pos": {
+          "x": 41152,
+          "y": 184,
+          "z": 1000
+        },
+        "name": "minecraft:piston",
+        "properties": {
+          "facing": "east",
+          "extended": "true"
+        }
+      },
+      {
+        "pos": {
+          "x": 41153,
+          "y": 183,
+          "z": 1001
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 41153,
+          "y": 184,
+          "z": 1000
+        },
+        "name": "minecraft:piston_head",
+        "properties": {
+          "type": "normal",
+          "short": "false",
+          "facing": "east"
+        }
+      },
+      {
+        "pos": {
+          "x": 41153,
+          "y": 184,
+          "z": 1001
+        },
+        "name": "minecraft:lever",
+        "properties": {
+          "powered": "true",
+          "facing": "north",
+          "face": "floor"
+        }
+      },
+      {
+        "pos": {
+          "x": 41154,
+          "y": 184,
+          "z": 1000
+        },
+        "name": "minecraft:sticky_piston",
+        "properties": {
+          "facing": "up",
+          "extended": "false"
+        }
+      }
+    ]
+  },
+  "observed_events": [
+    {
+      "tick": 1,
+      "kind": "neighbor",
+      "position": [
+        41152,
+        184,
+        1000
+      ],
+      "world": [
+        [
+          [
+            41152,
+            183,
+            999
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            999
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            1000
+          ],
+          [
+            "minecraft:piston",
+            [
+              [
+                "extended",
+                "false"
+              ],
+              [
+                "facing",
+                "east"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            183,
+            1001
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1000
+          ],
+          [
+            "minecraft:sticky_piston",
+            [
+              [
+                "extended",
+                "false"
+              ],
+              [
+                "facing",
+                "up"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1001
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "false"
+              ]
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "tick": 1,
+      "kind": "neighbor",
+      "position": [
+        41152,
+        184,
+        1000
+      ],
+      "world": [
+        [
+          [
+            41152,
+            183,
+            999
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            999
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            1000
+          ],
+          [
+            "minecraft:piston",
+            [
+              [
+                "extended",
+                "false"
+              ],
+              [
+                "facing",
+                "east"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            183,
+            1001
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1000
+          ],
+          [
+            "minecraft:sticky_piston",
+            [
+              [
+                "extended",
+                "false"
+              ],
+              [
+                "facing",
+                "up"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1001
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "false"
+              ]
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "tick": 1,
+      "kind": "neighbor",
+      "position": [
+        41153,
+        184,
+        1000
+      ],
+      "world": [
+        [
+          [
+            41152,
+            183,
+            999
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            999
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            1000
+          ],
+          [
+            "minecraft:piston",
+            [
+              [
+                "extended",
+                "false"
+              ],
+              [
+                "facing",
+                "east"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            183,
+            1001
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1000
+          ],
+          [
+            "minecraft:sticky_piston",
+            [
+              [
+                "extended",
+                "false"
+              ],
+              [
+                "facing",
+                "up"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1001
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "tick": 1,
+      "kind": "neighbor",
+      "position": [
+        41153,
+        184,
+        1000
+      ],
+      "world": [
+        [
+          [
+            41152,
+            183,
+            999
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            999
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            1000
+          ],
+          [
+            "minecraft:piston",
+            [
+              [
+                "extended",
+                "false"
+              ],
+              [
+                "facing",
+                "east"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            183,
+            1001
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1000
+          ],
+          [
+            "minecraft:sticky_piston",
+            [
+              [
+                "extended",
+                "false"
+              ],
+              [
+                "facing",
+                "up"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1001
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "tick": 2,
+      "kind": "event_begin",
+      "position": [
+        41152,
+        184,
+        1000
+      ],
+      "event": 0,
+      "world": [
+        [
+          [
+            41152,
+            183,
+            999
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            999
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            1000
+          ],
+          [
+            "minecraft:piston",
+            [
+              [
+                "extended",
+                "false"
+              ],
+              [
+                "facing",
+                "east"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            183,
+            1001
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1000
+          ],
+          [
+            "minecraft:sticky_piston",
+            [
+              [
+                "extended",
+                "false"
+              ],
+              [
+                "facing",
+                "up"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1001
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "tick": 2,
+      "kind": "neighbor",
+      "position": [
+        41152,
+        184,
+        1000
+      ],
+      "world": [
+        [
+          [
+            41152,
+            183,
+            999
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            999
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            1000
+          ],
+          [
+            "minecraft:piston",
+            [
+              [
+                "extended",
+                "false"
+              ],
+              [
+                "facing",
+                "east"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            183,
+            1001
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1000
+          ],
+          [
+            "minecraft:moving_piston",
+            [
+              [
+                "facing",
+                "east"
+              ],
+              [
+                "type",
+                "normal"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1001
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41154,
+            184,
+            1000
+          ],
+          [
+            "minecraft:moving_piston",
+            [
+              [
+                "facing",
+                "east"
+              ],
+              [
+                "type",
+                "normal"
+              ]
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "tick": 2,
+      "kind": "neighbor",
+      "position": [
+        41154,
+        184,
+        1000
+      ],
+      "world": [
+        [
+          [
+            41152,
+            183,
+            999
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            999
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            1000
+          ],
+          [
+            "minecraft:piston",
+            [
+              [
+                "extended",
+                "false"
+              ],
+              [
+                "facing",
+                "east"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            183,
+            1001
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1000
+          ],
+          [
+            "minecraft:moving_piston",
+            [
+              [
+                "facing",
+                "east"
+              ],
+              [
+                "type",
+                "normal"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1001
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41154,
+            184,
+            1000
+          ],
+          [
+            "minecraft:moving_piston",
+            [
+              [
+                "facing",
+                "east"
+              ],
+              [
+                "type",
+                "normal"
+              ]
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "tick": 2,
+      "kind": "neighbor",
+      "position": [
+        41152,
+        184,
+        1000
+      ],
+      "world": [
+        [
+          [
+            41152,
+            183,
+            999
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            999
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            1000
+          ],
+          [
+            "minecraft:piston",
+            [
+              [
+                "extended",
+                "false"
+              ],
+              [
+                "facing",
+                "east"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            183,
+            1001
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1000
+          ],
+          [
+            "minecraft:moving_piston",
+            [
+              [
+                "facing",
+                "east"
+              ],
+              [
+                "type",
+                "normal"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1001
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41154,
+            184,
+            1000
+          ],
+          [
+            "minecraft:moving_piston",
+            [
+              [
+                "facing",
+                "east"
+              ],
+              [
+                "type",
+                "normal"
+              ]
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "tick": 2,
+      "kind": "neighbor",
+      "position": [
+        41154,
+        184,
+        1000
+      ],
+      "world": [
+        [
+          [
+            41152,
+            183,
+            999
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            999
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            1000
+          ],
+          [
+            "minecraft:piston",
+            [
+              [
+                "extended",
+                "false"
+              ],
+              [
+                "facing",
+                "east"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            183,
+            1001
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1000
+          ],
+          [
+            "minecraft:moving_piston",
+            [
+              [
+                "facing",
+                "east"
+              ],
+              [
+                "type",
+                "normal"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1001
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41154,
+            184,
+            1000
+          ],
+          [
+            "minecraft:moving_piston",
+            [
+              [
+                "facing",
+                "east"
+              ],
+              [
+                "type",
+                "normal"
+              ]
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "tick": 2,
+      "kind": "neighbor",
+      "position": [
+        41153,
+        184,
+        1000
+      ],
+      "world": [
+        [
+          [
+            41152,
+            183,
+            999
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            999
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            1000
+          ],
+          [
+            "minecraft:piston",
+            [
+              [
+                "extended",
+                "true"
+              ],
+              [
+                "facing",
+                "east"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            183,
+            1001
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1000
+          ],
+          [
+            "minecraft:moving_piston",
+            [
+              [
+                "facing",
+                "east"
+              ],
+              [
+                "type",
+                "normal"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1001
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41154,
+            184,
+            1000
+          ],
+          [
+            "minecraft:moving_piston",
+            [
+              [
+                "facing",
+                "east"
+              ],
+              [
+                "type",
+                "normal"
+              ]
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "tick": 2,
+      "kind": "event_end",
+      "position": [
+        41152,
+        184,
+        1000
+      ],
+      "event": 0,
+      "world": [
+        [
+          [
+            41152,
+            183,
+            999
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            999
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            1000
+          ],
+          [
+            "minecraft:piston",
+            [
+              [
+                "extended",
+                "true"
+              ],
+              [
+                "facing",
+                "east"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            183,
+            1001
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1000
+          ],
+          [
+            "minecraft:moving_piston",
+            [
+              [
+                "facing",
+                "east"
+              ],
+              [
+                "type",
+                "normal"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1001
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41154,
+            184,
+            1000
+          ],
+          [
+            "minecraft:moving_piston",
+            [
+              [
+                "facing",
+                "east"
+              ],
+              [
+                "type",
+                "normal"
+              ]
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "tick": 2,
+      "kind": "tick_begin",
+      "position": [
+        41154,
+        184,
+        1000
+      ],
+      "carrier": {
+        "progress": 0.0,
+        "last_progress": 0.0,
+        "saved_world_time": 0,
+        "extending": true,
+        "source": false,
+        "payload": [
+          "minecraft:sticky_piston",
+          [
+            [
+              "extended",
+              "false"
+            ],
+            [
+              "facing",
+              "up"
+            ]
+          ]
+        ]
+      },
+      "world": [
+        [
+          [
+            41152,
+            183,
+            999
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            999
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            1000
+          ],
+          [
+            "minecraft:piston",
+            [
+              [
+                "extended",
+                "true"
+              ],
+              [
+                "facing",
+                "east"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            183,
+            1001
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1000
+          ],
+          [
+            "minecraft:moving_piston",
+            [
+              [
+                "facing",
+                "east"
+              ],
+              [
+                "type",
+                "normal"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1001
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41154,
+            184,
+            1000
+          ],
+          [
+            "minecraft:moving_piston",
+            [
+              [
+                "facing",
+                "east"
+              ],
+              [
+                "type",
+                "normal"
+              ]
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "tick": 2,
+      "kind": "tick_end",
+      "position": [
+        41154,
+        184,
+        1000
+      ],
+      "carrier": {
+        "progress": 0.5,
+        "last_progress": 0.0,
+        "saved_world_time": 2,
+        "extending": true,
+        "source": false,
+        "payload": [
+          "minecraft:sticky_piston",
+          [
+            [
+              "extended",
+              "false"
+            ],
+            [
+              "facing",
+              "up"
+            ]
+          ]
+        ]
+      },
+      "world": [
+        [
+          [
+            41152,
+            183,
+            999
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            999
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            1000
+          ],
+          [
+            "minecraft:piston",
+            [
+              [
+                "extended",
+                "true"
+              ],
+              [
+                "facing",
+                "east"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            183,
+            1001
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1000
+          ],
+          [
+            "minecraft:moving_piston",
+            [
+              [
+                "facing",
+                "east"
+              ],
+              [
+                "type",
+                "normal"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1001
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41154,
+            184,
+            1000
+          ],
+          [
+            "minecraft:moving_piston",
+            [
+              [
+                "facing",
+                "east"
+              ],
+              [
+                "type",
+                "normal"
+              ]
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "tick": 2,
+      "kind": "tick_begin",
+      "position": [
+        41153,
+        184,
+        1000
+      ],
+      "carrier": {
+        "progress": 0.0,
+        "last_progress": 0.0,
+        "saved_world_time": 0,
+        "extending": true,
+        "source": true,
+        "payload": [
+          "minecraft:piston_head",
+          [
+            [
+              "facing",
+              "east"
+            ],
+            [
+              "short",
+              "false"
+            ],
+            [
+              "type",
+              "normal"
+            ]
+          ]
+        ]
+      },
+      "world": [
+        [
+          [
+            41152,
+            183,
+            999
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            999
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            1000
+          ],
+          [
+            "minecraft:piston",
+            [
+              [
+                "extended",
+                "true"
+              ],
+              [
+                "facing",
+                "east"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            183,
+            1001
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1000
+          ],
+          [
+            "minecraft:moving_piston",
+            [
+              [
+                "facing",
+                "east"
+              ],
+              [
+                "type",
+                "normal"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1001
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41154,
+            184,
+            1000
+          ],
+          [
+            "minecraft:moving_piston",
+            [
+              [
+                "facing",
+                "east"
+              ],
+              [
+                "type",
+                "normal"
+              ]
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "tick": 2,
+      "kind": "tick_end",
+      "position": [
+        41153,
+        184,
+        1000
+      ],
+      "carrier": {
+        "progress": 0.5,
+        "last_progress": 0.0,
+        "saved_world_time": 2,
+        "extending": true,
+        "source": true,
+        "payload": [
+          "minecraft:piston_head",
+          [
+            [
+              "facing",
+              "east"
+            ],
+            [
+              "short",
+              "false"
+            ],
+            [
+              "type",
+              "normal"
+            ]
+          ]
+        ]
+      },
+      "world": [
+        [
+          [
+            41152,
+            183,
+            999
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            999
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            1000
+          ],
+          [
+            "minecraft:piston",
+            [
+              [
+                "extended",
+                "true"
+              ],
+              [
+                "facing",
+                "east"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            183,
+            1001
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1000
+          ],
+          [
+            "minecraft:moving_piston",
+            [
+              [
+                "facing",
+                "east"
+              ],
+              [
+                "type",
+                "normal"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1001
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41154,
+            184,
+            1000
+          ],
+          [
+            "minecraft:moving_piston",
+            [
+              [
+                "facing",
+                "east"
+              ],
+              [
+                "type",
+                "normal"
+              ]
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "tick": 3,
+      "kind": "tick_begin",
+      "position": [
+        41154,
+        184,
+        1000
+      ],
+      "carrier": {
+        "progress": 0.5,
+        "last_progress": 0.0,
+        "saved_world_time": 2,
+        "extending": true,
+        "source": false,
+        "payload": [
+          "minecraft:sticky_piston",
+          [
+            [
+              "extended",
+              "false"
+            ],
+            [
+              "facing",
+              "up"
+            ]
+          ]
+        ]
+      },
+      "world": [
+        [
+          [
+            41152,
+            183,
+            999
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            999
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            1000
+          ],
+          [
+            "minecraft:piston",
+            [
+              [
+                "extended",
+                "true"
+              ],
+              [
+                "facing",
+                "east"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            183,
+            1001
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1000
+          ],
+          [
+            "minecraft:moving_piston",
+            [
+              [
+                "facing",
+                "east"
+              ],
+              [
+                "type",
+                "normal"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1001
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41154,
+            184,
+            1000
+          ],
+          [
+            "minecraft:moving_piston",
+            [
+              [
+                "facing",
+                "east"
+              ],
+              [
+                "type",
+                "normal"
+              ]
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "tick": 3,
+      "kind": "tick_end",
+      "position": [
+        41154,
+        184,
+        1000
+      ],
+      "carrier": {
+        "progress": 1.0,
+        "last_progress": 0.5,
+        "saved_world_time": 3,
+        "extending": true,
+        "source": false,
+        "payload": [
+          "minecraft:sticky_piston",
+          [
+            [
+              "extended",
+              "false"
+            ],
+            [
+              "facing",
+              "up"
+            ]
+          ]
+        ]
+      },
+      "world": [
+        [
+          [
+            41152,
+            183,
+            999
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            999
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            1000
+          ],
+          [
+            "minecraft:piston",
+            [
+              [
+                "extended",
+                "true"
+              ],
+              [
+                "facing",
+                "east"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            183,
+            1001
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1000
+          ],
+          [
+            "minecraft:moving_piston",
+            [
+              [
+                "facing",
+                "east"
+              ],
+              [
+                "type",
+                "normal"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1001
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41154,
+            184,
+            1000
+          ],
+          [
+            "minecraft:moving_piston",
+            [
+              [
+                "facing",
+                "east"
+              ],
+              [
+                "type",
+                "normal"
+              ]
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "tick": 3,
+      "kind": "tick_begin",
+      "position": [
+        41153,
+        184,
+        1000
+      ],
+      "carrier": {
+        "progress": 0.5,
+        "last_progress": 0.0,
+        "saved_world_time": 2,
+        "extending": true,
+        "source": true,
+        "payload": [
+          "minecraft:piston_head",
+          [
+            [
+              "facing",
+              "east"
+            ],
+            [
+              "short",
+              "false"
+            ],
+            [
+              "type",
+              "normal"
+            ]
+          ]
+        ]
+      },
+      "world": [
+        [
+          [
+            41152,
+            183,
+            999
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            999
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            1000
+          ],
+          [
+            "minecraft:piston",
+            [
+              [
+                "extended",
+                "true"
+              ],
+              [
+                "facing",
+                "east"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            183,
+            1001
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1000
+          ],
+          [
+            "minecraft:moving_piston",
+            [
+              [
+                "facing",
+                "east"
+              ],
+              [
+                "type",
+                "normal"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1001
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41154,
+            184,
+            1000
+          ],
+          [
+            "minecraft:moving_piston",
+            [
+              [
+                "facing",
+                "east"
+              ],
+              [
+                "type",
+                "normal"
+              ]
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "tick": 3,
+      "kind": "tick_end",
+      "position": [
+        41153,
+        184,
+        1000
+      ],
+      "carrier": {
+        "progress": 1.0,
+        "last_progress": 0.5,
+        "saved_world_time": 3,
+        "extending": true,
+        "source": true,
+        "payload": [
+          "minecraft:piston_head",
+          [
+            [
+              "facing",
+              "east"
+            ],
+            [
+              "short",
+              "false"
+            ],
+            [
+              "type",
+              "normal"
+            ]
+          ]
+        ]
+      },
+      "world": [
+        [
+          [
+            41152,
+            183,
+            999
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            999
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            1000
+          ],
+          [
+            "minecraft:piston",
+            [
+              [
+                "extended",
+                "true"
+              ],
+              [
+                "facing",
+                "east"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            183,
+            1001
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1000
+          ],
+          [
+            "minecraft:moving_piston",
+            [
+              [
+                "facing",
+                "east"
+              ],
+              [
+                "type",
+                "normal"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1001
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41154,
+            184,
+            1000
+          ],
+          [
+            "minecraft:moving_piston",
+            [
+              [
+                "facing",
+                "east"
+              ],
+              [
+                "type",
+                "normal"
+              ]
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "tick": 4,
+      "kind": "tick_begin",
+      "position": [
+        41154,
+        184,
+        1000
+      ],
+      "carrier": {
+        "progress": 1.0,
+        "last_progress": 0.5,
+        "saved_world_time": 3,
+        "extending": true,
+        "source": false,
+        "payload": [
+          "minecraft:sticky_piston",
+          [
+            [
+              "extended",
+              "false"
+            ],
+            [
+              "facing",
+              "up"
+            ]
+          ]
+        ]
+      },
+      "world": [
+        [
+          [
+            41152,
+            183,
+            999
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            999
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            1000
+          ],
+          [
+            "minecraft:piston",
+            [
+              [
+                "extended",
+                "true"
+              ],
+              [
+                "facing",
+                "east"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            183,
+            1001
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1000
+          ],
+          [
+            "minecraft:moving_piston",
+            [
+              [
+                "facing",
+                "east"
+              ],
+              [
+                "type",
+                "normal"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1001
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41154,
+            184,
+            1000
+          ],
+          [
+            "minecraft:moving_piston",
+            [
+              [
+                "facing",
+                "east"
+              ],
+              [
+                "type",
+                "normal"
+              ]
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "tick": 4,
+      "kind": "neighbor",
+      "position": [
+        41153,
+        184,
+        1000
+      ],
+      "world": [
+        [
+          [
+            41152,
+            183,
+            999
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            999
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            1000
+          ],
+          [
+            "minecraft:piston",
+            [
+              [
+                "extended",
+                "true"
+              ],
+              [
+                "facing",
+                "east"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            183,
+            1001
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1000
+          ],
+          [
+            "minecraft:moving_piston",
+            [
+              [
+                "facing",
+                "east"
+              ],
+              [
+                "type",
+                "normal"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1001
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41154,
+            184,
+            1000
+          ],
+          [
+            "minecraft:sticky_piston",
+            [
+              [
+                "extended",
+                "false"
+              ],
+              [
+                "facing",
+                "up"
+              ]
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "tick": 4,
+      "kind": "neighbor",
+      "position": [
+        41154,
+        184,
+        1000
+      ],
+      "world": [
+        [
+          [
+            41152,
+            183,
+            999
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            999
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            1000
+          ],
+          [
+            "minecraft:piston",
+            [
+              [
+                "extended",
+                "true"
+              ],
+              [
+                "facing",
+                "east"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            183,
+            1001
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1000
+          ],
+          [
+            "minecraft:moving_piston",
+            [
+              [
+                "facing",
+                "east"
+              ],
+              [
+                "type",
+                "normal"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1001
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41154,
+            184,
+            1000
+          ],
+          [
+            "minecraft:sticky_piston",
+            [
+              [
+                "extended",
+                "false"
+              ],
+              [
+                "facing",
+                "up"
+              ]
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "tick": 4,
+      "kind": "tick_end",
+      "position": [
+        41154,
+        184,
+        1000
+      ],
+      "carrier": null,
+      "world": [
+        [
+          [
+            41152,
+            183,
+            999
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            999
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            1000
+          ],
+          [
+            "minecraft:piston",
+            [
+              [
+                "extended",
+                "true"
+              ],
+              [
+                "facing",
+                "east"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            183,
+            1001
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1000
+          ],
+          [
+            "minecraft:moving_piston",
+            [
+              [
+                "facing",
+                "east"
+              ],
+              [
+                "type",
+                "normal"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1001
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41154,
+            184,
+            1000
+          ],
+          [
+            "minecraft:sticky_piston",
+            [
+              [
+                "extended",
+                "false"
+              ],
+              [
+                "facing",
+                "up"
+              ]
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "tick": 4,
+      "kind": "tick_begin",
+      "position": [
+        41153,
+        184,
+        1000
+      ],
+      "carrier": {
+        "progress": 1.0,
+        "last_progress": 0.5,
+        "saved_world_time": 3,
+        "extending": true,
+        "source": true,
+        "payload": [
+          "minecraft:piston_head",
+          [
+            [
+              "facing",
+              "east"
+            ],
+            [
+              "short",
+              "false"
+            ],
+            [
+              "type",
+              "normal"
+            ]
+          ]
+        ]
+      },
+      "world": [
+        [
+          [
+            41152,
+            183,
+            999
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            999
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            1000
+          ],
+          [
+            "minecraft:piston",
+            [
+              [
+                "extended",
+                "true"
+              ],
+              [
+                "facing",
+                "east"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            183,
+            1001
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1000
+          ],
+          [
+            "minecraft:moving_piston",
+            [
+              [
+                "facing",
+                "east"
+              ],
+              [
+                "type",
+                "normal"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1001
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41154,
+            184,
+            1000
+          ],
+          [
+            "minecraft:sticky_piston",
+            [
+              [
+                "extended",
+                "false"
+              ],
+              [
+                "facing",
+                "up"
+              ]
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "tick": 4,
+      "kind": "neighbor",
+      "position": [
+        41152,
+        184,
+        1000
+      ],
+      "world": [
+        [
+          [
+            41152,
+            183,
+            999
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            999
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            1000
+          ],
+          [
+            "minecraft:piston",
+            [
+              [
+                "extended",
+                "true"
+              ],
+              [
+                "facing",
+                "east"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            183,
+            1001
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1000
+          ],
+          [
+            "minecraft:piston_head",
+            [
+              [
+                "facing",
+                "east"
+              ],
+              [
+                "short",
+                "false"
+              ],
+              [
+                "type",
+                "normal"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1001
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41154,
+            184,
+            1000
+          ],
+          [
+            "minecraft:sticky_piston",
+            [
+              [
+                "extended",
+                "false"
+              ],
+              [
+                "facing",
+                "up"
+              ]
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "tick": 4,
+      "kind": "neighbor",
+      "position": [
+        41154,
+        184,
+        1000
+      ],
+      "world": [
+        [
+          [
+            41152,
+            183,
+            999
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            999
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            1000
+          ],
+          [
+            "minecraft:piston",
+            [
+              [
+                "extended",
+                "true"
+              ],
+              [
+                "facing",
+                "east"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            183,
+            1001
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1000
+          ],
+          [
+            "minecraft:piston_head",
+            [
+              [
+                "facing",
+                "east"
+              ],
+              [
+                "short",
+                "false"
+              ],
+              [
+                "type",
+                "normal"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1001
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41154,
+            184,
+            1000
+          ],
+          [
+            "minecraft:sticky_piston",
+            [
+              [
+                "extended",
+                "false"
+              ],
+              [
+                "facing",
+                "up"
+              ]
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "tick": 4,
+      "kind": "neighbor",
+      "position": [
+        41153,
+        184,
+        1000
+      ],
+      "world": [
+        [
+          [
+            41152,
+            183,
+            999
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            999
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            1000
+          ],
+          [
+            "minecraft:piston",
+            [
+              [
+                "extended",
+                "true"
+              ],
+              [
+                "facing",
+                "east"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            183,
+            1001
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1000
+          ],
+          [
+            "minecraft:piston_head",
+            [
+              [
+                "facing",
+                "east"
+              ],
+              [
+                "short",
+                "false"
+              ],
+              [
+                "type",
+                "normal"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1001
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41154,
+            184,
+            1000
+          ],
+          [
+            "minecraft:sticky_piston",
+            [
+              [
+                "extended",
+                "false"
+              ],
+              [
+                "facing",
+                "up"
+              ]
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "tick": 4,
+      "kind": "neighbor",
+      "position": [
+        41152,
+        184,
+        1000
+      ],
+      "world": [
+        [
+          [
+            41152,
+            183,
+            999
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            999
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            1000
+          ],
+          [
+            "minecraft:piston",
+            [
+              [
+                "extended",
+                "true"
+              ],
+              [
+                "facing",
+                "east"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            183,
+            1001
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1000
+          ],
+          [
+            "minecraft:piston_head",
+            [
+              [
+                "facing",
+                "east"
+              ],
+              [
+                "short",
+                "false"
+              ],
+              [
+                "type",
+                "normal"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1001
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41154,
+            184,
+            1000
+          ],
+          [
+            "minecraft:sticky_piston",
+            [
+              [
+                "extended",
+                "false"
+              ],
+              [
+                "facing",
+                "up"
+              ]
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "tick": 4,
+      "kind": "tick_end",
+      "position": [
+        41153,
+        184,
+        1000
+      ],
+      "carrier": null,
+      "world": [
+        [
+          [
+            41152,
+            183,
+            999
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            999
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41152,
+            184,
+            1000
+          ],
+          [
+            "minecraft:piston",
+            [
+              [
+                "extended",
+                "true"
+              ],
+              [
+                "facing",
+                "east"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            183,
+            1001
+          ],
+          [
+            "minecraft:stone",
+            []
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1000
+          ],
+          [
+            "minecraft:piston_head",
+            [
+              [
+                "facing",
+                "east"
+              ],
+              [
+                "short",
+                "false"
+              ],
+              [
+                "type",
+                "normal"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41153,
+            184,
+            1001
+          ],
+          [
+            "minecraft:lever",
+            [
+              [
+                "face",
+                "floor"
+              ],
+              [
+                "facing",
+                "north"
+              ],
+              [
+                "powered",
+                "true"
+              ]
+            ]
+          ]
+        ],
+        [
+          [
+            41154,
+            184,
+            1000
+          ],
+          [
+            "minecraft:sticky_piston",
+            [
+              [
+                "extended",
+                "false"
+              ],
+              [
+                "facing",
+                "up"
+              ]
+            ]
+          ]
+        ]
+      ]
+    }
+  ],
+  "applied_inputs": [
+    {
+      "position": {
+        "x": 41152,
+        "y": 184,
+        "z": 999
+      },
+      "powered": true,
+      "game_tick": 61499,
+      "packet_sequence": 1839,
+      "write_sequence": 1847
+    },
+    {
+      "position": {
+        "x": 41153,
+        "y": 184,
+        "z": 1001
+      },
+      "powered": true,
+      "game_tick": 61499,
+      "packet_sequence": 1861,
+      "write_sequence": 1869
+    }
+  ],
+  "cleanup": {
+    "region_empty": true,
+    "force_load_removed": true,
+    "disconnected_before_finish": null
+  },
+  "raw_window": [
+    {
+      "kind": "artifact_start",
+      "schema": "dustroute.vanilla-instrumentation.v1",
+      "minecraft_version": "1.21.11",
+      "started_at": "2026-09-27T05:01:50.224092564Z",
+      "transient_trace": "dustroute.piston-transient.v1",
+      "trace_bounds": "41147,180,995,41159,191,1005",
+      "capture_mode": "bounded",
+      "max_ticks_after_input": 100,
+      "pre_roll_ticks": 2,
+      "drain_ticks": 2,
+      "heartbeat_mode": "full"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 1830,
+      "dimension": "minecraft:overworld",
+      "game_tick": 61499,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 1831,
+      "dimension": "minecraft:the_end",
+      "game_tick": 61499,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 1832,
+      "dimension": "minecraft:the_end",
+      "scheduler": "block",
+      "time": 61499,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 1833,
+      "dimension": "minecraft:the_end",
+      "scheduler": "fluid",
+      "time": 61499,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 1834,
+      "dimension": "minecraft:the_end",
+      "game_tick": 61499,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 1835,
+      "dimension": "minecraft:the_nether",
+      "game_tick": 61499,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 1836,
+      "dimension": "minecraft:the_nether",
+      "scheduler": "block",
+      "time": 61499,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 1837,
+      "dimension": "minecraft:the_nether",
+      "scheduler": "fluid",
+      "time": 61499,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 1838,
+      "dimension": "minecraft:the_nether",
+      "game_tick": 61499,
+      "phase": "end"
+    },
+    {
+      "kind": "input_packet",
+      "sequence": 1839,
+      "game_tick": 61499,
+      "dimension": "minecraft:overworld",
+      "input_kind": "player_interact_block",
+      "position": "BlockPos{x=41152, y=184, z=999}",
+      "hand": "MAIN_HAND",
+      "packet_sequence": 1
+    },
+    {
+      "kind": "state_commit",
+      "sequence": 1840,
+      "game_tick": 61499,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41152, y=184, z=999}",
+      "before": "Block{minecraft:lever}[face=floor,facing=north,powered=false]",
+      "after": "Block{minecraft:lever}[face=floor,facing=north,powered=true]",
+      "flags": 3
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1841,
+      "game_tick": 61499,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41151, y=184, z=999}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:lever",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1842,
+      "game_tick": 61499,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=184, z=999}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:lever",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1843,
+      "game_tick": 61499,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41152, y=183, z=999}",
+      "target": "Block{minecraft:stone}",
+      "source_block": "minecraft:lever",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1844,
+      "game_tick": 61499,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41152, y=185, z=999}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:lever",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1845,
+      "game_tick": 61499,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41152, y=184, z=998}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:lever",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1846,
+      "game_tick": 61499,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41152, y=184, z=1000}",
+      "target": "Block{minecraft:piston}[extended=false,facing=east]",
+      "source_block": "minecraft:lever",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "block_state_change",
+      "sequence": 1847,
+      "game_tick": 61499,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41152, y=184, z=999}",
+      "before": "Block{minecraft:lever}[face=floor,facing=north,powered=false]",
+      "after": "Block{minecraft:lever}[face=floor,facing=north,powered=true]",
+      "changed": true,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1848,
+      "game_tick": 61499,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41151, y=184, z=999}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:lever",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1849,
+      "game_tick": 61499,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=184, z=999}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:lever",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1850,
+      "game_tick": 61499,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41152, y=183, z=999}",
+      "target": "Block{minecraft:stone}",
+      "source_block": "minecraft:lever",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1851,
+      "game_tick": 61499,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41152, y=185, z=999}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:lever",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1852,
+      "game_tick": 61499,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41152, y=184, z=998}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:lever",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1853,
+      "game_tick": 61499,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41152, y=184, z=1000}",
+      "target": "Block{minecraft:piston}[extended=false,facing=east]",
+      "source_block": "minecraft:lever",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1854,
+      "game_tick": 61499,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41151, y=183, z=999}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:lever",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1855,
+      "game_tick": 61499,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=183, z=999}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:lever",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1856,
+      "game_tick": 61499,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41152, y=182, z=999}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:lever",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1857,
+      "game_tick": 61499,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41152, y=184, z=999}",
+      "target": "Block{minecraft:lever}[face=floor,facing=north,powered=true]",
+      "source_block": "minecraft:lever",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1858,
+      "game_tick": 61499,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41152, y=183, z=998}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:lever",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1859,
+      "game_tick": 61499,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41152, y=183, z=1000}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:lever",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "outbound_block_update",
+      "sequence": 1860,
+      "game_tick": 61499,
+      "dimension": "minecraft:overworld",
+      "packet_type": "BlockUpdateS2CPacket",
+      "position": "BlockPos{x=41152, y=184, z=999}",
+      "state": "Block{minecraft:lever}[face=floor,facing=north,powered=true]",
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "input_packet",
+      "sequence": 1861,
+      "game_tick": 61499,
+      "dimension": "minecraft:overworld",
+      "input_kind": "player_interact_block",
+      "position": "BlockPos{x=41153, y=184, z=1001}",
+      "hand": "MAIN_HAND",
+      "packet_sequence": 2
+    },
+    {
+      "kind": "state_commit",
+      "sequence": 1862,
+      "game_tick": 61499,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=184, z=1001}",
+      "before": "Block{minecraft:lever}[face=floor,facing=north,powered=false]",
+      "after": "Block{minecraft:lever}[face=floor,facing=north,powered=true]",
+      "flags": 3
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1863,
+      "game_tick": 61499,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41152, y=184, z=1001}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:lever",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1864,
+      "game_tick": 61499,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41154, y=184, z=1001}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:lever",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1865,
+      "game_tick": 61499,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=183, z=1001}",
+      "target": "Block{minecraft:stone}",
+      "source_block": "minecraft:lever",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1866,
+      "game_tick": 61499,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=185, z=1001}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:lever",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1867,
+      "game_tick": 61499,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=184, z=1000}",
+      "target": "Block{minecraft:sticky_piston}[extended=false,facing=up]",
+      "source_block": "minecraft:lever",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1868,
+      "game_tick": 61499,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=184, z=1002}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:lever",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "block_state_change",
+      "sequence": 1869,
+      "game_tick": 61499,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=184, z=1001}",
+      "before": "Block{minecraft:lever}[face=floor,facing=north,powered=false]",
+      "after": "Block{minecraft:lever}[face=floor,facing=north,powered=true]",
+      "changed": true,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1870,
+      "game_tick": 61499,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41152, y=184, z=1001}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:lever",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1871,
+      "game_tick": 61499,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41154, y=184, z=1001}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:lever",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1872,
+      "game_tick": 61499,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=183, z=1001}",
+      "target": "Block{minecraft:stone}",
+      "source_block": "minecraft:lever",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1873,
+      "game_tick": 61499,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=185, z=1001}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:lever",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1874,
+      "game_tick": 61499,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=184, z=1000}",
+      "target": "Block{minecraft:sticky_piston}[extended=false,facing=up]",
+      "source_block": "minecraft:lever",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1875,
+      "game_tick": 61499,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=184, z=1002}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:lever",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1876,
+      "game_tick": 61499,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41152, y=183, z=1001}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:lever",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1877,
+      "game_tick": 61499,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41154, y=183, z=1001}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:lever",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1878,
+      "game_tick": 61499,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=182, z=1001}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:lever",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1879,
+      "game_tick": 61499,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=184, z=1001}",
+      "target": "Block{minecraft:lever}[face=floor,facing=north,powered=true]",
+      "source_block": "minecraft:lever",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1880,
+      "game_tick": 61499,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=183, z=1000}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:lever",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1881,
+      "game_tick": 61499,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=183, z=1002}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:lever",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "outbound_block_update",
+      "sequence": 1882,
+      "game_tick": 61499,
+      "dimension": "minecraft:overworld",
+      "packet_type": "BlockUpdateS2CPacket",
+      "position": "BlockPos{x=41153, y=184, z=1001}",
+      "state": "Block{minecraft:lever}[face=floor,facing=north,powered=true]",
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 1883,
+      "dimension": "minecraft:overworld",
+      "game_tick": 61499,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 1884,
+      "dimension": "minecraft:overworld",
+      "scheduler": "block",
+      "time": 61500,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 1885,
+      "dimension": "minecraft:overworld",
+      "scheduler": "fluid",
+      "time": 61500,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "outbound_block_update",
+      "sequence": 1886,
+      "game_tick": 61500,
+      "dimension": "minecraft:overworld",
+      "packet_type": "ChunkDeltaUpdateS2CPacket",
+      "position": "Mutable{x=41152, y=184, z=999}",
+      "state": "Block{minecraft:lever}[face=floor,facing=north,powered=true]",
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "outbound_block_update",
+      "sequence": 1887,
+      "game_tick": 61500,
+      "dimension": "minecraft:overworld",
+      "packet_type": "ChunkDeltaUpdateS2CPacket",
+      "position": "Mutable{x=41153, y=184, z=1001}",
+      "state": "Block{minecraft:lever}[face=floor,facing=north,powered=true]",
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "piston_event",
+      "sequence": 1888,
+      "game_tick": 61500,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41152, y=184, z=1000}",
+      "event_type": 0,
+      "event_data": 5,
+      "stage": "begin",
+      "result": null
+    },
+    {
+      "kind": "state_commit",
+      "sequence": 1889,
+      "game_tick": 61500,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41154, y=184, z=1000}",
+      "before": "Block{minecraft:air}",
+      "after": "Block{minecraft:moving_piston}[facing=east,type=normal]",
+      "flags": 324
+    },
+    {
+      "kind": "block_state_change",
+      "sequence": 1890,
+      "game_tick": 61500,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41154, y=184, z=1000}",
+      "before": "Block{minecraft:air}",
+      "after": "Block{minecraft:moving_piston}[facing=east,type=normal]",
+      "changed": true,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "state_commit",
+      "sequence": 1891,
+      "game_tick": 61500,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=184, z=1000}",
+      "before": "Block{minecraft:sticky_piston}[extended=false,facing=up]",
+      "after": "Block{minecraft:moving_piston}[facing=east,type=normal]",
+      "flags": 324
+    },
+    {
+      "kind": "block_state_change",
+      "sequence": 1892,
+      "game_tick": 61500,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=184, z=1000}",
+      "before": "Block{minecraft:sticky_piston}[extended=false,facing=up]",
+      "after": "Block{minecraft:moving_piston}[facing=east,type=normal]",
+      "changed": true,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1893,
+      "game_tick": 61500,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41152, y=184, z=1000}",
+      "target": "Block{minecraft:piston}[extended=false,facing=east]",
+      "source_block": "minecraft:sticky_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1894,
+      "game_tick": 61500,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41154, y=184, z=1000}",
+      "target": "Block{minecraft:moving_piston}[facing=east,type=normal]",
+      "source_block": "minecraft:sticky_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1895,
+      "game_tick": 61500,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=183, z=1000}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:sticky_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1896,
+      "game_tick": 61500,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=185, z=1000}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:sticky_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1897,
+      "game_tick": 61500,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=184, z=999}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:sticky_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1898,
+      "game_tick": 61500,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=184, z=1001}",
+      "target": "Block{minecraft:lever}[face=floor,facing=north,powered=true]",
+      "source_block": "minecraft:sticky_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1899,
+      "game_tick": 61500,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41152, y=184, z=1000}",
+      "target": "Block{minecraft:piston}[extended=false,facing=east]",
+      "source_block": "minecraft:piston_head",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1900,
+      "game_tick": 61500,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41154, y=184, z=1000}",
+      "target": "Block{minecraft:moving_piston}[facing=east,type=normal]",
+      "source_block": "minecraft:piston_head",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1901,
+      "game_tick": 61500,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=183, z=1000}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:piston_head",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1902,
+      "game_tick": 61500,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=185, z=1000}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:piston_head",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1903,
+      "game_tick": 61500,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=184, z=999}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:piston_head",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1904,
+      "game_tick": 61500,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=184, z=1001}",
+      "target": "Block{minecraft:lever}[face=floor,facing=north,powered=true]",
+      "source_block": "minecraft:piston_head",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "state_commit",
+      "sequence": 1905,
+      "game_tick": 61500,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41152, y=184, z=1000}",
+      "before": "Block{minecraft:piston}[extended=false,facing=east]",
+      "after": "Block{minecraft:piston}[extended=true,facing=east]",
+      "flags": 67
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1906,
+      "game_tick": 61500,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41151, y=184, z=1000}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1907,
+      "game_tick": 61500,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=184, z=1000}",
+      "target": "Block{minecraft:moving_piston}[facing=east,type=normal]",
+      "source_block": "minecraft:piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1908,
+      "game_tick": 61500,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41152, y=183, z=1000}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1909,
+      "game_tick": 61500,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41152, y=185, z=1000}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1910,
+      "game_tick": 61500,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41152, y=184, z=999}",
+      "target": "Block{minecraft:lever}[face=floor,facing=north,powered=true]",
+      "source_block": "minecraft:piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1911,
+      "game_tick": 61500,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41152, y=184, z=1001}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "block_state_change",
+      "sequence": 1912,
+      "game_tick": 61500,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41152, y=184, z=1000}",
+      "before": "Block{minecraft:piston}[extended=false,facing=east]",
+      "after": "Block{minecraft:piston}[extended=true,facing=east]",
+      "changed": true,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "piston_event",
+      "sequence": 1913,
+      "game_tick": 61500,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41152, y=184, z=1000}",
+      "event_type": 0,
+      "event_data": 5,
+      "stage": "end",
+      "result": true
+    },
+    {
+      "kind": "carrier_trace",
+      "sequence": 1914,
+      "game_tick": 61500,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41154, y=184, z=1000}",
+      "operation": "tick",
+      "stage": "begin",
+      "progress": 0.0,
+      "last_progress": 0.0,
+      "saved_world_time": 0,
+      "extending": true,
+      "source": false,
+      "removed": false,
+      "payload": "Block{minecraft:sticky_piston}[extended=false,facing=up]",
+      "state": "Block{minecraft:moving_piston}[facing=east,type=normal]"
+    },
+    {
+      "kind": "piston_state",
+      "sequence": 1915,
+      "game_tick": 61500,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41154, y=184, z=1000}",
+      "phase": "moving_begin",
+      "body": "Block{minecraft:moving_piston}[facing=east,type=normal]",
+      "pushed_block": "Block{minecraft:sticky_piston}[extended=false,facing=up]",
+      "extending": true,
+      "source": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "piston_state",
+      "sequence": 1916,
+      "game_tick": 61500,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41154, y=184, z=1000}",
+      "phase": "moving_end",
+      "body": "Block{minecraft:moving_piston}[facing=east,type=normal]",
+      "pushed_block": "Block{minecraft:sticky_piston}[extended=false,facing=up]",
+      "extending": true,
+      "source": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "carrier_trace",
+      "sequence": 1917,
+      "game_tick": 61500,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41154, y=184, z=1000}",
+      "operation": "tick",
+      "stage": "end",
+      "progress": 0.5,
+      "last_progress": 0.0,
+      "saved_world_time": 61500,
+      "extending": true,
+      "source": false,
+      "removed": false,
+      "payload": "Block{minecraft:sticky_piston}[extended=false,facing=up]",
+      "state": "Block{minecraft:moving_piston}[facing=east,type=normal]"
+    },
+    {
+      "kind": "carrier_trace",
+      "sequence": 1918,
+      "game_tick": 61500,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=184, z=1000}",
+      "operation": "tick",
+      "stage": "begin",
+      "progress": 0.0,
+      "last_progress": 0.0,
+      "saved_world_time": 0,
+      "extending": true,
+      "source": true,
+      "removed": false,
+      "payload": "Block{minecraft:piston_head}[facing=east,short=false,type=normal]",
+      "state": "Block{minecraft:moving_piston}[facing=east,type=normal]"
+    },
+    {
+      "kind": "piston_state",
+      "sequence": 1919,
+      "game_tick": 61500,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=184, z=1000}",
+      "phase": "moving_begin",
+      "body": "Block{minecraft:moving_piston}[facing=east,type=normal]",
+      "pushed_block": "Block{minecraft:piston_head}[facing=east,short=false,type=normal]",
+      "extending": true,
+      "source": true,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "piston_state",
+      "sequence": 1920,
+      "game_tick": 61500,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=184, z=1000}",
+      "phase": "moving_end",
+      "body": "Block{minecraft:moving_piston}[facing=east,type=normal]",
+      "pushed_block": "Block{minecraft:piston_head}[facing=east,short=false,type=normal]",
+      "extending": true,
+      "source": true,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "carrier_trace",
+      "sequence": 1921,
+      "game_tick": 61500,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=184, z=1000}",
+      "operation": "tick",
+      "stage": "end",
+      "progress": 0.5,
+      "last_progress": 0.0,
+      "saved_world_time": 61500,
+      "extending": true,
+      "source": true,
+      "removed": false,
+      "payload": "Block{minecraft:piston_head}[facing=east,short=false,type=normal]",
+      "state": "Block{minecraft:moving_piston}[facing=east,type=normal]"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 1922,
+      "dimension": "minecraft:overworld",
+      "game_tick": 61500,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 1923,
+      "dimension": "minecraft:the_end",
+      "game_tick": 61500,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 1924,
+      "dimension": "minecraft:the_end",
+      "scheduler": "block",
+      "time": 61500,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 1925,
+      "dimension": "minecraft:the_end",
+      "scheduler": "fluid",
+      "time": 61500,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 1926,
+      "dimension": "minecraft:the_end",
+      "game_tick": 61500,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 1927,
+      "dimension": "minecraft:the_nether",
+      "game_tick": 61500,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 1928,
+      "dimension": "minecraft:the_nether",
+      "scheduler": "block",
+      "time": 61500,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 1929,
+      "dimension": "minecraft:the_nether",
+      "scheduler": "fluid",
+      "time": 61500,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 1930,
+      "dimension": "minecraft:the_nether",
+      "game_tick": 61500,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 1931,
+      "dimension": "minecraft:overworld",
+      "game_tick": 61500,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 1932,
+      "dimension": "minecraft:overworld",
+      "scheduler": "block",
+      "time": 61501,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 1933,
+      "dimension": "minecraft:overworld",
+      "scheduler": "fluid",
+      "time": 61501,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "outbound_block_update",
+      "sequence": 1934,
+      "game_tick": 61501,
+      "dimension": "minecraft:overworld",
+      "packet_type": "BlockUpdateS2CPacket",
+      "position": "BlockPos{x=41152, y=184, z=1000}",
+      "state": "Block{minecraft:piston}[extended=true,facing=east]",
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "carrier_trace",
+      "sequence": 1935,
+      "game_tick": 61501,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41154, y=184, z=1000}",
+      "operation": "tick",
+      "stage": "begin",
+      "progress": 0.5,
+      "last_progress": 0.0,
+      "saved_world_time": 61500,
+      "extending": true,
+      "source": false,
+      "removed": false,
+      "payload": "Block{minecraft:sticky_piston}[extended=false,facing=up]",
+      "state": "Block{minecraft:moving_piston}[facing=east,type=normal]"
+    },
+    {
+      "kind": "piston_state",
+      "sequence": 1936,
+      "game_tick": 61501,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41154, y=184, z=1000}",
+      "phase": "moving_begin",
+      "body": "Block{minecraft:moving_piston}[facing=east,type=normal]",
+      "pushed_block": "Block{minecraft:sticky_piston}[extended=false,facing=up]",
+      "extending": true,
+      "source": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "piston_state",
+      "sequence": 1937,
+      "game_tick": 61501,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41154, y=184, z=1000}",
+      "phase": "moving_end",
+      "body": "Block{minecraft:moving_piston}[facing=east,type=normal]",
+      "pushed_block": "Block{minecraft:sticky_piston}[extended=false,facing=up]",
+      "extending": true,
+      "source": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "carrier_trace",
+      "sequence": 1938,
+      "game_tick": 61501,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41154, y=184, z=1000}",
+      "operation": "tick",
+      "stage": "end",
+      "progress": 1.0,
+      "last_progress": 0.5,
+      "saved_world_time": 61501,
+      "extending": true,
+      "source": false,
+      "removed": false,
+      "payload": "Block{minecraft:sticky_piston}[extended=false,facing=up]",
+      "state": "Block{minecraft:moving_piston}[facing=east,type=normal]"
+    },
+    {
+      "kind": "carrier_trace",
+      "sequence": 1939,
+      "game_tick": 61501,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=184, z=1000}",
+      "operation": "tick",
+      "stage": "begin",
+      "progress": 0.5,
+      "last_progress": 0.0,
+      "saved_world_time": 61500,
+      "extending": true,
+      "source": true,
+      "removed": false,
+      "payload": "Block{minecraft:piston_head}[facing=east,short=false,type=normal]",
+      "state": "Block{minecraft:moving_piston}[facing=east,type=normal]"
+    },
+    {
+      "kind": "piston_state",
+      "sequence": 1940,
+      "game_tick": 61501,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=184, z=1000}",
+      "phase": "moving_begin",
+      "body": "Block{minecraft:moving_piston}[facing=east,type=normal]",
+      "pushed_block": "Block{minecraft:piston_head}[facing=east,short=false,type=normal]",
+      "extending": true,
+      "source": true,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "piston_state",
+      "sequence": 1941,
+      "game_tick": 61501,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=184, z=1000}",
+      "phase": "moving_end",
+      "body": "Block{minecraft:moving_piston}[facing=east,type=normal]",
+      "pushed_block": "Block{minecraft:piston_head}[facing=east,short=false,type=normal]",
+      "extending": true,
+      "source": true,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "carrier_trace",
+      "sequence": 1942,
+      "game_tick": 61501,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=184, z=1000}",
+      "operation": "tick",
+      "stage": "end",
+      "progress": 1.0,
+      "last_progress": 0.5,
+      "saved_world_time": 61501,
+      "extending": true,
+      "source": true,
+      "removed": false,
+      "payload": "Block{minecraft:piston_head}[facing=east,short=false,type=normal]",
+      "state": "Block{minecraft:moving_piston}[facing=east,type=normal]"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 1943,
+      "dimension": "minecraft:overworld",
+      "game_tick": 61501,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 1944,
+      "dimension": "minecraft:the_end",
+      "game_tick": 61501,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 1945,
+      "dimension": "minecraft:the_end",
+      "scheduler": "block",
+      "time": 61501,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 1946,
+      "dimension": "minecraft:the_end",
+      "scheduler": "fluid",
+      "time": 61501,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 1947,
+      "dimension": "minecraft:the_end",
+      "game_tick": 61501,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 1948,
+      "dimension": "minecraft:the_nether",
+      "game_tick": 61501,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 1949,
+      "dimension": "minecraft:the_nether",
+      "scheduler": "block",
+      "time": 61501,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 1950,
+      "dimension": "minecraft:the_nether",
+      "scheduler": "fluid",
+      "time": 61501,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 1951,
+      "dimension": "minecraft:the_nether",
+      "game_tick": 61501,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 1952,
+      "dimension": "minecraft:overworld",
+      "game_tick": 61501,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 1953,
+      "dimension": "minecraft:overworld",
+      "scheduler": "block",
+      "time": 61502,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 1954,
+      "dimension": "minecraft:overworld",
+      "scheduler": "fluid",
+      "time": 61502,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "carrier_trace",
+      "sequence": 1955,
+      "game_tick": 61502,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41154, y=184, z=1000}",
+      "operation": "tick",
+      "stage": "begin",
+      "progress": 1.0,
+      "last_progress": 0.5,
+      "saved_world_time": 61501,
+      "extending": true,
+      "source": false,
+      "removed": false,
+      "payload": "Block{minecraft:sticky_piston}[extended=false,facing=up]",
+      "state": "Block{minecraft:moving_piston}[facing=east,type=normal]"
+    },
+    {
+      "kind": "piston_state",
+      "sequence": 1956,
+      "game_tick": 61502,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41154, y=184, z=1000}",
+      "phase": "moving_begin",
+      "body": "Block{minecraft:moving_piston}[facing=east,type=normal]",
+      "pushed_block": "Block{minecraft:sticky_piston}[extended=false,facing=up]",
+      "extending": true,
+      "source": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "state_commit",
+      "sequence": 1957,
+      "game_tick": 61502,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41154, y=184, z=1000}",
+      "before": "Block{minecraft:moving_piston}[facing=east,type=normal]",
+      "after": "Block{minecraft:sticky_piston}[extended=false,facing=up]",
+      "flags": 67
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1958,
+      "game_tick": 61502,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=184, z=1000}",
+      "target": "Block{minecraft:moving_piston}[facing=east,type=normal]",
+      "source_block": "minecraft:moving_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1959,
+      "game_tick": 61502,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41155, y=184, z=1000}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:moving_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1960,
+      "game_tick": 61502,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41154, y=183, z=1000}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:moving_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1961,
+      "game_tick": 61502,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41154, y=185, z=1000}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:moving_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1962,
+      "game_tick": 61502,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41154, y=184, z=999}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:moving_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1963,
+      "game_tick": 61502,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41154, y=184, z=1001}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:moving_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "block_state_change",
+      "sequence": 1964,
+      "game_tick": 61502,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41154, y=184, z=1000}",
+      "before": "Block{minecraft:moving_piston}[facing=east,type=normal]",
+      "after": "Block{minecraft:sticky_piston}[extended=false,facing=up]",
+      "changed": true,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1965,
+      "game_tick": 61502,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41154, y=184, z=1000}",
+      "target": "Block{minecraft:sticky_piston}[extended=false,facing=up]",
+      "source_block": "minecraft:sticky_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "piston_state",
+      "sequence": 1966,
+      "game_tick": 61502,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41154, y=184, z=1000}",
+      "phase": "completion",
+      "body": "Block{minecraft:moving_piston}[facing=east,type=normal]",
+      "pushed_block": "Block{minecraft:sticky_piston}[extended=false,facing=up]",
+      "extending": true,
+      "source": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "carrier_trace",
+      "sequence": 1967,
+      "game_tick": 61502,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41154, y=184, z=1000}",
+      "operation": "tick",
+      "stage": "end",
+      "progress": 1.0,
+      "last_progress": 1.0,
+      "saved_world_time": 61502,
+      "extending": true,
+      "source": false,
+      "removed": true,
+      "payload": "Block{minecraft:sticky_piston}[extended=false,facing=up]",
+      "state": "Block{minecraft:sticky_piston}[extended=false,facing=up]"
+    },
+    {
+      "kind": "carrier_trace",
+      "sequence": 1968,
+      "game_tick": 61502,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=184, z=1000}",
+      "operation": "tick",
+      "stage": "begin",
+      "progress": 1.0,
+      "last_progress": 0.5,
+      "saved_world_time": 61501,
+      "extending": true,
+      "source": true,
+      "removed": false,
+      "payload": "Block{minecraft:piston_head}[facing=east,short=false,type=normal]",
+      "state": "Block{minecraft:moving_piston}[facing=east,type=normal]"
+    },
+    {
+      "kind": "piston_state",
+      "sequence": 1969,
+      "game_tick": 61502,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=184, z=1000}",
+      "phase": "moving_begin",
+      "body": "Block{minecraft:moving_piston}[facing=east,type=normal]",
+      "pushed_block": "Block{minecraft:piston_head}[facing=east,short=false,type=normal]",
+      "extending": true,
+      "source": true,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "state_commit",
+      "sequence": 1970,
+      "game_tick": 61502,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=184, z=1000}",
+      "before": "Block{minecraft:moving_piston}[facing=east,type=normal]",
+      "after": "Block{minecraft:piston_head}[facing=east,short=false,type=normal]",
+      "flags": 67
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1971,
+      "game_tick": 61502,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41152, y=184, z=1000}",
+      "target": "Block{minecraft:piston}[extended=true,facing=east]",
+      "source_block": "minecraft:moving_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1972,
+      "game_tick": 61502,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41154, y=184, z=1000}",
+      "target": "Block{minecraft:sticky_piston}[extended=false,facing=up]",
+      "source_block": "minecraft:moving_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1973,
+      "game_tick": 61502,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=183, z=1000}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:moving_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1974,
+      "game_tick": 61502,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=185, z=1000}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:moving_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1975,
+      "game_tick": 61502,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=184, z=999}",
+      "target": "Block{minecraft:air}",
+      "source_block": "minecraft:moving_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1976,
+      "game_tick": 61502,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=184, z=1001}",
+      "target": "Block{minecraft:lever}[face=floor,facing=north,powered=true]",
+      "source_block": "minecraft:moving_piston",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "block_state_change",
+      "sequence": 1977,
+      "game_tick": 61502,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=184, z=1000}",
+      "before": "Block{minecraft:moving_piston}[facing=east,type=normal]",
+      "after": "Block{minecraft:piston_head}[facing=east,short=false,type=normal]",
+      "changed": true,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "stable_piston_state",
+      "sequence": 1978,
+      "game_tick": 61502,
+      "dimension": "minecraft:overworld",
+      "body_position": "BlockPos{x=41152, y=184, z=1000}",
+      "head_position": "BlockPos{x=41153, y=184, z=1000}",
+      "body": "Block{minecraft:piston}[extended=true,facing=east]",
+      "head": "Block{minecraft:piston_head}[facing=east,short=false,type=normal]",
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1979,
+      "game_tick": 61502,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=184, z=1000}",
+      "target": "Block{minecraft:piston_head}[facing=east,short=false,type=normal]",
+      "source_block": "minecraft:piston_head",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "neighbor_update",
+      "sequence": 1980,
+      "game_tick": 61502,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41152, y=184, z=1000}",
+      "target": "Block{minecraft:piston}[extended=true,facing=east]",
+      "source_block": "minecraft:piston_head",
+      "orientation": null,
+      "notify": false,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "piston_state",
+      "sequence": 1981,
+      "game_tick": 61502,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=184, z=1000}",
+      "phase": "completion",
+      "body": "Block{minecraft:moving_piston}[facing=east,type=normal]",
+      "pushed_block": "Block{minecraft:piston_head}[facing=east,short=false,type=normal]",
+      "extending": true,
+      "source": true,
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "carrier_trace",
+      "sequence": 1982,
+      "game_tick": 61502,
+      "dimension": "minecraft:overworld",
+      "position": "BlockPos{x=41153, y=184, z=1000}",
+      "operation": "tick",
+      "stage": "end",
+      "progress": 1.0,
+      "last_progress": 1.0,
+      "saved_world_time": 61502,
+      "extending": true,
+      "source": true,
+      "removed": true,
+      "payload": "Block{minecraft:piston_head}[facing=east,short=false,type=normal]",
+      "state": "Block{minecraft:piston_head}[facing=east,short=false,type=normal]"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 1983,
+      "dimension": "minecraft:overworld",
+      "game_tick": 61502,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 1984,
+      "dimension": "minecraft:the_end",
+      "game_tick": 61502,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 1985,
+      "dimension": "minecraft:the_end",
+      "scheduler": "block",
+      "time": 61502,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 1986,
+      "dimension": "minecraft:the_end",
+      "scheduler": "fluid",
+      "time": 61502,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 1987,
+      "dimension": "minecraft:the_end",
+      "game_tick": 61502,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 1988,
+      "dimension": "minecraft:the_nether",
+      "game_tick": 61502,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 1989,
+      "dimension": "minecraft:the_nether",
+      "scheduler": "block",
+      "time": 61502,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 1990,
+      "dimension": "minecraft:the_nether",
+      "scheduler": "fluid",
+      "time": 61502,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 1991,
+      "dimension": "minecraft:the_nether",
+      "game_tick": 61502,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 1992,
+      "dimension": "minecraft:overworld",
+      "game_tick": 61502,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 1993,
+      "dimension": "minecraft:overworld",
+      "scheduler": "block",
+      "time": 61503,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 1994,
+      "dimension": "minecraft:overworld",
+      "scheduler": "fluid",
+      "time": 61503,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "outbound_block_update",
+      "sequence": 1995,
+      "game_tick": 61503,
+      "dimension": "minecraft:overworld",
+      "packet_type": "ChunkDeltaUpdateS2CPacket",
+      "position": "Mutable{x=41153, y=184, z=1000}",
+      "state": "Block{minecraft:piston_head}[facing=east,short=false,type=normal]",
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "outbound_block_update",
+      "sequence": 1996,
+      "game_tick": 61503,
+      "dimension": "minecraft:overworld",
+      "packet_type": "ChunkDeltaUpdateS2CPacket",
+      "position": "Mutable{x=41154, y=184, z=1000}",
+      "state": "Block{minecraft:sticky_piston}[extended=false,facing=up]",
+      "ordered_tick_sequence": null
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 1997,
+      "dimension": "minecraft:overworld",
+      "game_tick": 61503,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 1998,
+      "dimension": "minecraft:the_end",
+      "game_tick": 61503,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 1999,
+      "dimension": "minecraft:the_end",
+      "scheduler": "block",
+      "time": 61503,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 2000,
+      "dimension": "minecraft:the_end",
+      "scheduler": "fluid",
+      "time": 61503,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 2001,
+      "dimension": "minecraft:the_end",
+      "game_tick": 61503,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 2002,
+      "dimension": "minecraft:the_nether",
+      "game_tick": 61503,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 2003,
+      "dimension": "minecraft:the_nether",
+      "scheduler": "block",
+      "time": 61503,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 2004,
+      "dimension": "minecraft:the_nether",
+      "scheduler": "fluid",
+      "time": 61503,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 2005,
+      "dimension": "minecraft:the_nether",
+      "game_tick": 61503,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 2006,
+      "dimension": "minecraft:overworld",
+      "game_tick": 61503,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 2007,
+      "dimension": "minecraft:overworld",
+      "scheduler": "block",
+      "time": 61504,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 2008,
+      "dimension": "minecraft:overworld",
+      "scheduler": "fluid",
+      "time": 61504,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 2009,
+      "dimension": "minecraft:overworld",
+      "game_tick": 61504,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 2010,
+      "dimension": "minecraft:the_end",
+      "game_tick": 61504,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 2011,
+      "dimension": "minecraft:the_end",
+      "scheduler": "block",
+      "time": 61504,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 2012,
+      "dimension": "minecraft:the_end",
+      "scheduler": "fluid",
+      "time": 61504,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 2013,
+      "dimension": "minecraft:the_end",
+      "game_tick": 61504,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 2014,
+      "dimension": "minecraft:the_nether",
+      "game_tick": 61504,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 2015,
+      "dimension": "minecraft:the_nether",
+      "scheduler": "block",
+      "time": 61504,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 2016,
+      "dimension": "minecraft:the_nether",
+      "scheduler": "fluid",
+      "time": 61504,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 2017,
+      "dimension": "minecraft:the_nether",
+      "game_tick": 61504,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 2018,
+      "dimension": "minecraft:overworld",
+      "game_tick": 61504,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 2019,
+      "dimension": "minecraft:overworld",
+      "scheduler": "block",
+      "time": 61505,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 2020,
+      "dimension": "minecraft:overworld",
+      "scheduler": "fluid",
+      "time": 61505,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 2021,
+      "dimension": "minecraft:overworld",
+      "game_tick": 61505,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 2022,
+      "dimension": "minecraft:the_end",
+      "game_tick": 61505,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 2023,
+      "dimension": "minecraft:the_end",
+      "scheduler": "block",
+      "time": 61505,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 2024,
+      "dimension": "minecraft:the_end",
+      "scheduler": "fluid",
+      "time": 61505,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 2025,
+      "dimension": "minecraft:the_end",
+      "game_tick": 61505,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 2026,
+      "dimension": "minecraft:the_nether",
+      "game_tick": 61505,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 2027,
+      "dimension": "minecraft:the_nether",
+      "scheduler": "block",
+      "time": 61505,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 2028,
+      "dimension": "minecraft:the_nether",
+      "scheduler": "fluid",
+      "time": 61505,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 2029,
+      "dimension": "minecraft:the_nether",
+      "game_tick": 61505,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 2030,
+      "dimension": "minecraft:overworld",
+      "game_tick": 61505,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 2031,
+      "dimension": "minecraft:overworld",
+      "scheduler": "block",
+      "time": 61506,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 2032,
+      "dimension": "minecraft:overworld",
+      "scheduler": "fluid",
+      "time": 61506,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 2033,
+      "dimension": "minecraft:overworld",
+      "game_tick": 61506,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 2034,
+      "dimension": "minecraft:the_end",
+      "game_tick": 61506,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 2035,
+      "dimension": "minecraft:the_end",
+      "scheduler": "block",
+      "time": 61506,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 2036,
+      "dimension": "minecraft:the_end",
+      "scheduler": "fluid",
+      "time": 61506,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 2037,
+      "dimension": "minecraft:the_end",
+      "game_tick": 61506,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 2038,
+      "dimension": "minecraft:the_nether",
+      "game_tick": 61506,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 2039,
+      "dimension": "minecraft:the_nether",
+      "scheduler": "block",
+      "time": 61506,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 2040,
+      "dimension": "minecraft:the_nether",
+      "scheduler": "fluid",
+      "time": 61506,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 2041,
+      "dimension": "minecraft:the_nether",
+      "game_tick": 61506,
+      "phase": "end"
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 2042,
+      "dimension": "minecraft:overworld",
+      "game_tick": 61506,
+      "phase": "begin"
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 2043,
+      "dimension": "minecraft:overworld",
+      "scheduler": "block",
+      "time": 61507,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "ordered_tick_batch",
+      "sequence": 2044,
+      "dimension": "minecraft:overworld",
+      "scheduler": "fluid",
+      "time": 61507,
+      "max_ticks": 65536
+    },
+    {
+      "kind": "server_world_tick",
+      "sequence": 2045,
+      "dimension": "minecraft:overworld",
+      "game_tick": 61507,
+      "phase": "end"
+    },
+    {
+      "kind": "artifact_end",
+      "capture_mode": "bounded",
+      "capture_state": "closed",
+      "input_observed": true,
+      "anchor_game_tick": 61499,
+      "end_game_tick": 61601,
+      "last_sequence": 9295,
+      "emitted_records": 1457,
+      "suppressed_records": 6035,
+      "evicted_records": 1803,
+      "write_errors": 0,
+      "heartbeat_mode": "full"
+    }
+  ],
+  "provenance": {
+    "artifacts": {
+      ".raw.ndjson": ".local/e2e-artifacts/piston-payload-20260927-e.raw.ndjson",
+      ".client.json": ".local/e2e-artifacts/piston-payload-20260927-e.client.json",
+      ".model.json": ".local/e2e-artifacts/piston-payload-20260927-e.model.json",
+      ".summary.json": ".local/e2e-artifacts/piston-payload-20260927-e.summary.json"
+    },
+    "sha256": {
+      ".raw.ndjson": "c125e58288f7620fdc70eda14ea2f0cda607b4c9181b8e0bc6e5cbedf26b191e",
+      ".client.json": "b0488f6bd1a50679ebf05d0d0e611613ab0b2291c1fc70f8e7adec45502cb34c",
+      ".model.json": "3574bf871e1f732c1241ae0718ab183d8b195ed603fa2c55b45cce08d04ca99c",
+      ".summary.json": "b9ff41a2d09459040182c7c7b280fb0ba72f7f33fab4e642e949a0593199e77d"
+    },
+    "actor_sha256": "e3c8e7dd9221077ff0a0fd286db8e639ca7f3c161a249181243ca1278f0e0443",
+    "model_exporter_sha256": "709ef3852ebed0647e58c241ca07fd783a04606d17e4e328a9d446a575e2396a",
+    "fixture_sha256": "defcf5a27cbea17ce898b4a2bb7f268abf531d0e30e4efbbaa1578ee434da260",
+    "replay_binary_sha256": "4de94259bcc489599502291f6e6b001078e79995f267a110b73b68e55e138a84",
+    "replay_output_sha256": "7045822cbc2b504fec95cac00a42c1684110a93dc88eee07f94d2f5cd3f70100",
+    "projection_sha256": "b2733a97102f99d789d2b4d7e48a284868496c719c7b5eff3271b9934ecd9aeb"
+  }
+}

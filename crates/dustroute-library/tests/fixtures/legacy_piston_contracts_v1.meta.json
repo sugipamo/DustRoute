@@ -1,0 +1,9 @@
+{
+  "kind": "pre_unification_model_regression",
+  "captured_on": "2026-09-26",
+  "rows": 2,
+  "sha256": "8b8712452ed41e98f65184de8877c9a5bd8b0c1a2f5222dabb41047c86230432",
+  "scope": "Historical horizontal/vertical behavior-context JSON, derived world-context JSON and complete selected immutable law revisions. Checkpoints and behavior states remain opaque process-local values and have no durable JSON format.",
+  "regenerate_policy": "Do not regenerate to bless unified-profile behavior. A new profile needs separate expected results.",
+  "command": "cargo run -q -p dustroute-library --example audit_legacy_piston_contracts"
+}

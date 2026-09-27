@@ -1,0 +1,115 @@
+{
+  "schema": "dustroute.placed-assembly-verification.v1",
+  "status": "passed",
+  "scope": "custom electrical Assemblies: durable instance facts, fresh observation/review and conditional removal across MCP restarts",
+  "commands": [
+    {
+      "command": "cargo clippy --offline --locked -p dustroute-mcp -p dustroute-translate --all-targets -j 1 -- -D warnings",
+      "exit_code": 0
+    },
+    {
+      "command": "cargo test --offline --locked -p dustroute-mcp -j 1 -- --test-threads=2",
+      "exit_code": 0
+    },
+    {
+      "command": "cargo test --offline --locked -p dustroute-translate -j 1 --test electrical_piston_construction --test electrical_piston_relocation -- --test-threads=2",
+      "exit_code": 0
+    },
+    {
+      "command": "cargo build --offline --locked -p dustroute-mcp -j 1",
+      "exit_code": 0
+    },
+    {
+      "command": "cargo clippy --offline --locked -p dustroute-mcp --all-targets -j 1 -- -D warnings",
+      "exit_code": 0
+    },
+    {
+      "command": "cargo test --offline --locked -p dustroute-mcp -j 1 --lib custom_electrical_construction_rechecks_adoption_baseline_settings_and_each_write -- --nocapture",
+      "exit_code": 0
+    },
+    {
+      "command": "cargo fmt --all --check",
+      "exit_code": 0
+    },
+    {
+      "command": "git diff --check",
+      "exit_code": 0
+    },
+    {
+      "command": "python3 tools/observe_assembly_construction.py --run-id placed-assembly-mcp-20260926-a --x 33152 --rotation r270 --fixture .local/e2e-artifacts/mixed-assembly-down-fixture-v1.json --persistence",
+      "exit_code": 0
+    }
+  ],
+  "test_counts": {
+    "mcp_suite": {
+      "passed": 79,
+      "failed": 0,
+      "ignored": 0
+    },
+    "translate_construction_and_relocation": {
+      "passed": 5,
+      "failed": 0,
+      "ignored": 0
+    },
+    "expanded_compatibility_regression": {
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0
+    }
+  },
+  "unique_tests_passed": 84,
+  "count_note": "The expanded compatibility regression reruns one of the 79 MCP tests; it is not an additional unique test. Production Rust sources were unchanged after the package suite/build/live trial; the final edit extends that existing regression.",
+  "logs": {
+    "mcp_suite": {
+      "path": "/tmp/dustroute-placed-mcp-tests.log",
+      "sha256": "cdbcf00ec5ba5bcfd211340f85bc76c91b34eea1281a7439c3fe8fc1559541b2"
+    },
+    "translate_construction_and_relocation": {
+      "path": "/tmp/dustroute-placed-translate-tests.log",
+      "sha256": "b46ba367dfb53031b9aeaa6d73955552da9f7840ebd0f7c71f06993337977951"
+    },
+    "expanded_compatibility_regression": {
+      "path": "/tmp/dustroute-placed-final-targeted.log",
+      "sha256": "e7c2ea9651c11911c6eb9d49b30437fb26d6ab8314febb7864a994caa0bb29d9"
+    },
+    "clippy": {
+      "path": "/tmp/dustroute-placed-clippy.log",
+      "sha256": "4cf94d8ab5b6cebe90fbf0545eac95339fddd059901fd9c3fa6d6b7679fa95cc"
+    },
+    "final_clippy": {
+      "path": "/tmp/dustroute-placed-final-clippy.log",
+      "sha256": "8a8f01dec78a24eed802f44ea90d31e35d563efb1c1644d3433acc99ca96e380"
+    },
+    "build": {
+      "path": "/tmp/dustroute-placed-build.log",
+      "sha256": "09e103d16a2eb894630095f963096a8cbed56f0bd088523d72214afb6024c5c6"
+    },
+    "live": {
+      "path": "/tmp/dustroute-placed-live.log",
+      "sha256": "2bae45a11e08fd4d2a0b42766701c1660ef368297856b8a9f3449ea1e31d8974"
+    }
+  },
+  "source_sha256": {
+    "crates/dustroute-mcp/src/assembly_registry.rs": "45f58f941e745d851981f5d1e5cd7a93f96cc73a3e46b7921b087f4cbaec6e52",
+    "crates/dustroute-mcp/src/service/assembly_placement.rs": "0ec19af2305ef0bb38542275c19613939a1cfb05151501bfccaef2bbc0cfe00d",
+    "crates/dustroute-mcp/src/piston_assembly.rs": "58245e1b9f80e147a9ae4567c528ce58c2a3f59e027d22d706d2afa3bf07248c",
+    "crates/dustroute-mcp/src/state.rs": "1df8fc4151a4f1c0fa6f627e8a2ed9d0a2d6a0398b1c8aa85b37b7d46dc2692f",
+    "crates/dustroute-mcp/src/service.rs": "18417a7f5a1880b43e3ef8e3dea786118aebc621a855b8579d03c5cc96a64787",
+    "crates/dustroute-mcp/src/service_blueprint_tests.rs": "f3748d94ac550cb78c762f271800a1b39bcffed4f8b715c0fb1d5e0be35be688",
+    "crates/dustroute-mcp/src/lib.rs": "20287b05feea1e0347be184dea82301f529bda500e2f0b81f268e034f09cf5ca",
+    "crates/dustroute-translate/src/assembly_transform.rs": "d6ef809b5b7e5e2121d0a1ccbf004ddb7d418853191b642e36d8d1312274fbc4",
+    "crates/dustroute-mcp/mineflayer/e2e/piston-assembly-mcp-live.js": "59a259a1c2eac7b08565f136c48943d120766ffef37221616504e791ea25a6ec",
+    "tools/observe_assembly_construction.py": "e91cdcea40d7a60209c7d30e71e08c3c562de8477ae618aadd710d170ed05b78",
+    "tools/retain_assembly_observation.py": "cf399c6f50c4f2e6105b4419af6f275091da4fa778a50f6cb6eed54092362250"
+  },
+  "live_evidence": {
+    "path": "docs/evidence/placed-assembly-mcp-20260926-a.json",
+    "sha256": "dac9bcf14514c70687c9db57bc708e43c954f5f06cf36185269130c5ee8d4596"
+  },
+  "limits": [
+    "No hidden runtime queue reconstruction from snapshots",
+    "No automatic recovery of uncertain writes",
+    "No persistent vanilla world UUID",
+    "No host crash or filesystem fault experiment"
+  ]
+}

@@ -20,6 +20,15 @@ pub struct UndoPlan {
     pub changes: Vec<BlockChange>,
 }
 
+/// Saved proposed circuit state, not live observation or placement authority.
+/// This describes the circuit; surrounding overlay context stays in the plan.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct PlacementAssembly {
+    /// Add this offset to assembly coordinates to obtain world coordinates.
+    pub coordinate_origin: Pos,
+    pub revision: dustroute_library::assembly::AssemblyRevision,
+}
+
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct PlacementPlan {
     pub operation_id: Uuid,
@@ -32,6 +41,8 @@ pub struct PlacementPlan {
     /// The default keeps plans created by older serialized clients unpreviewed.
     #[serde(default)]
     pub previewed: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub assembly: Option<PlacementAssembly>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -154,6 +165,7 @@ pub fn plan_world_overlay(
         materials,
         undo,
         previewed: false,
+        assembly: None,
     })
 }
 

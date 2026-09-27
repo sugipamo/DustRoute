@@ -1,0 +1,180 @@
+{
+  "schema_version": "dustroute.mixed-piston-fixture.v1",
+  "id": "mixed-electrical-wire-climb-v1",
+  "initial": {
+    "min": {
+      "x": -6,
+      "y": -2,
+      "z": -6
+    },
+    "max": {
+      "x": 8,
+      "y": 12,
+      "z": 6
+    },
+    "blocks": [
+      {
+        "pos": {
+          "x": -3,
+          "y": 2,
+          "z": 0
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": -2,
+          "y": 2,
+          "z": 0
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": -1,
+          "y": 3,
+          "z": 0
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 0,
+          "y": 3,
+          "z": 0
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 1,
+          "y": 3,
+          "z": 0
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 2,
+          "y": 5,
+          "z": 0
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 2,
+          "y": 4,
+          "z": 0
+        },
+        "name": "minecraft:piston",
+        "properties": {
+          "facing": "up",
+          "extended": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 1,
+          "y": 4,
+          "z": 0
+        },
+        "name": "minecraft:repeater",
+        "properties": {
+          "facing": "west",
+          "delay": "3",
+          "locked": "false",
+          "powered": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": -2,
+          "y": 3,
+          "z": 0
+        },
+        "name": "minecraft:redstone_wire",
+        "properties": {
+          "power": "0",
+          "north": "none",
+          "south": "none",
+          "east": "up",
+          "west": "side"
+        }
+      },
+      {
+        "pos": {
+          "x": -1,
+          "y": 4,
+          "z": 0
+        },
+        "name": "minecraft:redstone_wire",
+        "properties": {
+          "power": "0",
+          "north": "none",
+          "south": "none",
+          "east": "side",
+          "west": "side"
+        }
+      },
+      {
+        "pos": {
+          "x": 0,
+          "y": 4,
+          "z": 0
+        },
+        "name": "minecraft:redstone_wire",
+        "properties": {
+          "power": "0",
+          "north": "none",
+          "south": "none",
+          "east": "side",
+          "west": "side"
+        }
+      },
+      {
+        "pos": {
+          "x": -3,
+          "y": 3,
+          "z": 0
+        },
+        "name": "minecraft:lever",
+        "properties": {
+          "face": "floor",
+          "facing": "north",
+          "powered": "false"
+        }
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "x": -3,
+      "y": 3,
+      "z": 0
+    }
+  ],
+  "steps": [
+    {
+      "input": 0,
+      "powered": true,
+      "wait_ticks": 10
+    },
+    {
+      "input": 0,
+      "powered": false,
+      "wait_ticks": 20
+    },
+    {
+      "input": 0,
+      "powered": true,
+      "wait_ticks": 20
+    }
+  ]
+}

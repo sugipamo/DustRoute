@@ -1,4 +1,6 @@
 //! Immutable hypothetical snapshots, never live-world evidence or write plans.
+use dustroute_library::assembly::AssemblyRevision;
+use dustroute_library::blueprint::AssemblyRevisionId;
 use dustroute_translate::{MinecraftSnapshot, MinecraftSnapshotBlock, Pos};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -22,6 +24,72 @@ pub struct CircuitRevision {
     pub base_snapshot: Option<MinecraftSnapshot>,
     pub changes: Vec<RevisionChange>,
     pub validation: Value,
+    /// A modeled view of the literal snapshot. Older records and undecodable
+    /// block states have no assembly; the literal snapshot remains authoritative.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub assembly: Option<AssemblyRevision>,
+}
+
+pub fn assembly_id(id: Uuid) -> AssemblyRevisionId {
+    AssemblyRevisionId::new(format!("dustroute.assembly.{id}")).expect("UUID forms a valid ID")
+}
+
+impl CircuitRevision {
+    /// Retains pinned interpretations from a modeled parent without altering any
+    /// source definition. Changed states must be validated again by the caller.
+    pub fn capture_assembly(
+        &self,
+        parent: Option<&AssemblyRevision>,
+    ) -> Result<AssemblyRevision, String> {
+        // scan_region fails if any chunk is unavailable. Its whole returned
+        // cuboid is known, even when discovery did not capture the whole circuit.
+        let mut assembly = dustroute_translate::snapshot::assembly_from_snapshot(
+            &self.snapshot,
+            "Hypothetical circuit state",
+            vec![dustroute_translate::Region::new(
+                self.snapshot.min,
+                self.snapshot.max,
+            )],
+        )
+        .map_err(|error| error.to_string())?;
+        if let Some(parent) = parent {
+            assembly.instances = parent.assembly.instances.clone();
+            assembly.connections = parent.assembly.connections.clone();
+            assembly.boundaries = parent.assembly.boundaries.clone();
+        }
+        assembly
+            .inspect(dustroute_library::builtin_blueprints::builtin_blueprints())
+            .map_err(|error| error.to_string())?;
+        Ok(AssemblyRevision {
+            id: assembly_id(self.revision_id),
+            parents: parent.into_iter().map(|parent| parent.id.clone()).collect(),
+            assembly,
+        })
+    }
+
+    /// Loading a sidecar never restores proof. Reject disagreement with the
+    /// literal snapshot or record identity before exposing its modeled view.
+    pub fn check_assembly_record(&self) -> Result<(), String> {
+        let Some(record) = &self.assembly else {
+            return Ok(());
+        };
+        if record.id != assembly_id(self.revision_id)
+            || record.parents.len() > 1
+            || record.parents.iter().any(|parent| {
+                !self
+                    .parent_revision_ids
+                    .iter()
+                    .any(|id| &assembly_id(*id) == parent)
+            })
+        {
+            return Err("assembly identity or ancestry mismatch".into());
+        }
+        let expected = self.capture_assembly(Some(record))?;
+        if record.assembly != expected.assembly {
+            return Err("assembly actual state disagrees with the literal snapshot".into());
+        }
+        Ok(())
+    }
 }
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct RevisionChange {
@@ -37,12 +105,7 @@ pub fn apply(
     if edits.len() > 64 || snapshot.blocks.len() > MAX_BLOCKS {
         return Err("revision limits: 64 edits and 4096 observed block records".into());
     }
-    if snapshot.min.x > snapshot.max.x
-        || snapshot.min.y > snapshot.max.y
-        || snapshot.min.z > snapshot.max.z
-    {
-        return Err("invalid snapshot bounds".into());
-    }
+    let mut blocks = dustroute_translate::snapshot::index_literal_snapshot(snapshot)?;
     let inside = |p: Pos| {
         p.x >= snapshot.min.x
             && p.x <= snapshot.max.x
@@ -51,16 +114,6 @@ pub fn apply(
             && p.z >= snapshot.min.z
             && p.z <= snapshot.max.z
     };
-    let mut blocks = BTreeMap::new();
-    let mut seen = BTreeSet::new();
-    for b in &snapshot.blocks {
-        if !inside(b.pos) || !seen.insert(b.pos) {
-            return Err("snapshot has out-of-bounds or duplicate coordinates".into());
-        }
-        if b.name != "minecraft:air" {
-            blocks.insert(b.pos, b.clone());
-        }
-    }
     let mut edited = BTreeSet::new();
     let mut changes = Vec::new();
     for edit in edits {
@@ -162,6 +215,78 @@ mod tests {
             name: name.into(),
             properties: BTreeMap::new(),
         }
+    }
+
+    #[test]
+    fn modeled_state_retains_pins_but_never_restores_source_blocks_or_rebinds_ids() {
+        use dustroute_library::blueprint::{BlueprintInclusion, BlueprintRevisionId, InstanceId};
+        use dustroute_library::builtin_blueprints::{NOT_TOP_REVISION, builtin_blueprints};
+        let catalog_before = builtin_blueprints().to_json().unwrap();
+        let mut original = CircuitRevision {
+            schema_version: "dustroute.circuit-revision.v1".into(),
+            revision_id: Uuid::new_v4(),
+            parent_revision_ids: vec![],
+            base_observation_id: Uuid::new_v4(),
+            player: "builder".into(),
+            dimension: "minecraft:overworld".into(),
+            target: None,
+            complete: false,
+            snapshot: MinecraftSnapshot {
+                min: Pos::default(),
+                max: Pos::new(4, 2, 2),
+                blocks: vec![block(Pos::default(), "minecraft:stone")],
+            },
+            base_snapshot: None,
+            changes: vec![],
+            validation: serde_json::json!({}),
+            assembly: None,
+        };
+        let mut state = original.capture_assembly(None).unwrap();
+        state.assembly.instances.push(BlueprintInclusion {
+            instance: InstanceId::new("claimed-not").unwrap(),
+            revision: BlueprintRevisionId::new(NOT_TOP_REVISION).unwrap(),
+            origin: Pos::default(),
+            rotation: Default::default(),
+        });
+        original.assembly = Some(state.clone());
+        original.check_assembly_record().unwrap();
+        let mut child = original.clone();
+        child.revision_id = Uuid::new_v4();
+        child.parent_revision_ids = vec![original.revision_id];
+        (child.snapshot, child.changes) = apply(
+            &original.snapshot,
+            vec![block(Pos::default(), "minecraft:air")],
+        )
+        .unwrap();
+        child.assembly = Some(child.capture_assembly(original.assembly.as_ref()).unwrap());
+        child.check_assembly_record().unwrap();
+        let current = child.assembly.as_ref().unwrap().clone();
+        assert_ne!(state.id, current.id);
+        assert_eq!(current.parents, vec![state.id.clone()]);
+        assert_eq!(current.assembly.instances, state.assembly.instances);
+        assert!(current.assembly.blocks.is_empty());
+        let view = current.assembly.inspect(builtin_blueprints()).unwrap();
+        assert_eq!(
+            view.block_at(Pos::default()).unwrap().kind,
+            dustroute_translate::BlockKind::Air
+        );
+        assert!(!view.source_differences().is_empty());
+        assert_eq!(original.assembly.as_ref(), Some(&state));
+        assert_eq!(builtin_blueprints().to_json().unwrap(), catalog_before);
+        let restored: CircuitRevision =
+            serde_json::from_slice(&serde_json::to_vec(&child).unwrap()).unwrap();
+        restored.check_assembly_record().unwrap();
+        child.assembly.as_mut().unwrap().assembly.blocks = state.assembly.blocks.clone();
+        assert!(child.check_assembly_record().is_err());
+        child.assembly = Some(current.clone());
+        child.assembly.as_mut().unwrap().id = state.id;
+        assert!(child.check_assembly_record().is_err());
+        // Existing records can be read without inventing an assembly history.
+        let mut legacy = serde_json::to_value(&original).unwrap();
+        legacy.as_object_mut().unwrap().remove("assembly");
+        let legacy: CircuitRevision = serde_json::from_value(legacy).unwrap();
+        assert!(legacy.assembly.is_none());
+        legacy.check_assembly_record().unwrap();
     }
     #[test]
     fn edits_are_atomic_and_preserve_source() {

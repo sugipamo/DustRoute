@@ -1,0 +1,232 @@
+{
+  "inputs": {
+    "state": 3,
+    "action": 1,
+    "powered": 1,
+    "sticky": 1
+  },
+  "registers": {
+    "request": {
+      "initial": 0,
+      "maximum": 2
+    },
+    "valid": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "stable": {
+      "initial": 0,
+      "maximum": 3
+    },
+    "moving": {
+      "initial": 0,
+      "maximum": 3
+    },
+    "pull": {
+      "initial": 0,
+      "maximum": 1
+    }
+  },
+  "histories": {},
+  "handlers": {
+    "evaluate": [
+      {
+        "op": "if",
+        "condition": {
+          "op": "and",
+          "left": {
+            "op": "equal",
+            "left": {
+              "op": "input",
+              "name": "state"
+            },
+            "right": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          "right": {
+            "op": "input",
+            "name": "powered"
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "request",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          }
+        ],
+        "otherwise": [
+          {
+            "op": "if",
+            "condition": {
+              "op": "and",
+              "left": {
+                "op": "equal",
+                "left": {
+                  "op": "input",
+                  "name": "state"
+                },
+                "right": {
+                  "op": "constant",
+                  "value": 2
+                }
+              },
+              "right": {
+                "op": "not",
+                "value": {
+                  "op": "input",
+                  "name": "powered"
+                }
+              }
+            },
+            "then": [
+              {
+                "op": "set",
+                "register": "request",
+                "value": {
+                  "op": "constant",
+                  "value": 2
+                }
+              }
+            ],
+            "otherwise": []
+          }
+        ]
+      },
+      {
+        "op": "set",
+        "register": "valid",
+        "value": {
+          "op": "maximum",
+          "left": {
+            "op": "and",
+            "left": {
+              "op": "equal",
+              "left": {
+                "op": "input",
+                "name": "action"
+              },
+              "right": {
+                "op": "constant",
+                "value": 0
+              }
+            },
+            "right": {
+              "op": "equal",
+              "left": {
+                "op": "input",
+                "name": "state"
+              },
+              "right": {
+                "op": "constant",
+                "value": 0
+              }
+            }
+          },
+          "right": {
+            "op": "and",
+            "left": {
+              "op": "equal",
+              "left": {
+                "op": "input",
+                "name": "action"
+              },
+              "right": {
+                "op": "constant",
+                "value": 1
+              }
+            },
+            "right": {
+              "op": "equal",
+              "left": {
+                "op": "input",
+                "name": "state"
+              },
+              "right": {
+                "op": "constant",
+                "value": 2
+              }
+            }
+          }
+        }
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "action"
+          },
+          "right": {
+            "op": "constant",
+            "value": 0
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "stable",
+            "value": {
+              "op": "constant",
+              "value": 2
+            }
+          },
+          {
+            "op": "set",
+            "register": "moving",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          }
+        ],
+        "otherwise": [
+          {
+            "op": "set",
+            "register": "stable",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "moving",
+            "value": {
+              "op": "constant",
+              "value": 3
+            }
+          }
+        ]
+      },
+      {
+        "op": "set",
+        "register": "pull",
+        "value": {
+          "op": "and",
+          "left": {
+            "op": "equal",
+            "left": {
+              "op": "input",
+              "name": "action"
+            },
+            "right": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          "right": {
+            "op": "input",
+            "name": "sticky"
+          }
+        }
+      }
+    ]
+  }
+}

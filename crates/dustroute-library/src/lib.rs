@@ -4,9 +4,20 @@
 //! component becomes trusted for automatic replacement only after its logical
 //! behavior and physical realization have accumulated the required evidence.
 
+pub mod assembly;
+pub mod behavior_context;
+pub mod behavior_type;
+pub mod blueprint;
 mod builtin;
+pub mod builtin_blueprints;
+pub mod builtin_laws;
+pub mod builtin_primitives;
 mod catalog;
 mod component;
+pub mod execution_context;
+mod interfaces;
+pub mod location_observation;
+pub mod runtime_behavior;
 mod verify;
 
 pub use builtin::{

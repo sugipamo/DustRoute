@@ -1,0 +1,178 @@
+{
+  "schema_version": "dustroute.mixed-piston-fixture.v1",
+  "id": "mixed-electrical-locking-v1",
+  "initial": {
+    "min": {
+      "x": -6,
+      "y": -2,
+      "z": -6
+    },
+    "max": {
+      "x": 8,
+      "y": 12,
+      "z": 6
+    },
+    "blocks": [
+      {
+        "pos": {
+          "x": -1,
+          "y": 3,
+          "z": 0
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 0,
+          "y": 3,
+          "z": 0
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 0,
+          "y": 3,
+          "z": -1
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 0,
+          "y": 3,
+          "z": -2
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 1,
+          "y": 5,
+          "z": 0
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 1,
+          "y": 4,
+          "z": 0
+        },
+        "name": "minecraft:sticky_piston",
+        "properties": {
+          "facing": "up",
+          "extended": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 0,
+          "y": 4,
+          "z": 0
+        },
+        "name": "minecraft:repeater",
+        "properties": {
+          "facing": "west",
+          "delay": "4",
+          "locked": "false",
+          "powered": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 0,
+          "y": 4,
+          "z": -1
+        },
+        "name": "minecraft:repeater",
+        "properties": {
+          "facing": "north",
+          "delay": "1",
+          "locked": "false",
+          "powered": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": -1,
+          "y": 4,
+          "z": 0
+        },
+        "name": "minecraft:lever",
+        "properties": {
+          "face": "floor",
+          "facing": "north",
+          "powered": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 0,
+          "y": 4,
+          "z": -2
+        },
+        "name": "minecraft:lever",
+        "properties": {
+          "face": "floor",
+          "facing": "north",
+          "powered": "false"
+        }
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "x": -1,
+      "y": 4,
+      "z": 0
+    },
+    {
+      "x": 0,
+      "y": 4,
+      "z": -2
+    }
+  ],
+  "steps": [
+    {
+      "input": 1,
+      "powered": true,
+      "wait_ticks": 10
+    },
+    {
+      "input": 0,
+      "powered": true,
+      "wait_ticks": 10
+    },
+    {
+      "input": 1,
+      "powered": false,
+      "wait_ticks": 10
+    },
+    {
+      "input": 1,
+      "powered": true,
+      "wait_ticks": 20
+    },
+    {
+      "input": 0,
+      "powered": false,
+      "wait_ticks": 10
+    },
+    {
+      "input": 1,
+      "powered": false,
+      "wait_ticks": 10
+    },
+    {
+      "input": 0,
+      "powered": true,
+      "wait_ticks": 20
+    }
+  ]
+}

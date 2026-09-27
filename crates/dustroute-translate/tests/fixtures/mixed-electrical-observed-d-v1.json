@@ -1,0 +1,514 @@
+{
+  "schema_version": "dustroute.mixed-piston-settled-observation.v1",
+  "run_id": "mixed-electrical-20260926-d",
+  "evidence_limit": "Applied lever writes and full settled client readback only. This is not a complete tick-internal conformance trace or an interruption claim.",
+  "minecraft_version": "1.21.11",
+  "redstone_experiments": false,
+  "provenance": {
+    "fixture": "mixed-electrical-down-interruption-v1",
+    "fixture_sha256": "b6a77fe954111014b108f5112232fc388eff0831a84a0f6afd26ec84e0f56f82",
+    "actor_sha256": "e77efd18df672a588f91d149f7fca2e2346a190d792619375424c3776b9de864",
+    "comparator_sha256": "72030ffb0a6825b9f4ec433559f1ba410b5bc7196510630218fd0edeef3700a9",
+    "artifacts_sha256": {
+      ".raw.ndjson": "2b00ba5a295904224c2b66f45d83f990795a867efd7c4892ba172da9c782325a",
+      ".server.log": "3dd67042fca5ba3eb0042742b569fd60ec757747b80a4908827133952f5f3310",
+      ".client.json": "30285f24999048c37498d984968887e86ffd3d16ebc8d1b0ba17f06c215bde76",
+      ".normalized.json": "89391a9d55e800a90f748ead4ae3f36ad171a071ce30378332111cab38bbded5",
+      ".input.json": "8ae3f99939099eaee91ece468a7676784979503e458e583cce0dee4c46cffd01",
+      ".model.json": "cdfd71d09a5c9eee0e82bca9715577722f04b44bd69ba6885631e336ad42117b"
+    },
+    "global_sequence_contiguous": false,
+    "retained_record_sequence_contiguous": true,
+    "capture_footer": {
+      "kind": "artifact_end",
+      "capture_mode": "bounded",
+      "capture_state": "closed",
+      "input_observed": true,
+      "anchor_game_tick": 33130,
+      "end_game_tick": 33292,
+      "last_sequence": 10311,
+      "emitted_records": 2229,
+      "suppressed_records": 6023,
+      "evicted_records": 2059,
+      "write_errors": 0,
+      "heartbeat_mode": "full"
+    },
+    "cleanup": {
+      "region_empty": true,
+      "force_load_removed": true,
+      "disconnected_before_finish": null
+    }
+  },
+  "applied_inputs": [
+    {
+      "position": {
+        "x": 32206,
+        "y": 184,
+        "z": 1000
+      },
+      "powered": true,
+      "game_tick": 33130,
+      "packet_sequence": 2095,
+      "write_sequence": 2102
+    },
+    {
+      "position": {
+        "x": 32206,
+        "y": 184,
+        "z": 1000
+      },
+      "powered": false,
+      "game_tick": 33134,
+      "packet_sequence": 2213,
+      "write_sequence": 2220
+    }
+  ],
+  "initial": {
+    "min": {
+      "x": 32186,
+      "y": 178,
+      "z": 995
+    },
+    "max": {
+      "x": 32214,
+      "y": 192,
+      "z": 1005
+    },
+    "blocks": [
+      {
+        "pos": {
+          "x": 32190,
+          "y": 183,
+          "z": 1000
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 32190,
+          "y": 184,
+          "z": 1000
+        },
+        "name": "minecraft:lever",
+        "properties": {
+          "powered": "false",
+          "facing": "north",
+          "face": "floor"
+        }
+      },
+      {
+        "pos": {
+          "x": 32191,
+          "y": 183,
+          "z": 1000
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 32191,
+          "y": 184,
+          "z": 1000
+        },
+        "name": "minecraft:redstone_wire",
+        "properties": {
+          "west": "side",
+          "south": "none",
+          "power": "0",
+          "north": "none",
+          "east": "side"
+        }
+      },
+      {
+        "pos": {
+          "x": 32192,
+          "y": 184,
+          "z": 1000
+        },
+        "name": "minecraft:sticky_piston",
+        "properties": {
+          "facing": "east",
+          "extended": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 32193,
+          "y": 184,
+          "z": 1000
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 32197,
+          "y": 183,
+          "z": 1000
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 32197,
+          "y": 184,
+          "z": 1000
+        },
+        "name": "minecraft:lever",
+        "properties": {
+          "powered": "false",
+          "facing": "north",
+          "face": "floor"
+        }
+      },
+      {
+        "pos": {
+          "x": 32198,
+          "y": 183,
+          "z": 1000
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 32198,
+          "y": 184,
+          "z": 1000
+        },
+        "name": "minecraft:redstone_wire",
+        "properties": {
+          "west": "side",
+          "south": "none",
+          "power": "0",
+          "north": "none",
+          "east": "side"
+        }
+      },
+      {
+        "pos": {
+          "x": 32199,
+          "y": 183,
+          "z": 1000
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 32199,
+          "y": 184,
+          "z": 1000
+        },
+        "name": "minecraft:repeater",
+        "properties": {
+          "powered": "false",
+          "locked": "false",
+          "facing": "west",
+          "delay": "1"
+        }
+      },
+      {
+        "pos": {
+          "x": 32200,
+          "y": 184,
+          "z": 1000
+        },
+        "name": "minecraft:sticky_piston",
+        "properties": {
+          "facing": "up",
+          "extended": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 32200,
+          "y": 185,
+          "z": 1000
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 32206,
+          "y": 184,
+          "z": 1000
+        },
+        "name": "minecraft:lever",
+        "properties": {
+          "powered": "false",
+          "facing": "west",
+          "face": "wall"
+        }
+      },
+      {
+        "pos": {
+          "x": 32207,
+          "y": 184,
+          "z": 1000
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 32208,
+          "y": 183,
+          "z": 1000
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 32208,
+          "y": 184,
+          "z": 1000
+        },
+        "name": "minecraft:sticky_piston",
+        "properties": {
+          "facing": "down",
+          "extended": "false"
+        }
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "position": {
+        "x": 32206,
+        "y": 184,
+        "z": 1000
+      },
+      "tick": 1,
+      "powered": true
+    },
+    {
+      "position": {
+        "x": 32206,
+        "y": 184,
+        "z": 1000
+      },
+      "tick": 5,
+      "powered": false
+    }
+  ],
+  "observed_final": {
+    "min": {
+      "x": 32186,
+      "y": 178,
+      "z": 995
+    },
+    "max": {
+      "x": 32214,
+      "y": 192,
+      "z": 1005
+    },
+    "blocks": [
+      {
+        "pos": {
+          "x": 32190,
+          "y": 183,
+          "z": 1000
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 32190,
+          "y": 184,
+          "z": 1000
+        },
+        "name": "minecraft:lever",
+        "properties": {
+          "powered": "false",
+          "facing": "north",
+          "face": "floor"
+        }
+      },
+      {
+        "pos": {
+          "x": 32191,
+          "y": 183,
+          "z": 1000
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 32191,
+          "y": 184,
+          "z": 1000
+        },
+        "name": "minecraft:redstone_wire",
+        "properties": {
+          "west": "side",
+          "south": "none",
+          "power": "0",
+          "north": "none",
+          "east": "side"
+        }
+      },
+      {
+        "pos": {
+          "x": 32192,
+          "y": 184,
+          "z": 1000
+        },
+        "name": "minecraft:sticky_piston",
+        "properties": {
+          "facing": "east",
+          "extended": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 32193,
+          "y": 184,
+          "z": 1000
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 32197,
+          "y": 183,
+          "z": 1000
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 32197,
+          "y": 184,
+          "z": 1000
+        },
+        "name": "minecraft:lever",
+        "properties": {
+          "powered": "false",
+          "facing": "north",
+          "face": "floor"
+        }
+      },
+      {
+        "pos": {
+          "x": 32198,
+          "y": 183,
+          "z": 1000
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 32198,
+          "y": 184,
+          "z": 1000
+        },
+        "name": "minecraft:redstone_wire",
+        "properties": {
+          "west": "side",
+          "south": "none",
+          "power": "0",
+          "north": "none",
+          "east": "side"
+        }
+      },
+      {
+        "pos": {
+          "x": 32199,
+          "y": 183,
+          "z": 1000
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 32199,
+          "y": 184,
+          "z": 1000
+        },
+        "name": "minecraft:repeater",
+        "properties": {
+          "powered": "false",
+          "locked": "false",
+          "facing": "west",
+          "delay": "1"
+        }
+      },
+      {
+        "pos": {
+          "x": 32200,
+          "y": 184,
+          "z": 1000
+        },
+        "name": "minecraft:sticky_piston",
+        "properties": {
+          "facing": "up",
+          "extended": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 32200,
+          "y": 185,
+          "z": 1000
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 32206,
+          "y": 184,
+          "z": 1000
+        },
+        "name": "minecraft:lever",
+        "properties": {
+          "powered": "false",
+          "facing": "west",
+          "face": "wall"
+        }
+      },
+      {
+        "pos": {
+          "x": 32207,
+          "y": 184,
+          "z": 1000
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 32208,
+          "y": 183,
+          "z": 1000
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 32208,
+          "y": 184,
+          "z": 1000
+        },
+        "name": "minecraft:sticky_piston",
+        "properties": {
+          "facing": "down",
+          "extended": "false"
+        }
+      }
+    ]
+  }
+}

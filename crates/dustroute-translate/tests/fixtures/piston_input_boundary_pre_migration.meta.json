@@ -1,0 +1,11 @@
+{
+  "kind": "pre_migration_validation_discrepancy",
+  "captured_on": "2026-09-20",
+  "source": "Working tree on codex/blueprint-architecture after lamp migration, before piston law changes",
+  "command": "cargo run -q -p dustroute-translate --example audit_piston_input_boundary",
+  "harness": "../../examples/audit_piston_input_boundary.rs",
+  "fixture": "piston_input_boundary_pre_migration.jsonl",
+  "cases": 3,
+  "event_results": 5,
+  "scope": "Local model diagnostic, not live Minecraft evidence. The incomplete north-input case incorrectly passes ON before rejecting OFF; the mirrored incomplete south-input case rejects ON; complete coverage passes both. The recorded acceptance is a historical validation defect, not a success criterion to retain after repair. No production piston rule was changed for this capture."
+}

@@ -656,7 +656,7 @@ fn validate_piston_states(
         }
         let body_name = short_name(&observation.body.name);
         let body_is_valid = match observation.state_kind {
-            PistonStateKind::Stable => body_name == "piston",
+            PistonStateKind::Stable => body_name == "piston" || body_name == "sticky_piston",
             PistonStateKind::Moving | PistonStateKind::Completion => {
                 body_name == "piston" || body_name == "moving_piston"
             }
@@ -869,6 +869,13 @@ mod tests {
         let mut value = artifact();
         value.piston_states[0].head = None;
         assert!(value.validate().is_err());
+    }
+
+    #[test]
+    fn accepts_stable_sticky_piston_with_head() {
+        let mut value = artifact();
+        value.piston_states[0].body.name = "minecraft:sticky_piston".into();
+        assert!(value.validate().is_ok());
     }
 
     #[test]

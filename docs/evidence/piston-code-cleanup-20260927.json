@@ -1,0 +1,162 @@
+{
+  "schema": "dustroute.piston-code-cleanup.v1",
+  "status": "verified",
+  "scope": "Behavior-preserving cleanup of supported piston command construction and custom-Assembly orchestration.",
+  "execution_profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v6",
+  "feature_additions": [],
+  "live_server_started": false,
+  "measured_baseline": "docs/evidence/reference-door-command-v6-20260927.json",
+  "inventory": "docs/piston-code-organization.md",
+  "removed": [
+    {
+      "path": "crates/dustroute-translate/examples/audit_reference_door_construction.rs",
+      "before_sha256": "1c1ab34e6ea61591c097475e71085ee2a013f43b8b1a8d3dd5a897cf466189a9",
+      "reason": "obsolete independent construction-order and teardown experiment",
+      "replacement": "production audit_reference_door_adoption ordinary-construction plus retained command_placement_regression",
+      "historical_evidence_preserved": true
+    }
+  ],
+  "source_before_sha256": {
+    "crates/dustroute-minecraft/src/time/piston_runtime/adapter.rs": "f89172862ba658b3dc9b19d4261f071668d246880657977fb7ca4c6c3ec74a0e",
+    "crates/dustroute-minecraft/src/time/piston_runtime/electrical.rs": "1a8a3c8dd8b0f852776d4d8a797ccb914aaa5204b7f5a57b27925541ad1aff6c",
+    "crates/dustroute-minecraft/src/time/piston_runtime/geometry.rs": "2f00ca60ed4a41ef5ebd426fb65bf286694db6f2eef08767ed9038d65233b976",
+    "crates/dustroute-minecraft/src/time/piston_runtime/movement.rs": "8aaa562de24962950ff5df75630640e152d62ae453aebb33bab61971bbc40ad8",
+    "crates/dustroute-minecraft/src/time/piston_runtime/mod.rs": "cc784306a28f4ef431c52b0026b0c500d5e4c81bdf566aed0ea415b41509c437",
+    "crates/dustroute-minecraft/src/time/piston_runtime/devices.rs": "e372e52cda043f7810470322c182e12d7011fc6a4da7d8b943dc22415d5953d1",
+    "crates/dustroute-minecraft/src/time/piston_runtime/notifications.rs": "9be1c211a7357bb3e9c285c6c8f9b47f1cc84714e15c8dac7dbdffc6cb9f7888",
+    "crates/dustroute-translate/src/piston_construction.rs": "b61ad02bae28827e2077a27dcdf0648ea85ac7fb239aabfd85b1ae20395a518b",
+    "crates/dustroute-translate/src/assembly_transform.rs": "d6ef809b5b7e5e2121d0a1ccbf004ddb7d418853191b642e36d8d1312274fbc4",
+    "crates/dustroute-translate/examples/audit_reference_door_construction.rs": "1c1ab34e6ea61591c097475e71085ee2a013f43b8b1a8d3dd5a897cf466189a9",
+    "crates/dustroute-mcp/src/piston_assembly.rs": "f83a90beb90542a3834bbdf38828cc276abe1e5b37452e5c6c7fc24bc858fae7",
+    "crates/dustroute-mcp/src/service/assembly_placement.rs": "0ec19af2305ef0bb38542275c19613939a1cfb05151501bfccaef2bbc0cfe00d"
+  },
+  "source_after_sha256": {
+    "crates/dustroute-minecraft/src/time/piston_runtime/adapter.rs": "28b41d311236e5dd510bd0e031c92c659dd86d89bcc04fd3f3addd8c4a641557",
+    "crates/dustroute-minecraft/src/time/piston_runtime/electrical.rs": "2d621907e6c156550584593394f25563737d1e7e4bd854181ca9fa26c38fa240",
+    "crates/dustroute-minecraft/src/time/piston_runtime/geometry.rs": "2f00ca60ed4a41ef5ebd426fb65bf286694db6f2eef08767ed9038d65233b976",
+    "crates/dustroute-minecraft/src/time/piston_runtime/movement.rs": "8aaa562de24962950ff5df75630640e152d62ae453aebb33bab61971bbc40ad8",
+    "crates/dustroute-minecraft/src/time/piston_runtime/mod.rs": "18cfc7493bda5420613e50fab4b18c02ad0698275f6ce290e6c771e477025f05",
+    "crates/dustroute-minecraft/src/time/piston_runtime/devices.rs": "f1f228e02a608161700942a12131f5ef78029e88afa6bebe6e1b061ffb0cd983",
+    "crates/dustroute-minecraft/src/time/piston_runtime/notifications.rs": "9be1c211a7357bb3e9c285c6c8f9b47f1cc84714e15c8dac7dbdffc6cb9f7888",
+    "crates/dustroute-translate/src/piston_construction.rs": "c2f7318f0bad4584e97f87a0df0804782b41dd41ec779157c45d6a3b49242f5c",
+    "crates/dustroute-translate/src/assembly_transform.rs": "312d03dcafedcbbbb6c78b64d6f553dfd851450f81f1744df1cc0c6dfbebf868",
+    "crates/dustroute-mcp/src/piston_assembly.rs": "f83a90beb90542a3834bbdf38828cc276abe1e5b37452e5c6c7fc24bc858fae7",
+    "crates/dustroute-mcp/src/service/assembly_placement.rs": "7831207f4bc25a84abb17c7171c6a15f46b8a07cd96ce3369aec4a31ae38d1c7",
+    "crates/dustroute-minecraft/src/time/piston_runtime/command.rs": "640846a7e6cd0eca2c02fc3024f5e8fcd818a39e283a70a2fc90b5fb3268b57d",
+    "crates/dustroute-translate/src/piston_construction/diagnostics.rs": "ead8ae17fdb200a14c6e3557f1b7086a489cf5419601fc21d4db85b2b1f9140a",
+    "crates/dustroute-translate/src/piston_construction/order.rs": "e3da82a7b8a3a6f19ab32e0b55969b6302af820861be502473b3fb656dba22a4",
+    "crates/dustroute-translate/src/piston_construction/snapshot.rs": "60a560a0a8f375ccdc4aa8512288d5798733528c48e0ea0c8d053f75e4a7c586",
+    "crates/dustroute-mcp/src/service/assembly_placement/execution.rs": "d24deeb0276465a3bd7e4512a2d23513792720ae5785e7ea5a95d6dca5cd43a0",
+    "crates/dustroute-mcp/src/service/assembly_placement/observation.rs": "0fa6d461a0410272acd9ca4e694cb961678a9799ff8ac04cb8c5eab0e7ba03a6",
+    "crates/dustroute-mcp/src/service/assembly_placement/validation.rs": "807aa729ef4f462f768297f813170cd475414ee64b410756a565a51370a032a1"
+  },
+  "new_source_files": [
+    "crates/dustroute-minecraft/src/time/piston_runtime/command.rs",
+    "crates/dustroute-translate/src/piston_construction/diagnostics.rs",
+    "crates/dustroute-translate/src/piston_construction/order.rs",
+    "crates/dustroute-translate/src/piston_construction/snapshot.rs",
+    "crates/dustroute-mcp/src/service/assembly_placement/execution.rs",
+    "crates/dustroute-mcp/src/service/assembly_placement/observation.rs",
+    "crates/dustroute-mcp/src/service/assembly_placement/validation.rs"
+  ],
+  "documents_sha256": {
+    "docs/piston-code-organization.md": "5665158e2d885f13ef5e41c9d88c228c1665d62da8d1545a2f52f82607fbc66e",
+    "docs/stabilization-legacy-paths.md": "fec2d5d3cecc3514333172a5b9673d591be02200e1e27fa2886626234cd841c4",
+    "docs/reference-door-construction-proposal.md": "1913d24254d823e89676cdc004999f8a56a3e577bc1def25a875f1a159205eb7",
+    "docs/custom-piston-assembly-placement.md": "4d373e7b0e3197dc113f88567682b397122dc13f3ab873e1662079e61c84e6d5",
+    "docs/README.md": "989aaa0dce12158eefe57c5e967694b6d44cc11e43d5a584df38bed040d390b5"
+  },
+  "invariants": {
+    "event_enum_and_continuations_unchanged": true,
+    "public_request_and_plan_declarations_unchanged": true,
+    "full_production_construction_json_identical": true,
+    "build_steps": 43,
+    "removal_steps": 43,
+    "laws_profiles_and_storage_formats_changed": false,
+    "live_authorization_guards_retained": true,
+    "baseline_matches_measured_repair_source": [
+      "crates/dustroute-mcp/src/piston_assembly.rs",
+      "crates/dustroute-minecraft/src/time/piston_runtime/adapter.rs",
+      "crates/dustroute-minecraft/src/time/piston_runtime/electrical.rs",
+      "crates/dustroute-minecraft/src/time/piston_runtime/mod.rs",
+      "crates/dustroute-translate/src/piston_construction.rs"
+    ]
+  },
+  "artifacts": {
+    "baseline_sources": {
+      "path": ".local/e2e-artifacts/piston-cleanup-20260927-before.tar",
+      "sha256": "823b6c4fe2e54118e43cd06cdeda3cded8301dd552cc706a2c11f234dd18e393"
+    },
+    "baseline_index": {
+      "path": ".local/e2e-artifacts/piston-cleanup-20260927-baseline.json",
+      "sha256": "31ae395e02b0ae3482268b6f49ecbd310a8fce4d3be827e8b4e8710707205d22"
+    },
+    "construction_before": {
+      "path": ".local/e2e-artifacts/piston-cleanup-20260927-construction-before.json",
+      "sha256": "5800919ccb6bdd38ba829ca76e070e63a800b624c22af5e1374d6367d4f205a5"
+    },
+    "construction_after": {
+      "path": ".local/e2e-artifacts/piston-cleanup-20260927-construction-after.json",
+      "sha256": "5800919ccb6bdd38ba829ca76e070e63a800b624c22af5e1374d6367d4f205a5"
+    }
+  },
+  "validation": {
+    "status": "passed",
+    "log": ".local/e2e-artifacts/piston-cleanup-20260927-verification.log",
+    "log_sha256": "4b0d632c0b40360e2b3a8f77232af4a1711fd16de1a82c98fd949012b8bb0c16",
+    "commands": [
+      {
+        "command": "cargo build --offline --locked -j 1 -p dustroute-mcp --bin dustroute-mcp -p dustroute-translate --example audit_reference_door_adoption",
+        "exit_code": 0
+      },
+      {
+        "command": "cargo test --offline --locked -j 1 -p dustroute-minecraft --test native_device_runtime --test piston_runtime --test unified_piston_runtime --test electrical_piston_runtime --test piston_payload_runtime -- --test-threads=1",
+        "exit_code": 0
+      },
+      {
+        "command": "cargo test --offline --locked -j 1 -p dustroute-translate --test command_placement_regression --test electrical_piston_construction --test reference_door_adoption --test reference_door_materials --test ordinary_reference_door --test native_device_observations --test electrical_piston_relocation --test electrical_piston_adoption -- --test-threads=1",
+        "exit_code": 0
+      },
+      {
+        "command": "cargo test --offline --locked -j 1 -p dustroute-mcp service::blueprint_tests -- --test-threads=1",
+        "exit_code": 0
+      },
+      {
+        "command": "cargo clippy --offline --locked -j 1 -p dustroute-minecraft -p dustroute-translate -p dustroute-mcp --all-targets -- -D warnings",
+        "exit_code": 0
+      },
+      {
+        "command": "cargo fmt --all --check",
+        "exit_code": 0
+      },
+      {
+        "command": "git diff --check",
+        "exit_code": 0
+      },
+      {
+        "command": "python3 -m unittest discover -s tools -p test_door_command_placement.py",
+        "exit_code": 0
+      }
+    ],
+    "rust_tests_passed": 96,
+    "python_tests_passed": 2,
+    "build_jobs": 1,
+    "rust_test_threads": 1,
+    "construction_json_comparison": "byte-identical",
+    "clippy_all_affected_targets_warnings_denied": "passed",
+    "workspace_format_check": "passed",
+    "diff_whitespace_check": "passed"
+  },
+  "retained_active_paths": [
+    "bounded PhysicsEngine contracts and fixed 1x2 door",
+    "fixed-geometry RedstoneTickSimulator and its active consumers",
+    "grounded revision reflection and general placement",
+    "current catalog/registry/API readers and evidence fields",
+    "historical observations and model-failure evidence"
+  ],
+  "limits": [
+    "Scoped cleanup, not a claim that the entire workspace has no legacy code.",
+    "Recorded observations were replayed; no new live trial is claimed.",
+    "Live operation readiness and other device/model expansion remain separate work."
+  ]
+}

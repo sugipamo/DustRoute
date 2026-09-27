@@ -1,0 +1,202 @@
+{
+  "inputs": {
+    "progress": 2,
+    "last_progress": 2,
+    "forced": 1,
+    "source": 1
+  },
+  "registers": {
+    "complete": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "discard": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "next_progress": {
+      "initial": 0,
+      "maximum": 2
+    },
+    "next_last": {
+      "initial": 0,
+      "maximum": 2
+    },
+    "save_time": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "again": {
+      "initial": 0,
+      "maximum": 1
+    }
+  },
+  "histories": {},
+  "handlers": {
+    "evaluate": [
+      {
+        "op": "set",
+        "register": "next_progress",
+        "value": {
+          "op": "input",
+          "name": "progress"
+        }
+      },
+      {
+        "op": "set",
+        "register": "next_last",
+        "value": {
+          "op": "input",
+          "name": "last_progress"
+        }
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "input",
+          "name": "forced"
+        },
+        "then": [
+          {
+            "op": "if",
+            "condition": {
+              "op": "not",
+              "value": {
+                "op": "equal",
+                "left": {
+                  "op": "input",
+                  "name": "last_progress"
+                },
+                "right": {
+                  "op": "constant",
+                  "value": 2
+                }
+              }
+            },
+            "then": [
+              {
+                "op": "set",
+                "register": "complete",
+                "value": {
+                  "op": "constant",
+                  "value": 1
+                }
+              },
+              {
+                "op": "set",
+                "register": "discard",
+                "value": {
+                  "op": "input",
+                  "name": "source"
+                }
+              },
+              {
+                "op": "set",
+                "register": "next_progress",
+                "value": {
+                  "op": "constant",
+                  "value": 2
+                }
+              },
+              {
+                "op": "set",
+                "register": "next_last",
+                "value": {
+                  "op": "constant",
+                  "value": 2
+                }
+              }
+            ],
+            "otherwise": []
+          }
+        ],
+        "otherwise": [
+          {
+            "op": "set",
+            "register": "save_time",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "next_last",
+            "value": {
+              "op": "input",
+              "name": "progress"
+            }
+          },
+          {
+            "op": "if",
+            "condition": {
+              "op": "equal",
+              "left": {
+                "op": "input",
+                "name": "progress"
+              },
+              "right": {
+                "op": "constant",
+                "value": 2
+              }
+            },
+            "then": [
+              {
+                "op": "set",
+                "register": "complete",
+                "value": {
+                  "op": "constant",
+                  "value": 1
+                }
+              }
+            ],
+            "otherwise": [
+              {
+                "op": "set",
+                "register": "again",
+                "value": {
+                  "op": "constant",
+                  "value": 1
+                }
+              },
+              {
+                "op": "if",
+                "condition": {
+                  "op": "equal",
+                  "left": {
+                    "op": "input",
+                    "name": "progress"
+                  },
+                  "right": {
+                    "op": "constant",
+                    "value": 0
+                  }
+                },
+                "then": [
+                  {
+                    "op": "set",
+                    "register": "next_progress",
+                    "value": {
+                      "op": "constant",
+                      "value": 1
+                    }
+                  }
+                ],
+                "otherwise": [
+                  {
+                    "op": "set",
+                    "register": "next_progress",
+                    "value": {
+                      "op": "constant",
+                      "value": 2
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

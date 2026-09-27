@@ -1,5 +1,9 @@
 use std::collections::BTreeMap;
 
+use dustroute_minecraft::spatial::{
+    DustElevation, DustTransferFacts, WireShapeFacts, builtin_spatial_laws,
+};
+
 use crate::world::{BlockKind, Facing, Pos, WireConnection, World};
 
 pub const HORIZONTAL: [Facing; 4] = [Facing::North, Facing::East, Facing::South, Facing::West];
@@ -16,51 +20,43 @@ fn horizontal(pos: Pos, facing: Facing) -> Pos {
     pos.offset(delta.x, 0, delta.z)
 }
 
-fn component_connects(world: &World, pos: Pos, direction: Facing) -> bool {
-    let block = world.get(pos);
-    match block.map(|block| block.kind) {
-        Some(
-            BlockKind::Lever
-            | BlockKind::Button
-            | BlockKind::PressurePlate
-            | BlockKind::RedstoneTorch
-            | BlockKind::RedstoneBlock,
-        ) => true,
-        Some(BlockKind::Observer) => block
-            .and_then(|block| block.facing)
-            .is_some_and(|facing| facing == direction.opposite()),
-        Some(BlockKind::Repeater | BlockKind::Comparator) => block
-            .and_then(|block| block.facing)
-            .is_some_and(|facing| facing == direction || facing == direction.opposite()),
-        _ => false,
-    }
-}
-
 #[must_use]
 pub fn infer_wire_connection(world: &World, pos: Pos, facing: Facing) -> WireConnection {
     let side = horizontal(pos, facing);
-    let side_kind = world.kind_at(side);
-    if side_kind == BlockKind::RedstoneWire || component_connects(world, side, facing) {
-        return WireConnection::Side;
+    let laws = builtin_spatial_laws();
+    let mut facts = WireShapeFacts {
+        side_connects: world
+            .get(side)
+            .is_some_and(|b| laws.component_connects(b, facing)),
+        support_shape: world
+            .get(side)
+            .and_then(|b| b.redstone_traits().wire_rise_connection),
+        upper_wire: false,
+        blocked: false,
+        side_air: world.kind_at(side) == BlockKind::Air,
+        lower_wire: false,
+    };
+    // Preserve this profile's local lookup scope. A direct side connection
+    // never needed above/below coordinates, including at coordinate limits.
+    if facts.side_connects {
+        return laws.infer_shape(facts);
     }
-    if let Some(rise_shape) = world
-        .get(side)
-        .and_then(|block| block.redstone_traits().wire_rise_connection)
-        .filter(|_| world.kind_at(side.offset(0, 1, 0)) == BlockKind::RedstoneWire)
-        .filter(|_| {
-            !world
+    if facts.support_shape.is_some() {
+        facts.upper_wire = world.kind_at(side.offset(0, 1, 0)) == BlockKind::RedstoneWire;
+        if facts.upper_wire {
+            facts.blocked = world
                 .get(pos.offset(0, 1, 0))
-                .is_some_and(|block| block.redstone_traits().blocks_wire_rise_when_above)
-        })
-    {
-        return rise_shape;
+                .is_some_and(|b| b.redstone_traits().blocks_wire_rise_when_above);
+        }
     }
-    if side_kind == BlockKind::Air
-        && world.kind_at(side.offset(0, -1, 0)) == BlockKind::RedstoneWire
-    {
-        return WireConnection::Side;
+    let shape = laws.infer_shape(facts);
+    if shape != WireConnection::None {
+        return shape;
     }
-    WireConnection::None
+    if facts.side_air {
+        facts.lower_wire = world.kind_at(side.offset(0, -1, 0)) == BlockKind::RedstoneWire;
+    }
+    laws.infer_shape(facts)
 }
 
 #[must_use]
@@ -98,36 +94,58 @@ pub fn dust_transfer(world: &World, source: Pos, sink: Pos) -> Option<DustTransf
     {
         return None;
     }
+    let laws = builtin_spatial_laws();
     for facing in HORIZONTAL {
         let side = horizontal(source, facing);
-        if sink == side
-            && wire_has_arm(world, source, facing)
-            && wire_has_arm(world, sink, facing.opposite())
-        {
-            return Some(DustTransfer::Horizontal);
-        }
-        if sink == side.offset(0, 1, 0) {
-            let expected = world
-                .get(side)
-                .and_then(|block| block.redstone_traits().wire_rise_connection);
-            if expected.is_some()
-                && expected == Some(resolved_wire_connection(world, source, facing))
-            {
-                return Some(DustTransfer::Rise);
-            }
-        }
-        if sink == side.offset(0, -1, 0) {
-            let expected = world
+        let (kind, facts) = if sink == side {
+            (
+                DustTransfer::Horizontal,
+                DustTransferFacts {
+                    elevation: DustElevation::Horizontal,
+                    source_arm: resolved_wire_connection(world, source, facing),
+                    sink_arm: resolved_wire_connection(world, sink, facing.opposite()),
+                    support_shape: None,
+                    conducts: false,
+                    clear: true,
+                    enforce_clearance: false,
+                },
+            )
+        } else if sink == side.offset(0, 1, 0) {
+            (
+                DustTransfer::Rise,
+                DustTransferFacts {
+                    elevation: DustElevation::Rise,
+                    source_arm: resolved_wire_connection(world, source, facing),
+                    sink_arm: WireConnection::None,
+                    support_shape: world
+                        .get(side)
+                        .and_then(|b| b.redstone_traits().wire_rise_connection),
+                    conducts: false,
+                    clear: true,
+                    enforce_clearance: false,
+                },
+            )
+        } else if sink == side.offset(0, -1, 0) {
+            let support = world
                 .get(source.offset(0, -1, 0))
-                .and_then(|block| block.redstone_traits().wire_rise_connection);
-            let lower_to_upper = expected.is_some()
-                && expected == Some(resolved_wire_connection(world, sink, facing.opposite()));
-            let support_conducts = world
-                .get(source.offset(0, -1, 0))
-                .is_some_and(|block| block.redstone_traits().strong_power_drives_dust);
-            if lower_to_upper && support_conducts {
-                return Some(DustTransfer::FallThroughConductor);
-            }
+                .map(|b| b.redstone_traits());
+            (
+                DustTransfer::FallThroughConductor,
+                DustTransferFacts {
+                    elevation: DustElevation::Fall,
+                    source_arm: WireConnection::None,
+                    sink_arm: resolved_wire_connection(world, sink, facing.opposite()),
+                    support_shape: support.and_then(|t| t.wire_rise_connection),
+                    conducts: support.is_some_and(|t| t.strong_power_drives_dust),
+                    clear: true,
+                    enforce_clearance: false,
+                },
+            )
+        } else {
+            continue;
+        };
+        if laws.dust_transfers(facts) {
+            return Some(kind);
         }
     }
     None

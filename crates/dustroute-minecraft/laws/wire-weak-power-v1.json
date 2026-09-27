@@ -1,0 +1,63 @@
+{
+  "inputs": {
+    "relation": 2,
+    "arm": 2
+  },
+  "registers": {
+    "connected": {
+      "initial": 0,
+      "maximum": 1
+    }
+  },
+  "histories": {},
+  "handlers": {
+    "evaluate": [
+      {
+        "op": "set",
+        "register": "connected",
+        "value": {
+          "op": "maximum",
+          "left": {
+            "op": "equal",
+            "left": {
+              "op": "input",
+              "name": "relation"
+            },
+            "right": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          "right": {
+            "op": "and",
+            "left": {
+              "op": "equal",
+              "left": {
+                "op": "input",
+                "name": "relation"
+              },
+              "right": {
+                "op": "constant",
+                "value": 1
+              }
+            },
+            "right": {
+              "op": "not",
+              "value": {
+                "op": "equal",
+                "left": {
+                  "op": "input",
+                  "name": "arm"
+                },
+                "right": {
+                  "op": "constant",
+                  "value": 0
+                }
+              }
+            }
+          }
+        }
+      }
+    ]
+  }
+}

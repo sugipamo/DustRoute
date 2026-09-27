@@ -1,0 +1,92 @@
+{
+  "schema_version": "dustroute.mixed-piston-fixture.v1",
+  "id": "piston-transient-up-reversal-v1",
+  "initial": {
+    "min": {
+      "x": -4,
+      "y": -2,
+      "z": -5
+    },
+    "max": {
+      "x": 4,
+      "y": 8,
+      "z": 4
+    },
+    "blocks": [
+      {
+        "pos": {
+          "x": 0,
+          "y": 1,
+          "z": -1
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 0,
+          "y": 2,
+          "z": -1
+        },
+        "name": "minecraft:lever",
+        "properties": {
+          "face": "floor",
+          "facing": "north",
+          "powered": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 0,
+          "y": 2,
+          "z": 0
+        },
+        "name": "minecraft:sticky_piston",
+        "properties": {
+          "facing": "up",
+          "extended": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 0,
+          "y": 3,
+          "z": 0
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "x": 0,
+      "y": 2,
+      "z": -1
+    }
+  ],
+  "steps": [
+    {
+      "input": 0,
+      "powered": true,
+      "wait_ticks": 0
+    },
+    {
+      "input": 0,
+      "powered": false,
+      "wait_ticks": 1
+    },
+    {
+      "input": 0,
+      "powered": true,
+      "wait_ticks": 1
+    },
+    {
+      "input": 0,
+      "powered": false,
+      "wait_ticks": 10
+    }
+  ],
+  "packet_input": true,
+  "warmup_ticks": 80
+}

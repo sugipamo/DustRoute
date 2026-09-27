@@ -1,0 +1,54 @@
+{
+  "schema_version": "dustroute.piston-goal-validation.v1",
+  "recorded_at": "2026-09-26T16:43:01.248816+00:00",
+  "workspace": "DustRoute",
+  "scope": "Declared Java 1.21.11 electrical piston construction goal",
+  "commands": [
+    {
+      "command": "cargo fmt --all --check",
+      "exit_code": 0
+    },
+    {
+      "command": "cargo clippy --workspace --all-targets -j 1 -- -D warnings",
+      "exit_code": 0
+    },
+    {
+      "command": "cargo test --workspace -j 1 -- --test-threads=2",
+      "exit_code": 0,
+      "test_result": {
+        "passed": 860,
+        "failed": 0,
+        "ignored": 1
+      },
+      "ignored_tests": [
+        "test measure_full_physical_not_reachability ... ignored, manual default-budget scalability measurement; does not certify NOT"
+      ]
+    },
+    {
+      "command": "git diff --check",
+      "exit_code": 0
+    }
+  ],
+  "logs_sha256": {
+    "dustroute-resumed-workspace-tests.log": "2b5b08614ef4019fe9b432bce56fc6c86abaf8782b1b87177c9cedbff1898a93",
+    "dustroute-resumed-clippy.log": "4a5a0c41b7ea55ea94264440b32ae19cf7705fc02a8bf8b21e9c2332147fac65"
+  },
+  "primitive_observations": [
+    "mixed-electrical-20260926-b",
+    "mixed-electrical-20260926-c",
+    "mixed-electrical-20260926-d",
+    "mixed-electrical-20260926-e",
+    "mixed-electrical-20260926-f",
+    "mixed-electrical-20260926-g",
+    "mixed-electrical-20260926-h",
+    "mixed-electrical-20260926-j",
+    "mixed-electrical-20260926-k",
+    "mixed-electrical-20260926-l"
+  ],
+  "public_mcp_trials": [
+    "piston-assembly-mcp-20260926-c.json",
+    "piston-assembly-mcp-20260926-d.json",
+    "piston-assembly-mcp-20260926-e.json"
+  ],
+  "limits": "Recorded observations and admitted model/construction scope; no exhaustive Minecraft or concurrent shared-world conformance claim"
+}

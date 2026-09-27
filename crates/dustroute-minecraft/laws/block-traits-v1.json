@@ -1,0 +1,3227 @@
+{
+  "inputs": {
+    "kind": 15,
+    "form": 7
+  },
+  "registers": {
+    "shape": {
+      "initial": 0,
+      "maximum": 4
+    },
+    "dust_support": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "weak": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "strong": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "dust_drive": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "rise_shape": {
+      "initial": 0,
+      "maximum": 2
+    },
+    "blocks_rise": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "kind_support": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "kind_weak": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "kind_strong": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "repeater_reads": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "kind_dust_drive": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "needs_support": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "support_below": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "wire_connect_mode": {
+      "initial": 0,
+      "maximum": 3
+    },
+    "strong_targets": {
+      "initial": 0,
+      "maximum": 5
+    },
+    "direct_mode": {
+      "initial": 0,
+      "maximum": 3
+    },
+    "relay_receiver": {
+      "initial": 0,
+      "maximum": 1
+    }
+  },
+  "histories": {},
+  "handlers": {
+    "evaluate": [
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "kind"
+          },
+          "right": {
+            "op": "constant",
+            "value": 0
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "shape",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "dust_support",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "weak",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "strong",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "dust_drive",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "rise_shape",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "blocks_rise",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_support",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_weak",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_strong",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "repeater_reads",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_dust_drive",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "needs_support",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "support_below",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "wire_connect_mode",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "strong_targets",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "direct_mode",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "relay_receiver",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          }
+        ],
+        "otherwise": []
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "kind"
+          },
+          "right": {
+            "op": "constant",
+            "value": 1
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "shape",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "dust_support",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "weak",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "strong",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "dust_drive",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "rise_shape",
+            "value": {
+              "op": "constant",
+              "value": 2
+            }
+          },
+          {
+            "op": "set",
+            "register": "blocks_rise",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_support",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_weak",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_strong",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "repeater_reads",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_dust_drive",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "needs_support",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "support_below",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "wire_connect_mode",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "strong_targets",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "direct_mode",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "relay_receiver",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          }
+        ],
+        "otherwise": []
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "kind"
+          },
+          "right": {
+            "op": "constant",
+            "value": 2
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "shape",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "dust_support",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "weak",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "strong",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "dust_drive",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "rise_shape",
+            "value": {
+              "op": "constant",
+              "value": 2
+            }
+          },
+          {
+            "op": "set",
+            "register": "blocks_rise",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_support",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_weak",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_strong",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "repeater_reads",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_dust_drive",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "needs_support",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "support_below",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "wire_connect_mode",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "strong_targets",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "direct_mode",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "relay_receiver",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          }
+        ],
+        "otherwise": []
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "kind"
+          },
+          "right": {
+            "op": "constant",
+            "value": 3
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "shape",
+            "value": {
+              "op": "constant",
+              "value": 4
+            }
+          },
+          {
+            "op": "set",
+            "register": "dust_support",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "weak",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "strong",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "dust_drive",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "rise_shape",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "blocks_rise",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_support",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_weak",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_strong",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "repeater_reads",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_dust_drive",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "needs_support",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "support_below",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "wire_connect_mode",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "strong_targets",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "direct_mode",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "relay_receiver",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          }
+        ],
+        "otherwise": []
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "kind"
+          },
+          "right": {
+            "op": "constant",
+            "value": 4
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "shape",
+            "value": {
+              "op": "constant",
+              "value": 4
+            }
+          },
+          {
+            "op": "set",
+            "register": "dust_support",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "weak",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "strong",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "dust_drive",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "rise_shape",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "blocks_rise",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_support",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_weak",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_strong",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "repeater_reads",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_dust_drive",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "needs_support",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "support_below",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "wire_connect_mode",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "strong_targets",
+            "value": {
+              "op": "constant",
+              "value": 4
+            }
+          },
+          {
+            "op": "set",
+            "register": "direct_mode",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "relay_receiver",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          }
+        ],
+        "otherwise": []
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "kind"
+          },
+          "right": {
+            "op": "constant",
+            "value": 5
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "shape",
+            "value": {
+              "op": "constant",
+              "value": 4
+            }
+          },
+          {
+            "op": "set",
+            "register": "dust_support",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "weak",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "strong",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "dust_drive",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "rise_shape",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "blocks_rise",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_support",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_weak",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_strong",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "repeater_reads",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_dust_drive",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "needs_support",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "support_below",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "wire_connect_mode",
+            "value": {
+              "op": "constant",
+              "value": 2
+            }
+          },
+          {
+            "op": "set",
+            "register": "strong_targets",
+            "value": {
+              "op": "constant",
+              "value": 2
+            }
+          },
+          {
+            "op": "set",
+            "register": "direct_mode",
+            "value": {
+              "op": "constant",
+              "value": 2
+            }
+          },
+          {
+            "op": "set",
+            "register": "relay_receiver",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          }
+        ],
+        "otherwise": []
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "kind"
+          },
+          "right": {
+            "op": "constant",
+            "value": 6
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "shape",
+            "value": {
+              "op": "constant",
+              "value": 4
+            }
+          },
+          {
+            "op": "set",
+            "register": "dust_support",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "weak",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "strong",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "dust_drive",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "rise_shape",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "blocks_rise",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_support",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_weak",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_strong",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "repeater_reads",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_dust_drive",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "needs_support",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "support_below",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "wire_connect_mode",
+            "value": {
+              "op": "constant",
+              "value": 2
+            }
+          },
+          {
+            "op": "set",
+            "register": "strong_targets",
+            "value": {
+              "op": "constant",
+              "value": 2
+            }
+          },
+          {
+            "op": "set",
+            "register": "direct_mode",
+            "value": {
+              "op": "constant",
+              "value": 2
+            }
+          },
+          {
+            "op": "set",
+            "register": "relay_receiver",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          }
+        ],
+        "otherwise": []
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "kind"
+          },
+          "right": {
+            "op": "constant",
+            "value": 7
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "shape",
+            "value": {
+              "op": "constant",
+              "value": 4
+            }
+          },
+          {
+            "op": "set",
+            "register": "dust_support",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "weak",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "strong",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "dust_drive",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "rise_shape",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "blocks_rise",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_support",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_weak",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_strong",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "repeater_reads",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_dust_drive",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "needs_support",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "support_below",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "wire_connect_mode",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "strong_targets",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "direct_mode",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "relay_receiver",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          }
+        ],
+        "otherwise": []
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "kind"
+          },
+          "right": {
+            "op": "constant",
+            "value": 8
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "shape",
+            "value": {
+              "op": "constant",
+              "value": 4
+            }
+          },
+          {
+            "op": "set",
+            "register": "dust_support",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "weak",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "strong",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "dust_drive",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "rise_shape",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "blocks_rise",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_support",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_weak",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_strong",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "repeater_reads",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_dust_drive",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "needs_support",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "support_below",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "wire_connect_mode",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "strong_targets",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "direct_mode",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "relay_receiver",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          }
+        ],
+        "otherwise": []
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "kind"
+          },
+          "right": {
+            "op": "constant",
+            "value": 9
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "shape",
+            "value": {
+              "op": "constant",
+              "value": 4
+            }
+          },
+          {
+            "op": "set",
+            "register": "dust_support",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "weak",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "strong",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "dust_drive",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "rise_shape",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "blocks_rise",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_support",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_weak",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_strong",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "repeater_reads",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_dust_drive",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "needs_support",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "support_below",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "wire_connect_mode",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "strong_targets",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "direct_mode",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "relay_receiver",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          }
+        ],
+        "otherwise": []
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "kind"
+          },
+          "right": {
+            "op": "constant",
+            "value": 10
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "shape",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "dust_support",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "weak",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "strong",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "dust_drive",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "rise_shape",
+            "value": {
+              "op": "constant",
+              "value": 2
+            }
+          },
+          {
+            "op": "set",
+            "register": "blocks_rise",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_support",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_weak",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_strong",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "repeater_reads",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_dust_drive",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "needs_support",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "support_below",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "wire_connect_mode",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "strong_targets",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "direct_mode",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "relay_receiver",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          }
+        ],
+        "otherwise": []
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "kind"
+          },
+          "right": {
+            "op": "constant",
+            "value": 11
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "shape",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "dust_support",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "weak",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "strong",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "dust_drive",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "rise_shape",
+            "value": {
+              "op": "constant",
+              "value": 2
+            }
+          },
+          {
+            "op": "set",
+            "register": "blocks_rise",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_support",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_weak",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_strong",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "repeater_reads",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_dust_drive",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "needs_support",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "support_below",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "wire_connect_mode",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "strong_targets",
+            "value": {
+              "op": "constant",
+              "value": 5
+            }
+          },
+          {
+            "op": "set",
+            "register": "direct_mode",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "relay_receiver",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          }
+        ],
+        "otherwise": []
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "kind"
+          },
+          "right": {
+            "op": "constant",
+            "value": 12
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "shape",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "dust_support",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "weak",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "strong",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "dust_drive",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "rise_shape",
+            "value": {
+              "op": "constant",
+              "value": 2
+            }
+          },
+          {
+            "op": "set",
+            "register": "blocks_rise",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_support",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_weak",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_strong",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "repeater_reads",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_dust_drive",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "needs_support",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "support_below",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "wire_connect_mode",
+            "value": {
+              "op": "constant",
+              "value": 3
+            }
+          },
+          {
+            "op": "set",
+            "register": "strong_targets",
+            "value": {
+              "op": "constant",
+              "value": 3
+            }
+          },
+          {
+            "op": "set",
+            "register": "direct_mode",
+            "value": {
+              "op": "constant",
+              "value": 3
+            }
+          },
+          {
+            "op": "set",
+            "register": "relay_receiver",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          }
+        ],
+        "otherwise": []
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "kind"
+          },
+          "right": {
+            "op": "constant",
+            "value": 13
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "shape",
+            "value": {
+              "op": "constant",
+              "value": 4
+            }
+          },
+          {
+            "op": "set",
+            "register": "dust_support",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "weak",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "strong",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "dust_drive",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "rise_shape",
+            "value": {
+              "op": "constant",
+              "value": 2
+            }
+          },
+          {
+            "op": "set",
+            "register": "blocks_rise",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_support",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_weak",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_strong",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "repeater_reads",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_dust_drive",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "needs_support",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "support_below",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "wire_connect_mode",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "strong_targets",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "direct_mode",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "relay_receiver",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          }
+        ],
+        "otherwise": []
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "kind"
+          },
+          "right": {
+            "op": "constant",
+            "value": 14
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "shape",
+            "value": {
+              "op": "constant",
+              "value": 4
+            }
+          },
+          {
+            "op": "set",
+            "register": "dust_support",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "weak",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "strong",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "dust_drive",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "rise_shape",
+            "value": {
+              "op": "constant",
+              "value": 2
+            }
+          },
+          {
+            "op": "set",
+            "register": "blocks_rise",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_support",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_weak",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_strong",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "repeater_reads",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_dust_drive",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "needs_support",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "support_below",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "wire_connect_mode",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "strong_targets",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "direct_mode",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "relay_receiver",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          }
+        ],
+        "otherwise": []
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "kind"
+          },
+          "right": {
+            "op": "constant",
+            "value": 15
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "shape",
+            "value": {
+              "op": "constant",
+              "value": 4
+            }
+          },
+          {
+            "op": "set",
+            "register": "dust_support",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "weak",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "strong",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "dust_drive",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "rise_shape",
+            "value": {
+              "op": "constant",
+              "value": 2
+            }
+          },
+          {
+            "op": "set",
+            "register": "blocks_rise",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_support",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_weak",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_strong",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "repeater_reads",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "kind_dust_drive",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "needs_support",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "support_below",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "wire_connect_mode",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "strong_targets",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "direct_mode",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "relay_receiver",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          }
+        ],
+        "otherwise": []
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "form"
+          },
+          "right": {
+            "op": "constant",
+            "value": 2
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "shape",
+            "value": {
+              "op": "constant",
+              "value": 3
+            }
+          },
+          {
+            "op": "set",
+            "register": "dust_support",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "rise_shape",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "weak",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "strong",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "dust_drive",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "blocks_rise",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          }
+        ],
+        "otherwise": []
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "form"
+          },
+          "right": {
+            "op": "constant",
+            "value": 3
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "shape",
+            "value": {
+              "op": "constant",
+              "value": 2
+            }
+          },
+          {
+            "op": "set",
+            "register": "dust_support",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "rise_shape",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "weak",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "strong",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "dust_drive",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "blocks_rise",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          }
+        ],
+        "otherwise": []
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "form"
+          },
+          "right": {
+            "op": "constant",
+            "value": 4
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "shape",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "dust_support",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "rise_shape",
+            "value": {
+              "op": "constant",
+              "value": 2
+            }
+          },
+          {
+            "op": "set",
+            "register": "weak",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "strong",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "dust_drive",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "blocks_rise",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          }
+        ],
+        "otherwise": []
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "form"
+          },
+          "right": {
+            "op": "constant",
+            "value": 5
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "shape",
+            "value": {
+              "op": "constant",
+              "value": 4
+            }
+          },
+          {
+            "op": "set",
+            "register": "dust_support",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "rise_shape",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "weak",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "strong",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "dust_drive",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "blocks_rise",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          }
+        ],
+        "otherwise": []
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "form"
+          },
+          "right": {
+            "op": "constant",
+            "value": 6
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "shape",
+            "value": {
+              "op": "constant",
+              "value": 4
+            }
+          },
+          {
+            "op": "set",
+            "register": "dust_support",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "rise_shape",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "weak",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "strong",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "dust_drive",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "blocks_rise",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          }
+        ],
+        "otherwise": []
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "form"
+          },
+          "right": {
+            "op": "constant",
+            "value": 7
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "shape",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "dust_support",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "rise_shape",
+            "value": {
+              "op": "constant",
+              "value": 2
+            }
+          },
+          {
+            "op": "set",
+            "register": "weak",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "strong",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "dust_drive",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "blocks_rise",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          }
+        ],
+        "otherwise": []
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "maximum",
+          "left": {
+            "op": "equal",
+            "left": {
+              "op": "input",
+              "name": "kind"
+            },
+            "right": {
+              "op": "constant",
+              "value": 14
+            }
+          },
+          "right": {
+            "op": "equal",
+            "left": {
+              "op": "input",
+              "name": "kind"
+            },
+            "right": {
+              "op": "constant",
+              "value": 15
+            }
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "dust_support",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "rise_shape",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "blocks_rise",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          }
+        ],
+        "otherwise": []
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "form"
+          },
+          "right": {
+            "op": "constant",
+            "value": 1
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "shape",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "dust_support",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "rise_shape",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "weak",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "strong",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "dust_drive",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "blocks_rise",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          }
+        ],
+        "otherwise": []
+      }
+    ]
+  }
+}

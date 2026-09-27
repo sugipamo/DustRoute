@@ -59,9 +59,15 @@ pub struct BlockBehaviorProfile {
     pub order_sensitive: bool,
 }
 
+#[derive(Clone, Copy)]
+struct TemporalProfile {
+    update_model: UpdateModel,
+    order_sensitive: bool,
+}
+
 #[must_use]
-pub const fn behavior_profile(kind: BlockKind) -> BlockBehaviorProfile {
-    match kind {
+pub fn behavior_profile(kind: BlockKind) -> BlockBehaviorProfile {
+    let temporal = match kind {
         BlockKind::Air => air::PROFILE,
         BlockKind::Solid => solid::PROFILE,
         BlockKind::Transparent => transparent::PROFILE,
@@ -76,6 +82,11 @@ pub const fn behavior_profile(kind: BlockKind) -> BlockBehaviorProfile {
         BlockKind::RedstoneBlock => redstone_block::PROFILE,
         BlockKind::Observer => observer::PROFILE,
         BlockKind::Piston | BlockKind::PistonHead | BlockKind::MovingPiston => piston::PROFILE,
+    };
+    BlockBehaviorProfile {
+        properties: kind.properties(),
+        update_model: temporal.update_model,
+        order_sensitive: temporal.order_sensitive,
     }
 }
 

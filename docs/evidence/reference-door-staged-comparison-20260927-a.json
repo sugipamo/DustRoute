@@ -1,0 +1,26 @@
+{
+  "schema_version": "dustroute.reference-door-comparison.v1",
+  "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v5",
+  "scope": "all retained tick-end block identities/properties; not within-tick or carrier-history conformance",
+  "classification": "matched_tick_end_states",
+  "ticks_compared": 381,
+  "mismatched_ticks": 0,
+  "first_mismatch": null,
+  "final_region_matches": true,
+  "model_restoration_verified": true,
+  "differences": [],
+  "artifacts": {
+    "reference": {
+      "path": "/root/DustRoute/crates/dustroute-translate/tests/fixtures/reference-3x3-observed-a-v1.json",
+      "sha256": "c5ccc15c9bbf1b5cd4e57ece66e66031b7947205a5052117ad2466c49485605e"
+    },
+    "input": {
+      "path": "/root/DustRoute/.local/e2e-artifacts/reference-3x3-input-v4-20260927.json",
+      "sha256": "fcf11f83859a2c61f7b359c79f5484ee5709f040fe33291f462327e52117e7d8"
+    },
+    "model": {
+      "path": "/root/DustRoute/.local/e2e-artifacts/reference-3x3-model-v5-20260927-a.json",
+      "sha256": "a113919dac8ac0801fa1ad5b09ca13e2f9978862e38e9bf06e3ee1d78d88ae65"
+    }
+  }
+}

@@ -1,0 +1,202 @@
+{
+  "schema_version": "dustroute.mixed-piston-fixture.v1",
+  "id": "piston-payload-mixed-twelve-v2",
+  "initial": {
+    "min": {
+      "x": -5,
+      "y": 0,
+      "z": -5
+    },
+    "max": {
+      "x": 17,
+      "y": 10,
+      "z": 5
+    },
+    "blocks": [
+      {
+        "pos": {
+          "x": 0,
+          "y": 3,
+          "z": -1
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 0,
+          "y": 4,
+          "z": -1
+        },
+        "name": "minecraft:lever",
+        "properties": {
+          "face": "floor",
+          "facing": "north",
+          "powered": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 0,
+          "y": 4,
+          "z": 0
+        },
+        "name": "minecraft:piston",
+        "properties": {
+          "facing": "east",
+          "extended": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 1,
+          "y": 4,
+          "z": 0
+        },
+        "name": "minecraft:piston",
+        "properties": {
+          "facing": "up",
+          "extended": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 2,
+          "y": 4,
+          "z": 0
+        },
+        "name": "minecraft:sticky_piston",
+        "properties": {
+          "facing": "down",
+          "extended": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 3,
+          "y": 4,
+          "z": 0
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 4,
+          "y": 4,
+          "z": 0
+        },
+        "name": "minecraft:sticky_piston",
+        "properties": {
+          "facing": "down",
+          "extended": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 5,
+          "y": 4,
+          "z": 0
+        },
+        "name": "minecraft:piston",
+        "properties": {
+          "facing": "up",
+          "extended": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 6,
+          "y": 4,
+          "z": 0
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 7,
+          "y": 4,
+          "z": 0
+        },
+        "name": "minecraft:piston",
+        "properties": {
+          "facing": "up",
+          "extended": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 8,
+          "y": 4,
+          "z": 0
+        },
+        "name": "minecraft:sticky_piston",
+        "properties": {
+          "facing": "down",
+          "extended": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 9,
+          "y": 4,
+          "z": 0
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 10,
+          "y": 4,
+          "z": 0
+        },
+        "name": "minecraft:sticky_piston",
+        "properties": {
+          "facing": "down",
+          "extended": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 11,
+          "y": 4,
+          "z": 0
+        },
+        "name": "minecraft:piston",
+        "properties": {
+          "facing": "up",
+          "extended": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 12,
+          "y": 4,
+          "z": 0
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "x": 0,
+      "y": 4,
+      "z": -1
+    }
+  ],
+  "steps": [
+    {
+      "input": 0,
+      "powered": true,
+      "wait_ticks": 0
+    }
+  ],
+  "packet_input": true,
+  "warmup_ticks": 80,
+  "align_first_input": true,
+  "shared_viewpoint": true
+}

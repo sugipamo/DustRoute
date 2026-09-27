@@ -1,0 +1,18 @@
+{
+  "kind": "pre_migration_model_regression",
+  "captured_on": "2026-09-20",
+  "source": "Working tree on codex/blueprint-architecture after the approved all-sides input validation repair, before piston law migration",
+  "command": "cargo run -q -p dustroute-translate --example audit_piston_world_model",
+  "harness": "../support/piston_models.rs",
+  "fixture": "piston_model_v1.jsonl",
+  "cases": 40,
+  "facings": ["north", "east", "south", "west"],
+  "variants": ["normal", "sticky"],
+  "payloads": ["empty", "stone", "glass", "twelve", "piston"],
+  "input_sequence": [true, false],
+  "direct_plan_row": ["state before", "state after", "moves", "stable changes"],
+  "event_row": ["PhysicsTime", "target", "event category", "execution status"],
+  "transition_row": ["PhysicsTime", "exact block changes", "move relations", "cause"],
+  "stable_row": ["all world block records", "pending events", "trace status"],
+  "scope": "Frozen local model evidence, not live Minecraft observations. Includes transient moving carriers and completed raw block states. Does not instantiate or move Blueprint interpretations. The separate piston_input_boundary_pre_migration fixture records the earlier validation defect and is not a success criterion. Do not regenerate this fixture merely to accept a changed law implementation."
+}

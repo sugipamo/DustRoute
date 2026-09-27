@@ -1,0 +1,431 @@
+{
+  "schema_version": "dustroute.assembly-diagnosis-evidence.v1",
+  "status": "passed",
+  "minecraft_version": "1.21.11",
+  "scope": "Cause-independent literal diagnosis against a registered Assembly, separately from reconstruction admission; no world writes by diagnosis.",
+  "model": {
+    "normal_open_closed_reference_rotations": [
+      "r0",
+      "r90",
+      "r180",
+      "r270"
+    ],
+    "repair_reentry": "Every settled reconstruction-step boundary for missing quartz and premature-input outcomes at 1, 3 and 14 modeled ticks",
+    "excludes": "arbitrary motion instants, unknown queues and arbitrary damage"
+  },
+  "transport": {
+    "external_damage_without_failed_tool_attempt": true,
+    "missing_orientation_settings_and_unsupported_extra_material": true,
+    "unverified_reference_and_missing_input_fallback": true,
+    "incomplete_and_moving_observation_refused": true,
+    "applied_write_reply_lost_then_restart_and_fresh_repair": true,
+    "diagnosis_no_world_write_asserted": true,
+    "fault_scope": "controlled local transport stub, not host crash or filesystem fault"
+  },
+  "validation": {
+    "rust_tests_passed": 18,
+    "retained_tool_results": [
+      {
+        "command": [
+          "cargo",
+          "test",
+          "--offline",
+          "--locked",
+          "-j",
+          "1",
+          "-p",
+          "dustroute-mcp",
+          "--lib",
+          "custom_electrical_construction_rechecks",
+          "--",
+          "--nocapture",
+          "--test-threads=1"
+        ],
+        "exit_code": 0,
+        "result": "1 passed; 0 failed; 0 ignored; 83 filtered out",
+        "seconds": 249.99,
+        "source": "retained exec/write_stdin output, session 46415"
+      },
+      {
+        "command": [
+          "cargo",
+          "test",
+          "--offline",
+          "--locked",
+          "-j",
+          "1",
+          "-p",
+          "dustroute-translate",
+          "--test",
+          "reference_door_adoption",
+          "--",
+          "--test-threads=1"
+        ],
+        "exit_code": 0,
+        "result": "8 passed; 0 failed; 0 ignored",
+        "seconds": 18.05,
+        "source": "retained exec/write_stdin output, session 80045"
+      }
+    ],
+    "construction_regressions": {
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-translate",
+        "--test",
+        "electrical_piston_construction",
+        "--test",
+        "command_placement_regression",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0
+    },
+    "checks": [
+      {
+        "command": [
+          "cargo",
+          "test",
+          "--offline",
+          "--locked",
+          "-j",
+          "1",
+          "-p",
+          "dustroute-mcp",
+          "--lib",
+          "diagnosis",
+          "--",
+          "--test-threads=1"
+        ],
+        "exit_code": 0,
+        "log": ".local/e2e-artifacts/reference-door-diagnosis-20260927/check-0.log"
+      },
+      {
+        "command": [
+          "cargo",
+          "clippy",
+          "--offline",
+          "--locked",
+          "-j",
+          "1",
+          "-p",
+          "dustroute-mcp",
+          "-p",
+          "dustroute-translate",
+          "--all-targets",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "exit_code": 0,
+        "log": ".local/e2e-artifacts/reference-door-diagnosis-20260927/check-1.log"
+      },
+      {
+        "command": [
+          "cargo",
+          "build",
+          "--offline",
+          "--locked",
+          "-j",
+          "1",
+          "-p",
+          "dustroute-mcp",
+          "--bin",
+          "dustroute-mcp"
+        ],
+        "exit_code": 0,
+        "log": ".local/e2e-artifacts/reference-door-diagnosis-20260927/check-2.log"
+      },
+      {
+        "command": [
+          "cargo",
+          "fmt",
+          "--all",
+          "--",
+          "--check"
+        ],
+        "exit_code": 0,
+        "log": ".local/e2e-artifacts/reference-door-diagnosis-20260927/check-3.log"
+      },
+      {
+        "command": [
+          "node",
+          "--check",
+          "crates/dustroute-mcp/mineflayer/e2e/piston-assembly-mcp-live.js"
+        ],
+        "exit_code": 0,
+        "log": ".local/e2e-artifacts/reference-door-diagnosis-20260927/check-4.log"
+      },
+      {
+        "command": [
+          "git",
+          "diff",
+          "--check"
+        ],
+        "exit_code": 0,
+        "log": ".local/e2e-artifacts/reference-door-diagnosis-20260927/check-5.log"
+      }
+    ]
+  },
+  "live": {
+    "status": "passed",
+    "verified_build_steps": 43,
+    "verified_reconstruction_steps": 85,
+    "verified_removal_steps": 43,
+    "normal_close_open_cycles_after_reconstruction": 2,
+    "whole_region_and_aperture_matches": 4,
+    "process_restarts": [
+      {
+        "before_pid": 134094,
+        "after_pid": 134131,
+        "exit_code": null,
+        "signal": "SIGTERM"
+      },
+      {
+        "before_pid": 134131,
+        "after_pid": 134199,
+        "exit_code": null,
+        "signal": "SIGTERM"
+      },
+      {
+        "before_pid": 134199,
+        "after_pid": 134381,
+        "exit_code": null,
+        "signal": "SIGTERM"
+      },
+      {
+        "before_pid": 134381,
+        "after_pid": 134556,
+        "exit_code": null,
+        "signal": "SIGTERM"
+      }
+    ],
+    "reconstruction_guards": {
+      "preview_required": true,
+      "changed_after_preview_refused": true,
+      "restored_after_restart": true
+    },
+    "capture_footer": {
+      "kind": "artifact_end",
+      "capture_mode": "continuous",
+      "capture_state": "closed_no_input",
+      "input_observed": false,
+      "anchor_game_tick": null,
+      "end_game_tick": null,
+      "last_sequence": 83008,
+      "emitted_records": 83008,
+      "suppressed_records": 0,
+      "evicted_records": 0,
+      "write_errors": 0,
+      "heartbeat_mode": "full"
+    },
+    "all_sequences_contiguous": true,
+    "applied_inputs": [
+      {
+        "position": {
+          "x": 69008,
+          "y": 191,
+          "z": 1000
+        },
+        "powered": true,
+        "game_tick": 117942,
+        "packet_sequence": 44545,
+        "write_sequence": 44553
+      },
+      {
+        "position": {
+          "x": 69008,
+          "y": 191,
+          "z": 1000
+        },
+        "powered": false,
+        "game_tick": 118309,
+        "packet_sequence": 51055,
+        "write_sequence": 51063
+      },
+      {
+        "position": {
+          "x": 69008,
+          "y": 191,
+          "z": 1000
+        },
+        "powered": true,
+        "game_tick": 118536,
+        "packet_sequence": 56012,
+        "write_sequence": 56020
+      },
+      {
+        "position": {
+          "x": 69008,
+          "y": 191,
+          "z": 1000
+        },
+        "powered": false,
+        "game_tick": 118955,
+        "packet_sequence": 63146,
+        "write_sequence": 63154
+      }
+    ],
+    "input_commits": [
+      {
+        "kind": "state_commit",
+        "sequence": 44546,
+        "game_tick": 117942,
+        "dimension": "minecraft:overworld",
+        "position": "BlockPos{x=69008, y=191, z=1000}",
+        "before": "Block{minecraft:lever}[face=floor,facing=east,powered=false]",
+        "after": "Block{minecraft:lever}[face=floor,facing=east,powered=true]",
+        "flags": 3
+      },
+      {
+        "kind": "state_commit",
+        "sequence": 51056,
+        "game_tick": 118309,
+        "dimension": "minecraft:overworld",
+        "position": "BlockPos{x=69008, y=191, z=1000}",
+        "before": "Block{minecraft:lever}[face=floor,facing=east,powered=true]",
+        "after": "Block{minecraft:lever}[face=floor,facing=east,powered=false]",
+        "flags": 3
+      },
+      {
+        "kind": "state_commit",
+        "sequence": 56013,
+        "game_tick": 118536,
+        "dimension": "minecraft:overworld",
+        "position": "BlockPos{x=69008, y=191, z=1000}",
+        "before": "Block{minecraft:lever}[face=floor,facing=east,powered=false]",
+        "after": "Block{minecraft:lever}[face=floor,facing=east,powered=true]",
+        "flags": 3
+      },
+      {
+        "kind": "state_commit",
+        "sequence": 63147,
+        "game_tick": 118955,
+        "dimension": "minecraft:overworld",
+        "position": "BlockPos{x=69008, y=191, z=1000}",
+        "before": "Block{minecraft:lever}[face=floor,facing=east,powered=true]",
+        "after": "Block{minecraft:lever}[face=floor,facing=east,powered=false]",
+        "flags": 3
+      }
+    ],
+    "cleanup": {
+      "region_empty": true,
+      "force_load_removed": true
+    },
+    "server_stopped_normally": true,
+    "loaded_sources_sha256": {
+      "/root/DustRoute/tools/observe_assembly_construction.py": "0ff69667305aff350e0ac052aa6a58a22a29f5c10848d0b2ea6f6f01f83061cc",
+      "/root/DustRoute/crates/dustroute-mcp/mineflayer/e2e/piston-assembly-mcp-live.js": "8e593a972421ff33734612ce13480f18d0d465a394b174195aaaea948bcd225d",
+      "/root/DustRoute/target/debug/dustroute-mcp": "cd5b74828a1080b2178fe635ba72ffe45082eac765650293ab2f669175da3527",
+      "/root/DustRoute/crates/dustroute-mcp/mineflayer/bridge.js": "b71723a91387203de40ed43fc91f4d5d273efe9bb0429948e1af2cf1103865d4",
+      "/root/DustRoute/tools/instrumented_server.py": "7164de1897c7f0388b99b6ab2cac7edb12174add7aaf1a0bd347e5ffb5f3ca6f"
+    },
+    "artifacts": {
+      ".raw.ndjson": "/root/DustRoute/.local/e2e-artifacts/reference-door-diagnosis-20260927-a.raw.ndjson",
+      ".server.log": "/root/DustRoute/.local/e2e-artifacts/reference-door-diagnosis-20260927-a.server.log",
+      ".bridge.log": "/root/DustRoute/.local/e2e-artifacts/reference-door-diagnosis-20260927-a.bridge.log",
+      ".client.json": "/root/DustRoute/.local/e2e-artifacts/reference-door-diagnosis-20260927-a.client.json",
+      ".fixture.json": "/root/DustRoute/.local/e2e-artifacts/reference-door-diagnosis-20260927-a.fixture.json",
+      ".summary.json": "/root/DustRoute/.local/e2e-artifacts/reference-door-diagnosis-20260927-a.summary.json"
+    },
+    "artifacts_sha256": {
+      ".raw.ndjson": "e873387aa08109f0aec5dc26c67222caea7aaa0b1a1290c153ca2a68e011058b",
+      ".server.log": "dbfd268ec6d170284cc436fa42f8cba33e7aa07376551bae778423a8b9f735c1",
+      ".bridge.log": "9495f2a796b4870b0803ffa3ae72ec59d79096eee045b3d1c6027f0f312ae39b",
+      ".client.json": "5eec40714862170de520c70fe69a68d38537e92e745ada28a57731580b581977",
+      ".fixture.json": "5e5b8043f4db422c0e895ad1156111144d63632605e15cdc3facf487359db386"
+    },
+    "diagnoses": [
+      {
+        "label": "initial_open",
+        "status": "matches_reference",
+        "world_unchanged": true
+      },
+      {
+        "label": "missing_client_chunks",
+        "status": "observation_unavailable",
+        "world_unchanged": true
+      },
+      {
+        "label": "player_added_chest",
+        "status": "differences_found",
+        "world_unchanged": true
+      },
+      {
+        "label": "player_removed_quartz",
+        "status": "differences_found",
+        "world_unchanged": true
+      },
+      {
+        "label": "normal_closed",
+        "status": "matches_reference",
+        "world_unchanged": true
+      },
+      {
+        "label": "normal_open",
+        "status": "matches_reference",
+        "world_unchanged": true
+      },
+      {
+        "label": "normal_closed",
+        "status": "matches_reference",
+        "world_unchanged": true
+      },
+      {
+        "label": "normal_open",
+        "status": "matches_reference",
+        "world_unchanged": true
+      }
+    ],
+    "evidence_limit": "one registered door at R0; no arbitrary-design/history guarantee, ownership proof or automatic live functional pass"
+  },
+  "remaining_limits": [
+    "Registered placed instance and retained pinned design required; no inference for arbitrary unregistered circuits",
+    "Current inputs select one canonical settled reference; other histories may have other valid states",
+    "Literal differences do not prove cause, ownership, or whether a human edit was intentional",
+    "Diagnosis does not run a live functional test; this evidence contains a separate explicit functional trial",
+    "Reconstruction uses bounded teardown/rebuild, not minimal-edit repair",
+    "Two client samples do not prove queue readiness or atomic check/write; unsupported states can block repair",
+    "World identity, external concurrent edits and world-save rollback retain existing limits"
+  ],
+  "source_sha256": {
+    "crates/dustroute-mcp/src/assembly_diagnosis.rs": "28aec0a16306bc844bd95cf4d06e716bb6773c257afa2405b9e941349a780ac9",
+    "crates/dustroute-mcp/src/lib.rs": "84f5223a6dbceadc5d21313a4ab2903aa635ee10944be9d11134f4d0caeedd10",
+    "crates/dustroute-mcp/src/service.rs": "80d7059140234b343696ea2b813c457ef5824902d30e503978c4ab4d829bd2a5",
+    "crates/dustroute-mcp/src/piston_assembly.rs": "dcb6778b20fa7c53ae8897951c34da7dfacf8a23388762d5bd604a35e191a8a1",
+    "crates/dustroute-mcp/src/service/assembly_placement.rs": "f875ad97f90f9edb9f5e3935030b39f8e27fb217b886ea01514f59a100dad2ae",
+    "crates/dustroute-mcp/src/service/assembly_placement/diagnosis.rs": "7402e5aad0f360030be212b4c970fd5f8f0c415183e4c55c9db60cefd815fa6a",
+    "crates/dustroute-mcp/src/service/assembly_placement/reconstruction.rs": "5535464e317c9a0a9cf87fbb5810fdfa2e6ab8fa88b3770d4fc38064ccdeed5b",
+    "crates/dustroute-mcp/src/service_blueprint_tests.rs": "bbb2456ed4b2a25a4f4d675606997c43bed913b34b6a6bac46b524641d824ab7",
+    "crates/dustroute-translate/src/piston_construction.rs": "6fce6f1127220452317137946ba0bc746491159dba4520648306891347de82a2",
+    "crates/dustroute-translate/tests/reference_door_adoption.rs": "4ac5693515414b936a6089e33548f872c91300468093ac4ba017fc1e8b6f24f1",
+    "crates/dustroute-mcp/mineflayer/e2e/piston-assembly-mcp-live.js": "8e593a972421ff33734612ce13480f18d0d465a394b174195aaaea948bcd225d",
+    "docs/assembly-diagnosis.md": "de6e08ba50b7e4083e22526b4ebb8b54e85af326ae572b7ceb31ec6905ce5763",
+    "docs/placed-assembly-management.md": "8a0e0e5c4ec77edd5b37944c0783f7816286c8223d0e40479add0f6a2ad91b2a",
+    "docs/live-operation-readiness-and-recovery.md": "9fb76743fd16ecbae3cc7d0c7585c9a1c12398ea7785f2bcecbc627b518c0d7b"
+  },
+  "supporting_artifacts_sha256": {
+    ".local/e2e-artifacts/reference-door-diagnosis-20260927/analyze.py": "9ac4aa1d73c138f432c28a9577a0ca862e8c62d75516e85a33bee14d9bce1617",
+    ".local/e2e-artifacts/reference-door-diagnosis-20260927/check-0.log": "f7175124a44e72ae8eede8267b23b8cbf4d78b530089facc1a1169db67b23c6f",
+    ".local/e2e-artifacts/reference-door-diagnosis-20260927/check-1.log": "a6b783a0dca72a4236243ccf5020b1f74f25b05a03ab1675119106158f5e3e56",
+    ".local/e2e-artifacts/reference-door-diagnosis-20260927/check-2.log": "96e2a9362b086c0a82adb5596a558106b29a0f435d3eb43f8145254872a86867",
+    ".local/e2e-artifacts/reference-door-diagnosis-20260927/check-3.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".local/e2e-artifacts/reference-door-diagnosis-20260927/check-4.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".local/e2e-artifacts/reference-door-diagnosis-20260927/check-5.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".local/e2e-artifacts/reference-door-diagnosis-20260927/checks.json": "1ef705fb56b4ec04ebf279e5466cbca64852b483443221965331d47c477ba803",
+    ".local/e2e-artifacts/reference-door-diagnosis-20260927/construction-check.json": "62b9a8ff65420bd09681c88f8e0c218946d902a2a64c2164dc7c0ed6ade49bb3",
+    ".local/e2e-artifacts/reference-door-diagnosis-20260927/construction-check.log": "e4428bde0a6a99b5c816c601d7d9e57592c51a88ddc9c156165b69479f6a1722",
+    ".local/e2e-artifacts/reference-door-diagnosis-20260927/fixture-build.log": "195085dcbd612b9abd734248349de67b3259db472eb1e5eafc44bd24575334f0",
+    ".local/e2e-artifacts/reference-door-diagnosis-20260927/input.json": "5e5b8043f4db422c0e895ad1156111144d63632605e15cdc3facf487359db386",
+    ".local/e2e-artifacts/reference-door-diagnosis-20260927/ports-closed.json": "2cb99b2484196a8dda8b669074c61573bb1219129a669cbdbed949d6959b753b",
+    ".local/e2e-artifacts/reference-door-diagnosis-20260927/prior-checks.json": "274289a8ce6939d28613682368969abe62d9d7dd98a8a08d26b4be48d852707d",
+    ".local/e2e-artifacts/reference-door-diagnosis-20260927/report.py": "43b35c9470c5da30137a267c02d1d5fa89f2f44e0d7fb9d2cd85f62bcd74d2a6",
+    ".local/e2e-artifacts/reference-door-diagnosis-20260927/transform.json": "ab8b8e03c6218818b6a2524945294948c410549537c071158289caa31ddaa000",
+    ".local/e2e-artifacts/reference-door-diagnosis-20260927/verified.json": "766e3020685ee4508baac7f3ad7eaec5e4c77f099f108e0809d4633e55cdd2d4"
+  }
+}

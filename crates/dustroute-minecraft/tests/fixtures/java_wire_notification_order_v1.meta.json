@@ -1,0 +1,11 @@
+{
+  "kind": "java_collection_order_reference",
+  "captured_on": "2026-09-26",
+  "java_version": "OpenJDK 21.0.12+8",
+  "minecraft_hash_method": "Vec3i.hashCode; static audit in piston_electrical_source.meta.json",
+  "generator": "tools/JavaWireNotificationOrder.java",
+  "generator_sha256": "a4c5e5ea79aeecfe9e64be9e394e12ca0c0e3d6edd4b0508f5895136db3d02c5",
+  "fixture_sha256": "9a4083b06e3c4fac66eccd63db1d8d839248e8b915db291efda18805ff0cbf21",
+  "cases": 7,
+  "evidence_limit": "Actual Java HashSet iteration with audited integer hash; not a live Minecraft observation."
+}

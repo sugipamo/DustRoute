@@ -1,0 +1,111 @@
+{
+  "inputs": {
+    "side_connects": 1,
+    "support_shape": 2,
+    "upper_wire": 1,
+    "blocked": 1,
+    "side_air": 1,
+    "lower_wire": 1
+  },
+  "registers": {
+    "shape": {
+      "initial": 0,
+      "maximum": 2
+    }
+  },
+  "histories": {},
+  "handlers": {
+    "evaluate": [
+      {
+        "op": "if",
+        "condition": {
+          "op": "input",
+          "name": "side_connects"
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "shape",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          }
+        ],
+        "otherwise": [
+          {
+            "op": "if",
+            "condition": {
+              "op": "and",
+              "left": {
+                "op": "not",
+                "value": {
+                  "op": "equal",
+                  "left": {
+                    "op": "input",
+                    "name": "support_shape"
+                  },
+                  "right": {
+                    "op": "constant",
+                    "value": 0
+                  }
+                }
+              },
+              "right": {
+                "op": "and",
+                "left": {
+                  "op": "input",
+                  "name": "upper_wire"
+                },
+                "right": {
+                  "op": "not",
+                  "value": {
+                    "op": "input",
+                    "name": "blocked"
+                  }
+                }
+              }
+            },
+            "then": [
+              {
+                "op": "set",
+                "register": "shape",
+                "value": {
+                  "op": "input",
+                  "name": "support_shape"
+                }
+              }
+            ],
+            "otherwise": [
+              {
+                "op": "if",
+                "condition": {
+                  "op": "and",
+                  "left": {
+                    "op": "input",
+                    "name": "side_air"
+                  },
+                  "right": {
+                    "op": "input",
+                    "name": "lower_wire"
+                  }
+                },
+                "then": [
+                  {
+                    "op": "set",
+                    "register": "shape",
+                    "value": {
+                      "op": "constant",
+                      "value": 1
+                    }
+                  }
+                ],
+                "otherwise": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

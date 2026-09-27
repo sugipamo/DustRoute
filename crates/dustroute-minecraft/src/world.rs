@@ -7,7 +7,18 @@ use std::fmt::{Display, Formatter};
 use serde::{Deserialize, Serialize};
 
 #[derive(
-    Clone, Copy, Debug, Default, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize,
+    Clone,
+    Copy,
+    Debug,
+    Default,
+    Deserialize,
+    Eq,
+    Hash,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    Serialize,
+    schemars::JsonSchema,
 )]
 pub struct Pos {
     pub x: i32,
@@ -27,7 +38,19 @@ impl Pos {
     }
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Deserialize,
+    Eq,
+    Hash,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    Serialize,
+    schemars::JsonSchema,
+)]
 pub enum BlockKind {
     Air,
     Solid,
@@ -54,7 +77,18 @@ pub enum BlockKind {
 /// physical state rather than inferred from a logical gate so sticky
 /// retraction cannot be silently lost during translation.
 #[derive(
-    Clone, Copy, Debug, Default, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize,
+    Clone,
+    Copy,
+    Debug,
+    Default,
+    Deserialize,
+    Eq,
+    Hash,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    Serialize,
+    schemars::JsonSchema,
 )]
 #[serde(rename_all = "snake_case")]
 pub enum PistonVariant {
@@ -67,7 +101,18 @@ pub enum PistonVariant {
 /// plan atomically, but the moving states are part of the contract so later
 /// block-event traces can expose the vanilla intermediate state honestly.
 #[derive(
-    Clone, Copy, Debug, Default, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize,
+    Clone,
+    Copy,
+    Debug,
+    Default,
+    Deserialize,
+    Eq,
+    Hash,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    Serialize,
+    schemars::JsonSchema,
 )]
 #[serde(rename_all = "snake_case")]
 pub enum PistonState {
@@ -93,7 +138,7 @@ impl PistonState {
 /// Stable piston-head state. Vanilla exposes the head as an independent
 /// block after an extension completes; keeping it typed prevents a completed
 /// piston from collapsing back to `Air` at the head coordinate.
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, schemars::JsonSchema)]
 pub struct PistonHeadState {
     pub facing: Facing,
     pub variant: PistonVariant,
@@ -106,7 +151,7 @@ pub struct PistonHeadState {
 /// Discrete representation of metadata carried by a vanilla
 /// `PistonBlockEntity`. Continuous interpolation is deliberately out of scope
 /// for this block-only model; `progress` is a stable 0/1 boundary marker.
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, schemars::JsonSchema)]
 pub struct PistonBlockEntityState {
     pub pushed_block: Box<Block>,
     pub facing: Facing,
@@ -128,7 +173,9 @@ pub enum CapabilityLevel {
     NotApplicable,
 }
 
-#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[derive(
+    Clone, Copy, Debug, Default, Deserialize, Eq, Hash, PartialEq, Serialize, schemars::JsonSchema,
+)]
 #[serde(rename_all = "snake_case")]
 pub enum ObservationClassification {
     /// Constructed internally rather than read from a live Minecraft world.
@@ -152,7 +199,19 @@ pub struct BlockCapabilities {
     pub placement: CapabilityLevel,
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Deserialize,
+    Eq,
+    Hash,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    Serialize,
+    schemars::JsonSchema,
+)]
 pub enum Facing {
     North,
     East,
@@ -199,7 +258,7 @@ impl Facing {
     }
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize, schemars::JsonSchema)]
 pub enum WireConnection {
     None,
     Side,
@@ -245,16 +304,6 @@ pub struct BlockProperties {
 }
 
 impl BlockProperties {
-    pub(crate) const fn support_only(supports_components: bool) -> Self {
-        Self {
-            supports_components,
-            receives_weak_power: false,
-            receives_strong_power: false,
-            repeater_reads_block_power: false,
-            strong_power_drives_dust: false,
-        }
-    }
-
     #[must_use]
     pub const fn can_be_powered(self) -> bool {
         self.receives_weak_power || self.receives_strong_power
@@ -283,12 +332,12 @@ impl BlockKind {
     }
 
     #[must_use]
-    pub const fn properties(self) -> BlockProperties {
-        crate::blocks::behavior_profile(self).properties
+    pub fn properties(self) -> BlockProperties {
+        crate::spatial::builtin_spatial_laws().properties(self)
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, schemars::JsonSchema)]
 pub struct Block {
     pub kind: BlockKind,
     /// Namespaced identifier reported by Minecraft. Synthetic blocks leave
@@ -545,90 +594,7 @@ impl Block {
     /// block state. Synthetic blocks retain the historical kind defaults.
     #[must_use]
     pub fn redstone_traits(&self) -> BlockRedstoneTraits {
-        let properties = self.kind.properties();
-        let mut traits = BlockRedstoneTraits {
-            occupied_shape: match self.kind {
-                BlockKind::Air => OccupiedShape::Empty,
-                BlockKind::Solid
-                | BlockKind::Transparent
-                | BlockKind::RedstoneBlock
-                | BlockKind::RedstoneLamp
-                | BlockKind::Observer => OccupiedShape::FullCube,
-                _ => OccupiedShape::Partial,
-            },
-            supports_dust_on_top: properties.supports_components,
-            conducts_weak_power: properties.receives_weak_power,
-            conducts_strong_power: properties.receives_strong_power,
-            strong_power_drives_dust: properties.strong_power_drives_dust,
-            permits_wire_rise_beside: properties.supports_components,
-            wire_rise_connection: properties.supports_components.then_some(WireConnection::Up),
-            blocks_wire_rise_when_above: self.kind == BlockKind::Solid,
-        };
-        if self.requires_live_observation() {
-            traits.occupied_shape = OccupiedShape::FullCube;
-            traits.supports_dust_on_top = false;
-            traits.conducts_weak_power = false;
-            traits.conducts_strong_power = false;
-            traits.strong_power_drives_dust = false;
-            traits.permits_wire_rise_beside = false;
-            traits.wire_rise_connection = None;
-            traits.blocks_wire_rise_when_above = true;
-            return traits;
-        }
-        let name = self.observed_name.as_deref().unwrap_or_default();
-        if name.ends_with("_slab") {
-            let top = self.observed_properties.get("type").map(String::as_str) == Some("top");
-            let double = self.observed_properties.get("type").map(String::as_str) == Some("double");
-            traits.occupied_shape = if double {
-                OccupiedShape::FullCube
-            } else if top {
-                OccupiedShape::TopHalf
-            } else {
-                OccupiedShape::BottomHalf
-            };
-            traits.supports_dust_on_top = top || double;
-            traits.permits_wire_rise_beside = top || double;
-            traits.wire_rise_connection = if top {
-                Some(WireConnection::Side)
-            } else if double {
-                Some(WireConnection::Up)
-            } else {
-                None
-            };
-            traits.blocks_wire_rise_when_above = double;
-            traits.conducts_weak_power = double;
-            traits.conducts_strong_power = double;
-            traits.strong_power_drives_dust = double;
-        } else if name.ends_with("_stairs") {
-            let top = self.observed_properties.get("half").map(String::as_str) == Some("top");
-            traits.occupied_shape = OccupiedShape::Partial;
-            traits.supports_dust_on_top = top;
-            traits.permits_wire_rise_beside = top;
-            traits.wire_rise_connection = top.then_some(WireConnection::Side);
-            traits.blocks_wire_rise_when_above = false;
-            traits.conducts_weak_power = false;
-            traits.conducts_strong_power = false;
-            traits.strong_power_drives_dust = false;
-        } else if matches!(name, "minecraft:glass" | "minecraft:tinted_glass") {
-            traits.occupied_shape = OccupiedShape::FullCube;
-            traits.supports_dust_on_top = true;
-            traits.permits_wire_rise_beside = true;
-            traits.wire_rise_connection = Some(WireConnection::Up);
-            traits.blocks_wire_rise_when_above = false;
-            traits.conducts_weak_power = false;
-            traits.conducts_strong_power = false;
-            traits.strong_power_drives_dust = false;
-        }
-        if matches!(self.kind, BlockKind::PistonHead | BlockKind::MovingPiston) {
-            // The current model does not reproduce the directional collision
-            // shape or moving-entity support rules; do not let either typed
-            // piston part create an inferred wire rise.
-            traits.supports_dust_on_top = false;
-            traits.permits_wire_rise_beside = false;
-            traits.wire_rise_connection = None;
-            traits.blocks_wire_rise_when_above = true;
-        }
-        traits
+        crate::spatial::builtin_spatial_laws().block_traits(self)
     }
 }
 
@@ -785,26 +751,27 @@ impl World {
 
     #[must_use]
     pub fn support_issues(&self) -> Vec<(Pos, BlockKind, Option<Pos>)> {
+        self.support_issues_with_laws(crate::spatial::builtin_spatial_laws())
+    }
+
+    /// Diagnose support under an explicit finite spatial model. This returns
+    /// raw issues, never a current-placement proof or authority to adopt it.
+    #[must_use]
+    pub fn support_issues_with_laws(
+        &self,
+        laws: &crate::spatial::SpatialLaws,
+    ) -> Vec<(Pos, BlockKind, Option<Pos>)> {
         self.blocks
             .iter()
             .filter_map(|(pos, block)| {
-                let requires = matches!(
-                    block.kind,
-                    BlockKind::RedstoneWire
-                        | BlockKind::RedstoneTorch
-                        | BlockKind::Repeater
-                        | BlockKind::Comparator
-                        | BlockKind::Lever
-                        | BlockKind::Button
-                        | BlockKind::PressurePlate
-                );
+                let requires = laws.requires_support(block.kind);
                 if !requires {
                     return None;
                 }
                 let support = block.support_pos(*pos);
                 let valid = support
                     .and_then(|at| self.get(at))
-                    .is_some_and(|support| support.redstone_traits().supports_dust_on_top);
+                    .is_some_and(|support| laws.block_traits(support).supports_dust_on_top);
                 (!valid).then_some((*pos, block.kind, support))
             })
             .collect()

@@ -1,0 +1,2065 @@
+{
+  "schema": "dustroute.reference-door-relocation.v1",
+  "status": "verified",
+  "scope": "Java 1.21.11 ordinary 43-block reference door, two isolated anchors by four Y rotations, public command construction and conditional removal; no live completion sensor.",
+  "execution_profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v6",
+  "prior_live_evidence": "docs/evidence/reference-door-command-v6-20260927.json",
+  "production_sources_unchanged_from": "docs/evidence/piston-code-cleanup-20260927.json",
+  "production_source_hashes_checked": 18,
+  "runtime_or_product_features_added": [],
+  "changes": [
+    "Target-specific live model probes and full public-plan equality in the test actor.",
+    "Independent static dependency/topological audit in the reference example.",
+    "Relocation evidence and usage documentation."
+  ],
+  "source_sha256": {
+    "crates/dustroute-translate/examples/audit_reference_door_adoption.rs": "be655d60421da3a9a94fdce4e3b42dca94b363eea8dc0a574f8ec32d1429d38e",
+    "target/debug/examples/audit_reference_door_adoption": "5d90d51b163faa01914b3b4904007c2620095bb22fa444a581145bff810735e0",
+    "crates/dustroute-mcp/mineflayer/e2e/piston-assembly-mcp-live.js": "145484dc29cd513745ec16d6a6017379b85ef2acfa6ed61b1a5125f3dad88951",
+    "target/debug/dustroute-mcp": "dddff0992df4d0299df24ea470a9ede9f86f16b893e3538c18207b4e0203b841",
+    "tools/observe_assembly_construction.py": "0ff69667305aff350e0ac052aa6a58a22a29f5c10848d0b2ea6f6f01f83061cc",
+    "tools/instrumented_server.py": "7164de1897c7f0388b99b6ab2cac7edb12174add7aaf1a0bd347e5ffb5f3ca6f"
+  },
+  "dependency_audit": {
+    "nodes_per_trial": 43,
+    "support_edges": 6,
+    "occupied_watched_cell_edges": 8,
+    "cycles": 0,
+    "production_order_violations": 0,
+    "source_relative_insertion_order_groups": [
+      [
+        "positive-r0",
+        "positive-r270",
+        "negative-r0",
+        "negative-r270"
+      ],
+      [
+        "positive-r90",
+        "positive-r180",
+        "negative-r90",
+        "negative-r180"
+      ]
+    ],
+    "production_planner_changed": false
+  },
+  "totals": {
+    "trials": 8,
+    "verified_build_stages": 344,
+    "verified_remove_stages": 344,
+    "ordinary_close_open_cycles": 16,
+    "whole_region_and_aperture_matches": 32,
+    "server_applied_inputs": 32,
+    "mcp_restarts": 24
+  },
+  "trials": [
+    {
+      "name": "positive-r0",
+      "run_id": "reference-door-relocation-20260927-positive-r0",
+      "status": "passed",
+      "transform": {
+        "source_anchor": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "target_anchor": {
+          "x": 65008,
+          "y": 180,
+          "z": 1000
+        },
+        "rotation": "r0"
+      },
+      "known_region": {
+        "min": {
+          "x": 65006,
+          "y": 180,
+          "z": 995
+        },
+        "max": {
+          "x": 65010,
+          "y": 193,
+          "z": 1005
+        }
+      },
+      "dependencies": {
+        "support": 6,
+        "occupied_watched_cell": 8
+      },
+      "static_order_valid": true,
+      "public_plan_matches_target_audit": true,
+      "verified_build_steps": 43,
+      "verified_remove_steps": 43,
+      "whole_region_and_aperture_matches": 4,
+      "normal_close_open_cycles": 2,
+      "applied_inputs": [
+        {
+          "position": {
+            "x": 65008,
+            "y": 191,
+            "z": 1000
+          },
+          "powered": true,
+          "game_tick": 81333,
+          "packet_sequence": 20084,
+          "write_sequence": 20092
+        },
+        {
+          "position": {
+            "x": 65008,
+            "y": 191,
+            "z": 1000
+          },
+          "powered": false,
+          "game_tick": 81647,
+          "packet_sequence": 25958,
+          "write_sequence": 25966
+        },
+        {
+          "position": {
+            "x": 65008,
+            "y": 191,
+            "z": 1000
+          },
+          "powered": true,
+          "game_tick": 81746,
+          "packet_sequence": 29379,
+          "write_sequence": 29387
+        },
+        {
+          "position": {
+            "x": 65008,
+            "y": 191,
+            "z": 1000
+          },
+          "powered": false,
+          "game_tick": 82012,
+          "packet_sequence": 34677,
+          "write_sequence": 34685
+        }
+      ],
+      "input_commits": [
+        {
+          "kind": "state_commit",
+          "sequence": 20085,
+          "game_tick": 81333,
+          "dimension": "minecraft:overworld",
+          "position": "BlockPos{x=65008, y=191, z=1000}",
+          "before": "Block{minecraft:lever}[face=floor,facing=east,powered=false]",
+          "after": "Block{minecraft:lever}[face=floor,facing=east,powered=true]",
+          "flags": 3
+        },
+        {
+          "kind": "state_commit",
+          "sequence": 25959,
+          "game_tick": 81647,
+          "dimension": "minecraft:overworld",
+          "position": "BlockPos{x=65008, y=191, z=1000}",
+          "before": "Block{minecraft:lever}[face=floor,facing=east,powered=true]",
+          "after": "Block{minecraft:lever}[face=floor,facing=east,powered=false]",
+          "flags": 3
+        },
+        {
+          "kind": "state_commit",
+          "sequence": 29380,
+          "game_tick": 81746,
+          "dimension": "minecraft:overworld",
+          "position": "BlockPos{x=65008, y=191, z=1000}",
+          "before": "Block{minecraft:lever}[face=floor,facing=east,powered=false]",
+          "after": "Block{minecraft:lever}[face=floor,facing=east,powered=true]",
+          "flags": 3
+        },
+        {
+          "kind": "state_commit",
+          "sequence": 34678,
+          "game_tick": 82012,
+          "dimension": "minecraft:overworld",
+          "position": "BlockPos{x=65008, y=191, z=1000}",
+          "before": "Block{minecraft:lever}[face=floor,facing=east,powered=true]",
+          "after": "Block{minecraft:lever}[face=floor,facing=east,powered=false]",
+          "flags": 3
+        }
+      ],
+      "capture_header": {
+        "kind": "artifact_start",
+        "schema": "dustroute.vanilla-instrumentation.v1",
+        "minecraft_version": "1.21.11",
+        "started_at": "2026-09-27T12:06:11.685860936Z",
+        "transient_trace": "dustroute.piston-transient.v1",
+        "trace_bounds": "65006,180,995,65010,193,1005",
+        "capture_mode": "continuous",
+        "max_ticks_after_input": null,
+        "pre_roll_ticks": 2,
+        "drain_ticks": 2,
+        "heartbeat_mode": "full"
+      },
+      "capture_footer": {
+        "kind": "artifact_end",
+        "capture_mode": "continuous",
+        "capture_state": "closed_no_input",
+        "input_observed": false,
+        "anchor_game_tick": null,
+        "end_game_tick": null,
+        "last_sequence": 54119,
+        "emitted_records": 54119,
+        "suppressed_records": 0,
+        "evicted_records": 0,
+        "write_errors": 0,
+        "heartbeat_mode": "full"
+      },
+      "all_sequences_contiguous": true,
+      "persistence_checks": {
+        "listed_after_restart": true,
+        "fresh_review": true,
+        "missing_chunks_refused": true,
+        "external_change_detected": true,
+        "preview_required": true,
+        "changed_after_preview_refused": true,
+        "removal_retained": true
+      },
+      "registry_records": [
+        {
+          "path": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-positive-r0.state/3c2797e6019a5e48/assembly-instances/026eea1e-a712-4d1f-8f19-e91a5869335e.json",
+          "sha256": "f0b27a270dde1bd67ef44599d23520c7f29194c95e3ffccdce530c2f5ec14bf3",
+          "schema": "dustroute.placed-assembly.v1",
+          "instance_id": "026eea1e-a712-4d1f-8f19-e91a5869335e",
+          "state": "removed",
+          "revision": 97,
+          "attempts": [
+            {
+              "operation_id": "026eea1e-a712-4d1f-8f19-e91a5869335e",
+              "removal": false,
+              "verified_steps": 43,
+              "total_steps": 43,
+              "started_at_unix_ms": 1790510807320,
+              "finished_at_unix_ms": 1790510824528,
+              "error": null
+            },
+            {
+              "operation_id": "188a97be-f857-45ed-b8ac-44beb53f9cf1",
+              "removal": true,
+              "verified_steps": 43,
+              "total_steps": 43,
+              "started_at_unix_ms": 1790510920443,
+              "finished_at_unix_ms": 1790510938730,
+              "error": null
+            }
+          ]
+        }
+      ],
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true
+      },
+      "server_stopped_normally": true,
+      "loaded_sources_sha256": {
+        "/root/DustRoute/tools/observe_assembly_construction.py": "0ff69667305aff350e0ac052aa6a58a22a29f5c10848d0b2ea6f6f01f83061cc",
+        "/root/DustRoute/crates/dustroute-mcp/mineflayer/e2e/piston-assembly-mcp-live.js": "145484dc29cd513745ec16d6a6017379b85ef2acfa6ed61b1a5125f3dad88951",
+        "/root/DustRoute/target/debug/dustroute-mcp": "dddff0992df4d0299df24ea470a9ede9f86f16b893e3538c18207b4e0203b841",
+        "/root/DustRoute/crates/dustroute-mcp/mineflayer/bridge.js": "b71723a91387203de40ed43fc91f4d5d273efe9bb0429948e1af2cf1103865d4",
+        "/root/DustRoute/tools/instrumented_server.py": "7164de1897c7f0388b99b6ab2cac7edb12174add7aaf1a0bd347e5ffb5f3ca6f"
+      },
+      "artifacts": {
+        ".raw.ndjson": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-positive-r0.raw.ndjson",
+        ".server.log": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-positive-r0.server.log",
+        ".bridge.log": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-positive-r0.bridge.log",
+        ".client.json": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-positive-r0.client.json",
+        ".fixture.json": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-positive-r0.fixture.json",
+        ".summary.json": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-positive-r0.summary.json"
+      },
+      "artifacts_sha256": {
+        ".raw.ndjson": "f4e8a97fe4f3442dbadb9a06fbf375bc4e57332f71ee0eb6396ed207f6a577d1",
+        ".server.log": "35caa8c7857ec58a4ddc7c062d13df5c149c1ac336eb8a4826409d210fdca1e3",
+        ".bridge.log": "bafef3883f18da1d195332c3bc2d8af2eefa5d3c918458fa44e78c0549ff4dda",
+        ".client.json": "fdaaab4b95757ba64fc5bb68fd3bb11d2a98298bd6accf3a46732c9a809460f8",
+        ".fixture.json": "c2d80384ca3fdd24fbf7fa98495421399c8ba69641a93282c1079547e0a2494a"
+      },
+      "fixture_sha256": "c2d80384ca3fdd24fbf7fa98495421399c8ba69641a93282c1079547e0a2494a",
+      "build_order_sha256": "bcb737fdd24339dba79887c7300b423902f64a78654bae762d3cc0b444fbb3ce"
+    },
+    {
+      "name": "positive-r90",
+      "run_id": "reference-door-relocation-20260927-positive-r90",
+      "status": "passed",
+      "transform": {
+        "source_anchor": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "target_anchor": {
+          "x": 65008,
+          "y": 180,
+          "z": 1000
+        },
+        "rotation": "r90"
+      },
+      "known_region": {
+        "min": {
+          "x": 65003,
+          "y": 180,
+          "z": 998
+        },
+        "max": {
+          "x": 65013,
+          "y": 193,
+          "z": 1002
+        }
+      },
+      "dependencies": {
+        "support": 6,
+        "occupied_watched_cell": 8
+      },
+      "static_order_valid": true,
+      "public_plan_matches_target_audit": true,
+      "verified_build_steps": 43,
+      "verified_remove_steps": 43,
+      "whole_region_and_aperture_matches": 4,
+      "normal_close_open_cycles": 2,
+      "applied_inputs": [
+        {
+          "position": {
+            "x": 65008,
+            "y": 191,
+            "z": 1000
+          },
+          "powered": true,
+          "game_tick": 85558,
+          "packet_sequence": 26768,
+          "write_sequence": 26776
+        },
+        {
+          "position": {
+            "x": 65008,
+            "y": 191,
+            "z": 1000
+          },
+          "powered": false,
+          "game_tick": 85836,
+          "packet_sequence": 32210,
+          "write_sequence": 32218
+        },
+        {
+          "position": {
+            "x": 65008,
+            "y": 191,
+            "z": 1000
+          },
+          "powered": true,
+          "game_tick": 85935,
+          "packet_sequence": 35631,
+          "write_sequence": 35639
+        },
+        {
+          "position": {
+            "x": 65008,
+            "y": 191,
+            "z": 1000
+          },
+          "powered": false,
+          "game_tick": 86176,
+          "packet_sequence": 40629,
+          "write_sequence": 40637
+        }
+      ],
+      "input_commits": [
+        {
+          "kind": "state_commit",
+          "sequence": 26769,
+          "game_tick": 85558,
+          "dimension": "minecraft:overworld",
+          "position": "BlockPos{x=65008, y=191, z=1000}",
+          "before": "Block{minecraft:lever}[face=floor,facing=south,powered=false]",
+          "after": "Block{minecraft:lever}[face=floor,facing=south,powered=true]",
+          "flags": 3
+        },
+        {
+          "kind": "state_commit",
+          "sequence": 32211,
+          "game_tick": 85836,
+          "dimension": "minecraft:overworld",
+          "position": "BlockPos{x=65008, y=191, z=1000}",
+          "before": "Block{minecraft:lever}[face=floor,facing=south,powered=true]",
+          "after": "Block{minecraft:lever}[face=floor,facing=south,powered=false]",
+          "flags": 3
+        },
+        {
+          "kind": "state_commit",
+          "sequence": 35632,
+          "game_tick": 85935,
+          "dimension": "minecraft:overworld",
+          "position": "BlockPos{x=65008, y=191, z=1000}",
+          "before": "Block{minecraft:lever}[face=floor,facing=south,powered=false]",
+          "after": "Block{minecraft:lever}[face=floor,facing=south,powered=true]",
+          "flags": 3
+        },
+        {
+          "kind": "state_commit",
+          "sequence": 40630,
+          "game_tick": 86176,
+          "dimension": "minecraft:overworld",
+          "position": "BlockPos{x=65008, y=191, z=1000}",
+          "before": "Block{minecraft:lever}[face=floor,facing=south,powered=true]",
+          "after": "Block{minecraft:lever}[face=floor,facing=south,powered=false]",
+          "flags": 3
+        }
+      ],
+      "capture_header": {
+        "kind": "artifact_start",
+        "schema": "dustroute.vanilla-instrumentation.v1",
+        "minecraft_version": "1.21.11",
+        "started_at": "2026-09-27T12:09:46.058940172Z",
+        "transient_trace": "dustroute.piston-transient.v1",
+        "trace_bounds": "65003,180,998,65013,193,1002",
+        "capture_mode": "continuous",
+        "max_ticks_after_input": null,
+        "pre_roll_ticks": 2,
+        "drain_ticks": 2,
+        "heartbeat_mode": "full"
+      },
+      "capture_footer": {
+        "kind": "artifact_end",
+        "capture_mode": "continuous",
+        "capture_state": "closed_no_input",
+        "input_observed": false,
+        "anchor_game_tick": null,
+        "end_game_tick": null,
+        "last_sequence": 61353,
+        "emitted_records": 61353,
+        "suppressed_records": 0,
+        "evicted_records": 0,
+        "write_errors": 0,
+        "heartbeat_mode": "full"
+      },
+      "all_sequences_contiguous": true,
+      "persistence_checks": {
+        "listed_after_restart": true,
+        "fresh_review": true,
+        "missing_chunks_refused": true,
+        "external_change_detected": true,
+        "preview_required": true,
+        "changed_after_preview_refused": true,
+        "removal_retained": true
+      },
+      "registry_records": [
+        {
+          "path": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-positive-r90.state/3c2797e6019a5e48/assembly-instances/6a7ca564-1b84-4aa8-a442-839471ce57b8.json",
+          "sha256": "7187e12ddd03e7251c5967e9577c0acbc04ea14dd299e224f3bc349e140133c5",
+          "schema": "dustroute.placed-assembly.v1",
+          "instance_id": "6a7ca564-1b84-4aa8-a442-839471ce57b8",
+          "state": "removed",
+          "revision": 97,
+          "attempts": [
+            {
+              "operation_id": "6a7ca564-1b84-4aa8-a442-839471ce57b8",
+              "removal": false,
+              "verified_steps": 43,
+              "total_steps": 43,
+              "started_at_unix_ms": 1790511047629,
+              "finished_at_unix_ms": 1790511065631,
+              "error": null
+            },
+            {
+              "operation_id": "543bc87d-cab6-4ea7-9f9b-c95eaacc44d1",
+              "removal": true,
+              "verified_steps": 43,
+              "total_steps": 43,
+              "started_at_unix_ms": 1790511162541,
+              "finished_at_unix_ms": 1790511181963,
+              "error": null
+            }
+          ]
+        }
+      ],
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true
+      },
+      "server_stopped_normally": true,
+      "loaded_sources_sha256": {
+        "/root/DustRoute/tools/observe_assembly_construction.py": "0ff69667305aff350e0ac052aa6a58a22a29f5c10848d0b2ea6f6f01f83061cc",
+        "/root/DustRoute/crates/dustroute-mcp/mineflayer/e2e/piston-assembly-mcp-live.js": "145484dc29cd513745ec16d6a6017379b85ef2acfa6ed61b1a5125f3dad88951",
+        "/root/DustRoute/target/debug/dustroute-mcp": "dddff0992df4d0299df24ea470a9ede9f86f16b893e3538c18207b4e0203b841",
+        "/root/DustRoute/crates/dustroute-mcp/mineflayer/bridge.js": "b71723a91387203de40ed43fc91f4d5d273efe9bb0429948e1af2cf1103865d4",
+        "/root/DustRoute/tools/instrumented_server.py": "7164de1897c7f0388b99b6ab2cac7edb12174add7aaf1a0bd347e5ffb5f3ca6f"
+      },
+      "artifacts": {
+        ".raw.ndjson": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-positive-r90.raw.ndjson",
+        ".server.log": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-positive-r90.server.log",
+        ".bridge.log": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-positive-r90.bridge.log",
+        ".client.json": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-positive-r90.client.json",
+        ".fixture.json": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-positive-r90.fixture.json",
+        ".summary.json": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-positive-r90.summary.json"
+      },
+      "artifacts_sha256": {
+        ".raw.ndjson": "4ed9884a8ee8237f1e1747744e35e7f9198eaf3ab2b1459ad84cfee283456b2b",
+        ".server.log": "95b327fab1136bb58bc03ce8ae860e114a8d3f1bbaa15f0adfcccaf260759896",
+        ".bridge.log": "55d6a29bcbea2b32e9b534b059f1ca1c4dfbe0739f83cdda814af4b8f9ea65f2",
+        ".client.json": "daa2d253e60b11232e8f9bb587fabd55b12cbe07c6b637a8ef5a37748566471a",
+        ".fixture.json": "662b2b106a622c85ffb42acb106c7b7536f2f3e8bbe62643fbceab4d613b3069"
+      },
+      "fixture_sha256": "662b2b106a622c85ffb42acb106c7b7536f2f3e8bbe62643fbceab4d613b3069",
+      "build_order_sha256": "505b676e52e17c4937242a9f6a7aa125791c6a984f21eb2b8c4897ea43cb6a8e"
+    },
+    {
+      "name": "positive-r180",
+      "run_id": "reference-door-relocation-20260927-positive-r180",
+      "status": "passed",
+      "transform": {
+        "source_anchor": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "target_anchor": {
+          "x": 65008,
+          "y": 180,
+          "z": 1000
+        },
+        "rotation": "r180"
+      },
+      "known_region": {
+        "min": {
+          "x": 65006,
+          "y": 180,
+          "z": 995
+        },
+        "max": {
+          "x": 65010,
+          "y": 193,
+          "z": 1005
+        }
+      },
+      "dependencies": {
+        "support": 6,
+        "occupied_watched_cell": 8
+      },
+      "static_order_valid": true,
+      "public_plan_matches_target_audit": true,
+      "verified_build_steps": 43,
+      "verified_remove_steps": 43,
+      "whole_region_and_aperture_matches": 4,
+      "normal_close_open_cycles": 2,
+      "applied_inputs": [
+        {
+          "position": {
+            "x": 65008,
+            "y": 191,
+            "z": 1000
+          },
+          "powered": true,
+          "game_tick": 89385,
+          "packet_sequence": 21668,
+          "write_sequence": 21676
+        },
+        {
+          "position": {
+            "x": 65008,
+            "y": 191,
+            "z": 1000
+          },
+          "powered": false,
+          "game_tick": 89630,
+          "packet_sequence": 26714,
+          "write_sequence": 26722
+        },
+        {
+          "position": {
+            "x": 65008,
+            "y": 191,
+            "z": 1000
+          },
+          "powered": true,
+          "game_tick": 89729,
+          "packet_sequence": 30135,
+          "write_sequence": 30143
+        },
+        {
+          "position": {
+            "x": 65008,
+            "y": 191,
+            "z": 1000
+          },
+          "powered": false,
+          "game_tick": 89983,
+          "packet_sequence": 35289,
+          "write_sequence": 35297
+        }
+      ],
+      "input_commits": [
+        {
+          "kind": "state_commit",
+          "sequence": 21669,
+          "game_tick": 89385,
+          "dimension": "minecraft:overworld",
+          "position": "BlockPos{x=65008, y=191, z=1000}",
+          "before": "Block{minecraft:lever}[face=floor,facing=west,powered=false]",
+          "after": "Block{minecraft:lever}[face=floor,facing=west,powered=true]",
+          "flags": 3
+        },
+        {
+          "kind": "state_commit",
+          "sequence": 26715,
+          "game_tick": 89630,
+          "dimension": "minecraft:overworld",
+          "position": "BlockPos{x=65008, y=191, z=1000}",
+          "before": "Block{minecraft:lever}[face=floor,facing=west,powered=true]",
+          "after": "Block{minecraft:lever}[face=floor,facing=west,powered=false]",
+          "flags": 3
+        },
+        {
+          "kind": "state_commit",
+          "sequence": 30136,
+          "game_tick": 89729,
+          "dimension": "minecraft:overworld",
+          "position": "BlockPos{x=65008, y=191, z=1000}",
+          "before": "Block{minecraft:lever}[face=floor,facing=west,powered=false]",
+          "after": "Block{minecraft:lever}[face=floor,facing=west,powered=true]",
+          "flags": 3
+        },
+        {
+          "kind": "state_commit",
+          "sequence": 35290,
+          "game_tick": 89983,
+          "dimension": "minecraft:overworld",
+          "position": "BlockPos{x=65008, y=191, z=1000}",
+          "before": "Block{minecraft:lever}[face=floor,facing=west,powered=true]",
+          "after": "Block{minecraft:lever}[face=floor,facing=west,powered=false]",
+          "flags": 3
+        }
+      ],
+      "capture_header": {
+        "kind": "artifact_start",
+        "schema": "dustroute.vanilla-instrumentation.v1",
+        "minecraft_version": "1.21.11",
+        "started_at": "2026-09-27T12:13:40.660043072Z",
+        "transient_trace": "dustroute.piston-transient.v1",
+        "trace_bounds": "65006,180,995,65010,193,1005",
+        "capture_mode": "continuous",
+        "max_ticks_after_input": null,
+        "pre_roll_ticks": 2,
+        "drain_ticks": 2,
+        "heartbeat_mode": "full"
+      },
+      "capture_footer": {
+        "kind": "artifact_end",
+        "capture_mode": "continuous",
+        "capture_state": "closed_no_input",
+        "input_observed": false,
+        "anchor_game_tick": null,
+        "end_game_tick": null,
+        "last_sequence": 54069,
+        "emitted_records": 54069,
+        "suppressed_records": 0,
+        "evicted_records": 0,
+        "write_errors": 0,
+        "heartbeat_mode": "full"
+      },
+      "all_sequences_contiguous": true,
+      "persistence_checks": {
+        "listed_after_restart": true,
+        "fresh_review": true,
+        "missing_chunks_refused": true,
+        "external_change_detected": true,
+        "preview_required": true,
+        "changed_after_preview_refused": true,
+        "removal_retained": true
+      },
+      "registry_records": [
+        {
+          "path": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-positive-r180.state/3c2797e6019a5e48/assembly-instances/c2cd019e-8c08-4aba-874c-c853f3d74a60.json",
+          "sha256": "06087411c913488d5c36050ee40bf794017cf21ab88944fffd727821fe8794ed",
+          "schema": "dustroute.placed-assembly.v1",
+          "instance_id": "c2cd019e-8c08-4aba-874c-c853f3d74a60",
+          "state": "removed",
+          "revision": 97,
+          "attempts": [
+            {
+              "operation_id": "c2cd019e-8c08-4aba-874c-c853f3d74a60",
+              "removal": false,
+              "verified_steps": 43,
+              "total_steps": 43,
+              "started_at_unix_ms": 1790511272917,
+              "finished_at_unix_ms": 1790511288844,
+              "error": null
+            },
+            {
+              "operation_id": "e8590987-1ebc-4f43-9fdf-6c3d3edb019a",
+              "removal": true,
+              "verified_steps": 43,
+              "total_steps": 43,
+              "started_at_unix_ms": 1790511372993,
+              "finished_at_unix_ms": 1790511390674,
+              "error": null
+            }
+          ]
+        }
+      ],
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true
+      },
+      "server_stopped_normally": true,
+      "loaded_sources_sha256": {
+        "/root/DustRoute/tools/observe_assembly_construction.py": "0ff69667305aff350e0ac052aa6a58a22a29f5c10848d0b2ea6f6f01f83061cc",
+        "/root/DustRoute/crates/dustroute-mcp/mineflayer/e2e/piston-assembly-mcp-live.js": "145484dc29cd513745ec16d6a6017379b85ef2acfa6ed61b1a5125f3dad88951",
+        "/root/DustRoute/target/debug/dustroute-mcp": "dddff0992df4d0299df24ea470a9ede9f86f16b893e3538c18207b4e0203b841",
+        "/root/DustRoute/crates/dustroute-mcp/mineflayer/bridge.js": "b71723a91387203de40ed43fc91f4d5d273efe9bb0429948e1af2cf1103865d4",
+        "/root/DustRoute/tools/instrumented_server.py": "7164de1897c7f0388b99b6ab2cac7edb12174add7aaf1a0bd347e5ffb5f3ca6f"
+      },
+      "artifacts": {
+        ".raw.ndjson": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-positive-r180.raw.ndjson",
+        ".server.log": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-positive-r180.server.log",
+        ".bridge.log": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-positive-r180.bridge.log",
+        ".client.json": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-positive-r180.client.json",
+        ".fixture.json": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-positive-r180.fixture.json",
+        ".summary.json": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-positive-r180.summary.json"
+      },
+      "artifacts_sha256": {
+        ".raw.ndjson": "2d500af8f25fa3425a7055522e1ac232f837583ff08532ebd587295ca2a25ec4",
+        ".server.log": "276ccf295c5c8c3d3cb975308a9e0eed51dd204342a6837341619754ece5e499",
+        ".bridge.log": "e80f4c857442e6d2900d93b580636575a19ca16b554747d3c155f00386f8ab83",
+        ".client.json": "4088b1f4b322cf5d238b341fe82a6044a3807cd58db3751f3699b9fc3efafbf8",
+        ".fixture.json": "6fe6b5f62792bbb113a550b7a9faec36e95b356dc86a3e91291fed8fc1298f4b"
+      },
+      "fixture_sha256": "6fe6b5f62792bbb113a550b7a9faec36e95b356dc86a3e91291fed8fc1298f4b",
+      "build_order_sha256": "d2459e0a623477c5c028b7e317c28c0d85f50f33be064157d1376ff6e963533f"
+    },
+    {
+      "name": "positive-r270",
+      "run_id": "reference-door-relocation-20260927-positive-r270",
+      "status": "passed",
+      "transform": {
+        "source_anchor": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "target_anchor": {
+          "x": 65008,
+          "y": 180,
+          "z": 1000
+        },
+        "rotation": "r270"
+      },
+      "known_region": {
+        "min": {
+          "x": 65003,
+          "y": 180,
+          "z": 998
+        },
+        "max": {
+          "x": 65013,
+          "y": 193,
+          "z": 1002
+        }
+      },
+      "dependencies": {
+        "support": 6,
+        "occupied_watched_cell": 8
+      },
+      "static_order_valid": true,
+      "public_plan_matches_target_audit": true,
+      "verified_build_steps": 43,
+      "verified_remove_steps": 43,
+      "whole_region_and_aperture_matches": 4,
+      "normal_close_open_cycles": 2,
+      "applied_inputs": [
+        {
+          "position": {
+            "x": 65008,
+            "y": 191,
+            "z": 1000
+          },
+          "powered": true,
+          "game_tick": 92984,
+          "packet_sequence": 21116,
+          "write_sequence": 21124
+        },
+        {
+          "position": {
+            "x": 65008,
+            "y": 191,
+            "z": 1000
+          },
+          "powered": false,
+          "game_tick": 93240,
+          "packet_sequence": 26294,
+          "write_sequence": 26302
+        },
+        {
+          "position": {
+            "x": 65008,
+            "y": 191,
+            "z": 1000
+          },
+          "powered": true,
+          "game_tick": 93340,
+          "packet_sequence": 29727,
+          "write_sequence": 29735
+        },
+        {
+          "position": {
+            "x": 65008,
+            "y": 191,
+            "z": 1000
+          },
+          "powered": false,
+          "game_tick": 93605,
+          "packet_sequence": 35013,
+          "write_sequence": 35021
+        }
+      ],
+      "input_commits": [
+        {
+          "kind": "state_commit",
+          "sequence": 21117,
+          "game_tick": 92984,
+          "dimension": "minecraft:overworld",
+          "position": "BlockPos{x=65008, y=191, z=1000}",
+          "before": "Block{minecraft:lever}[face=floor,facing=north,powered=false]",
+          "after": "Block{minecraft:lever}[face=floor,facing=north,powered=true]",
+          "flags": 3
+        },
+        {
+          "kind": "state_commit",
+          "sequence": 26295,
+          "game_tick": 93240,
+          "dimension": "minecraft:overworld",
+          "position": "BlockPos{x=65008, y=191, z=1000}",
+          "before": "Block{minecraft:lever}[face=floor,facing=north,powered=true]",
+          "after": "Block{minecraft:lever}[face=floor,facing=north,powered=false]",
+          "flags": 3
+        },
+        {
+          "kind": "state_commit",
+          "sequence": 29728,
+          "game_tick": 93340,
+          "dimension": "minecraft:overworld",
+          "position": "BlockPos{x=65008, y=191, z=1000}",
+          "before": "Block{minecraft:lever}[face=floor,facing=north,powered=false]",
+          "after": "Block{minecraft:lever}[face=floor,facing=north,powered=true]",
+          "flags": 3
+        },
+        {
+          "kind": "state_commit",
+          "sequence": 35014,
+          "game_tick": 93605,
+          "dimension": "minecraft:overworld",
+          "position": "BlockPos{x=65008, y=191, z=1000}",
+          "before": "Block{minecraft:lever}[face=floor,facing=north,powered=true]",
+          "after": "Block{minecraft:lever}[face=floor,facing=north,powered=false]",
+          "flags": 3
+        }
+      ],
+      "capture_header": {
+        "kind": "artifact_start",
+        "schema": "dustroute.vanilla-instrumentation.v1",
+        "minecraft_version": "1.21.11",
+        "started_at": "2026-09-27T12:17:03.188625750Z",
+        "transient_trace": "dustroute.piston-transient.v1",
+        "trace_bounds": "65003,180,998,65013,193,1002",
+        "capture_mode": "continuous",
+        "max_ticks_after_input": null,
+        "pre_roll_ticks": 2,
+        "drain_ticks": 2,
+        "heartbeat_mode": "full"
+      },
+      "capture_footer": {
+        "kind": "artifact_end",
+        "capture_mode": "continuous",
+        "capture_state": "closed_no_input",
+        "input_observed": false,
+        "anchor_game_tick": null,
+        "end_game_tick": null,
+        "last_sequence": 53531,
+        "emitted_records": 53531,
+        "suppressed_records": 0,
+        "evicted_records": 0,
+        "write_errors": 0,
+        "heartbeat_mode": "full"
+      },
+      "all_sequences_contiguous": true,
+      "persistence_checks": {
+        "listed_after_restart": true,
+        "fresh_review": true,
+        "missing_chunks_refused": true,
+        "external_change_detected": true,
+        "preview_required": true,
+        "changed_after_preview_refused": true,
+        "removal_retained": true
+      },
+      "registry_records": [
+        {
+          "path": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-positive-r270.state/3c2797e6019a5e48/assembly-instances/fc80f456-61b1-4b6a-a7b9-978b2e6075c0.json",
+          "sha256": "928c47245bac80671f66d45f5dbbacf294a999415e7a6720d80318f5f427e730",
+          "schema": "dustroute.placed-assembly.v1",
+          "instance_id": "fc80f456-61b1-4b6a-a7b9-978b2e6075c0",
+          "state": "removed",
+          "revision": 97,
+          "attempts": [
+            {
+              "operation_id": "fc80f456-61b1-4b6a-a7b9-978b2e6075c0",
+              "removal": false,
+              "verified_steps": 43,
+              "total_steps": 43,
+              "started_at_unix_ms": 1790511462837,
+              "finished_at_unix_ms": 1790511483207,
+              "error": null
+            },
+            {
+              "operation_id": "00f5f3ac-95d4-49b2-a3a9-10fb993feed7",
+              "removal": true,
+              "verified_steps": 43,
+              "total_steps": 43,
+              "started_at_unix_ms": 1790511569584,
+              "finished_at_unix_ms": 1790511587045,
+              "error": null
+            }
+          ]
+        }
+      ],
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true
+      },
+      "server_stopped_normally": true,
+      "loaded_sources_sha256": {
+        "/root/DustRoute/tools/observe_assembly_construction.py": "0ff69667305aff350e0ac052aa6a58a22a29f5c10848d0b2ea6f6f01f83061cc",
+        "/root/DustRoute/crates/dustroute-mcp/mineflayer/e2e/piston-assembly-mcp-live.js": "145484dc29cd513745ec16d6a6017379b85ef2acfa6ed61b1a5125f3dad88951",
+        "/root/DustRoute/target/debug/dustroute-mcp": "dddff0992df4d0299df24ea470a9ede9f86f16b893e3538c18207b4e0203b841",
+        "/root/DustRoute/crates/dustroute-mcp/mineflayer/bridge.js": "b71723a91387203de40ed43fc91f4d5d273efe9bb0429948e1af2cf1103865d4",
+        "/root/DustRoute/tools/instrumented_server.py": "7164de1897c7f0388b99b6ab2cac7edb12174add7aaf1a0bd347e5ffb5f3ca6f"
+      },
+      "artifacts": {
+        ".raw.ndjson": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-positive-r270.raw.ndjson",
+        ".server.log": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-positive-r270.server.log",
+        ".bridge.log": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-positive-r270.bridge.log",
+        ".client.json": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-positive-r270.client.json",
+        ".fixture.json": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-positive-r270.fixture.json",
+        ".summary.json": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-positive-r270.summary.json"
+      },
+      "artifacts_sha256": {
+        ".raw.ndjson": "6c9c68733fa9ec63b7a00e00f6c1a1d9395edecc70197e5f91ca7e2f90389001",
+        ".server.log": "7c47db63f0f0c87360fe89b68bc357d927b32ab5291147a391be41c7314388e2",
+        ".bridge.log": "2a68ddcfa7ed0c1a617b820813733e2ab6f0e4da8a34e278fd43d93dab06c93a",
+        ".client.json": "59a05ad8cddd70398796b6d2a740ddf652f67531df7c5cd1b96b86e45446ba9a",
+        ".fixture.json": "79a7b88475c0377845709ed34dc7640f3f7b407159956d4ef2b7ad3c6ccdf8ff"
+      },
+      "fixture_sha256": "79a7b88475c0377845709ed34dc7640f3f7b407159956d4ef2b7ad3c6ccdf8ff",
+      "build_order_sha256": "a8fe58a02874419e4f12b76e649813901a012a7add6c939e5b1ea5ecdac125cb"
+    },
+    {
+      "name": "negative-r0",
+      "run_id": "reference-door-relocation-20260927-negative-r0",
+      "status": "passed",
+      "transform": {
+        "source_anchor": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "target_anchor": {
+          "x": -65009,
+          "y": 180,
+          "z": 1000
+        },
+        "rotation": "r0"
+      },
+      "known_region": {
+        "min": {
+          "x": -65011,
+          "y": 180,
+          "z": 995
+        },
+        "max": {
+          "x": -65007,
+          "y": 193,
+          "z": 1005
+        }
+      },
+      "dependencies": {
+        "support": 6,
+        "occupied_watched_cell": 8
+      },
+      "static_order_valid": true,
+      "public_plan_matches_target_audit": true,
+      "verified_build_steps": 43,
+      "verified_remove_steps": 43,
+      "whole_region_and_aperture_matches": 4,
+      "normal_close_open_cycles": 2,
+      "applied_inputs": [
+        {
+          "position": {
+            "x": -65009,
+            "y": 191,
+            "z": 1000
+          },
+          "powered": true,
+          "game_tick": 96506,
+          "packet_sequence": 19952,
+          "write_sequence": 19960
+        },
+        {
+          "position": {
+            "x": -65009,
+            "y": 191,
+            "z": 1000
+          },
+          "powered": false,
+          "game_tick": 96743,
+          "packet_sequence": 24902,
+          "write_sequence": 24910
+        },
+        {
+          "position": {
+            "x": -65009,
+            "y": 191,
+            "z": 1000
+          },
+          "powered": true,
+          "game_tick": 96842,
+          "packet_sequence": 28323,
+          "write_sequence": 28331
+        },
+        {
+          "position": {
+            "x": -65009,
+            "y": 191,
+            "z": 1000
+          },
+          "powered": false,
+          "game_tick": 97083,
+          "packet_sequence": 33321,
+          "write_sequence": 33329
+        }
+      ],
+      "input_commits": [
+        {
+          "kind": "state_commit",
+          "sequence": 19953,
+          "game_tick": 96506,
+          "dimension": "minecraft:overworld",
+          "position": "BlockPos{x=-65009, y=191, z=1000}",
+          "before": "Block{minecraft:lever}[face=floor,facing=east,powered=false]",
+          "after": "Block{minecraft:lever}[face=floor,facing=east,powered=true]",
+          "flags": 3
+        },
+        {
+          "kind": "state_commit",
+          "sequence": 24903,
+          "game_tick": 96743,
+          "dimension": "minecraft:overworld",
+          "position": "BlockPos{x=-65009, y=191, z=1000}",
+          "before": "Block{minecraft:lever}[face=floor,facing=east,powered=true]",
+          "after": "Block{minecraft:lever}[face=floor,facing=east,powered=false]",
+          "flags": 3
+        },
+        {
+          "kind": "state_commit",
+          "sequence": 28324,
+          "game_tick": 96842,
+          "dimension": "minecraft:overworld",
+          "position": "BlockPos{x=-65009, y=191, z=1000}",
+          "before": "Block{minecraft:lever}[face=floor,facing=east,powered=false]",
+          "after": "Block{minecraft:lever}[face=floor,facing=east,powered=true]",
+          "flags": 3
+        },
+        {
+          "kind": "state_commit",
+          "sequence": 33322,
+          "game_tick": 97083,
+          "dimension": "minecraft:overworld",
+          "position": "BlockPos{x=-65009, y=191, z=1000}",
+          "before": "Block{minecraft:lever}[face=floor,facing=east,powered=true]",
+          "after": "Block{minecraft:lever}[face=floor,facing=east,powered=false]",
+          "flags": 3
+        }
+      ],
+      "capture_header": {
+        "kind": "artifact_start",
+        "schema": "dustroute.vanilla-instrumentation.v1",
+        "minecraft_version": "1.21.11",
+        "started_at": "2026-09-27T12:20:20.182517680Z",
+        "transient_trace": "dustroute.piston-transient.v1",
+        "trace_bounds": "-65011,180,995,-65007,193,1005",
+        "capture_mode": "continuous",
+        "max_ticks_after_input": null,
+        "pre_roll_ticks": 2,
+        "drain_ticks": 2,
+        "heartbeat_mode": "full"
+      },
+      "capture_footer": {
+        "kind": "artifact_end",
+        "capture_mode": "continuous",
+        "capture_state": "closed_no_input",
+        "input_observed": false,
+        "anchor_game_tick": null,
+        "end_game_tick": null,
+        "last_sequence": 51731,
+        "emitted_records": 51731,
+        "suppressed_records": 0,
+        "evicted_records": 0,
+        "write_errors": 0,
+        "heartbeat_mode": "full"
+      },
+      "all_sequences_contiguous": true,
+      "persistence_checks": {
+        "listed_after_restart": true,
+        "fresh_review": true,
+        "missing_chunks_refused": true,
+        "external_change_detected": true,
+        "preview_required": true,
+        "changed_after_preview_refused": true,
+        "removal_retained": true
+      },
+      "registry_records": [
+        {
+          "path": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-negative-r0.state/3c2797e6019a5e48/assembly-instances/cbdacd82-c558-40d6-9bc5-10ee343cb9bf.json",
+          "sha256": "95094f62ed844ff682dc24579bfee476b29b351aae485e68287ac88ba498e4a3",
+          "schema": "dustroute.placed-assembly.v1",
+          "instance_id": "cbdacd82-c558-40d6-9bc5-10ee343cb9bf",
+          "state": "removed",
+          "revision": 97,
+          "attempts": [
+            {
+              "operation_id": "cbdacd82-c558-40d6-9bc5-10ee343cb9bf",
+              "removal": false,
+              "verified_steps": 43,
+              "total_steps": 43,
+              "started_at_unix_ms": 1790511661212,
+              "finished_at_unix_ms": 1790511677647,
+              "error": null
+            },
+            {
+              "operation_id": "dd717b97-35c9-4d1c-8770-3a4c1af7516f",
+              "removal": true,
+              "verified_steps": 43,
+              "total_steps": 43,
+              "started_at_unix_ms": 1790511759463,
+              "finished_at_unix_ms": 1790511776835,
+              "error": null
+            }
+          ]
+        }
+      ],
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true
+      },
+      "server_stopped_normally": true,
+      "loaded_sources_sha256": {
+        "/root/DustRoute/tools/observe_assembly_construction.py": "0ff69667305aff350e0ac052aa6a58a22a29f5c10848d0b2ea6f6f01f83061cc",
+        "/root/DustRoute/crates/dustroute-mcp/mineflayer/e2e/piston-assembly-mcp-live.js": "145484dc29cd513745ec16d6a6017379b85ef2acfa6ed61b1a5125f3dad88951",
+        "/root/DustRoute/target/debug/dustroute-mcp": "dddff0992df4d0299df24ea470a9ede9f86f16b893e3538c18207b4e0203b841",
+        "/root/DustRoute/crates/dustroute-mcp/mineflayer/bridge.js": "b71723a91387203de40ed43fc91f4d5d273efe9bb0429948e1af2cf1103865d4",
+        "/root/DustRoute/tools/instrumented_server.py": "7164de1897c7f0388b99b6ab2cac7edb12174add7aaf1a0bd347e5ffb5f3ca6f"
+      },
+      "artifacts": {
+        ".raw.ndjson": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-negative-r0.raw.ndjson",
+        ".server.log": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-negative-r0.server.log",
+        ".bridge.log": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-negative-r0.bridge.log",
+        ".client.json": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-negative-r0.client.json",
+        ".fixture.json": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-negative-r0.fixture.json",
+        ".summary.json": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-negative-r0.summary.json"
+      },
+      "artifacts_sha256": {
+        ".raw.ndjson": "c5ac982967869020a3a1a6604b9449192ee9dba987a4c611be2180ed8469f610",
+        ".server.log": "5ec51463c298165cef2467eb1c85bc2fd4de720ac9de9cdbed837ad4ffe425bb",
+        ".bridge.log": "c32b28daa1abb0d6c0475b9e568c7cdf880c899f300aa36520f19cc7f36085a7",
+        ".client.json": "eb53cab006bc70c866a756e78f92d0adb80166ca2b1f2d03d461a101b2b295d0",
+        ".fixture.json": "7db5a0f65179a176f89a9f42574fc272322bc97b70382c27c3c69f0c12209338"
+      },
+      "fixture_sha256": "7db5a0f65179a176f89a9f42574fc272322bc97b70382c27c3c69f0c12209338",
+      "build_order_sha256": "f81d3b0df7d7386eb9d6cb019f1a0490297722426e347d4631e03d992dabf775"
+    },
+    {
+      "name": "negative-r90",
+      "run_id": "reference-door-relocation-20260927-negative-r90",
+      "status": "passed",
+      "transform": {
+        "source_anchor": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "target_anchor": {
+          "x": -65009,
+          "y": 180,
+          "z": 1000
+        },
+        "rotation": "r90"
+      },
+      "known_region": {
+        "min": {
+          "x": -65014,
+          "y": 180,
+          "z": 998
+        },
+        "max": {
+          "x": -65004,
+          "y": 193,
+          "z": 1002
+        }
+      },
+      "dependencies": {
+        "support": 6,
+        "occupied_watched_cell": 8
+      },
+      "static_order_valid": true,
+      "public_plan_matches_target_audit": true,
+      "verified_build_steps": 43,
+      "verified_remove_steps": 43,
+      "whole_region_and_aperture_matches": 4,
+      "normal_close_open_cycles": 2,
+      "applied_inputs": [
+        {
+          "position": {
+            "x": -65009,
+            "y": 191,
+            "z": 1000
+          },
+          "powered": true,
+          "game_tick": 99939,
+          "packet_sequence": 19520,
+          "write_sequence": 19528
+        },
+        {
+          "position": {
+            "x": -65009,
+            "y": 191,
+            "z": 1000
+          },
+          "powered": false,
+          "game_tick": 100189,
+          "packet_sequence": 24626,
+          "write_sequence": 24634
+        },
+        {
+          "position": {
+            "x": -65009,
+            "y": 191,
+            "z": 1000
+          },
+          "powered": true,
+          "game_tick": 100289,
+          "packet_sequence": 28059,
+          "write_sequence": 28067
+        },
+        {
+          "position": {
+            "x": -65009,
+            "y": 191,
+            "z": 1000
+          },
+          "powered": false,
+          "game_tick": 100529,
+          "packet_sequence": 33045,
+          "write_sequence": 33053
+        }
+      ],
+      "input_commits": [
+        {
+          "kind": "state_commit",
+          "sequence": 19521,
+          "game_tick": 99939,
+          "dimension": "minecraft:overworld",
+          "position": "BlockPos{x=-65009, y=191, z=1000}",
+          "before": "Block{minecraft:lever}[face=floor,facing=south,powered=false]",
+          "after": "Block{minecraft:lever}[face=floor,facing=south,powered=true]",
+          "flags": 3
+        },
+        {
+          "kind": "state_commit",
+          "sequence": 24627,
+          "game_tick": 100189,
+          "dimension": "minecraft:overworld",
+          "position": "BlockPos{x=-65009, y=191, z=1000}",
+          "before": "Block{minecraft:lever}[face=floor,facing=south,powered=true]",
+          "after": "Block{minecraft:lever}[face=floor,facing=south,powered=false]",
+          "flags": 3
+        },
+        {
+          "kind": "state_commit",
+          "sequence": 28060,
+          "game_tick": 100289,
+          "dimension": "minecraft:overworld",
+          "position": "BlockPos{x=-65009, y=191, z=1000}",
+          "before": "Block{minecraft:lever}[face=floor,facing=south,powered=false]",
+          "after": "Block{minecraft:lever}[face=floor,facing=south,powered=true]",
+          "flags": 3
+        },
+        {
+          "kind": "state_commit",
+          "sequence": 33046,
+          "game_tick": 100529,
+          "dimension": "minecraft:overworld",
+          "position": "BlockPos{x=-65009, y=191, z=1000}",
+          "before": "Block{minecraft:lever}[face=floor,facing=south,powered=true]",
+          "after": "Block{minecraft:lever}[face=floor,facing=south,powered=false]",
+          "flags": 3
+        }
+      ],
+      "capture_header": {
+        "kind": "artifact_start",
+        "schema": "dustroute.vanilla-instrumentation.v1",
+        "minecraft_version": "1.21.11",
+        "started_at": "2026-09-27T12:23:41.302451033Z",
+        "transient_trace": "dustroute.piston-transient.v1",
+        "trace_bounds": "-65014,180,998,-65004,193,1002",
+        "capture_mode": "continuous",
+        "max_ticks_after_input": null,
+        "pre_roll_ticks": 2,
+        "drain_ticks": 2,
+        "heartbeat_mode": "full"
+      },
+      "capture_footer": {
+        "kind": "artifact_end",
+        "capture_mode": "continuous",
+        "capture_state": "closed_no_input",
+        "input_observed": false,
+        "anchor_game_tick": null,
+        "end_game_tick": null,
+        "last_sequence": 51873,
+        "emitted_records": 51873,
+        "suppressed_records": 0,
+        "evicted_records": 0,
+        "write_errors": 0,
+        "heartbeat_mode": "full"
+      },
+      "all_sequences_contiguous": true,
+      "persistence_checks": {
+        "listed_after_restart": true,
+        "fresh_review": true,
+        "missing_chunks_refused": true,
+        "external_change_detected": true,
+        "preview_required": true,
+        "changed_after_preview_refused": true,
+        "removal_retained": true
+      },
+      "registry_records": [
+        {
+          "path": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-negative-r90.state/3c2797e6019a5e48/assembly-instances/18d3d5dd-83f5-48bd-a6d2-42514dbdcb8b.json",
+          "sha256": "819daca9fd8a4cb7b66438af27e42cf6d085ad5955b8516bc3630dc8de0125dd",
+          "schema": "dustroute.placed-assembly.v1",
+          "instance_id": "18d3d5dd-83f5-48bd-a6d2-42514dbdcb8b",
+          "state": "removed",
+          "revision": 97,
+          "attempts": [
+            {
+              "operation_id": "18d3d5dd-83f5-48bd-a6d2-42514dbdcb8b",
+              "removal": false,
+              "verified_steps": 43,
+              "total_steps": 43,
+              "started_at_unix_ms": 1790511861357,
+              "finished_at_unix_ms": 1790511876663,
+              "error": null
+            },
+            {
+              "operation_id": "9e053b7a-5f64-4cc8-8a24-3557e1237445",
+              "removal": true,
+              "verified_steps": 43,
+              "total_steps": 43,
+              "started_at_unix_ms": 1790511959911,
+              "finished_at_unix_ms": 1790511977705,
+              "error": null
+            }
+          ]
+        }
+      ],
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true
+      },
+      "server_stopped_normally": true,
+      "loaded_sources_sha256": {
+        "/root/DustRoute/tools/observe_assembly_construction.py": "0ff69667305aff350e0ac052aa6a58a22a29f5c10848d0b2ea6f6f01f83061cc",
+        "/root/DustRoute/crates/dustroute-mcp/mineflayer/e2e/piston-assembly-mcp-live.js": "145484dc29cd513745ec16d6a6017379b85ef2acfa6ed61b1a5125f3dad88951",
+        "/root/DustRoute/target/debug/dustroute-mcp": "dddff0992df4d0299df24ea470a9ede9f86f16b893e3538c18207b4e0203b841",
+        "/root/DustRoute/crates/dustroute-mcp/mineflayer/bridge.js": "b71723a91387203de40ed43fc91f4d5d273efe9bb0429948e1af2cf1103865d4",
+        "/root/DustRoute/tools/instrumented_server.py": "7164de1897c7f0388b99b6ab2cac7edb12174add7aaf1a0bd347e5ffb5f3ca6f"
+      },
+      "artifacts": {
+        ".raw.ndjson": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-negative-r90.raw.ndjson",
+        ".server.log": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-negative-r90.server.log",
+        ".bridge.log": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-negative-r90.bridge.log",
+        ".client.json": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-negative-r90.client.json",
+        ".fixture.json": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-negative-r90.fixture.json",
+        ".summary.json": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-negative-r90.summary.json"
+      },
+      "artifacts_sha256": {
+        ".raw.ndjson": "7320caab393118f1ed7e0d6f45c2bc41c36b9df4d158e5eb2425f0f3f3b8af65",
+        ".server.log": "7e50a1967e68208d3b4f467dcc5f8fc4c62eed022c06f38262c505efe1fce55c",
+        ".bridge.log": "b8715730453aea4a0b63b40d53b6315723368edb45d733977f527e1f51b7c51a",
+        ".client.json": "32239ad1c060057ddee48385790f5ecd5595ea51fb91e1e4f7c8fb9e804d02c0",
+        ".fixture.json": "cf80d714f8b81fa0b9ff44c33677ddc7c9c07c1aa048c167168dcc8931c8cf59"
+      },
+      "fixture_sha256": "cf80d714f8b81fa0b9ff44c33677ddc7c9c07c1aa048c167168dcc8931c8cf59",
+      "build_order_sha256": "b3c65796affae018a5ba79113485a5d2b0212574e60fefe4083d050df9aa750b"
+    },
+    {
+      "name": "negative-r180",
+      "run_id": "reference-door-relocation-20260927-negative-r180",
+      "status": "passed",
+      "transform": {
+        "source_anchor": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "target_anchor": {
+          "x": -65009,
+          "y": 180,
+          "z": 1000
+        },
+        "rotation": "r180"
+      },
+      "known_region": {
+        "min": {
+          "x": -65011,
+          "y": 180,
+          "z": 995
+        },
+        "max": {
+          "x": -65007,
+          "y": 193,
+          "z": 1005
+        }
+      },
+      "dependencies": {
+        "support": 6,
+        "occupied_watched_cell": 8
+      },
+      "static_order_valid": true,
+      "public_plan_matches_target_audit": true,
+      "verified_build_steps": 43,
+      "verified_remove_steps": 43,
+      "whole_region_and_aperture_matches": 4,
+      "normal_close_open_cycles": 2,
+      "applied_inputs": [
+        {
+          "position": {
+            "x": -65009,
+            "y": 191,
+            "z": 1000
+          },
+          "powered": true,
+          "game_tick": 103418,
+          "packet_sequence": 19724,
+          "write_sequence": 19732
+        },
+        {
+          "position": {
+            "x": -65009,
+            "y": 191,
+            "z": 1000
+          },
+          "powered": false,
+          "game_tick": 103661,
+          "packet_sequence": 24746,
+          "write_sequence": 24754
+        },
+        {
+          "position": {
+            "x": -65009,
+            "y": 191,
+            "z": 1000
+          },
+          "powered": true,
+          "game_tick": 103760,
+          "packet_sequence": 28167,
+          "write_sequence": 28175
+        },
+        {
+          "position": {
+            "x": -65009,
+            "y": 191,
+            "z": 1000
+          },
+          "powered": false,
+          "game_tick": 104002,
+          "packet_sequence": 33177,
+          "write_sequence": 33185
+        }
+      ],
+      "input_commits": [
+        {
+          "kind": "state_commit",
+          "sequence": 19725,
+          "game_tick": 103418,
+          "dimension": "minecraft:overworld",
+          "position": "BlockPos{x=-65009, y=191, z=1000}",
+          "before": "Block{minecraft:lever}[face=floor,facing=west,powered=false]",
+          "after": "Block{minecraft:lever}[face=floor,facing=west,powered=true]",
+          "flags": 3
+        },
+        {
+          "kind": "state_commit",
+          "sequence": 24747,
+          "game_tick": 103661,
+          "dimension": "minecraft:overworld",
+          "position": "BlockPos{x=-65009, y=191, z=1000}",
+          "before": "Block{minecraft:lever}[face=floor,facing=west,powered=true]",
+          "after": "Block{minecraft:lever}[face=floor,facing=west,powered=false]",
+          "flags": 3
+        },
+        {
+          "kind": "state_commit",
+          "sequence": 28168,
+          "game_tick": 103760,
+          "dimension": "minecraft:overworld",
+          "position": "BlockPos{x=-65009, y=191, z=1000}",
+          "before": "Block{minecraft:lever}[face=floor,facing=west,powered=false]",
+          "after": "Block{minecraft:lever}[face=floor,facing=west,powered=true]",
+          "flags": 3
+        },
+        {
+          "kind": "state_commit",
+          "sequence": 33178,
+          "game_tick": 104002,
+          "dimension": "minecraft:overworld",
+          "position": "BlockPos{x=-65009, y=191, z=1000}",
+          "before": "Block{minecraft:lever}[face=floor,facing=west,powered=true]",
+          "after": "Block{minecraft:lever}[face=floor,facing=west,powered=false]",
+          "flags": 3
+        }
+      ],
+      "capture_header": {
+        "kind": "artifact_start",
+        "schema": "dustroute.vanilla-instrumentation.v1",
+        "minecraft_version": "1.21.11",
+        "started_at": "2026-09-27T12:26:50.029252048Z",
+        "transient_trace": "dustroute.piston-transient.v1",
+        "trace_bounds": "-65011,180,995,-65007,193,1005",
+        "capture_mode": "continuous",
+        "max_ticks_after_input": null,
+        "pre_roll_ticks": 2,
+        "drain_ticks": 2,
+        "heartbeat_mode": "full"
+      },
+      "capture_footer": {
+        "kind": "artifact_end",
+        "capture_mode": "continuous",
+        "capture_state": "closed_no_input",
+        "input_observed": false,
+        "anchor_game_tick": null,
+        "end_game_tick": null,
+        "last_sequence": 51789,
+        "emitted_records": 51789,
+        "suppressed_records": 0,
+        "evicted_records": 0,
+        "write_errors": 0,
+        "heartbeat_mode": "full"
+      },
+      "all_sequences_contiguous": true,
+      "persistence_checks": {
+        "listed_after_restart": true,
+        "fresh_review": true,
+        "missing_chunks_refused": true,
+        "external_change_detected": true,
+        "preview_required": true,
+        "changed_after_preview_refused": true,
+        "removal_retained": true
+      },
+      "registry_records": [
+        {
+          "path": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-negative-r180.state/3c2797e6019a5e48/assembly-instances/60578aaf-c0e7-4790-98fc-bea2d1cd0b5e.json",
+          "sha256": "919339d299362a4b91cb87a662b931dd35be2cd78e51c6f58d38319ab099b23a",
+          "schema": "dustroute.placed-assembly.v1",
+          "instance_id": "60578aaf-c0e7-4790-98fc-bea2d1cd0b5e",
+          "state": "removed",
+          "revision": 97,
+          "attempts": [
+            {
+              "operation_id": "60578aaf-c0e7-4790-98fc-bea2d1cd0b5e",
+              "removal": false,
+              "verified_steps": 43,
+              "total_steps": 43,
+              "started_at_unix_ms": 1790512049981,
+              "finished_at_unix_ms": 1790512066085,
+              "error": null
+            },
+            {
+              "operation_id": "60a261dc-3806-4166-9759-c94aad4a9702",
+              "removal": true,
+              "verified_steps": 43,
+              "total_steps": 43,
+              "started_at_unix_ms": 1790512148800,
+              "finished_at_unix_ms": 1790512166070,
+              "error": null
+            }
+          ]
+        }
+      ],
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true
+      },
+      "server_stopped_normally": true,
+      "loaded_sources_sha256": {
+        "/root/DustRoute/tools/observe_assembly_construction.py": "0ff69667305aff350e0ac052aa6a58a22a29f5c10848d0b2ea6f6f01f83061cc",
+        "/root/DustRoute/crates/dustroute-mcp/mineflayer/e2e/piston-assembly-mcp-live.js": "145484dc29cd513745ec16d6a6017379b85ef2acfa6ed61b1a5125f3dad88951",
+        "/root/DustRoute/target/debug/dustroute-mcp": "dddff0992df4d0299df24ea470a9ede9f86f16b893e3538c18207b4e0203b841",
+        "/root/DustRoute/crates/dustroute-mcp/mineflayer/bridge.js": "b71723a91387203de40ed43fc91f4d5d273efe9bb0429948e1af2cf1103865d4",
+        "/root/DustRoute/tools/instrumented_server.py": "7164de1897c7f0388b99b6ab2cac7edb12174add7aaf1a0bd347e5ffb5f3ca6f"
+      },
+      "artifacts": {
+        ".raw.ndjson": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-negative-r180.raw.ndjson",
+        ".server.log": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-negative-r180.server.log",
+        ".bridge.log": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-negative-r180.bridge.log",
+        ".client.json": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-negative-r180.client.json",
+        ".fixture.json": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-negative-r180.fixture.json",
+        ".summary.json": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-negative-r180.summary.json"
+      },
+      "artifacts_sha256": {
+        ".raw.ndjson": "9b7f54408011bdc3192095f9c587574dcdf33891f71e44f5ebbff7ef1601778e",
+        ".server.log": "20cf4617366293c94f3bb8910f229c908ae3c5669e6d7c65f81df95cd79fa692",
+        ".bridge.log": "4959b8c19760d9e99b46663c0597b6148c7b5e217a84bcad7153cb0cd22d704c",
+        ".client.json": "48e1b5f7bbf03267b1c800ba15b58bd0d6be3d8bb04123bb77c403c67fe618eb",
+        ".fixture.json": "efbcd14eee70e27a73290fd2696b098d595e30934eaaaabc69a4fe8724383510"
+      },
+      "fixture_sha256": "efbcd14eee70e27a73290fd2696b098d595e30934eaaaabc69a4fe8724383510",
+      "build_order_sha256": "eaf4c67c8e4a670688564be0dbf8c8a3029ffeead7cdce0a1d523c0e5a4e7805"
+    },
+    {
+      "name": "negative-r270",
+      "run_id": "reference-door-relocation-20260927-negative-r270",
+      "status": "passed",
+      "transform": {
+        "source_anchor": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "target_anchor": {
+          "x": -65009,
+          "y": 180,
+          "z": 1000
+        },
+        "rotation": "r270"
+      },
+      "known_region": {
+        "min": {
+          "x": -65014,
+          "y": 180,
+          "z": 998
+        },
+        "max": {
+          "x": -65004,
+          "y": 193,
+          "z": 1002
+        }
+      },
+      "dependencies": {
+        "support": 6,
+        "occupied_watched_cell": 8
+      },
+      "static_order_valid": true,
+      "public_plan_matches_target_audit": true,
+      "verified_build_steps": 43,
+      "verified_remove_steps": 43,
+      "whole_region_and_aperture_matches": 4,
+      "normal_close_open_cycles": 2,
+      "applied_inputs": [
+        {
+          "position": {
+            "x": -65009,
+            "y": 191,
+            "z": 1000
+          },
+          "powered": true,
+          "game_tick": 106810,
+          "packet_sequence": 18968,
+          "write_sequence": 18976
+        },
+        {
+          "position": {
+            "x": -65009,
+            "y": 191,
+            "z": 1000
+          },
+          "powered": false,
+          "game_tick": 107108,
+          "packet_sequence": 24650,
+          "write_sequence": 24658
+        },
+        {
+          "position": {
+            "x": -65009,
+            "y": 191,
+            "z": 1000
+          },
+          "powered": true,
+          "game_tick": 107207,
+          "packet_sequence": 28071,
+          "write_sequence": 28079
+        },
+        {
+          "position": {
+            "x": -65009,
+            "y": 191,
+            "z": 1000
+          },
+          "powered": false,
+          "game_tick": 107443,
+          "packet_sequence": 33009,
+          "write_sequence": 33017
+        }
+      ],
+      "input_commits": [
+        {
+          "kind": "state_commit",
+          "sequence": 18969,
+          "game_tick": 106810,
+          "dimension": "minecraft:overworld",
+          "position": "BlockPos{x=-65009, y=191, z=1000}",
+          "before": "Block{minecraft:lever}[face=floor,facing=north,powered=false]",
+          "after": "Block{minecraft:lever}[face=floor,facing=north,powered=true]",
+          "flags": 3
+        },
+        {
+          "kind": "state_commit",
+          "sequence": 24651,
+          "game_tick": 107108,
+          "dimension": "minecraft:overworld",
+          "position": "BlockPos{x=-65009, y=191, z=1000}",
+          "before": "Block{minecraft:lever}[face=floor,facing=north,powered=true]",
+          "after": "Block{minecraft:lever}[face=floor,facing=north,powered=false]",
+          "flags": 3
+        },
+        {
+          "kind": "state_commit",
+          "sequence": 28072,
+          "game_tick": 107207,
+          "dimension": "minecraft:overworld",
+          "position": "BlockPos{x=-65009, y=191, z=1000}",
+          "before": "Block{minecraft:lever}[face=floor,facing=north,powered=false]",
+          "after": "Block{minecraft:lever}[face=floor,facing=north,powered=true]",
+          "flags": 3
+        },
+        {
+          "kind": "state_commit",
+          "sequence": 33010,
+          "game_tick": 107443,
+          "dimension": "minecraft:overworld",
+          "position": "BlockPos{x=-65009, y=191, z=1000}",
+          "before": "Block{minecraft:lever}[face=floor,facing=north,powered=true]",
+          "after": "Block{minecraft:lever}[face=floor,facing=north,powered=false]",
+          "flags": 3
+        }
+      ],
+      "capture_header": {
+        "kind": "artifact_start",
+        "schema": "dustroute.vanilla-instrumentation.v1",
+        "minecraft_version": "1.21.11",
+        "started_at": "2026-09-27T12:29:58.115016230Z",
+        "transient_trace": "dustroute.piston-transient.v1",
+        "trace_bounds": "-65014,180,998,-65004,193,1002",
+        "capture_mode": "continuous",
+        "max_ticks_after_input": null,
+        "pre_roll_ticks": 2,
+        "drain_ticks": 2,
+        "heartbeat_mode": "full"
+      },
+      "capture_footer": {
+        "kind": "artifact_end",
+        "capture_mode": "continuous",
+        "capture_state": "closed_no_input",
+        "input_observed": false,
+        "anchor_game_tick": null,
+        "end_game_tick": null,
+        "last_sequence": 52499,
+        "emitted_records": 52499,
+        "suppressed_records": 0,
+        "evicted_records": 0,
+        "write_errors": 0,
+        "heartbeat_mode": "full"
+      },
+      "all_sequences_contiguous": true,
+      "persistence_checks": {
+        "listed_after_restart": true,
+        "fresh_review": true,
+        "missing_chunks_refused": true,
+        "external_change_detected": true,
+        "preview_required": true,
+        "changed_after_preview_refused": true,
+        "removal_retained": true
+      },
+      "registry_records": [
+        {
+          "path": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-negative-r270.state/3c2797e6019a5e48/assembly-instances/20b45fbc-cacb-48b4-b18a-8e95a797affc.json",
+          "sha256": "42b98abbf486f86eaebec7133729d2ac6dc6b8d0aa52ee3b57275537d037e5d6",
+          "schema": "dustroute.placed-assembly.v1",
+          "instance_id": "20b45fbc-cacb-48b4-b18a-8e95a797affc",
+          "state": "removed",
+          "revision": 97,
+          "attempts": [
+            {
+              "operation_id": "20b45fbc-cacb-48b4-b18a-8e95a797affc",
+              "removal": false,
+              "verified_steps": 43,
+              "total_steps": 43,
+              "started_at_unix_ms": 1790512236638,
+              "finished_at_unix_ms": 1790512252215,
+              "error": null
+            },
+            {
+              "operation_id": "84049882-9be8-4174-8f3e-03e6287b893b",
+              "removal": true,
+              "verified_steps": 43,
+              "total_steps": 43,
+              "started_at_unix_ms": 1790512335459,
+              "finished_at_unix_ms": 1790512354199,
+              "error": null
+            }
+          ]
+        }
+      ],
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true
+      },
+      "server_stopped_normally": true,
+      "loaded_sources_sha256": {
+        "/root/DustRoute/tools/observe_assembly_construction.py": "0ff69667305aff350e0ac052aa6a58a22a29f5c10848d0b2ea6f6f01f83061cc",
+        "/root/DustRoute/crates/dustroute-mcp/mineflayer/e2e/piston-assembly-mcp-live.js": "145484dc29cd513745ec16d6a6017379b85ef2acfa6ed61b1a5125f3dad88951",
+        "/root/DustRoute/target/debug/dustroute-mcp": "dddff0992df4d0299df24ea470a9ede9f86f16b893e3538c18207b4e0203b841",
+        "/root/DustRoute/crates/dustroute-mcp/mineflayer/bridge.js": "b71723a91387203de40ed43fc91f4d5d273efe9bb0429948e1af2cf1103865d4",
+        "/root/DustRoute/tools/instrumented_server.py": "7164de1897c7f0388b99b6ab2cac7edb12174add7aaf1a0bd347e5ffb5f3ca6f"
+      },
+      "artifacts": {
+        ".raw.ndjson": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-negative-r270.raw.ndjson",
+        ".server.log": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-negative-r270.server.log",
+        ".bridge.log": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-negative-r270.bridge.log",
+        ".client.json": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-negative-r270.client.json",
+        ".fixture.json": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-negative-r270.fixture.json",
+        ".summary.json": "/root/DustRoute/.local/e2e-artifacts/reference-door-relocation-20260927-negative-r270.summary.json"
+      },
+      "artifacts_sha256": {
+        ".raw.ndjson": "17aa6bf19247b06bdc7efaa6a931d2358264d77e0302b3ce8d9926a8c433c663",
+        ".server.log": "0ddf49b43d3f0f167c322db8b682d7b9cdc3a36fc35d96e4f62e77d488ba9d4e",
+        ".bridge.log": "b531e07677579c8bdbda4da6412a5ceffc69c4cfbbd86e0354482292f13facc4",
+        ".client.json": "fb4884d96037f2fa4bc00ee8d558003ef25c1b0ae40512a960c546d9bfae56ec",
+        ".fixture.json": "55a8f97f1adeb085f48c59b2010a5ac4a92559c5f26003145adf7c47a0f9c463"
+      },
+      "fixture_sha256": "55a8f97f1adeb085f48c59b2010a5ac4a92559c5f26003145adf7c47a0f9c463",
+      "build_order_sha256": "f7cc255b3dfd7237d2cbad7069aea633e78e73b60f777400d7dcd085c63f4c60"
+    }
+  ],
+  "execution": [
+    {
+      "name": "positive-r0",
+      "command": [
+        "python3",
+        "tools/observe_assembly_construction.py",
+        "--run-id",
+        "reference-door-relocation-20260927-positive-r0",
+        "--x",
+        "65008",
+        "--rotation",
+        "r0",
+        "--fixture",
+        ".local/e2e-artifacts/reference-door-relocation-20260927/positive-r0.input.json",
+        "--persistence",
+        "--capture-construction"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 210.57
+    },
+    {
+      "name": "positive-r90",
+      "command": [
+        "python3",
+        "tools/observe_assembly_construction.py",
+        "--run-id",
+        "reference-door-relocation-20260927-positive-r90",
+        "--x",
+        "65008",
+        "--rotation",
+        "r90",
+        "--fixture",
+        ".local/e2e-artifacts/reference-door-relocation-20260927/positive-r90.input.json",
+        "--persistence",
+        "--capture-construction"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 232.86
+    },
+    {
+      "name": "positive-r180",
+      "command": [
+        "python3",
+        "tools/observe_assembly_construction.py",
+        "--run-id",
+        "reference-door-relocation-20260927-positive-r180",
+        "--x",
+        "65008",
+        "--rotation",
+        "r180",
+        "--fixture",
+        ".local/e2e-artifacts/reference-door-relocation-20260927/positive-r180.input.json",
+        "--persistence",
+        "--capture-construction"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 207.28
+    },
+    {
+      "name": "positive-r270",
+      "command": [
+        "python3",
+        "tools/observe_assembly_construction.py",
+        "--run-id",
+        "reference-door-relocation-20260927-positive-r270",
+        "--x",
+        "65008",
+        "--rotation",
+        "r270",
+        "--fixture",
+        ".local/e2e-artifacts/reference-door-relocation-20260927/positive-r270.input.json",
+        "--persistence",
+        "--capture-construction"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 196.74
+    },
+    {
+      "name": "negative-r0",
+      "command": [
+        "python3",
+        "tools/observe_assembly_construction.py",
+        "--run-id",
+        "reference-door-relocation-20260927-negative-r0",
+        "--x",
+        "-65009",
+        "--rotation",
+        "r0",
+        "--fixture",
+        ".local/e2e-artifacts/reference-door-relocation-20260927/negative-r0.input.json",
+        "--persistence",
+        "--capture-construction"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 201.95
+    },
+    {
+      "name": "negative-r90",
+      "command": [
+        "python3",
+        "tools/observe_assembly_construction.py",
+        "--run-id",
+        "reference-door-relocation-20260927-negative-r90",
+        "--x",
+        "-65009",
+        "--rotation",
+        "r90",
+        "--fixture",
+        ".local/e2e-artifacts/reference-door-relocation-20260927/negative-r90.input.json",
+        "--persistence",
+        "--capture-construction"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 188.28
+    },
+    {
+      "name": "negative-r180",
+      "command": [
+        "python3",
+        "tools/observe_assembly_construction.py",
+        "--run-id",
+        "reference-door-relocation-20260927-negative-r180",
+        "--x",
+        "-65009",
+        "--rotation",
+        "r180",
+        "--fixture",
+        ".local/e2e-artifacts/reference-door-relocation-20260927/negative-r180.input.json",
+        "--persistence",
+        "--capture-construction"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 188.46
+    },
+    {
+      "name": "negative-r270",
+      "command": [
+        "python3",
+        "tools/observe_assembly_construction.py",
+        "--run-id",
+        "reference-door-relocation-20260927-negative-r270",
+        "--x",
+        "-65009",
+        "--rotation",
+        "r270",
+        "--fixture",
+        ".local/e2e-artifacts/reference-door-relocation-20260927/negative-r270.input.json",
+        "--persistence",
+        "--capture-construction"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 192.73
+    }
+  ],
+  "validation": {
+    "status": "passed",
+    "rust_tests_passed": 12,
+    "commands": [
+      {
+        "command": "cargo test --offline --locked -j 1 -p dustroute-translate --test command_placement_regression --test electrical_piston_construction --test reference_door_adoption -- --test-threads=1",
+        "exit_code": 0
+      },
+      {
+        "command": "cargo clippy --offline --locked -j 1 -p dustroute-translate --example audit_reference_door_adoption -- -D warnings",
+        "exit_code": 0
+      },
+      {
+        "command": "cargo fmt --all --check",
+        "exit_code": 0
+      },
+      {
+        "command": "node --check crates/dustroute-mcp/mineflayer/e2e/piston-assembly-mcp-live.js",
+        "exit_code": 0
+      },
+      {
+        "command": "git diff --check",
+        "exit_code": 0
+      }
+    ],
+    "log": ".local/e2e-artifacts/reference-door-relocation-20260927/final-checks.log",
+    "log_sha256": "61b40284e703b939c165eba71f9be9f5b46e565134c8357fe559144bf39796c2",
+    "existing_source_frame_fixture_unchanged": true,
+    "isolated_ports_unused_after_all_trials": [
+      25565,
+      25580
+    ]
+  },
+  "artifacts": {
+    ".local/e2e-artifacts/reference-door-relocation-20260927/trials.json": "56b1afc28dd61510aae6caccad602d33e8236c9520d0de5fa9db867a7dfdf3a4",
+    ".local/e2e-artifacts/reference-door-relocation-20260927/loaded-baseline.json": "d6a8dde917e2e472b1ea41f3db118d484a8dd0c1bdd27d00323405a9eb984d74",
+    ".local/e2e-artifacts/reference-door-relocation-20260927/execution.jsonl": "78ea6885542996dcb7caf100b5f39b8649a9996d9d226b01aa0db573d2189fd9",
+    ".local/e2e-artifacts/reference-door-relocation-20260927/legacy-probes-check.json": "aafd7c0607ef2e6d4f4224b005605fe00945cf68f0de3a074795b26a91bd6d4f",
+    ".local/e2e-artifacts/reference-door-relocation-20260927/analyze.py": "9d83fcd6fcc5b20ac889c829945a254f3fdd988898f4ac02b51a45ad20cbaa2f",
+    ".local/e2e-artifacts/reference-door-relocation-20260927/final-checks.log": "61b40284e703b939c165eba71f9be9f5b46e565134c8357fe559144bf39796c2",
+    ".local/e2e-artifacts/reference-door-relocation-20260927/positive-r0.verified.json": "43fe2242845cfd280c66a09f330be30950b01550d22a4e0dc90213a026e1c33c",
+    ".local/e2e-artifacts/reference-door-relocation-20260927/positive-r90.verified.json": "9581fb66598fea52e828893af588580715475a93729c990bdf6bb9267c42c5cd",
+    ".local/e2e-artifacts/reference-door-relocation-20260927/positive-r180.verified.json": "96fbf6592cbe126a420bd6b8b791c38d0aaa645094eadda7bbd929537afef161",
+    ".local/e2e-artifacts/reference-door-relocation-20260927/positive-r270.verified.json": "5ab4f9fc0779ad6e87d365cd6ecc9670535155f73eeee37df5ad740870e7b259",
+    ".local/e2e-artifacts/reference-door-relocation-20260927/negative-r0.verified.json": "b10e312f49ae522d96254d3032ac20c01a16de2df1cff2c2d05c2226914742b5",
+    ".local/e2e-artifacts/reference-door-relocation-20260927/negative-r90.verified.json": "0a65142f3101d86aa78b8183200287ae67ff2e23a41f2b917085edcf63ee40f9",
+    ".local/e2e-artifacts/reference-door-relocation-20260927/negative-r180.verified.json": "bb15681a242e3ea7776e42b91c81082883134c2f6636d33d972956eec90d59b2",
+    ".local/e2e-artifacts/reference-door-relocation-20260927/negative-r270.verified.json": "119a6f5fcd65128b554b85982e3f1977d55e238ea4d6fa7c9347530d1e232eae"
+  },
+  "limits": [
+    "Finite captures at these eight targets do not prove all coordinates or surrounding environments.",
+    "100 client-tick waits and matching snapshots do not certify pending-work completion or a minimum safe input interval.",
+    "The default input trigger is false for this lever; continuous packet/write records establish the actual applied inputs.",
+    "Mid-operation input tolerance and live readiness observation remain separate work.",
+    "Independent topological audit does not replace step-by-step runtime simulation or search alternative construction orders."
+  ],
+  "documents_sha256": {
+    "docs/reference-door-relocation.md": "1d771498072747cee1b7653ecba167dcdf009c4a3d7492d1b4939cfac4a6037c",
+    "docs/reference-door-live-construction.md": "60155b3af516da0193175c916781381a037d76da0995cde9ea2cd39e81be9565",
+    "docs/custom-piston-assembly-placement.md": "05e63d451f44f29f6650971cc7859b4e85d41e5ea3c66a8b41d580c71bdb72c6",
+    "docs/README.md": "6e46dfbc4a2c15273a038f980f61fa0260f2fd2dbe2244789f22ab406ff70dbc",
+    "crates/dustroute-mcp/mineflayer/e2e/README.md": "655855c901d15c5f46cbcc1e76fb82fa0ac26d44338820948ca09cd3551a389a"
+  }
+}

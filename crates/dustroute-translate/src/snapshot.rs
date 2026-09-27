@@ -28,6 +28,7 @@ pub struct MinecraftSnapshotBlock {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum SnapshotError {
     Json(String),
+    InvalidSnapshot(String),
     InvalidFacing { pos: Pos, value: String },
 }
 
@@ -35,6 +36,7 @@ impl Display for SnapshotError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Json(message) => write!(f, "invalid Minecraft snapshot JSON: {message}"),
+            Self::InvalidSnapshot(message) => write!(f, "invalid Minecraft snapshot: {message}"),
             Self::InvalidFacing { pos, value } => {
                 write!(f, "invalid facing {value:?} at {pos:?}")
             }
@@ -43,6 +45,38 @@ impl Display for SnapshotError {
 }
 
 impl Error for SnapshotError {}
+
+/// Literal, bounds-checked indexing. Does not infer shapes or require supported
+/// physics. Callers retain observation-completeness and resource-budget checks.
+pub fn index_literal_snapshot(
+    snapshot: &MinecraftSnapshot,
+) -> Result<BTreeMap<Pos, MinecraftSnapshotBlock>, String> {
+    if snapshot.min.x > snapshot.max.x
+        || snapshot.min.y > snapshot.max.y
+        || snapshot.min.z > snapshot.max.z
+    {
+        return Err("invalid snapshot bounds".into());
+    }
+    let inside = |p: Pos| {
+        p.x >= snapshot.min.x
+            && p.x <= snapshot.max.x
+            && p.y >= snapshot.min.y
+            && p.y <= snapshot.max.y
+            && p.z >= snapshot.min.z
+            && p.z <= snapshot.max.z
+    };
+    let mut blocks = BTreeMap::new();
+    let mut seen = std::collections::BTreeSet::new();
+    for b in &snapshot.blocks {
+        if !inside(b.pos) || !seen.insert(b.pos) {
+            return Err("snapshot has out-of-bounds or duplicate coordinates".into());
+        }
+        if b.name != "minecraft:air" {
+            blocks.insert(b.pos, b.clone());
+        }
+    }
+    Ok(blocks)
+}
 
 pub fn world_from_snapshot_json(json: &str) -> Result<(MinecraftSnapshot, World), SnapshotError> {
     let snapshot: MinecraftSnapshot =
@@ -58,6 +92,55 @@ pub fn world_from_snapshot(snapshot: &MinecraftSnapshot) -> Result<World, Snapsh
     }
     update_wire_shapes(&mut world);
     Ok(world)
+}
+
+/// Retains declared block states without the wire-shape inference used by the
+/// analysis world. The caller supplies known coverage explicitly: bounds alone
+/// do not prove that omitted positions were observed. No classification,
+/// blueprint identity, connection, or physical validation is inferred here.
+pub fn assembly_from_snapshot(
+    snapshot: &MinecraftSnapshot,
+    name: impl Into<String>,
+    known_regions: Vec<crate::Region>,
+) -> Result<dustroute_library::assembly::Assembly, SnapshotError> {
+    use dustroute_library::assembly::Assembly;
+    use dustroute_library::blueprint::{BlueprintCatalog, PositionedBlock};
+    let invalid = |message: &str| SnapshotError::InvalidSnapshot(message.into());
+    if snapshot.min.x > snapshot.max.x
+        || snapshot.min.y > snapshot.max.y
+        || snapshot.min.z > snapshot.max.z
+    {
+        return Err(invalid("reversed bounds"));
+    }
+    let bounds = crate::Region::new(snapshot.min, snapshot.max);
+    if known_regions
+        .iter()
+        .any(|region| !bounds.contains(region.min) || !bounds.contains(region.max))
+    {
+        return Err(invalid("known coverage extends outside the snapshot"));
+    }
+    let mut blocks = BTreeMap::new();
+    for record in &snapshot.blocks {
+        if !bounds.contains(record.pos) || blocks.contains_key(&record.pos) {
+            return Err(invalid("duplicate or out-of-bounds block"));
+        }
+        blocks.insert(record.pos, block_from_record(record)?);
+    }
+    let assembly = Assembly {
+        name: name.into(),
+        instances: vec![],
+        blocks: blocks
+            .into_iter()
+            .map(|(position, block)| PositionedBlock { position, block })
+            .collect(),
+        known_regions,
+        connections: vec![],
+        boundaries: vec![],
+    };
+    assembly
+        .inspect(&BlueprintCatalog::default())
+        .map_err(|error| SnapshotError::InvalidSnapshot(error.to_string()))?;
+    Ok(assembly)
 }
 
 fn block_from_record(record: &MinecraftSnapshotBlock) -> Result<Block, SnapshotError> {
@@ -88,9 +171,8 @@ fn block_from_record(record: &MinecraftSnapshotBlock) -> Result<Block, SnapshotE
         name if name.ends_with("_slab") || name.ends_with("_stairs") => {
             (BlockKind::Transparent, ObservationClassification::Exact)
         }
-        "stone" | "dirt" | "grass_block" | "bedrock" | "cobblestone" | "deepslate" => {
-            (BlockKind::Solid, ObservationClassification::Exact)
-        }
+        "stone" | "dirt" | "grass_block" | "bedrock" | "cobblestone" | "deepslate"
+        | "smooth_quartz" | "cyan_wool" => (BlockKind::Solid, ObservationClassification::Exact),
         _ => (BlockKind::Solid, ObservationClassification::Coarse),
     };
     let mut block = Block::new(kind);

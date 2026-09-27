@@ -1,0 +1,220 @@
+{
+  "inputs": {
+    "source": 4,
+    "level": 15,
+    "query": 2,
+    "direction_match": 1,
+    "wire_connected": 1,
+    "wires_enabled": 1
+  },
+  "registers": {
+    "weak": {
+      "initial": 0,
+      "maximum": 15
+    },
+    "strong": {
+      "initial": 0,
+      "maximum": 15
+    }
+  },
+  "histories": {},
+  "handlers": {
+    "evaluate": [
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "source"
+          },
+          "right": {
+            "op": "constant",
+            "value": 1
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "weak",
+            "value": {
+              "op": "input",
+              "name": "level"
+            }
+          },
+          {
+            "op": "if",
+            "condition": {
+              "op": "input",
+              "name": "direction_match"
+            },
+            "then": [
+              {
+                "op": "set",
+                "register": "strong",
+                "value": {
+                  "op": "input",
+                  "name": "level"
+                }
+              }
+            ],
+            "otherwise": []
+          }
+        ],
+        "otherwise": []
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "source"
+          },
+          "right": {
+            "op": "constant",
+            "value": 2
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "weak",
+            "value": {
+              "op": "constant",
+              "value": 15
+            }
+          }
+        ],
+        "otherwise": []
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "and",
+          "left": {
+            "op": "equal",
+            "left": {
+              "op": "input",
+              "name": "source"
+            },
+            "right": {
+              "op": "constant",
+              "value": 3
+            }
+          },
+          "right": {
+            "op": "input",
+            "name": "direction_match"
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "weak",
+            "value": {
+              "op": "input",
+              "name": "level"
+            }
+          },
+          {
+            "op": "set",
+            "register": "strong",
+            "value": {
+              "op": "input",
+              "name": "level"
+            }
+          }
+        ],
+        "otherwise": []
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "and",
+          "left": {
+            "op": "equal",
+            "left": {
+              "op": "input",
+              "name": "source"
+            },
+            "right": {
+              "op": "constant",
+              "value": 4
+            }
+          },
+          "right": {
+            "op": "and",
+            "left": {
+              "op": "input",
+              "name": "wires_enabled"
+            },
+            "right": {
+              "op": "and",
+              "left": {
+                "op": "not",
+                "value": {
+                  "op": "equal",
+                  "left": {
+                    "op": "input",
+                    "name": "query"
+                  },
+                  "right": {
+                    "op": "constant",
+                    "value": 0
+                  }
+                }
+              },
+              "right": {
+                "op": "not",
+                "value": {
+                  "op": "and",
+                  "left": {
+                    "op": "not",
+                    "value": {
+                      "op": "equal",
+                      "left": {
+                        "op": "input",
+                        "name": "query"
+                      },
+                      "right": {
+                        "op": "constant",
+                        "value": 1
+                      }
+                    }
+                  },
+                  "right": {
+                    "op": "not",
+                    "value": {
+                      "op": "input",
+                      "name": "wire_connected"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "weak",
+            "value": {
+              "op": "input",
+              "name": "level"
+            }
+          },
+          {
+            "op": "set",
+            "register": "strong",
+            "value": {
+              "op": "input",
+              "name": "level"
+            }
+          }
+        ],
+        "otherwise": []
+      }
+    ]
+  }
+}

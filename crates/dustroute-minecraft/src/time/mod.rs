@@ -2,7 +2,9 @@
 
 mod engine;
 mod event;
+pub mod piston_runtime;
 mod queue;
+pub mod runtime;
 mod scheduler;
 mod trace;
 mod transition;

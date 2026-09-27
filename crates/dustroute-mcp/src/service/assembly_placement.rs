@@ -1,0 +1,366 @@
+//! Public Assembly planning, preview and persistent-instance orchestration.
+mod diagnosis;
+mod execution;
+mod observation;
+mod reconstruction;
+mod validation;
+
+use super::*;
+use crate::assembly_registry::{
+    Attempt, InstanceState, PlacedAssembly, RegistryLock, TargetServer, now_ms,
+};
+use crate::piston_assembly::ValidatedAssemblyPlacement;
+use dustroute_library::assembly::AssemblyRevision;
+use dustroute_library::blueprint::{AssemblyRevisionId, BlueprintCatalog};
+use dustroute_library::runtime_behavior::RuntimeBehaviorContext;
+use dustroute_translate::assembly_transform::AssemblyTransform;
+use validation::{
+    ConstructionSource, proof_from_basis, server_contract, source_basis_matches, source_identity,
+};
+
+#[derive(Clone, Debug, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub(super) struct AssemblyPlacementTarget {
+    /// Source coordinate that maps to target_anchor. No source definition is edited.
+    source_anchor: CoordinateParam,
+    target_anchor: CoordinateParam,
+    #[serde(default)]
+    rotation: dustroute_translate::RotationY,
+}
+impl AssemblyPlacementTarget {
+    fn transform(&self) -> AssemblyTransform {
+        let p = |c: CoordinateParam| Pos::new(c.x, c.y, c.z);
+        AssemblyTransform {
+            source_anchor: p(self.source_anchor),
+            target_anchor: p(self.target_anchor),
+            rotation: self.rotation,
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub(super) struct StoredAssemblyPlacement {
+    player: String,
+    dimension: String,
+    assembly_id: AssemblyRevisionId,
+    source_identity: Value,
+    proof: ValidatedAssemblyPlacement,
+    previewed: bool,
+    state: PistonPlacementState,
+    expires_at: Instant,
+    transform: AssemblyTransform,
+    target: TargetServer,
+    action: AssemblyPlacementAction,
+}
+
+#[derive(Clone, Debug)]
+enum AssemblyPlacementAction {
+    Construct,
+    Remove {
+        instance_id: uuid::Uuid,
+        revision: u64,
+    },
+    Reconstruct {
+        instance_id: uuid::Uuid,
+        revision: u64,
+        plan: Box<crate::assembly_registry::ReconstructionAttempt>,
+    },
+}
+
+impl StoredAssemblyPlacement {
+    fn instance(&self) -> Option<(uuid::Uuid, u64)> {
+        match self.action {
+            AssemblyPlacementAction::Construct => None,
+            AssemblyPlacementAction::Remove {
+                instance_id,
+                revision,
+            }
+            | AssemblyPlacementAction::Reconstruct {
+                instance_id,
+                revision,
+                ..
+            } => Some((instance_id, revision)),
+        }
+    }
+    fn reconstruction(&self) -> Option<&crate::assembly_registry::ReconstructionAttempt> {
+        match &self.action {
+            AssemblyPlacementAction::Reconstruct { plan, .. } => Some(plan),
+            _ => None,
+        }
+    }
+    fn is_removal(&self) -> bool {
+        matches!(self.action, AssemblyPlacementAction::Remove { .. })
+    }
+    fn kind(&self) -> &'static str {
+        match self.action {
+            AssemblyPlacementAction::Construct => "custom_piston_assembly_construction",
+            AssemblyPlacementAction::Remove { .. } => "placed_assembly_removal",
+            AssemblyPlacementAction::Reconstruct { .. } => "placed_assembly_reconstruction",
+        }
+    }
+    fn steps(
+        &self,
+        undo: bool,
+    ) -> &[dustroute_translate::piston_construction::ElectricalConstructionStep] {
+        self.reconstruction().map_or_else(
+            || self.proof.steps(undo || self.is_removal()),
+            |r| r.steps.as_slice(),
+        )
+    }
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub(super) struct ManageAssemblyParams {
+    action: AssemblyManagementAction,
+    /// UUID returned as instance_id by construction. Required except for list.
+    instance_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+enum AssemblyManagementAction {
+    List,
+    Get,
+    Observe,
+    /// Compare the live layout with the design, independently of repair eligibility.
+    Diagnose,
+    PlanRemoval,
+    /// Tear down the observed supported layout and rebuild its declared initial state.
+    PlanReconstruction,
+}
+
+impl DustRouteMcp {
+    async fn rebuild_instance_proof(
+        &self,
+        record: &PlacedAssembly,
+    ) -> Result<ValidatedAssemblyPlacement, String> {
+        let basis = self
+            .construction_basis(&record.player, record.assembly_id.clone())
+            .await?;
+        if !source_basis_matches(&record.source_identity, &basis)? {
+            return Err("saved source/adoption/context differs from the current catalog; no automatic revision replacement".into());
+        }
+        let transform = record.transform;
+        let proof = tokio::task::spawn_blocking(move || proof_from_basis(&basis, transform))
+            .await
+            .map_err(|e| e.to_string())??;
+        if proof.assembly() != &record.assembly || proof.context() != &record.context {
+            return Err(
+                "saved target Assembly/context does not match freshly transformed source".into(),
+            );
+        }
+        ValidatedAssemblyPlacement::matches(
+            &record.expected,
+            proof.settled(),
+            &record.target.version,
+        )?;
+        Ok(proof)
+    }
+
+    pub(super) async fn manage_placed_assembly(&self, params: ManageAssemblyParams) -> String {
+        let result: Result<Value,String> = async {
+            let player = self.resolve_player(None)?;
+            if let Some(error) = self.authorize_player(&player) { return Err(error); }
+            let registry = RegistryLock::acquire(&self.state_store)?;
+            let reconstruct = matches!(params.action, AssemblyManagementAction::PlanReconstruction);
+            let diagnose = matches!(params.action, AssemblyManagementAction::Diagnose);
+            let (observe, removal) = match params.action {
+                AssemblyManagementAction::List => {
+                    if params.instance_id.is_some() { return Err("list does not take an instance_id".into()); }
+                    return Ok(json!({"ok":true,"instances":registry.list(&player)?,"fresh_observation":false}));
+                },
+                AssemblyManagementAction::Get => (false,false),
+                AssemblyManagementAction::Observe => (true,false),
+                AssemblyManagementAction::Diagnose => (true,false),
+                AssemblyManagementAction::PlanRemoval => (true,true),
+                AssemblyManagementAction::PlanReconstruction => (true,false),
+            };
+            let instance_id = params.instance_id.ok_or("instance_id required")?;
+            let id = uuid::Uuid::parse_str(&instance_id).map_err(|e|e.to_string())?;
+            let mut record = registry.get(id,&player)?;
+            if !observe {
+                return Ok(json!({"ok":true,"instance":record.summary(),"assembly":record.assembly,"execution_context":record.context,
+                    "expected_snapshot":record.expected,"pinned_source":record.source_identity,"fresh_observation":false}));
+            }
+            let proof = self.rebuild_instance_proof(&record).await;
+            let mut observation = self.observe_instance(&record).await;
+            observation["revalidation"] = match &proof {
+                Ok(proof) => json!({"status":"passed","fresh_target_review":proof.review()}),
+                Err(error) => json!({"status":"failed","reason":error}),
+            };
+            let eligible = record.state == InstanceState::Applied && proof.is_ok() && observation["status"] == "matches";
+            observation["removal_eligible"] = json!(eligible);
+            if diagnose || reconstruct {
+                observation["diagnosis"] = self.diagnose_instance(&record,&proof,&observation).await;
+            }
+            record.last_observation = Some(observation.clone());
+            registry.save(&mut record)?;
+            if reconstruct {
+                let diagnosis = observation["diagnosis"].clone();
+                let attempt = async {
+                    self.plan_assembly_reconstruction(record, proof?, observation).await
+                }.await;
+                return Ok(match attempt {
+                    Ok(mut plan) => { plan["diagnosis"] = diagnosis; plan },
+                    Err(error) => json!({"ok":false,"error":error,"diagnosis":diagnosis}),
+                });
+            }
+            if diagnose {
+                return Ok(json!({"ok":true,"instance":record.summary(),"diagnosis":observation["diagnosis"],"observation":observation}));
+            }
+            if !removal || !eligible {
+                return Ok(json!({"ok":!removal,"instance":record.summary(),"observation":observation,
+                    "error":if removal {Some("conditional removal requires an applied record, matching observation and fresh passing review")}else{None}}));
+            }
+            let proof = proof?;
+            self.policy.validate_placement_size(proof.steps(true).len()).map_err(|e|e.to_string())?;
+            let operation_id = uuid::Uuid::new_v4();
+            let response = json!({"ok":true,"kind":"placed_assembly_removal","operation_id":operation_id,"instance_id":id,
+                "record_revision":record.revision,"bounds":bounds_json(proof.bounds()),"dimension":record.target.dimension,
+                "read_only":self.policy.read_only,
+                "removal_steps":proof.steps(true),"fresh_target_review":proof.review(),"observation":observation,
+                "next_step":"show_operation, then invoke_operation(confirm=true)"});
+            let mut plans = self.assembly_placements.lock().await;
+            plans.retain(|_,p|p.state != PistonPlacementState::Planned || p.expires_at > Instant::now());
+            if plans.len() >= 256 { return Err("too many retained Assembly construction plans".into()); }
+            plans.insert(operation_id,StoredAssemblyPlacement { player,dimension:record.target.dimension.clone(),assembly_id:record.assembly_id,
+                source_identity:record.source_identity,proof,previewed:false,state:PistonPlacementState::Planned,
+                expires_at:Instant::now()+Duration::from_secs(300),transform:record.transform,target:record.target,action:AssemblyPlacementAction::Remove { instance_id:id, revision:record.revision } });
+            drop(plans);
+            self.operations.record_completed(operation_id,OperationKind::PlacementPreview,response.clone()).await;
+            Ok(response)
+        }.await;
+        json_text(result.unwrap_or_else(|error| json!({"ok":false,"error":error})))
+    }
+
+    async fn construction_basis(
+        &self,
+        player: &str,
+        id: AssemblyRevisionId,
+    ) -> Result<Value, String> {
+        let store = self.state_store.clone();
+        let player = player.to_owned();
+        tokio::task::spawn_blocking(move || {
+            crate::blueprint_mcp::execute(
+                &store,
+                &player,
+                crate::blueprint_mcp::Command::ConstructionBasis(id),
+            )
+        })
+        .await
+        .map_err(|e| e.to_string())??
+        .ok_or_else(|| "adopted construction basis is unavailable".into())
+    }
+
+    pub(super) async fn plan_assembly_construction(
+        &self,
+        params: PreviewPlacementParams,
+    ) -> String {
+        let result: Result<Value, String> = async {
+            if !params.circuit.is_empty() || params.revision_id.is_some() || params.optimize.unwrap_or(false) {
+                return Err("assembly_target requires only an adopted assembly_revision_id".into());
+            }
+            let id = params.assembly_revision_id.ok_or("assembly_revision_id required")?;
+            let target = params.assembly_target.ok_or("assembly_target required")?;
+            let player = self.resolve_player(params.player.as_deref())?;
+            if let Some(error) = self.authorize_player(&player) { return Err(error); }
+            let basis = self.construction_basis(&player, id.clone()).await?;
+            let ConstructionSource { record, context, catalog } = ConstructionSource::parse(&basis)?;
+            let count = record.assembly.blocks.len();
+            if count == 0 || count > 256 || params.max_blocks.is_some_and(|n| count > n) {
+                return Err("custom construction budget is 1 through 256 block records, also bounded by max_blocks".into());
+            }
+            self.policy.validate_placement_size(count).map_err(|e|e.to_string())?;
+            // The assisted player's dimension is observed, not supplied by the request.
+            let observation = self.bridge.observe_player(&player, 64.0).await.map_err(|e|e.to_string())?;
+            let dimension = observation.dimension;
+            self.policy.authorize_dimension(&dimension).map_err(|e|e.to_string())?;
+            let region = target.transform().region(context.known_region)?;
+            let bounds = dustroute_translate::RegionBounds::new(region.min, region.max);
+            self.policy.validate_region(bounds).map_err(|e|e.to_string())?;
+            let status = self.bridge.status().await.map_err(|e|e.to_string())?;
+            server_contract(&status, &dimension)?;
+            let baseline = self.bridge.scan_region(bounds.min,bounds.max,&dimension).await.map_err(|e|e.to_string())?;
+            let transform = target.transform();
+            let target_server = TargetServer::observed(&status, &dimension)?;
+            let proof = tokio::task::spawn_blocking(move || ValidatedAssemblyPlacement::new(&catalog,&record.assembly,&context,transform,&baseline,&status.version))
+                .await.map_err(|e|e.to_string())??;
+            self.policy.validate_placement_size(proof.steps(true).len().max(proof.steps(false).len())).map_err(|e|e.to_string())?;
+            let operation_id = uuid::Uuid::new_v4();
+            let response = json!({"ok":true,"operation_id":operation_id,"kind":"custom_piston_assembly_construction", "assembly_revision_id":id,
+                "adopted_by":basis["adopted_by"], "bounds":bounds_json(bounds), "dimension":dimension,
+                "proposed_assembly":proof.assembly(), "execution_context":proof.context(), "fresh_target_review":proof.review(),
+                "construction_steps":proof.steps(false), "undo_steps":proof.steps(true), "live_world_verified":false,
+                "read_only":self.policy.read_only, "next_step":"show_operation, then invoke_operation(confirm=true)",
+                "undo_requirement":"exact constructed settled state and unchanged entire observation region"});
+            let mut plans = self.assembly_placements.lock().await;
+            plans.retain(|_,p| p.state != PistonPlacementState::Planned || p.expires_at > Instant::now());
+            if plans.len() >= 256 { return Err("too many retained Assembly construction plans".into()); }
+            plans.insert(operation_id, StoredAssemblyPlacement { player, dimension, assembly_id:id, source_identity:source_identity(&basis), proof, previewed:false, state:PistonPlacementState::Planned, expires_at:Instant::now()+Duration::from_secs(300), transform, target:target_server, action:AssemblyPlacementAction::Construct });
+            drop(plans);
+            self.operations.record_completed(operation_id,OperationKind::PlacementPreview,response.clone()).await;
+            Ok(response)
+        }.await;
+        json_text(result.unwrap_or_else(|e| json!({"ok":false,"error":e})))
+    }
+
+    async fn owned_assembly_plan(
+        &self,
+        id: uuid::Uuid,
+        player: Option<&str>,
+    ) -> Result<StoredAssemblyPlacement, String> {
+        let player = self.resolve_player(player)?;
+        if let Some(error) = self.authorize_player(&player) {
+            return Err(error);
+        }
+        let plan = self
+            .assembly_placements
+            .lock()
+            .await
+            .get(&id)
+            .cloned()
+            .ok_or("construction plan not found")?;
+        if plan.player != player {
+            return Err("construction belongs to another player".into());
+        }
+        Ok(plan)
+    }
+
+    pub(super) async fn get_assembly_construction(&self, id: uuid::Uuid) -> String {
+        let result: Result<Value,String> = async {
+            let plan = self.owned_assembly_plan(id,None).await?;
+            Ok(json!({"ok":true,"operation_id":id,"kind":plan.kind(),"assembly_revision_id":plan.assembly_id,
+                "bounds":bounds_json(plan.proof.bounds()), "proposed_assembly":plan.proof.assembly(),
+                "construction_steps":plan.proof.steps(false),"undo_steps":plan.proof.steps(true),
+                "steps":plan.steps(false),"reconstruction":plan.reconstruction(),"reconstruction_conditions":plan.reconstruction().map(|_|reconstruction::conditions()),
+                "previewed":plan.previewed,"state":format!("{:?}",plan.state),"stored_history_is_validation_proof":false}))
+        }.await;
+        json_text(result.unwrap_or_else(|e| json!({"ok":false,"error":e})))
+    }
+
+    pub(super) async fn show_assembly_construction(
+        &self,
+        id: uuid::Uuid,
+        player: Option<&str>,
+    ) -> String {
+        let result: Result<Value,String> = async {
+            let plan = self.owned_assembly_plan(id,player).await?;
+            if plan.state != PistonPlacementState::Planned || plan.expires_at <= Instant::now() { return Err("construction preview is expired or consumed".into()); }
+            let bounds = plan.proof.bounds();
+            if let Some((instance_id, revision)) = plan.instance() {
+                let registry = RegistryLock::acquire(&self.state_store)?;
+                let record = registry.get(instance_id, &plan.player)?;
+                if record.revision != revision || (plan.is_removal() && record.state != InstanceState::Applied) {
+                    return Err("placed Assembly record changed; reobserve and replan removal".into());
+                }
+            }
+            self.policy.authorize_dimension(&plan.dimension).map_err(|e|e.to_string())?;
+            self.policy.validate_region(bounds).map_err(|e|e.to_string())?;
+            let preview = self.bridge.preview_region(&plan.player,bounds.min,bounds.max,&plan.dimension).await.map_err(|e|e.to_string())?;
+            self.assembly_placements.lock().await.get_mut(&id).ok_or("construction missing")?.previewed = true;
+            Ok(json!({"ok":true,"operation_id":id,"preview":preview,"bounds":bounds_json(bounds),"kind":plan.kind(),"steps":plan.steps(false),"construction_steps":plan.proof.steps(false),"undo_steps":plan.proof.steps(true),"reconstruction":plan.reconstruction(),"reconstruction_conditions":plan.reconstruction().map(|_|reconstruction::conditions())}))
+        }.await;
+        json_text(result.unwrap_or_else(|e| json!({"ok":false,"error":e})))
+    }
+}

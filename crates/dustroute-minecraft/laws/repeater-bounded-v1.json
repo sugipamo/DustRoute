@@ -1,0 +1,172 @@
+{
+  "inputs": {
+    "powered": 1,
+    "rear_powered": 1,
+    "expected_powered": 1,
+    "delay": 4
+  },
+  "registers": {
+    "needs_update": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "apply_tick": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "next_powered": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "delay_game_ticks": {
+      "initial": 0,
+      "maximum": 8
+    }
+  },
+  "histories": {},
+  "handlers": {
+    "evaluate": [
+      {
+        "op": "set",
+        "register": "needs_update",
+        "value": {
+          "op": "not",
+          "value": {
+            "op": "equal",
+            "left": {
+              "op": "input",
+              "name": "powered"
+            },
+            "right": {
+              "op": "input",
+              "name": "rear_powered"
+            }
+          }
+        }
+      },
+      {
+        "op": "set",
+        "register": "apply_tick",
+        "value": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "rear_powered"
+          },
+          "right": {
+            "op": "input",
+            "name": "expected_powered"
+          }
+        }
+      },
+      {
+        "op": "set",
+        "register": "next_powered",
+        "value": {
+          "op": "input",
+          "name": "expected_powered"
+        }
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "delay"
+          },
+          "right": {
+            "op": "constant",
+            "value": 1
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "delay_game_ticks",
+            "value": {
+              "op": "constant",
+              "value": 2
+            }
+          }
+        ],
+        "otherwise": []
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "delay"
+          },
+          "right": {
+            "op": "constant",
+            "value": 2
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "delay_game_ticks",
+            "value": {
+              "op": "constant",
+              "value": 4
+            }
+          }
+        ],
+        "otherwise": []
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "delay"
+          },
+          "right": {
+            "op": "constant",
+            "value": 3
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "delay_game_ticks",
+            "value": {
+              "op": "constant",
+              "value": 6
+            }
+          }
+        ],
+        "otherwise": []
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "delay"
+          },
+          "right": {
+            "op": "constant",
+            "value": 4
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "delay_game_ticks",
+            "value": {
+              "op": "constant",
+              "value": 8
+            }
+          }
+        ],
+        "otherwise": []
+      }
+    ]
+  }
+}

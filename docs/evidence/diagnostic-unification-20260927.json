@@ -1,0 +1,273 @@
+{
+  "schema_version": "dustroute.diagnostic-unification-evidence.v1",
+  "status": "passed",
+  "scope": "Shared diagnostic findings/evidence/repair assessment for connectivity and design comparison; pinned Assembly/Blueprint references",
+  "common_schema": "dustroute.diagnosis.v1",
+  "validation": {
+    "unique_rust_tests_passed": 10,
+    "model": {
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-translate",
+        "--lib",
+        "diagnostic",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0,
+      "tests_passed": 4,
+      "seconds": 0.07,
+      "source": "retained exec/write_stdin output, session 30463"
+    },
+    "mcp": [
+      {
+        "command": [
+          "cargo",
+          "test",
+          "--offline",
+          "--locked",
+          "-j",
+          "1",
+          "-p",
+          "dustroute-mcp",
+          "--lib",
+          "diagnos",
+          "--",
+          "--test-threads=1"
+        ],
+        "exit_code": 0,
+        "seconds": 32.6,
+        "log": ".local/e2e-artifacts/diagnosis-unification-20260927/verified-check-0.log"
+      },
+      {
+        "command": [
+          "cargo",
+          "test",
+          "--offline",
+          "--locked",
+          "-j",
+          "1",
+          "-p",
+          "dustroute-mcp",
+          "--lib",
+          "repairs_and_undoes",
+          "--",
+          "--test-threads=1"
+        ],
+        "exit_code": 0,
+        "seconds": 0.18,
+        "log": ".local/e2e-artifacts/diagnosis-unification-20260927/verified-check-1.log"
+      },
+      {
+        "command": [
+          "cargo",
+          "test",
+          "--offline",
+          "--locked",
+          "-j",
+          "1",
+          "-p",
+          "dustroute-mcp",
+          "--lib",
+          "revision::tests",
+          "--",
+          "--test-threads=1"
+        ],
+        "exit_code": 0,
+        "seconds": 0.17,
+        "log": ".local/e2e-artifacts/diagnosis-unification-20260927/verified-check-2.log"
+      },
+      {
+        "command": [
+          "cargo",
+          "test",
+          "--offline",
+          "--locked",
+          "-j",
+          "1",
+          "-p",
+          "dustroute-mcp",
+          "--lib",
+          "custom_electrical_construction_rechecks",
+          "--",
+          "--test-threads=1"
+        ],
+        "exit_code": 0,
+        "seconds": 248.74,
+        "log": ".local/e2e-artifacts/diagnosis-unification-20260927/verified-check-3.log"
+      }
+    ],
+    "final": [
+      {
+        "command": [
+          "cargo",
+          "fmt",
+          "--all"
+        ],
+        "exit_code": 0,
+        "seconds": 1.37,
+        "log": ".local/e2e-artifacts/diagnosis-unification-20260927/final-check-0.log"
+      },
+      {
+        "command": [
+          "cargo",
+          "test",
+          "--offline",
+          "--locked",
+          "-j",
+          "1",
+          "-p",
+          "dustroute-mcp",
+          "--lib",
+          "repairs_and_undoes",
+          "--",
+          "--test-threads=1"
+        ],
+        "exit_code": 0,
+        "seconds": 16.48,
+        "log": ".local/e2e-artifacts/diagnosis-unification-20260927/final-check-1.log"
+      },
+      {
+        "command": [
+          "cargo",
+          "clippy",
+          "--offline",
+          "--locked",
+          "-j",
+          "1",
+          "-p",
+          "dustroute-mcp",
+          "-p",
+          "dustroute-translate",
+          "--all-targets",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "exit_code": 0,
+        "seconds": 32.73,
+        "log": ".local/e2e-artifacts/diagnosis-unification-20260927/final-check-2.log"
+      },
+      {
+        "command": [
+          "cargo",
+          "build",
+          "--offline",
+          "--locked",
+          "-j",
+          "1",
+          "-p",
+          "dustroute-mcp",
+          "--bin",
+          "dustroute-mcp"
+        ],
+        "exit_code": 0,
+        "seconds": 27.71,
+        "log": ".local/e2e-artifacts/diagnosis-unification-20260927/final-check-3.log"
+      },
+      {
+        "command": [
+          "cargo",
+          "fmt",
+          "--all",
+          "--",
+          "--check"
+        ],
+        "exit_code": 0,
+        "seconds": 1.34,
+        "log": ".local/e2e-artifacts/diagnosis-unification-20260927/final-check-4.log"
+      },
+      {
+        "command": [
+          "node",
+          "--check",
+          "crates/dustroute-mcp/mineflayer/e2e/piston-assembly-mcp-live.js"
+        ],
+        "exit_code": 0,
+        "seconds": 0.1,
+        "log": ".local/e2e-artifacts/diagnosis-unification-20260927/final-check-5.log"
+      },
+      {
+        "command": [
+          "git",
+          "diff",
+          "--check"
+        ],
+        "exit_code": 0,
+        "seconds": 0.02,
+        "log": ".local/e2e-artifacts/diagnosis-unification-20260927/final-check-6.log"
+      }
+    ]
+  },
+  "covered": [
+    "One typed diagnostic core deserializes both public diagnostic methods",
+    "Existing inferred external inputs remain distinct from probable connectivity faults",
+    "Literal unsupported-block and property differences remain available",
+    "Repair context and repair proposals agree on the shared diagnosis",
+    "Report-local repair references resolve to findings in the accompanying diagnosis",
+    "Nested/overlapping Blueprint membership survives rotation and retains every declared occurrence",
+    "A Blueprint source layout never replaces the supplied physical comparison reference",
+    "Diagnosis retains pins; reading returned Assembly/Blueprint IDs through the existing public tool works",
+    "Unverified design reference still reports differences and blocks repair",
+    "Existing partial repair/undo and persistent Assembly reconstruction guard/restart paths pass"
+  ],
+  "live": {
+    "rerun": false,
+    "reason": "The physical runtime and mutation executors are unchanged; this change is checked with model and public transport tests.",
+    "historical_reference": "docs/evidence/reference-door-diagnosis-20260927.json",
+    "historical_reference_limit": "Predates the common report schema and is not a live pass for the new binary."
+  },
+  "limits": [
+    "Source membership is a declared coordinate interpretation, not moving-payload tracking or ownership",
+    "Public arbitrary-world-region to chosen-design binding is not implemented",
+    "Partial-patch and reconstruction planners/executors remain separate; shared reports grant no permission",
+    "Current-input comparison is one canonical settled reference, not all possible histories",
+    "Saved observations remain historical JSON, not validation capabilities"
+  ],
+  "removed_module": "crates/dustroute-mcp/src/assembly_diagnosis.rs",
+  "source_sha256": {
+    "crates/dustroute-translate/src/diagnostic.rs": "6a3865694e5b54bf58f5704fbbceca0fd3a91c3fe123b07cc46ec060077f43d9",
+    "crates/dustroute-translate/src/diagnostic/difference.rs": "c881ea567dc4ee3801dbe061e5ee16fa307b7eae81bccf3fe65d1ef0cd69ccd7",
+    "crates/dustroute-translate/src/diagnostic/report.rs": "40ecf0bebbc8fdeabb45d6ee3e70aa83e323fd2fabd2ee09d94516e49c8e8fce",
+    "crates/dustroute-translate/src/snapshot.rs": "11f274060dcb6432081027a47646f5be0c6eea763b2c5cac96a58c6043345a4d",
+    "crates/dustroute-translate/src/lib.rs": "23b8b7b17de0d7db29dec810e0ea89eafff3551ea28fc800609ac284feab77ec",
+    "crates/dustroute-mcp/src/lib.rs": "20287b05feea1e0347be184dea82301f529bda500e2f0b81f268e034f09cf5ca",
+    "crates/dustroute-mcp/src/revision.rs": "824bd7d5c02fd7b23c4bfefe3e82325d8649559338e1a96b238cf5bef307ca4a",
+    "crates/dustroute-mcp/src/service.rs": "e4b08b8e453cf77b8c75d6a3984eeb4cf25f6a5ae875ce4f7307c9af8b63adc7",
+    "crates/dustroute-mcp/src/piston_assembly.rs": "0e191e1017880146e9c407e7cab292c095df60d29d2ab7f2e303fdf7985f5a3d",
+    "crates/dustroute-mcp/src/service/assembly_placement/diagnosis.rs": "9b081808a8e5c7c551a945cf5832d076bc85a43ec2379bf88988182b9b54d331",
+    "crates/dustroute-mcp/src/service/assembly_placement/reconstruction.rs": "b7762732d8ed645a8add273087dd655549602688051e1692f0d305d42674f94e",
+    "crates/dustroute-mcp/src/service_blueprint_tests.rs": "2cf771fe0b7938743a61ff97f257117162f7290c63e8b2ebdb9660c2c38fe014",
+    "crates/dustroute-mcp/mineflayer/e2e/piston-assembly-mcp-live.js": "4334c0e64b5717c13156dddf39f8d7a2f698ee5b614e15fd33e54ce1882c639b",
+    "docs/diagnostic-system.md": "5baf3b04b8968bb320d52d3a16880f87723fb9d32c724379472bf9c885040ff5",
+    "docs/assembly-diagnosis.md": "c8bb88850ff78df423d0e5648da5494778f815b581d12d9b8f23c93b1d4c468e",
+    "docs/mcp-api-v1.md": "7c61b65a2b54a62eed61d5b8fb3d5a8ee690abe928363d102edc045e194211d1",
+    "docs/blueprint-mcp.md": "1ebb280a75c189985efba0d650fd04e57a0dbb3cdee60100bb6eb6bc80c7c97f"
+  },
+  "binary_sha256": "aa0d6b44bc750163635dd642e7dff4c49376e0b48dffbcc3d87081fd325325e7",
+  "supporting_artifacts_sha256": {
+    ".local/e2e-artifacts/diagnosis-unification-20260927/check-0.log": "dcf134515e07d1a4b482bd3cb5cb46ad486793d6827fb23c2aaed4dad771f39f",
+    ".local/e2e-artifacts/diagnosis-unification-20260927/checks.json": "9667f27a64966f7145e370ea96f425dbaaa3c97192e64308b1259fcf8f4b65d1",
+    ".local/e2e-artifacts/diagnosis-unification-20260927/final-check-0.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".local/e2e-artifacts/diagnosis-unification-20260927/final-check-1.log": "c94cb82e681c1956efcf0c1e11c2c9078eebf4623f3a3846888aa029e0cb339f",
+    ".local/e2e-artifacts/diagnosis-unification-20260927/final-check-2.log": "81cbd1488fe1bd0805b7a175b82d4da2f07b7386f78d71e990efd8d78f8f1c16",
+    ".local/e2e-artifacts/diagnosis-unification-20260927/final-check-3.log": "59c1cba21e86a6db8e730eb1c5368f99af27453164388d3d8d2842b3f2654816",
+    ".local/e2e-artifacts/diagnosis-unification-20260927/final-check-4.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".local/e2e-artifacts/diagnosis-unification-20260927/final-check-5.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".local/e2e-artifacts/diagnosis-unification-20260927/final-check-6.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".local/e2e-artifacts/diagnosis-unification-20260927/final-checks.json": "9375da7324b13e58af6b98776911dd8c950629257b8dc83a025375abc0afee84",
+    ".local/e2e-artifacts/diagnosis-unification-20260927/model-check.json": "3964ea6a3c82acb767cbcf3cb62c719da9e5aba263f5f7cfa3f6757de7142436",
+    ".local/e2e-artifacts/diagnosis-unification-20260927/report.py": "21cbd1f9c8179d92aabc6e60a494e5d020958c48522e2b49acb7d4d52e9c9b4e",
+    ".local/e2e-artifacts/diagnosis-unification-20260927/verified-check-0.log": "2d792739807445fe60e6e8bd6d3d3ab3f675f01fe896e072ff831f9e9b4d2b30",
+    ".local/e2e-artifacts/diagnosis-unification-20260927/verified-check-1.log": "e60b53817f7d7e197195c734c48369a026cd306e1520e2ea17a1546a159038c0",
+    ".local/e2e-artifacts/diagnosis-unification-20260927/verified-check-2.log": "dc1c4cda099a23a36e8def72d42bba079cf94aec52dab587dd737c2c23edea05",
+    ".local/e2e-artifacts/diagnosis-unification-20260927/verified-check-3.log": "11d3a7fa2055865be30fb5d79833385461a82d33184e2f5e919e7274dda66e65",
+    ".local/e2e-artifacts/diagnosis-unification-20260927/verified-checks.json": "cc0ee2acb165cbbb69d44dabca0dc5707aad8010f3ef3c2af22ecb5c7a4efaca"
+  }
+}

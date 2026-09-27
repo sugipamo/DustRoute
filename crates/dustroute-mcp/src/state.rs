@@ -16,6 +16,17 @@ pub(crate) struct PlanStateStore {
 }
 
 impl PlanStateStore {
+    pub(crate) fn assembly_instance_root(&self) -> PathBuf {
+        self.root.join("assembly-instances")
+    }
+
+    pub(crate) fn blueprint_root(&self, player: &str) -> PathBuf {
+        let mut hasher = DefaultHasher::new();
+        player.hash(&mut hasher);
+        self.root
+            .join("blueprints")
+            .join(format!("{:016x}", hasher.finish()))
+    }
     pub(crate) fn from_environment(scope: &str) -> Self {
         let mut hasher = DefaultHasher::new();
         scope.hash(&mut hasher);

@@ -1,0 +1,732 @@
+{
+  "schema_version": "dustroute.reference-door-static-audit.v1",
+  "audit_date": "2026-09-27",
+  "candidate_source_url": "https://www.planetminecraft.com/project/one-wide-3x3-piston-door-works-on-java-edition/",
+  "source": {
+    "file_name": "3x3-piston-door-e2180.zip",
+    "bytes": 1458088,
+    "sha256": "2f4e45868baa6d06c3fa197c88db50a7de2e57e5180eb15fea267e21d254e8c6",
+    "saved_version": {
+      "Id": 2975,
+      "Name": "1.18.2",
+      "Series": "main",
+      "Snapshot": 0
+    },
+    "level_data_version": 2975,
+    "enabled_datapacks": [
+      "vanilla",
+      "Fabric Mods"
+    ],
+    "screenshot_displayed_version": "1.21.11",
+    "screenshot_player_block": {
+      "x": -14,
+      "y": 110,
+      "z": -2
+    }
+  },
+  "inspection": {
+    "chunk_bounds": {
+      "x": [
+        -2,
+        1
+      ],
+      "z": [
+        -2,
+        1
+      ]
+    },
+    "minimum_y": 64,
+    "chunks": [
+      {
+        "x": -2,
+        "z": -2,
+        "data_version": 2975,
+        "status": "full",
+        "nbt_sha256": "b421dc6f03cb7336e8e6c082b399c89cef02d08b49dc8ac2677acca98a35c63a"
+      },
+      {
+        "x": -2,
+        "z": -1,
+        "data_version": 2975,
+        "status": "full",
+        "nbt_sha256": "4e7ffb41dfeaa508246ec5248e73644445b25f03a05d3b044834fa51e68cd0e4"
+      },
+      {
+        "x": -2,
+        "z": 0,
+        "data_version": 2975,
+        "status": "full",
+        "nbt_sha256": "221244abff70935c78aa4a4b905278773f1f20900876dd846c7eb364ffa8cab0"
+      },
+      {
+        "x": -2,
+        "z": 1,
+        "data_version": 2975,
+        "status": "full",
+        "nbt_sha256": "cbacdf90b096208aed6443c5a5137317732ab1f64cb0a7636486ff6aab2e3d5e"
+      },
+      {
+        "x": -1,
+        "z": -2,
+        "data_version": 2975,
+        "status": "full",
+        "nbt_sha256": "bcf56640d6d1e85e4caa73e3d6d3c3f50f773e8312d28163e68dc1c50056cc94"
+      },
+      {
+        "x": -1,
+        "z": -1,
+        "data_version": 2975,
+        "status": "full",
+        "nbt_sha256": "73f36fec6693a0c872f0b5f8145d5a12efa807d4c7bb3d8cadaf23b734eda994"
+      },
+      {
+        "x": -1,
+        "z": 0,
+        "data_version": 2975,
+        "status": "full",
+        "nbt_sha256": "400608e5292ff45cef0d1099c70d75310be06213183a625f4e46fa124e52d1c4"
+      },
+      {
+        "x": -1,
+        "z": 1,
+        "data_version": 2975,
+        "status": "full",
+        "nbt_sha256": "420d8fd595bb8b53c8378d02d4408e8733835e9fd38e220aa5b0a99add2210df"
+      },
+      {
+        "x": 0,
+        "z": -2,
+        "data_version": 2975,
+        "status": "full",
+        "nbt_sha256": "cdbda1443835f347d9dc36893610e18f4be3cf137c1083b6c7a5008ff9092db0"
+      },
+      {
+        "x": 0,
+        "z": -1,
+        "data_version": 2975,
+        "status": "full",
+        "nbt_sha256": "de57b4f63e531e96ce2cb7ae63afe38fb7215b5041681cf4acde10a77965249d"
+      },
+      {
+        "x": 0,
+        "z": 0,
+        "data_version": 2975,
+        "status": "full",
+        "nbt_sha256": "2f8a3c9ef07c1d70420b52e517d2c68e24f466da3edb0d96e3ace51f83f90c53"
+      },
+      {
+        "x": 0,
+        "z": 1,
+        "data_version": 2975,
+        "status": "full",
+        "nbt_sha256": "ae0eca05fee52ca037c6d52ca8b9cf14da189603725fe62d2cfd4d28da3b6015"
+      },
+      {
+        "x": 1,
+        "z": -2,
+        "data_version": 2975,
+        "status": "full",
+        "nbt_sha256": "916446fa6833238d702bc1ccbac521ee8a1e1884a80dbc99ae55cf2b537edf55"
+      },
+      {
+        "x": 1,
+        "z": -1,
+        "data_version": 2975,
+        "status": "full",
+        "nbt_sha256": "0f73326701d58c8d182ff1e44f4cb59e7a8a977c45ab943ff79d2b6207155fe0"
+      },
+      {
+        "x": 1,
+        "z": 0,
+        "data_version": 2975,
+        "status": "full",
+        "nbt_sha256": "dc5ca2d8dac5b34648151366c02bae9f43485c97f11a9d7e20b419b6ed31972c"
+      },
+      {
+        "x": 1,
+        "z": 1,
+        "data_version": 2975,
+        "status": "full",
+        "nbt_sha256": "016d3da804c61bd86a159c9e06fadc77e25dacb6267d76d9027141213c05fcb6"
+      }
+    ],
+    "non_air_blocks": 52,
+    "excluded_spawn_platform": {
+      "glass": 8,
+      "smooth_quartz": 1
+    },
+    "block_entities_in_inspected_chunks": 0,
+    "scheduled_ticks_in_inspected_chunks": 0,
+    "independent_decoder_check": {
+      "decoder": "prismarine-nbt",
+      "chunks_compared": 16,
+      "non_air_blocks_compared": 52,
+      "all_positions_names_properties_match": true,
+      "level_version_matches": true
+    }
+  },
+  "door": {
+    "non_air_blocks": 43,
+    "bounds": {
+      "min": {
+        "x": -14,
+        "y": 101,
+        "z": -5
+      },
+      "max": {
+        "x": -14,
+        "y": 110,
+        "z": 1
+      }
+    },
+    "dimensions": {
+      "x": 1,
+      "y": 10,
+      "z": 7
+    },
+    "material_counts": {
+      "minecraft:cyan_wool": 6,
+      "minecraft:lever": 1,
+      "minecraft:observer": 8,
+      "minecraft:redstone_lamp": 1,
+      "minecraft:redstone_wire": 4,
+      "minecraft:repeater": 1,
+      "minecraft:smooth_quartz": 12,
+      "minecraft:sticky_piston": 10
+    },
+    "piston_facings": {
+      "down": 3,
+      "north": 2,
+      "south": 3,
+      "up": 2
+    },
+    "input_position": {
+      "x": -14,
+      "y": 110,
+      "z": -2
+    },
+    "aperture": {
+      "min": {
+        "x": -14,
+        "y": 105,
+        "z": -3
+      },
+      "max": {
+        "x": -14,
+        "y": 107,
+        "z": -1
+      }
+    },
+    "saved_aperture_is_air": true,
+    "initial_state": "all pistons retracted, devices unpowered/unlit, dust 0; static archive facts only",
+    "snapshot": {
+      "min": {
+        "x": -16,
+        "y": 99,
+        "z": -7
+      },
+      "max": {
+        "x": -12,
+        "y": 112,
+        "z": 3
+      },
+      "blocks": [
+        {
+          "pos": {
+            "x": -14,
+            "y": 101,
+            "z": -4
+          },
+          "name": "minecraft:cyan_wool",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -14,
+            "y": 101,
+            "z": -3
+          },
+          "name": "minecraft:observer",
+          "properties": {
+            "powered": "false",
+            "facing": "south"
+          }
+        },
+        {
+          "pos": {
+            "x": -14,
+            "y": 101,
+            "z": -2
+          },
+          "name": "minecraft:observer",
+          "properties": {
+            "powered": "false",
+            "facing": "south"
+          }
+        },
+        {
+          "pos": {
+            "x": -14,
+            "y": 101,
+            "z": -1
+          },
+          "name": "minecraft:redstone_lamp",
+          "properties": {
+            "lit": "false"
+          }
+        },
+        {
+          "pos": {
+            "x": -14,
+            "y": 101,
+            "z": 0
+          },
+          "name": "minecraft:cyan_wool",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -14,
+            "y": 102,
+            "z": -4
+          },
+          "name": "minecraft:redstone_wire",
+          "properties": {
+            "power": "0",
+            "west": "none",
+            "east": "none",
+            "south": "side",
+            "north": "side"
+          }
+        },
+        {
+          "pos": {
+            "x": -14,
+            "y": 102,
+            "z": -3
+          },
+          "name": "minecraft:repeater",
+          "properties": {
+            "powered": "false",
+            "facing": "north",
+            "locked": "false",
+            "delay": "4"
+          }
+        },
+        {
+          "pos": {
+            "x": -14,
+            "y": 102,
+            "z": -2
+          },
+          "name": "minecraft:sticky_piston",
+          "properties": {
+            "extended": "false",
+            "facing": "up"
+          }
+        },
+        {
+          "pos": {
+            "x": -14,
+            "y": 102,
+            "z": -1
+          },
+          "name": "minecraft:observer",
+          "properties": {
+            "powered": "false",
+            "facing": "down"
+          }
+        },
+        {
+          "pos": {
+            "x": -14,
+            "y": 102,
+            "z": 0
+          },
+          "name": "minecraft:redstone_wire",
+          "properties": {
+            "power": "0",
+            "west": "side",
+            "east": "side",
+            "south": "side",
+            "north": "side"
+          }
+        },
+        {
+          "pos": {
+            "x": -14,
+            "y": 103,
+            "z": -4
+          },
+          "name": "minecraft:observer",
+          "properties": {
+            "powered": "false",
+            "facing": "down"
+          }
+        },
+        {
+          "pos": {
+            "x": -14,
+            "y": 103,
+            "z": -3
+          },
+          "name": "minecraft:observer",
+          "properties": {
+            "powered": "false",
+            "facing": "down"
+          }
+        },
+        {
+          "pos": {
+            "x": -14,
+            "y": 103,
+            "z": -2
+          },
+          "name": "minecraft:sticky_piston",
+          "properties": {
+            "extended": "false",
+            "facing": "up"
+          }
+        },
+        {
+          "pos": {
+            "x": -14,
+            "y": 103,
+            "z": -1
+          },
+          "name": "minecraft:cyan_wool",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -14,
+            "y": 103,
+            "z": 0
+          },
+          "name": "minecraft:cyan_wool",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -14,
+            "y": 104,
+            "z": -4
+          },
+          "name": "minecraft:sticky_piston",
+          "properties": {
+            "extended": "false",
+            "facing": "south"
+          }
+        },
+        {
+          "pos": {
+            "x": -14,
+            "y": 104,
+            "z": -3
+          },
+          "name": "minecraft:smooth_quartz",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -14,
+            "y": 104,
+            "z": -2
+          },
+          "name": "minecraft:smooth_quartz",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -14,
+            "y": 104,
+            "z": -1
+          },
+          "name": "minecraft:smooth_quartz",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -14,
+            "y": 104,
+            "z": 0
+          },
+          "name": "minecraft:observer",
+          "properties": {
+            "powered": "false",
+            "facing": "up"
+          }
+        },
+        {
+          "pos": {
+            "x": -14,
+            "y": 105,
+            "z": -5
+          },
+          "name": "minecraft:sticky_piston",
+          "properties": {
+            "extended": "false",
+            "facing": "south"
+          }
+        },
+        {
+          "pos": {
+            "x": -14,
+            "y": 105,
+            "z": -4
+          },
+          "name": "minecraft:smooth_quartz",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -14,
+            "y": 105,
+            "z": 0
+          },
+          "name": "minecraft:smooth_quartz",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -14,
+            "y": 105,
+            "z": 1
+          },
+          "name": "minecraft:sticky_piston",
+          "properties": {
+            "extended": "false",
+            "facing": "north"
+          }
+        },
+        {
+          "pos": {
+            "x": -14,
+            "y": 106,
+            "z": -5
+          },
+          "name": "minecraft:sticky_piston",
+          "properties": {
+            "extended": "false",
+            "facing": "south"
+          }
+        },
+        {
+          "pos": {
+            "x": -14,
+            "y": 106,
+            "z": -4
+          },
+          "name": "minecraft:smooth_quartz",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -14,
+            "y": 106,
+            "z": 0
+          },
+          "name": "minecraft:smooth_quartz",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -14,
+            "y": 106,
+            "z": 1
+          },
+          "name": "minecraft:sticky_piston",
+          "properties": {
+            "extended": "false",
+            "facing": "north"
+          }
+        },
+        {
+          "pos": {
+            "x": -14,
+            "y": 107,
+            "z": -5
+          },
+          "name": "minecraft:cyan_wool",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -14,
+            "y": 107,
+            "z": -4
+          },
+          "name": "minecraft:smooth_quartz",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -14,
+            "y": 107,
+            "z": 0
+          },
+          "name": "minecraft:smooth_quartz",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -14,
+            "y": 107,
+            "z": 1
+          },
+          "name": "minecraft:cyan_wool",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -14,
+            "y": 108,
+            "z": -5
+          },
+          "name": "minecraft:redstone_wire",
+          "properties": {
+            "power": "0",
+            "west": "none",
+            "east": "none",
+            "south": "side",
+            "north": "side"
+          }
+        },
+        {
+          "pos": {
+            "x": -14,
+            "y": 108,
+            "z": -4
+          },
+          "name": "minecraft:observer",
+          "properties": {
+            "powered": "false",
+            "facing": "south"
+          }
+        },
+        {
+          "pos": {
+            "x": -14,
+            "y": 108,
+            "z": -3
+          },
+          "name": "minecraft:smooth_quartz",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -14,
+            "y": 108,
+            "z": -2
+          },
+          "name": "minecraft:smooth_quartz",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -14,
+            "y": 108,
+            "z": -1
+          },
+          "name": "minecraft:smooth_quartz",
+          "properties": {}
+        },
+        {
+          "pos": {
+            "x": -14,
+            "y": 108,
+            "z": 0
+          },
+          "name": "minecraft:observer",
+          "properties": {
+            "powered": "false",
+            "facing": "north"
+          }
+        },
+        {
+          "pos": {
+            "x": -14,
+            "y": 108,
+            "z": 1
+          },
+          "name": "minecraft:redstone_wire",
+          "properties": {
+            "power": "0",
+            "west": "none",
+            "east": "none",
+            "south": "side",
+            "north": "side"
+          }
+        },
+        {
+          "pos": {
+            "x": -14,
+            "y": 109,
+            "z": -3
+          },
+          "name": "minecraft:sticky_piston",
+          "properties": {
+            "extended": "false",
+            "facing": "down"
+          }
+        },
+        {
+          "pos": {
+            "x": -14,
+            "y": 109,
+            "z": -2
+          },
+          "name": "minecraft:sticky_piston",
+          "properties": {
+            "extended": "false",
+            "facing": "down"
+          }
+        },
+        {
+          "pos": {
+            "x": -14,
+            "y": 109,
+            "z": -1
+          },
+          "name": "minecraft:sticky_piston",
+          "properties": {
+            "extended": "false",
+            "facing": "down"
+          }
+        },
+        {
+          "pos": {
+            "x": -14,
+            "y": 110,
+            "z": -2
+          },
+          "name": "minecraft:lever",
+          "properties": {
+            "powered": "false",
+            "facing": "east",
+            "face": "floor"
+          }
+        }
+      ]
+    }
+  },
+  "admission_gaps": [
+    "observer common-runtime callbacks, signal emission, scheduled ticks and moving payload",
+    "redstone lamp common-runtime lit state, electrical traits, notifications and scheduled updates",
+    "exact smooth_quartz and cyan_wool classification and material admission"
+  ],
+  "validation": {
+    "archive_unchanged": true,
+    "server_started": false,
+    "live_inputs_applied": false,
+    "target_version_door_conformance_verified": false,
+    "model_execution_attempted": false,
+    "runtime_implementation_changed": false,
+    "limitations": [
+      "Static save data is not a callback runtime checkpoint or a target-version compatibility certificate.",
+      "No door open/close trace has been captured.",
+      "Block entities and scheduled ticks were inspected only in the sixteen selected chunks.",
+      "No automatic block substitution or rule changes were made."
+    ]
+  }
+}

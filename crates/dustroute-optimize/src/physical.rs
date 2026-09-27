@@ -852,6 +852,26 @@ mod tests {
         world.place(BlockKind::Lever, Pos::new(-1, 1, 0));
         world.place(BlockKind::RedstoneLamp, Pos::new(5, 1, 0));
         update_wire_shapes(&mut world);
+        // The old fixture put a lamp east of a north/south endpoint. That
+        // adjacency was never a weak-power path, even though the old graph
+        // admitted it. Keep this negative check, then use the fixed endpoint's
+        // supporting lamp so both the detour and shortened path really drive it.
+        assert!(!dustroute_translate::physical_step_connected(
+            &world,
+            Pos::new(4, 1, 0),
+            Pos::new(5, 1, 0)
+        ));
+        world.remove(Pos::new(5, 1, 0));
+        world.set(Pos::new(4, 0, 0), Block::new(BlockKind::RedstoneLamp));
+        let mut powered = world.clone();
+        powered.get_mut(Pos::new(-1, 1, 0)).unwrap().powered = Some(true);
+        let signal = dustroute_translate::electrical::solve_instantaneous(
+            &powered,
+            &dustroute_translate::electrical::DeviceOutputState::default(),
+            64,
+        )
+        .unwrap();
+        assert!(signal.power(Pos::new(4, 0, 0)).weak > 0);
         let bounds = RegionBounds::new(Pos::new(-1, 0, 0), Pos::new(5, 1, 2));
         let focus = RegionBounds::new(Pos::new(0, 1, 0), Pos::new(4, 1, 2));
         let analysis = dustroute_translate::analyze_world_region(&world, bounds);

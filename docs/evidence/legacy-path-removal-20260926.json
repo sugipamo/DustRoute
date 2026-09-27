@@ -1,0 +1,166 @@
+{
+  "schema_version": "dustroute.legacy-path-removal-checks.v1",
+  "created_at": "2026-09-26T18:38:55.650323+00:00",
+  "scope": "Retire horizontal, vertical and isolated-direct callback profiles; retain electrical piston execution and active fixed-geometry consumers.",
+  "reference": "Minecraft Java 1.21.11 source audit and recorded observations; obsolete model output is not an acceptance contract.",
+  "live_trial_performed": false,
+  "saved_data_policy": "Retired context IDs fail deserialization, including an archive with a retired context in historical proposals. No automatic reinterpretation, conversion, rewriting or deletion of saved files.",
+  "checks": [
+    {
+      "command": "cargo check --offline --locked --workspace --all-targets -j 1",
+      "exit_code": 0,
+      "local_log": "/tmp/dustroute-legacy-removal-check.log",
+      "log_sha256": "84e4bd140f2d95cd5f90c9cb2dda8f11da95a652b187a3ddcf51e63525b345c1"
+    },
+    {
+      "command": "cargo test --offline --locked --workspace --no-fail-fast -j 1 -- --test-threads=2",
+      "exit_code": 101,
+      "local_log": "/tmp/dustroute-legacy-removal-workspace-tests.log",
+      "log_sha256": "7df74dd4eb656b6a2081a97b53a27d5fecf8b0f4fd12406c14310687c1805d0b",
+      "counts_this_invocation": {
+        "passed": 846,
+        "failed": 8,
+        "ignored": 1
+      }
+    },
+    {
+      "command": "cargo test --offline --locked -p dustroute-library --test location_observations --test execution_context -j 1 -- --test-threads=2",
+      "exit_code": 0,
+      "local_log": "/tmp/dustroute-legacy-removal-library-rerun.log",
+      "log_sha256": "5d317bd34ccb4ed0dc8bef74a787066ae053e0b1569b2c88bc048bee4806a5af",
+      "counts_this_invocation": {
+        "passed": 13,
+        "failed": 0,
+        "ignored": 0
+      }
+    },
+    {
+      "command": "cargo test --offline --locked -p dustroute-translate --test location_behavior --test piston_runtime --test unified_piston_behavior -j 1 -- --test-threads=2",
+      "exit_code": 0,
+      "local_log": "/tmp/dustroute-legacy-removal-translate-rerun.log",
+      "log_sha256": "cdd8f15ee496eaa01d4b50ff4b7ca210a5e733b86eeb60a6e9b8068654d309a4",
+      "counts_this_invocation": {
+        "passed": 18,
+        "failed": 0,
+        "ignored": 0
+      }
+    },
+    {
+      "command": "cargo test --offline --locked -p dustroute-optimize --test blueprint_reduction torch_support_patterns_are_enumerated_then_proved_in_all_five_orientations -j 1 -- --test-threads=1",
+      "exit_code": 0,
+      "local_log": "/tmp/dustroute-legacy-removal-enumeration-rerun.log",
+      "log_sha256": "544c539873fd0905b85cbcc1537d243a3eb9f4131348ebfcacb3e00cb332b71e",
+      "counts_this_invocation": {
+        "passed": 1,
+        "failed": 0,
+        "ignored": 0
+      }
+    },
+    {
+      "command": "cargo clippy --offline --locked --workspace --all-targets -j 1 -- -D warnings",
+      "exit_code": 101,
+      "local_log": "/tmp/dustroute-legacy-removal-clippy.log",
+      "log_sha256": "415538e6f872ca7d0a8455a842d55efbc0d85f42fae3a161fd0dd4aca01095c0"
+    },
+    {
+      "command": "cargo clippy --offline --locked --workspace --all-targets -j 1 -- -D warnings",
+      "exit_code": 0,
+      "local_log": "/tmp/dustroute-legacy-removal-clippy-final.log",
+      "log_sha256": "e6b67334fd626bd9ef0e9eb6739c8d4d1e908adc4f4fc40018f71729bdd90b1a"
+    },
+    {
+      "command": "cargo test --offline --locked -p dustroute-library --test execution_context -j 1 -- --test-threads=2",
+      "exit_code": 0,
+      "local_log": "/tmp/dustroute-legacy-removal-context-final.log",
+      "log_sha256": "d3b036c6b6e6afdd60051fd1cb9d7b16ed41d053f6f45263383bed2b6a323930",
+      "counts_this_invocation": {
+        "passed": 7,
+        "failed": 0,
+        "ignored": 0
+      }
+    },
+    {
+      "command": "cargo fmt --all --check",
+      "exit_code": 0,
+      "local_log": "/tmp/dustroute-legacy-removal-fmt-final.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "git diff --check",
+      "exit_code": 0,
+      "local_log": "/tmp/dustroute-legacy-removal-diff-final.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "resolution_notes": [
+    "Full workspace invocation finished with 8 failed tests in 5 targets; the affected tests were corrected and rerun as listed. Do not interpret the initial full invocation as all green.",
+    "Incomplete old snapshots are now rejected explicitly instead of guessing wire arms or expanding known air; the original captures were retained.",
+    "Absent retired law requirements are rejected during catalog insertion, before behavior exploration.",
+    "Five-orientation torch proof test permits 180 seconds of total enumeration; production deadlines and per-proof bounds are unchanged.",
+    "First Clippy pass found a redundant single-element profile loop; it was removed and all-target Clippy plus the context tests passed afterward.",
+    "Full workspace tests were not repeated after test-only corrections or removal of the obsolete example/live runner.",
+    "The existing ignored test is measure_full_physical_not_reachability, a manual scalability measurement.",
+    "Test counts are per invocation and overlap; they must not be summed into a distinct-test count."
+  ],
+  "additional_checks": [
+    "Syntax and import checks passed for instrumented_server, observe_mixed_pistons and observe_assembly_construction with process/network launch mocked to reject unexpected calls.",
+    "Extracted server constructor body and inherited lifecycle methods retain structural equivalence to their prior implementations.",
+    "Local Markdown file links validated; retired symbols remain only in explicit rejection/schema tests and historical data/documentation."
+  ],
+  "removed_files": [
+    "crates/dustroute-minecraft/src/time/piston_runtime/unified.rs",
+    "crates/dustroute-minecraft/src/piston_input_law.rs",
+    "crates/dustroute-minecraft/tests/legacy_piston_callbacks.rs",
+    "crates/dustroute-minecraft/tests/support/legacy_piston_callbacks.rs",
+    "crates/dustroute-minecraft/examples/audit_legacy_piston_callbacks.rs",
+    "crates/dustroute-library/tests/legacy_piston_contracts.rs",
+    "crates/dustroute-library/tests/support/legacy_piston_contracts.rs",
+    "crates/dustroute-library/examples/audit_legacy_piston_contracts.rs",
+    "crates/dustroute-translate/examples/compare_piston_interruption.rs",
+    "tools/observe_piston_interruption.py",
+    "crates/dustroute-mcp/mineflayer/e2e/piston-interruption-live.js"
+  ],
+  "source_sha256": {
+    "crates/dustroute-minecraft/src/execution_context.rs": "397c7abb92ef4e21bdc1c3009ffca24e6dfe5a4b658f7abe54c8a477e1079bde",
+    "crates/dustroute-minecraft/src/time/piston_runtime/mod.rs": "1c0f85de1419da1fbc76e8c21fbbdc549b6f13360b324d7e3ea6982bdf83df74",
+    "crates/dustroute-minecraft/src/time/piston_runtime/adapter.rs": "03716915f839f08405fc5b5a65a42756df12e9be2cbe9e3ea0e2079c36168fb3",
+    "crates/dustroute-minecraft/src/time/piston_runtime/geometry.rs": "770a335cd7f44655e4662f5c9dc6c7f4a9c872c149cc983b00f667cb986f0685",
+    "crates/dustroute-minecraft/src/time/piston_runtime/notifications.rs": "da26387e1da9598519526fadfe6879fbe74a446bab29c816d1ecb93743684742",
+    "crates/dustroute-minecraft/src/time/piston_runtime/electrical.rs": "9a1de681f0f16f10a52d3438f6af0a4f1e33ba4ec57c96fe1b13dc7e09ecfdf9",
+    "crates/dustroute-minecraft/src/time/runtime/executor/piston_behavior.rs": "3143646609909d178a9bbe2f63d908e0283895d1c456e9850ff958bf5b0bddce",
+    "crates/dustroute-minecraft/src/blocks/piston.rs": "b02f4690a4e18a72f8d474a52f5c04c631ef23825530f3a5393f133db7e30358",
+    "crates/dustroute-minecraft/src/piston_motion_law.rs": "f22c4bbe61aa02cfd59c45d17f1799128e756a8c209a1801398ed2db4b198515",
+    "crates/dustroute-library/src/builtin_laws.rs": "ae337e18a6d5fee602f694ee3969593a7929c4d00256561d0e9b5e6019370bf2",
+    "crates/dustroute-library/src/runtime_behavior.rs": "98fc61e66556736e24f3aefde31e0cda41c3bbba1bd1f5e9a6ba6e29055e2914",
+    "crates/dustroute-library/tests/execution_context.rs": "35125477e8c65e6a5cf649e3d93b55b26e1689f21b20c76aa2db314f02f39e12",
+    "crates/dustroute-library/tests/location_observations.rs": "819a97b742e3ffe5bcf310e0023ecb1f08b48f52751f4f82ce03df1bb3f1aafc",
+    "crates/dustroute-translate/src/runtime_behavior.rs": "45fea93656f3b4d2c92fd44ed3a4fea85e6c1101529db3985ec0e5c227d1c54f",
+    "crates/dustroute-translate/src/location_behavior.rs": "699d954f6f068b792b2e9e95f6ddaa8317647b03a2a96c1d7eac77ec79f39bb5",
+    "crates/dustroute-translate/src/promotion.rs": "4112e1b341fe0514ca8896d25f991ebe075738f6d2835543e4b787ed3e98375a",
+    "crates/dustroute-translate/src/piston_construction.rs": "2edc3c23f9d80003d08afd162ad634af095a98777ff580d6c77dca85eb89731d",
+    "crates/dustroute-translate/tests/location_behavior.rs": "fbb46ef2d0720af29522e5b26f2d600e0de2b7bb3a442e3fdb63bfa464dade42",
+    "crates/dustroute-translate/tests/piston_runtime.rs": "2c844b8a5f063feaf871ee8c81ff474b3429e89168bd983170099fb2928b3211",
+    "crates/dustroute-translate/tests/unified_piston_behavior.rs": "1f0fa886b02f61c4881fee17b4f67c602d3ea9f0a34a275a0b6b0b7477bb1f2a",
+    "crates/dustroute-translate/tests/electrical_piston_observations.rs": "154184c17787f51968354e341b32056ac8f50b723545dcdca892c56069f96864",
+    "crates/dustroute-translate/examples/compare_electrical_pistons.rs": "3b69d7d6472330845e3f5bde9598f4c147080dd900e0d60a72239c63576215ba",
+    "crates/dustroute-mcp/src/piston_assembly.rs": "772afced838b7bcb529b389fe5a94bda29ba8f86f310faf3da5750066fdb378a",
+    "crates/dustroute-mcp/src/blueprint_mcp.rs": "bf2d0e69a846686c4780c9813ab0d992661676d20b63ce1d3a3c46f5d425cc32",
+    "crates/dustroute-mcp/src/service_blueprint_tests.rs": "462feb1d86df9acae48308405c587cef11678ac33c0ce35a0d344ee5787a24bf",
+    "crates/dustroute-optimize/tests/blueprint_reduction.rs": "085357efff961c4e9d87531f6fb7eb03aef35d0ffa6b7a104e78f8a4de0d000a",
+    "tools/instrumented_server.py": "bd734b11b5c90705a74c78b8ad05f2a09fde83645de08a0b88c9b74c4c13294c",
+    "tools/observe_mixed_pistons.py": "2fd43917a71d5a8c3b374898769e8ae487b30cb6f7f0de64867e745a31c4d115",
+    "tools/observe_assembly_construction.py": "77b3feddf27cc16ac5a2bc876ddf067a3fcc6133f0892eba237b54174e9fa6b5"
+  },
+  "replayed_fixture_sha256": {
+    "crates/dustroute-translate/tests/fixtures/mixed-electrical-observed-b-v1.json": "416fcef7ec5f54b78af8ad93d42030bab19a535be9daf18b6f4f68a329587de0",
+    "crates/dustroute-translate/tests/fixtures/mixed-electrical-observed-c-v1.json": "d0249262be28eef5153f3f422b067050f85909106f16be11318fd50616ccd6dc",
+    "crates/dustroute-translate/tests/fixtures/mixed-electrical-observed-d-v1.json": "b88223d04e1ca4863da516047430e9ceec1b3c283b7e3391a535306d63bdb375",
+    "crates/dustroute-translate/tests/fixtures/mixed-electrical-observed-e-v1.json": "f3bcb8411e9184d6557767b5534c9e397ad55026ad3f315a6a0b204d0676c25f",
+    "crates/dustroute-translate/tests/fixtures/mixed-electrical-observed-f-v1.json": "0dafdabbd24e72e42d12be7dbd8611947bb7a703215886b98d5d2b49fe9c9125",
+    "crates/dustroute-translate/tests/fixtures/mixed-electrical-observed-g-v1.json": "86f88e2d7a0b1d4885e49d42696f6c038b375155e635d8e55fd7d3a896e9f697",
+    "crates/dustroute-translate/tests/fixtures/mixed-electrical-observed-h-v1.json": "def6a51955ca66f4a2c9e1efca3effd7c1dd6ed6b3a84ef2f30d3622bba989d9",
+    "crates/dustroute-translate/tests/fixtures/mixed-electrical-observed-j-v1.json": "891f64a21c6ad4c05d4232e53c88c0aecb55eda0759a8113fa42d55139be8df8",
+    "crates/dustroute-translate/tests/fixtures/mixed-electrical-observed-k-v1.json": "e4ba23924146419b97c03de7289218b48957a8bdb41a7a00025d5dc53ad978e5",
+    "crates/dustroute-translate/tests/fixtures/mixed-electrical-observed-l-v1.json": "c106530e5ee179be9c743d8773204f237feac20c142314d8da724ef5420aa720"
+  }
+}

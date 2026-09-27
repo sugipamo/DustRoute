@@ -1,0 +1,65 @@
+{
+  "kind": "static_bytecode_audit",
+  "audited_on": "2026-09-26",
+  "minecraft_version": "1.21.11",
+  "yarn_mappings": "1.21.11+build.6",
+  "redstone_experiments": false,
+  "named_merged_jar": "minecraft-merged-1.21.11-net.fabricmc.yarn.1_21_11.1.21.11+build.6-v2.jar",
+  "named_merged_jar_sha256": "5b4aa12131a872a25dc32e7f017373d6e83502f6919154769296dd3de6af8c1b",
+  "artifact_provenance": "piston_runtime_source.meta.json",
+  "inspection": "javap -p -c -classpath <named_merged_jar> <class>",
+  "named_class_sha256": {
+    "net.minecraft.block.PistonBlock": "00cadea51e97b910da939da68b97c591843675ced0619145a4bb7c412c31cd02",
+    "net.minecraft.world.RedstoneView": "4c83d65faabca6acf8c841c350d60fefe0e765725f7dc171298c18e21d6b2c53",
+    "net.minecraft.block.LeverBlock": "47870b3317b33b9eb5e3b2b0e3a54b2effa2c3fbdd443b8e00aff265dc34ebf6",
+    "net.minecraft.block.WallMountedBlock": "de4e1242c8ca9538e103b0ba04534125d1030daa9cf36945d87baf0e38520934",
+    "net.minecraft.block.RedstoneWireBlock": "0583da64d1ca29a6da959b09b4f6b74d53f8542e81f3f32f557ec332931f77ea",
+    "net.minecraft.block.RedstoneBlock": "3dcae06634e00c31fdbdb42add7b6b0b2dae17c76fe1d783b6713ed1b5ca02a5",
+    "net.minecraft.world.block.NeighborUpdater": "288328dcd874eea9005fe034f0715c2681f3af7e932c4d73484065b06b516b9e",
+    "net.minecraft.world.block.ChainRestrictedNeighborUpdater": "659bedb473d4f2a2b3cbb1cb23cd190346bb0682ebc0f30f45a9c2a926c24f04",
+    "net.minecraft.world.block.ChainRestrictedNeighborUpdater$SixWayEntry": "165b0437782b559139fca6b7b9e6823cf23557c29af7072c0439617beace0e62",
+    "net.minecraft.block.AbstractBlock": "a005796ef429f0b0a7bd7398b3c06da4847619118a11d46286eb6640c50db6a8",
+    "net.minecraft.block.AbstractBlock$AbstractBlockState": "aeb7c519d37fc54dd11e082751e721711fe2b452bb0a2d6110e8b7eda0638615",
+    "net.minecraft.block.entity.PistonBlockEntity": "c0f4f67fb2645bd762b8aaf01335c7da0111469793051e4ade39fde2bdfe0e56"
+  },
+  "findings": [
+    {
+      "method": "PistonBlock.shouldExtend",
+      "bytecode_ranges": [
+        "0..57: six adjacent positions except facing",
+        "58..72: own position queried with DOWN",
+        "73..141: five neighbors of position.up(), excluding DOWN"
+      ],
+      "implication": "Six-direction direct input is only one part of Java piston power; conductor transfer and quasi-connectivity are not supplied by selecting the vertical adapter."
+    },
+    {
+      "method": "RedstoneView.getEmittedRedstonePower",
+      "bytecode_ranges": [
+        "0..16: weak signal from source",
+        "17..38: solid source also receives strong power"
+      ],
+      "implication": "Source emission is directional and can be mediated by a solid conductor."
+    },
+    {
+      "method": "RedstoneWireBlock.getWeakRedstonePower",
+      "bytecode_ranges": [
+        "0..16: DOWN query emits zero",
+        "39..84: UP query accepts power; horizontal query uses opposite rendered arm"
+      ],
+      "implication": "Do not apply the old wire-arm connection test to vertical source directions; Java query direction is receiver-to-source."
+    },
+    {
+      "method": "LeverBlock.updateNeighbors",
+      "bytecode_ranges": [
+        "44..49: notify around lever",
+        "52..62: notify around supporting block"
+      ],
+      "implication": "The current runtime only emits the first six-way batch plus nearby-wire work."
+    },
+    {
+      "method": "NeighborUpdater.<clinit> / AbstractBlock.<clinit>",
+      "implication": "Ordinary order W E D U N S and shape order W E N S D U match retained geometry law outputs. This is not evidence of complete write/callback coverage."
+    }
+  ],
+  "evidence_limit": "No live world was changed or observed. Model regression captures are separate from this target-version bytecode audit."
+}

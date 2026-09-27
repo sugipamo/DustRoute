@@ -1,0 +1,44 @@
+{
+  "inputs": {"rear": 255, "side_a": 255, "side_b": 255, "subtract": 1},
+  "registers": {"strength": {"initial": 0, "maximum": 255}},
+  "histories": {},
+  "handlers": {
+    "evaluate": [
+      {
+        "op": "if",
+        "condition": {"op": "input", "name": "subtract"},
+        "then": [
+          {
+            "op": "set",
+            "register": "strength",
+            "value": {
+              "op": "saturating_subtract",
+              "left": {"op": "input", "name": "rear"},
+              "right": {
+                "op": "maximum",
+                "left": {"op": "input", "name": "side_a"},
+                "right": {"op": "input", "name": "side_b"}
+              }
+            }
+          }
+        ],
+        "otherwise": [
+          {
+            "op": "if",
+            "condition": {
+              "op": "at_least",
+              "left": {"op": "input", "name": "rear"},
+              "right": {
+                "op": "maximum",
+                "left": {"op": "input", "name": "side_a"},
+                "right": {"op": "input", "name": "side_b"}
+              }
+            },
+            "then": [{"op": "set", "register": "strength", "value": {"op": "input", "name": "rear"}}],
+            "otherwise": [{"op": "set", "register": "strength", "value": {"op": "constant", "value": 0}}]
+          }
+        ]
+      }
+    ]
+  }
+}

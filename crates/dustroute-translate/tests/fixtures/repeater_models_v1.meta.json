@@ -1,0 +1,17 @@
+{
+  "kind": "pre_migration_model_regression",
+  "captured_on": "2026-09-20",
+  "source": "Working tree on codex/blueprint-architecture before the phase 3b repeater law migration; includes the completed phase 3a changes",
+  "command": "cargo run -q -p dustroute-translate --example audit_repeater_world_models",
+  "harness": "../support/repeater_models.rs",
+  "fixture": "repeater_models_v1.jsonl",
+  "cases": 32,
+  "delay_range": [1, 4],
+  "initial_output_values": [false, true],
+  "patterns": ["held", "pulse", "reverse_twice", "lock_then_release"],
+  "compatibility_row": ["PhysicsTime", "before output", "after output", "transition kind", "settled front wire strength", "pending work after boundary"],
+  "compatibility_lock_row": ["redstone tick", "main output", "side repeater output", "pending work"],
+  "bounded_events_row": ["PhysicsTime", "RepeaterTick payload", "execution status"],
+  "bounded_changes_row": ["PhysicsTime", "before powered", "after powered"],
+  "scope": "Model regression only. The bounded runner excludes the lock cases. These are not Minecraft observations or an assertion that the two models agree. Do not regenerate expected data after a semantic change merely to make the regression pass."
+}

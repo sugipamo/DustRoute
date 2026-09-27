@@ -1,6 +1,8 @@
 use std::collections::BTreeMap;
 
-use dustroute_translate::cell_library::{CellLibrary, default_cell_library, verify_cell};
+use dustroute_translate::cell_library::{
+    CellLibrary, default_cell_library, verify_cell_with_settle_ticks,
+};
 use dustroute_translate::cells::RotationY;
 use dustroute_translate::logic::GateKind;
 use dustroute_translate::physical::{CellId, Endpoint, PhysicalNode, PlacementCircuit, Route};
@@ -45,6 +47,7 @@ pub struct PlacementMutation {
     pub delta: Pos,
     pub rotation: Option<RotationY>,
     pub candidate_name: Option<String>,
+    pub candidate_revision: Option<dustroute_library::blueprint::BlueprintRevisionId>,
     pub companion_moves: Vec<(CellId, Pos)>,
 }
 
@@ -196,7 +199,13 @@ pub fn apply_mutation(
             placed.cell = lib
                 .candidates_for(node.logical_kind)
                 .iter()
-                .find(|c| Some(c.name.as_str()) == m.candidate_name.as_deref())
+                .find(|c| match &m.candidate_revision {
+                    Some(revision) => c.source_revision.as_ref() == Some(revision),
+                    None => {
+                        c.source_revision.is_none()
+                            && Some(c.name.as_str()) == m.candidate_name.as_deref()
+                    }
+                })
                 .unwrap()
                 .clone()
         }
@@ -246,6 +255,7 @@ pub fn candidate_mutations(
                 delta: d,
                 rotation: None,
                 candidate_name: None,
+                candidate_revision: None,
                 companion_moves: vec![],
             });
         }
@@ -291,19 +301,40 @@ pub fn candidate_mutations(
                         delta,
                         rotation: Some(rotation),
                         candidate_name: None,
+                        candidate_revision: None,
                         companion_moves: vec![],
                     });
                 }
             }
         }
         for c in lib.candidates_for(n.logical_kind) {
-            if c.name != n.placed.cell.name && verify_cell(n.logical_kind, c).valid {
+            let same_interface = c
+                .inputs
+                .iter()
+                .map(|port| &port.name)
+                .collect::<std::collections::BTreeSet<_>>()
+                == n.placed.cell.inputs.iter().map(|port| &port.name).collect()
+                && c.outputs
+                    .iter()
+                    .map(|port| &port.name)
+                    .collect::<std::collections::BTreeSet<_>>()
+                    == n.placed
+                        .cell
+                        .outputs
+                        .iter()
+                        .map(|port| &port.name)
+                        .collect();
+            if c != &n.placed.cell
+                && same_interface
+                && verify_cell_with_settle_ticks(n.logical_kind, c, lib.settle_ticks_for(c)).valid
+            {
                 out.push(PlacementMutation {
                     kind: MutationKind::ReplaceCell,
                     cell_id: id,
                     delta: Pos::new(0, 0, 0),
                     rotation: None,
                     candidate_name: Some(c.name.clone()),
+                    candidate_revision: c.source_revision.clone(),
                     companion_moves: vec![],
                 });
             }
@@ -338,6 +369,7 @@ pub fn candidate_mutations(
                 delta: first_delta,
                 rotation: None,
                 candidate_name: None,
+                candidate_revision: None,
                 companion_moves: vec![(second, second_delta)],
             });
         }
@@ -378,6 +410,7 @@ pub fn candidate_mutations(
                 delta,
                 rotation: None,
                 candidate_name: None,
+                candidate_revision: None,
                 companion_moves: cells[1..].iter().map(|cell| (*cell, delta)).collect(),
             });
         }
@@ -414,6 +447,7 @@ pub fn candidate_mutations(
                 delta: primary_delta,
                 rotation: None,
                 candidate_name: None,
+                candidate_revision: None,
                 companion_moves,
             });
         }

@@ -1,0 +1,273 @@
+{
+  "inputs": {
+    "action": 1,
+    "count": 12,
+    "piston_payload": 1
+  },
+  "registers": {
+    "admit_push": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "admit_chain": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "limit": {
+      "initial": 0,
+      "maximum": 12
+    },
+    "head": {
+      "initial": 0,
+      "maximum": 4
+    },
+    "push_step": {
+      "initial": 0,
+      "maximum": 4
+    },
+    "pull_from": {
+      "initial": 0,
+      "maximum": 4
+    },
+    "pull_to": {
+      "initial": 0,
+      "maximum": 4
+    },
+    "dirty_radius": {
+      "initial": 0,
+      "maximum": 4
+    },
+    "source_carrier": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "destination_carrier": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "head_carrier": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "extending": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "progress": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "head_is_payload": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "activation_min": {
+      "initial": 0,
+      "maximum": 65535
+    },
+    "activation_max": {
+      "initial": 0,
+      "maximum": 65535
+    },
+    "completion": {
+      "initial": 0,
+      "maximum": 65535
+    }
+  },
+  "histories": {},
+  "handlers": {
+    "evaluate": [
+      {
+        "op": "set",
+        "register": "admit_push",
+        "value": {
+          "op": "not",
+          "value": {
+            "op": "at_least",
+            "left": {
+              "op": "input",
+              "name": "count"
+            },
+            "right": {
+              "op": "constant",
+              "value": 12
+            }
+          }
+        }
+      },
+      {
+        "op": "set",
+        "register": "admit_chain",
+        "value": {
+          "op": "maximum",
+          "left": {
+            "op": "not",
+            "value": {
+              "op": "input",
+              "name": "piston_payload"
+            }
+          },
+          "right": {
+            "op": "equal",
+            "left": {
+              "op": "input",
+              "name": "count"
+            },
+            "right": {
+              "op": "constant",
+              "value": 1
+            }
+          }
+        }
+      },
+      {
+        "op": "set",
+        "register": "limit",
+        "value": {
+          "op": "constant",
+          "value": 12
+        }
+      },
+      {
+        "op": "set",
+        "register": "head",
+        "value": {
+          "op": "constant",
+          "value": 1
+        }
+      },
+      {
+        "op": "set",
+        "register": "push_step",
+        "value": {
+          "op": "constant",
+          "value": 1
+        }
+      },
+      {
+        "op": "set",
+        "register": "pull_from",
+        "value": {
+          "op": "constant",
+          "value": 2
+        }
+      },
+      {
+        "op": "set",
+        "register": "pull_to",
+        "value": {
+          "op": "constant",
+          "value": 1
+        }
+      },
+      {
+        "op": "set",
+        "register": "dirty_radius",
+        "value": {
+          "op": "constant",
+          "value": 1
+        }
+      },
+      {
+        "op": "set",
+        "register": "destination_carrier",
+        "value": {
+          "op": "constant",
+          "value": 1
+        }
+      },
+      {
+        "op": "set",
+        "register": "head_carrier",
+        "value": {
+          "op": "constant",
+          "value": 1
+        }
+      },
+      {
+        "op": "set",
+        "register": "activation_min",
+        "value": {
+          "op": "constant",
+          "value": 0
+        }
+      },
+      {
+        "op": "set",
+        "register": "activation_max",
+        "value": {
+          "op": "constant",
+          "value": 1
+        }
+      },
+      {
+        "op": "set",
+        "register": "completion",
+        "value": {
+          "op": "constant",
+          "value": 2
+        }
+      },
+      {
+        "op": "set",
+        "register": "source_carrier",
+        "value": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "action"
+          },
+          "right": {
+            "op": "constant",
+            "value": 1
+          }
+        }
+      },
+      {
+        "op": "set",
+        "register": "extending",
+        "value": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "action"
+          },
+          "right": {
+            "op": "constant",
+            "value": 0
+          }
+        }
+      },
+      {
+        "op": "set",
+        "register": "progress",
+        "value": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "action"
+          },
+          "right": {
+            "op": "constant",
+            "value": 1
+          }
+        }
+      },
+      {
+        "op": "set",
+        "register": "head_is_payload",
+        "value": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "action"
+          },
+          "right": {
+            "op": "constant",
+            "value": 1
+          }
+        }
+      }
+    ]
+  }
+}

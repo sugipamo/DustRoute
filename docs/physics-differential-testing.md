@@ -102,7 +102,39 @@ BUD, or Vanilla's complete neighbor-update order.
 Incomplete observed regions and missing signal/connection properties remain
 failed/unavailable rather than being normalized to an unpowered circuit.
 
+The two existing repeater models now execute distinct immutable Blueprint law
+programs. Their short-pulse and locking differences are intentionally retained;
+see [executable repeater laws](blueprint-architecture.md#executable-repeater-laws)
+for the comparison and pre-migration model captures. Those captures add no new
+live conformance claim.
+
+The compatibility simulator's comparator calculation likewise executes an
+[immutable law program](blueprint-architecture.md#executable-comparator-law),
+preserving input sampling and commit order. This does not add comparator timing
+to the bounded runner or change the scope of the retained live fixtures.
+
+Observer notification and pulse effects also use an
+[immutable law program](blueprint-architecture.md#executable-observer-law).
+Pre-migration model captures preserve all six directions and overlapping pulse
+events; actual observation history and deadlines remain in the compatibility
+simulator. This adds neither observer timing to the bounded runner nor new live
+conformance evidence.
+
+The [lamp law migration](blueprint-architecture.md#executable-lamp-laws) similarly
+retains two scopes: delayed OFF in the compatibility simulator and immediate
+updates in the bounded runner. Its 24 pre-migration captures compare each model
+with its own retained behavior; they do not assert that the two timing models
+are equivalent or add a live conformance claim.
+
 ### Current 1.21.11 scenario conformance
+
+The bounded piston path now executes pinned
+[Blueprint law programs](blueprint-architecture.md#executable-piston-laws).
+Forty frozen local captures compare the corrected pre-migration model with the
+law-backed path, including moving carriers and completed block metadata. The
+approved all-sides input-validation repair is recorded separately from that
+baseline. This adds model regression coverage and reuses the retained observed
+fixtures; it does not add live observations or resolve unobserved event order.
 
 The integration test `transition_conformance` rebuilds both promoted scenarios
 from their E2E layouts and runs the real simulators. The Repeater/Observer

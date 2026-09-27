@@ -107,7 +107,10 @@ fn redstone_compiler_xor() -> Component {
         |a, b| vec![a ^ b],
     );
     component.name = "Redstone Compiler generated XOR".into();
-    component.layout_reference = Some("dustroute-translate:external_xor_cell".into());
+    component.layout_reference = Some(format!(
+        "blueprint:{}",
+        crate::builtin_blueprints::EXTERNAL_XOR_REVISION
+    ));
     component.physical = Some(PhysicalMetrics {
         bounding_size: [3, 5, 5],
         occupied_blocks: 23,
@@ -161,7 +164,10 @@ fn dustroute_compiled_xor() -> Component {
         |a, b| vec![a ^ b],
     );
     component.name = "DustRoute compiled XOR baseline".into();
-    component.layout_reference = Some("dustroute-translate:compiled_xor_cell".into());
+    component.layout_reference = Some(format!(
+        "blueprint:{}",
+        crate::builtin_blueprints::XOR_REVISION
+    ));
     component.physical = Some(PhysicalMetrics {
         bounding_size: [51, 5, 13],
         occupied_blocks: 341,
@@ -204,7 +210,10 @@ fn dustroute_compact_xor() -> Component {
         |a, b| vec![a ^ b],
     );
     component.name = "DustRoute compact compiled XOR".into();
-    component.layout_reference = Some("dustroute-translate:compact_compiled_xor_cell".into());
+    component.layout_reference = Some(format!(
+        "blueprint:{}",
+        crate::builtin_blueprints::XOR_COMPACT_REVISION
+    ));
     component.physical = Some(PhysicalMetrics {
         bounding_size: [39, 5, 11],
         occupied_blocks: 275,

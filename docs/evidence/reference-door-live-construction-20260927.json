@@ -1,0 +1,468 @@
+{
+  "schema_version": "dustroute.reference-door-live-construction-audit.v1",
+  "date": "2026-09-27",
+  "status": "paused_before_shared_command_placement_and_readiness_expansion",
+  "minecraft_version": "1.21.11",
+  "ordinary_type": "dustroute.type.piston-door-3x3.v1",
+  "trials": [
+    {
+      "run_id": "reference-door-live-construction-20260927-a",
+      "status": "failed_before_normal_operation",
+      "verified_steps": 37,
+      "attempted_stage": 38,
+      "total_steps": 43,
+      "actual_capture_mode": "bounded",
+      "capture_footer": {
+        "kind": "artifact_end",
+        "capture_mode": "bounded",
+        "capture_state": "closed_no_input",
+        "input_observed": false,
+        "anchor_game_tick": null,
+        "end_game_tick": null,
+        "last_sequence": 15777,
+        "emitted_records": 35,
+        "suppressed_records": 0,
+        "evicted_records": 15742,
+        "write_errors": 0,
+        "heartbeat_mode": "full"
+      },
+      "complete_construction_capture": false,
+      "public_adoption_after_fresh_review": true,
+      "mcp_restarted_after_adoption": true,
+      "normal_inputs_applied": 0,
+      "failure_observations": 0,
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true
+      },
+      "server_stopped_normally": true,
+      "public_undo_or_removal_completed": false,
+      "failed_attempt_preserved_as": "needs_inspection",
+      "loaded_sources_sha256": {
+        "/root/DustRoute/tools/observe_assembly_construction.py": "15541cfff2a9f5a6fe20d7b8d4a3418f0a99dbd7384f1cdd7cc1ab824f989a29",
+        "/root/DustRoute/crates/dustroute-mcp/mineflayer/e2e/piston-assembly-mcp-live.js": "f7a7da104503c41f1892022402198081f1ebe2c3295818b9df23265ccbfe10d8",
+        "/root/DustRoute/target/debug/dustroute-mcp": "bf6aee51543466ca7443035ceb172f9b27dd972830919ac34fc4f76f46bfb021",
+        "/root/DustRoute/crates/dustroute-mcp/mineflayer/bridge.js": "b71723a91387203de40ed43fc91f4d5d273efe9bb0429948e1af2cf1103865d4"
+      },
+      "artifacts": [
+        {
+          "path": ".local/e2e-artifacts/reference-door-live-construction-20260927-a.fixture.json",
+          "sha256": "84ffe68b299b2a5413612befd2bc49b9852ae21cebf06ea135a8c66cd5d6ba2e",
+          "bytes": 948028
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-live-construction-20260927-a.client.json",
+          "sha256": "5eaa48e40cf00966a1941f83e1b687c1832999991201fb96ec9d3d2655183f0b",
+          "bytes": 2605648
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-live-construction-20260927-a.summary.json",
+          "sha256": "c5aebc184a031fa27ae18fbfdb145ed27d462f5e3a4538be7e6cf9bf91730a24",
+          "bytes": 5110
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-live-construction-20260927-a.raw.ndjson",
+          "sha256": "8350bed6dd0cae03aa2b9f04db667e16a0219ccab184b564b8ee790791a6e8c3",
+          "bytes": 4899
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-live-construction-20260927-a.server.log",
+          "sha256": "8321a07e423548c1db8b91194690308a8c870c3830c570cf5d3dcb68a3391a2f",
+          "bytes": 10821
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-live-construction-20260927-a.bridge.log",
+          "sha256": "4c50b2d474e11603056d5003ecb2b063bf62b91739a116d418b13f4d44340a45",
+          "bytes": 374
+        }
+      ],
+      "registry_records": [
+        {
+          "path": "/root/DustRoute/.local/e2e-artifacts/reference-door-live-construction-20260927-a.state/3c2797e6019a5e48/assembly-instances/495186e1-2765-4efd-932a-fce4a57bc6db.json",
+          "sha256": "bffb08203631bc40f907bafbf53bcff7940c1a66e996e960c0be6b2886e0fb99",
+          "schema": "dustroute.placed-assembly.v1",
+          "instance_id": "495186e1-2765-4efd-932a-fce4a57bc6db",
+          "state": "needs_inspection",
+          "revision": 39,
+          "attempts": [
+            {
+              "operation_id": "495186e1-2765-4efd-932a-fce4a57bc6db",
+              "removal": false,
+              "verified_steps": 37,
+              "total_steps": 43,
+              "started_at_unix_ms": 1790505918892,
+              "finished_at_unix_ms": 1790505932641,
+              "error": "construction state or surrounding world differs from the verified plan; inspect before continuing"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "run_id": "reference-door-live-construction-20260927-b",
+      "status": "failed_before_normal_operation",
+      "verified_steps": 37,
+      "attempted_stage": 38,
+      "total_steps": 43,
+      "actual_capture_mode": "bounded",
+      "capture_footer": {
+        "kind": "artifact_end",
+        "capture_mode": "bounded",
+        "capture_state": "closed_no_input",
+        "input_observed": false,
+        "anchor_game_tick": null,
+        "end_game_tick": null,
+        "last_sequence": 17648,
+        "emitted_records": 35,
+        "suppressed_records": 0,
+        "evicted_records": 17613,
+        "write_errors": 0,
+        "heartbeat_mode": "full"
+      },
+      "complete_construction_capture": false,
+      "public_adoption_after_fresh_review": true,
+      "mcp_restarted_after_adoption": true,
+      "normal_inputs_applied": 0,
+      "failure_observations": 2,
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true
+      },
+      "server_stopped_normally": true,
+      "public_undo_or_removal_completed": false,
+      "failed_attempt_preserved_as": "needs_inspection",
+      "loaded_sources_sha256": {
+        "/root/DustRoute/tools/observe_assembly_construction.py": "6a6596f1650d85c0bc1199357c0d2e6014e3482fd7088086c9645f041243c6bd",
+        "/root/DustRoute/crates/dustroute-mcp/mineflayer/e2e/piston-assembly-mcp-live.js": "617d93dccb4e7c62027c888e2d5317464a83bdecdef235c6eceaf6164200154e",
+        "/root/DustRoute/target/debug/dustroute-mcp": "bf6aee51543466ca7443035ceb172f9b27dd972830919ac34fc4f76f46bfb021",
+        "/root/DustRoute/crates/dustroute-mcp/mineflayer/bridge.js": "b71723a91387203de40ed43fc91f4d5d273efe9bb0429948e1af2cf1103865d4"
+      },
+      "artifacts": [
+        {
+          "path": ".local/e2e-artifacts/reference-door-live-construction-20260927-b.fixture.json",
+          "sha256": "84ffe68b299b2a5413612befd2bc49b9852ae21cebf06ea135a8c66cd5d6ba2e",
+          "bytes": 948028
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-live-construction-20260927-b.client.json",
+          "sha256": "ea8089d3dad4ba5bc353e6e70dd34985cac5e422431762c185676e473f6100ed",
+          "bytes": 2626172
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-live-construction-20260927-b.summary.json",
+          "sha256": "e9a2e1b2959dc146929b29592bad1afd4d282720d5b66ed89268f2e87341ab13",
+          "bytes": 5153
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-live-construction-20260927-b.raw.ndjson",
+          "sha256": "fe48d35d8f0665b86c2e58dd62a6f92fbafcaadadfb5937d74b380853be1fab3",
+          "bytes": 4925
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-live-construction-20260927-b.server.log",
+          "sha256": "dd731228358db2d295ab8a6e55235bd69b5de7b5dd3564f59c9ab0cdb466ac87",
+          "bytes": 10967
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-live-construction-20260927-b.bridge.log",
+          "sha256": "93d80a687f4ab1e81368c6675a63d3abf12dc0b5b4335af9488f3b99b910cc6d",
+          "bytes": 374
+        }
+      ],
+      "registry_records": [
+        {
+          "path": "/root/DustRoute/.local/e2e-artifacts/reference-door-live-construction-20260927-b.state/3c2797e6019a5e48/assembly-instances/d3f05d47-7646-4ac0-8cb9-314a9e3043d8.json",
+          "sha256": "1f36be965e3cc6239f2b52c2791c1241924585a7adcdd0052edc364c7530242d",
+          "schema": "dustroute.placed-assembly.v1",
+          "instance_id": "d3f05d47-7646-4ac0-8cb9-314a9e3043d8",
+          "state": "needs_inspection",
+          "revision": 39,
+          "attempts": [
+            {
+              "operation_id": "d3f05d47-7646-4ac0-8cb9-314a9e3043d8",
+              "removal": false,
+              "verified_steps": 37,
+              "total_steps": 43,
+              "started_at_unix_ms": 1790506129247,
+              "finished_at_unix_ms": 1790506142528,
+              "error": "construction state or surrounding world differs from the verified plan; inspect before continuing"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "run_id": "reference-door-live-construction-20260927-c",
+      "status": "failed_before_normal_operation",
+      "verified_steps": 37,
+      "attempted_stage": 38,
+      "total_steps": 43,
+      "actual_capture_mode": "continuous",
+      "capture_footer": {
+        "kind": "artifact_end",
+        "capture_mode": "continuous",
+        "capture_state": "closed_no_input",
+        "input_observed": false,
+        "anchor_game_tick": null,
+        "end_game_tick": null,
+        "last_sequence": 16796,
+        "emitted_records": 16796,
+        "suppressed_records": 0,
+        "evicted_records": 0,
+        "write_errors": 0,
+        "heartbeat_mode": "full"
+      },
+      "complete_construction_capture": true,
+      "public_adoption_after_fresh_review": true,
+      "mcp_restarted_after_adoption": true,
+      "normal_inputs_applied": 0,
+      "failure_observations": 2,
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true
+      },
+      "server_stopped_normally": true,
+      "public_undo_or_removal_completed": false,
+      "failed_attempt_preserved_as": "needs_inspection",
+      "loaded_sources_sha256": {
+        "/root/DustRoute/tools/observe_assembly_construction.py": "6a6596f1650d85c0bc1199357c0d2e6014e3482fd7088086c9645f041243c6bd",
+        "/root/DustRoute/crates/dustroute-mcp/mineflayer/e2e/piston-assembly-mcp-live.js": "617d93dccb4e7c62027c888e2d5317464a83bdecdef235c6eceaf6164200154e",
+        "/root/DustRoute/target/debug/dustroute-mcp": "bf6aee51543466ca7443035ceb172f9b27dd972830919ac34fc4f76f46bfb021",
+        "/root/DustRoute/crates/dustroute-mcp/mineflayer/bridge.js": "b71723a91387203de40ed43fc91f4d5d273efe9bb0429948e1af2cf1103865d4"
+      },
+      "artifacts": [
+        {
+          "path": ".local/e2e-artifacts/reference-door-live-construction-20260927-c.fixture.json",
+          "sha256": "84ffe68b299b2a5413612befd2bc49b9852ae21cebf06ea135a8c66cd5d6ba2e",
+          "bytes": 948028
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-live-construction-20260927-c.client.json",
+          "sha256": "4791d07f19156484b65a14c76209b4ce1e7385df8a4f23ede43dbb939cec058c",
+          "bytes": 2626172
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-live-construction-20260927-c.summary.json",
+          "sha256": "d745b810e0f4ced28eedfea00e786841618d28ed81b284f1b0064a031d89c640",
+          "bytes": 5151
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-live-construction-20260927-c.raw.ndjson",
+          "sha256": "adb49f2b3e2a04a41fe51b96f46667e8a10c5a5d04b3867e329117744efd32f6",
+          "bytes": 2220813
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-live-construction-20260927-c.server.log",
+          "sha256": "21871376f9c4e0c56f5d1ead4cdbeceafaf097544fccf12f20e331f64f4d02de",
+          "bytes": 10857
+        },
+        {
+          "path": ".local/e2e-artifacts/reference-door-live-construction-20260927-c.bridge.log",
+          "sha256": "39710e78c122ce8de858180d8c0048623c89154e5e4f9ac2ec22b1543beba1fe",
+          "bytes": 374
+        }
+      ],
+      "registry_records": [
+        {
+          "path": "/root/DustRoute/.local/e2e-artifacts/reference-door-live-construction-20260927-c.state/3c2797e6019a5e48/assembly-instances/0435a805-3aa2-4d77-ba2c-902a02fe7928.json",
+          "sha256": "c111ce569efe1db615ce4bc098a9639f19ca92611576212fb6fc7bdf7e9e1d28",
+          "schema": "dustroute.placed-assembly.v1",
+          "instance_id": "0435a805-3aa2-4d77-ba2c-902a02fe7928",
+          "state": "needs_inspection",
+          "revision": 39,
+          "attempts": [
+            {
+              "operation_id": "0435a805-3aa2-4d77-ba2c-902a02fe7928",
+              "removal": false,
+              "verified_steps": 37,
+              "total_steps": 43,
+              "started_at_unix_ms": 1790506274232,
+              "finished_at_unix_ms": 1790506287641,
+              "error": "construction state or surrounding world differs from the verified plan; inspect before continuing"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "diagnosis": {
+    "classification": "live_command_placement_counterexample",
+    "verified_steps": 37,
+    "attempted_stage": 38,
+    "prewrite_schedule_sequence": 12197,
+    "install_sequence": 12199,
+    "installation_game_tick": 76039,
+    "observer_on_game_tick": 76041,
+    "differences": [
+      {
+        "position": [
+          61000,
+          185,
+          1000
+        ],
+        "expected": [
+          "minecraft:smooth_quartz",
+          {}
+        ],
+        "actual": null
+      },
+      {
+        "position": [
+          61000,
+          186,
+          1000
+        ],
+        "expected": null,
+        "actual": [
+          "minecraft:smooth_quartz",
+          {}
+        ]
+      }
+    ],
+    "unchanged_after_100_client_ticks": true,
+    "completion_certified": false,
+    "live_construction_passed": false
+  },
+  "bytecode_audit": [
+    {
+      "path": ".local/e2e-artifacts/reference-door-placement-BlockStateArgument-20260927.txt",
+      "sha256": "4134671de96ce0bcecda50c605e5bc08897f1152a09d4560e03de579328509a3",
+      "bytes": 15335
+    },
+    {
+      "path": ".local/e2e-artifacts/reference-door-placement-SetBlockCommand-20260927.txt",
+      "sha256": "a9fa634338d9771b174b0fa9568c0c55763c03d993ba14ab4e336f8b7ec1adc7",
+      "bytes": 22282
+    }
+  ],
+  "retained_fixture": {
+    "path": "crates/dustroute-translate/tests/fixtures/reference-door-command-placement-v1.json",
+    "sha256": "a7e3ae1278a7a10449a2596cc5ab3b86e275060047c61099b74ed1338fd9b445",
+    "bytes": 123920
+  },
+  "interpretation": "The command preprocesses the requested block before writing it. An observer tick is queued while the actual cell is Air; its pulse drives extension/retraction and leaves quartz one block above the expected location. The direct-install model omits that entry.",
+  "delivered_guard": "Fresh target review refuses observer-containing custom Assemblies before placement/removal writes, including saved-plan revalidation. Model behavior review/adoption remains available.",
+  "runtime_or_law_changes": false,
+  "user_catalog_changed": false,
+  "unchanged_baseline_sources": [
+    {
+      "path": "crates/dustroute-translate/src/piston_door_type.rs",
+      "sha256": "96a062861bdc6db443b6285343940d06ecb45a0751cdb5b5789d716187738c9b",
+      "bytes": 8262
+    },
+    {
+      "path": "crates/dustroute-translate/src/runtime_behavior.rs",
+      "sha256": "d255826e5352ab327eee7846688e14b859037df72c49dca9e47f49d17a0c5f86",
+      "bytes": 12020
+    },
+    {
+      "path": "crates/dustroute-translate/src/runtime_review.rs",
+      "sha256": "3efeced1f8b60c089b9af0a86a101427108f5039bbdd7f7c2721cc1325293031",
+      "bytes": 19885
+    },
+    {
+      "path": "crates/dustroute-minecraft/src/time/piston_runtime/mod.rs",
+      "sha256": "1a2b8a6b3444d57eddb6094fdb1cffdf911069b4244c9eea5cf1a96b4854b805",
+      "bytes": 7666
+    },
+    {
+      "path": "crates/dustroute-minecraft/src/time/piston_runtime/devices.rs",
+      "sha256": "e372e52cda043f7810470322c182e12d7011fc6a4da7d8b943dc22415d5953d1",
+      "bytes": 4866
+    },
+    {
+      "path": "crates/dustroute-minecraft/src/time/piston_runtime/movement.rs",
+      "sha256": "8aaa562de24962950ff5df75630640e152d62ae453aebb33bab61971bbc40ad8",
+      "bytes": 5013
+    }
+  ],
+  "completion_detection_implemented": false,
+  "normal_cycles_after_public_construction_verified": false,
+  "public_removal_of_reference_door_verified": false,
+  "capture_configuration_correction": "Trial B requested continuous capture but its nonnegative max_ticks_after_input forced bounded mode. Fixed by omitting that maximum in continuous mode and validating the actual header before launching the actor. Only C is construction-history evidence.",
+  "next_scope": [
+    "Requested-state preprocessing and pending events before setblock writes, command flags and notifications, restorable execution boundaries.",
+    "Recompute and verify construction/removal order or explicit initialization; preserve declared geometry and recorded old evidence.",
+    "Repeat successful public placement, two normal cycles, restart and removal before lifting the observer guard.",
+    "Define authoritative live completion observations and bridge expiry; missing internal history remains unknown."
+  ],
+  "sources": [
+    {
+      "path": "crates/dustroute-mcp/src/piston_assembly.rs",
+      "sha256": "99646b6742124aa40d9a0306444bb5bc5901bf83c6e53d39325e9d8ed00f4c5a",
+      "bytes": 5881
+    },
+    {
+      "path": "crates/dustroute-mcp/src/service_blueprint_tests.rs",
+      "sha256": "cfeb703ea57bc687280e06f27b2e395008d42f65901c1c8c4a0d0b33ec9f6b3b",
+      "bytes": 86739
+    },
+    {
+      "path": "crates/dustroute-translate/examples/audit_reference_door_adoption.rs",
+      "sha256": "9e91002f24b1ea701db7d40241d7cb2333b00c5198b2ac1c7d4c6d74153188b7",
+      "bytes": 6986
+    },
+    {
+      "path": "crates/dustroute-mcp/mineflayer/e2e/piston-assembly-mcp-live.js",
+      "sha256": "617d93dccb4e7c62027c888e2d5317464a83bdecdef235c6eceaf6164200154e",
+      "bytes": 13479
+    },
+    {
+      "path": "tools/instrumented_server.py",
+      "sha256": "7164de1897c7f0388b99b6ab2cac7edb12174add7aaf1a0bd347e5ffb5f3ca6f",
+      "bytes": 4329
+    },
+    {
+      "path": "tools/observe_assembly_construction.py",
+      "sha256": "0ff69667305aff350e0ac052aa6a58a22a29f5c10848d0b2ea6f6f01f83061cc",
+      "bytes": 6846
+    },
+    {
+      "path": "tools/analyze_door_command_placement.py",
+      "sha256": "ef05d49c21613a4d1d7e2aa144c7a2fe9a75b169cc3147732aae9fbaf7090857",
+      "bytes": 4061
+    },
+    {
+      "path": "tools/test_door_command_placement.py",
+      "sha256": "3d9d5887d4db0a8d14f9563df7a0d411fa4170dac9ecf842d16db913a6226672",
+      "bytes": 1644
+    }
+  ],
+  "checks": {
+    "mcp_related_tests_passed": 15,
+    "offline_evidence_tests_passed": 2,
+    "clippy_all_targets_mcp_translate_warnings_denied": "passed",
+    "node_syntax": "passed",
+    "python_compile": "passed",
+    "logs": [
+      {
+        "path": ".local/e2e-artifacts/reference-door-stability-20260927-dustroute-door-placement-guard-tests.log",
+        "sha256": "9221e5dcbc1c6a577113904d368c1db04038a23240f443d960fc81aa0e59b9ac",
+        "bytes": 2176
+      },
+      {
+        "path": ".local/e2e-artifacts/reference-door-stability-20260927-dustroute-door-placement-evidence-tests.log",
+        "sha256": "b70aaee4b98aed3c929b11d2edf077f243b297ed21e6fabbffb70bd38d82b0f9",
+        "bytes": 100
+      },
+      {
+        "path": ".local/e2e-artifacts/reference-door-stability-20260927-dustroute-door-stability-clippy.log",
+        "sha256": "b47cbc06079882a5a1d5501bebf95e34354ba3f93d6347bcabbddca7e181cae0",
+        "bytes": 230
+      },
+      {
+        "path": ".local/e2e-artifacts/reference-door-stability-20260927-dustroute-door-guard-build.log",
+        "sha256": "a0cd1ef2300768d261faaf148cd7678dabab5318a54797a4297b9e68aef0c09c",
+        "bytes": 145
+      }
+    ],
+    "format_and_diff": "passed",
+    "guarded_mcp_binary_build": "passed"
+  },
+  "limits": [
+    "Client waits are not server-tick or queue-emptiness certificates.",
+    "The selected 291-record window is contiguous; complete source capture remains in the hashed private artifact.",
+    "Private harness cleanup after the failed attempt is not MCP undo and does not change its needs_inspection lifecycle.",
+    "Captured MCP executables precede the observer refusal guard; no successful post-guard live construction is claimed."
+  ]
+}

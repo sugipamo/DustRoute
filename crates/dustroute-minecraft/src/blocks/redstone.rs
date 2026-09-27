@@ -46,6 +46,11 @@ pub enum RedstonePropagationError {
         position: Pos,
         delay: u8,
     },
+    InvalidSignalLevel {
+        position: Pos,
+        kind: BlockKind,
+        level: u8,
+    },
 }
 
 impl Display for RedstonePropagationError {
@@ -72,6 +77,15 @@ impl Display for RedstonePropagationError {
             Self::InvalidRepeaterDelay { position, delay } => write!(
                 formatter,
                 "repeater at ({}, {}, {}) has invalid delay {delay}; expected 1..=4 redstone ticks",
+                position.x, position.y, position.z
+            ),
+            Self::InvalidSignalLevel {
+                position,
+                kind,
+                level,
+            } => write!(
+                formatter,
+                "signal level {level} for {kind:?} at ({}, {}, {}) is outside 0..=15",
                 position.x, position.y, position.z
             ),
         }
@@ -176,23 +190,41 @@ pub(crate) fn redstone_wire_delta(
     }
 
     let current = wire_level(block, position)?;
-    let mut expected = 0_u8;
+    let mut direct = 0_u8;
+    let mut neighboring = 0_u8;
     for facing in HORIZONTAL_FACINGS {
         let offset = facing.offset();
         let source_position = position.offset(offset.x, offset.y, offset.z);
         ensure_known(known_region, source_position, BlockKind::Air)?;
         if wire_connects(block, position, facing)? {
             if let Some(source) = world.get(source_position) {
-                let signal = if source.kind == BlockKind::RedstoneWire {
-                    if !wire_connects(source, source_position, facing.opposite())? {
-                        0
+                if source.kind == BlockKind::RedstoneWire {
+                    let source_arm = if wire_connects(source, source_position, facing.opposite())? {
+                        WireConnection::Side
                     } else {
-                        wire_level(source, source_position)?.saturating_sub(1)
+                        WireConnection::None
+                    };
+                    if crate::execution_context::bounded_world_laws()
+                        .spatial
+                        .dust_transfers(crate::spatial::DustTransferFacts {
+                            elevation: crate::spatial::DustElevation::Horizontal,
+                            source_arm,
+                            sink_arm: WireConnection::Side,
+                            support_shape: None,
+                            conducts: false,
+                            clear: true,
+                            enforce_clearance: true,
+                        })
+                    {
+                        neighboring = neighboring.max(wire_level(source, source_position)?);
                     }
                 } else {
-                    source_signal_toward(source, source_position, facing.opposite())?
-                };
-                expected = expected.max(signal);
+                    direct = direct.max(source_signal_toward(
+                        source,
+                        source_position,
+                        facing.opposite(),
+                    )?);
+                }
             }
         }
 
@@ -212,7 +244,7 @@ pub(crate) fn redstone_wire_delta(
             let source = world
                 .get(lower_source)
                 .expect("vertical transfer validated a wire source");
-            expected = expected.max(wire_level(source, lower_source)?.saturating_sub(1));
+            neighboring = neighboring.max(wire_level(source, lower_source)?);
         }
 
         let upper_source = position.offset(-offset.x, 1, -offset.z);
@@ -227,10 +259,14 @@ pub(crate) fn redstone_wire_delta(
             let source = world
                 .get(upper_source)
                 .expect("vertical transfer validated a wire source");
-            expected = expected.max(wire_level(source, upper_source)?.saturating_sub(1));
+            neighboring = neighboring.max(wire_level(source, upper_source)?);
         }
     }
 
+    let expected = crate::execution_context::bounded_world_laws()
+        .dust
+        .strength(direct, neighboring)
+        .expect("validated signal levels");
     if current == expected {
         return Ok(None);
     }
@@ -272,7 +308,9 @@ pub(crate) fn redstone_lamp_delta(
             kind: block.kind,
             reason: "lamp lit state is missing".to_owned(),
         })?;
-    let expected = received_signal(world, position, known_region)? > 0;
+    let expected = crate::execution_context::bounded_world_laws()
+        .lamp
+        .lit(received_signal(world, position, known_region)? > 0);
     if current == expected {
         return Ok(None);
     }
@@ -432,7 +470,10 @@ pub(crate) fn redstone_repeater_delay_game_ticks(
     if !(1..=4).contains(&delay) {
         return Err(RedstonePropagationError::InvalidRepeaterDelay { position, delay });
     }
-    Ok(u64::from(delay) * 2)
+    Ok(crate::execution_context::bounded_world_laws()
+        .repeater
+        .delay_game_ticks(delay)
+        .expect("validated repeater delay"))
 }
 
 /// Builds the signal-only state transition applied when a repeater's delayed
@@ -532,7 +573,8 @@ fn received_signal(
     target: Pos,
     known_region: Option<Region>,
 ) -> Result<u8, RedstonePropagationError> {
-    let mut signal = 0_u8;
+    let mut direct = 0_u8;
+    let mut neighboring = 0_u8;
     for facing in HORIZONTAL_FACINGS {
         let offset = facing.offset();
         let source_position = target.offset(offset.x, offset.y, offset.z);
@@ -548,18 +590,22 @@ fn received_signal(
         {
             continue;
         }
-        let candidate = if source.kind == BlockKind::RedstoneWire {
-            if !wire_connects(source, source_position, facing.opposite())? {
-                0
-            } else {
-                wire_level(source, source_position)?.saturating_sub(1)
+        if source.kind == BlockKind::RedstoneWire {
+            if wire_connects(source, source_position, facing.opposite())? {
+                neighboring = neighboring.max(wire_level(source, source_position)?);
             }
         } else {
-            source_signal_toward(source, source_position, facing.opposite())?
-        };
-        signal = signal.max(candidate);
+            direct = direct.max(source_signal_toward(
+                source,
+                source_position,
+                facing.opposite(),
+            )?);
+        }
     }
-    Ok(signal)
+    Ok(crate::execution_context::bounded_world_laws()
+        .dust
+        .strength(direct, neighboring)
+        .expect("validated signal levels"))
 }
 
 fn source_signal(block: &Block, position: Pos) -> Result<u8, RedstonePropagationError> {
@@ -594,11 +640,12 @@ fn source_signal(block: &Block, position: Pos) -> Result<u8, RedstonePropagation
             .or_else(|| block.observed_name.is_none().then_some(0)),
         _ => Some(0),
     };
-    signal.ok_or_else(|| RedstonePropagationError::UnknownState {
+    let signal = signal.ok_or_else(|| RedstonePropagationError::UnknownState {
         position,
         kind: block.kind,
         reason: "source power state is missing".to_owned(),
-    })
+    })?;
+    checked_signal_level(block, position, signal)
 }
 
 fn source_signal_toward(
@@ -629,7 +676,7 @@ fn source_signal_toward(
 }
 
 fn wire_level(block: &Block, position: Pos) -> Result<u8, RedstonePropagationError> {
-    block
+    let level = block
         .power_level
         .or_else(|| observed_u8_property(block, "power"))
         .or_else(|| block.observed_name.is_none().then_some(0))
@@ -637,7 +684,24 @@ fn wire_level(block: &Block, position: Pos) -> Result<u8, RedstonePropagationErr
             position,
             kind: block.kind,
             reason: "wire power level is missing".to_owned(),
+        })?;
+    checked_signal_level(block, position, level)
+}
+
+pub(super) fn checked_signal_level(
+    block: &Block,
+    position: Pos,
+    level: u8,
+) -> Result<u8, RedstonePropagationError> {
+    if level > 15 {
+        Err(RedstonePropagationError::InvalidSignalLevel {
+            position,
+            kind: block.kind,
+            level,
         })
+    } else {
+        Ok(level)
+    }
 }
 
 fn wire_connects(
@@ -712,59 +776,53 @@ fn infer_synthetic_wire_connection(
     let side = position.offset(offset.x, 0, offset.z);
     ensure_known(known_region, side, BlockKind::Air)?;
     if world.kind_at(side) == BlockKind::RedstoneWire || component_connects(world, side, toward) {
-        return Ok(WireConnection::Side);
+        return Ok(crate::execution_context::bounded_world_laws()
+            .spatial
+            .infer_shape(crate::spatial::WireShapeFacts {
+                side_connects: true,
+                support_shape: None,
+                upper_wire: false,
+                blocked: false,
+                side_air: false,
+                lower_wire: false,
+            }));
     }
 
     let side_above = side.offset(0, 1, 0);
     ensure_known(known_region, side_above, BlockKind::Air)?;
     let source_above = position.offset(0, 1, 0);
     ensure_known(known_region, source_above, BlockKind::Air)?;
-    if let Some(rise_shape) = world
-        .get(side)
-        .and_then(|block| block.redstone_traits().wire_rise_connection)
-        .filter(|_| world.kind_at(side_above) == BlockKind::RedstoneWire)
-        .filter(|_| {
-            !world
-                .get(source_above)
-                .is_some_and(|block| block.redstone_traits().blocks_wire_rise_when_above)
-        })
-    {
-        return Ok(rise_shape);
+    let mut facts = crate::spatial::WireShapeFacts {
+        side_connects: false,
+        support_shape: world
+            .get(side)
+            .and_then(|b| b.redstone_traits().wire_rise_connection),
+        upper_wire: world.kind_at(side_above) == BlockKind::RedstoneWire,
+        blocked: world
+            .get(source_above)
+            .is_some_and(|b| b.redstone_traits().blocks_wire_rise_when_above),
+        side_air: world.kind_at(side) == BlockKind::Air,
+        lower_wire: false,
+    };
+    let laws = crate::execution_context::bounded_world_laws().spatial;
+    let shape = laws.infer_shape(facts);
+    if shape != WireConnection::None {
+        return Ok(shape);
     }
-
     let side_below = side.offset(0, -1, 0);
     ensure_known(known_region, side_below, BlockKind::Air)?;
-    if world.kind_at(side) == BlockKind::Air && world.kind_at(side_below) == BlockKind::RedstoneWire
-    {
-        return Ok(WireConnection::Side);
-    }
-    Ok(WireConnection::None)
+    facts.lower_wire = world.kind_at(side_below) == BlockKind::RedstoneWire;
+    Ok(laws.infer_shape(facts))
 }
 
 fn component_connects(world: &World, position: Pos, toward: Facing) -> bool {
-    let block = world.get(position);
-    match block.map(|block| block.kind) {
-        Some(
-            BlockKind::Lever
-            | BlockKind::Button
-            | BlockKind::PressurePlate
-            | BlockKind::RedstoneTorch
-            | BlockKind::RedstoneBlock,
-        ) => true,
-        Some(BlockKind::Observer) => block
-            .and_then(|block| block.facing)
-            .is_some_and(|facing| facing == toward.opposite()),
-        Some(BlockKind::Repeater | BlockKind::Comparator) => block
-            .and_then(|block| block.facing)
-            .is_some_and(|facing| facing == toward || facing == toward.opposite()),
-        _ => false,
-    }
+    world.get(position).is_some_and(|b| {
+        crate::execution_context::bounded_world_laws()
+            .spatial
+            .component_connects(b, toward)
+    })
 }
 
-/// Checks one diagonal dust relation.  The helper deliberately returns only
-/// a boolean: callers apply the ordinary one-level wire attenuation after the
-/// relation has been proven.  Every inspected coordinate is checked against
-/// the complete observed region before it is interpreted as Air.
 fn vertical_wire_transfer(
     world: &World,
     source: Pos,
@@ -796,24 +854,24 @@ fn vertical_wire_transfer(
             let expected = world
                 .get(side)
                 .and_then(|block| block.redstone_traits().wire_rise_connection);
-            if expected.is_none()
-                || expected
-                    != Some(resolved_wire_connection(
-                        world,
-                        source,
-                        facing,
-                        known_region,
-                    )?)
-            {
+            if expected.is_none() {
                 return Ok(false);
             }
-            if world
+            let arm = resolved_wire_connection(world, source, facing, known_region)?;
+            let clear = !world
                 .get(source.offset(0, 1, 0))
-                .is_some_and(|block| block.redstone_traits().blocks_wire_rise_when_above)
-            {
-                return Ok(false);
-            }
-            Ok(true)
+                .is_some_and(|b| b.redstone_traits().blocks_wire_rise_when_above);
+            Ok(crate::execution_context::bounded_world_laws()
+                .spatial
+                .dust_transfers(crate::spatial::DustTransferFacts {
+                    elevation: crate::spatial::DustElevation::Rise,
+                    source_arm: arm,
+                    sink_arm: WireConnection::None,
+                    support_shape: expected,
+                    conducts: false,
+                    clear,
+                    enforce_clearance: true,
+                }))
         }
         VerticalDustTransfer::FallThroughConductor => {
             if sink != side.offset(0, -1, 0) {
@@ -826,18 +884,24 @@ fn vertical_wire_transfer(
             let expected = world
                 .get(source_below)
                 .and_then(|block| block.redstone_traits().wire_rise_connection);
-            let lower_to_upper = expected.is_some()
-                && expected
-                    == Some(resolved_wire_connection(
-                        world,
-                        sink,
-                        facing.opposite(),
-                        known_region,
-                    )?);
+            if expected.is_none() {
+                return Ok(false);
+            }
+            let arm = resolved_wire_connection(world, sink, facing.opposite(), known_region)?;
             let support_conducts = world
                 .get(source_below)
-                .is_some_and(|block| block.redstone_traits().strong_power_drives_dust);
-            Ok(lower_to_upper && support_conducts)
+                .is_some_and(|b| b.redstone_traits().strong_power_drives_dust);
+            Ok(crate::execution_context::bounded_world_laws()
+                .spatial
+                .dust_transfers(crate::spatial::DustTransferFacts {
+                    elevation: crate::spatial::DustElevation::Fall,
+                    source_arm: WireConnection::None,
+                    sink_arm: arm,
+                    support_shape: expected,
+                    conducts: support_conducts,
+                    clear: true,
+                    enforce_clearance: true,
+                }))
         }
     }
 }

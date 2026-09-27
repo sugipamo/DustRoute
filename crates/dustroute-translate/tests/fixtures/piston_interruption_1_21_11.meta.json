@@ -1,0 +1,228 @@
+{
+  "schema_version": "dustroute.piston-interruption-comparison.v1",
+  "created_at": "2026-09-21T09:22:06Z",
+  "minecraft_version": "1.21.11",
+  "fixture": "07-single-input-two-row",
+  "fixture_sha256": "eaf1fb7eb60be57089e0e0f65f4771d721ecdf3b93609dbad47880c2faf77a70",
+  "dustroute_revision": "dd4de76186407be37b2980375a9104745f984cad",
+  "dustroute_worktree_dirty": true,
+  "instrumentation_revision": "055b0093bad6fb4bfad4009dd37036a332c27de6",
+  "instrumentation_worktree_dirty": true,
+  "instrumentation_source_sha256": "bdcb5d5cb35884fc1f958ae1e2da00931f4913b31ee97791a10936d4301df8b9",
+  "actor_sha256": "6150cb5d9033243bdc2b8b6ea949d017d03124ea63d2e717e8bba3bf0024eec4",
+  "model_profile": "dustroute.horizontal-piston-callbacks.java-1-21-11.v1",
+  "server": {
+    "address": "127.0.0.1:25565",
+    "world": "dustroute-e2e-flat",
+    "mod": "dustroute-vanilla-instrumentation 0.1.0",
+    "loader": "Fabric 0.19.5"
+  },
+  "placement": {
+    "offset": {
+      "x": 26000,
+      "y": 180,
+      "z": 1000
+    },
+    "relative_region": {
+      "min": {
+        "x": -2,
+        "y": -1,
+        "z": -3
+      },
+      "max": {
+        "x": 6,
+        "y": 2,
+        "z": 5
+      }
+    }
+  },
+  "scope": "server-applied input ticks and client-visible states; tick-internal order only from retained server instrumentation",
+  "complete": true,
+  "run_id": "piston-interruption-20260921-r2",
+  "evidence_retention": "Full artifacts are local; hashes identify the accepted captures.",
+  "trials": [
+    {
+      "label": "same_tick",
+      "repetition": 1,
+      "requested_client_physics_tick_delay": 0,
+      "applied_server_game_tick_delay": 0,
+      "applied_inputs": [
+        {
+          "game_tick": 26986,
+          "position": "BlockPos{x=26002, y=180, z=1004}"
+        },
+        {
+          "game_tick": 26986,
+          "position": "BlockPos{x=26002, y=180, z=1004}"
+        }
+      ],
+      "capture_state": "closed",
+      "capture_sequence_contiguous": false,
+      "live_complete": true,
+      "model_status": {
+        "kind": "complete"
+      },
+      "classification": "matched",
+      "sha256": {
+        "raw.ndjson": "67776121b859accf77c2a5f7145a56b2447bf0013f97db3f90c415de827c7cb0",
+        "server.log": "d86e1595ef00fae4b50a0bf5194d5a3fc7d0c34b9196e5271abcdac5f53d8f77",
+        "client.json": "cb3825f2b85a005c96407347237864836c217f979a52458f50d0447ddd4b9fc1",
+        "normalized.json": "61e0a46a2f95094d495691de5781bee82b9d31ee64c6c9f545f4bde1292b69b5",
+        "model.json": "6caf531b7a93d5f5ff0efb14836b2bc0e840e839ee4aeff5b45477c514613ac7"
+      }
+    },
+    {
+      "label": "next_tick",
+      "repetition": 1,
+      "requested_client_physics_tick_delay": 1,
+      "applied_server_game_tick_delay": 1,
+      "applied_inputs": [
+        {
+          "game_tick": 27596,
+          "position": "BlockPos{x=26002, y=180, z=1004}"
+        },
+        {
+          "game_tick": 27597,
+          "position": "BlockPos{x=26002, y=180, z=1004}"
+        }
+      ],
+      "capture_state": "closed",
+      "capture_sequence_contiguous": false,
+      "live_complete": true,
+      "model_status": {
+        "kind": "complete"
+      },
+      "classification": "matched",
+      "sha256": {
+        "raw.ndjson": "62df3ed925bba62aab908355611151846b7b05f7a869b85263185fa3749a6a61",
+        "server.log": "a3bdb045ad5e06742cd00cc69ae134e4e375774e4e99d98c8504cebad33fdcb8",
+        "client.json": "9fd6bb013079e58475e2ba7f73c8f9b6cdb0c8944da022cb53e1d32482c8a595",
+        "normalized.json": "1f741af1621f674123607103626c8b44e08eea1a73cd7ab2737fd532083ee785",
+        "model.json": "840520fe429e4a42bf84019a949eaca3387f660a93560369b345f3ddb0bb4f2b"
+      }
+    },
+    {
+      "label": "next_tick_repeat",
+      "repetition": 2,
+      "requested_client_physics_tick_delay": 1,
+      "applied_server_game_tick_delay": 1,
+      "applied_inputs": [
+        {
+          "game_tick": 28207,
+          "position": "BlockPos{x=26002, y=180, z=1004}"
+        },
+        {
+          "game_tick": 28208,
+          "position": "BlockPos{x=26002, y=180, z=1004}"
+        }
+      ],
+      "capture_state": "closed",
+      "capture_sequence_contiguous": false,
+      "live_complete": true,
+      "model_status": {
+        "kind": "complete"
+      },
+      "classification": "matched",
+      "sha256": {
+        "raw.ndjson": "0c0bcc1c692b4a1b9a5fb0778900282e44b9c8dcec9574c08963a32ff6644ca4",
+        "server.log": "b17ab396bfa6da2a2c3fe4668aea97a406c31682cab2ff0ac207673f0b0104c1",
+        "client.json": "0618359c28d6b9f5af6e4b8eb4e8babeab6e4d0d46deca17c318797414ff839e",
+        "normalized.json": "ac244703f54d6750312f50f0325a44e59756890d1471dac016a411643cf47fb8",
+        "model.json": "840520fe429e4a42bf84019a949eaca3387f660a93560369b345f3ddb0bb4f2b"
+      }
+    },
+    {
+      "label": "two_ticks",
+      "repetition": 1,
+      "requested_client_physics_tick_delay": 2,
+      "applied_server_game_tick_delay": 1,
+      "applied_inputs": [
+        {
+          "game_tick": 28818,
+          "position": "BlockPos{x=26002, y=180, z=1004}"
+        },
+        {
+          "game_tick": 28819,
+          "position": "BlockPos{x=26002, y=180, z=1004}"
+        }
+      ],
+      "capture_state": "closed",
+      "capture_sequence_contiguous": false,
+      "live_complete": true,
+      "model_status": {
+        "kind": "complete"
+      },
+      "classification": "matched",
+      "sha256": {
+        "raw.ndjson": "9333e81998df0fdf0e9278165b58b94338b6d4510c056a4e65cdc274adb0fb54",
+        "server.log": "ee38d5c67b5974503762b679458874c7aea6cb206af8c1603ed627996b95ef18",
+        "client.json": "01f961ca2ae066f5019759cf0ecb3126ed0226c69eb9176701e00f381675174d",
+        "normalized.json": "eaec08a6fc6beee267425acf100406bb5cf23c10a06499ab0d14e2590ac42610",
+        "model.json": "840520fe429e4a42bf84019a949eaca3387f660a93560369b345f3ddb0bb4f2b"
+      }
+    },
+    {
+      "label": "completion_boundary",
+      "repetition": 1,
+      "requested_client_physics_tick_delay": 7,
+      "applied_server_game_tick_delay": 7,
+      "applied_inputs": [
+        {
+          "game_tick": 29426,
+          "position": "BlockPos{x=26002, y=180, z=1004}"
+        },
+        {
+          "game_tick": 29433,
+          "position": "BlockPos{x=26002, y=180, z=1004}"
+        }
+      ],
+      "capture_state": "closed",
+      "capture_sequence_contiguous": false,
+      "live_complete": true,
+      "model_status": {
+        "kind": "complete"
+      },
+      "classification": "matched",
+      "sha256": {
+        "raw.ndjson": "40fb7d9da5b6d1fdf541f5b465715c78619c4c7c6ea78553572e7fbf68b2c68a",
+        "server.log": "a38d91b39bdfaf42387a4e23ff90335872c3bd53572790cda8d0710beb60c470",
+        "client.json": "5fefb8e9c6b439ebbe4690cdd38e143693200ab7055142982d8ab260bd0ab7d2",
+        "normalized.json": "46a1fc090d23df0fe9520e4f3e33c4896159e0241c21fa737d0686ac55b8313c",
+        "model.json": "f3bfaabf007c205c4d92c1c44af0330ce98a3d393365d890b92631b3b31a0f1a"
+      }
+    },
+    {
+      "label": "settled",
+      "repetition": 1,
+      "requested_client_physics_tick_delay": 12,
+      "applied_server_game_tick_delay": 12,
+      "applied_inputs": [
+        {
+          "game_tick": 30035,
+          "position": "BlockPos{x=26002, y=180, z=1004}"
+        },
+        {
+          "game_tick": 30047,
+          "position": "BlockPos{x=26002, y=180, z=1004}"
+        }
+      ],
+      "capture_state": "closed",
+      "capture_sequence_contiguous": false,
+      "live_complete": true,
+      "model_status": {
+        "kind": "complete"
+      },
+      "classification": "matched",
+      "sha256": {
+        "raw.ndjson": "640c87018f32d8adb1c961182fb230f6c1d5a394f9759fca2ef69ccbacf436dc",
+        "server.log": "ede83cf326718de779be6b5dc2371e0dfc5e0a87e9f39b986e25395b72e66304",
+        "client.json": "906ecefd9af462bd0904d9834fda86f2f99080a317ba0f387f5c58243580334f",
+        "normalized.json": "6a561002c2ac8e2842d8a5a6cca813f73668cb1f18089249b9a9e8b34eb0b5e5",
+        "model.json": "ed80e915bb63089010061b197069feeba666a077347540c68879db7e78d43e25"
+      }
+    }
+  ],
+  "instrumentation_input_mixin_sha256": "51b701457fff1f7c376206c6277c209013d1a5e93e8a33e1c03f682671630807",
+  "model_comparator_sha256": "d9ee7937c02650b4de3c9b4e1e1570d311b4dff1a9c958240fa5234d100c5279",
+  "evidence_validator_sha256": "394b4673c4b908ffea5fd1441d9d8421e93181a5c36d6809107994317cbbd412"
+}

@@ -1,15 +1,32 @@
 //! Core intermediate representations and compiler stages for DustRoute.
 
+pub mod abstract_behavior;
 pub mod analysis;
 pub mod api;
+pub mod assembly;
+pub mod assembly_transform;
+mod autonomous;
 pub mod behavior;
+mod behavior_review;
+pub mod behavior_type;
+pub mod blueprint;
+pub mod blueprint_connection;
+pub mod blueprint_generation;
+pub mod blueprint_update;
+pub mod cell_generators;
 pub mod cell_library;
 pub mod cells;
 pub mod circuits;
 pub mod compiler;
 pub mod connectivity;
 pub mod diagnostic;
+pub mod dust_law;
 pub mod electrical;
+pub mod finite_burst;
+pub mod location_behavior;
+pub mod runtime_behavior;
+pub mod runtime_review;
+pub mod torch_law;
 pub mod expr {
     pub use dustroute_ir::expr::*;
 }
@@ -21,10 +38,15 @@ pub mod minecraft_export;
 pub mod minecraft_semantics;
 pub mod multinet;
 pub mod observed_piston_door;
+pub mod periodic;
 pub mod physical;
+pub mod physical_behavior;
 pub mod physics_trace;
+pub mod piston_construction;
 pub mod piston_door;
+pub mod piston_door_type;
 pub mod port_realization;
+pub mod promotion;
 pub mod repair;
 pub mod routing;
 pub mod routing_resources;
@@ -67,9 +89,10 @@ pub use connectivity::{
     build_physical_circuit, extract_connectivity, observer_input_pos, observer_output_pos,
     physical_step, physical_step_connected, piston_input_connected,
 };
+pub use diagnostic::report::{Diagnosis, Finding as DiagnosticFinding};
 pub use diagnostic::{
-    CircuitDiagnosticReport, CircuitDiagnosticStatus, DiagnosticConfidence, DiagnosticCounts,
-    DiagnosticFinding, DiagnosticHealth, RecommendedAction, RecommendedActionKind, diagnose_scene,
+    CircuitDiagnosticReport, CircuitDiagnosticStatus, ConnectivityFinding, DiagnosticConfidence,
+    DiagnosticCounts, DiagnosticHealth, RecommendedAction, RecommendedActionKind, diagnose_scene,
 };
 pub use dustroute_ir::{
     DagBuilder, EventCause, EventKind, EventSource, Expr, GateKind, LogicDag, LogicError,
@@ -193,3 +216,5 @@ pub use piston_observation::{
     PistonObservation, PistonObservationContract, PistonObservationIssue, PistonObservationState,
     observe_piston_mechanism,
 };
+
+mod world_laws;

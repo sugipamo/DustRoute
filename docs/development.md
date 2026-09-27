@@ -23,6 +23,58 @@ Forward compilation follows logical intent → primitive lowering → cell mappi
 starts with observed blocks and preserves physical evidence before deriving
 higher-level labels. `PlacementCircuit` is proposed geometry, not observation.
 
+Normal compilation retains an `Assembly` containing the connected block state,
+pinned blueprint occurrences and explicit port routes. Source Blueprint Revisions
+and placed Assembly Revisions have separate immutable identities. Archive loading
+checks structural integrity; `validate_assembly` checks the reconstructed actual
+world and connections again. See the [blueprint architecture](blueprint-architecture.md)
+for persistence, shared membership and the remaining migration boundaries.
+
+Cells retain source IDs through replacement and rotation. Optimized assemblies
+can be captured with `RealizedOptimization::capture_assembly` and must pass
+`validate_assembly` against the source catalog before use. MCP built-in planning
+performs this check. For observation storage, `assembly_from_snapshot` retains
+declared native states; the analysis-oriented `world_from_snapshot` can infer
+wire shapes and must not be used to overwrite the saved actual state.
+
+Blueprint parents retain internal connection proposals and explicit child-port
+bindings. Capture copies inherited proposals into separate assembly routes;
+validation checks the actual routes and every requirement behind those bindings.
+Use `capture_assembly_in_catalog` when sources come from a caller-owned catalog.
+Raw geometry adapters reject contracts they cannot carry through validation.
+
+For catalog-driven candidates, use `CellLibrary::from_blueprints` with explicit
+gate-to-classification bindings, then `BaselineCompiler::compile_with_library`
+or `realize_staged_optimization_with_library`. Source catalogs are retained and
+the composed result passes `validate_assembly_occurrences`. Gate simulation is
+separate from physical type checks. For arbitrary multi-port/nested replacements,
+use `plan_blueprint_replacement` and
+`materialize_macro_replacement_in_assembly` with explicit source context and
+port mappings. These return proposals; they do not adopt immutable revisions.
+See [candidate selection](blueprint-architecture.md#catalog-driven-candidate-selection-and-replacement).
+
+For initial-state blueprint promotion, use `PromotionCandidate::prepare` →
+`validate` → explicit `PromotionReview::adopt` in `dustroute_translate::promotion`.
+The review checks parent and descendants separately, including shared parts;
+failed or undetermined required checks block adoption. `group_as_blueprint` only
+prepares unverified data. Captured parent layouts do not rewrite child sources.
+Behavioral and live evidence still require their existing verification paths.
+
+`dustroute_translate::blueprint_update::BlueprintUpdates` adds explicit child
+update proposals over that gate. Supply the base parent/state, selected child,
+new parent/intermediate definitions and candidate Assembly Revision. Use
+`create` → `diff` → `validate` → `adopt` or `reject`. `adopt` reruns verification;
+serialized review history never grants adoption authority. The self-contained
+JSON archive retains candidates and decisions without modifying historical
+sources or states. The [workflow reference](blueprint-architecture.md#explicit-child-update-proposals)
+describes path conventions and persistence. MCP exposes this workflow through
+the existing revision and operation tools, without adding tool names; see the
+[Blueprint MCP contract](blueprint-mcp.md). The `blueprint_mcp` adapter stores a
+player-scoped catalog and proposal history with a lock across read/review/write,
+atomic replacement and no plan TTL. Tests in `service_blueprint_tests.rs` exercise
+actual MCP tool calls and restarts, including a forged saved pass that cannot
+authorize adoption. They need no Minecraft bridge.
+
 `World` is mutable data. General placement requires `ValidatedWorld`; edits
 invalidate that proof. Persisted plans are proposals and must be checked against
 fresh live state. The fixed 1×2 piston preset has a separate exact-contract
@@ -30,6 +82,35 @@ proof and does not widen general placement support. See
 [validation boundaries](world-validation-boundary.md).
 
 ## Toolchain and local checks
+
+The behavioral-type extension exposes `RepeatedSettling`, autonomous
+single-output `Periodic` and `FiniteBurst` types, the completed-operation
+`PistonDoor` type, and complete-state checkers in
+`dustroute_translate::behavior_type`, `periodic`, `finite_burst` and
+`piston_door_type`. These are model-level
+checkers. `physical_behavior::PhysicalBehaviorModel` connects actual
+Assembly Revisions, explicit port bindings and pinned dust/torch laws, including
+hidden torch history and pending recovery. Declared obligations can
+use explicit contextual review/adoption through the existing MCP tools;
+[repeated-settling adoption](repeated-settling-adoption.md) checks complete port
+mappings and actual input controls using universal conservative abstraction.
+The [periodic foundation](periodic-behavior-status.md)
+describes the supported initial condition and limits. The [extension status](blueprint-architecture.md#behavioral-types-and-executable-laws-current-extension)
+records the accepted guarantees. See [physical behavior](physical-behavior.md)
+for execution assumptions, proof limits and the manual reachability measurement,
+and [torch laws](torch-laws.md) for server-observation evidence.
+
+The [Blueprint block-count search](blueprint-block-reduction.md) uses the same
+fresh contextual gates and returns new immutable candidate data. Its regression
+checks a 6-to-2 component NOT reduction (7-to-3 including its external lever), both moved terminals, shared-block counting,
+changed nesting, law pinning and explicit parent adoption after MCP restart.
+
+```bash
+cargo test -p dustroute-translate --test behavior_types
+cargo test -p dustroute-translate --test physical_behavior
+cargo test -p dustroute-library --test periodic
+cargo test -p dustroute-translate --test periodic --test physical_periodic
+```
 
 The workspace manifest declares Rust edition 2024 and `rust-version = "1.85"`.
 Use a current stable toolchain for the existing formatting/lint/test workflow.
@@ -88,6 +169,10 @@ only inside a complete declared observation; boundary completeness is separate.
 ```
 
 ## Evidence and benchmarks
+
+Built-in cell layouts are frozen blueprint data. Use the explicit authoring
+command and reproducibility check in [blueprint architecture](blueprint-architecture.md)
+when changing those definitions. Runtime lookup must not call their generators.
 
 Sanitized regression observations are tracked under
 `crates/dustroute-translate/tests/fixtures` and
