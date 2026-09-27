@@ -1,0 +1,209 @@
+{
+  "inputs": {
+    "initial": 1,
+    "powered": 1,
+    "lit": 1,
+    "has_deadline": 1,
+    "due": 1,
+    "last_tick": 1
+  },
+  "registers": {
+    "write": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "lit": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "deadline": {
+      "initial": 0,
+      "maximum": 2
+    },
+    "after": {
+      "initial": 0,
+      "maximum": 65535
+    }
+  },
+  "histories": {},
+  "handlers": {
+    "evaluate": [
+      {
+        "op": "if",
+        "condition": {
+          "op": "input",
+          "name": "initial"
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "write",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "lit",
+            "value": {
+              "op": "input",
+              "name": "powered"
+            }
+          },
+          {
+            "op": "set",
+            "register": "deadline",
+            "value": {
+              "op": "constant",
+              "value": 2
+            }
+          }
+        ],
+        "otherwise": [
+          {
+            "op": "if",
+            "condition": {
+              "op": "input",
+              "name": "powered"
+            },
+            "then": [
+              {
+                "op": "set",
+                "register": "write",
+                "value": {
+                  "op": "constant",
+                  "value": 1
+                }
+              },
+              {
+                "op": "set",
+                "register": "lit",
+                "value": {
+                  "op": "constant",
+                  "value": 1
+                }
+              },
+              {
+                "op": "set",
+                "register": "deadline",
+                "value": {
+                  "op": "constant",
+                  "value": 2
+                }
+              }
+            ],
+            "otherwise": [
+              {
+                "op": "if",
+                "condition": {
+                  "op": "input",
+                  "name": "lit"
+                },
+                "then": [
+                  {
+                    "op": "if",
+                    "condition": {
+                      "op": "input",
+                      "name": "has_deadline"
+                    },
+                    "then": [
+                      {
+                        "op": "if",
+                        "condition": {
+                          "op": "input",
+                          "name": "due"
+                        },
+                        "then": [
+                          {
+                            "op": "set",
+                            "register": "write",
+                            "value": {
+                              "op": "constant",
+                              "value": 1
+                            }
+                          },
+                          {
+                            "op": "set",
+                            "register": "lit",
+                            "value": {
+                              "op": "constant",
+                              "value": 0
+                            }
+                          },
+                          {
+                            "op": "set",
+                            "register": "deadline",
+                            "value": {
+                              "op": "constant",
+                              "value": 2
+                            }
+                          }
+                        ],
+                        "otherwise": []
+                      }
+                    ],
+                    "otherwise": [
+                      {
+                        "op": "if",
+                        "condition": {
+                          "op": "input",
+                          "name": "last_tick"
+                        },
+                        "then": [
+                          {
+                            "op": "set",
+                            "register": "write",
+                            "value": {
+                              "op": "constant",
+                              "value": 1
+                            }
+                          },
+                          {
+                            "op": "set",
+                            "register": "lit",
+                            "value": {
+                              "op": "constant",
+                              "value": 0
+                            }
+                          },
+                          {
+                            "op": "set",
+                            "register": "deadline",
+                            "value": {
+                              "op": "constant",
+                              "value": 2
+                            }
+                          }
+                        ],
+                        "otherwise": [
+                          {
+                            "op": "set",
+                            "register": "deadline",
+                            "value": {
+                              "op": "constant",
+                              "value": 1
+                            }
+                          },
+                          {
+                            "op": "set",
+                            "register": "after",
+                            "value": {
+                              "op": "constant",
+                              "value": 2
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ],
+                "otherwise": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

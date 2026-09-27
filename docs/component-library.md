@@ -41,6 +41,34 @@ External catalogs can be decoded with `Catalog::from_json`. DustRoute does not
 download sources from inside this crate; acquisition, license review, and
 content storage remain explicit caller responsibilities.
 
+Concrete built-in layouts now use the immutable
+[blueprint catalog](blueprint-architecture.md). `layout_reference` values use
+`blueprint:<revision>` to pin stored geometry. Runtime resolution reads that data;
+authoring/recompilation is a separate explicit operation. The legacy compiled-XOR
+reference strings remain aliases. Existing verification and compatibility gates
+still determine automatic-replacement eligibility; a blueprint classification
+annotation is not verification evidence.
+
+Placed circuits retain their actual block states in separate Assembly Revisions.
+Wire connections can change with surrounding geometry while each source
+Blueprint Revision remains unchanged. Catalog archives can retain both source
+definitions and placed states, with shared/nested source membership. Loaded
+states must pass fresh physical and connection checks before further use; saved
+classifications or a successful archive load do not supply that evidence.
+
+Promoted parents also retain internal routes and exposed child-port bindings.
+The blueprint-aware compiler can reuse these parents without dropping nested
+connection requirements. Geometry-only legacy adapters reject such contracts;
+reading layout data alone does not make a candidate eligible for replacement.
+Initial-state promotion now captures the parent's composed layout, reviews each
+child's physical connection requirements separately, and requires explicit
+adoption after successful checks. It never updates child definitions or grants
+behavioral/compatibility evidence. Explicit PR/MR-style parent update proposals
+now support review, adoption, rejection and persistence in the Rust library.
+Adoption revalidates the complete candidate and creates new parent/state
+revisions. Child-version tracking remains future work. See the
+[update proposal workflow](blueprint-architecture.md#explicit-child-update-proposals).
+
 The first external probe is Redstone-Compiler's MIT-licensed generated XOR at
 commit `cc997732b82d957a8b5cc80d14c07b375562dd9d`. Its logical claim is a valid
 XOR, but its published output remains low for every input combination in

@@ -119,11 +119,57 @@ families use these identifiers:
 | repair plan and mutation | `dustroute.repair.v1` |
 | repair evidence context | `dustroute.repair-context.v1` |
 | transition plan, run, and restore | `dustroute.transition.v1` |
+| Blueprint catalog, update review and decisions | `dustroute.blueprint-mcp.v1` |
 | common error | `dustroute.error.v1` |
 
 Adding an optional field is compatible within v1. Removing a field, changing
 its meaning or type, or renaming an enum value requires a new schema version.
 Coordinates are always objects with signed integer `x`, `y`, and `z` fields.
+
+The [Blueprint MCP contract](blueprint-mcp.md) describes the `blueprint`
+branches of `get_circuit_revision` and `test_circuit_change`, and the explicit
+`blueprint_decision` on `invoke_operation`. Their responses set
+`writes_minecraft: false`. Initial-state validation and persisted proposal
+history are not behavioral or live-world evidence. Optional `behavior_context`
+selects fresh checks of declared `Periodic`, `FiniteBurst` and `RepeatedSettling`
+obligations. Repeated-settling requires complete port mappings and explicit actual
+input drivers; see [contextual adoption](repeated-settling-adoption.md). Its bindings
+require at least catalog v6; direct-device ports and block-kind requirements use v7;
+self-bound `static_type_bindings` require v8; finite-burst types require v5; earlier catalogs and existing
+periodic response scope values remain supported. Such catalogs use the additional
+contextual scope value `placement_connections_and_declared_behavioral_obligations`. Scoped results
+use `declared_behavior_verified`, `behavior_status` and `behavior_scope`; legacy
+`behavior_verified` and `live_world_verified` remain false. The complete record input
+schemas are included in `tools/list`; Blueprint IDs and Assembly IDs are
+separate from observed circuit and hypothetical circuit revision UUIDs.
+
+For new piston requests, the optional `behavior_context` field accepts
+`{"piston":{"known_region":...,"input_levers":[...],"root_limits":{...}}}`.
+Root limits are optional. It resolves to fresh construction under
+`dustroute.piston-electrical-root-exploration.v3` before persistence; no direction
+selection is required. Explicit electrical profile objects are accepted;
+retired horizontal, vertical and direct-only profile IDs are rejected without
+conversion. These objects cannot be mixed with old
+dust/torch fields. Native responses use scope
+`whole_realization_declared_obligations_in_moving_world_model` and the selected
+piston placement profile. Their histories require
+`dustroute.blueprint-updates.v5`; earlier context objects retain their original
+JSON and schema requirements. Fresh review/adoption checks the complete actual
+world and retained children, including intermediate movement. See
+[native context contract](blueprint-mcp.md#location-behavior-in-the-moving-world).
+
+`test_circuit_change` additionally accepts `blueprint.action: "optimize"`.
+Its request selects the Assembly, explicit cost scope, target behavior binding, new candidate
+IDs and pinned execution context. The result contains fresh diagnostics and an
+optional strictly smaller candidate. `catalog_changed`, `writes_minecraft` and
+`adoption_authorized` remain false; a search result cannot replace an explicit
+parent proposal and fresh adoption. See [block reduction](blueprint-block-reduction.md)
+for candidate families, movable terminals, counting scope and bounded-search limits.
+
+`blueprint.action: "enumerate_layouts"` uses the same endpoint to enumerate
+physical torch/support patterns and freshly verify their declared behavior.
+Component scope keeps external equipment fixed and reports body and complete
+Assembly counts separately. See [component patterns](blueprint-component-patterns.md).
 
 ## Errors
 
@@ -317,3 +363,65 @@ returns a separately validated common placement operation. It requires current
 world agreement with that evidence and shared placement validation; revision
 IDs are still not operation IDs or live circuit IDs. Legacy revisions without
 base evidence cannot be reflected.
+
+`new_placement` also accepts `assembly_revision_id` as a separate alternative.
+With `assembly_target: {source_anchor, target_anchor, rotation}`, a uniquely
+adopted electrical Assembly can request fresh construction at new coordinates.
+The complete target region must be observed empty, target-coordinate behavior
+review must pass, and installation/teardown must settle in the physical model.
+After preview, every applied step receives whole-region readback; undo requires
+the exact constructed state. See [construction contract](custom-piston-assembly-placement.md).
+
+Without `assembly_target`, the historical grounded route retains its contract:
+The Assembly must be published by exactly one adopted update, and its immutable
+ancestry must reach a complete Assembly captured from a Circuit Revision with a
+retained literal base snapshot. Planning reruns the Blueprint review and the same
+live-base, placement, preview, apply verification and undo checks. It preserves
+the captured dimension and coordinates; it does not authorize relocation or
+fresh construction.
+
+## Shared diagnostic core
+
+Circuit and Assembly diagnostics share `dustroute.diagnosis.v1`: method-tagged
+findings, report-local finding IDs, repair assessment and optional pinned design
+references. `new_repair` and `get_repair_context` use that same core to connect
+candidate evidence with findings. See [diagnostic methods and Blueprint links](diagnostic-system.md).
+Assembly assessment is now `repair`; method-specific step/reset details are in
+`repair_details`. Executable reconstruction journals keep their existing name.
+
+## Durable placed Assembly management
+
+`manage_assembly` accepts `action: list | get | observe | diagnose | plan_removal | plan_reconstruction` and an
+`instance_id` UUID for all actions except `list`. Construction returns this
+instance UUID separately from temporary executable plans. `get` returns the
+saved source pins, transform, expected snapshot, concrete execution context and
+lifecycle/progress record; it explicitly reports `fresh_observation: false`.
+
+`observe` returns `observation.status`, independent `revalidation.status`, and
+`removal_eligible`. Observation statuses are `matches`, `changed`,
+`observation_incomplete`, `history_unavailable` and `target_mismatch`.
+`ok: true` on an observation means the diagnostic request completed, not that
+physical state matched or removal is permitted. A refusal by `plan_removal`
+returns `ok: false` with diagnostics. A successful plan returns a new
+`operation_id` for `show_operation` and `invoke_operation(confirm=true)`.
+
+`diagnose` returns `diagnosis` with the shared schema `dustroute.diagnosis.v1`,
+reference mode, coordinate/property findings and a separate reconstruction
+assessment. Unsupported damage can still be reported. It performs no world
+writes and creates no operation; saving its observation invalidates older plans.
+Normal current input levels inform the reference, with explicit historical or
+initial-state fallbacks. See [diagnosis semantics and limits](assembly-diagnosis.md).
+
+`plan_reconstruction` freshly models teardown of a supported observed layout and
+rebuild to the declared initial state. It returns complete baseline/steps,
+differences and operator conditions for explicit preview/confirmation. Matching
+client samples do not prove empty server queues; no companion MOD is required.
+Failed attempts are preserved; this is a new operation, never a blind retry.
+The response retains a `diagnosis` even when reconstruction planning fails.
+
+Registry records use schema `dustroute.placed-assembly.v2` (v1 readable as history
+and upgraded on save), no TTL, and lifecycle
+`needs_inspection | applied | removed`. A failure after an attempted write keeps
+`needs_inspection`, the verified prefix and an error. Persisted records and old
+observations never deserialize into execution permission. See the
+[complete persistence and conditional-removal contract](placed-assembly-management.md).

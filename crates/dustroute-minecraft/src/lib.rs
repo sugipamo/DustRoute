@@ -4,11 +4,29 @@
 //! IRs. Version-sensitive Minecraft behavior belongs here.
 
 pub mod blocks;
+pub mod comparator_law;
 mod delta;
+pub mod device_callback_law;
+pub mod dust_law;
+pub mod execution_context;
+pub mod lamp_law;
+pub mod law;
+pub mod observer_law;
+pub mod piston_electrical;
+pub mod piston_electrical_law;
+pub mod piston_law;
+pub mod piston_motion_law;
+pub mod repeater_law;
+mod rotation;
+pub mod spatial;
+pub use rotation::RotationY;
 pub mod time;
 mod validation;
 mod world;
-pub use validation::{ValidatedWorld, WorldValidationError, WorldValidationIssue};
+pub use validation::{
+    HistoricalPlacementV1, ValidatedWorld, WorldValidationError, WorldValidationIssue,
+    wire_rise_issues,
+};
 
 pub use delta::{
     BlockChange, BlockMove, ChangeReason, DeltaCause, Region, RegionSet, Shape, ShapeId, StateId,

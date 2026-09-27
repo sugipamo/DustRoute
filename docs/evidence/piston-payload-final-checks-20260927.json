@@ -1,0 +1,281 @@
+{
+  "schema_version": "dustroute.piston-payload-final-checks.v1",
+  "date": "2026-09-27",
+  "minecraft_version": "1.21.11",
+  "yarn_version": "1.21.11+build.6",
+  "execution_profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v2",
+  "behavior_profile": "dustroute.piston-electrical-root-exploration.v2",
+  "new_law_revisions": [
+    "dustroute.law.piston.electrical-payload.java-1-21-11.v2",
+    "dustroute.law.piston.geometry.java-1-21-11.v2"
+  ],
+  "scope": [
+    "retracted ordinary/sticky bodies facing all six directions",
+    "mixed linear chains within twelve-block limit",
+    "power at original and destination positions",
+    "two-stage extender and solid payload recovery",
+    "mid-motion interruption and restoration"
+  ],
+  "exclusions": [
+    "complete 3x3 door controller or deployment",
+    "slime/honey",
+    "entities",
+    "support/component destruction",
+    "torch/observer/comparator integration",
+    "arbitrary snapshot recovery or old checkpoint conversion"
+  ],
+  "profile_policy": "Electrical v1 contexts are rejected; no silent archive/profile conversion or mutation of Blueprint requirements. Fresh proposals must select v2 and pass new review.",
+  "target_class_sha256": {
+    "net.minecraft.block.PistonBlock": "00cadea51e97b910da939da68b97c591843675ced0619145a4bb7c412c31cd02",
+    "net.minecraft.block.piston.PistonHandler": "d0647b9d63b2d81c4f7cc0508e9327a8fd1419e5d6ff09ac55aa4d6ad0fe5ee3"
+  },
+  "captures": [
+    {
+      "run_id": "piston-payload-20260927-a",
+      "fixture": "crates/dustroute-translate/tests/fixtures/piston-payload-observed-a-v2.json",
+      "sha256": "44543470c7ef32b44b062c444abcc9727659d1ef41936de7960b92aea77276a8",
+      "matching_boundaries": 160,
+      "applied_offsets": [
+        0,
+        8,
+        16,
+        24,
+        32,
+        40
+      ],
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "normal_server_shutdown": true,
+      "server_log_sha256": "0bd47f2c5c7bc7f5db09b3be5134dc3ed8997f037604f4e55549d99f695261d8"
+    },
+    {
+      "run_id": "piston-payload-20260927-b",
+      "fixture": "crates/dustroute-translate/tests/fixtures/piston-payload-observed-b-v2.json",
+      "sha256": "e3aea72f37a2293626ca7d8f643f80a0bfdd83dac47d48656acd6409e2f6927e",
+      "matching_boundaries": 140,
+      "applied_offsets": [
+        0
+      ],
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "normal_server_shutdown": true,
+      "server_log_sha256": "065f43396828d8f83ad1ec321ea10b80ee181e1b2b89e5620ff40685665c2730"
+    },
+    {
+      "run_id": "piston-payload-20260927-c",
+      "fixture": "crates/dustroute-translate/tests/fixtures/piston-payload-observed-c-v2.json",
+      "sha256": "45d8a59735ab4b6d925e4e14b09510afe080293910906c4dc936459c03f69cd6",
+      "matching_boundaries": 50,
+      "applied_offsets": [
+        0,
+        8
+      ],
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "normal_server_shutdown": true,
+      "server_log_sha256": "7a143c40794aa68b9ff670f2d11c30a9bce4a5b5aa3a20a3749d8c99bb6794a2"
+    },
+    {
+      "run_id": "piston-payload-20260927-d",
+      "fixture": "crates/dustroute-translate/tests/fixtures/piston-payload-observed-d-v2.json",
+      "sha256": "a72607c8821314584611e987b2f8211f1ec3f7bf72a3a18096324f1995ac0f1e",
+      "matching_boundaries": 52,
+      "applied_offsets": [
+        0
+      ],
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "normal_server_shutdown": true,
+      "server_log_sha256": "70ef84eae7169488ba7455abc011a2c8f65e277ba8aee9cc14045d479b4b8f91"
+    },
+    {
+      "run_id": "piston-payload-20260927-e",
+      "fixture": "crates/dustroute-translate/tests/fixtures/piston-payload-observed-e-v2.json",
+      "sha256": "955c46b48f74979d7f63fbe1f6e41cb6238e8e47aae187e316b85869265515b6",
+      "matching_boundaries": 29,
+      "applied_offsets": [
+        0,
+        0
+      ],
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "normal_server_shutdown": true,
+      "server_log_sha256": "13e36cd7dc2b8188ed3274f71fccd9684a86889070e355ff5caba3160a250617"
+    },
+    {
+      "run_id": "piston-payload-20260927-f",
+      "fixture": "crates/dustroute-translate/tests/fixtures/piston-payload-observed-f-v2.json",
+      "sha256": "ce6d13992114950fdcfea9f6635734f07049e5a1919823fad17d07fc9b45b56c",
+      "matching_boundaries": 71,
+      "applied_offsets": [
+        0,
+        1,
+        2,
+        14
+      ],
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "normal_server_shutdown": true,
+      "server_log_sha256": "ff622b8568188a1b70336b1bcc3696ffc3925db7b24cbfb0fda9201a54da99dc"
+    }
+  ],
+  "accepted_live_captures": 6,
+  "matching_boundaries": 502,
+  "earlier_transient_captures_replayed": 11,
+  "total_replayed_captures": 17,
+  "total_matching_boundaries": 1161,
+  "projection": "same bounded event/carrier/active-component ordinary-neighbor projection as prior transient work; excludes individual setter ordering and shape callback conformance",
+  "comparator_correction": {
+    "capture": "piston-payload-20260927-f",
+    "original": "72 model vs 71 live: direct onBlockAdded check after ForceFinish misclassified as ordinary callback",
+    "fix": "exclude only first direct completion self check, retaining the true trailing neighbor callback; runtime unchanged",
+    "original_report_sha256": "e4afcbba0d84cce31f0a8600dcb89b12e54d60361f4887e9368d10559d039351",
+    "corrected_report_sha256": "929ebb2c0fbae0476eb1fc3caa7114f1c7d3a927b3d2fb7056f44d636b105756"
+  },
+  "checks": [
+    {
+      "command": "cargo test --offline --locked -p dustroute-minecraft -j 1 -- --test-threads=2",
+      "status": "passed",
+      "exit_code": 0,
+      "passed": 214,
+      "log": "/tmp/dustroute-piston-payload-minecraft-tests.log",
+      "log_sha256": "3a4f5a4b63884f3db05e75672f57258eaed61f0b827aee8538b59f0060b655f4",
+      "result_lines": [
+        "test result: ok. 95 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.85s",
+        "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s",
+        "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.68s",
+        "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s",
+        "test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s",
+        "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s",
+        "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s",
+        "test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.91s",
+        "test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.10s",
+        "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s",
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s",
+        "test result: ok. 23 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s",
+        "test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.26s",
+        "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s",
+        "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s"
+      ]
+    },
+    {
+      "command": "cargo test --offline --locked -p dustroute-library -p dustroute-translate --test execution_context --test executable_laws --test unified_piston_behavior --test location_behavior --test runtime_adoption --test electrical_piston_adoption --test electrical_piston_construction --test electrical_piston_relocation --test electrical_piston_observations -j 1 -- --test-threads=2",
+      "status": "passed",
+      "exit_code": 0,
+      "passed": 51,
+      "log": "/tmp/dustroute-piston-payload-integration.log",
+      "log_sha256": "e81ee448353a30c37b574b85f1972d9083b753b35f05b6f64c7e43ec452889af",
+      "result_lines": [
+        "test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.26s",
+        "test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s",
+        "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 11.40s",
+        "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.72s",
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.78s",
+        "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.15s",
+        "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s",
+        "test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.95s",
+        "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.32s",
+        "test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.24s"
+      ]
+    },
+    {
+      "command": "cargo test --offline --locked -p dustroute-mcp --lib -j 1 -- --test-threads=2",
+      "status": "passed",
+      "exit_code": 0,
+      "passed": 80,
+      "log": "/tmp/dustroute-piston-payload-mcp-all.log",
+      "log_sha256": "59306952b8ba0ca76cb72a56be8af1dbed04bf0272db471326949767d4e94139",
+      "result_lines": [
+        "test result: ok. 80 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 167.09s"
+      ]
+    },
+    {
+      "command": "python3 tools/test_piston_transients.py",
+      "status": "passed",
+      "exit_code": 0,
+      "log": "/tmp/dustroute-piston-payload-offline-tests.log",
+      "log_sha256": "8435445de6694173a63451950895d48d4e87e1165c8b14e85b16ad59e1133a79"
+    },
+    {
+      "command": "cargo clippy --offline --locked --workspace --all-targets -j 1 -- -D warnings",
+      "status": "passed",
+      "exit_code": 0,
+      "log": "/tmp/dustroute-piston-payload-clippy.log",
+      "log_sha256": "30c3a3d4e78cd0c6421775c12e86b9c1745537efdc5f6916c49fac32f144cb39"
+    },
+    {
+      "command": "cargo fmt --all --check",
+      "status": "passed",
+      "exit_code": 0,
+      "log": "/tmp/dustroute-piston-payload-fmt-check.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "git diff --check; Python AST and new law JSON parsing",
+      "status": "passed",
+      "exit_code": 0
+    }
+  ],
+  "rust_tests_passed": 345,
+  "python_tests_passed": 7,
+  "all_target_clippy": "passed",
+  "full_workspace_test_suite_rerun": false,
+  "initial_mcp_filter": "service_blueprint_tests matched zero tests; excluded from validation; corrected by running all 80 MCP library tests",
+  "source_sha256": {
+    "crates/dustroute-library/src/runtime_behavior.rs": "9366abd945ed5c9092cd07053c4595c68cb71c3a76a47968295e775cd6f2caf7",
+    "crates/dustroute-library/tests/executable_laws.rs": "a92f16c6cbf3ed5a31da553653407862c2ba8683574585b7682b625af7a4752b",
+    "crates/dustroute-library/tests/execution_context.rs": "7285326f12a76c36e09e97e3f140eb0f6aa1da72e4bcf2069995443e2ae12f0c",
+    "crates/dustroute-mcp/src/service_blueprint_tests.rs": "1650dfd1bd4543428f6189be24d8be42e13ef1f1dbc382af989bddb189f897f2",
+    "crates/dustroute-minecraft/laws/piston-electrical-payload-java-1-21-11-v2.json": "18ce1d7d3ed79b51a6889060c1eb44aa4156fffa4dc0b4f4335f9c92b54c842b",
+    "crates/dustroute-minecraft/laws/piston-geometry-java-1-21-11-v2.json": "0b0935f1a24d6b57063162933c4bb1d6820d971a5faec46ee75508f3a8c4c34f",
+    "crates/dustroute-minecraft/src/execution_context.rs": "028f4e3b26030c69d1d0b6aca292c88d96b209d4151541193ed9031ae0e66355",
+    "crates/dustroute-minecraft/src/piston_law.rs": "df423a80a1fc01c8c6b022d831c263873832c0bb9eeef39c2084497f7907ad83",
+    "crates/dustroute-minecraft/src/piston_motion_law.rs": "156617c8bc8e9007864e5b8592a702a546e5d4b358d04517d66f080f13fe60d4",
+    "crates/dustroute-minecraft/src/time/piston_runtime/adapter.rs": "e134e903e146af4dc85b78fd8e9377e55d5f2c83f7806008e43d97ee2cc7f6da",
+    "crates/dustroute-minecraft/src/time/piston_runtime/geometry.rs": "a4e3eaac9f52e03e4cc89b8288874cc9c1f4a73d86887b8da9a580067ea1930c",
+    "crates/dustroute-minecraft/src/time/piston_runtime/mod.rs": "7aae8bf859a8171c795e2b7f44bc9ce60975452a9950a318857e99b3d96201eb",
+    "crates/dustroute-minecraft/tests/piston_payload_runtime.rs": "4bcca03080deb7133023e1e204f765ab07b7505243aa1af1d5da89a55f083476",
+    "crates/dustroute-minecraft/tests/piston_runtime.rs": "ef169ef97b00b9aa7a9dd3809f52b2a555ad23500f75a2d08f8e68a03ab6bc08",
+    "crates/dustroute-minecraft/tests/unified_piston_runtime.rs": "0040d93897ad9122b680477b4fb44b15c19ac7d65f9991a01c928b32244168ac",
+    "crates/dustroute-translate/tests/execution_context.rs": "8e70a685c43c5d6500d9bfcc2349e22380f5c22a8c9699aafae29e2860e071f9",
+    "crates/dustroute-translate/tests/location_behavior.rs": "623bde53bcc04cf2b9c2254b3cd4ddfe362a8e2ac523b4f63e10fceeacd4d81a",
+    "crates/dustroute-translate/tests/support/runtime_blueprint.rs": "5c5e2438600291518e2970014052e31d4c11629254d7c10a89788e234c363b35",
+    "crates/dustroute-translate/tests/unified_piston_behavior.rs": "ee25b213a168b69e0afba10f8c17557af2037f6bc34808462bfbb653ce456bff",
+    "tools/compare_piston_transients.py": "b2733a97102f99d789d2b4d7e48a284868496c719c7b5eff3271b9934ecd9aeb",
+    "tools/test_piston_transients.py": "67721a8f018d670186e2860ffe679b18b449e8ee3ea3cfe111d25debba2ad6af"
+  },
+  "construction_fixture_sha256": {
+    "crates/dustroute-translate/tests/fixtures/piston-payload-arrival-power-v2.json": "d37d87c7ac89318b8870024256b66dd13a58cab5f729a70def80deee6273054a",
+    "crates/dustroute-translate/tests/fixtures/piston-payload-double-extender-v2.json": "c2bba196123c25cdc09a9ecfd5c2c9783891783fd41103806c96b7d9f2c9e948",
+    "crates/dustroute-translate/tests/fixtures/piston-payload-down-pull-v2.json": "9bcd26662175cd2c0d58b4e903ce7db8dd6c45bee43cfbb62d317272bb536dae",
+    "crates/dustroute-translate/tests/fixtures/piston-payload-interrupted-v2.json": "3bce236f468863a053c73126d93e41f21cb3f853798c7f4c28b65f519f6978d6",
+    "crates/dustroute-translate/tests/fixtures/piston-payload-mixed-twelve-v2.json": "f708137c6be22be5f6fd805f296d71c1734c73f190dc311d3e27b2b3eb625b44",
+    "crates/dustroute-translate/tests/fixtures/piston-payload-queued-event-v2.json": "defcf5a27cbea17ce898b4a2bb7f268abf531d0e30e4efbbaa1578ee434da260"
+  },
+  "model_binary_sha256": "4de94259bcc489599502291f6e6b001078e79995f267a110b73b68e55e138a84",
+  "host_operations": "none",
+  "instrumentation_changes": "none in this task; reused existing scoped trace hooks",
+  "preservation": "Original capture artifacts and diagnostics retained. Fixture provenance contains capture/retention-time hashes, distinct from final source hashes."
+}

@@ -1,0 +1,239 @@
+{
+  "schema_version": "dustroute.reference-door-construction-order.v1",
+  "date": "2026-09-27",
+  "implementation": "Current production ElectricalConstruction adds precedence for each declared occupied watched cell before its observer, preserving support requirements and rank/coordinate tie-breaking. Cycles fail closed. Full callbacks, settled-state equality and teardown remain mandatory.",
+  "world_and_exploration_context": {
+    "initial_condition": "fresh_construction",
+    "input_levers": [
+      {
+        "x": 0,
+        "y": 11,
+        "z": 0
+      }
+    ],
+    "known_region": {
+      "max": {
+        "x": 2,
+        "y": 13,
+        "z": 5
+      },
+      "min": {
+        "x": -2,
+        "y": 0,
+        "z": -5
+      }
+    },
+    "profile": "dustroute.piston-electrical-root-exploration.v5",
+    "root_limits": {
+      "max_call_depth": 512,
+      "max_microsteps": 100000,
+      "max_pending": 10000
+    }
+  },
+  "source_geometry_unchanged": true,
+  "current_construction": {
+    "status": "passed",
+    "build_steps": 43,
+    "teardown_steps": 43,
+    "exact_initial_world_reached": true,
+    "empty_after_teardown": true,
+    "all_build_wait_ticks": 4,
+    "order_34_to_37": [
+      {
+        "position": {
+          "x": 0,
+          "y": 2,
+          "z": 1
+        },
+        "state": "minecraft:redstone_lamp[lit=false]"
+      },
+      {
+        "position": {
+          "x": 0,
+          "y": 2,
+          "z": 0
+        },
+        "state": "minecraft:observer[facing=south,powered=false]"
+      },
+      {
+        "position": {
+          "x": 0,
+          "y": 2,
+          "z": -1
+        },
+        "state": "minecraft:observer[facing=south,powered=false]"
+      },
+      {
+        "position": {
+          "x": 0,
+          "y": 3,
+          "z": -1
+        },
+        "state": "minecraft:repeater[delay=4,facing=north,locked=false,powered=false]"
+      }
+    ]
+  },
+  "regression_tests": {
+    "total_passed": 10,
+    "translation_passed": 9,
+    "mcp_passed": 1,
+    "coverage": [
+      "Full reference door at original coordinates, then at (50000,180,1000) under R0/R90/R180/R270; each reconstructs all 43 exact blocks and removes all blocks in 43 steps.",
+      "Observer chains in all six orientations without timed placement pulses.",
+      "Declared watched Air adds no synthetic block or dependency.",
+      "Mutually watching observers and observer/repeater support cycles are rejected.",
+      "Existing mixed piston construction, constant-source sequencing and lossless state export.",
+      "Source references and materials survive save/load; proposed aperture bindings observe one settled close/open cycle.",
+      "Existing public MCP custom-construction regression with transport stub: fresh adoption/target/baseline checks, full stage readback, persistence and refusal after failures."
+    ],
+    "limits": "The MCP regression uses its existing mixed-piston fixture, not the reference door. No live Java server or full-workspace test suite was run."
+  },
+  "historical_control": {
+    "retained_old_order_matches": false,
+    "current_production_matches": true,
+    "diagnostic_schema": "dustroute.reference-construction-experiment.v2"
+  },
+  "fresh_saved_candidate_adoption": {
+    "command": "target/debug/examples/audit_reference_door_adoption adopt .local/e2e-artifacts/reference-door-adoption-candidate-20260927.json",
+    "process_exit_code": 0,
+    "status": "undetermined",
+    "proposal_status": "open",
+    "candidate_published": false,
+    "original_catalog_unchanged": true,
+    "behavior_reports": [
+      {
+        "type_revision": "reference-door.aperture-repeated-settling.v1",
+        "status": "undetermined",
+        "reachable_states": 1746,
+        "evaluated_steps": 2077,
+        "graph_closed": false,
+        "detail": "elapsed verification budget exhausted; no timing deadline was imposed",
+        "counterexample": null
+      }
+    ]
+  },
+  "checks": [
+    {
+      "command": "cargo test --offline --locked -j 1 --package dustroute-translate --test electrical_piston_construction --test reference_door_adoption -- --test-threads=2",
+      "exit_code": 0,
+      "tests_passed": 9,
+      "log": "/tmp/dustroute-observer-construction-order-tests.log",
+      "sha256": "03e83c74bdbf1ddd65167a52f15b0d5629d6cc61637de34158bd91ed6bc4bf7f"
+    },
+    {
+      "command": "cargo test --offline --locked -j 1 --package dustroute-mcp --lib custom_electrical_construction_rechecks_adoption_baseline_settings_and_each_write -- --test-threads=1",
+      "exit_code": 0,
+      "tests_passed": 1,
+      "log": "/tmp/dustroute-observer-construction-order-mcp.log",
+      "sha256": "f832031e081d6ef57b40fed345849c6a54de0a4bca97ab69342a132af7c22041"
+    },
+    {
+      "command": "cargo build --offline --locked -j 1 --package dustroute-translate --example audit_reference_door_adoption --example audit_reference_door_construction",
+      "exit_code": 0,
+      "tests_passed": null,
+      "log": "/tmp/dustroute-observer-construction-order-build.log",
+      "sha256": "024f0864565c02fe105bd938ed64e2a1355c701819c6882b01cfe9efb96136a6"
+    },
+    {
+      "command": "cargo clippy --offline --locked -j 1 --package dustroute-translate --example audit_reference_door_adoption --example audit_reference_door_construction --test reference_door_adoption --test electrical_piston_construction -- -D warnings",
+      "exit_code": 0,
+      "tests_passed": null,
+      "log": "/tmp/dustroute-observer-construction-order-clippy.log",
+      "sha256": "f9cec439e52663317aad1ad203770f73ba9664fe11ec9174b1e67bed7d5471b4"
+    },
+    {
+      "command": "cargo fmt --package dustroute-translate -- --check",
+      "exit_code": 0,
+      "tests_passed": null,
+      "log": "/tmp/dustroute-observer-construction-order-fmt.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "git diff --check",
+      "exit_code": 0,
+      "tests_passed": null,
+      "log": "/tmp/dustroute-observer-construction-order-diff-check.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": ".local/e2e-artifacts/reference-door-construction-order-plan-20260927.json",
+      "sha256": "fbfaa863178fbbdd043605a714c2fcfc9f5a8a28626d73810827e4ea8f3864e6",
+      "bytes": 481103
+    },
+    {
+      "path": ".local/e2e-artifacts/reference-door-construction-order-control-20260927.json",
+      "sha256": "800431c039462455f8346fcf439197bbbc716c07adaef33fbad801458f08fb46",
+      "bytes": 1428846
+    },
+    {
+      "path": ".local/e2e-artifacts/reference-door-construction-order-adoption-20260927.json",
+      "sha256": "6a247c9490727845c30c51e10fe966e9b6074d2577c5947a28b367cb4e423852",
+      "bytes": 535686
+    }
+  ],
+  "sources": [
+    {
+      "path": "crates/dustroute-translate/src/piston_construction.rs",
+      "sha256": "dd6d29423997bf9f8bd83d3570364250bee578ced1aa404c0fd497fd08d0fdfc"
+    },
+    {
+      "path": "crates/dustroute-translate/tests/electrical_piston_construction.rs",
+      "sha256": "0f1c377a389a3befe6e76ca68200a6aa684b6942c67160ce8b2a8337aa3395c0"
+    },
+    {
+      "path": "crates/dustroute-translate/tests/reference_door_adoption.rs",
+      "sha256": "f33681abd2592be2d6fce981992c133f59bc1337f1f1e2527455ac5dc00ad660"
+    },
+    {
+      "path": "crates/dustroute-translate/examples/audit_reference_door_adoption.rs",
+      "sha256": "487ed595ce3a3e7471b6c7bcac9508974f69e71952ad79460c0de0d39029aa77"
+    },
+    {
+      "path": "crates/dustroute-translate/examples/audit_reference_door_construction.rs",
+      "sha256": "1c1ab34e6ea61591c097475e71085ee2a013f43b8b1a8d3dd5a897cf466189a9"
+    },
+    {
+      "path": "crates/dustroute-translate/tests/support/reference_door_blueprint.rs",
+      "sha256": "276960f00caf183e3c343c65fa82c7a816e9d12567af780417dd7b5d377da2bd"
+    },
+    {
+      "path": "crates/dustroute-mcp/src/service_blueprint_tests.rs",
+      "sha256": "4cc2f1f611bed0427760cdd2956e61bdfa2ca0144cefd0979a187224f38005ee"
+    }
+  ],
+  "unchanged_adoption_and_exploration_sources": [
+    {
+      "path": "crates/dustroute-translate/src/runtime_behavior.rs",
+      "sha256": "45fea93656f3b4d2c92fd44ed3a4fea85e6c1101529db3985ec0e5c227d1c54f"
+    },
+    {
+      "path": "crates/dustroute-translate/src/runtime_review.rs",
+      "sha256": "369ed319c1211f3c88edbbebdad43e0f57f3571e51269df8f7583a022389cbf9"
+    },
+    {
+      "path": "crates/dustroute-translate/src/blueprint_update.rs",
+      "sha256": "6ea378b0f8217652c1711cbbd4d3f9d1e902713ade16578e5a7b54c73322e7d2"
+    },
+    {
+      "path": "crates/dustroute-translate/src/behavior_type.rs",
+      "sha256": "d76506727e25a74c162c12e54e799e63ee2861ff0948c88aa9d2eef739b14c2e"
+    },
+    {
+      "path": "crates/dustroute-mcp/src/blueprint_mcp.rs",
+      "sha256": "bf2d0e69a846686c4780c9813ab0d992661676d20b63ce1d3a3c46f5d425cc32"
+    }
+  ],
+  "not_changed": [
+    "Physical runtime or Laws/profiles",
+    "Blueprint input contract or parent/child references",
+    "Saved plan/instance sequences or storage schemas",
+    "User catalog or live Minecraft world"
+  ],
+  "outstanding": [
+    "Complete the arbitrary-input repeated-settling proof; current default-budget outcome remains undetermined without a counterexample.",
+    "Live comparison of ordinary sequential construction and teardown.",
+    "Reference-door public MCP placement and target-environment/readback/undo checks after adoption can pass."
+  ]
+}

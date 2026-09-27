@@ -1,0 +1,516 @@
+{
+  "inputs": {
+    "delay": 4,
+    "rear_powered": 1,
+    "locked": 1
+  },
+  "registers": {
+    "powered": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "pending": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "q0": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "q1": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "q2": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "q3": {
+      "initial": 0,
+      "maximum": 1
+    }
+  },
+  "histories": {},
+  "handlers": {
+    "initialize": [
+      {
+        "op": "set",
+        "register": "powered",
+        "value": {
+          "op": "input",
+          "name": "rear_powered"
+        }
+      },
+      {
+        "op": "set",
+        "register": "pending",
+        "value": {
+          "op": "constant",
+          "value": 0
+        }
+      },
+      {
+        "op": "set",
+        "register": "q0",
+        "value": {
+          "op": "constant",
+          "value": 0
+        }
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "at_least",
+          "left": {
+            "op": "input",
+            "name": "delay"
+          },
+          "right": {
+            "op": "constant",
+            "value": 1
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "q0",
+            "value": {
+              "op": "input",
+              "name": "rear_powered"
+            }
+          }
+        ],
+        "otherwise": []
+      },
+      {
+        "op": "set",
+        "register": "q1",
+        "value": {
+          "op": "constant",
+          "value": 0
+        }
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "at_least",
+          "left": {
+            "op": "input",
+            "name": "delay"
+          },
+          "right": {
+            "op": "constant",
+            "value": 2
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "q1",
+            "value": {
+              "op": "input",
+              "name": "rear_powered"
+            }
+          }
+        ],
+        "otherwise": []
+      },
+      {
+        "op": "set",
+        "register": "q2",
+        "value": {
+          "op": "constant",
+          "value": 0
+        }
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "at_least",
+          "left": {
+            "op": "input",
+            "name": "delay"
+          },
+          "right": {
+            "op": "constant",
+            "value": 3
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "q2",
+            "value": {
+              "op": "input",
+              "name": "rear_powered"
+            }
+          }
+        ],
+        "otherwise": []
+      },
+      {
+        "op": "set",
+        "register": "q3",
+        "value": {
+          "op": "constant",
+          "value": 0
+        }
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "at_least",
+          "left": {
+            "op": "input",
+            "name": "delay"
+          },
+          "right": {
+            "op": "constant",
+            "value": 4
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "q3",
+            "value": {
+              "op": "input",
+              "name": "rear_powered"
+            }
+          }
+        ],
+        "otherwise": []
+      }
+    ],
+    "boundary": [
+      {
+        "op": "if",
+        "condition": {
+          "op": "not",
+          "value": {
+            "op": "input",
+            "name": "locked"
+          }
+        },
+        "then": [
+          {
+            "op": "if",
+            "condition": {
+              "op": "at_least",
+              "left": {
+                "op": "input",
+                "name": "delay"
+              },
+              "right": {
+                "op": "constant",
+                "value": 2
+              }
+            },
+            "then": [
+              {
+                "op": "set",
+                "register": "q0",
+                "value": {
+                  "op": "register",
+                  "name": "q1"
+                }
+              }
+            ],
+            "otherwise": []
+          },
+          {
+            "op": "if",
+            "condition": {
+              "op": "equal",
+              "left": {
+                "op": "input",
+                "name": "delay"
+              },
+              "right": {
+                "op": "constant",
+                "value": 1
+              }
+            },
+            "then": [
+              {
+                "op": "set",
+                "register": "q0",
+                "value": {
+                  "op": "input",
+                  "name": "rear_powered"
+                }
+              }
+            ],
+            "otherwise": []
+          },
+          {
+            "op": "if",
+            "condition": {
+              "op": "at_least",
+              "left": {
+                "op": "input",
+                "name": "delay"
+              },
+              "right": {
+                "op": "constant",
+                "value": 3
+              }
+            },
+            "then": [
+              {
+                "op": "set",
+                "register": "q1",
+                "value": {
+                  "op": "register",
+                  "name": "q2"
+                }
+              }
+            ],
+            "otherwise": []
+          },
+          {
+            "op": "if",
+            "condition": {
+              "op": "equal",
+              "left": {
+                "op": "input",
+                "name": "delay"
+              },
+              "right": {
+                "op": "constant",
+                "value": 2
+              }
+            },
+            "then": [
+              {
+                "op": "set",
+                "register": "q1",
+                "value": {
+                  "op": "input",
+                  "name": "rear_powered"
+                }
+              }
+            ],
+            "otherwise": []
+          },
+          {
+            "op": "if",
+            "condition": {
+              "op": "at_least",
+              "left": {
+                "op": "input",
+                "name": "delay"
+              },
+              "right": {
+                "op": "constant",
+                "value": 4
+              }
+            },
+            "then": [
+              {
+                "op": "set",
+                "register": "q2",
+                "value": {
+                  "op": "register",
+                  "name": "q3"
+                }
+              }
+            ],
+            "otherwise": []
+          },
+          {
+            "op": "if",
+            "condition": {
+              "op": "equal",
+              "left": {
+                "op": "input",
+                "name": "delay"
+              },
+              "right": {
+                "op": "constant",
+                "value": 3
+              }
+            },
+            "then": [
+              {
+                "op": "set",
+                "register": "q2",
+                "value": {
+                  "op": "input",
+                  "name": "rear_powered"
+                }
+              }
+            ],
+            "otherwise": []
+          },
+          {
+            "op": "if",
+            "condition": {
+              "op": "equal",
+              "left": {
+                "op": "input",
+                "name": "delay"
+              },
+              "right": {
+                "op": "constant",
+                "value": 4
+              }
+            },
+            "then": [
+              {
+                "op": "set",
+                "register": "q3",
+                "value": {
+                  "op": "input",
+                  "name": "rear_powered"
+                }
+              }
+            ],
+            "otherwise": []
+          },
+          {
+            "op": "set",
+            "register": "powered",
+            "value": {
+              "op": "register",
+              "name": "q0"
+            }
+          },
+          {
+            "op": "set",
+            "register": "pending",
+            "value": {
+              "op": "maximum",
+              "left": {
+                "op": "maximum",
+                "left": {
+                  "op": "maximum",
+                  "left": {
+                    "op": "maximum",
+                    "left": {
+                      "op": "constant",
+                      "value": 0
+                    },
+                    "right": {
+                      "op": "and",
+                      "left": {
+                        "op": "at_least",
+                        "left": {
+                          "op": "input",
+                          "name": "delay"
+                        },
+                        "right": {
+                          "op": "constant",
+                          "value": 1
+                        }
+                      },
+                      "right": {
+                        "op": "not",
+                        "value": {
+                          "op": "equal",
+                          "left": {
+                            "op": "register",
+                            "name": "q0"
+                          },
+                          "right": {
+                            "op": "register",
+                            "name": "powered"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "right": {
+                    "op": "and",
+                    "left": {
+                      "op": "at_least",
+                      "left": {
+                        "op": "input",
+                        "name": "delay"
+                      },
+                      "right": {
+                        "op": "constant",
+                        "value": 2
+                      }
+                    },
+                    "right": {
+                      "op": "not",
+                      "value": {
+                        "op": "equal",
+                        "left": {
+                          "op": "register",
+                          "name": "q1"
+                        },
+                        "right": {
+                          "op": "register",
+                          "name": "powered"
+                        }
+                      }
+                    }
+                  }
+                },
+                "right": {
+                  "op": "and",
+                  "left": {
+                    "op": "at_least",
+                    "left": {
+                      "op": "input",
+                      "name": "delay"
+                    },
+                    "right": {
+                      "op": "constant",
+                      "value": 3
+                    }
+                  },
+                  "right": {
+                    "op": "not",
+                    "value": {
+                      "op": "equal",
+                      "left": {
+                        "op": "register",
+                        "name": "q2"
+                      },
+                      "right": {
+                        "op": "register",
+                        "name": "powered"
+                      }
+                    }
+                  }
+                }
+              },
+              "right": {
+                "op": "and",
+                "left": {
+                  "op": "at_least",
+                  "left": {
+                    "op": "input",
+                    "name": "delay"
+                  },
+                  "right": {
+                    "op": "constant",
+                    "value": 4
+                  }
+                },
+                "right": {
+                  "op": "not",
+                  "value": {
+                    "op": "equal",
+                    "left": {
+                      "op": "register",
+                      "name": "q3"
+                    },
+                    "right": {
+                      "op": "register",
+                      "name": "powered"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "otherwise": []
+      }
+    ]
+  }
+}

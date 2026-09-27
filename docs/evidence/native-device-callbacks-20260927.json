@@ -1,0 +1,113 @@
+{
+  "schema_version": "dustroute.native-device-evidence.v1",
+  "minecraft_version": "1.21.11",
+  "named_class_sha256": {
+    "net/minecraft/block/ObserverBlock.class": "1f9131ba4d62b58289cc1673d2e76229678b05b357a5958857b99e8fe3a42baa",
+    "net/minecraft/block/RedstoneLampBlock.class": "2200a240d4b7b84fcc4eed53fd12fdccc70f03ed683642966c7c5dd46f996823",
+    "net/minecraft/block/Blocks.class": "12384e63a34df092eef2375056e63b2d398cf8f210cf6e2df2af64be8cc3621b",
+    "net/minecraft/world/tick/WorldTickScheduler.class": "d040f7b19521f3501d45ee62d785fcc5c631d88ac7ccf15876577b114834018b",
+    "net/minecraft/world/tick/ChunkTickScheduler.class": "85abbcaf7ff54cfdddd264b62c3fece872ded0e29746bfec43db6e05548a5683",
+    "net/minecraft/block/AbstractRedstoneGateBlock.class": "1650b9eacd97788b5be6fad0164e71834191298daadcecb2fac90c7c117cfa3d",
+    "net/minecraft/block/RedstoneWireBlock.class": "0583da64d1ca29a6da959b09b4f6b74d53f8542e81f3f32f557ec332931f77ea"
+  },
+  "capture": "reference-3x3-native-20260927-b",
+  "inputs": [
+    {
+      "position": {
+        "x": 44000,
+        "y": 191,
+        "z": 1000
+      },
+      "powered": true,
+      "tick": 0
+    },
+    {
+      "position": {
+        "x": 44000,
+        "y": 191,
+        "z": 1000
+      },
+      "powered": false,
+      "tick": 101
+    },
+    {
+      "position": {
+        "x": 44000,
+        "y": 191,
+        "z": 1000
+      },
+      "powered": true,
+      "tick": 200
+    },
+    {
+      "position": {
+        "x": 44000,
+        "y": 191,
+        "z": 1000
+      },
+      "powered": false,
+      "tick": 300
+    }
+  ],
+  "outcomes": [
+    {
+      "input": 0,
+      "sample_tick": 101,
+      "aperture": "closed",
+      "full_initial_region_restored": false
+    },
+    {
+      "input": 1,
+      "sample_tick": 200,
+      "aperture": "open",
+      "full_initial_region_restored": true
+    },
+    {
+      "input": 2,
+      "sample_tick": 300,
+      "aperture": "closed",
+      "full_initial_region_restored": false
+    },
+    {
+      "input": 3,
+      "sample_tick": 380,
+      "aperture": "open",
+      "full_initial_region_restored": true
+    }
+  ],
+  "tick_end_worlds": 381,
+  "state_commits": 524,
+  "carrier_events": 812,
+  "observer_probes_retained": 498,
+  "ready_not_queued_shapes": 26,
+  "observer_state_commits": 108,
+  "cleanup": {
+    "region_empty": true,
+    "force_load_removed": true,
+    "disconnected_before_finish": null
+  },
+  "complete_door_model_conformance": false,
+  "limit": "Local callback decisions checked; movement-start notification delivery mismatch remains. Moving observers and public placement are not certified.",
+  "artifacts": {
+    "/root/DustRoute/.local/e2e-artifacts/reference-3x3-native-20260927-b.raw.ndjson": "27922ad5a36677698280f20b02d12f5973c506b372621eb05ce8c29c4694e417",
+    "/root/DustRoute/.local/e2e-artifacts/reference-3x3-native-20260927-b.server.log": "d064ed166be5e234edee9743c258814b0ecf20cfe8362c582ce3e9199976988d",
+    "/root/DustRoute/.local/e2e-artifacts/reference-3x3-native-20260927-b.client.json": "62a3720f1ac8e5a074bbb10646fc9a4382838138a3a48ca2e90de818313a929a",
+    "/root/DustRoute/.local/e2e-artifacts/reference-3x3-native-20260927-b.reference.json": "d07d571dcc4cd3631add768fa47b1a48bbe3155ca1cb053fdae8afbd0c22abfa",
+    "/root/DustRoute/.local/e2e-artifacts/reference-3x3-native-20260927-b.summary.json": "c2ecada9820c1b03caae4a7bb6ab0d4f8bd875230d67d35ccd655a84318ae0ba",
+    "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/mixin/ObserverBlockMixin.java": "7be6e71ac12bf927e650fdd1f277c774642acaf8227663dfb2ae23755489a0f1",
+    "/root/DustRoute-minecraft-instrumentation/src/main/resources/dustroute-vanilla-instrumentation.mixins.json": "006b4ba66fc0e94215c80539e10320c3bfa57b4ecb8aab6d1f53f41e330c4f6a",
+    "/root/DustRoute/crates/dustroute-translate/tests/fixtures/reference-3x3-observer-probes-b-v1.json": "629112690d1968ccadc5e0e83a1a2bc643ded6f9deea35195eabe7c697757185"
+  },
+  "implementation_sha256": {
+    "crates/dustroute-minecraft/laws/lamp-callback-java-1-21-11-v1.json": "d270f3a930c69ef8e52b73bcbc7792dc8f71d317b0cbbcc7e2bfd23be0ccdc46",
+    "crates/dustroute-minecraft/laws/observer-callback-java-1-21-11-v1.json": "d7310a5d97fd35ff43bb49b4d930b84110b0ffaf258f584003409ce5debc7eca",
+    "crates/dustroute-minecraft/src/device_callback_law.rs": "ff9ae735c1c0e5ed02cb2688d6414ef6689ba58d1bf36beb72e2756dec04b5db",
+    "crates/dustroute-minecraft/src/time/piston_runtime/devices.rs": "e372e52cda043f7810470322c182e12d7011fc6a4da7d8b943dc22415d5953d1",
+    "crates/dustroute-minecraft/src/time/runtime/executor.rs": "78db9fce85f148398db59713e3fce5e7168b91405da6faac9f192b35c50faed6",
+    "crates/dustroute-minecraft/tests/native_device_runtime.rs": "1b2f2dc473d4e3fe1e846f94591a8f5d1ab479a5c811f085be8b7f75db200c02",
+    "crates/dustroute-translate/tests/native_device_observations.rs": "dbbb3d9de3ccd93907d96231615d636b8bb372e6b7b3ff4c984036d1d1ea28d1",
+    "tools/compare_reference_door.py": "31f582a6f80647c30872fabdde048730eb4a06b70b345091b747e2ecfc0d87f0"
+  },
+  "execution_profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v4",
+  "runtime_profile": "dustroute.synchronous-world-callbacks.v2"
+}

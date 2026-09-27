@@ -1,0 +1,718 @@
+{
+  "schema_version": "dustroute.mixed-piston-fixture.v1",
+  "id": "mixed-electrical-all-facings-v1",
+  "initial": {
+    "min": {
+      "x": -6,
+      "y": -2,
+      "z": -6
+    },
+    "max": {
+      "x": 46,
+      "y": 12,
+      "z": 18
+    },
+    "blocks": [
+      {
+        "pos": {
+          "x": 1,
+          "y": 4,
+          "z": 0
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 0,
+          "y": 4,
+          "z": -1
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 7,
+          "y": 4,
+          "z": 0
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 8,
+          "y": 4,
+          "z": -1
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 16,
+          "y": 4,
+          "z": -1
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 15,
+          "y": 4,
+          "z": 0
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 24,
+          "y": 4,
+          "z": 1
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 23,
+          "y": 4,
+          "z": 0
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 32,
+          "y": 5,
+          "z": 0
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 32,
+          "y": 4,
+          "z": -1
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 40,
+          "y": 3,
+          "z": 0
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 40,
+          "y": 4,
+          "z": -1
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 1,
+          "y": 4,
+          "z": 12
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 0,
+          "y": 4,
+          "z": 11
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 7,
+          "y": 4,
+          "z": 12
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 8,
+          "y": 4,
+          "z": 11
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 16,
+          "y": 4,
+          "z": 11
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 15,
+          "y": 4,
+          "z": 12
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 24,
+          "y": 4,
+          "z": 13
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 23,
+          "y": 4,
+          "z": 12
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 32,
+          "y": 5,
+          "z": 12
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 32,
+          "y": 4,
+          "z": 11
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 40,
+          "y": 3,
+          "z": 12
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 40,
+          "y": 4,
+          "z": 11
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 0,
+          "y": 4,
+          "z": 0
+        },
+        "name": "minecraft:piston",
+        "properties": {
+          "facing": "east",
+          "extended": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 8,
+          "y": 4,
+          "z": 0
+        },
+        "name": "minecraft:piston",
+        "properties": {
+          "facing": "west",
+          "extended": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 16,
+          "y": 4,
+          "z": 0
+        },
+        "name": "minecraft:piston",
+        "properties": {
+          "facing": "north",
+          "extended": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 24,
+          "y": 4,
+          "z": 0
+        },
+        "name": "minecraft:piston",
+        "properties": {
+          "facing": "south",
+          "extended": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 32,
+          "y": 4,
+          "z": 0
+        },
+        "name": "minecraft:piston",
+        "properties": {
+          "facing": "up",
+          "extended": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 40,
+          "y": 4,
+          "z": 0
+        },
+        "name": "minecraft:piston",
+        "properties": {
+          "facing": "down",
+          "extended": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 0,
+          "y": 4,
+          "z": 12
+        },
+        "name": "minecraft:sticky_piston",
+        "properties": {
+          "facing": "east",
+          "extended": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 8,
+          "y": 4,
+          "z": 12
+        },
+        "name": "minecraft:sticky_piston",
+        "properties": {
+          "facing": "west",
+          "extended": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 16,
+          "y": 4,
+          "z": 12
+        },
+        "name": "minecraft:sticky_piston",
+        "properties": {
+          "facing": "north",
+          "extended": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 24,
+          "y": 4,
+          "z": 12
+        },
+        "name": "minecraft:sticky_piston",
+        "properties": {
+          "facing": "south",
+          "extended": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 32,
+          "y": 4,
+          "z": 12
+        },
+        "name": "minecraft:sticky_piston",
+        "properties": {
+          "facing": "up",
+          "extended": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 40,
+          "y": 4,
+          "z": 12
+        },
+        "name": "minecraft:sticky_piston",
+        "properties": {
+          "facing": "down",
+          "extended": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 0,
+          "y": 4,
+          "z": -2
+        },
+        "name": "minecraft:lever",
+        "properties": {
+          "face": "wall",
+          "facing": "north",
+          "powered": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 8,
+          "y": 4,
+          "z": -2
+        },
+        "name": "minecraft:lever",
+        "properties": {
+          "face": "wall",
+          "facing": "north",
+          "powered": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 14,
+          "y": 4,
+          "z": 0
+        },
+        "name": "minecraft:lever",
+        "properties": {
+          "face": "wall",
+          "facing": "west",
+          "powered": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 22,
+          "y": 4,
+          "z": 0
+        },
+        "name": "minecraft:lever",
+        "properties": {
+          "face": "wall",
+          "facing": "west",
+          "powered": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 32,
+          "y": 4,
+          "z": -2
+        },
+        "name": "minecraft:lever",
+        "properties": {
+          "face": "wall",
+          "facing": "north",
+          "powered": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 40,
+          "y": 4,
+          "z": -2
+        },
+        "name": "minecraft:lever",
+        "properties": {
+          "face": "wall",
+          "facing": "north",
+          "powered": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 0,
+          "y": 4,
+          "z": 10
+        },
+        "name": "minecraft:lever",
+        "properties": {
+          "face": "wall",
+          "facing": "north",
+          "powered": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 8,
+          "y": 4,
+          "z": 10
+        },
+        "name": "minecraft:lever",
+        "properties": {
+          "face": "wall",
+          "facing": "north",
+          "powered": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 14,
+          "y": 4,
+          "z": 12
+        },
+        "name": "minecraft:lever",
+        "properties": {
+          "face": "wall",
+          "facing": "west",
+          "powered": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 22,
+          "y": 4,
+          "z": 12
+        },
+        "name": "minecraft:lever",
+        "properties": {
+          "face": "wall",
+          "facing": "west",
+          "powered": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 32,
+          "y": 4,
+          "z": 10
+        },
+        "name": "minecraft:lever",
+        "properties": {
+          "face": "wall",
+          "facing": "north",
+          "powered": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 40,
+          "y": 4,
+          "z": 10
+        },
+        "name": "minecraft:lever",
+        "properties": {
+          "face": "wall",
+          "facing": "north",
+          "powered": "false"
+        }
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "x": 0,
+      "y": 4,
+      "z": -2
+    },
+    {
+      "x": 8,
+      "y": 4,
+      "z": -2
+    },
+    {
+      "x": 14,
+      "y": 4,
+      "z": 0
+    },
+    {
+      "x": 22,
+      "y": 4,
+      "z": 0
+    },
+    {
+      "x": 32,
+      "y": 4,
+      "z": -2
+    },
+    {
+      "x": 40,
+      "y": 4,
+      "z": -2
+    },
+    {
+      "x": 0,
+      "y": 4,
+      "z": 10
+    },
+    {
+      "x": 8,
+      "y": 4,
+      "z": 10
+    },
+    {
+      "x": 14,
+      "y": 4,
+      "z": 12
+    },
+    {
+      "x": 22,
+      "y": 4,
+      "z": 12
+    },
+    {
+      "x": 32,
+      "y": 4,
+      "z": 10
+    },
+    {
+      "x": 40,
+      "y": 4,
+      "z": 10
+    }
+  ],
+  "steps": [
+    {
+      "input": 11,
+      "powered": true,
+      "wait_ticks": 10
+    },
+    {
+      "input": 10,
+      "powered": true,
+      "wait_ticks": 10
+    },
+    {
+      "input": 9,
+      "powered": true,
+      "wait_ticks": 10
+    },
+    {
+      "input": 8,
+      "powered": true,
+      "wait_ticks": 10
+    },
+    {
+      "input": 7,
+      "powered": true,
+      "wait_ticks": 10
+    },
+    {
+      "input": 6,
+      "powered": true,
+      "wait_ticks": 10
+    },
+    {
+      "input": 5,
+      "powered": true,
+      "wait_ticks": 10
+    },
+    {
+      "input": 4,
+      "powered": true,
+      "wait_ticks": 10
+    },
+    {
+      "input": 3,
+      "powered": true,
+      "wait_ticks": 10
+    },
+    {
+      "input": 2,
+      "powered": true,
+      "wait_ticks": 10
+    },
+    {
+      "input": 1,
+      "powered": true,
+      "wait_ticks": 10
+    },
+    {
+      "input": 0,
+      "powered": true,
+      "wait_ticks": 10
+    },
+    {
+      "input": 0,
+      "powered": false,
+      "wait_ticks": 10
+    },
+    {
+      "input": 1,
+      "powered": false,
+      "wait_ticks": 10
+    },
+    {
+      "input": 2,
+      "powered": false,
+      "wait_ticks": 10
+    },
+    {
+      "input": 3,
+      "powered": false,
+      "wait_ticks": 10
+    },
+    {
+      "input": 4,
+      "powered": false,
+      "wait_ticks": 10
+    },
+    {
+      "input": 5,
+      "powered": false,
+      "wait_ticks": 10
+    },
+    {
+      "input": 6,
+      "powered": false,
+      "wait_ticks": 10
+    },
+    {
+      "input": 7,
+      "powered": false,
+      "wait_ticks": 10
+    },
+    {
+      "input": 8,
+      "powered": false,
+      "wait_ticks": 10
+    },
+    {
+      "input": 9,
+      "powered": false,
+      "wait_ticks": 10
+    },
+    {
+      "input": 10,
+      "powered": false,
+      "wait_ticks": 10
+    },
+    {
+      "input": 11,
+      "powered": false,
+      "wait_ticks": 10
+    }
+  ]
+}

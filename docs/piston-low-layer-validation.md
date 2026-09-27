@@ -5,6 +5,19 @@ For user-facing construction and operation, use the
 [fixed 1×2 contract](piston-door-mcp-v1.md). The observations below do not promote
 general piston placement or arbitrary door layouts.
 
+The current planner and event runner execute immutable
+[piston law Revisions](blueprint-architecture.md#executable-piston-laws) for state,
+movement effects, input connections and payload eligibility. The world still
+owns physical blocks and pending movement; moving child Blueprint terminal/type
+bindings remain unsupported. Forty local pre-migration captures preserve the
+supported model behavior without adding a live-evidence claim.
+
+Input changes now validate every horizontal side before returning combined
+power. A powered source cannot hide a later unknown side or required observed
+state. This approved repair precedes the law baseline; the
+[historical defect and regression scope](blueprint-architecture.md#piston-migration-preflight-incomplete-input-validation)
+remain documented separately.
+
 ## Validated progression
 
 The [coordinate fixtures](../crates/dustroute-translate/tests/fixtures/piston-low-layer)
@@ -84,3 +97,13 @@ is not the current product status. Full transient client recordings belong in
 ignored `.local/` artifacts. Exact Vanilla same-tick ordering, interruptions,
 short pulses, larger doors, slime/honey and general placement remain outside
 this bounded validation.
+
+Motion-time reversal was subsequently approved as new work. The
+[1.21.11 source audit](piston-motion-source-audit.md) records why a new execution
+boundary is required before integrating those rules: synchronous notifications,
+event-time input checks and separate moving carriers affect block states.
+The retained v1 runner and its validated scope above remain unchanged.
+The separate [horizontal callback profile](piston-callback-runtime.md) now
+implements those motion-time rules and reproduces the saved single-input 1×2
+settled observations. Its transient cases are source-derived regressions, not
+additional live observations or a behavioral type certificate.

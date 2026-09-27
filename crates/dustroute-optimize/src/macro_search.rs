@@ -68,7 +68,29 @@ pub fn find_verified_macro_replacements(
     version: &str,
     current: ObservedMacroMetrics,
 ) -> Vec<MacroReplacementCandidate> {
-    let mut candidates = catalog
+    find_verified_macro_replacements_in_catalog(
+        model,
+        catalog,
+        dustroute_library::builtin_blueprints::builtin_blueprints(),
+        edition,
+        version,
+        current,
+    )
+}
+
+/// Blueprint definitions are the source of candidate geometry. The existing
+/// component registry supplies separate compatibility/behavioral evidence;
+/// a classification or a saved definition never grants that evidence.
+#[must_use]
+pub fn find_verified_macro_replacements_in_catalog(
+    model: &FunctionalNetworkModel,
+    catalog: &Catalog,
+    blueprints: &dustroute_library::blueprint::BlueprintCatalog,
+    edition: &str,
+    version: &str,
+    current: ObservedMacroMetrics,
+) -> Vec<MacroReplacementCandidate> {
+    let eligible = catalog
         .search(&dustroute_library::ComponentQuery {
             input_count: Some(model.truth_table.inputs.len()),
             output_count: Some(model.truth_table.outputs.len()),
@@ -78,10 +100,43 @@ pub fn find_verified_macro_replacements(
         })
         .into_iter()
         .filter(|component| compatible(component, edition, version))
-        .filter_map(|component| {
+        .collect::<Vec<_>>();
+    let mut candidates = blueprints
+        .revisions()
+        .flat_map(|revision| {
+            eligible.iter().filter_map(move |component| {
+                let reference = component.layout_reference.as_deref()?;
+                let selected = crate::macro_realize::layout_revision(reference).ok()?;
+                (selected == revision.id).then_some((*component, revision))
+            })
+        })
+        .filter_map(|(component, revision)| {
             let (input_ports, output_ports) = truth_table_mapping(component, model)?;
-            let physical = component.physical.clone()?;
-            let layout_reference = component.layout_reference.clone()?;
+            // Saved metrics cannot replace the selected revision's geometry.
+            let expanded = blueprints.expand(&revision.id).ok()?;
+            let metrics = ObservedMacroMetrics::from_world(&expanded.proposed_world());
+            let physical = PhysicalMetrics {
+                bounding_size: metrics.bounding_size,
+                occupied_blocks: metrics.occupied_blocks,
+                dust_blocks: metrics.dust_blocks,
+                repeater_count: metrics.repeater_count,
+                delay_redstone_ticks: component.physical.as_ref()?.delay_redstone_ticks,
+            };
+            for (names, direction) in [
+                (&input_ports, dustroute_library::PortDirection::Input),
+                (&output_ports, dustroute_library::PortDirection::Output),
+            ] {
+                let actual = revision
+                    .ports
+                    .iter()
+                    .filter(|port| port.direction == direction)
+                    .map(|port| &port.name)
+                    .collect::<std::collections::BTreeSet<_>>();
+                if names.iter().collect::<std::collections::BTreeSet<_>>() != actual {
+                    return None;
+                }
+            }
+            let layout_reference = format!("blueprint:{}", revision.id);
             let candidate_volume = volume(physical.bounding_size);
             let current_volume = current.bounding_volume();
             let improves = physical.occupied_blocks < current.occupied_blocks

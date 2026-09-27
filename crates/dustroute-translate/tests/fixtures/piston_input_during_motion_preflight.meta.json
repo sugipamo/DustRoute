@@ -1,0 +1,22 @@
+{
+  "kind": "pre_implementation_model_diagnostic",
+  "captured_on": "2026-09-21",
+  "source": "Working tree on codex/blueprint-architecture after phase 4b and the agreed location-terminal semantics; before movement behavioral implementation",
+  "command": "cargo run -q -p dustroute-translate --example audit_piston_input_during_motion",
+  "fixture": "piston_input_during_motion_preflight.jsonl",
+  "cases": 6,
+  "layouts": [
+    "single_sticky_direct",
+    "single_sticky_propagation",
+    "existing_two_row_propagation"
+  ],
+  "inputs": {
+    "on_tick": 1,
+    "off_ticks": [
+      3,
+      8
+    ]
+  },
+  "finding": "OFF during motion leaves Solid output locations and an empty queue; OFF after completion restores Air. Both traces report complete execution.",
+  "scope": "Existing deterministic model output only, not live Minecraft evidence. Movement-time input reversal is outside the retained low-layer conformance scope. expected_if_off_settles_to_absence describes the proposed observable relation, not an implemented behavioral binding or a passing proof. The capture must not become an immutable requirement to preserve this result. No production law or handler was changed."
+}

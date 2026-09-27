@@ -1,0 +1,43 @@
+{
+  "inputs": {
+    "source": 1,
+    "powered": 1,
+    "front": 1
+  },
+  "registers": {
+    "accept": {
+      "initial": 0,
+      "maximum": 1
+    }
+  },
+  "histories": {},
+  "handlers": {
+    "evaluate": [
+      {
+        "op": "if",
+        "condition": {
+          "op": "input",
+          "name": "front"
+        },
+        "then": [],
+        "otherwise": [
+          {
+            "op": "set",
+            "register": "accept",
+            "value": {
+              "op": "and",
+              "left": {
+                "op": "input",
+                "name": "source"
+              },
+              "right": {
+                "op": "input",
+                "name": "powered"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,108 @@
+{
+  "schema_version": "dustroute.reference-door-construction-diagnostic.v1",
+  "date": "2026-09-27",
+  "command": "target/debug/examples/audit_reference_door_adoption construction",
+  "result": {
+    "error": "sequential construction does not reach the declared fresh-world result; 2 differing cells (showing at most 16): Pos { x: 0, y: 5, z: 0 }: expected minecraft:smooth_quartz, actual minecraft:air; last settled change at build step 36 installing minecraft:observer[facing=south,powered=false] at Pos { x: 0, y: 2, z: 0 }; Pos { x: 0, y: 6, z: 0 }: expected minecraft:air, actual minecraft:smooth_quartz; last settled change at build step 36 installing minecraft:observer[facing=south,powered=false] at Pos { x: 0, y: 2, z: 0 }",
+    "status": "failed"
+  },
+  "artifact": {
+    "path": ".local/e2e-artifacts/reference-door-construction-diagnostic-20260927.json",
+    "sha256": "262ba289b5818a266ee61c942fe850eeae703a192ea73e492601322fdf6f94b7"
+  },
+  "differences": [
+    {
+      "position": {
+        "x": 0,
+        "y": 5,
+        "z": 0
+      },
+      "expected": "minecraft:smooth_quartz",
+      "actual": "minecraft:air"
+    },
+    {
+      "position": {
+        "x": 0,
+        "y": 6,
+        "z": 0
+      },
+      "expected": "minecraft:air",
+      "actual": "minecraft:smooth_quartz"
+    }
+  ],
+  "last_settled_change": {
+    "step": 36,
+    "position": {
+      "x": 0,
+      "y": 2,
+      "z": 0
+    },
+    "state": "minecraft:observer[facing=south,powered=false]"
+  },
+  "interpretation": "The last change between completed construction snapshots at these two cells follows step 36. The diagnostic does not establish the first transient change or its precise causal callback. Other final cells match.",
+  "scope": {
+    "diagnostic_only": true,
+    "placement_order_changed": false,
+    "physics_changed": false,
+    "adoption_conditions_changed": false,
+    "live_world_writes": false,
+    "arbitrary_input_review_rerun": false
+  },
+  "checks": [
+    {
+      "command": "cargo build --offline --locked -j 1 --package dustroute-translate --example audit_reference_door_adoption",
+      "exit_code": 0,
+      "log": "/tmp/dustroute-reference-construction-diagnostic-build-final.log",
+      "sha256": "472b1e07a84a5efcbbc032aaf5de9c9671fbc6913a0c8faef7b2e1677720b1ef"
+    },
+    {
+      "command": "cargo test --offline --locked -j 1 --package dustroute-translate --test reference_door_adoption --test electrical_piston_construction -- --test-threads=2",
+      "exit_code": 0,
+      "log": "/tmp/dustroute-reference-construction-diagnostic-tests.log",
+      "sha256": "3f353da68d6147788123edd65eae824ea3680144fa27d5c5aa4827da94333b26"
+    },
+    {
+      "command": "cargo clippy --offline --locked -j 1 --package dustroute-translate --example audit_reference_door_adoption --test reference_door_adoption --test electrical_piston_construction -- -D warnings",
+      "exit_code": 0,
+      "log": "/tmp/dustroute-reference-construction-diagnostic-clippy.log",
+      "sha256": "df1a790b09bd07c7e7fcc63e2b7904dfef46b7e7edbac2d7c88a644c6ba1fdbe"
+    },
+    {
+      "command": "cargo fmt --package dustroute-translate -- --check",
+      "exit_code": 0,
+      "log": "/tmp/dustroute-reference-construction-diagnostic-fmt.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "git diff --check",
+      "exit_code": 0,
+      "log": "/tmp/dustroute-reference-construction-diagnostic-diff-check.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "tests_passed": 5,
+  "source_hashes": [
+    {
+      "path": "crates/dustroute-translate/src/piston_construction.rs",
+      "sha256": "69a0353eef07f03c7942c55486c24eee08e581840717de7fb3b46aa52860104e"
+    },
+    {
+      "path": "crates/dustroute-translate/examples/audit_reference_door_adoption.rs",
+      "sha256": "487ed595ce3a3e7471b6c7bcac9508974f69e71952ad79460c0de0d39029aa77"
+    },
+    {
+      "path": "crates/dustroute-translate/tests/support/reference_door_blueprint.rs",
+      "sha256": "276960f00caf183e3c343c65fa82c7a816e9d12567af780417dd7b5d377da2bd"
+    },
+    {
+      "path": "crates/dustroute-translate/tests/fixtures/reference-3x3-bobiloosky-v1.json",
+      "sha256": "ded824e424947bc12d3060e6f5242207a22ec7abe123c9e90ce73f9e7c0ef900"
+    }
+  ],
+  "previous_audit": "docs/evidence/reference-door-adoption-20260927.json",
+  "remaining": [
+    "Identify the notification path at construction step 36 and design a validated placement/initialization procedure.",
+    "Complete the declared repeated-settling proof.",
+    "Public MCP and live target/environment checks remain unverified."
+  ]
+}

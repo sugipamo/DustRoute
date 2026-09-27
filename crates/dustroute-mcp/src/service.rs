@@ -3,6 +3,8 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
+mod assembly_placement;
+
 use dustroute_app::DustRouteService;
 use dustroute_optimize::{
     AnchorPolicy, BehavioralVerificationConfig, CompressionAxis, CompressionDirection,
@@ -11,7 +13,7 @@ use dustroute_optimize::{
     OptimizationContractAssessment, OptimizationPlan, OptimizationRoutingConfig,
     OptimizationSafety, PhysicalOptimizationSearchBudget, TemporalCapabilities, TimingContractMode,
     assess_macro_contract, assess_optimization_safety, extract_model_boundary_with_context,
-    find_builtin_verified_macro_replacements, materialize_macro_replacement,
+    find_builtin_verified_macro_replacements, materialize_macro_replacement_in_known_regions,
     optimize_physical_wire_path_with_budget, plan_macro_replacement_with_reserved,
     realize_staged_optimization_against, validate_macro_structure, verify_boundary_strengths,
     verify_macro_steady_state, verify_macro_transitions, verify_realized_optimization,
@@ -62,6 +64,10 @@ const PLACEMENT_VERIFY_INTERVAL: Duration = Duration::from_millis(100);
 const CIRCUIT_SNAPSHOT_TTL: Duration = Duration::from_secs(15 * 60);
 const MAX_CIRCUIT_SNAPSHOTS: usize = 64;
 
+#[cfg(test)]
+#[path = "service_blueprint_tests.rs"]
+mod blueprint_tests;
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ToolProfile {
     Default,
@@ -99,10 +105,11 @@ pub struct DustRouteMcp {
     plan_dimensions: Arc<Mutex<HashMap<uuid::Uuid, String>>>,
     revision_placements: Arc<Mutex<HashMap<uuid::Uuid, RevisionPlacementContext>>>,
     applied_plans: Arc<Mutex<HashMap<uuid::Uuid, bool>>>,
-    repair_plans: Arc<Mutex<HashMap<uuid::Uuid, StoredRepairPlan>>>,
     transition_plans: Arc<Mutex<HashMap<uuid::Uuid, StoredTransitionPlan>>>,
     door_plans: Arc<Mutex<HashMap<uuid::Uuid, StoredDoorPlan>>>,
     piston_placements: Arc<Mutex<HashMap<uuid::Uuid, StoredPistonPlacement>>>,
+    assembly_placements:
+        Arc<Mutex<HashMap<uuid::Uuid, assembly_placement::StoredAssemblyPlacement>>>,
     state_store: PlanStateStore,
     policy: McpPolicy,
     app: DustRouteService,
@@ -310,6 +317,9 @@ struct GetLookedAtCircuitIrParams {
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 struct TestCircuitChangeParams {
+    /// Alternative to block edits: append Blueprint drafts, capture an Assembly,
+    /// or create an explicit child-update proposal. Does not write Minecraft.
+    blueprint: Option<crate::blueprint_mcp::BlueprintWrite>,
     /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
     #[schemars(skip)]
     player: Option<String>,
@@ -335,8 +345,12 @@ struct VirtualBlockChangeParam {
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 struct GetCircuitRevisionParams {
+    /// Alternative to revision_id: read the local Blueprint catalog or an exact
+    /// source/type/classification/Assembly record. Saved records are not proof.
+    blueprint: Option<crate::blueprint_mcp::BlueprintRead>,
+    #[serde(default)]
     revision_id: String,
-    /// Include the complete hypothetical snapshot, in addition to diff and validation.
+    /// Include the literal snapshot and modeled Assembly Revision, if available.
     include_snapshot: Option<bool>,
 }
 
@@ -357,6 +371,11 @@ struct PreviewPlacementParams {
     circuit: String,
     /// Alternative to a built-in name: plan the cumulative revision diff at its original coordinates.
     revision_id: Option<String>,
+    /// Alternative to circuit/revision: an adopted Assembly whose ancestry is grounded in a complete captured Circuit Revision. Reflected only at the original dimension and coordinates.
+    assembly_revision_id: Option<dustroute_library::blueprint::AssemblyRevisionId>,
+    /// Construct the adopted Assembly at an explicit new target, after a fresh
+    /// review there. Requires the unified electrical execution context.
+    assembly_target: Option<assembly_placement::AssemblyPlacementTarget>,
     /// Maximum number of blocks allowed in one placement plan. Defaults to 32768.
     max_blocks: Option<usize>,
     /// Run directional compression followed by global compaction before creating the placement plan.
@@ -379,7 +398,7 @@ struct ConfirmedOperationParams {
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 struct ShowOperationParams {
-    /// Operation UUID returned by a new_* tool.
+    /// Operation UUID returned by a new_* tool or a Blueprint update proposal.
     operation_id: String,
     /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
     #[schemars(skip)]
@@ -388,9 +407,12 @@ struct ShowOperationParams {
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 struct InvokeOperationParams {
-    /// Operation UUID returned by a new_* tool.
+    /// Required for Blueprint update operations; never used for world changes.
+    /// Adoption revalidates the candidate and appends immutable records locally.
+    blueprint_decision: Option<crate::blueprint_mcp::BlueprintDecision>,
+    /// Operation UUID returned by a new_* tool or a Blueprint update proposal.
     operation_id: String,
-    /// Must be true to acknowledge that this call can change the test world.
+    /// Acknowledge the previewed action: a local Blueprint decision or a world operation.
     confirm: bool,
     /// Optional signal contracts used only by transition-test operations.
     contracts: Option<Vec<TransitionContractParam>>,
@@ -809,6 +831,67 @@ fn world_from_snapshot_for_service(
     snapshot: &dustroute_translate::MinecraftSnapshot,
 ) -> Result<dustroute_translate::World, String> {
     world_from_snapshot(snapshot).map_err(|error| error.to_string())
+}
+
+fn snapshot_from_grounded_assembly(
+    record: &dustroute_library::assembly::AssemblyRevision,
+    min: Pos,
+    max: Pos,
+) -> Result<dustroute_translate::MinecraftSnapshot, String> {
+    if !record
+        .assembly
+        .known_regions
+        .iter()
+        .any(|region| region.contains(min) && region.contains(max))
+    {
+        return Err(
+            "adopted Assembly does not declare the complete grounded observation region as known"
+                .into(),
+        );
+    }
+    let inside = |position: Pos| {
+        position.x >= min.x
+            && position.x <= max.x
+            && position.y >= min.y
+            && position.y <= max.y
+            && position.z >= min.z
+            && position.z <= max.z
+    };
+    let mut seen = BTreeSet::new();
+    let mut blocks = Vec::new();
+    for positioned in &record.assembly.blocks {
+        if !inside(positioned.position) || !seen.insert(positioned.position) {
+            return Err("adopted Assembly has an out-of-bounds or duplicate actual block".into());
+        }
+        if positioned.block.kind == BlockKind::Air {
+            continue;
+        }
+        let state =
+            java_block_state(&positioned.block, &JavaExportConfig::default()).map_err(|error| {
+                format!("adopted Assembly block is not losslessly exportable: {error}")
+            })?;
+        let (name, encoded) = state
+            .split_once('[')
+            .map_or((state.as_str(), ""), |(name, properties)| {
+                (name, properties.trim_end_matches(']'))
+            });
+        let properties = encoded
+            .split(',')
+            .filter(|entry| !entry.is_empty())
+            .map(|entry| {
+                entry
+                    .split_once('=')
+                    .map(|(name, value)| (name.to_owned(), value.to_owned()))
+                    .ok_or_else(|| "exported block state has an invalid property".to_owned())
+            })
+            .collect::<Result<BTreeMap<_, _>, _>>()?;
+        blocks.push(dustroute_translate::MinecraftSnapshotBlock {
+            pos: positioned.position,
+            name: name.to_owned(),
+            properties,
+        });
+    }
+    Ok(dustroute_translate::MinecraftSnapshot { min, max, blocks })
 }
 
 fn error_text(code: McpErrorCode, message: impl Into<String>, retryable: bool) -> String {
@@ -1684,10 +1767,11 @@ fn virtual_analysis_summary(
     let mixed = dustroute_ir::build_mixed_ir(&hierarchy);
     let diagnostic = dustroute_translate::diagnose_scene(scene, Some(focus), complete);
     let faults = diagnostic
+        .diagnosis
         .findings
         .iter()
         .filter(|finding| {
-            finding.status == dustroute_translate::CircuitDiagnosticStatus::ProbableFault
+            matches!(&finding.evidence, dustroute_translate::diagnostic::report::FindingEvidence::Connectivity(f) if f.status == dustroute_translate::CircuitDiagnosticStatus::ProbableFault)
         })
         .collect::<Vec<_>>();
     let mut representations = BTreeMap::<&str, usize>::new();
@@ -1721,7 +1805,21 @@ fn revision_json(r: &crate::revision::CircuitRevision, include_snapshot: bool) -
     let mut value = json!({"ok":true,"schema_version":r.schema_version,"analysis_mode":"virtual_circuit_revision","revision_id":r.revision_id,"parent_revision_ids":r.parent_revision_ids,"base_observation_id":r.base_observation_id,"dimension":r.dimension,"bounds":{"min":r.snapshot.min,"max":r.snapshot.max},"changes":r.changes,"validation":r.validation,"analysis_complete":r.complete,"mutation_performed":false,"live_world_evidence":false,"placement_authorized":false,"retention":"DUSTROUTE_PLAN_TTL_SECONDS (default 3600 seconds); reads do not extend lifetime"});
     if include_snapshot {
         value["snapshot"] = json!(r.snapshot);
+        value["assembly_revision"] = json!(r.assembly);
     }
+    value["assembly_state"] = match &r.assembly {
+        Some(record) => json!({
+            "status": "available",
+            "assembly_revision_id": record.id,
+            "parent_assembly_revision_ids": record.parents,
+            "source_revision_ids": record.assembly.instances.iter().map(|instance| &instance.revision).collect::<std::collections::BTreeSet<_>>(),
+            "block_records": record.assembly.blocks.len(),
+            "source_instances": record.assembly.instances.len(),
+            "connections": record.assembly.connections.len(),
+            "scope": "saved hypothetical state; source references are interpretations, not restored evidence"
+        }),
+        None => json!({"status": "unavailable_or_legacy"}),
+    };
     value
 }
 
@@ -2052,6 +2150,36 @@ fn reverse_result_json(
 }
 
 impl DustRouteMcp {
+    async fn blueprint_command(
+        &self,
+        command: crate::blueprint_mcp::Command,
+        player_override: Option<&str>,
+        required: bool,
+    ) -> Option<String> {
+        let player = match self.resolve_player(player_override) {
+            Ok(player) => player,
+            Err(error) => return required.then(|| json_text(crate::blueprint_mcp::failure(error))),
+        };
+        if let Some(error) = self.authorize_player(&player) {
+            return Some(error);
+        }
+        let store = self.state_store.clone();
+        match tokio::task::spawn_blocking(move || {
+            crate::blueprint_mcp::execute(&store, &player, command)
+        })
+        .await
+        {
+            Ok(Ok(Some(result))) => Some(json_text(result)),
+            Ok(Ok(None)) => required.then(|| {
+                json_text(crate::blueprint_mcp::failure(
+                    "unknown Blueprint operation ID",
+                ))
+            }),
+            Ok(Err(error)) => Some(json_text(crate::blueprint_mcp::failure(error))),
+            Err(error) => Some(json_text(crate::blueprint_mcp::failure(error))),
+        }
+    }
+
     #[must_use]
     pub fn new(bridge_address: impl Into<String>) -> Self {
         Self::with_policy(bridge_address, McpPolicy::default())
@@ -2085,10 +2213,10 @@ impl DustRouteMcp {
             plan_dimensions: Arc::new(Mutex::new(HashMap::new())),
             revision_placements: Arc::new(Mutex::new(HashMap::new())),
             applied_plans: Arc::new(Mutex::new(HashMap::new())),
-            repair_plans: Arc::new(Mutex::new(HashMap::new())),
             transition_plans: Arc::new(Mutex::new(HashMap::new())),
             door_plans: Arc::new(Mutex::new(HashMap::new())),
             piston_placements: Arc::new(Mutex::new(HashMap::new())),
+            assembly_placements: Arc::new(Mutex::new(HashMap::new())),
             state_store: PlanStateStore::from_environment("default"),
             policy,
             app: DustRouteService::default(),
@@ -2125,24 +2253,16 @@ impl DustRouteMcp {
         operation_id: uuid::Uuid,
         plan: StoredRepairPlan,
     ) -> Result<(), String> {
-        self.state_store.save("repairs", operation_id, &plan)?;
-        self.repair_plans.lock().await.insert(operation_id, plan);
-        Ok(())
+        self.state_store.save("repairs", operation_id, &plan)
     }
 
     async fn repair_plan(
         &self,
         operation_id: uuid::Uuid,
     ) -> Result<Option<StoredRepairPlan>, String> {
-        let plan: Option<StoredRepairPlan> = self.state_store.load("repairs", operation_id)?;
-        if let Some(plan) = &plan {
-            self.repair_plans
-                .lock()
-                .await
-                .insert(operation_id, plan.clone());
-            return Ok(Some(plan.clone()));
-        }
-        Ok(self.repair_plans.lock().await.get(&operation_id).cloned())
+        // Disk retention applies equally before and after a service restart.
+        // An expired or removed record must not be resurrected from memory.
+        self.state_store.load("repairs", operation_id)
     }
 
     fn resolve_player(&self, requested: Option<&str>) -> Result<String, String> {
@@ -3733,7 +3853,7 @@ impl DustRouteMcp {
     }
 
     #[tool(
-        description = "Capture or reuse an immutable circuit snapshot and return a compact health summary plus bounded focused_explanation (local role, directed edges, terminal candidates, paths, and timing caveats). Omit circuit_id to capture the current gaze; pass the returned circuit_id to keep later analysis on the same circuit",
+        description = "Capture or reuse an immutable circuit snapshot and return a compact health summary with shared diagnostic findings and bounded focused_explanation (local role, directed edges, terminal candidates, paths, and timing caveats). Omit circuit_id to capture the current gaze; pass the returned circuit_id to keep later analysis on the same circuit",
         annotations(read_only_hint = true, destructive_hint = false)
     )]
     async fn test_circuit(&self, Parameters(params): Parameters<DiagnoseLookedAtParams>) -> String {
@@ -3884,26 +4004,74 @@ impl DustRouteMcp {
     }
 
     #[tool(
-        description = "Create an immutable hypothetical circuit revision from exactly one circuit_id or revision_id. Apply up to 64 full block-state edits (add, replace, or air to delete), save before/after diagnostics and bounded initial-state simulation, and return revision_id. Empty changes copies the source. Never changes Minecraft or authorizes placement.",
-        annotations(read_only_hint = true, destructive_hint = false)
+        description = "Use blueprint.action to import unverified source/state records, capture_revision from a saved circuit revision, optimize the supplied Assembly or an explicit component body for fewer actual blocks preserving only an explicit behavioral type, enumerate_layouts for freshly checked torch/support placements, or propose_update with explicit new definitions and candidate state. Component scope separates body_positions from fixed external equipment and reports body/total counts. Device outputs can directly observe a torch. Blueprint optimize and enumerate_layouts return candidate data without publishing it; inspect moved ports and removed interpretations before proposing parent changes. Blueprint proposals continue through show_operation and invoke_operation. Otherwise create an immutable hypothetical circuit revision from exactly one circuit_id or revision_id. Apply up to 64 full block-state edits (add, replace, or air to delete), save before/after diagnostics, bounded initial-state simulation and a separate modeled Assembly Revision when decodable. Blueprint source references stay pinned; observation alone does not infer them. Empty changes copies the source. Never changes Minecraft or authorizes placement.",
+        annotations(read_only_hint = false, destructive_hint = false)
     )]
     async fn test_circuit_change(
         &self,
         Parameters(params): Parameters<TestCircuitChangeParams>,
     ) -> String {
+        if let Some(write) = params.blueprint {
+            if !params.changes.is_empty()
+                || params.simulation_ticks.is_some()
+                || params.circuit_id.is_some()
+                || params.revision_id.is_some()
+            {
+                return json_text(crate::blueprint_mcp::failure(
+                    "blueprint operations cannot be combined with circuit block-edit parameters",
+                ));
+            }
+            let command = if let crate::blueprint_mcp::BlueprintWrite::CaptureRevision {
+                revision_id,
+            } = write
+            {
+                let player = match self.resolve_player(params.player.as_deref()) {
+                    Ok(p) => p,
+                    Err(e) => return json_text(crate::blueprint_mcp::failure(e)),
+                };
+                if let Some(error) = self.authorize_player(&player) {
+                    return error;
+                }
+                let (record, grounding) = match self.load_revision(&revision_id, &player).and_then(|r| {
+                    let record = r.assembly.clone().ok_or_else(|| "revision has no decodable Assembly".to_owned())?;
+                    let base_snapshot = r.base_snapshot.clone().ok_or_else(|| "revision has no retained base snapshot; capture from a complete observation first".to_owned())?;
+                    Ok((record.clone(), crate::blueprint_mcp::AssemblyGrounding {
+                        assembly_revision_id: record.id,
+                        circuit_revision_id: r.revision_id,
+                        base_observation_id: r.base_observation_id,
+                        dimension: r.dimension,
+                        complete: r.complete,
+                        base_snapshot,
+                    }))
+                }) {
+                    Ok(value) => value,
+                    Err(e) => return json_text(crate::blueprint_mcp::failure(e)),
+                };
+                crate::blueprint_mcp::Command::Capture {
+                    record: Box::new(record),
+                    grounding,
+                }
+            } else {
+                crate::blueprint_mcp::Command::Write(write)
+            };
+            return self
+                .blueprint_command(command, params.player.as_deref(), true)
+                .await
+                .expect("explicit blueprint response");
+        }
         let result: Result<Value,String> = async {
             let player=self.resolve_player(params.player.as_deref())?;
             if let Some(error)=self.authorize_player(&player) {return Err(error);}
             let ticks=params.simulation_ticks.unwrap_or(64);
             if !(1..=256).contains(&ticks) {return Err("simulation_ticks must be 1 through 256".into());}
-            let (base_observation_id,parents,dimension,target,complete,baseline,base_snapshot)=match (params.circuit_id.as_deref(),params.revision_id.as_deref()) {
+            let (base_observation_id,parents,dimension,target,complete,baseline,base_snapshot,parent_assembly)=match (params.circuit_id.as_deref(),params.revision_id.as_deref()) {
                 (Some(id),None)=>{
                     let (id,c)=self.load_circuit(id,&player).await?;
-                    (id,vec![],c.dimension,c.target,c.complete,c.snapshot.clone(),Some(c.snapshot))
+                    (id,vec![],c.dimension,c.target,c.complete,c.snapshot.clone(),Some(c.snapshot),None)
                 },
                 (None,Some(id))=>{
                     let r=self.load_revision(id,&player)?;
-                    (r.base_observation_id,vec![r.revision_id],r.dimension,r.target,r.complete,r.snapshot,r.base_snapshot)
+                    (r.base_observation_id,vec![r.revision_id],r.dimension,r.target,r.complete,r.snapshot,r.base_snapshot,r.assembly)
                 },
                 _=>return Err("provide exactly one of circuit_id or revision_id".into()),
             };
@@ -3914,10 +4082,27 @@ impl DustRouteMcp {
             let focus=target.unwrap_or(snapshot.min);
             let before=revision_validation(&baseline,&dimension,focus,complete,ticks);
             let after=revision_validation(&snapshot,&dimension,focus,complete,ticks);
-            let revision=crate::revision::CircuitRevision{
+            let mut revision=crate::revision::CircuitRevision{
                 schema_version:"dustroute.circuit-revision.v1".into(),revision_id:uuid::Uuid::new_v4(),parent_revision_ids:parents,base_observation_id,player,dimension,target,complete,snapshot,base_snapshot,changes,
                 validation:json!({"before":before,"after":after,"simulation_ticks":ticks,"scope":"initial_state_only; no functional equivalence or live-world guarantee"}),
+                assembly:None,
             };
+            match revision.capture_assembly(parent_assembly.as_ref()) {
+                Ok(record)=>{
+                    let checked=dustroute_translate::assembly::validate_assembly(dustroute_library::builtin_blueprints::builtin_blueprints(),&record.assembly);
+                    revision.validation["assembly"]=match checked {
+                        Ok(_)=>json!({"status":"placement_and_declared_connections_valid","scope":"modeled state only; no behavioral or live-world proof"}),
+                        Err(error)=>json!({"status":"invalid_or_unsupported","error":error.to_string()}),
+                    };
+                    revision.assembly=Some(record);
+                },
+                Err(error)=>{
+                    if parent_assembly.as_ref().is_some_and(|parent| !parent.assembly.instances.is_empty()) {
+                        return Err(format!("cannot retain pinned blueprint interpretations for this state: {error}"));
+                    }
+                    revision.validation["assembly"]=json!({"status":"unavailable","error":error});
+                },
+            }
             if serde_json::to_vec(&revision).map_err(|e|e.to_string())?.len()>crate::revision::MAX_BYTES {return Err("revision record exceeds 4 MiB".into());}
             self.state_store.save("circuit_revisions",revision.revision_id,&revision)?;
             Ok(revision_json(&revision,false))
@@ -3951,17 +4136,29 @@ impl DustRouteMcp {
                 r.snapshot.max,
             ))
             .map_err(|e| e.to_string())?;
+        r.check_assembly_record()?;
         Ok(r)
     }
 
     #[tool(
-        description = "Read a saved immutable hypothetical revision: parent IDs, original observation ID, edits and stored validation. Optionally include its full snapshot. This is not a fresh world observation and cannot be used as a live circuit_id.",
+        description = "Use blueprint.kind to list the catalog or read a Blueprint, Assembly, type, classification, or exported archive. Blueprint IDs are separate from hypothetical revision_id and never grant placement permission. Otherwise read a saved immutable hypothetical revision: parent IDs, original observation ID, edits, stored validation and Assembly Revision summary. include_snapshot=true also returns the literal snapshot and modeled assembly, including pinned source references when present. Source definitions are separate and are not rewritten by edits. This is not fresh observation or a live circuit_id.",
         annotations(read_only_hint = true, destructive_hint = false)
     )]
     async fn get_circuit_revision(
         &self,
         Parameters(params): Parameters<GetCircuitRevisionParams>,
     ) -> String {
+        if let Some(query) = params.blueprint {
+            if !params.revision_id.is_empty() || params.include_snapshot.is_some() {
+                return json_text(crate::blueprint_mcp::failure(
+                    "blueprint queries cannot be combined with revision_id/include_snapshot",
+                ));
+            }
+            return self
+                .blueprint_command(crate::blueprint_mcp::Command::Read(query), None, true)
+                .await
+                .expect("explicit blueprint response");
+        }
         let result: Result<Value, String> = (|| {
             let player = self.resolve_player(None)?;
             if let Some(error) = self.authorize_player(&player) {
@@ -4139,8 +4336,13 @@ impl DustRouteMcp {
                         } else {
                             ContextualVerificationState::Failed
                         };
-                        let materialized =
-                            materialize_macro_replacement(&plan, &world, &replaceable, 14);
+                        let materialized = materialize_macro_replacement_in_known_regions(
+                            &plan,
+                            &world,
+                            &[dustroute_translate::Region::new(snapshot.min, snapshot.max)],
+                            &replaceable,
+                            14,
+                        );
                         let steady_state = materialized.as_ref().ok().map(|materialized| {
                             verify_macro_steady_state(
                                 &model.truth_table,
@@ -4364,12 +4566,18 @@ impl DustRouteMcp {
     }
 
     #[tool(
-        description = "Plan either a built-in circuit at the gaze target or a revision_id cumulative diff at its original coordinates. Revision placement rescans and validates the full base and surrounding context. Returns a previewable operation and undo plan without changing the world"
+        description = "Plan a built-in circuit, a grounded revision at its original coordinates, or an adopted electrical Assembly at a new assembly_target (source_anchor, target_anchor, rotation). Custom construction freshly reviews the target and simulates ordered installation/removal with full readback after each step. Returns a previewable operation and conditional undo without changing the world"
     )]
     async fn new_placement(
         &self,
         Parameters(params): Parameters<PreviewPlacementParams>,
     ) -> String {
+        if params.assembly_target.is_some() {
+            return self.plan_assembly_construction(params).await;
+        }
+        if params.assembly_revision_id.is_some() {
+            return self.plan_adopted_assembly_placement(params).await;
+        }
         if params.revision_id.is_some() {
             return self.plan_revision_placement(params).await;
         }
@@ -4410,7 +4618,7 @@ impl DustRouteMcp {
             }
             Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
         };
-        let (proposed_world, optimization) = if params.optimize.unwrap_or(false) {
+        let (proposed_world, assembly, optimization) = if params.optimize.unwrap_or(false) {
             let optimization_plan = OptimizationPlan::directional_then_global(
                 CompressionAxis::X,
                 CompressionDirection::TowardMinimum,
@@ -4465,8 +4673,17 @@ impl DustRouteMcp {
                     })
                 })
                 .collect::<Vec<_>>();
+            let assembly = match realized.capture_assembly() {
+                Ok(assembly) => assembly,
+                Err(error) => {
+                    return json_text(
+                        json!({"ok":false,"error":format!("cannot capture optimized blueprint state: {error}")}),
+                    );
+                }
+            };
             (
                 realized.world,
+                assembly,
                 Some(json!({
                     "strategy": "directional_x_toward_minimum_then_global",
                     "safety": safety_label,
@@ -4476,8 +4693,28 @@ impl DustRouteMcp {
                 })),
             )
         } else {
-            (translated.compiled.world.clone().into_world(), None)
+            let assembly = match translated.compiled.capture_assembly(&params.circuit) {
+                Ok(assembly) => assembly,
+                Err(error) => {
+                    return json_text(
+                        json!({"ok":false,"error":format!("cannot capture compiled blueprint state: {error}")}),
+                    );
+                }
+            };
+            (
+                translated.compiled.world.clone().into_world(),
+                assembly,
+                None,
+            )
         };
+        if let Err(error) = dustroute_translate::assembly::validate_assembly(
+            dustroute_library::builtin_blueprints::builtin_blueprints(),
+            &assembly,
+        ) {
+            return json_text(
+                json!({"ok":false,"error":format!("proposed assembly failed validation: {error}")}),
+            );
+        }
         let Some((local_min, local_max)) = proposed_world.bounds() else {
             return json_text(json!({ "ok": false, "error": "compiled circuit is empty" }));
         };
@@ -4521,7 +4758,7 @@ impl DustRouteMcp {
                 );
             }
         };
-        let plan = match plan_world_overlay(
+        let mut plan = match plan_world_overlay(
             &existing,
             &proposed_world,
             origin,
@@ -4534,6 +4771,23 @@ impl DustRouteMcp {
             Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
         };
         let operation_id = plan.operation_id;
+        let assembly_id = crate::revision::assembly_id(uuid::Uuid::new_v4());
+        let assembly_summary = json!({
+            "assembly_revision_id": assembly_id,
+            "coordinate_origin": origin,
+            "source_revision_ids": assembly.instances.iter().map(|instance| &instance.revision).collect::<std::collections::BTreeSet<_>>(),
+            "source_instances": assembly.instances.len(),
+            "connections": assembly.connections.len(),
+            "scope": "proposed composed circuit state; full data in show_operation"
+        });
+        plan.assembly = Some(dustroute_app::PlacementAssembly {
+            coordinate_origin: origin,
+            revision: dustroute_library::assembly::AssemblyRevision {
+                id: assembly_id,
+                parents: vec![],
+                assembly,
+            },
+        });
         let collision_samples = plan
             .changes
             .iter()
@@ -4553,6 +4807,7 @@ impl DustRouteMcp {
             "materials": &plan.materials,
             "undo_change_count": plan.undo.changes.len(),
             "optimization": optimization,
+            "assembly_state": assembly_summary,
             "next_step": if self.policy.read_only {
                 "review this plan; writes are disabled by policy"
             } else {
@@ -4575,7 +4830,7 @@ impl DustRouteMcp {
     }
 
     #[tool(
-        description = "Retrieve the complete placement and exact undo plan by operation ID",
+        description = "Retrieve the complete placement and exact undo plan by operation ID, including a separate proposed Assembly Revision and its coordinate origin when available. Blueprint references are pinned source definitions; proposed state is not live evidence.",
         annotations(read_only_hint = true, destructive_hint = false)
     )]
     async fn get_circuit_placement(
@@ -4588,6 +4843,14 @@ impl DustRouteMcp {
                 return error_text(McpErrorCode::InvalidArgument, error.to_string(), false);
             }
         };
+        if self
+            .assembly_placements
+            .lock()
+            .await
+            .contains_key(&operation_id)
+        {
+            return self.get_assembly_construction(operation_id).await;
+        }
         if let Some(plan) = self.piston_placements.lock().await.get(&operation_id) {
             let player = match self.resolve_player(None) {
                 Ok(player) => player,
@@ -4625,20 +4888,6 @@ impl DustRouteMcp {
             }
             None => json_text(json!({ "ok": false, "error": "unknown operation ID" })),
         }
-    }
-
-    async fn invoke_circuit_placement(
-        &self,
-        Parameters(params): Parameters<ConfirmedOperationParams>,
-    ) -> String {
-        self.mutate_placement(params, false).await
-    }
-
-    async fn undo_circuit_placement(
-        &self,
-        Parameters(params): Parameters<ConfirmedOperationParams>,
-    ) -> String {
-        self.mutate_placement(params, true).await
     }
 
     #[tool(
@@ -4810,7 +5059,7 @@ impl DustRouteMcp {
     }
 
     #[tool(
-        description = "Create ranked, non-mutating partial repair plans from the supplied immutable circuit_id"
+        description = "Create ranked, non-mutating partial repair plans from the supplied immutable circuit_id, with shared diagnostic evidence and report-local finding references"
     )]
     async fn new_repair(&self, Parameters(params): Parameters<ProposeRepairsParams>) -> String {
         let player = match self.resolve_player(params.player.as_deref()) {
@@ -4837,8 +5086,18 @@ impl DustRouteMcp {
         };
         let analysis = dustroute_translate::analyze_world_region(&world, bounds);
         let fragments_before = analysis.scene.fragments.len();
+        let mut diagnostic =
+            dustroute_translate::diagnose_scene(&analysis.scene, circuit.target, circuit.complete);
         let proposals =
             dustroute_translate::propose_scene_repairs(&world, &analysis.scene, max_gap);
+        diagnostic.diagnosis.assess_repair(
+            if proposals.is_empty() {
+                dustroute_translate::diagnostic::report::RepairStatus::NoCandidate
+            } else {
+                dustroute_translate::diagnostic::report::RepairStatus::PlanAvailable
+            },
+            None,
+        );
         let mut response = Vec::new();
         for proposal in proposals.into_iter().take(32) {
             let operation_id = uuid::Uuid::new_v4();
@@ -4874,6 +5133,7 @@ impl DustRouteMcp {
                 .await;
             response.push(json!({
                 "operation_id": operation_id,
+                "diagnostic_finding_ids": diagnostic.diagnosis.findings_for_repair(&proposal, &analysis.scene),
                 "patch": proposal.patch,
                 "evidence": proposal.evidence,
                 "impact": proposal.impact,
@@ -4885,6 +5145,7 @@ impl DustRouteMcp {
             "circuit_id": circuit_id,
             "bounds": bounds_json(bounds),
             "fragments": fragments_before,
+            "diagnostic": diagnostic,
             "proposal_count": response.len(),
             "proposals": response,
             "next_step": "review a proposal, call show_operation, ask for explicit confirmation, then call invoke_operation with confirm=true"
@@ -4919,10 +5180,18 @@ impl DustRouteMcp {
             Err(error) => return error_text(McpErrorCode::SerializationFailed, error, false),
         };
         let analysis = dustroute_translate::analyze_world_region(&world, circuit.bounds);
-        let diagnostic =
+        let mut diagnostic =
             dustroute_translate::diagnose_scene(&analysis.scene, circuit.target, circuit.complete);
         let proposals =
             dustroute_translate::propose_scene_repairs(&world, &analysis.scene, max_gap);
+        diagnostic.diagnosis.assess_repair(
+            if proposals.is_empty() {
+                dustroute_translate::diagnostic::report::RepairStatus::NoCandidate
+            } else {
+                dustroute_translate::diagnostic::report::RepairStatus::PlanAvailable
+            },
+            None,
+        );
         let operation_id = match params.operation_id.as_deref() {
             Some(value) => match uuid::Uuid::parse_str(value) {
                 Ok(id) => Some(id),
@@ -5049,6 +5318,7 @@ impl DustRouteMcp {
                 "confidence_percent": proposal.patch.confidence_percent,
                 "supporting_evidence": supporting_evidence,
                 "contradictions": contradictions,
+                "diagnostic_finding_ids": diagnostic.diagnosis.findings_for_repair(proposal, &analysis.scene),
                 "physical_evidence": proposal.evidence,
                 "counterfactual_impact": proposal.impact,
                 "operation_id": operation_id
@@ -5204,8 +5474,16 @@ impl DustRouteMcp {
             );
         }
         placement.verification.structural = ContextualVerificationState::Passed;
-        let materialized = match materialize_macro_replacement(&placement, &world, &replaceable, 14)
-        {
+        let materialized = match materialize_macro_replacement_in_known_regions(
+            &placement,
+            &world,
+            &[dustroute_translate::Region::new(
+                circuit.snapshot.min,
+                circuit.snapshot.max,
+            )],
+            &replaceable,
+            14,
+        ) {
             Ok(materialized) => materialized,
             Err(error) => {
                 return error_text(
@@ -5829,83 +6107,295 @@ impl DustRouteMcp {
         }
     }
 
-    async fn invoke_repair(
-        &self,
-        Parameters(params): Parameters<ConfirmedOperationParams>,
-    ) -> String {
-        self.mutate_repair(params, false).await
-    }
-
-    async fn undo_repair(
-        &self,
-        Parameters(params): Parameters<ConfirmedOperationParams>,
-    ) -> String {
-        self.mutate_repair(params, true).await
-    }
-
     async fn plan_revision_placement(&self, params: PreviewPlacementParams) -> String {
-        let result:Result<Value,String>=async {
-            if !params.circuit.is_empty() || params.optimize.unwrap_or(false) {return Err("revision_id cannot be combined with a built-in circuit or optimization".into());}
+        let result: Result<Value, String> = async {
+            if !params.circuit.is_empty()
+                || params.optimize.unwrap_or(false)
+                || params.assembly_revision_id.is_some()
+            {
+                return Err("revision_id cannot be combined with a built-in circuit, Assembly Revision or optimization".into());
+            }
             let player=self.resolve_player(params.player.as_deref())?;
             if let Some(error)=self.authorize_player(&player) {return Err(error);}
             let revision=self.load_revision(params.revision_id.as_deref().ok_or("revision_id required")?,&player)?;
-            if !revision.complete {return Err("incomplete source observation cannot authorize placement".into());}
-            let base=revision.base_snapshot.as_ref().ok_or("revision has no retained base snapshot; create a new revision from a fresh observation")?;
-            if base.min!=revision.snapshot.min || base.max!=revision.snapshot.max {return Err("revision cannot expand observation bounds".into());}
-            let base_map=crate::revision::blocks(base)?;
-            let target_map=crate::revision::blocks(&revision.snapshot)?;
-            let offset=|p:Pos,d:i32|->Result<Pos,String>{Ok(Pos::new(p.x.checked_add(d).ok_or("coordinate overflow")?,p.y.checked_add(d).ok_or("coordinate overflow")?,p.z.checked_add(d).ok_or("coordinate overflow")?))};
-            let bounds=dustroute_translate::RegionBounds::new(offset(base.min,-1)?,offset(base.max,1)?);
-            self.policy.validate_region(bounds).map_err(|e|e.to_string())?;
-            let status=self.bridge.status().await.map_err(|e|e.to_string())?;
-            if !status.connected || status.dimension.as_deref()!=Some(revision.dimension.as_str()) {return Err("bot disconnected or dimension changed".into());}
-            let before=self.bridge.scan_region(bounds.min,bounds.max,&revision.dimension).await.map_err(|e|e.to_string())?;
-            if before.min!=bounds.min || before.max!=bounds.max {return Err("complete context scan required".into());}
-            let context=crate::revision::blocks(&before)?;
-            let inside=|p:Pos|p.x>=base.min.x&&p.y>=base.min.y&&p.z>=base.min.z&&p.x<=base.max.x&&p.y<=base.max.y&&p.z<=base.max.z;
-            let observed=context.iter().filter(|(p,_)|inside(**p)).map(|(p,b)|(*p,b.clone())).collect::<BTreeMap<_,_>>();
-            if observed!=base_map {return Err("physical world differs from the base observation; capture and revise again".into());}
-            let mut final_map=context.clone();
-            final_map.retain(|p,_|!inside(*p));
-            final_map.extend(target_map.clone());
-            let after=dustroute_translate::MinecraftSnapshot{min:bounds.min,max:bounds.max,blocks:final_map.into_values().collect()};
-            let old=world_from_snapshot(&before).map_err(|e|e.to_string())?;
-            let new=world_from_snapshot(&after).map_err(|e|e.to_string())?;
-            dustroute_translate::ValidatedWorld::try_from(old.clone()).map_err(|e|format!("baseline is invalid or unsupported: {e}"))?;
-            let mut changes=Vec::new();
-            let mut materials=BTreeMap::<String,usize>::new();
-            let positions=base_map.keys().chain(target_map.keys()).copied().collect::<BTreeSet<_>>();
-            for pos in positions {
-                if base_map.get(&pos)==target_map.get(&pos) {continue;}
-                let before_block=old.get(pos).cloned().unwrap_or_else(||dustroute_translate::Block::new(BlockKind::Air));
-                let after_block=new.get(pos).cloned().unwrap_or_else(||dustroute_translate::Block::new(BlockKind::Air));
-                // Reject lossy/defaulted metadata instead of silently installing a different revision.
-                for (record,block) in [(base_map.get(&pos),&before_block),(target_map.get(&pos),&after_block)] {
-                    if let Some(record)=record {
-                        let exported=java_block_state(block,&JavaExportConfig::default()).map_err(|e|e.to_string())?;
-                        let requested=crate::revision::state(record);
-                        let split=|s:&str|->(String,BTreeSet<String>){let (name,props)=s.split_once('[').unwrap_or((s,""));(name.into(),props.trim_end_matches(']').split(',').filter(|s|!s.is_empty()).map(str::to_owned).collect())};
-                        if split(&exported)!=split(&requested) {return Err(format!("block at {pos:?} must have complete, losslessly exportable properties; expected {exported}"));}
-                    }
-                }
-                if let Some(b)=target_map.get(&pos) {*materials.entry(b.name.clone()).or_default()+=1;}
-                changes.push(BlockChange{pos,before:before_block,after:after_block,collision:base_map.contains_key(&pos)});
-            }
-            if changes.is_empty() {return Err("revision has no cumulative changes from its base observation".into());}
-            self.policy.validate_placement_size(changes.len()).map_err(|e|e.to_string())?;
-            if params.max_blocks.is_some_and(|limit|changes.len()>limit) {return Err("revision diff exceeds max_blocks".into());}
-            dustroute_app::ValidatedBlockChanges::new(&old,changes.clone()).map_err(|e|format!("revision placement rejected: {e}: {:?}",e.issues))?;
-            let id=uuid::Uuid::new_v4();
-            let undo=dustroute_app::UndoPlan{operation_id:id,changes:changes.iter().map(|c|BlockChange{pos:c.pos,before:c.after.clone(),after:c.before.clone(),collision:false}).collect()};
-            let plan=PlacementPlan{operation_id:id,origin:base.min,collision_count:changes.iter().filter(|c|c.collision).count(),changes,materials,undo,previewed:false};
-            let response=json!({"ok":true,"operation_id":id,"revision_id":revision.revision_id,"base_observation_id":revision.base_observation_id,"bounds":bounds_json(bounds),"plan":plan,"read_only":self.policy.read_only,"next_step":"show_operation then invoke_operation(confirm=true)","validation_scope":"modeled placement and exact context; not functional equivalence"});
-            self.revision_placements.lock().await.insert(id,RevisionPlacementContext{player,dimension:revision.dimension.clone(),version:status.version,before,after,expires_at:Instant::now()+Duration::from_secs(300),consumed:false,undo_consumed:false});
-            self.plan_dimensions.lock().await.insert(id,revision.dimension);
-            self.plans.lock().await.insert(id,plan);
-            self.operations.record_completed(id,OperationKind::PlacementPreview,response.clone()).await;
-            Ok(response)
+            self.plan_grounded_revision_placement(
+                &params,
+                player,
+                revision.clone(),
+                json!({"kind":"circuit_revision","revision_id":revision.revision_id}),
+            ).await
         }.await;
         json_text(result.unwrap_or_else(|error| json!({"ok":false,"error":error})))
+    }
+
+    async fn plan_adopted_assembly_placement(&self, params: PreviewPlacementParams) -> String {
+        let result: Result<Value, String> = async {
+            if !params.circuit.is_empty()
+                || params.revision_id.is_some()
+                || params.optimize.unwrap_or(false)
+            {
+                return Err("assembly_revision_id cannot be combined with a built-in circuit, circuit revision or optimization".into());
+            }
+            let player = self.resolve_player(params.player.as_deref())?;
+            if let Some(error) = self.authorize_player(&player) {
+                return Err(error);
+            }
+            let assembly_id = params
+                .assembly_revision_id
+                .clone()
+                .ok_or("assembly_revision_id required")?;
+            let store = self.state_store.clone();
+            let owner = player.clone();
+            let basis = tokio::task::spawn_blocking(move || {
+                crate::blueprint_mcp::execute(
+                    &store,
+                    &owner,
+                    crate::blueprint_mcp::Command::PlacementBasis(assembly_id),
+                )
+            })
+            .await
+            .map_err(|error| error.to_string())??
+            .ok_or("adopted Assembly placement basis is unavailable")?;
+            let record: dustroute_library::assembly::AssemblyRevision =
+                serde_json::from_value(basis["record"].clone())
+                    .map_err(|error| format!("invalid adopted Assembly record: {error}"))?;
+            let grounding: crate::blueprint_mcp::AssemblyGrounding =
+                serde_json::from_value(basis["grounding"].clone())
+                    .map_err(|error| format!("invalid Assembly grounding: {error}"))?;
+            self.policy
+                .authorize_dimension(&grounding.dimension)
+                .map_err(|error| error.to_string())?;
+            let target = snapshot_from_grounded_assembly(
+                &record,
+                grounding.base_snapshot.min,
+                grounding.base_snapshot.max,
+            )?;
+            let revision = crate::revision::CircuitRevision {
+                schema_version: "dustroute.circuit-revision.v1".into(),
+                revision_id: grounding.circuit_revision_id,
+                parent_revision_ids: vec![],
+                base_observation_id: grounding.base_observation_id,
+                player: player.clone(),
+                dimension: grounding.dimension,
+                target: None,
+                complete: grounding.complete,
+                snapshot: target,
+                base_snapshot: Some(grounding.base_snapshot),
+                changes: vec![],
+                validation: json!({"source":"fresh adopted Assembly review"}),
+                assembly: Some(record.clone()),
+            };
+            self.plan_grounded_revision_placement(
+                &params,
+                player,
+                revision,
+                json!({
+                    "kind":"adopted_assembly_revision",
+                    "assembly_revision_id":record.id,
+                    "adopted_by":basis["adopted_by"],
+                    "grounding_assembly_revision_id":basis["grounding_assembly_revision_id"],
+                    "fresh_review":basis["fresh_review"],
+                    "literal_observation":"grounding.base_snapshot",
+                    "candidate_interpretation":"record.assembly"
+                }),
+            )
+            .await
+        }
+        .await;
+        json_text(result.unwrap_or_else(|error| json!({"ok":false,"error":error})))
+    }
+
+    async fn plan_grounded_revision_placement(
+        &self,
+        params: &PreviewPlacementParams,
+        player: String,
+        revision: crate::revision::CircuitRevision,
+        source: Value,
+    ) -> Result<Value, String> {
+        if !revision.complete {
+            return Err("incomplete source observation cannot authorize placement".into());
+        }
+        let base=revision.base_snapshot.as_ref().ok_or("revision has no retained base snapshot; create a new revision from a fresh observation")?;
+        if base.min != revision.snapshot.min || base.max != revision.snapshot.max {
+            return Err("revision cannot expand observation bounds".into());
+        }
+        let base_map = crate::revision::blocks(base)?;
+        let target_map = crate::revision::blocks(&revision.snapshot)?;
+        let offset = |p: Pos, d: i32| -> Result<Pos, String> {
+            Ok(Pos::new(
+                p.x.checked_add(d).ok_or("coordinate overflow")?,
+                p.y.checked_add(d).ok_or("coordinate overflow")?,
+                p.z.checked_add(d).ok_or("coordinate overflow")?,
+            ))
+        };
+        let bounds =
+            dustroute_translate::RegionBounds::new(offset(base.min, -1)?, offset(base.max, 1)?);
+        self.policy
+            .validate_region(bounds)
+            .map_err(|e| e.to_string())?;
+        let status = self.bridge.status().await.map_err(|e| e.to_string())?;
+        if !status.connected || status.dimension.as_deref() != Some(revision.dimension.as_str()) {
+            return Err("bot disconnected or dimension changed".into());
+        }
+        let before = self
+            .bridge
+            .scan_region(bounds.min, bounds.max, &revision.dimension)
+            .await
+            .map_err(|e| e.to_string())?;
+        if before.min != bounds.min || before.max != bounds.max {
+            return Err("complete context scan required".into());
+        }
+        let context = crate::revision::blocks(&before)?;
+        let inside = |p: Pos| {
+            p.x >= base.min.x
+                && p.y >= base.min.y
+                && p.z >= base.min.z
+                && p.x <= base.max.x
+                && p.y <= base.max.y
+                && p.z <= base.max.z
+        };
+        let observed = context
+            .iter()
+            .filter(|(p, _)| inside(**p))
+            .map(|(p, b)| (*p, b.clone()))
+            .collect::<BTreeMap<_, _>>();
+        if observed != base_map {
+            return Err(
+                "physical world differs from the base observation; capture and revise again".into(),
+            );
+        }
+        let mut final_map = context.clone();
+        final_map.retain(|p, _| !inside(*p));
+        final_map.extend(target_map.clone());
+        let after = dustroute_translate::MinecraftSnapshot {
+            min: bounds.min,
+            max: bounds.max,
+            blocks: final_map.into_values().collect(),
+        };
+        let old = world_from_snapshot(&before).map_err(|e| e.to_string())?;
+        let new = world_from_snapshot(&after).map_err(|e| e.to_string())?;
+        dustroute_translate::ValidatedWorld::try_from(old.clone())
+            .map_err(|e| format!("baseline is invalid or unsupported: {e}"))?;
+        let mut changes = Vec::new();
+        let mut materials = BTreeMap::<String, usize>::new();
+        let positions = base_map
+            .keys()
+            .chain(target_map.keys())
+            .copied()
+            .collect::<BTreeSet<_>>();
+        for pos in positions {
+            if base_map.get(&pos) == target_map.get(&pos) {
+                continue;
+            }
+            let before_block = old
+                .get(pos)
+                .cloned()
+                .unwrap_or_else(|| dustroute_translate::Block::new(BlockKind::Air));
+            let after_block = new
+                .get(pos)
+                .cloned()
+                .unwrap_or_else(|| dustroute_translate::Block::new(BlockKind::Air));
+            // Reject lossy/defaulted metadata instead of silently installing a different revision.
+            for (record, block) in [
+                (base_map.get(&pos), &before_block),
+                (target_map.get(&pos), &after_block),
+            ] {
+                if let Some(record) = record {
+                    let exported = java_block_state(block, &JavaExportConfig::default())
+                        .map_err(|e| e.to_string())?;
+                    let requested = crate::revision::state(record);
+                    let split = |s: &str| -> (String, BTreeSet<String>) {
+                        let (name, props) = s.split_once('[').unwrap_or((s, ""));
+                        (
+                            name.into(),
+                            props
+                                .trim_end_matches(']')
+                                .split(',')
+                                .filter(|s| !s.is_empty())
+                                .map(str::to_owned)
+                                .collect(),
+                        )
+                    };
+                    if split(&exported) != split(&requested) {
+                        return Err(format!(
+                            "block at {pos:?} must have complete, losslessly exportable properties; expected {exported}, retained {requested}"
+                        ));
+                    }
+                }
+            }
+            if let Some(b) = target_map.get(&pos) {
+                *materials.entry(b.name.clone()).or_default() += 1;
+            }
+            changes.push(BlockChange {
+                pos,
+                before: before_block,
+                after: after_block,
+                collision: base_map.contains_key(&pos),
+            });
+        }
+        if changes.is_empty() {
+            return Err("revision has no cumulative changes from its base observation".into());
+        }
+        self.policy
+            .validate_placement_size(changes.len())
+            .map_err(|e| e.to_string())?;
+        if params.max_blocks.is_some_and(|limit| changes.len() > limit) {
+            return Err("revision diff exceeds max_blocks".into());
+        }
+        dustroute_app::ValidatedBlockChanges::new(&old, changes.clone())
+            .map_err(|e| format!("revision placement rejected: {e}: {:?}", e.issues))?;
+        let id = uuid::Uuid::new_v4();
+        let undo = dustroute_app::UndoPlan {
+            operation_id: id,
+            changes: changes
+                .iter()
+                .map(|c| BlockChange {
+                    pos: c.pos,
+                    before: c.after.clone(),
+                    after: c.before.clone(),
+                    collision: false,
+                })
+                .collect(),
+        };
+        let plan = PlacementPlan {
+            operation_id: id,
+            origin: base.min,
+            collision_count: changes.iter().filter(|c| c.collision).count(),
+            changes,
+            materials,
+            undo,
+            previewed: false,
+            assembly: revision
+                .assembly
+                .clone()
+                .map(|revision| dustroute_app::PlacementAssembly {
+                    coordinate_origin: Pos::default(),
+                    revision,
+                }),
+        };
+        let response = json!({"ok":true,"operation_id":id,"source":source,"revision_id":revision.revision_id,"base_observation_id":revision.base_observation_id,"bounds":bounds_json(bounds),"plan":plan,"read_only":self.policy.read_only,"next_step":"show_operation then invoke_operation(confirm=true)","validation_scope":"fresh model review when declared, modeled placement, exact live base and surrounding context; not general functional equivalence"});
+        self.revision_placements.lock().await.insert(
+            id,
+            RevisionPlacementContext {
+                player,
+                dimension: revision.dimension.clone(),
+                version: status.version,
+                before,
+                after,
+                expires_at: Instant::now() + Duration::from_secs(300),
+                consumed: false,
+                undo_consumed: false,
+            },
+        );
+        self.plan_dimensions
+            .lock()
+            .await
+            .insert(id, revision.dimension);
+        self.plans.lock().await.insert(id, plan);
+        self.operations
+            .record_completed(id, OperationKind::PlacementPreview, response.clone())
+            .await;
+        Ok(response)
     }
 
     async fn check_revision_placement(
@@ -6918,8 +7408,19 @@ impl DustRouteMcp {
     }
 
     #[tool(
-        description = "Show or highlight any placement, repair, piston-door, or transition-test operation before execution",
-        annotations(read_only_hint = true, destructive_hint = false)
+        description = "Manage durable placed custom piston Assemblies: list/get history, observe fresh complete samples, diagnose coordinate-level missing/extra/block/property differences with shared repair assessment and pinned Blueprint references, even when reconstruction is blocked, plan_removal for a matching applied instance, or plan_reconstruction to tear down an observed supported layout and rebuild its declared initial state. Reconstruction requires review of all affected blocks and no competing inputs/edits; matching client samples do not prove empty server queues. Rejects moving/incomplete observations and extra material. Fresh pinned source/target review required. Preview with show_operation; apply with invoke_operation(confirm=true). Never writes world blocks itself.",
+        annotations(read_only_hint = false, destructive_hint = false)
+    )]
+    async fn manage_assembly(
+        &self,
+        Parameters(params): Parameters<assembly_placement::ManageAssemblyParams>,
+    ) -> String {
+        self.manage_placed_assembly(params).await
+    }
+
+    #[tool(
+        description = "Show an operation. Blueprint updates return the full diff and a fresh independent parent/child/shared review; this does not adopt them or contact Minecraft. World placement, repair, piston-door and transition-test operations retain their preview path.",
+        annotations(read_only_hint = false, destructive_hint = false)
     )]
     async fn show_operation(&self, Parameters(params): Parameters<ShowOperationParams>) -> String {
         let operation_id = match uuid::Uuid::parse_str(&params.operation_id) {
@@ -6928,6 +7429,16 @@ impl DustRouteMcp {
                 return error_text(McpErrorCode::InvalidArgument, error.to_string(), false);
             }
         };
+        if self
+            .assembly_placements
+            .lock()
+            .await
+            .contains_key(&operation_id)
+        {
+            return self
+                .show_assembly_construction(operation_id, params.player.as_deref())
+                .await;
+        }
         if self
             .piston_placements
             .lock()
@@ -7006,19 +7517,17 @@ impl DustRouteMcp {
             }
             return result;
         }
-        if self
-            .repair_plan(operation_id)
-            .await
-            .ok()
-            .flatten()
-            .is_some()
-        {
-            return self
-                .show_repair_plan(Parameters(PreviewRepairParams {
-                    operation_id: params.operation_id,
-                    player: params.player,
-                }))
-                .await;
+        match self.repair_plan(operation_id).await {
+            Ok(Some(_)) => {
+                return self
+                    .show_repair_plan(Parameters(PreviewRepairParams {
+                        operation_id: params.operation_id,
+                        player: params.player,
+                    }))
+                    .await;
+            }
+            Ok(None) => {}
+            Err(error) => return error_text(McpErrorCode::Internal, error, false),
         }
         if self
             .transition_plans
@@ -7033,11 +7542,21 @@ impl DustRouteMcp {
                 }))
                 .await;
         }
+        if let Some(result) = self
+            .blueprint_command(
+                crate::blueprint_mcp::Command::Show(operation_id),
+                params.player.as_deref(),
+                false,
+            )
+            .await
+        {
+            return result;
+        }
         error_text(McpErrorCode::NotFound, "operation not found", false)
     }
 
     #[tool(
-        description = "Invoke any previewed placement, repair, piston-door, or transition-test operation. Requires confirm=true.",
+        description = "For a Blueprint update, supply blueprint_decision action adopt or reject (with reason) and confirm=true. Adoption freshly revalidates and appends immutable records locally; rejection retains history. Neither writes Minecraft. Other operation kinds execute their existing previewed world action with confirm=true.",
         annotations(read_only_hint = false, destructive_hint = true)
     )]
     async fn invoke_operation(
@@ -7050,6 +7569,35 @@ impl DustRouteMcp {
                 return error_text(McpErrorCode::InvalidArgument, error.to_string(), false);
             }
         };
+        if let Some(decision) = params.blueprint_decision {
+            if params.contracts.is_some() {
+                return json_text(crate::blueprint_mcp::failure(
+                    "transition contracts are not Blueprint decision parameters",
+                ));
+            }
+            return self
+                .blueprint_command(
+                    crate::blueprint_mcp::Command::Decide(
+                        operation_id,
+                        Some(decision),
+                        params.confirm,
+                    ),
+                    None,
+                    true,
+                )
+                .await
+                .expect("explicit blueprint response");
+        }
+        if self
+            .assembly_placements
+            .lock()
+            .await
+            .contains_key(&operation_id)
+        {
+            return self
+                .mutate_assembly_construction(operation_id, params.confirm, false)
+                .await;
+        }
         if self
             .piston_placements
             .lock()
@@ -7065,25 +7613,29 @@ impl DustRouteMcp {
         }
         if self.plans.lock().await.contains_key(&operation_id) {
             return self
-                .invoke_circuit_placement(Parameters(ConfirmedOperationParams {
-                    operation_id: params.operation_id,
-                    confirm: params.confirm,
-                }))
+                .mutate_placement(
+                    ConfirmedOperationParams {
+                        operation_id: params.operation_id,
+                        confirm: params.confirm,
+                    },
+                    false,
+                )
                 .await;
         }
-        if self
-            .repair_plan(operation_id)
-            .await
-            .ok()
-            .flatten()
-            .is_some()
-        {
-            return self
-                .invoke_repair(Parameters(ConfirmedOperationParams {
-                    operation_id: params.operation_id,
-                    confirm: params.confirm,
-                }))
-                .await;
+        match self.repair_plan(operation_id).await {
+            Ok(Some(_)) => {
+                return self
+                    .mutate_repair(
+                        ConfirmedOperationParams {
+                            operation_id: params.operation_id,
+                            confirm: params.confirm,
+                        },
+                        false,
+                    )
+                    .await;
+            }
+            Ok(None) => {}
+            Err(error) => return error_text(McpErrorCode::Internal, error, false),
         }
         if self
             .transition_plans
@@ -7098,6 +7650,16 @@ impl DustRouteMcp {
                     contracts: params.contracts,
                 }))
                 .await;
+        }
+        if let Some(result) = self
+            .blueprint_command(
+                crate::blueprint_mcp::Command::Decide(operation_id, None, params.confirm),
+                None,
+                false,
+            )
+            .await
+        {
+            return result;
         }
         error_text(McpErrorCode::NotFound, "operation not found", false)
     }
@@ -7117,6 +7679,16 @@ impl DustRouteMcp {
             }
         };
         if self
+            .assembly_placements
+            .lock()
+            .await
+            .contains_key(&operation_id)
+        {
+            return self
+                .mutate_assembly_construction(operation_id, params.confirm, true)
+                .await;
+        }
+        if self
             .piston_placements
             .lock()
             .await
@@ -7134,16 +7706,12 @@ impl DustRouteMcp {
             );
         }
         if self.plans.lock().await.contains_key(&operation_id) {
-            return self.undo_circuit_placement(Parameters(params)).await;
+            return self.mutate_placement(params, true).await;
         }
-        if self
-            .repair_plan(operation_id)
-            .await
-            .ok()
-            .flatten()
-            .is_some()
-        {
-            return self.undo_repair(Parameters(params)).await;
+        match self.repair_plan(operation_id).await {
+            Ok(Some(_)) => return self.mutate_repair(params, true).await,
+            Ok(None) => {}
+            Err(error) => return error_text(McpErrorCode::Internal, error, false),
         }
         if self
             .transition_plans
@@ -7159,11 +7727,21 @@ impl DustRouteMcp {
                 }))
                 .await;
         }
+        if let Some(result) = self
+            .blueprint_command(
+                crate::blueprint_mcp::Command::Undo(operation_id),
+                None,
+                false,
+            )
+            .await
+        {
+            return result;
+        }
         error_text(McpErrorCode::NotFound, "operation not found", false)
     }
 
     #[tool(
-        description = "Get progress and result for a long-running DustRoute operation",
+        description = "Read operation status/results, including persisted Blueprint update requests and decision history. Saved validation events are historical diagnostics, never fresh proof.",
         annotations(read_only_hint = true, destructive_hint = false)
     )]
     async fn get_operation(&self, Parameters(params): Parameters<OperationParams>) -> String {
@@ -7175,7 +7753,14 @@ impl DustRouteMcp {
         };
         match self.operations.get(operation_id).await {
             Some(operation) => json_text(json!({ "ok": true, "operation": operation })),
-            None => json_text(json!({ "ok": false, "error": "unknown operation ID" })),
+            None => self
+                .blueprint_command(
+                    crate::blueprint_mcp::Command::Get(operation_id),
+                    None,
+                    false,
+                )
+                .await
+                .unwrap_or_else(|| json_text(json!({"ok":false,"error":"unknown operation ID"}))),
         }
     }
 
@@ -7217,7 +7802,7 @@ impl DustRouteMcp {
     async fn collaboration_prompt(&self) -> GetPromptResult {
         GetPromptResult::new(vec![PromptMessage::new_text(
             Role::User,
-            "Work with the player on a Minecraft redstone circuit using the PowerShell-style Verb-Noun contract expressed as snake_case. Use get_world for literal visibility, then test_circuit to capture an immutable circuit snapshot and compact health. Reuse its circuit_id for get_circuit_ir, convert_from_circuit, test_circuit_change, new_repair, get_repair_context, new_optimization, new_macro_optimization, new_transition_test, and new_piston_door_operation; never silently switch back to the current gaze during one task. After new_repair, use get_repair_context when physical fragments admit competing repair and external-input hypotheses; present supporting and contradictory evidence and ask the returned questions before choosing. For observed optimization, require an explicit focus, keep everything outside fixed, and explain verification limits. Only pass a macro component_id returned for that same circuit_id. For mixed IR, pass circuit_id and first request the summary, then pass its analysis_id and a node_id to expand only that node. Treat intrinsic sources, controllable inputs, event inputs, and observation boundaries as distinct. For hypothetical edits, test_circuit_change creates an immutable revision_id from either circuit_id or parent revision_id. Use get_circuit_revision to read saved edits and validation; revision IDs are never live circuit IDs or placement permissions. New operations only create plans. Always call show_operation, explain the preview, and obtain explicit confirmation before invoke_operation(confirm=true). Use undo_operation for supported recovery. For the existing 1x2 piston door, show_region rescans the selected region and returns mechanisms plus a fresh circuit_id; convert_from_circuit interprets that immutable snapshot. Use a fresh ID for a new_piston_door_operation only when the observed mechanism matches its contract. Piston door operations have no automatic retry or undo. For an explicitly selected region, call set_region twice and show_region; reuse the circuit_id returned by show_region. Never infer coordinates from prose when gaze tools can ground them, and never mutate the world without preview and explicit confirmation.".to_owned(),
+            "Work with the player on a Minecraft redstone circuit using the PowerShell-style Verb-Noun contract expressed as snake_case. For offline Blueprint work, start with get_circuit_revision(blueprint.kind=catalog); no live observation is required. Read exact source/type/classification/Assembly records through blueprint.kind, and use test_circuit_change(blueprint.action=import, capture_revision, optimize, enumerate_layouts, or propose_update). Import saves unverified data. Blueprint optimize searches the supplied Assembly under a selected behavioral type and pinned execution context. Its explicit component scope separates body positions and fixed external equipment, with body and complete counts reported separately. enumerate_layouts tests each torch/support placement; only passed candidates satisfy the selected type in that context. Device outputs observe torches directly. Levers are independent realizations, not a NOT input-type requirement. It may move ports and replace internal interpretations, returns standalone candidate data, and neither proves global minimality nor publishes or adopts anything. Review the changed decomposition and prepare an explicit parent update using the candidate definitions, state and context. Proposals must supply new immutable parent definitions and explicit candidate state; classification labels do not verify behavior, and connection types check signal compatibility only. Review through show_operation, including every child and shared occurrence, then invoke_operation with confirm=true and blueprint_decision action adopt or reject (with reason). Adoption revalidates and appends records locally; it never writes Minecraft or automatically updates other parents. Failed or undetermined checks block adoption even if the parent passes. Persisted history is not validation proof. Blueprint IDs are not live placement arguments. An Assembly ID needs unique adoption. With assembly_target, the unified electrical context supports custom piston construction in a completely observed empty target region, after fresh target review and construction simulation; every write is read back and a mismatch stops the sequence. This requires Java 1.21.11 with observed vanilla feature flags. Undo requires the exact constructed settled state. After restart, use manage_assembly to list saved instances, diagnose damage against the design without writing blocks, and then plan_removal or plan_reconstruction; preview and confirm that new operation. Saved instance records do not authorize writes, and uncertain attempts require inspection. Without assembly_target, grounded Assembly reflection retains its original-coordinate requirement. Neither route reuses stored validation as authority. For live-world tasks, use get_world for literal visibility, then test_circuit to capture an immutable circuit snapshot and compact health. Reuse its circuit_id for get_circuit_ir, convert_from_circuit, test_circuit_change, new_repair, get_repair_context, new_optimization, new_macro_optimization, new_transition_test, and new_piston_door_operation; never silently switch back to the current gaze during one task. After new_repair, use get_repair_context when physical fragments admit competing repair and external-input hypotheses; present supporting and contradictory evidence and ask the returned questions before choosing. For observed optimization, require an explicit focus, keep everything outside fixed, and explain verification limits. Only pass a macro component_id returned for that same circuit_id. For mixed IR, pass circuit_id and first request the summary, then pass its analysis_id and a node_id to expand only that node. Treat intrinsic sources, controllable inputs, event inputs, and observation boundaries as distinct. For hypothetical edits, test_circuit_change creates an immutable revision_id from either circuit_id or parent revision_id. Use get_circuit_revision to read saved edits and validation; revision IDs are never live circuit IDs or placement permissions. New operations only create plans. Always call show_operation, explain the preview, and obtain explicit confirmation before invoke_operation(confirm=true). Use undo_operation for supported recovery. For the existing 1x2 piston door, show_region rescans the selected region and returns mechanisms plus a fresh circuit_id; convert_from_circuit interprets that immutable snapshot. Use a fresh ID for a new_piston_door_operation only when the observed mechanism matches its contract. Piston door operations have no automatic retry or undo. For an explicitly selected region, call set_region twice and show_region; reuse the circuit_id returned by show_region. Never infer coordinates from prose when gaze tools can ground them, and never mutate the world without preview and explicit confirmation.".to_owned(),
         )])
         .with_description("Safe gaze-grounded DustRoute collaboration workflow")
     }
@@ -7238,7 +7823,7 @@ impl ServerHandler for DustRouteMcp {
             env!("CARGO_PKG_VERSION"),
         ))
         .with_instructions(
-            "Use the collaborate-on-redstone-circuit prompt. Use get_world for raw visibility, test_circuit to capture a stable circuit_id and compact health, then reuse that circuit_id for analysis, hypotheses, repair, and transition planning. Use get_repair_context to compare repair evidence against intentional-boundary alternatives. New creates a plan, show_operation previews it, invoke_operation requires explicit confirmation, and undo_operation recovers it."
+            "Use the collaborate-on-redstone-circuit prompt. For offline Blueprint work, use get_circuit_revision with blueprint.kind and test_circuit_change with blueprint.action. Blueprint update decisions require show_operation and an explicit blueprint_decision on invoke_operation; adoption revalidates and saves locally, never writing Minecraft. For live-world tasks, use get_world for raw visibility, test_circuit to capture a stable circuit_id and compact health, then reuse that circuit_id for analysis, hypotheses, repair, and transition planning. Use get_repair_context to compare repair evidence against intentional-boundary alternatives. New creates a plan, show_operation previews it, invoke_operation requires explicit confirmation, and undo_operation recovers only supported operation kinds. After restart, use manage_assembly for saved custom piston instances, cause-independent diagnosis and explicit removal/reconstruction planning. Diagnosis accounts for observed input levels where modeled; differences alone do not prove damage or authorize writes."
         )
     }
 }
@@ -7490,6 +8075,7 @@ mod tests {
         let result: Value = serde_json::from_str(
             &service
                 .invoke_operation(Parameters(InvokeOperationParams {
+                    blueprint_decision: None,
                     operation_id: "not-a-uuid".into(),
                     confirm: true,
                     contracts: None,
@@ -7641,6 +8227,7 @@ mod tests {
         let rejected: Value = serde_json::from_str(
             &service
                 .invoke_operation(Parameters(InvokeOperationParams {
+                    blueprint_decision: None,
                     operation_id: operation_id.to_string(),
                     confirm: true,
                     contracts: None,
@@ -7721,10 +8308,11 @@ mod tests {
             .map(|tool| tool.name.to_string())
             .collect::<BTreeSet<_>>();
 
-        assert_eq!(default_names.len(), 21);
+        assert_eq!(default_names.len(), 22);
+        assert!(default_names.contains("manage_assembly"));
         assert!(!default_names.contains("get_piston_door_state"));
         assert!(!debug_names.contains("get_piston_door_state"));
-        assert_eq!(debug_names.len(), 28);
+        assert_eq!(debug_names.len(), 29);
         assert!(default_names.contains("test_circuit"));
         assert!(default_names.contains("get_circuit_ir"));
         assert!(default_names.contains("test_circuit_change"));
@@ -8145,6 +8733,17 @@ mod tests {
         assert_eq!(value["ok"], true, "{result}");
         assert_eq!(value["schema_version"], "dustroute.diagnostic.v1");
         assert_eq!(value["analysis_mode"], "focused_fast");
+        let shared: dustroute_translate::diagnostic::report::Diagnosis =
+            serde_json::from_value(value["diagnostic"].clone()).unwrap();
+        assert_eq!(
+            shared.method,
+            dustroute_translate::diagnostic::report::DiagnosticMethod::Connectivity
+        );
+        assert!(!shared.world_writes && !shared.repair.permission_granted);
+        assert_eq!(
+            shared.repair.status,
+            dustroute_translate::diagnostic::report::RepairStatus::NotAssessed
+        );
         assert_eq!(value["mutation_performed"], false);
         assert!(value["diagnostic"]["counts"].is_object());
         assert!(value["diagnostic"]["findings"].is_array());
@@ -8157,7 +8756,7 @@ mod tests {
     async fn repairs_and_undoes_a_broken_wire_through_the_mcp_workflow() {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let address = listener.local_addr().unwrap().to_string();
-        tokio::spawn(async move {
+        let server = tokio::spawn(async move {
             let mut repaired = false;
             for _ in 0..10 {
                 let (mut stream, _) = listener.accept().await.unwrap();
@@ -8192,7 +8791,17 @@ mod tests {
             read_only: false,
             ..McpPolicy::default()
         };
-        let service = DustRouteMcp::with_policy_and_player(address, policy, "builder");
+        let root = std::env::temp_dir().join(format!(
+            "dustroute-repair-workflow-{}",
+            uuid::Uuid::new_v4()
+        ));
+        let make_service = || {
+            let mut service =
+                DustRouteMcp::with_policy_and_player(address.clone(), policy.clone(), "builder");
+            service.state_store = PlanStateStore::new(root.clone(), 3600);
+            service
+        };
+        let service = make_service();
         let bounds = dustroute_translate::RegionBounds::new(Pos::new(0, 0, 0), Pos::new(2, 2, 0));
         service
             .selections
@@ -8219,12 +8828,52 @@ mod tests {
                 .new_repair(Parameters(ProposeRepairsParams {
                     player: None,
                     max_gap: Some(2),
-                    circuit_id,
+                    circuit_id: circuit_id.clone(),
                 }))
                 .await,
         )
         .unwrap();
         assert_eq!(proposed["proposal_count"], 3);
+        let shared: dustroute_translate::diagnostic::report::Diagnosis =
+            serde_json::from_value(proposed["diagnostic"].clone()).unwrap();
+        assert_eq!(
+            shared.method,
+            dustroute_translate::diagnostic::report::DiagnosticMethod::Connectivity
+        );
+        assert_eq!(
+            shared.repair.status,
+            dustroute_translate::diagnostic::report::RepairStatus::PlanAvailable
+        );
+        assert_eq!(
+            shared.repair.strategy,
+            dustroute_translate::diagnostic::report::RepairStrategy::PartialPatch
+        );
+        assert!(!shared.repair.permission_granted);
+        let context: Value = serde_json::from_str(
+            &service
+                .get_repair_context(Parameters(GetRepairContextParams {
+                    player: None,
+                    circuit_id,
+                    operation_id: None,
+                    max_gap: Some(2),
+                }))
+                .await,
+        )
+        .unwrap();
+        let context_diagnosis: dustroute_translate::diagnostic::report::Diagnosis =
+            serde_json::from_value(context["facts"]["diagnostic"].clone()).unwrap();
+        assert_eq!(context_diagnosis, shared);
+        let finding_ids: std::collections::BTreeSet<_> = shared
+            .findings
+            .iter()
+            .map(|f| f.finding_id.as_str())
+            .collect();
+        for candidate in proposed["proposals"].as_array().unwrap() {
+            for id in candidate["diagnostic_finding_ids"].as_array().unwrap() {
+                assert!(finding_ids.contains(id.as_str().unwrap()));
+            }
+        }
+
         let operation_id = proposed["proposals"][0]["operation_id"]
             .as_str()
             .unwrap()
@@ -8237,8 +8886,11 @@ mod tests {
             }))
             .await;
         assert!(preview.contains("\"ok\": true"));
-        let applied = service
+        // Preview and applied status must survive independent service instances.
+        let restarted = make_service();
+        let applied = restarted
             .invoke_operation(Parameters(InvokeOperationParams {
+                blueprint_decision: None,
                 operation_id: operation_id.clone(),
                 confirm: true,
                 contracts: None,
@@ -8248,13 +8900,152 @@ mod tests {
         let applied_value: Value = serde_json::from_str(&applied).unwrap();
         assert!(applied_value["resulting_logic"].is_object());
         assert_eq!(applied_value["semantic_verification"]["available"], false);
-        let undone = service
+        let id = uuid::Uuid::parse_str(&operation_id).unwrap();
+        assert!(service.repair_plan(id).await.unwrap().unwrap().applied);
+        let restarted = make_service();
+        let undone = restarted
             .undo_operation(Parameters(ConfirmedOperationParams {
                 operation_id,
                 confirm: true,
             }))
             .await;
         assert!(undone.contains("\"verified\": true"), "{undone}");
+        assert!(!service.repair_plan(id).await.unwrap().unwrap().applied);
+        server.await.unwrap();
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[tokio::test]
+    async fn repair_operations_reject_unavailable_saved_state_before_and_after_restart() {
+        for invalidation in ["expired", "deleted", "corrupt"] {
+            for applied in [false, true] {
+                let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+                let address = listener.local_addr().unwrap().to_string();
+                let root = std::env::temp_dir().join(format!(
+                    "dustroute-repair-retention-{}",
+                    uuid::Uuid::new_v4()
+                ));
+                let make_service = || {
+                    let mut service = DustRouteMcp::with_policy_and_player(
+                        address.clone(),
+                        McpPolicy {
+                            read_only: false,
+                            ..McpPolicy::default()
+                        },
+                        "builder",
+                    );
+                    service.state_store = PlanStateStore::new(root.clone(), 3600);
+                    service
+                };
+                let service = make_service();
+                let id = uuid::Uuid::new_v4();
+                let pos = Pos::new(1, 1, 0);
+                service
+                    .store_repair_plan(
+                        id,
+                        StoredRepairPlan {
+                            patch: PhysicalPatch {
+                                reason: dustroute_physical::PhysicalPatchReason::ConnectMissingWire,
+                                affected_fragments: vec![],
+                                confidence_percent: 100,
+                                explanation: "restore missing wire".into(),
+                                changes: vec![PhysicalBlockChange {
+                                    pos,
+                                    before: dustroute_physical::Block::new(BlockKind::Air),
+                                    after: dustroute_physical::Block::new(BlockKind::RedstoneWire),
+                                }],
+                            },
+                            dimension: "minecraft:overworld".into(),
+                            analysis_bounds: dustroute_translate::RegionBounds::new(
+                                Pos::new(0, 0, 0),
+                                Pos::new(2, 2, 0),
+                            ),
+                            fragments_before: 2,
+                            baseline_truth_table: None,
+                            previewed: true,
+                            applied,
+                            contract_satisfied: true,
+                            preserved_boundary: vec![],
+                        },
+                    )
+                    .await
+                    .unwrap();
+                // Exercise the formerly cached read before invalidating its disk record.
+                assert!(service.repair_plan(id).await.unwrap().is_some());
+                let path = root.join("repairs").join(format!("{id}.json"));
+                match invalidation {
+                    "expired" => {
+                        let mut envelope: Value =
+                            serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+                        envelope["saved_at_unix_seconds"] = json!(1);
+                        std::fs::write(&path, serde_json::to_vec(&envelope).unwrap()).unwrap();
+                    }
+                    "deleted" => std::fs::remove_file(&path).unwrap(),
+                    "corrupt" => std::fs::write(&path, b"not json").unwrap(),
+                    _ => unreachable!(),
+                }
+                let restarted = make_service();
+                let expected_code = if invalidation == "corrupt" {
+                    "internal"
+                } else {
+                    "not_found"
+                };
+                let check = async {
+                    for instance in [&service, &restarted] {
+                        for action in ["show", "invoke", "undo"] {
+                            let response = match action {
+                                "show" => {
+                                    instance
+                                        .show_operation(Parameters(ShowOperationParams {
+                                            operation_id: id.to_string(),
+                                            player: None,
+                                        }))
+                                        .await
+                                }
+                                "invoke" => {
+                                    instance
+                                        .invoke_operation(Parameters(InvokeOperationParams {
+                                            operation_id: id.to_string(),
+                                            confirm: true,
+                                            blueprint_decision: None,
+                                            contracts: None,
+                                        }))
+                                        .await
+                                }
+                                "undo" => {
+                                    instance
+                                        .undo_operation(Parameters(ConfirmedOperationParams {
+                                            operation_id: id.to_string(),
+                                            confirm: true,
+                                        }))
+                                        .await
+                                }
+                                _ => unreachable!(),
+                            };
+                            let value: Value = serde_json::from_str(&response).unwrap();
+                            assert_eq!(value["ok"], false, "{invalidation}/{action}: {value}");
+                            assert_eq!(
+                                value["error_code"], expected_code,
+                                "{invalidation}/{action}: {value}"
+                            );
+                        }
+                    }
+                };
+                tokio::select! {
+                    () = check => {},
+                    connection = listener.accept() => panic!(
+                        "unavailable repair state must reject before any bridge call: {connection:?}"
+                    ),
+                }
+                // Also reject a connection queued while a handler returned without awaiting it.
+                assert!(
+                    tokio::time::timeout(Duration::from_millis(10), listener.accept())
+                        .await
+                        .is_err()
+                );
+                std::fs::remove_dir_all(root).unwrap();
+            }
+        }
     }
 
     #[test]
@@ -8331,6 +9122,172 @@ mod tests {
             "power": "0",
         })
     }
+
+    #[tokio::test]
+    async fn adopted_grounded_assembly_enters_existing_revision_placement_path() {
+        let (records, proposal) = super::blueprint_tests::placement_fixture();
+        let base_record: dustroute_library::assembly::AssemblyRevision =
+            serde_json::from_value(records["blueprint"]["records"]["assemblies"][0].clone())
+                .unwrap();
+        let candidate_id: dustroute_library::blueprint::AssemblyRevisionId =
+            serde_json::from_value(
+                proposal["blueprint"]["request"]["candidate_state"]["id"].clone(),
+            )
+            .unwrap();
+        let known = base_record.assembly.known_regions[0];
+        let base = snapshot_from_grounded_assembly(&base_record, known.min, known.max).unwrap();
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap().to_string();
+        let bridge_base = base.clone();
+        let server = tokio::spawn(async move {
+            loop {
+                let (mut stream, _) = listener.accept().await.unwrap();
+                let mut line = String::new();
+                BufReader::new(&mut stream)
+                    .read_line(&mut line)
+                    .await
+                    .unwrap();
+                let request: Value = serde_json::from_str(&line).unwrap();
+                let result = match request["method"].as_str().unwrap() {
+                    "status" => {
+                        json!({"connected":true,"username":"DustRouteBot","host":"localhost","port":25565,"version":"1.21.11","dimension":"minecraft:overworld"})
+                    }
+                    "scan_region" => {
+                        let min: Pos =
+                            serde_json::from_value(request["params"]["min"].clone()).unwrap();
+                        let max: Pos =
+                            serde_json::from_value(request["params"]["max"].clone()).unwrap();
+                        let blocks = bridge_base
+                            .blocks
+                            .iter()
+                            .filter(|block| {
+                                let p = block.pos;
+                                p.x >= min.x
+                                    && p.y >= min.y
+                                    && p.z >= min.z
+                                    && p.x <= max.x
+                                    && p.y <= max.y
+                                    && p.z <= max.z
+                            })
+                            .collect::<Vec<_>>();
+                        json!({"min":min,"max":max,"blocks":blocks})
+                    }
+                    other => panic!("unexpected bridge request {other}"),
+                };
+                stream
+                    .write_all(
+                        format!("{}\n", json!({"id":request["id"],"result":result})).as_bytes(),
+                    )
+                    .await
+                    .unwrap();
+            }
+        });
+        let root = std::env::temp_dir().join(format!(
+            "dustroute-adopted-placement-{}",
+            uuid::Uuid::new_v4()
+        ));
+        let mut service =
+            DustRouteMcp::with_policy_and_player(address, McpPolicy::default(), "builder");
+        service.state_store = PlanStateStore::new(root.clone(), 3600);
+        let imported: Value = serde_json::from_str(
+            &service
+                .test_circuit_change(Parameters(serde_json::from_value(records).unwrap()))
+                .await,
+        )
+        .unwrap();
+        assert_eq!(imported["ok"], true, "{imported}");
+        let proposed: Value = serde_json::from_str(
+            &service
+                .test_circuit_change(Parameters(serde_json::from_value(proposal).unwrap()))
+                .await,
+        )
+        .unwrap();
+        assert_eq!(proposed["ok"], true, "{proposed}");
+        let unadopted = crate::blueprint_mcp::execute(
+            &service.state_store,
+            "builder",
+            crate::blueprint_mcp::Command::PlacementBasis(candidate_id.clone()),
+        )
+        .unwrap_err();
+        assert!(
+            unadopted.contains("exactly one adopted update"),
+            "{unadopted}"
+        );
+        let adopted: Value = serde_json::from_str(
+            &service
+                .invoke_operation(Parameters(InvokeOperationParams {
+                    blueprint_decision: Some(crate::blueprint_mcp::BlueprintDecision::Adopt),
+                    operation_id: proposed["operation_id"].as_str().unwrap().into(),
+                    confirm: true,
+                    contracts: None,
+                }))
+                .await,
+        )
+        .unwrap();
+        assert_eq!(adopted["ok"], true, "{adopted}");
+        let ungrounded = crate::blueprint_mcp::execute(
+            &service.state_store,
+            "builder",
+            crate::blueprint_mcp::Command::PlacementBasis(candidate_id.clone()),
+        )
+        .unwrap_err();
+        assert!(
+            ungrounded.contains("captured Circuit Revision ancestor"),
+            "{ungrounded}"
+        );
+        let grounding_revision = uuid::Uuid::new_v4();
+        let grounding = crate::blueprint_mcp::AssemblyGrounding {
+            assembly_revision_id: base_record.id.clone(),
+            circuit_revision_id: grounding_revision,
+            base_observation_id: uuid::Uuid::new_v4(),
+            dimension: "minecraft:overworld".into(),
+            complete: true,
+            base_snapshot: base,
+        };
+        let mut incomplete = grounding.clone();
+        incomplete.complete = false;
+        let rejected = crate::blueprint_mcp::execute(
+            &service.state_store,
+            "builder",
+            crate::blueprint_mcp::Command::Capture {
+                record: Box::new(base_record.clone()),
+                grounding: incomplete,
+            },
+        )
+        .unwrap_err();
+        assert!(
+            rejected.contains("complete Assembly Revision"),
+            "{rejected}"
+        );
+        crate::blueprint_mcp::execute(
+            &service.state_store,
+            "builder",
+            crate::blueprint_mcp::Command::Capture {
+                record: Box::new(base_record.clone()),
+                grounding,
+            },
+        )
+        .unwrap();
+        let plan: Value = serde_json::from_str(
+            &service
+                .new_placement(Parameters(
+                    serde_json::from_value(json!({"assembly_revision_id":candidate_id})).unwrap(),
+                ))
+                .await,
+        )
+        .unwrap();
+        assert_eq!(plan["ok"], true, "{plan}");
+        assert_eq!(plan["source"]["kind"], "adopted_assembly_revision");
+        assert_eq!(plan["source"]["fresh_review"]["status"], "passed");
+        assert_eq!(
+            plan["source"]["literal_observation"],
+            "grounding.base_snapshot"
+        );
+        assert!(!plan["plan"]["changes"].as_array().unwrap().is_empty());
+        server.abort();
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
     #[tokio::test]
     async fn revision_placement_revalidates_cumulative_diff_context_and_undo() {
         use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
@@ -8446,6 +9403,7 @@ mod tests {
                     .unwrap();
                 legacy.revision_id = uuid::Uuid::new_v4();
                 legacy.base_snapshot = None;
+                legacy.assembly = None;
                 service
                     .state_store
                     .save("circuit_revisions", legacy.revision_id, &legacy)
@@ -8493,6 +9451,7 @@ mod tests {
             let result: Value = serde_json::from_str(
                 &service
                     .invoke_operation(Parameters(InvokeOperationParams {
+                        blueprint_decision: None,
                         operation_id: op.clone(),
                         confirm: true,
                         contracts: None,
@@ -8507,6 +9466,7 @@ mod tests {
                 let retry: Value = serde_json::from_str(
                     &service
                         .invoke_operation(Parameters(InvokeOperationParams {
+                            blueprint_decision: None,
                             operation_id: op.clone(),
                             confirm: true,
                             contracts: None,
@@ -8573,6 +9533,8 @@ mod tests {
         assert_eq!(base["parent_revision_ids"], json!([]));
         assert_eq!(base["base_observation_id"], id.to_string());
         assert_eq!(base["validation"]["after"]["status"], "structurally_valid");
+        assert_eq!(base["assembly_state"]["status"], "available");
+        assert_eq!(base["assembly_state"]["source_instances"], 0);
         let removed=edit(&service,json!({"revision_id":base["revision_id"],"changes":[{"position":{"x":0,"y":0,"z":0},"block":"minecraft:air"}]})).await;
         assert_eq!(removed["ok"], true, "{removed}");
         assert_eq!(
@@ -8591,6 +9553,14 @@ mod tests {
             branch["parent_revision_ids"]
         );
         assert_ne!(removed["revision_id"], branch["revision_id"]);
+        assert_ne!(
+            removed["assembly_state"]["assembly_revision_id"],
+            branch["assembly_state"]["assembly_revision_id"]
+        );
+        assert_eq!(
+            branch["assembly_state"]["parent_assembly_revision_ids"],
+            json!([base["assembly_state"]["assembly_revision_id"]])
+        );
         let repaired=edit(&service,json!({"revision_id":removed["revision_id"],"changes":[{"position":{"x":0,"y":0,"z":0},"block":"minecraft:stone"}]})).await;
         assert_eq!(
             repaired["validation"]["after"]["status"],
@@ -8626,6 +9596,7 @@ mod tests {
         let persisted: Value = serde_json::from_str(
             &restarted
                 .get_circuit_revision(Parameters(GetCircuitRevisionParams {
+                    blueprint: None,
                     revision_id: base["revision_id"].as_str().unwrap().into(),
                     include_snapshot: Some(true),
                 }))
@@ -8634,6 +9605,16 @@ mod tests {
         .unwrap();
         assert_eq!(persisted["ok"], true);
         assert_eq!(persisted["snapshot"], json!(snapshot));
+        assert_eq!(
+            persisted["assembly_revision"]["id"],
+            base["assembly_state"]["assembly_revision_id"]
+        );
+        assert!(
+            persisted["assembly_revision"]["assembly"]["instances"]
+                .as_array()
+                .unwrap()
+                .is_empty()
+        );
         assert_eq!(persisted["validation"], base["validation"]);
         let child = edit(
             &restarted,
@@ -8660,6 +9641,7 @@ mod tests {
         let invoked: Value = serde_json::from_str(
             &service
                 .invoke_operation(Parameters(InvokeOperationParams {
+                    blueprint_decision: None,
                     operation_id: base["revision_id"].as_str().unwrap().into(),
                     confirm: true,
                     contracts: None,
@@ -8670,6 +9652,10 @@ mod tests {
         assert_eq!(invoked["ok"], false);
         let invalid_state=edit(&service,json!({"revision_id":base["revision_id"],"changes":[{"position":{"x":0,"y":1,"z":0},"block":"minecraft:repeater","properties":{"facing":"sideways","delay":"2"}}]})).await;
         assert_eq!(invalid_state["ok"], true);
+        assert_eq!(
+            invalid_state["assembly_state"]["status"],
+            "unavailable_or_legacy"
+        );
         assert_eq!(
             invalid_state["validation"]["after"]["status"],
             "unavailable"
@@ -8692,6 +9678,104 @@ mod tests {
                 .is_ok()
         );
         std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[tokio::test]
+    async fn compiled_placement_keeps_pinned_sources_and_composed_state_in_existing_api() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap().to_string();
+        let origin = Pos::new(10, 64, -20);
+        let server = tokio::spawn(async move {
+            loop {
+                let (mut stream, _) = listener.accept().await.unwrap();
+                let mut line = String::new();
+                BufReader::new(&mut stream)
+                    .read_line(&mut line)
+                    .await
+                    .unwrap();
+                let req: Value = serde_json::from_str(&line).unwrap();
+                let result = match req["method"].as_str().unwrap() {
+                    "observe_player" => {
+                        json!({"player":"builder","eye_position":{"x":10.0,"y":67.0,"z":-20.0},"yaw":0.0,"pitch":0.0,"targeted_block":origin,"dimension":"minecraft:overworld"})
+                    }
+                    "scan_region" => {
+                        json!({"min":req["params"]["min"],"max":req["params"]["max"],"blocks":[]})
+                    }
+                    other => panic!("unexpected request (planning must not write): {other}"),
+                };
+                let reply = json!({"id":req["id"],"result":result});
+                stream
+                    .write_all(format!("{reply}\n").as_bytes())
+                    .await
+                    .unwrap();
+            }
+        });
+        let service =
+            DustRouteMcp::with_policy_and_player(address, McpPolicy::default(), "builder");
+        let proposed: Value = serde_json::from_str(
+            &service
+                .new_placement(Parameters(
+                    serde_json::from_value(json!({"circuit":"half-adder"})).unwrap(),
+                ))
+                .await,
+        )
+        .unwrap();
+        assert_eq!(proposed["ok"], true, "{proposed}");
+        let full: Value = serde_json::from_str(
+            &service
+                .get_circuit_placement(Parameters(OperationParams {
+                    operation_id: proposed["operation_id"].as_str().unwrap().into(),
+                }))
+                .await,
+        )
+        .unwrap();
+        let plan: PlacementPlan = serde_json::from_value(full["plan"].clone()).unwrap();
+        let saved = plan.assembly.as_ref().unwrap();
+        assert_eq!(saved.coordinate_origin, origin);
+        assert_eq!(
+            json!(saved.revision.id),
+            proposed["assembly_state"]["assembly_revision_id"]
+        );
+        let view = saved
+            .revision
+            .assembly
+            .inspect(dustroute_library::builtin_blueprints::builtin_blueprints())
+            .unwrap();
+        assert!(!view.source_differences().is_empty());
+        assert!(
+            view.occurrences
+                .values()
+                .any(|occurrence| occurrence.revision.as_str()
+                    == dustroute_library::builtin_blueprints::NOT_TOP_REVISION)
+        );
+        let world = view.proposed_world();
+        assert_eq!(world.iter().count(), plan.changes.len());
+        for change in &plan.changes {
+            let local = change.pos.offset(-origin.x, -origin.y, -origin.z);
+            assert_eq!(world.get(local), Some(&change.after));
+        }
+        assert!(!plan.previewed);
+        let shown: Value = serde_json::from_str(
+            &service
+                .show_operation(Parameters(ShowOperationParams {
+                    operation_id: proposed["operation_id"].as_str().unwrap().into(),
+                    player: None,
+                }))
+                .await,
+        )
+        .unwrap();
+        assert_eq!(shown["ok"], true);
+        assert_eq!(shown["plan"]["assembly"], full["plan"]["assembly"]);
+        assert_eq!(shown["plan"]["previewed"], true);
+        let mut legacy = full["plan"].clone();
+        legacy.as_object_mut().unwrap().remove("assembly");
+        assert!(
+            serde_json::from_value::<PlacementPlan>(legacy)
+                .unwrap()
+                .assembly
+                .is_none()
+        );
+        server.abort();
     }
 
     #[tokio::test]
@@ -8778,6 +9862,8 @@ mod tests {
                         player: None,
                         circuit: "piston-door-1x2".into(),
                         revision_id: None,
+                        assembly_revision_id: None,
+                        assembly_target: None,
                         max_blocks: None,
                         optimize: None,
                     }))
@@ -8820,6 +9906,7 @@ mod tests {
             let result: Value = serde_json::from_str(
                 &service
                     .invoke_operation(Parameters(InvokeOperationParams {
+                        blueprint_decision: None,
                         operation_id: id.clone(),
                         confirm: mode != "unconfirmed",
                         contracts: None,
@@ -8834,6 +9921,7 @@ mod tests {
                 let retry: Value = serde_json::from_str(
                     &service
                         .invoke_operation(Parameters(InvokeOperationParams {
+                            blueprint_decision: None,
                             operation_id: id.clone(),
                             confirm: true,
                             contracts: None,
@@ -8995,6 +10083,7 @@ mod tests {
             let result: Value = serde_json::from_str(
                 &service
                     .invoke_operation(Parameters(InvokeOperationParams {
+                        blueprint_decision: None,
                         operation_id: id.clone(),
                         confirm: mode != "unconfirmed",
                         contracts: None,
@@ -9013,6 +10102,7 @@ mod tests {
                 let retry: Value = serde_json::from_str(
                     &service
                         .invoke_operation(Parameters(InvokeOperationParams {
+                            blueprint_decision: None,
                             operation_id: id,
                             confirm: true,
                             contracts: None,

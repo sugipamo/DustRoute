@@ -1,0 +1,17 @@
+{
+  "kind": "pre_migration_model_regression",
+  "captured_on": "2026-09-20",
+  "source": "Working tree on codex/blueprint-architecture after comparator migration and before observer law migration",
+  "command": "cargo run -q -p dustroute-translate --example audit_observer_world_model",
+  "harness": "../support/observer_models.rs",
+  "fixture": "observer_model_v1.jsonl",
+  "cases": 48,
+  "directions": ["north", "east", "south", "west", "up", "down"],
+  "initially_powered": [false, true],
+  "patterns": ["idle", "single", "repeat", "coalesced"],
+  "samples_per_case": 6,
+  "initial_row": ["observer output", "pending work"],
+  "sample_row": ["pending before boundary", "events", "output after boundary", "pending after boundary"],
+  "event_row": ["PhysicsTime", "event kind", "transition kind", "output before event", "output after event", "pending work"],
+  "scope": "Compatibility model regression, not a live Minecraft observation. Changes include synthetic raw block metadata to exercise exact Block-record equality, not a new physical property. Expected data was captured before migrating the Rust observer rules. Do not regenerate it after semantic changes merely to pass the test."
+}

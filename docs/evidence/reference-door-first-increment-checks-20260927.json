@@ -1,0 +1,109 @@
+{
+  "schema_version": "dustroute.reference-door-checks.v1",
+  "completed_steps": [
+    "live Java 1.21.11 reference, two close/open cycles",
+    "exact smooth_quartz/cyan_wool import and electrical runtime material support"
+  ],
+  "remaining_steps": [
+    "lamp adapter",
+    "stationary observer trigger/scheduling instrumentation and runtime adapter",
+    "moving observer separately reviewed: absent from measured normal cycles",
+    "full simulator comparison"
+  ],
+  "stop_reason": "User requested stopping before substantial implementation; observer shape trigger, queue admission and lifecycle integration needs coordinated probe/runtime work. No lamp/observer adapter or instrumentation changes were started.",
+  "checks": [
+    {
+      "check": "minecraft",
+      "command": "cargo test --offline --locked -p dustroute-minecraft -j 1 -- --test-threads=2",
+      "status": "passed",
+      "passed_tests": 214,
+      "log": "/tmp/dustroute-reference-materials-minecraft-tests.log",
+      "sha256": "d7b76067fca1a65c4af804d3cdc52333ad6924af7a2c15e1c06e3448f65d6b2a"
+    },
+    {
+      "check": "integration",
+      "command": "cargo test --offline --locked -p dustroute-library -p dustroute-translate --test execution_context --test executable_laws --test unified_piston_behavior --test location_behavior --test runtime_adoption --test electrical_piston_construction --test electrical_piston_observations --test reference_door_materials -j 1 -- --test-threads=2",
+      "status": "passed",
+      "passed_tests": 49,
+      "log": "/tmp/dustroute-reference-materials-integration-tests.log",
+      "sha256": "951ecd526a73225e0de5d3d16b61767366d93d93f7d33c728bb103fea707e56f"
+    },
+    {
+      "check": "mcp_blueprint",
+      "command": "cargo test --offline --locked -p dustroute-mcp --lib blueprint_tests -j 1 -- --test-threads=2",
+      "status": "passed",
+      "passed_tests": 13,
+      "log": "/tmp/dustroute-reference-materials-mcp-blueprint-tests.log",
+      "sha256": "95314ed6e473a75985879aa142e1124bbf4398e384947193045dab298b090f3d"
+    },
+    {
+      "check": "transient_replay",
+      "command": "python3 tools/test_piston_transients.py",
+      "status": "passed",
+      "passed_tests": 7,
+      "log": "/tmp/dustroute-reference-materials-transient-tests.log",
+      "sha256": "f6a661bec3cf2f398fc2b75e8c975436a0e47886309aeb3c521793c71fc8e0cd"
+    },
+    {
+      "check": "clippy",
+      "command": "cargo clippy --offline --locked --workspace --all-targets -j 1 -- -D warnings",
+      "status": "passed",
+      "passed_tests": null,
+      "log": "/tmp/dustroute-reference-materials-clippy.log",
+      "sha256": "5f72c52ccd5830653b414b260db73c8f299e344847cc2694e9bb2a70eb673484"
+    },
+    {
+      "check": "fmt",
+      "command": "cargo fmt --all --check",
+      "status": "passed",
+      "passed_tests": null,
+      "log": "/tmp/dustroute-reference-materials-fmt.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "rust_tests_passed": 276,
+  "python_tests_passed": 7,
+  "reference_analysis_checks": [
+    "positive replay of 381 tick-end worlds",
+    "reject missing captured record",
+    "reject failed cleanup",
+    "reject incorrect requested input",
+    "reject altered final readback",
+    "reject empty aperture",
+    "lossless compact snapshot expansion"
+  ],
+  "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v3",
+  "old_v2_context_policy": "reject, no implicit migration or reuse of saved adoption",
+  "source_sha256": {
+    "crates/dustroute-library/tests/execution_context.rs": "bb62cf279c3ddb0b489a7e73edf5131abe9d447c0622c170b01cde1d5bee9adf",
+    "crates/dustroute-library/tests/executable_laws.rs": "5ef42a483928111ad7531447dd143ec3e45c55c788ed96993acfea6fec489ce5",
+    "crates/dustroute-library/src/runtime_behavior.rs": "3c64e9e73929f73f33039c85d74caa0ddaf321bf6bbd436276f86d1ed68e10d0",
+    "crates/dustroute-minecraft/tests/unified_piston_runtime.rs": "4e3d8ef351df8d0143d5ebfce64309eaadd385547568e02170415ea2c08b902f",
+    "crates/dustroute-minecraft/tests/piston_runtime.rs": "bbb1dfbf3986bbc14ff6d4481b49523b09b007150df435b9c5e89205b33838c3",
+    "docs/mcp-api-v1.md": "3f91c5454d080ccd5eb8f135c563d6dfc3a90809dd015d0d67d52dd83ca876e8",
+    "docs/custom-piston-assembly-placement.md": "5f0e8790f82ba2471a86273ef9a360eb89ae350cd41105c04b89dd9b6713b3b9",
+    "docs/blueprint-mcp.md": "6b0fa8e7f9c1acd8b12ab725284e8c098a1a948e0d10cfe42baa7a39c3fb46d7",
+    "docs/unified-piston-runtime.md": "f35e89cd8a28ed94421cbd2ed8d0918f86637758ae9e366246fb651dd99f4965",
+    "crates/dustroute-minecraft/src/piston_electrical.rs": "625e825b536d0759b0d7bc2dcc21cf0031de7729ec0faf32714ca2e0e34026e3",
+    "crates/dustroute-minecraft/src/time/piston_runtime/mod.rs": "1334bdbea5122cbe288eb29d169e883c71d8e82b2ffa1feaa60d3a6155b743f4",
+    "crates/dustroute-minecraft/src/execution_context.rs": "0fe426a5c33bcfb59ef49db6085dbfeee9161e5c528ca5f95053a33cd7a8362f",
+    "crates/dustroute-mcp/src/service_blueprint_tests.rs": "b756beba82ee1bf0a128222075a587d652c2c3262bec01ac27de8589cc2d93ab",
+    "crates/dustroute-translate/tests/unified_piston_behavior.rs": "cb096d0f0a5f7d708a2a1e5353900807d5e2c9385fd9835f5301441726674997",
+    "crates/dustroute-translate/tests/location_behavior.rs": "f2aab2f61e4a82f6a17eb4d1ef4c9cf0eab1f835d06aabf88f7124efd75dadd6",
+    "crates/dustroute-translate/tests/execution_context.rs": "df17dd924e3787e151ff634993980a7d79025bc205159930bccf0723a35dabb4",
+    "crates/dustroute-translate/tests/support/runtime_blueprint.rs": "37edaea9dc4fa450723cf7c3a7c643c047b1e0c698bbe326c371fc3996b59933",
+    "crates/dustroute-translate/src/snapshot.rs": "5356506bfaa6f37f9fd8742899ee77076cd51698e8dba8415049302e74081b76",
+    "crates/dustroute-translate/tests/reference_door_materials.rs": "f89090de02b4cf8132b15f5b070bea22d53bce8ad123f0d445742a7031a5d743",
+    "crates/dustroute-translate/tests/fixtures/reference-3x3-bobiloosky-v1.json": "ded824e424947bc12d3060e6f5242207a22ec7abe123c9e90ce73f9e7c0ef900",
+    "crates/dustroute-translate/tests/fixtures/reference-3x3-observed-a-v1.json": "c5ccc15c9bbf1b5cd4e57ece66e66031b7947205a5052117ad2466c49485605e",
+    "crates/dustroute-mcp/mineflayer/e2e/piston-mixed-live.js": "df2c99c818ffa5dcee043647e27e669d3602374ab3ed92f0dd250bd80f87fa43",
+    "tools/observe_reference_door.py": "6580d13703f58c62729d76310c46fa91169f9c1f4adf1569b0ac9314c4b3297b",
+    "docs/reference-3x3-door-audit.md": "cac76483c2e8a3f3a278a0d9aa9075ab7a65742a0822a7ce96eb964b52376018",
+    "docs/evidence/reference-3x3-live-20260927.json": "2956472cc85dce0d751ac307760a5dd5b7afb50309738650d8ba615d9ed9f67d"
+  },
+  "validation_limits": [
+    "Full workspace tests were not rerun; selected affected suites and workspace all-target Clippy passed.",
+    "An initial MCP filter service_blueprint_tests selected zero tests and was not counted; corrected blueprint_tests ran all 13 matching tests.",
+    "Material integration uses target-source audit and model tests; the full door live capture is a reference, not a model pass."
+  ]
+}

@@ -13,8 +13,8 @@ use std::fmt::{Display, Formatter};
 
 use dustroute_minecraft::time::{PhysicsEngine, PhysicsEngineError, TraceStatus};
 use dustroute_minecraft::{
-    Block, BlockKind, Facing, PISTON_PUSH_LIMIT, PistonState, PistonVariant, Pos, Region,
-    WireConnection, World, piston_state,
+    Block, BlockKind, Facing, PistonState, PistonVariant, Pos, Region, WireConnection, World,
+    piston_state,
 };
 use dustroute_minecraft::{ValidatedWorld, WorldValidationError, WorldValidationIssue};
 use serde::{Deserialize, Serialize};
@@ -541,7 +541,7 @@ impl PistonDoorScenario {
             }
         }
         let (low, high) = world.bounds().ok_or(PistonDoorScenarioError::EmptyWorld)?;
-        let margin = PISTON_PUSH_LIMIT as i32 + 1;
+        let margin = dustroute_minecraft::piston_law::builtin_piston_laws().push_limit() as i32 + 1;
         let known_region = Region::new(
             low.offset(-margin, -margin, -margin),
             high.offset(margin, margin, margin),

@@ -1,0 +1,11 @@
+{
+  "reason": "Pin directly observed torch off-edge threshold, inclusive history window and recovery behavior before repeated-use type certification",
+  "source_artifact": "torch-burnout-1.21.11-observed.json",
+  "fixture_sha256": "3353411a2098f81571f15d519d12d88c4103bbe5b16822805ecb07432b123df9",
+  "raw_console_sha256": "12faed3a843753c4d285e15578760f8256622745d7171c39a0cf5f042b172c0d",
+  "capture_tool_sha256": "b8c86ae2cd47e203d53ec73de296f1b4aa153ebdc5a540b2a245b62ccf73ce52",
+  "evidence": "observed_server_block_state",
+  "internal_callback_order": "unavailable",
+  "cases": 18,
+  "samples": 3888
+}

@@ -1,0 +1,371 @@
+{
+  "schema_version": "dustroute.custom-assembly-live-evidence.v1",
+  "run_id": "placed-assembly-mcp-20260926-a",
+  "status": "passed",
+  "origin": {
+    "x": 33152,
+    "y": 180,
+    "z": 1000
+  },
+  "known_region": {
+    "min": {
+      "x": 33147,
+      "y": 178,
+      "z": 978
+    },
+    "max": {
+      "x": 33157,
+      "y": 192,
+      "z": 1006
+    }
+  },
+  "server": {
+    "connected": true,
+    "username": "DustRouteBot",
+    "host": "127.0.0.1",
+    "port": 25565,
+    "version": "1.21.11",
+    "dimension": "minecraft:overworld",
+    "enabled_features": [
+      "minecraft:vanilla"
+    ],
+    "position": {
+      "x": 33027.5,
+      "y": -60,
+      "z": 997.5
+    },
+    "metrics": {
+      "requests_total": 4,
+      "errors_total": 0,
+      "request_bytes": 152,
+      "response_bytes": 2046,
+      "total_duration_micros": 1407,
+      "max_duration_micros": 1101,
+      "scan_requests": 0,
+      "scan_volume_blocks": 0,
+      "scan_non_air_blocks": 0,
+      "requests_by_method": {
+        "status": 4,
+        "visible_players": 0,
+        "approach_player": 0,
+        "observe_player": 0,
+        "scan_region": 0,
+        "get_block": 0,
+        "activate_lever": 0,
+        "approach_lever": 0,
+        "wait_ticks": 0,
+        "start_update_recording": 0,
+        "stop_update_recording": 0,
+        "preview_region": 0,
+        "write_blocks": 0,
+        "place_physical_blocks": 0,
+        "unknown": 0
+      }
+    }
+  },
+  "calls": [
+    {
+      "name": "test_circuit_change",
+      "ok": true
+    },
+    {
+      "name": "test_circuit_change",
+      "ok": true,
+      "operation_id": "014d3660-7144-49d6-9564-5097ce0198ed"
+    },
+    {
+      "name": "show_operation",
+      "ok": true,
+      "operation_id": "014d3660-7144-49d6-9564-5097ce0198ed"
+    },
+    {
+      "name": "invoke_operation",
+      "ok": true,
+      "operation_id": "014d3660-7144-49d6-9564-5097ce0198ed"
+    },
+    {
+      "name": "new_placement",
+      "ok": true,
+      "operation_id": "dce45de6-df6f-4e83-bdc0-67ca270916e8"
+    },
+    {
+      "name": "invoke_operation",
+      "ok": false,
+      "error": "construction needs an unused preview; undo needs a verified application"
+    },
+    {
+      "name": "show_operation",
+      "ok": true,
+      "operation_id": "dce45de6-df6f-4e83-bdc0-67ca270916e8"
+    },
+    {
+      "name": "invoke_operation",
+      "ok": false,
+      "error": "construction state or surrounding world differs from the verified plan; inspect before continuing"
+    },
+    {
+      "name": "invoke_operation",
+      "ok": true,
+      "operation_id": "dce45de6-df6f-4e83-bdc0-67ca270916e8",
+      "instance_id": "dce45de6-df6f-4e83-bdc0-67ca270916e8",
+      "status": "verified",
+      "verified_steps": 14,
+      "total_steps": 14,
+      "error": null,
+      "undo": false
+    },
+    {
+      "name": "manage_assembly",
+      "ok": true,
+      "action": "list",
+      "observation_status": null,
+      "revalidation_status": null,
+      "instance_state": null
+    },
+    {
+      "name": "manage_assembly",
+      "ok": true,
+      "action": "get",
+      "observation_status": null,
+      "revalidation_status": null,
+      "instance_state": "applied"
+    },
+    {
+      "name": "manage_assembly",
+      "ok": true,
+      "error": null,
+      "action": "observe",
+      "observation_status": "matches",
+      "revalidation_status": "passed",
+      "instance_state": "applied"
+    },
+    {
+      "name": "undo_operation",
+      "ok": false,
+      "error": "operation not found"
+    },
+    {
+      "name": "manage_assembly",
+      "ok": false,
+      "error": "conditional removal requires an applied record, matching observation and fresh passing review",
+      "action": "plan_removal",
+      "observation_status": "observation_incomplete",
+      "revalidation_status": "passed",
+      "instance_state": "applied"
+    },
+    {
+      "name": "manage_assembly",
+      "ok": false,
+      "error": "conditional removal requires an applied record, matching observation and fresh passing review",
+      "action": "plan_removal",
+      "observation_status": "changed",
+      "revalidation_status": "passed",
+      "instance_state": "applied"
+    },
+    {
+      "name": "manage_assembly",
+      "ok": false,
+      "error": "conditional removal requires an applied record, matching observation and fresh passing review",
+      "action": "plan_removal",
+      "observation_status": "changed",
+      "revalidation_status": "passed",
+      "instance_state": "applied"
+    },
+    {
+      "name": "manage_assembly",
+      "ok": true,
+      "operation_id": "2bb323b8-5ef3-472c-83f1-2e69e2d80108",
+      "instance_id": "dce45de6-df6f-4e83-bdc0-67ca270916e8",
+      "action": "plan_removal",
+      "observation_status": "matches",
+      "revalidation_status": "passed",
+      "instance_state": null
+    },
+    {
+      "name": "invoke_operation",
+      "ok": false,
+      "error": "construction needs an unused preview; undo needs a verified application"
+    },
+    {
+      "name": "show_operation",
+      "ok": true,
+      "operation_id": "2bb323b8-5ef3-472c-83f1-2e69e2d80108"
+    },
+    {
+      "name": "invoke_operation",
+      "ok": false,
+      "error": "fresh removal observation refused: {\"matching_samples\":2,\"observed_at_unix_ms\":1790443251729,\"reason\":\"construction state or surrounding world differs from the verified plan; inspect before continuing\",\"runtime_history_reconstructed\":false,\"sample_interval_ticks\":20,\"snapshot\":{\"blocks\":[{\"name\":\"minecraft:stone\",\"pos\":{\"x\":33147,\"y\":178,\"z\":978},\"properties\":{}},{\"name\":\"minecraft:redstone_block\",\"pos\":{\"x\":33151,\"y\":184,\"z\":984},\"properties\":{}},{\"name\":\"minecraft:redstone_block\",\"pos\":{\"x\":33151,\"y\":184,\"z\":992},\"properties\":{}},{\"name\":\"minecraft:stone\",\"pos\":{\"x\":33152,\"y\":183,\"z\":1000},\"properties\":{}},{\"name\":\"minecraft:stone\",\"pos\":{\"x\":33152,\"y\":183,\"z\":1001},\"properties\":{}},{\"name\":\"minecraft:stone\",\"pos\":{\"x\":33152,\"y\":183,\"z\":1002},\"properties\":{}},{\"name\":\"minecraft:stone\",\"pos\":{\"x\":33152,\"y\":183,\"z\":1003},\"properties\":{}},{\"name\":\"minecraft:sticky_piston\",\"pos\":{\"x\":33152,\"y\":184,\"z\":984},\"properties\":{\"extended\":\"true\",\"facing\":\"up\"}},{\"name\":\"minecraft:stone\",\"pos\":{\"x\":33152,\"y\":184,\"z\":990},\"properties\":{}},{\"name\":\"minecraft:piston_head\",\"pos\":{\"x\":33152,\"y\":184,\"z\":991},\"properties\":{\"facing\":\"north\",\"short\":\"false\",\"type\":\"sticky\"}},{\"name\":\"minecraft:sticky_piston\",\"pos\":{\"x\":33152,\"y\":184,\"z\":992},\"properties\":{\"extended\":\"true\",\"facing\":\"north\"}},{\"name\":\"minecraft:sticky_piston\",\"pos\":{\"x\":33152,\"y\":184,\"z\":1000},\"properties\":{\"extended\":\"false\",\"facing\":\"down\"}},{\"name\":\"minecraft:repeater\",\"pos\":{\"x\":33152,\"y\":184,\"z\":1001},\"properties\":{\"delay\":\"1\",\"facing\":\"south\",\"locked\":\"false\",\"powered\":\"false\"}},{\"name\":\"minecraft:redstone_wire\",\"pos\":{\"x\":33152,\"y\":184,\"z\":1002},\"properties\":{\"east\":\"none\",\"north\":\"side\",\"power\":\"0\",\"south\":\"side\",\"west\":\"none\"}},{\"name\":\"minecraft:lever\",\"pos\":{\"x\":33152,\"y\":184,\"z\":1003},\"properties\":{\"face\":\"floor\",\"facing\":\"north\",\"powered\":\"false\"}},{\"name\":\"minecraft:piston_head\",\"pos\":{\"x\":33152,\"y\":185,\"z\":984},\"properties\":{\"facing\":\"up\",\"short\":\"false\",\"type\":\"sticky\"}},{\"name\":\"minecraft:stone\",\"pos\":{\"x\":33152,\"y\":186,\"z\":984},\"properties\":{}}],\"max\":{\"x\":33157,\"y\":192,\"z\":1006},\"min\":{\"x\":33147,\"y\":178,\"z\":978}},\"status\":\"changed\"}"
+    },
+    {
+      "name": "invoke_operation",
+      "ok": true,
+      "operation_id": "2bb323b8-5ef3-472c-83f1-2e69e2d80108",
+      "instance_id": "dce45de6-df6f-4e83-bdc0-67ca270916e8",
+      "status": "verified",
+      "verified_steps": 14,
+      "total_steps": 14,
+      "error": null,
+      "undo": true
+    },
+    {
+      "name": "manage_assembly",
+      "ok": true,
+      "error": null,
+      "action": "observe",
+      "observation_status": "matches",
+      "revalidation_status": "passed",
+      "instance_state": "removed"
+    }
+  ],
+  "applied_inputs": [
+    {
+      "position": {
+        "x": 33152,
+        "y": 184,
+        "z": 1003
+      },
+      "powered": true,
+      "game_tick": 48412,
+      "packet_sequence": 27007,
+      "write_sequence": 27057
+    },
+    {
+      "position": {
+        "x": 33152,
+        "y": 184,
+        "z": 1003
+      },
+      "powered": false,
+      "game_tick": 48606,
+      "packet_sequence": 29463,
+      "write_sequence": 29513
+    }
+  ],
+  "body_readbacks": [
+    {
+      "position": {
+        "x": 33152,
+        "y": 184,
+        "z": 1003
+      },
+      "powered": true,
+      "evidence": "actual application ticks retained in server capture",
+      "body_readback": {
+        "name": "sticky_piston",
+        "properties": {
+          "facing": "down",
+          "extended": true
+        }
+      }
+    },
+    {
+      "position": {
+        "x": 33152,
+        "y": 184,
+        "z": 1003
+      },
+      "powered": false,
+      "evidence": "actual application ticks retained in server capture",
+      "body_readback": {
+        "name": "sticky_piston",
+        "properties": {
+          "facing": "down",
+          "extended": false
+        }
+      }
+    }
+  ],
+  "restart": {
+    "after_adoption": true,
+    "transport": "new_stdio_process",
+    "after_placement": true,
+    "after_removal": true
+  },
+  "rotation": "r270",
+  "process_restarts": [
+    {
+      "before_pid": 29015,
+      "after_pid": 29090,
+      "exit_code": null,
+      "signal": "SIGTERM"
+    },
+    {
+      "before_pid": 29090,
+      "after_pid": 29181,
+      "exit_code": null,
+      "signal": "SIGTERM"
+    },
+    {
+      "before_pid": 29181,
+      "after_pid": 29267,
+      "exit_code": null,
+      "signal": "SIGTERM"
+    }
+  ],
+  "persistence_checks": {
+    "listed_after_restart": true,
+    "fresh_review": true,
+    "missing_chunks_refused": true,
+    "external_change_detected": true,
+    "preview_required": true,
+    "changed_after_preview_refused": true,
+    "removal_retained": true
+  },
+  "registry_records": [
+    {
+      "path": "/root/DustRoute/.local/e2e-artifacts/placed-assembly-mcp-20260926-a.state/3c2797e6019a5e48/assembly-instances/dce45de6-df6f-4e83-bdc0-67ca270916e8.json",
+      "sha256": "7cb59a4b2834132f1b7021fd49e68e9793dc84d11e84c8cb863810a3a1382ac6",
+      "schema": "dustroute.placed-assembly.v1",
+      "instance_id": "dce45de6-df6f-4e83-bdc0-67ca270916e8",
+      "state": "removed",
+      "revision": 38,
+      "attempts": [
+        {
+          "operation_id": "dce45de6-df6f-4e83-bdc0-67ca270916e8",
+          "removal": false,
+          "verified_steps": 14,
+          "total_steps": 14,
+          "started_at_unix_ms": 1790443179018,
+          "finished_at_unix_ms": 1790443185474,
+          "error": null
+        },
+        {
+          "operation_id": "2bb323b8-5ef3-472c-83f1-2e69e2d80108",
+          "removal": true,
+          "verified_steps": 14,
+          "total_steps": 14,
+          "started_at_unix_ms": 1790443261833,
+          "finished_at_unix_ms": 1790443268398,
+          "error": null
+        }
+      ]
+    }
+  ],
+  "cleanup": {
+    "region_empty": true,
+    "force_load_removed": true
+  },
+  "artifacts_sha256": {
+    ".raw.ndjson": "60e5a0fcbb1c4ac34908fbfc6d05994ea66da51bb3c356ca902733d1a9f3445a",
+    ".server.log": "45a99b7c0d722fd4e7f36e39f1907d5a45a7e3462d1962549fab236004ddf469",
+    ".bridge.log": "ea4f62985d4b534720f4d34bc2d41f42dad2f2bb48724ccbc9f3563652b5949d",
+    ".client.json": "da6f2be51fc4b35bb97062db05652b613f835320f226e34eba96b2d33b3ed82d",
+    ".fixture.json": "d175658b55064b7a37d9f384df5493a202e536d106fec48ca29292a79575af8d"
+  },
+  "actor_sha256": "59a259a1c2eac7b08565f136c48943d120766ffef37221616504e791ea25a6ec",
+  "capture_footer": {
+    "kind": "artifact_end",
+    "capture_mode": "bounded",
+    "capture_state": "closed",
+    "input_observed": true,
+    "anchor_game_tick": 48412,
+    "end_game_tick": 49614,
+    "last_sequence": 43349,
+    "emitted_records": 14843,
+    "suppressed_records": 1535,
+    "evicted_records": 26971,
+    "write_errors": 0,
+    "heartbeat_mode": "full"
+  },
+  "evidence_limit": "Public MCP per-stage whole-region verification and client body readback after applied inputs. Client sample ticks are not server ticks; bounded server capture omits earlier construction and is not complete tick-internal evidence."
+}

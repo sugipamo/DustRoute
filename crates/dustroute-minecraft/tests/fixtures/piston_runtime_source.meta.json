@@ -1,0 +1,51 @@
+{
+  "minecraft_version": "1.21.11",
+  "yarn_mappings": "1.21.11+build.6",
+  "fabric_loom": "1.17.20",
+  "official_artifacts": {
+    "client": {
+      "url": "https://piston-data.mojang.com/v1/objects/ba2df812c2d12e0219c489c4cd9a5e1f0760f5bd/client.jar",
+      "sha1": "ba2df812c2d12e0219c489c4cd9a5e1f0760f5bd",
+      "matches_official_manifest": true
+    },
+    "server": {
+      "url": "https://piston-data.mojang.com/v1/objects/64bb6d763bed0a9f1d632ec347938594144943ed/server.jar",
+      "sha1": "64bb6d763bed0a9f1d632ec347938594144943ed",
+      "matches_official_manifest": true
+    }
+  },
+  "named_merged_jar": "minecraft-merged-1.21.11-net.fabricmc.yarn.1_21_11.1.21.11+build.6-v2.jar",
+  "named_merged_jar_sha256": "5b4aa12131a872a25dc32e7f017373d6e83502f6919154769296dd3de6af8c1b",
+  "inspection": {
+    "bytecode": "javap -p -c",
+    "decompiler": "CFR 0.152",
+    "decompiler_url": "https://www.benf.org/other/cfr/cfr-0.152.jar",
+    "decompiler_sha256": "f686e8f3ded377d7bc87d216a90e9e9512df4156e75b06c655a16648ae8765b2"
+  },
+  "named_class_sha256": {
+    "net/minecraft/block/PistonBlock.class": "00cadea51e97b910da939da68b97c591843675ced0619145a4bb7c412c31cd02",
+    "net/minecraft/block/entity/PistonBlockEntity.class": "c0f4f67fb2645bd762b8aaf01335c7da0111469793051e4ade39fde2bdfe0e56",
+    "net/minecraft/server/world/ServerWorld.class": "737285e67694a14c1f51858e929209c53dc91f3bbe5bd030b09c56e9d71de14f",
+    "net/minecraft/world/block/ChainRestrictedNeighborUpdater.class": "659bedb473d4f2a2b3cbb1cb23cd190346bb0682ebc0f30f45a9c2a926c24f04",
+    "net/minecraft/world/World.class": "745b101ac1d0231555831f0fcf65e98e89ffd18d45facce363d31243592cad11",
+    "net/minecraft/world/chunk/WorldChunk.class": "ac2873369f78d13129bc4651058bf95230770f168e4b56b9f2a50f00b2e1c5b0",
+    "net/minecraft/block/PistonHeadBlock.class": "d71a4265c315f6ab25f2964bb9575278bce24a347055971d24ffc2fa48b09a8b",
+    "net/minecraft/block/PistonExtensionBlock.class": "cb3ecd2c13301868d900a6e874891db1ce59323dc13499947b0772ec52ad132c",
+    "net/minecraft/block/piston/PistonHandler.class": "d0647b9d63b2d81c4f7cc0508e9327a8fd1419e5d6ff09ac55aa4d6ad0fe5ee3",
+    "net/minecraft/world/block/NeighborUpdater.class": "288328dcd874eea9005fe034f0715c2681f3af7e932c4d73484065b06b516b9e",
+    "net/minecraft/world/block/ChainRestrictedNeighborUpdater$SixWayEntry.class": "165b0437782b559139fca6b7b9e6823cf23557c29af7072c0439617beace0e62",
+    "net/minecraft/block/AbstractBlock.class": "a005796ef429f0b0a7bd7398b3c06da4847619118a11d46286eb6640c50db6a8",
+    "net/minecraft/block/AbstractBlock$AbstractBlockState.class": "aeb7c519d37fc54dd11e082751e721711fe2b452bb0a2d6110e8b7eda0638615"
+  },
+  "kind": "static_source_audit",
+  "audited_on": "2026-09-21",
+  "profile": "dustroute.horizontal-piston-callbacks.java-1-21-11.v1",
+  "scope": "Source/bytecode basis of the new bounded callback adapter. No new live observation. Electrical transfer and payload admission retain the explicitly pinned bounded laws. Historical captures and profiles are unchanged.",
+  "findings": [
+    "Piston request and delivery use distinct power checks and preserve the requested event argument.",
+    "Carrier progress, last progress, saved world time and source/payload lifecycle are independent runtime state.",
+    "New block entity tickers enter the active list outside its iteration, or the pending list during iteration.",
+    "Ordinary neighbor order is west/east/down/up/north/south; shape order is west/east/north/south/down/up.",
+    "Head support and shape callbacks use the current body state; source retraction installs a carrier at the body coordinate."
+  ]
+}

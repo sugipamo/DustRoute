@@ -1,0 +1,688 @@
+{
+  "inputs": {
+    "retract": 1,
+    "front": 1,
+    "block_entity_section": 1,
+    "neighbor_index": 5,
+    "count": 12,
+    "piston_payload": 1,
+    "has_block_entity": 1,
+    "extended_piston": 1
+  },
+  "registers": {
+    "head": {
+      "initial": 0,
+      "maximum": 2
+    },
+    "payload": {
+      "initial": 0,
+      "maximum": 2
+    },
+    "limit": {
+      "initial": 0,
+      "maximum": 12
+    },
+    "body_carrier": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "head_carrier": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "accept_input": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "first_tick_delay": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "next_tick_delay": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "dx": {
+      "initial": 0,
+      "maximum": 2
+    },
+    "dy": {
+      "initial": 0,
+      "maximum": 2
+    },
+    "dz": {
+      "initial": 0,
+      "maximum": 2
+    },
+    "admit_chain": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "immovable": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "shape_dx": {
+      "initial": 1,
+      "maximum": 2
+    },
+    "shape_dy": {
+      "initial": 1,
+      "maximum": 2
+    },
+    "shape_dz": {
+      "initial": 1,
+      "maximum": 2
+    }
+  },
+  "histories": {},
+  "handlers": {
+    "evaluate": [
+      {
+        "op": "set",
+        "register": "head",
+        "value": {
+          "op": "constant",
+          "value": 1
+        }
+      },
+      {
+        "op": "set",
+        "register": "payload",
+        "value": {
+          "op": "constant",
+          "value": 2
+        }
+      },
+      {
+        "op": "set",
+        "register": "limit",
+        "value": {
+          "op": "constant",
+          "value": 12
+        }
+      },
+      {
+        "op": "set",
+        "register": "body_carrier",
+        "value": {
+          "op": "input",
+          "name": "retract"
+        }
+      },
+      {
+        "op": "set",
+        "register": "head_carrier",
+        "value": {
+          "op": "not",
+          "value": {
+            "op": "input",
+            "name": "retract"
+          }
+        }
+      },
+      {
+        "op": "set",
+        "register": "accept_input",
+        "value": {
+          "op": "not",
+          "value": {
+            "op": "input",
+            "name": "front"
+          }
+        }
+      },
+      {
+        "op": "set",
+        "register": "first_tick_delay",
+        "value": {
+          "op": "input",
+          "name": "block_entity_section"
+        }
+      },
+      {
+        "op": "set",
+        "register": "next_tick_delay",
+        "value": {
+          "op": "constant",
+          "value": 1
+        }
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "neighbor_index"
+          },
+          "right": {
+            "op": "constant",
+            "value": 0
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "dx",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "dy",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "dz",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          }
+        ],
+        "otherwise": []
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "neighbor_index"
+          },
+          "right": {
+            "op": "constant",
+            "value": 1
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "dx",
+            "value": {
+              "op": "constant",
+              "value": 2
+            }
+          },
+          {
+            "op": "set",
+            "register": "dy",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "dz",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          }
+        ],
+        "otherwise": []
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "neighbor_index"
+          },
+          "right": {
+            "op": "constant",
+            "value": 2
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "dx",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "dy",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "dz",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          }
+        ],
+        "otherwise": []
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "neighbor_index"
+          },
+          "right": {
+            "op": "constant",
+            "value": 3
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "dx",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "dy",
+            "value": {
+              "op": "constant",
+              "value": 2
+            }
+          },
+          {
+            "op": "set",
+            "register": "dz",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          }
+        ],
+        "otherwise": []
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "neighbor_index"
+          },
+          "right": {
+            "op": "constant",
+            "value": 4
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "dx",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "dy",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "dz",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          }
+        ],
+        "otherwise": []
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "neighbor_index"
+          },
+          "right": {
+            "op": "constant",
+            "value": 5
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "dx",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "dy",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "dz",
+            "value": {
+              "op": "constant",
+              "value": 2
+            }
+          }
+        ],
+        "otherwise": []
+      },
+      {
+        "op": "set",
+        "register": "admit_chain",
+        "value": {
+          "op": "maximum",
+          "left": {
+            "op": "not",
+            "value": {
+              "op": "input",
+              "name": "piston_payload"
+            }
+          },
+          "right": {
+            "op": "not",
+            "value": {
+              "op": "at_least",
+              "left": {
+                "op": "input",
+                "name": "count"
+              },
+              "right": {
+                "op": "constant",
+                "value": 2
+              }
+            }
+          }
+        }
+      },
+      {
+        "op": "set",
+        "register": "immovable",
+        "value": {
+          "op": "maximum",
+          "left": {
+            "op": "input",
+            "name": "has_block_entity"
+          },
+          "right": {
+            "op": "input",
+            "name": "extended_piston"
+          }
+        }
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "neighbor_index"
+          },
+          "right": {
+            "op": "constant",
+            "value": 0
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "shape_dx",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "shape_dy",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "shape_dz",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          }
+        ],
+        "otherwise": []
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "neighbor_index"
+          },
+          "right": {
+            "op": "constant",
+            "value": 1
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "shape_dx",
+            "value": {
+              "op": "constant",
+              "value": 2
+            }
+          },
+          {
+            "op": "set",
+            "register": "shape_dy",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "shape_dz",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          }
+        ],
+        "otherwise": []
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "neighbor_index"
+          },
+          "right": {
+            "op": "constant",
+            "value": 2
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "shape_dx",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "shape_dy",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "shape_dz",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          }
+        ],
+        "otherwise": []
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "neighbor_index"
+          },
+          "right": {
+            "op": "constant",
+            "value": 3
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "shape_dx",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "shape_dy",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "shape_dz",
+            "value": {
+              "op": "constant",
+              "value": 2
+            }
+          }
+        ],
+        "otherwise": []
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "neighbor_index"
+          },
+          "right": {
+            "op": "constant",
+            "value": 4
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "shape_dx",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "shape_dy",
+            "value": {
+              "op": "constant",
+              "value": 0
+            }
+          },
+          {
+            "op": "set",
+            "register": "shape_dz",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          }
+        ],
+        "otherwise": []
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "neighbor_index"
+          },
+          "right": {
+            "op": "constant",
+            "value": 5
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "shape_dx",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          },
+          {
+            "op": "set",
+            "register": "shape_dy",
+            "value": {
+              "op": "constant",
+              "value": 2
+            }
+          },
+          {
+            "op": "set",
+            "register": "shape_dz",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          }
+        ],
+        "otherwise": []
+      }
+    ]
+  }
+}

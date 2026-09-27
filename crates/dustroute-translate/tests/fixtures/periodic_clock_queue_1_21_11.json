@@ -1,0 +1,554 @@
+{
+  "schema": "dustroute.periodic-clock-observation.v1",
+  "minecraft_version": "1.21.11",
+  "evidence": "observed_server_block_state",
+  "clock": "game_tick",
+  "sampling": "frozen_console_after_each_explicit_tick",
+  "construction": "support_then_upper_block_then_dust_then_lit_wall_torch_in_one_frozen_tick",
+  "external_inputs": [],
+  "internal_callback_order": "unavailable",
+  "placement": [
+    {
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "state": "minecraft:stone"
+    },
+    {
+      "position": {
+        "x": 1,
+        "y": 1,
+        "z": 0
+      },
+      "state": "minecraft:stone"
+    },
+    {
+      "position": {
+        "x": 0,
+        "y": 1,
+        "z": 0
+      },
+      "state": "minecraft:redstone_wire"
+    },
+    {
+      "position": {
+        "x": 1,
+        "y": 0,
+        "z": 0
+      },
+      "state": "minecraft:redstone_wall_torch[facing=east,lit=true]"
+    }
+  ],
+  "known_region": {
+    "min": {
+      "x": -2,
+      "y": -2,
+      "z": -2
+    },
+    "max": {
+      "x": 3,
+      "y": 3,
+      "z": 2
+    }
+  },
+  "duration_game_ticks": 32,
+  "samples": [
+    {
+      "game_tick": 0,
+      "torch_lit": true,
+      "torch_facing": "east",
+      "dust_power": 15,
+      "dust_connections": {
+        "north": "none",
+        "east": "none",
+        "south": "none",
+        "west": "none"
+      },
+      "supports_intact": true
+    },
+    {
+      "game_tick": 1,
+      "torch_lit": true,
+      "torch_facing": "east",
+      "dust_power": 15,
+      "dust_connections": {
+        "north": "none",
+        "east": "none",
+        "south": "none",
+        "west": "none"
+      },
+      "supports_intact": true
+    },
+    {
+      "game_tick": 2,
+      "torch_lit": false,
+      "torch_facing": "east",
+      "dust_power": 0,
+      "dust_connections": {
+        "north": "none",
+        "east": "none",
+        "south": "none",
+        "west": "none"
+      },
+      "supports_intact": true
+    },
+    {
+      "game_tick": 3,
+      "torch_lit": false,
+      "torch_facing": "east",
+      "dust_power": 0,
+      "dust_connections": {
+        "north": "none",
+        "east": "none",
+        "south": "none",
+        "west": "none"
+      },
+      "supports_intact": true
+    },
+    {
+      "game_tick": 4,
+      "torch_lit": true,
+      "torch_facing": "east",
+      "dust_power": 15,
+      "dust_connections": {
+        "north": "none",
+        "east": "none",
+        "south": "none",
+        "west": "none"
+      },
+      "supports_intact": true
+    },
+    {
+      "game_tick": 5,
+      "torch_lit": true,
+      "torch_facing": "east",
+      "dust_power": 15,
+      "dust_connections": {
+        "north": "none",
+        "east": "none",
+        "south": "none",
+        "west": "none"
+      },
+      "supports_intact": true
+    },
+    {
+      "game_tick": 6,
+      "torch_lit": false,
+      "torch_facing": "east",
+      "dust_power": 0,
+      "dust_connections": {
+        "north": "none",
+        "east": "none",
+        "south": "none",
+        "west": "none"
+      },
+      "supports_intact": true
+    },
+    {
+      "game_tick": 7,
+      "torch_lit": false,
+      "torch_facing": "east",
+      "dust_power": 0,
+      "dust_connections": {
+        "north": "none",
+        "east": "none",
+        "south": "none",
+        "west": "none"
+      },
+      "supports_intact": true
+    },
+    {
+      "game_tick": 8,
+      "torch_lit": true,
+      "torch_facing": "east",
+      "dust_power": 15,
+      "dust_connections": {
+        "north": "none",
+        "east": "none",
+        "south": "none",
+        "west": "none"
+      },
+      "supports_intact": true
+    },
+    {
+      "game_tick": 9,
+      "torch_lit": true,
+      "torch_facing": "east",
+      "dust_power": 15,
+      "dust_connections": {
+        "north": "none",
+        "east": "none",
+        "south": "none",
+        "west": "none"
+      },
+      "supports_intact": true
+    },
+    {
+      "game_tick": 10,
+      "torch_lit": false,
+      "torch_facing": "east",
+      "dust_power": 0,
+      "dust_connections": {
+        "north": "none",
+        "east": "none",
+        "south": "none",
+        "west": "none"
+      },
+      "supports_intact": true
+    },
+    {
+      "game_tick": 11,
+      "torch_lit": false,
+      "torch_facing": "east",
+      "dust_power": 0,
+      "dust_connections": {
+        "north": "none",
+        "east": "none",
+        "south": "none",
+        "west": "none"
+      },
+      "supports_intact": true
+    },
+    {
+      "game_tick": 12,
+      "torch_lit": true,
+      "torch_facing": "east",
+      "dust_power": 15,
+      "dust_connections": {
+        "north": "none",
+        "east": "none",
+        "south": "none",
+        "west": "none"
+      },
+      "supports_intact": true
+    },
+    {
+      "game_tick": 13,
+      "torch_lit": true,
+      "torch_facing": "east",
+      "dust_power": 15,
+      "dust_connections": {
+        "north": "none",
+        "east": "none",
+        "south": "none",
+        "west": "none"
+      },
+      "supports_intact": true
+    },
+    {
+      "game_tick": 14,
+      "torch_lit": false,
+      "torch_facing": "east",
+      "dust_power": 0,
+      "dust_connections": {
+        "north": "none",
+        "east": "none",
+        "south": "none",
+        "west": "none"
+      },
+      "supports_intact": true
+    },
+    {
+      "game_tick": 15,
+      "torch_lit": false,
+      "torch_facing": "east",
+      "dust_power": 0,
+      "dust_connections": {
+        "north": "none",
+        "east": "none",
+        "south": "none",
+        "west": "none"
+      },
+      "supports_intact": true
+    },
+    {
+      "game_tick": 16,
+      "torch_lit": true,
+      "torch_facing": "east",
+      "dust_power": 15,
+      "dust_connections": {
+        "north": "none",
+        "east": "none",
+        "south": "none",
+        "west": "none"
+      },
+      "supports_intact": true
+    },
+    {
+      "game_tick": 17,
+      "torch_lit": true,
+      "torch_facing": "east",
+      "dust_power": 15,
+      "dust_connections": {
+        "north": "none",
+        "east": "none",
+        "south": "none",
+        "west": "none"
+      },
+      "supports_intact": true
+    },
+    {
+      "game_tick": 18,
+      "torch_lit": false,
+      "torch_facing": "east",
+      "dust_power": 0,
+      "dust_connections": {
+        "north": "none",
+        "east": "none",
+        "south": "none",
+        "west": "none"
+      },
+      "supports_intact": true
+    },
+    {
+      "game_tick": 19,
+      "torch_lit": false,
+      "torch_facing": "east",
+      "dust_power": 0,
+      "dust_connections": {
+        "north": "none",
+        "east": "none",
+        "south": "none",
+        "west": "none"
+      },
+      "supports_intact": true
+    },
+    {
+      "game_tick": 20,
+      "torch_lit": true,
+      "torch_facing": "east",
+      "dust_power": 15,
+      "dust_connections": {
+        "north": "none",
+        "east": "none",
+        "south": "none",
+        "west": "none"
+      },
+      "supports_intact": true
+    },
+    {
+      "game_tick": 21,
+      "torch_lit": true,
+      "torch_facing": "east",
+      "dust_power": 15,
+      "dust_connections": {
+        "north": "none",
+        "east": "none",
+        "south": "none",
+        "west": "none"
+      },
+      "supports_intact": true
+    },
+    {
+      "game_tick": 22,
+      "torch_lit": false,
+      "torch_facing": "east",
+      "dust_power": 0,
+      "dust_connections": {
+        "north": "none",
+        "east": "none",
+        "south": "none",
+        "west": "none"
+      },
+      "supports_intact": true
+    },
+    {
+      "game_tick": 23,
+      "torch_lit": false,
+      "torch_facing": "east",
+      "dust_power": 0,
+      "dust_connections": {
+        "north": "none",
+        "east": "none",
+        "south": "none",
+        "west": "none"
+      },
+      "supports_intact": true
+    },
+    {
+      "game_tick": 24,
+      "torch_lit": true,
+      "torch_facing": "east",
+      "dust_power": 15,
+      "dust_connections": {
+        "north": "none",
+        "east": "none",
+        "south": "none",
+        "west": "none"
+      },
+      "supports_intact": true
+    },
+    {
+      "game_tick": 25,
+      "torch_lit": true,
+      "torch_facing": "east",
+      "dust_power": 15,
+      "dust_connections": {
+        "north": "none",
+        "east": "none",
+        "south": "none",
+        "west": "none"
+      },
+      "supports_intact": true
+    },
+    {
+      "game_tick": 26,
+      "torch_lit": false,
+      "torch_facing": "east",
+      "dust_power": 0,
+      "dust_connections": {
+        "north": "none",
+        "east": "none",
+        "south": "none",
+        "west": "none"
+      },
+      "supports_intact": true
+    },
+    {
+      "game_tick": 27,
+      "torch_lit": false,
+      "torch_facing": "east",
+      "dust_power": 0,
+      "dust_connections": {
+        "north": "none",
+        "east": "none",
+        "south": "none",
+        "west": "none"
+      },
+      "supports_intact": true
+    },
+    {
+      "game_tick": 28,
+      "torch_lit": true,
+      "torch_facing": "east",
+      "dust_power": 15,
+      "dust_connections": {
+        "north": "none",
+        "east": "none",
+        "south": "none",
+        "west": "none"
+      },
+      "supports_intact": true
+    },
+    {
+      "game_tick": 29,
+      "torch_lit": true,
+      "torch_facing": "east",
+      "dust_power": 15,
+      "dust_connections": {
+        "north": "none",
+        "east": "none",
+        "south": "none",
+        "west": "none"
+      },
+      "supports_intact": true
+    },
+    {
+      "game_tick": 30,
+      "torch_lit": false,
+      "torch_facing": "east",
+      "dust_power": 0,
+      "dust_connections": {
+        "north": "none",
+        "east": "none",
+        "south": "none",
+        "west": "none"
+      },
+      "supports_intact": true
+    },
+    {
+      "game_tick": 31,
+      "torch_lit": false,
+      "torch_facing": "east",
+      "dust_power": 0,
+      "dust_connections": {
+        "north": "none",
+        "east": "none",
+        "south": "none",
+        "west": "none"
+      },
+      "supports_intact": true
+    },
+    {
+      "game_tick": 32,
+      "torch_lit": false,
+      "torch_facing": "east",
+      "dust_power": 0,
+      "dust_connections": {
+        "north": "none",
+        "east": "none",
+        "south": "none",
+        "west": "none"
+      },
+      "supports_intact": true
+    }
+  ],
+  "observation_complete": true,
+  "complete": true,
+  "cleanup": {
+    "blocks_removed": true,
+    "tickets_removed": true,
+    "server_stopped": true,
+    "properties_restored": true
+  },
+  "server_jar_sha1": "64bb6d763bed0a9f1d632ec347938594144943ed",
+  "server_jar_sha256": "f83b8e093865806f931c7e34aae41b177d4c076335263dd124c75d6d65dd1726",
+  "capture_tool_sha256": "c0d8d704b9fa49477a2b87b15ce5cb6f7c0556dbf3d3b554bd71c56795c63cda",
+  "console_helper_sha256": "9c5a8d3a69c7f085e781a1e28b39bc085b69af5796dd6a9a89072258c907a1b1",
+  "saved_queue_checkpoint_ticks": [
+    28,
+    30,
+    32
+  ],
+  "queue_reader_sha256": "df880936b0e6edb43add0b320d3089a3338eb032d38319bfc7cfa04c16cf966c",
+  "queue_checkpoints": [
+    {
+      "game_tick": 28,
+      "stage": "after_tick",
+      "evidence": "saved_server_chunk_block_ticks",
+      "saved_chunk_age_game_ticks": 0,
+      "current_queue_verified": true,
+      "region_sha256": "94966a781dfb5e8b5e163e38c38cf4db9f44149ed4214d842a2154e3cb4a8825",
+      "ticks": [
+        {
+          "block": "minecraft:redstone_wall_torch",
+          "stored_delay": 2,
+          "priority": 0
+        }
+      ]
+    },
+    {
+      "game_tick": 30,
+      "stage": "after_tick",
+      "evidence": "saved_server_chunk_block_ticks",
+      "saved_chunk_age_game_ticks": 0,
+      "current_queue_verified": true,
+      "region_sha256": "570240f04e594de53b402649b9b8992fabd8328ce7eef5fbec408dc63e332556",
+      "ticks": [
+        {
+          "block": "minecraft:redstone_wall_torch",
+          "stored_delay": 2,
+          "priority": 0
+        }
+      ]
+    },
+    {
+      "game_tick": 32,
+      "stage": "after_tick",
+      "evidence": "saved_server_chunk_block_ticks",
+      "saved_chunk_age_game_ticks": 2,
+      "current_queue_verified": false,
+      "region_sha256": "570240f04e594de53b402649b9b8992fabd8328ce7eef5fbec408dc63e332556",
+      "ticks": [
+        {
+          "block": "minecraft:redstone_wall_torch",
+          "stored_delay": 2,
+          "priority": 0
+        }
+      ]
+    }
+  ],
+  "raw_console_sha256": "4a18791b30fc959ece052a461cd5c43f42cbd5b2845fc042e41ead69ef7adb9f"
+}

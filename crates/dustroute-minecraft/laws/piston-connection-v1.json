@@ -1,0 +1,243 @@
+{
+  "inputs": {
+    "kind": 15,
+    "observed": 1,
+    "shape": 1,
+    "arm": 1,
+    "facing": 1,
+    "aligned": 1
+  },
+  "registers": {
+    "connected": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "error": {
+      "initial": 0,
+      "maximum": 2
+    }
+  },
+  "histories": {},
+  "handlers": {
+    "evaluate": [
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "kind"
+          },
+          "right": {
+            "op": "constant",
+            "value": 3
+          }
+        },
+        "then": [
+          {
+            "op": "if",
+            "condition": {
+              "op": "input",
+              "name": "shape"
+            },
+            "then": [
+              {
+                "op": "set",
+                "register": "connected",
+                "value": {
+                  "op": "input",
+                  "name": "arm"
+                }
+              }
+            ],
+            "otherwise": [
+              {
+                "op": "if",
+                "condition": {
+                  "op": "input",
+                  "name": "observed"
+                },
+                "then": [
+                  {
+                    "op": "set",
+                    "register": "error",
+                    "value": {
+                      "op": "constant",
+                      "value": 1
+                    }
+                  }
+                ],
+                "otherwise": [
+                  {
+                    "op": "set",
+                    "register": "connected",
+                    "value": {
+                      "op": "constant",
+                      "value": 1
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "otherwise": [
+          {
+            "op": "if",
+            "condition": {
+              "op": "maximum",
+              "left": {
+                "op": "maximum",
+                "left": {
+                  "op": "equal",
+                  "left": {
+                    "op": "input",
+                    "name": "kind"
+                  },
+                  "right": {
+                    "op": "constant",
+                    "value": 5
+                  }
+                },
+                "right": {
+                  "op": "equal",
+                  "left": {
+                    "op": "input",
+                    "name": "kind"
+                  },
+                  "right": {
+                    "op": "constant",
+                    "value": 6
+                  }
+                }
+              },
+              "right": {
+                "op": "equal",
+                "left": {
+                  "op": "input",
+                  "name": "kind"
+                },
+                "right": {
+                  "op": "constant",
+                  "value": 12
+                }
+              }
+            },
+            "then": [
+              {
+                "op": "if",
+                "condition": {
+                  "op": "input",
+                  "name": "facing"
+                },
+                "then": [
+                  {
+                    "op": "set",
+                    "register": "connected",
+                    "value": {
+                      "op": "input",
+                      "name": "aligned"
+                    }
+                  }
+                ],
+                "otherwise": [
+                  {
+                    "op": "if",
+                    "condition": {
+                      "op": "input",
+                      "name": "observed"
+                    },
+                    "then": [
+                      {
+                        "op": "set",
+                        "register": "error",
+                        "value": {
+                          "op": "constant",
+                          "value": 2
+                        }
+                      }
+                    ],
+                    "otherwise": []
+                  }
+                ]
+              }
+            ],
+            "otherwise": [
+              {
+                "op": "set",
+                "register": "connected",
+                "value": {
+                  "op": "maximum",
+                  "left": {
+                    "op": "maximum",
+                    "left": {
+                      "op": "maximum",
+                      "left": {
+                        "op": "maximum",
+                        "left": {
+                          "op": "equal",
+                          "left": {
+                            "op": "input",
+                            "name": "kind"
+                          },
+                          "right": {
+                            "op": "constant",
+                            "value": 4
+                          }
+                        },
+                        "right": {
+                          "op": "equal",
+                          "left": {
+                            "op": "input",
+                            "name": "kind"
+                          },
+                          "right": {
+                            "op": "constant",
+                            "value": 7
+                          }
+                        }
+                      },
+                      "right": {
+                        "op": "equal",
+                        "left": {
+                          "op": "input",
+                          "name": "kind"
+                        },
+                        "right": {
+                          "op": "constant",
+                          "value": 8
+                        }
+                      }
+                    },
+                    "right": {
+                      "op": "equal",
+                      "left": {
+                        "op": "input",
+                        "name": "kind"
+                      },
+                      "right": {
+                        "op": "constant",
+                        "value": 9
+                      }
+                    }
+                  },
+                  "right": {
+                    "op": "equal",
+                    "left": {
+                      "op": "input",
+                      "name": "kind"
+                    },
+                    "right": {
+                      "op": "constant",
+                      "value": 11
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -8,10 +8,12 @@ repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+fs2 = "0.4.3"
 anyhow = "1.0"
 axum = "0.8"
 dustroute-app = { path = "../dustroute-app" }
 dustroute-ir = { path = "../dustroute-ir" }
+dustroute-library = { path = "../dustroute-library" }
 dustroute-optimize = { path = "../dustroute-optimize" }
 dustroute-physical = { path = "../dustroute-physical" }
 dustroute-translate = { path = "../dustroute-translate" }

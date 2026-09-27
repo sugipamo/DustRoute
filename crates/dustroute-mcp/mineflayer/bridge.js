@@ -45,10 +45,12 @@ let shuttingDown = false
 let reconnectTimer = null
 let updateRecording = null
 let observedGameTick = 0
+let enabledFeatures = null
 const bridgeMetrics = createBridgeMetrics()
 
 function connectBot () {
   if (shuttingDown) return
+  enabledFeatures = null
   bot = mineflayer.createBot({
     host: config.host,
     port: config.port,
@@ -56,6 +58,10 @@ function connectBot () {
     auth: process.env.DUSTROUTE_MC_AUTH || 'offline',
     version: config.version,
     hideErrors: false
+  })
+  bot._client.on('start_configuration', () => { enabledFeatures = null })
+  bot._client.on('feature_flags', packet => {
+    enabledFeatures = Array.isArray(packet.features) ? [...packet.features] : null
   })
   bot.once('spawn', async () => {
     spawned = true
@@ -68,6 +74,7 @@ function connectBot () {
   })
   bot.on('end', reason => {
     spawned = false
+    enabledFeatures = null
     updateRecording = null
     process.stderr.write(`[dustroute-bot] disconnected: ${String(reason)}; reconnecting in 3s\n`)
     if (!shuttingDown) reconnectTimer = setTimeout(connectBot, 3000)
@@ -455,6 +462,7 @@ async function dispatch (method, params) {
       port: config.port,
       version: config.version,
       dimension: spawned ? currentDimension() : null,
+      enabled_features: spawned ? enabledFeatures : null,
       position: spawned ? posJson(bot.entity.position) : null,
       metrics: snapshotMetrics(bridgeMetrics)
     }

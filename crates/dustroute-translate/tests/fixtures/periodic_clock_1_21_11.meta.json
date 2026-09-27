@@ -1,0 +1,50 @@
+{
+  "status": "known_model_divergence",
+  "minecraft_version": "1.21.11",
+  "date": "2026-09-20",
+  "internal_callback_order_verified": false,
+  "live_infinite_recurrence_proven": false,
+  "fixtures": [
+    {
+      "fixture": "periodic_clock_1_21_11.json",
+      "source_artifact": "periodic-clock-fixed-20260920.json",
+      "reason": "Autonomous fixed four-block clock: known live/model divergence at game tick 190; not a conformance certificate",
+      "fixture_sha256": "d1f35a566af9913c37062a5ffe06c6f49d829645b3d7ed51a0b2508135882066",
+      "samples": 641,
+      "raw_console_sha256": "0889434e95b665302d9a262067da490f3359a99bd03afd253a64be6ba4103777",
+      "capture_tool_sha256": "87753540dd6a517aa0d7c44a3cf7d6e4818f0d88edffd76860a674a4b55dda1a",
+      "console_helper_sha256": "9c5a8d3a69c7f085e781a1e28b39bc085b69af5796dd6a9a89072258c907a1b1",
+      "queue_reader_sha256": null
+    },
+    {
+      "fixture": "periodic_clock_recovery_1_21_11.json",
+      "source_artifact": "periodic-clock-recovery-diagnostic-20260920.json",
+      "reason": "Diagnostic only: adjacent notification at tick 220 restores pulses at tick 222; saved queue freshness was not checked in this capture",
+      "fixture_sha256": "8be4aa068bbd153265f8b876d2bfd5230d763075f4ecb50a2f8c936b2b8c3a50",
+      "samples": 261,
+      "raw_console_sha256": "30fd5a21749c0006e2fe1cd56911cd9e5410fb4ba95a9a82c9c602a871d1c770",
+      "capture_tool_sha256": "f183476278799d9b6bc2bfbb7d0589fb4e86b4746dfab79dadf3935681f3f27b",
+      "console_helper_sha256": "9c5a8d3a69c7f085e781a1e28b39bc085b69af5796dd6a9a89072258c907a1b1",
+      "queue_reader_sha256": "bc81074cb7cc5764d6ec8a55c7f438681b13ffa48b930af8b053c1a6afa5fdd5"
+    },
+    {
+      "fixture": "periodic_clock_queue_1_21_11.json",
+      "source_artifact": "periodic-clock-queue-freshness-20260920.json",
+      "reason": "Independent saved-queue check: fresh at tick 30 (delay 2), stale at tick 32; stale snapshots do not establish the current queue",
+      "fixture_sha256": "bf08831341350293bd410f9fbec240acaed830f251218f98a4f0b5a6f00a3353",
+      "samples": 33,
+      "raw_console_sha256": "4a18791b30fc959ece052a461cd5c43f42cbd5b2845fc042e41ead69ef7adb9f",
+      "capture_tool_sha256": "c0d8d704b9fa49477a2b87b15ce5cb6f7c0556dbf3d3b554bd71c56795c63cda",
+      "console_helper_sha256": "9c5a8d3a69c7f085e781a1e28b39bc085b69af5796dd6a9a89072258c907a1b1",
+      "queue_reader_sha256": "df880936b0e6edb43add0b320d3089a3338eb032d38319bfc7cfa04c16cf966c"
+    }
+  ],
+  "comparison": {
+    "samples": 641,
+    "first_mismatch_game_tick": 190,
+    "mismatched_samples": 48,
+    "runtime_profile": "dustroute.dust-torch-synchronous-game-tick.v1",
+    "dust_law": "dustroute.law.dust-strength.v1",
+    "torch_law": "dustroute.law.torch.java-1-21-11.v1"
+  }
+}

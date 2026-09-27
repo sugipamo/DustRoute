@@ -411,7 +411,7 @@ fn tree_adjacency(branches: &[Vec<Pos>]) -> BTreeMap<Pos, BTreeSet<Pos>> {
     adjacency
 }
 
-fn rooted_parent(source: Pos, branches: &[Vec<Pos>]) -> BTreeMap<Pos, Option<Pos>> {
+pub(crate) fn rooted_parent(source: Pos, branches: &[Vec<Pos>]) -> BTreeMap<Pos, Option<Pos>> {
     let adjacency = tree_adjacency(branches);
     let mut parent = BTreeMap::from([(source, None)]);
     let mut queue = std::collections::VecDeque::from([source]);
@@ -426,7 +426,7 @@ fn rooted_parent(source: Pos, branches: &[Vec<Pos>]) -> BTreeMap<Pos, Option<Pos
     parent
 }
 
-fn root_path(parent: &BTreeMap<Pos, Option<Pos>>, sink: Pos) -> Option<Vec<Pos>> {
+pub(crate) fn root_path(parent: &BTreeMap<Pos, Option<Pos>>, sink: Pos) -> Option<Vec<Pos>> {
     let mut path = vec![sink];
     let mut current = sink;
     while let Some(previous) = *parent.get(&current)? {

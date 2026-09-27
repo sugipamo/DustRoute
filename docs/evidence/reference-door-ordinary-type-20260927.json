@@ -1,0 +1,392 @@
+{
+  "schema_version": "dustroute.reference-door-ordinary-type.v1",
+  "date": "2026-09-27",
+  "contract": {
+    "contract": {
+      "kind": "piston_door",
+      "requirement": {
+        "aperture": [
+          [
+            {
+              "air": "aperture_0_0_air",
+              "solid": "aperture_0_0_solid"
+            },
+            {
+              "air": "aperture_0_1_air",
+              "solid": "aperture_0_1_solid"
+            },
+            {
+              "air": "aperture_0_2_air",
+              "solid": "aperture_0_2_solid"
+            }
+          ],
+          [
+            {
+              "air": "aperture_1_0_air",
+              "solid": "aperture_1_0_solid"
+            },
+            {
+              "air": "aperture_1_1_air",
+              "solid": "aperture_1_1_solid"
+            },
+            {
+              "air": "aperture_1_2_air",
+              "solid": "aperture_1_2_solid"
+            }
+          ],
+          [
+            {
+              "air": "aperture_2_0_air",
+              "solid": "aperture_2_0_solid"
+            },
+            {
+              "air": "aperture_2_1_air",
+              "solid": "aperture_2_1_solid"
+            },
+            {
+              "air": "aperture_2_2_air",
+              "solid": "aperture_2_2_solid"
+            }
+          ]
+        ],
+        "closed_input": "closed_command"
+      }
+    },
+    "id": "dustroute.type.piston-door-3x3.v1",
+    "name": "Ordinary 3x3 piston door; commands after completed operations"
+  },
+  "context": {
+    "initial_condition": "fresh_construction",
+    "input_levers": [
+      {
+        "x": 0,
+        "y": 11,
+        "z": 0
+      }
+    ],
+    "known_region": {
+      "max": {
+        "x": 2,
+        "y": 13,
+        "z": 5
+      },
+      "min": {
+        "x": -2,
+        "y": 0,
+        "z": -5
+      }
+    },
+    "profile": "dustroute.piston-electrical-root-exploration.v5",
+    "root_limits": {
+      "max_call_depth": 512,
+      "max_microsteps": 100000,
+      "max_pending": 10000
+    }
+  },
+  "initial_condition": "fresh declared physical world; actual lever polarity; initial aperture remains correct while reaching the certified recurrent region",
+  "completion": "held-input full-state recurrent region with correct aperture at every boundary and intermediate observation; every phase permits the next command",
+  "catalog_schema": "dustroute.blueprint-catalog.v11",
+  "proposal_history_schema": "dustroute.blueprint-updates.v5",
+  "candidate": {
+    "child": "reference-door.mechanism.v3",
+    "parent": "reference-door.parent.v3",
+    "assembly": "reference-door.state.v3",
+    "forks_from": "literal v1; not a mutation of the unrestricted v2 proposal"
+  },
+  "proposal_id": "reference-door.ordinary-adoption.v1",
+  "behavior_report": {
+    "counterexample": null,
+    "detail": "closed completed-operation graph; 2 complete physical cycle phases permit new commands; held-input intermediate aperture observations remain correct; interruption tolerance is not required",
+    "evaluated_steps": 388,
+    "graph_closed": true,
+    "reachable_states": 388,
+    "status": "passed",
+    "type_revision": "dustroute.type.piston-door-3x3.v1"
+  },
+  "whole_review": "passed",
+  "adoption_after_process_restart": {
+    "status": "adopted",
+    "candidate_published": true
+  },
+  "fresh_review_after_another_process_restart": "passed",
+  "construction": {
+    "model": "passed",
+    "build_steps": 43,
+    "remove_steps": 43,
+    "live_sequential_construction_performed": false
+  },
+  "public_mcp": {
+    "transport_tests": "passed",
+    "proposal_review_and_adopt_after_restart": true,
+    "adopted_catalog_review_after_second_restart": true,
+    "live_world_changed": false
+  },
+  "checks": {
+    "rust_tests_passed": 76,
+    "new_rust_tests": 15,
+    "rust_target_suites": [
+      {
+        "package": "dustroute-library",
+        "target": "blueprints",
+        "passed": 11
+      },
+      {
+        "package": "dustroute-library",
+        "target": "location_observations",
+        "passed": 6
+      },
+      {
+        "package": "dustroute-library",
+        "target": "piston_door_type",
+        "passed": 3
+      },
+      {
+        "package": "dustroute-translate",
+        "target": "behavior_types",
+        "passed": 8
+      },
+      {
+        "package": "dustroute-translate",
+        "target": "blueprint_updates",
+        "passed": 10
+      },
+      {
+        "package": "dustroute-translate",
+        "target": "blueprints",
+        "passed": 5
+      },
+      {
+        "package": "dustroute-translate",
+        "target": "location_behavior",
+        "passed": 11
+      },
+      {
+        "package": "dustroute-translate",
+        "target": "ordinary_reference_door",
+        "passed": 5
+      },
+      {
+        "package": "dustroute-translate",
+        "target": "piston_door_type",
+        "passed": 5
+      },
+      {
+        "package": "dustroute-translate",
+        "target": "reference_door_adoption",
+        "passed": 5
+      },
+      {
+        "package": "dustroute-translate",
+        "target": "runtime_adoption",
+        "passed": 5
+      },
+      {
+        "package": "dustroute-mcp",
+        "target": "ordinary_door filter",
+        "passed": 2
+      }
+    ],
+    "python_tests_passed": 5,
+    "retained_live_cases_replayed": 6,
+    "retained_tick_ends": 636,
+    "retained_palette_writes": 1355,
+    "retained_callback_boundaries": 5584,
+    "retained_checkpoint_and_behavior_restoration_verified": true,
+    "workspace_clippy_all_targets_warnings_denied": "passed",
+    "workspace_format": "passed",
+    "git_diff_check": "passed",
+    "existing_test_boundary_corrections": "Three preexisting assertions assumed a carrier entity existed at its preceding staged write/event boundary. Tests now check both staged occupancy and later registration; physical runtime unchanged."
+  },
+  "old_repeated_settling_semantics_changed": false,
+  "physical_runtime_changed": false,
+  "user_catalog_changed": false,
+  "live_server_started": false,
+  "retained_live_baseline": {
+    "path": "docs/evidence/reference-door-short-live-20260927.json",
+    "sha256": "b2e179715cd5b2b3b94d671188757e3ee905b04e1a2b8ddd2865d30ded983c1a",
+    "bytes": 46073
+  },
+  "unchanged_against_live_baseline": [
+    {
+      "path": "crates/dustroute-minecraft/src/time/piston_runtime/mod.rs",
+      "sha256": "1a2b8a6b3444d57eddb6094fdb1cffdf911069b4244c9eea5cf1a96b4854b805",
+      "bytes": 7666
+    },
+    {
+      "path": "crates/dustroute-minecraft/src/time/piston_runtime/devices.rs",
+      "sha256": "e372e52cda043f7810470322c182e12d7011fc6a4da7d8b943dc22415d5953d1",
+      "bytes": 4866
+    },
+    {
+      "path": "crates/dustroute-minecraft/src/time/piston_runtime/movement.rs",
+      "sha256": "8aaa562de24962950ff5df75630640e152d62ae453aebb33bab61971bbc40ad8",
+      "bytes": 5013
+    },
+    {
+      "path": "crates/dustroute-translate/src/behavior_type.rs",
+      "sha256": "d76506727e25a74c162c12e54e799e63ee2861ff0948c88aa9d2eef739b14c2e",
+      "bytes": 11445
+    },
+    {
+      "path": "crates/dustroute-translate/src/blueprint_update.rs",
+      "sha256": "6ea378b0f8217652c1711cbbd4d3f9d1e902713ade16578e5a7b54c73322e7d2",
+      "bytes": 24461
+    }
+  ],
+  "sources": [
+    {
+      "path": "crates/dustroute-library/src/behavior_type.rs",
+      "sha256": "932c47505e265e8ab3f6184a727797a6d57562481e7692b5b7ffa337ee68bf26",
+      "bytes": 10497
+    },
+    {
+      "path": "crates/dustroute-library/src/blueprint.rs",
+      "sha256": "82f1fdbeb7fb20a546dc1cf91c7aaf5b378e44d70c4452073bf4e89bd6709995",
+      "bytes": 56674
+    },
+    {
+      "path": "crates/dustroute-translate/src/piston_door_type.rs",
+      "sha256": "96a062861bdc6db443b6285343940d06ecb45a0751cdb5b5789d716187738c9b",
+      "bytes": 8262
+    },
+    {
+      "path": "crates/dustroute-translate/src/runtime_behavior.rs",
+      "sha256": "d255826e5352ab327eee7846688e14b859037df72c49dca9e47f49d17a0c5f86",
+      "bytes": 12020
+    },
+    {
+      "path": "crates/dustroute-translate/src/runtime_review.rs",
+      "sha256": "3efeced1f8b60c089b9af0a86a101427108f5039bbdd7f7c2721cc1325293031",
+      "bytes": 19885
+    },
+    {
+      "path": "crates/dustroute-translate/src/location_behavior.rs",
+      "sha256": "56cb1f310ee7e2bae7001a169cd5fcd6b84d7fedd1e509f16f3756f97126fc31",
+      "bytes": 7106
+    },
+    {
+      "path": "crates/dustroute-translate/src/promotion.rs",
+      "sha256": "998fd22b2067f9ff13449fcff54ac356677b4877795c5917f4496d632a0c2469",
+      "bytes": 30522
+    },
+    {
+      "path": "crates/dustroute-mcp/src/blueprint_mcp.rs",
+      "sha256": "47527f78d81c223ab5394c9287aee451f7288e40e314dcd9ba894a7c5dcbafde",
+      "bytes": 33878
+    },
+    {
+      "path": "crates/dustroute-mcp/src/piston_assembly.rs",
+      "sha256": "772afced838b7bcb529b389fe5a94bda29ba8f86f310faf3da5750066fdb378a",
+      "bytes": 5075
+    },
+    {
+      "path": "crates/dustroute-translate/tests/support/reference_door_blueprint.rs",
+      "sha256": "3ee5435e9bbac847a2012d32c9f5c35f1b2ec709745694bcde3853e4f51a0c38",
+      "bytes": 9761
+    },
+    {
+      "path": "crates/dustroute-translate/examples/audit_reference_door_adoption.rs",
+      "sha256": "5627ad3f438e387e0d5c8f0085efbe92eb7227dbfca4087b2ebbca68c31d60c8",
+      "bytes": 5248
+    },
+    {
+      "path": "crates/dustroute-library/tests/piston_door_type.rs",
+      "sha256": "ba359faad7e08d19703f340c481ec0fb59bdd9c12889ccd7143b6250c65a99bf",
+      "bytes": 2736
+    },
+    {
+      "path": "crates/dustroute-translate/tests/piston_door_type.rs",
+      "sha256": "b91c07fbcd68bffe63ba98bd4b922624f1b274629475b3ebb755b633fb4f75e3",
+      "bytes": 6158
+    },
+    {
+      "path": "crates/dustroute-translate/tests/ordinary_reference_door.rs",
+      "sha256": "3a4707bc2726f53259f00fab56adbb44e89604ab5d5c1d76467a3871145f3520",
+      "bytes": 7972
+    },
+    {
+      "path": "crates/dustroute-library/tests/location_observations.rs",
+      "sha256": "a7ce75d0a16db9790c647725d50d726e74ff54013d3c72534270c64c3bf6114b",
+      "bytes": 12355
+    },
+    {
+      "path": "crates/dustroute-translate/tests/location_behavior.rs",
+      "sha256": "f891ae8eb7a06e5f7423c3b8f16afd986127db6b93ec7cf1a8bda6b55bdf6c54",
+      "bytes": 31797
+    },
+    {
+      "path": "crates/dustroute-mcp/src/service_blueprint_tests.rs",
+      "sha256": "fdaa5aec8a980bb6d81644e23a1f85d0cc8fab1338fe22375375e92bfd300776",
+      "bytes": 86846
+    }
+  ],
+  "artifacts": [
+    {
+      "path": ".local/e2e-artifacts/reference-door-ordinary-type-20260927/prepared.json",
+      "sha256": "e3ed2c2353c97ee3041e9ef5fcb43d929284a769c96e90750974579232cfdcd1",
+      "bytes": 896325
+    },
+    {
+      "path": ".local/e2e-artifacts/reference-door-ordinary-type-20260927/review.json",
+      "sha256": "d1d9b3fa0a6bb288801acb2e18b01d179aa58c8802710df36fd800626bbdfc16",
+      "bytes": 31073
+    },
+    {
+      "path": ".local/e2e-artifacts/reference-door-ordinary-type-20260927/adopted.json",
+      "sha256": "ad51fc376ecbc35cd101ff115cf181b5fdd19fb9212cd7da2d50ba0ac626cb72",
+      "bytes": 579384
+    },
+    {
+      "path": ".local/e2e-artifacts/reference-door-ordinary-type-20260927/rechecked.json",
+      "sha256": "7e338231c08e804d4cfc6c78c6901ad2f2a8383523c05bd4b4324eac25e55ace",
+      "bytes": 32219
+    },
+    {
+      "path": ".local/e2e-artifacts/reference-door-ordinary-type-20260927/construction.json",
+      "sha256": "fbfaa863178fbbdd043605a714c2fcfc9f5a8a28626d73810827e4ea8f3864e6",
+      "bytes": 481103
+    },
+    {
+      "path": ".local/e2e-artifacts/reference-door-ordinary-type-20260927/dustroute-door-regression-tests.log",
+      "sha256": "7bec3a0a148213c730064d6df14fe03e53b49bcdc359608fe431324c099e621c",
+      "bytes": 6534
+    },
+    {
+      "path": ".local/e2e-artifacts/reference-door-ordinary-type-20260927/dustroute-door-regression-rest.log",
+      "sha256": "9522130de4df3213fb6c4aefa92ca21eafe22ab857113f400e70cf52f396cb38",
+      "bytes": 3747
+    },
+    {
+      "path": ".local/e2e-artifacts/reference-door-ordinary-type-20260927/dustroute-door-final-type-tests.log",
+      "sha256": "9b13130ff8c2606989f66268d4533e216644162f296e67971577a2182442a827",
+      "bytes": 1907
+    },
+    {
+      "path": ".local/e2e-artifacts/reference-door-ordinary-type-20260927/dustroute-door-mcp-tests.log",
+      "sha256": "be106564f4ac199fef73fbe84bd664de504f19677875259511e4f43924255521",
+      "bytes": 1086
+    },
+    {
+      "path": ".local/e2e-artifacts/reference-door-ordinary-type-20260927/dustroute-door-live-replay-tests.log",
+      "sha256": "b6537a46e65e68d0674f24674bde0ff373cde5dbd642884ffe188c99b121b12c",
+      "bytes": 104
+    },
+    {
+      "path": ".local/e2e-artifacts/reference-door-ordinary-type-20260927/dustroute-door-clippy.log",
+      "sha256": "9e4b3842af7d5308524c5bd8ce96cafcbd7c470cc68ce229d9318a9fda857bb0",
+      "bytes": 238
+    },
+    {
+      "path": ".local/e2e-artifacts/reference-door-ordinary-type-20260927/dustroute-door-examples-build.log",
+      "sha256": "02366a972429c7fb1c6c3e996d53dad64204aa5164a4d18318287e4e56e271e0",
+      "bytes": 157
+    }
+  ],
+  "limits": [
+    "Proof concerns the declared model, environment, Laws and completed-operation input protocol, not every Minecraft history.",
+    "No live readiness sensor or arbitrary-door operation API was added.",
+    "The model may return undetermined if complete physical recurrence exceeds budgets; it never requires all unrelated clocks to stop.",
+    "No automatic user-catalog migration or historical pass reuse.",
+    "New live sequential construction, public preview/apply/readback, restart and undo of this reference door remain separate trials."
+  ]
+}

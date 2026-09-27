@@ -1,5 +1,10 @@
 //! Stable, presentation-neutral circuit diagnostics for MCP and other clients.
 
+pub mod difference;
+pub mod report;
+
+use report::Diagnosis;
+
 use std::collections::{BTreeMap, BTreeSet};
 
 use dustroute_physical::{
@@ -50,7 +55,7 @@ pub enum RecommendedActionKind {
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-pub struct DiagnosticFinding {
+pub struct ConnectivityFinding {
     pub status: CircuitDiagnosticStatus,
     pub confidence: DiagnosticConfidence,
     pub position: Option<Pos>,
@@ -86,7 +91,8 @@ pub struct CircuitDiagnosticReport {
     pub focus: Option<Pos>,
     pub counts: DiagnosticCounts,
     pub source_counts: BTreeMap<String, usize>,
-    pub findings: Vec<DiagnosticFinding>,
+    #[serde(flatten)]
+    pub diagnosis: Diagnosis,
     pub recommended_next_action: RecommendedAction,
 }
 
@@ -103,7 +109,7 @@ pub fn diagnose_scene(
     let mut findings = Vec::new();
 
     if !observation_complete {
-        findings.push(DiagnosticFinding {
+        findings.push(ConnectivityFinding {
             status: CircuitDiagnosticStatus::IncompleteObservation,
             confidence: DiagnosticConfidence::High,
             position: focus,
@@ -120,7 +126,7 @@ pub fn diagnose_scene(
     for assessment in &liveness.required_input_assessments {
         match assessment.status {
             RequiredInputStatus::DrivenByKnownSource => {}
-            RequiredInputStatus::AwaitingExternalInput => findings.push(DiagnosticFinding {
+            RequiredInputStatus::AwaitingExternalInput => findings.push(ConnectivityFinding {
                 status: CircuitDiagnosticStatus::AwaitingExternalInput,
                 confidence: DiagnosticConfidence::Medium,
                 position: Some(assessment.position),
@@ -145,7 +151,7 @@ pub fn diagnose_scene(
                     ),
                     _ => unreachable!(),
                 };
-                findings.push(DiagnosticFinding {
+                findings.push(ConnectivityFinding {
                     status: CircuitDiagnosticStatus::ProbableFault,
                     confidence,
                     position: Some(assessment.position),
@@ -166,7 +172,7 @@ pub fn diagnose_scene(
         .into_iter()
         .filter(|issue| issue.level == CapabilityLevel::Unsupported)
     {
-        findings.push(DiagnosticFinding {
+        findings.push(ConnectivityFinding {
             status: CircuitDiagnosticStatus::Unsupported,
             confidence: DiagnosticConfidence::High,
             position: Some(issue.position),
@@ -237,7 +243,7 @@ pub fn diagnose_scene(
         focus,
         counts,
         source_counts,
-        findings,
+        diagnosis: Diagnosis::connectivity(findings),
         recommended_next_action,
     }
 }
@@ -247,7 +253,7 @@ fn recommend_action(
     focus: Option<Pos>,
     observation_complete: bool,
     liveness: &crate::SignalLivenessReport,
-    findings: &[DiagnosticFinding],
+    findings: &[ConnectivityFinding],
 ) -> RecommendedAction {
     if !observation_complete {
         return RecommendedAction {
@@ -320,7 +326,7 @@ fn recommend_action(
     }
 }
 
-fn count_status(findings: &[DiagnosticFinding], status: CircuitDiagnosticStatus) -> usize {
+fn count_status(findings: &[ConnectivityFinding], status: CircuitDiagnosticStatus) -> usize {
     findings
         .iter()
         .filter(|finding| finding.status == status)

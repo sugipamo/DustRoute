@@ -1,8 +1,11 @@
 use std::collections::BTreeMap;
 
-use crate::cells::{
-    PhysicalCell, PortKind, and_cell, nand_cell, not_cell, not_top_cell, or_buffered_cell,
+use dustroute_library::blueprint::{
+    BlueprintCatalog, BlueprintError, BlueprintRevisionId, ClassificationRevisionId,
 };
+use dustroute_library::builtin_blueprints::*;
+
+use crate::cells::{PhysicalCell, PortKind};
 use crate::logic::GateKind;
 use crate::sim::RedstoneTickSimulator;
 use crate::wire::update_wire_shapes;
@@ -60,7 +63,17 @@ pub fn verify_cell_with_settle_ticks(
     cell: &PhysicalCell,
     settle_ticks: usize,
 ) -> CellVerification {
-    if cell.outputs.len() != 1 || cell.inputs.len() > usize::BITS as usize {
+    let input_count = match kind {
+        GateKind::Not => 1,
+        GateKind::And | GateKind::Or | GateKind::Nand | GateKind::Xor => 2,
+        _ => {
+            return CellVerification {
+                valid: false,
+                cases: Vec::new(),
+            };
+        }
+    };
+    if cell.outputs.len() != 1 || cell.inputs.len() != input_count {
         return CellVerification {
             valid: false,
             cases: Vec::new(),
@@ -76,9 +89,15 @@ pub fn verify_cell_with_settle_ticks(
             drive_input(&mut world, port, *value);
         }
         update_wire_shapes(&mut world);
-        let actual = RedstoneTickSimulator::new(world)
+        let Ok(state) = RedstoneTickSimulator::new(world)
             .and_then(|mut simulator| simulator.settle_ticks(settle_ticks))
-            .is_ok_and(|state| state.strength(cell.outputs[0].pos) > 0);
+        else {
+            return CellVerification {
+                valid: false,
+                cases,
+            };
+        };
+        let actual = state.strength(cell.outputs[0].pos) > 0;
         let wanted = expected(kind, &inputs);
         cases.push((inputs, wanted, actual));
     }
@@ -91,10 +110,76 @@ pub fn verify_cell_with_settle_ticks(
 #[derive(Clone, Debug, Default)]
 pub struct CellLibrary {
     candidates: BTreeMap<GateKind, Vec<PhysicalCell>>,
-    verification_ticks: BTreeMap<String, usize>,
+    verification_ticks: BTreeMap<
+        (
+            Option<dustroute_library::blueprint::BlueprintRevisionId>,
+            String,
+        ),
+        usize,
+    >,
+    /// Immutable source snapshot for the geometry projections in this library.
+    /// Raw authoring libraries have no catalog and cannot certify contracts.
+    catalog: Option<BlueprintCatalog>,
+    unavailable: Vec<(BlueprintRevisionId, BlueprintError)>,
 }
 
 impl CellLibrary {
+    /// Discovers concrete revisions by classification. Geometry is only a
+    /// routing proposal; callers must review the composed Assembly against
+    /// `catalog()` before accepting it. Logical simulation remains separate.
+    pub fn from_blueprints(
+        catalog: &BlueprintCatalog,
+        classifications: &BTreeMap<GateKind, ClassificationRevisionId>,
+        settle_ticks: usize,
+    ) -> Result<Self, BlueprintError> {
+        let mut library = Self {
+            catalog: Some(catalog.clone()),
+            ..Self::default()
+        };
+        for (kind, classification) in classifications {
+            if catalog.classification(classification).is_none() {
+                return Err(BlueprintError::UnknownClassification(
+                    classification.clone(),
+                ));
+            }
+            for revision in catalog.candidates(classification) {
+                match crate::blueprint::blueprint_cell_for_routing(catalog, &revision.id) {
+                    Ok(cell) => library.add_with_settle_ticks(*kind, cell, settle_ticks),
+                    Err(error) => library.unavailable.push((revision.id.clone(), error)),
+                }
+            }
+            if let Some(candidates) = library.candidates.get_mut(kind) {
+                // Stable size ordering is a search heuristic, never trust or
+                // a mutable latest-version policy.
+                candidates.sort_by_key(|cell| {
+                    let volume = cell.world.bounds().map_or(0, |(min, max)| {
+                        (i64::from(max.x) - i64::from(min.x) + 1)
+                            .saturating_mul(i64::from(max.y) - i64::from(min.y) + 1)
+                            .saturating_mul(i64::from(max.z) - i64::from(min.z) + 1)
+                    });
+                    (
+                        cell.world.iter().count(),
+                        volume,
+                        cell.source_revision.clone(),
+                    )
+                });
+            }
+        }
+        Ok(library)
+    }
+
+    #[must_use]
+    pub fn catalog(&self) -> Option<&BlueprintCatalog> {
+        self.catalog.as_ref()
+    }
+
+    /// Unsupported layouts stay visible as diagnostics, not silently trusted
+    /// geometry with discarded requirements.
+    #[must_use]
+    pub fn unavailable(&self) -> &[(BlueprintRevisionId, BlueprintError)] {
+        &self.unavailable
+    }
+
     pub fn add(&mut self, kind: GateKind, cell: PhysicalCell) {
         self.add_with_settle_ticks(kind, cell, 8);
     }
@@ -105,14 +190,16 @@ impl CellLibrary {
         cell: PhysicalCell,
         settle_ticks: usize,
     ) {
-        self.verification_ticks
-            .insert(cell.name.clone(), settle_ticks);
+        self.verification_ticks.insert(
+            (cell.source_revision.clone(), cell.name.clone()),
+            settle_ticks,
+        );
         self.candidates.entry(kind).or_default().push(cell);
     }
 
-    fn settle_ticks_for(&self, cell: &PhysicalCell) -> usize {
+    pub fn settle_ticks_for(&self, cell: &PhysicalCell) -> usize {
         self.verification_ticks
-            .get(&cell.name)
+            .get(&(cell.source_revision.clone(), cell.name.clone()))
             .copied()
             .unwrap_or(8)
     }
@@ -144,23 +231,29 @@ impl CellLibrary {
 
 #[must_use]
 pub fn default_cell_library() -> CellLibrary {
-    let mut library = CellLibrary::default();
-    library.add(GateKind::Not, not_top_cell());
-    library.add(GateKind::Not, not_cell());
-    library.add(GateKind::And, and_cell());
-    library.add(GateKind::Or, or_buffered_cell());
-    library.add(GateKind::Nand, nand_cell());
-    library.add_with_settle_ticks(
-        GateKind::Xor,
-        crate::cells::compact_compiled_xor_cell().expect("compact XOR baseline compiles"),
-        64,
-    );
-    library.add_with_settle_ticks(
-        GateKind::Xor,
-        crate::cells::compiled_xor_cell().expect("built-in XOR baseline compiles"),
-        64,
-    );
-    library
+    CellLibrary::from_blueprints(builtin_blueprints(), &logic_classifications(), 64)
+        .expect("built-in classification bindings exist")
+}
+
+/// Adapter from the existing Boolean DAG to interpretation labels. These
+/// bindings do not assign logical meaning to connection types.
+#[must_use]
+pub fn logic_classifications() -> BTreeMap<GateKind, ClassificationRevisionId> {
+    [
+        (GateKind::Not, NOT_CLASSIFICATION_REVISION),
+        (GateKind::And, AND_CLASSIFICATION_REVISION),
+        (GateKind::Or, OR_CLASSIFICATION_REVISION),
+        (GateKind::Nand, NAND_CLASSIFICATION_REVISION),
+        (GateKind::Xor, XOR_CLASSIFICATION_REVISION),
+    ]
+    .into_iter()
+    .map(|(kind, id)| {
+        (
+            kind,
+            ClassificationRevisionId::new(id).expect("built-in ID"),
+        )
+    })
+    .collect()
 }
 
 #[cfg(test)]

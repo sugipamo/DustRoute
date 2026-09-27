@@ -1,0 +1,120 @@
+{
+  "schema_version": "dustroute.mixed-piston-fixture.v1",
+  "id": "observer-movement-powered-v1",
+  "initial": {
+    "min": {
+      "x": -5,
+      "y": 0,
+      "z": -5
+    },
+    "max": {
+      "x": 7,
+      "y": 10,
+      "z": 5
+    },
+    "blocks": [
+      {
+        "pos": {
+          "x": -1,
+          "y": 3,
+          "z": 0
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": -1,
+          "y": 4,
+          "z": 0
+        },
+        "name": "minecraft:lever",
+        "properties": {
+          "face": "floor",
+          "facing": "north",
+          "powered": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 0,
+          "y": 4,
+          "z": 0
+        },
+        "name": "minecraft:sticky_piston",
+        "properties": {
+          "facing": "east",
+          "extended": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 1,
+          "y": 4,
+          "z": 0
+        },
+        "name": "minecraft:observer",
+        "properties": {
+          "facing": "north",
+          "powered": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 1,
+          "y": 3,
+          "z": -1
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 1,
+          "y": 4,
+          "z": -1
+        },
+        "name": "minecraft:lever",
+        "properties": {
+          "face": "floor",
+          "facing": "north",
+          "powered": "false"
+        }
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "x": -1,
+      "y": 4,
+      "z": 0
+    },
+    {
+      "x": 1,
+      "y": 4,
+      "z": -1
+    }
+  ],
+  "steps": [
+    {
+      "input": 1,
+      "powered": true,
+      "wait_ticks": 0
+    },
+    {
+      "input": 0,
+      "powered": true,
+      "wait_ticks": 2
+    },
+    {
+      "input": 0,
+      "powered": false,
+      "wait_ticks": 12
+    }
+  ],
+  "packet_input": true,
+  "warmup_ticks": 80,
+  "align_first_input": true,
+  "shared_viewpoint": true,
+  "placement_mode": "strict"
+}

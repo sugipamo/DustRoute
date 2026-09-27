@@ -3,6 +3,7 @@
 `World` is an editable model or observation. It does not imply legal placement.
 `ValidatedWorld` is immutable evidence that its initial placement passed the
 shared support, placement-capability, and explicit block-state checks.
+The current profile is `dustroute.initial-placement.explicit-wire-rise.v2`.
 
 ```mermaid
 flowchart TD
@@ -53,6 +54,28 @@ capabilities. It rejects missing support metadata, invalid supports, impossible
 support offsets, unsupported placement devices, missing/invalid directional
 states and repeater delays, out-of-range power, and a supposedly switched-off
 redstone block. It never adds supports or silently substitutes blocks.
+
+Support, conduction and rise traits come from the shared
+[spatial law programs](blueprint-architecture.md#executable-spatial-laws).
+`support_issues_with_laws` can diagnose a different finite model, but returns raw
+issues rather than a `ValidatedWorld` proof. Current placement retains its fixed
+law pins. Connection/adoption checks additionally require an actual wire arm for
+horizontal weak power; mere adjacency to a conducting block does not pass.
+
+The current gate also checks explicit wire rises against their surroundings.
+An `Up` arm needs a compatible adjacent support, an upper wire and clearance above
+the lower wire. A `Side` arm known to form a top-half rise needs that clearance
+too. Contradictions fail without rewriting stored wire shapes. Horizontal
+decorative endpoints and unspecified shapes are not treated as false rise claims;
+the gate does not claim complete Vanilla shape validation.
+
+For partial Assembly observations, missing required neighboring cells remain
+unknown, not air. Review reports them as undetermined and blocks adoption. The
+complete `World` constructor instead assumes its absent cells are known air.
+The old `HistoricalPlacementV1` proof exists only for pinned v1 behavior-model
+replay; its distinct type cannot authorize `PhysicsEngine::new`, export or
+placement. New reviews always run the current gate, regardless of an older model
+passing. See the [reproducible model comparison](blueprint-architecture.md#spatial-law-migration-explicit-rise-consistency).
 
 MCP mutation scans include one block of surrounding context. A support that
 cannot be established within that scan fails validation; clients may need a

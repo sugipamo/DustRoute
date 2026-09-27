@@ -1,0 +1,129 @@
+{
+  "schema_version": "dustroute.develop-integration.v1",
+  "status": "passed",
+  "target_branch": "develop",
+  "source_branch": "codex/blueprint-architecture",
+  "base_commit": "dd4de76186407be37b2980375a9104745f984cad",
+  "scope": "Blueprint/Assembly architecture, unified electrical piston runtime, staged persistent placement/reconstruction, shared diagnosis and pinned design references",
+  "checks": [
+    {
+      "command": [
+        "cargo",
+        "fmt",
+        "--all",
+        "--",
+        "--check"
+      ],
+      "exit_code": 0,
+      "seconds": 1.37,
+      "log": ".local/e2e-artifacts/develop-integration-20260927/check-0.log"
+    },
+    {
+      "command": [
+        "cargo",
+        "clippy",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "--workspace",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "exit_code": 0,
+      "seconds": 5.06,
+      "log": ".local/e2e-artifacts/develop-integration-20260927/check-1.log"
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "--workspace",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0,
+      "seconds": 1718.03,
+      "log": ".local/e2e-artifacts/develop-integration-20260927/check-2.log"
+    },
+    {
+      "command": [
+        "npm",
+        "--prefix",
+        "crates/dustroute-mcp/mineflayer",
+        "test"
+      ],
+      "exit_code": 0,
+      "seconds": 1.29,
+      "log": ".local/e2e-artifacts/develop-integration-20260927/check-3.log"
+    },
+    {
+      "command": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tools",
+        "-p",
+        "test_*.py"
+      ],
+      "exit_code": 0,
+      "seconds": 63.55,
+      "log": ".local/e2e-artifacts/develop-integration-20260927/check-4.log"
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit_code": 0,
+      "seconds": 0.0,
+      "log": ".local/e2e-artifacts/develop-integration-20260927/check-5.log"
+    }
+  ],
+  "rust": {
+    "passed": 905,
+    "failed": 0,
+    "ignored": 1,
+    "completed_test_binaries_and_doctest_suites": 101,
+    "ignored_tests": [
+      "test measure_full_physical_not_reachability ... ignored, manual default-budget scalability measurement; does not certify NOT"
+    ]
+  },
+  "node": {
+    "tests": 4,
+    "pass": 4,
+    "fail": 0,
+    "skipped": 0
+  },
+  "python": {
+    "passed": 14,
+    "failed": 0
+  },
+  "source_files_before_this_report": 490,
+  "rust_execution": {
+    "jobs": 1,
+    "test_threads": 1,
+    "offline": true,
+    "locked": true,
+    "live_server_started": false
+  },
+  "live_evidence": "Prior bounded trials remain under docs/evidence; no Minecraft live trial rerun for this integration.",
+  "ci": "No GitHub Actions workflow is configured; these are completed local checks.",
+  "log_sha256": {
+    ".local/e2e-artifacts/develop-integration-20260927/check-0.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".local/e2e-artifacts/develop-integration-20260927/check-1.log": "e94aaf0b920078be832659042d5625b9fcd50310c8ef449122c25bafbcf785d0",
+    ".local/e2e-artifacts/develop-integration-20260927/check-2.log": "387a9cae8defc9ade6631bfc0c4913f09d045c7a27e1b0c11b7ed0fa87a1f8a5",
+    ".local/e2e-artifacts/develop-integration-20260927/check-3.log": "4f617de9874230f5c59f2f041266430e37cc00d901d4dc168d60accc55470760",
+    ".local/e2e-artifacts/develop-integration-20260927/check-4.log": "eb95fc8ea09ecb8eb1e3a9bd996d44e67500d8f8a5801e7b32937c8ab08b5feb",
+    ".local/e2e-artifacts/develop-integration-20260927/check-5.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+}

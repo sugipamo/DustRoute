@@ -54,6 +54,33 @@ the full saved hypothetical snapshot, exact changes and stored validation.
 Without `include_snapshot`, the full block list is omitted. Reading does not
 rescan Minecraft or recalculate against a changed live world.
 
+Responses also include `assembly_state`, a summary of the separate immutable
+Assembly Revision when the snapshot is decodable. With `include_snapshot=true`,
+`assembly_revision` contains its actual block records, known regions, pinned
+Blueprint source occurrences, explicit connections and external boundaries.
+Observations start unclassified: no source blueprint or connection is guessed.
+Child revisions retain existing interpretations, replace actual state, and
+record fresh modeled placement/connection checks under `validation.assembly`.
+Logical meaning and behavioral evidence remain separate from connection types.
+
+Blueprint Revisions are immutable source definitions. Assembly Revisions record
+composed state, so a wire can change shape without rewriting its source. Native
+block properties and declared wire connections survive storage without analysis
+inference. The scanned cuboid is known space; absent cells outside it are unknown.
+Loading rejects a modeled state that disagrees with its literal snapshot.
+Legacy records and undecodable drafts may have no assembly. A draft that cannot
+retain existing pinned interpretations is rejected instead of dropping them.
+Assembly IDs and Blueprint IDs cannot be supplied as MCP `revision_id`,
+`circuit_id` or `operation_id` values.
+
+To retain an Assembly beyond the hypothetical revision TTL, explicitly call
+`test_circuit_change` with `blueprint.action: "capture_revision"` and the saved
+`revision_id` inside that object. This adds the exact record to the separate
+Blueprint catalog; capture its parents first. Read it through
+`get_circuit_revision(blueprint.kind=assembly)`. The [Blueprint workflow](blueprint-mcp.md)
+also supports source imports and child-update proposals. Its local adoption
+does not create a live placement plan or change this revision's literal snapshot.
+
 ## Identity and validation
 
 Records contain `revision_id`, `parent_revision_ids`, `base_observation_id`,
@@ -124,6 +151,13 @@ Old records without this evidence remain readable/editable, but cannot be
 placed; create a new revision from a fresh observation. This additive field
 allows placement after the original in-memory observation expires, without
 traversing expired parent records.
+
+When available, the placement plan also carries `assembly.revision` and
+`assembly.coordinate_origin`. Add this origin to an assembly position to obtain
+world coordinates. A revision-based plan uses zero because its saved positions
+are already world coordinates. Built-in plans retain their locally composed
+state and use the placement origin. This is proposed circuit state, not the
+surrounding overlay context or evidence of a completed Minecraft write.
 
 Planning rescans the entire original region and one block of surrounding
 context. Every observed block/property inside the original region must exactly

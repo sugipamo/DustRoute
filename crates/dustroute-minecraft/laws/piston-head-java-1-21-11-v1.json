@@ -1,0 +1,96 @@
+{
+  "inputs": {
+    "body_piston": 1,
+    "body_moving": 1,
+    "aligned": 1,
+    "same_variant": 1,
+    "extended": 1
+  },
+  "registers": {
+    "attached": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "supported": {
+      "initial": 0,
+      "maximum": 1
+    }
+  },
+  "histories": {},
+  "handlers": {
+    "evaluate": [
+      {
+        "op": "set",
+        "register": "attached",
+        "value": {
+          "op": "and",
+          "left": {
+            "op": "and",
+            "left": {
+              "op": "input",
+              "name": "body_piston"
+            },
+            "right": {
+              "op": "input",
+              "name": "aligned"
+            }
+          },
+          "right": {
+            "op": "and",
+            "left": {
+              "op": "input",
+              "name": "same_variant"
+            },
+            "right": {
+              "op": "input",
+              "name": "extended"
+            }
+          }
+        }
+      },
+      {
+        "op": "set",
+        "register": "supported",
+        "value": {
+          "op": "maximum",
+          "left": {
+            "op": "and",
+            "left": {
+              "op": "and",
+              "left": {
+                "op": "input",
+                "name": "body_piston"
+              },
+              "right": {
+                "op": "input",
+                "name": "aligned"
+              }
+            },
+            "right": {
+              "op": "and",
+              "left": {
+                "op": "input",
+                "name": "same_variant"
+              },
+              "right": {
+                "op": "input",
+                "name": "extended"
+              }
+            }
+          },
+          "right": {
+            "op": "and",
+            "left": {
+              "op": "input",
+              "name": "body_moving"
+            },
+            "right": {
+              "op": "input",
+              "name": "aligned"
+            }
+          }
+        }
+      }
+    ]
+  }
+}

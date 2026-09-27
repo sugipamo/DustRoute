@@ -81,7 +81,19 @@ impl Shape {
 }
 
 /// A closed axis-aligned region used for conservative topology invalidation.
-#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Deserialize,
+    Eq,
+    Hash,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    Serialize,
+    schemars::JsonSchema,
+)]
 pub struct Region {
     pub min: crate::Pos,
     pub max: crate::Pos,

@@ -1,0 +1,51 @@
+{
+  "inputs": {
+    "weak": 15,
+    "received_strong": 15,
+    "conducts": 1
+  },
+  "registers": {
+    "emitted": {
+      "initial": 0,
+      "maximum": 15
+    }
+  },
+  "histories": {},
+  "handlers": {
+    "evaluate": [
+      {
+        "op": "set",
+        "register": "emitted",
+        "value": {
+          "op": "input",
+          "name": "weak"
+        }
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "input",
+          "name": "conducts"
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "emitted",
+            "value": {
+              "op": "maximum",
+              "left": {
+                "op": "input",
+                "name": "weak"
+              },
+              "right": {
+                "op": "input",
+                "name": "received_strong"
+              }
+            }
+          }
+        ],
+        "otherwise": []
+      }
+    ]
+  }
+}

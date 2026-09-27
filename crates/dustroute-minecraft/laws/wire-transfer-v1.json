@@ -1,0 +1,196 @@
+{
+  "inputs": {
+    "elevation": 2,
+    "source_arm": 2,
+    "sink_arm": 2,
+    "support_shape": 2,
+    "conducts": 1,
+    "clear": 1,
+    "enforce_clearance": 1
+  },
+  "registers": {
+    "connected": {
+      "initial": 0,
+      "maximum": 1
+    }
+  },
+  "histories": {},
+  "handlers": {
+    "evaluate": [
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "elevation"
+          },
+          "right": {
+            "op": "constant",
+            "value": 0
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "connected",
+            "value": {
+              "op": "and",
+              "left": {
+                "op": "not",
+                "value": {
+                  "op": "equal",
+                  "left": {
+                    "op": "input",
+                    "name": "source_arm"
+                  },
+                  "right": {
+                    "op": "constant",
+                    "value": 0
+                  }
+                }
+              },
+              "right": {
+                "op": "not",
+                "value": {
+                  "op": "equal",
+                  "left": {
+                    "op": "input",
+                    "name": "sink_arm"
+                  },
+                  "right": {
+                    "op": "constant",
+                    "value": 0
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "otherwise": []
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "elevation"
+          },
+          "right": {
+            "op": "constant",
+            "value": 1
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "connected",
+            "value": {
+              "op": "and",
+              "left": {
+                "op": "and",
+                "left": {
+                  "op": "not",
+                  "value": {
+                    "op": "equal",
+                    "left": {
+                      "op": "input",
+                      "name": "support_shape"
+                    },
+                    "right": {
+                      "op": "constant",
+                      "value": 0
+                    }
+                  }
+                },
+                "right": {
+                  "op": "equal",
+                  "left": {
+                    "op": "input",
+                    "name": "source_arm"
+                  },
+                  "right": {
+                    "op": "input",
+                    "name": "support_shape"
+                  }
+                }
+              },
+              "right": {
+                "op": "maximum",
+                "left": {
+                  "op": "not",
+                  "value": {
+                    "op": "input",
+                    "name": "enforce_clearance"
+                  }
+                },
+                "right": {
+                  "op": "input",
+                  "name": "clear"
+                }
+              }
+            }
+          }
+        ],
+        "otherwise": []
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "elevation"
+          },
+          "right": {
+            "op": "constant",
+            "value": 2
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "connected",
+            "value": {
+              "op": "and",
+              "left": {
+                "op": "and",
+                "left": {
+                  "op": "not",
+                  "value": {
+                    "op": "equal",
+                    "left": {
+                      "op": "input",
+                      "name": "support_shape"
+                    },
+                    "right": {
+                      "op": "constant",
+                      "value": 0
+                    }
+                  }
+                },
+                "right": {
+                  "op": "equal",
+                  "left": {
+                    "op": "input",
+                    "name": "sink_arm"
+                  },
+                  "right": {
+                    "op": "input",
+                    "name": "support_shape"
+                  }
+                }
+              },
+              "right": {
+                "op": "input",
+                "name": "conducts"
+              }
+            }
+          }
+        ],
+        "otherwise": []
+      }
+    ]
+  }
+}

@@ -1,0 +1,129 @@
+{
+  "classification": "live_reference_recorded_not_model_verified",
+  "fixture_sha256": "ded824e424947bc12d3060e6f5242207a22ec7abe123c9e90ce73f9e7c0ef900",
+  "actor_sha256": "df2c99c818ffa5dcee043647e27e669d3602374ab3ed92f0dd250bd80f87fa43",
+  "capture_tool_sha256": "075f163718604c4444f9bcd65ff1b564bfc943ec4da31a56b207f1fd340c4fd5",
+  "inputs": [
+    {
+      "position": {
+        "x": 42000,
+        "y": 191,
+        "z": 1000
+      },
+      "powered": true,
+      "tick": 0
+    },
+    {
+      "position": {
+        "x": 42000,
+        "y": 191,
+        "z": 1000
+      },
+      "powered": false,
+      "tick": 100
+    },
+    {
+      "position": {
+        "x": 42000,
+        "y": 191,
+        "z": 1000
+      },
+      "powered": true,
+      "tick": 200
+    },
+    {
+      "position": {
+        "x": 42000,
+        "y": 191,
+        "z": 1000
+      },
+      "powered": false,
+      "tick": 300
+    }
+  ],
+  "outcomes": [
+    {
+      "input": 0,
+      "sample_tick": 100,
+      "aperture": "closed",
+      "full_initial_region_restored": false
+    },
+    {
+      "input": 1,
+      "sample_tick": 200,
+      "aperture": "open",
+      "full_initial_region_restored": true
+    },
+    {
+      "input": 2,
+      "sample_tick": 300,
+      "aperture": "closed",
+      "full_initial_region_restored": false
+    },
+    {
+      "input": 3,
+      "sample_tick": 380,
+      "aperture": "open",
+      "full_initial_region_restored": true
+    }
+  ],
+  "tick_end_states": 381,
+  "state_commits": 524,
+  "carrier_events": 812,
+  "committed_names": {
+    "minecraft:lever": 4,
+    "minecraft:moving_piston": 136,
+    "minecraft:sticky_piston": 92,
+    "minecraft:observer": 108,
+    "minecraft:redstone_wire": 44,
+    "minecraft:smooth_quartz": 44,
+    "minecraft:piston_head": 12,
+    "minecraft:redstone_lamp": 8,
+    "minecraft:air": 68,
+    "minecraft:repeater": 8
+  },
+  "cleanup": {
+    "region_empty": true,
+    "force_load_removed": true,
+    "disconnected_before_finish": null
+  },
+  "raw_capture_end": {
+    "kind": "artifact_end",
+    "capture_mode": "bounded",
+    "capture_state": "closed",
+    "input_observed": true,
+    "anchor_game_tick": 63112,
+    "end_game_tick": 63714,
+    "last_sequence": 24219,
+    "emitted_records": 15630,
+    "suppressed_records": 5483,
+    "evicted_records": 3106,
+    "write_errors": 0,
+    "heartbeat_mode": "full"
+  },
+  "artifacts": {
+    ".raw.ndjson": "/root/DustRoute/.local/e2e-artifacts/reference-3x3-20260927-a.raw.ndjson",
+    ".server.log": "/root/DustRoute/.local/e2e-artifacts/reference-3x3-20260927-a.server.log",
+    ".client.json": "/root/DustRoute/.local/e2e-artifacts/reference-3x3-20260927-a.client.json",
+    ".reference.json": "/root/DustRoute/.local/e2e-artifacts/reference-3x3-20260927-a.reference.json",
+    ".summary.json": "/root/DustRoute/.local/e2e-artifacts/reference-3x3-20260927-a.summary.json"
+  },
+  "sha256": {
+    ".raw.ndjson": "95c2a8f36b1350c2859346df021a077cda67a0ad7ab301c3a0ad45f208eaf824",
+    ".server.log": "11e0db9be7db269937a4a09c9a6cf5051b77ac30c34a9d9bf218cd038ea87f22",
+    ".client.json": "a533d2284980130cd2dd24fbd4c28a42524a8014e537c643a2570f284b844a4c",
+    ".reference.json": "b4b82398c751ef65e476497fd636c0d6b2fc2048589cba62e9faa69ac31def7b"
+  },
+  "retained_fixture": "crates/dustroute-translate/tests/fixtures/reference-3x3-observed-a-v1.json",
+  "retained_fixture_sha256": "c5ccc15c9bbf1b5cd4e57ece66e66031b7947205a5052117ad2466c49485605e",
+  "saved_world_time_origin": "first server input, with original zero sentinel retained",
+  "target_audit_class_sha256": {
+    "block/Blocks": "12384e63a34df092eef2375056e63b2d398cf8f210cf6e2df2af64be8cc3621b",
+    "block/ObserverBlock": "1f9131ba4d62b58289cc1673d2e76229678b05b357a5958857b99e8fe3a42baa",
+    "block/RedstoneLampBlock": "2200a240d4b7b84fcc4eed53fd12fdccc70f03ed683642966c7c5dd46f996823",
+    "server/command/SetBlockCommand": "4fc2f53c12f769a29cf838596c5d601905d44a686af551360394281598bdd582"
+  },
+  "unique_tick_end_worlds": 36,
+  "observer_movement_observed": false,
+  "source_audit_stop": "Observer shape update triggers and schedule admission/isQueued are not directly observed by existing hooks; integration would require broader adapter and instrumentation work."
+}

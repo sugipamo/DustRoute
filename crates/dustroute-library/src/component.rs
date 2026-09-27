@@ -2,7 +2,9 @@ use std::fmt::{Display, Formatter};
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[derive(
+    Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, schemars::JsonSchema,
+)]
 #[serde(try_from = "String", into = "String")]
 pub struct ComponentId(String);
 
@@ -57,21 +59,33 @@ pub enum ComponentKind {
     HalfAdder,
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Deserialize,
+    Eq,
+    Hash,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    Serialize,
+    schemars::JsonSchema,
+)]
 #[serde(rename_all = "snake_case")]
 pub enum PortDirection {
     Input,
     Output,
 }
 
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, schemars::JsonSchema)]
 pub struct Port {
     pub name: String,
     pub direction: PortDirection,
     pub bit_width: usize,
 }
 
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, schemars::JsonSchema)]
 pub struct LogicalSpec {
     pub ports: Vec<Port>,
     /// Rows are ordered as all input values followed by all output values.
@@ -135,7 +149,7 @@ pub struct Evidence {
     pub notes: Option<String>,
 }
 
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, schemars::JsonSchema)]
 pub struct Provenance {
     pub author: String,
     pub source_url: Option<String>,

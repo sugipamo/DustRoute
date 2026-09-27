@@ -1,0 +1,87 @@
+{
+  "schema_version": "dustroute.mixed-piston-fixture.v1",
+  "id": "piston-payload-down-pull-v2",
+  "initial": {
+    "min": {
+      "x": -5,
+      "y": 0,
+      "z": -5
+    },
+    "max": {
+      "x": 7,
+      "y": 11,
+      "z": 5
+    },
+    "blocks": [
+      {
+        "pos": {
+          "x": 1,
+          "y": 7,
+          "z": 0
+        },
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      {
+        "pos": {
+          "x": 1,
+          "y": 6,
+          "z": 0
+        },
+        "name": "minecraft:lever",
+        "properties": {
+          "face": "ceiling",
+          "facing": "north",
+          "powered": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 0,
+          "y": 6,
+          "z": 0
+        },
+        "name": "minecraft:sticky_piston",
+        "properties": {
+          "facing": "down",
+          "extended": "false"
+        }
+      },
+      {
+        "pos": {
+          "x": 0,
+          "y": 5,
+          "z": 0
+        },
+        "name": "minecraft:sticky_piston",
+        "properties": {
+          "facing": "east",
+          "extended": "false"
+        }
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "x": 1,
+      "y": 6,
+      "z": 0
+    }
+  ],
+  "steps": [
+    {
+      "input": 0,
+      "powered": true,
+      "wait_ticks": 0
+    },
+    {
+      "input": 0,
+      "powered": false,
+      "wait_ticks": 8
+    }
+  ],
+  "packet_input": true,
+  "warmup_ticks": 80,
+  "align_first_input": true,
+  "shared_viewpoint": true
+}

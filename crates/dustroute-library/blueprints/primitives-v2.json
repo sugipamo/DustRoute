@@ -1,0 +1,136 @@
+{
+  "schema": "dustroute.blueprint-catalog.v8",
+  "types": [
+    {
+      "id": "dustroute.type.device-output.v1",
+      "name": "Direct device output",
+      "contract": {
+        "kind": "signal",
+        "port_kind": "device_output"
+      }
+    },
+    {
+      "id": "dustroute.type.lever.v1",
+      "name": "Lever block identity",
+      "contract": {
+        "kind": "block_kind",
+        "block_kind": "Lever"
+      }
+    }
+  ],
+  "classifications": [],
+  "revisions": [
+    {
+      "id": "dustroute.lever.wall.v1",
+      "parents": [],
+      "name": "Independent wall lever",
+      "classifications": [],
+      "blocks": [
+        {
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "block": {
+            "kind": "Lever",
+            "observed_name": null,
+            "observed_properties": {},
+            "observation_classification": "synthetic",
+            "facing": null,
+            "powered": false,
+            "power_level": null,
+            "delay": null,
+            "support_offset": {
+              "x": 1,
+              "y": 0,
+              "z": 0
+            },
+            "wire_connections": null
+          }
+        }
+      ],
+      "inclusions": [],
+      "ports": [
+        {
+          "name": "out",
+          "direction": "output",
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "kind": "device_output",
+          "facing": null,
+          "required_source_types": []
+        }
+      ],
+      "provenance": {
+        "author": "DustRoute",
+        "source_url": null,
+        "license": "Apache-2.0",
+        "retrieved_on": null
+      }
+    },
+    {
+      "id": "dustroute.lever.wall.v2",
+      "parents": [
+        "dustroute.lever.wall.v1"
+      ],
+      "name": "Independent wall lever",
+      "classifications": [],
+      "blocks": [
+        {
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "block": {
+            "kind": "Lever",
+            "observed_name": null,
+            "observed_properties": {},
+            "observation_classification": "synthetic",
+            "facing": null,
+            "powered": false,
+            "power_level": null,
+            "delay": null,
+            "support_offset": {
+              "x": 1,
+              "y": 0,
+              "z": 0
+            },
+            "wire_connections": null
+          }
+        }
+      ],
+      "inclusions": [],
+      "ports": [
+        {
+          "name": "out",
+          "direction": "output",
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "kind": "device_output",
+          "facing": null,
+          "required_source_types": []
+        }
+      ],
+      "provenance": {
+        "author": "DustRoute",
+        "source_url": null,
+        "license": "Apache-2.0",
+        "retrieved_on": null
+      },
+      "static_type_bindings": [
+        {
+          "type_revision": "dustroute.type.lever.v1",
+          "port": "out"
+        }
+      ]
+    }
+  ]
+}

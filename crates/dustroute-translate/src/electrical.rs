@@ -2,9 +2,11 @@ use std::collections::BTreeMap;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 
-use crate::connectivity::{comparator_output_pos, observer_output_pos, repeater_output_pos};
+use crate::dust_law::{DustLaw, builtin_dust_law};
+use crate::wire::resolved_wire_connection;
 use crate::wire::{HORIZONTAL, dust_transmits, wire_has_arm};
 use crate::world::{BlockKind, Pos, World};
+use dustroute_minecraft::spatial::{DirectPower, WeakTarget, builtin_spatial_laws};
 
 pub const MAX_SIGNAL: u8 = 15;
 const ADJACENT: [Pos; 6] = [
@@ -120,23 +122,7 @@ impl ElectricalTopology {
         let power_sources: Vec<_> = positions
             .iter()
             .filter_map(|pos| {
-                let block = world.get(*pos)?;
-                let targets = match block.kind {
-                    BlockKind::Lever | BlockKind::Button | BlockKind::PressurePlate => {
-                        block.support_pos(*pos).into_iter().collect()
-                    }
-                    BlockKind::Repeater => repeater_output_pos(world, *pos).into_iter().collect(),
-                    BlockKind::Comparator => {
-                        comparator_output_pos(world, *pos).into_iter().collect()
-                    }
-                    BlockKind::Observer => observer_output_pos(world, *pos).into_iter().collect(),
-                    BlockKind::RedstoneTorch => vec![pos.offset(0, 1, 0)],
-                    BlockKind::RedstoneBlock => ADJACENT
-                        .into_iter()
-                        .map(|delta| pos.offset(delta.x, delta.y, delta.z))
-                        .collect(),
-                    _ => return None,
-                };
+                let targets = strong_output_targets(world, *pos)?;
                 let strong_targets = targets
                     .into_iter()
                     .filter(|target| {
@@ -210,6 +196,12 @@ impl Display for InstantaneousSolveDidNotConverge {
 
 impl Error for InstantaneousSolveDidNotConverge {}
 
+/// Potential strong-power targets shared by simulation and physical route checks.
+/// Current ON/OFF state controls the signal level, not connectivity.
+pub(crate) fn strong_output_targets(world: &World, pos: Pos) -> Option<Vec<Pos>> {
+    builtin_spatial_laws().strong_output_targets(world, pos)
+}
+
 fn component_output_level(world: &World, pos: Pos, devices: &DeviceOutputState) -> u8 {
     let Some(block) = world.get(pos) else {
         return 0;
@@ -235,10 +227,19 @@ fn component_output_level(world: &World, pos: Pos, devices: &DeviceOutputState) 
     }
 }
 
-fn dust_weak_power_targets(world: &World, pos: Pos) -> Vec<Pos> {
-    let mut targets = vec![pos.offset(0, -1, 0)];
+/// Potential weak-power targets, independent of the wire's current level.
+/// Route checks and electrical execution must use the same arm geometry.
+pub(crate) fn dust_weak_power_targets(world: &World, pos: Pos) -> Vec<Pos> {
+    let laws = builtin_spatial_laws();
+    let mut targets = Vec::new();
+    if laws.weakly_powers(WeakTarget::Below, crate::world::WireConnection::None) {
+        targets.push(pos.offset(0, -1, 0));
+    }
     for facing in HORIZONTAL {
-        if wire_has_arm(world, pos, facing) {
+        if laws.weakly_powers(
+            WeakTarget::Horizontal,
+            resolved_wire_connection(world, pos, facing),
+        ) {
             let delta = facing.horizontal_offset().expect("horizontal facing");
             targets.push(pos.offset(delta.x, 0, delta.z));
         }
@@ -270,7 +271,8 @@ fn compute_powered_blocks(
         for delta in ADJACENT {
             let target = source.offset(delta.x, delta.y, delta.z);
             if world.get(target).is_some_and(|block| {
-                block.kind != BlockKind::Solid && block.redstone_traits().conducts_weak_power
+                builtin_spatial_laws().accepts_relayed_weak_power(block.kind)
+                    && block.redstone_traits().conducts_weak_power
             }) {
                 weak.entry(target)
                     .and_modify(|value| *value = (*value).max(*level))
@@ -311,32 +313,31 @@ fn direct_level_into_dust(
     block_power: &BTreeMap<Pos, PoweredBlockState>,
     devices: &DeviceOutputState,
 ) -> u8 {
-    match world.kind_at(neighbor) {
-        BlockKind::RedstoneBlock
-        | BlockKind::Lever
-        | BlockKind::Button
-        | BlockKind::PressurePlate
-        | BlockKind::RedstoneTorch => component_output_level(world, neighbor, devices),
-        BlockKind::Repeater if repeater_output_pos(world, neighbor) == Some(dust) => {
-            component_output_level(world, neighbor, devices)
-        }
-        BlockKind::Comparator if comparator_output_pos(world, neighbor) == Some(dust) => {
-            component_output_level(world, neighbor, devices)
-        }
-        BlockKind::Observer if observer_output_pos(world, neighbor) == Some(dust) => {
-            component_output_level(world, neighbor, devices)
-        }
-        _ if world
-            .get(neighbor)
-            .is_some_and(|block| block.redstone_traits().strong_power_drives_dust) =>
-        {
-            block_power
-                .get(&neighbor)
-                .copied()
-                .unwrap_or_default()
-                .strong
-        }
-        _ => 0,
+    let Some(block) = world.get(neighbor) else {
+        return 0;
+    };
+    let direct = match builtin_spatial_laws().direct_power(block.kind) {
+        DirectPower::Adjacent => true,
+        DirectPower::ForwardHorizontal => block
+            .facing
+            .and_then(|f| f.horizontal_offset())
+            .is_some_and(|d| neighbor.offset(d.x, d.y, d.z) == dust),
+        DirectPower::ForwardAny => block
+            .facing
+            .map(|f| f.offset())
+            .is_some_and(|d| neighbor.offset(d.x, d.y, d.z) == dust),
+        DirectPower::None => false,
+    };
+    if direct {
+        component_output_level(world, neighbor, devices)
+    } else if block.redstone_traits().strong_power_drives_dust {
+        block_power
+            .get(&neighbor)
+            .copied()
+            .unwrap_or_default()
+            .strong
+    } else {
+        0
     }
 }
 
@@ -355,6 +356,16 @@ pub(crate) fn solve_instantaneous_with_topology(
     max_iterations: usize,
     topology: &ElectricalTopology,
 ) -> Result<InstantaneousElectricalState, InstantaneousSolveDidNotConverge> {
+    solve_instantaneous_with_law(world, devices, max_iterations, topology, builtin_dust_law())
+}
+
+pub(crate) fn solve_instantaneous_with_law(
+    world: &World,
+    devices: &DeviceOutputState,
+    max_iterations: usize,
+    topology: &ElectricalTopology,
+    dust_law: &DustLaw,
+) -> Result<InstantaneousElectricalState, InstantaneousSolveDidNotConverge> {
     let mut signals: BTreeMap<_, _> = topology
         .positions
         .iter()
@@ -369,7 +380,8 @@ pub(crate) fn solve_instantaneous_with_topology(
             .map(|pos| (*pos, component_output_level(world, *pos, devices)))
             .collect();
         for dust in &topology.wires {
-            let mut best = 0;
+            let mut neighboring = 0;
+            let mut direct = 0;
             for facing in HORIZONTAL {
                 let delta = facing.horizontal_offset().expect("horizontal facing");
                 for dy in -1..=1 {
@@ -377,14 +389,13 @@ pub(crate) fn solve_instantaneous_with_topology(
                     if world.kind_at(other) == BlockKind::RedstoneWire
                         && dust_transmits(world, other, *dust)
                     {
-                        best =
-                            best.max(signals.get(&other).copied().unwrap_or(0).saturating_sub(1));
+                        neighboring = neighboring.max(signals.get(&other).copied().unwrap_or(0));
                     }
                 }
             }
             for dy in [-1, 1] {
                 let neighbor = dust.offset(0, dy, 0);
-                best = best.max(direct_level_into_dust(
+                direct = direct.max(direct_level_into_dust(
                     world,
                     *dust,
                     neighbor,
@@ -405,7 +416,7 @@ pub(crate) fn solve_instantaneous_with_topology(
                 if !receives_through_arm && !receives_from_strong_block {
                     continue;
                 }
-                best = best.max(direct_level_into_dust(
+                direct = direct.max(direct_level_into_dust(
                     world,
                     *dust,
                     neighbor,
@@ -413,7 +424,7 @@ pub(crate) fn solve_instantaneous_with_topology(
                     devices,
                 ));
             }
-            next_signals.insert(*dust, best.min(MAX_SIGNAL));
+            next_signals.insert(*dust, dust_law.strength(direct, neighboring));
         }
         if next_signals == signals && next_block_power == block_power {
             return Ok(InstantaneousElectricalState {

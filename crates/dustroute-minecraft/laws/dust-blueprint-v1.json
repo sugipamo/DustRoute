@@ -1,0 +1,61 @@
+{
+  "schema": "dustroute.blueprint-catalog.v3",
+  "types": [],
+  "classifications": [],
+  "revisions": [
+    {
+      "id": "dustroute.law.dust-strength.v1",
+      "parents": [],
+      "name": "Dust signal combination and attenuation",
+      "classifications": [],
+      "blocks": [],
+      "inclusions": [],
+      "ports": [],
+      "provenance": {
+        "author": "DustRoute: existing electrical model and differential fixtures",
+        "source_url": null,
+        "license": null,
+        "retrieved_on": "2026-09-20"
+      },
+      "law": {
+        "inputs": {
+          "direct": 15,
+          "neighbor": 15
+        },
+        "registers": {
+          "strength": {
+            "initial": 0,
+            "maximum": 15
+          }
+        },
+        "histories": {},
+        "handlers": {
+          "evaluate": [
+            {
+              "op": "set",
+              "register": "strength",
+              "value": {
+                "op": "maximum",
+                "left": {
+                  "op": "input",
+                  "name": "direct"
+                },
+                "right": {
+                  "op": "saturating_subtract",
+                  "left": {
+                    "op": "input",
+                    "name": "neighbor"
+                  },
+                  "right": {
+                    "op": "constant",
+                    "value": 1
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

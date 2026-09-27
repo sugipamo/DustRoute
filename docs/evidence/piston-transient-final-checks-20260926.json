@@ -1,0 +1,389 @@
+{
+  "schema_version": "dustroute.piston-transient-final-checks.v1",
+  "date": "2026-09-26",
+  "minecraft_version": "1.21.11",
+  "yarn_version": "1.21.11+build.6",
+  "reference": "actual isolated vanilla server with scoped observation instrumentation, redstone experiments disabled",
+  "target_jar_audited_sha256": "5b4aa12131a872a25dc32e7f017373d6e83502f6919154769296dd3de6af8c1b",
+  "instrumentation_execution": "Gradle runServer development classes; compilation and live mixin loading verified",
+  "scope": [
+    "supported electrical piston subset",
+    "upward/horizontal sticky reversal",
+    "downward ordinary short-pulse operation",
+    "pre-materialization and post-completion interruption",
+    "shared destination in both input orders, including negative X"
+  ],
+  "projection": [
+    "complete known block world at delivered piston-event entry/return",
+    "carrier tick/forced-finish entry/return, including progress and saved world time",
+    "ordinary neighbor callbacks to piston, head, moving piston, wire and repeater"
+  ],
+  "excluded": [
+    "setter-by-setter order inside atomic model deltas",
+    "shape callbacks",
+    "inert-target callback identity",
+    "entity collisions",
+    "slime/honey",
+    "vertical-piston payloads",
+    "multiple-piston payload chains",
+    "new component support"
+  ],
+  "confirmed_fix": {
+    "trigger": "trial i: post-world OFF at measured two-tick completion boundary",
+    "previous_replay": "pre-next-world External input requested Retract while live requested RetractDrop; final world still matched",
+    "correction": "explicit AfterWorldTick section and schedule_electrical_input_after_tick preserve world-time equality and defer block events",
+    "existing_before_tick_semantics": "unchanged",
+    "piston_law_changed": false
+  },
+  "evidence_rejections": [
+    "requested input without matching applied lever write",
+    "missing input world-tick section",
+    "noncontiguous raw interval",
+    "missing full world-tick heartbeat interval",
+    "different spatial scope",
+    "unclosed capture or write errors",
+    "drain state inconsistent with full final readback"
+  ],
+  "accepted_captures": [
+    {
+      "path": "crates/dustroute-translate/tests/fixtures/piston-transient-observed-b-v2.json",
+      "sha256": "2e4c06b48be38a8071211cc62898a5a91b6155c37c95651b4858a645438982ab",
+      "run_id": "piston-transient-20260926-b",
+      "matching_boundaries": 67,
+      "applied_offsets": [
+        0,
+        1,
+        2,
+        12
+      ],
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_shutdown": "normal",
+      "server_log_sha256": "4ed235442c59b604ce766c52f1c600f77af8eb8c8e57c2675621bed0957a5d0e"
+    },
+    {
+      "path": "crates/dustroute-translate/tests/fixtures/piston-transient-observed-c-v2.json",
+      "sha256": "fe092dbfe19c411cc58a36ef7ad588ca6d65b292deb720f0b6acbb71d6f29481",
+      "run_id": "piston-transient-20260926-c",
+      "matching_boundaries": 53,
+      "applied_offsets": [
+        0,
+        0,
+        1,
+        11
+      ],
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_shutdown": "normal",
+      "server_log_sha256": "aaa66988d9354a1b4fa6663a5106b4fe5dc82a2d0b56f5ba988036653793682d"
+    },
+    {
+      "path": "crates/dustroute-translate/tests/fixtures/piston-transient-observed-d-v2.json",
+      "sha256": "1df2ad557e118115f22ec7e4f149f853c52deeb5b6f0989d20ceb215fe2dbb1f",
+      "run_id": "piston-transient-20260926-d",
+      "matching_boundaries": 47,
+      "applied_offsets": [
+        0,
+        0,
+        7,
+        17
+      ],
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_shutdown": "normal",
+      "server_log_sha256": "6c91871cc7309456e1dceca603f881092d1a5962306d2606525676313349eeeb"
+    },
+    {
+      "path": "crates/dustroute-translate/tests/fixtures/piston-transient-observed-e-v2.json",
+      "sha256": "b0800995187dadbee0f86e34a8d7a60a0bfd57a113972cd68c4d7175ca2d0c12",
+      "run_id": "piston-transient-20260926-e",
+      "matching_boundaries": 67,
+      "applied_offsets": [
+        0,
+        1,
+        2,
+        13
+      ],
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_shutdown": "normal",
+      "server_log_sha256": "44c16a4b56bd502326b028d4e7a463950f95a4e792dc0888c555cc9d9532826f"
+    },
+    {
+      "path": "crates/dustroute-translate/tests/fixtures/piston-transient-observed-f-v2.json",
+      "sha256": "84d24288378da5edc4e1ef1d066831d0b5b70d09709031424c8d5d51d7998676",
+      "run_id": "piston-transient-20260926-f",
+      "matching_boundaries": 99,
+      "applied_offsets": [
+        0,
+        3,
+        4,
+        14
+      ],
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_shutdown": "normal",
+      "server_log_sha256": "d9a6a206efd0a97e4372b7eac2c38cfbfd6c93737bd66f0358f40bf62817a45c"
+    },
+    {
+      "path": "crates/dustroute-translate/tests/fixtures/piston-transient-observed-g-v2.json",
+      "sha256": "41c6ff4760c75dd9667d9d677169999cb242221486fc2eb99dc30630da1d4328",
+      "run_id": "piston-transient-20260926-g",
+      "matching_boundaries": 47,
+      "applied_offsets": [
+        0,
+        6
+      ],
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_shutdown": "normal",
+      "server_log_sha256": "7b416e627aef1dd2accd126aa7cc87dfface810fc2ce1f2e966dde1e1fb95ecb"
+    },
+    {
+      "path": "crates/dustroute-translate/tests/fixtures/piston-transient-observed-h-v2.json",
+      "sha256": "bb9248c7a724ca3035eff4181f5e20fd5419a104606bb83e17ed3b84972905c4",
+      "run_id": "piston-transient-20260926-h",
+      "matching_boundaries": 36,
+      "applied_offsets": [
+        0,
+        0,
+        1,
+        2
+      ],
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_shutdown": "normal",
+      "server_log_sha256": "106bdae975be0ce703effe20e92b9e04e44e6ced7d3707a19d95ed31c8f09ca1"
+    },
+    {
+      "path": "crates/dustroute-translate/tests/fixtures/piston-transient-observed-i-v2.json",
+      "sha256": "d507a02377e8e99a7d7cdbc696e2ec80386b82086e997f1b7022d3712ebaf043",
+      "run_id": "piston-transient-20260926-i",
+      "matching_boundaries": 41,
+      "applied_offsets": [
+        0,
+        0,
+        2,
+        3
+      ],
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_shutdown": "normal",
+      "server_log_sha256": "50044ed4dcc182b598d5f67d425d1fc4479852a43107f06dcf1123ec7114b037"
+    },
+    {
+      "path": "crates/dustroute-translate/tests/fixtures/piston-transient-observed-j-v2.json",
+      "sha256": "c5322a9c7c41a0ae4c290a34bf2bc4a3f813d493e3e705e201f6491dff4a2486",
+      "run_id": "piston-transient-20260926-j",
+      "matching_boundaries": 67,
+      "applied_offsets": [
+        0,
+        1,
+        2,
+        12
+      ],
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_shutdown": "normal",
+      "server_log_sha256": "bbbad785147eec4ff3a427b0e9f3e1039cf93fb5790380e7a3d092704f0012af"
+    },
+    {
+      "path": "crates/dustroute-translate/tests/fixtures/piston-transient-observed-k-v2.json",
+      "sha256": "5dc49a2896acc2e78d333f0c1a40d3f7f97356afc47d0c96f6b4414a2f25d2a0",
+      "run_id": "piston-transient-20260926-k",
+      "matching_boundaries": 64,
+      "applied_offsets": [
+        0,
+        1,
+        8,
+        18
+      ],
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_shutdown": "normal",
+      "server_log_sha256": "7402560d215b2c58ca09d2fc24ac2417b2d70a545755b961b3f41d8eaa91f33c"
+    },
+    {
+      "path": "crates/dustroute-translate/tests/fixtures/piston-transient-observed-l-v2.json",
+      "sha256": "096cf09cef1442242fdd48085e02a376118da57525652eab354946df311d778e",
+      "run_id": "piston-transient-20260926-l",
+      "matching_boundaries": 71,
+      "applied_offsets": [
+        0,
+        2,
+        3,
+        13
+      ],
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_shutdown": "normal",
+      "server_log_sha256": "fb7f905ccf966d9dd78100a90646cfb13299124332bc905f05e7775f731911f5"
+    }
+  ],
+  "matching_boundaries": 659,
+  "rejected_capture": {
+    "run_id": "piston-transient-20260926-a",
+    "classification": "input_application_unverified",
+    "reason": "first three requested inputs did not apply; final lever write disagreed with requested level",
+    "cleanup": {
+      "region_empty": true,
+      "force_load_removed": true,
+      "disconnected_before_finish": null
+    },
+    "server_shutdown": "normal",
+    "artifacts_sha256": {
+      ".raw.ndjson": "cf6aa9b7c21b6d3ebac8b1050d5d47f950f8a312b8396fce81b6d5f8a35db7e5",
+      ".client.json": "81db9457f39dec6048fbff18592cbf55bb409f6fe041f8f5279e34d5106e5d75",
+      ".server.log": "80e09e5c9d068656d39403ee6bb61c583c5711fac028bd486a079278ea9113c1"
+    }
+  },
+  "checks": [
+    {
+      "command": "cargo test --offline --locked -p dustroute-minecraft -j 1 -- --test-threads=2",
+      "result": "passed",
+      "log": "/tmp/dustroute-transient-minecraft-tests.log",
+      "log_sha256": "feeec0addaaf5d3c37a9247ea6932eb8259701812c811fbb6b483ba55e349be5",
+      "passed": 208
+    },
+    {
+      "command": "cargo test --offline --locked -p dustroute-library --test execution_context -p dustroute-translate --test electrical_piston_observations --test location_behavior --test unified_piston_behavior --test runtime_adoption -j 1 -- --test-threads=2",
+      "result": "passed",
+      "log": "/tmp/dustroute-transient-integration-tests.log",
+      "log_sha256": "8acdb6170eb34fc1353cfb0d2f5330d7443b7929d228c7138a3320f477a0ac47",
+      "passed": 32
+    },
+    {
+      "command": "python3 tools/test_piston_transients.py",
+      "result": "passed",
+      "log": "/tmp/dustroute-transient-offline-tests-final.log",
+      "log_sha256": "7336ff67934dcdd118b4cb2299276a424e664eab5b993732cd780b1b875a6b8e",
+      "passed": 7,
+      "captures_replayed": 11,
+      "restoration": "moving suspended checkpoint and moving behavior representative reach the same final state"
+    },
+    {
+      "command": "cargo clippy --offline --locked --workspace --all-targets -j 1 -- -D warnings",
+      "result": "passed",
+      "log": "/tmp/dustroute-transient-clippy.log",
+      "log_sha256": "54d0ad1cf83fb791aff543108aedf3108cdfc1a849616693f73e0497c4b32d02"
+    },
+    {
+      "command": "./gradlew --offline --max-workers=1 compileJava",
+      "result": "passed",
+      "log": "/tmp/dustroute-transient-instrumentation-compile.log",
+      "log_sha256": "becd33cd867dc69b6b1422bd4e26f8e8b0f980debb66e0a6f107ff04f07264d3",
+      "cwd": "/root/DustRoute-minecraft-instrumentation"
+    },
+    {
+      "command": "python3 scripts/test_normalize_ndjson.py",
+      "result": "passed",
+      "log": "/tmp/dustroute-transient-normalizer-tests.log",
+      "log_sha256": "62e6bd3a77554540929dd26eab6204ab86056dc07bacce00a71e4482e9f4bcb8",
+      "passed": 14,
+      "cwd": "/root/DustRoute-minecraft-instrumentation"
+    },
+    {
+      "command": "python3 scripts/test_compress_ndjson.py",
+      "result": "passed",
+      "log": "/tmp/dustroute-transient-compress-tests.log",
+      "log_sha256": "24adda79e21044fef19cdc7f0606a9cd7770fc9a99c705a8622ee923c13bce5d",
+      "passed": 2,
+      "cwd": "/root/DustRoute-minecraft-instrumentation"
+    },
+    {
+      "command": "cargo fmt --all --check",
+      "result": "passed",
+      "exit_code": 0,
+      "log": "/tmp/dustroute-transient-fmt-final.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "node --check crates/dustroute-mcp/mineflayer/e2e/piston-mixed-live.js",
+      "result": "passed",
+      "exit_code": 0
+    },
+    {
+      "command": "Python ast.parse for five changed observation tools",
+      "result": "passed",
+      "exit_code": 0
+    },
+    {
+      "command": "git diff --check",
+      "cwd": "/root/DustRoute",
+      "result": "passed",
+      "exit_code": 0
+    },
+    {
+      "command": "git diff --check",
+      "cwd": "/root/DustRoute-minecraft-instrumentation",
+      "result": "passed",
+      "exit_code": 0
+    }
+  ],
+  "full_workspace_test_suite_rerun": false,
+  "preservation": "Original full raw artifacts and original model outputs remain unchanged. Retained fixture provenance records capture/retention-time hashes; current source hashes below are separate.",
+  "source_sha256": {
+    "crates/dustroute-minecraft/src/time/runtime/mod.rs": "933846b5f3dc488366437780c8e83e267086f3cbf058757bb3d7cd1663230179",
+    "crates/dustroute-minecraft/src/time/runtime/executor.rs": "0970d3a01ff8731b8cdc181911bed5055ca939768c98a197f95d8095afdeb7c2",
+    "crates/dustroute-minecraft/src/time/piston_runtime/mod.rs": "afdde2c82cc3a1c2bde279c162ab474e26dffb27af7cc9b512ec15d8eed87d82",
+    "crates/dustroute-minecraft/tests/piston_runtime.rs": "e37203f9e48c1dd182451ecce4cf3a10b69d1ea3be068f765876283f79616d9b",
+    "crates/dustroute-translate/examples/compare_electrical_pistons.rs": "709ef3852ebed0647e58c241ca07fd783a04606d17e4e328a9d446a575e2396a",
+    "crates/dustroute-mcp/mineflayer/e2e/piston-mixed-live.js": "e3c8e7dd9221077ff0a0fd286db8e639ca7f3c161a249181243ca1278f0e0443",
+    "tools/instrumented_server.py": "e83097f238fe9d170809c79fdb6aafa731887e4691285e3e9c32d2e60efe830c",
+    "tools/observe_mixed_pistons.py": "f6d4b118831e9a6fdf7d00761325051dc08823212b0e725a3f4199c1574b3927",
+    "tools/compare_piston_transients.py": "cf8eedbbac08e0d8d29385eea221de567592ff51e02a6822b72f7182901f4abd",
+    "tools/retain_piston_transient.py": "571b09781e89ccdcbe90ce136872c0c30a9c51b27cf7f8fccec8b25d1defa64a",
+    "tools/test_piston_transients.py": "8149b369f65eb1355bacaec985a21ba37aaf8a715eb3681565565af497e7ab37"
+  },
+  "companion_root": "/root/DustRoute-minecraft-instrumentation",
+  "companion_source_sha256": {
+    "src/main/java/dev/dustroute/instrumentation/ObservationFilter.java": "51ce513b7c41724ad09dbc2b1d6b9178b19380dad7474aacc7f8e715a47d3332",
+    "src/main/java/dev/dustroute/instrumentation/InstrumentationLog.java": "4896331f77b7f1be0f5462bfa3e7fada4e4eac510c1bc6f946395ef9c7a719d1",
+    "src/main/java/dev/dustroute/instrumentation/mixin/WorldChunkMixin.java": "09fa3f45e45007356ba9ddbea246234d0d147a3e4a0028eeb2afbc0ac7219b53",
+    "src/main/java/dev/dustroute/instrumentation/mixin/PistonBlockMixin.java": "90d4e22e4a7958412f1df8df1e12d9f52655ac71cd0266d787461b27bb853728",
+    "src/main/java/dev/dustroute/instrumentation/mixin/PistonBlockEntityMixin.java": "a2d57320171b6b6979b396bd9b8a62655ce19be9283aaa60a6da6f7d66d6e246",
+    "src/main/java/dev/dustroute/instrumentation/mixin/AbstractBlockStateMixin.java": "b0bcc128a52c3000446dffa1712bee5877c083c764c50366a01a6f1de288c0ef",
+    "src/main/resources/dustroute-vanilla-instrumentation.mixins.json": "377b7114e1146319f2e37363b8f300bc7d2ad9256a54e488d82ee59613662da1"
+  },
+  "unchanged_baseline_sha256": {
+    "crates/dustroute-minecraft/src/piston_motion_law.rs": "f22c4bbe61aa02cfd59c45d17f1799128e756a8c209a1801398ed2db4b198515",
+    "crates/dustroute-minecraft/src/time/piston_runtime/adapter.rs": "03716915f839f08405fc5b5a65a42756df12e9be2cbe9e3ea0e2079c36168fb3",
+    "crates/dustroute-minecraft/src/time/piston_runtime/geometry.rs": "770a335cd7f44655e4662f5c9dc6c7f4a9c872c149cc983b00f667cb986f0685"
+  },
+  "model_binary_sha256": "85e2c949a1bff62dcd240eb2d7bc8925166626af477672eebc20f8e18f23f0a7",
+  "host_operations": "none",
+  "live_world_changes": "isolated empty regions checked before construction; all twelve trial regions emptied and force loads removed"
+}

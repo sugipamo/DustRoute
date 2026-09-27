@@ -1,0 +1,356 @@
+{
+  "inputs": {
+    "powered": 1,
+    "extended": 1,
+    "can_push": 1,
+    "matching_carrier": 1,
+    "same_tick": 1,
+    "in_block_tick": 1,
+    "sticky": 1,
+    "pullable": 1,
+    "last_progress": 2,
+    "event": 2
+  },
+  "registers": {
+    "request": {
+      "initial": 0,
+      "maximum": 3
+    },
+    "execute": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "finish_payload": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "pull": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "remove_head": {
+      "initial": 0,
+      "maximum": 1
+    }
+  },
+  "histories": {},
+  "handlers": {
+    "evaluate": [
+      {
+        "op": "if",
+        "condition": {
+          "op": "and",
+          "left": {
+            "op": "and",
+            "left": {
+              "op": "input",
+              "name": "powered"
+            },
+            "right": {
+              "op": "not",
+              "value": {
+                "op": "input",
+                "name": "extended"
+              }
+            }
+          },
+          "right": {
+            "op": "input",
+            "name": "can_push"
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "request",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          }
+        ],
+        "otherwise": [
+          {
+            "op": "if",
+            "condition": {
+              "op": "and",
+              "left": {
+                "op": "not",
+                "value": {
+                  "op": "input",
+                  "name": "powered"
+                }
+              },
+              "right": {
+                "op": "input",
+                "name": "extended"
+              }
+            },
+            "then": [
+              {
+                "op": "if",
+                "condition": {
+                  "op": "and",
+                  "left": {
+                    "op": "input",
+                    "name": "matching_carrier"
+                  },
+                  "right": {
+                    "op": "maximum",
+                    "left": {
+                      "op": "maximum",
+                      "left": {
+                        "op": "not",
+                        "value": {
+                          "op": "at_least",
+                          "left": {
+                            "op": "input",
+                            "name": "last_progress"
+                          },
+                          "right": {
+                            "op": "constant",
+                            "value": 1
+                          }
+                        }
+                      },
+                      "right": {
+                        "op": "input",
+                        "name": "same_tick"
+                      }
+                    },
+                    "right": {
+                      "op": "input",
+                      "name": "in_block_tick"
+                    }
+                  }
+                },
+                "then": [
+                  {
+                    "op": "set",
+                    "register": "request",
+                    "value": {
+                      "op": "constant",
+                      "value": 3
+                    }
+                  }
+                ],
+                "otherwise": [
+                  {
+                    "op": "set",
+                    "register": "request",
+                    "value": {
+                      "op": "constant",
+                      "value": 2
+                    }
+                  }
+                ]
+              }
+            ],
+            "otherwise": []
+          }
+        ]
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "event"
+          },
+          "right": {
+            "op": "constant",
+            "value": 0
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "execute",
+            "value": {
+              "op": "input",
+              "name": "powered"
+            }
+          }
+        ],
+        "otherwise": [
+          {
+            "op": "set",
+            "register": "execute",
+            "value": {
+              "op": "not",
+              "value": {
+                "op": "input",
+                "name": "powered"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "op": "set",
+        "register": "finish_payload",
+        "value": {
+          "op": "and",
+          "left": {
+            "op": "and",
+            "left": {
+              "op": "not",
+              "value": {
+                "op": "equal",
+                "left": {
+                  "op": "input",
+                  "name": "event"
+                },
+                "right": {
+                  "op": "constant",
+                  "value": 0
+                }
+              }
+            },
+            "right": {
+              "op": "input",
+              "name": "sticky"
+            }
+          },
+          "right": {
+            "op": "input",
+            "name": "matching_carrier"
+          }
+        }
+      },
+      {
+        "op": "set",
+        "register": "pull",
+        "value": {
+          "op": "and",
+          "left": {
+            "op": "and",
+            "left": {
+              "op": "and",
+              "left": {
+                "op": "equal",
+                "left": {
+                  "op": "input",
+                  "name": "event"
+                },
+                "right": {
+                  "op": "constant",
+                  "value": 1
+                }
+              },
+              "right": {
+                "op": "input",
+                "name": "sticky"
+              }
+            },
+            "right": {
+              "op": "not",
+              "value": {
+                "op": "input",
+                "name": "matching_carrier"
+              }
+            }
+          },
+          "right": {
+            "op": "input",
+            "name": "pullable"
+          }
+        }
+      },
+      {
+        "op": "set",
+        "register": "remove_head",
+        "value": {
+          "op": "and",
+          "left": {
+            "op": "and",
+            "left": {
+              "op": "not",
+              "value": {
+                "op": "equal",
+                "left": {
+                  "op": "input",
+                  "name": "event"
+                },
+                "right": {
+                  "op": "constant",
+                  "value": 0
+                }
+              }
+            },
+            "right": {
+              "op": "not",
+              "value": {
+                "op": "and",
+                "left": {
+                  "op": "and",
+                  "left": {
+                    "op": "not",
+                    "value": {
+                      "op": "equal",
+                      "left": {
+                        "op": "input",
+                        "name": "event"
+                      },
+                      "right": {
+                        "op": "constant",
+                        "value": 0
+                      }
+                    }
+                  },
+                  "right": {
+                    "op": "input",
+                    "name": "sticky"
+                  }
+                },
+                "right": {
+                  "op": "input",
+                  "name": "matching_carrier"
+                }
+              }
+            }
+          },
+          "right": {
+            "op": "not",
+            "value": {
+              "op": "and",
+              "left": {
+                "op": "and",
+                "left": {
+                  "op": "and",
+                  "left": {
+                    "op": "equal",
+                    "left": {
+                      "op": "input",
+                      "name": "event"
+                    },
+                    "right": {
+                      "op": "constant",
+                      "value": 1
+                    }
+                  },
+                  "right": {
+                    "op": "input",
+                    "name": "sticky"
+                  }
+                },
+                "right": {
+                  "op": "not",
+                  "value": {
+                    "op": "input",
+                    "name": "matching_carrier"
+                  }
+                }
+              },
+              "right": {
+                "op": "input",
+                "name": "pullable"
+              }
+            }
+          }
+        }
+      }
+    ]
+  }
+}

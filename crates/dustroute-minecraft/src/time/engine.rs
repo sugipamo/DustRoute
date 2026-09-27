@@ -12,14 +12,13 @@ use super::{
     TransitionId, TransitionRecord, TransitionStep, TransitionTrace,
 };
 use crate::{
-    Block, BlockKind, ChangeReason, DEFAULT_PISTON_MOTION_PROFILE, PistonAction, PistonError,
-    PistonMotionProfile, PistonMotionProfileError, Pos, RedstonePropagationError, Region, ShapeId,
-    World, WorldDelta, WorldDeltaError, direct_piston_neighbors, external_world_delta,
-    piston_input_powered_in_region, piston_state, plan_piston, plan_piston_in_region,
-    redstone_input_delta, redstone_lamp_delta, redstone_position_known,
-    redstone_repeater_delay_game_ticks, redstone_repeater_delta, redstone_repeater_input_powered,
-    redstone_repeater_output_position, redstone_repeater_powered, redstone_update_positions,
-    redstone_wire_delta, redstone_wire_update_positions,
+    Block, BlockKind, ChangeReason, PistonAction, PistonError, PistonMotionProfile,
+    PistonMotionProfileError, Pos, RedstonePropagationError, Region, ShapeId, World, WorldDelta,
+    WorldDeltaError, direct_piston_neighbors, external_world_delta, piston_input_powered_in_region,
+    piston_state, plan_piston, plan_piston_in_region, redstone_input_delta, redstone_lamp_delta,
+    redstone_position_known, redstone_repeater_delay_game_ticks, redstone_repeater_delta,
+    redstone_repeater_input_powered, redstone_repeater_output_position, redstone_repeater_powered,
+    redstone_update_positions, redstone_wire_delta, redstone_wire_update_positions,
 };
 
 /// Default guard for zero-delay event chains. This is deliberately separate
@@ -417,6 +416,7 @@ impl PhysicsEngine {
     /// or live-execution approval; export and placement must validate again.
     #[must_use]
     pub fn new_diagnostic(world: World, max_events: usize) -> Self {
+        crate::execution_context::bounded_world_laws();
         Self {
             world,
             queue: PhysicsEventQueue::default(),
@@ -432,9 +432,37 @@ impl PhysicsEngine {
             max_microsteps_per_game_tick: DEFAULT_MAX_MICROSTEPS_PER_GAME_TICK,
             microsteps_this_game_tick: 0,
             scheduler_profile: SchedulerProfile::default(),
-            piston_motion_profile: DEFAULT_PISTON_MOTION_PROFILE,
+            piston_motion_profile: PistonMotionProfile::default(),
             piston_planning_region: None,
         }
+    }
+
+    /// The world's executable model selection. Mutable queue/history data is
+    /// retained by the engine and checkpoint, not by this assumptions record.
+    #[must_use]
+    pub fn execution_context(&self) -> crate::execution_context::WorldExecutionContext {
+        use crate::execution_context::{WorldExecutionContext, WorldExecutionProfile};
+        let mut context =
+            WorldExecutionContext::for_profile(WorldExecutionProfile::BoundedRedstoneEventsV1);
+        context.scheduler = Some(self.scheduler_profile);
+        context.piston_motion = Some(self.piston_motion_profile);
+        context
+    }
+
+    /// Applies only settings implemented by this exact world adapter. Changing
+    /// a law pin, initialization policy or model cannot silently relabel it.
+    pub fn with_execution_context(
+        mut self,
+        context: &crate::execution_context::WorldExecutionContext,
+    ) -> Result<Self, String> {
+        use crate::execution_context::WorldExecutionProfile;
+        if context.profile != WorldExecutionProfile::BoundedRedstoneEventsV1 {
+            return Err("bounded engine requires its bounded world profile".into());
+        }
+        context.validate()?;
+        self.scheduler_profile = context.scheduler.expect("validated scheduler");
+        self.piston_motion_profile = context.piston_motion.expect("validated piston settings");
+        Ok(self)
     }
 
     /// Captures all mutable engine state needed to resume an execution
@@ -1437,7 +1465,10 @@ impl PhysicsEngine {
                                 planning_region,
                             )?;
                             let current_powered = redstone_repeater_powered(world, event.target)?;
-                            if current_powered == expected_powered {
+                            if !crate::execution_context::bounded_world_laws()
+                                .repeater
+                                .needs_update(current_powered, expected_powered)
+                            {
                                 return Ok(EventOutcome::default());
                             }
                             let delay_game_ticks =
@@ -1469,14 +1500,9 @@ impl PhysicsEngine {
                     return Ok(EventOutcome::default());
                 }
                 let powered = piston_input_powered_in_region(world, planning_region, event.target)?;
-                let action = match (piston_state(piston), powered) {
-                    (crate::PistonState::Retracted, true) => Some(PistonAction::Extend),
-                    (crate::PistonState::Extended, false) => Some(PistonAction::Retract),
-                    // A moving piston deliberately ignores a new edge in this
-                    // first integration; interruption/reversal is a later
-                    // versioned contract.
-                    _ => None,
-                };
+                let action = crate::execution_context::bounded_world_laws()
+                    .piston
+                    .requested_action(piston_state(piston), powered);
                 let queued = action
                     .map(|action| QueuedEvent {
                         delay_ticks: activation_game_ticks,
@@ -1503,18 +1529,17 @@ impl PhysicsEngine {
                 // The input edge that created this scheduled tick may have
                 // been reversed before the delay elapsed. Retain the event
                 // as evidence, but do not apply an obsolete output pulse.
-                if current_input != *expected_powered {
+                let Some(next_powered) = crate::execution_context::bounded_world_laws()
+                    .repeater
+                    .scheduled_output(current_input, *expected_powered)
+                else {
                     return Ok(EventOutcome::default());
-                }
+                };
                 let output =
                     redstone_repeater_output_position(world, event.target, planning_region)?;
                 preflight_redstone_targets(world, planning_region, &[output])?;
-                let delta = redstone_repeater_delta(
-                    world,
-                    event.target,
-                    *expected_powered,
-                    planning_region,
-                )?;
+                let delta =
+                    redstone_repeater_delta(world, event.target, next_powered, planning_region)?;
                 let queued = delta
                     .as_ref()
                     .map(|_| {
@@ -1545,7 +1570,9 @@ impl PhysicsEngine {
                 if redstone_inputs
                     && world.get(event.target).is_some_and(|piston| {
                         piston.kind == BlockKind::Piston
-                            && !matches!(piston_state(piston), crate::PistonState::Retracted)
+                            && !crate::execution_context::bounded_world_laws()
+                                .piston
+                                .permits(piston_state(piston), PistonAction::Extend)
                     })
                 {
                     // Multiple source edges may deliver the same powered
@@ -1586,7 +1613,9 @@ impl PhysicsEngine {
                 if redstone_inputs
                     && world.get(event.target).is_some_and(|piston| {
                         piston.kind == BlockKind::Piston
-                            && !matches!(piston_state(piston), crate::PistonState::Extended)
+                            && !crate::execution_context::bounded_world_laws()
+                                .piston
+                                .permits(piston_state(piston), PistonAction::Retract)
                     })
                 {
                     // See the extension branch above: a duplicate retract or

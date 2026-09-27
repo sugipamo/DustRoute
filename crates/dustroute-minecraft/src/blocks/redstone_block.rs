@@ -1,8 +1,6 @@
-use super::{BlockBehaviorProfile, UpdateModel};
-use crate::BlockProperties;
+use super::{TemporalProfile, UpdateModel};
 
-pub(super) const PROFILE: BlockBehaviorProfile = BlockBehaviorProfile {
-    properties: BlockProperties::support_only(true),
+pub(super) const PROFILE: TemporalProfile = TemporalProfile {
     update_model: UpdateModel::ImmediateNeighborChain,
     order_sensitive: true,
 };

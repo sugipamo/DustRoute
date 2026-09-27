@@ -1,0 +1,17 @@
+{
+  "kind": "pre_migration_model_regression",
+  "captured_on": "2026-09-20",
+  "source": "Working tree on codex/blueprint-architecture after observer migration and before lamp law migration",
+  "command": "cargo run -q -p dustroute-translate --example audit_lamp_world_models",
+  "harness": "../support/lamp_models.rs",
+  "fixture": "lamp_models_v1.jsonl",
+  "cases": 24,
+  "initial_source_powered": [false, true],
+  "initial_lamp_flag": [null, false, true],
+  "patterns": ["idle", "held", "pulse", "reverse_twice"],
+  "samples_per_case": 7,
+  "initial_row": ["compatibility lit", "compatibility pending", "bounded stored flag"],
+  "compatibility_row": ["PhysicsTime", "transition kind", "lit before", "lit after", "pending work"],
+  "bounded_change_row": ["PhysicsTime", "stored flag before", "stored flag after"],
+  "scope": "Frozen regression of two existing models, not live Minecraft evidence. Compatibility construction derives lit from current power; the bounded runner retains the given lamp state until an event reevaluates it. The compatibility model delays OFF and the bounded runner updates immediately. Expected data was captured before moving these rules into LawProgram assets. Do not regenerate it merely to pass a changed implementation."
+}

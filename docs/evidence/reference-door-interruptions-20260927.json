@@ -1,0 +1,1792 @@
+{
+  "schema_version": "dustroute.reference-door-interruption-audit.v1",
+  "date": "2026-09-27",
+  "audit_decision": "do_not_adopt_under_declared_unrestricted_contract",
+  "model_contract_status": "disproved_by_replayed_reachable_fixed_point",
+  "shared_public_adoption_status": "undetermined_in_retained_default_budget_attempt; not overwritten by diagnostic",
+  "proposal_status": "open",
+  "candidate_published": false,
+  "user_catalog_changed": false,
+  "live_server_started": false,
+  "live_evidence": false,
+  "live_target_review_performed": false,
+  "construction": "passed after authorized observer-front ordering; see separate construction-order evidence",
+  "context": {
+    "initial_condition": "fresh_construction",
+    "input_levers": [
+      {
+        "x": 0,
+        "y": 11,
+        "z": 0
+      }
+    ],
+    "known_region": {
+      "max": {
+        "x": 2,
+        "y": 13,
+        "z": 5
+      },
+      "min": {
+        "x": -2,
+        "y": 0,
+        "z": -5
+      }
+    },
+    "profile": "dustroute.piston-electrical-root-exploration.v5",
+    "root_limits": {
+      "max_call_depth": 512,
+      "max_microsteps": 100000,
+      "max_pending": 10000
+    }
+  },
+  "type_revision": {
+    "contract": {
+      "kind": "repeated_settling",
+      "relation": {
+        "inputs": [
+          "closed_command"
+        ],
+        "outputs": [
+          "aperture_0_0_air",
+          "aperture_0_0_solid",
+          "aperture_0_1_air",
+          "aperture_0_1_solid",
+          "aperture_0_2_air",
+          "aperture_0_2_solid",
+          "aperture_1_0_air",
+          "aperture_1_0_solid",
+          "aperture_1_1_air",
+          "aperture_1_1_solid",
+          "aperture_1_2_air",
+          "aperture_1_2_solid",
+          "aperture_2_0_air",
+          "aperture_2_0_solid",
+          "aperture_2_1_air",
+          "aperture_2_1_solid",
+          "aperture_2_2_air",
+          "aperture_2_2_solid"
+        ],
+        "rows": [
+          {
+            "inputs": [
+              false
+            ],
+            "outputs": [
+              true,
+              false,
+              true,
+              false,
+              true,
+              false,
+              true,
+              false,
+              true,
+              false,
+              true,
+              false,
+              true,
+              false,
+              true,
+              false,
+              true,
+              false
+            ]
+          },
+          {
+            "inputs": [
+              true
+            ],
+            "outputs": [
+              false,
+              true,
+              false,
+              true,
+              false,
+              true,
+              false,
+              true,
+              false,
+              true,
+              false,
+              true,
+              false,
+              true,
+              false,
+              true,
+              false,
+              true
+            ]
+          }
+        ]
+      }
+    },
+    "id": "reference-door.aperture-repeated-settling.v1",
+    "name": "Nine air cells when open; nine solid cells when closed"
+  },
+  "root_model_probe": {
+    "cases": [
+      {
+        "advances_before_off": 0,
+        "held_advances_to_fixed_point": 5,
+        "outputs": [
+          true,
+          false,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false
+        ],
+        "status": "correct_fixed_point"
+      },
+      {
+        "advances_before_off": 1,
+        "held_advances_to_fixed_point": 4,
+        "outputs": [
+          true,
+          false,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false
+        ],
+        "status": "correct_fixed_point"
+      },
+      {
+        "advances_before_off": 2,
+        "held_advances_to_fixed_point": 12,
+        "outputs": [
+          true,
+          false,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false,
+          false,
+          true,
+          true,
+          false
+        ],
+        "status": "counterexample"
+      }
+    ],
+    "counterexample": {
+      "cycle_outputs": [
+        [
+          true,
+          false,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false,
+          false,
+          true,
+          true,
+          false
+        ],
+        [
+          true,
+          false,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false,
+          false,
+          true,
+          true,
+          false
+        ]
+      ],
+      "expected_outputs": [
+        true,
+        false,
+        true,
+        false,
+        true,
+        false,
+        true,
+        false,
+        true,
+        false,
+        true,
+        false,
+        true,
+        false,
+        true,
+        false,
+        true,
+        false
+      ],
+      "held_inputs": [
+        false
+      ],
+      "prefix": [
+        {
+          "action": "set_inputs",
+          "inputs": [
+            true
+          ]
+        },
+        {
+          "action": "advance"
+        },
+        {
+          "action": "advance"
+        },
+        {
+          "action": "set_inputs",
+          "inputs": [
+            false
+          ]
+        },
+        {
+          "action": "advance"
+        },
+        {
+          "action": "advance"
+        },
+        {
+          "action": "advance"
+        },
+        {
+          "action": "advance"
+        },
+        {
+          "action": "advance"
+        },
+        {
+          "action": "advance"
+        },
+        {
+          "action": "advance"
+        },
+        {
+          "action": "advance"
+        },
+        {
+          "action": "advance"
+        },
+        {
+          "action": "advance"
+        },
+        {
+          "action": "advance"
+        },
+        {
+          "action": "advance"
+        }
+      ]
+    },
+    "fresh_replay_checked": true,
+    "limits": {
+      "held_advances": 1024,
+      "prefixes": 64,
+      "seconds": 30
+    },
+    "input_boundary": "existing runtime model advances, not game ticks or measured server input times"
+  },
+  "root_model_bad_cell": {
+    "position": {
+      "x": 0,
+      "y": 8,
+      "z": 0
+    },
+    "expected": "air",
+    "actual": "solid"
+  },
+  "post_world_tick_probe": {
+    "case_count": 33,
+    "failed_cases": 17,
+    "restored_cases": 16,
+    "cases": [
+      {
+        "on_after_world_tick": 0,
+        "off_after_world_tick": 1,
+        "status": "aperture_not_open",
+        "initial_world_restored": false,
+        "pending_roots": 0,
+        "settled_at": {
+          "game_tick": 29,
+          "section": "block_ticks"
+        },
+        "occupied_aperture": [
+          {
+            "position": {
+              "x": 0,
+              "y": 6,
+              "z": -1
+            },
+            "name": "minecraft:smooth_quartz"
+          },
+          {
+            "position": {
+              "x": 0,
+              "y": 6,
+              "z": 0
+            },
+            "name": "minecraft:smooth_quartz"
+          },
+          {
+            "position": {
+              "x": 0,
+              "y": 6,
+              "z": 1
+            },
+            "name": "minecraft:smooth_quartz"
+          },
+          {
+            "position": {
+              "x": 0,
+              "y": 7,
+              "z": -1
+            },
+            "name": "minecraft:smooth_quartz"
+          },
+          {
+            "position": {
+              "x": 0,
+              "y": 7,
+              "z": 0
+            },
+            "name": "minecraft:smooth_quartz"
+          },
+          {
+            "position": {
+              "x": 0,
+              "y": 7,
+              "z": 1
+            },
+            "name": "minecraft:smooth_quartz"
+          },
+          {
+            "position": {
+              "x": 0,
+              "y": 8,
+              "z": -1
+            },
+            "name": "minecraft:smooth_quartz"
+          },
+          {
+            "position": {
+              "x": 0,
+              "y": 8,
+              "z": 0
+            },
+            "name": "minecraft:smooth_quartz"
+          },
+          {
+            "position": {
+              "x": 0,
+              "y": 8,
+              "z": 1
+            },
+            "name": "minecraft:smooth_quartz"
+          }
+        ],
+        "input_deliveries": [
+          {
+            "powered": true,
+            "time": {
+              "game_tick": 0,
+              "section": "after_world_tick"
+            }
+          },
+          {
+            "powered": false,
+            "time": {
+              "game_tick": 1,
+              "section": "after_world_tick"
+            }
+          }
+        ]
+      },
+      {
+        "on_after_world_tick": 0,
+        "off_after_world_tick": 2,
+        "status": "aperture_not_open",
+        "initial_world_restored": false,
+        "pending_roots": 0,
+        "settled_at": {
+          "game_tick": 29,
+          "section": "block_ticks"
+        },
+        "occupied_aperture": [
+          {
+            "position": {
+              "x": 0,
+              "y": 6,
+              "z": -1
+            },
+            "name": "minecraft:smooth_quartz"
+          },
+          {
+            "position": {
+              "x": 0,
+              "y": 6,
+              "z": 0
+            },
+            "name": "minecraft:smooth_quartz"
+          },
+          {
+            "position": {
+              "x": 0,
+              "y": 6,
+              "z": 1
+            },
+            "name": "minecraft:smooth_quartz"
+          },
+          {
+            "position": {
+              "x": 0,
+              "y": 7,
+              "z": -1
+            },
+            "name": "minecraft:smooth_quartz"
+          },
+          {
+            "position": {
+              "x": 0,
+              "y": 7,
+              "z": 0
+            },
+            "name": "minecraft:smooth_quartz"
+          },
+          {
+            "position": {
+              "x": 0,
+              "y": 7,
+              "z": 1
+            },
+            "name": "minecraft:smooth_quartz"
+          },
+          {
+            "position": {
+              "x": 0,
+              "y": 8,
+              "z": -1
+            },
+            "name": "minecraft:smooth_quartz"
+          },
+          {
+            "position": {
+              "x": 0,
+              "y": 8,
+              "z": 0
+            },
+            "name": "minecraft:smooth_quartz"
+          },
+          {
+            "position": {
+              "x": 0,
+              "y": 8,
+              "z": 1
+            },
+            "name": "minecraft:smooth_quartz"
+          }
+        ],
+        "input_deliveries": [
+          {
+            "powered": true,
+            "time": {
+              "game_tick": 0,
+              "section": "after_world_tick"
+            }
+          },
+          {
+            "powered": false,
+            "time": {
+              "game_tick": 2,
+              "section": "after_world_tick"
+            }
+          }
+        ]
+      },
+      {
+        "on_after_world_tick": 0,
+        "off_after_world_tick": 3,
+        "status": "aperture_not_open",
+        "initial_world_restored": false,
+        "pending_roots": 0,
+        "settled_at": {
+          "game_tick": 40,
+          "section": "block_entities"
+        },
+        "occupied_aperture": [
+          {
+            "position": {
+              "x": 0,
+              "y": 6,
+              "z": 0
+            },
+            "name": "minecraft:smooth_quartz"
+          },
+          {
+            "position": {
+              "x": 0,
+              "y": 7,
+              "z": 0
+            },
+            "name": "minecraft:smooth_quartz"
+          }
+        ],
+        "input_deliveries": [
+          {
+            "powered": true,
+            "time": {
+              "game_tick": 0,
+              "section": "after_world_tick"
+            }
+          },
+          {
+            "powered": false,
+            "time": {
+              "game_tick": 3,
+              "section": "after_world_tick"
+            }
+          }
+        ]
+      },
+      {
+        "on_after_world_tick": 0,
+        "off_after_world_tick": 4,
+        "status": "aperture_not_open",
+        "initial_world_restored": false,
+        "pending_roots": 0,
+        "settled_at": {
+          "game_tick": 31,
+          "section": "block_entities"
+        },
+        "occupied_aperture": [
+          {
+            "position": {
+              "x": 0,
+              "y": 6,
+              "z": 0
+            },
+            "name": "minecraft:smooth_quartz"
+          },
+          {
+            "position": {
+              "x": 0,
+              "y": 7,
+              "z": 0
+            },
+            "name": "minecraft:smooth_quartz"
+          }
+        ],
+        "input_deliveries": [
+          {
+            "powered": true,
+            "time": {
+              "game_tick": 0,
+              "section": "after_world_tick"
+            }
+          },
+          {
+            "powered": false,
+            "time": {
+              "game_tick": 4,
+              "section": "after_world_tick"
+            }
+          }
+        ]
+      },
+      {
+        "on_after_world_tick": 0,
+        "off_after_world_tick": 5,
+        "status": "aperture_not_open",
+        "initial_world_restored": false,
+        "pending_roots": 0,
+        "settled_at": {
+          "game_tick": 40,
+          "section": "block_entities"
+        },
+        "occupied_aperture": [
+          {
+            "position": {
+              "x": 0,
+              "y": 6,
+              "z": 0
+            },
+            "name": "minecraft:smooth_quartz"
+          },
+          {
+            "position": {
+              "x": 0,
+              "y": 7,
+              "z": 0
+            },
+            "name": "minecraft:smooth_quartz"
+          }
+        ],
+        "input_deliveries": [
+          {
+            "powered": true,
+            "time": {
+              "game_tick": 0,
+              "section": "after_world_tick"
+            }
+          },
+          {
+            "powered": false,
+            "time": {
+              "game_tick": 5,
+              "section": "after_world_tick"
+            }
+          }
+        ]
+      },
+      {
+        "on_after_world_tick": 0,
+        "off_after_world_tick": 6,
+        "status": "aperture_not_open",
+        "initial_world_restored": false,
+        "pending_roots": 0,
+        "settled_at": {
+          "game_tick": 45,
+          "section": "block_ticks"
+        },
+        "occupied_aperture": [
+          {
+            "position": {
+              "x": 0,
+              "y": 6,
+              "z": 0
+            },
+            "name": "minecraft:smooth_quartz"
+          },
+          {
+            "position": {
+              "x": 0,
+              "y": 7,
+              "z": 0
+            },
+            "name": "minecraft:smooth_quartz"
+          }
+        ],
+        "input_deliveries": [
+          {
+            "powered": true,
+            "time": {
+              "game_tick": 0,
+              "section": "after_world_tick"
+            }
+          },
+          {
+            "powered": false,
+            "time": {
+              "game_tick": 6,
+              "section": "after_world_tick"
+            }
+          }
+        ]
+      },
+      {
+        "on_after_world_tick": 0,
+        "off_after_world_tick": 7,
+        "status": "aperture_not_open",
+        "initial_world_restored": false,
+        "pending_roots": 0,
+        "settled_at": {
+          "game_tick": 46,
+          "section": "block_ticks"
+        },
+        "occupied_aperture": [
+          {
+            "position": {
+              "x": 0,
+              "y": 6,
+              "z": 0
+            },
+            "name": "minecraft:smooth_quartz"
+          },
+          {
+            "position": {
+              "x": 0,
+              "y": 7,
+              "z": 0
+            },
+            "name": "minecraft:smooth_quartz"
+          }
+        ],
+        "input_deliveries": [
+          {
+            "powered": true,
+            "time": {
+              "game_tick": 0,
+              "section": "after_world_tick"
+            }
+          },
+          {
+            "powered": false,
+            "time": {
+              "game_tick": 7,
+              "section": "after_world_tick"
+            }
+          }
+        ]
+      },
+      {
+        "on_after_world_tick": 0,
+        "off_after_world_tick": 8,
+        "status": "aperture_not_open",
+        "initial_world_restored": false,
+        "pending_roots": 0,
+        "settled_at": {
+          "game_tick": 47,
+          "section": "block_ticks"
+        },
+        "occupied_aperture": [
+          {
+            "position": {
+              "x": 0,
+              "y": 6,
+              "z": 0
+            },
+            "name": "minecraft:smooth_quartz"
+          },
+          {
+            "position": {
+              "x": 0,
+              "y": 7,
+              "z": 0
+            },
+            "name": "minecraft:smooth_quartz"
+          }
+        ],
+        "input_deliveries": [
+          {
+            "powered": true,
+            "time": {
+              "game_tick": 0,
+              "section": "after_world_tick"
+            }
+          },
+          {
+            "powered": false,
+            "time": {
+              "game_tick": 8,
+              "section": "after_world_tick"
+            }
+          }
+        ]
+      },
+      {
+        "on_after_world_tick": 0,
+        "off_after_world_tick": 9,
+        "status": "aperture_not_open",
+        "initial_world_restored": false,
+        "pending_roots": 0,
+        "settled_at": {
+          "game_tick": 48,
+          "section": "block_ticks"
+        },
+        "occupied_aperture": [
+          {
+            "position": {
+              "x": 0,
+              "y": 6,
+              "z": 0
+            },
+            "name": "minecraft:smooth_quartz"
+          },
+          {
+            "position": {
+              "x": 0,
+              "y": 7,
+              "z": 0
+            },
+            "name": "minecraft:smooth_quartz"
+          }
+        ],
+        "input_deliveries": [
+          {
+            "powered": true,
+            "time": {
+              "game_tick": 0,
+              "section": "after_world_tick"
+            }
+          },
+          {
+            "powered": false,
+            "time": {
+              "game_tick": 9,
+              "section": "after_world_tick"
+            }
+          }
+        ]
+      },
+      {
+        "on_after_world_tick": 0,
+        "off_after_world_tick": 10,
+        "status": "aperture_not_open",
+        "initial_world_restored": false,
+        "pending_roots": 0,
+        "settled_at": {
+          "game_tick": 49,
+          "section": "block_ticks"
+        },
+        "occupied_aperture": [
+          {
+            "position": {
+              "x": 0,
+              "y": 6,
+              "z": 0
+            },
+            "name": "minecraft:smooth_quartz"
+          },
+          {
+            "position": {
+              "x": 0,
+              "y": 7,
+              "z": 0
+            },
+            "name": "minecraft:smooth_quartz"
+          }
+        ],
+        "input_deliveries": [
+          {
+            "powered": true,
+            "time": {
+              "game_tick": 0,
+              "section": "after_world_tick"
+            }
+          },
+          {
+            "powered": false,
+            "time": {
+              "game_tick": 10,
+              "section": "after_world_tick"
+            }
+          }
+        ]
+      },
+      {
+        "on_after_world_tick": 0,
+        "off_after_world_tick": 11,
+        "status": "aperture_not_open",
+        "initial_world_restored": false,
+        "pending_roots": 0,
+        "settled_at": {
+          "game_tick": 50,
+          "section": "block_ticks"
+        },
+        "occupied_aperture": [
+          {
+            "position": {
+              "x": 0,
+              "y": 6,
+              "z": 0
+            },
+            "name": "minecraft:smooth_quartz"
+          },
+          {
+            "position": {
+              "x": 0,
+              "y": 7,
+              "z": 0
+            },
+            "name": "minecraft:smooth_quartz"
+          }
+        ],
+        "input_deliveries": [
+          {
+            "powered": true,
+            "time": {
+              "game_tick": 0,
+              "section": "after_world_tick"
+            }
+          },
+          {
+            "powered": false,
+            "time": {
+              "game_tick": 11,
+              "section": "after_world_tick"
+            }
+          }
+        ]
+      },
+      {
+        "on_after_world_tick": 0,
+        "off_after_world_tick": 12,
+        "status": "aperture_open",
+        "initial_world_restored": true,
+        "pending_roots": 0,
+        "settled_at": {
+          "game_tick": 55,
+          "section": "block_entities"
+        },
+        "occupied_aperture": [],
+        "input_deliveries": [
+          {
+            "powered": true,
+            "time": {
+              "game_tick": 0,
+              "section": "after_world_tick"
+            }
+          },
+          {
+            "powered": false,
+            "time": {
+              "game_tick": 12,
+              "section": "after_world_tick"
+            }
+          }
+        ]
+      },
+      {
+        "on_after_world_tick": 0,
+        "off_after_world_tick": 13,
+        "status": "aperture_open",
+        "initial_world_restored": true,
+        "pending_roots": 0,
+        "settled_at": {
+          "game_tick": 56,
+          "section": "block_entities"
+        },
+        "occupied_aperture": [],
+        "input_deliveries": [
+          {
+            "powered": true,
+            "time": {
+              "game_tick": 0,
+              "section": "after_world_tick"
+            }
+          },
+          {
+            "powered": false,
+            "time": {
+              "game_tick": 13,
+              "section": "after_world_tick"
+            }
+          }
+        ]
+      },
+      {
+        "on_after_world_tick": 0,
+        "off_after_world_tick": 14,
+        "status": "aperture_not_open",
+        "initial_world_restored": false,
+        "pending_roots": 0,
+        "settled_at": {
+          "game_tick": 55,
+          "section": "block_entities"
+        },
+        "occupied_aperture": [
+          {
+            "position": {
+              "x": 0,
+              "y": 6,
+              "z": 0
+            },
+            "name": "minecraft:smooth_quartz"
+          },
+          {
+            "position": {
+              "x": 0,
+              "y": 7,
+              "z": 0
+            },
+            "name": "minecraft:smooth_quartz"
+          }
+        ],
+        "input_deliveries": [
+          {
+            "powered": true,
+            "time": {
+              "game_tick": 0,
+              "section": "after_world_tick"
+            }
+          },
+          {
+            "powered": false,
+            "time": {
+              "game_tick": 14,
+              "section": "after_world_tick"
+            }
+          }
+        ]
+      },
+      {
+        "on_after_world_tick": 0,
+        "off_after_world_tick": 15,
+        "status": "aperture_not_open",
+        "initial_world_restored": false,
+        "pending_roots": 0,
+        "settled_at": {
+          "game_tick": 56,
+          "section": "block_entities"
+        },
+        "occupied_aperture": [
+          {
+            "position": {
+              "x": 0,
+              "y": 6,
+              "z": 0
+            },
+            "name": "minecraft:smooth_quartz"
+          },
+          {
+            "position": {
+              "x": 0,
+              "y": 7,
+              "z": 0
+            },
+            "name": "minecraft:smooth_quartz"
+          }
+        ],
+        "input_deliveries": [
+          {
+            "powered": true,
+            "time": {
+              "game_tick": 0,
+              "section": "after_world_tick"
+            }
+          },
+          {
+            "powered": false,
+            "time": {
+              "game_tick": 15,
+              "section": "after_world_tick"
+            }
+          }
+        ]
+      },
+      {
+        "on_after_world_tick": 0,
+        "off_after_world_tick": 16,
+        "status": "aperture_not_open",
+        "initial_world_restored": false,
+        "pending_roots": 0,
+        "settled_at": {
+          "game_tick": 47,
+          "section": "block_entities"
+        },
+        "occupied_aperture": [
+          {
+            "position": {
+              "x": 0,
+              "y": 6,
+              "z": 0
+            },
+            "name": "minecraft:smooth_quartz"
+          },
+          {
+            "position": {
+              "x": 0,
+              "y": 7,
+              "z": 0
+            },
+            "name": "minecraft:smooth_quartz"
+          }
+        ],
+        "input_deliveries": [
+          {
+            "powered": true,
+            "time": {
+              "game_tick": 0,
+              "section": "after_world_tick"
+            }
+          },
+          {
+            "powered": false,
+            "time": {
+              "game_tick": 16,
+              "section": "after_world_tick"
+            }
+          }
+        ]
+      },
+      {
+        "on_after_world_tick": 0,
+        "off_after_world_tick": 17,
+        "status": "aperture_not_open",
+        "initial_world_restored": false,
+        "pending_roots": 0,
+        "settled_at": {
+          "game_tick": 48,
+          "section": "block_entities"
+        },
+        "occupied_aperture": [
+          {
+            "position": {
+              "x": 0,
+              "y": 6,
+              "z": 0
+            },
+            "name": "minecraft:smooth_quartz"
+          },
+          {
+            "position": {
+              "x": 0,
+              "y": 7,
+              "z": 0
+            },
+            "name": "minecraft:smooth_quartz"
+          }
+        ],
+        "input_deliveries": [
+          {
+            "powered": true,
+            "time": {
+              "game_tick": 0,
+              "section": "after_world_tick"
+            }
+          },
+          {
+            "powered": false,
+            "time": {
+              "game_tick": 17,
+              "section": "after_world_tick"
+            }
+          }
+        ]
+      },
+      {
+        "on_after_world_tick": 0,
+        "off_after_world_tick": 18,
+        "status": "aperture_not_open",
+        "initial_world_restored": false,
+        "pending_roots": 0,
+        "settled_at": {
+          "game_tick": 49,
+          "section": "block_entities"
+        },
+        "occupied_aperture": [
+          {
+            "position": {
+              "x": 0,
+              "y": 6,
+              "z": 0
+            },
+            "name": "minecraft:smooth_quartz"
+          },
+          {
+            "position": {
+              "x": 0,
+              "y": 7,
+              "z": 0
+            },
+            "name": "minecraft:smooth_quartz"
+          }
+        ],
+        "input_deliveries": [
+          {
+            "powered": true,
+            "time": {
+              "game_tick": 0,
+              "section": "after_world_tick"
+            }
+          },
+          {
+            "powered": false,
+            "time": {
+              "game_tick": 18,
+              "section": "after_world_tick"
+            }
+          }
+        ]
+      },
+      {
+        "on_after_world_tick": 0,
+        "off_after_world_tick": 19,
+        "status": "aperture_not_open",
+        "initial_world_restored": false,
+        "pending_roots": 0,
+        "settled_at": {
+          "game_tick": 50,
+          "section": "block_entities"
+        },
+        "occupied_aperture": [
+          {
+            "position": {
+              "x": 0,
+              "y": 6,
+              "z": 0
+            },
+            "name": "minecraft:smooth_quartz"
+          },
+          {
+            "position": {
+              "x": 0,
+              "y": 7,
+              "z": 0
+            },
+            "name": "minecraft:smooth_quartz"
+          }
+        ],
+        "input_deliveries": [
+          {
+            "powered": true,
+            "time": {
+              "game_tick": 0,
+              "section": "after_world_tick"
+            }
+          },
+          {
+            "powered": false,
+            "time": {
+              "game_tick": 19,
+              "section": "after_world_tick"
+            }
+          }
+        ]
+      },
+      {
+        "on_after_world_tick": 0,
+        "off_after_world_tick": 20,
+        "status": "aperture_open",
+        "initial_world_restored": true,
+        "pending_roots": 0,
+        "settled_at": {
+          "game_tick": 53,
+          "section": "block_entities"
+        },
+        "occupied_aperture": [],
+        "input_deliveries": [
+          {
+            "powered": true,
+            "time": {
+              "game_tick": 0,
+              "section": "after_world_tick"
+            }
+          },
+          {
+            "powered": false,
+            "time": {
+              "game_tick": 20,
+              "section": "after_world_tick"
+            }
+          }
+        ]
+      },
+      {
+        "on_after_world_tick": 0,
+        "off_after_world_tick": 21,
+        "status": "aperture_open",
+        "initial_world_restored": true,
+        "pending_roots": 0,
+        "settled_at": {
+          "game_tick": 54,
+          "section": "block_entities"
+        },
+        "occupied_aperture": [],
+        "input_deliveries": [
+          {
+            "powered": true,
+            "time": {
+              "game_tick": 0,
+              "section": "after_world_tick"
+            }
+          },
+          {
+            "powered": false,
+            "time": {
+              "game_tick": 21,
+              "section": "after_world_tick"
+            }
+          }
+        ]
+      },
+      {
+        "on_after_world_tick": 0,
+        "off_after_world_tick": 22,
+        "status": "aperture_open",
+        "initial_world_restored": true,
+        "pending_roots": 0,
+        "settled_at": {
+          "game_tick": 55,
+          "section": "block_entities"
+        },
+        "occupied_aperture": [],
+        "input_deliveries": [
+          {
+            "powered": true,
+            "time": {
+              "game_tick": 0,
+              "section": "after_world_tick"
+            }
+          },
+          {
+            "powered": false,
+            "time": {
+              "game_tick": 22,
+              "section": "after_world_tick"
+            }
+          }
+        ]
+      },
+      {
+        "on_after_world_tick": 0,
+        "off_after_world_tick": 23,
+        "status": "aperture_open",
+        "initial_world_restored": true,
+        "pending_roots": 0,
+        "settled_at": {
+          "game_tick": 56,
+          "section": "block_entities"
+        },
+        "occupied_aperture": [],
+        "input_deliveries": [
+          {
+            "powered": true,
+            "time": {
+              "game_tick": 0,
+              "section": "after_world_tick"
+            }
+          },
+          {
+            "powered": false,
+            "time": {
+              "game_tick": 23,
+              "section": "after_world_tick"
+            }
+          }
+        ]
+      },
+      {
+        "on_after_world_tick": 0,
+        "off_after_world_tick": 24,
+        "status": "aperture_open",
+        "initial_world_restored": true,
+        "pending_roots": 0,
+        "settled_at": {
+          "game_tick": 57,
+          "section": "block_entities"
+        },
+        "occupied_aperture": [],
+        "input_deliveries": [
+          {
+            "powered": true,
+            "time": {
+              "game_tick": 0,
+              "section": "after_world_tick"
+            }
+          },
+          {
+            "powered": false,
+            "time": {
+              "game_tick": 24,
+              "section": "after_world_tick"
+            }
+          }
+        ]
+      },
+      {
+        "on_after_world_tick": 0,
+        "off_after_world_tick": 25,
+        "status": "aperture_open",
+        "initial_world_restored": true,
+        "pending_roots": 0,
+        "settled_at": {
+          "game_tick": 58,
+          "section": "block_entities"
+        },
+        "occupied_aperture": [],
+        "input_deliveries": [
+          {
+            "powered": true,
+            "time": {
+              "game_tick": 0,
+              "section": "after_world_tick"
+            }
+          },
+          {
+            "powered": false,
+            "time": {
+              "game_tick": 25,
+              "section": "after_world_tick"
+            }
+          }
+        ]
+      },
+      {
+        "on_after_world_tick": 0,
+        "off_after_world_tick": 26,
+        "status": "aperture_open",
+        "initial_world_restored": true,
+        "pending_roots": 0,
+        "settled_at": {
+          "game_tick": 59,
+          "section": "block_entities"
+        },
+        "occupied_aperture": [],
+        "input_deliveries": [
+          {
+            "powered": true,
+            "time": {
+              "game_tick": 0,
+              "section": "after_world_tick"
+            }
+          },
+          {
+            "powered": false,
+            "time": {
+              "game_tick": 26,
+              "section": "after_world_tick"
+            }
+          }
+        ]
+      },
+      {
+        "on_after_world_tick": 0,
+        "off_after_world_tick": 27,
+        "status": "aperture_open",
+        "initial_world_restored": true,
+        "pending_roots": 0,
+        "settled_at": {
+          "game_tick": 60,
+          "section": "block_entities"
+        },
+        "occupied_aperture": [],
+        "input_deliveries": [
+          {
+            "powered": true,
+            "time": {
+              "game_tick": 0,
+              "section": "after_world_tick"
+            }
+          },
+          {
+            "powered": false,
+            "time": {
+              "game_tick": 27,
+              "section": "after_world_tick"
+            }
+          }
+        ]
+      },
+      {
+        "on_after_world_tick": 0,
+        "off_after_world_tick": 28,
+        "status": "aperture_open",
+        "initial_world_restored": true,
+        "pending_roots": 0,
+        "settled_at": {
+          "game_tick": 61,
+          "section": "block_entities"
+        },
+        "occupied_aperture": [],
+        "input_deliveries": [
+          {
+            "powered": true,
+            "time": {
+              "game_tick": 0,
+              "section": "after_world_tick"
+            }
+          },
+          {
+            "powered": false,
+            "time": {
+              "game_tick": 28,
+              "section": "after_world_tick"
+            }
+          }
+        ]
+      },
+      {
+        "on_after_world_tick": 0,
+        "off_after_world_tick": 29,
+        "status": "aperture_open",
+        "initial_world_restored": true,
+        "pending_roots": 0,
+        "settled_at": {
+          "game_tick": 62,
+          "section": "block_entities"
+        },
+        "occupied_aperture": [],
+        "input_deliveries": [
+          {
+            "powered": true,
+            "time": {
+              "game_tick": 0,
+              "section": "after_world_tick"
+            }
+          },
+          {
+            "powered": false,
+            "time": {
+              "game_tick": 29,
+              "section": "after_world_tick"
+            }
+          }
+        ]
+      },
+      {
+        "on_after_world_tick": 0,
+        "off_after_world_tick": 30,
+        "status": "aperture_open",
+        "initial_world_restored": true,
+        "pending_roots": 0,
+        "settled_at": {
+          "game_tick": 63,
+          "section": "block_entities"
+        },
+        "occupied_aperture": [],
+        "input_deliveries": [
+          {
+            "powered": true,
+            "time": {
+              "game_tick": 0,
+              "section": "after_world_tick"
+            }
+          },
+          {
+            "powered": false,
+            "time": {
+              "game_tick": 30,
+              "section": "after_world_tick"
+            }
+          }
+        ]
+      },
+      {
+        "on_after_world_tick": 0,
+        "off_after_world_tick": 31,
+        "status": "aperture_open",
+        "initial_world_restored": true,
+        "pending_roots": 0,
+        "settled_at": {
+          "game_tick": 64,
+          "section": "block_entities"
+        },
+        "occupied_aperture": [],
+        "input_deliveries": [
+          {
+            "powered": true,
+            "time": {
+              "game_tick": 0,
+              "section": "after_world_tick"
+            }
+          },
+          {
+            "powered": false,
+            "time": {
+              "game_tick": 31,
+              "section": "after_world_tick"
+            }
+          }
+        ]
+      },
+      {
+        "on_after_world_tick": 0,
+        "off_after_world_tick": 32,
+        "status": "aperture_open",
+        "initial_world_restored": true,
+        "pending_roots": 0,
+        "settled_at": {
+          "game_tick": 65,
+          "section": "block_entities"
+        },
+        "occupied_aperture": [],
+        "input_deliveries": [
+          {
+            "powered": true,
+            "time": {
+              "game_tick": 0,
+              "section": "after_world_tick"
+            }
+          },
+          {
+            "powered": false,
+            "time": {
+              "game_tick": 32,
+              "section": "after_world_tick"
+            }
+          }
+        ]
+      },
+      {
+        "on_after_world_tick": 0,
+        "off_after_world_tick": 100,
+        "status": "aperture_open",
+        "initial_world_restored": true,
+        "pending_roots": 0,
+        "settled_at": {
+          "game_tick": 133,
+          "section": "block_entities"
+        },
+        "occupied_aperture": [],
+        "input_deliveries": [
+          {
+            "powered": true,
+            "time": {
+              "game_tick": 0,
+              "section": "after_world_tick"
+            }
+          },
+          {
+            "powered": false,
+            "time": {
+              "game_tick": 100,
+              "section": "after_world_tick"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "diagnostic_command": "target/debug/examples/probe_reference_door_interruptions",
+  "diagnostic_exit_code": 0,
+  "artifacts": [
+    {
+      "path": ".local/e2e-artifacts/reference-door-interruptions-20260927.json",
+      "bytes": 11626750,
+      "sha256": "36edc6cc6e07fd1949af6d40ba17ea02ae70d64ec070966ebde03cf18254cb47"
+    }
+  ],
+  "checks": [
+    {
+      "command": "cargo build --offline --locked -j 1 --package dustroute-translate --example probe_reference_door_interruptions",
+      "exit_code": 0,
+      "tests_passed": null,
+      "log": "/tmp/dustroute-reference-interruption-probe-build.log",
+      "sha256": "d6a81facc8ac9840d012c27ceaa153cd90cda6e914fb99263897ed9491711720"
+    },
+    {
+      "command": "cargo test --offline --locked -j 1 --package dustroute-translate --test reference_door_adoption -- --test-threads=2",
+      "exit_code": 0,
+      "tests_passed": 5,
+      "log": "/tmp/dustroute-reference-interruption-tests.log",
+      "sha256": "26e349a0acfe7f1a618f16cf8555c04347b66e2d4b06b7e253d8b3d3948ca162"
+    },
+    {
+      "command": "cargo clippy --offline --locked -j 1 --package dustroute-translate --example probe_reference_door_interruptions --test reference_door_adoption -- -D warnings",
+      "exit_code": 0,
+      "tests_passed": null,
+      "log": "/tmp/dustroute-reference-interruption-clippy.log",
+      "sha256": "904ae4c738dd9fcd9ebc4fa3b493e6def27c87c1817820f5baba775b1956ac9f"
+    },
+    {
+      "command": "cargo fmt --package dustroute-translate -- --check",
+      "exit_code": 0,
+      "tests_passed": null,
+      "log": "/tmp/dustroute-reference-interruption-fmt.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "git diff --check",
+      "exit_code": 0,
+      "tests_passed": null,
+      "log": "/tmp/dustroute-reference-interruption-diff-check.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "sources": [
+    {
+      "path": "crates/dustroute-translate/examples/probe_reference_door_interruptions.rs",
+      "sha256": "6dcb51cf80fa13d87a1da3387e8916834d9f9012b7e2dbc24d03a02e74c468e7"
+    },
+    {
+      "path": "crates/dustroute-translate/tests/reference_door_adoption.rs",
+      "sha256": "7aabf89afe7c4743dd8d06224d55013314b37d76aebb23793d2ff85dcce9e638"
+    },
+    {
+      "path": "crates/dustroute-translate/tests/support/reference_door_blueprint.rs",
+      "sha256": "276960f00caf183e3c343c65fa82c7a816e9d12567af780417dd7b5d377da2bd"
+    },
+    {
+      "path": "crates/dustroute-translate/tests/fixtures/reference-3x3-bobiloosky-v1.json",
+      "sha256": "ded824e424947bc12d3060e6f5242207a22ec7abe123c9e90ce73f9e7c0ef900"
+    },
+    {
+      "path": "crates/dustroute-translate/src/piston_construction.rs",
+      "sha256": "dd6d29423997bf9f8bd83d3570364250bee578ced1aa404c0fd497fd08d0fdfc"
+    },
+    {
+      "path": "crates/dustroute-minecraft/src/time/piston_runtime/mod.rs",
+      "sha256": "1a2b8a6b3444d57eddb6094fdb1cffdf911069b4244c9eea5cf1a96b4854b805"
+    },
+    {
+      "path": "crates/dustroute-minecraft/src/time/runtime/executor/piston_behavior.rs",
+      "sha256": "1677c30e977a50a99480376fd9f34267c96cbd81aca3c91cfd0d106f51a6adb3"
+    }
+  ],
+  "unchanged_adoption_and_exploration_sources": [
+    {
+      "path": "crates/dustroute-translate/src/runtime_behavior.rs",
+      "sha256": "45fea93656f3b4d2c92fd44ed3a4fea85e6c1101529db3985ec0e5c227d1c54f",
+      "unchanged_since_construction_order_audit": true
+    },
+    {
+      "path": "crates/dustroute-translate/src/runtime_review.rs",
+      "sha256": "369ed319c1211f3c88edbbebdad43e0f57f3571e51269df8f7583a022389cbf9",
+      "unchanged_since_construction_order_audit": true
+    },
+    {
+      "path": "crates/dustroute-translate/src/blueprint_update.rs",
+      "sha256": "6ea378b0f8217652c1711cbbd4d3f9d1e902713ade16578e5a7b54c73322e7d2",
+      "unchanged_since_construction_order_audit": true
+    },
+    {
+      "path": "crates/dustroute-translate/src/behavior_type.rs",
+      "sha256": "d76506727e25a74c162c12e54e799e63ee2861ff0948c88aa9d2eef739b14c2e",
+      "unchanged_since_construction_order_audit": true
+    },
+    {
+      "path": "crates/dustroute-mcp/src/blueprint_mcp.rs",
+      "sha256": "bf2d0e69a846686c4780c9813ab0d992661676d20b63ce1d3a3c46f5d425cc32",
+      "unchanged_since_construction_order_audit": true
+    }
+  ],
+  "limits": [
+    "Model advances are not game ticks or measured packet application times.",
+    "Tick-scheduled replay uses the existing after-world-tick simulator helper, not live Java.",
+    "Finite pulse probes do not establish a safe minimum input interval or arbitrary repeated-input conformance.",
+    "The shared public verifier was not changed to consume this directed witness.",
+    "Target environment, live construction and reference-door MCP readback/undo were not attempted after the behavior gate failed."
+  ],
+  "next_proposed_work": [
+    "Capture actual short-input application times and trajectories in isolated Java 1.21.11, then compare first divergence.",
+    "If Java differs, identify and correct the runtime mechanism against evidence.",
+    "If Java agrees, explicitly choose a restricted operation protocol or a new circuit revision; do not rewrite the existing contract.",
+    "Restricted protocol exploration, adoption, persistence/restart and MCP enforcement are a separate substantial design task; implementation has not begun."
+  ]
+}

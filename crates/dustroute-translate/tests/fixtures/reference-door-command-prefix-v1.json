@@ -1,0 +1,424 @@
+{
+  "schema": "dustroute.reference-door-command-prefix.v1",
+  "source_client_sha256": "4791d07f19156484b65a14c76209b4ce1e7385df8a4f23ede43dbb939cec058c",
+  "source_client": ".local/e2e-artifacts/reference-door-live-construction-20260927-c.client.json",
+  "scope": "First 38 requested commands from recorded new_placement plan; execution of step 38 failed readback.",
+  "commands": [
+    {
+      "pos": {
+        "x": 61000,
+        "y": 182,
+        "z": 998
+      },
+      "name": "minecraft:cyan_wool",
+      "properties": {}
+    },
+    {
+      "pos": {
+        "x": 61000,
+        "y": 182,
+        "z": 1002
+      },
+      "name": "minecraft:cyan_wool",
+      "properties": {}
+    },
+    {
+      "pos": {
+        "x": 61000,
+        "y": 184,
+        "z": 1001
+      },
+      "name": "minecraft:cyan_wool",
+      "properties": {}
+    },
+    {
+      "pos": {
+        "x": 61000,
+        "y": 184,
+        "z": 1002
+      },
+      "name": "minecraft:cyan_wool",
+      "properties": {}
+    },
+    {
+      "pos": {
+        "x": 61000,
+        "y": 185,
+        "z": 999
+      },
+      "name": "minecraft:smooth_quartz",
+      "properties": {}
+    },
+    {
+      "pos": {
+        "x": 61000,
+        "y": 185,
+        "z": 1000
+      },
+      "name": "minecraft:smooth_quartz",
+      "properties": {}
+    },
+    {
+      "pos": {
+        "x": 61000,
+        "y": 185,
+        "z": 1001
+      },
+      "name": "minecraft:smooth_quartz",
+      "properties": {}
+    },
+    {
+      "pos": {
+        "x": 61000,
+        "y": 186,
+        "z": 998
+      },
+      "name": "minecraft:smooth_quartz",
+      "properties": {}
+    },
+    {
+      "pos": {
+        "x": 61000,
+        "y": 186,
+        "z": 1002
+      },
+      "name": "minecraft:smooth_quartz",
+      "properties": {}
+    },
+    {
+      "pos": {
+        "x": 61000,
+        "y": 187,
+        "z": 998
+      },
+      "name": "minecraft:smooth_quartz",
+      "properties": {}
+    },
+    {
+      "pos": {
+        "x": 61000,
+        "y": 187,
+        "z": 1002
+      },
+      "name": "minecraft:smooth_quartz",
+      "properties": {}
+    },
+    {
+      "pos": {
+        "x": 61000,
+        "y": 188,
+        "z": 997
+      },
+      "name": "minecraft:cyan_wool",
+      "properties": {}
+    },
+    {
+      "pos": {
+        "x": 61000,
+        "y": 188,
+        "z": 998
+      },
+      "name": "minecraft:smooth_quartz",
+      "properties": {}
+    },
+    {
+      "pos": {
+        "x": 61000,
+        "y": 188,
+        "z": 1002
+      },
+      "name": "minecraft:smooth_quartz",
+      "properties": {}
+    },
+    {
+      "pos": {
+        "x": 61000,
+        "y": 188,
+        "z": 1003
+      },
+      "name": "minecraft:cyan_wool",
+      "properties": {}
+    },
+    {
+      "pos": {
+        "x": 61000,
+        "y": 189,
+        "z": 999
+      },
+      "name": "minecraft:smooth_quartz",
+      "properties": {}
+    },
+    {
+      "pos": {
+        "x": 61000,
+        "y": 189,
+        "z": 1000
+      },
+      "name": "minecraft:smooth_quartz",
+      "properties": {}
+    },
+    {
+      "pos": {
+        "x": 61000,
+        "y": 189,
+        "z": 1001
+      },
+      "name": "minecraft:smooth_quartz",
+      "properties": {}
+    },
+    {
+      "pos": {
+        "x": 61000,
+        "y": 183,
+        "z": 1000
+      },
+      "name": "minecraft:sticky_piston",
+      "properties": {
+        "extended": "false",
+        "facing": "up"
+      }
+    },
+    {
+      "pos": {
+        "x": 61000,
+        "y": 184,
+        "z": 1000
+      },
+      "name": "minecraft:sticky_piston",
+      "properties": {
+        "extended": "false",
+        "facing": "up"
+      }
+    },
+    {
+      "pos": {
+        "x": 61000,
+        "y": 185,
+        "z": 998
+      },
+      "name": "minecraft:sticky_piston",
+      "properties": {
+        "extended": "false",
+        "facing": "south"
+      }
+    },
+    {
+      "pos": {
+        "x": 61000,
+        "y": 186,
+        "z": 997
+      },
+      "name": "minecraft:sticky_piston",
+      "properties": {
+        "extended": "false",
+        "facing": "south"
+      }
+    },
+    {
+      "pos": {
+        "x": 61000,
+        "y": 186,
+        "z": 1003
+      },
+      "name": "minecraft:sticky_piston",
+      "properties": {
+        "extended": "false",
+        "facing": "north"
+      }
+    },
+    {
+      "pos": {
+        "x": 61000,
+        "y": 187,
+        "z": 997
+      },
+      "name": "minecraft:sticky_piston",
+      "properties": {
+        "extended": "false",
+        "facing": "south"
+      }
+    },
+    {
+      "pos": {
+        "x": 61000,
+        "y": 187,
+        "z": 1003
+      },
+      "name": "minecraft:sticky_piston",
+      "properties": {
+        "extended": "false",
+        "facing": "north"
+      }
+    },
+    {
+      "pos": {
+        "x": 61000,
+        "y": 190,
+        "z": 999
+      },
+      "name": "minecraft:sticky_piston",
+      "properties": {
+        "extended": "false",
+        "facing": "down"
+      }
+    },
+    {
+      "pos": {
+        "x": 61000,
+        "y": 190,
+        "z": 1000
+      },
+      "name": "minecraft:sticky_piston",
+      "properties": {
+        "extended": "false",
+        "facing": "down"
+      }
+    },
+    {
+      "pos": {
+        "x": 61000,
+        "y": 190,
+        "z": 1001
+      },
+      "name": "minecraft:sticky_piston",
+      "properties": {
+        "extended": "false",
+        "facing": "down"
+      }
+    },
+    {
+      "pos": {
+        "x": 61000,
+        "y": 183,
+        "z": 998
+      },
+      "name": "minecraft:redstone_wire",
+      "properties": {
+        "east": "none",
+        "north": "side",
+        "power": "0",
+        "south": "side",
+        "west": "none"
+      }
+    },
+    {
+      "pos": {
+        "x": 61000,
+        "y": 183,
+        "z": 1002
+      },
+      "name": "minecraft:redstone_wire",
+      "properties": {
+        "east": "side",
+        "north": "side",
+        "power": "0",
+        "south": "side",
+        "west": "side"
+      }
+    },
+    {
+      "pos": {
+        "x": 61000,
+        "y": 189,
+        "z": 997
+      },
+      "name": "minecraft:redstone_wire",
+      "properties": {
+        "east": "none",
+        "north": "side",
+        "power": "0",
+        "south": "side",
+        "west": "none"
+      }
+    },
+    {
+      "pos": {
+        "x": 61000,
+        "y": 189,
+        "z": 1003
+      },
+      "name": "minecraft:redstone_wire",
+      "properties": {
+        "east": "none",
+        "north": "side",
+        "power": "0",
+        "south": "side",
+        "west": "none"
+      }
+    },
+    {
+      "pos": {
+        "x": 61000,
+        "y": 191,
+        "z": 1000
+      },
+      "name": "minecraft:lever",
+      "properties": {
+        "face": "floor",
+        "facing": "east",
+        "powered": "false"
+      }
+    },
+    {
+      "pos": {
+        "x": 61000,
+        "y": 182,
+        "z": 1001
+      },
+      "name": "minecraft:redstone_lamp",
+      "properties": {
+        "lit": "false"
+      }
+    },
+    {
+      "pos": {
+        "x": 61000,
+        "y": 182,
+        "z": 1000
+      },
+      "name": "minecraft:observer",
+      "properties": {
+        "facing": "south",
+        "powered": "false"
+      }
+    },
+    {
+      "pos": {
+        "x": 61000,
+        "y": 182,
+        "z": 999
+      },
+      "name": "minecraft:observer",
+      "properties": {
+        "facing": "south",
+        "powered": "false"
+      }
+    },
+    {
+      "pos": {
+        "x": 61000,
+        "y": 183,
+        "z": 999
+      },
+      "name": "minecraft:repeater",
+      "properties": {
+        "delay": "4",
+        "facing": "north",
+        "locked": "false",
+        "powered": "false"
+      }
+    },
+    {
+      "pos": {
+        "x": 61000,
+        "y": 183,
+        "z": 1001
+      },
+      "name": "minecraft:observer",
+      "properties": {
+        "facing": "down",
+        "powered": "false"
+      }
+    }
+  ]
+}

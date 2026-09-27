@@ -1,4 +1,11 @@
 use std::collections::BTreeSet;
+use std::sync::Arc;
+
+use dustroute_library::assembly::Assembly;
+use dustroute_library::blueprint::{
+    BlueprintCatalog, BlueprintInclusion, BlueprintRevisionId, InstanceId, InstancePath,
+    PositionedBlock,
+};
 
 use dustroute_physical::{
     Block, BlockKind, Facing, PhysicalBlockChange, PhysicalPatch, PhysicalPatchReason, Pos, World,
@@ -58,6 +65,8 @@ pub struct MacroReplacementPlan {
     pub verification: MacroRealizationVerification,
     pub automatic_apply_allowed: bool,
     pub total_route_length: usize,
+    /// Retains contracts and immutable identities while geometry is routed.
+    source_catalog: Arc<BlueprintCatalog>,
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -88,6 +97,15 @@ pub struct MaterializedMacroReplacement {
     pub patch: PhysicalPatch,
     pub added_supports: Vec<Pos>,
     pub inserted_repeaters: Vec<Pos>,
+    /// Reviewed initial state; behavior and adoption remain separate decisions.
+    pub assembly: Assembly,
+}
+
+struct MacroGeometry {
+    world: World,
+    patch: PhysicalPatch,
+    added_supports: Vec<Pos>,
+    inserted_repeaters: Vec<Pos>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -154,6 +172,7 @@ pub enum MacroRealizationError {
     },
     MissingCandidatePort(String),
     NoPlacement,
+    Blueprint(String),
     StructurallyInvalid(Box<MacroStructuralReport>),
     NoRepeaterSite {
         route: usize,
@@ -258,18 +277,36 @@ pub fn extract_model_boundary_with_context(
 }
 
 pub fn resolve_builtin_layout(reference: &str) -> Result<PhysicalCell, MacroRealizationError> {
-    match reference {
-        "dustroute-translate:compiled_xor_cell" => dustroute_translate::compiled_xor_cell(),
-        "dustroute-translate:compact_compiled_xor_cell" => {
-            dustroute_translate::compact_compiled_xor_cell()
-        }
-        other => {
-            return Err(MacroRealizationError::UnsupportedLayoutReference(
-                other.into(),
-            ));
-        }
-    }
-    .map_err(MacroRealizationError::UnsupportedLayoutReference)
+    resolve_blueprint_layout(
+        reference,
+        dustroute_library::builtin_blueprints::builtin_blueprints(),
+    )
+}
+
+/// Resolves caller-supplied blueprint data, never executable generator names.
+/// Historical built-in references are aliases for pinned, frozen revisions.
+pub fn resolve_blueprint_layout(
+    reference: &str,
+    catalog: &dustroute_library::blueprint::BlueprintCatalog,
+) -> Result<PhysicalCell, MacroRealizationError> {
+    let id = layout_revision(reference)?;
+    dustroute_translate::blueprint::blueprint_cell(catalog, &id)
+        .map_err(|error| MacroRealizationError::UnsupportedLayoutReference(error.to_string()))
+}
+
+pub(crate) fn layout_revision(
+    reference: &str,
+) -> Result<BlueprintRevisionId, MacroRealizationError> {
+    use dustroute_library::builtin_blueprints::{XOR_COMPACT_REVISION, XOR_REVISION};
+    let revision = match reference {
+        "dustroute-translate:compiled_xor_cell" => XOR_REVISION,
+        "dustroute-translate:compact_compiled_xor_cell" => XOR_COMPACT_REVISION,
+        _ => reference
+            .strip_prefix("blueprint:")
+            .ok_or_else(|| MacroRealizationError::UnsupportedLayoutReference(reference.into()))?,
+    };
+    BlueprintRevisionId::new(revision)
+        .map_err(|error| MacroRealizationError::UnsupportedLayoutReference(error.into()))
 }
 
 /// Produces a read-only placement proposal. Candidate origins are derived by
@@ -287,8 +324,74 @@ pub fn plan_macro_replacement_with_reserved(
     boundary: &[MacroBoundaryPort],
     reserved: &BTreeSet<Pos>,
 ) -> Result<MacroReplacementPlan, MacroRealizationError> {
-    let cell = resolve_builtin_layout(&candidate.layout_reference)?;
-    let mappings = mapped_boundary(candidate, boundary)?;
+    plan_macro_replacement_in_catalog(
+        candidate,
+        boundary,
+        reserved,
+        dustroute_library::builtin_blueprints::builtin_blueprints(),
+    )
+}
+
+pub fn plan_macro_replacement_in_catalog(
+    candidate: &MacroReplacementCandidate,
+    boundary: &[MacroBoundaryPort],
+    reserved: &BTreeSet<Pos>,
+    catalog: &dustroute_library::blueprint::BlueprintCatalog,
+) -> Result<MacroReplacementPlan, MacroRealizationError> {
+    let revision = layout_revision(&candidate.layout_reference)?;
+    let mut plan = plan_blueprint_replacement(
+        catalog,
+        &revision,
+        &candidate.input_ports,
+        &candidate.output_ports,
+        boundary,
+        reserved,
+    )?;
+    plan.component_id = candidate.component_id.as_str().into();
+    Ok(plan)
+}
+
+/// Plans any explicitly selected concrete revision, including multiple inputs
+/// and outputs. Port order is an explicit binding to observed boundary indices;
+/// no GateKind, classification meaning or logical equivalence is inferred.
+pub fn plan_blueprint_replacement(
+    catalog: &BlueprintCatalog,
+    revision: &BlueprintRevisionId,
+    input_ports: &[String],
+    output_ports: &[String],
+    boundary: &[MacroBoundaryPort],
+    reserved: &BTreeSet<Pos>,
+) -> Result<MacroReplacementPlan, MacroRealizationError> {
+    let cell = dustroute_translate::blueprint::blueprint_cell_for_routing(catalog, revision)
+        .map_err(|error| MacroRealizationError::Blueprint(error.to_string()))?;
+    let source_catalog = Arc::new(catalog.clone());
+    for (names, actual) in [
+        (
+            input_ports,
+            cell.inputs
+                .iter()
+                .map(|p| p.name.as_str())
+                .collect::<BTreeSet<_>>(),
+        ),
+        (
+            output_ports,
+            cell.outputs.iter().map(|p| p.name.as_str()).collect(),
+        ),
+    ] {
+        if names.len() != actual.len()
+            || names.iter().map(String::as_str).collect::<BTreeSet<_>>() != actual
+        {
+            return Err(MacroRealizationError::Blueprint(
+                "port bindings must cover each selected interface exactly once".into(),
+            ));
+        }
+    }
+    if boundary.len() != input_ports.len() + output_ports.len() {
+        return Err(MacroRealizationError::Blueprint(
+            "boundary and selected interface counts differ".into(),
+        ));
+    }
+    let mappings = mapped_boundary(input_ports, output_ports, boundary)?;
     let rotations = [
         RotationY::R0,
         RotationY::R90,
@@ -376,7 +479,8 @@ pub fn plan_macro_replacement_with_reserved(
                 .filter(|pos| candidate_positions.contains(pos))
                 .count();
             let plan = MacroReplacementPlan {
-                component_id: candidate.component_id.as_str().into(),
+                source_catalog: source_catalog.clone(),
+                component_id: revision.as_str().into(),
                 placed,
                 routes,
                 verification: MacroRealizationVerification {
@@ -433,6 +537,7 @@ pub fn validate_macro_structure(
     observed: &World,
     replaceable: &BTreeSet<Pos>,
 ) -> MacroStructuralReport {
+    let replaceable = replacement_ownership(plan, observed, replaceable);
     let mut report = MacroStructuralReport::default();
     let candidate_blocks = plan
         .placed
@@ -456,7 +561,7 @@ pub fn validate_macro_structure(
         }
     }
     let mut candidate_world = observed.clone();
-    for pos in replaceable {
+    for pos in &replaceable {
         candidate_world.remove(*pos);
     }
     for (pos, block) in &candidate_blocks {
@@ -540,20 +645,175 @@ pub fn validate_macro_structure(
 
 /// Converts a structurally valid skeleton into a virtual world and an exact
 /// reversible patch. The observed world itself is never mutated.
+/// This compatibility entry point only knows the occupied bounding box. Use
+/// `materialize_macro_replacement_in_known_regions` to retain a real scan's air
+/// coverage, or the Assembly entry point for existing typed interpretations.
 pub fn materialize_macro_replacement(
     plan: &MacroReplacementPlan,
     observed: &World,
     replaceable: &BTreeSet<Pos>,
     max_wire_run: usize,
 ) -> Result<MaterializedMacroReplacement, MacroRealizationError> {
-    let structural = validate_macro_structure(plan, observed, replaceable);
+    let known_regions = observed
+        .bounds()
+        .map(|(min, max)| dustroute_translate::Region::new(min, max))
+        .into_iter()
+        .collect::<Vec<_>>();
+    materialize_macro_replacement_in_known_regions(
+        plan,
+        observed,
+        &known_regions,
+        replaceable,
+        max_wire_run,
+    )
+}
+
+/// Retains caller-declared observed or modeled coverage. It never enlarges the
+/// region to make a candidate pass or treats absent cells beyond it as air.
+pub fn materialize_macro_replacement_in_known_regions(
+    plan: &MacroReplacementPlan,
+    observed: &World,
+    known_regions: &[dustroute_translate::Region],
+    replaceable: &BTreeSet<Pos>,
+    max_wire_run: usize,
+) -> Result<MaterializedMacroReplacement, MacroRealizationError> {
+    let revision = plan.placed.cell.source_revision.clone().ok_or_else(|| {
+        MacroRealizationError::Blueprint("replacement has no source revision".into())
+    })?;
+    let context = Assembly {
+        name: "Macro replacement candidate".into(),
+        instances: vec![BlueprintInclusion {
+            instance: InstanceId::new("replacement").expect("static instance ID"),
+            revision,
+            origin: plan.placed.origin,
+            rotation: plan.placed.rotation,
+        }],
+        blocks: observed
+            .iter()
+            .map(|(position, block)| PositionedBlock {
+                position: *position,
+                block: block.clone(),
+            })
+            .collect(),
+        known_regions: known_regions.to_vec(),
+        connections: vec![],
+        boundaries: vec![],
+    };
+    materialize_macro_replacement_in_assembly(
+        plan,
+        &plan.source_catalog,
+        &context,
+        &vec![InstanceId::new("replacement").expect("static instance ID")],
+        replaceable,
+        max_wire_run,
+    )
+}
+
+/// Realizes against an explicitly supplied candidate structure. It must already
+/// pin the selected replacement and retain affected parents/shared occurrences;
+/// this function never rewrites source definitions or invents parent revisions.
+/// External typed inputs need explicit upstream occurrences and actual routes.
+pub fn materialize_macro_replacement_in_assembly(
+    plan: &MacroReplacementPlan,
+    catalog: &BlueprintCatalog,
+    context: &Assembly,
+    occurrence: &InstancePath,
+    replaceable: &BTreeSet<Pos>,
+    max_wire_run: usize,
+) -> Result<MaterializedMacroReplacement, MacroRealizationError> {
+    for source in plan.source_catalog.revisions() {
+        if catalog.revision(&source.id) != Some(source) {
+            return Err(MacroRealizationError::Blueprint(
+                "source catalog differs from the planned revision".into(),
+            ));
+        }
+    }
+    for definition in plan.source_catalog.type_revisions() {
+        if catalog.type_revision(&definition.id) != Some(definition) {
+            return Err(MacroRealizationError::Blueprint(
+                "source type differs from the planned definition".into(),
+            ));
+        }
+    }
+    for definition in plan.source_catalog.classifications() {
+        if catalog.classification(&definition.id) != Some(definition) {
+            return Err(MacroRealizationError::Blueprint(
+                "classification differs from the planned definition".into(),
+            ));
+        }
+    }
+    let view = context
+        .inspect(catalog)
+        .map_err(|error| MacroRealizationError::Blueprint(error.to_string()))?;
+    let selected = view
+        .occurrences
+        .get(occurrence)
+        .ok_or_else(|| MacroRealizationError::Blueprint("missing replacement occurrence".into()))?;
+    if Some(&selected.revision) != plan.placed.cell.source_revision.as_ref()
+        || selected.origin != plan.placed.origin
+        || selected.rotation != plan.placed.rotation
+    {
+        return Err(MacroRealizationError::Blueprint(
+            "replacement occurrence does not match the plan".into(),
+        ));
+    }
+    let observed = view.proposed_world();
+    let materialized = materialize_macro_geometry(plan, &observed, replaceable, max_wire_run)?;
+    let mut assembly = context.clone();
+    assembly.blocks = materialized
+        .world
+        .iter()
+        .map(|(position, block)| PositionedBlock {
+            position: *position,
+            block: block.clone(),
+        })
+        .collect();
+    // Preserve explicit known air outside the cuboid, and record cleared
+    // positions. Absence elsewhere remains unknown.
+    let explicit_air = context
+        .blocks
+        .iter()
+        .filter(|record| record.block.kind == BlockKind::Air)
+        .map(|record| record.position)
+        .chain(replaceable.iter().copied())
+        .collect::<BTreeSet<_>>();
+    for position in explicit_air {
+        if materialized.world.kind_at(position) == BlockKind::Air {
+            assembly.blocks.push(PositionedBlock {
+                position,
+                block: Block::new(BlockKind::Air),
+            });
+        }
+    }
+    let assembly = assembly
+        .with_source_connections(catalog)
+        .map_err(|error| MacroRealizationError::Blueprint(error.to_string()))?;
+    dustroute_translate::assembly::validate_assembly_occurrences(catalog, &assembly)
+        .map_err(|error| MacroRealizationError::Blueprint(error.to_string()))?;
+    Ok(MaterializedMacroReplacement {
+        world: materialized.world,
+        patch: materialized.patch,
+        added_supports: materialized.added_supports,
+        inserted_repeaters: materialized.inserted_repeaters,
+        assembly,
+    })
+}
+
+fn materialize_macro_geometry(
+    plan: &MacroReplacementPlan,
+    observed: &World,
+    replaceable: &BTreeSet<Pos>,
+    max_wire_run: usize,
+) -> Result<MacroGeometry, MacroRealizationError> {
+    let replaceable = replacement_ownership(plan, observed, replaceable);
+    let structural = validate_macro_structure(plan, observed, &replaceable);
     if !structural.valid() {
         return Err(MacroRealizationError::StructurallyInvalid(Box::new(
             structural,
         )));
     }
     let mut world = observed.clone();
-    for pos in replaceable {
+    for pos in &replaceable {
         world.remove(*pos);
     }
     for (pos, block) in plan.placed.blocks() {
@@ -624,7 +884,7 @@ pub fn materialize_macro_replacement(
             (before != after).then_some(PhysicalBlockChange { pos, before, after })
         })
         .collect();
-    Ok(MaterializedMacroReplacement {
+    Ok(MacroGeometry {
         world,
         patch: PhysicalPatch {
             reason: PhysicalPatchReason::OptimizePlacement,
@@ -636,6 +896,38 @@ pub fn materialize_macro_replacement(
         added_supports: structural.required_route_supports,
         inserted_repeaters,
     })
+}
+
+/// Fixed observed blocks retain their existing supports. The replaceable set
+/// permits edits; it does not grant ownership of another retained block's
+/// support. This preserves existing state and never synthesizes a repair.
+fn replacement_ownership(
+    plan: &MacroReplacementPlan,
+    observed: &World,
+    replaceable: &BTreeSet<Pos>,
+) -> BTreeSet<Pos> {
+    let mut protected = observed
+        .positions()
+        .filter(|pos| !replaceable.contains(pos))
+        .collect::<BTreeSet<_>>();
+    protected.extend(plan.routes.iter().map(|route| route.boundary.position));
+    protected.extend(
+        plan.routes
+            .iter()
+            .filter_map(|route| route.boundary.driver_position),
+    );
+    let mut pending = protected.iter().copied().collect::<Vec<_>>();
+    while let Some(position) = pending.pop() {
+        if let Some(support) = observed
+            .get(position)
+            .and_then(|block| block.support_pos(position))
+            && observed.get(support).is_some()
+            && protected.insert(support)
+        {
+            pending.push(support);
+        }
+    }
+    replaceable.difference(&protected).copied().collect()
 }
 
 /// Re-infers the materialized circuit, identifies its terminals by the fixed
@@ -1179,13 +1471,14 @@ fn facing_between(from: Pos, to: Pos) -> Option<Facing> {
 }
 
 fn mapped_boundary<'a>(
-    candidate: &'a MacroReplacementCandidate,
+    input_ports: &'a [String],
+    output_ports: &'a [String],
     boundary: &'a [MacroBoundaryPort],
 ) -> Result<Vec<(&'a MacroBoundaryPort, &'a str)>, MacroRealizationError> {
     let mut result = Vec::new();
     for (direction, names) in [
-        (MacroBoundaryDirection::Input, &candidate.input_ports),
-        (MacroBoundaryDirection::Output, &candidate.output_ports),
+        (MacroBoundaryDirection::Input, input_ports),
+        (MacroBoundaryDirection::Output, output_ports),
     ] {
         for (index, name) in names.iter().enumerate() {
             let port = boundary
@@ -1497,8 +1790,26 @@ mod tests {
         let report = validate_macro_structure(&plan, &baseline.world, &replaceable);
         assert!(report.candidate_collisions.is_empty());
         assert!(report.blocked_route_supports.is_empty());
-        let materialized =
-            materialize_macro_replacement(&plan, &baseline.world, &replaceable, 14).unwrap();
+        // The compatibility facade lacks explicit air coverage above the old
+        // bounding box. It cannot certify the replacement's rising wires.
+        let missing =
+            materialize_macro_replacement(&plan, &baseline.world, &replaceable, 14).unwrap_err();
+        assert!(
+            matches!(missing, MacroRealizationError::Blueprint(ref detail) if detail.contains("UnknownWireConnection"))
+        );
+        // This synthetic fixture declares the full working volume as known;
+        // real callers must pass actual scan coverage, not derive new evidence.
+        let known =
+            dustroute_translate::Region::new(Pos::new(-100, -10, -100), Pos::new(100, 20, 100));
+        let materialized = materialize_macro_replacement_in_known_regions(
+            &plan,
+            &baseline.world,
+            &[known],
+            &replaceable,
+            14,
+        )
+        .unwrap();
+        assert_eq!(materialized.assembly.known_regions, vec![known]);
         let steady = verify_macro_steady_state(
             &model.truth_table,
             &baseline.world,
@@ -1598,6 +1909,9 @@ mod tests {
         };
         let plan = MacroReplacementPlan {
             component_id: "test.long-route".into(),
+            source_catalog: Arc::new(
+                dustroute_library::builtin_blueprints::builtin_blueprints().clone(),
+            ),
             placed,
             routes: vec![MacroPortRoute {
                 boundary: boundary.clone(),

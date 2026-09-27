@@ -1,8 +1,28 @@
 # DustRoute MCP — guide for LLM clients
 
-Use DustRoute to observe Minecraft redstone, explain evidence, create hypothetical revisions, and propose verified world changes. Ground each task in the configured player's gaze or an explicitly selected region. Keep observation, hypothesis and execution separate.
+Use DustRoute to observe Minecraft redstone, explain evidence, create hypothetical revisions, review Blueprint updates, and propose verified world changes. Ground live-world tasks in the configured player's gaze or an explicitly selected region. Offline Blueprint tasks use exact catalog records and need no bridge connection. Keep observation, hypothesis and execution separate.
 
-This is the tool-use guide. Server installation, credentials, permissions and transport configuration belong in [SETUP.md](SETUP.md). Detailed subsystem examples are in [REFERENCE.md](REFERENCE.md); the complete 21-tool default inventory and 7 debug additions are in the [public feature guide](../../docs/mcp-public-features.md). Use the connected server's tool schemas for exact arguments.
+This is the tool-use guide. Server installation, credentials, permissions and transport configuration belong in [SETUP.md](SETUP.md). Detailed subsystem examples are in [REFERENCE.md](REFERENCE.md); the complete 22-tool default inventory and 7 debug additions are in the [public feature guide](../../docs/mcp-public-features.md). Use the connected server's tool schemas for exact arguments.
+
+Custom electrical Assembly construction returns a durable `instance_id`.
+After MCP restart, use `manage_assembly` (`list`, `get`, `observe`, `diagnose`, `plan_removal`, `plan_reconstruction`)
+to read records, freshly compare/revalidate the world and preview a new
+conditional removal or reconstruction operation. Reconstruction tears down the
+observed supported layout and rebuilds the declared initial state; review all
+affected blocks and keep competing inputs/edits out of the region. It uses the
+ordinary command path and does not prove empty server queues. Stored success
+never authorizes writes by itself.
+See [persistent placed Assemblies](../../docs/placed-assembly-management.md).
+Use `diagnose` to locate missing parts or player edits even when repair cannot
+be planned. Findings compare a declared reference; they do not establish cause,
+ownership or a live functional pass. See [Assembly diagnosis](../../docs/assembly-diagnosis.md).
+
+Circuit diagnosis and Assembly diagnosis share a [diagnostic result and repair
+handoff](../../docs/diagnostic-system.md). Read `method` to distinguish connection
+inference from design comparison. Placed-instance findings expose their pinned
+Assembly ID and declared Blueprint occurrences; read those with
+`get_circuit_revision(blueprint.kind=assembly|blueprint)`. A source link does not
+prove a fault or authorize an update.
 
 ## Choose the next tool from the task
 
@@ -15,7 +35,10 @@ This is the tool-use guide. Server installation, credentials, permissions and tr
 | Explain circuit behavior | `convert_from_circuit(circuit_id)`. Read completeness, capabilities, diagnostics and `mechanisms` before assigning a function. |
 | Inspect abstraction details | `get_circuit_ir(circuit_id)`, then use the returned `analysis_id` and a returned `node_id` for expansion. |
 | Try a hypothetical edit or branch | `test_circuit_change` with exactly one `circuit_id` or parent `revision_id`. Read saved versions with `get_circuit_revision`. |
+| Read or author Blueprint data | `get_circuit_revision` with `blueprint.kind`; `test_circuit_change` with `blueprint.action` equal to `import` or `capture_revision`. Imported data is unverified. |
+| Consider a child update | `test_circuit_change(blueprint.action=propose_update)` with complete candidate definitions/state, then `show_operation`. Adopt/reject via explicit `blueprint_decision` on `invoke_operation`; these actions never write Minecraft. |
 | Place a saved revision | `new_placement(revision_id)`. A new live comparison and placement proof are required. |
+| Reflect an adopted Assembly | `new_placement(assembly_revision_id)`. Its ancestry must reach a complete captured Circuit Revision; reflection uses that original dimension and coordinates and reruns both adoption review and live validation. |
 | Place a built-in circuit | `new_placement(circuit)`. Supported names: `half-adder`, `half-subtractor`, `mux2`, `decoder1to2`, `full-adder`, `piston-door-1x2`. |
 | Repair observed circuitry | `new_repair(circuit_id)`. Use `get_repair_context` when evidence admits competing explanations; resolve the returned questions before choosing a repair. |
 | Optimize supported existing wiring | `new_optimization`. Current candidate generation is limited to a non-branching dust path with fixed endpoints. |
@@ -33,11 +56,124 @@ The default profile exposes all tools above. Debug-only discovery and asynchrono
 | `circuit_id` | Immutable observed-world snapshot | Reuse for analysis and source-specific plans. To see current world changes, capture again. |
 | `revision_id` | Immutable hypothetical snapshot | Edit/branch it, retrieve it, or ask `new_placement` to validate a proposal. Never pass it as a live circuit ID or operation ID. |
 | `parent_revision_ids` | Revision ancestry | Current records have zero or one parent. Multiple children form branches; merge is not implemented. |
+| Blueprint/type/classification revision IDs | Immutable local definitions | Read via `blueprint.kind`; exact pins only. Classification labels do not prove meaning or signal compatibility. |
+| Assembly Revision ID | Explicit composed state, independent of its sources | Read via `blueprint.kind=assembly`. It is not a circuit `revision_id` or live placement permission. |
 | `base_observation_id` | Original observation reference | New revisions retain its snapshot separately for later live comparison, even when the original ID expires. |
 | `analysis_id`, `node_id`, `component_id` | Identifiers scoped to an analysis | Use only with the observation/analysis that returned them. |
 | `operation_id` | A particular proposal or execution record | Use the common operation lifecycle. Do not substitute a revision ID. |
 
 A `circuit_id` is held in memory for 15 minutes and may be evicted at the 64-record limit. Revisions use the scoped state store, default TTL one hour, and survive restart under the same state scope. Reads do not extend expiry. Most operation plans are in memory and are lost on restart. Revision placement, fixed-door placement and door activation proposals have five-minute pre-execution lifetimes; do not assume all other operation kinds share this TTL. See the [lifetime and recovery tables](../../docs/mcp-public-features.md#ids-and-retention) for details.
+
+Blueprint catalogs and proposal histories are separate and have no TTL. Capture
+a circuit revision's modeled Assembly explicitly to retain it in that catalog.
+Old source references stay pinned; adopting a proposal only appends new records.
+
+Repair and optimization plans use the scoped disk store without a memory
+fallback. Expiry or deletion blocks preview, apply and undo even in the process
+that created the plan. Preview and successful apply/undo renew retention by
+saving the plan; reads do not. Unreadable saved state returns an error.
+
+## Review an offline Blueprint update
+
+Start with `get_circuit_revision({"blueprint":{"kind":"catalog"}})` and read the
+relevant exact records. Use the tool schema to supply an explicit candidate via
+`test_circuit_change({"blueprint":{"action":"propose_update","request":{...}}})`.
+The request includes the old and new parent/child pins, changed intermediate
+definitions and complete candidate Assembly; nothing is auto-merged or routed.
+
+Use `show_operation` to review the diff and every parent, descendant and shared
+occurrence. `can_adopt` requires an open proposal and every required check to
+pass. A passing parent cannot override failed or undetermined children. Snapshot
+checks cover placement, physical signal types and connections. For `Periodic`,
+`FiniteBurst` or `RepeatedSettling` obligations, supply `behavior_context` in the proposal (or in an Assembly
+read with `validate:true`): select the explicit profile, fresh-construction initial
+condition and exact dust/torch law IDs. The profile also pins four spatial law
+Revisions; including a different law in a Blueprint does not select a new world
+model. Blueprint `behavior_bindings` attach a
+behavioral type to a named output; consumer `required_source_types` can also require
+it. Without context these obligations remain undetermined. A model pass proves
+only the declared requirements in that model. `FiniteBurst` requires at least
+two ON-to-OFF transitions and eventual permanent OFF; it does not certify
+restartability. These types do not fix numerical timing or certify live behavior.
+For snapshot requirements on the realization itself, use
+`static_type_bindings: [{type_revision, port}]` with a `Signal`, `BlockKind` or
+`BlockPattern` type. These are checked even without a connected consumer;
+`dustroute.lever.wall.v2` uses this to assert actual lever identity. Older pins
+remain unchanged. These declarations require catalog v8.
+Use `required_laws: ["<immutable law revision ID>", ...]` to declare a source's
+physical law dependencies. The selected world context must provide every required
+Revision, including the laws' own dependencies. Missing context is undetermined;
+a mismatched Revision fails. Declarations neither create physical state nor
+certify live Minecraft conformance. Shared and nested sources use one physical
+state and event stream. Law requirements need catalog v9 and proposal-history v3,
+including requirements that occur only in a pending candidate.
+Explicit `observed_inputs`/`observed_outputs` bindings require catalog v10 and
+at least proposal-history v4. They declare named signal/location observations;
+fixed-geometry proof contexts leave them undetermined. For supported location-only
+`RepeatedSettling`, new requests use `behavior_context: {"piston": {
+"known_region": ..., "input_levers": [...], "root_limits": {...}}}`.
+This chooses the shared electrical runtime for all six body directions; no
+horizontal/vertical selection is needed. The complete Assembly's known region
+and actual input levers are required; root limits may be omitted. The stored
+proposal pins the explicit electrical v1 profile and fresh initial conditions.
+Every input
+must observe a distinct actual lever's powered state; every output has an explicit
+location predicate. Review includes input changes during motion and each
+intermediate write. Retained child/static requirements must pass independently.
+Dust, repeaters, conductor power and piston quasi-connectivity share this
+runtime. Mixed signal/location bindings, moving-world routes and autonomous
+contracts remain unsupported. Horizontal, vertical and direct-only callback
+profiles have been removed. Saved objects naming them are rejected; start fresh
+with the electrical context and explicitly review any changed law requirements. Contexts require proposal-history v5 and fresh adoption checks after
+restart. Adopted electrical Assemblies can request `new_placement` with
+`assembly_target`, followed by preview, apply, full readback and conditional
+undo. See [construction scope and evidence](../../docs/custom-piston-assembly-placement.md).
+Persisted diagnostics are not proof, and adoption reruns the checks.
+Review also reports `placement_validation_profile`. Fixed-geometry review's v2 gate rejects
+stored wire-rise arms that contradict the surrounding support, upper wire or
+clearance; unknown required neighbors remain undetermined. Literal observations
+and old Revisions stay unchanged. Historical v1 model success cannot override
+current placement or adoption failure.
+
+For `RepeatedSettling`, map every named type input/output to Blueprint ports
+using `behavior_bindings: [{behavior_type, inputs, outputs}]` and specify actual
+`input_drivers` in the context. Each driver names an Assembly terminal position,
+port kind and actual lever position. Review checks that the lever establishes
+the requested input value throughout the explored graph, then universally
+verifies the relation using conservative history abstraction. Missing controls,
+ambiguous mappings and incomplete proofs remain undetermined. See
+[multiport bindings and adoption](../../docs/repeated-settling-adoption.md).
+
+Use `test_circuit_change(blueprint.action="optimize")` to search the supplied
+Assembly or an explicitly scoped component body for fewer actual blocks while preserving only an explicit
+behavioral type. It can rebind ports and replace internal interpretations.
+Component mode reports the body count separately from the complete setup; external
+controls remain fixed. External routes and boundaries are retained and freshly
+checked, including routes through shared body blocks. An external endpoint that
+cannot be retained requires explicit parent reconnection; search does not discard
+it. Shared physical positions count once.
+`blueprint.action="enumerate_layouts"` enumerates and verifies the torch/support
+family, with direct device outputs and independent lever definitions. See
+[component patterns](../../docs/blueprint-component-patterns.md).
+Results are new candidate data: the search does not publish, adopt or reconnect
+parents. Review the candidate and use an explicit parent update proposal;
+adoption still reruns every retained obligation. Global minimality is not proven.
+See [request shape and search limits](../../docs/blueprint-block-reduction.md).
+
+For the observed single-torch scope, select
+`dustroute.dust-single-torch-block-effects.v1`. It rejects multiple torches and
+unsupported nested block effects. The original synchronous profile remains
+selectable for existing pins but disagrees with the recorded four-block feedback
+clock; that candidate fails the periodic requirement and passes the separate
+finite-burst requirement under the new profile.
+See [physical comparison and limits](../../docs/periodic-clock-conformance.md).
+
+When authorized, use `invoke_operation({"operation_id":"…","confirm":true,
+"blueprint_decision":{"action":"adopt"}})` or a decision with `action:"reject"`
+and a `reason`. Adoption revalidates and saves locally; `writes_minecraft` stays
+false. Decisions survive restart and cannot be undone by rewriting history.
+Keep the old revision or propose a new change. For complete arguments, failure
+handling and persistence limits, see the [Blueprint MCP contract](../../docs/blueprint-mcp.md).
 
 ## Create and refine a hypothetical circuit
 
@@ -68,13 +204,20 @@ Limits: 64 edits per request, 4096 block records/result blocks, 4 MiB per saved 
 
 ## Propose and execute a change
 
-1. Create a plan for the grounded source. For a revision, call `new_placement({"revision_id":"…"})`; do not combine it with `circuit` or optimization.
+1. Create a plan for the grounded source. For a revision, call `new_placement({"revision_id":"…"})`. For an adopted Assembly whose ancestry reaches a captured Circuit Revision, call `new_placement({"assembly_revision_id":"…"})`. Do not combine either ID with `circuit` or optimization.
 2. Read the returned diff, bounds, verification and limitations. If rejected, explain the reason and return to observation or revision editing.
 3. Call `show_operation` with the returned operation ID. Explain the concrete change to the user and obtain the required confirmation before execution.
 4. Call `invoke_operation` with that ID and `confirm: true` only when authorized. Default policy is read-only; do not treat a proposal as permission to override it.
 5. Read the execution result and live verification. A successful tool transport or a submitted write is not sufficient evidence that the intended blocks are present.
 
 Revision placement uses the cumulative diff from the original observation, not just the last parent edit. It rescans the original region plus one block of context, requires exact base agreement, and reruns the shared placement checks. Changed states must export without losing properties. Powered states or unspecified properties that the exporter would reset can be rejected even when a draft was saved successfully. Older revisions without a retained base snapshot cannot be placed.
+
+Assembly placement uses the same preview, authorization, exact live-base check,
+lossless export, apply verification and undo path. Adoption is necessary but is
+not saved placement authority: the proposal is reviewed again, and an adopted
+ancestor must retain a complete literal base snapshot. Candidate interpretation
+remains separate from that observation. Arbitrary relocation and new construction
+from an Assembly ID are outside this workflow.
 
 Do not switch a failed revision proposal to raw writes, a different gaze target, or another operation family to bypass its validation. Placement is currently command-based and uses the configured bot's privileges; it is not survival inventory construction.
 
@@ -102,6 +245,7 @@ The operation/build contract is Java 1.21.11, fixed 1×2 layout, translation onl
 
 - [Public feature inventory and support limits](../../docs/mcp-public-features.md)
 - [Revision editing and live placement contract](../../docs/circuit-revisions.md)
+- [Blueprint catalogs, update proposals and decisions](../../docs/blueprint-mcp.md)
 - [Fixed piston contract and live evidence](../../docs/piston-door-mcp-v1.md)
 - [Response schemas and compatibility](../../docs/mcp-api-v1.md)
 - [Detailed repair, transition and optimization reference](REFERENCE.md)

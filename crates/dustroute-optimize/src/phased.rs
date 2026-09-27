@@ -1,6 +1,6 @@
 use std::collections::BTreeSet;
 
-use dustroute_translate::cell_library::default_cell_library;
+use dustroute_translate::cell_library::{CellLibrary, default_cell_library};
 use dustroute_translate::physical::{CellId, PlacementCircuit};
 use dustroute_translate::world::Pos;
 
@@ -213,10 +213,10 @@ fn move_matches_direction(
 fn optimize_phase(
     circuit: &PlacementCircuit,
     phase: &OptimizationPhase,
+    library: &CellLibrary,
     focus: Option<&BTreeSet<CellId>>,
     accept_candidate: &mut impl FnMut(&PlacementCircuit) -> bool,
 ) -> (PlacementCircuit, PhaseOptimizationResult) {
-    let library = default_cell_library();
     let mut current = circuit.clone();
     let (max_steps, move_step) = match phase {
         OptimizationPhase::DirectionalCompress {
@@ -247,7 +247,7 @@ fn optimize_phase(
 
     for _ in 0..max_steps {
         let mut improving = Vec::new();
-        for mutation in candidate_mutations(&current, &library, move_step) {
+        for mutation in candidate_mutations(&current, library, move_step) {
             if focus
                 .is_some_and(|focus| mutation.affected_cells().any(|cell| !focus.contains(&cell)))
             {
@@ -266,7 +266,7 @@ fn optimize_phase(
             {
                 continue;
             }
-            let candidate = apply_mutation(&current, &mutation, &library);
+            let candidate = apply_mutation(&current, &mutation, library);
             if electrical_keepout_contacts(&candidate) > keepout_contacts {
                 continue;
             }
@@ -316,8 +316,9 @@ pub(crate) fn optimize_staged_with_validator(
 ) -> StagedOptimizationResult {
     let mut current = circuit.clone();
     let mut results = Vec::with_capacity(plan.phases.len());
+    let library = default_cell_library();
     for phase in &plan.phases {
-        let (next, result) = optimize_phase(&current, phase, None, &mut accept_candidate);
+        let (next, result) = optimize_phase(&current, phase, &library, None, &mut accept_candidate);
         current = next;
         results.push(result);
     }
@@ -352,9 +353,28 @@ fn focus_windows(circuit: &PlacementCircuit, max_cells: usize) -> Vec<BTreeSet<C
         .collect()
 }
 
+#[cfg(test)]
 pub(crate) fn optimize_staged_windowed_with_validator(
     circuit: &PlacementCircuit,
     plan: &OptimizationPlan,
+    max_focus_cells: usize,
+    max_sweeps: usize,
+    accept_candidate: impl FnMut(&PlacementCircuit) -> bool,
+) -> StagedOptimizationResult {
+    optimize_staged_windowed_with_library(
+        circuit,
+        plan,
+        &default_cell_library(),
+        max_focus_cells,
+        max_sweeps,
+        accept_candidate,
+    )
+}
+
+pub(crate) fn optimize_staged_windowed_with_library(
+    circuit: &PlacementCircuit,
+    plan: &OptimizationPlan,
+    library: &CellLibrary,
     max_focus_cells: usize,
     max_sweeps: usize,
     mut accept_candidate: impl FnMut(&PlacementCircuit) -> bool,
@@ -375,8 +395,13 @@ pub(crate) fn optimize_staged_windowed_with_validator(
         let mut improved = false;
         for focus in focus_windows(&current, max_focus_cells) {
             for (index, phase) in plan.phases.iter().enumerate() {
-                let (next, result) =
-                    optimize_phase(&current, phase, Some(&focus), &mut accept_candidate);
+                let (next, result) = optimize_phase(
+                    &current,
+                    phase,
+                    library,
+                    Some(&focus),
+                    &mut accept_candidate,
+                );
                 improved |= !result.accepted.is_empty();
                 accepted[index].extend(result.accepted);
                 current = next;

@@ -1,0 +1,491 @@
+{
+  "inputs": {
+    "kind": 15,
+    "retracted": 1,
+    "normal": 1,
+    "horizontal": 1,
+    "powered": 1,
+    "head": 1,
+    "entity": 1,
+    "name_missing": 1,
+    "extended_false_or_absent": 1,
+    "coarse": 1,
+    "live": 1,
+    "name:bedrock": 1,
+    "name:obsidian": 1,
+    "name:crying_obsidian": 1,
+    "name:reinforced_deepslate": 1,
+    "name:end_portal_frame": 1,
+    "name:end_portal": 1,
+    "name:nether_portal": 1,
+    "name:moving_piston": 1,
+    "name:piston_head": 1,
+    "name:barrier": 1,
+    "name:structure_block": 1,
+    "name:jigsaw": 1,
+    "name:command_block": 1,
+    "name:chain_command_block": 1,
+    "name:repeating_command_block": 1,
+    "name:piston": 1
+  },
+  "registers": {
+    "immovable": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "rejection": {
+      "initial": 0,
+      "maximum": 4
+    }
+  },
+  "histories": {},
+  "handlers": {
+    "evaluate": [
+      {
+        "op": "set",
+        "register": "immovable",
+        "value": {
+          "op": "maximum",
+          "left": {
+            "op": "maximum",
+            "left": {
+              "op": "maximum",
+              "left": {
+                "op": "maximum",
+                "left": {
+                  "op": "maximum",
+                  "left": {
+                    "op": "maximum",
+                    "left": {
+                      "op": "maximum",
+                      "left": {
+                        "op": "maximum",
+                        "left": {
+                          "op": "maximum",
+                          "left": {
+                            "op": "maximum",
+                            "left": {
+                              "op": "maximum",
+                              "left": {
+                                "op": "maximum",
+                                "left": {
+                                  "op": "maximum",
+                                  "left": {
+                                    "op": "maximum",
+                                    "left": {
+                                      "op": "maximum",
+                                      "left": {
+                                        "op": "input",
+                                        "name": "name:bedrock"
+                                      },
+                                      "right": {
+                                        "op": "input",
+                                        "name": "name:obsidian"
+                                      }
+                                    },
+                                    "right": {
+                                      "op": "input",
+                                      "name": "name:crying_obsidian"
+                                    }
+                                  },
+                                  "right": {
+                                    "op": "input",
+                                    "name": "name:reinforced_deepslate"
+                                  }
+                                },
+                                "right": {
+                                  "op": "input",
+                                  "name": "name:end_portal_frame"
+                                }
+                              },
+                              "right": {
+                                "op": "input",
+                                "name": "name:end_portal"
+                              }
+                            },
+                            "right": {
+                              "op": "input",
+                              "name": "name:nether_portal"
+                            }
+                          },
+                          "right": {
+                            "op": "input",
+                            "name": "name:moving_piston"
+                          }
+                        },
+                        "right": {
+                          "op": "input",
+                          "name": "name:piston_head"
+                        }
+                      },
+                      "right": {
+                        "op": "input",
+                        "name": "name:barrier"
+                      }
+                    },
+                    "right": {
+                      "op": "input",
+                      "name": "name:structure_block"
+                    }
+                  },
+                  "right": {
+                    "op": "input",
+                    "name": "name:jigsaw"
+                  }
+                },
+                "right": {
+                  "op": "input",
+                  "name": "name:command_block"
+                }
+              },
+              "right": {
+                "op": "input",
+                "name": "name:chain_command_block"
+              }
+            },
+            "right": {
+              "op": "input",
+              "name": "name:repeating_command_block"
+            }
+          },
+          "right": {
+            "op": "equal",
+            "left": {
+              "op": "input",
+              "name": "kind"
+            },
+            "right": {
+              "op": "constant",
+              "value": 14
+            }
+          }
+        }
+      },
+      {
+        "op": "if",
+        "condition": {
+          "op": "not",
+          "value": {
+            "op": "maximum",
+            "left": {
+              "op": "maximum",
+              "left": {
+                "op": "maximum",
+                "left": {
+                  "op": "maximum",
+                  "left": {
+                    "op": "equal",
+                    "left": {
+                      "op": "input",
+                      "name": "kind"
+                    },
+                    "right": {
+                      "op": "constant",
+                      "value": 1
+                    }
+                  },
+                  "right": {
+                    "op": "equal",
+                    "left": {
+                      "op": "input",
+                      "name": "kind"
+                    },
+                    "right": {
+                      "op": "constant",
+                      "value": 2
+                    }
+                  }
+                },
+                "right": {
+                  "op": "and",
+                  "left": {
+                    "op": "and",
+                    "left": {
+                      "op": "and",
+                      "left": {
+                        "op": "and",
+                        "left": {
+                          "op": "and",
+                          "left": {
+                            "op": "and",
+                            "left": {
+                              "op": "and",
+                              "left": {
+                                "op": "and",
+                                "left": {
+                                  "op": "equal",
+                                  "left": {
+                                    "op": "input",
+                                    "name": "kind"
+                                  },
+                                  "right": {
+                                    "op": "constant",
+                                    "value": 13
+                                  }
+                                },
+                                "right": {
+                                  "op": "input",
+                                  "name": "retracted"
+                                }
+                              },
+                              "right": {
+                                "op": "input",
+                                "name": "normal"
+                              }
+                            },
+                            "right": {
+                              "op": "input",
+                              "name": "horizontal"
+                            }
+                          },
+                          "right": {
+                            "op": "not",
+                            "value": {
+                              "op": "input",
+                              "name": "powered"
+                            }
+                          }
+                        },
+                        "right": {
+                          "op": "not",
+                          "value": {
+                            "op": "input",
+                            "name": "head"
+                          }
+                        }
+                      },
+                      "right": {
+                        "op": "not",
+                        "value": {
+                          "op": "input",
+                          "name": "entity"
+                        }
+                      }
+                    },
+                    "right": {
+                      "op": "maximum",
+                      "left": {
+                        "op": "input",
+                        "name": "name_missing"
+                      },
+                      "right": {
+                        "op": "input",
+                        "name": "name:piston"
+                      }
+                    }
+                  },
+                  "right": {
+                    "op": "input",
+                    "name": "extended_false_or_absent"
+                  }
+                }
+              },
+              "right": {
+                "op": "equal",
+                "left": {
+                  "op": "input",
+                  "name": "kind"
+                },
+                "right": {
+                  "op": "constant",
+                  "value": 11
+                }
+              }
+            },
+            "right": {
+              "op": "equal",
+              "left": {
+                "op": "input",
+                "name": "kind"
+              },
+              "right": {
+                "op": "constant",
+                "value": 14
+              }
+            }
+          }
+        },
+        "then": [
+          {
+            "op": "set",
+            "register": "rejection",
+            "value": {
+              "op": "constant",
+              "value": 1
+            }
+          }
+        ],
+        "otherwise": [
+          {
+            "op": "if",
+            "condition": {
+              "op": "input",
+              "name": "coarse"
+            },
+            "then": [
+              {
+                "op": "set",
+                "register": "rejection",
+                "value": {
+                  "op": "constant",
+                  "value": 2
+                }
+              }
+            ],
+            "otherwise": [
+              {
+                "op": "if",
+                "condition": {
+                  "op": "input",
+                  "name": "live"
+                },
+                "then": [
+                  {
+                    "op": "set",
+                    "register": "rejection",
+                    "value": {
+                      "op": "constant",
+                      "value": 3
+                    }
+                  }
+                ],
+                "otherwise": [
+                  {
+                    "op": "if",
+                    "condition": {
+                      "op": "maximum",
+                      "left": {
+                        "op": "maximum",
+                        "left": {
+                          "op": "maximum",
+                          "left": {
+                            "op": "maximum",
+                            "left": {
+                              "op": "maximum",
+                              "left": {
+                                "op": "maximum",
+                                "left": {
+                                  "op": "maximum",
+                                  "left": {
+                                    "op": "maximum",
+                                    "left": {
+                                      "op": "maximum",
+                                      "left": {
+                                        "op": "maximum",
+                                        "left": {
+                                          "op": "maximum",
+                                          "left": {
+                                            "op": "maximum",
+                                            "left": {
+                                              "op": "maximum",
+                                              "left": {
+                                                "op": "maximum",
+                                                "left": {
+                                                  "op": "maximum",
+                                                  "left": {
+                                                    "op": "input",
+                                                    "name": "name:bedrock"
+                                                  },
+                                                  "right": {
+                                                    "op": "input",
+                                                    "name": "name:obsidian"
+                                                  }
+                                                },
+                                                "right": {
+                                                  "op": "input",
+                                                  "name": "name:crying_obsidian"
+                                                }
+                                              },
+                                              "right": {
+                                                "op": "input",
+                                                "name": "name:reinforced_deepslate"
+                                              }
+                                            },
+                                            "right": {
+                                              "op": "input",
+                                              "name": "name:end_portal_frame"
+                                            }
+                                          },
+                                          "right": {
+                                            "op": "input",
+                                            "name": "name:end_portal"
+                                          }
+                                        },
+                                        "right": {
+                                          "op": "input",
+                                          "name": "name:nether_portal"
+                                        }
+                                      },
+                                      "right": {
+                                        "op": "input",
+                                        "name": "name:moving_piston"
+                                      }
+                                    },
+                                    "right": {
+                                      "op": "input",
+                                      "name": "name:piston_head"
+                                    }
+                                  },
+                                  "right": {
+                                    "op": "input",
+                                    "name": "name:barrier"
+                                  }
+                                },
+                                "right": {
+                                  "op": "input",
+                                  "name": "name:structure_block"
+                                }
+                              },
+                              "right": {
+                                "op": "input",
+                                "name": "name:jigsaw"
+                              }
+                            },
+                            "right": {
+                              "op": "input",
+                              "name": "name:command_block"
+                            }
+                          },
+                          "right": {
+                            "op": "input",
+                            "name": "name:chain_command_block"
+                          }
+                        },
+                        "right": {
+                          "op": "input",
+                          "name": "name:repeating_command_block"
+                        }
+                      },
+                      "right": {
+                        "op": "equal",
+                        "left": {
+                          "op": "input",
+                          "name": "kind"
+                        },
+                        "right": {
+                          "op": "constant",
+                          "value": 14
+                        }
+                      }
+                    },
+                    "then": [
+                      {
+                        "op": "set",
+                        "register": "rejection",
+                        "value": {
+                          "op": "constant",
+                          "value": 4
+                        }
+                      }
+                    ],
+                    "otherwise": []
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

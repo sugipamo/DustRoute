@@ -9,7 +9,13 @@ use crate::electrical::{
     InstantaneousSolveDidNotConverge, PoweredBlockState, repeater_input_level,
     solve_instantaneous_with_topology, torch_support_is_powered,
 };
+use crate::torch_law::{self, TorchState};
 use crate::world::{Block, BlockKind, Pos, World};
+use crate::world_laws::{CompatibilityWorldLaws, builtin_compatibility_world_laws};
+use dustroute_minecraft::execution_context::{WorldExecutionContext, WorldExecutionProfile};
+use dustroute_minecraft::lamp_law::LampDeadline;
+use dustroute_minecraft::observer_law::{ObserverChanges, ObserverDeadline, ObserverPulseAction};
+use dustroute_minecraft::repeater_law::CompatibilityRepeaterState;
 use dustroute_minecraft::time::{PhysicsEventPhase, PhysicsTime, SchedulerProfile};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -68,6 +74,8 @@ pub struct TickState {
     pub comparator_output: BTreeMap<Pos, u8>,
     pub observer_powered: BTreeMap<Pos, bool>,
     pub lamp_lit: BTreeMap<Pos, bool>,
+    /// Historical modeled burnout crossings. Retained under the existing public
+    /// name so callers continue to request live evidence; not a current-lit bit.
     pub torch_burnout_candidates: BTreeSet<Pos>,
     pub instantaneous_iterations: usize,
 }
@@ -221,11 +229,12 @@ struct SimulationEvent {
 struct PendingBoundary {
     game_tick: u64,
     before_observers: BTreeMap<Pos, ObserverObservedState>,
-    repeater_requested: BTreeMap<Pos, bool>,
+    next_repeater_states: BTreeMap<Pos, CompatibilityRepeaterState>,
     next_repeaters: BTreeMap<Pos, bool>,
     comparator_requested: BTreeMap<Pos, u8>,
     next_comparators: BTreeMap<Pos, u8>,
     next_torches: BTreeMap<Pos, bool>,
+    next_torch_states: BTreeMap<Pos, TorchState>,
     pending_observers: BTreeSet<Pos>,
     observers_to_off: BTreeSet<Pos>,
 }
@@ -287,6 +296,7 @@ impl SimulationEventQueue {
 
 #[derive(Clone)]
 pub struct RedstoneTickSimulator {
+    laws: &'static CompatibilityWorldLaws,
     world: World,
     topology: ElectricalTopology,
     tick: u64,
@@ -295,9 +305,9 @@ pub struct RedstoneTickSimulator {
     event_queue: SimulationEventQueue,
     pending_boundary: Option<PendingBoundary>,
     repeater_powered: BTreeMap<Pos, bool>,
-    repeater_queues: BTreeMap<Pos, VecDeque<bool>>,
+    repeater_states: BTreeMap<Pos, CompatibilityRepeaterState>,
     torch_lit: BTreeMap<Pos, bool>,
-    torch_toggle_ticks: BTreeMap<Pos, VecDeque<u64>>,
+    torch_states: BTreeMap<Pos, TorchState>,
     torch_burnout_candidates: BTreeSet<Pos>,
     comparator_output: BTreeMap<Pos, u8>,
     comparator_queues: BTreeMap<Pos, VecDeque<u8>>,
@@ -312,15 +322,21 @@ pub struct RedstoneTickSimulator {
 
 impl RedstoneTickSimulator {
     pub fn new(world: World) -> Result<Self, InstantaneousSolveDidNotConverge> {
+        let laws = builtin_compatibility_world_laws();
         let topology = ElectricalTopology::from_world(&world);
         let devices = DeviceOutputState::initially_lit(&world);
-        let repeater_queues = world
+        let repeater_states = world
             .iter()
             .filter(|(_, block)| block.kind == BlockKind::Repeater)
             .map(|(pos, block)| {
-                let delay = usize::from(block.delay.unwrap_or(1).clamp(1, 4));
+                let delay = block.delay.unwrap_or(1).clamp(1, 4);
                 let powered = devices.repeater_powered.get(pos).copied().unwrap_or(false);
-                (*pos, VecDeque::from(vec![powered; delay]))
+                (
+                    *pos,
+                    laws.repeater
+                        .initial(delay, powered)
+                        .expect("pinned repeater law accepts the retained initialization policy"),
+                )
             })
             .collect();
         let instantaneous = solve_instantaneous_with_topology(&world, &devices, 128, &topology)?;
@@ -337,9 +353,17 @@ impl RedstoneTickSimulator {
         let lamp_lit = world
             .iter()
             .filter(|(_, block)| block.kind == BlockKind::RedstoneLamp)
-            .map(|(pos, _)| (*pos, instantaneous.power(*pos).powered()))
+            .map(|(pos, _)| {
+                (
+                    *pos,
+                    laws.lamp
+                        .initially_lit(instantaneous.power(*pos).powered())
+                        .expect("pinned lamp initialization"),
+                )
+            })
             .collect();
         let mut simulator = Self {
+            laws,
             world,
             topology,
             tick: 0,
@@ -348,9 +372,13 @@ impl RedstoneTickSimulator {
             event_queue: SimulationEventQueue::default(),
             pending_boundary: None,
             repeater_powered: devices.repeater_powered,
-            repeater_queues,
+            repeater_states,
+            torch_states: devices
+                .torch_lit
+                .iter()
+                .map(|(pos, lit)| (*pos, torch_law::initial(*lit)))
+                .collect(),
             torch_lit: devices.torch_lit,
-            torch_toggle_ticks: BTreeMap::new(),
             torch_burnout_candidates: BTreeSet::new(),
             comparator_output: devices.comparator_output,
             comparator_queues,
@@ -363,6 +391,28 @@ impl RedstoneTickSimulator {
             instantaneous,
         };
         simulator.observer_observations = simulator.observer_states();
+        simulator.notify_torches();
+        Ok(simulator)
+    }
+
+    /// The compatibility world's complete law and execution assumptions.
+    /// Device output caches, timers and observations remain per simulator.
+    #[must_use]
+    pub fn execution_context(&self) -> WorldExecutionContext {
+        let mut context = self.laws.context.clone();
+        context.scheduler = Some(self.scheduler_profile);
+        context
+    }
+
+    /// Constructs this existing model after validating its entire contract.
+    /// Other models and invented initial histories cannot be substituted.
+    pub fn new_in_context(world: World, context: &WorldExecutionContext) -> Result<Self, String> {
+        if context.profile != WorldExecutionProfile::RedstoneCompatibilityBoundaryV1 {
+            return Err("compatibility simulator requires its compatibility world profile".into());
+        }
+        context.validate()?;
+        let mut simulator = Self::new(world).map_err(|error| error.to_string())?;
+        simulator.scheduler_profile = context.scheduler.expect("validated scheduler");
         Ok(simulator)
     }
 
@@ -411,7 +461,15 @@ impl RedstoneTickSimulator {
     pub fn settle_instantaneous(&mut self) -> Result<TickState, InstantaneousSolveDidNotConverge> {
         self.instantaneous =
             solve_instantaneous_with_topology(&self.world, &self.devices(), 128, &self.topology)?;
+        self.notify_torches();
         Ok(self.snapshot())
+    }
+
+    fn notify_torches(&mut self) {
+        for (pos, state) in &mut self.torch_states {
+            let powered = torch_support_is_powered(&self.world, *pos, &self.instantaneous);
+            *state = torch_law::notify(state, powered);
+        }
     }
 
     #[must_use]
@@ -439,10 +497,12 @@ impl RedstoneTickSimulator {
     pub fn has_pending_events(&self) -> bool {
         !self.event_queue.is_empty()
             || self.pending_boundary.is_some()
-            || self.repeater_queues.iter().any(|(pos, queue)| {
-                queue
-                    .iter()
-                    .any(|value| self.repeater_powered.get(pos).copied() != Some(*value))
+            || self
+                .torch_states
+                .values()
+                .any(|state| state.pending_game_ticks().is_some())
+            || self.repeater_states.iter().any(|(pos, state)| {
+                !self.repeater_powered.contains_key(pos) || state.has_pending_output()
             })
             || self.comparator_queues.iter().any(|(pos, queue)| {
                 queue
@@ -499,6 +559,7 @@ impl RedstoneTickSimulator {
                     128,
                     &self.topology,
                 )?;
+                self.notify_torches();
             }
             SimulationEventKind::LampUpdate => self.apply_lamp_update(),
         }
@@ -520,7 +581,7 @@ impl RedstoneTickSimulator {
         self.tick = self.tick.saturating_add(1);
         let before_observers = self.observer_observations.clone();
 
-        let mut repeater_requested = BTreeMap::new();
+        let mut next_repeater_states = BTreeMap::new();
         let mut next_repeaters = BTreeMap::new();
         for (pos, block) in self.world.iter() {
             if block.kind != BlockKind::Repeater {
@@ -537,34 +598,31 @@ impl RedstoneTickSimulator {
                             && comparator_output_pos(&self.world, side) == Some(*pos)
                 })
             });
-            if locked {
-                next_repeaters.insert(
-                    *pos,
-                    self.repeater_powered.get(pos).copied().unwrap_or(false),
-                );
-                continue;
-            }
-            repeater_requested.insert(*pos, requested);
-            let mut queue = self
-                .repeater_queues
-                .get(pos)
-                .cloned()
-                .expect("repeater queue initialized");
-            queue.pop_front();
-            queue.push_back(requested);
-            next_repeaters.insert(*pos, queue.front().copied().unwrap_or(requested));
+            let next = self
+                .laws
+                .repeater
+                .boundary(
+                    self.repeater_states
+                        .get(pos)
+                        .expect("repeater state initialized"),
+                    requested,
+                    locked,
+                )
+                .expect("pinned repeater law accepts sampled Boolean inputs");
+            next_repeaters.insert(*pos, next.powered());
+            next_repeater_states.insert(*pos, next);
         }
 
-        let next_torches: BTreeMap<_, _> = self
-            .world
+        // The compatibility boundary spans two game ticks. The pinned program
+        // executes both, retaining its history and pending recovery event.
+        let next_torch_states: BTreeMap<_, _> = self
+            .torch_states
             .iter()
-            .filter(|(_, block)| block.kind == BlockKind::RedstoneTorch)
-            .map(|(pos, _)| {
-                (
-                    *pos,
-                    !torch_support_is_powered(&self.world, *pos, &self.instantaneous),
-                )
-            })
+            .map(|(pos, state)| (*pos, torch_law::advance(&torch_law::advance(state))))
+            .collect();
+        let next_torches = next_torch_states
+            .iter()
+            .map(|(pos, state)| (*pos, torch_law::lit(state)))
             .collect();
 
         let mut comparator_requested = BTreeMap::new();
@@ -576,23 +634,16 @@ impl RedstoneTickSimulator {
             let rear = comparator_input_pos(&self.world, *pos)
                 .map(|input| electrical_level_at(input, &self.instantaneous))
                 .unwrap_or(0);
-            let side = device_side_positions(&self.world, *pos)
-                .map(|sides| {
-                    sides
-                        .into_iter()
-                        .map(|side| electrical_level_at(side, &self.instantaneous))
-                        .max()
-                        .unwrap_or(0)
-                })
-                .unwrap_or(0);
-            let requested =
-                if block.observed_properties.get("mode").map(String::as_str) == Some("subtract") {
-                    rear.saturating_sub(side)
-                } else if rear >= side {
-                    rear
-                } else {
-                    0
-                };
+            let sides = device_side_positions(&self.world, *pos)
+                .map(|sides| sides.map(|side| electrical_level_at(side, &self.instantaneous)))
+                .unwrap_or([0, 0]);
+            let subtract =
+                block.observed_properties.get("mode").map(String::as_str) == Some("subtract");
+            let requested = self
+                .laws
+                .comparator
+                .evaluate(rear, sides, subtract)
+                .expect("pinned comparator law accepts the existing u8 input levels");
             comparator_requested.insert(*pos, requested);
             let mut queue = self
                 .comparator_queues
@@ -613,11 +664,12 @@ impl RedstoneTickSimulator {
         self.pending_boundary = Some(PendingBoundary {
             game_tick,
             before_observers,
-            repeater_requested,
+            next_repeater_states,
             next_repeaters,
             comparator_requested,
             next_comparators,
             next_torches,
+            next_torch_states,
             pending_observers,
             observers_to_off,
         });
@@ -702,14 +754,10 @@ impl RedstoneTickSimulator {
         let Some(pending) = self.pending_boundary.as_ref() else {
             return;
         };
-        for (pos, requested) in &pending.repeater_requested {
-            let queue = self
-                .repeater_queues
-                .get_mut(pos)
-                .expect("repeater queue initialized");
-            queue.pop_front();
-            queue.push_back(*requested);
-        }
+        // Observation mutations historically retain per-position queues. Keep
+        // that lifecycle; this migration does not invent device restart state.
+        self.repeater_states
+            .extend(pending.next_repeater_states.clone());
         self.repeater_powered = pending.next_repeaters.clone();
     }
 
@@ -729,29 +777,22 @@ impl RedstoneTickSimulator {
     }
 
     fn apply_torch_update(&mut self) {
-        let Some(next_torches) = self
+        let Some(next_states) = self
             .pending_boundary
             .as_ref()
-            .map(|pending| pending.next_torches.clone())
+            .map(|pending| pending.next_torch_states.clone())
         else {
             return;
         };
-        for (pos, next) in &next_torches {
-            if self.torch_lit.get(pos).copied() != Some(*next) {
-                let toggles = self.torch_toggle_ticks.entry(*pos).or_default();
-                toggles.push_back(self.tick);
-                while toggles
-                    .front()
-                    .is_some_and(|toggle_tick| self.tick.saturating_sub(*toggle_tick) > 30)
-                {
-                    toggles.pop_front();
-                }
-                if toggles.len() >= 8 {
-                    self.torch_burnout_candidates.insert(*pos);
-                }
+        for (pos, state) in &next_states {
+            if torch_law::burnout_seen(state) {
+                // Retain the conservative public diagnostic; modeled evidence
+                // does not silently upgrade a scenario to live-world proof.
+                self.torch_burnout_candidates.insert(*pos);
             }
+            self.torch_lit.insert(*pos, torch_law::lit(state));
         }
-        self.torch_lit = next_torches;
+        self.torch_states = next_states;
     }
 
     fn apply_observer_pulse_end(&mut self) {
@@ -763,14 +804,17 @@ impl RedstoneTickSimulator {
             return;
         };
         for pos in positions {
-            if self.world.kind_at(pos) == BlockKind::Observer
-                && self
-                    .observer_off_deadline
-                    .get(&pos)
-                    .is_some_and(|deadline| *deadline <= self.tick)
+            let due = self
+                .observer_off_deadline
+                .get(&pos)
+                .is_some_and(|deadline| *deadline <= self.tick);
+            if let Some(action) = self
+                .laws
+                .observer
+                .end(self.world.kind_at(pos) == BlockKind::Observer, due)
+                .expect("pinned observer end law")
             {
-                self.observer_powered.insert(pos, false);
-                self.observer_off_deadline.remove(&pos);
+                self.apply_observer_action(pos, action);
             }
         }
     }
@@ -784,10 +828,27 @@ impl RedstoneTickSimulator {
             return;
         };
         for pos in positions {
-            if self.world.kind_at(pos) == BlockKind::Observer {
-                self.observer_powered.insert(pos, true);
+            if let Some(action) = self
+                .laws
+                .observer
+                .start(self.world.kind_at(pos) == BlockKind::Observer)
+                .expect("pinned observer start law")
+            {
+                self.apply_observer_action(pos, action);
+            }
+        }
+    }
+
+    fn apply_observer_action(&mut self, pos: Pos, action: ObserverPulseAction) {
+        self.observer_powered.insert(pos, action.powered);
+        match action.deadline {
+            ObserverDeadline::Keep => {}
+            ObserverDeadline::SetAfter(delay) => {
                 self.observer_off_deadline
-                    .insert(pos, self.tick.saturating_add(1));
+                    .insert(pos, self.tick.saturating_add(u64::from(delay)));
+            }
+            ObserverDeadline::Clear => {
+                self.observer_off_deadline.remove(&pos);
             }
         }
     }
@@ -797,16 +858,24 @@ impl RedstoneTickSimulator {
             if block.kind != BlockKind::RedstoneLamp {
                 continue;
             }
-            if self.instantaneous.power(*pos).powered() {
-                self.lamp_lit.insert(*pos, true);
-                self.lamp_off_deadline.remove(pos);
-            } else if self.lamp_lit.get(pos).copied().unwrap_or(false) {
-                let deadline = *self
-                    .lamp_off_deadline
-                    .entry(*pos)
-                    .or_insert(self.tick.saturating_add(2));
-                if self.tick >= deadline {
-                    self.lamp_lit.insert(*pos, false);
+            let action = self.laws.lamp.boundary(
+                self.instantaneous.power(*pos).powered(),
+                self.lamp_lit.get(pos).copied().unwrap_or(false),
+                self.lamp_off_deadline
+                    .get(pos)
+                    .map(|deadline| *deadline <= self.tick),
+                self.tick == u64::MAX,
+            );
+            if let Some(lit) = action.lit {
+                self.lamp_lit.insert(*pos, lit);
+            }
+            match action.deadline {
+                LampDeadline::Keep => {}
+                LampDeadline::SetAfter(delay) => {
+                    self.lamp_off_deadline
+                        .insert(*pos, self.tick.saturating_add(u64::from(delay)));
+                }
+                LampDeadline::Clear => {
                     self.lamp_off_deadline.remove(pos);
                 }
             }
@@ -1142,7 +1211,26 @@ impl RedstoneTickSimulator {
     fn record_observer_changes(&mut self, before: &BTreeMap<Pos, ObserverObservedState>) {
         let after = self.observer_states();
         for (pos, state) in &after {
-            if before.get(pos).is_some_and(|previous| previous != state) {
+            let previous = before.get(pos);
+            let changes = previous
+                .map(|previous| ObserverChanges {
+                    block_record: previous.block != state.block,
+                    signal: previous.signal != state.signal,
+                    weak: previous.power.weak != state.power.weak,
+                    strong: previous.power.strong != state.power.strong,
+                    repeater: previous.repeater_powered != state.repeater_powered,
+                    torch: previous.torch_lit != state.torch_lit,
+                    comparator: previous.comparator_output != state.comparator_output,
+                    observer: previous.observer_powered != state.observer_powered,
+                    lamp: previous.lamp_lit != state.lamp_lit,
+                })
+                .unwrap_or_default();
+            if self
+                .laws
+                .observer
+                .should_notify(previous.is_some(), changes)
+                .expect("pinned observer change law")
+            {
                 self.observer_pending.insert(*pos);
             }
         }
@@ -1293,6 +1381,40 @@ mod tests {
                 .strength(Pos::new(1, 0, 0)),
             0
         );
+    }
+
+    #[test]
+    fn observer_adapter_preserves_every_observed_field_and_missing_baselines() {
+        let observer = Pos::new(1, 1, 0);
+        let mut world = World::new();
+        world.place(BlockKind::Observer, observer).facing = Some(Facing::East);
+        world.set(Pos::new(0, 1, 0), Block::new(BlockKind::Solid));
+        let mut sim = RedstoneTickSimulator::new(world).unwrap();
+        let actual = sim.observer_states();
+        for field in 0..9 {
+            let mut before = actual.clone();
+            let previous = before.get_mut(&observer).unwrap();
+            match field {
+                0 => previous.block = None,
+                1 => previous.signal = 1,
+                2 => previous.power.weak = 1,
+                3 => previous.power.strong = 1,
+                4 => previous.repeater_powered = !previous.repeater_powered,
+                5 => previous.torch_lit = !previous.torch_lit,
+                6 => previous.comparator_output = 1,
+                7 => previous.observer_powered = !previous.observer_powered,
+                8 => previous.lamp_lit = !previous.lamp_lit,
+                _ => unreachable!(),
+            }
+            sim.observer_pending.clear();
+            sim.record_observer_changes(&before);
+            assert!(sim.observer_pending.contains(&observer), "field {field}");
+        }
+        for before in [&actual, &BTreeMap::new()] {
+            sim.observer_pending.clear();
+            sim.record_observer_changes(before);
+            assert!(sim.observer_pending.is_empty());
+        }
     }
 
     #[test]
@@ -1496,6 +1618,28 @@ mod tests {
     }
 
     #[test]
+    fn lamp_world_adapter_retains_saturating_expiry_at_the_last_tick() {
+        let pos = Pos::new(0, 0, 0);
+        let mut world = World::new();
+        world.place(BlockKind::RedstoneLamp, pos);
+        let mut sim = RedstoneTickSimulator::new(world).unwrap();
+        sim.lamp_lit.insert(pos, true);
+        sim.tick = u64::MAX - 1;
+        sim.apply_lamp_update();
+        assert!(sim.lamp_lit[&pos]);
+        assert_eq!(sim.lamp_off_deadline[&pos], u64::MAX);
+        sim.tick = u64::MAX;
+        sim.apply_lamp_update();
+        assert!(!sim.lamp_lit[&pos]);
+        assert!(!sim.lamp_off_deadline.contains_key(&pos));
+        // A newly requested deadline at MAX saturates and expires immediately.
+        sim.lamp_lit.insert(pos, true);
+        sim.apply_lamp_update();
+        assert!(!sim.lamp_lit[&pos]);
+        assert!(!sim.lamp_off_deadline.contains_key(&pos));
+    }
+
+    #[test]
     fn input_mutations_reject_missing_or_non_input_blocks() {
         let mut world = World::new();
         world.set(Pos::new(0, 0, 0), Block::new(BlockKind::Solid));
@@ -1534,11 +1678,14 @@ mod tests {
         let torch = world.place(BlockKind::RedstoneTorch, Pos::new(1, 0, 0));
         torch.support_offset = Some(Pos::new(-1, 0, 0));
         let mut simulator = RedstoneTickSimulator::new(world).unwrap();
-        for tick in 0..8 {
+        for tick in 0..16 {
             simulator
                 .set_powered(Pos::new(-1, 0, 0), tick % 2 == 0)
                 .unwrap();
             simulator.advance_tick().unwrap();
+            if tick < 14 {
+                assert!(simulator.snapshot().torch_burnout_candidates.is_empty());
+            }
         }
         assert!(
             simulator
@@ -1546,5 +1693,14 @@ mod tests {
                 .torch_burnout_candidates
                 .contains(&Pos::new(1, 0, 0))
         );
+        assert!(!simulator.snapshot().torch_lit[&Pos::new(1, 0, 0)]);
+        assert!(simulator.has_pending_events());
+        while simulator.snapshot().tick < 94 {
+            simulator.advance_tick().unwrap();
+        }
+        assert!(!simulator.snapshot().torch_lit[&Pos::new(1, 0, 0)]);
+        simulator.advance_tick().unwrap();
+        assert!(simulator.snapshot().torch_lit[&Pos::new(1, 0, 0)]);
+        assert!(!simulator.has_pending_events());
     }
 }

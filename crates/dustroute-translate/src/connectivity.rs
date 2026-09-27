@@ -142,8 +142,9 @@ pub fn repeater_input_pos(world: &World, pos: Pos) -> Option<Pos> {
     if block.kind != BlockKind::Repeater {
         return None;
     }
-    let delta = block.facing?.opposite().horizontal_offset()?;
-    Some(pos.offset(delta.x, 0, delta.z))
+    let delta =
+        dustroute_minecraft::spatial::builtin_spatial_laws().directional_offset(block, true)?;
+    Some(pos.offset(delta.x, delta.y, delta.z))
 }
 
 #[must_use]
@@ -152,8 +153,9 @@ pub fn repeater_output_pos(world: &World, pos: Pos) -> Option<Pos> {
     if block.kind != BlockKind::Repeater {
         return None;
     }
-    let delta = block.facing?.horizontal_offset()?;
-    Some(pos.offset(delta.x, 0, delta.z))
+    let delta =
+        dustroute_minecraft::spatial::builtin_spatial_laws().directional_offset(block, false)?;
+    Some(pos.offset(delta.x, delta.y, delta.z))
 }
 
 #[must_use]
@@ -162,8 +164,9 @@ pub fn comparator_input_pos(world: &World, pos: Pos) -> Option<Pos> {
     if block.kind != BlockKind::Comparator {
         return None;
     }
-    let delta = block.facing?.opposite().horizontal_offset()?;
-    Some(pos.offset(delta.x, 0, delta.z))
+    let delta =
+        dustroute_minecraft::spatial::builtin_spatial_laws().directional_offset(block, true)?;
+    Some(pos.offset(delta.x, delta.y, delta.z))
 }
 
 #[must_use]
@@ -172,8 +175,9 @@ pub fn comparator_output_pos(world: &World, pos: Pos) -> Option<Pos> {
     if block.kind != BlockKind::Comparator {
         return None;
     }
-    let delta = block.facing?.horizontal_offset()?;
-    Some(pos.offset(delta.x, 0, delta.z))
+    let delta =
+        dustroute_minecraft::spatial::builtin_spatial_laws().directional_offset(block, false)?;
+    Some(pos.offset(delta.x, delta.y, delta.z))
 }
 
 /// Position observed by an observer. `Block::facing` uses the common
@@ -185,7 +189,8 @@ pub fn observer_input_pos(world: &World, pos: Pos) -> Option<Pos> {
     if block.kind != BlockKind::Observer {
         return None;
     }
-    let delta = block.facing?.opposite().offset();
+    let delta =
+        dustroute_minecraft::spatial::builtin_spatial_laws().directional_offset(block, true)?;
     Some(pos.offset(delta.x, delta.y, delta.z))
 }
 
@@ -196,7 +201,8 @@ pub fn observer_output_pos(world: &World, pos: Pos) -> Option<Pos> {
     if block.kind != BlockKind::Observer {
         return None;
     }
-    let delta = block.facing?.offset();
+    let delta =
+        dustroute_minecraft::spatial::builtin_spatial_laws().directional_offset(block, false)?;
     Some(pos.offset(delta.x, delta.y, delta.z))
 }
 
@@ -295,7 +301,8 @@ pub fn physical_step(world: &World, source: Pos, sink: Pos) -> Option<PhysicalSt
             .get(sink)
             .is_some_and(|block| block.redstone_traits().conducts_weak_power)
     {
-        (sink == source.offset(0, -1, 0) || horizontal_facing_between(source, sink).is_some())
+        crate::electrical::dust_weak_power_targets(world, source)
+            .contains(&sink)
             .then_some(PhysicalStepKind::DustToBlock)
     } else if a.properties().repeater_reads_block_power && b == BlockKind::Repeater {
         (repeater_input_pos(world, sink) == Some(source))
@@ -314,14 +321,9 @@ pub fn physical_step(world: &World, source: Pos, sink: Pos) -> Option<PhysicalSt
     {
         (comparator_output_pos(world, source) == Some(sink))
             .then_some(PhysicalStepKind::ComparatorToBlock)
-    } else if matches!(
-        a,
-        BlockKind::RedstoneBlock
-            | BlockKind::Lever
-            | BlockKind::Button
-            | BlockKind::PressurePlate
-            | BlockKind::RedstoneTorch
-    ) && b == BlockKind::RedstoneWire
+    } else if dustroute_minecraft::spatial::builtin_spatial_laws().direct_power(a)
+        == dustroute_minecraft::spatial::DirectPower::Adjacent
+        && b == BlockKind::RedstoneWire
     {
         horizontal_facing_between(source, sink)
             .filter(|facing| wire_has_arm(world, sink, facing.opposite()))

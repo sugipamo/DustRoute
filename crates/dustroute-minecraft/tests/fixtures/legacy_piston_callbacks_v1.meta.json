@@ -1,0 +1,9 @@
+{
+  "kind": "pre_unification_model_regression",
+  "captured_on": "2026-09-26",
+  "rows": 60,
+  "sha256": "cb71c0229db0ebebcd69ad6aaea28e52934c954906c1f5b317c11d63811ea08d",
+  "scope": "Historical directional model behavior, not Vanilla observations. Six facings, normal/sticky variants, OFF at ticks 1/2/3/8 after ON at tick 1, plus ON again at tick 9 after OFF at tick 8. Every delivered invocation time/kind/target/result, visible delta and carrier-history change; notification/continuation payloads are summarized. Final world and pending count retained.",
+  "regenerate_policy": "Do not regenerate to bless unified-profile behavior. A new profile needs separate expected results.",
+  "command": "cargo run -q -p dustroute-minecraft --example audit_legacy_piston_callbacks"
+}

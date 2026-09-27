@@ -7,7 +7,10 @@ use std::ops::Deref;
 
 use serde::Serialize;
 
-use crate::{BlockKind, CapabilityLevel, Facing, Pos, World};
+use crate::{Block, BlockKind, CapabilityLevel, Facing, Pos, World};
+
+mod wire_rise;
+pub use wire_rise::wire_rise_issues;
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 #[serde(tag = "code", rename_all = "snake_case")]
@@ -24,6 +27,16 @@ pub enum WorldValidationIssue {
     InvalidState {
         position: Pos,
         reason: String,
+    },
+    InvalidWireConnection {
+        position: Pos,
+        facing: Facing,
+        reason: String,
+    },
+    UnknownWireConnection {
+        position: Pos,
+        facing: Facing,
+        required_positions: Vec<Pos>,
     },
     SyntheticInputDriver {
         reason: String,
@@ -62,6 +75,8 @@ impl std::error::Error for WorldValidationError {}
 pub struct ValidatedWorld(World);
 
 impl ValidatedWorld {
+    pub const PROFILE: &'static str = "dustroute.initial-placement.explicit-wire-rise.v2";
+
     #[must_use]
     pub fn into_world(self) -> World {
         self.0
@@ -93,6 +108,28 @@ impl World {
     /// positions or block-state properties are invented to make a world pass.
     #[must_use]
     pub fn placement_issues(&self) -> Vec<WorldValidationIssue> {
+        self.placement_issues_with_lookup(|position| {
+            Some(
+                self.get(position)
+                    .cloned()
+                    .unwrap_or_else(|| Block::new(BlockKind::Air)),
+            )
+        })
+    }
+
+    /// Check a partial snapshot without replacing unobserved neighbors with air.
+    /// Existing support diagnostics retain their explicit support position;
+    /// wire diagnostics identify any additional missing physical evidence.
+    pub fn placement_issues_with_lookup(
+        &self,
+        block_at: impl Fn(Pos) -> Option<Block>,
+    ) -> Vec<WorldValidationIssue> {
+        let mut issues = self.placement_issues_v1();
+        issues.extend(wire_rise_issues(self, block_at));
+        issues
+    }
+
+    fn placement_issues_v1(&self) -> Vec<WorldValidationIssue> {
         let mut issues: Vec<_> = self
             .support_issues()
             .into_iter()
@@ -125,13 +162,8 @@ impl World {
                 if !adjacent {
                     invalid("support must be immediately adjacent");
                 }
-                if matches!(
-                    block.kind,
-                    BlockKind::RedstoneWire
-                        | BlockKind::Repeater
-                        | BlockKind::Comparator
-                        | BlockKind::PressurePlate
-                ) && offset != Pos::new(0, -1, 0)
+                if crate::spatial::builtin_spatial_laws().requires_support_below(block.kind)
+                    && offset != Pos::new(0, -1, 0)
                 {
                     invalid("this component requires support directly below");
                 }
@@ -158,6 +190,48 @@ impl World {
             }
         }
         issues
+    }
+}
+
+/// Historical initial-placement proof for the two existing v1 physical
+/// behavior profiles. It cannot authorize current placement or adoption.
+/// Raw observations and old model replay remain available even when a newer
+/// validator rejects the same geometry.
+///
+/// ```compile_fail
+/// use dustroute_minecraft::{HistoricalPlacementV1, ValidatedWorld, World};
+/// let historical = HistoricalPlacementV1::try_from(World::new()).unwrap();
+/// let current: ValidatedWorld = historical;
+/// ```
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HistoricalPlacementV1(World);
+
+impl HistoricalPlacementV1 {
+    pub const PROFILE: &'static str = "dustroute.initial-placement.v1";
+
+    #[must_use]
+    pub fn into_world(self) -> World {
+        self.0
+    }
+}
+
+impl Deref for HistoricalPlacementV1 {
+    type Target = World;
+    fn deref(&self) -> &World {
+        &self.0
+    }
+}
+
+impl TryFrom<World> for HistoricalPlacementV1 {
+    type Error = WorldValidationError;
+
+    fn try_from(world: World) -> Result<Self, Self::Error> {
+        let issues = world.placement_issues_v1();
+        if issues.is_empty() {
+            Ok(Self(world))
+        } else {
+            Err(WorldValidationError { issues })
+        }
     }
 }
 
