@@ -83,14 +83,7 @@ pub(super) fn preprocess(
         }),
         ..Default::default()
     };
-    if block.kind == BlockKind::Observer {
-        out.queued = super::devices::observer_shape_ticks(
-            view,
-            pos,
-            block,
-            block.facing == Some(direction.opposite()),
-        )?;
-    }
+    out.queued = super::devices::preprocess(view, pos, block, along(pos, *direction, 1)?)?;
     Ok(out)
 }
 
@@ -117,19 +110,20 @@ pub(super) fn added(
 ) -> Result<RuntimeOutcome<PistonEvent>, RuntimeError> {
     let block = view.block(pos)?;
     let mut jobs = VecDeque::new();
-    match block.kind {
-        BlockKind::Observer => {
-            let mut out = super::devices::observer(
-                view,
+    if crate::device_program::program(block.kind).is_some() {
+        return Ok(RuntimeOutcome {
+            callbacks: vec![super::devices::event(
                 pos,
-                crate::device_callback_law::ObserverCallback::Added,
-                false,
-            )?;
-            out.continuation = Some(PistonEvent::ElectricalAfterAdded {
+                crate::device_program::Callback::Added,
+                None,
+            )],
+            continuation: Some(PistonEvent::ElectricalAfterAdded {
                 block: Box::new(block),
-            });
-            return Ok(out);
-        }
+            }),
+            ..Default::default()
+        });
+    }
+    match block.kind {
         BlockKind::Piston => jobs.push_back(NeighborJob {
             target: pos,
             source: pos,
@@ -239,8 +233,8 @@ pub(super) fn removed(
     before: &Block,
 ) -> Result<RuntimeOutcome<PistonEvent>, RuntimeError> {
     let mut jobs = VecDeque::new();
+    jobs.extend(super::devices::removed_jobs(view, pos, before)?);
     match before.kind {
-        BlockKind::Observer => jobs.extend(super::devices::removed_jobs(view, pos, before)?),
         BlockKind::Repeater => jobs.extend(repeater_jobs_for(view, pos, before)?),
         BlockKind::Lever if before.powered == Some(true) => {
             jobs.extend(adjacent_jobs(view, pos, false, false)?);

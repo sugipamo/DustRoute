@@ -1,6 +1,40 @@
 //! Local callback law checks against directly instrumented target decisions.
 //! Delivery conformance is checked separately against retained runtime traces.
-use dustroute_minecraft::device_callback_law::{ObserverCallback, builtin_laws};
+use dustroute_minecraft::device_program::{Callback, Query, ResolvedEffect, program};
+use dustroute_minecraft::{Block, BlockKind};
+
+fn decision(callback: Callback, powered: bool, queued: bool, front: bool) -> Vec<ResolvedEffect> {
+    let mut block = Block::new(BlockKind::Observer);
+    block.powered = Some(powered);
+    program(block.kind)
+        .unwrap()
+        .prepare(callback, &block, |query| {
+            Ok(match query {
+                Query::Constant { value } => *value,
+                Query::Powered => powered.into(),
+                Query::TickQueued => queued.into(),
+                Query::SourceAtFront => front.into(),
+                Query::ReceivingPower => panic!("observer must not sample receiver power"),
+            })
+        })
+        .unwrap()
+        .unwrap()
+        .effects()
+        .to_vec()
+}
+fn delay(effects: &[ResolvedEffect]) -> u64 {
+    effects
+        .iter()
+        .find_map(|effect| {
+            if let ResolvedEffect::Schedule { delay, .. } = effect {
+                Some(*delay)
+            } else {
+                None
+            }
+        })
+        .unwrap_or(0)
+}
+
 use serde_json::Value;
 
 #[test]
@@ -23,17 +57,16 @@ fn recorded_shape_admission_and_pulse_writes_agree_with_native_observer_law() {
                 let state = event["argument_state"].as_str().unwrap();
                 let powered = state.contains("powered=true");
                 let front = state.contains(&format!("facing={}", event["side"].as_str().unwrap()));
-                let effect =
-                    builtin_laws().observer(ObserverCallback::Shape, powered, queued, front);
+                let effect = decision(Callback::Shape, powered, queued, front);
                 if front && !powered {
                     assert_eq!(events[index + 1]["event"], "schedule_before");
                     assert_eq!(events[index + 2]["event"], "schedule_after");
                     assert_eq!(events[index + 1]["position"], event["position"]);
                     assert_eq!(events[index + 1]["queued"], queued);
                     assert_eq!(events[index + 2]["queued"], true);
-                    assert_eq!(effect.delay, if queued { 0 } else { 2 });
+                    assert_eq!(delay(&effect), if queued { 0 } else { 2 });
                 } else {
-                    assert_eq!(effect.delay, 0);
+                    assert_eq!(delay(&effect), 0);
                     assert_ne!(
                         events.get(index + 1).map(|e| &e["event"]),
                         Some(&Value::from("schedule_before"))
@@ -49,8 +82,7 @@ fn recorded_shape_admission_and_pulse_writes_agree_with_native_observer_law() {
                     event["ticking"], false,
                     "executing tick has left ready batch"
                 );
-                let effect =
-                    builtin_laws().observer(ObserverCallback::Tick, powered, queued, false);
+                let effect = decision(Callback::Tick, powered, queued, false);
                 let write = commits
                     .iter()
                     .find(|c| {
@@ -70,9 +102,20 @@ fn recorded_shape_admission_and_pulse_writes_agree_with_native_observer_law() {
                         == "true"
                 };
                 assert_eq!(property("before"), powered);
-                assert!(effect.write && effect.notify);
-                assert_eq!(property("after"), effect.powered);
-                assert_eq!(effect.delay, if powered { 0 } else { 2 });
+                assert!(
+                    effect
+                        .iter()
+                        .any(|e| matches!(e, ResolvedEffect::Notify { .. }))
+                );
+                let next_powered = effect
+                    .iter()
+                    .find_map(|e| match e {
+                        ResolvedEffect::WritePower { powered, .. } => Some(*powered),
+                        _ => None,
+                    })
+                    .expect("observed write");
+                assert_eq!(property("after"), next_powered);
+                assert_eq!(delay(&effect), if powered { 0 } else { 2 });
             }
             "schedule_before" | "schedule_after" => {}
             other => panic!("unexpected observation {other}"),

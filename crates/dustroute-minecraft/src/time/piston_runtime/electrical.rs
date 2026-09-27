@@ -45,18 +45,29 @@ pub(super) fn wire_offset_jobs(
 pub(super) fn validate_scope(view: RuntimeView<'_>, fresh: bool) -> Result<(), RuntimeError> {
     let electrical = world(view)?;
     for (pos, block) in view.world().iter() {
-        if fresh && block.kind == BlockKind::Observer && block.powered == Some(true) {
-            return Err(unsupported(
-                "powered observer needs its pending history; resume a checkpoint",
-            ));
-        }
-        match block.kind {
-            BlockKind::RedstoneLamp => {
+        if let Some(program) = crate::device_program::program(block.kind) {
+            let definition = &program.definition;
+            if fresh && definition.fresh_powered_requires_history && block.powered == Some(true) {
+                return Err(unsupported(
+                    "powered device needs its pending history; resume a checkpoint",
+                ));
+            }
+            if definition.handlers.values().any(|h| {
+                h.inputs
+                    .iter()
+                    .any(|i| matches!(i.sample, crate::device_program::Query::ReceivingPower))
+            }) {
                 electrical.receiving_power(*pos)?;
             }
-            BlockKind::Observer => {
-                repeater_jobs_for(view, *pos, block)?;
+            for handler in definition.handlers.values() {
+                for effect in &handler.effects {
+                    if let crate::device_program::Effect::Notify { targets, .. } = effect {
+                        super::devices::notification_jobs(view, *pos, block, *targets)?;
+                    }
+                }
             }
+        }
+        match block.kind {
             BlockKind::Piston => {
                 electrical.piston_powered(*pos)?;
             }
@@ -81,7 +92,9 @@ pub(super) fn validate_scope(view: RuntimeView<'_>, fresh: bool) -> Result<(), R
         if matches!(
             block.kind,
             BlockKind::Lever | BlockKind::RedstoneWire | BlockKind::Repeater
-        ) {
+        ) || crate::device_program::program(block.kind).is_some_and(|p| {
+            p.definition.orientation == crate::device_program::Orientation::Attached
+        }) {
             let offset = block
                 .support_offset
                 .ok_or_else(|| unsupported("electrical support required"))?;

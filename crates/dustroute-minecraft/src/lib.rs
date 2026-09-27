@@ -7,6 +7,7 @@ pub mod blocks;
 pub mod comparator_law;
 mod delta;
 pub mod device_callback_law;
+pub mod device_program;
 pub mod dust_law;
 pub mod execution_context;
 pub mod lamp_law;

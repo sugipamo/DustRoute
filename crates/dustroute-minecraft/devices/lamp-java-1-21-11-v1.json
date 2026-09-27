@@ -1,0 +1,143 @@
+{
+  "id": "dustroute.device.lamp.java-1-21-11.v1",
+  "kind": "RedstoneLamp",
+  "observed_names": [
+    "redstone_lamp"
+  ],
+  "law": "dustroute.law.lamp.callback.java-1-21-11.v1",
+  "power_property": "lit",
+  "orientation": "none",
+  "signal": "none",
+  "conducts": true,
+  "full_support": true,
+  "fresh_powered_requires_history": false,
+  "initial_neighbor_update": true,
+  "preprocess_shapes": false,
+  "handlers": {
+    "neighbor": {
+      "inputs": [
+        {
+          "name": "lit",
+          "maximum": 1,
+          "sample": {
+            "query": "powered"
+          }
+        },
+        {
+          "name": "input",
+          "maximum": 1,
+          "sample": {
+            "query": "receiving_power"
+          }
+        },
+        {
+          "name": "scheduled",
+          "maximum": 1,
+          "sample": {
+            "query": "constant",
+            "value": 0
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "write",
+          "maximum": 1
+        },
+        {
+          "name": "lit",
+          "maximum": 1
+        },
+        {
+          "name": "delay",
+          "maximum": 4
+        }
+      ],
+      "effects": [
+        {
+          "effect": "write_power",
+          "when": {
+            "value": "output",
+            "name": "write"
+          },
+          "powered": {
+            "value": "output",
+            "name": "lit"
+          },
+          "notifications": "shapes"
+        },
+        {
+          "effect": "schedule",
+          "delay": {
+            "value": "output",
+            "name": "delay"
+          },
+          "priority": 3
+        }
+      ]
+    },
+    "tick": {
+      "inputs": [
+        {
+          "name": "lit",
+          "maximum": 1,
+          "sample": {
+            "query": "powered"
+          }
+        },
+        {
+          "name": "input",
+          "maximum": 1,
+          "sample": {
+            "query": "receiving_power"
+          }
+        },
+        {
+          "name": "scheduled",
+          "maximum": 1,
+          "sample": {
+            "query": "constant",
+            "value": 1
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "write",
+          "maximum": 1
+        },
+        {
+          "name": "lit",
+          "maximum": 1
+        },
+        {
+          "name": "delay",
+          "maximum": 4
+        }
+      ],
+      "effects": [
+        {
+          "effect": "write_power",
+          "when": {
+            "value": "output",
+            "name": "write"
+          },
+          "powered": {
+            "value": "output",
+            "name": "lit"
+          },
+          "notifications": "shapes"
+        },
+        {
+          "effect": "schedule",
+          "delay": {
+            "value": "output",
+            "name": "delay"
+          },
+          "priority": 3
+        }
+      ]
+    }
+  },
+  "command_initialization": null
+}

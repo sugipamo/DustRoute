@@ -1,0 +1,377 @@
+{
+  "schema_version": "dustroute.device-program-migration-checks.v1",
+  "status": "passed",
+  "base_commit": "8e56da75c25900ee25e5b4ef6dbeb8ee374e69f4",
+  "branch": "codex/data-driven-block-runtime",
+  "runtime_profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v7",
+  "device_program_revision": "dustroute.device-programs.java-1-21-11.v1",
+  "rust_unique_passed": 307,
+  "rust_failed": 0,
+  "python_passed": 14,
+  "checks": [
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-minecraft",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 26.61,
+      "log": ".local/e2e-artifacts/data-driven-runtime-20260927/check-0.log",
+      "log_sha256": "6e0645c5397003dea2cf4f26fa4ce8d4204758190861064ee57c65f55e559fca",
+      "passed_in_this_invocation": 234
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-library",
+        "--test",
+        "execution_context",
+        "--test",
+        "executable_laws",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 6.76,
+      "log": ".local/e2e-artifacts/data-driven-runtime-20260927/check-1.log",
+      "log_sha256": "0b30bd829234c8a94945f130c2b5d331067a38c046cba8841c9fff779b2613b5",
+      "passed_in_this_invocation": 18
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-translate",
+        "--test",
+        "native_device_observations",
+        "--test",
+        "execution_context",
+        "--test",
+        "electrical_piston_construction",
+        "--test",
+        "command_placement_regression",
+        "--test",
+        "ordinary_reference_door",
+        "--test",
+        "electrical_piston_relocation",
+        "--test",
+        "runtime_adoption",
+        "--test",
+        "unified_piston_behavior",
+        "--test",
+        "location_behavior",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 105.76,
+      "log": ".local/e2e-artifacts/data-driven-runtime-20260927/check-2.log",
+      "log_sha256": "f6c94062666beedb846275e4117ccbce4cee6587fd763f37179829ce6fd52de7",
+      "passed_in_this_invocation": 40
+    },
+    {
+      "command": [
+        "cargo",
+        "build",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-translate",
+        "--example",
+        "compare_electrical_pistons"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 1.35,
+      "log": ".local/e2e-artifacts/data-driven-runtime-20260927/check-3.log",
+      "log_sha256": "0f3aa4f6c5f0902bca877d1bed38394f4fb023959e66ee87ee0b42795d661760"
+    },
+    {
+      "command": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tools",
+        "-p",
+        "test_*.py"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 52.63,
+      "log": ".local/e2e-artifacts/data-driven-runtime-20260927/check-4.log",
+      "log_sha256": "181e9ef5e726ad0455762c13004bb2716d82694a48def8bcea28baa1ab834e4f"
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-mcp",
+        "--lib",
+        "service_blueprint_tests::",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 84.3,
+      "log": ".local/e2e-artifacts/data-driven-runtime-20260927/check-5.log",
+      "log_sha256": "d4a21d5e33767c1fbd81f5865b6d5b7873664a85ffe6379b05760145218efa4e",
+      "passed_in_this_invocation": 0,
+      "note": "Filter matched no tests; not counted as MCP validation. Corrected by final-3.log."
+    },
+    {
+      "command": [
+        "cargo",
+        "clippy",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "--workspace",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 53.11,
+      "log": ".local/e2e-artifacts/data-driven-runtime-20260927/check-6.log",
+      "log_sha256": "19e32695e9ac079093b6028410dbc8fd833b171bb5af8008d946d1f37c516aff"
+    },
+    {
+      "command": [
+        "cargo",
+        "fmt",
+        "--all"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 1.36,
+      "log": ".local/e2e-artifacts/data-driven-runtime-20260927/final-0.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-minecraft",
+        "--lib",
+        "--test",
+        "device_programs",
+        "--test",
+        "native_device_runtime",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 18.63,
+      "log": ".local/e2e-artifacts/data-driven-runtime-20260927/final-1.log",
+      "log_sha256": "9d47442634bfc2d7d56fa440058cfcfc2120c7a41b6d142d097575dec102b716",
+      "passed_in_this_invocation": 114
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-translate",
+        "--test",
+        "native_device_observations",
+        "--test",
+        "electrical_piston_construction",
+        "--test",
+        "command_placement_regression",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 35.03,
+      "log": ".local/e2e-artifacts/data-driven-runtime-20260927/final-2.log",
+      "log_sha256": "0a9664b3817d4cf2d3f27025f6232ca357f14b05ed8364018003bd12ea0f3ab7",
+      "passed_in_this_invocation": 8
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-mcp",
+        "--lib",
+        "service::blueprint_tests::",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 340.38,
+      "log": ".local/e2e-artifacts/data-driven-runtime-20260927/final-3.log",
+      "log_sha256": "e90264a3a253893d43307dc81eb2f0eaed36b2a88baf4557c79fbf1910f426e2",
+      "passed_in_this_invocation": 15
+    },
+    {
+      "command": [
+        "cargo",
+        "build",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-translate",
+        "--example",
+        "compare_electrical_pistons"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 1.56,
+      "log": ".local/e2e-artifacts/data-driven-runtime-20260927/final-4.log",
+      "log_sha256": "abb783a5d9a065d9ca59ef666a8b607a9a451a89bfc8d79907e22cb8dd040725"
+    },
+    {
+      "command": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tools",
+        "-p",
+        "test_*.py"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 47.89,
+      "log": ".local/e2e-artifacts/data-driven-runtime-20260927/final-5.log",
+      "log_sha256": "cb954522fee8133d8133af641c0f1dc7991466d4d7cd1c8f16b88a8e5951db84"
+    },
+    {
+      "command": [
+        "cargo",
+        "clippy",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "--workspace",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 25.15,
+      "log": ".local/e2e-artifacts/data-driven-runtime-20260927/final-6.log",
+      "log_sha256": "91266cb031859a8599a2c467d0278e14cea37658384633570fce071cca49fefd"
+    },
+    {
+      "command": [
+        "cargo",
+        "fmt",
+        "--all",
+        "--",
+        "--check"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 1.34,
+      "log": ".local/e2e-artifacts/data-driven-runtime-20260927/final-7.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.01,
+      "log": ".local/e2e-artifacts/data-driven-runtime-20260927/final-8.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "implementation_sha256": {
+    "crates/dustroute-library/src/runtime_behavior.rs": "2f9edd01f2b872a3585692e75ffa172ef275c407ab8f2042b0213aa6076e7a08",
+    "crates/dustroute-library/tests/executable_laws.rs": "8147976ac1d636bb2bde5f13ca1634225683c3e927204ac16615a2d28a3be2ae",
+    "crates/dustroute-library/tests/execution_context.rs": "da47a1ef5c74fdaf63726a7727d0fb3cb28353f4a0107a26f6990945b49710b4",
+    "crates/dustroute-mcp/src/service_blueprint_tests.rs": "8f2a414493f9765ffcdfb92fe08f3d1424a7f04de4887118921daca387855703",
+    "crates/dustroute-minecraft/src/device_callback_law.rs": "dc504b861dfc2c8dbda698f54b0000d3eda7c34cb7b618464a858272c98e571f",
+    "crates/dustroute-minecraft/src/execution_context.rs": "ba69b307be4d2657ecd6815a4243abe5c07a1dbe0711597cbe44f4dd831d5ebd",
+    "crates/dustroute-minecraft/src/lib.rs": "7fcc19e283f35d44e039d652d9677330f66aa75b87842e749b8cc31674e5fe55",
+    "crates/dustroute-minecraft/src/piston_electrical.rs": "706aaf0dee441dfe779e0a8a443d9d3fdc16dbf408fc5734a2c46ba42f98f1a9",
+    "crates/dustroute-minecraft/src/time/piston_runtime/adapter.rs": "d2be22144e0263424f1876d892d8ab4ce1058b62d027ffeff2a908bc6c7377e3",
+    "crates/dustroute-minecraft/src/time/piston_runtime/command.rs": "d8265e98ac307c52fc5240d0df4812b6db3c784eb30dc322a1bdf3f89412a205",
+    "crates/dustroute-minecraft/src/time/piston_runtime/devices.rs": "00f8b09d0f8dec055165030234e04e0e7854fd06d588065f798ad12f478e0813",
+    "crates/dustroute-minecraft/src/time/piston_runtime/electrical.rs": "31e1e0c9df78c2c174b75886fbc3153664090f5bc6066f85055ac788d3038b93",
+    "crates/dustroute-minecraft/src/time/piston_runtime/mod.rs": "07b0c25094abaa95e72903b8c4e23f16780f659d1ee85e5a353907b1451ba8f5",
+    "crates/dustroute-minecraft/src/time/piston_runtime/movement.rs": "41753f9d3b9306e841942c2ad6bca5319771b723617f202bb6e6bf3b9727d8c9",
+    "crates/dustroute-minecraft/src/time/piston_runtime/notifications.rs": "19c74133d79b36effbe0c54d0c3329ca0f1e6d790a8651d0beacb757aa6bc9af",
+    "crates/dustroute-minecraft/src/time/runtime/executor/piston_behavior.rs": "1b932a4d6423e5a3565c05625d570136ccb884abbc508e626cd914c5b73a3981",
+    "crates/dustroute-minecraft/tests/native_device_runtime.rs": "052df0bf4ec3515f5bed7fcc5093555e665d9e870a5f3b5c164a81207ad20da8",
+    "crates/dustroute-minecraft/tests/piston_runtime.rs": "27b10e1482ea1fe82505ab037234bffb961590f798fe35fde12a6d444dc0855a",
+    "crates/dustroute-minecraft/tests/unified_piston_runtime.rs": "e548fa64e50ccd384429a95cdda096fd6243584b47406e509df841ae679a3043",
+    "crates/dustroute-translate/src/piston_construction/snapshot.rs": "5e1cca8ceefbae5ed1ac2de7fce5e63e423907cc42baa4f387c02139c2b08c03",
+    "crates/dustroute-translate/tests/execution_context.rs": "57c7c194e5f4c5768f99458ab0ddaa63b20fc3331ce058a7dcbf9e9f9c99384a",
+    "crates/dustroute-translate/tests/location_behavior.rs": "eb28e98a9fa0579d89bbdff826d8d23250797022b28501fbac883faf3617ccdf",
+    "crates/dustroute-translate/tests/native_device_observations.rs": "9a2649c5297a5fdc0220b7c4b4f79175bca81daf39220e6001a274826d05e529",
+    "crates/dustroute-translate/tests/support/runtime_blueprint.rs": "4b07d918322ee7d4c4ca57627910c6dfc3d52709d121105ead15d338f91fcf2b",
+    "crates/dustroute-translate/tests/unified_piston_behavior.rs": "eb19986cd3a6466383124c5defcf1dd6c85d68e1765c6a95a64d25eb56cfcf69",
+    "crates/dustroute-minecraft/devices/lamp-java-1-21-11-v1.json": "1eca46b717c7a028f009b81ec6ed11cfa5c5b02c3d9d4ed9e7980244a43630d0",
+    "crates/dustroute-minecraft/devices/observer-java-1-21-11-v1.json": "9d7c86560c06c6511f43c5f924a573aa40aac533249a7a64180226f0ae21fe72",
+    "crates/dustroute-minecraft/devices/stone-button-java-1-21-11-v1.json": "1fed8e4b045bf9ab990ffb6bbe397f22c49bd3440c4e773e39fabe7a7cfdcc43",
+    "crates/dustroute-minecraft/laws/stone-button-callback-java-1-21-11-v1.json": "329006b57925eceb3c14504a30573606af18fd80ad2da1394055275d394caaea",
+    "crates/dustroute-minecraft/src/device_program.rs": "ffbc55c1be5db82b8d870022ab6180de2d1f0f446b12fb5a9a7586c277da24be",
+    "crates/dustroute-minecraft/tests/device_programs.rs": "5848a5ab7a680dbcbc8720cad9f94001c665eb37b1fc0647e1eea98270e1016d"
+  },
+  "retained_evidence": {
+    "reference_door_tick_ends": 381,
+    "reference_door_ordered_writes": 524,
+    "reference_door_callback_carrier_boundaries": 2118,
+    "transient_captures": 20,
+    "raw_observations_modified": false
+  },
+  "source_audit": "docs/evidence/device-program-source-20260927.json",
+  "new_live_trial": false,
+  "workspace_full_test_suite_run": false,
+  "rust_jobs": 1,
+  "rust_test_threads": 1,
+  "offline_locked": true,
+  "limits": [
+    "New stone button has static source and model-test evidence, not a live-server trial.",
+    "No public button-use MCP operation or button-input exploration protocol.",
+    "Electrical v1-v6 execution contexts/checkpoints require explicit fresh review; no conversion.",
+    "Wire/repeater, stateful torch/comparator and other proof models are not migrated to device programs in this increment."
+  ]
+}

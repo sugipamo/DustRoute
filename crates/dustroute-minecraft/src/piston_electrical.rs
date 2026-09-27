@@ -107,6 +107,47 @@ pub fn validate_evidence(block: &Block) -> Result<(), RuntimeError> {
         .as_deref()
         .map(|n| n.strip_prefix("minecraft:").unwrap_or(n));
     let property = |key: &str| block.observed_properties.get(key).map(String::as_str);
+    if let Some(program) = crate::device_program::program(block.kind) {
+        use crate::device_program::Orientation;
+        let definition = &program.definition;
+        let powered = power(block)? != 0;
+        let direction_valid = match definition.orientation {
+            Orientation::None => true,
+            Orientation::Output => block.facing.is_some(),
+            Orientation::Attached => {
+                support(block)?;
+                true
+            }
+        };
+        let properties_valid = observed.is_none_or(|name| {
+            let orientation = match definition.orientation {
+                Orientation::None => true,
+                Orientation::Output => block.facing.is_some_and(|direction| {
+                    property("facing") == Some(self::name(direction.opposite()))
+                }),
+                Orientation::Attached => {
+                    let facing = block.facing.filter(|d| d.horizontal_offset().is_some());
+                    let expected = match property("face") {
+                        Some("floor") => Some(Facing::Down.offset()),
+                        Some("ceiling") => Some(Facing::Up.offset()),
+                        Some("wall") => facing.map(|d| d.opposite().offset()),
+                        _ => None,
+                    };
+                    expected == block.support_offset
+                        && facing.is_some_and(|d| property("facing") == Some(self::name(d)))
+                }
+            };
+            definition.observed_names.iter().any(|n| n == name)
+                && orientation
+                && property(&definition.power_property).and_then(|s| s.parse::<bool>().ok())
+                    == Some(powered)
+        });
+        return if direction_valid && properties_valid {
+            Ok(())
+        } else {
+            Err(invalid("unsupported device observation"))
+        };
+    }
     let matches = match block.kind {
         BlockKind::Air => observed.is_none_or(|n| n == "air"),
         BlockKind::Solid => observed.is_none_or(|n| {
@@ -171,24 +212,6 @@ pub fn validate_evidence(block: &Block) -> Result<(), RuntimeError> {
                             .is_some()
                 })
         }
-        BlockKind::Observer => {
-            let powered = power(block)? != 0;
-            let direction = block
-                .facing
-                .ok_or_else(|| invalid("observer output required"))?;
-            observed.is_none_or(|n| {
-                n == "observer"
-                    && property("facing") == Some(name(direction.opposite()))
-                    && property("powered").and_then(|s| s.parse::<bool>().ok()) == Some(powered)
-            })
-        }
-        BlockKind::RedstoneLamp => {
-            let lit = power(block)? != 0;
-            observed.is_none_or(|n| {
-                n == "redstone_lamp"
-                    && property("lit").and_then(|s| s.parse::<bool>().ok()) == Some(lit)
-            })
-        }
         BlockKind::Piston => {
             block.facing.is_some()
                 && block.piston_state.is_some_and(|s| s.is_stable())
@@ -219,16 +242,16 @@ pub fn validate_evidence(block: &Block) -> Result<(), RuntimeError> {
 /// Not the generic historical block traits: Java explicitly excludes pistons
 /// and redstone blocks from isSolidBlock, despite their full collision shapes.
 pub fn conducts(block: &Block) -> bool {
-    matches!(block.kind, BlockKind::Solid | BlockKind::RedstoneLamp)
+    crate::device_program::program(block.kind)
+        .map_or(block.kind == BlockKind::Solid, |p| p.definition.conducts)
 }
 
 pub fn full_face(block: &Block, side: Facing) -> bool {
+    if let Some(program) = crate::device_program::program(block.kind) {
+        return program.definition.full_support;
+    }
     match block.kind {
-        BlockKind::Solid
-        | BlockKind::Transparent
-        | BlockKind::RedstoneBlock
-        | BlockKind::Observer
-        | BlockKind::RedstoneLamp => true,
+        BlockKind::Solid | BlockKind::Transparent | BlockKind::RedstoneBlock => true,
         BlockKind::Piston => {
             block.piston_state == Some(PistonState::Retracted)
                 || block.facing == Some(side.opposite())
@@ -309,18 +332,33 @@ impl<'a> ElectricalWorld<'a> {
             wire_connected: false,
             wires_enabled,
         };
+        if let Some(program) = crate::device_program::program(block.kind) {
+            use crate::device_program::Signal;
+            let level = power(&block)?;
+            return Ok(match program.definition.signal {
+                Signal::None => Emission { weak: 0, strong: 0 },
+                Signal::Output => {
+                    let signal = if block.facing == Some(query.opposite()) {
+                        level
+                    } else {
+                        0
+                    };
+                    Emission {
+                        weak: signal,
+                        strong: signal,
+                    }
+                }
+                Signal::Attached => Emission {
+                    weak: level,
+                    strong: if query == support(&block)?.opposite() {
+                        level
+                    } else {
+                        0
+                    },
+                },
+            });
+        }
         match block.kind {
-            BlockKind::Observer => {
-                let signal = if block.facing == Some(query.opposite()) {
-                    crate::device_callback_law::builtin_laws().observer_signal(power(&block)? != 0)
-                } else {
-                    0
-                };
-                return Ok(Emission {
-                    weak: signal,
-                    strong: signal,
-                });
-            }
             BlockKind::Lever => {
                 facts.source = SignalSource::Lever;
                 facts.level = power(&block)?;
@@ -415,12 +453,18 @@ impl<'a> ElectricalWorld<'a> {
     }
 
     fn wire_connects(block: &Block, side: Facing) -> bool {
+        if let Some(program) = crate::device_program::program(block.kind) {
+            return match program.definition.signal {
+                crate::device_program::Signal::None => false,
+                crate::device_program::Signal::Output => block.facing == Some(side.opposite()),
+                crate::device_program::Signal::Attached => true,
+            };
+        }
         match block.kind {
             BlockKind::RedstoneWire | BlockKind::Lever | BlockKind::RedstoneBlock => true,
             BlockKind::Repeater => block
                 .facing
                 .is_some_and(|d| d == side || d == side.opposite()),
-            BlockKind::Observer => block.facing == Some(side.opposite()),
             _ => false,
         }
     }

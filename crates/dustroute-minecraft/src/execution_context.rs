@@ -21,8 +21,8 @@ pub enum WorldExecutionProfile {
     RedstoneCompatibilityBoundaryV1,
     #[serde(rename = "dustroute.bounded-redstone-events.v1")]
     BoundedRedstoneEventsV1,
-    #[serde(rename = "dustroute.piston-electrical-callbacks.java-1-21-11.v6")]
-    UnifiedPistonElectricalCallbacksJava12111V6,
+    #[serde(rename = "dustroute.piston-electrical-callbacks.java-1-21-11.v7")]
+    UnifiedPistonElectricalCallbacksJava12111V7,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
@@ -38,6 +38,7 @@ pub enum LawRole {
     Comparator,
     Observer,
     Lamp,
+    Button,
     PistonState,
     PistonMotion,
     PistonConnection,
@@ -68,7 +69,7 @@ pub enum InputPolicy {
     PhysicalLeversBetweenModelSteps,
     ExplicitCompatibilityMutations,
     ExplicitScheduledWorldEvents,
-    PhysicalLeversBetweenSynchronousCalls,
+    PhysicalDeviceUsesBetweenSynchronousCalls,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -141,10 +142,11 @@ impl WorldExecutionContext {
                         Some(crate::piston_law::builtin_piston_laws().default_motion_profile()),
                     )
                 }
-                UnifiedPistonElectricalCallbacksJava12111V6 => {
+                UnifiedPistonElectricalCallbacksJava12111V7 => {
                     laws.retain(|role, _| *role == BlockTraits);
                     laws.insert(Lamp, crate::device_callback_law::LAW_IDS[0].into());
                     laws.insert(Observer, crate::device_callback_law::LAW_IDS[1].into());
+                    laws.insert(Button, crate::device_callback_law::LAW_IDS[2].into());
                     laws.insert(DustStrength, crate::dust_law::DUST_LAW_REVISION.into());
                     for (role, id) in [SignalEmission, ConductorPower, PistonConnection, Repeater]
                         .into_iter()
@@ -164,7 +166,7 @@ impl WorldExecutionContext {
                     );
                     (
                         InitializationPolicy::FreshElectricalPistonConstruction,
-                        InputPolicy::PhysicalLeversBetweenSynchronousCalls,
+                        InputPolicy::PhysicalDeviceUsesBetweenSynchronousCalls,
                         None,
                         None,
                         None,
@@ -190,12 +192,22 @@ impl WorldExecutionContext {
         )
     }
 
+    /// The fixed integration program is part of this profile's immutable
+    /// contract, alongside its selected finite laws. It is not user code.
+    pub fn device_program_revision(&self) -> Option<&'static str> {
+        matches!(
+            self.profile,
+            WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V7
+        )
+        .then_some(crate::device_program::REVISION)
+    }
+
     /// New callback delivery is an explicit profile dependency; the old flat
     /// scheduler field and serialized contexts retain their previous meaning.
     pub fn synchronous_runtime_profile(&self) -> Option<&'static str> {
         matches!(
             self.profile,
-            WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V6
+            WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V7
         )
         .then_some(crate::time::runtime::PROFILE)
     }

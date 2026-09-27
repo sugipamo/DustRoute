@@ -1,0 +1,192 @@
+{
+  "id": "dustroute.device.stone-button.java-1-21-11.v1",
+  "kind": "Button",
+  "observed_names": [
+    "stone_button"
+  ],
+  "law": "dustroute.law.stone-button.callback.java-1-21-11.v1",
+  "power_property": "powered",
+  "orientation": "attached",
+  "signal": "attached",
+  "conducts": false,
+  "full_support": false,
+  "fresh_powered_requires_history": true,
+  "initial_neighbor_update": false,
+  "preprocess_shapes": false,
+  "handlers": {
+    "use": {
+      "inputs": [
+        {
+          "name": "event",
+          "maximum": 2,
+          "sample": {
+            "query": "constant",
+            "value": 0
+          }
+        },
+        {
+          "name": "powered",
+          "maximum": 1,
+          "sample": {
+            "query": "powered"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "write",
+          "maximum": 1
+        },
+        {
+          "name": "powered",
+          "maximum": 1
+        },
+        {
+          "name": "delay",
+          "maximum": 20
+        },
+        {
+          "name": "notify",
+          "maximum": 1
+        }
+      ],
+      "effects": [
+        {
+          "effect": "write_power",
+          "when": {
+            "value": "output",
+            "name": "write"
+          },
+          "powered": {
+            "value": "output",
+            "name": "powered"
+          },
+          "notifications": "neighbors_and_shapes"
+        },
+        {
+          "effect": "notify",
+          "when": {
+            "value": "output",
+            "name": "notify"
+          },
+          "targets": "self_and_support"
+        },
+        {
+          "effect": "schedule",
+          "delay": {
+            "value": "output",
+            "name": "delay"
+          },
+          "priority": 3
+        }
+      ]
+    },
+    "tick": {
+      "inputs": [
+        {
+          "name": "event",
+          "maximum": 2,
+          "sample": {
+            "query": "constant",
+            "value": 1
+          }
+        },
+        {
+          "name": "powered",
+          "maximum": 1,
+          "sample": {
+            "query": "powered"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "write",
+          "maximum": 1
+        },
+        {
+          "name": "powered",
+          "maximum": 1
+        },
+        {
+          "name": "delay",
+          "maximum": 20
+        },
+        {
+          "name": "notify",
+          "maximum": 1
+        }
+      ],
+      "effects": [
+        {
+          "effect": "write_power",
+          "when": {
+            "value": "output",
+            "name": "write"
+          },
+          "powered": {
+            "value": "output",
+            "name": "powered"
+          },
+          "notifications": "neighbors_and_shapes"
+        },
+        {
+          "effect": "notify",
+          "when": {
+            "value": "output",
+            "name": "notify"
+          },
+          "targets": "self_and_support"
+        }
+      ]
+    },
+    "removed": {
+      "inputs": [
+        {
+          "name": "event",
+          "maximum": 2,
+          "sample": {
+            "query": "constant",
+            "value": 2
+          }
+        },
+        {
+          "name": "powered",
+          "maximum": 1,
+          "sample": {
+            "query": "powered"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "write",
+          "maximum": 1
+        },
+        {
+          "name": "powered",
+          "maximum": 1
+        },
+        {
+          "name": "delay",
+          "maximum": 20
+        },
+        {
+          "name": "notify",
+          "maximum": 1
+        }
+      ],
+      "effects": [
+        {
+          "effect": "notify",
+          "when": {
+            "value": "output",
+            "name": "notify"
+          },
+          "targets": "self_and_support"
+        }
+      ]
+    }
+  },
+  "command_initialization": null
+}

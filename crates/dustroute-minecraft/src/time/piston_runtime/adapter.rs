@@ -79,6 +79,9 @@ fn validate_initial(view: RuntimeView<'_>) -> Result<(), RuntimeError> {
                 "unsupported initial evidence at {pos:?}"
             )));
         }
+        if crate::device_program::program(block.kind).is_some() {
+            continue;
+        }
         match block.kind {
             BlockKind::Piston => {
                 let dir = facing(block)?;
@@ -150,8 +153,6 @@ fn validate_initial(view: RuntimeView<'_>) -> Result<(), RuntimeError> {
             | BlockKind::RedstoneWire
             | BlockKind::Lever
             | BlockKind::RedstoneBlock
-            | BlockKind::Observer
-            | BlockKind::RedstoneLamp
             | BlockKind::Repeater => {}
             other => {
                 return Err(unsupported(format!(
@@ -170,23 +171,13 @@ fn handle(
     let pos = event.call.target;
     match &event.call.payload {
         PistonEvent::Motion { plan } => super::movement::step(view, pos, plan),
-        PistonEvent::LampTick => super::devices::lamp(view, pos, true),
-        PistonEvent::ObserverTick => super::devices::observer(
-            view,
-            pos,
-            crate::device_callback_law::ObserverCallback::Tick,
-            false,
-        ),
-        PistonEvent::ObserverAfterTick { block, delay } => {
-            super::devices::observer_after_tick(view, pos, block, *delay)
-        }
-        PistonEvent::MovingObserverAdded => super::devices::observer(
-            view,
-            pos,
-            crate::device_callback_law::ObserverCallback::Added,
-            false,
-        ),
-        PistonEvent::MovingObserverAfterAdded { block } => {
+        PistonEvent::Device {
+            callback,
+            source,
+            captured,
+        } => super::devices::start(view, pos, *callback, *source, captured.as_deref()),
+        PistonEvent::DeviceContinue { run } => super::devices::step(view, pos, *run.clone()),
+        PistonEvent::DeviceAfterArrival { block } => {
             let mut jobs = if view.block(pos)? == **block {
                 adjacent_jobs(view, pos, false, true)?
             } else {
@@ -238,9 +229,9 @@ fn handle(
                         BlockKind::Piston
                             | BlockKind::PistonHead
                             | BlockKind::RedstoneWire
-                            | BlockKind::RedstoneLamp
                             | BlockKind::Repeater
-                    )
+                    ) || crate::device_program::program(b.kind)
+                        .is_some_and(|p| p.definition.initial_neighbor_update)
                 })
                 .map(|(p, _)| NeighborJob {
                     target: *p,
@@ -619,11 +610,24 @@ fn finish_or_advance(
         if after.kind == BlockKind::PistonHead && !head_supported(view, pos, &after)? {
             after = Block::new(BlockKind::Air);
         }
-        if after.kind == BlockKind::Observer {
+        if crate::device_program::program(after.kind)
+            .is_some_and(|p| p.definition.preprocess_shapes)
+        {
             // postProcessState evaluates all six neighbor directions before
             // the arrival write. Its facing-side observer callback can enqueue
             // a destination tick even though that cell is still moving.
-            let queued = super::devices::observer_shape_ticks(view, pos, &after, true)?;
+            let queued = super::devices::preprocess(
+                view,
+                pos,
+                &after,
+                along(
+                    pos,
+                    after
+                        .facing
+                        .ok_or_else(|| unsupported("device output required"))?,
+                    -1,
+                )?,
+            )?;
             return Ok(RuntimeOutcome {
                 delta: Some(delta(
                     view,
@@ -636,8 +640,12 @@ fn finish_or_advance(
                     expected: carrier,
                 }],
                 queued,
-                callbacks: vec![call(pos, PistonEvent::MovingObserverAdded)],
-                continuation: Some(PistonEvent::MovingObserverAfterAdded {
+                callbacks: vec![super::devices::event(
+                    pos,
+                    crate::device_program::Callback::Added,
+                    None,
+                )],
+                continuation: Some(PistonEvent::DeviceAfterArrival {
                     block: Box::new(after),
                 }),
             });

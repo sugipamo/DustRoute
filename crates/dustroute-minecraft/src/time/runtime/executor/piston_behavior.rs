@@ -122,12 +122,21 @@ impl<A: RuntimeAdapter<Payload = PistonEvent>> SynchronousWorldRuntime<A> {
                     (invocation.kind, &invocation.call.payload),
                     (
                         InvocationKind::External,
-                        PistonEvent::Initialize | PistonEvent::Input { .. }
+                        PistonEvent::Initialize
+                            | PistonEvent::Input { .. }
+                            | PistonEvent::Device {
+                                callback: crate::device_program::Callback::Use,
+                                source: None,
+                                captured: None
+                            }
                     ) | (
                         InvocationKind::ScheduledTick,
                         PistonEvent::ElectricalRepeaterTick
-                            | PistonEvent::LampTick
-                            | PistonEvent::ObserverTick
+                            | PistonEvent::Device {
+                                callback: crate::device_program::Callback::Tick,
+                                source: None,
+                                captured: None
+                            }
                     ) | (InvocationKind::BlockEvent, PistonEvent::Block { .. })
                         | (InvocationKind::CarrierTick, PistonEvent::CarrierTick)
                 ) {
