@@ -96,7 +96,7 @@ fn arms(block: &Block) -> Result<&BTreeMap<Facing, WireConnection>, RuntimeError
 /// Evidence gate for electrical identities only. Stable piston/head pairing and
 /// physical support must additionally pass the runtime/placement gates.
 pub fn validate_evidence(block: &Block) -> Result<(), RuntimeError> {
-    if !crate::execution_context::WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V13
+    if !crate::execution_context::WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V14
         .admits_kind(block.kind)
     {
         return Err(invalid(format!("unsupported electrical kind {:?}", block.kind)));
@@ -511,7 +511,7 @@ impl<'a> ElectricalWorld<'a> {
         let mut shape = arms(&block)?.clone();
         if side == Facing::Down {
             if !full_face(&self.block(along(pos, side)?)?, Facing::Up) {
-                return Err(invalid("wire support destruction is outside this profile"));
+                return Err(invalid("wire shape query requires surviving support"));
             }
             return Ok(shape);
         }

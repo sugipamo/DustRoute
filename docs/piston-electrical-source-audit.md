@@ -8,6 +8,11 @@ Class hashes and methods are retained in the
 [audit manifest](../crates/dustroute-minecraft/tests/fixtures/piston_electrical_source.meta.json).
 This is static implementation evidence, not a new server observation.
 
+The support-destruction exclusion below describes the initial scope. The current
+v14 runtime adds [attachment support loss](support-loss-runtime.md) for admitted
+components, with separate live evidence; direct piston crushing remains outside
+that extension.
+
 ## Differences that must be implemented together
 
 | Area | Target behavior | Required change |

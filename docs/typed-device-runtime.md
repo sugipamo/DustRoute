@@ -5,7 +5,8 @@ foundation. The current implementation adds repeater callback definitions,
 computed tick priorities, installed shape queries, output-before-shape writes
 and explicit dust connection rules. The approved physical-admission prerequisite
 shares checked geometry and separates executor support from classification.
-Execution/review uses v13 and device programs v7, including the
+Execution/review uses v14 and device programs v7, including
+[attachment support loss](support-loss-runtime.md) through physical admission v5, the
 [waxed copper bulb](copper-bulb-runtime.md),
 [circuit comparator](comparator-runtime.md) and
 [shared-world torch histories](shared-torch-runtime.md); the v8/v2 validation results

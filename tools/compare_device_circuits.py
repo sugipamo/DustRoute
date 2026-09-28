@@ -75,7 +75,7 @@ def observe(raw, client, fixture):
         wanted.extend([('begin', tick), ('end', tick + 1)])
     assert beats == wanted, 'missing tick boundaries'
     world = dict(initial_world)
-    ticks, writes, scheduled = [], [], []
+    ticks, writes, scheduled, attempts = [], [], [], []
     for r in window:
         if r.get('dimension') != 'minecraft:overworld':
             continue
@@ -92,7 +92,13 @@ def observe(raw, client, fixture):
         elif r['kind'] == 'ordered_tick' and r['scheduler'] == 'block':
             if r['trigger_game_tick'] != r['execution_game_tick']:
                 raise ReplayOutsideScope('overdue tick outside this replay scope')
-            scheduled.append(dict(tick=r['execution_game_tick'] - first + 1, position=p, block=r['type']))
+            delivered = world.get(p, AIR)[0] == r['type']
+            attempts.append(dict(tick=r['execution_game_tick'] - first + 1, position=p, delivered=delivered))
+            # The probe runs before ServerWorld.tickBlock's identity check.
+            # With lifetime coverage enabled, compare attempts separately and
+            # count only matching receivers as delivered device callbacks.
+            if delivered or not fixture.get('compare_tick_attempts'):
+                scheduled.append(dict(tick=r['execution_game_tick'] - first + 1, position=p, block=r['type']))
     final = {key(b['pos']): state(b['name'], b['properties']) for b in snapshot(client, 'final')['blocks']}
     assert world_rows(world) == world_rows(final), 'later work or cleanup differs from drain readback'
     inputs = [dict(tick=a['game_tick'] - first + 1, position=a['position'], after_world_tick=True,
@@ -111,7 +117,8 @@ def observe(raw, client, fixture):
                 applied_inputs=applied, requested_steps=fixture['steps'], tick_end_worlds=ticks,
                 writes=writes, scheduled_ticks=scheduled, cleanup=client['cleanup'],
                 enabled_features=client['enabled_features'], hidden_state_observed=False,
-                callback_worlds=worlds, callbacks=compact)
+                callback_worlds=worlds, callbacks=compact,
+                **({'tick_attempts': attempts} if fixture.get('compare_tick_attempts') else {}))
 
 
 def compare_model(observation, trial, model):
@@ -124,16 +131,19 @@ def compare_model(observation, trial, model):
     assert not model_writes(initialization), 'model initialization changed the observed stable initial world'
     records = [r for r in records if r['invocation']['root'] not in initial_roots]
     writes = model_writes(records)
-    scheduled = []
+    scheduled, attempts = [], []
     world = {key(b['pos']): state(b['name'], b['properties']) for b in trial['initial']['blocks']}
     events = []
     for r in records:
         inv = r['invocation']
         payload = inv['call']['payload']
         p = key(inv['call']['target'])
-        if (r['result'] == 'Executed' and inv['kind'] == 'scheduled_tick' and inv['time']['section'] == 'block_ticks'
+        if (inv['kind'] == 'scheduled_tick' and inv['time']['section'] == 'block_ticks'
                 and isinstance(payload, dict) and payload.get('Device', {}).get('callback') == 'tick'):
-            scheduled.append(dict(tick=inv['time']['game_tick'], position=p, block=world.get(p, AIR)[0]))
+            assert r['result'] in ['Executed', 'BlockReplaced']
+            attempts.append(dict(tick=inv['time']['game_tick'], position=p, delivered=r['result'] == 'Executed'))
+            if r['result'] == 'Executed':
+                scheduled.append(dict(tick=inv['time']['game_tick'], position=p, block=world.get(p, AIR)[0]))
         for c in (r.get('delta') or {}).get('changes', []):
             events.append((inv['time'], c))
             assert world.get(key(c['position']), AIR) == model_state(c['before']), 'model trace gap'
@@ -160,6 +170,7 @@ def compare_model(observation, trial, model):
                 first_write_mismatch=compare(observation['writes'], writes),
                 live_scheduled_count=len(observation['scheduled_ticks']), model_scheduled_count=len(scheduled),
                 first_scheduled_mismatch=compare(observation['scheduled_ticks'], scheduled),
+                first_tick_attempt_mismatch=compare(observation['tick_attempts'], attempts) if 'tick_attempts' in observation else None,
                 live_callback_count=len(actual_callbacks), model_callback_count=len(predicted_callbacks),
                 first_callback_mismatch=compare(actual_callbacks, predicted_callbacks),
                 restoration_verified=True,

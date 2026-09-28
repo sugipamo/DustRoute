@@ -140,9 +140,59 @@ fn piston_support_faces_follow_body_and_head_state_in_every_direction() {
 }
 
 #[test]
+fn centered_support_and_invalid_attachment_policies_are_distinct_from_full_faces() {
+    use physical::{SupportFace, SupportLoss, SupportTrigger};
+    for facing in SIDES {
+        let mut body = Block::new(BlockKind::Piston);
+        body.facing = Some(facing);
+        body.piston_state = Some(PistonState::Extended);
+        for side in SIDES {
+            assert_eq!(
+                physical::of_kind(body.kind).center_face(&body, side),
+                side != facing
+            );
+        }
+        for short in [false, true] {
+            let head = Block::piston_head(facing, Default::default(), short);
+            for side in SIDES {
+                assert_eq!(
+                    physical::of_kind(head.kind).center_face(&head, side),
+                    side == facing || side == facing.opposite()
+                );
+            }
+        }
+    }
+    let wire = physical::of_kind(BlockKind::RedstoneWire).spec();
+    for invalid in [
+        PhysicalSpec {
+            support: Support::None,
+            ..wire
+        },
+        PhysicalSpec {
+            support_loss: Some(SupportLoss {
+                trigger: SupportTrigger::Shape,
+                face: SupportFace::Full,
+                notify_around_neighbors: true,
+            }),
+            ..wire
+        },
+        PhysicalSpec {
+            support_loss: Some(SupportLoss {
+                trigger: SupportTrigger::Shape,
+                face: SupportFace::StandingCenter,
+                notify_around_neighbors: false,
+            }),
+            ..wire
+        },
+    ] {
+        assert!(physical::CheckedPhysical::try_from(invalid).is_err());
+    }
+}
+
+#[test]
 fn world_contracts_check_admission_independently_from_physical_geometry() {
     let current = WorldExecutionContext::for_profile(
-        WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V13,
+        WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V14,
     );
     let proof =
         WorldExecutionContext::for_profile(WorldExecutionProfile::DustTorchSynchronousGameTickV1);

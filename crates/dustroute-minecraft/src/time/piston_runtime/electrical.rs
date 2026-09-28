@@ -2,7 +2,7 @@
 use super::geometry::{along, delta, offset};
 use super::notifications::{adjacent_jobs, shape_jobs};
 use super::*;
-use crate::piston_electrical::{ElectricalWorld, full_face, wire_notification_centers};
+use crate::piston_electrical::{ElectricalWorld, wire_notification_centers};
 use crate::{BlockKind, DeltaCause, Facing, WireConnection};
 
 pub(super) fn world(view: RuntimeView<'_>) -> Result<ElectricalWorld<'_>, RuntimeError> {
@@ -120,26 +120,15 @@ pub(super) fn validate_scope(view: RuntimeView<'_>, fresh: bool) -> Result<(), R
                 .support_offset
                 .ok_or_else(|| unsupported("electrical support required"))?;
             let support = super::geometry::offset(*pos, offset)?;
-            let side = crate::piston_electrical::SIDES
+            crate::piston_electrical::SIDES
                 .into_iter()
                 .find(|d| d.offset() == offset)
                 .ok_or_else(|| unsupported("adjacent support required"))?;
-            let support_block = view
-                .staged_carriers
-                .get(&support)
-                .cloned()
-                .unwrap_or(view.block(support)?);
-            let retained_body_back = support_block.kind == BlockKind::MovingPiston
-                && support_block
-                    .piston_entity
-                    .as_deref()
-                    .is_some_and(|carrier| {
-                        carrier.source
-                            && !carrier.extending
-                            && carrier.pushed_block.kind == BlockKind::Piston
-                            && carrier.pushed_block.facing == Some(side)
-                    });
-            if !full_face(&support_block, side.opposite()) && !retained_body_back {
+            // During a write/notification sequence the old attachment may
+            // temporarily lack support. Its native callback decides when to
+            // remove it; fresh worlds must still start with valid support.
+            view.block(support)?;
+            if fresh && !super::support::present(view, *pos, block)? {
                 return Err(unsupported(format!(
                     "unsupported electrical support at {pos:?}"
                 )));
@@ -157,8 +146,7 @@ fn side_from_source(job: &NeighborJob) -> Result<Facing, RuntimeError> {
 }
 
 /// RedstoneWireBlock.prepare: diagonal shapes around connected arms, in
-/// Direction.Type.HORIZONTAL order. Components cannot be moved/destroyed in
-/// this profile, so the target identities stay fixed during these callbacks.
+/// Direction.Type.HORIZONTAL order. Each target is resolved again on delivery.
 fn prepare_jobs(
     view: RuntimeView<'_>,
     pos: Pos,

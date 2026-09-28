@@ -776,13 +776,31 @@ impl World {
 
     #[must_use]
     pub fn support_issues(&self) -> Vec<(Pos, BlockKind, Option<Pos>)> {
-        self.support_issues_using(
-            |kind| {
-                crate::spatial::builtin_spatial_laws().requires_support(kind)
-                    || crate::physical::of_kind(kind).support() != crate::physical::Support::None
-            },
-            |block| block.redstone_traits().supports_dust_on_top,
-        )
+        self.blocks
+            .iter()
+            .filter_map(|(pos, block)| {
+                let physical = crate::physical::of_kind(block.kind);
+                if physical.support() == crate::physical::Support::None
+                    && !crate::spatial::builtin_spatial_laws().requires_support(block.kind)
+                {
+                    return None;
+                }
+                let support = block.support_pos(*pos);
+                let valid = support.and_then(|p| self.get(p)).is_some_and(|base| {
+                    if physical.support_loss().is_some() && crate::physical::known_geometry(base) {
+                        crate::piston_electrical::SIDES
+                            .into_iter()
+                            .find(|side| Some(side.offset()) == block.support_offset)
+                            .is_some_and(|side| physical.supports_attachment(base, side))
+                    } else {
+                        // Generic placement also admits geometry (e.g. slabs)
+                        // outside the callback adapter's declared evidence subset.
+                        base.redstone_traits().supports_dust_on_top
+                    }
+                });
+                (!valid).then_some((*pos, block.kind, support))
+            })
+            .collect()
     }
 
     /// Diagnose support under an explicit finite spatial model. This returns

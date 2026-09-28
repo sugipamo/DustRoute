@@ -85,6 +85,13 @@ pub(super) fn notify(
         return Ok(out);
     };
     let block = view.block(job.target)?;
+    if super::support::should_break(view, job.target, &block, job.shape, Some(job.source))? {
+        let mut out = super::support::remove(view, job.target, &block, job.shape)?;
+        if !jobs.is_empty() {
+            out.continuation = Some(PistonEvent::Notify { jobs });
+        }
+        return Ok(out);
+    }
     if let Some(program) = crate::device_program::program(&block) {
         let callback = if job.shape {
             crate::device_program::Callback::Shape

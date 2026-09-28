@@ -10,6 +10,14 @@
 //!     ..of_kind(dustroute_minecraft::BlockKind::Solid).spec()
 //! }.checked();
 //! ```
+//! Support loss requires an attachment with a compatible notification trigger:
+//! ```compile_fail,E0080
+//! use dustroute_minecraft::physical::*;
+//! const BAD: CheckedPhysical = PhysicalSpec {
+//!     support: Support::None,
+//!     ..of_kind(dustroute_minecraft::BlockKind::RedstoneWire).spec()
+//! }.checked();
+//! ```
 //! Directional dust attachment requires an output axis:
 //! ```compile_fail,E0080
 //! use dustroute_minecraft::physical::*;
@@ -22,7 +30,7 @@ use serde::Deserialize;
 
 use crate::{Block, BlockKind, Facing, ObservationClassification, PistonState};
 
-pub const REVISION: &str = "dustroute.physical-admission.java-1-21-11.v4";
+pub const REVISION: &str = "dustroute.physical-admission.java-1-21-11.v5";
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
 #[serde(rename_all = "snake_case")]
@@ -58,6 +66,32 @@ pub enum Support {
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
 #[serde(rename_all = "snake_case")]
+pub enum SupportTrigger {
+    Shape,
+    Neighbor,
+    ShapeAndNeighbor,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum SupportFace {
+    Full,
+    Rigid,
+    /// Standing torches use CENTER; wall torches use FULL.
+    StandingCenter,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct SupportLoss {
+    pub trigger: SupportTrigger,
+    pub face: SupportFace,
+    /// AbstractRedstoneGateBlock notifies around every neighbor after removal.
+    pub notify_around_neighbors: bool,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
 pub enum Shape {
     Empty,
     FullCube,
@@ -85,6 +119,7 @@ pub struct PhysicalSpec {
     pub conducting: Faces,
     pub supporting: Faces,
     pub support: Support,
+    pub support_loss: Option<SupportLoss>,
     pub orientation: Orientation,
     pub wire_connection: WireConnectionRule,
 }
@@ -101,6 +136,21 @@ impl PhysicalSpec {
                     return Some($message);
                 }
             };
+        }
+        check!(
+            self.support_loss.is_none() || !matches!(self.support, Support::None),
+            "support-loss behavior requires an attachment"
+        );
+        if let Some(rule) = self.support_loss {
+            check!(
+                !rule.notify_around_neighbors || !matches!(rule.trigger, SupportTrigger::Shape),
+                "post-neighbor removal notifications require a neighbor trigger"
+            );
+            check!(
+                !matches!(rule.face, SupportFace::StandingCenter)
+                    || matches!(self.orientation, Orientation::StandingOrWall),
+                "standing/wall support requires a standing/wall orientation"
+            );
         }
         check!(
             matches!(self.conducting, Faces::None | Faces::All),
@@ -200,6 +250,15 @@ impl CheckedPhysical {
             && self.0.conducting as u8 == other.0.conducting as u8
             && self.0.supporting as u8 == other.0.supporting as u8
             && self.0.support as u8 == other.0.support as u8
+            && match (self.0.support_loss, other.0.support_loss) {
+                (None, None) => true,
+                (Some(a), Some(b)) => {
+                    a.trigger as u8 == b.trigger as u8
+                        && a.face as u8 == b.face as u8
+                        && a.notify_around_neighbors == b.notify_around_neighbors
+                }
+                _ => false,
+            }
             && self.0.orientation as u8 == other.0.orientation as u8
             && self.0.wire_connection as u8 == other.0.wire_connection as u8
     }
@@ -211,6 +270,39 @@ impl CheckedPhysical {
     }
     pub const fn support(self) -> Support {
         self.0.support
+    }
+    pub const fn support_loss(self) -> Option<SupportLoss> {
+        self.0.support_loss
+    }
+    pub fn supports_attachment(self, support: &Block, toward_support: Facing) -> bool {
+        let face = toward_support.opposite();
+        let physical = of_kind(support.kind);
+        if self
+            .0
+            .support_loss
+            .is_some_and(|rule| rule.face == SupportFace::StandingCenter)
+            && toward_support == Facing::Down
+        {
+            return physical.center_face(support, face);
+        }
+        // FULL and RIGID coincide for the admitted cubes/body/head shapes.
+        physical.full_face(support, face)
+    }
+    pub fn center_face(self, block: &Block, side: Facing) -> bool {
+        if !known_geometry(block) {
+            return false;
+        }
+        match self.0.supporting {
+            Faces::All => true,
+            Faces::None => false,
+            Faces::PistonBody => {
+                block.piston_state == Some(PistonState::Retracted)
+                    || block.facing.is_some_and(|f| f != side)
+            }
+            Faces::PistonHead => block
+                .facing
+                .is_some_and(|f| side == f || side == f.opposite()),
+        }
     }
     pub fn conducts(self, block: &Block) -> bool {
         matches!(self.0.conducting, Faces::All) && known_geometry(block)
@@ -239,7 +331,7 @@ impl CheckedPhysical {
     }
 }
 
-fn known_geometry(block: &Block) -> bool {
+pub(crate) fn known_geometry(block: &Block) -> bool {
     block.observation_classification != ObservationClassification::Coarse
         && !block.requires_live_observation()
         && !block
@@ -253,6 +345,7 @@ const EMPTY: PhysicalSpec = PhysicalSpec {
     conducting: Faces::None,
     supporting: Faces::None,
     support: Support::None,
+    support_loss: None,
     orientation: Orientation::None,
     wire_connection: WireConnectionRule::None,
 };
@@ -267,12 +360,22 @@ const COMPONENT: PhysicalSpec = PhysicalSpec {
 };
 const GATE: PhysicalSpec = PhysicalSpec {
     support: Support::Below,
+    support_loss: Some(SupportLoss {
+        trigger: SupportTrigger::ShapeAndNeighbor,
+        face: SupportFace::Rigid,
+        notify_around_neighbors: true,
+    }),
     orientation: Orientation::FloorOutput,
     wire_connection: WireConnectionRule::Axis,
     ..COMPONENT
 };
 const ATTACHED: PhysicalSpec = PhysicalSpec {
     support: Support::Attached,
+    support_loss: Some(SupportLoss {
+        trigger: SupportTrigger::Shape,
+        face: SupportFace::Full,
+        notify_around_neighbors: false,
+    }),
     orientation: Orientation::Attached,
     wire_connection: WireConnectionRule::Any,
     ..COMPONENT
@@ -289,12 +392,22 @@ const SOLID: CheckedPhysical = PhysicalSpec {
 const GLASS: CheckedPhysical = CUBE.checked();
 const WIRE: CheckedPhysical = PhysicalSpec {
     support: Support::Below,
+    support_loss: Some(SupportLoss {
+        trigger: SupportTrigger::ShapeAndNeighbor,
+        face: SupportFace::Full,
+        notify_around_neighbors: false,
+    }),
     wire_connection: WireConnectionRule::Any,
     ..COMPONENT
 }
 .checked();
 const TORCH: CheckedPhysical = PhysicalSpec {
     orientation: Orientation::StandingOrWall,
+    support_loss: Some(SupportLoss {
+        trigger: SupportTrigger::Shape,
+        face: SupportFace::StandingCenter,
+        notify_around_neighbors: false,
+    }),
     ..ATTACHED
 }
 .checked();

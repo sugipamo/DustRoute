@@ -485,7 +485,7 @@ fn vertical_pistons_push_pull_and_preserve_interruption_for_both_directions() {
             );
             assert_eq!(run.view().block(front).unwrap().kind, expected_front);
             assert_eq!(run.view().block(out).unwrap().kind, expected_out);
-            assert_eq!(run.execution_context().profile, dustroute_minecraft::execution_context::WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V13);
+            assert_eq!(run.execution_context().profile, dustroute_minecraft::execution_context::WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V14);
         }
     }
 }
@@ -651,10 +651,10 @@ fn maximum_linear_chain_moves_far_first_but_over_limit_is_blocked() {
 }
 
 #[test]
-fn unknown_boundary_and_unsupported_support_destruction_never_complete() {
+fn moved_support_breaks_its_wire_and_unknown_boundaries_still_fail() {
     let (mut world, _) = scene(true);
-    // A valid initial wire supported by a moving payload needs a destruction
-    // law outside this profile. Keeping it suspended would be a false result.
+    // The wire loses support during movement even though the source coordinate
+    // will contain a stable block again at the end. It must not stay suspended.
     let wire = world.place(BlockKind::RedstoneWire, Pos::new(1, 2, 0));
     wire.power_level = Some(0);
     wire.wire_connections = Some(
@@ -666,11 +666,14 @@ fn unknown_boundary_and_unsupported_support_destruction_never_complete() {
     let region = Region::new(Pos::new(-4, -2, -4), Pos::new(5, 4, 4));
     let mut run = new_piston_runtime(world, region, RuntimeLimits::default()).unwrap();
     schedule_electrical_input(&mut run, 1, INPUT, true).unwrap();
-    let error = run.run_until_idle().unwrap_err();
-    assert!(error.to_string().contains("component support"), "{error}");
+    run.run_until_idle().unwrap();
+    assert_eq!(
+        run.view().block(Pos::new(1, 2, 0)).unwrap().kind,
+        BlockKind::Air
+    );
     assert!(matches!(
         run.status(),
-        dustroute_minecraft::time::TraceStatus::Failed { .. }
+        dustroute_minecraft::time::TraceStatus::Complete
     ));
 
     let (world, _) = scene(true);

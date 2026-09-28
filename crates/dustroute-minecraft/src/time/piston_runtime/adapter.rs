@@ -327,32 +327,6 @@ fn handle(
     }
 }
 
-fn no_attached_components(
-    view: RuntimeView<'_>,
-    changes: &[Pos],
-    retracting_body: Option<Pos>,
-) -> Result<(), RuntimeError> {
-    for (p, b) in view.world().iter() {
-        if b.support_pos(*p)
-            .is_some_and(|support| changes.contains(&support))
-        {
-            // A source body retracts in place. Its back-face attachment receives
-            // no shape callback until the stable body is restored; no component
-            // is transported or destroyed. Ordinary payload support still fails.
-            if let Some(body_pos) = retracting_body
-                && b.support_pos(*p) == Some(body_pos)
-                && b.support_offset == view.block(body_pos)?.facing.map(Facing::offset)
-            {
-                continue;
-            }
-            return Err(unsupported(format!(
-                "movement would change component support at {p:?}; destruction/replacement is outside the retained payload subset"
-            )));
-        }
-    }
-    Ok(())
-}
-
 fn begin(
     view: RuntimeView<'_>,
     pos: Pos,
@@ -426,12 +400,6 @@ fn start_extension(
     if !effects.head_carrier || effects.body_carrier {
         return Err(unsupported("unsupported extension carrier effects"));
     }
-    let changes: Vec<_> = moves
-        .iter()
-        .flat_map(|m| [m.from, m.to])
-        .chain([front])
-        .collect();
-    no_attached_components(view, &changes, None)?;
     let mut plan = MotionPlan::new(
         DeltaCause::PistonExtend { piston: pos },
         Some(PistonEvent::ExtendBody {
@@ -472,7 +440,6 @@ fn retract_body(
     if !effects.body_carrier || effects.head_carrier {
         return Err(unsupported("unsupported retraction carrier effects"));
     }
-    no_attached_components(view, &[pos], Some(pos))?;
     // The event's data argument restores the facing of the carried body;
     // movement itself uses the facing of the current receiving state.
     let mut restored = state(body.clone(), false);
@@ -544,7 +511,6 @@ fn retract_payload(
         });
     }
     if decision.pull {
-        no_attached_components(view, &[front, source], None)?;
         let mut plan = MotionPlan::new(DeltaCause::PistonRetract { piston: pos }, None);
         // move(false) removes the old head with flags 276 before the payload
         // destination write (324), then clears the vacated source (82).

@@ -53,7 +53,7 @@ class DeviceCircuitEvidence(unittest.TestCase):
                 self.assertEqual(run.returncode, 0, run.stderr)
                 result = compare_model(actual, trial, json.loads(run.stdout))
                 self.assertEqual(result['tick_mismatches'], [])
-                for field in ['first_write_mismatch', 'first_scheduled_mismatch', 'first_callback_mismatch']:
+                for field in ['first_write_mismatch', 'first_scheduled_mismatch', 'first_callback_mismatch', 'first_tick_attempt_mismatch']:
                     self.assertIsNone(result[field], (path.name, field, result[field]))
 
     def test_input_tick_is_not_inferred_from_the_requested_client_delay(self):
@@ -115,6 +115,23 @@ class DeviceCircuitEvidence(unittest.TestCase):
             run = replay(trial)
             self.assertNotEqual(run.returncode, 0)
 
+    def test_discarded_button_tick_is_compared_even_without_a_visible_write(self):
+        observation = load(FIXTURES / 'support-button-r0.json.gz')['observed']
+        discarded = [a for a in observation['tick_attempts'] if not a['delivered']]
+        self.assertEqual(len(discarded), 1)
+        trial = trial_for(observation)
+        run = replay(trial)
+        self.assertEqual(run.returncode, 0, run.stderr)
+        model = json.loads(run.stdout)
+        self.assertIsNone(compare_model(observation, trial, model)['first_tick_attempt_mismatch'])
+        weakened = copy.deepcopy(observation)
+        weakened['tick_attempts'].remove(discarded[0])
+        result = compare_model(weakened, trial, model)
+        self.assertEqual(result['tick_mismatches'], [])
+        self.assertIsNone(result['first_write_mismatch'])
+        self.assertIsNone(result['first_scheduled_mismatch'])
+        self.assertIsNotNone(result['first_tick_attempt_mismatch'])
+
     def test_declared_case_coverage_is_present_in_server_writes(self):
         required = {'bulb-compare-r0', 'bulb-compare-r180', 'bulb-subtract-r90',
                     'bulb-subtract-r270', 'torch-feedback-r0', 'torch-feedback-r90',
@@ -167,6 +184,49 @@ class DeviceCircuitEvidence(unittest.TestCase):
                 for control in fixture['inputs']:
                     distance_squared = sum((control[a] - point[a]) ** 2 for a in ('x', 'y', 'z'))
                     self.assertLessEqual(distance_squared, 16)
+
+    def test_support_captures_exercise_removal_and_centered_survival(self):
+        cases = {'wire-r0': 'redstone_wire', 'powered-wire-r0': 'redstone_wire',
+                 'torch-r0': 'redstone_torch', 'wall-torch-r90': 'redstone_wall_torch',
+                 'lever-r0': 'lever', 'button-r0': 'stone_button',
+                 'repeater-r0': 'repeater', 'comparator-r0': 'comparator',
+                 'pull-wire-r90': 'redstone_wire',
+                 'body-wire-r0': 'redstone_wire', 'body-torch-r0': 'redstone_torch'}
+        for case, kind in cases.items():
+            with self.subTest(case=case):
+                observed = load(FIXTURES / ('support-' + case + '.json.gz'))['observed']
+                removals = [w for w in observed['writes'] if w['before'][0] == 'minecraft:' + kind
+                            and w['after'][0] == 'minecraft:air']
+                self.assertEqual(len(removals), 0 if case == 'body-torch-r0' else 1)
+                final = {tuple(p): s for p, s in observed['tick_end_worlds'][-1]['blocks']}
+                if case == 'body-torch-r0':
+                    self.assertTrue(any(s[0] == 'minecraft:redstone_torch' for s in final.values()))
+                    self.assertTrue(any(w['after'][0] == 'minecraft:piston'
+                                        and dict(w['after'][1])['extended'] == 'true' for w in observed['writes']))
+                    continue
+                removed = removals[0]
+                properties = dict(removed['before'][1])
+                if case in ['button-r0', 'lever-r0', 'repeater-r0', 'comparator-r0']:
+                    self.assertEqual(properties['powered'], 'true')
+                if case == 'powered-wire-r0':
+                    self.assertEqual(properties['power'], '15')
+                self.assertNotIn(tuple(removed['position']), final)
+                if case == 'pull-wire-r90':
+                    x, y, z = removed['position']
+                    self.assertNotIn((x, y - 1, z), final)
+                    self.assertEqual(final[(x, y - 1, z - 1)][0], 'minecraft:stone')
+                    continue
+                if not case.startswith('body-'):
+                    self.assertTrue(any(w['after'][0] == 'minecraft:redstone_lamp'
+                                        and dict(w['after'][1])['lit'] == 'true' for w in observed['writes']))
+                    # Later solid support at the same location does not recreate
+                    # a component that already lost support during movement.
+                    x, y, z = removed['position']
+                    dx, dy, dz = (0, -1, 0)
+                    if kind in ['redstone_wall_torch', 'lever', 'stone_button']:
+                        dx, dy, dz = {'north': (0, 0, 1), 'south': (0, 0, -1),
+                                      'west': (1, 0, 0), 'east': (-1, 0, 0)}[properties['facing']]
+                    self.assertEqual(final[(x + dx, y + dy, z + dz)][0], 'minecraft:stone')
 
     def test_missing_unsupported_and_rejected_runs_have_distinct_outcomes(self):
         for kind, expected in [('missing', 'observation_incomplete'),

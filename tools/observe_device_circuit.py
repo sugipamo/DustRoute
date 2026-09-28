@@ -42,7 +42,7 @@ def compare_capture(paths, fixture):
     except (AssertionError, ValueError, KeyError, IndexError, TypeError) as error:
         return dict(classification='model_comparison_incomplete',
                     error=f'{type(error).__name__}: {error}'), observation
-    differences = ['tick_mismatches', 'first_write_mismatch', 'first_scheduled_mismatch', 'first_callback_mismatch']
+    differences = ['tick_mismatches', 'first_write_mismatch', 'first_scheduled_mismatch', 'first_callback_mismatch', 'first_tick_attempt_mismatch']
     result['classification'] = 'mismatch' if any(result[k] for k in differences) else 'matched_declared_projection'
     return result, observation
 
@@ -102,6 +102,7 @@ def main():
     save(paths['.summary.json'], summary)
     print(json.dumps(dict(classification=result['classification'], summary=str(paths['.summary.json']),
                           first_write_mismatch=result.get('first_write_mismatch'), first_scheduled_mismatch=result.get('first_scheduled_mismatch'),
+                          first_tick_attempt_mismatch=result.get('first_tick_attempt_mismatch'),
                           first_callback_mismatch=result.get('first_callback_mismatch'), error=result.get('error'))), flush=True)
     if result['classification'] != 'matched_declared_projection':
         raise SystemExit(1)

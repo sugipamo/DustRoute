@@ -4,7 +4,7 @@ use super::electrical::{wire_offset_jobs, world, write_shape_jobs};
 use super::geometry::{along, delta, offset};
 use super::notifications::adjacent_jobs;
 use super::*;
-use crate::piston_electrical::{full_face, wire_notification_centers};
+use crate::piston_electrical::wire_notification_centers;
 use crate::{BlockKind, DeltaCause, Facing};
 
 pub(super) fn install(
@@ -31,7 +31,9 @@ pub(super) fn install(
             .into_iter()
             .find(|side| side.offset() == support)
             .ok_or_else(|| unsupported("adjacent construction support required"))?;
-        if !full_face(&view.block(offset(pos, support)?)?, side.opposite()) {
+        if !crate::physical::of_kind(block.kind)
+            .supports_attachment(&view.block(offset(pos, support)?)?, side)
+        {
             return Err(unsupported("unsupported command placement support"));
         }
     }
@@ -229,6 +231,25 @@ pub(super) fn removed(
     pos: Pos,
     before: &Block,
 ) -> Result<RuntimeOutcome<PistonEvent>, RuntimeError> {
+    let jobs = removed_notification_jobs(view, pos, before)?;
+    Ok(RuntimeOutcome {
+        callbacks: vec![call(pos, PistonEvent::Notify { jobs })],
+        continuation: Some(if before.kind == BlockKind::RedstoneWire {
+            PistonEvent::ElectricalRemovedWireUpdate {
+                block: Box::new(before.clone()),
+            }
+        } else {
+            PistonEvent::ElectricalCommandNeighbors
+        }),
+        ..Default::default()
+    })
+}
+
+pub(super) fn removed_notification_jobs(
+    view: RuntimeView<'_>,
+    pos: Pos,
+    before: &Block,
+) -> Result<VecDeque<NeighborJob>, RuntimeError> {
     let mut jobs = VecDeque::new();
     jobs.extend(super::devices::removed_jobs(view, pos, before)?);
     match before.kind {
@@ -246,21 +267,10 @@ pub(super) fn removed(
             for side in crate::piston_electrical::SIDES {
                 jobs.extend(adjacent_jobs(view, along(pos, side, 1)?, false, false)?);
             }
-            return Ok(RuntimeOutcome {
-                callbacks: vec![call(pos, PistonEvent::Notify { jobs })],
-                continuation: Some(PistonEvent::ElectricalRemovedWireUpdate {
-                    block: Box::new(before.clone()),
-                }),
-                ..Default::default()
-            });
         }
         _ => {}
     }
-    Ok(RuntimeOutcome {
-        callbacks: vec![call(pos, PistonEvent::Notify { jobs })],
-        continuation: Some(PistonEvent::ElectricalCommandNeighbors),
-        ..Default::default()
-    })
+    Ok(jobs)
 }
 
 pub(super) fn removed_wire_update(
@@ -268,6 +278,23 @@ pub(super) fn removed_wire_update(
     pos: Pos,
     before: &Block,
 ) -> Result<RuntimeOutcome<PistonEvent>, RuntimeError> {
+    Ok(RuntimeOutcome {
+        callbacks: vec![call(
+            pos,
+            PistonEvent::Notify {
+                jobs: removed_wire_jobs(view, pos, before)?,
+            },
+        )],
+        continuation: Some(PistonEvent::ElectricalCommandNeighbors),
+        ..Default::default()
+    })
+}
+
+pub(super) fn removed_wire_jobs(
+    view: RuntimeView<'_>,
+    pos: Pos,
+    before: &Block,
+) -> Result<VecDeque<NeighborJob>, RuntimeError> {
     let mut jobs = VecDeque::new();
     if Some(world(view)?.wire_power_at(pos)?) != before.power_level {
         for center in wire_notification_centers(pos)? {
@@ -275,9 +302,5 @@ pub(super) fn removed_wire_update(
         }
     }
     jobs.extend(wire_offset_jobs(view, pos)?);
-    Ok(RuntimeOutcome {
-        callbacks: vec![call(pos, PistonEvent::Notify { jobs })],
-        continuation: Some(PistonEvent::ElectricalCommandNeighbors),
-        ..Default::default()
-    })
+    Ok(jobs)
 }

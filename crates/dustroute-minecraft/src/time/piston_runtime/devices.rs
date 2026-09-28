@@ -133,6 +133,12 @@ pub(super) fn start(
             &current
         }
     };
+    if captured.is_none()
+        && callback == Callback::Neighbor
+        && super::support::should_break(view, pos, before, false, source)?
+    {
+        return super::support::remove(view, pos, before, false);
+    }
     let Some(run) = prepare(view, pos, before, callback, source)? else {
         return Ok(RuntimeOutcome::default());
     };

@@ -8,7 +8,8 @@ new observations or evidence do not silently upgrade an earlier approval.
 approved physical-admission prerequisite are implemented and verified. Device
 rules, query bindings and ordered effects use checked Rust constants; the shared
 runtime owns scheduling, internal outputs and bounded position histories.
-Current execution/root exploration is v13. Earlier saved approvals need fresh
+Current execution/root exploration is v14 after the
+[attachment support-loss extension](support-loss-runtime.md). Earlier saved approvals need fresh
 review. No further outside-scope prerequisite was required.
 
 ## Ordered milestones
