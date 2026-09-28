@@ -24,10 +24,13 @@ impl DustRouteMcp {
             if !source_basis_matches(&plan.source_identity, &basis)? { return Err("adopted source or context changed; create a new construction plan".into()); }
             let transform = plan.transform;
             let reconstruct_from = plan.reconstruction().map(|r| r.baseline.clone());
+            let remove_from = plan.operating_removal().map(|r| r.baseline.clone());
             let (proof, steps) = tokio::task::spawn_blocking(move || {
                 let proof = proof_from_basis(&basis,transform)?;
                 let steps = if let Some(baseline) = reconstruct_from {
                     proof.reconstruction_steps(&baseline)?
+                } else if let Some(baseline) = remove_from {
+                    proof.operating_removal(&baseline)?.steps
                 } else { proof.steps(removal).to_vec() };
                 Ok::<_,String>((proof,steps))
             }).await.map_err(|e|e.to_string())??;
@@ -57,8 +60,11 @@ impl DustRouteMcp {
                 ValidatedAssemblyPlacement::matches(&record.expected,proof.settled(),&status.version)?;
                 let observation = self.observe_instance(&record).await;
                 if let Some(reconstruction) = plan.reconstruction() {
-                    let actual = reconstruction::baseline(&observation)?;
+                    let actual = observation::stable_baseline(&observation)?;
                     ValidatedAssemblyPlacement::matches(&actual,&reconstruction.baseline,&status.version)?;
+                } else if let Some(operating) = plan.operating_removal() {
+                    let actual = observation::stable_baseline(&observation)?;
+                    ValidatedAssemblyPlacement::matches(&actual,&operating.baseline,&status.version)?;
                 } else if observation["status"] != "matches" { return Err(format!("fresh removal observation refused: {observation}")); }
                 record
             } else {
@@ -71,12 +77,14 @@ impl DustRouteMcp {
             let baseline = baseline_readback.snapshot;
             if let Some(reconstruction) = plan.reconstruction() {
                 ValidatedAssemblyPlacement::matches(&baseline,&reconstruction.baseline,&status.version)?;
+            } else if let Some(operating) = plan.operating_removal() {
+                ValidatedAssemblyPlacement::matches(&baseline,&operating.baseline,&status.version)?;
             } else { proof.validate_before(&baseline,&status.version,removal)?; }
             if !undo && plan.expires_at <= Instant::now() { return Err("construction expired during validation".into()); }
             self.assembly_placements.lock().await.get_mut(&id).ok_or("construction missing")?.state = PistonPlacementState::NeedsInspection;
             record.state = InstanceState::NeedsInspection;
             record.last_observation = None;
-            record.attempts.push(Attempt { operation_id:id,removal,reconstruction:plan.reconstruction().cloned(),verified_steps:0,total_steps:steps.len(),started_at_unix_ms:now_ms()?,finished_at_unix_ms:None,error:None,readbacks:vec![baseline_readback.readback] });
+            record.attempts.push(Attempt { operation_id:id,removal,reconstruction:plan.reconstruction().cloned(),operating_removal:plan.operating_removal().cloned(),verified_steps:0,total_steps:steps.len(),started_at_unix_ms:now_ms()?,finished_at_unix_ms:None,error:None,readbacks:vec![baseline_readback.readback] });
             registry.save(&mut record)?;
             let mut completed = 0;
             let mut run: Result<(),String> = async {

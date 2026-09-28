@@ -105,7 +105,8 @@ impl RuntimeBehaviorModel {
         let relation = match &definition.contract {
             TypeContract::RepeatedSettling { relation } => relation.clone(),
             TypeContract::PistonDoor { requirement } => requirement.relation(),
-            _ => return Err("runtime exploration supports repeated-settling and completed-operation piston-door types".into()),
+            TypeContract::SingleOperation { requirement } => requirement.relation(),
+            _ => return Err("runtime exploration supports repeated-settling, piston-door and single-operation types".into()),
         };
         relation.validate().map_err(str::to_owned)?;
         let bound = LocationBehaviorBinding::resolve(catalog, assembly, instance, binding)?;
@@ -190,6 +191,14 @@ impl RuntimeBehaviorModel {
                 self.initial_inputs[0],
                 budget,
             ),
+            TypeContract::SingleOperation { .. } => {
+                crate::piston_door_type::verify_single_operation(
+                    &self.definition,
+                    model,
+                    self.initial_inputs[0],
+                    budget,
+                )
+            }
             _ => verify_repeated_settling(&self.definition, model, budget),
         }
     }

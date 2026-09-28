@@ -120,7 +120,30 @@ blocks, but saves the observation and invalidates older plans through the record
 revision. Read the [diagnosis contract](assembly-diagnosis.md), including reference
 fallbacks and the limits of interpreting a difference as a fault.
 
-`plan_removal` repeats those checks and requires lifecycle state `applied`.
+To remove an intact layout after a permitted operation (including a flying
+machine that has arrived elsewhere inside its fixed observation region), opt in:
+
+```json
+{"action":"plan_removal","instance_id":"<UUID>","removal_reference":"observed_inputs"}
+```
+
+This uses the same reference as diagnosis: replay the declared initial design,
+apply the observed declared lever values in order, and settle each input. It
+requires an applied instance, fresh target review, complete matching samples,
+and an exact full-region match to that reference. It never imports live blocks
+as hidden runtime state. Missing parts, extra blocks, changed inputs after the
+preview, incomplete coverage and ongoing motion refuse the operation. Other
+valid histories can end differently; such layouts require explicit diagnosis.
+
+The preview includes `operating_removal.baseline` and modeled teardown steps.
+Execution rebuilds them, checks the record revision and full baseline again,
+then verifies each step through the existing server readback gates. A restart
+requires a new plan; v3 instance records retain the reference and steps as
+history only. v1/v2 history remains readable but cannot carry this new field.
+Default `removal_reference: "constructed"` retains the original baseline rule.
+Neither option proves hidden server queues empty or makes check/write atomic.
+
+`plan_removal` with the default reference repeats those checks and requires lifecycle state `applied`.
 It creates a five-minute, process-local operation with freshly simulated removal
 stages. Review it through `show_operation`, then use
 `invoke_operation({"operation_id":"<new operation UUID>","confirm":true})`.
@@ -140,7 +163,7 @@ construction needs its own reviewed empty-site plan.
 Configure a durable `DUSTROUTE_STATE_DIR`; its default lives in the operating
 system's temporary directory and is not a permanent storage guarantee.
 `<scoped state directory>/assembly-instances/<instance UUID>.json` has schema
-`dustroute.placed-assembly.v2`, a monotonically increasing record revision and
+`dustroute.placed-assembly.v3`, a monotonically increasing record revision and
 no TTL. `DUSTROUTE_PLAN_TTL_SECONDS` does not expire these files. Records are
 limited to 32 MiB each. A registry file lock serializes updates and construction
 attempts across MCP instances using the same state directory; another request

@@ -207,6 +207,7 @@ fn port_type_check(
             }),
             TypeContract::RepeatedSettling { .. }
             | TypeContract::PistonDoor { .. }
+            | TypeContract::SingleOperation { .. }
             | TypeContract::Periodic { .. }
             | TypeContract::FiniteBurst { .. } => false,
         };
@@ -288,6 +289,7 @@ fn requirement_check(
                 catalog.type_revision(id).expect("checked type").contract,
                 TypeContract::RepeatedSettling { .. }
                     | TypeContract::PistonDoor { .. }
+                    | TypeContract::SingleOperation { .. }
                     | TypeContract::Periodic { .. }
                     | TypeContract::FiniteBurst { .. }
             )

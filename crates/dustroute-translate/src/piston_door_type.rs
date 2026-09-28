@@ -1,8 +1,9 @@
 //! Completed-operation verification in the same deterministic physical world.
 //! Completion is membership in a fully examined held-input recurrent region
-//! with permanently correct aperture observations, including internal samples.
-//! Every phase of that region permits the next command. No world reset, clock
-//! deadline, world-only key, or simulation input filter is introduced.
+//! with permanently correct observations, including internal samples. Door
+//! contracts admit subsequent commands from every completed phase; a single
+//! operation only admits its one rising command from every initial ready phase.
+//! No world reset, clock deadline, world-only key, or input filter is introduced.
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::time::Instant;
 
@@ -29,6 +30,7 @@ struct Explorer<S> {
     steps: usize,
     budget: BehaviorBudget,
     start: Instant,
+    expected: [Vec<bool>; 2],
 }
 impl<S: Clone + Ord> Explorer<S> {
     fn check(&self) -> Result<(), String> {
@@ -84,8 +86,11 @@ impl<S: Clone + Ord> Explorer<S> {
         let mut outputs = vec![model.outputs(state)?];
         let (next, inside) = model.step_with_observations(state)?;
         outputs.extend(inside);
-        if outputs.iter().any(|o| o.len() != 18) {
-            return Err("door observation width mismatch".into());
+        if outputs
+            .iter()
+            .any(|o| o.len() != self.expected[usize::from(closed)].len())
+        {
+            return Err("operation observation width mismatch".into());
         }
         let next = self.intern(next, Some((index, WitnessAction::Advance)))?;
         self.edges.insert((index, closed), Edge { next, outputs });
@@ -110,19 +115,19 @@ impl<S: Clone + Ord> Explorer<S> {
         }
     }
     fn wrong(&self, path: &[usize], closed: bool) -> bool {
-        let expected: Vec<_> = (0..9).flat_map(|_| [!closed, closed]).collect();
+        let expected = &self.expected[usize::from(closed)];
         path.iter().any(|index| {
             self.edges[&(*index, closed)]
                 .outputs
                 .iter()
-                .any(|o| o != &expected)
+                .any(|o| o != expected)
         })
     }
     fn witness(&self, cycle: &[usize], closed: bool) -> BehaviorCounterexample {
         BehaviorCounterexample {
             prefix: self.prefix(cycle[0]),
             held_inputs: vec![closed],
-            expected_outputs: (0..9).flat_map(|_| [!closed, closed]).collect(),
+            expected_outputs: self.expected[usize::from(closed)].clone(),
             cycle_outputs: cycle
                 .iter()
                 .flat_map(|i| self.edges[&(*i, closed)].outputs.clone())
@@ -141,6 +146,32 @@ pub fn verify_piston_door<M: BehaviorModel>(
     initial_closed: bool,
     budget: BehaviorBudget,
 ) -> BehaviorTypeReport {
+    verify_completed_operation(definition, model, initial_closed, budget, false)
+}
+
+/// Initial readiness is explored to closure. The one rising command must work
+/// from every ready phase; no reverse command or second activation is assumed.
+pub fn verify_single_operation<M: BehaviorModel>(
+    definition: &TypeRevision,
+    model: &M,
+    initially_active: bool,
+    budget: BehaviorBudget,
+) -> BehaviorTypeReport {
+    verify_completed_operation(definition, model, initially_active, budget, true)
+}
+
+fn verify_completed_operation<M: BehaviorModel>(
+    definition: &TypeRevision,
+    model: &M,
+    initial_closed: bool,
+    budget: BehaviorBudget,
+    single: bool,
+) -> BehaviorTypeReport {
+    let relation = match (&definition.contract, single) {
+        (TypeContract::PistonDoor { requirement }, false) => Some(requirement.relation()),
+        (TypeContract::SingleOperation { requirement }, true) => Some(requirement.relation()),
+        _ => None,
+    };
     let mut e = Explorer {
         states: Vec::new(),
         indices: BTreeMap::new(),
@@ -149,12 +180,21 @@ pub fn verify_piston_door<M: BehaviorModel>(
         steps: 0,
         budget,
         start: Instant::now(),
+        expected: std::array::from_fn(|index| {
+            relation
+                .as_ref()
+                .map_or_else(Vec::new, |r| r.rows[index].outputs.clone())
+        }),
     };
     let result = (|| -> Result<(CheckStatus, Option<BehaviorCounterexample>, String), String> {
-        let TypeContract::PistonDoor { requirement } = &definition.contract else {
-            return Err("expected completed-operation piston-door contract".into());
-        };
-        requirement.validate().map_err(str::to_owned)?;
+        relation
+            .as_ref()
+            .ok_or("wrong completed-operation contract")?
+            .validate()
+            .map_err(str::to_owned)?;
+        if single && initial_closed {
+            return Err("single-operation input must initially be false".into());
+        }
         let first = e.intern(model.initial_state()?, None)?;
         let (initial, begin) = e.trajectory(model, first, initial_closed)?;
         if e.wrong(&initial, initial_closed) {
@@ -164,7 +204,7 @@ pub fn verify_piston_door<M: BehaviorModel>(
             return Ok((
                 CheckStatus::Failed,
                 witness,
-                "declared initial aperture is incorrect or changes during initial completion"
+                "declared initial observations are incorrect or change during initial completion"
                     .into(),
             ));
         }
@@ -176,6 +216,9 @@ pub fn verify_piston_door<M: BehaviorModel>(
         }
         while let Some(index) = ready.pop_front() {
             for closed in [false, true] {
+                if single && !closed {
+                    continue;
+                }
                 e.check()?;
                 let driven = model.with_inputs(&e.states[index].value, &[closed])?;
                 let driven = e.intern(
@@ -190,10 +233,10 @@ pub fn verify_piston_door<M: BehaviorModel>(
                 let (path, begin) = e.trajectory(model, driven, closed)?;
                 let cycle = &path[begin..];
                 if e.wrong(cycle, closed) {
-                    return Ok((CheckStatus::Failed,Some(e.witness(cycle,closed)),"an allowed operation reaches a recurrent region with incorrect aperture observations".into()));
+                    return Ok((CheckStatus::Failed,Some(e.witness(cycle,closed)),"an allowed operation reaches a recurrent region with incorrect observations".into()));
                 }
                 for &index in cycle {
-                    if e.completed.insert(index) {
+                    if !single && e.completed.insert(index) {
                         ready.push_back(index);
                     }
                 }
@@ -203,8 +246,13 @@ pub fn verify_piston_door<M: BehaviorModel>(
             CheckStatus::Passed,
             None,
             format!(
-                "closed completed-operation graph; {} complete physical cycle phases permit new commands; held-input intermediate aperture observations remain correct; interruption tolerance is not required",
-                e.completed.len()
+                "closed completed-operation graph; {} ready physical cycle phases checked; held-input intermediate observations remain correct; {}; interruption tolerance is not required",
+                e.completed.len(),
+                if single {
+                    "one rising command only; reverse/reset/reuse not promised"
+                } else {
+                    "repeated completed commands"
+                }
             ),
         ))
     })();

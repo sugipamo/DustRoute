@@ -148,6 +148,7 @@ fn validate_assembly_routes(
                         TypeContract::RepeatedSettling { .. }
                             | TypeContract::Periodic { .. }
                             | TypeContract::FiniteBurst { .. }
+                            | TypeContract::SingleOperation { .. }
                     )
                 })
             });

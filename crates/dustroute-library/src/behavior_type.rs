@@ -166,6 +166,41 @@ pub struct BooleanRow {
     pub outputs: Vec<bool>,
 }
 
+/// One command after initial readiness, then a permanently held input.
+/// The input is initially false; it may become true once at any ready phase.
+/// Completion constrains named observations, not an arbitrary live snapshot's
+/// hidden queue. Reset, interruption and repeated activation are not promised.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SingleOperation {
+    pub input: String,
+    pub outputs: Vec<String>,
+    pub initial: Vec<bool>,
+    pub completed: Vec<bool>,
+}
+
+impl SingleOperation {
+    pub fn relation(&self) -> RepeatedSettling {
+        RepeatedSettling {
+            inputs: vec![self.input.clone()],
+            outputs: self.outputs.clone(),
+            rows: vec![
+                BooleanRow {
+                    inputs: vec![false],
+                    outputs: self.initial.clone(),
+                },
+                BooleanRow {
+                    inputs: vec![true],
+                    outputs: self.completed.clone(),
+                },
+            ],
+        }
+    }
+    pub fn validate(&self) -> Result<(), &'static str> {
+        self.relation().validate()
+    }
+}
+
 /// Ordinary door operation. Inputs change only at completed operation states;
 /// this does not inherit RepeatedSettling's interruption-tolerance semantics.
 /// The ordered 3x3 observations are bound to a fixed physical aperture.

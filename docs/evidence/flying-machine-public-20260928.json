@@ -1,0 +1,213 @@
+{
+  "schema_version": "dustroute.finite-flight-public-evidence.v1",
+  "date": "2026-09-28",
+  "status": "passed",
+  "base_commit": "b791873",
+  "minecraft": "1.21.11",
+  "runtime_revision": "v17 (unchanged)",
+  "scope": "One specified empty corridor, R90 placement, one ten-block flight, shared diagnosis and explicit arrival-reference removal through public MCP; no physics-runtime changes.",
+  "origin": {
+    "x": 270000,
+    "y": 180,
+    "z": 1000
+  },
+  "rotation": "r90",
+  "known_region": {
+    "min": {
+      "x": 269996,
+      "y": 177,
+      "z": 996
+    },
+    "max": {
+      "x": 270003,
+      "y": 185,
+      "z": 1015
+    }
+  },
+  "checked_cells": 1440,
+  "applied_inputs": [
+    {
+      "position": {
+        "x": 270000,
+        "y": 182,
+        "z": 1000
+      },
+      "powered": true,
+      "game_tick": 182459,
+      "packet_sequence": 14567,
+      "write_sequence": 14578
+    }
+  ],
+  "verified_operations": [
+    {
+      "kind": "custom_piston_assembly_construction",
+      "steps": 9
+    },
+    {
+      "kind": "placed_assembly_removal",
+      "steps": 9
+    }
+  ],
+  "arrival": {
+    "distance": 10,
+    "engine_blocks": 6,
+    "whole_corridor_readback": "server_confirmed",
+    "expected_from": "declared engine translated ten blocks; fixed initial native states retained except input=true",
+    "diagnosis": "matches_reference",
+    "diagnosis_world_unchanged": true,
+    "hidden_readiness_proven": false
+  },
+  "restart": {
+    "after_adoption": true,
+    "transport": "new_stdio_process",
+    "after_placement": true,
+    "after_arrival": true,
+    "after_removal": true
+  },
+  "restart_count": 5,
+  "guards": {
+    "occupied_target_refused": true,
+    "listed_after_restart": true,
+    "fresh_review": true,
+    "missing_chunks_refused": true,
+    "external_change_detected": true,
+    "unsaved_removal_plan_not_reused": true,
+    "preview_required": true,
+    "changed_after_preview_refused": true,
+    "removal_retained": true
+  },
+  "cleanup": {
+    "region_empty": true,
+    "force_load_removed": true,
+    "server_stopped_normally": true
+  },
+  "retained_observations": {
+    "path": "docs/evidence/flying-machine-public-20260928.observations.json.gz",
+    "sha256": "398ea1dc078bbf8a3b576d7d7d172401a6a147f26a41fe876398f1d2e9e0880f",
+    "includes": [
+      "fixture",
+      "complete MCP requests and responses",
+      "native arrival readback",
+      "durable registry records and per-stage readback receipts",
+      "continuous server capture",
+      "server/bridge logs"
+    ]
+  },
+  "raw_capture": {
+    "records": 34167,
+    "contiguous": true,
+    "footer": {
+      "kind": "artifact_end",
+      "capture_mode": "continuous",
+      "capture_state": "closed_no_input",
+      "input_observed": false,
+      "anchor_game_tick": null,
+      "end_game_tick": null,
+      "last_sequence": 34167,
+      "emitted_records": 34167,
+      "suppressed_records": 0,
+      "evicted_records": 0,
+      "write_errors": 0,
+      "heartbeat_mode": "full"
+    },
+    "note": "Continuous capture records input packets independently of the bounded-trigger footer; actual input is identified by its packet and applied lever write."
+  },
+  "validation": {
+    "type_adoption_construction_tests": {
+      "log": ".local/finite-flight-translate-tests.log",
+      "sha256": "351a850687e7f9df91b3086c5597b41b84b93ae89ddfe056ab7e09fa698881af",
+      "passed": 15
+    },
+    "public_mcp_regression_tests": {
+      "log": ".local/finite-flight-mcp-tests.log",
+      "sha256": "993af84b018ce082c17ad3e3f066ad78e4669becfdf380b9a327916332855200",
+      "passed": 16
+    },
+    "registry_tests": {
+      "log": ".local/finite-flight-registry-tests.log",
+      "sha256": "843dbe47c88b7774ef18c937980ad9298ffd1ce97d43ad7fdf4834454c0b0bd6",
+      "passed": 1
+    },
+    "clippy": {
+      "log": ".local/finite-flight-clippy.log",
+      "sha256": "8418123ca8d237c756b6ae1f93bb2428cb7492669313fafefe4b304e0ecf0ef0",
+      "passed": true,
+      "scope": "--offline --locked -j 1 --workspace --all-targets -- -D warnings"
+    },
+    "note": "The public MCP regression run preceded the final relocation of the unchanged stable-snapshot helper into observation and the test-fixture module re-export; the live workflow and final workspace Clippy use that shared helper. No physics-runtime source changed."
+  },
+  "limits": [
+    "One actual R90 placement; model construction/operating-removal also checked at R0/R90/R180/R270.",
+    "SingleOperation does not promise interruption tolerance, reversal, reset or repeated launch.",
+    "No empty-site auto-search, moving observation window, indefinite flight, entity cargo or chunk-unload support.",
+    "Matching block-state samples do not prove all hidden queues empty or atomic observation/write.",
+    "This workflow confirms staged construction/removal and endpoint arrival; tick-by-tick flight comparison is the separate earlier fixed-course evidence."
+  ],
+  "artifacts": {
+    ".raw.ndjson": "/root/DustRoute/.local/e2e-artifacts/flying-public-20260928-a.raw.ndjson",
+    ".server.log": "/root/DustRoute/.local/e2e-artifacts/flying-public-20260928-a.server.log",
+    ".bridge.log": "/root/DustRoute/.local/e2e-artifacts/flying-public-20260928-a.bridge.log",
+    ".client.json": "/root/DustRoute/.local/e2e-artifacts/flying-public-20260928-a.client.json",
+    ".fixture.json": "/root/DustRoute/.local/e2e-artifacts/flying-public-20260928-a.fixture.json",
+    ".summary.json": "/root/DustRoute/.local/e2e-artifacts/flying-public-20260928-a.summary.json"
+  },
+  "artifacts_sha256": {
+    ".raw.ndjson": "8cd08d4ecd86655bf81280a64190454f6233a5321b3efee53e50f2cbe6d85956",
+    ".server.log": "f333d94c6d56a9fde31a6a49685d0273824c3dccd00b9c5275262cbff085fc8c",
+    ".bridge.log": "54426e79fbbe6dacb9e5ec92f4b1f503e38e4ed07d873c863db9f12d96c04109",
+    ".client.json": "07748483c45190f4fa0c2866328a479bc34f6a7c5e6905d1353b3b399b2d7291",
+    ".fixture.json": "045e2b983d42b66db80a3f6b891aac9ef6ae999d074982230e3a1f9c8342739b"
+  },
+  "loaded_sources_sha256": {
+    "/root/DustRoute/tools/observe_assembly_construction.py": "ce7352aa14163e89bdf0446ac756d8b32ad3a98eaed5a7f36581bc18d141e940",
+    "/root/DustRoute/crates/dustroute-mcp/mineflayer/e2e/piston-assembly-mcp-live.js": "94f83346482fa5256cdd65b6e2b228c88fd2d9474ca947c9085d9d3268f25565",
+    "/root/DustRoute/target/debug/dustroute-mcp": "0b478244e96f4cf0fe5c836f78fd8ccf89f7b59ee2cd31024e08a3d8c912ca2d",
+    "/root/DustRoute/crates/dustroute-mcp/mineflayer/bridge.js": "fd20930613733f1f36b97103033a651a958736c3b79c3c8e2122d5215173c8c8",
+    "/root/DustRoute/crates/dustroute-mcp/mineflayer/readback.js": "517f9ebab79a8e18be6e489f6346a5c9a115f5b7d6073c5ff0c2b46fb71e8737",
+    "/root/DustRoute/tools/instrumented_server.py": "7164de1897c7f0388b99b6ab2cac7edb12174add7aaf1a0bd347e5ffb5f3ca6f"
+  },
+  "server": {
+    "connected": true,
+    "username": "DustRouteBot",
+    "host": "127.0.0.1",
+    "port": 25565,
+    "version": "1.21.11",
+    "dimension": "minecraft:overworld",
+    "enabled_features": [
+      "minecraft:vanilla"
+    ],
+    "position": {
+      "x": 240003.5,
+      "y": -60,
+      "z": 997.5
+    },
+    "metrics": {
+      "requests_total": 4,
+      "errors_total": 0,
+      "request_bytes": 152,
+      "response_bytes": 2046,
+      "total_duration_micros": 1466,
+      "max_duration_micros": 1211,
+      "scan_requests": 0,
+      "scan_volume_blocks": 0,
+      "scan_non_air_blocks": 0,
+      "requests_by_method": {
+        "status": 4,
+        "visible_players": 0,
+        "approach_player": 0,
+        "observe_player": 0,
+        "scan_region": 0,
+        "get_block": 0,
+        "activate_lever": 0,
+        "approach_lever": 0,
+        "wait_ticks": 0,
+        "start_update_recording": 0,
+        "stop_update_recording": 0,
+        "preview_region": 0,
+        "write_blocks": 0,
+        "place_physical_blocks": 0,
+        "unknown": 0
+      }
+    }
+  }
+}

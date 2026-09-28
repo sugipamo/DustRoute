@@ -134,9 +134,25 @@ impl ValidatedAssemblyPlacement {
         &self,
         observed: &MinecraftSnapshot,
     ) -> Result<MinecraftSnapshot, String> {
+        self.construction
+            .operating_reference(&self.observed_inputs(observed)?, self.context.root_limits)
+    }
+    pub(crate) fn operating_removal(
+        &self,
+        observed: &MinecraftSnapshot,
+    ) -> Result<crate::assembly_registry::OperatingRemoval, String> {
+        let (baseline, steps) = self
+            .construction
+            .operating_removal(&self.observed_inputs(observed)?, self.context.root_limits)?;
+        Self::matches(observed, &baseline, "1.21.11")?;
+        Ok(crate::assembly_registry::OperatingRemoval { baseline, steps })
+    }
+    fn observed_inputs(
+        &self,
+        observed: &MinecraftSnapshot,
+    ) -> Result<Vec<(dustroute_translate::Pos, bool)>, String> {
         let blocks = crate::revision::blocks(observed)?;
-        let inputs = self
-            .context
+        self.context
             .input_levers
             .iter()
             .map(|position| {
@@ -154,9 +170,7 @@ impl ValidatedAssemblyPlacement {
                     })?;
                 Ok((*position, level))
             })
-            .collect::<Result<Vec<_>, String>>()?;
-        self.construction
-            .operating_reference(&inputs, self.context.root_limits)
+            .collect()
     }
     pub(crate) fn validate_before(
         &self,

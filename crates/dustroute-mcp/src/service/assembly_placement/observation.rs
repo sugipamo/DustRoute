@@ -1,6 +1,17 @@
 //! Complete live snapshots and their evidence limits; never reconstructs runtime history.
 use super::*;
 
+pub(super) fn stable_baseline(
+    observation: &Value,
+) -> Result<dustroute_translate::MinecraftSnapshot, String> {
+    if !matches!(observation["status"].as_str(), Some("matches" | "changed")) {
+        return Err(format!(
+            "operation needs complete, unchanged samples: {observation}"
+        ));
+    }
+    serde_json::from_value(observation["snapshot"].clone()).map_err(|e| e.to_string())
+}
+
 impl DustRouteMcp {
     pub(super) async fn observe_instance(&self, record: &PlacedAssembly) -> Value {
         let bounds =

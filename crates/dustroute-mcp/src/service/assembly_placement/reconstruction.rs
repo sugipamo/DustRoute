@@ -1,7 +1,6 @@
 //! A newly reviewed reconstruction, never continuation of an uncertain attempt.
 use super::*;
 use crate::assembly_registry::ReconstructionAttempt;
-use dustroute_translate::MinecraftSnapshot;
 
 pub(super) fn conditions() -> Value {
     json!({
@@ -14,15 +13,6 @@ pub(super) fn conditions() -> Value {
     })
 }
 
-pub(super) fn baseline(observation: &Value) -> Result<MinecraftSnapshot, String> {
-    if !matches!(observation["status"].as_str(), Some("matches" | "changed")) {
-        return Err(format!(
-            "reconstruction needs complete, unchanged samples: {observation}"
-        ));
-    }
-    serde_json::from_value(observation["snapshot"].clone()).map_err(|e| e.to_string())
-}
-
 impl DustRouteMcp {
     pub(super) async fn plan_assembly_reconstruction(
         &self,
@@ -33,7 +23,7 @@ impl DustRouteMcp {
         if record.state == InstanceState::Removed {
             return Err("removed instances need a new placement plan".into());
         }
-        let baseline = baseline(&observation)?;
+        let baseline = observation::stable_baseline(&observation)?;
         let model = proof.clone();
         let initial = baseline.clone();
         let steps = tokio::task::spawn_blocking(move || model.reconstruction_steps(&initial))

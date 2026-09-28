@@ -15,12 +15,88 @@ use std::{
     path::{Path, PathBuf},
 };
 
-#[path = "../../dustroute-translate/tests/support/runtime_blueprint.rs"]
-pub(crate) mod runtime_fixture;
+pub(crate) use flight_fixture::base as runtime_fixture;
 
 #[allow(dead_code)]
 #[path = "../../dustroute-translate/tests/support/reference_door_blueprint.rs"]
 mod door_fixture;
+
+#[allow(dead_code)]
+#[path = "../../dustroute-translate/tests/support/flying_machine_blueprint.rs"]
+mod flight_fixture;
+
+#[test]
+fn flight_placement_and_operating_removal_require_the_entire_reviewed_region() {
+    use crate::piston_assembly::ValidatedAssemblyPlacement;
+    use dustroute_translate::assembly_transform::AssemblyTransform;
+    let mut f = flight_fixture::fixture();
+    f.catalog.insert_revisions(f.request.revisions).unwrap();
+    let transform = AssemblyTransform {
+        source_anchor: Pos::default(),
+        target_anchor: Pos::new(270_000, 180, 1000),
+        rotation: RotationY::R90,
+    };
+    let region = transform.region(f.context.known_region).unwrap();
+    let empty = dustroute_translate::MinecraftSnapshot {
+        min: region.min,
+        max: region.max,
+        blocks: vec![],
+    };
+    let new = |baseline: &dustroute_translate::MinecraftSnapshot| {
+        ValidatedAssemblyPlacement::new(
+            &f.catalog,
+            &f.request.candidate_state.assembly,
+            &f.context,
+            transform,
+            baseline,
+            "1.21.11",
+        )
+    };
+    let proof = new(&empty).unwrap();
+    assert!(new(proof.settled()).is_err());
+    let mut partial = empty.clone();
+    partial.min.x += 1;
+    assert!(new(&partial).is_err());
+    let mut input = proof.settled().clone();
+    input
+        .blocks
+        .iter_mut()
+        .find(|b| b.name == "minecraft:lever")
+        .unwrap()
+        .properties
+        .insert("powered".into(), "true".into());
+    assert!(
+        proof.operating_removal(&input).is_err(),
+        "departed layout with active input is not arrival"
+    );
+    let arrived = proof.operating_reference(&input).unwrap();
+    assert!(proof.validate_before(&arrived, "1.21.11", true).is_err());
+    let removal = proof.operating_removal(&arrived).unwrap();
+    assert_eq!(removal.baseline, arrived);
+    assert!(removal.steps.last().unwrap().expected.blocks.is_empty());
+    let mut damaged = arrived.clone();
+    damaged.blocks.retain(|b| b.name != "minecraft:slime_block");
+    assert!(proof.operating_removal(&damaged).is_err());
+    let mut obstructed = arrived.clone();
+    let mut foreign = arrived
+        .blocks
+        .iter()
+        .find(|b| b.name == "minecraft:stone")
+        .unwrap()
+        .clone();
+    foreign.pos = arrived.min;
+    obstructed.blocks.push(foreign);
+    assert!(proof.operating_removal(&obstructed).is_err());
+    let mut changed_input = arrived.clone();
+    changed_input
+        .blocks
+        .iter_mut()
+        .find(|b| b.name == "minecraft:lever")
+        .unwrap()
+        .properties
+        .insert("powered".into(), "false".into());
+    assert!(proof.operating_removal(&changed_input).is_err());
+}
 
 #[test]
 fn ordinary_door_command_initialization_connects_to_full_readback_gates() {

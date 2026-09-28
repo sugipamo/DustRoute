@@ -20,7 +20,7 @@ impl DustRouteMcp {
         proof: &Result<ValidatedAssemblyPlacement, String>,
         observation: &Value,
     ) -> Value {
-        let snapshot = match reconstruction::baseline(observation) {
+        let snapshot = match observation::stable_baseline(observation) {
             Ok(snapshot) => snapshot,
             Err(reason) => return with_design(unavailable(&reason), record, proof),
         };

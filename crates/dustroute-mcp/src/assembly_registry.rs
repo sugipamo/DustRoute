@@ -15,7 +15,8 @@ use uuid::Uuid;
 
 use crate::{bridge::BotStatus, state::PlanStateStore};
 
-const SCHEMA: &str = "dustroute.placed-assembly.v2";
+const SCHEMA: &str = "dustroute.placed-assembly.v3";
+const RECONSTRUCTION_SCHEMA: &str = "dustroute.placed-assembly.v2";
 const LEGACY_SCHEMA: &str = "dustroute.placed-assembly.v1";
 const MAX_BYTES: u64 = 32 * 1024 * 1024;
 
@@ -69,6 +70,9 @@ pub(crate) struct Attempt {
     /// Historical reconstruction request, never an executable capability.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reconstruction: Option<ReconstructionAttempt>,
+    /// Historical reference and steps; fresh replay and observation are required.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub operating_removal: Option<OperatingRemoval>,
     pub verified_steps: usize,
     pub total_steps: usize,
     pub started_at_unix_ms: u64,
@@ -81,6 +85,12 @@ pub(crate) struct Attempt {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub(crate) struct ReconstructionAttempt {
+    pub baseline: MinecraftSnapshot,
+    pub steps: Vec<dustroute_translate::piston_construction::ElectricalConstructionStep>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub(crate) struct OperatingRemoval {
     pub baseline: MinecraftSnapshot,
     pub steps: Vec<dustroute_translate::piston_construction::ElectricalConstructionStep>,
 }
@@ -163,11 +173,21 @@ impl RegistryLock {
             return Err("placed Assembly record exceeds 32 MiB".into());
         }
         let record: PlacedAssembly = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-        if !matches!(record.schema.as_str(), SCHEMA | LEGACY_SCHEMA)
-            || record.instance_id != id
+        if !matches!(
+            record.schema.as_str(),
+            SCHEMA | RECONSTRUCTION_SCHEMA | LEGACY_SCHEMA
+        ) || record.instance_id != id
             || record.revision == 0
             || (record.schema == LEGACY_SCHEMA
                 && record.attempts.iter().any(|a| a.reconstruction.is_some()))
+            || (record.schema != SCHEMA
+                && record
+                    .attempts
+                    .iter()
+                    .any(|a| a.operating_removal.is_some()))
+            || record.attempts.iter().any(|a| {
+                a.operating_removal.is_some() && (!a.removal || a.reconstruction.is_some())
+            })
         {
             return Err("placed Assembly schema or identity mismatch".into());
         }
@@ -211,13 +231,16 @@ impl RegistryLock {
         let previous = self.load(record.instance_id)?;
         if previous.as_ref().map_or(0, |r| r.revision) != record.revision
             || previous.as_ref().is_some_and(|r| r.player != record.player)
-            || !matches!(record.schema.as_str(), SCHEMA | LEGACY_SCHEMA)
+            || !matches!(
+                record.schema.as_str(),
+                SCHEMA | RECONSTRUCTION_SCHEMA | LEGACY_SCHEMA
+            )
         {
             return Err("placed Assembly record changed; reobserve and replan".into());
         }
         let mut next = record.clone();
         // Read legacy records as history; only a save upgrades the container.
-        // Older binaries reject v2 instead of interpreting a repair as a build.
+        // Older binaries reject new operation semantics instead of guessing.
         next.schema = SCHEMA.into();
         next.revision = next
             .revision
@@ -343,6 +366,35 @@ mod tests {
         reopened.save(&mut legacy).unwrap();
         assert_eq!(legacy.schema, SCHEMA);
         assert_eq!(legacy.state, InstanceState::NeedsInspection);
+        let mut history = serde_json::to_value(&legacy).unwrap();
+        history["attempts"] = serde_json::json!([{
+            "operation_id":Uuid::new_v4(), "removal":true,
+            "operating_removal":{"baseline":legacy.expected,"steps":[]},
+            "verified_steps":0,"total_steps":0,"started_at_unix_ms":1,
+            "finished_at_unix_ms":2,"error":null
+        }]);
+        fs::write(&path, serde_json::to_vec(&history).unwrap()).unwrap();
+        assert!(
+            reopened.get(record.instance_id, "Tester").unwrap().attempts[0]
+                .operating_removal
+                .is_some()
+        );
+        for schema in [LEGACY_SCHEMA, RECONSTRUCTION_SCHEMA] {
+            history["schema"] = serde_json::json!(schema);
+            fs::write(&path, serde_json::to_vec(&history).unwrap()).unwrap();
+            assert!(reopened.get(record.instance_id, "Tester").is_err());
+            let mut old_without_removal = history.clone();
+            old_without_removal["attempts"][0]
+                .as_object_mut()
+                .unwrap()
+                .remove("operating_removal");
+            fs::write(&path, serde_json::to_vec(&old_without_removal).unwrap()).unwrap();
+            assert!(reopened.get(record.instance_id, "Tester").is_ok());
+        }
+        history["schema"] = serde_json::json!(SCHEMA);
+        history["attempts"][0]["removal"] = serde_json::json!(false);
+        fs::write(&path, serde_json::to_vec(&history).unwrap()).unwrap();
+        assert!(reopened.get(record.instance_id, "Tester").is_err());
         fs::write(&path, b"{truncated").unwrap();
         assert!(reopened.get(record.instance_id, "Tester").is_err());
         assert!(reopened.save(&mut record).is_err());
