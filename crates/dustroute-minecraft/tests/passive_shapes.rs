@@ -56,7 +56,9 @@ fn slab_state_selects_support_faces_and_conduction_without_changing_kind() {
         }
     }
     for spec in passive::BUILTINS {
-        if let passive::PassiveStates::Fixed(_) = spec.states {
+        if let passive::PassiveStates::Fixed(p) = spec.states
+            && p.spec().adhesion == physical::Adhesion::None
+        {
             for name in spec.names {
                 let b = observed(name, None);
                 validate_evidence(&b).unwrap();

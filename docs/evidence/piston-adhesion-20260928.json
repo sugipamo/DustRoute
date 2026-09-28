@@ -1,0 +1,1678 @@
+{
+  "schema_version": "dustroute.piston-adhesion-evidence.v1",
+  "date": "2026-09-28",
+  "base_commit": "ad24b78",
+  "branch": "codex/piston-adhesion",
+  "target": {
+    "minecraft": "1.21.11",
+    "yarn": "1.21.11+build.6",
+    "named_jar": "/root/.gradle/caches/fabric-loom/minecraftMaven/net/minecraft/minecraft-merged/1.21.11-net.fabricmc.yarn.1_21_11.1.21.11+build.6-v2/minecraft-merged-1.21.11-net.fabricmc.yarn.1_21_11.1.21.11+build.6-v2.jar",
+    "classes_sha256": {
+      "net.minecraft.block.piston.PistonHandler": "d0647b9d63b2d81c4f7cc0508e9327a8fd1419e5d6ff09ac55aa4d6ad0fe5ee3",
+      "net.minecraft.block.PistonBlock": "00cadea51e97b910da939da68b97c591843675ced0619145a4bb7c412c31cd02",
+      "net.minecraft.block.HoneyBlock": "448b533b89feda0ab14af49271aa8eabdcf2f0fabcaf1f3297fbdb7abefef057",
+      "net.minecraft.block.SlimeBlock": "20a94a8384fba08cfc8e4d58b94181a1c8166ecd5c956c0e753b22007c581f39",
+      "net.minecraft.block.Blocks": "12384e63a34df092eef2375056e63b2d398cf8f210cf6e2df2af64be8cc3621b",
+      "net.minecraft.block.AbstractBlock": "a005796ef429f0b0a7bd7398b3c06da4847619118a11d46286eb6640c50db6a8",
+      "net.minecraft.block.AbstractBlock$Settings": "d4f9035d372a911995bcc4b6ea44725d030b9f0ef951a3d0d7385758492781fe",
+      "net.minecraft.block.AbstractBlock$AbstractBlockState": "aeb7c519d37fc54dd11e082751e721711fe2b452bb0a2d6110e8b7eda0638615"
+    }
+  },
+  "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v17",
+  "physical_revision": "dustroute.physical-admission.java-1-21-11.v8",
+  "scope": "Block-to-block slime/honey adhesion in the current shared runtime; source ordering, branching, push/pull, carrier lifecycle, support loss, electrical callbacks, restoration and existing Blueprint/placement flow.",
+  "changed_source_sha256": {
+    "crates/dustroute-library/src/runtime_behavior.rs": "bacd6c6b64376fe006decdc1de173dd75ffe7ddb71d67a30d43de543963ed590",
+    "crates/dustroute-library/tests/executable_laws.rs": "d82d5d2457d22923ae273c07f20764e7d4bab2ec1bcbbfa3c6df0d7565c6ee7f",
+    "crates/dustroute-library/tests/execution_context.rs": "3976244cf7059d82568ebddea7692af34af2a0ca769cc37ddb0dde5b3e620083",
+    "crates/dustroute-mcp/src/service_blueprint_tests.rs": "7857f92cc86f5d032c40279cb18a24eeaf518cafc695841f14ebc635c825ef13",
+    "crates/dustroute-minecraft/src/blocks/piston.rs": "ec5ec688728eec4a99985bb7065810859bf2ae5f473da86a849451e31eb86746",
+    "crates/dustroute-minecraft/src/execution_context.rs": "e28f0a220db603598dafb3f206a683b5e2c7daded4fa97ce571fdbb36f162001",
+    "crates/dustroute-minecraft/src/physical.rs": "90b926d43044e2eec515684645cd9e9a07fcc34f1f1d5d6a687060d151613cce",
+    "crates/dustroute-minecraft/src/physical/passive.rs": "8d4c2562bb04b70d2a10757407594c7f097245b2fb82acd705a18323d293c339",
+    "crates/dustroute-minecraft/src/piston_electrical.rs": "5708086670bf7cb352ad908f2a2290ebe69dbe08f0674ccb46531deaf9bddab1",
+    "crates/dustroute-minecraft/src/time/engine.rs": "3b00e229ed84e7ec9e9aa0a47d5ece362942f4089857e0a7d5c65d29e403dded",
+    "crates/dustroute-minecraft/src/time/piston_runtime/adapter.rs": "93c868f52d2f1894d6a9870e484cb3708b071893ed592e89844485b37b54a5f1",
+    "crates/dustroute-minecraft/src/time/piston_runtime/adhesion.rs": "ddd74de32f87cd89b37dc2e1de928424bd788fefebfe4ab614ff5917b1b06103",
+    "crates/dustroute-minecraft/src/time/piston_runtime/geometry.rs": "a2fdccbebe203b03f3da69fe9bf787078307494721238325df0b3be412ed9e9f",
+    "crates/dustroute-minecraft/src/time/piston_runtime/mod.rs": "f3d6ca755f65d56a25624c496c1d32e60b70da4be9c40b92df947378be007b3b",
+    "crates/dustroute-minecraft/src/validation.rs": "7c6d90db6e3b697bc1742ba81c3a8fadce259c60672252726daaaf29f3080ff2",
+    "crates/dustroute-minecraft/src/world.rs": "3cbafefe4440234473a0bbcd139cad05a226126ded72cc242816573af3d2caff",
+    "crates/dustroute-minecraft/tests/passive_shapes.rs": "cc18c4f939e2d8a49aeea6861a05f05c3437022e222f9f290a76f83ac92540cf",
+    "crates/dustroute-minecraft/tests/physical_admission.rs": "2ad216e4b75c0e659e4ff9379731c0a73f5c204199952f3607db13cceae7adfe",
+    "crates/dustroute-minecraft/tests/piston_adhesion.rs": "75fff3d603cc17e973df6fe3b98911a4e628d976f15afd1528d77a4688e8f905",
+    "crates/dustroute-minecraft/tests/piston_runtime.rs": "03fff013ef8769639cf59a1ea2a4a31652f9295d7ed89f5e0a30a46ad6428089",
+    "crates/dustroute-minecraft/tests/unified_piston_runtime.rs": "113356412ff98d21898f2d32606f3d9e8a902c50153b4aa3ac850d13265c00a7",
+    "crates/dustroute-translate/examples/compare_electrical_pistons.rs": "b3c2fee0973b5113f015106d99005ee48fc1d0b939ba1e711ef1f9947b9ce003",
+    "crates/dustroute-translate/src/electrical.rs": "ca32d71fc63e1f98efe63bcbc7fdfb5adb04bb0947bae3af6c01b57776f14439",
+    "crates/dustroute-translate/src/physical_behavior.rs": "02331e7d06a671786da790d03a681d9e480d3461245120d46032e9299bad1e2b",
+    "crates/dustroute-translate/tests/adhesion_construction.rs": "d877638f1794799174c1c87bb15eab1bcde4f1914dcbc78df06a006d30a0b046",
+    "crates/dustroute-translate/tests/execution_context.rs": "c97676c0b9dae8b41655ff7f38feb50dce7ce799edcae0056b2f54426109d2ec",
+    "crates/dustroute-translate/tests/location_behavior.rs": "cb6e6c9239393f84a14b939cfc725cba33f1463610bab6482f79c9490aab43dc",
+    "crates/dustroute-translate/tests/support/runtime_blueprint.rs": "17331827f3aad28d3a3efea45c996de7478d2391731bc28a6d55f82496b8b8e3",
+    "crates/dustroute-translate/tests/unified_piston_behavior.rs": "510a87f9633e8556cb8a0c273f9b5a802da6e3ae5b667e1708a55b64bddcb15b",
+    "tools/compare_device_circuits.py": "78a609a21b98ac4afa38e1b34349c88c354e369b2d1dccbe897e8c3cea90d507",
+    "tools/make_adhesion_assembly_fixture.py": "70372a97314a63424100cbc50028d8d7744458d395cd0e448b3cf7b301de5880",
+    "tools/make_adhesion_fixtures.py": "2d1a40e802554734c0869a5c75059b17334c9700e70d26a1a64693ba04802d5e",
+    "tools/observe_device_circuit.py": "51efae75a602419872e5fc9ec4254ad4fab14bf274434d34cf26e699f8161032",
+    "tools/test_device_circuits.py": "bc00596862e66d4c2cce9c3f699e3d97d82c12aa4f6abde17f58abd8d10132aa"
+  },
+  "final_model_sha256": "a8502afb60d32dc34704a53a171d9db9f3df655ade13bd4250b021a6ea3fc6e2",
+  "model_provenance": "The first five captures used the earlier model/comparator identified in each summary. All 54 retained device-circuit captures, including these 11, passed the final-model replay in the Python suite. Original comparison files were not rewritten.",
+  "native_cases": [
+    {
+      "run_id": "adhesion-slime-20260928-a",
+      "summary": {
+        "fixture": "device-adhesion-slime-r0",
+        "fixture_sha256": "18e6bf2ab95c009b4e714b3bbf94e808563d2a017466f156b12e871541f95263",
+        "actor_sha256": "32979a514e7b32ba75736d8f3ca423f8c1187d6c90f1b6d96e08364c9ef56264",
+        "readback_sha256": "517f9ebab79a8e18be6e489f6346a5c9a115f5b7d6073c5ff0c2b46fb71e8737",
+        "readback_validator_sha256": "6c31a6bc06ae8ec296b6b3b1cf4894c0bf7fa026f9b9723667f87e915a92bdc9",
+        "capture_sha256": "d9c4d8bf9f209656b3a90ba82d496ed6484d090586c797fdb67adf83061c0a7a",
+        "comparator_sha256": "0e82e4641afd5b12f075a47f1fc0ee11b4c2630c63df56931522d380c36a3414",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "123dd67cf249f944cb0ca53018a3478b4a68cda3b46ac51df9f778484b549d9b",
+        "classification": "matched_declared_projection",
+        "applied_inputs": [
+          {
+            "position": {
+              "x": 199999,
+              "y": 180,
+              "z": 1000
+            },
+            "game_tick": 167006,
+            "packet_sequence": 2051,
+            "write_sequence": 2052,
+            "kind": "lever",
+            "powered": true
+          },
+          {
+            "position": {
+              "x": 199999,
+              "y": 180,
+              "z": 1000
+            },
+            "game_tick": 167022,
+            "packet_sequence": 2397,
+            "write_sequence": 2398,
+            "kind": "lever",
+            "powered": false
+          }
+        ],
+        "requested_steps": [
+          {
+            "input": 0,
+            "powered": true,
+            "wait_ticks": 0
+          },
+          {
+            "input": 0,
+            "powered": false,
+            "wait_ticks": 16
+          }
+        ],
+        "cleanup": {
+          "region_empty": true,
+          "force_load_removed": true,
+          "disconnected_before_finish": null
+        },
+        "server_stopped_normally": true,
+        "enabled_features": [
+          "minecraft:vanilla"
+        ],
+        "artifacts": {
+          ".raw.ndjson": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-slime-20260928-a.raw.ndjson",
+            "sha256": "8d4ee9222a2f1ac77adbc40ea607950bcdd19a11173e59fb6fe919be43a43ace"
+          },
+          ".server.log": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-slime-20260928-a.server.log",
+            "sha256": "c81bdad33d8e4f6f789febf2c9b04fac256cea16c338ccc65f934559c684ae43"
+          },
+          ".client.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-slime-20260928-a.client.json",
+            "sha256": "4e2635acbc64b82c4bb3f8e2c15e080421c96ea5df18a353e6a026acd67d7de5"
+          },
+          ".reference.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-slime-20260928-a.reference.json",
+            "sha256": "63a7d6ff4ae99b2394d3680ab98a6cacda5e9e3d7181aa983be88e79dcd9940d"
+          },
+          ".input.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-slime-20260928-a.input.json",
+            "sha256": "8198f3b99dbe9bf7e78881a86d0944fa2546de2911367f8ab804a05212ca7e8c"
+          },
+          ".model.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-slime-20260928-a.model.json",
+            "sha256": "17d9d1ebbc229430c084856839f37dc0683e7110784a9e15b8b757fa412c9714"
+          },
+          ".comparison.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-slime-20260928-a.comparison.json",
+            "sha256": "080f286939a33fc301432f333316ca4a55322875635a13da6abfaaf7a1142925"
+          }
+        }
+      },
+      "comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v17",
+        "tick_end_count": 57,
+        "tick_mismatches": [],
+        "live_write_count": 23,
+        "model_write_count": 23,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 0,
+        "model_scheduled_count": 0,
+        "first_scheduled_mismatch": null,
+        "first_tick_attempt_mismatch": null,
+        "live_callback_count": 87,
+        "model_callback_count": 87,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection"
+      },
+      "retained_fixture": "crates/dustroute-translate/tests/fixtures/device-circuits/adhesion-slime.json.gz",
+      "retained_sha256": "fb7d1c5b961c7d04e5ae6f8dad8a2997f7e9ab685ebe7d488aeacf6a59281891"
+    },
+    {
+      "run_id": "adhesion-honey-up-20260928-a",
+      "summary": {
+        "fixture": "device-adhesion-honey-up-r0",
+        "fixture_sha256": "3990d354e9af8d219be9282c581e00a68655beaf5bb7bfb931e40f2e7896a058",
+        "actor_sha256": "32979a514e7b32ba75736d8f3ca423f8c1187d6c90f1b6d96e08364c9ef56264",
+        "readback_sha256": "517f9ebab79a8e18be6e489f6346a5c9a115f5b7d6073c5ff0c2b46fb71e8737",
+        "readback_validator_sha256": "6c31a6bc06ae8ec296b6b3b1cf4894c0bf7fa026f9b9723667f87e915a92bdc9",
+        "capture_sha256": "d9c4d8bf9f209656b3a90ba82d496ed6484d090586c797fdb67adf83061c0a7a",
+        "comparator_sha256": "0e82e4641afd5b12f075a47f1fc0ee11b4c2630c63df56931522d380c36a3414",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "123dd67cf249f944cb0ca53018a3478b4a68cda3b46ac51df9f778484b549d9b",
+        "classification": "matched_declared_projection",
+        "applied_inputs": [
+          {
+            "position": {
+              "x": 201000,
+              "y": 179,
+              "z": 1000
+            },
+            "game_tick": 167795,
+            "packet_sequence": 1991,
+            "write_sequence": 1992,
+            "kind": "lever",
+            "powered": true
+          },
+          {
+            "position": {
+              "x": 201000,
+              "y": 179,
+              "z": 1000
+            },
+            "game_tick": 167811,
+            "packet_sequence": 2338,
+            "write_sequence": 2339,
+            "kind": "lever",
+            "powered": false
+          }
+        ],
+        "requested_steps": [
+          {
+            "input": 0,
+            "powered": true,
+            "wait_ticks": 0
+          },
+          {
+            "input": 0,
+            "powered": false,
+            "wait_ticks": 16
+          }
+        ],
+        "cleanup": {
+          "region_empty": true,
+          "force_load_removed": true,
+          "disconnected_before_finish": null
+        },
+        "server_stopped_normally": true,
+        "enabled_features": [
+          "minecraft:vanilla"
+        ],
+        "artifacts": {
+          ".raw.ndjson": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-honey-up-20260928-a.raw.ndjson",
+            "sha256": "814e9369432a576cf948006a48e4e31c7ee2662cc33a669f95011f79f244a340"
+          },
+          ".server.log": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-honey-up-20260928-a.server.log",
+            "sha256": "c4bec252e32c16fd19d5ed2a810ec4ba39cd3240f77e3bc85e7f3d7891e10c19"
+          },
+          ".client.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-honey-up-20260928-a.client.json",
+            "sha256": "5fa90dc36da9f7f635224cfe72ec122aefb98f2db7da52bdb473418e2fdf5062"
+          },
+          ".reference.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-honey-up-20260928-a.reference.json",
+            "sha256": "ce2cc47ac07ff9bd8d702f28deca6eea2448a6a02f0118bd2d6a310cd81a7493"
+          },
+          ".input.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-honey-up-20260928-a.input.json",
+            "sha256": "fd49bf2f0def28941dacb022ecdec2cf3e2db3537834f396e671d8b6c5180be3"
+          },
+          ".model.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-honey-up-20260928-a.model.json",
+            "sha256": "4229c8dc9989eb408b1ff30b7eb5009366b43b8b14ec256ed650d0c6bfd2787b"
+          },
+          ".comparison.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-honey-up-20260928-a.comparison.json",
+            "sha256": "080f286939a33fc301432f333316ca4a55322875635a13da6abfaaf7a1142925"
+          }
+        }
+      },
+      "comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v17",
+        "tick_end_count": 57,
+        "tick_mismatches": [],
+        "live_write_count": 23,
+        "model_write_count": 23,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 0,
+        "model_scheduled_count": 0,
+        "first_scheduled_mismatch": null,
+        "first_tick_attempt_mismatch": null,
+        "live_callback_count": 87,
+        "model_callback_count": 87,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection"
+      },
+      "retained_fixture": "crates/dustroute-translate/tests/fixtures/device-circuits/adhesion-honey-up.json.gz",
+      "retained_sha256": "a272408f85f0af0599c0307595da3bebf68877cf65b5aa898878b1439c82bd60"
+    },
+    {
+      "run_id": "adhesion-slime-down-20260928-a",
+      "summary": {
+        "fixture": "device-adhesion-slime-down-r0",
+        "fixture_sha256": "ce2e37d3d731bc773ef00efee4888e45f5348398dbf0ca2d3cbe64e6268f7c97",
+        "actor_sha256": "32979a514e7b32ba75736d8f3ca423f8c1187d6c90f1b6d96e08364c9ef56264",
+        "readback_sha256": "517f9ebab79a8e18be6e489f6346a5c9a115f5b7d6073c5ff0c2b46fb71e8737",
+        "readback_validator_sha256": "6c31a6bc06ae8ec296b6b3b1cf4894c0bf7fa026f9b9723667f87e915a92bdc9",
+        "capture_sha256": "d9c4d8bf9f209656b3a90ba82d496ed6484d090586c797fdb67adf83061c0a7a",
+        "comparator_sha256": "0e82e4641afd5b12f075a47f1fc0ee11b4c2630c63df56931522d380c36a3414",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "123dd67cf249f944cb0ca53018a3478b4a68cda3b46ac51df9f778484b549d9b",
+        "classification": "matched_declared_projection",
+        "applied_inputs": [
+          {
+            "position": {
+              "x": 202000,
+              "y": 181,
+              "z": 1000
+            },
+            "game_tick": 168609,
+            "packet_sequence": 2279,
+            "write_sequence": 2280,
+            "kind": "lever",
+            "powered": true
+          },
+          {
+            "position": {
+              "x": 202000,
+              "y": 181,
+              "z": 1000
+            },
+            "game_tick": 168624,
+            "packet_sequence": 2613,
+            "write_sequence": 2614,
+            "kind": "lever",
+            "powered": false
+          }
+        ],
+        "requested_steps": [
+          {
+            "input": 0,
+            "powered": true,
+            "wait_ticks": 0
+          },
+          {
+            "input": 0,
+            "powered": false,
+            "wait_ticks": 16
+          }
+        ],
+        "cleanup": {
+          "region_empty": true,
+          "force_load_removed": true,
+          "disconnected_before_finish": null
+        },
+        "server_stopped_normally": true,
+        "enabled_features": [
+          "minecraft:vanilla"
+        ],
+        "artifacts": {
+          ".raw.ndjson": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-slime-down-20260928-a.raw.ndjson",
+            "sha256": "2f7e0bd65f215096d620e6ad2ba9328952d126529f8d5fdd4aea9f83e1d32588"
+          },
+          ".server.log": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-slime-down-20260928-a.server.log",
+            "sha256": "6674170348854fea95adbd8d1f3535a0ce5984c5c959968363fb4c9e607a7600"
+          },
+          ".client.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-slime-down-20260928-a.client.json",
+            "sha256": "bab78dcc68e495ec430a1c35b1925a5b1de0b80ec08acff6da6bc6dc14eaa0a9"
+          },
+          ".reference.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-slime-down-20260928-a.reference.json",
+            "sha256": "58a0d8581c4b4b3bcabed2a90205772e019dd383be9084cf20cf2283afbc1f0a"
+          },
+          ".input.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-slime-down-20260928-a.input.json",
+            "sha256": "acc25f9a549391fae8700c7b7a2c8793a52afcb2ab3b52d8c528f3f3e3f54a4a"
+          },
+          ".model.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-slime-down-20260928-a.model.json",
+            "sha256": "8e82ac62903a33f711ca86fb0bc8f2c3fdbf66a68691f097088c07a35dd78037"
+          },
+          ".comparison.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-slime-down-20260928-a.comparison.json",
+            "sha256": "7fc79f95f26a5cf28c620be784c5b9d4a3869a4ac2ae7b68c08c1a513c5591c8"
+          }
+        }
+      },
+      "comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v17",
+        "tick_end_count": 56,
+        "tick_mismatches": [],
+        "live_write_count": 23,
+        "model_write_count": 23,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 0,
+        "model_scheduled_count": 0,
+        "first_scheduled_mismatch": null,
+        "first_tick_attempt_mismatch": null,
+        "live_callback_count": 87,
+        "model_callback_count": 87,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection"
+      },
+      "retained_fixture": "crates/dustroute-translate/tests/fixtures/device-circuits/adhesion-slime-down.json.gz",
+      "retained_sha256": "9bd2140a79bbf9548dd23ff8967f488647bfd5e3b3bf38579d688c1fd1df7b99"
+    },
+    {
+      "run_id": "adhesion-merge-20260928-a",
+      "summary": {
+        "fixture": "device-adhesion-merge-r90",
+        "fixture_sha256": "7d9aa668d77e02c24ab35ff115c959e510ed8bf796bbe3942d9634f94bd39858",
+        "actor_sha256": "32979a514e7b32ba75736d8f3ca423f8c1187d6c90f1b6d96e08364c9ef56264",
+        "readback_sha256": "517f9ebab79a8e18be6e489f6346a5c9a115f5b7d6073c5ff0c2b46fb71e8737",
+        "readback_validator_sha256": "6c31a6bc06ae8ec296b6b3b1cf4894c0bf7fa026f9b9723667f87e915a92bdc9",
+        "capture_sha256": "d9c4d8bf9f209656b3a90ba82d496ed6484d090586c797fdb67adf83061c0a7a",
+        "comparator_sha256": "0e82e4641afd5b12f075a47f1fc0ee11b4c2630c63df56931522d380c36a3414",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "123dd67cf249f944cb0ca53018a3478b4a68cda3b46ac51df9f778484b549d9b",
+        "classification": "matched_declared_projection",
+        "applied_inputs": [
+          {
+            "position": {
+              "x": 203000,
+              "y": 180,
+              "z": 999
+            },
+            "game_tick": 169390,
+            "packet_sequence": 2076,
+            "write_sequence": 2077,
+            "kind": "lever",
+            "powered": true
+          },
+          {
+            "position": {
+              "x": 203000,
+              "y": 180,
+              "z": 999
+            },
+            "game_tick": 169406,
+            "packet_sequence": 2451,
+            "write_sequence": 2452,
+            "kind": "lever",
+            "powered": false
+          }
+        ],
+        "requested_steps": [
+          {
+            "input": 0,
+            "powered": true,
+            "wait_ticks": 0
+          },
+          {
+            "input": 0,
+            "powered": false,
+            "wait_ticks": 16
+          }
+        ],
+        "cleanup": {
+          "region_empty": true,
+          "force_load_removed": true,
+          "disconnected_before_finish": null
+        },
+        "server_stopped_normally": true,
+        "enabled_features": [
+          "minecraft:vanilla"
+        ],
+        "artifacts": {
+          ".raw.ndjson": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-merge-20260928-a.raw.ndjson",
+            "sha256": "559810be1230caab126995abd46dae086e09a7b92904a1cb18aed0387bcc8147"
+          },
+          ".server.log": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-merge-20260928-a.server.log",
+            "sha256": "3cd26971ae10c3a2ecbb5bb168d3194d1799e22a8f49756faa23d263bd880346"
+          },
+          ".client.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-merge-20260928-a.client.json",
+            "sha256": "bd2fe3ef2ff3fba86dc05202a0b5cb8a16ad18d9d4838e804458285a777731eb"
+          },
+          ".reference.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-merge-20260928-a.reference.json",
+            "sha256": "869f22e3ab9f4e8e2e7986b5413beb6b27b16c784b72784d7cd7611cde5430cf"
+          },
+          ".input.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-merge-20260928-a.input.json",
+            "sha256": "8ba3b179c39f295b4dec39a74ff088613bea719ccf096dddf58ba4360dedb10f"
+          },
+          ".model.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-merge-20260928-a.model.json",
+            "sha256": "919b25a907cecec50cfca60c829ed48576b706c67ba8c4e7a7b226292b3cce84"
+          },
+          ".comparison.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-merge-20260928-a.comparison.json",
+            "sha256": "ca95e4ed9380d65d26ed9fbf37dd6dd2518489d7f035473f4f8ea7f964d61556"
+          }
+        }
+      },
+      "comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v17",
+        "tick_end_count": 57,
+        "tick_mismatches": [],
+        "live_write_count": 27,
+        "model_write_count": 27,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 0,
+        "model_scheduled_count": 0,
+        "first_scheduled_mismatch": null,
+        "first_tick_attempt_mismatch": null,
+        "live_callback_count": 103,
+        "model_callback_count": 103,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection"
+      },
+      "retained_fixture": "crates/dustroute-translate/tests/fixtures/device-circuits/adhesion-merge.json.gz",
+      "retained_sha256": "746c8b28814fd21afdd5fae6ba0859390f07db2fde3ce28c19a30be316c76580"
+    },
+    {
+      "run_id": "adhesion-split-20260928-a",
+      "summary": {
+        "fixture": "device-adhesion-split-r0",
+        "fixture_sha256": "68b431bebe4ed9d7de25eb174d4b246911c7f61a719ccb694f4a3ed565305cca",
+        "actor_sha256": "32979a514e7b32ba75736d8f3ca423f8c1187d6c90f1b6d96e08364c9ef56264",
+        "readback_sha256": "517f9ebab79a8e18be6e489f6346a5c9a115f5b7d6073c5ff0c2b46fb71e8737",
+        "readback_validator_sha256": "6c31a6bc06ae8ec296b6b3b1cf4894c0bf7fa026f9b9723667f87e915a92bdc9",
+        "capture_sha256": "d9c4d8bf9f209656b3a90ba82d496ed6484d090586c797fdb67adf83061c0a7a",
+        "comparator_sha256": "0e82e4641afd5b12f075a47f1fc0ee11b4c2630c63df56931522d380c36a3414",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "123dd67cf249f944cb0ca53018a3478b4a68cda3b46ac51df9f778484b549d9b",
+        "classification": "matched_declared_projection",
+        "applied_inputs": [
+          {
+            "position": {
+              "x": 203999,
+              "y": 180,
+              "z": 1000
+            },
+            "game_tick": 170178,
+            "packet_sequence": 2039,
+            "write_sequence": 2040,
+            "kind": "lever",
+            "powered": true
+          },
+          {
+            "position": {
+              "x": 203999,
+              "y": 180,
+              "z": 1000
+            },
+            "game_tick": 170194,
+            "packet_sequence": 2326,
+            "write_sequence": 2327,
+            "kind": "lever",
+            "powered": false
+          }
+        ],
+        "requested_steps": [
+          {
+            "input": 0,
+            "powered": true,
+            "wait_ticks": 0
+          },
+          {
+            "input": 0,
+            "powered": false,
+            "wait_ticks": 16
+          }
+        ],
+        "cleanup": {
+          "region_empty": true,
+          "force_load_removed": true,
+          "disconnected_before_finish": null
+        },
+        "server_stopped_normally": true,
+        "enabled_features": [
+          "minecraft:vanilla"
+        ],
+        "artifacts": {
+          ".raw.ndjson": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-split-20260928-a.raw.ndjson",
+            "sha256": "0558eaf7926fb2da0249d4209d87a06bbbb0ad50f03807d6abd6cd5df13be7ab"
+          },
+          ".server.log": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-split-20260928-a.server.log",
+            "sha256": "6ef59d9600f48bb7f8f6ab2035eb89d0bb9cce28df71db475915e68ca32b16f0"
+          },
+          ".client.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-split-20260928-a.client.json",
+            "sha256": "d4952ab0d8522ff3d9e49a75f55c9749cb658b865ad261d4d40094377975ae2f"
+          },
+          ".reference.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-split-20260928-a.reference.json",
+            "sha256": "b8247f5d8dbd559cc0e73047114312245c2f5a2ebb8bcc7f6b6d868185780038"
+          },
+          ".input.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-split-20260928-a.input.json",
+            "sha256": "9a8f0e53f4880ba4c32f1fb68b72309ec02c1c560a74eb9bd78619b3bc11d552"
+          },
+          ".model.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-split-20260928-a.model.json",
+            "sha256": "53ae82395404c845e805693686bb1000dcf3ced4efd5b009985a5101380ffc86"
+          },
+          ".comparison.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-split-20260928-a.comparison.json",
+            "sha256": "4261b90740032353dc0d8fd9225dff82f60b52678ddaa497bb98e4e0b102a3ca"
+          }
+        }
+      },
+      "comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v17",
+        "tick_end_count": 57,
+        "tick_mismatches": [],
+        "live_write_count": 13,
+        "model_write_count": 13,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 0,
+        "model_scheduled_count": 0,
+        "first_scheduled_mismatch": null,
+        "first_tick_attempt_mismatch": null,
+        "live_callback_count": 47,
+        "model_callback_count": 47,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection"
+      },
+      "retained_fixture": "crates/dustroute-translate/tests/fixtures/device-circuits/adhesion-split.json.gz",
+      "retained_sha256": "9c33f8dc10f234ef8f2ed61cf373a3472ff4b290c4de69674b5e9599336fe788"
+    },
+    {
+      "run_id": "adhesion-blocked-20260928-b",
+      "summary": {
+        "fixture": "device-adhesion-blocked-r0",
+        "fixture_sha256": "e297a7d27174eb917c06540bf325487539af8ca23871586e0844463a59f889fb",
+        "actor_sha256": "32979a514e7b32ba75736d8f3ca423f8c1187d6c90f1b6d96e08364c9ef56264",
+        "readback_sha256": "517f9ebab79a8e18be6e489f6346a5c9a115f5b7d6073c5ff0c2b46fb71e8737",
+        "readback_validator_sha256": "6c31a6bc06ae8ec296b6b3b1cf4894c0bf7fa026f9b9723667f87e915a92bdc9",
+        "capture_sha256": "51efae75a602419872e5fc9ec4254ad4fab14bf274434d34cf26e699f8161032",
+        "comparator_sha256": "78a609a21b98ac4afa38e1b34349c88c354e369b2d1dccbe897e8c3cea90d507",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "a8502afb60d32dc34704a53a171d9db9f3df655ade13bd4250b021a6ea3fc6e2",
+        "classification": "matched_declared_projection",
+        "applied_inputs": [
+          {
+            "position": {
+              "x": 219999,
+              "y": 180,
+              "z": 1000
+            },
+            "game_tick": 171769,
+            "packet_sequence": 2100,
+            "write_sequence": 2101,
+            "kind": "lever",
+            "powered": true
+          },
+          {
+            "position": {
+              "x": 219999,
+              "y": 180,
+              "z": 1000
+            },
+            "game_tick": 171784,
+            "packet_sequence": 2303,
+            "write_sequence": 2304,
+            "kind": "lever",
+            "powered": false
+          }
+        ],
+        "requested_steps": [
+          {
+            "input": 0,
+            "powered": true,
+            "wait_ticks": 0
+          },
+          {
+            "input": 0,
+            "powered": false,
+            "wait_ticks": 16
+          }
+        ],
+        "cleanup": {
+          "region_empty": true,
+          "force_load_removed": true,
+          "disconnected_before_finish": null
+        },
+        "server_stopped_normally": true,
+        "enabled_features": [
+          "minecraft:vanilla"
+        ],
+        "artifacts": {
+          ".raw.ndjson": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-blocked-20260928-b.raw.ndjson",
+            "sha256": "19b168d0864e8665e4c5458a38b4e52328ffbebbc593a69231293cb619c6d06e"
+          },
+          ".server.log": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-blocked-20260928-b.server.log",
+            "sha256": "c0a0ecf9d9e63b07b07e4d625f34180206d1501435d716185537b5c4130b05b5"
+          },
+          ".client.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-blocked-20260928-b.client.json",
+            "sha256": "92daec8476b574c300fa1887bf611917a7a431e5a81cd6d4a6d749328c39bd1c"
+          },
+          ".reference.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-blocked-20260928-b.reference.json",
+            "sha256": "7c15d7aa98ae87aacc99a49e9bcaed5cddf6ab96eccc81c93d81b3e031f724b6"
+          },
+          ".input.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-blocked-20260928-b.input.json",
+            "sha256": "a17bf3fafbdf465a12726d5133db574f43b5994fc5288616cf6e1bed79cce611"
+          },
+          ".model.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-blocked-20260928-b.model.json",
+            "sha256": "23a1f75820a27341330ec63ac3052564b2387b9077bd4ba927b397845224c707"
+          },
+          ".comparison.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-blocked-20260928-b.comparison.json",
+            "sha256": "534f71f9cd85166f23ef06d9c9b551baf7fbfe485cf53e249da72c372a2faeee"
+          }
+        }
+      },
+      "comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v17",
+        "tick_end_count": 56,
+        "tick_mismatches": [],
+        "live_write_count": 2,
+        "model_write_count": 2,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 0,
+        "model_scheduled_count": 0,
+        "first_scheduled_mismatch": null,
+        "first_tick_attempt_mismatch": null,
+        "live_callback_count": 4,
+        "model_callback_count": 4,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "restoration_scope": "input_notifications",
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection"
+      },
+      "retained_fixture": "crates/dustroute-translate/tests/fixtures/device-circuits/adhesion-blocked.json.gz",
+      "retained_sha256": "c070887046760ed913f848e12fd8cecef894ca36aa5f17ce345ee380a43ebc92"
+    },
+    {
+      "run_id": "adhesion-support-20260928-b",
+      "summary": {
+        "fixture": "device-adhesion-support-r0",
+        "fixture_sha256": "456ce56c9306f50ad48a82ca5d94b933a947a20d9729643e80739cfef823de06",
+        "actor_sha256": "32979a514e7b32ba75736d8f3ca423f8c1187d6c90f1b6d96e08364c9ef56264",
+        "readback_sha256": "517f9ebab79a8e18be6e489f6346a5c9a115f5b7d6073c5ff0c2b46fb71e8737",
+        "readback_validator_sha256": "6c31a6bc06ae8ec296b6b3b1cf4894c0bf7fa026f9b9723667f87e915a92bdc9",
+        "capture_sha256": "51efae75a602419872e5fc9ec4254ad4fab14bf274434d34cf26e699f8161032",
+        "comparator_sha256": "78a609a21b98ac4afa38e1b34349c88c354e369b2d1dccbe897e8c3cea90d507",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "a8502afb60d32dc34704a53a171d9db9f3df655ade13bd4250b021a6ea3fc6e2",
+        "classification": "matched_declared_projection",
+        "applied_inputs": [
+          {
+            "position": {
+              "x": 220999,
+              "y": 180,
+              "z": 1000
+            },
+            "game_tick": 172561,
+            "packet_sequence": 2112,
+            "write_sequence": 2113,
+            "kind": "lever",
+            "powered": true
+          },
+          {
+            "position": {
+              "x": 220999,
+              "y": 180,
+              "z": 1000
+            },
+            "game_tick": 172577,
+            "packet_sequence": 2407,
+            "write_sequence": 2408,
+            "kind": "lever",
+            "powered": false
+          }
+        ],
+        "requested_steps": [
+          {
+            "input": 0,
+            "powered": true,
+            "wait_ticks": 0
+          },
+          {
+            "input": 0,
+            "powered": false,
+            "wait_ticks": 16
+          }
+        ],
+        "cleanup": {
+          "region_empty": true,
+          "force_load_removed": true,
+          "disconnected_before_finish": null
+        },
+        "server_stopped_normally": true,
+        "enabled_features": [
+          "minecraft:vanilla"
+        ],
+        "artifacts": {
+          ".raw.ndjson": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-support-20260928-b.raw.ndjson",
+            "sha256": "745fc5c2e638adcb65bf3eb43b4c196ef809a6620e490fc356ae15e4380cebab"
+          },
+          ".server.log": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-support-20260928-b.server.log",
+            "sha256": "edc27549211a16c1e4dafef4373a61b09b4bfa4eb613ed2203673743b8820f5f"
+          },
+          ".client.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-support-20260928-b.client.json",
+            "sha256": "4400392456bf8ef8d38adf63508f8e45b4b4afceaf84756660c853447690f2af"
+          },
+          ".reference.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-support-20260928-b.reference.json",
+            "sha256": "12ecee5ab063fca63fec2dea310925f8a4e41eede7f196d34d4771eb7a78374a"
+          },
+          ".input.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-support-20260928-b.input.json",
+            "sha256": "c2a2630a9f02f50f9bba1842c857471ea330583c7b18fefbaa259c860add99cd"
+          },
+          ".model.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-support-20260928-b.model.json",
+            "sha256": "45a42b3da9e55aa54ad7bf2460dd19388c363cdea3a2776f4e8478362052d542"
+          },
+          ".comparison.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-support-20260928-b.comparison.json",
+            "sha256": "2c67948f1a620e9fa2dc28734e57ace92a5338f07abe07029590fa41f0e07801"
+          }
+        }
+      },
+      "comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v17",
+        "tick_end_count": 57,
+        "tick_mismatches": [],
+        "live_write_count": 14,
+        "model_write_count": 14,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 0,
+        "model_scheduled_count": 0,
+        "first_scheduled_mismatch": null,
+        "first_tick_attempt_mismatch": null,
+        "live_callback_count": 48,
+        "model_callback_count": 48,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "restoration_scope": "movement_or_device",
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection"
+      },
+      "retained_fixture": "crates/dustroute-translate/tests/fixtures/device-circuits/adhesion-support.json.gz",
+      "retained_sha256": "340d802ba90d4dbf4c33a0765fba8899efb44d6833707049acf2f30630dbcabc"
+    },
+    {
+      "run_id": "adhesion-rapid-20260928-b",
+      "summary": {
+        "fixture": "device-adhesion-rapid-r90",
+        "fixture_sha256": "4db9a905e919aaa04134da85ae0061ab8dc34f3275b4209b28fc454dfbadb2e0",
+        "actor_sha256": "32979a514e7b32ba75736d8f3ca423f8c1187d6c90f1b6d96e08364c9ef56264",
+        "readback_sha256": "517f9ebab79a8e18be6e489f6346a5c9a115f5b7d6073c5ff0c2b46fb71e8737",
+        "readback_validator_sha256": "6c31a6bc06ae8ec296b6b3b1cf4894c0bf7fa026f9b9723667f87e915a92bdc9",
+        "capture_sha256": "51efae75a602419872e5fc9ec4254ad4fab14bf274434d34cf26e699f8161032",
+        "comparator_sha256": "78a609a21b98ac4afa38e1b34349c88c354e369b2d1dccbe897e8c3cea90d507",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "a8502afb60d32dc34704a53a171d9db9f3df655ade13bd4250b021a6ea3fc6e2",
+        "classification": "matched_declared_projection",
+        "applied_inputs": [
+          {
+            "position": {
+              "x": 222000,
+              "y": 180,
+              "z": 999
+            },
+            "game_tick": 173362,
+            "packet_sequence": 2159,
+            "write_sequence": 2160,
+            "kind": "lever",
+            "powered": true
+          },
+          {
+            "position": {
+              "x": 222000,
+              "y": 180,
+              "z": 999
+            },
+            "game_tick": 173362,
+            "packet_sequence": 2181,
+            "write_sequence": 2182,
+            "kind": "lever",
+            "powered": false
+          },
+          {
+            "position": {
+              "x": 222000,
+              "y": 180,
+              "z": 999
+            },
+            "game_tick": 173364,
+            "packet_sequence": 2230,
+            "write_sequence": 2231,
+            "kind": "lever",
+            "powered": true
+          },
+          {
+            "position": {
+              "x": 222000,
+              "y": 180,
+              "z": 999
+            },
+            "game_tick": 173380,
+            "packet_sequence": 2576,
+            "write_sequence": 2577,
+            "kind": "lever",
+            "powered": false
+          }
+        ],
+        "requested_steps": [
+          {
+            "input": 0,
+            "powered": true,
+            "wait_ticks": 0
+          },
+          {
+            "input": 0,
+            "powered": false,
+            "wait_ticks": 1
+          },
+          {
+            "input": 0,
+            "powered": true,
+            "wait_ticks": 1
+          },
+          {
+            "input": 0,
+            "powered": false,
+            "wait_ticks": 16
+          }
+        ],
+        "cleanup": {
+          "region_empty": true,
+          "force_load_removed": true,
+          "disconnected_before_finish": null
+        },
+        "server_stopped_normally": true,
+        "enabled_features": [
+          "minecraft:vanilla"
+        ],
+        "artifacts": {
+          ".raw.ndjson": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-rapid-20260928-b.raw.ndjson",
+            "sha256": "2bbe668c184adaaecf9a2cd4877580946d9b71024cc3a2f9979f2c45040bca1d"
+          },
+          ".server.log": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-rapid-20260928-b.server.log",
+            "sha256": "e73b72ae769089aaa1315a8af72020a83c14b757f970fcccb926e8611b572a6e"
+          },
+          ".client.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-rapid-20260928-b.client.json",
+            "sha256": "0a41a73bab5ee065a9f4f0825d0f34e32408c0e60ab7d090ac4582c83d95de8d"
+          },
+          ".reference.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-rapid-20260928-b.reference.json",
+            "sha256": "af562b729822d7c85ea9efc9507fb7524af8bc1418b8053bd1cd65768b018ea9"
+          },
+          ".input.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-rapid-20260928-b.input.json",
+            "sha256": "deef85ce01d29791299b6bd38213036c514cdcd02e3690067320e5ddacce856d"
+          },
+          ".model.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-rapid-20260928-b.model.json",
+            "sha256": "9bcc41848a61d565e60f01c14d40791f642eca1084d9c4bf3c462309d56cb23c"
+          },
+          ".comparison.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-rapid-20260928-b.comparison.json",
+            "sha256": "32999509709ff595913932255efa746165374b49c0e3868b030eaaa4417bd35c"
+          }
+        }
+      },
+      "comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v17",
+        "tick_end_count": 59,
+        "tick_mismatches": [],
+        "live_write_count": 25,
+        "model_write_count": 25,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 0,
+        "model_scheduled_count": 0,
+        "first_scheduled_mismatch": null,
+        "first_tick_attempt_mismatch": null,
+        "live_callback_count": 93,
+        "model_callback_count": 93,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "restoration_scope": "movement_or_device",
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection"
+      },
+      "retained_fixture": "crates/dustroute-translate/tests/fixtures/device-circuits/adhesion-rapid.json.gz",
+      "retained_sha256": "307c481de30294c6e777f53db909c3b1efae8385231ca631ba62c6b62202cc18"
+    },
+    {
+      "run_id": "adhesion-limit12-20260928-b",
+      "summary": {
+        "fixture": "device-adhesion-limit12-r0",
+        "fixture_sha256": "4ad8e8ff4bce8cb1c04676336ed5d977936ca44732ec704b03ea49a7e93427c7",
+        "actor_sha256": "32979a514e7b32ba75736d8f3ca423f8c1187d6c90f1b6d96e08364c9ef56264",
+        "readback_sha256": "517f9ebab79a8e18be6e489f6346a5c9a115f5b7d6073c5ff0c2b46fb71e8737",
+        "readback_validator_sha256": "6c31a6bc06ae8ec296b6b3b1cf4894c0bf7fa026f9b9723667f87e915a92bdc9",
+        "capture_sha256": "51efae75a602419872e5fc9ec4254ad4fab14bf274434d34cf26e699f8161032",
+        "comparator_sha256": "78a609a21b98ac4afa38e1b34349c88c354e369b2d1dccbe897e8c3cea90d507",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "a8502afb60d32dc34704a53a171d9db9f3df655ade13bd4250b021a6ea3fc6e2",
+        "classification": "matched_declared_projection",
+        "applied_inputs": [
+          {
+            "position": {
+              "x": 222999,
+              "y": 180,
+              "z": 1000
+            },
+            "game_tick": 174190,
+            "packet_sequence": 2564,
+            "write_sequence": 2565,
+            "kind": "lever",
+            "powered": true
+          },
+          {
+            "position": {
+              "x": 222999,
+              "y": 180,
+              "z": 1000
+            },
+            "game_tick": 174206,
+            "packet_sequence": 3175,
+            "write_sequence": 3176,
+            "kind": "lever",
+            "powered": false
+          }
+        ],
+        "requested_steps": [
+          {
+            "input": 0,
+            "powered": true,
+            "wait_ticks": 0
+          },
+          {
+            "input": 0,
+            "powered": false,
+            "wait_ticks": 16
+          }
+        ],
+        "cleanup": {
+          "region_empty": true,
+          "force_load_removed": true,
+          "disconnected_before_finish": null
+        },
+        "server_stopped_normally": true,
+        "enabled_features": [
+          "minecraft:vanilla"
+        ],
+        "artifacts": {
+          ".raw.ndjson": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-limit12-20260928-b.raw.ndjson",
+            "sha256": "765db09a9c6527b6a455f21fdadf7c4d9da2fb1e8081511e781bd3284b971752"
+          },
+          ".server.log": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-limit12-20260928-b.server.log",
+            "sha256": "bb8557044522960b25c5ec50dd5712cd91eac82e7e9cb2119e4a1f0da9d9f31e"
+          },
+          ".client.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-limit12-20260928-b.client.json",
+            "sha256": "3b7b80865e140ba0925d89a3ea5caffcc1ce04d690599325b4ade33f4c83eda9"
+          },
+          ".reference.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-limit12-20260928-b.reference.json",
+            "sha256": "0df4224e92a3aa2a797bace498220f5f532c6c1f73836d0fdda9735c8c483c5d"
+          },
+          ".input.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-limit12-20260928-b.input.json",
+            "sha256": "6651a2f2a0933fb71a51c4649c711405f434b6aa5fb44f990e669bedc024e34d"
+          },
+          ".model.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-limit12-20260928-b.model.json",
+            "sha256": "d619eb01c4754e88b36ef096db5d9b8e4828df3b3fd650d83933d7e251da14b2"
+          },
+          ".comparison.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-limit12-20260928-b.comparison.json",
+            "sha256": "2f36bc522e8462cb233e2be273df683c375381ea50d305809db35f41ff0311ba"
+          }
+        }
+      },
+      "comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v17",
+        "tick_end_count": 57,
+        "tick_mismatches": [],
+        "live_write_count": 67,
+        "model_write_count": 67,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 0,
+        "model_scheduled_count": 0,
+        "first_scheduled_mismatch": null,
+        "first_tick_attempt_mismatch": null,
+        "live_callback_count": 255,
+        "model_callback_count": 255,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "restoration_scope": "movement_or_device",
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection"
+      },
+      "retained_fixture": "crates/dustroute-translate/tests/fixtures/device-circuits/adhesion-limit12.json.gz",
+      "retained_sha256": "208019ba6a77f289730ffb5b422d7597758117c26aa24b6ac47986d7e1a334eb"
+    },
+    {
+      "run_id": "adhesion-limit13-20260928-b",
+      "summary": {
+        "fixture": "device-adhesion-limit13-r0",
+        "fixture_sha256": "53813e4e238870e983b996133caf14c5566f885a4f6a3830c62b7d8e3c1538b3",
+        "actor_sha256": "32979a514e7b32ba75736d8f3ca423f8c1187d6c90f1b6d96e08364c9ef56264",
+        "readback_sha256": "517f9ebab79a8e18be6e489f6346a5c9a115f5b7d6073c5ff0c2b46fb71e8737",
+        "readback_validator_sha256": "6c31a6bc06ae8ec296b6b3b1cf4894c0bf7fa026f9b9723667f87e915a92bdc9",
+        "capture_sha256": "51efae75a602419872e5fc9ec4254ad4fab14bf274434d34cf26e699f8161032",
+        "comparator_sha256": "78a609a21b98ac4afa38e1b34349c88c354e369b2d1dccbe897e8c3cea90d507",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "a8502afb60d32dc34704a53a171d9db9f3df655ade13bd4250b021a6ea3fc6e2",
+        "classification": "matched_declared_projection",
+        "applied_inputs": [
+          {
+            "position": {
+              "x": 223999,
+              "y": 180,
+              "z": 1000
+            },
+            "game_tick": 175008,
+            "packet_sequence": 2829,
+            "write_sequence": 2830,
+            "kind": "lever",
+            "powered": true
+          },
+          {
+            "position": {
+              "x": 223999,
+              "y": 180,
+              "z": 1000
+            },
+            "game_tick": 175024,
+            "packet_sequence": 3044,
+            "write_sequence": 3045,
+            "kind": "lever",
+            "powered": false
+          }
+        ],
+        "requested_steps": [
+          {
+            "input": 0,
+            "powered": true,
+            "wait_ticks": 0
+          },
+          {
+            "input": 0,
+            "powered": false,
+            "wait_ticks": 16
+          }
+        ],
+        "cleanup": {
+          "region_empty": true,
+          "force_load_removed": true,
+          "disconnected_before_finish": null
+        },
+        "server_stopped_normally": true,
+        "enabled_features": [
+          "minecraft:vanilla"
+        ],
+        "artifacts": {
+          ".raw.ndjson": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-limit13-20260928-b.raw.ndjson",
+            "sha256": "a9c868243ed00bd0a8f0e6b41130ee3cd88e77901aaadfe4fe410d4ae80af114"
+          },
+          ".server.log": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-limit13-20260928-b.server.log",
+            "sha256": "e569ac650692b593bc1cbb796471269190e4660336e6debd054633edde4705e1"
+          },
+          ".client.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-limit13-20260928-b.client.json",
+            "sha256": "c30b7afb36c485f92a9b1a435bb0563561973794971b7f84c8fbe941ec118c6c"
+          },
+          ".reference.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-limit13-20260928-b.reference.json",
+            "sha256": "23b5ff8df5ff3c7b63536315cb01c4aae1226926115268b763602f1194e385c7"
+          },
+          ".input.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-limit13-20260928-b.input.json",
+            "sha256": "73321e636295ed4dd44fe7914ccdc24567ec212d824d9b1732b6aa88c684465c"
+          },
+          ".model.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-limit13-20260928-b.model.json",
+            "sha256": "7c3070f2c315374fec2110fff8e4e8b672d04f55f5b6836f088b5c1313097e97"
+          },
+          ".comparison.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-limit13-20260928-b.comparison.json",
+            "sha256": "80b0571a5e56f5665d5c0cbe0f6ff02f439149bdb6822f4c69dcba3c126aa3f6"
+          }
+        }
+      },
+      "comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v17",
+        "tick_end_count": 57,
+        "tick_mismatches": [],
+        "live_write_count": 2,
+        "model_write_count": 2,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 0,
+        "model_scheduled_count": 0,
+        "first_scheduled_mismatch": null,
+        "first_tick_attempt_mismatch": null,
+        "live_callback_count": 4,
+        "model_callback_count": 4,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "restoration_scope": "input_notifications",
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection"
+      },
+      "retained_fixture": "crates/dustroute-translate/tests/fixtures/device-circuits/adhesion-limit13.json.gz",
+      "retained_sha256": "548b1c12623d5dc4a36160053f1d507904b9f1125219a75fea3ebdabeba4eb0c"
+    },
+    {
+      "run_id": "adhesion-observer-20260928-b",
+      "summary": {
+        "fixture": "device-adhesion-observer-r0",
+        "fixture_sha256": "99ff2d12ee1d4d9425a3919ae9bc06102c5ee39d4697c103886c75d5cd15016f",
+        "actor_sha256": "32979a514e7b32ba75736d8f3ca423f8c1187d6c90f1b6d96e08364c9ef56264",
+        "readback_sha256": "517f9ebab79a8e18be6e489f6346a5c9a115f5b7d6073c5ff0c2b46fb71e8737",
+        "readback_validator_sha256": "6c31a6bc06ae8ec296b6b3b1cf4894c0bf7fa026f9b9723667f87e915a92bdc9",
+        "capture_sha256": "51efae75a602419872e5fc9ec4254ad4fab14bf274434d34cf26e699f8161032",
+        "comparator_sha256": "78a609a21b98ac4afa38e1b34349c88c354e369b2d1dccbe897e8c3cea90d507",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "a8502afb60d32dc34704a53a171d9db9f3df655ade13bd4250b021a6ea3fc6e2",
+        "classification": "matched_declared_projection",
+        "applied_inputs": [
+          {
+            "position": {
+              "x": 224999,
+              "y": 180,
+              "z": 1000
+            },
+            "game_tick": 175772,
+            "packet_sequence": 2091,
+            "write_sequence": 2092,
+            "kind": "lever",
+            "powered": true
+          },
+          {
+            "position": {
+              "x": 224999,
+              "y": 180,
+              "z": 1000
+            },
+            "game_tick": 175788,
+            "packet_sequence": 2457,
+            "write_sequence": 2458,
+            "kind": "lever",
+            "powered": false
+          }
+        ],
+        "requested_steps": [
+          {
+            "input": 0,
+            "powered": true,
+            "wait_ticks": 0
+          },
+          {
+            "input": 0,
+            "powered": false,
+            "wait_ticks": 16
+          }
+        ],
+        "cleanup": {
+          "region_empty": true,
+          "force_load_removed": true,
+          "disconnected_before_finish": null
+        },
+        "server_stopped_normally": true,
+        "enabled_features": [
+          "minecraft:vanilla"
+        ],
+        "artifacts": {
+          ".raw.ndjson": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-observer-20260928-b.raw.ndjson",
+            "sha256": "3cfacfad0e8b379e3c727acf453f8bb92e268b390f3ee8534663f8184b0e01ef"
+          },
+          ".server.log": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-observer-20260928-b.server.log",
+            "sha256": "9471cc06b293e2a72e7ccddc178d023597ab5a54e0ebafb3eca7127455268ebe"
+          },
+          ".client.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-observer-20260928-b.client.json",
+            "sha256": "c63b1cce238cbec4a54eeefbc8ad3903489cad4fab84b134fdf4df1c145796a8"
+          },
+          ".reference.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-observer-20260928-b.reference.json",
+            "sha256": "8e778c7892ddeb9354d493a34bcb6d3c406a40f5ca5f16de529f9a2df00b405c"
+          },
+          ".input.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-observer-20260928-b.input.json",
+            "sha256": "76b5cceb70f0e21f297c198ef7261ff948a601ecc6309f3996c0aa1203fd4e8c"
+          },
+          ".model.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-observer-20260928-b.model.json",
+            "sha256": "1e02b25357d27a8c2d224047ce11da868d538838efa56bebddb52f12cec38247"
+          },
+          ".comparison.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-observer-20260928-b.comparison.json",
+            "sha256": "defab633298c8bdebe09d3c09f8ce0427d2aadf1d9a5ae76ae52d799f478a47e"
+          }
+        }
+      },
+      "comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v17",
+        "tick_end_count": 57,
+        "tick_mismatches": [],
+        "live_write_count": 25,
+        "model_write_count": 25,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 5,
+        "model_scheduled_count": 5,
+        "first_scheduled_mismatch": null,
+        "first_tick_attempt_mismatch": null,
+        "live_callback_count": 74,
+        "model_callback_count": 74,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "restoration_scope": "movement_or_device",
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection"
+      },
+      "retained_fixture": "crates/dustroute-translate/tests/fixtures/device-circuits/adhesion-observer.json.gz",
+      "retained_sha256": "1e662899a433429f0d4c8766ee9495d6ae1fd8dcc4174db7749cb4a77c9abfed"
+    }
+  ],
+  "native_totals": {
+    "tick_end_count": 627,
+    "live_write_count": 244,
+    "live_scheduled_count": 5,
+    "live_callback_count": 889
+  },
+  "preserved_initial_rejection": {
+    "fixture": "device-adhesion-blocked-r0",
+    "fixture_sha256": "1271ea5771ad2dc68f2c84a6143d1879ae433f19536ee7f9631de602326c646b",
+    "actor_sha256": "32979a514e7b32ba75736d8f3ca423f8c1187d6c90f1b6d96e08364c9ef56264",
+    "readback_sha256": "517f9ebab79a8e18be6e489f6346a5c9a115f5b7d6073c5ff0c2b46fb71e8737",
+    "readback_validator_sha256": "6c31a6bc06ae8ec296b6b3b1cf4894c0bf7fa026f9b9723667f87e915a92bdc9",
+    "capture_sha256": "d9c4d8bf9f209656b3a90ba82d496ed6484d090586c797fdb67adf83061c0a7a",
+    "comparator_sha256": "0e82e4641afd5b12f075a47f1fc0ee11b4c2630c63df56931522d380c36a3414",
+    "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+    "model_binary_sha256": "123dd67cf249f944cb0ca53018a3478b4a68cda3b46ac51df9f778484b549d9b",
+    "classification": "model_rejected",
+    "applied_inputs": [
+      {
+        "position": {
+          "x": 204999,
+          "y": 180,
+          "z": 1000
+        },
+        "game_tick": 170979,
+        "packet_sequence": 2160,
+        "write_sequence": 2161,
+        "kind": "lever",
+        "powered": true
+      },
+      {
+        "position": {
+          "x": 204999,
+          "y": 180,
+          "z": 1000
+        },
+        "game_tick": 170995,
+        "packet_sequence": 2375,
+        "write_sequence": 2376,
+        "kind": "lever",
+        "powered": false
+      }
+    ],
+    "requested_steps": [
+      {
+        "input": 0,
+        "powered": true,
+        "wait_ticks": 0
+      },
+      {
+        "input": 0,
+        "powered": false,
+        "wait_ticks": 16
+      }
+    ],
+    "cleanup": {
+      "region_empty": true,
+      "force_load_removed": true,
+      "disconnected_before_finish": null
+    },
+    "server_stopped_normally": true,
+    "enabled_features": [
+      "minecraft:vanilla"
+    ],
+    "artifacts": {
+      ".raw.ndjson": {
+        "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-blocked-20260928-a.raw.ndjson",
+        "sha256": "ec2a4c1eb9697a028040b99fdf8f1e0fd93b6768584b4bce8108eb1652a3dd7e"
+      },
+      ".server.log": {
+        "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-blocked-20260928-a.server.log",
+        "sha256": "50eb803048e930797ea0700d1aeafec5340fc8c162e71f19949b8517f9dbd5de"
+      },
+      ".client.json": {
+        "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-blocked-20260928-a.client.json",
+        "sha256": "03ec175c0e12f14bd2cc6c1d49135ad311e430f02cc84f78db7088099357d7bf"
+      },
+      ".reference.json": {
+        "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-blocked-20260928-a.reference.json",
+        "sha256": "793faaf7da794b74d271368156fb1c77cf7725c20d627685763893a8e372d2b5"
+      },
+      ".input.json": {
+        "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-blocked-20260928-a.input.json",
+        "sha256": "d921bc58d8ca4081212dbabda47cd966e67c33b85bccd92b5bce072d7db18017"
+      },
+      ".comparison.json": {
+        "path": "/root/DustRoute/.local/e2e-artifacts/adhesion-blocked-20260928-a.comparison.json",
+        "sha256": "e2591d1697984ca3db0375962f03bb2b64e43d7e770b9cfefeb244c72b853a05"
+      }
+    }
+  },
+  "initial_rejection_reason": "No-motion fixture could not satisfy the old mandatory movement/device checkpoint. New explicit input_notifications restoration validates changed-input callbacks and rejects any carrier; default strict scope remains unchanged. The b capture passed independently.",
+  "validation": [
+    {
+      "name": "minecraft",
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-minecraft",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 57.71,
+      "log": ".local/adhesion-final-minecraft.log",
+      "sha256": "d48695ed79df8d7eabdaf57d252d389d5e4e58d0e3235bae9d1fd167a6c03c97",
+      "passed": 325
+    },
+    {
+      "name": "library",
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-library",
+        "--test",
+        "execution_context",
+        "--test",
+        "executable_laws",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 11.53,
+      "log": ".local/adhesion-final-library.log",
+      "sha256": "a24f2e8a9d7d77c326bb37a88a8758a2ce5e434fde10e1f893ead2615be2f73c",
+      "passed": 18
+    },
+    {
+      "name": "translate",
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-translate",
+        "--test",
+        "adhesion_construction",
+        "--test",
+        "execution_context",
+        "--test",
+        "electrical_piston_adoption",
+        "--test",
+        "electrical_piston_construction",
+        "--test",
+        "electrical_piston_relocation",
+        "--test",
+        "ordinary_reference_door",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 56.44,
+      "log": ".local/adhesion-final-translate.log",
+      "sha256": "4b0aeabe9cab588db87f1696790d25d3595bfbb87bcc7c891cea7db10c63ec82",
+      "passed": 19
+    },
+    {
+      "name": "mcp",
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-mcp",
+        "--lib",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 546.88,
+      "log": ".local/adhesion-final-mcp.log",
+      "sha256": "f46300e218eaa7e91d1d1e46e1c5622d13aca8c6598b04c35080ec0060d2a80a",
+      "passed": 84
+    },
+    {
+      "name": "python",
+      "command": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tools",
+        "-p",
+        "test_*.py"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 273.18,
+      "log": ".local/adhesion-python.log",
+      "sha256": "1b3cfe08a61ae844b80aaaf0e30b50d98d59abd2bc8b8e43a258255aca4b5fde",
+      "passed": 34
+    },
+    {
+      "command": [
+        "cargo",
+        "clippy",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "--workspace",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "exit_code": 0,
+      "log": ".local/adhesion-clippy.log",
+      "sha256": "e0a28873f11f9df003669df34d239a5212e720c8e2de870456a8254c5a58d4ec"
+    },
+    {
+      "command": [
+        "cargo",
+        "fmt",
+        "--all",
+        "--",
+        "--check"
+      ],
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit_code": 0
+    }
+  ],
+  "public_workflow": {
+    "run_id": "adhesion-public-20260928-a",
+    "status": "passed",
+    "retained_path": "docs/evidence/piston-adhesion-public-20260928.json.gz",
+    "retained_sha256": "0beabe7333e5e304511db42803ae08e9d6bcbbd54500e4551f576e4dca8696a5",
+    "placement_steps": 16,
+    "removal_steps": 16,
+    "readbacks_per_operation": 33,
+    "checked_cells": 4785,
+    "process_restarts": 3,
+    "checks": {
+      "listed_after_restart": true,
+      "fresh_review": true,
+      "missing_chunks_refused": true,
+      "external_change_detected": true,
+      "preview_required": true,
+      "changed_after_preview_refused": true,
+      "removal_retained": true
+    },
+    "cleanup": {
+      "region_empty": true,
+      "force_load_removed": true
+    },
+    "inputs": [
+      {
+        "kind": "input_packet",
+        "sequence": 27709,
+        "game_tick": 178673,
+        "dimension": "minecraft:overworld",
+        "input_kind": "player_interact_block",
+        "position": "BlockPos{x=240000, y=181, z=997}",
+        "hand": "MAIN_HAND",
+        "packet_sequence": 0
+      },
+      {
+        "kind": "input_packet",
+        "sequence": 31302,
+        "game_tick": 178957,
+        "dimension": "minecraft:overworld",
+        "input_kind": "player_interact_block",
+        "position": "BlockPos{x=240000, y=181, z=997}",
+        "hand": "MAIN_HAND",
+        "packet_sequence": 0
+      }
+    ],
+    "observed_states": [
+      {
+        "game_tick": 178672,
+        "states": {
+          "BlockPos{x=240000, y=182, z=1000}": "Block{minecraft:slime_block}",
+          "BlockPos{x=240000, y=183, z=1000}": "Block{minecraft:air}",
+          "BlockPos{x=240001, y=182, z=1000}": "Block{minecraft:stone}",
+          "BlockPos{x=240001, y=183, z=1000}": "Block{minecraft:air}",
+          "BlockPos{x=240000, y=182, z=1001}": "Block{minecraft:honey_block}"
+        }
+      },
+      {
+        "game_tick": 178683,
+        "states": {
+          "BlockPos{x=240000, y=182, z=1000}": "Block{minecraft:piston_head}[facing=up,short=false,type=sticky]",
+          "BlockPos{x=240000, y=183, z=1000}": "Block{minecraft:slime_block}",
+          "BlockPos{x=240001, y=182, z=1000}": "Block{minecraft:air}",
+          "BlockPos{x=240001, y=183, z=1000}": "Block{minecraft:stone}",
+          "BlockPos{x=240000, y=182, z=1001}": "Block{minecraft:honey_block}"
+        }
+      },
+      {
+        "game_tick": 178967,
+        "states": {
+          "BlockPos{x=240000, y=182, z=1000}": "Block{minecraft:slime_block}",
+          "BlockPos{x=240000, y=183, z=1000}": "Block{minecraft:air}",
+          "BlockPos{x=240001, y=182, z=1000}": "Block{minecraft:stone}",
+          "BlockPos{x=240001, y=183, z=1000}": "Block{minecraft:air}",
+          "BlockPos{x=240000, y=182, z=1001}": "Block{minecraft:honey_block}"
+        }
+      }
+    ]
+  },
+  "limits": [
+    "No entity transport, bounce, sliding, items, fluids or inventory.",
+    "Direct piston destruction in movement paths and previously unsupported movable devices remain rejected.",
+    "Source-map hash bucket exceeding eight keys is rejected rather than inventing Java collision-resize iteration order.",
+    "Native comparison covers the declared projection, not hidden registers/history or all shape/inert-target callbacks.",
+    "Known-space, placement permissions/size and non-atomic world mutation constraints remain.",
+    "Retired contexts/checkpoints and old Blueprint passes are not automatically converted or reused."
+  ]
+}

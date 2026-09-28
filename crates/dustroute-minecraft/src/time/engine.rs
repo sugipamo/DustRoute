@@ -1198,7 +1198,7 @@ impl PhysicsEngine {
     ) -> Result<(), PhysicsEngineError> {
         let unsupported = self.world.iter().find_map(|(position, block)| {
             (!crate::execution_context::WorldExecutionProfile::BoundedRedstoneEventsV1
-                .admits_kind(block.kind))
+                .admits_block(block))
             .then_some((*position, block.kind))
         });
         if let Some((position, kind)) = unsupported {
@@ -1363,7 +1363,7 @@ impl PhysicsEngine {
             PhysicsEventKind::WorldChange { after } if propagation => {
                 redstone_position_known(planning_region, event.target)?;
                 if !crate::execution_context::WorldExecutionProfile::BoundedRedstoneEventsV1
-                    .admits_kind(after.kind)
+                    .admits_block(after)
                 {
                     return Err(RedstonePropagationError::UnsupportedComponent {
                         position: event.target,

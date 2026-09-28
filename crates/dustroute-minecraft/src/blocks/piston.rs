@@ -1376,6 +1376,14 @@ fn ensure_known(known_region: Option<Region>, position: Pos) -> Result<(), Pisto
 }
 
 fn ensure_movable(position: Pos, block: &Block) -> Result<(), PistonError> {
+    if !crate::execution_context::WorldExecutionProfile::BoundedRedstoneEventsV1.admits_block(block)
+    {
+        return Err(PistonError::UnsupportedMovingBlock {
+            position,
+            kind: block.kind,
+            reason: "payload requires a different execution contract".into(),
+        });
+    }
     let reason = match bounded_world_laws()
         .piston
         .payload_rejection(block)

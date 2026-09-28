@@ -202,7 +202,7 @@ impl Display for ElectricalSolveError {
 
 pub(crate) fn validate_compatibility_kinds(world: &World) -> Result<(), ElectricalSolveError> {
     for (position, block) in world.iter() {
-        if !dustroute_minecraft::execution_context::WorldExecutionProfile::RedstoneCompatibilityBoundaryV1.admits_kind(block.kind) {
+        if !dustroute_minecraft::execution_context::WorldExecutionProfile::RedstoneCompatibilityBoundaryV1.admits_block(block) {
             return Err(ElectricalSolveError::UnsupportedBlock { position: *position, kind: block.kind });
         }
     }

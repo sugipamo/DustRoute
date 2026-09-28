@@ -1,9 +1,9 @@
 # Custom piston Assembly construction
 
 This is the standard path for new supported piston Assemblies on Java 1.21.11.
-The [device-program migration](data-driven-block-runtime.md) advances execution
-and review to v7. Construction uses the same command semantics previously
-validated at v6; archived v6 acceptance is not reused as a current proof.
+Execution and review use v17 with [slime/honey adhesion](piston-adhesion.md), after
+the [device-program migration](data-driven-block-runtime.md), support loss and
+shape extensions. Archived acceptance is not reused as a current proof.
 Horizontal, upward and downward bodies share one electrical world and queue.
 The [roadmap](piston-general-placement-roadmap.md) and
 [evidence report](piston-electrical-live-evidence.md) record the implementation
@@ -35,20 +35,22 @@ For new review/update requests, supply these explicit physical assumptions in
 ```
 
 Optional `root_limits` bound computation. This request form chooses fresh
-construction and `dustroute.piston-electrical-root-exploration.v9`; it is resolved
+construction and `dustroute.piston-electrical-root-exploration.v17`; it is resolved
 before saving the proposal. Saved archives still require their concrete profile
 and initial-condition fields. `RuntimeBehaviorContext::fresh_pistons` and
 `new_piston_runtime` are the corresponding library and execution entry points.
 
-Supported electrical components include levers, redstone blocks, dust, repeaters,
-observers and lamps, including admitted solid-block conduction and piston quasi-connectivity. Exact
-passive observed identities currently include stone, cobblestone, smooth stone,
-obsidian, smooth quartz, cyan wool and glass. Bodies may be ordinary or sticky in any of the six directions.
-Slime/honey, entities, general block entities, destructive support/component
-transitions and imported moving snapshots without their exact history remain
-unsupported. This is command construction, not survival inventory building.
+Supported electrical components include levers, stone buttons, redstone blocks,
+dust, repeaters, torches, circuit comparators, waxed bulbs, observers and lamps,
+including admitted conduction and piston quasi-connectivity. Passive identities
+and supported states are listed in [physical declarations](../crates/dustroute-minecraft/src/physical/passive.rs).
+Bodies may be ordinary or sticky in any of the six directions. Slime/honey add
+branching block movement; support loss removes admitted attachments.
+Entities, inventories, direct piston destruction and imported moving snapshots
+without their exact history remain unsupported. This is command construction,
+not survival inventory building.
 Retracted ordinary/sticky bodies in all six directions can be moved as payloads,
-including mixed linear chains within the twelve-block limit. Extended bodies
+including mixed and adhesive structures within the shared twelve-block limit. Extended bodies
 and active carriers block movement. See [movable body evidence](piston-payload-conformance.md).
 Behavioral review currently covers declared location-only repeated-settling and ordinary-door
 obligations; unsupported bindings/contracts or exhausted budgets are not passes.
@@ -117,9 +119,9 @@ begins, its placed-instance record and stage progress persist separately without
 a TTL. `manage_assembly` lists/reads those records, reobserves their world and
 creates freshly reviewed conditional removal plans after restart; see
 [persistent placed Assemblies](placed-assembly-management.md). Blueprint
-adoption and its pinned definitions also persist. Retired directional/direct-only and electrical v1–v6 contexts are rejected; use
+adoption and its pinned definitions also persist. Retired directional/direct-only and electrical v1–v16 contexts are rejected; use
 explicit new proposals and fresh review under the current execution context.
 
 Implementation responsibilities and retained distinct placement paths are mapped
 in [piston code organization](piston-code-organization.md). Module refactoring
-does not change the construction protocol, observation gates or v7 execution pin.
+does not by itself change the construction protocol or execution contract.

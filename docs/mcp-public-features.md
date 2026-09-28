@@ -184,6 +184,10 @@ fallback for its undo data.
   requirements at intermediate states. Adopted custom Assemblies can use
   `assembly_target` for fresh target review, ordered installation, whole-region
   readback and conditional undo. See [scope and live evidence](custom-piston-assembly-placement.md).
+- The v17 context adds declared [slime/honey block adhesion](piston-adhesion.md):
+  branches, push/pull, shared twelve-block limit and nonadhesion between the two
+  materials. Entity carrying/bouncing/sliding and direct component destruction
+  remain outside scope. Earlier approvals require fresh review.
 - Placement uses command writes, not survival inventory gathering/construction.
 - Merge, entity handling, long-running endurance optimization and arbitrary
   fully autonomous design are outside the current scope.

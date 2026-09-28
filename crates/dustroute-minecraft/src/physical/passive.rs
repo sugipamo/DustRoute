@@ -44,6 +44,15 @@ pub struct PassiveSpec {
     pub states: PassiveStates,
 }
 
+impl PassiveSpec {
+    pub const fn adhesion(&self) -> Adhesion {
+        match self.states {
+            PassiveStates::Fixed(p) => p.spec().adhesion,
+            PassiveStates::DryStairs(_) | PassiveStates::DrySlab { .. } => Adhesion::None,
+        }
+    }
+}
+
 const fn same_name(a: &str, b: &str) -> bool {
     let a = a.as_bytes();
     let b = b.as_bytes();
@@ -63,6 +72,7 @@ const fn same_name(a: &str, b: &str) -> bool {
 const fn passive(p: CheckedPhysical) {
     assert!(
         matches!(p.support(), Support::None)
+            && matches!(p.spec().piston_reaction, PistonReaction::Normal)
             && matches!(p.spec().orientation, Orientation::None)
             && matches!(p.spec().wire_connection, WireConnectionRule::None),
         "passive blocks cannot declare attachment, signal axes or dust terminals"
@@ -95,8 +105,8 @@ pub const fn registry<const N: usize>(specs: [PassiveSpec; N]) -> [PassiveSpec; 
             PassiveStates::Fixed(p) => {
                 passive(p);
                 assert!(
-                    matches!(p.spec().shape, Shape::FullCube),
-                    "fixed passive shape must be a cube"
+                    matches!(p.spec().shape, Shape::FullCube | Shape::Honey),
+                    "fixed passive shape must be a cube or honey"
                 );
                 assert!(
                     matches!(p.support(), Support::None),
@@ -183,7 +193,31 @@ const TOP: CheckedPhysical = PhysicalSpec {
 }
 .checked();
 
-pub const BUILTINS: [PassiveSpec; 4] = registry([
+pub const BUILTINS: [PassiveSpec; 6] = registry([
+    PassiveSpec {
+        names: &["slime_block"],
+        kind: BlockKind::Transparent,
+        states: PassiveStates::Fixed(
+            PhysicalSpec {
+                adhesion: Adhesion::Slime,
+                ..SOLID.spec()
+            }
+            .checked(),
+        ),
+    },
+    PassiveSpec {
+        names: &["honey_block"],
+        kind: BlockKind::Transparent,
+        states: PassiveStates::Fixed(
+            PhysicalSpec {
+                shape: Shape::Honey,
+                supporting: Faces::Honey,
+                adhesion: Adhesion::Honey,
+                ..EMPTY
+            }
+            .checked(),
+        ),
+    },
     PassiveSpec {
         names: &[
             "stone_stairs",

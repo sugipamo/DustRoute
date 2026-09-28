@@ -642,8 +642,6 @@ pub fn observed_name_requires_live_observation(name: &str) -> bool {
             | "dispenser"
             | "dropper"
             | "hopper"
-            | "slime_block"
-            | "honey_block"
             | "water"
             | "lava"
             | "tripwire_hook"

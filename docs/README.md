@@ -43,6 +43,7 @@ Git history; diagnostic fixtures have not been promoted into public capability.
 | [Electrical piston live evidence](piston-electrical-live-evidence.md) | Applied input times, observed mixed/interference/quasi results and public construction trials |
 | [Piston transient conformance](piston-transient-conformance.md) | Measured input boundaries, carrier progress and callback-visible state comparisons |
 | [Movable piston bodies](piston-payload-conformance.md) | All-facing ordinary/sticky payloads, shared chains, double-extender evidence and subsequent redstone integration |
+| [Slime and honey adhesion](piston-adhesion.md) | Ordered branching movement, material relations, scope and verification |
 | [Downloaded 3×3 reference door](reference-3x3-door-audit.md) | Static inventory, exact coordinates and implementation/validation history |
 | [Typed device definitions](typed-device-runtime.md) | Rust constants, compile-time contracts, atomic properties, analog signals and concrete variant selection |
 | [Device integration roadmap](device-integration-roadmap.md) | Repeater integration, waxed bulbs, comparator internal state and torch history milestones |

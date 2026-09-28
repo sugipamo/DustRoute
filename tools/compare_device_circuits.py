@@ -136,6 +136,7 @@ def compare_model(observation, trial, model):
     assert observation['initial'] == trial['initial'] and observation['inputs'] == trial['inputs']
     assert model['status'] == {'kind': 'complete'} and model['pending'] == 0, 'incomplete model run'
     assert model['restoration_verified'] and model['trace']
+    assert model.get('restoration_scope', 'movement_or_device') == trial.get('restoration_scope', 'movement_or_device')
     records = model['trace']
     initial_roots = {r['invocation']['root'] for r in records if r['invocation']['call']['payload'] == 'Initialize'}
     initialization = [r for r in records if r['invocation']['root'] in initial_roots]
@@ -185,4 +186,5 @@ def compare_model(observation, trial, model):
                 live_callback_count=len(actual_callbacks), model_callback_count=len(predicted_callbacks),
                 first_callback_mismatch=compare(actual_callbacks, predicted_callbacks),
                 restoration_verified=True,
+                restoration_scope=trial.get('restoration_scope', 'movement_or_device'),
                 scope='complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared')
