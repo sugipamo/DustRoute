@@ -28,6 +28,40 @@
 //!     }], ..BASE
 //! }.checked();
 //! ```
+//! Construction settings are readable but cannot be assigned by callbacks:
+//! ```compile_fail,E0080
+//! use dustroute_minecraft::device_program::{*, schema::*};
+//! const BASE: DeviceSpec = BUILTIN_DEVICES[3].spec();
+//! const BAD: CheckedDevice = DeviceSpec {
+//!     handlers: &[HandlerSpec {
+//!         callback: Callback::Tick, inputs: BASE.handlers[1].inputs,
+//!         operations: &[Operation::Write {
+//!             when: Binding::Constant(1), values: &[(Property::Delay, Binding::Constant(1))],
+//!             notifications: WriteNotifications::None,
+//!         }],
+//!     }], ..BASE
+//! }.checked();
+//! ```
+//! Computed tick priorities must stay in the scheduler's 0..=6 range:
+//! ```compile_fail,E0080
+//! use dustroute_minecraft::device_program::{*, schema::*};
+//! const BASE: DeviceSpec = BUILTIN_DEVICES[3].spec();
+//! const BAD: CheckedDevice = DeviceSpec {
+//!     handlers: &[HandlerSpec {
+//!         callback: Callback::Tick, inputs: BASE.handlers[1].inputs,
+//!         operations: &[Operation::Schedule {
+//!             delay: Binding::Constant(2), priority: Binding::Output("delay"),
+//!         }],
+//!     }], ..BASE
+//! }.checked();
+//! ```
+//! An installed shape query cannot be reused for pre-insertion processing:
+//! ```compile_fail,E0080
+//! use dustroute_minecraft::device_program::{*, schema::*};
+//! const BAD: CheckedDevice = DeviceSpec {
+//!     preprocess_shapes: true, ..BUILTIN_DEVICES[3].spec()
+//! }.checked();
+//! ```
 //! Boolean properties cannot receive analog values:
 //! ```compile_fail,E0080
 //! use dustroute_minecraft::device_program::{*, schema::*};
@@ -102,7 +136,7 @@ pub enum Operation {
     },
     Schedule {
         delay: Binding,
-        priority: u8,
+        priority: Binding,
     },
     Notify {
         when: Binding,
@@ -130,6 +164,7 @@ pub struct DeviceSpec {
     pub law: &'static StaticLaw,
     pub orientation: Orientation,
     pub signal: Signal,
+    pub wire_connection: WireConnectionRule,
     pub signal_level: SignalLevel,
     pub conducts: bool,
     pub full_support: bool,
@@ -229,14 +264,20 @@ impl DeviceSpec {
             i += 1;
         }
         assert!(
-            !matches!(self.signal, Signal::Output)
-                || matches!(self.orientation, Orientation::Output),
+            !matches!(self.signal, Signal::Output) || self.orientation.has_output(),
             "output signal needs orientation"
         );
         assert!(
             !matches!(self.signal, Signal::Attached)
                 || matches!(self.orientation, Orientation::Attached),
             "attached signal needs orientation"
+        );
+        assert!(
+            !matches!(
+                self.wire_connection,
+                WireConnectionRule::Output | WireConnectionRule::Axis
+            ) || self.orientation.has_output(),
+            "wire connection needs orientation"
         );
         assert!(
             !self.preprocess_shapes || self.handles(Callback::Shape),
@@ -280,18 +321,31 @@ impl DeviceSpec {
                     "query exceeds law input range"
                 );
                 assert!(
-                    !matches!(q, Query::SourceAtFront)
-                        || matches!(self.orientation, Orientation::Output),
+                    !matches!(q, Query::SourceAtFront | Query::SourceOffAxis)
+                        || self.orientation.has_output(),
                     "front query needs orientation"
                 );
                 assert!(
                     !matches!(
-                        h.callback,
-                        Callback::Removed | Callback::Shape | Callback::Added
-                    ) || !matches!(
                         q,
-                        Query::ReceivingPower | Query::ReceivingLevel | Query::SideLevel { .. }
-                    ),
+                        Query::GateInputPowered
+                            | Query::SideGatePowered
+                            | Query::OutputGateMisaligned
+                    ) || matches!(self.orientation, Orientation::FloorOutput),
+                    "gate query needs horizontal floor output"
+                );
+                assert!(
+                    !(matches!(h.callback, Callback::Removed | Callback::Added)
+                        || matches!(h.callback, Callback::Shape) && self.preprocess_shapes)
+                        || !matches!(
+                            q,
+                            Query::ReceivingPower
+                                | Query::ReceivingLevel
+                                | Query::SideLevel { .. }
+                                | Query::GateInputPowered
+                                | Query::SideGatePowered
+                                | Query::OutputGateMisaligned
+                        ),
                     "detached query needs installed receiver"
                 );
                 j += 1;
@@ -308,7 +362,11 @@ impl DeviceSpec {
                     "prewrite shape may only schedule"
                 );
                 match op {
-                    Operation::Write { when, values, .. } => {
+                    Operation::Write {
+                        when,
+                        values,
+                        notifications,
+                    } => {
                         writes += 1;
                         assert!(
                             writes <= 1 && !matches!(h.callback, Callback::Removed),
@@ -318,11 +376,18 @@ impl DeviceSpec {
                             when.bound(self.law) <= 1 && !values.is_empty(),
                             "invalid write guard or empty write"
                         );
+                        assert!(
+                            !matches!(notifications, WriteNotifications::OutputAndShapes)
+                                || self.orientation.has_output(),
+                            "output notification needs orientation"
+                        );
                         let mut k = 0;
                         while k < values.len() {
                             let (p, v) = values[k];
                             assert!(
-                                self.declares(p) && v.bound(self.law) <= p.maximum(),
+                                self.declares(p)
+                                    && p.writable()
+                                    && v.bound(self.law) <= p.maximum(),
                                 "property assignment outside declared range"
                             );
                             let mut m = 0;
@@ -336,7 +401,7 @@ impl DeviceSpec {
                     Operation::Schedule { delay, priority } => {
                         delay.bound(self.law);
                         assert!(
-                            *priority <= 6
+                            priority.bound(self.law) <= 6
                                 && self.handles(Callback::Tick)
                                 && !matches!(h.callback, Callback::Removed),
                             "schedule needs tick handler and valid priority"
@@ -349,8 +414,7 @@ impl DeviceSpec {
                         );
                         assert!(
                             match targets {
-                                NotifyTargets::Output =>
-                                    matches!(self.orientation, Orientation::Output),
+                                NotifyTargets::Output => self.orientation.has_output(),
                                 NotifyTargets::SelfAndSupport =>
                                     matches!(self.orientation, Orientation::Attached),
                             },
@@ -437,6 +501,7 @@ impl CheckedDevice {
             law: s.law_id.into(),
             orientation: s.orientation,
             signal: s.signal,
+            wire_connection: s.wire_connection,
             signal_level: s.signal_level,
             conducts: s.conducts,
             full_support: s.full_support,
@@ -492,7 +557,7 @@ impl CheckedDevice {
                                     },
                                     Operation::Schedule { delay, priority } => Effect::Schedule {
                                         delay: delay.owned(),
-                                        priority: *priority,
+                                        priority: priority.owned(),
                                     },
                                     Operation::Notify { when, targets } => Effect::Notify {
                                         when: when.owned(),

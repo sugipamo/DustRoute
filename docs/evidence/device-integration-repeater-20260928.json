@@ -1,0 +1,269 @@
+{
+  "schema": "dustroute.device-integration-repeater-evidence.v1",
+  "date": "2026-09-28",
+  "branch": "codex/data-driven-block-runtime",
+  "base_commit": "eb2e7a040c387064238b2eafcb41991f289beb27",
+  "execution_profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v9",
+  "root_exploration": "dustroute.piston-electrical-root-exploration.v9",
+  "device_program_revision": "dustroute.device-programs.java-1-21-11.v3",
+  "repeater_law": "dustroute.law.repeater.callback.java-1-21-11.v2",
+  "scope": "Repeater integration milestone only; later milestones stopped pending the documented physical-admission proposal",
+  "rust_test_count": 301,
+  "rust_compile_fail_doctest_count": 14,
+  "python_test_count": 14,
+  "rust_tests_by_scope": {
+    "minecraft": 241,
+    "library": 18,
+    "translate": 40,
+    "public_mcp_stub": 2
+  },
+  "new_regressions": {
+    "repeater_directions_times_delays": 16,
+    "dust_attachment_arrangements": 32,
+    "checkpoint_boundary": "every microstep at the short-pulse output/shape/followup tick",
+    "admission_rejections": 7
+  },
+  "source_audit": {
+    "artifact": "/root/.gradle/caches/fabric-loom/minecraftMaven/net/minecraft/minecraft-merged/1.21.11-net.fabricmc.yarn.1_21_11.1.21.11+build.6-v2/minecraft-merged-1.21.11-net.fabricmc.yarn.1_21_11.1.21.11+build.6-v2.jar",
+    "class_sha256": {
+      "AbstractRedstoneGateBlock": "1650b9eacd97788b5be6fad0164e71834191298daadcecb2fac90c7c117cfa3d",
+      "RepeaterBlock": "2ab7b5c657ba0e701258b58870b9d4611d10d9dd5e57b6db3c84c296dcd73b67"
+    },
+    "inspection": "javap -p -c; no server execution"
+  },
+  "commands": [
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-minecraft",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0,
+      "log": "/tmp/dustroute-repeater-minecraft-tests.log"
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-translate",
+        "--test",
+        "native_device_observations",
+        "--test",
+        "execution_context",
+        "--test",
+        "electrical_piston_construction",
+        "--test",
+        "command_placement_regression",
+        "--test",
+        "ordinary_reference_door",
+        "--test",
+        "electrical_piston_relocation",
+        "--test",
+        "runtime_adoption",
+        "--test",
+        "unified_piston_behavior",
+        "--test",
+        "location_behavior",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0,
+      "log": "/tmp/dustroute-repeater-translate-tests.log"
+    },
+    {
+      "command": [
+        "cargo",
+        "build",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-translate",
+        "--example",
+        "compare_electrical_pistons"
+      ],
+      "exit_code": 0,
+      "log": "/tmp/dustroute-repeater-model-build.log"
+    },
+    {
+      "command": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tools",
+        "-p",
+        "test_*.py"
+      ],
+      "exit_code": 0,
+      "log": "/tmp/dustroute-repeater-python-tests.log"
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-library",
+        "--test",
+        "execution_context",
+        "--test",
+        "executable_laws",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 9.07,
+      "log": "/tmp/dustroute-repeater-library.log"
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-mcp",
+        "--lib",
+        "service::blueprint_tests::runtime_blueprint_review_and_adoption_preserve_child_failures_after_restart",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 89.64,
+      "log": "/tmp/dustroute-repeater-mcp-review.log"
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-mcp",
+        "--lib",
+        "service::blueprint_tests::custom_electrical_construction_rechecks_adoption_baseline_settings_and_each_write",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 259.23,
+      "log": "/tmp/dustroute-repeater-mcp-construction.log"
+    },
+    {
+      "command": [
+        "cargo",
+        "clippy",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "--workspace",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 60.29,
+      "log": "/tmp/dustroute-repeater-clippy.log"
+    },
+    {
+      "command": [
+        "cargo",
+        "fmt",
+        "--all"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 1.36,
+      "log": "/tmp/dustroute-repeater-fmt-apply.log"
+    },
+    {
+      "command": [
+        "cargo",
+        "fmt",
+        "--all",
+        "--",
+        "--check"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 1.63,
+      "log": "/tmp/dustroute-repeater-fmt.log"
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.01,
+      "log": "/tmp/dustroute-repeater-diff.log"
+    }
+  ],
+  "implementation_sha256": {
+    "crates/dustroute-library/src/runtime_behavior.rs": "0b20e22990b17de64423227b19b863200e8b07088d2396cf3bac86ddaf02ba6f",
+    "crates/dustroute-library/tests/executable_laws.rs": "13090b37638d5b2cd5e1fe44affa2829308a20938829d67fd204ed98aef7420f",
+    "crates/dustroute-library/tests/execution_context.rs": "cf6c3dd3129e4ada360f25b2b7694d1b3e4d19d2da9e5fb6bf1111118075343d",
+    "crates/dustroute-mcp/src/service_blueprint_tests.rs": "6f2c20e0955d965e2d633169e6208296e1aa0212f547cabf747c046ca2918811",
+    "crates/dustroute-minecraft/src/device_callback_law.rs": "202d6927264ff464aa3cc9402c796a31070333c7856f086294710a64f0d8856c",
+    "crates/dustroute-minecraft/src/device_program.rs": "bdfd027b9e11de47b06d97a1b19645f9fb5983cc7f809f3ecbf25e417118db77",
+    "crates/dustroute-minecraft/src/device_program/builtin_laws.rs": "f2f21a58150cb83ff7a71fc15fefde2d539ac2251957ce53baad77676afa7ed5",
+    "crates/dustroute-minecraft/src/device_program/builtins.rs": "ad93e5dcac7ba41e9656c61d367cc038a8d98ac52d04221ef6717bf7b02e1b6d",
+    "crates/dustroute-minecraft/src/device_program/schema.rs": "9a73a5c64dab09d785214fa6a006855cd331e999c02548f09a1d23c96ebe62d4",
+    "crates/dustroute-minecraft/src/device_program/state.rs": "5e48eab7875a59ccc5456069030d5da49bc13a8bd9011d2d47ca6442283951e8",
+    "crates/dustroute-minecraft/src/execution_context.rs": "635af3428b5c7438320ef7eb7161b75189cd064e80879d61a7ca976873d25f5e",
+    "crates/dustroute-minecraft/src/piston_electrical.rs": "8a2ef5332dad367efb9cd57016ee3bc65315c42c7f54faba75f895c6c3b3c09b",
+    "crates/dustroute-minecraft/src/time/piston_runtime/adapter.rs": "5e166ba30bf939d864f71e38589da595a2d579f1b3d3d21a2411ec07b7baba22",
+    "crates/dustroute-minecraft/src/time/piston_runtime/command.rs": "eb6586db83dc275502a7685707da826e585adf8e5a579c16fd869a3aef1ff675",
+    "crates/dustroute-minecraft/src/time/piston_runtime/device_capability_tests.rs": "8d53e69da99c9a9f3e0d7630308479fe3a5de5d32d8bc1c102c7566e2740ce82",
+    "crates/dustroute-minecraft/src/time/piston_runtime/devices.rs": "c390fa2da5be219ab4d6557f7c6d613c491326f925ab69da4835d5260045b4ad",
+    "crates/dustroute-minecraft/src/time/piston_runtime/electrical.rs": "7a67caf2cdb0bc60bba35bdcbe7f5fa2bdc4c1e227c23efc73c7b3c797b4bcfa",
+    "crates/dustroute-minecraft/src/time/piston_runtime/mod.rs": "5af2f7ed19abeb91c73c125bbf5fe49c1dccd42864d8a900ef8ba8902be4307b",
+    "crates/dustroute-minecraft/src/time/piston_runtime/notifications.rs": "4993ecd704f1fc456c58808942656ebe7fdb362a42a962acddbab8087d7e2de7",
+    "crates/dustroute-minecraft/src/time/runtime/executor/piston_behavior.rs": "969fe5da4ac2b3499aa424103fdcc852936bba3dca3cd834707e3dc2ca30776c",
+    "crates/dustroute-minecraft/tests/device_programs.rs": "6fbe59b89f73c10f4c845966ed7d6801b97950db86a52beffa3615e755a8b41a",
+    "crates/dustroute-minecraft/tests/piston_electrical_world.rs": "f9c8a06a6ff3d9e5ba64b169ef364999e35c08f2d61df32c44220b05047262dc",
+    "crates/dustroute-minecraft/tests/piston_runtime.rs": "63454550b46ad6ec1c80580c6a755864a1a039119e5852271517c5ec2372e4af",
+    "crates/dustroute-minecraft/tests/repeater_device.rs": "535c1f4da3fed203b50ea3ed7cd10623f4a922f0e26ceee1a8f8066a6747c5d9",
+    "crates/dustroute-minecraft/tests/unified_piston_runtime.rs": "d75fa1538a9b5aedde10a9c3dd37741fdb46fa42693e8c4502290732db8e7a1b",
+    "crates/dustroute-translate/tests/execution_context.rs": "9930bdabf6b21df6429dad01c73e915abf3a8adb6192eb2ce26ec6f70202ad1d",
+    "crates/dustroute-translate/tests/location_behavior.rs": "b8a21a9220e8ddec66b2ca678f1679f63c918471b26496689ffcfcaf1f6448ac",
+    "crates/dustroute-translate/tests/native_device_observations.rs": "e17e00cd76acdc673bf13aba503394dd221fa34413301ee39efde3a58d4c71e5",
+    "crates/dustroute-translate/tests/support/runtime_blueprint.rs": "d531ef755720378f4b46b4c68cc0299ebf0cafbd6387202ae07fa0f83b0af6d3",
+    "crates/dustroute-translate/tests/unified_piston_behavior.rs": "eb11d44e2f8ca1d499c1086e0ffd958e523a0c890589a10d0d00e3682db01664"
+  },
+  "findings": [
+    "Target scheduledTick reserves short-pulse OFF only after the powered write and nested callbacks return; the dedicated path reserved it earlier.",
+    "Retained command-placement regression caught conflating output emission with dust attachment; explicit WireConnectionRule fixes it without changing retained evidence."
+  ],
+  "limits": [
+    "No live Minecraft server or new live trial",
+    "Full workspace test suite not run",
+    "No copper bulb, comparator or torch integration added",
+    "No physical-admission redesign implemented",
+    "No old context/checkpoint conversion",
+    "Temporary logs are local convenience files; commands, counts and hashes are retained here"
+  ]
+}

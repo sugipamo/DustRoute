@@ -80,7 +80,7 @@ fn definitions_reject_unbound_outputs_invalid_domains_and_prewrite_mutations() {
                     delay: Value::Output {
                         name: "missing".into(),
                     },
-                    priority: 3,
+                    priority: Value::Constant { number: 3 },
                 }),
             1 => {
                 definition.handlers.get_mut(&Callback::Tick).unwrap().inputs[0].sample =

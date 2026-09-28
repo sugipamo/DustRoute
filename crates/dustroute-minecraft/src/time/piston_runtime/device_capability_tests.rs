@@ -43,7 +43,7 @@ const OPERATIONS: &[Operation] = &[
     },
     Operation::Schedule {
         delay: Binding::Output("delay"),
-        priority: 3,
+        priority: Binding::Constant(3),
     },
 ];
 const BASE: DeviceSpec = DeviceSpec {

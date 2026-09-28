@@ -21,8 +21,8 @@ pub enum WorldExecutionProfile {
     RedstoneCompatibilityBoundaryV1,
     #[serde(rename = "dustroute.bounded-redstone-events.v1")]
     BoundedRedstoneEventsV1,
-    #[serde(rename = "dustroute.piston-electrical-callbacks.java-1-21-11.v8")]
-    UnifiedPistonElectricalCallbacksJava12111V8,
+    #[serde(rename = "dustroute.piston-electrical-callbacks.java-1-21-11.v9")]
+    UnifiedPistonElectricalCallbacksJava12111V9,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
@@ -142,7 +142,7 @@ impl WorldExecutionContext {
                         Some(crate::piston_law::builtin_piston_laws().default_motion_profile()),
                     )
                 }
-                UnifiedPistonElectricalCallbacksJava12111V8 => {
+                UnifiedPistonElectricalCallbacksJava12111V9 => {
                     laws.retain(|role, _| *role == BlockTraits);
                     laws.insert(Lamp, crate::device_callback_law::LAW_IDS[0].into());
                     laws.insert(Observer, crate::device_callback_law::LAW_IDS[1].into());
@@ -154,6 +154,7 @@ impl WorldExecutionContext {
                     {
                         laws.insert(role, id.into());
                     }
+                    laws.insert(Repeater, crate::device_callback_law::LAW_IDS[3].into());
                     laws.insert(
                         PistonPayload,
                         crate::piston_law::ELECTRICAL_PAYLOAD_LAW.into(),
@@ -197,7 +198,7 @@ impl WorldExecutionContext {
     pub fn device_program_revision(&self) -> Option<&'static str> {
         matches!(
             self.profile,
-            WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V8
+            WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V9
         )
         .then_some(crate::device_program::REVISION)
     }
@@ -207,7 +208,7 @@ impl WorldExecutionContext {
     pub fn synchronous_runtime_profile(&self) -> Option<&'static str> {
         matches!(
             self.profile,
-            WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V8
+            WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V9
         )
         .then_some(crate::time::runtime::PROFILE)
     }

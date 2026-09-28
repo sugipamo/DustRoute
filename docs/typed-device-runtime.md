@@ -1,5 +1,19 @@
 # Typed device runtime roadmap
 
+The subsequent [integration roadmap](device-integration-roadmap.md) extends this
+foundation. The current implementation adds repeater callback definitions,
+computed tick priorities, installed shape queries, output-before-shape writes
+and explicit dust connection rules. Execution/review uses v9 and device programs
+v3; the v8/v2 validation results below describe the completed foundation step.
+
+The new repeater bindings read `Delay` (1..4) as a construction-only property;
+callback assignments to it fail const validation. Observed repeaters require
+explicit, consistent `powered`, `locked`, `delay` and horizontal `facing`, with
+support below. Synthetic repeaters retain an omitted-lock default of false;
+malformed explicit locks are rejected. `TickCollected` samples the current ready
+batch, whereas `TickQueued` samples future reservations. Installed shape handlers
+can read gate power; pre-insertion shape handlers still cannot.
+
 The next step extends the shared device vocabulary, with Rust constants as the
 authoring format. It does not claim support for additional Minecraft blocks.
 
@@ -31,7 +45,7 @@ Rust job and one test thread; no Minecraft server is needed for this migration.
 
 ## Authoring and compilation
 
-`src/device_program/builtin_laws.rs` owns the three callback rules as `StaticLaw`
+In the foundation revision, `src/device_program/builtin_laws.rs` owns the three callback rules as `StaticLaw`
 constants. `builtins.rs` binds them to physical queries and ordered operations
 using `DeviceSpec { ... }.checked()`. `schema::registry([...])` checks the complete
 built-in registry in a const initializer. No production device definition or
@@ -100,8 +114,8 @@ remaining operations belong to the captured definition. A later scheduled tick
 selects from the then-current physical state, guarded by concrete block identity.
 These operations are included in exact checkpoints.
 
-Execution and root exploration now use **v8**, pinning device-program revision
-**v2**. Previous v7 contexts and checkpoints are rejected. No old approval is
+The foundation used execution/root-exploration **v8**, pinning device-program revision
+**v2**. It rejected previous v7 contexts and checkpoints. No old approval is
 silently upgraded; start review from explicit fresh state. Catalog schemas and
 the three existing immutable callback Law bodies are unchanged.
 

@@ -1,9 +1,9 @@
 # Unified electrical piston runtime
 
-The current v8 execution/exploration profiles implement source-ordered movement
+The current v9 execution/exploration profiles implement source-ordered movement
 writes and native stationary/moving observer and lamp callbacks in one world.
 The reference 3×3 door matches retained Java 1.21.11 tick ends, ordered palette
-writes and callback-visible worlds. Saved v1–v7 contexts require explicit fresh
+writes and callback-visible worlds. Saved v1–v8 contexts require explicit fresh
 verification. See [movement staging and evidence](staged-piston-motion.md) and
 [native devices](native-device-callbacks.md) for the tested scope.
 
@@ -22,9 +22,9 @@ necessary for the same-tick piston retract decision; simply moving the input
 before the next tick can select a different block event. See
 [transient comparison evidence](piston-transient-conformance.md).
 
-The world profile is `dustroute.piston-electrical-callbacks.java-1-21-11.v8`;
-behavior review uses `dustroute.piston-electrical-root-exploration.v8`.
-Lamp, observer and stone-button callbacks now use [Rust constant device programs](typed-device-runtime.md).
+The world profile is `dustroute.piston-electrical-callbacks.java-1-21-11.v9`;
+behavior review uses `dustroute.piston-electrical-root-exploration.v9`.
+Lamp, observer, stone-button and repeater callbacks now use [Rust constant device programs](typed-device-runtime.md).
 `use_now` and `schedule_device_use_after_tick` expose stone-button interaction in
 the library runtime. Behavioral review still uses declared lever inputs; no new
 public MCP button-operation protocol or live button certification is implied.

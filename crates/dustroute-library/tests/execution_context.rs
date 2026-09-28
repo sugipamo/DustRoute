@@ -19,12 +19,12 @@ fn new_piston_context_is_unified_but_saved_records_still_require_their_profile()
     );
     assert_eq!(
         context.profile,
-        RuntimeBehaviorProfile::UnifiedPistonElectricalRootExplorationV8
+        RuntimeBehaviorProfile::UnifiedPistonElectricalRootExplorationV9
     );
     resolve_law_references(builtin_laws(), &context.execution_context()).unwrap();
     let saved = serde_json::to_value(&context).unwrap();
     let mut previous = saved.clone();
-    previous["profile"] = "dustroute.piston-electrical-root-exploration.v7".into();
+    previous["profile"] = "dustroute.piston-electrical-root-exploration.v8".into();
     assert!(serde_json::from_value::<RuntimeBehaviorContext>(previous).is_err());
     let world = context.execution_context();
     assert_eq!(
@@ -32,7 +32,7 @@ fn new_piston_context_is_unified_but_saved_records_still_require_their_profile()
         Some(dustroute_minecraft::device_program::REVISION)
     );
     let mut previous_world = serde_json::to_value(&world).unwrap();
-    previous_world["profile"] = "dustroute.piston-electrical-callbacks.java-1-21-11.v7".into();
+    previous_world["profile"] = "dustroute.piston-electrical-callbacks.java-1-21-11.v8".into();
     assert!(serde_json::from_value::<WorldExecutionContext>(previous_world).is_err());
     assert_eq!(
         serde_json::from_value::<RuntimeBehaviorContext>(saved.clone()).unwrap(),
@@ -95,7 +95,7 @@ fn profiles_select_distinct_complete_law_sets_without_extending_proof_capabiliti
         (DustSingleTorchBlockEffectsV1, 6),
         (RedstoneCompatibilityBoundaryV1, 10),
         (BoundedRedstoneEventsV1, 11),
-        (UnifiedPistonElectricalCallbacksJava12111V8, 14),
+        (UnifiedPistonElectricalCallbacksJava12111V9, 14),
     ] {
         let context = WorldExecutionContext::for_profile(profile);
         let saved = builtin_laws().to_json().unwrap();
@@ -125,7 +125,7 @@ fn electrical_context_roundtrips_and_pins_its_connection_program() {
     use dustroute_library::runtime_behavior::{RuntimeBehaviorContext, RuntimeBehaviorProfile};
     use dustroute_minecraft::{Pos, Region};
     let context = RuntimeBehaviorContext {
-        profile: RuntimeBehaviorProfile::UnifiedPistonElectricalRootExplorationV8,
+        profile: RuntimeBehaviorProfile::UnifiedPistonElectricalRootExplorationV9,
         initial_condition:
             dustroute_library::behavior_type::BehaviorInitialCondition::FreshConstruction,
         known_region: Region::new(Pos::new(-4, -4, -4), Pos::new(20, 10, 4)),
@@ -133,7 +133,7 @@ fn electrical_context_roundtrips_and_pins_its_connection_program() {
         root_limits: Default::default(),
     };
     let saved = serde_json::to_string(&context).unwrap();
-    assert!(saved.contains("dustroute.piston-electrical-root-exploration.v8"));
+    assert!(saved.contains("dustroute.piston-electrical-root-exploration.v9"));
     let restored: RuntimeBehaviorContext = serde_json::from_str(&saved).unwrap();
     assert_eq!(context, restored);
     let world = restored.execution_context();
@@ -203,7 +203,7 @@ fn fixed_adapters_reject_a_changed_body_even_when_the_revision_id_matches() {
     for profile in [
         RedstoneCompatibilityBoundaryV1,
         BoundedRedstoneEventsV1,
-        UnifiedPistonElectricalCallbacksJava12111V8,
+        UnifiedPistonElectricalCallbacksJava12111V9,
     ] {
         let context = WorldExecutionContext::for_profile(profile);
         let mut conflict = dust_law_revision().clone();

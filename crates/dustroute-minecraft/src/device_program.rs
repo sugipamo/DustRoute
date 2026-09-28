@@ -14,8 +14,8 @@ pub mod schema;
 mod state;
 pub use state::{BoolProperty, Property, SignalLevel};
 
-pub const REVISION: &str = "dustroute.device-programs.java-1-21-11.v2";
-pub const BUILTIN_DEVICES: [schema::CheckedDevice; 3] = builtins::DEVICES;
+pub const REVISION: &str = "dustroute.device-programs.java-1-21-11.v3";
+pub const BUILTIN_DEVICES: [schema::CheckedDevice; 4] = builtins::DEVICES;
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -31,14 +31,26 @@ pub enum Callback {
 #[derive(Clone, Copy, Debug, Deserialize)]
 #[serde(tag = "query", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Query {
-    Constant { value: u16 },
+    Constant {
+        value: u16,
+    },
     Powered,
     ReceivingPower,
     TickQueued,
+    /// Tick collected for the current batch, distinct from a future reservation.
+    TickCollected,
     SourceAtFront,
-    State { property: Property },
+    SourceOffAxis,
+    GateInputPowered,
+    SideGatePowered,
+    OutputGateMisaligned,
+    State {
+        property: Property,
+    },
     ReceivingLevel,
-    SideLevel { side: crate::Facing },
+    SideLevel {
+        side: crate::Facing,
+    },
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -69,6 +81,8 @@ pub enum WriteNotifications {
     None,
     Shapes,
     NeighborsAndShapes,
+    /// Installed gate output callbacks run before the write's shape callbacks.
+    OutputAndShapes,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -88,7 +102,7 @@ pub enum Effect {
     },
     Schedule {
         delay: Value,
-        priority: u8,
+        priority: Value,
     },
     Notify {
         when: Value,
@@ -109,7 +123,15 @@ pub struct Handler {
 pub enum Orientation {
     None,
     Output,
+    /// Horizontal output with support immediately below the device.
+    FloorOutput,
     Attached,
+}
+
+impl Orientation {
+    pub const fn has_output(self) -> bool {
+        matches!(self, Self::Output | Self::FloorOutput)
+    }
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
@@ -118,6 +140,15 @@ pub enum Signal {
     None,
     Output,
     Attached,
+}
+
+/// Dust's visual/physical connection is independent of signal emission.
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
+pub enum WireConnectionRule {
+    None,
+    Output,
+    Axis,
+    Any,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -141,6 +172,7 @@ pub struct DeviceDefinition {
     pub signal_level: SignalLevel,
     pub orientation: Orientation,
     pub signal: Signal,
+    pub wire_connection: WireConnectionRule,
     pub conducts: bool,
     pub full_support: bool,
     pub fresh_powered_requires_history: bool,
@@ -228,11 +260,18 @@ impl DeviceProgram {
         {
             return Err("invalid device definition identity or state property".into());
         }
-        if definition.signal == Signal::Output && definition.orientation != Orientation::Output
+        if definition.signal == Signal::Output && !definition.orientation.has_output()
             || definition.signal == Signal::Attached
                 && definition.orientation != Orientation::Attached
         {
             return Err("device signal requires matching orientation".into());
+        }
+        if matches!(
+            definition.wire_connection,
+            WireConnectionRule::Output | WireConnectionRule::Axis
+        ) && !definition.orientation.has_output()
+        {
+            return Err("directional wire connection requires output orientation".into());
         }
         let mut tables = BTreeMap::new();
         for (callback, handler) in &definition.handlers {
@@ -254,21 +293,46 @@ impl DeviceProgram {
                 if maximum > input.maximum {
                     return Err("device query exceeds law input domain".into());
                 }
-                if matches!(input.sample, Query::SourceAtFront)
-                    && definition.orientation != Orientation::Output
+                if matches!(input.sample, Query::SourceAtFront | Query::SourceOffAxis)
+                    && !definition.orientation.has_output()
                 {
                     return Err("front query requires output orientation".into());
                 }
                 if matches!(
-                    callback,
-                    Callback::Removed | Callback::Shape | Callback::Added
-                ) && matches!(
                     input.sample,
-                    Query::ReceivingPower | Query::ReceivingLevel | Query::SideLevel { .. }
-                ) {
+                    Query::GateInputPowered | Query::SideGatePowered | Query::OutputGateMisaligned
+                ) && definition.orientation != Orientation::FloorOutput
+                {
+                    return Err("gate query requires horizontal floor output".into());
+                }
+                if matches!(callback, Callback::Removed | Callback::Added)
+                    && matches!(
+                        input.sample,
+                        Query::ReceivingPower
+                            | Query::ReceivingLevel
+                            | Query::SideLevel { .. }
+                            | Query::GateInputPowered
+                            | Query::SideGatePowered
+                            | Query::OutputGateMisaligned
+                    )
+                {
                     return Err(
                         "detached/lifecycle query cannot assume an installed receiver".into(),
                     );
+                }
+                if *callback == Callback::Shape
+                    && definition.preprocess_shapes
+                    && matches!(
+                        input.sample,
+                        Query::ReceivingPower
+                            | Query::ReceivingLevel
+                            | Query::SideLevel { .. }
+                            | Query::GateInputPowered
+                            | Query::SideGatePowered
+                            | Query::OutputGateMisaligned
+                    )
+                {
+                    return Err("pre-write query cannot assume an installed receiver".into());
                 }
             }
             let bound = |value: &Value| -> Result<u16, String> {
@@ -285,7 +349,11 @@ impl DeviceProgram {
             let mut writes = 0;
             for effect in &handler.effects {
                 match effect {
-                    Effect::WriteState { when, values, .. } => {
+                    Effect::WriteState {
+                        when,
+                        values,
+                        notifications,
+                    } => {
                         writes += 1;
                         if bound(when)? > 1
                             || values.is_empty()
@@ -294,8 +362,14 @@ impl DeviceProgram {
                         {
                             return Err("invalid device state write".into());
                         }
+                        if *notifications == WriteNotifications::OutputAndShapes
+                            && !definition.orientation.has_output()
+                        {
+                            return Err("output notifications require output orientation".into());
+                        }
                         for (index, (property, value)) in values.iter().enumerate() {
                             if !definition.properties.contains(property)
+                                || !property.writable()
                                 || bound(value)? > property.maximum()
                                 || values[..index].iter().any(|(p, _)| p == property)
                             {
@@ -305,7 +379,7 @@ impl DeviceProgram {
                     }
                     Effect::Schedule { delay, priority } => {
                         bound(delay)?;
-                        if *priority > 6
+                        if bound(priority)? > 6
                             || !definition.handlers.contains_key(&Callback::Tick)
                             || *callback == Callback::Removed
                         {
@@ -317,7 +391,7 @@ impl DeviceProgram {
                     Effect::Notify { when, targets } => {
                         if bound(when)? > 1
                             || *targets == NotifyTargets::Output
-                                && definition.orientation != Orientation::Output
+                                && !definition.orientation.has_output()
                             || *targets == NotifyTargets::SelfAndSupport
                                 && definition.orientation != Orientation::Attached
                         {
@@ -396,7 +470,7 @@ impl DeviceProgram {
                 Effect::Schedule { delay, priority } => {
                     (value(delay) != 0).then_some(ResolvedEffect::Schedule {
                         delay: value(delay).into(),
-                        priority: *priority,
+                        priority: value(priority) as u8,
                     })
                 }
                 Effect::Notify { when, targets } => {
@@ -431,13 +505,13 @@ impl DeviceDefinition {
     }
 }
 
-pub fn definitions() -> &'static [DeviceDefinition; 3] {
-    static DEFINITIONS: OnceLock<[DeviceDefinition; 3]> = OnceLock::new();
+pub fn definitions() -> &'static [DeviceDefinition; 4] {
+    static DEFINITIONS: OnceLock<[DeviceDefinition; 4]> = OnceLock::new();
     DEFINITIONS.get_or_init(|| builtins::DEVICES.map(|d| d.definition()))
 }
 
-pub fn programs() -> &'static [DeviceProgram; 3] {
-    static PROGRAMS: OnceLock<[DeviceProgram; 3]> = OnceLock::new();
+pub fn programs() -> &'static [DeviceProgram; 4] {
+    static PROGRAMS: OnceLock<[DeviceProgram; 4]> = OnceLock::new();
     PROGRAMS.get_or_init(|| builtins::DEVICES.map(|d| d.compile()))
 }
 

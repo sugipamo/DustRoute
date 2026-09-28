@@ -62,6 +62,29 @@ pub(super) fn prepare_program(
                     Query::TickQueued => view
                         .block_tick_queued(pos, &BlockIdentity::of(before))
                         .into(),
+                    Query::TickCollected => view
+                        .block_tick_ticking(pos, &BlockIdentity::of(before))
+                        .into(),
+                    Query::GateInputPowered => super::electrical::world(view)?
+                        .gate_input_powered(pos)?
+                        .into(),
+                    Query::SideGatePowered => super::electrical::world(view)?
+                        .side_gate_powered(pos)?
+                        .into(),
+                    Query::OutputGateMisaligned => super::electrical::world(view)?
+                        .output_gate_misaligned(pos)?
+                        .into(),
+                    Query::SourceOffAxis => {
+                        let facing = before
+                            .facing
+                            .ok_or_else(|| unsupported("device output required"))?;
+                        let source = source.ok_or_else(|| unsupported("shape source required"))?;
+                        let side = crate::piston_electrical::SIDES
+                            .into_iter()
+                            .find(|d| along(pos, *d, 1).ok() == Some(source))
+                            .ok_or_else(|| unsupported("shape source must be adjacent"))?;
+                        (side != facing && side != facing.opposite()).into()
+                    }
                     Query::SourceAtFront => {
                         let facing = before
                             .facing
@@ -125,7 +148,7 @@ pub(super) fn notification_jobs(
     targets: NotifyTargets,
 ) -> Result<VecDeque<NeighborJob>, RuntimeError> {
     match targets {
-        NotifyTargets::Output => super::electrical::repeater_jobs_for(view, pos, before),
+        NotifyTargets::Output => output_jobs(view, pos, before),
         NotifyTargets::SelfAndSupport => {
             let support = before
                 .support_offset
@@ -140,6 +163,29 @@ pub(super) fn notification_jobs(
             Ok(jobs)
         }
     }
+}
+
+pub(super) fn output_jobs(
+    view: RuntimeView<'_>,
+    pos: Pos,
+    block: &Block,
+) -> Result<VecDeque<NeighborJob>, RuntimeError> {
+    let direction = block
+        .facing
+        .ok_or_else(|| unsupported("device output required"))?;
+    let target = along(pos, direction, 1)?;
+    view.block(target)?;
+    let mut jobs = VecDeque::from([NeighborJob {
+        target,
+        source: pos,
+        shape: false,
+    }]);
+    jobs.extend(
+        super::notifications::adjacent_jobs(view, target, false, false)?
+            .into_iter()
+            .filter(|job| job.target != pos),
+    );
+    Ok(jobs)
 }
 
 pub(super) fn step(
@@ -185,6 +231,9 @@ pub(super) fn step_program(
                 jobs.extend(super::notifications::adjacent_jobs(
                     view, pos, false, false,
                 )?);
+            }
+            if notifications == WriteNotifications::OutputAndShapes {
+                jobs.extend(output_jobs(view, pos, &after)?);
             }
             if notifications != WriteNotifications::None {
                 jobs.extend(super::electrical::write_shape_jobs(

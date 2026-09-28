@@ -103,8 +103,8 @@ pub(super) fn notify(
         }
         return Ok(out);
     }
-    if matches!(block.kind, BlockKind::RedstoneWire | BlockKind::Repeater) {
-        let mut out = super::electrical::notify_device(view, &job, &block)?;
+    if block.kind == BlockKind::RedstoneWire {
+        let mut out = super::electrical::notify_wire(view, &job, &block)?;
         if !jobs.is_empty() {
             out.continuation = Some(PistonEvent::Notify { jobs });
         }

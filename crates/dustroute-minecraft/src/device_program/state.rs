@@ -27,25 +27,33 @@ impl BoolProperty {
 pub enum Property {
     Bool(BoolProperty),
     Power,
+    /// Construction setting (1..=4), sampled but not changed by callbacks.
+    Delay,
 }
 
 impl Property {
+    pub const fn writable(self) -> bool {
+        !matches!(self, Self::Delay)
+    }
     pub const fn maximum(self) -> u16 {
         match self {
             Self::Bool(_) => 1,
             Self::Power => 15,
+            Self::Delay => 4,
         }
     }
     pub const fn name(self) -> &'static str {
         match self {
             Self::Bool(p) => p.name(),
             Self::Power => "power",
+            Self::Delay => "delay",
         }
     }
     pub(crate) const fn same(self, other: Self) -> bool {
         match (self, other) {
             (Self::Bool(a), Self::Bool(b)) => a as u8 == b as u8,
             (Self::Power, Self::Power) => true,
+            (Self::Delay, Self::Delay) => true,
             _ => false,
         }
     }
@@ -77,17 +85,24 @@ impl DeviceDefinition {
                 .observed_properties
                 .get(p.name())
                 .and_then(|s| s.parse::<bool>().ok())
-                .map(u16::from),
+                .map(u16::from)
+                .or_else(|| {
+                    (p == super::BoolProperty::Locked
+                        && block.observed_name.is_none()
+                        && !block.observed_properties.contains_key(p.name()))
+                    .then_some(0)
+                }),
             Property::Power => block.power_level.map(u16::from),
+            Property::Delay => block.delay.map(u16::from),
         }
         .ok_or_else(|| format!("missing device property {}", property.name()))?;
-        if value > property.maximum() {
+        if value > property.maximum() || property == Property::Delay && value == 0 {
             return Err("device property outside its range".into());
         }
         if block.observed_name.is_some() {
             let expected = match property {
                 Property::Bool(_) => (value != 0).to_string(),
-                Property::Power => value.to_string(),
+                Property::Power | Property::Delay => value.to_string(),
             };
             if block.observed_properties.get(property.name()) != Some(&expected) {
                 return Err(format!(
@@ -117,7 +132,9 @@ impl DeviceDefinition {
         let mut after = before.clone();
         for (index, (property, value)) in values.iter().enumerate() {
             if !self.properties.contains(property)
+                || !property.writable()
                 || *value > property.maximum()
+                || *property == Property::Delay && *value == 0
                 || values[..index].iter().any(|(p, _)| p == property)
             {
                 return Err("invalid device state write".into());
@@ -125,6 +142,7 @@ impl DeviceDefinition {
             match property {
                 Property::Bool(p) if *p == self.primary_power => after.powered = Some(*value != 0),
                 Property::Power => after.power_level = Some(*value as u8),
+                Property::Delay => after.delay = Some(*value as u8),
                 _ => {}
             }
             if after.observed_name.is_some()
@@ -134,7 +152,7 @@ impl DeviceDefinition {
                     property.name().into(),
                     match property {
                         Property::Bool(_) => (*value != 0).to_string(),
-                        Property::Power => value.to_string(),
+                        Property::Power | Property::Delay => value.to_string(),
                     },
                 );
             }

@@ -226,10 +226,7 @@ fn handle(
                 .filter(|(_, b)| {
                     matches!(
                         b.kind,
-                        BlockKind::Piston
-                            | BlockKind::PistonHead
-                            | BlockKind::RedstoneWire
-                            | BlockKind::Repeater
+                        BlockKind::Piston | BlockKind::PistonHead | BlockKind::RedstoneWire
                     ) || crate::device_program::program(b)
                         .is_some_and(|p| p.definition.initial_neighbor_update)
                 })
@@ -323,7 +320,6 @@ fn handle(
             finish_or_advance(view, pos, true)
         }
         PistonEvent::CarrierTick => finish_or_advance(view, pos, false),
-        PistonEvent::ElectricalRepeaterTick => super::electrical::repeater_tick(view, pos),
     }
 }
 

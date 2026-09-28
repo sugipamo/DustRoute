@@ -14,6 +14,7 @@ pub const LAMP: CheckedDevice = DeviceSpec {
     law: &builtin_laws::LAMP,
     orientation: Orientation::None,
     signal: Signal::None,
+    wire_connection: WireConnectionRule::None,
     signal_level: SignalLevel::Binary(BoolProperty::Lit),
     conducts: true,
     full_support: true,
@@ -37,7 +38,7 @@ pub const LAMP: CheckedDevice = DeviceSpec {
                 },
                 Operation::Schedule {
                     delay: Binding::Output("delay"),
-                    priority: 3,
+                    priority: Binding::Constant(3),
                 },
             ],
         },
@@ -56,7 +57,7 @@ pub const LAMP: CheckedDevice = DeviceSpec {
                 },
                 Operation::Schedule {
                     delay: Binding::Output("delay"),
-                    priority: 3,
+                    priority: Binding::Constant(3),
                 },
             ],
         },
@@ -75,6 +76,7 @@ pub const OBSERVER: CheckedDevice = DeviceSpec {
     law: &builtin_laws::OBSERVER,
     orientation: Orientation::Output,
     signal: Signal::Output,
+    wire_connection: WireConnectionRule::Output,
     signal_level: SignalLevel::Binary(BoolProperty::Powered),
     conducts: false,
     full_support: true,
@@ -93,7 +95,7 @@ pub const OBSERVER: CheckedDevice = DeviceSpec {
             ],
             operations: &[Operation::Schedule {
                 delay: Binding::Output("delay"),
-                priority: 3,
+                priority: Binding::Constant(3),
             }],
         },
         HandlerSpec {
@@ -115,7 +117,7 @@ pub const OBSERVER: CheckedDevice = DeviceSpec {
                 },
                 Operation::Schedule {
                     delay: Binding::Output("delay"),
-                    priority: 3,
+                    priority: Binding::Constant(3),
                 },
                 Operation::Notify {
                     when: Binding::Output("notify"),
@@ -168,6 +170,7 @@ pub const STONE_BUTTON: CheckedDevice = DeviceSpec {
     law: &builtin_laws::STONE_BUTTON,
     orientation: Orientation::Attached,
     signal: Signal::Attached,
+    wire_connection: WireConnectionRule::Any,
     signal_level: SignalLevel::Binary(BoolProperty::Powered),
     conducts: false,
     full_support: false,
@@ -197,7 +200,7 @@ pub const STONE_BUTTON: CheckedDevice = DeviceSpec {
                 },
                 Operation::Schedule {
                     delay: Binding::Output("delay"),
-                    priority: 3,
+                    priority: Binding::Constant(3),
                 },
             ],
         },
@@ -236,4 +239,157 @@ pub const STONE_BUTTON: CheckedDevice = DeviceSpec {
     ],
 }
 .checked();
-pub const DEVICES: [CheckedDevice; 3] = registry([LAMP, OBSERVER, STONE_BUTTON]);
+const fn gate_inputs(event: u16) -> [(&'static str, Query); 9] {
+    [
+        ("event", Query::Constant { value: event }),
+        (
+            "powered",
+            if event <= 1 {
+                Query::Powered
+            } else {
+                Query::Constant { value: 0 }
+            },
+        ),
+        (
+            "input",
+            if event <= 1 {
+                Query::GateInputPowered
+            } else {
+                Query::Constant { value: 0 }
+            },
+        ),
+        (
+            "locked",
+            if event <= 2 {
+                Query::SideGatePowered
+            } else {
+                Query::Constant { value: 0 }
+            },
+        ),
+        (
+            "misaligned",
+            if event == 0 {
+                Query::OutputGateMisaligned
+            } else {
+                Query::Constant { value: 0 }
+            },
+        ),
+        (
+            "delay_setting",
+            Query::State {
+                property: Property::Delay,
+            },
+        ),
+        (
+            "ticking",
+            if event == 0 {
+                Query::TickCollected
+            } else {
+                Query::Constant { value: 0 }
+            },
+        ),
+        (
+            "stored_locked",
+            if event == 2 {
+                Query::State {
+                    property: Property::Bool(BoolProperty::Locked),
+                }
+            } else {
+                Query::Constant { value: 0 }
+            },
+        ),
+        (
+            "off_axis",
+            if event == 2 {
+                Query::SourceOffAxis
+            } else {
+                Query::Constant { value: 0 }
+            },
+        ),
+    ]
+}
+
+pub const REPEATER: CheckedDevice = DeviceSpec {
+    id: "dustroute.device.repeater.java-1-21-11.v1",
+    kind: BlockKind::Repeater,
+    observed_names: &["repeater"],
+    synthetic: true,
+    predicates: &[],
+    primary_power: BoolProperty::Powered,
+    properties: &[
+        Property::Bool(BoolProperty::Powered),
+        Property::Bool(BoolProperty::Locked),
+        Property::Delay,
+    ],
+    law_id: "dustroute.law.repeater.callback.java-1-21-11.v2",
+    law: &builtin_laws::REPEATER,
+    orientation: Orientation::FloorOutput,
+    signal: Signal::Output,
+    wire_connection: WireConnectionRule::Axis,
+    signal_level: SignalLevel::Binary(BoolProperty::Powered),
+    conducts: false,
+    full_support: false,
+    fresh_powered_requires_history: false,
+    initial_neighbor_update: true,
+    preprocess_shapes: false,
+    command_initialization: None,
+    handlers: &[
+        HandlerSpec {
+            callback: Callback::Neighbor,
+            inputs: &gate_inputs(0),
+            operations: &[Operation::Schedule {
+                delay: Binding::Output("delay"),
+                priority: Binding::Output("priority"),
+            }],
+        },
+        HandlerSpec {
+            callback: Callback::Tick,
+            inputs: &gate_inputs(1),
+            operations: &[
+                Operation::Write {
+                    when: Binding::Output("write"),
+                    values: &[(
+                        Property::Bool(BoolProperty::Powered),
+                        Binding::Output("powered"),
+                    )],
+                    notifications: WriteNotifications::OutputAndShapes,
+                },
+                Operation::Schedule {
+                    delay: Binding::Output("delay"),
+                    priority: Binding::Output("priority"),
+                },
+            ],
+        },
+        HandlerSpec {
+            callback: Callback::Shape,
+            inputs: &gate_inputs(2),
+            operations: &[Operation::Write {
+                when: Binding::Output("write"),
+                values: &[(
+                    Property::Bool(BoolProperty::Locked),
+                    Binding::Output("locked"),
+                )],
+                notifications: WriteNotifications::OutputAndShapes,
+            }],
+        },
+        HandlerSpec {
+            callback: Callback::Added,
+            inputs: &gate_inputs(3),
+            operations: &[Operation::Notify {
+                when: Binding::Output("notify"),
+                targets: NotifyTargets::Output,
+            }],
+        },
+        HandlerSpec {
+            callback: Callback::Removed,
+            inputs: &gate_inputs(4),
+            operations: &[Operation::Notify {
+                when: Binding::Output("notify"),
+                targets: NotifyTargets::Output,
+            }],
+        },
+    ],
+}
+.checked();
+
+pub const DEVICES: [CheckedDevice; 4] = registry([LAMP, OBSERVER, STONE_BUTTON, REPEATER]);

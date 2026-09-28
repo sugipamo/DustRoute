@@ -17,7 +17,7 @@ use crate::{Block, Facing, Pos, Region, World};
 pub(crate) use adapter::ElectricalPistonAdapter;
 pub use movement::MotionPlan;
 
-pub const ELECTRICAL_PROFILE: &str = "dustroute.piston-electrical-callbacks.java-1-21-11.v8";
+pub const ELECTRICAL_PROFILE: &str = "dustroute.piston-electrical-callbacks.java-1-21-11.v9";
 
 #[cfg(test)]
 mod device_capability_tests;
@@ -113,7 +113,7 @@ impl ElectricalPistonRuntime {
     }
     pub fn execution_context(&self) -> crate::execution_context::WorldExecutionContext {
         crate::execution_context::WorldExecutionContext::for_profile(
-            crate::execution_context::WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V8,
+            crate::execution_context::WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V9,
         )
     }
 }
@@ -163,7 +163,6 @@ pub enum PistonEvent {
         carrier: CarrierId,
     },
     CarrierTick,
-    ElectricalRepeaterTick,
     Device {
         callback: crate::device_program::Callback,
         source: Option<Pos>,
@@ -209,7 +208,7 @@ pub fn new_piston_runtime(
     limits: RuntimeLimits,
 ) -> Result<ElectricalPistonRuntime, RuntimeError> {
     crate::execution_context::WorldExecutionContext::for_profile(
-        crate::execution_context::WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V8,
+        crate::execution_context::WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V9,
     )
     .validate()
     .map_err(RuntimeError::Invalid)?;

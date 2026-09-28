@@ -35,7 +35,7 @@ For new review/update requests, supply these explicit physical assumptions in
 ```
 
 Optional `root_limits` bound computation. This request form chooses fresh
-construction and `dustroute.piston-electrical-root-exploration.v8`; it is resolved
+construction and `dustroute.piston-electrical-root-exploration.v9`; it is resolved
 before saving the proposal. Saved archives still require their concrete profile
 and initial-condition fields. `RuntimeBehaviorContext::fresh_pistons` and
 `new_piston_runtime` are the corresponding library and execution entry points.

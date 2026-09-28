@@ -1,8 +1,6 @@
 //! Exact-state Java command insertion/removal, including pre-write work.
 //! Queue payloads remain in PistonEvent; module boundaries do not change timing.
-use super::electrical::{
-    repeater_jobs, repeater_jobs_for, wire_offset_jobs, world, write_shape_jobs,
-};
+use super::electrical::{wire_offset_jobs, world, write_shape_jobs};
 use super::geometry::{along, delta, offset};
 use super::notifications::adjacent_jobs;
 use super::*;
@@ -129,7 +127,6 @@ pub(super) fn added(
             source: pos,
             shape: false,
         }),
-        BlockKind::Repeater => jobs.extend(repeater_jobs(view, pos)?),
         BlockKind::RedstoneWire => {
             jobs.push_back(NeighborJob {
                 target: pos,
@@ -235,7 +232,6 @@ pub(super) fn removed(
     let mut jobs = VecDeque::new();
     jobs.extend(super::devices::removed_jobs(view, pos, before)?);
     match before.kind {
-        BlockKind::Repeater => jobs.extend(repeater_jobs_for(view, pos, before)?),
         BlockKind::Lever if before.powered == Some(true) => {
             jobs.extend(adjacent_jobs(view, pos, false, false)?);
             let support = super::geometry::offset(

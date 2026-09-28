@@ -114,6 +114,12 @@ pub fn validate_evidence(block: &Block) -> Result<(), RuntimeError> {
         let direction_valid = match definition.orientation {
             Orientation::None => true,
             Orientation::Output => block.facing.is_some(),
+            Orientation::FloorOutput => {
+                block
+                    .facing
+                    .is_some_and(|d| d.horizontal_offset().is_some())
+                    && block.support_offset == Some(Facing::Down.offset())
+            }
             Orientation::Attached => {
                 support(block)?;
                 true
@@ -122,9 +128,11 @@ pub fn validate_evidence(block: &Block) -> Result<(), RuntimeError> {
         let properties_valid = observed.is_none_or(|name| {
             let orientation = match definition.orientation {
                 Orientation::None => true,
-                Orientation::Output => block.facing.is_some_and(|direction| {
-                    property("facing") == Some(self::name(direction.opposite()))
-                }),
+                Orientation::Output | Orientation::FloorOutput => {
+                    block.facing.is_some_and(|direction| {
+                        property("facing") == Some(self::name(direction.opposite()))
+                    })
+                }
                 Orientation::Attached => {
                     let facing = block.facing.filter(|d| d.horizontal_offset().is_some());
                     let expected = match property("face") {
@@ -189,24 +197,6 @@ pub fn validate_evidence(block: &Block) -> Result<(), RuntimeError> {
                         && HORIZONTAL
                             .into_iter()
                             .all(|d| property(name(d)) == Some(wire_name(connections[&d])))
-                })
-        }
-        BlockKind::Repeater => {
-            let power = power(block)? != 0;
-            let direction = output(block)?;
-            let delay = block
-                .delay
-                .filter(|d| (1..=4).contains(d))
-                .ok_or_else(|| invalid("repeater delay 1..4 required"))?;
-            block.support_offset == Some(Facing::Down.offset())
-                && observed.is_none_or(|n| {
-                    n == "repeater"
-                        && property("facing") == Some(name(direction.opposite()))
-                        && property("powered").and_then(|s| s.parse::<bool>().ok()) == Some(power)
-                        && property("delay").and_then(|s| s.parse::<u8>().ok()) == Some(delay)
-                        && property("locked")
-                            .and_then(|s| s.parse::<bool>().ok())
-                            .is_some()
                 })
         }
         BlockKind::Piston => {
@@ -339,11 +329,6 @@ impl<'a> ElectricalWorld<'a> {
                 facts.direction_match = query == support(&block)?.opposite();
             }
             BlockKind::RedstoneBlock => facts.source = SignalSource::RedstoneBlock,
-            BlockKind::Repeater => {
-                facts.source = SignalSource::Repeater;
-                facts.level = power(&block)?;
-                facts.direction_match = query == output(&block)?.opposite();
-            }
             BlockKind::RedstoneWire => {
                 facts.source = SignalSource::Wire;
                 facts.level = level(&block)?;
@@ -439,19 +424,20 @@ impl<'a> ElectricalWorld<'a> {
 
     fn wire_connects(block: &Block, side: Facing) -> bool {
         if let Some(program) = crate::device_program::program(block) {
-            return match program.definition.signal {
-                crate::device_program::Signal::None => false,
-                crate::device_program::Signal::Output => block.facing == Some(side.opposite()),
-                crate::device_program::Signal::Attached => true,
+            use crate::device_program::WireConnectionRule;
+            return match program.definition.wire_connection {
+                WireConnectionRule::None => false,
+                WireConnectionRule::Output => block.facing == Some(side.opposite()),
+                WireConnectionRule::Axis => block
+                    .facing
+                    .is_some_and(|d| d == side || d == side.opposite()),
+                WireConnectionRule::Any => true,
             };
         }
-        match block.kind {
-            BlockKind::RedstoneWire | BlockKind::Lever | BlockKind::RedstoneBlock => true,
-            BlockKind::Repeater => block
-                .facing
-                .is_some_and(|d| d == side || d == side.opposite()),
-            _ => false,
-        }
+        matches!(
+            block.kind,
+            BlockKind::RedstoneWire | BlockKind::Lever | BlockKind::RedstoneBlock
+        )
     }
 
     pub fn wire_shape(&self, pos: Pos) -> Result<BTreeMap<Facing, WireConnection>, RuntimeError> {
@@ -594,7 +580,7 @@ impl<'a> ElectricalWorld<'a> {
             .expect("bounded dust facts"))
     }
 
-    pub fn repeater_input(&self, pos: Pos) -> Result<bool, RuntimeError> {
+    pub fn gate_input_powered(&self, pos: Pos) -> Result<bool, RuntimeError> {
         let query = output(&self.block(pos)?)?.opposite();
         let rear = along(pos, query)?;
         let emitted = self.emitted(rear, query, true)?;
@@ -602,7 +588,7 @@ impl<'a> ElectricalWorld<'a> {
         Ok(emitted > 0 || (block.kind == BlockKind::RedstoneWire && level(&block)? > 0))
     }
 
-    pub fn repeater_locked(&self, pos: Pos) -> Result<bool, RuntimeError> {
+    pub fn side_gate_powered(&self, pos: Pos) -> Result<bool, RuntimeError> {
         let direction = output(&self.block(pos)?)?;
         let mut locked = false;
         for side in HORIZONTAL
@@ -615,6 +601,12 @@ impl<'a> ElectricalWorld<'a> {
             }
         }
         Ok(locked)
+    }
+
+    pub fn output_gate_misaligned(&self, pos: Pos) -> Result<bool, RuntimeError> {
+        let direction = output(&self.block(pos)?)?;
+        let target = self.block(along(pos, direction)?)?;
+        Ok(target.kind == BlockKind::Repeater && target.facing != Some(direction.opposite()))
     }
 }
 
