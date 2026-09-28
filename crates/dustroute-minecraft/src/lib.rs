@@ -13,6 +13,7 @@ pub mod execution_context;
 pub mod lamp_law;
 pub mod law;
 pub mod observer_law;
+pub mod physical;
 pub mod piston_electrical;
 pub mod piston_electrical_law;
 pub mod piston_law;

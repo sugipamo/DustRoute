@@ -1,6 +1,6 @@
 # Data-driven block execution migration
 
-This records the completed v7 migration. Current v8 execution uses
+This records the completed v7 migration. Subsequent execution uses
 [Rust constant definitions](typed-device-runtime.md), replacing the device JSON
 authoring described below and adding multi-property and analog primitives.
 

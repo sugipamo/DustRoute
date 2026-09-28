@@ -21,8 +21,49 @@ pub enum WorldExecutionProfile {
     RedstoneCompatibilityBoundaryV1,
     #[serde(rename = "dustroute.bounded-redstone-events.v1")]
     BoundedRedstoneEventsV1,
-    #[serde(rename = "dustroute.piston-electrical-callbacks.java-1-21-11.v9")]
-    UnifiedPistonElectricalCallbacksJava12111V9,
+    #[serde(rename = "dustroute.piston-electrical-callbacks.java-1-21-11.v10")]
+    UnifiedPistonElectricalCallbacksJava12111V10,
+}
+
+impl WorldExecutionProfile {
+    /// Kind admission is independent of registry membership and physical
+    /// geometry. State, observed identity and known-space gates still apply.
+    pub const fn admits_kind(self, kind: crate::BlockKind) -> bool {
+        use crate::BlockKind::*;
+        match self {
+            Self::DustTorchSynchronousGameTickV1 | Self::DustSingleTorchBlockEffectsV1 => {
+                matches!(
+                    kind,
+                    Air | Solid
+                        | Transparent
+                        | RedstoneWire
+                        | RedstoneTorch
+                        | Lever
+                        | RedstoneBlock
+                )
+            }
+            Self::RedstoneCompatibilityBoundaryV1 | Self::BoundedRedstoneEventsV1 => {
+                crate::spatial::spatial_kind_v1(kind).is_some()
+            }
+            Self::UnifiedPistonElectricalCallbacksJava12111V10 => {
+                matches!(
+                    kind,
+                    Air | Solid
+                        | Transparent
+                        | RedstoneWire
+                        | Repeater
+                        | Lever
+                        | Button
+                        | RedstoneLamp
+                        | RedstoneBlock
+                        | Observer
+                        | Piston
+                        | PistonHead
+                        | MovingPiston
+                )
+            }
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
@@ -85,6 +126,29 @@ pub struct WorldExecutionContext {
 }
 
 impl WorldExecutionContext {
+    pub fn validate_world_kinds(&self, world: &crate::World) -> Result<(), String> {
+        self.validate()?;
+        for (pos, block) in world.iter() {
+            if !self.profile.admits_kind(block.kind) {
+                return Err(format!(
+                    "execution profile {:?} does not admit {:?} at {pos:?}",
+                    self.profile, block.kind
+                ));
+            }
+        }
+        Ok(())
+    }
+
+    /// Compiled physical declarations are an immutable adapter dependency,
+    /// separate from the legacy finite spatial-law catalog.
+    pub const fn physical_admission_revision(&self) -> Option<&'static str> {
+        match self.profile {
+            WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V10 => {
+                Some(crate::physical::REVISION)
+            }
+            _ => None,
+        }
+    }
     pub fn for_profile(profile: WorldExecutionProfile) -> Self {
         use LawRole::*;
         use WorldExecutionProfile::*;
@@ -142,7 +206,7 @@ impl WorldExecutionContext {
                         Some(crate::piston_law::builtin_piston_laws().default_motion_profile()),
                     )
                 }
-                UnifiedPistonElectricalCallbacksJava12111V9 => {
+                UnifiedPistonElectricalCallbacksJava12111V10 => {
                     laws.retain(|role, _| *role == BlockTraits);
                     laws.insert(Lamp, crate::device_callback_law::LAW_IDS[0].into());
                     laws.insert(Observer, crate::device_callback_law::LAW_IDS[1].into());
@@ -198,7 +262,7 @@ impl WorldExecutionContext {
     pub fn device_program_revision(&self) -> Option<&'static str> {
         matches!(
             self.profile,
-            WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V9
+            WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V10
         )
         .then_some(crate::device_program::REVISION)
     }
@@ -208,7 +272,7 @@ impl WorldExecutionContext {
     pub fn synchronous_runtime_profile(&self) -> Option<&'static str> {
         matches!(
             self.profile,
-            WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V9
+            WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V10
         )
         .then_some(crate::time::runtime::PROFILE)
     }

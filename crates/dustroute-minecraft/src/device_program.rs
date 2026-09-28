@@ -14,7 +14,7 @@ pub mod schema;
 mod state;
 pub use state::{BoolProperty, Property, SignalLevel};
 
-pub const REVISION: &str = "dustroute.device-programs.java-1-21-11.v3";
+pub const REVISION: &str = "dustroute.device-programs.java-1-21-11.v4";
 pub const BUILTIN_DEVICES: [schema::CheckedDevice; 4] = builtins::DEVICES;
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
@@ -118,21 +118,7 @@ pub struct Handler {
     pub effects: Vec<Effect>,
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
-#[serde(rename_all = "snake_case")]
-pub enum Orientation {
-    None,
-    Output,
-    /// Horizontal output with support immediately below the device.
-    FloorOutput,
-    Attached,
-}
-
-impl Orientation {
-    pub const fn has_output(self) -> bool {
-        matches!(self, Self::Output | Self::FloorOutput)
-    }
-}
+pub use crate::physical::{Orientation, WireConnectionRule};
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
 #[serde(rename_all = "snake_case")]
@@ -140,15 +126,6 @@ pub enum Signal {
     None,
     Output,
     Attached,
-}
-
-/// Dust's visual/physical connection is independent of signal emission.
-#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
-pub enum WireConnectionRule {
-    None,
-    Output,
-    Axis,
-    Any,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -163,6 +140,7 @@ pub struct CommandInitialization {
 pub struct DeviceDefinition {
     pub id: String,
     pub kind: BlockKind,
+    pub physical: crate::physical::CheckedPhysical,
     pub observed_names: Vec<String>,
     pub law: String,
     pub primary_power: BoolProperty,
@@ -170,16 +148,18 @@ pub struct DeviceDefinition {
     pub synthetic: bool,
     pub predicates: Vec<(Property, u16)>,
     pub signal_level: SignalLevel,
-    pub orientation: Orientation,
     pub signal: Signal,
-    pub wire_connection: WireConnectionRule,
-    pub conducts: bool,
-    pub full_support: bool,
     pub fresh_powered_requires_history: bool,
     pub initial_neighbor_update: bool,
     pub preprocess_shapes: bool,
     pub command_initialization: Option<CommandInitialization>,
     pub handlers: BTreeMap<Callback, Handler>,
+}
+
+impl DeviceDefinition {
+    pub const fn physical(&self) -> crate::physical::CheckedPhysical {
+        self.physical
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
@@ -260,19 +240,13 @@ impl DeviceProgram {
         {
             return Err("invalid device definition identity or state property".into());
         }
-        if definition.signal == Signal::Output && !definition.orientation.has_output()
+        if definition.signal == Signal::Output && !definition.physical().orientation().has_output()
             || definition.signal == Signal::Attached
-                && definition.orientation != Orientation::Attached
+                && definition.physical().orientation() != Orientation::Attached
         {
             return Err("device signal requires matching orientation".into());
         }
-        if matches!(
-            definition.wire_connection,
-            WireConnectionRule::Output | WireConnectionRule::Axis
-        ) && !definition.orientation.has_output()
-        {
-            return Err("directional wire connection requires output orientation".into());
-        }
+
         let mut tables = BTreeMap::new();
         for (callback, handler) in &definition.handlers {
             if handler.effects.len() > 32 {
@@ -294,14 +268,14 @@ impl DeviceProgram {
                     return Err("device query exceeds law input domain".into());
                 }
                 if matches!(input.sample, Query::SourceAtFront | Query::SourceOffAxis)
-                    && !definition.orientation.has_output()
+                    && !definition.physical().orientation().has_output()
                 {
                     return Err("front query requires output orientation".into());
                 }
                 if matches!(
                     input.sample,
                     Query::GateInputPowered | Query::SideGatePowered | Query::OutputGateMisaligned
-                ) && definition.orientation != Orientation::FloorOutput
+                ) && definition.physical().orientation() != Orientation::FloorOutput
                 {
                     return Err("gate query requires horizontal floor output".into());
                 }
@@ -363,7 +337,7 @@ impl DeviceProgram {
                             return Err("invalid device state write".into());
                         }
                         if *notifications == WriteNotifications::OutputAndShapes
-                            && !definition.orientation.has_output()
+                            && !definition.physical().orientation().has_output()
                         {
                             return Err("output notifications require output orientation".into());
                         }
@@ -391,9 +365,9 @@ impl DeviceProgram {
                     Effect::Notify { when, targets } => {
                         if bound(when)? > 1
                             || *targets == NotifyTargets::Output
-                                && !definition.orientation.has_output()
+                                && !definition.physical().orientation().has_output()
                             || *targets == NotifyTargets::SelfAndSupport
-                                && definition.orientation != Orientation::Attached
+                                && definition.physical().orientation() != Orientation::Attached
                         {
                             return Err("invalid notification binding".into());
                         }

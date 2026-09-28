@@ -1,8 +1,9 @@
 # Proposed prerequisite before adding new device kinds
 
-Status: **proposal only; implementation stopped before milestone 2** of the
-[integration roadmap](device-integration-roadmap.md), under the user's instruction
-to stop when outside work should precede the declared plan.
+Status: **approved and implemented before milestone 2** of the
+[integration roadmap](device-integration-roadmap.md). The user approved this
+bounded prerequisite after the original stop. Further outside prerequisites
+still require stopping before implementation.
 
 ## Finding
 
@@ -64,6 +65,27 @@ The short-pulse follow-up follows the target's post-notification reservation
 order. Current execution/review is v9, device programs v3, with a new repeater
 callback Law v2; earlier contexts require explicit fresh review.
 
-No copper-bulb kind, comparator internal state, torch history integration or
-physical-admission redesign has been implemented. Validation of the repeater
+At the original stop, no copper-bulb kind, comparator internal state, torch
+history integration or physical-admission redesign had been implemented. Validation of the repeater
 change is recorded in the roadmap and its evidence manifest.
+
+## Approved implementation
+
+The prerequisite is implemented. `physical.rs` owns checked Rust
+geometry, conducting/supporting faces, attachment requirements and dust
+connection rules. Built-in device bindings reference these declarations. Current
+electrical queries, construction support and observation classification share
+them. Classification alone does not authorize simulation or placement.
+
+The historical `SpatialLaws` projection remains immutable: its support and
+signal-routing approximations are part of older execution contracts. It is not
+used to infer the current callback adapter's conductor/support faces. Spatial,
+piston connection and piston payload each own a separate kind adapter; a future
+kind must be admitted explicitly to each ABI. Diagnostic spatial queries on an
+unadmitted kind have no support/emission paths. Executor admission rejects such
+kinds before calculation, rather than treating them as another block.
+
+Execution and root exploration now use v10, device bindings v4 and physical
+admission v1. Old v9 contexts require fresh review. Compatibility solver errors
+now distinguish an unsupported block from failure to converge. No new live
+Minecraft trial is part of this prerequisite.

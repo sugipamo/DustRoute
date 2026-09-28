@@ -7,8 +7,7 @@ use crate::piston_electrical_law::{
 };
 use crate::time::runtime::RuntimeError;
 use crate::{
-    Block, BlockKind, Facing, ObservationClassification, PistonState, Pos, Region, WireConnection,
-    World,
+    Block, BlockKind, Facing, ObservationClassification, Pos, Region, WireConnection, World,
 };
 
 pub const SIDES: [Facing; 6] = [
@@ -97,6 +96,11 @@ fn arms(block: &Block) -> Result<&BTreeMap<Facing, WireConnection>, RuntimeError
 /// Evidence gate for electrical identities only. Stable piston/head pairing and
 /// physical support must additionally pass the runtime/placement gates.
 pub fn validate_evidence(block: &Block) -> Result<(), RuntimeError> {
+    if !crate::execution_context::WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V10
+        .admits_kind(block.kind)
+    {
+        return Err(invalid(format!("unsupported electrical kind {:?}", block.kind)));
+    }
     if block.observation_classification == ObservationClassification::Coarse
         || block.requires_live_observation()
     {
@@ -111,7 +115,7 @@ pub fn validate_evidence(block: &Block) -> Result<(), RuntimeError> {
         use crate::device_program::Orientation;
         let definition = &program.definition;
         definition.validate_state(block).map_err(invalid)?;
-        let direction_valid = match definition.orientation {
+        let direction_valid = match definition.physical().orientation() {
             Orientation::None => true,
             Orientation::Output => block.facing.is_some(),
             Orientation::FloorOutput => {
@@ -126,7 +130,7 @@ pub fn validate_evidence(block: &Block) -> Result<(), RuntimeError> {
             }
         };
         let properties_valid = observed.is_none_or(|name| {
-            let orientation = match definition.orientation {
+            let orientation = match definition.physical().orientation() {
                 Orientation::None => true,
                 Orientation::Output | Orientation::FloorOutput => {
                     block.facing.is_some_and(|direction| {
@@ -226,26 +230,13 @@ pub fn validate_evidence(block: &Block) -> Result<(), RuntimeError> {
     Ok(())
 }
 
-/// Not the generic historical block traits: Java explicitly excludes pistons
-/// and redstone blocks from isSolidBlock, despite their full collision shapes.
+/// Current callback geometry is independent of historical spatial Law tags.
 pub fn conducts(block: &Block) -> bool {
-    crate::device_program::program(block)
-        .map_or(block.kind == BlockKind::Solid, |p| p.definition.conducts)
+    crate::physical::of_kind(block.kind).conducts(block)
 }
 
 pub fn full_face(block: &Block, side: Facing) -> bool {
-    if let Some(program) = crate::device_program::program(block) {
-        return program.definition.full_support;
-    }
-    match block.kind {
-        BlockKind::Solid | BlockKind::Transparent | BlockKind::RedstoneBlock => true,
-        BlockKind::Piston => {
-            block.piston_state == Some(PistonState::Retracted)
-                || block.facing == Some(side.opposite())
-        }
-        BlockKind::PistonHead => block.facing == Some(side),
-        _ => false,
-    }
+    crate::physical::of_kind(block.kind).full_face(block, side)
 }
 
 #[derive(Clone, Copy)]
@@ -423,21 +414,7 @@ impl<'a> ElectricalWorld<'a> {
     }
 
     fn wire_connects(block: &Block, side: Facing) -> bool {
-        if let Some(program) = crate::device_program::program(block) {
-            use crate::device_program::WireConnectionRule;
-            return match program.definition.wire_connection {
-                WireConnectionRule::None => false,
-                WireConnectionRule::Output => block.facing == Some(side.opposite()),
-                WireConnectionRule::Axis => block
-                    .facing
-                    .is_some_and(|d| d == side || d == side.opposite()),
-                WireConnectionRule::Any => true,
-            };
-        }
-        matches!(
-            block.kind,
-            BlockKind::RedstoneWire | BlockKind::Lever | BlockKind::RedstoneBlock
-        )
+        crate::physical::of_kind(block.kind).wire_connects(block, side)
     }
 
     pub fn wire_shape(&self, pos: Pos) -> Result<BTreeMap<Facing, WireConnection>, RuntimeError> {

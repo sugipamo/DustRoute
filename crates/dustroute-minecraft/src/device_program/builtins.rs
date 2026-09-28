@@ -5,6 +5,7 @@ use super::*;
 pub const LAMP: CheckedDevice = DeviceSpec {
     id: "dustroute.device.lamp.java-1-21-11.v1",
     kind: crate::BlockKind::RedstoneLamp,
+    physical: crate::physical::of_kind(crate::BlockKind::RedstoneLamp),
     observed_names: &["redstone_lamp"],
     synthetic: true,
     predicates: &[],
@@ -12,12 +13,8 @@ pub const LAMP: CheckedDevice = DeviceSpec {
     properties: &[Property::Bool(BoolProperty::Lit)],
     law_id: "dustroute.law.lamp.callback.java-1-21-11.v1",
     law: &builtin_laws::LAMP,
-    orientation: Orientation::None,
     signal: Signal::None,
-    wire_connection: WireConnectionRule::None,
     signal_level: SignalLevel::Binary(BoolProperty::Lit),
-    conducts: true,
-    full_support: true,
     fresh_powered_requires_history: false,
     initial_neighbor_update: true,
     preprocess_shapes: false,
@@ -67,6 +64,7 @@ pub const LAMP: CheckedDevice = DeviceSpec {
 pub const OBSERVER: CheckedDevice = DeviceSpec {
     id: "dustroute.device.observer.java-1-21-11.v1",
     kind: crate::BlockKind::Observer,
+    physical: crate::physical::of_kind(crate::BlockKind::Observer),
     observed_names: &["observer"],
     synthetic: true,
     predicates: &[],
@@ -74,12 +72,8 @@ pub const OBSERVER: CheckedDevice = DeviceSpec {
     properties: &[Property::Bool(BoolProperty::Powered)],
     law_id: "dustroute.law.observer.callback.java-1-21-11.v1",
     law: &builtin_laws::OBSERVER,
-    orientation: Orientation::Output,
     signal: Signal::Output,
-    wire_connection: WireConnectionRule::Output,
     signal_level: SignalLevel::Binary(BoolProperty::Powered),
-    conducts: false,
-    full_support: true,
     fresh_powered_requires_history: true,
     initial_neighbor_update: false,
     preprocess_shapes: true,
@@ -161,6 +155,7 @@ pub const OBSERVER: CheckedDevice = DeviceSpec {
 pub const STONE_BUTTON: CheckedDevice = DeviceSpec {
     id: "dustroute.device.stone-button.java-1-21-11.v1",
     kind: crate::BlockKind::Button,
+    physical: crate::physical::of_kind(crate::BlockKind::Button),
     observed_names: &["stone_button"],
     synthetic: true,
     predicates: &[],
@@ -168,12 +163,8 @@ pub const STONE_BUTTON: CheckedDevice = DeviceSpec {
     properties: &[Property::Bool(BoolProperty::Powered)],
     law_id: "dustroute.law.stone-button.callback.java-1-21-11.v1",
     law: &builtin_laws::STONE_BUTTON,
-    orientation: Orientation::Attached,
     signal: Signal::Attached,
-    wire_connection: WireConnectionRule::Any,
     signal_level: SignalLevel::Binary(BoolProperty::Powered),
-    conducts: false,
-    full_support: false,
     fresh_powered_requires_history: true,
     initial_neighbor_update: false,
     preprocess_shapes: false,
@@ -312,6 +303,7 @@ const fn gate_inputs(event: u16) -> [(&'static str, Query); 9] {
 pub const REPEATER: CheckedDevice = DeviceSpec {
     id: "dustroute.device.repeater.java-1-21-11.v1",
     kind: BlockKind::Repeater,
+    physical: crate::physical::of_kind(BlockKind::Repeater),
     observed_names: &["repeater"],
     synthetic: true,
     predicates: &[],
@@ -323,12 +315,8 @@ pub const REPEATER: CheckedDevice = DeviceSpec {
     ],
     law_id: "dustroute.law.repeater.callback.java-1-21-11.v2",
     law: &builtin_laws::REPEATER,
-    orientation: Orientation::FloorOutput,
     signal: Signal::Output,
-    wire_connection: WireConnectionRule::Axis,
     signal_level: SignalLevel::Binary(BoolProperty::Powered),
-    conducts: false,
-    full_support: false,
     fresh_powered_requires_history: false,
     initial_neighbor_update: true,
     preprocess_shapes: false,
@@ -392,4 +380,16 @@ pub const REPEATER: CheckedDevice = DeviceSpec {
 }
 .checked();
 
-pub const DEVICES: [CheckedDevice; 4] = registry([LAMP, OBSERVER, STONE_BUTTON, REPEATER]);
+pub const DEVICES: [CheckedDevice; 4] = {
+    let devices = registry([LAMP, OBSERVER, STONE_BUTTON, REPEATER]);
+    let mut i = 0;
+    while i < devices.len() {
+        let device = devices[i].spec();
+        assert!(
+            device.physical.same(crate::physical::of_kind(device.kind)),
+            "built-in device must share its declared physical facts"
+        );
+        i += 1;
+    }
+    devices
+};

@@ -155,6 +155,7 @@ pub struct HandlerSpec {
 pub struct DeviceSpec {
     pub id: &'static str,
     pub kind: BlockKind,
+    pub physical: crate::physical::CheckedPhysical,
     pub observed_names: &'static [&'static str],
     pub synthetic: bool,
     pub predicates: &'static [(Property, u16)],
@@ -162,12 +163,8 @@ pub struct DeviceSpec {
     pub properties: &'static [Property],
     pub law_id: &'static str,
     pub law: &'static StaticLaw,
-    pub orientation: Orientation,
     pub signal: Signal,
-    pub wire_connection: WireConnectionRule,
     pub signal_level: SignalLevel,
-    pub conducts: bool,
-    pub full_support: bool,
     pub fresh_powered_requires_history: bool,
     pub initial_neighbor_update: bool,
     pub preprocess_shapes: bool,
@@ -264,20 +261,13 @@ impl DeviceSpec {
             i += 1;
         }
         assert!(
-            !matches!(self.signal, Signal::Output) || self.orientation.has_output(),
+            !matches!(self.signal, Signal::Output) || self.physical.orientation().has_output(),
             "output signal needs orientation"
         );
         assert!(
             !matches!(self.signal, Signal::Attached)
-                || matches!(self.orientation, Orientation::Attached),
+                || matches!(self.physical.orientation(), Orientation::Attached),
             "attached signal needs orientation"
-        );
-        assert!(
-            !matches!(
-                self.wire_connection,
-                WireConnectionRule::Output | WireConnectionRule::Axis
-            ) || self.orientation.has_output(),
-            "wire connection needs orientation"
         );
         assert!(
             !self.preprocess_shapes || self.handles(Callback::Shape),
@@ -322,7 +312,7 @@ impl DeviceSpec {
                 );
                 assert!(
                     !matches!(q, Query::SourceAtFront | Query::SourceOffAxis)
-                        || self.orientation.has_output(),
+                        || self.physical.orientation().has_output(),
                     "front query needs orientation"
                 );
                 assert!(
@@ -331,7 +321,7 @@ impl DeviceSpec {
                         Query::GateInputPowered
                             | Query::SideGatePowered
                             | Query::OutputGateMisaligned
-                    ) || matches!(self.orientation, Orientation::FloorOutput),
+                    ) || matches!(self.physical.orientation(), Orientation::FloorOutput),
                     "gate query needs horizontal floor output"
                 );
                 assert!(
@@ -378,7 +368,7 @@ impl DeviceSpec {
                         );
                         assert!(
                             !matches!(notifications, WriteNotifications::OutputAndShapes)
-                                || self.orientation.has_output(),
+                                || self.physical.orientation().has_output(),
                             "output notification needs orientation"
                         );
                         let mut k = 0;
@@ -414,9 +404,9 @@ impl DeviceSpec {
                         );
                         assert!(
                             match targets {
-                                NotifyTargets::Output => self.orientation.has_output(),
+                                NotifyTargets::Output => self.physical.orientation().has_output(),
                                 NotifyTargets::SelfAndSupport =>
-                                    matches!(self.orientation, Orientation::Attached),
+                                    matches!(self.physical.orientation(), Orientation::Attached),
                             },
                             "notification needs matching orientation"
                         );
@@ -493,18 +483,15 @@ impl CheckedDevice {
         DeviceDefinition {
             id: s.id.into(),
             kind: s.kind,
+            physical: s.physical,
             observed_names: s.observed_names.iter().map(|n| (*n).into()).collect(),
             synthetic: s.synthetic,
             predicates: s.predicates.into(),
             primary_power: s.primary_power,
             properties: s.properties.into(),
             law: s.law_id.into(),
-            orientation: s.orientation,
             signal: s.signal,
-            wire_connection: s.wire_connection,
             signal_level: s.signal_level,
-            conducts: s.conducts,
-            full_support: s.full_support,
             fresh_powered_requires_history: s.fresh_powered_requires_history,
             initial_neighbor_update: s.initial_neighbor_update,
             preprocess_shapes: s.preprocess_shapes,

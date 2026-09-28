@@ -6,8 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::wire::update_wire_shapes;
 use crate::world::{
-    Block, BlockKind, Facing, ObservationClassification, PistonState, PistonVariant, Pos,
-    WireConnection, World,
+    Block, BlockKind, Facing, PistonState, PistonVariant, Pos, WireConnection, World,
 };
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -148,33 +147,7 @@ fn block_from_record(record: &MinecraftSnapshotBlock) -> Result<Block, SnapshotE
         .name
         .strip_prefix("minecraft:")
         .unwrap_or(&record.name);
-    let (kind, observation_classification) = match short_name {
-        "air" | "cave_air" | "void_air" => (BlockKind::Air, ObservationClassification::Exact),
-        "redstone_wire" => (BlockKind::RedstoneWire, ObservationClassification::Exact),
-        "redstone_torch" | "redstone_wall_torch" => {
-            (BlockKind::RedstoneTorch, ObservationClassification::Exact)
-        }
-        "repeater" => (BlockKind::Repeater, ObservationClassification::Exact),
-        "comparator" => (BlockKind::Comparator, ObservationClassification::Exact),
-        "lever" => (BlockKind::Lever, ObservationClassification::Exact),
-        name if name.ends_with("_button") => (BlockKind::Button, ObservationClassification::Exact),
-        name if name.ends_with("_pressure_plate") => {
-            (BlockKind::PressurePlate, ObservationClassification::Exact)
-        }
-        "redstone_lamp" => (BlockKind::RedstoneLamp, ObservationClassification::Exact),
-        "redstone_block" => (BlockKind::RedstoneBlock, ObservationClassification::Exact),
-        "observer" => (BlockKind::Observer, ObservationClassification::Exact),
-        "piston" | "sticky_piston" => (BlockKind::Piston, ObservationClassification::Exact),
-        "piston_head" => (BlockKind::PistonHead, ObservationClassification::Exact),
-        "moving_piston" => (BlockKind::MovingPiston, ObservationClassification::Exact),
-        "glass" | "tinted_glass" => (BlockKind::Transparent, ObservationClassification::Exact),
-        name if name.ends_with("_slab") || name.ends_with("_stairs") => {
-            (BlockKind::Transparent, ObservationClassification::Exact)
-        }
-        "stone" | "dirt" | "grass_block" | "bedrock" | "cobblestone" | "deepslate"
-        | "smooth_quartz" | "cyan_wool" => (BlockKind::Solid, ObservationClassification::Exact),
-        _ => (BlockKind::Solid, ObservationClassification::Coarse),
-    };
+    let (kind, observation_classification) = dustroute_minecraft::physical::classify(&record.name);
     let mut block = Block::new(kind);
     block.observed_name = Some(record.name.clone());
     block.observed_properties = record.properties.clone();
@@ -358,6 +331,7 @@ const fn facing_name(facing: Facing) -> &'static str {
 
 #[cfg(test)]
 mod tests {
+    use crate::world::ObservationClassification;
     use dustroute_minecraft::CapabilityLevel;
 
     use super::*;

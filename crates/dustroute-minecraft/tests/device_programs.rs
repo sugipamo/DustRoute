@@ -102,7 +102,10 @@ fn definitions_reject_unbound_outputs_invalid_domains_and_prewrite_mutations() {
             3 => {
                 definition.handlers.remove(&Callback::Tick);
             }
-            _ => definition.orientation = Orientation::None,
+            _ => {
+                definition.physical =
+                    dustroute_minecraft::physical::of_kind(BlockKind::RedstoneLamp)
+            }
         }
         assert!(
             DeviceProgram::compile(definition, law).is_err(),

@@ -100,15 +100,7 @@ pub(super) fn validate_scope(view: RuntimeView<'_>, fresh: bool) -> Result<(), R
             }
             _ => {}
         }
-        if matches!(block.kind, BlockKind::Lever | BlockKind::RedstoneWire)
-            || crate::device_program::program(block).is_some_and(|p| {
-                matches!(
-                    p.definition.orientation,
-                    crate::device_program::Orientation::Attached
-                        | crate::device_program::Orientation::FloorOutput
-                )
-            })
-        {
+        if crate::physical::of_kind(block.kind).support() != crate::physical::Support::None {
             let offset = block
                 .support_offset
                 .ok_or_else(|| unsupported("electrical support required"))?;

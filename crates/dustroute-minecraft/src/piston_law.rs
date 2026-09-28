@@ -6,8 +6,8 @@ use std::sync::OnceLock;
 
 use crate::law::{ExecutableLaw, Instruction, LawProgram, finite::FiniteLaw};
 use crate::{
-    Block, Facing, ObservationClassification, PistonAction, PistonMotionProfile, PistonState,
-    PistonVariant, WireConnection,
+    Block, BlockKind, Facing, ObservationClassification, PistonAction, PistonMotionProfile,
+    PistonState, PistonVariant, WireConnection,
 };
 
 pub const PISTON_LAW_IDS: [&str; 4] = [
@@ -318,7 +318,7 @@ impl PistonLaws {
         let row = self
             .connection
             .evaluate(&[
-                crate::spatial::kind_tag(source.kind),
+                connection_kind_v1(source.kind).ok_or(3_u16)?,
                 u16::from(source.observed_name.is_some()),
                 u16::from(source.wire_connections.is_some()),
                 u16::from(
@@ -367,7 +367,10 @@ impl PistonLaws {
     /// or piston state, coarse identity, live behavior, then immovable name.
     pub fn payload_rejection(&self, block: &Block) -> Result<u16, String> {
         let mut facts = self.payload_facts(block.observed_name.as_deref());
-        facts.insert("kind".into(), crate::spatial::kind_tag(block.kind));
+        let Some(kind) = payload_kind_v1(block.kind) else {
+            return Ok(1); // unsupported payload, before evaluating the immutable law
+        };
+        facts.insert("kind".into(), kind);
         for (name, value) in [
             (
                 "retracted",
@@ -430,4 +433,48 @@ fn from_state_tag(tag: u16) -> PistonState {
         PistonState::Extended,
         PistonState::Retracting,
     ][usize::from(tag)]
+}
+
+// Independent immutable Law ABIs. A new world kind must be admitted to each
+// explicitly; sharing an enum ordinal or a spatial tag would change all three.
+const fn connection_kind_v1(kind: BlockKind) -> Option<u16> {
+    Some(match kind {
+        BlockKind::Air => 0,
+        BlockKind::Solid => 1,
+        BlockKind::Transparent => 2,
+        BlockKind::RedstoneWire => 3,
+        BlockKind::RedstoneTorch => 4,
+        BlockKind::Repeater => 5,
+        BlockKind::Comparator => 6,
+        BlockKind::Lever => 7,
+        BlockKind::Button => 8,
+        BlockKind::PressurePlate => 9,
+        BlockKind::RedstoneLamp => 10,
+        BlockKind::RedstoneBlock => 11,
+        BlockKind::Observer => 12,
+        BlockKind::Piston => 13,
+        BlockKind::PistonHead => 14,
+        BlockKind::MovingPiston => 15,
+    })
+}
+
+const fn payload_kind_v1(kind: BlockKind) -> Option<u16> {
+    Some(match kind {
+        BlockKind::Air => 0,
+        BlockKind::Solid => 1,
+        BlockKind::Transparent => 2,
+        BlockKind::RedstoneWire => 3,
+        BlockKind::RedstoneTorch => 4,
+        BlockKind::Repeater => 5,
+        BlockKind::Comparator => 6,
+        BlockKind::Lever => 7,
+        BlockKind::Button => 8,
+        BlockKind::PressurePlate => 9,
+        BlockKind::RedstoneLamp => 10,
+        BlockKind::RedstoneBlock => 11,
+        BlockKind::Observer => 12,
+        BlockKind::Piston => 13,
+        BlockKind::PistonHead => 14,
+        BlockKind::MovingPiston => 15,
+    })
 }

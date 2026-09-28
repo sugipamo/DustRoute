@@ -4,11 +4,11 @@ Work continues on `codex/data-driven-block-runtime`. Minecraft Java 1.21.11 is
 the behavioral reference. Device rules and bindings are checked Rust constants;
 new observations or evidence do not silently upgrade an earlier approval.
 
-**Stop boundary:** milestone 1 is complete; milestones 2–4 are unstarted.
-The [physical admission proposal](device-physical-admission-proposal.md) explains
-why a broader prerequisite is recommended before introducing a new block kind.
-That broader redesign is not part of the declared callback/state milestones and
-remains a proposal. The overall goal is not complete.
+**Current work:** milestone 1 is complete; milestones 2–4 follow the
+[approved physical admission prerequisite](device-physical-admission-proposal.md).
+The user approved checked physical descriptors, explicit executor admission,
+independent Law kind adapters and shared observation/support checks. This work
+is now in scope. The overall goal is not complete.
 
 ## Ordered milestones
 
@@ -86,5 +86,24 @@ and pre-insertion query restrictions.
   Minecraft trial was run; the full workspace test suite was not run.
 
 [Commands, source-class and implementation hashes](evidence/device-integration-repeater-20260928.json)
-record the final checks. The additional physical-admission proposal remains
-unimplemented; this result does not complete the overall goal.
+record the final checks. At that stop the physical-admission prerequisite was still a proposal.
+The approved implementation is recorded below; the overall goal continues.
+
+## Approved prerequisite result
+
+The physical-admission prerequisite now has one checked Rust declaration for
+current callback geometry, attachment, conduction/support faces and dust
+connection. Device definitions, electrical queries and current command
+construction consume those facts. Snapshot identity classification also reads
+registered device names, without granting executor or placement support.
+
+World profiles explicitly admit block kinds. Compatibility and bounded runners
+reject kinds outside their contract; spatial, connection and payload laws have
+independent ABI adapters. Historical spatial laws keep their earlier meaning.
+Current execution/root exploration is v10, device programs v4, physical
+admission v1. Saved v9 contexts are rejected rather than converted.
+
+Validation: 245 Minecraft tests, 16 compile-fail doctests, 18 library Law/context
+tests and 40 translation/construction/adoption tests passed. Workspace/all-target
+Clippy passed with warnings denied. No live Minecraft trial or new public MCP
+operation was run. The next milestone is the waxed copper bulb.

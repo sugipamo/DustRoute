@@ -52,7 +52,11 @@ const BASE: DeviceSpec = DeviceSpec {
     law: &LAW,
     properties: &[LIT, POWERED, Property::Power],
     predicates: &[(LIT, 0)],
-    orientation: Orientation::Output,
+    physical: crate::physical::PhysicalSpec {
+        orientation: Orientation::Output,
+        ..BUILTIN_DEVICES[0].spec().physical.spec()
+    }
+    .checked(),
     signal: Signal::Output,
     signal_level: SignalLevel::Analog,
     initial_neighbor_update: false,

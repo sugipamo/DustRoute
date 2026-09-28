@@ -3,8 +3,10 @@
 The subsequent [integration roadmap](device-integration-roadmap.md) extends this
 foundation. The current implementation adds repeater callback definitions,
 computed tick priorities, installed shape queries, output-before-shape writes
-and explicit dust connection rules. Execution/review uses v9 and device programs
-v3; the v8/v2 validation results below describe the completed foundation step.
+and explicit dust connection rules. The approved physical-admission prerequisite
+shares checked geometry and separates executor support from classification.
+Execution/review uses v10 and device programs v4; the v8/v2 validation results
+below describe the completed foundation step.
 
 The new repeater bindings read `Delay` (1..4) as a construction-only property;
 callback assignments to it fail const validation. Observed repeaters require
