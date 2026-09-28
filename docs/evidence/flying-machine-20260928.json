@@ -1,0 +1,230 @@
+{
+  "schema_version": "dustroute.finite-flight-evidence.v1",
+  "date": "2026-09-28",
+  "base_commit": "0b6a0cc195fc6d3d1331f7707ec5d1fcda51a5e2",
+  "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v17",
+  "minecraft": "1.21.11",
+  "scope": "One six-block unmanned eastbound engine; ten-block finite travel and obsidian stop inside a fully observed fixed corridor. No physics-runtime or public MCP changes.",
+  "fixture_source": "tools/flying_machine_trial.py",
+  "retained_capture": {
+    "path": "crates/dustroute-translate/tests/fixtures/device-circuits/flying-short-course.json.gz",
+    "sha256": "2837a5e100e4f1e267b93540e93826c2e4c02f5ccb1adce167709c27017b4cde"
+  },
+  "source_sha256": {
+    "tools/flying_machine_trial.py": "c6f4ea707d3442afd738cab7154cf4b04797dc510a8e74b03a6491bf713dce32",
+    "tools/test_flying_machine.py": "fb9037ee4cc5c4ac83b70d5e335f3d18fd985789ac17053d641f4a100183068f",
+    "tools/observe_device_circuit.py": "51efae75a602419872e5fc9ec4254ad4fab14bf274434d34cf26e699f8161032",
+    "tools/compare_device_circuits.py": "78a609a21b98ac4afa38e1b34349c88c354e369b2d1dccbe897e8c3cea90d507",
+    "tools/compare_piston_transients.py": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+    "tools/retain_device_circuit.py": "be7c29557c359cb022d3b040fbbf86f0c8ee47d476e09376823ee359eda79a5a",
+    "crates/dustroute-translate/examples/compare_electrical_pistons.rs": "b3c2fee0973b5113f015106d99005ee48fc1d0b939ba1e711ef1f9947b9ce003",
+    "crates/dustroute-minecraft/src/time/piston_runtime/adhesion.rs": "ddd74de32f87cd89b37dc2e1de928424bd788fefebfe4ab614ff5917b1b06103"
+  },
+  "live_run": {
+    "command": [
+      "python3",
+      "tools/observe_device_circuit.py",
+      "--fixture",
+      ".local/flying-short-course-v1.fixture.json",
+      "--run-id",
+      "flying-short-20260928-a",
+      "--x",
+      "260000"
+    ],
+    "exit_code": 0,
+    "summary": {
+      "fixture": "device-flying-short-course-r0",
+      "fixture_sha256": "16288eb4c65469c9fad690f15ef1124a2711332ee5e7ada9f855a01010cd60ce",
+      "actor_sha256": "32979a514e7b32ba75736d8f3ca423f8c1187d6c90f1b6d96e08364c9ef56264",
+      "readback_sha256": "517f9ebab79a8e18be6e489f6346a5c9a115f5b7d6073c5ff0c2b46fb71e8737",
+      "readback_validator_sha256": "6c31a6bc06ae8ec296b6b3b1cf4894c0bf7fa026f9b9723667f87e915a92bdc9",
+      "capture_sha256": "51efae75a602419872e5fc9ec4254ad4fab14bf274434d34cf26e699f8161032",
+      "comparator_sha256": "78a609a21b98ac4afa38e1b34349c88c354e369b2d1dccbe897e8c3cea90d507",
+      "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+      "model_binary_sha256": "a8502afb60d32dc34704a53a171d9db9f3df655ade13bd4250b021a6ea3fc6e2",
+      "classification": "matched_declared_projection",
+      "applied_inputs": [
+        {
+          "position": {
+            "x": 260000,
+            "y": 182,
+            "z": 1000
+          },
+          "game_tick": 180541,
+          "packet_sequence": 2240,
+          "write_sequence": 2241,
+          "kind": "lever",
+          "powered": true
+        }
+      ],
+      "requested_steps": [
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 0
+        }
+      ],
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_stopped_normally": true,
+      "enabled_features": [
+        "minecraft:vanilla"
+      ],
+      "artifacts": {
+        ".raw.ndjson": {
+          "path": "/root/DustRoute/.local/e2e-artifacts/flying-short-20260928-a.raw.ndjson",
+          "sha256": "5a5924a77fffe6e23761b89ab9261babf0351fecfd18f3ea545407e0789d5b44"
+        },
+        ".server.log": {
+          "path": "/root/DustRoute/.local/e2e-artifacts/flying-short-20260928-a.server.log",
+          "sha256": "60a75b18e66886d2e2f6730302cec2c5cf11414703e128c6d5f0303b32aae26a"
+        },
+        ".client.json": {
+          "path": "/root/DustRoute/.local/e2e-artifacts/flying-short-20260928-a.client.json",
+          "sha256": "10c2057de9c097f01d58bc03aeeb8742bcc8dd7cc82c34a7762040c58a226e38"
+        },
+        ".reference.json": {
+          "path": "/root/DustRoute/.local/e2e-artifacts/flying-short-20260928-a.reference.json",
+          "sha256": "c352d37a040dbe18f14559f9b45af52d67ed5f90d6118f4b6386e3f201ee242c"
+        },
+        ".input.json": {
+          "path": "/root/DustRoute/.local/e2e-artifacts/flying-short-20260928-a.input.json",
+          "sha256": "f1222eee522cc18339bc2c4755fc3f8a9f508bd92db54b7a5e84a63a3d90da92"
+        },
+        ".model.json": {
+          "path": "/root/DustRoute/.local/e2e-artifacts/flying-short-20260928-a.model.json",
+          "sha256": "1b67bcd045ac7490b222f50306a7992abcb2bc2d157bb314c7d2f2b9c192328b"
+        },
+        ".comparison.json": {
+          "path": "/root/DustRoute/.local/e2e-artifacts/flying-short-20260928-a.comparison.json",
+          "sha256": "5f1188fa097a476091235f15ef8b63050491a9e31bc060c762f0cfea1a04fcc4"
+        }
+      }
+    },
+    "comparison": {
+      "schema_version": "dustroute.device-circuit-comparison.v1",
+      "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v17",
+      "tick_end_count": 171,
+      "tick_mismatches": [],
+      "live_write_count": 313,
+      "model_write_count": 313,
+      "first_write_mismatch": null,
+      "live_scheduled_count": 42,
+      "model_scheduled_count": 42,
+      "first_scheduled_mismatch": null,
+      "first_tick_attempt_mismatch": null,
+      "live_callback_count": 1066,
+      "model_callback_count": 1066,
+      "first_callback_mismatch": null,
+      "restoration_verified": true,
+      "restoration_scope": "movement_or_device",
+      "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+      "classification": "matched_declared_projection"
+    }
+  },
+  "arrival": {
+    "distance": 10,
+    "engine_blocks": 6,
+    "intact_frames": [
+      {
+        "displacement": 0,
+        "first_tick": 2,
+        "last_tick": 2
+      },
+      {
+        "displacement": 1,
+        "first_tick": 11,
+        "last_tick": 12
+      },
+      {
+        "displacement": 2,
+        "first_tick": 21,
+        "last_tick": 22
+      },
+      {
+        "displacement": 3,
+        "first_tick": 31,
+        "last_tick": 32
+      },
+      {
+        "displacement": 4,
+        "first_tick": 41,
+        "last_tick": 42
+      },
+      {
+        "displacement": 5,
+        "first_tick": 51,
+        "last_tick": 52
+      },
+      {
+        "displacement": 6,
+        "first_tick": 61,
+        "last_tick": 62
+      },
+      {
+        "displacement": 7,
+        "first_tick": 71,
+        "last_tick": 72
+      },
+      {
+        "displacement": 8,
+        "first_tick": 81,
+        "last_tick": 82
+      },
+      {
+        "displacement": 9,
+        "first_tick": 91,
+        "last_tick": 92
+      },
+      {
+        "displacement": 10,
+        "first_tick": 101,
+        "last_tick": 171
+      }
+    ],
+    "last_write_tick": 105,
+    "final_tick": 171,
+    "quiet_ticks": 66,
+    "scope": "complete observed region, one applied input, intact translated frames at every integer displacement, no final debris, no observed writes/device deliveries during the final quiet interval; no hidden-queue or indefinite-flight proof"
+  },
+  "checked_cells": 1440,
+  "evidence_method": "Server-confirmed initial/final/empty snapshots plus contiguous ordered server changes and tick boundaries. Live observations independently supply comparison expectations. Relative intact-shape frames are diagnostic only; absolute coordinates and update order remain in the comparison.",
+  "validation": [
+    {
+      "command": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tools",
+        "-p",
+        "test_*.py"
+      ],
+      "exit_code": 0,
+      "passed": 37,
+      "elapsed_seconds": 228.963,
+      "log": ".local/flying-python-validation.log",
+      "sha256": "b2996f9231f17f784e293af6dadbc32688e28b20f6258eb55740603e6cdb9ef1",
+      "retained_device_capture_count": 55
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit_code": 0
+    }
+  ],
+  "validation_note": "Python suite rederives and replays all 55 retained device captures with restoration, including this new flight. No Rust source changed and no Rust rebuild/test was needed for this task.",
+  "limits": [
+    "One absolute placement and direction; no all-coordinate or indefinite-flight claim.",
+    "The observed final quiet interval does not expose every hidden server queue/history.",
+    "No player/entity cargo, chunk-unload, restart-after-breakage or moving-window observation coverage.",
+    "No public flying-machine type, adoption, deployment, tracking or removal workflow added."
+  ]
+}
