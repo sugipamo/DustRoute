@@ -52,7 +52,8 @@ def inside(p, region):
     return all(region['min'][a] <= v <= region['max'][a] for a, v in zip(('x', 'y', 'z'), p))
 
 
-def live_trace(raw, client, *, settle_ticks=8, epoch=1):
+def live_trace(raw, client, *, settle_ticks=8, epoch=1, verified_inputs=None,
+               observed_names=OBSERVED, require_movement=True):
     assert raw[0]['transient_trace'] == 'dustroute.piston-transient.v1'
     assert raw[0]['heartbeat_mode'] == 'full', 'full world-tick heartbeats required'
     bounds = [client['known_region'][edge][axis] for edge in ('min', 'max') for axis in ('x', 'y', 'z')]
@@ -60,7 +61,9 @@ def live_trace(raw, client, *, settle_ticks=8, epoch=1):
     assert client['complete'] and client['cleanup']['region_empty'] and client['cleanup']['force_load_removed']
     assert raw[-1]['kind'] == 'artifact_end' and raw[-1]['capture_state'] == 'closed'
     assert raw[-1]['write_errors'] == 0
-    applied = applied_inputs(raw, client)
+    # Alternative ordinary controls must have independently verified their
+    # applied palette writes before supplying this input record.
+    applied = applied_inputs(raw, client) if verified_inputs is None else verified_inputs
     require_post_world_inputs(raw, applied)
     first = applied[0]['game_tick']
     start = applied[0]['packet_sequence']
@@ -110,7 +113,7 @@ def live_trace(raw, client, *, settle_ticks=8, epoch=1):
             before, after = parse_state(r['before']), parse_state(r['after'])
             assert world.get(p, AIR) == before, f'unobserved write before sequence {r["sequence"]}: {p}'
             world[p] = after
-        elif kind == 'neighbor_update' and parse_state(r['target'])[0] in OBSERVED:
+        elif kind == 'neighbor_update' and parse_state(r['target'])[0] in observed_names:
             assert world.get(p, AIR) == parse_state(r['target']), 'callback target differs from committed state'
             events.append(dict(tick=tick, kind='neighbor', position=p, world=world_rows(world)))
         elif kind == 'piston_event':
@@ -124,12 +127,13 @@ def live_trace(raw, client, *, settle_ticks=8, epoch=1):
                                carrier=carrier, world=world_rows(world)))
     final = {key(b['pos']): state(b['name'],b['properties']) for b in snapshot(client,'final')['blocks']}
     assert world_rows(world) == world_rows(final), 'drain world differs from final readback or includes cleanup'
-    assert any(e['kind']=='event_begin' for e in events), 'no delivered piston event'
-    assert any(e['kind']=='tick_begin' for e in events), 'no moving carrier evidence'
+    if require_movement:
+        assert any(e['kind']=='event_begin' for e in events), 'no delivered piston event'
+        assert any(e['kind']=='tick_begin' for e in events), 'no moving carrier evidence'
     return events, applied
 
 
-def model_trace(initial, records, *, first_tick=1):
+def model_trace(initial, records, *, first_tick=1, observed_names=OBSERVED):
     world = {key(b['pos']): state(b['name'], b['properties']) for b in initial['blocks']}
     bodies = {}
     carriers = {}
@@ -190,6 +194,15 @@ def model_trace(initial, records, *, first_tick=1):
                 scope.update(id=invocation['id'], tick=tick, position=position)
                 emit(scope, 'begin')
                 active.append(scope)
+            parent_record = previous_records.get(invocation['cause'])
+            parent_payload = None if parent_record is None else parent_record['invocation']['call']['payload']
+            # World.updateComparators calls updateNeighbor directly, outside
+            # the ordinary six-side Notify iterator. Count its actual device
+            # delivery once; initialization/Added self checks remain excluded.
+            if (isinstance(payload, dict) and payload.get('Device', {}).get('callback') == 'neighbor'
+                    and isinstance(parent_payload, dict) and 'NotifyAnalogReaders' in parent_payload
+                    and world.get(position, AIR)[0] in observed_names):
+                events.append(dict(tick=tick, kind='neighbor', position=position, world=world_rows(world)))
             if isinstance(payload, dict) and 'Notify' in payload and payload['Notify']['jobs']:
                 job = payload['Notify']['jobs'][0]
                 target = key(job['target'])
@@ -207,7 +220,7 @@ def model_trace(initial, records, *, first_tick=1):
                     and any(change['after']['kind'] == 'Piston' and key(change['position']) == target
                             for change in parent_record['delta']['changes'])
                 )
-                if not added_check and not job['shape'] and world.get(target, AIR)[0] in OBSERVED:
+                if not added_check and not job['shape'] and world.get(target, AIR)[0] in observed_names:
                     events.append(dict(tick=tick, kind='neighbor', position=target, world=world_rows(world)))
         if record['delta']:
             for change in record['delta']['changes']:
@@ -227,11 +240,11 @@ def model_trace(initial, records, *, first_tick=1):
 
 def compare(live, model):
     # JSON also normalizes tuple/list transport differences.
-    live = json.loads(json.dumps(live))
-    model = json.loads(json.dumps(model))
     for index in range(max(len(live), len(model))):
-        actual = live[index] if index < len(live) else None
-        predicted = model[index] if index < len(model) else None
+        # Normalize one event at a time to avoid copying an entire mixed-circuit
+        # world trace into a second JSON tree before locating its first mismatch.
+        actual = json.loads(json.dumps(live[index])) if index < len(live) else None
+        predicted = json.loads(json.dumps(model[index])) if index < len(model) else None
         if actual != predicted:
             return dict(index=index, live=actual, model=predicted,
                         live_count=len(live), model_count=len(model))

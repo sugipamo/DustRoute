@@ -25,6 +25,11 @@ let disconnected = null
 let ownsRegion = false
 let ownsForceLoad = false
 let phase = 'connect'
+let enabledFeatures = null
+bot._client.on('start_configuration', () => { enabledFeatures = null })
+bot._client.on('feature_flags', packet => {
+  enabledFeatures = Array.isArray(packet.features) ? [...packet.features] : null
+})
 const report = {
   schema_version: 'dustroute.mixed-piston-live.v1', minecraft_version: '1.21.11',
   fixture: fixture.id, captured_at: new Date().toISOString(), origin, placement_mode: placementMode,
@@ -79,16 +84,27 @@ function sample (label) {
   report.samples.push({ label, client_tick: tick, blocks: positions.map(state) })
 }
 async function approach (p) {
+  const destination = fixture.shared_viewpoint && fixture.viewpoint
+    ? absolute(fixture.viewpoint) : absolute(p).offset(0.5, 0, 2.5)
+  if (![destination.x, destination.y, destination.z].every(Number.isFinite)) throw new Error('invalid viewpoint')
+  if (fixture.shared_viewpoint && fixture.inputs.some(input => destination.distanceTo(absolute(input)) > 4)) {
+    throw new Error('shared viewpoint cannot reach every input')
+  }
   bot.creative.startFlying()
   bot.entity.velocity.set(0, 0, 0)
-  await command(`/tp dustroutetest ${coords({ x: p.x, y: p.y + 1, z: p.z + 2 })}`)
+  await command(`/tp dustroutetest ${destination.x} ${destination.y + 1} ${destination.z}`)
   await bot.waitForTicks(4)
   bot.entity.velocity.set(0, 0, 0)
-  await bot.creative.flyTo(absolute(p).offset(0.5, 0, 2.5))
+  await bot.creative.flyTo(destination)
   await bot.waitForTicks(4)
 }
 async function main () {
   await Promise.race([once(bot, 'spawn'), sleep(30000).then(() => { throw new Error('spawn timeout') })])
+  report.enabled_features = enabledFeatures
+  if (fixture.require_vanilla_features &&
+      (!enabledFeatures || enabledFeatures.length !== 1 || enabledFeatures[0] !== 'minecraft:vanilla')) {
+    throw new Error(`unexpected enabled features: ${JSON.stringify(enabledFeatures)}`)
+  }
   await command('/gamemode creative dustroutetest')
   const low = absolute(min); const high = absolute(max)
   await command(`/forceload add ${low.x} ${low.z} ${high.x} ${high.z}`)

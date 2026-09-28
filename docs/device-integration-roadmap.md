@@ -184,3 +184,12 @@ record the final evidence. Inventory inputs, entities, fluids, oxidation, manual
 comparator-mode interaction and live hidden-state reconstruction remain outside
 this goal. New devices using existing primitives can share the definition path;
 a new physical mechanism still requires an explicit shared primitive and evidence.
+
+## Follow-up mixed-device measurements
+
+The next [mixed-device conformance milestone](mixed-device-conformance.md)
+adds Java 1.21.11 live observations for button/bulb/comparator/piston chains,
+coupled and separate torch feedback, and locking/observer/piston circuits.
+It retains independent raw intervals, measured input times and rotated/negative
+coordinate variants. Its evidence and validation are separate from the
+source-derived integration checks above.
