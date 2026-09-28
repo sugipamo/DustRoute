@@ -17,6 +17,8 @@ fn decision(callback: Callback, powered: bool, queued: bool, front: bool) -> Vec
                 Query::TickQueued => queued.into(),
                 Query::SourceAtFront => front.into(),
                 Query::ReceivingPower
+                | Query::SupportPowered
+                | Query::HistoryCount
                 | Query::ReceivingLevel
                 | Query::SideLevel { .. }
                 | Query::State { .. } => panic!("unexpected observer query"),

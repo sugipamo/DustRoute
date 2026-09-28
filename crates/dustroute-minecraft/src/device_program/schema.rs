@@ -112,6 +112,30 @@
 //!     properties: &[Property::Bool(BoolProperty::Powered)], ..BUILTIN_DEVICES[5].spec()
 //! }.checked();
 //! ```
+//! Histories must have a positive window and threshold:
+//! ```compile_fail,E0080
+//! use dustroute_minecraft::{device_program::{*, schema::*}, time::runtime::HistoryPolicy};
+//! const BAD: CheckedDevice = DeviceSpec {
+//!     history: Some(HistorySpec { key: "events", policy: HistoryPolicy { window:60, threshold:0 } }),
+//!     ..BUILTIN_DEVICES[6].spec()
+//! }.checked();
+//! ```
+//! Queries cannot silently invent a missing history:
+//! ```compile_fail,E0080
+//! use dustroute_minecraft::device_program::{*, schema::*};
+//! const BAD: CheckedDevice = DeviceSpec { history: None, ..BUILTIN_DEVICES[6].spec() }.checked();
+//! ```
+//! A shared namespace has one policy even across disjoint native identities:
+//! ```compile_fail,E0080
+//! use dustroute_minecraft::{device_program::{*, schema::*}, time::runtime::HistoryPolicy};
+//! const BASE: DeviceSpec = BUILTIN_DEVICES[6].spec();
+//! const OTHER: CheckedDevice = DeviceSpec {
+//!     id:"other", observed_names:&["other_floor","other_wall"], synthetic:false,
+//!     history:Some(HistorySpec { key:"dustroute.history.torch-off.java-1-21-11.v1", policy:HistoryPolicy {window:59,threshold:8} }),
+//!     ..BASE
+//! }.checked();
+//! const BAD: [CheckedDevice;2] = registry([BUILTIN_DEVICES[6],OTHER]);
+//! ```
 //! A timer requires a tick handler:
 //! ```compile_fail,E0080
 //! use dustroute_minecraft::device_program::{*, schema::*};
@@ -164,6 +188,10 @@ impl Binding {
 
 #[derive(Clone, Copy, Debug)]
 pub enum Operation {
+    PruneHistory,
+    RecordHistory {
+        when: Binding,
+    },
     WriteOutput {
         when: Binding,
         level: Binding,
@@ -191,6 +219,20 @@ pub struct HandlerSpec {
 }
 
 #[derive(Clone, Copy, Debug)]
+pub struct HistorySpec {
+    pub key: &'static str,
+    pub policy: crate::time::runtime::HistoryPolicy,
+}
+impl HistorySpec {
+    fn owned(self) -> crate::time::runtime::HistoryRule {
+        crate::time::runtime::HistoryRule {
+            key: self.key.into(),
+            policy: self.policy,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
 pub struct DeviceSpec {
     pub id: &'static str,
     pub kind: BlockKind,
@@ -205,6 +247,7 @@ pub struct DeviceSpec {
     pub signal: Signal,
     pub signal_level: SignalLevel,
     pub comparator_output: Option<SignalLevel>,
+    pub history: Option<HistorySpec>,
     pub fresh_powered_requires_history: bool,
     pub initial_neighbor_update: bool,
     pub preprocess_shapes: bool,
@@ -239,6 +282,12 @@ impl DeviceSpec {
     }
 
     pub const fn checked(self) -> CheckedDevice {
+        if let Some(h) = self.history {
+            assert!(
+                !h.key.is_empty() && h.key.len() <= 128 && h.policy.valid(),
+                "invalid history policy"
+            );
+        }
         if let Some(output) = self.comparator_output {
             match output.property() {
                 Some(p) => assert!(
@@ -309,6 +358,16 @@ impl DeviceSpec {
             i += 1;
         }
         assert!(
+            !matches!(self.physical.orientation(), Orientation::StandingOrWall)
+                || self.observed_names.len() == 2,
+            "standing/wall orientation needs two identities"
+        );
+        assert!(
+            !matches!(self.signal, Signal::SupportExcludedUpwardStrong)
+                || matches!(self.physical.orientation(), Orientation::StandingOrWall),
+            "support-excluded signal requires standing/wall orientation"
+        );
+        assert!(
             !matches!(self.signal, Signal::Output) || self.physical.orientation().has_output(),
             "output signal needs orientation"
         );
@@ -346,6 +405,10 @@ impl DeviceSpec {
                     k += 1;
                 }
                 let maximum = match q {
+                    Query::HistoryCount => match self.history {
+                        Some(h) => h.policy.threshold as u16,
+                        None => panic!("history query needs a policy"),
+                    },
                     Query::Constant { value } => value,
                     Query::State { property } => {
                         assert!(self.declares(property), "undeclared query property");
@@ -363,6 +426,11 @@ impl DeviceSpec {
                 assert!(
                     maximum <= self.law.input_bound(name),
                     "query exceeds law input range"
+                );
+                assert!(
+                    !matches!(q, Query::SupportPowered)
+                        || !matches!(self.physical.support(), crate::physical::Support::None),
+                    "support query requires support"
                 );
                 assert!(
                     !matches!(q, Query::SourceAtFront | Query::SourceOffAxis)
@@ -386,6 +454,7 @@ impl DeviceSpec {
                         || !matches!(
                             q,
                             Query::ReceivingPower
+                                | Query::SupportPowered
                                 | Query::ReceivingLevel
                                 | Query::SideLevel { .. }
                                 | Query::GateInputPowered
@@ -410,6 +479,19 @@ impl DeviceSpec {
                     "prewrite shape may only schedule"
                 );
                 match op {
+                    Operation::PruneHistory | Operation::RecordHistory { .. } => {
+                        assert!(
+                            self.history.is_some()
+                                && !matches!(h.callback, Callback::Removed | Callback::Shape),
+                            "invalid history effect"
+                        );
+                        if let Operation::RecordHistory { when } = op {
+                            assert!(
+                                when.bound(self.law) <= 1,
+                                "history record guard needs Boolean"
+                            );
+                        }
+                    }
                     Operation::WriteOutput { when, level } => {
                         assert!(
                             when.bound(self.law) <= 1
@@ -432,6 +514,13 @@ impl DeviceSpec {
                         assert!(
                             when.bound(self.law) <= 1 && !values.is_empty(),
                             "invalid write guard or empty write"
+                        );
+                        assert!(
+                            !matches!(
+                                notifications,
+                                WriteNotifications::AddedThenNeighborsAndShapes
+                            ) || self.handles(Callback::Added),
+                            "write lifecycle callback needs an Added handler"
                         );
                         assert!(
                             !matches!(notifications, WriteNotifications::OutputAndShapes)
@@ -471,6 +560,7 @@ impl DeviceSpec {
                         );
                         assert!(
                             match targets {
+                                NotifyTargets::AroundEachNeighbor => true,
                                 NotifyTargets::Output => self.physical.orientation().has_output(),
                                 NotifyTargets::SelfAndSupport =>
                                     matches!(self.physical.orientation(), Orientation::Attached),
@@ -497,6 +587,14 @@ pub const fn registry<const N: usize>(devices: [CheckedDevice; N]) -> [CheckedDe
         while j < i {
             let b = &devices[j].0;
             assert!(!same(a.id, b.id), "duplicate device id");
+            if let (Some(ha), Some(hb)) = (a.history, b.history) {
+                assert!(
+                    !same(ha.key, hb.key)
+                        || ha.policy.window == hb.policy.window
+                            && ha.policy.threshold == hb.policy.threshold,
+                    "conflicting shared history policies"
+                );
+            }
             if a.kind as u8 == b.kind as u8 {
                 let mut overlaps = a.synthetic && b.synthetic;
                 let mut n = 0;
@@ -560,6 +658,7 @@ impl CheckedDevice {
             signal: s.signal,
             signal_level: s.signal_level,
             comparator_output: s.comparator_output,
+            history: s.history.map(HistorySpec::owned),
             fresh_powered_requires_history: s.fresh_powered_requires_history,
             initial_neighbor_update: s.initial_neighbor_update,
             preprocess_shapes: s.preprocess_shapes,
@@ -598,6 +697,10 @@ impl CheckedDevice {
                                 .operations
                                 .iter()
                                 .map(|op| match op {
+                                    Operation::PruneHistory => Effect::PruneHistory,
+                                    Operation::RecordHistory { when } => {
+                                        Effect::RecordHistory { when: when.owned() }
+                                    }
                                     Operation::WriteOutput { when, level } => Effect::WriteOutput {
                                         when: when.owned(),
                                         level: level.owned(),

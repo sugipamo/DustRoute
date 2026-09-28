@@ -96,7 +96,7 @@ fn arms(block: &Block) -> Result<&BTreeMap<Facing, WireConnection>, RuntimeError
 /// Evidence gate for electrical identities only. Stable piston/head pairing and
 /// physical support must additionally pass the runtime/placement gates.
 pub fn validate_evidence(block: &Block) -> Result<(), RuntimeError> {
-    if !crate::execution_context::WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V12
+    if !crate::execution_context::WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V13
         .admits_kind(block.kind)
     {
         return Err(invalid(format!("unsupported electrical kind {:?}", block.kind)));
@@ -124,6 +124,12 @@ pub fn validate_evidence(block: &Block) -> Result<(), RuntimeError> {
                     .is_some_and(|d| d.horizontal_offset().is_some())
                     && block.support_offset == Some(Facing::Down.offset())
             }
+            Orientation::StandingOrWall => {
+                let side = support(block)?;
+                side != Facing::Up
+                    && (side == Facing::Down || block.facing.is_none_or(|d| d == side.opposite()))
+                    && definition.native_identity(block).is_ok()
+            }
             Orientation::Attached => {
                 support(block)?;
                 true
@@ -136,6 +142,14 @@ pub fn validate_evidence(block: &Block) -> Result<(), RuntimeError> {
                     block.facing.is_some_and(|direction| {
                         property("facing") == Some(self::name(direction.opposite()))
                     })
+                }
+                Orientation::StandingOrWall => {
+                    let side = support(block).expect("validated support");
+                    if side == Facing::Down {
+                        property("facing").is_none()
+                    } else {
+                        property("facing") == Some(self::name(side.opposite()))
+                    }
                 }
                 Orientation::Attached => {
                     let facing = block.facing.filter(|d| d.horizontal_offset().is_some());
@@ -373,6 +387,11 @@ impl<'a> ElectricalWorld<'a> {
         Ok(builtin_laws()
             .emitted(weak, strong, conductor)
             .expect("bounded signal facts"))
+    }
+
+    pub fn support_powered(&self, pos: Pos) -> Result<bool, RuntimeError> {
+        let support = support(&self.block(pos)?)?;
+        Ok(self.emitted(along(pos, support)?, support, true)? > 0)
     }
 
     pub fn receiving_power(&self, pos: Pos) -> Result<bool, RuntimeError> {

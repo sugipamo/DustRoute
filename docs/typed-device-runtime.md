@@ -5,9 +5,10 @@ foundation. The current implementation adds repeater callback definitions,
 computed tick priorities, installed shape queries, output-before-shape writes
 and explicit dust connection rules. The approved physical-admission prerequisite
 shares checked geometry and separates executor support from classification.
-Execution/review uses v12 and device programs v6, including the
-[waxed copper bulb](copper-bulb-runtime.md) and
-[circuit comparator](comparator-runtime.md); the v8/v2 validation results
+Execution/review uses v13 and device programs v7, including the
+[waxed copper bulb](copper-bulb-runtime.md),
+[circuit comparator](comparator-runtime.md) and
+[shared-world torch histories](shared-torch-runtime.md); the v8/v2 validation results
 below describe the completed foundation step.
 
 The new repeater bindings read `Delay` (1..4) as a construction-only property;
@@ -18,8 +19,9 @@ malformed explicit locks are rejected. `TickCollected` samples the current ready
 batch, whereas `TickQueued` samples future reservations. Installed shape handlers
 can read gate power; pre-insertion shape handlers still cannot.
 
-The next step extends the shared device vocabulary, with Rust constants as the
-authoring format. It does not claim support for additional Minecraft blocks.
+The foundation step below extended the shared device vocabulary with Rust
+constants as the authoring format. Its validation did not yet add Minecraft
+blocks; the linked integration roadmap records the later supported devices.
 
 All five steps below are complete. No out-of-scope prerequisite was needed.
 
@@ -38,10 +40,11 @@ All five steps below are complete. No out-of-scope prerequisite was needed.
    and retained Minecraft observations. Version the execution contract.
 5. Document authoring, compile-time guarantees and remaining runtime checks.
 
-Outside this scope: complete copper-bulb/comparator implementations, torch
-history integration, inventory/entity models, arbitrary runtime-loaded programs,
-and new public MCP operations. Stop and report if an outside prerequisite should
-be implemented first. Minecraft correctness still needs independent evidence;
+Outside the foundation scope were copper-bulb/comparator implementations and
+torch history integration, subsequently completed by the integration roadmap.
+Inventory/entity models, arbitrary runtime-loaded programs and new public MCP
+operations remain outside both scopes. Stop and report if an outside prerequisite
+should be implemented first. Minecraft correctness still needs independent evidence;
 compilation proves the definition contract, not parity with Minecraft.
 
 Work continues on `codex/data-driven-block-runtime`. Build/test workloads use one
@@ -89,8 +92,9 @@ the built-in registry always uses const initialization.
 
 ## State and selection
 
-The current property vocabulary is `Powered`, `Lit`, `Open`, `Locked` (Boolean)
-and `Power` (0–15). This is not an arbitrary property-name escape hatch. The
+The property vocabulary is `Powered`, `Lit`, `Open`, `Locked` (Boolean),
+`Power` (0–15), and construction-only `Delay` (1–4) and `ComparatorMode`
+(compare/subtract). This is not an arbitrary property-name escape hatch. The
 definition explicitly identifies the primary Boolean mirrored by `Block.powered`;
 secondary Booleans use named block properties, including on synthetic blocks.
 `Power` uses `Block.power_level`. Observed state must agree with these canonical
@@ -132,10 +136,11 @@ sampler, effect executor and scheduler through a private test adapter, and are
 not registered as Minecraft blocks. Separate tests check material selection,
 unknown identities, observation inconsistencies and missing surrounding space.
 
-This extension does not add copper bulbs, comparators, wooden-button arrows or
-inventory devices to the supported block set. Local history, item/entity effects,
-relative comparator-facing queries and arbitrary persistent registers still
-need shared primitives. Compile-time validity does not establish Minecraft
+The foundation extension did not add copper bulbs, comparators, wooden-button
+arrows or inventory devices. The integration roadmap subsequently added waxed
+bulbs, circuit comparators, relative gate queries, world-owned output registers
+and bounded position histories. Item/entity effects and inventory devices remain
+unsupported. Compile-time validity does not establish Minecraft
 behavioral equivalence or make a simulation-only input publicly available in MCP.
 
 ## Validation

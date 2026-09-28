@@ -639,6 +639,7 @@ fn finish_or_advance(
                 }],
                 queued,
                 outputs: vec![],
+                histories: vec![],
                 callbacks: vec![super::devices::event(
                     pos,
                     crate::device_program::Callback::Added,

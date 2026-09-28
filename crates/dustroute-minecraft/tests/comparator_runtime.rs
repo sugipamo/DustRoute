@@ -371,3 +371,45 @@ fn gate_tick_requests_respect_collected_batch_and_target_alignment() {
         }
     }
 }
+
+#[test]
+fn powered_write_notifies_output_both_from_added_and_after_the_shape_pass() {
+    use dustroute_minecraft::device_program::Callback;
+    use dustroute_minecraft::time::piston_runtime::PistonEvent;
+    let mut w = World::new();
+    supported(&mut w, C, comparator(Facing::East, false));
+    w.place(BlockKind::RedstoneBlock, along(C, Facing::West, 1));
+    let lamp = along(C, Facing::East, 1);
+    w.place(BlockKind::RedstoneLamp, lamp).powered = Some(false);
+    let mut rt = new_piston_runtime(w, region(), Default::default()).unwrap();
+    rt.run_until_idle().unwrap();
+    let deliveries: Vec<_> = rt
+        .trace()
+        .iter()
+        .filter(|r| {
+            r.invocation.time.game_tick == 2
+                && r.invocation.call.target == lamp
+                && matches!(
+                    r.invocation.call.payload,
+                    PistonEvent::Device {
+                        callback: Callback::Neighbor,
+                        ..
+                    }
+                )
+        })
+        .collect();
+    assert_eq!(deliveries.len(), 2);
+    let lit_change = rt
+        .trace()
+        .iter()
+        .find(|r| {
+            r.delta.as_ref().is_some_and(|d| {
+                d.changes
+                    .iter()
+                    .any(|c| c.position == lamp && c.after.powered == Some(true))
+            })
+        })
+        .unwrap();
+    assert_eq!(deliveries[0].invocation.id, lit_change.invocation.id);
+    assert!(lit_change.invocation.id < deliveries[1].invocation.id);
+}

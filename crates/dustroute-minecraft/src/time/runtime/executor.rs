@@ -37,6 +37,7 @@ struct State<P> {
     carriers: BTreeMap<Pos, CarrierState>,
     staged_carriers: BTreeMap<Pos, Block>,
     outputs: BTreeMap<Pos, u8>,
+    histories: history::Histories,
     next_id: u64,
     next_carrier: u64,
     processed: usize,
@@ -104,6 +105,7 @@ impl<P: Clone + Eq> State<P> {
             carriers: &self.carriers,
             staged_carriers: &self.staged_carriers,
             outputs: &self.outputs,
+            histories: &self.histories,
             limits: self.limits,
             block_ticks: &self.pending,
         }
@@ -469,6 +471,12 @@ impl<P: Clone + Eq> State<P> {
                 self.outputs.insert(effect.position, effect.value);
             }
         }
+        history::apply(
+            &mut self.histories,
+            outcome.histories,
+            self.region,
+            self.time.game_tick,
+        )?;
         self.apply_carriers(outcome.carriers)?;
         for queued in outcome.queued {
             self.enqueue(queued, Some(parent.id))?;
@@ -560,6 +568,7 @@ impl<A: RuntimeAdapter> SynchronousWorldRuntime<A> {
                 carriers: BTreeMap::new(),
                 staged_carriers: BTreeMap::new(),
                 outputs: BTreeMap::new(),
+                histories: BTreeMap::new(),
                 next_id: 0,
                 next_carrier: 0,
                 processed: 0,
@@ -749,12 +758,32 @@ impl<A: RuntimeAdapter> SynchronousWorldRuntime<A> {
                 (before != after).then_some((pos, before, after))
             })
             .collect();
+        let history_changes = self
+            .state
+            .histories
+            .keys()
+            .chain(staged.histories.keys())
+            .cloned()
+            .collect::<BTreeSet<_>>()
+            .into_iter()
+            .filter_map(|key| {
+                let before = self.state.histories.get(&key).cloned();
+                let after = staged.histories.get(&key).cloned();
+                (before != after).then_some(HistoryChange {
+                    key: key.0,
+                    position: key.1,
+                    before,
+                    after,
+                })
+            })
+            .collect();
         let record = RuntimeRecord {
             invocation,
             result,
             delta,
             carrier_changes,
             output_changes,
+            history_changes,
         };
         self.state = staged;
         self.trace.push(record.clone());

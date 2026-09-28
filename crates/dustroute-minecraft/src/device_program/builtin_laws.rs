@@ -342,3 +342,73 @@ pub const COMPARATOR: StaticLaw = StaticLaw::new(
         ),
     ],
 );
+
+// History is a bounded world query. Recording occurs after the lit write and
+// its nested callbacks, so feedback can reserve a short tick before recovery.
+pub const TORCH: StaticLaw = StaticLaw::new(
+    &[
+        ("event", 3),
+        ("lit", 1),
+        ("support_powered", 1),
+        ("ticking", 1),
+        ("off_count", 8),
+    ],
+    &[
+        ("write", 1),
+        ("lit", 1),
+        ("record", 1),
+        ("delay", 160),
+        ("notify", 1),
+    ],
+    &[
+        Set("lit", Input("lit")),
+        If(
+            Equal(&Input("event"), &Constant(0)),
+            &[If(
+                And(
+                    &Equal(&Input("lit"), &Input("support_powered")),
+                    &Not(&Input("ticking")),
+                ),
+                &[Set("delay", Constant(2))],
+                &[],
+            )],
+            &[],
+        ),
+        If(
+            Equal(&Input("event"), &Constant(1)),
+            &[
+                If(
+                    And(&Input("lit"), &Input("support_powered")),
+                    &[
+                        Set("write", Constant(1)),
+                        Set("lit", Constant(0)),
+                        Set("record", Constant(1)),
+                        If(
+                            AtLeast(&Input("off_count"), &Constant(7)),
+                            &[Set("delay", Constant(160))],
+                            &[],
+                        ),
+                    ],
+                    &[],
+                ),
+                If(
+                    And(
+                        &Not(&Input("lit")),
+                        &And(
+                            &Not(&Input("support_powered")),
+                            &Not(&AtLeast(&Input("off_count"), &Constant(8))),
+                        ),
+                    ),
+                    &[Set("write", Constant(1)), Set("lit", Constant(1))],
+                    &[],
+                ),
+            ],
+            &[],
+        ),
+        If(
+            AtLeast(&Input("event"), &Constant(2)),
+            &[Set("notify", Constant(1))],
+            &[],
+        ),
+    ],
+);

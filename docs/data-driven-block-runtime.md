@@ -3,6 +3,8 @@
 This records the completed v7 migration. Subsequent execution uses
 [Rust constant definitions](typed-device-runtime.md), replacing the device JSON
 authoring described below and adding multi-property and analog primitives.
+The [device integration roadmap](device-integration-roadmap.md) records the later
+repeater, waxed bulb, comparator and shared torch work.
 
 Started 2026-09-27 on `codex/data-driven-block-runtime` from develop
 `8e56da75c25900ee25e5b4ef6dbeb8ee374e69f4`.
@@ -154,6 +156,7 @@ were not changed and no out-of-scope prerequisite was needed.
 
 [Validation commands and implementation hashes](evidence/device-program-migration-20260927.json)
 and [button source provenance](evidence/device-program-source-20260927.json)
-record the evidence and its limits. Current registration is an immutable built-in
-registry. Runtime-loaded arbitrary device programs, stateful torch-history
-integration, analog writes and inventory/entity effects remain separate work.
+record the evidence and its limits. In v7, registration was an immutable built-in
+registry; arbitrary runtime-loaded programs, shared torch history, analog writes
+and inventory/entity effects were outside that migration. Subsequent supported
+work is recorded by the roadmaps linked above.

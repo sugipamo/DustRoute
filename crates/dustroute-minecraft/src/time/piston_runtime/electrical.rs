@@ -55,6 +55,18 @@ pub(super) fn validate_scope(view: RuntimeView<'_>, fresh: bool) -> Result<(), R
                 for input in &handler.inputs {
                     use crate::device_program::Query;
                     match input.sample {
+                        Query::HistoryCount => {
+                            view.history_count(
+                                definition
+                                    .history
+                                    .as_ref()
+                                    .ok_or_else(|| unsupported("missing history policy"))?,
+                                *pos,
+                            )?;
+                        }
+                        Query::SupportPowered => {
+                            electrical.support_powered(*pos)?;
+                        }
                         Query::ReceivingPower => {
                             electrical.receiving_power(*pos)?;
                         }

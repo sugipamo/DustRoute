@@ -46,8 +46,8 @@ Teardown is simulated through the same callbacks. Missing properties and extra
 unexported observed properties cannot pass the lossless snapshot check.
 
 Both bits remain in the world/checkpoint and behavioral comparison state.
-Execution/root exploration is v11, device programs v5, physical admission v2,
-and ordinary placement v3. Old v10 execution approvals require fresh review.
+This milestone introduced execution/root exploration v11, device programs v5,
+physical admission v2 and ordinary placement v3. Old v10 execution approvals require fresh review.
 There is no checkpoint conversion and no new public MCP operation.
 
 ## Evidence

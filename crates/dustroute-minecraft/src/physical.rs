@@ -22,7 +22,7 @@ use serde::Deserialize;
 
 use crate::{Block, BlockKind, Facing, ObservationClassification, PistonState};
 
-pub const REVISION: &str = "dustroute.physical-admission.java-1-21-11.v3";
+pub const REVISION: &str = "dustroute.physical-admission.java-1-21-11.v4";
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
 #[serde(rename_all = "snake_case")]
@@ -31,6 +31,7 @@ pub enum Orientation {
     Output,
     FloorOutput,
     Attached,
+    StandingOrWall,
 }
 impl Orientation {
     pub const fn has_output(self) -> bool {
@@ -129,8 +130,10 @@ impl PhysicalSpec {
             "floor output requires support below"
         );
         check!(
-            !matches!(self.orientation, Orientation::Attached)
-                || matches!(self.support, Support::Attached),
+            !matches!(
+                self.orientation,
+                Orientation::Attached | Orientation::StandingOrWall
+            ) || matches!(self.support, Support::Attached),
             "attached orientation requires adjacent support"
         );
         check!(
@@ -290,7 +293,11 @@ const WIRE: CheckedPhysical = PhysicalSpec {
     ..COMPONENT
 }
 .checked();
-const TORCH: CheckedPhysical = ATTACHED.checked();
+const TORCH: CheckedPhysical = PhysicalSpec {
+    orientation: Orientation::StandingOrWall,
+    ..ATTACHED
+}
+.checked();
 const DIODE: CheckedPhysical = GATE.checked();
 const COMPARATOR: CheckedPhysical = PhysicalSpec {
     wire_connection: WireConnectionRule::Any,

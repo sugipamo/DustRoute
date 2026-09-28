@@ -27,8 +27,10 @@ participate in the output-alignment priority query.
 Neighbor updates compare the desired output with the stored signal and POWERED.
 They schedule a two-game-tick update unless a tick is in the collected batch.
 Priority is HIGH for a misaligned output gate, otherwise NORMAL. The tick writes
-the internal signal before any POWERED write, drains that write's shape callbacks,
-and then notifies the output. Compare mode notifies even when signal is unchanged;
+the internal signal before any POWERED write. In the current v13 adapter,
+that write invokes inherited Added output notifications before its shapes;
+the explicit update also notifies the output after the shape pass. Compare mode
+notifies even when signal is unchanged;
 subtract mode skips the remaining update when its stored signal is unchanged.
 This also retains the unusual fresh `powered=true,mode=subtract`/zero-input case:
 the Boolean can remain true while the actual emitted signal is zero.
@@ -66,8 +68,10 @@ inventory/entity behavior.
 
 ## Revisions and verification
 
-Execution/root exploration is v12, device definitions v6 and physical admission
-v3. The synchronous runtime record is v4 and root comparison v2. Earlier saved
+This milestone introduced execution/root exploration v12, device definitions v6
+and physical admission v3, with synchronous runtime record v4 and root
+comparison v2. The [torch integration](shared-torch-runtime.md) advances those
+revisions and includes the state-write lifecycle correction. Earlier saved
 contexts require fresh review; no checkpoint conversion is provided.
 
 Tests cover all 512 arithmetic input combinations, nonbinary circuits, four

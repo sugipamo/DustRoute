@@ -142,7 +142,7 @@ fn piston_support_faces_follow_body_and_head_state_in_every_direction() {
 #[test]
 fn world_contracts_check_admission_independently_from_physical_geometry() {
     let current = WorldExecutionContext::for_profile(
-        WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V12,
+        WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V13,
     );
     let proof =
         WorldExecutionContext::for_profile(WorldExecutionProfile::DustTorchSynchronousGameTickV1);

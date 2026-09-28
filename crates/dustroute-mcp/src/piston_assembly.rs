@@ -64,11 +64,37 @@ impl ValidatedAssemblyPlacement {
         // direct-install results never grant placement/removal authority.
         let construction =
             ElectricalConstruction::new(&world, context.known_region, context.root_limits)?;
+        let mut review = crate::blueprint_mcp::report_json(&review, catalog);
+        // These are model initial conditions, not facts recovered from the
+        // live block-state baseline. Keep the accepted snapshot-based workflow
+        // while making new hidden-state dependencies visible in its preview.
+        let conditions: Vec<_> = world
+            .iter()
+            .filter_map(|(position, block)| {
+                let definition =
+                    dustroute_translate::world::device_program::program(block)?.definition();
+                let output = definition.signal_level
+                    == dustroute_translate::world::device_program::SignalLevel::StoredOutput;
+                (output || definition.history.is_some()).then(|| serde_json::json!({
+                "position":position,
+                "block":definition.native_identity(block).ok(),
+                "initial_output_signal":output.then_some(0),
+                "position_history":definition.history.as_ref().map(|history| serde_json::json!({
+                    "assumed":"empty", "observed":false, "survives_block_removal":true,
+                    "window_game_ticks":history.policy.window
+                })),
+                "runtime_state_reconstructed_from_snapshot":false
+            }))
+            })
+            .collect();
+        if !conditions.is_empty() {
+            review["device_initial_conditions"] = serde_json::json!(conditions);
+        }
         Ok(Self {
             assembly,
             context,
             construction,
-            review: crate::blueprint_mcp::report_json(&review, catalog),
+            review,
             design_index,
         })
     }

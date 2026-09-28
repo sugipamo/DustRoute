@@ -14,8 +14,8 @@ pub mod schema;
 mod state;
 pub use state::{BoolProperty, Property, SignalLevel};
 
-pub const REVISION: &str = "dustroute.device-programs.java-1-21-11.v6";
-pub const DEVICE_COUNT: usize = 6;
+pub const REVISION: &str = "dustroute.device-programs.java-1-21-11.v7";
+pub const DEVICE_COUNT: usize = 7;
 pub const BUILTIN_DEVICES: [schema::CheckedDevice; DEVICE_COUNT] = builtins::DEVICES;
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
@@ -37,6 +37,8 @@ pub enum Query {
     },
     Powered,
     ReceivingPower,
+    SupportPowered,
+    HistoryCount,
     TickQueued,
     /// Tick collected for the current batch, distinct from a future reservation.
     TickCollected,
@@ -84,6 +86,8 @@ pub enum WriteNotifications {
     None,
     Shapes,
     NeighborsAndShapes,
+    /// State writes invoke the installed Added callback before flags-3 notifications.
+    AddedThenNeighborsAndShapes,
     /// Installed gate output callbacks run before the write's shape callbacks.
     OutputAndShapes,
 }
@@ -93,11 +97,16 @@ pub enum WriteNotifications {
 pub enum NotifyTargets {
     Output,
     SelfAndSupport,
+    AroundEachNeighbor,
 }
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(tag = "effect", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Effect {
+    PruneHistory,
+    RecordHistory {
+        when: Value,
+    },
     WriteOutput {
         when: Value,
         level: Value,
@@ -131,6 +140,7 @@ pub use crate::physical::{Orientation, WireConnectionRule};
 #[serde(rename_all = "snake_case")]
 pub enum Signal {
     None,
+    SupportExcludedUpwardStrong,
     Output,
     Attached,
 }
@@ -156,6 +166,7 @@ pub struct DeviceDefinition {
     pub predicates: Vec<(Property, u16)>,
     pub signal_level: SignalLevel,
     pub comparator_output: Option<SignalLevel>,
+    pub history: Option<crate::time::runtime::HistoryRule>,
     pub signal: Signal,
     pub fresh_powered_requires_history: bool,
     pub initial_neighbor_update: bool,
@@ -172,6 +183,8 @@ impl DeviceDefinition {
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub enum ResolvedEffect {
+    PruneHistory,
+    RecordHistory,
     WriteOutput {
         level: u8,
     },
@@ -259,6 +272,16 @@ impl DeviceProgram {
         }) {
             return Err("comparator readout needs a declared property".into());
         }
+        if definition.physical().orientation() == Orientation::StandingOrWall
+            && definition.observed_names.len() != 2
+        {
+            return Err("standing/wall orientation needs two concrete identities".into());
+        }
+        if definition.signal == Signal::SupportExcludedUpwardStrong
+            && definition.physical().orientation() != Orientation::StandingOrWall
+        {
+            return Err("support-excluded signal requires standing/wall orientation".into());
+        }
         if definition.signal == Signal::Output && !definition.physical().orientation().has_output()
             || definition.signal == Signal::Attached
                 && definition.physical().orientation() != Orientation::Attached
@@ -266,6 +289,9 @@ impl DeviceProgram {
             return Err("device signal requires matching orientation".into());
         }
 
+        if let Some(history) = &definition.history {
+            history.validate()?;
+        }
         let mut tables = BTreeMap::new();
         for (callback, handler) in &definition.handlers {
             if handler.effects.len() > 32 {
@@ -273,6 +299,13 @@ impl DeviceProgram {
             }
             for input in &handler.inputs {
                 let maximum = match input.sample {
+                    Query::HistoryCount => definition
+                        .history
+                        .as_ref()
+                        .ok_or("history query needs a policy")?
+                        .policy
+                        .threshold
+                        .into(),
                     Query::Constant { value } => value,
                     Query::State { property } => {
                         if !definition.properties.contains(&property) {
@@ -294,6 +327,11 @@ impl DeviceProgram {
                 if maximum > input.maximum {
                     return Err("device query exceeds law input domain".into());
                 }
+                if matches!(input.sample, Query::SupportPowered)
+                    && definition.physical().support() == crate::physical::Support::None
+                {
+                    return Err("support power query requires declared support".into());
+                }
                 if matches!(input.sample, Query::SourceAtFront | Query::SourceOffAxis)
                     && !definition.physical().orientation().has_output()
                 {
@@ -314,6 +352,7 @@ impl DeviceProgram {
                     && matches!(
                         input.sample,
                         Query::ReceivingPower
+                            | Query::SupportPowered
                             | Query::ReceivingLevel
                             | Query::SideLevel { .. }
                             | Query::GateInputPowered
@@ -332,6 +371,7 @@ impl DeviceProgram {
                     && matches!(
                         input.sample,
                         Query::ReceivingPower
+                            | Query::SupportPowered
                             | Query::ReceivingLevel
                             | Query::SideLevel { .. }
                             | Query::GateInputPowered
@@ -358,6 +398,18 @@ impl DeviceProgram {
             let mut writes = 0;
             for effect in &handler.effects {
                 match effect {
+                    Effect::PruneHistory | Effect::RecordHistory { .. } => {
+                        if definition.history.is_none()
+                            || matches!(callback, Callback::Removed | Callback::Shape)
+                        {
+                            return Err("invalid history effect".into());
+                        }
+                        if let Effect::RecordHistory { when } = effect
+                            && bound(when)? > 1
+                        {
+                            return Err("invalid history record guard".into());
+                        }
+                    }
                     Effect::WriteOutput { when, level } => {
                         if bound(when)? > 1
                             || bound(level)? > 15
@@ -379,6 +431,11 @@ impl DeviceProgram {
                             || *callback == Callback::Removed
                         {
                             return Err("invalid device state write".into());
+                        }
+                        if *notifications == WriteNotifications::AddedThenNeighborsAndShapes
+                            && !definition.handlers.contains_key(&Callback::Added)
+                        {
+                            return Err("write lifecycle callback needs an Added handler".into());
                         }
                         if *notifications == WriteNotifications::OutputAndShapes
                             && !definition.physical().orientation().has_output()
@@ -477,6 +534,10 @@ impl DeviceProgram {
             .effects
             .iter()
             .filter_map(|effect| match effect {
+                Effect::PruneHistory => Some(ResolvedEffect::PruneHistory),
+                Effect::RecordHistory { when } => {
+                    (value(when) != 0).then_some(ResolvedEffect::RecordHistory)
+                }
                 Effect::WriteOutput { when, level } => {
                     (value(when) != 0).then_some(ResolvedEffect::WriteOutput {
                         level: value(level) as u8,

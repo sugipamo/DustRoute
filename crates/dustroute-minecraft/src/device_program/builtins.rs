@@ -44,6 +44,7 @@ pub const COPPER_BULB: CheckedDevice = DeviceSpec {
     law: &builtin_laws::COPPER_BULB,
     signal: Signal::None,
     signal_level: SignalLevel::Binary(BoolProperty::Lit),
+    history: None,
     comparator_output: Some(SignalLevel::Binary(BoolProperty::Lit)),
     fresh_powered_requires_history: false,
     initial_neighbor_update: true,
@@ -77,6 +78,7 @@ pub const LAMP: CheckedDevice = DeviceSpec {
     law: &builtin_laws::LAMP,
     signal: Signal::None,
     signal_level: SignalLevel::Binary(BoolProperty::Lit),
+    history: None,
     comparator_output: None,
     fresh_powered_requires_history: false,
     initial_neighbor_update: true,
@@ -137,6 +139,7 @@ pub const OBSERVER: CheckedDevice = DeviceSpec {
     law: &builtin_laws::OBSERVER,
     signal: Signal::Output,
     signal_level: SignalLevel::Binary(BoolProperty::Powered),
+    history: None,
     comparator_output: None,
     fresh_powered_requires_history: true,
     initial_neighbor_update: false,
@@ -229,6 +232,7 @@ pub const STONE_BUTTON: CheckedDevice = DeviceSpec {
     law: &builtin_laws::STONE_BUTTON,
     signal: Signal::Attached,
     signal_level: SignalLevel::Binary(BoolProperty::Powered),
+    history: None,
     comparator_output: None,
     fresh_powered_requires_history: true,
     initial_neighbor_update: false,
@@ -382,6 +386,7 @@ pub const REPEATER: CheckedDevice = DeviceSpec {
     law: &builtin_laws::REPEATER,
     signal: Signal::Output,
     signal_level: SignalLevel::Binary(BoolProperty::Powered),
+    history: None,
     comparator_output: None,
     fresh_powered_requires_history: false,
     initial_neighbor_update: true,
@@ -507,6 +512,7 @@ pub const COMPARATOR: CheckedDevice = DeviceSpec {
     law: &builtin_laws::COMPARATOR,
     signal: Signal::Output,
     signal_level: SignalLevel::StoredOutput,
+    history: None,
     comparator_output: None,
     fresh_powered_requires_history: false,
     initial_neighbor_update: true,
@@ -535,7 +541,7 @@ pub const COMPARATOR: CheckedDevice = DeviceSpec {
                         Property::Bool(BoolProperty::Powered),
                         Binding::Output("powered"),
                     )],
-                    notifications: WriteNotifications::Shapes,
+                    notifications: WriteNotifications::OutputAndShapes,
                 },
                 Operation::Notify {
                     when: Binding::Output("notify"),
@@ -563,6 +569,109 @@ pub const COMPARATOR: CheckedDevice = DeviceSpec {
 }
 .checked();
 
+const fn torch_inputs(event: u16) -> [(&'static str, Query); 5] {
+    [
+        ("event", Query::Constant { value: event }),
+        ("lit", Query::Powered),
+        (
+            "support_powered",
+            if event < 2 {
+                Query::SupportPowered
+            } else {
+                Query::Constant { value: 0 }
+            },
+        ),
+        (
+            "ticking",
+            if event == 0 {
+                Query::TickCollected
+            } else {
+                Query::Constant { value: 0 }
+            },
+        ),
+        (
+            "off_count",
+            if event == 1 {
+                Query::HistoryCount
+            } else {
+                Query::Constant { value: 0 }
+            },
+        ),
+    ]
+}
+pub const TORCH: CheckedDevice = DeviceSpec {
+    id: "dustroute.device.torch.java-1-21-11.v1",
+    kind: BlockKind::RedstoneTorch,
+    physical: crate::physical::of_kind(BlockKind::RedstoneTorch),
+    observed_names: &["redstone_torch", "redstone_wall_torch"],
+    synthetic: true,
+    predicates: &[],
+    primary_power: BoolProperty::Lit,
+    properties: &[Property::Bool(BoolProperty::Lit)],
+    law_id: "dustroute.law.torch.callback.java-1-21-11.v1",
+    law: &builtin_laws::TORCH,
+    signal: Signal::SupportExcludedUpwardStrong,
+    signal_level: SignalLevel::Binary(BoolProperty::Lit),
+    comparator_output: None,
+    history: Some(HistorySpec {
+        key: "dustroute.history.torch-off.java-1-21-11.v1",
+        policy: crate::time::runtime::HistoryPolicy {
+            window: 60,
+            threshold: 8,
+        },
+    }),
+    fresh_powered_requires_history: false,
+    initial_neighbor_update: true,
+    preprocess_shapes: false,
+    command_initialization: None,
+    handlers: &[
+        HandlerSpec {
+            callback: Callback::Neighbor,
+            inputs: &torch_inputs(0),
+            operations: &[Operation::Schedule {
+                delay: Binding::Output("delay"),
+                priority: Binding::Constant(3),
+            }],
+        },
+        HandlerSpec {
+            callback: Callback::Tick,
+            inputs: &torch_inputs(1),
+            operations: &[
+                Operation::PruneHistory,
+                Operation::Write {
+                    when: Binding::Output("write"),
+                    values: &[(Property::Bool(BoolProperty::Lit), Binding::Output("lit"))],
+                    notifications: WriteNotifications::AddedThenNeighborsAndShapes,
+                },
+                Operation::RecordHistory {
+                    when: Binding::Output("record"),
+                },
+                Operation::Schedule {
+                    delay: Binding::Output("delay"),
+                    priority: Binding::Constant(3),
+                },
+            ],
+        },
+        HandlerSpec {
+            callback: Callback::Added,
+            inputs: &torch_inputs(2),
+            operations: &[Operation::Notify {
+                when: Binding::Output("notify"),
+                targets: NotifyTargets::AroundEachNeighbor,
+            }],
+        },
+        HandlerSpec {
+            callback: Callback::Removed,
+            inputs: &torch_inputs(3),
+            operations: &[Operation::Notify {
+                when: Binding::Output("notify"),
+                targets: NotifyTargets::AroundEachNeighbor,
+            }],
+        },
+    ],
+}
+.checked();
+
 pub const DEVICES: [CheckedDevice; DEVICE_COUNT] = {
     let devices = registry([
         LAMP,
@@ -571,6 +680,7 @@ pub const DEVICES: [CheckedDevice; DEVICE_COUNT] = {
         REPEATER,
         COPPER_BULB,
         COMPARATOR,
+        TORCH,
     ]);
     let mut i = 0;
     while i < devices.len() {

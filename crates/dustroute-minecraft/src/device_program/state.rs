@@ -80,6 +80,39 @@ impl SignalLevel {
 }
 
 impl DeviceDefinition {
+    /// Concrete identity for scheduler guards and native export. A mounted
+    /// variant changes block identity, while facing/power changes do not.
+    pub fn native_identity(&self, block: &Block) -> Result<&str, String> {
+        let observed = block
+            .observed_name
+            .as_deref()
+            .map(|n| n.strip_prefix("minecraft:").unwrap_or(n));
+        let selected = if self.physical().orientation() == super::Orientation::StandingOrWall {
+            let index = if block.support_offset == Some(crate::Facing::Down.offset()) {
+                0
+            } else if crate::piston_electrical::HORIZONTAL
+                .iter()
+                .any(|side| Some(side.offset()) == block.support_offset)
+            {
+                1
+            } else {
+                return Err("standing/wall device needs floor or horizontal support".into());
+            };
+            self.observed_names
+                .get(index)
+                .filter(|name| observed.is_none_or(|n| n == name.as_str()))
+        } else if let Some(observed) = observed {
+            self.observed_names
+                .iter()
+                .find(|name| name.as_str() == observed)
+        } else {
+            self.observed_names.first()
+        };
+        selected
+            .map(String::as_str)
+            .ok_or_else(|| "unsupported concrete device identity".into())
+    }
+
     pub fn state(&self, block: &Block, property: Property) -> Result<u16, String> {
         if !self.properties.contains(&property) {
             return Err("undeclared device property".into());
@@ -223,6 +256,25 @@ impl DeviceDefinition {
         use crate::piston_electrical_law::Emission;
         Ok(match self.signal {
             Signal::None => Emission { weak: 0, strong: 0 },
+            Signal::SupportExcludedUpwardStrong => {
+                let support = crate::piston_electrical::SIDES
+                    .into_iter()
+                    .find(|d| Some(d.offset()) == block.support_offset)
+                    .ok_or("device support required")?;
+                let weak = if query == support.opposite() {
+                    0
+                } else {
+                    level
+                };
+                Emission {
+                    weak,
+                    strong: if query == crate::Facing::Down {
+                        weak
+                    } else {
+                        0
+                    },
+                }
+            }
             Signal::Output => {
                 let facing = block.facing.ok_or("device output required")?;
                 let signal = if facing == query.opposite() { level } else { 0 };

@@ -1,5 +1,8 @@
 # Executable torch law and burnout observations
 
+The current mixed-world adapter also has [shared torch history and callback execution](shared-torch-runtime.md).
+The isolated-law evidence and profile boundaries below remain historical contracts.
+
 The local torch transition law is stored as immutable Blueprint Revision
 `dustroute.law.torch.java-1-21-11.v1` in
 [`torch-law-v1.json`](../crates/dustroute-library/blueprints/torch-law-v1.json).

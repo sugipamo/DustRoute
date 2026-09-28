@@ -5,7 +5,7 @@ use super::*;
 use crate::time::piston_runtime::PistonEvent;
 use std::cmp::Ordering;
 
-pub const COMPARISON: &str = "dustroute.piston-electrical-root-comparison.v2";
+pub const COMPARISON: &str = "dustroute.piston-electrical-root-comparison.v3";
 
 /// Opaque, process-local representative of a complete physical root boundary.
 /// Its ordering compares the full canonical record, not a hash. The selected
@@ -85,9 +85,34 @@ impl<A: RuntimeAdapter<Payload = PistonEvent>> SynchronousWorldRuntime<A> {
         }
         let mut state = self.state.clone();
         let old_tick = state.time.game_tick;
-        // Zero is a semantic constructor constant (fresh savedWorldTime = 0).
-        // Positive epochs can share origin 1; moving them to zero is unsound.
-        let epoch = u64::from(old_tick != 0);
+        // Expired entries never contribute to a later query. A representative
+        // keeps every live age; exact checkpoints retain the original record.
+        state.histories.retain(|_, history| {
+            history
+                .times
+                .retain(|t| old_tick.saturating_sub(*t) <= u64::from(history.policy.window));
+            !history.times.is_empty()
+        });
+        // Leave room for past ages while preserving zero as the fresh clock.
+        let epoch = if old_tick == 0 {
+            0
+        } else {
+            state
+                .histories
+                .values()
+                .map(|h| u64::from(h.policy.window))
+                .max()
+                .unwrap_or(0)
+                + 1
+        };
+        for history in state.histories.values_mut() {
+            for time in &mut history.times {
+                *time = old_tick
+                    .checked_sub(*time)
+                    .and_then(|age| epoch.checked_sub(age))
+                    .ok_or(RuntimeError::ClockOverflow)?;
+            }
+        }
         state.time.game_tick = epoch;
         state.processed = 0; // a computation limit per atomic root, not physics
         state.next_id = 0;
@@ -172,6 +197,7 @@ impl<A: RuntimeAdapter<Payload = PistonEvent>> SynchronousWorldRuntime<A> {
             state.pending.iter().collect::<Vec<_>>(),
             state.carriers.iter().collect::<Vec<_>>(),
             state.outputs.iter().collect::<Vec<_>>(),
+            state.histories.iter().collect::<Vec<_>>(),
             state.staged_carriers.iter().collect::<Vec<_>>(),
             state.next_id,
             state.next_carrier,

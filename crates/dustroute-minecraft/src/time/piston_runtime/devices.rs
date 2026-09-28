@@ -50,6 +50,19 @@ pub(super) fn prepare_program(
                         .definition
                         .state(before, *property)
                         .map_err(unsupported)?,
+                    Query::HistoryCount => view
+                        .history_count(
+                            program
+                                .definition
+                                .history
+                                .as_ref()
+                                .ok_or_else(|| unsupported("missing history policy"))?,
+                            pos,
+                        )?
+                        .into(),
+                    Query::SupportPowered => {
+                        super::electrical::world(view)?.support_powered(pos)?.into()
+                    }
                     Query::ReceivingPower => {
                         super::electrical::world(view)?.receiving_power(pos)?.into()
                     }
@@ -155,6 +168,18 @@ pub(super) fn notification_jobs(
     targets: NotifyTargets,
 ) -> Result<VecDeque<NeighborJob>, RuntimeError> {
     match targets {
+        NotifyTargets::AroundEachNeighbor => {
+            let mut jobs = VecDeque::new();
+            for side in crate::piston_electrical::SIDES {
+                jobs.extend(super::notifications::adjacent_jobs(
+                    view,
+                    along(pos, side, 1)?,
+                    false,
+                    false,
+                )?);
+            }
+            Ok(jobs)
+        }
         NotifyTargets::Output => output_jobs(view, pos, before),
         NotifyTargets::SelfAndSupport => {
             let support = before
@@ -220,6 +245,21 @@ pub(super) fn step_program(
     };
     run.next += 1;
     match effect {
+        ResolvedEffect::PruneHistory => out.histories.push(HistoryEffect::Prune {
+            rule: program
+                .definition
+                .history
+                .clone()
+                .ok_or_else(|| unsupported("missing history policy"))?,
+        }),
+        ResolvedEffect::RecordHistory => out.histories.push(HistoryEffect::Record {
+            position: pos,
+            rule: program
+                .definition
+                .history
+                .clone()
+                .ok_or_else(|| unsupported("missing history policy"))?,
+        }),
         ResolvedEffect::WriteOutput { level } => {
             out.outputs.push(crate::time::runtime::OutputEffect {
                 position: pos,
@@ -241,7 +281,21 @@ pub(super) fn step_program(
                 .write_state(&run.before, &values)
                 .map_err(unsupported)?;
             let mut jobs = VecDeque::new();
-            if notifications == WriteNotifications::NeighborsAndShapes {
+            if notifications == WriteNotifications::AddedThenNeighborsAndShapes {
+                out.callbacks.push(call(
+                    pos,
+                    PistonEvent::Device {
+                        callback: Callback::Added,
+                        source: None,
+                        captured: Some(Box::new(after.clone())),
+                    },
+                ));
+            }
+            if matches!(
+                notifications,
+                WriteNotifications::NeighborsAndShapes
+                    | WriteNotifications::AddedThenNeighborsAndShapes
+            ) {
                 jobs.extend(super::notifications::adjacent_jobs(
                     view, pos, false, false,
                 )?);
@@ -252,8 +306,11 @@ pub(super) fn step_program(
             if !jobs.is_empty() {
                 out.callbacks.push(call(pos, PistonEvent::Notify { jobs }));
             }
-            if notifications == WriteNotifications::NeighborsAndShapes
-                && program.definition.comparator_output.is_some()
+            if matches!(
+                notifications,
+                WriteNotifications::NeighborsAndShapes
+                    | WriteNotifications::AddedThenNeighborsAndShapes
+            ) && program.definition.comparator_output.is_some()
             {
                 out.callbacks
                     .push(call(pos, PistonEvent::NotifyAnalogReaders { next_side: 0 }));

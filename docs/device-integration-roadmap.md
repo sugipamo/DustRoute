@@ -4,11 +4,12 @@ Work continues on `codex/data-driven-block-runtime`. Minecraft Java 1.21.11 is
 the behavioral reference. Device rules and bindings are checked Rust constants;
 new observations or evidence do not silently upgrade an earlier approval.
 
-**Current work:** milestone 1 is complete; milestones 2–4 follow the
-[approved physical admission prerequisite](device-physical-admission-proposal.md).
-The user approved checked physical descriptors, explicit executor admission,
-independent Law kind adapters and shared observation/support checks. This work
-is complete. The waxed bulb milestone is complete; the comparator milestone is complete, followed by torch integration. The overall goal is not complete.
+**Status: complete for the declared scope.** All four milestones and the
+approved physical-admission prerequisite are implemented and verified. Device
+rules, query bindings and ordered effects use checked Rust constants; the shared
+runtime owns scheduling, internal outputs and bounded position histories.
+Current execution/root exploration is v13. Earlier saved approvals need fresh
+review. No further outside-scope prerequisite was required.
 
 ## Ordered milestones
 
@@ -29,7 +30,7 @@ is complete. The waxed bulb milestone is complete; the comparator milestone is c
    internal output distinct from block-state properties. Define fresh observation
    and restoration rather than inventing missing block-entity values. Inventory
    and entity inputs remain outside scope.
-4. **Torch.** Integrate position-owned burnout history, expiry and scheduled work
+4. **Torch (complete).** Integrate position-owned burnout history, expiry and scheduled work
    into the shared world, using target-version evidence. Verify replacement and
    intermediate restoration before claiming mixed-circuit coverage.
 
@@ -144,4 +145,42 @@ operation or full workspace test run was performed.
 
 [Behavior and persistence boundaries](comparator-runtime.md) and
 [verification manifest](evidence/device-integration-comparator-20260928.json).
-The remaining planned milestone is world-owned torch history and delivery.
+The following milestone completes world-owned torch history and delivery.
+
+
+## Milestone 4 and final result
+
+Standing and four wall torch orientations now use one definition and the common
+world scheduler. Bounded histories retain the latest eight off events per
+position, with an inclusive 60-game-tick window, and survive block replacement.
+Checkpoint restoration retains exact state; root comparison preserves live ages
+and pending delays. Source inspection corrected the same-kind Added callback on
+LIT writes and the corresponding comparator POWERED-write notifications.
+
+Fresh-review previews expose the initial output/history assumptions for devices
+that need hidden state. The accepted snapshot-based repair workflow remains;
+matching visible blocks does not establish empty torch history or reconstruct
+live comparator output. No new public MCP operation or companion MOD is required.
+
+Final validation:
+
+- **337 distinct Rust tests passed:** 269 Minecraft, 18 library Law/context,
+  48 translation/construction/adoption and two public MCP transport-stub tests.
+- **23 compile-fail doctests** and **14 Python tests** passed. The rebuilt model
+  passes retained door comparisons. Torch LIT agrees with 3,888 isolated-torch
+  and 641 autonomous feedback-clock observations from the retained target server.
+- Workspace/all-target Clippy with warnings denied, formatting and diff checks
+  passed. Cargo builds used one job, tests one thread, and offline locked
+  dependencies. No live server/new Minecraft trial or full workspace test run
+  was performed.
+
+Execution/root exploration is v13, device programs v7, physical admission v4,
+synchronous runtime record v5 and root comparison v3. Historical Law bodies keep
+their meaning; incompatible saved contexts are rejected rather than upgraded.
+
+[Shared torch behavior and limits](shared-torch-runtime.md) and
+[commands, source/fixture hashes and validation results](evidence/device-integration-torch-20260928.json)
+record the final evidence. Inventory inputs, entities, fluids, oxidation, manual
+comparator-mode interaction and live hidden-state reconstruction remain outside
+this goal. New devices using existing primitives can share the definition path;
+a new physical mechanism still requires an explicit shared primitive and evidence.

@@ -163,6 +163,16 @@ pub(crate) fn device_java_block_state(block: &Block) -> Result<String, Minecraft
                 .ok_or_else(|| invalid("output facing required".into()))?;
             properties.insert("facing", facing_name(output.opposite()).into());
         }
+        Orientation::StandingOrWall => {
+            let support = block
+                .support_offset
+                .ok_or_else(|| invalid("support required".into()))?;
+            if support != Facing::Down.offset() {
+                let facing = outward_from_support(support)
+                    .ok_or_else(|| invalid("horizontal support required".into()))?;
+                properties.insert("facing", facing_name(facing).into());
+            }
+        }
         Orientation::Attached => {
             let support = block
                 .support_offset
@@ -181,11 +191,7 @@ pub(crate) fn device_java_block_state(block: &Block) -> Result<String, Minecraft
             properties.insert("facing", facing_name(facing).into());
         }
     }
-    let name = block
-        .observed_name
-        .as_deref()
-        .unwrap_or(&definition.observed_names[0]);
-    let name = name.strip_prefix("minecraft:").unwrap_or(name);
+    let name = definition.native_identity(block).map_err(invalid)?;
     Ok(format!(
         "minecraft:{name}[{}]",
         properties
