@@ -7,8 +7,7 @@ use crate::piston_electrical_law::{
 };
 use crate::time::runtime::RuntimeError;
 use crate::{
-    Block, BlockKind, Facing, ObservationClassification, PistonState, Pos, Region, WireConnection,
-    World,
+    Block, BlockKind, Facing, ObservationClassification, Pos, Region, WireConnection, World,
 };
 
 pub const SIDES: [Facing; 6] = [
@@ -97,6 +96,11 @@ fn arms(block: &Block) -> Result<&BTreeMap<Facing, WireConnection>, RuntimeError
 /// Evidence gate for electrical identities only. Stable piston/head pairing and
 /// physical support must additionally pass the runtime/placement gates.
 pub fn validate_evidence(block: &Block) -> Result<(), RuntimeError> {
+    if !crate::execution_context::WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V16
+        .admits_kind(block.kind)
+    {
+        return Err(invalid(format!("unsupported electrical kind {:?}", block.kind)));
+    }
     if block.observation_classification == ObservationClassification::Coarse
         || block.requires_live_observation()
     {
@@ -107,20 +111,69 @@ pub fn validate_evidence(block: &Block) -> Result<(), RuntimeError> {
         .as_deref()
         .map(|n| n.strip_prefix("minecraft:").unwrap_or(n));
     let property = |key: &str| block.observed_properties.get(key).map(String::as_str);
+    if let Some(program) = crate::device_program::program(block) {
+        use crate::device_program::Orientation;
+        let definition = &program.definition;
+        definition.validate_state(block).map_err(invalid)?;
+        let direction_valid = match definition.physical().orientation() {
+            Orientation::None => true,
+            Orientation::Output => block.facing.is_some(),
+            Orientation::FloorOutput => {
+                block
+                    .facing
+                    .is_some_and(|d| d.horizontal_offset().is_some())
+                    && block.support_offset == Some(Facing::Down.offset())
+            }
+            Orientation::StandingOrWall => {
+                let side = support(block)?;
+                side != Facing::Up
+                    && (side == Facing::Down || block.facing.is_none_or(|d| d == side.opposite()))
+                    && definition.native_identity(block).is_ok()
+            }
+            Orientation::Attached => {
+                support(block)?;
+                true
+            }
+        };
+        let properties_valid = observed.is_none_or(|name| {
+            let orientation = match definition.physical().orientation() {
+                Orientation::None => true,
+                Orientation::Output | Orientation::FloorOutput => {
+                    block.facing.is_some_and(|direction| {
+                        property("facing") == Some(self::name(direction.opposite()))
+                    })
+                }
+                Orientation::StandingOrWall => {
+                    let side = support(block).expect("validated support");
+                    if side == Facing::Down {
+                        property("facing").is_none()
+                    } else {
+                        property("facing") == Some(self::name(side.opposite()))
+                    }
+                }
+                Orientation::Attached => {
+                    let facing = block.facing.filter(|d| d.horizontal_offset().is_some());
+                    let expected = match property("face") {
+                        Some("floor") => Some(Facing::Down.offset()),
+                        Some("ceiling") => Some(Facing::Up.offset()),
+                        Some("wall") => facing.map(|d| d.opposite().offset()),
+                        _ => None,
+                    };
+                    expected == block.support_offset
+                        && facing.is_some_and(|d| property("facing") == Some(self::name(d)))
+                }
+            };
+            definition.observed_names.iter().any(|n| n == name) && orientation
+        });
+        return if direction_valid && properties_valid {
+            Ok(())
+        } else {
+            Err(invalid("unsupported device observation"))
+        };
+    }
     let matches = match block.kind {
         BlockKind::Air => observed.is_none_or(|n| n == "air"),
-        BlockKind::Solid => observed.is_none_or(|n| {
-            matches!(
-                n,
-                "stone"
-                    | "cobblestone"
-                    | "smooth_stone"
-                    | "obsidian"
-                    | "smooth_quartz"
-                    | "cyan_wool"
-            )
-        }),
-        BlockKind::Transparent => observed.is_none_or(|n| n == "glass"),
+        BlockKind::Solid | BlockKind::Transparent => crate::physical::of_block(block).is_some(),
         BlockKind::RedstoneBlock => {
             block.powered != Some(false) && observed.is_none_or(|n| n == "redstone_block")
         }
@@ -153,42 +206,6 @@ pub fn validate_evidence(block: &Block) -> Result<(), RuntimeError> {
                             .all(|d| property(name(d)) == Some(wire_name(connections[&d])))
                 })
         }
-        BlockKind::Repeater => {
-            let power = power(block)? != 0;
-            let direction = output(block)?;
-            let delay = block
-                .delay
-                .filter(|d| (1..=4).contains(d))
-                .ok_or_else(|| invalid("repeater delay 1..4 required"))?;
-            block.support_offset == Some(Facing::Down.offset())
-                && observed.is_none_or(|n| {
-                    n == "repeater"
-                        && property("facing") == Some(name(direction.opposite()))
-                        && property("powered").and_then(|s| s.parse::<bool>().ok()) == Some(power)
-                        && property("delay").and_then(|s| s.parse::<u8>().ok()) == Some(delay)
-                        && property("locked")
-                            .and_then(|s| s.parse::<bool>().ok())
-                            .is_some()
-                })
-        }
-        BlockKind::Observer => {
-            let powered = power(block)? != 0;
-            let direction = block
-                .facing
-                .ok_or_else(|| invalid("observer output required"))?;
-            observed.is_none_or(|n| {
-                n == "observer"
-                    && property("facing") == Some(name(direction.opposite()))
-                    && property("powered").and_then(|s| s.parse::<bool>().ok()) == Some(powered)
-            })
-        }
-        BlockKind::RedstoneLamp => {
-            let lit = power(block)? != 0;
-            observed.is_none_or(|n| {
-                n == "redstone_lamp"
-                    && property("lit").and_then(|s| s.parse::<bool>().ok()) == Some(lit)
-            })
-        }
         BlockKind::Piston => {
             block.facing.is_some()
                 && block.piston_state.is_some_and(|s| s.is_stable())
@@ -216,32 +233,20 @@ pub fn validate_evidence(block: &Block) -> Result<(), RuntimeError> {
     Ok(())
 }
 
-/// Not the generic historical block traits: Java explicitly excludes pistons
-/// and redstone blocks from isSolidBlock, despite their full collision shapes.
+/// Current callback geometry is independent of historical spatial Law tags.
 pub fn conducts(block: &Block) -> bool {
-    matches!(block.kind, BlockKind::Solid | BlockKind::RedstoneLamp)
+    crate::physical::of_block(block).is_some_and(|p| p.conducts(block))
 }
 
 pub fn full_face(block: &Block, side: Facing) -> bool {
-    match block.kind {
-        BlockKind::Solid
-        | BlockKind::Transparent
-        | BlockKind::RedstoneBlock
-        | BlockKind::Observer
-        | BlockKind::RedstoneLamp => true,
-        BlockKind::Piston => {
-            block.piston_state == Some(PistonState::Retracted)
-                || block.facing == Some(side.opposite())
-        }
-        BlockKind::PistonHead => block.facing == Some(side),
-        _ => false,
-    }
+    crate::physical::of_block(block).is_some_and(|p| p.full_face(block, side))
 }
 
 #[derive(Clone, Copy)]
 pub struct ElectricalWorld<'a> {
     world: &'a World,
     region: Region,
+    outputs: Option<&'a BTreeMap<Pos, u8>>,
 }
 
 impl<'a> ElectricalWorld<'a> {
@@ -266,6 +271,7 @@ impl<'a> ElectricalWorld<'a> {
         Ok(Self {
             world: view.world(),
             region: view.known_region(),
+            outputs: Some(view.outputs),
         })
     }
 
@@ -276,7 +282,11 @@ impl<'a> ElectricalWorld<'a> {
             }
             validate_evidence(block)?;
         }
-        Ok(Self { world, region })
+        Ok(Self {
+            world,
+            region,
+            outputs: None,
+        })
     }
 
     pub fn block(&self, pos: Pos) -> Result<Block, RuntimeError> {
@@ -309,29 +319,28 @@ impl<'a> ElectricalWorld<'a> {
             wire_connected: false,
             wires_enabled,
         };
-        match block.kind {
-            BlockKind::Observer => {
-                let signal = if block.facing == Some(query.opposite()) {
-                    crate::device_callback_law::builtin_laws().observer_signal(power(&block)? != 0)
+        if let Some(program) = crate::device_program::program(&block) {
+            let definition = program.definition();
+            if definition.signal_level == crate::device_program::SignalLevel::StoredOutput {
+                let stored = self.stored_output(pos)?;
+                let level = if block.powered == Some(true) {
+                    stored
                 } else {
                     0
                 };
-                return Ok(Emission {
-                    weak: signal,
-                    strong: signal,
-                });
+                return definition
+                    .emission_with_level(&block, query, level)
+                    .map_err(invalid);
             }
+            return definition.emission(&block, query).map_err(invalid);
+        }
+        match block.kind {
             BlockKind::Lever => {
                 facts.source = SignalSource::Lever;
                 facts.level = power(&block)?;
                 facts.direction_match = query == support(&block)?.opposite();
             }
             BlockKind::RedstoneBlock => facts.source = SignalSource::RedstoneBlock,
-            BlockKind::Repeater => {
-                facts.source = SignalSource::Repeater;
-                facts.level = power(&block)?;
-                facts.direction_match = query == output(&block)?.opposite();
-            }
             BlockKind::RedstoneWire => {
                 facts.source = SignalSource::Wire;
                 facts.level = level(&block)?;
@@ -369,6 +378,11 @@ impl<'a> ElectricalWorld<'a> {
             .expect("bounded signal facts"))
     }
 
+    pub fn support_powered(&self, pos: Pos) -> Result<bool, RuntimeError> {
+        let support = support(&self.block(pos)?)?;
+        Ok(self.emitted(along(pos, support)?, support, true)? > 0)
+    }
+
     pub fn receiving_power(&self, pos: Pos) -> Result<bool, RuntimeError> {
         for side in SIDES {
             if self.emitted(along(pos, side)?, side, true)? > 0 {
@@ -376,6 +390,28 @@ impl<'a> ElectricalWorld<'a> {
             }
         }
         Ok(false)
+    }
+
+    pub fn comparator_readout(&self, pos: Pos) -> Result<Option<u8>, RuntimeError> {
+        let block = self.block(pos)?;
+        match crate::device_program::program(&block) {
+            Some(program) => program
+                .definition()
+                .comparator_readout(&block)
+                .map_err(invalid),
+            None => Ok(None),
+        }
+    }
+
+    /// Maximum incoming analog signal, including conductor-mediated strong power.
+    /// Unlike a Boolean query this must inspect all six faces, even after finding
+    /// a nonzero value. Unknown space is an error, never an implicit zero.
+    pub fn receiving_level(&self, pos: Pos) -> Result<u8, RuntimeError> {
+        let mut level = 0;
+        for side in SIDES {
+            level = level.max(self.emitted(along(pos, side)?, side, true)?);
+        }
+        Ok(level)
     }
 
     pub fn piston_powered(&self, pos: Pos) -> Result<bool, RuntimeError> {
@@ -415,14 +451,7 @@ impl<'a> ElectricalWorld<'a> {
     }
 
     fn wire_connects(block: &Block, side: Facing) -> bool {
-        match block.kind {
-            BlockKind::RedstoneWire | BlockKind::Lever | BlockKind::RedstoneBlock => true,
-            BlockKind::Repeater => block
-                .facing
-                .is_some_and(|d| d == side || d == side.opposite()),
-            BlockKind::Observer => block.facing == Some(side.opposite()),
-            _ => false,
-        }
+        crate::physical::of_kind(block.kind).wire_connects(block, side)
     }
 
     pub fn wire_shape(&self, pos: Pos) -> Result<BTreeMap<Facing, WireConnection>, RuntimeError> {
@@ -440,15 +469,12 @@ impl<'a> ElectricalWorld<'a> {
         let clear = !conducts(&self.block(along(pos, Facing::Up)?)?);
         let beside = along(pos, side)?;
         let neighbor = self.block(beside)?;
+        let rise = crate::physical::wire_rise_connection(&neighbor, side);
         let connected = if clear
-            && full_face(&neighbor, Facing::Up)
+            && let Some(rise) = rise
             && self.block(along(beside, Facing::Up)?)?.kind == BlockKind::RedstoneWire
         {
-            if full_face(&neighbor, side.opposite()) {
-                WireConnection::Up
-            } else {
-                WireConnection::Side
-            }
+            rise
         } else if Self::wire_connects(&neighbor, side)
             || (!conducts(&neighbor)
                 && self.block(along(beside, Facing::Down)?)?.kind == BlockKind::RedstoneWire)
@@ -471,7 +497,7 @@ impl<'a> ElectricalWorld<'a> {
         let mut shape = arms(&block)?.clone();
         if side == Facing::Down {
             if !full_face(&self.block(along(pos, side)?)?, Facing::Up) {
-                return Err(invalid("wire support destruction is outside this profile"));
+                return Err(invalid("wire shape query requires surviving support"));
             }
             return Ok(shape);
         }
@@ -565,7 +591,62 @@ impl<'a> ElectricalWorld<'a> {
             .expect("bounded dust facts"))
     }
 
-    pub fn repeater_input(&self, pos: Pos) -> Result<bool, RuntimeError> {
+    pub fn stored_output(&self, pos: Pos) -> Result<u8, RuntimeError> {
+        self.block(pos)?;
+        Ok(self
+            .outputs
+            .ok_or_else(|| {
+                invalid("device output requires runtime state; block snapshot is insufficient")
+            })?
+            .get(&pos)
+            .copied()
+            .unwrap_or(0))
+    }
+
+    /// Block-only gate inputs, including comparator readout through one solid block.
+    pub fn gate_output_level(&self, pos: Pos) -> Result<u8, RuntimeError> {
+        let block = self.block(pos)?;
+        let direction = output(&block)?;
+        let rear_direction = direction.opposite();
+        let rear = along(pos, rear_direction)?;
+        let rear_block = self.block(rear)?;
+        let mut input = self.emitted(rear, rear_direction, true)?;
+        if rear_block.kind == BlockKind::RedstoneWire {
+            input = input.max(level(&rear_block)?);
+        }
+        if let Some(readout) = self.comparator_readout(rear)? {
+            input = readout;
+        } else if input < 15 && conducts(&rear_block) {
+            if let Some(readout) = self.comparator_readout(along(rear, rear_direction)?)? {
+                input = readout;
+            }
+        }
+        let mut side_input = 0;
+        for side in HORIZONTAL
+            .into_iter()
+            .filter(|d| *d != direction && *d != rear_direction)
+        {
+            let pos = along(pos, side)?;
+            let block = self.block(pos)?;
+            let level = match block.kind {
+                BlockKind::RedstoneWire => level(&block)?,
+                BlockKind::RedstoneBlock => 15,
+                _ => self.emission(pos, side, true)?.strong,
+            };
+            side_input = side_input.max(level);
+        }
+        let definition = crate::device_program::program(&block)
+            .ok_or_else(|| invalid("missing gate definition"))?
+            .definition();
+        let subtract = definition
+            .state(&block, crate::device_program::Property::ComparatorMode)
+            .map_err(invalid)?
+            != 0;
+        crate::device_callback_law::comparator_signal(input, side_input, subtract)
+            .ok_or_else(|| invalid("invalid gate input level"))
+    }
+
+    pub fn gate_input_powered(&self, pos: Pos) -> Result<bool, RuntimeError> {
         let query = output(&self.block(pos)?)?.opposite();
         let rear = along(pos, query)?;
         let emitted = self.emitted(rear, query, true)?;
@@ -573,7 +654,7 @@ impl<'a> ElectricalWorld<'a> {
         Ok(emitted > 0 || (block.kind == BlockKind::RedstoneWire && level(&block)? > 0))
     }
 
-    pub fn repeater_locked(&self, pos: Pos) -> Result<bool, RuntimeError> {
+    pub fn side_gate_powered(&self, pos: Pos) -> Result<bool, RuntimeError> {
         let direction = output(&self.block(pos)?)?;
         let mut locked = false;
         for side in HORIZONTAL
@@ -581,11 +662,23 @@ impl<'a> ElectricalWorld<'a> {
             .filter(|d| *d != direction && *d != direction.opposite())
         {
             let target = along(pos, side)?;
-            if self.block(target)?.kind == BlockKind::Repeater {
+            if matches!(
+                self.block(target)?.kind,
+                BlockKind::Repeater | BlockKind::Comparator
+            ) {
                 locked |= self.emission(target, side, true)?.strong > 0;
             }
         }
         Ok(locked)
+    }
+
+    pub fn output_gate_misaligned(&self, pos: Pos) -> Result<bool, RuntimeError> {
+        let direction = output(&self.block(pos)?)?;
+        let target = self.block(along(pos, direction)?)?;
+        Ok(
+            matches!(target.kind, BlockKind::Repeater | BlockKind::Comparator)
+                && target.facing != Some(direction.opposite()),
+        )
     }
 }
 

@@ -1,0 +1,1523 @@
+{
+  "schema_version": "dustroute.support-loss-conformance.v1",
+  "date": "2026-09-28",
+  "base_commit": "a02f98b",
+  "branch": "codex/data-driven-block-runtime",
+  "target": {
+    "minecraft": "Java 1.21.11",
+    "yarn": "1.21.11+build.6",
+    "enabled_features": [
+      "minecraft:vanilla"
+    ],
+    "loader": "0.19.5",
+    "loom": "1.17.20",
+    "source_world_class_sha256": "745b101ac1d0231555831f0fcf65e98e89ffd18d45facce363d31243592cad11"
+  },
+  "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v14",
+  "root_exploration": "dustroute.piston-electrical-root-exploration.v14",
+  "physical_admission": "dustroute.physical-admission.java-1-21-11.v5",
+  "production_physics_changed": true,
+  "public_mcp_operations_added": false,
+  "completed_live_trials": 11,
+  "live_probe_modified": false,
+  "totals": {
+    "tick_ends": 863,
+    "palette_writes": 192,
+    "delivered_device_ticks": 32,
+    "tick_attempts": 33,
+    "discarded_tick_attempts": 1,
+    "callback_boundaries": 616
+  },
+  "runs": [
+    {
+      "run": "a",
+      "fixture": "device-support-wire-r0",
+      "origin": {
+        "x": 80000,
+        "y": 180,
+        "z": 1000
+      },
+      "rotation": 0,
+      "requested_steps": [
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 0
+        },
+        {
+          "input": 0,
+          "powered": false,
+          "wait_ticks": 40
+        }
+      ],
+      "applied_inputs": [
+        {
+          "position": {
+            "x": 79999,
+            "y": 180,
+            "z": 1000
+          },
+          "game_tick": 131099,
+          "packet_sequence": 2060,
+          "write_sequence": 2061,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": 79999,
+            "y": 180,
+            "z": 1000
+          },
+          "game_tick": 131139,
+          "packet_sequence": 2771,
+          "write_sequence": 2772,
+          "kind": "lever",
+          "powered": false
+        }
+      ],
+      "applied_offsets": [
+        0,
+        40
+      ],
+      "original_classification": "matched_declared_projection",
+      "final_comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v14",
+        "tick_end_count": 81,
+        "tick_mismatches": [],
+        "live_write_count": 19,
+        "model_write_count": 19,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 3,
+        "model_scheduled_count": 3,
+        "first_scheduled_mismatch": null,
+        "first_tick_attempt_mismatch": null,
+        "live_callback_count": 64,
+        "model_callback_count": 64,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection",
+        "model_binary_sha256": "313d93a7f637bfb6c8a865626879c613570f74f80a288f4a8db82e5c24748f84"
+      },
+      "retained_fixture": {
+        "path": "crates/dustroute-translate/tests/fixtures/device-circuits/support-wire-r0.json.gz",
+        "sha256": "cba045265a69e1de231d9b8d1f25d70c3da8a6b42bba40d111f36b5b85df1a7c"
+      },
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_stopped_normally": true,
+      "original_capture_provenance": {
+        "fixture_sha256": "616a8967eb252f3d176eb7dc827b9702129376c6d2de9820e83118e822e0888f",
+        "actor_sha256": "a12206d3d5f6f75d68c7382e219ba870b8125e7310220b6d2fe71c870cb8bded",
+        "capture_sha256": "71fcbcb5da3bd447eb0116fa1de2994006505f000d41c5914ff790caeb8fa259",
+        "comparator_sha256": "75ebf5c9475baa11bb0e58a5dc2e0c60939db676825a4611cf733a87f2496cdd",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "f669aabf085e89014776d01e6223c605cb37f40d278bd015b0eebb2c3b48f380"
+      },
+      "artifacts": {
+        ".local/e2e-artifacts/support-loss-20260928-a.raw.ndjson": "ef3d11512fd0ec36d67cdf2ceb1274a235e0e0a5f7a2c56138fda4f4e602cceb",
+        ".local/e2e-artifacts/support-loss-20260928-a.server.log": "cdb684183c49cdab9f7b869710f118d456627bab5048ddba4d0799352c5df81e",
+        ".local/e2e-artifacts/support-loss-20260928-a.client.json": "4f322402621a87fb0e0f7e07601383071a1686b110c843ff1a794968031da02d",
+        ".local/e2e-artifacts/support-loss-20260928-a.reference.json": "906a509306bb3b1979b0f99af17f69ebf390bedfc9945aef5832be8ce4773a62",
+        ".local/e2e-artifacts/support-loss-20260928-a.input.json": "6ccaf1ca72cc3f27c951cf278497450793bee5f1b0e93346f865f1b9f8075c91",
+        ".local/e2e-artifacts/support-loss-20260928-a.model.json": "d6f52a90887902752d23a25b710c24da651c977d2c2a16e8145b6a6c7cd3ef27",
+        ".local/e2e-artifacts/support-loss-20260928-a.comparison.json": "36412ea58d611c0eff6068f48290666179cf81a873f6cb2acd67f2657fd77798",
+        ".local/e2e-artifacts/support-loss-20260928-a.summary.json": "3926fa8f3874eeac199ec68cedb63eb1843d35d6b7d051536c619fd5a37e77fb",
+        ".local/e2e-artifacts/support-loss-final-support-wire-r0.comparison.json": "5fbcc82ce104b58fec7dc35978ce77696025e9237f07a9d94a6f344e54138192"
+      }
+    },
+    {
+      "run": "b",
+      "fixture": "device-support-button-r0",
+      "origin": {
+        "x": 81000,
+        "y": 180,
+        "z": 1000
+      },
+      "rotation": 0,
+      "requested_steps": [
+        {
+          "input": 1,
+          "powered": true,
+          "wait_ticks": 0
+        },
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 4
+        },
+        {
+          "input": 0,
+          "powered": false,
+          "wait_ticks": 40
+        }
+      ],
+      "applied_inputs": [
+        {
+          "position": {
+            "x": 81003,
+            "y": 180,
+            "z": 1001
+          },
+          "game_tick": 131911,
+          "packet_sequence": 2046,
+          "write_sequence": 2047,
+          "kind": "use_device",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": 80999,
+            "y": 180,
+            "z": 1000
+          },
+          "game_tick": 131916,
+          "packet_sequence": 2155,
+          "write_sequence": 2156,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": 80999,
+            "y": 180,
+            "z": 1000
+          },
+          "game_tick": 131955,
+          "packet_sequence": 2834,
+          "write_sequence": 2835,
+          "kind": "lever",
+          "powered": false
+        }
+      ],
+      "applied_offsets": [
+        0,
+        5,
+        44
+      ],
+      "original_classification": "matched_declared_projection",
+      "final_comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v14",
+        "tick_end_count": 85,
+        "tick_mismatches": [],
+        "live_write_count": 24,
+        "model_write_count": 24,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 6,
+        "model_scheduled_count": 6,
+        "first_scheduled_mismatch": null,
+        "first_tick_attempt_mismatch": null,
+        "live_callback_count": 69,
+        "model_callback_count": 69,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection",
+        "model_binary_sha256": "313d93a7f637bfb6c8a865626879c613570f74f80a288f4a8db82e5c24748f84"
+      },
+      "retained_fixture": {
+        "path": "crates/dustroute-translate/tests/fixtures/device-circuits/support-button-r0.json.gz",
+        "sha256": "5083de4cd08bc899ff96e40b3ed60df4b39484e92af830908328ddda5374c7fa"
+      },
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_stopped_normally": true,
+      "original_capture_provenance": {
+        "fixture_sha256": "1cdc936aa47c7302f2228e64b9d14d90dce6c6255f17237ad52f18556a0a942e",
+        "actor_sha256": "a12206d3d5f6f75d68c7382e219ba870b8125e7310220b6d2fe71c870cb8bded",
+        "capture_sha256": "71fcbcb5da3bd447eb0116fa1de2994006505f000d41c5914ff790caeb8fa259",
+        "comparator_sha256": "75ebf5c9475baa11bb0e58a5dc2e0c60939db676825a4611cf733a87f2496cdd",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "f669aabf085e89014776d01e6223c605cb37f40d278bd015b0eebb2c3b48f380"
+      },
+      "artifacts": {
+        ".local/e2e-artifacts/support-loss-20260928-b.raw.ndjson": "78f0f43f5326b9e2086eee509f553bc97c79ae42c12aa1e802de376f60632b61",
+        ".local/e2e-artifacts/support-loss-20260928-b.server.log": "1acfa85a8ed1ffaaa7aa5d6b40989ebd3294b3f21cc4e0cfa0f605b7b3822548",
+        ".local/e2e-artifacts/support-loss-20260928-b.client.json": "b325cbace8966f492be774adfcab96019e8230bb9926bfaf799b2ee2092c5034",
+        ".local/e2e-artifacts/support-loss-20260928-b.reference.json": "7165cf56f2f34eb3e0a95d968b41103d8cc46381098dd22ae11e20c992569ebe",
+        ".local/e2e-artifacts/support-loss-20260928-b.input.json": "cb1d6bfb32342f33f7183ddf5f9526623d1099d54ba822ffc7011562997f2018",
+        ".local/e2e-artifacts/support-loss-20260928-b.model.json": "965c69ba02adcdccfa37a589581930a39d0c43d55dcf57ce8e81d3d2180274fa",
+        ".local/e2e-artifacts/support-loss-20260928-b.comparison.json": "4799ba9a542f396d54eb3b2bf2e0983027eb2c91a553f7f16d92476b6b1df831",
+        ".local/e2e-artifacts/support-loss-20260928-b.summary.json": "a9233139092d979bb72b32d463829fbdcf77bd69837cbbe7bbdf42b2b10f3f9c",
+        ".local/e2e-artifacts/support-loss-final-support-button-r0.comparison.json": "c83e13c0f93f9b61be282b63ba7b095f69c41c39e6924a7853e8c40e95a68518"
+      }
+    },
+    {
+      "run": "c",
+      "fixture": "device-support-powered-wire-r0",
+      "origin": {
+        "x": 82000,
+        "y": 180,
+        "z": 1000
+      },
+      "rotation": 0,
+      "requested_steps": [
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 0
+        },
+        {
+          "input": 0,
+          "powered": false,
+          "wait_ticks": 40
+        }
+      ],
+      "applied_inputs": [
+        {
+          "position": {
+            "x": 81999,
+            "y": 180,
+            "z": 1000
+          },
+          "game_tick": 132745,
+          "packet_sequence": 2241,
+          "write_sequence": 2242,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": 81999,
+            "y": 180,
+            "z": 1000
+          },
+          "game_tick": 132785,
+          "packet_sequence": 2952,
+          "write_sequence": 2953,
+          "kind": "lever",
+          "powered": false
+        }
+      ],
+      "applied_offsets": [
+        0,
+        40
+      ],
+      "original_classification": "matched_declared_projection",
+      "final_comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v14",
+        "tick_end_count": 81,
+        "tick_mismatches": [],
+        "live_write_count": 19,
+        "model_write_count": 19,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 3,
+        "model_scheduled_count": 3,
+        "first_scheduled_mismatch": null,
+        "first_tick_attempt_mismatch": null,
+        "live_callback_count": 64,
+        "model_callback_count": 64,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection",
+        "model_binary_sha256": "313d93a7f637bfb6c8a865626879c613570f74f80a288f4a8db82e5c24748f84"
+      },
+      "retained_fixture": {
+        "path": "crates/dustroute-translate/tests/fixtures/device-circuits/support-powered-wire-r0.json.gz",
+        "sha256": "7c00f0778993f4aab5d5e27614063809ac10f838a9f6f14623892f5cc76ae443"
+      },
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_stopped_normally": true,
+      "original_capture_provenance": {
+        "fixture_sha256": "91865bec3fca38505c00b3a3f62d6767daed52c5b84412573b8d67b4826d24b7",
+        "actor_sha256": "a12206d3d5f6f75d68c7382e219ba870b8125e7310220b6d2fe71c870cb8bded",
+        "capture_sha256": "71fcbcb5da3bd447eb0116fa1de2994006505f000d41c5914ff790caeb8fa259",
+        "comparator_sha256": "75ebf5c9475baa11bb0e58a5dc2e0c60939db676825a4611cf733a87f2496cdd",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "f669aabf085e89014776d01e6223c605cb37f40d278bd015b0eebb2c3b48f380"
+      },
+      "artifacts": {
+        ".local/e2e-artifacts/support-loss-20260928-c.raw.ndjson": "0ff6cd5c2a9595151a95c705963c1efb803463b471048c47a61b38207ba69176",
+        ".local/e2e-artifacts/support-loss-20260928-c.server.log": "7830bea248e091fc1df70ded2a302bea49da44a46bc58b2c37d08a3571254c08",
+        ".local/e2e-artifacts/support-loss-20260928-c.client.json": "5c15df80887c32281e37be42e1c4f8329722eb07e5e0cf2d84bf3396f0763811",
+        ".local/e2e-artifacts/support-loss-20260928-c.reference.json": "032600ed51fb9a8feedaefa79e8bc57a0f39d757fb5fc96a1f910b61c18c4db6",
+        ".local/e2e-artifacts/support-loss-20260928-c.input.json": "7c5e08b91eb2d2683382cdd0336422b7d7db77adf23d6b42f872d99999cc6cb5",
+        ".local/e2e-artifacts/support-loss-20260928-c.model.json": "6b5f8eb53c86f9825d7640a9c544e624ff251b50aa8913e93535204e8cdb4a5f",
+        ".local/e2e-artifacts/support-loss-20260928-c.comparison.json": "36412ea58d611c0eff6068f48290666179cf81a873f6cb2acd67f2657fd77798",
+        ".local/e2e-artifacts/support-loss-20260928-c.summary.json": "2cf030d8f7173953f205f40f13fe3336a7475ee92df8a06decbc2c2b2b300fc1",
+        ".local/e2e-artifacts/support-loss-final-support-powered-wire-r0.comparison.json": "5fbcc82ce104b58fec7dc35978ce77696025e9237f07a9d94a6f344e54138192"
+      }
+    },
+    {
+      "run": "d",
+      "fixture": "device-support-torch-r0",
+      "origin": {
+        "x": 83000,
+        "y": 180,
+        "z": 1000
+      },
+      "rotation": 0,
+      "requested_steps": [
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 0
+        },
+        {
+          "input": 0,
+          "powered": false,
+          "wait_ticks": 40
+        }
+      ],
+      "applied_inputs": [
+        {
+          "position": {
+            "x": 82999,
+            "y": 180,
+            "z": 1000
+          },
+          "game_tick": 133557,
+          "packet_sequence": 2192,
+          "write_sequence": 2193,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": 82999,
+            "y": 180,
+            "z": 1000
+          },
+          "game_tick": 133596,
+          "packet_sequence": 2891,
+          "write_sequence": 2892,
+          "kind": "lever",
+          "powered": false
+        }
+      ],
+      "applied_offsets": [
+        0,
+        39
+      ],
+      "original_classification": "matched_declared_projection",
+      "final_comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v14",
+        "tick_end_count": 80,
+        "tick_mismatches": [],
+        "live_write_count": 19,
+        "model_write_count": 19,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 3,
+        "model_scheduled_count": 3,
+        "first_scheduled_mismatch": null,
+        "first_tick_attempt_mismatch": null,
+        "live_callback_count": 64,
+        "model_callback_count": 64,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection",
+        "model_binary_sha256": "313d93a7f637bfb6c8a865626879c613570f74f80a288f4a8db82e5c24748f84"
+      },
+      "retained_fixture": {
+        "path": "crates/dustroute-translate/tests/fixtures/device-circuits/support-torch-r0.json.gz",
+        "sha256": "5d03e1a20d0195b798aef08c649a7e7e665f4112c64d28ea235f66561b70b1bf"
+      },
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_stopped_normally": true,
+      "original_capture_provenance": {
+        "fixture_sha256": "c7ebb66c284e7e9e5309f26cc2f0f4977537fce4618a19d244fcd913f6a977b6",
+        "actor_sha256": "a12206d3d5f6f75d68c7382e219ba870b8125e7310220b6d2fe71c870cb8bded",
+        "capture_sha256": "57e8593d5b69ff8e7de0ef2d2c78c76dcfc255439fb67586c31ab85ba735c09c",
+        "comparator_sha256": "75ebf5c9475baa11bb0e58a5dc2e0c60939db676825a4611cf733a87f2496cdd",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "0d86fa38191a6f1c687ba8cf703e330bea23a841faa3d114ef9ff6612d83b383"
+      },
+      "artifacts": {
+        ".local/e2e-artifacts/support-loss-20260928-d.raw.ndjson": "d57e0287de5732054db0ed4839c8636c8d2951382487322f8cf3c32140b82f15",
+        ".local/e2e-artifacts/support-loss-20260928-d.server.log": "f38fbdfa2b3f79d0a968dae8b14ee741e414d7fbb7c0dcbc5fa85b599c21a5ff",
+        ".local/e2e-artifacts/support-loss-20260928-d.client.json": "f42b43f56c01adcb44c799a76e1aae9fbdf503d0b5b5761d9349ebf8c9616867",
+        ".local/e2e-artifacts/support-loss-20260928-d.reference.json": "7007491ed20eefe9f0e62b7bed12e5be6744fac4f723d16069a9f20276c264aa",
+        ".local/e2e-artifacts/support-loss-20260928-d.input.json": "120e4e3221ce7d9b27d0386c220462579cc445ff6c93c511e4c35a759e1a22d6",
+        ".local/e2e-artifacts/support-loss-20260928-d.model.json": "ef72a27924927a19df211ec9ee893e11d905358ff109c2b6d3d3b8dff3107dd0",
+        ".local/e2e-artifacts/support-loss-20260928-d.comparison.json": "9da6a3f7fdee634bb22c8b6c0125d789dff4f69eef4e4000c41acc1069b57ff4",
+        ".local/e2e-artifacts/support-loss-20260928-d.summary.json": "b828ec92b709be4e10152f216f201367f9d961a33753f20a7348ae58de71a151",
+        ".local/e2e-artifacts/support-loss-final-support-torch-r0.comparison.json": "05a626b47786fd2fdcbd110561e8867ef52965b08292684edcd84163e065bc11"
+      }
+    },
+    {
+      "run": "e",
+      "fixture": "device-support-wall-torch-r90",
+      "origin": {
+        "x": -84000,
+        "y": 180,
+        "z": 1000
+      },
+      "rotation": 90,
+      "requested_steps": [
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 0
+        },
+        {
+          "input": 0,
+          "powered": false,
+          "wait_ticks": 40
+        }
+      ],
+      "applied_inputs": [
+        {
+          "position": {
+            "x": -84000,
+            "y": 180,
+            "z": 999
+          },
+          "game_tick": 134378,
+          "packet_sequence": 2240,
+          "write_sequence": 2241,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": -84000,
+            "y": 180,
+            "z": 999
+          },
+          "game_tick": 134418,
+          "packet_sequence": 2951,
+          "write_sequence": 2952,
+          "kind": "lever",
+          "powered": false
+        }
+      ],
+      "applied_offsets": [
+        0,
+        40
+      ],
+      "original_classification": "matched_declared_projection",
+      "final_comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v14",
+        "tick_end_count": 81,
+        "tick_mismatches": [],
+        "live_write_count": 19,
+        "model_write_count": 19,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 3,
+        "model_scheduled_count": 3,
+        "first_scheduled_mismatch": null,
+        "first_tick_attempt_mismatch": null,
+        "live_callback_count": 64,
+        "model_callback_count": 64,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection",
+        "model_binary_sha256": "313d93a7f637bfb6c8a865626879c613570f74f80a288f4a8db82e5c24748f84"
+      },
+      "retained_fixture": {
+        "path": "crates/dustroute-translate/tests/fixtures/device-circuits/support-wall-torch-r90.json.gz",
+        "sha256": "0a780be6271581f7be222ffe724a630fc90dc874a57657c55204f1b6bde6fb20"
+      },
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_stopped_normally": true,
+      "original_capture_provenance": {
+        "fixture_sha256": "a83e256029aef215fc20de5a9ecd4e161a46f5c0d8a597c22b9b03849a205a0b",
+        "actor_sha256": "a12206d3d5f6f75d68c7382e219ba870b8125e7310220b6d2fe71c870cb8bded",
+        "capture_sha256": "57e8593d5b69ff8e7de0ef2d2c78c76dcfc255439fb67586c31ab85ba735c09c",
+        "comparator_sha256": "75ebf5c9475baa11bb0e58a5dc2e0c60939db676825a4611cf733a87f2496cdd",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "0d86fa38191a6f1c687ba8cf703e330bea23a841faa3d114ef9ff6612d83b383"
+      },
+      "artifacts": {
+        ".local/e2e-artifacts/support-loss-20260928-e.raw.ndjson": "f6b0640c8a1f0e593625747f44659ddc46bf08b8187c95c2a007b52a136bbb8d",
+        ".local/e2e-artifacts/support-loss-20260928-e.server.log": "62583fb97122485b9551899b023b7e42c443f6e34ca3ba5f5c79b8c58f407c52",
+        ".local/e2e-artifacts/support-loss-20260928-e.client.json": "1a7eb119dfc0041dce92d3c64f1f3f7513c34e7ebd541a25a28374b47172f675",
+        ".local/e2e-artifacts/support-loss-20260928-e.reference.json": "cca64c4613865eea6ea76186db3b09ccf7ed799586ab2b8ea5dfcb4edae3dbc8",
+        ".local/e2e-artifacts/support-loss-20260928-e.input.json": "ad0df5be3d9aaafb1f2da9f6fa9f79b48a7217d7d8853e82c4ecf9214ac868d1",
+        ".local/e2e-artifacts/support-loss-20260928-e.model.json": "f0ebe5fddfe92679fcc9413a9531cd908fc1dbb2ae0785912816a67b6501be87",
+        ".local/e2e-artifacts/support-loss-20260928-e.comparison.json": "36412ea58d611c0eff6068f48290666179cf81a873f6cb2acd67f2657fd77798",
+        ".local/e2e-artifacts/support-loss-20260928-e.summary.json": "2e275e7b28638cd82ed7008a9b0dabb2412f6785dccbe9fcdaa092d5e9f3b588",
+        ".local/e2e-artifacts/support-loss-final-support-wall-torch-r90.comparison.json": "5fbcc82ce104b58fec7dc35978ce77696025e9237f07a9d94a6f344e54138192"
+      }
+    },
+    {
+      "run": "f",
+      "fixture": "device-support-lever-r0",
+      "origin": {
+        "x": 85000,
+        "y": 180,
+        "z": 1000
+      },
+      "rotation": 0,
+      "requested_steps": [
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 0
+        },
+        {
+          "input": 0,
+          "powered": false,
+          "wait_ticks": 40
+        }
+      ],
+      "applied_inputs": [
+        {
+          "position": {
+            "x": 84999,
+            "y": 180,
+            "z": 1000
+          },
+          "game_tick": 135182,
+          "packet_sequence": 2120,
+          "write_sequence": 2121,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": 84999,
+            "y": 180,
+            "z": 1000
+          },
+          "game_tick": 135222,
+          "packet_sequence": 2807,
+          "write_sequence": 2808,
+          "kind": "lever",
+          "powered": false
+        }
+      ],
+      "applied_offsets": [
+        0,
+        40
+      ],
+      "original_classification": "matched_declared_projection",
+      "final_comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v14",
+        "tick_end_count": 81,
+        "tick_mismatches": [],
+        "live_write_count": 19,
+        "model_write_count": 19,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 3,
+        "model_scheduled_count": 3,
+        "first_scheduled_mismatch": null,
+        "first_tick_attempt_mismatch": null,
+        "live_callback_count": 64,
+        "model_callback_count": 64,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection",
+        "model_binary_sha256": "313d93a7f637bfb6c8a865626879c613570f74f80a288f4a8db82e5c24748f84"
+      },
+      "retained_fixture": {
+        "path": "crates/dustroute-translate/tests/fixtures/device-circuits/support-lever-r0.json.gz",
+        "sha256": "e81c78238ca84c486264dbcd4c107e0d4baa0df224ba272ab231f1c8369a3653"
+      },
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_stopped_normally": true,
+      "original_capture_provenance": {
+        "fixture_sha256": "59624cb15c433cffefab12c904021dc78d9fe9f7a4aeb9374eebc8dfb37804b9",
+        "actor_sha256": "a12206d3d5f6f75d68c7382e219ba870b8125e7310220b6d2fe71c870cb8bded",
+        "capture_sha256": "57e8593d5b69ff8e7de0ef2d2c78c76dcfc255439fb67586c31ab85ba735c09c",
+        "comparator_sha256": "75ebf5c9475baa11bb0e58a5dc2e0c60939db676825a4611cf733a87f2496cdd",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "0d86fa38191a6f1c687ba8cf703e330bea23a841faa3d114ef9ff6612d83b383"
+      },
+      "artifacts": {
+        ".local/e2e-artifacts/support-loss-20260928-f.raw.ndjson": "637cf52ba3e8007354b7f0f331108d4197811f708d8f5b93328724678ab26304",
+        ".local/e2e-artifacts/support-loss-20260928-f.server.log": "64a7e2517acf29880aea88cdf559fac84759718a81e12f79f745212d615a1657",
+        ".local/e2e-artifacts/support-loss-20260928-f.client.json": "d09a39e33e3523a0cf2538529bbf52c599cd4737a7b31c187ef6b9b6be1c4eb7",
+        ".local/e2e-artifacts/support-loss-20260928-f.reference.json": "f35fb547ab52f50827199dc7099e4594a4b5d61cb2bd39341ed052517608ff44",
+        ".local/e2e-artifacts/support-loss-20260928-f.input.json": "dfc144f28c0b75491df5b44db9b7eaa968f4c084d434ac5b422ab4ec206b0b2d",
+        ".local/e2e-artifacts/support-loss-20260928-f.model.json": "8053ccb09d2b9d586773caaba6d620daced9abf667c9eaf7361302b58970ede8",
+        ".local/e2e-artifacts/support-loss-20260928-f.comparison.json": "36412ea58d611c0eff6068f48290666179cf81a873f6cb2acd67f2657fd77798",
+        ".local/e2e-artifacts/support-loss-20260928-f.summary.json": "6e6e2274014cde96f8caf4ce9aa18a562c25c0d6a485d11973c17dd0f2954149",
+        ".local/e2e-artifacts/support-loss-final-support-lever-r0.comparison.json": "5fbcc82ce104b58fec7dc35978ce77696025e9237f07a9d94a6f344e54138192"
+      }
+    },
+    {
+      "run": "g",
+      "fixture": "device-support-repeater-r0",
+      "origin": {
+        "x": 86000,
+        "y": 180,
+        "z": 1000
+      },
+      "rotation": 0,
+      "requested_steps": [
+        {
+          "input": 1,
+          "powered": true,
+          "wait_ticks": 0
+        },
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 4
+        },
+        {
+          "input": 0,
+          "powered": false,
+          "wait_ticks": 40
+        }
+      ],
+      "applied_inputs": [
+        {
+          "position": {
+            "x": 86002,
+            "y": 181,
+            "z": 1000
+          },
+          "game_tick": 136002,
+          "packet_sequence": 2195,
+          "write_sequence": 2196,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": 85999,
+            "y": 180,
+            "z": 1000
+          },
+          "game_tick": 136006,
+          "packet_sequence": 2294,
+          "write_sequence": 2295,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": 85999,
+            "y": 180,
+            "z": 1000
+          },
+          "game_tick": 136046,
+          "packet_sequence": 2978,
+          "write_sequence": 2979,
+          "kind": "lever",
+          "powered": false
+        }
+      ],
+      "applied_offsets": [
+        0,
+        4,
+        44
+      ],
+      "original_classification": "mismatch",
+      "final_comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v14",
+        "tick_end_count": 85,
+        "tick_mismatches": [],
+        "live_write_count": 22,
+        "model_write_count": 22,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 4,
+        "model_scheduled_count": 4,
+        "first_scheduled_mismatch": null,
+        "first_tick_attempt_mismatch": null,
+        "live_callback_count": 67,
+        "model_callback_count": 67,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection",
+        "model_binary_sha256": "313d93a7f637bfb6c8a865626879c613570f74f80a288f4a8db82e5c24748f84"
+      },
+      "retained_fixture": {
+        "path": "crates/dustroute-translate/tests/fixtures/device-circuits/support-repeater-r0.json.gz",
+        "sha256": "0425c1db3cdda6bf6290f4d4f42c73f1f3ee5ad6027a2e324714d2af91a243af"
+      },
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_stopped_normally": true,
+      "original_capture_provenance": {
+        "fixture_sha256": "0bb79845ec2b91d7920425fb66d0a0ef9e23e8b2bd5a14b54918d761c6772b7a",
+        "actor_sha256": "a12206d3d5f6f75d68c7382e219ba870b8125e7310220b6d2fe71c870cb8bded",
+        "capture_sha256": "57e8593d5b69ff8e7de0ef2d2c78c76dcfc255439fb67586c31ab85ba735c09c",
+        "comparator_sha256": "75ebf5c9475baa11bb0e58a5dc2e0c60939db676825a4611cf733a87f2496cdd",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "0d86fa38191a6f1c687ba8cf703e330bea23a841faa3d114ef9ff6612d83b383"
+      },
+      "artifacts": {
+        ".local/e2e-artifacts/support-loss-20260928-g.raw.ndjson": "5f4a25dd8325575680e9b191d297a6b2bd044d1e16ed0a63446450b53d7e44dc",
+        ".local/e2e-artifacts/support-loss-20260928-g.server.log": "a5dcade8f44bb0da09a476126d4a15cf1ac0b62a223990889741af021f7bd4e9",
+        ".local/e2e-artifacts/support-loss-20260928-g.client.json": "c615072495eff74307ca0a8e80efcfd5b40e744ebdcdaf7a40ab51833eadf784",
+        ".local/e2e-artifacts/support-loss-20260928-g.reference.json": "0e67f6a98e9c3e5cfc0c502531a595a8e12ad40d240d10f560e1463232c53eff",
+        ".local/e2e-artifacts/support-loss-20260928-g.input.json": "96d48ac197b9fadf88458638c3e3564a8585fe9050ee98d1f6e6dc3d7ad442dd",
+        ".local/e2e-artifacts/support-loss-20260928-g.model.json": "325c25e90f03736516bd06c7487566bd32b9484a5237d4b0d178121db8271d4a",
+        ".local/e2e-artifacts/support-loss-20260928-g.comparison.json": "6bbd8cc6463f6b1f5554a247e468b92c5a587a5894066bc6b3532cb5d50e615d",
+        ".local/e2e-artifacts/support-loss-20260928-g.summary.json": "d9878fa243f2943083c7ab8b6a4f58a1cc868cd128955684b3963a2705c898d9",
+        ".local/e2e-artifacts/support-loss-final-support-repeater-r0.comparison.json": "de2bda098976410e8b9e1fb56592fc7ea7b048a7a95cb5c22f05552bd27bb17d"
+      }
+    },
+    {
+      "run": "h",
+      "fixture": "device-support-comparator-r0",
+      "origin": {
+        "x": 87000,
+        "y": 180,
+        "z": 1000
+      },
+      "rotation": 0,
+      "requested_steps": [
+        {
+          "input": 1,
+          "powered": true,
+          "wait_ticks": 0
+        },
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 4
+        },
+        {
+          "input": 0,
+          "powered": false,
+          "wait_ticks": 40
+        }
+      ],
+      "applied_inputs": [
+        {
+          "position": {
+            "x": 87002,
+            "y": 181,
+            "z": 1000
+          },
+          "game_tick": 136817,
+          "packet_sequence": 2123,
+          "write_sequence": 2124,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": 86999,
+            "y": 180,
+            "z": 1000
+          },
+          "game_tick": 136821,
+          "packet_sequence": 2228,
+          "write_sequence": 2229,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": 86999,
+            "y": 180,
+            "z": 1000
+          },
+          "game_tick": 136862,
+          "packet_sequence": 2924,
+          "write_sequence": 2925,
+          "kind": "lever",
+          "powered": false
+        }
+      ],
+      "applied_offsets": [
+        0,
+        4,
+        45
+      ],
+      "original_classification": "mismatch",
+      "final_comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v14",
+        "tick_end_count": 86,
+        "tick_mismatches": [],
+        "live_write_count": 22,
+        "model_write_count": 22,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 4,
+        "model_scheduled_count": 4,
+        "first_scheduled_mismatch": null,
+        "first_tick_attempt_mismatch": null,
+        "live_callback_count": 67,
+        "model_callback_count": 67,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection",
+        "model_binary_sha256": "313d93a7f637bfb6c8a865626879c613570f74f80a288f4a8db82e5c24748f84"
+      },
+      "retained_fixture": {
+        "path": "crates/dustroute-translate/tests/fixtures/device-circuits/support-comparator-r0.json.gz",
+        "sha256": "25fcdf55a06dd6aef63ba64a3d78dce5be04994ab6f06f12a9934348bd7b0f36"
+      },
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_stopped_normally": true,
+      "original_capture_provenance": {
+        "fixture_sha256": "19a012a01887953c697e3cb0f327d30075f3b573465222643eaafe5da6678458",
+        "actor_sha256": "a12206d3d5f6f75d68c7382e219ba870b8125e7310220b6d2fe71c870cb8bded",
+        "capture_sha256": "57e8593d5b69ff8e7de0ef2d2c78c76dcfc255439fb67586c31ab85ba735c09c",
+        "comparator_sha256": "75ebf5c9475baa11bb0e58a5dc2e0c60939db676825a4611cf733a87f2496cdd",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "0d86fa38191a6f1c687ba8cf703e330bea23a841faa3d114ef9ff6612d83b383"
+      },
+      "artifacts": {
+        ".local/e2e-artifacts/support-loss-20260928-h.raw.ndjson": "a85152b744ab481da61c28d0302cc20664045da10b26e321f78d09228de1f014",
+        ".local/e2e-artifacts/support-loss-20260928-h.server.log": "7c94e8c2e351a72e565bf027e410255223682d21f29a8a4ab7f92203cd779ffc",
+        ".local/e2e-artifacts/support-loss-20260928-h.client.json": "f9c22c7407162415942bc3548d4eefbc01302eb387b03497fef27ed277d8ef81",
+        ".local/e2e-artifacts/support-loss-20260928-h.reference.json": "15f6400cbbd09d2c2ee14d97852ce2519a5ff9d2ebe72d1d71b974e017104487",
+        ".local/e2e-artifacts/support-loss-20260928-h.input.json": "16c3be889c698ce2aaa3b541ee16d6fc643a53896a71052149f454db0b31d7f6",
+        ".local/e2e-artifacts/support-loss-20260928-h.model.json": "f720d52109953b76aa8e47450f46f0a18768e380ffaf8e34a7806e9f4d712396",
+        ".local/e2e-artifacts/support-loss-20260928-h.comparison.json": "97ff298f02e8cf8a14e5272a2a80a2c7cd57209e519964801f3ff9a8b11d693a",
+        ".local/e2e-artifacts/support-loss-20260928-h.summary.json": "29d08d681eb20784b657150980e24be18dbdd1dc880c5eb9623f8c200eb9a7e2",
+        ".local/e2e-artifacts/support-loss-final-support-comparator-r0.comparison.json": "7ed1abdb04440cbbe995e37cf76880e9fa6e0fec2500dc8aa035a7d565b25a5d"
+      }
+    },
+    {
+      "run": "i",
+      "fixture": "device-support-body-wire-r0",
+      "origin": {
+        "x": 88000,
+        "y": 180,
+        "z": 1000
+      },
+      "rotation": 0,
+      "requested_steps": [
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 0
+        },
+        {
+          "input": 0,
+          "powered": false,
+          "wait_ticks": 40
+        }
+      ],
+      "applied_inputs": [
+        {
+          "position": {
+            "x": 87999,
+            "y": 180,
+            "z": 1000
+          },
+          "game_tick": 137628,
+          "packet_sequence": 2027,
+          "write_sequence": 2028,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": 87999,
+            "y": 180,
+            "z": 1000
+          },
+          "game_tick": 137668,
+          "packet_sequence": 2617,
+          "write_sequence": 2618,
+          "kind": "lever",
+          "powered": false
+        }
+      ],
+      "applied_offsets": [
+        0,
+        40
+      ],
+      "original_classification": "matched_declared_projection",
+      "final_comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v14",
+        "tick_end_count": 81,
+        "tick_mismatches": [],
+        "live_write_count": 9,
+        "model_write_count": 9,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 0,
+        "model_scheduled_count": 0,
+        "first_scheduled_mismatch": null,
+        "first_tick_attempt_mismatch": null,
+        "live_callback_count": 33,
+        "model_callback_count": 33,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection",
+        "model_binary_sha256": "313d93a7f637bfb6c8a865626879c613570f74f80a288f4a8db82e5c24748f84"
+      },
+      "retained_fixture": {
+        "path": "crates/dustroute-translate/tests/fixtures/device-circuits/support-body-wire-r0.json.gz",
+        "sha256": "7825337c16fd6022cfe0896daa70145b77dfe66c23e9214e6ca16c002441d38c"
+      },
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_stopped_normally": true,
+      "original_capture_provenance": {
+        "fixture_sha256": "4f3f1bf50f300313a71230da52b2f9d2a054173e83dcb972406526d7fe1b0d26",
+        "actor_sha256": "a12206d3d5f6f75d68c7382e219ba870b8125e7310220b6d2fe71c870cb8bded",
+        "capture_sha256": "57e8593d5b69ff8e7de0ef2d2c78c76dcfc255439fb67586c31ab85ba735c09c",
+        "comparator_sha256": "75ebf5c9475baa11bb0e58a5dc2e0c60939db676825a4611cf733a87f2496cdd",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "0d86fa38191a6f1c687ba8cf703e330bea23a841faa3d114ef9ff6612d83b383"
+      },
+      "artifacts": {
+        ".local/e2e-artifacts/support-loss-20260928-i.raw.ndjson": "a17ce0734f69eccd66900303c428fae3a507933524833655f62b3291bedce621",
+        ".local/e2e-artifacts/support-loss-20260928-i.server.log": "f572e42d215879f52936dfb5cd2dc57614ba09d89b7fb258a57f5ace752bf7bd",
+        ".local/e2e-artifacts/support-loss-20260928-i.client.json": "b3c2233f668728483225bb51988d5cf3e520ac8f34de652e979d7917540f29a6",
+        ".local/e2e-artifacts/support-loss-20260928-i.reference.json": "cc8b2ef364a5237f8232128e6a1a721395b29f9976f4775d961bd9d400290a6d",
+        ".local/e2e-artifacts/support-loss-20260928-i.input.json": "859b21d84c718e831af2ddd5b0808e1099f5e611f768b03467a09e1184b912a1",
+        ".local/e2e-artifacts/support-loss-20260928-i.model.json": "a4646063bdd1cf863d9c0a2934b4729466f0fe2f23ce704f524ea9d840c5eff4",
+        ".local/e2e-artifacts/support-loss-20260928-i.comparison.json": "eec8029a1a238ad57ece1d5ec039e4f677a19e36385175f9e56ac762d3b9c6ad",
+        ".local/e2e-artifacts/support-loss-20260928-i.summary.json": "b8ad4b470585ba9fc21d312a3d6613c0e7c9006075be24ea9d0b3c109ade0ebe",
+        ".local/e2e-artifacts/support-loss-final-support-body-wire-r0.comparison.json": "a71075196c97fae34f854e2f6aa8ef3346b9bef1c19bcfa266a7aa6a218c72ea"
+      }
+    },
+    {
+      "run": "j",
+      "fixture": "device-support-body-torch-r0",
+      "origin": {
+        "x": 89000,
+        "y": 180,
+        "z": 1000
+      },
+      "rotation": 0,
+      "requested_steps": [
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 0
+        },
+        {
+          "input": 0,
+          "powered": false,
+          "wait_ticks": 40
+        }
+      ],
+      "applied_inputs": [
+        {
+          "position": {
+            "x": 88999,
+            "y": 180,
+            "z": 1000
+          },
+          "game_tick": 138443,
+          "packet_sequence": 2039,
+          "write_sequence": 2040,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": 88999,
+            "y": 180,
+            "z": 1000
+          },
+          "game_tick": 138483,
+          "packet_sequence": 2585,
+          "write_sequence": 2586,
+          "kind": "lever",
+          "powered": false
+        }
+      ],
+      "applied_offsets": [
+        0,
+        40
+      ],
+      "original_classification": "matched_declared_projection",
+      "final_comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v14",
+        "tick_end_count": 81,
+        "tick_mismatches": [],
+        "live_write_count": 8,
+        "model_write_count": 8,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 0,
+        "model_scheduled_count": 0,
+        "first_scheduled_mismatch": null,
+        "first_tick_attempt_mismatch": null,
+        "live_callback_count": 32,
+        "model_callback_count": 32,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection",
+        "model_binary_sha256": "313d93a7f637bfb6c8a865626879c613570f74f80a288f4a8db82e5c24748f84"
+      },
+      "retained_fixture": {
+        "path": "crates/dustroute-translate/tests/fixtures/device-circuits/support-body-torch-r0.json.gz",
+        "sha256": "4a7ea530e37a71f04130a5322d002e19ef51313bb40858c9b7b1d28e52237d10"
+      },
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_stopped_normally": true,
+      "original_capture_provenance": {
+        "fixture_sha256": "8e1fdb858f55c1d7800a6539dd9a4c2b9506320ee063a8a005e4535d0b3bb1c6",
+        "actor_sha256": "a12206d3d5f6f75d68c7382e219ba870b8125e7310220b6d2fe71c870cb8bded",
+        "capture_sha256": "57e8593d5b69ff8e7de0ef2d2c78c76dcfc255439fb67586c31ab85ba735c09c",
+        "comparator_sha256": "75ebf5c9475baa11bb0e58a5dc2e0c60939db676825a4611cf733a87f2496cdd",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "0d86fa38191a6f1c687ba8cf703e330bea23a841faa3d114ef9ff6612d83b383"
+      },
+      "artifacts": {
+        ".local/e2e-artifacts/support-loss-20260928-j.raw.ndjson": "082e6182b6a1e18ba4730206eb86e36f63d3871fb257eacd30190582f5dae2bc",
+        ".local/e2e-artifacts/support-loss-20260928-j.server.log": "aa744bce4a19bba60dbd7638e168b0825854d08b1572004120e44a167fbee840",
+        ".local/e2e-artifacts/support-loss-20260928-j.client.json": "db21ceeda90f300694a30489e1c1737107603582d9b85895d087383dc3f2b85d",
+        ".local/e2e-artifacts/support-loss-20260928-j.reference.json": "818a969c10482beb2a1e2814940bcb14d156433c1b5c749671aafa29f049c6e1",
+        ".local/e2e-artifacts/support-loss-20260928-j.input.json": "4e873137e968a974ceb442806ef63f4076c01f2bfdc0d778ff1ceb062e92b907",
+        ".local/e2e-artifacts/support-loss-20260928-j.model.json": "e11973be7f67fee40f7cf01967885177ca264ceb5e780dd2787356c1503528f8",
+        ".local/e2e-artifacts/support-loss-20260928-j.comparison.json": "263f8abec3334b918217a00e5b085b9bff3f4022f71befbb3eebb414e503f931",
+        ".local/e2e-artifacts/support-loss-20260928-j.summary.json": "86570fbe4fb2c3539b30d10186737425a6c75a3863851ba4aa0321357da4271c",
+        ".local/e2e-artifacts/support-loss-final-support-body-torch-r0.comparison.json": "6d9d1cbe961e575b9baba9f480eec0d849504f3649d746613ddcb7907f8ff26f"
+      }
+    },
+    {
+      "run": "k",
+      "fixture": "device-support-pull-wire-r90",
+      "origin": {
+        "x": -90000,
+        "y": 180,
+        "z": 1000
+      },
+      "rotation": 90,
+      "requested_steps": [
+        {
+          "input": 0,
+          "powered": false,
+          "wait_ticks": 0
+        }
+      ],
+      "applied_inputs": [
+        {
+          "position": {
+            "x": -90000,
+            "y": 180,
+            "z": 999
+          },
+          "game_tick": 139265,
+          "packet_sequence": 2134,
+          "write_sequence": 2135,
+          "kind": "lever",
+          "powered": false
+        }
+      ],
+      "applied_offsets": [
+        0
+      ],
+      "original_classification": "matched_declared_projection",
+      "final_comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v14",
+        "tick_end_count": 41,
+        "tick_mismatches": [],
+        "live_write_count": 12,
+        "model_write_count": 12,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 3,
+        "model_scheduled_count": 3,
+        "first_scheduled_mismatch": null,
+        "first_tick_attempt_mismatch": null,
+        "live_callback_count": 28,
+        "model_callback_count": 28,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection",
+        "model_binary_sha256": "313d93a7f637bfb6c8a865626879c613570f74f80a288f4a8db82e5c24748f84"
+      },
+      "retained_fixture": {
+        "path": "crates/dustroute-translate/tests/fixtures/device-circuits/support-pull-wire-r90.json.gz",
+        "sha256": "486ce17a1866d4a9fa8e80032554f57b47e0d197cea8aab941f92c1f5f32eb85"
+      },
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_stopped_normally": true,
+      "original_capture_provenance": {
+        "fixture_sha256": "ebad87c167eea700e4a614574d9e355e7159e08c2ce758cb4a819766ec94d0b8",
+        "actor_sha256": "a12206d3d5f6f75d68c7382e219ba870b8125e7310220b6d2fe71c870cb8bded",
+        "capture_sha256": "57e8593d5b69ff8e7de0ef2d2c78c76dcfc255439fb67586c31ab85ba735c09c",
+        "comparator_sha256": "75ebf5c9475baa11bb0e58a5dc2e0c60939db676825a4611cf733a87f2496cdd",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "0d86fa38191a6f1c687ba8cf703e330bea23a841faa3d114ef9ff6612d83b383"
+      },
+      "artifacts": {
+        ".local/e2e-artifacts/support-loss-20260928-k.raw.ndjson": "4e54cb6b51cf53a84f4c46e8760b12aa4745e0f29fc12ecc1891ea3842686e95",
+        ".local/e2e-artifacts/support-loss-20260928-k.server.log": "0823972d0fa5c36b0e4e39706be0cfa9a899952526f67743f0f36e265a7b316d",
+        ".local/e2e-artifacts/support-loss-20260928-k.client.json": "26a01c6426662e0b48940864fa7af08e6b14f034c8afd65e0a6fcb02fb5f53f2",
+        ".local/e2e-artifacts/support-loss-20260928-k.reference.json": "bcd85539265c0806a3a2afae89fb9105fa0a888b0c310716bc0f845ed6a1e424",
+        ".local/e2e-artifacts/support-loss-20260928-k.input.json": "9eba7fa3f6e59973805522eb5b305c1e79eb960f4dbe52b29e36eb1d02e97c62",
+        ".local/e2e-artifacts/support-loss-20260928-k.model.json": "5475dfad081a6847b58f6e306a3c8db59ca37f9dcfa7cbeae75a0d84149db813",
+        ".local/e2e-artifacts/support-loss-20260928-k.comparison.json": "ff4f4915a9064a11015ea69f7b5662c47617167fd336f591b6fd1de09a2ec230",
+        ".local/e2e-artifacts/support-loss-20260928-k.summary.json": "f8cf05b20408512db21bf4f00db1cc4e8f28ec21eaf29163f82ac2817e45f694",
+        ".local/e2e-artifacts/support-loss-final-support-pull-wire-r90.comparison.json": "3c8ef6673e23a45a1204fbed68e9c0a5e0e1582c8ffa8bb2369fd6e88c767577"
+      }
+    }
+  ],
+  "corrections": [
+    "RepeaterBlock and ComparatorBlock have DOWN shape support checks as well as ordinary neighbor checks. Original g/h mismatches remain intact; final comparisons use the corrected common GATE declaration against the same captures.",
+    "The probe logs ordered_tick before the ServerWorld identity guard. New fixtures compare every attempt and its delivery/discard decision, separately from delivered ticks. No stale tick is silently removed from the evidence."
+  ],
+  "source_reference": {
+    "source_jar": "/root/.gradle/caches/fabric-loom/minecraftMaven/net/minecraft/minecraft-merged/1.21.11-net.fabricmc.yarn.1_21_11.1.21.11+build.6-v2/minecraft-merged-1.21.11-net.fabricmc.yarn.1_21_11.1.21.11+build.6-v2.jar",
+    "classes_sha256": {
+      "net/minecraft/block/WallMountedBlock.class": "de4e1242c8ca9538e103b0ba04534125d1030daa9cf36945d87baf0e38520934",
+      "net/minecraft/block/AbstractTorchBlock.class": "7ef00a389bd4613217ead4334326e3cf9d241e7b0692fe4be084e0c90a596a24",
+      "net/minecraft/block/TorchBlock.class": "a09b703cc10654b7e25db1cabbab4ed573b4c1c68f41f0f6f1847c9b32adc00c",
+      "net/minecraft/block/WallTorchBlock.class": "ee6d7916147d9898c8a16f3c941b40ea172bb450628b74f8753c734dc4e0b063",
+      "net/minecraft/block/AbstractRedstoneGateBlock.class": "1650b9eacd97788b5be6fad0164e71834191298daadcecb2fac90c7c117cfa3d",
+      "net/minecraft/block/RepeaterBlock.class": "2ab7b5c657ba0e701258b58870b9d4611d10d9dd5e57b6db3c84c296dcd73b67",
+      "net/minecraft/block/ComparatorBlock.class": "b73c728bf082c6ea3a43f8ec2b0276b0d1bdc94ea078a03a123cc5f53a3e2974",
+      "net/minecraft/block/RedstoneWireBlock.class": "0583da64d1ca29a6da959b09b4f6b74d53f8542e81f3f32f557ec332931f77ea",
+      "net/minecraft/block/PistonExtensionBlock.class": "cb3ecd2c13301868d900a6e874891db1ce59323dc13499947b0772ec52ad132c",
+      "net/minecraft/block/PistonHeadBlock.class": "d71a4265c315f6ab25f2964bb9575278bce24a347055971d24ffc2fa48b09a8b",
+      "net/minecraft/block/SideShapeType.class": "c98e1dc83c0037a5861cbae64785a566c97fb67b88fcb6e4794957105b82d25f",
+      "net/minecraft/block/SideShapeType$2.class": "3ad5acac0922ed7284e2d2ef9bba0b600ea04acf377db82767ff98ead033e1cb",
+      "net/minecraft/block/RedstoneTorchBlock.class": "2b2750e6b5eea5f2d41851c0a93135fae6f165eb7180689a1f9fb014afcb04dc",
+      "net/minecraft/block/LeverBlock.class": "47870b3317b33b9eb5e3b2b0e3a54b2effa2c3fbdd443b8e00aff265dc34ebf6",
+      "net/minecraft/block/ButtonBlock.class": "334dcae45f94deb208bb17e35f5630faaebe77775164aa880f9dd2ba228f7fab",
+      "net/minecraft/block/Block.class": "50db238ead15fdf94b4de48fc34023ef16ebb3b9d5f24d5c4f32c8ae103eddbb",
+      "net/minecraft/world/World.class": "745b101ac1d0231555831f0fcf65e98e89ffd18d45facce363d31243592cad11",
+      "net/minecraft/world/chunk/WorldChunk.class": "ac2873369f78d13129bc4651058bf95230770f168e4b56b9f2a50f00b2e1c5b0",
+      "net/minecraft/world/block/NeighborUpdater.class": "288328dcd874eea9005fe034f0715c2681f3af7e932c4d73484065b06b516b9e",
+      "net/minecraft/server/world/ServerWorld.class": "737285e67694a14c1f51858e929209c53dc91f3bbe5bd030b09c56e9d71de14f"
+    },
+    "probe_sources_sha256": {
+      "/root/DustRoute-minecraft-instrumentation/build.gradle": "f722876c5f961dd6557292526936e8e3a8d4154b22f45d19c59c482e47debb19",
+      "/root/DustRoute-minecraft-instrumentation/gradle/wrapper/gradle-wrapper.properties": "c67b97cdfe41822dbc8dc4614460f4ae0d2eef937d873f4b9011e892b1875c0d",
+      "/root/DustRoute-minecraft-instrumentation/gradle.properties": "bc3b225b1c58f0b6a613a6e3a89abb07267b1ddc50cbf597b7e7eb24a5c5121f",
+      "/root/DustRoute-minecraft-instrumentation/settings.gradle": "6d590f07f64de77b5e28f13244dc8a39e18fde666a3815c06ed8694d805b1da3",
+      "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/CaptureController.java": "ae6c13af15a194097822f0c4925271575b3df314f296ca46cf8c2570a696d9d8",
+      "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/DustRouteInstrumentation.java": "d066cbf8c04dedb4fe0468b20518ba3c4aa09601cc64282ea1db6ec9257c70b0",
+      "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/InstrumentationLog.java": "4896331f77b7f1be0f5462bfa3e7fada4e4eac510c1bc6f946395ef9c7a719d1",
+      "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/ObservationFilter.java": "51ce513b7c41724ad09dbc2b1d6b9178b19380dad7474aacc7f8e715a47d3332",
+      "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/mixin/AbstractBlockStateMixin.java": "b0bcc128a52c3000446dffa1712bee5877c083c764c50366a01a6f1de288c0ef",
+      "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/mixin/ObserverBlockMixin.java": "7be6e71ac12bf927e650fdd1f277c774642acaf8227663dfb2ae23755489a0f1",
+      "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/mixin/PistonBlockEntityMixin.java": "a2d57320171b6b6979b396bd9b8a62655ce19be9283aaa60a6da6f7d66d6e246",
+      "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/mixin/PistonBlockMixin.java": "90d4e22e4a7958412f1df8df1e12d9f52655ac71cd0266d787461b27bb853728",
+      "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/mixin/ServerCommonNetworkHandlerMixin.java": "67db460a232c552bb5452203466cc0cc04fac01fd7d06fefc3a9a1fd2377127c",
+      "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/mixin/ServerPlayNetworkHandlerMixin.java": "51b701457fff1f7c376206c6277c209013d1a5e93e8a33e1c03f682671630807",
+      "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/mixin/ServerWorldMixin.java": "c2d11c0129335c36a2d08fd28a3ff51682e28821c7e7b8f62c36bd61ddf2dc39",
+      "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/mixin/WorldChunkMixin.java": "09fa3f45e45007356ba9ddbea246234d0d147a3e4a0028eeb2afbc0ac7219b53",
+      "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/mixin/WorldMixin.java": "ddc0050a85c83098edcf4c4fe77f2e21c35ea995f66c5c92ec56f8cdacd02593",
+      "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/mixin/WorldTickSchedulerMixin.java": "06c9bf6bec5bbd44621b31ffe237966cc56e8702eb14c4be7360a37357bb66cf",
+      "/root/DustRoute-minecraft-instrumentation/src/main/resources/dustroute-vanilla-instrumentation.mixins.json": "006b4ba66fc0e94215c80539e10320c3bfa57b4ecb8aab6d1f53f41e330c4f6a",
+      "/root/DustRoute-minecraft-instrumentation/src/main/resources/fabric.mod.json": "62d7e74403e53f93d51c576e6cbd58a4c3eb44f1fe7af5db5d7a2afba57960bd"
+    }
+  },
+  "probe_reused_uncommitted_work": [
+    " M README.md",
+    " M docs/observation-contract.md",
+    " M scripts/normalize_ndjson.py",
+    " M scripts/test_normalize_ndjson.py",
+    " M src/main/java/dev/dustroute/instrumentation/InstrumentationLog.java",
+    " M src/main/java/dev/dustroute/instrumentation/ObservationFilter.java",
+    " M src/main/java/dev/dustroute/instrumentation/mixin/PistonBlockEntityMixin.java",
+    " M src/main/java/dev/dustroute/instrumentation/mixin/ServerPlayNetworkHandlerMixin.java",
+    " M src/main/java/dev/dustroute/instrumentation/mixin/WorldTickSchedulerMixin.java",
+    " M src/main/resources/dustroute-vanilla-instrumentation.mixins.json",
+    "?? scripts/compress_ndjson.py",
+    "?? scripts/test_compress_ndjson.py",
+    "?? src/main/java/dev/dustroute/instrumentation/CaptureController.java",
+    "?? src/main/java/dev/dustroute/instrumentation/mixin/AbstractBlockStateMixin.java",
+    "?? src/main/java/dev/dustroute/instrumentation/mixin/ObserverBlockMixin.java",
+    "?? src/main/java/dev/dustroute/instrumentation/mixin/PistonBlockMixin.java",
+    "?? src/main/java/dev/dustroute/instrumentation/mixin/WorldChunkMixin.java"
+  ],
+  "sources_sha256": {
+    "crates/dustroute-library/src/runtime_behavior.rs": "dc1a7f17eab0008ab47d5aeb63e72071a7034f53ac56a671fcc17108826929fc",
+    "crates/dustroute-library/tests/executable_laws.rs": "21c50a68202faa92ed89a84220dbaff64ab033410eaa3b72acc0903bc1aa3066",
+    "crates/dustroute-library/tests/execution_context.rs": "77116c925e0bec0c5de6de68d02b06c3feacf6a8ea5bb65777bc3536b972dfec",
+    "crates/dustroute-mcp/src/service_blueprint_tests.rs": "7acd4982b4fe2b78e22e0181db9919c3c9e54cf2313d7a5545745712424c8886",
+    "crates/dustroute-minecraft/src/execution_context.rs": "2129f95b58b61667ad01fd802a9575cf6d21e29b453b276e0d8a6d5b839cff4c",
+    "crates/dustroute-minecraft/src/physical.rs": "29fe977119aaf40376c311b8151669633379f8b03da7752a663f912c54f1245c",
+    "crates/dustroute-minecraft/src/piston_electrical.rs": "ccb6b5b11dd82ad8ca290752d38971390f89f76bfc81de2a3cb4c70d63ba9c7e",
+    "crates/dustroute-minecraft/src/time/piston_runtime/adapter.rs": "a10412bc5faf1ce42ac82e310131e03dfdf2cce17a6c76cc1cce2d99d8352263",
+    "crates/dustroute-minecraft/src/time/piston_runtime/command.rs": "f154347784d2b5b0e2e0cf0646847bada93577b9e31aee1955afb01b6fa3d0cb",
+    "crates/dustroute-minecraft/src/time/piston_runtime/devices.rs": "a2235368b9d478b10d2c7ca7f7fdac75add820696363715aea17721e8e07c5b3",
+    "crates/dustroute-minecraft/src/time/piston_runtime/electrical.rs": "1cedbd0bd2df97772fc422374e658d7faf37fc3adbb75c5c7a6853454e7d981b",
+    "crates/dustroute-minecraft/src/time/piston_runtime/mod.rs": "f74f5f8f80887452ee7ac348b06a5c79246eacfd8ddf9a5a4516730a09901cca",
+    "crates/dustroute-minecraft/src/time/piston_runtime/notifications.rs": "64bba4ba0ad0d7a6696d8ad4455f23df8b60a8aff70542aa4d55284273c6af48",
+    "crates/dustroute-minecraft/src/time/piston_runtime/support.rs": "018dfbd53cb4cc8cdb6db04c4217a1dee162f48c150750b64d38acd434f62e77",
+    "crates/dustroute-minecraft/src/world.rs": "45aeef8cdb8c824dfbc63583271310f55271d836bf4ca5023a87f458542d822f",
+    "crates/dustroute-minecraft/tests/physical_admission.rs": "373cb656e839ac1c54e9ae0a473b1bb0df2217345a1c6c29fb596894e4eb40fa",
+    "crates/dustroute-minecraft/tests/piston_runtime.rs": "7f6501bea74809903acbacfabe0f65ff0bfbbe8a5476c1f8167fec3ff40dd4df",
+    "crates/dustroute-minecraft/tests/support_loss.rs": "cb5e6e6127dff17f768103c6d9262aee6b34731211ace2a61f397c70dc85b573",
+    "crates/dustroute-minecraft/tests/unified_piston_runtime.rs": "4f8badabc8ac7597c8b8e9169c1d2a0a3b20342dff4ba388062d5c94f828852e",
+    "crates/dustroute-translate/tests/execution_context.rs": "b25930f5ab93ed5a61e51bea50b15cae6b741b452b4b25be37c3e55ab04c1924",
+    "crates/dustroute-translate/tests/location_behavior.rs": "59eed934ed5fa6be8bddf3c5fafd882e08fcac893256ce26d4358aa663272ad3",
+    "crates/dustroute-translate/tests/support/runtime_blueprint.rs": "b5df5db17d379cba2095c36ecac0f91b27ed4efc9ec286c49b4a2f045d63f240",
+    "crates/dustroute-translate/tests/unified_piston_behavior.rs": "fab32f322e363060fc8f895a43aeb61ed1e38a6ed0d06f88487392c04e492b98",
+    "tools/compare_device_circuits.py": "75ebf5c9475baa11bb0e58a5dc2e0c60939db676825a4611cf733a87f2496cdd",
+    "tools/make_support_loss_fixtures.py": "d5b466ac5fb6eac7e1d805919a779671c4fe84a09d81858c7c2e2f632cc130ce",
+    "tools/observe_device_circuit.py": "57e8593d5b69ff8e7de0ef2d2c78c76dcfc255439fb67586c31ab85ba735c09c",
+    "tools/test_device_circuits.py": "31c543ddc43781a496493ba77423b86b573cac9b9ece3820444f97bafaeb7d8e"
+  },
+  "model_binary_sha256": "313d93a7f637bfb6c8a865626879c613570f74f80a288f4a8db82e5c24748f84",
+  "validation": [
+    {
+      "name": "fmt",
+      "command": [
+        "cargo",
+        "fmt",
+        "--all"
+      ],
+      "exit_code": 0,
+      "log": ".local/e2e-artifacts/support-loss-validation-fmt.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "passed_tests_including_doctests": 0
+    },
+    {
+      "name": "build",
+      "command": [
+        "cargo",
+        "build",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-translate",
+        "--example",
+        "compare_electrical_pistons"
+      ],
+      "exit_code": 0,
+      "log": ".local/e2e-artifacts/support-loss-validation-build.log",
+      "sha256": "ae6f0ddfd73b1132179dfc9b688197c1cc774da7847b6f42050bee024ed629be",
+      "passed_tests_including_doctests": 0
+    },
+    {
+      "name": "minecraft",
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-minecraft",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0,
+      "log": ".local/e2e-artifacts/support-loss-validation-minecraft.log",
+      "sha256": "8771345bdffe9fc8cb26ea3879a6b49450bab84925702c812e394496b2bf525f",
+      "passed_tests_including_doctests": 300
+    },
+    {
+      "name": "library",
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-library",
+        "--test",
+        "execution_context",
+        "--test",
+        "executable_laws",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0,
+      "log": ".local/e2e-artifacts/support-loss-validation-library.log",
+      "sha256": "114ec39505e0279ded16b73267f869c61a7e0ecaef1cdfbf2905f8c0ae4960b2",
+      "passed_tests_including_doctests": 18
+    },
+    {
+      "name": "translate",
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-translate",
+        "--test",
+        "execution_context",
+        "--test",
+        "electrical_piston_construction",
+        "--test",
+        "electrical_piston_adoption",
+        "--test",
+        "electrical_piston_relocation",
+        "--test",
+        "runtime_adoption",
+        "--test",
+        "ordinary_reference_door",
+        "--test",
+        "location_behavior",
+        "--test",
+        "unified_piston_behavior",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0,
+      "log": ".local/e2e-artifacts/support-loss-validation-translate.log",
+      "sha256": "60546d864f98beec79e646c7afb35e8e400ae9826627cab469bf4cc8b4c65c5f",
+      "passed_tests_including_doctests": 40
+    },
+    {
+      "name": "mcp-empty-filter",
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-mcp",
+        "--lib",
+        "service_blueprint_tests",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0,
+      "log": ".local/e2e-artifacts/support-loss-validation-mcp.log",
+      "note": "Initial filter matched zero tests; corrected module filter is recorded separately.",
+      "sha256": "040189677e3631672d11a6622f5f6f43627eb95d8f8b192656565c37830db857",
+      "passed_tests_including_doctests": 0
+    },
+    {
+      "name": "clippy",
+      "command": [
+        "cargo",
+        "clippy",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "--workspace",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "exit_code": 0,
+      "log": ".local/e2e-artifacts/support-loss-validation-clippy.log",
+      "sha256": "bd71f065d0c07b3be0cb43094bfc0c046e93d978d45e94480d2f1a6ada9cc050",
+      "passed_tests_including_doctests": 0
+    },
+    {
+      "name": "fmt-check",
+      "command": [
+        "cargo",
+        "fmt",
+        "--all",
+        "--",
+        "--check"
+      ],
+      "exit_code": 0,
+      "log": ".local/e2e-artifacts/support-loss-validation-fmt-check.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "passed_tests_including_doctests": 0
+    },
+    {
+      "name": "diff-check",
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit_code": 0,
+      "log": ".local/e2e-artifacts/support-loss-validation-diff-check.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "passed_tests_including_doctests": 0
+    },
+    {
+      "name": "mcp",
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-mcp",
+        "--lib",
+        "blueprint_tests",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0,
+      "log": ".local/e2e-artifacts/support-loss-validation-mcp-corrected.log",
+      "sha256": "d2d7171227bf1a61ba94032559a545e035b6f66996e5ed027301c60bb025211b",
+      "passed_tests_including_doctests": 15
+    },
+    {
+      "name": "python",
+      "command": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tools",
+        "-p",
+        "test_*.py"
+      ],
+      "exit_code": 0,
+      "passed_tests": 26,
+      "log": ".local/e2e-artifacts/support-loss-validation-python.log",
+      "sha256": "a4c4e70bd2983252d6cadf59ed6b2e50d53a58bb8a3017aa6131aa52b4b932cc"
+    }
+  ],
+  "preliminary_broad_check": {
+    "command": "cargo test --offline --locked -j 1 -p dustroute-library -p dustroute-translate -- --test-threads=1",
+    "exit_code": 101,
+    "log": ".local/e2e-artifacts/support-loss-preliminary-library-translate.log",
+    "sha256": "ba0b796bcf2e38690eced64199d66ef79a55b60350db9bba1ed0c528e59cd62d",
+    "outcome": "Stopped at the old unsupported_support_destruction_is_still_undetermined expectation. Its body relation now closes correctly after attachment loss. The corrected test and affected construction/adoption targets were rerun with final code; a full workspace test run is not claimed."
+  },
+  "boundaries": [
+    "Fresh strict placement in isolated known regions; not arbitrary live construction certification.",
+    "Complete bounded tick-end blocks, ordered writes, delivered device ticks, scheduler attempt/discard order and available active-device/piston boundaries.",
+    "No direct observation of hidden registers/histories, shape or inert-target callbacks; no item entities.",
+    "Checkpoint and behavior-state restoration verifies model continuation, not reconstruction of live hidden state.",
+    "Known attachment loss only; new shapes/materials, pressure plates, direct piston crushing, slime/honey, inventory/entities/fluids remain excluded.",
+    "Retained raw intervals include original header/end; full capture artifact hashes remain local references.",
+    "Retained 3x3 door and earlier mixed-device observations are replayed; no new live door trial or full workspace test run."
+  ]
+}

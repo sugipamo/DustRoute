@@ -1,0 +1,1660 @@
+{
+  "schema_version": "dustroute.passive-shapes-conformance.v1",
+  "date": "2026-09-28",
+  "base_commit": "d8ba7d8",
+  "branch": "codex/data-driven-block-runtime",
+  "target": {
+    "minecraft": "Java 1.21.11",
+    "yarn": "1.21.11+build.6",
+    "enabled_features": [
+      "minecraft:vanilla"
+    ],
+    "loader": "0.19.5",
+    "loom": "1.17.20",
+    "source_world_class_sha256": "745b101ac1d0231555831f0fcf65e98e89ffd18d45facce363d31243592cad11"
+  },
+  "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v15",
+  "root_exploration": "dustroute.piston-electrical-root-exploration.v15",
+  "physical_admission": "dustroute.physical-admission.java-1-21-11.v6",
+  "production_physics_changed": true,
+  "public_mcp_operations_added": false,
+  "completed_live_trials": 10,
+  "live_probe_modified": false,
+  "totals": {
+    "tick_ends": 719,
+    "palette_writes": 169,
+    "delivered_device_ticks": 20,
+    "tick_attempts": 21,
+    "discarded_tick_attempts": 1,
+    "callback_boundaries": 792
+  },
+  "runs": [
+    {
+      "run": "a",
+      "fixture": "device-shapes-conduction-bottom-r0",
+      "origin": {
+        "x": 91000,
+        "y": 180,
+        "z": 1000
+      },
+      "rotation": 0,
+      "requested_steps": [
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 0
+        },
+        {
+          "input": 0,
+          "powered": false,
+          "wait_ticks": 16
+        }
+      ],
+      "applied_inputs": [
+        {
+          "position": {
+            "x": 90998,
+            "y": 181,
+            "z": 1000
+          },
+          "game_tick": 140062,
+          "packet_sequence": 2396,
+          "write_sequence": 2397,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": 90998,
+            "y": 181,
+            "z": 1000
+          },
+          "game_tick": 140079,
+          "packet_sequence": 2676,
+          "write_sequence": 2677,
+          "kind": "lever",
+          "powered": false
+        }
+      ],
+      "counts": {
+        "tick_ends": 58,
+        "palette_writes": 10,
+        "delivered_device_ticks": 2,
+        "tick_attempts": 2,
+        "discarded_tick_attempts": 0,
+        "callback_boundaries": 35
+      },
+      "original_classification": "matched_declared_projection",
+      "final_comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v15",
+        "tick_end_count": 58,
+        "tick_mismatches": [],
+        "live_write_count": 10,
+        "model_write_count": 10,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 2,
+        "model_scheduled_count": 2,
+        "first_scheduled_mismatch": null,
+        "first_tick_attempt_mismatch": null,
+        "live_callback_count": 35,
+        "model_callback_count": 35,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection",
+        "model_binary_sha256": "2b99dd87ed6e1179355083d5b061b5c58aab2692b7af4603a25e28d530582524"
+      },
+      "retained_fixture": {
+        "path": "crates/dustroute-translate/tests/fixtures/device-circuits/shapes-conduction-bottom-r0.json.gz",
+        "sha256": "9f83d92187bb7c1e9934570c5b39a3120bd15282052ebf7e521293b5ac1538b5"
+      },
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_stopped_normally": true,
+      "original_capture_provenance": {
+        "fixture_sha256": "a4e35fe1bb509883c9dceb64083e8815b70b118bf20808545c540b80107ee1d1",
+        "actor_sha256": "a12206d3d5f6f75d68c7382e219ba870b8125e7310220b6d2fe71c870cb8bded",
+        "capture_sha256": "57e8593d5b69ff8e7de0ef2d2c78c76dcfc255439fb67586c31ab85ba735c09c",
+        "comparator_sha256": "75ebf5c9475baa11bb0e58a5dc2e0c60939db676825a4611cf733a87f2496cdd",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "baad5a11961c25c532ddd4620f5af07142a4add3e8359bc092fb1c867a5ab19b"
+      },
+      "artifacts": {
+        ".local/e2e-artifacts/passive-shapes-20260928-a.raw.ndjson": "92bd13ff5d918a99a8dbbd7606fea3fe3bdd8ca9d9156196bd2290c4b1696691",
+        ".local/e2e-artifacts/passive-shapes-20260928-a.server.log": "ba43b6f5d5b2f4f6061938e03671dde076f821c016dd00ee7b5c539a6320eeef",
+        ".local/e2e-artifacts/passive-shapes-20260928-a.client.json": "a05c7ef762fad6db4c7c209701629d9b35764c5ac0f90462409776a7cd8a46d0",
+        ".local/e2e-artifacts/passive-shapes-20260928-a.reference.json": "561a4aeb87c7b32460887b9a605e99c727f2669c6224ef55fb3fdbd420c5040c",
+        ".local/e2e-artifacts/passive-shapes-20260928-a.input.json": "839957bfaa814c51dff7b58dd60d04432b81e0cc53fe8557191fe9ffee586579",
+        ".local/e2e-artifacts/passive-shapes-20260928-a.model.json": "b97a9f183d03a7ad1fd5eee9cf263cd292f8ca57c93a0ef37122f5022d3d1a4d",
+        ".local/e2e-artifacts/passive-shapes-20260928-a.comparison.json": "18a8f80c1db3df4d97beee60a69fb7cef1fbdd83d15ec6e4a362ee21caca6778",
+        ".local/e2e-artifacts/passive-shapes-20260928-a.summary.json": "8463fd44098f4cd197691ede6110f4d2dc1ae57cc072369c6c8558f61daebbbc",
+        ".local/e2e-artifacts/passive-shapes-final-a.comparison.json": "b8aa97992183f98e6feefcd7ded509a683fa6711b3956e2616e90c6148d68a36"
+      }
+    },
+    {
+      "run": "b",
+      "fixture": "device-shapes-conduction-top-r0",
+      "origin": {
+        "x": 92000,
+        "y": 180,
+        "z": 1000
+      },
+      "rotation": 0,
+      "requested_steps": [
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 0
+        },
+        {
+          "input": 0,
+          "powered": false,
+          "wait_ticks": 16
+        }
+      ],
+      "applied_inputs": [
+        {
+          "position": {
+            "x": 91998,
+            "y": 181,
+            "z": 1000
+          },
+          "game_tick": 140855,
+          "packet_sequence": 2312,
+          "write_sequence": 2313,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": 91998,
+            "y": 181,
+            "z": 1000
+          },
+          "game_tick": 140870,
+          "packet_sequence": 2568,
+          "write_sequence": 2569,
+          "kind": "lever",
+          "powered": false
+        }
+      ],
+      "counts": {
+        "tick_ends": 56,
+        "palette_writes": 10,
+        "delivered_device_ticks": 2,
+        "tick_attempts": 2,
+        "discarded_tick_attempts": 0,
+        "callback_boundaries": 35
+      },
+      "original_classification": "matched_declared_projection",
+      "final_comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v15",
+        "tick_end_count": 56,
+        "tick_mismatches": [],
+        "live_write_count": 10,
+        "model_write_count": 10,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 2,
+        "model_scheduled_count": 2,
+        "first_scheduled_mismatch": null,
+        "first_tick_attempt_mismatch": null,
+        "live_callback_count": 35,
+        "model_callback_count": 35,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection",
+        "model_binary_sha256": "2b99dd87ed6e1179355083d5b061b5c58aab2692b7af4603a25e28d530582524"
+      },
+      "retained_fixture": {
+        "path": "crates/dustroute-translate/tests/fixtures/device-circuits/shapes-conduction-top-r0.json.gz",
+        "sha256": "9c85fe349a0d4e2afab6e3084d3befd9eac02039d6444671d33c88f87a94441c"
+      },
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_stopped_normally": true,
+      "original_capture_provenance": {
+        "fixture_sha256": "1b359df107acb333bea1c323822212362902a208c8fc8c603aa71e7f204d5d6f",
+        "actor_sha256": "a12206d3d5f6f75d68c7382e219ba870b8125e7310220b6d2fe71c870cb8bded",
+        "capture_sha256": "57e8593d5b69ff8e7de0ef2d2c78c76dcfc255439fb67586c31ab85ba735c09c",
+        "comparator_sha256": "75ebf5c9475baa11bb0e58a5dc2e0c60939db676825a4611cf733a87f2496cdd",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "baad5a11961c25c532ddd4620f5af07142a4add3e8359bc092fb1c867a5ab19b"
+      },
+      "artifacts": {
+        ".local/e2e-artifacts/passive-shapes-20260928-b.raw.ndjson": "9d99af20203336851f573275c7945f7abebf386043bbd7aa2e2e4463f2762c94",
+        ".local/e2e-artifacts/passive-shapes-20260928-b.server.log": "fbf852328a70736db1389d7841a56a07520d68abb392b9584ff606d79d2d01da",
+        ".local/e2e-artifacts/passive-shapes-20260928-b.client.json": "a25179dac2bccadac3474061083700af93afb865b310f854621c9e90dbe38616",
+        ".local/e2e-artifacts/passive-shapes-20260928-b.reference.json": "50c077f899f5e8ab772656c0cd88df38338e19d3b2e308ca30a8edc6843054e5",
+        ".local/e2e-artifacts/passive-shapes-20260928-b.input.json": "939389322f2b210491e20a5f7b6fdc60c5ab2e9d7b1ff569dc5bee4e241391c0",
+        ".local/e2e-artifacts/passive-shapes-20260928-b.model.json": "c4869606e8fa92d7e032d4f1d1fc02e6d7ad67ae5e999c778f0c9f6028f2765c",
+        ".local/e2e-artifacts/passive-shapes-20260928-b.comparison.json": "525d250a3ad4007c3ef34f7edd56e66474bcef440fa137223fb11f81807b6f52",
+        ".local/e2e-artifacts/passive-shapes-20260928-b.summary.json": "3938f36bdcbe30ada8bf512a324c69877f1e6f501a6226d7f93a7e45c0788b22",
+        ".local/e2e-artifacts/passive-shapes-final-b.comparison.json": "af7592189327012e3c604869b4730c3fd6d64ca684d669cc51afc8f0ebb09e80"
+      }
+    },
+    {
+      "run": "c",
+      "fixture": "device-shapes-conduction-double-r0",
+      "origin": {
+        "x": 93000,
+        "y": 180,
+        "z": 1000
+      },
+      "rotation": 0,
+      "requested_steps": [
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 0
+        },
+        {
+          "input": 0,
+          "powered": false,
+          "wait_ticks": 16
+        }
+      ],
+      "applied_inputs": [
+        {
+          "position": {
+            "x": 92998,
+            "y": 181,
+            "z": 1000
+          },
+          "game_tick": 141649,
+          "packet_sequence": 2264,
+          "write_sequence": 2265,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": 92998,
+            "y": 181,
+            "z": 1000
+          },
+          "game_tick": 141665,
+          "packet_sequence": 2580,
+          "write_sequence": 2581,
+          "kind": "lever",
+          "powered": false
+        }
+      ],
+      "counts": {
+        "tick_ends": 57,
+        "palette_writes": 14,
+        "delivered_device_ticks": 3,
+        "tick_attempts": 3,
+        "discarded_tick_attempts": 0,
+        "callback_boundaries": 55
+      },
+      "original_classification": "matched_declared_projection",
+      "final_comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v15",
+        "tick_end_count": 57,
+        "tick_mismatches": [],
+        "live_write_count": 14,
+        "model_write_count": 14,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 3,
+        "model_scheduled_count": 3,
+        "first_scheduled_mismatch": null,
+        "first_tick_attempt_mismatch": null,
+        "live_callback_count": 55,
+        "model_callback_count": 55,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection",
+        "model_binary_sha256": "2b99dd87ed6e1179355083d5b061b5c58aab2692b7af4603a25e28d530582524"
+      },
+      "retained_fixture": {
+        "path": "crates/dustroute-translate/tests/fixtures/device-circuits/shapes-conduction-double-r0.json.gz",
+        "sha256": "07ad962a4a48839e9088aa267b26763b505b0235fb9707d1fe51d3287b00a39d"
+      },
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_stopped_normally": true,
+      "original_capture_provenance": {
+        "fixture_sha256": "206cb6776214bec007affa356ab82b0f80d19f6fbb7738bc8438fa50abf59da9",
+        "actor_sha256": "a12206d3d5f6f75d68c7382e219ba870b8125e7310220b6d2fe71c870cb8bded",
+        "capture_sha256": "57e8593d5b69ff8e7de0ef2d2c78c76dcfc255439fb67586c31ab85ba735c09c",
+        "comparator_sha256": "75ebf5c9475baa11bb0e58a5dc2e0c60939db676825a4611cf733a87f2496cdd",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "baad5a11961c25c532ddd4620f5af07142a4add3e8359bc092fb1c867a5ab19b"
+      },
+      "artifacts": {
+        ".local/e2e-artifacts/passive-shapes-20260928-c.raw.ndjson": "e76347c1b500d8a73a1b121692ab6886c8bfcb1c2d88d26abd5eb1a4a8231ee1",
+        ".local/e2e-artifacts/passive-shapes-20260928-c.server.log": "3dfe68ad9e902efd1c78954b053054d1686d49f328b3c03653674034d5eb2346",
+        ".local/e2e-artifacts/passive-shapes-20260928-c.client.json": "29c788b63f7ead09d8b5317c13c78ffc0a592442543476d29c22ebd29139eee1",
+        ".local/e2e-artifacts/passive-shapes-20260928-c.reference.json": "6a94406d00ed9d99080bad9d0b3b1a587c5d379683453f8015f648577fb110e0",
+        ".local/e2e-artifacts/passive-shapes-20260928-c.input.json": "d5daace79da9cf4ddbe42a5e1e73ab3336b8516c12e3d593744f9398a897824f",
+        ".local/e2e-artifacts/passive-shapes-20260928-c.model.json": "bbf5f55a546cd0e0f82f8a4ea85a158f3e8fbaa22bdb4ea2223bed5f15b8fc10",
+        ".local/e2e-artifacts/passive-shapes-20260928-c.comparison.json": "4386f6e0496589e51d358f7d71c89d05a2b3c3a92d0722d32bc85bc5e8c298c9",
+        ".local/e2e-artifacts/passive-shapes-20260928-c.summary.json": "265c47c675fced36c257b1b1e0a8093eca1da4937543a3dae6f4abd164c21c68",
+        ".local/e2e-artifacts/passive-shapes-final-c.comparison.json": "1b92e7bdda402bfa0e40aad8c0c376e19579ec36798af985abeb6cebeb16854f"
+      }
+    },
+    {
+      "run": "d",
+      "fixture": "device-shapes-conduction-tinted_glass-r90",
+      "origin": {
+        "x": -94000,
+        "y": 180,
+        "z": 1000
+      },
+      "rotation": 90,
+      "requested_steps": [
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 0
+        },
+        {
+          "input": 0,
+          "powered": false,
+          "wait_ticks": 16
+        }
+      ],
+      "applied_inputs": [
+        {
+          "position": {
+            "x": -94000,
+            "y": 181,
+            "z": 998
+          },
+          "game_tick": 142439,
+          "packet_sequence": 2192,
+          "write_sequence": 2193,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": -94000,
+            "y": 181,
+            "z": 998
+          },
+          "game_tick": 142455,
+          "packet_sequence": 2460,
+          "write_sequence": 2461,
+          "kind": "lever",
+          "powered": false
+        }
+      ],
+      "counts": {
+        "tick_ends": 57,
+        "palette_writes": 10,
+        "delivered_device_ticks": 2,
+        "tick_attempts": 2,
+        "discarded_tick_attempts": 0,
+        "callback_boundaries": 35
+      },
+      "original_classification": "matched_declared_projection",
+      "final_comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v15",
+        "tick_end_count": 57,
+        "tick_mismatches": [],
+        "live_write_count": 10,
+        "model_write_count": 10,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 2,
+        "model_scheduled_count": 2,
+        "first_scheduled_mismatch": null,
+        "first_tick_attempt_mismatch": null,
+        "live_callback_count": 35,
+        "model_callback_count": 35,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection",
+        "model_binary_sha256": "2b99dd87ed6e1179355083d5b061b5c58aab2692b7af4603a25e28d530582524"
+      },
+      "retained_fixture": {
+        "path": "crates/dustroute-translate/tests/fixtures/device-circuits/shapes-conduction-tinted_glass-r90.json.gz",
+        "sha256": "c09fc523d5b70119bdcac7951a8e4cffb09a5d533230654c86a8383a94f101f2"
+      },
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_stopped_normally": true,
+      "original_capture_provenance": {
+        "fixture_sha256": "691442773da8e5ec63d9c40b16e43d61dc978fa1097a0ed07933ca5d5e643a53",
+        "actor_sha256": "a12206d3d5f6f75d68c7382e219ba870b8125e7310220b6d2fe71c870cb8bded",
+        "capture_sha256": "57e8593d5b69ff8e7de0ef2d2c78c76dcfc255439fb67586c31ab85ba735c09c",
+        "comparator_sha256": "75ebf5c9475baa11bb0e58a5dc2e0c60939db676825a4611cf733a87f2496cdd",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "baad5a11961c25c532ddd4620f5af07142a4add3e8359bc092fb1c867a5ab19b"
+      },
+      "artifacts": {
+        ".local/e2e-artifacts/passive-shapes-20260928-d.raw.ndjson": "6c6f4cfd9efc99f91232a158e3b88c05627746a462a41bfacfe1c40cd9f2441b",
+        ".local/e2e-artifacts/passive-shapes-20260928-d.server.log": "ab8b109c1a13406897d084445aef4b38ec7a89fca1735c0bf00a3711ed5786f7",
+        ".local/e2e-artifacts/passive-shapes-20260928-d.client.json": "d93d4d2be8de7dd5df39c46a468b466ff3b0b2a3a0cf240545e206fa69cd572f",
+        ".local/e2e-artifacts/passive-shapes-20260928-d.reference.json": "b806293a7f04a73fa1ce0e0fbdadbc225606031a34380df680d3f905769d2b0b",
+        ".local/e2e-artifacts/passive-shapes-20260928-d.input.json": "489824cd8bec7d6955fb9ada5528eed9d6ceddec6d5d6d8d3e5a3d7923ba77e5",
+        ".local/e2e-artifacts/passive-shapes-20260928-d.model.json": "788e57a47b572d628ecdc822b6aae90a1982907f9e2b67c243b1f484f50c8d3d",
+        ".local/e2e-artifacts/passive-shapes-20260928-d.comparison.json": "1ca3dd20c06f6d3b4bee6e097e194b1c7fe5af1d776c8cbfb2b23696e03de636",
+        ".local/e2e-artifacts/passive-shapes-20260928-d.summary.json": "b67d9403da128c2d334a0fd414e1cfa52d2cfe925f9a876c28a1a269c0517f98",
+        ".local/e2e-artifacts/passive-shapes-final-d.comparison.json": "c9ac35ea43cbe91a953c56b21ae6bd312117ff72a5511db6e7e9b3edf4629754"
+      }
+    },
+    {
+      "run": "e",
+      "fixture": "device-shapes-conduction-red_stained_glass-r0",
+      "origin": {
+        "x": 95000,
+        "y": 180,
+        "z": 1000
+      },
+      "rotation": 0,
+      "requested_steps": [
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 0
+        },
+        {
+          "input": 0,
+          "powered": false,
+          "wait_ticks": 16
+        }
+      ],
+      "applied_inputs": [
+        {
+          "position": {
+            "x": 94998,
+            "y": 181,
+            "z": 1000
+          },
+          "game_tick": 143231,
+          "packet_sequence": 2180,
+          "write_sequence": 2181,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": 94998,
+            "y": 181,
+            "z": 1000
+          },
+          "game_tick": 143247,
+          "packet_sequence": 2448,
+          "write_sequence": 2449,
+          "kind": "lever",
+          "powered": false
+        }
+      ],
+      "counts": {
+        "tick_ends": 57,
+        "palette_writes": 10,
+        "delivered_device_ticks": 2,
+        "tick_attempts": 2,
+        "discarded_tick_attempts": 0,
+        "callback_boundaries": 35
+      },
+      "original_classification": "matched_declared_projection",
+      "final_comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v15",
+        "tick_end_count": 57,
+        "tick_mismatches": [],
+        "live_write_count": 10,
+        "model_write_count": 10,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 2,
+        "model_scheduled_count": 2,
+        "first_scheduled_mismatch": null,
+        "first_tick_attempt_mismatch": null,
+        "live_callback_count": 35,
+        "model_callback_count": 35,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection",
+        "model_binary_sha256": "2b99dd87ed6e1179355083d5b061b5c58aab2692b7af4603a25e28d530582524"
+      },
+      "retained_fixture": {
+        "path": "crates/dustroute-translate/tests/fixtures/device-circuits/shapes-conduction-red_stained_glass-r0.json.gz",
+        "sha256": "8be99403683e401caa11bd25ae94da33de6f4ddb2d7b3ec1db8ad118009f9c45"
+      },
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_stopped_normally": true,
+      "original_capture_provenance": {
+        "fixture_sha256": "450491e4f925ec843cc143386b0c36c9e2434ebec8c8cf9ec4815d0aa5be1641",
+        "actor_sha256": "a12206d3d5f6f75d68c7382e219ba870b8125e7310220b6d2fe71c870cb8bded",
+        "capture_sha256": "57e8593d5b69ff8e7de0ef2d2c78c76dcfc255439fb67586c31ab85ba735c09c",
+        "comparator_sha256": "75ebf5c9475baa11bb0e58a5dc2e0c60939db676825a4611cf733a87f2496cdd",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "baad5a11961c25c532ddd4620f5af07142a4add3e8359bc092fb1c867a5ab19b"
+      },
+      "artifacts": {
+        ".local/e2e-artifacts/passive-shapes-20260928-e.raw.ndjson": "30ceab1d31e8cf8bfc17eebb33fc574fa3389432bd60574fd46956b4a7be7106",
+        ".local/e2e-artifacts/passive-shapes-20260928-e.server.log": "6feb2ed245fe0771a6bb6761073c7160579b82a978b5d1c507c674dd78b21168",
+        ".local/e2e-artifacts/passive-shapes-20260928-e.client.json": "814e333598d507f809aa9a78f250bf1ee35cf6301c38dd8835ae403d2c76ffbe",
+        ".local/e2e-artifacts/passive-shapes-20260928-e.reference.json": "28f807963c2bdd6ea92b1f2777e9a18b2de61bc0a98fc0a32d743029c491e546",
+        ".local/e2e-artifacts/passive-shapes-20260928-e.input.json": "268add5b15dcf5d874b1b495de0d0a1dcc975eb4d73fabdd3349a47a20c7046e",
+        ".local/e2e-artifacts/passive-shapes-20260928-e.model.json": "d52b774f585deb82a097a87df7af2ef70cb9a9cefa8b75b9864bf589190317ed",
+        ".local/e2e-artifacts/passive-shapes-20260928-e.comparison.json": "1ca3dd20c06f6d3b4bee6e097e194b1c7fe5af1d776c8cbfb2b23696e03de636",
+        ".local/e2e-artifacts/passive-shapes-20260928-e.summary.json": "7cbdbb5afe9394e248afef64446547fbe93cdb3dcfad79f3ac078386dd356491",
+        ".local/e2e-artifacts/passive-shapes-final-e.comparison.json": "c9ac35ea43cbe91a953c56b21ae6bd312117ff72a5511db6e7e9b3edf4629754"
+      }
+    },
+    {
+      "run": "f",
+      "fixture": "device-shapes-step-top-r0",
+      "origin": {
+        "x": 96000,
+        "y": 180,
+        "z": 1000
+      },
+      "rotation": 0,
+      "requested_steps": [
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 0
+        },
+        {
+          "input": 0,
+          "powered": false,
+          "wait_ticks": 16
+        },
+        {
+          "input": 1,
+          "powered": true,
+          "wait_ticks": 16
+        },
+        {
+          "input": 1,
+          "powered": false,
+          "wait_ticks": 16
+        }
+      ],
+      "applied_inputs": [
+        {
+          "position": {
+            "x": 95998,
+            "y": 181,
+            "z": 1000
+          },
+          "game_tick": 144016,
+          "packet_sequence": 2084,
+          "write_sequence": 2085,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": 95998,
+            "y": 181,
+            "z": 1000
+          },
+          "game_tick": 144032,
+          "packet_sequence": 2432,
+          "write_sequence": 2433,
+          "kind": "lever",
+          "powered": false
+        },
+        {
+          "position": {
+            "x": 96000,
+            "y": 182,
+            "z": 1001
+          },
+          "game_tick": 144048,
+          "packet_sequence": 2778,
+          "write_sequence": 2779,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": 96000,
+            "y": 182,
+            "z": 1001
+          },
+          "game_tick": 144064,
+          "packet_sequence": 3038,
+          "write_sequence": 3039,
+          "kind": "lever",
+          "powered": false
+        }
+      ],
+      "counts": {
+        "tick_ends": 89,
+        "palette_writes": 16,
+        "delivered_device_ticks": 0,
+        "tick_attempts": 0,
+        "discarded_tick_attempts": 0,
+        "callback_boundaries": 83
+      },
+      "original_classification": "matched_declared_projection",
+      "final_comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v15",
+        "tick_end_count": 89,
+        "tick_mismatches": [],
+        "live_write_count": 16,
+        "model_write_count": 16,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 0,
+        "model_scheduled_count": 0,
+        "first_scheduled_mismatch": null,
+        "first_tick_attempt_mismatch": null,
+        "live_callback_count": 83,
+        "model_callback_count": 83,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection",
+        "model_binary_sha256": "2b99dd87ed6e1179355083d5b061b5c58aab2692b7af4603a25e28d530582524"
+      },
+      "retained_fixture": {
+        "path": "crates/dustroute-translate/tests/fixtures/device-circuits/shapes-step-top-r0.json.gz",
+        "sha256": "d27c226c8bbf54cfd055d3e381a4e77ea5cefab16920320da6843be083e4d7b0"
+      },
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_stopped_normally": true,
+      "original_capture_provenance": {
+        "fixture_sha256": "635edd40beb85fa51122684a9bf775ce766edf53a76ab857c27aed479bfd7f9b",
+        "actor_sha256": "a12206d3d5f6f75d68c7382e219ba870b8125e7310220b6d2fe71c870cb8bded",
+        "capture_sha256": "57e8593d5b69ff8e7de0ef2d2c78c76dcfc255439fb67586c31ab85ba735c09c",
+        "comparator_sha256": "75ebf5c9475baa11bb0e58a5dc2e0c60939db676825a4611cf733a87f2496cdd",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "baad5a11961c25c532ddd4620f5af07142a4add3e8359bc092fb1c867a5ab19b"
+      },
+      "artifacts": {
+        ".local/e2e-artifacts/passive-shapes-20260928-f.raw.ndjson": "dc0f2b8971e9a810aefec0e4b11a860c4dc93e595a83559881119160138a4f22",
+        ".local/e2e-artifacts/passive-shapes-20260928-f.server.log": "3768cc2eae7b88d4c69a933f501b5380fd329bf095640e71349ac86b2b2273b4",
+        ".local/e2e-artifacts/passive-shapes-20260928-f.client.json": "840a249973d2c3087fc1f68e53a9b0fa443d6b2282074581f770c777cd81bfbc",
+        ".local/e2e-artifacts/passive-shapes-20260928-f.reference.json": "45b56c1a9cc9efd412ee3d5eff638fc54a6378a85ee9340df448a9f6c91091e4",
+        ".local/e2e-artifacts/passive-shapes-20260928-f.input.json": "cfb2ab52d10f5c394018e5d649a8367b10dd36935e3bd02c7f2312d03d32ea46",
+        ".local/e2e-artifacts/passive-shapes-20260928-f.model.json": "16e1bc3ba526bafcfebdc8d31bef5d8500728457b03685a889ea2aa66d89363b",
+        ".local/e2e-artifacts/passive-shapes-20260928-f.comparison.json": "9daed72118e0928f7fa29271caaad06e53be0d0b879b004addd6d821cf16e2cc",
+        ".local/e2e-artifacts/passive-shapes-20260928-f.summary.json": "8648531fda26d87c1133d309bc1b8bf7268edf87e8a2d12e0a7037b1cdd8326b",
+        ".local/e2e-artifacts/passive-shapes-final-f.comparison.json": "08772bd2e26beba589b81d69140d4bd8aed8a406ea0a2030823c88e51ede68e5"
+      }
+    },
+    {
+      "run": "g",
+      "fixture": "device-shapes-step-double-r90",
+      "origin": {
+        "x": -97000,
+        "y": 180,
+        "z": 1000
+      },
+      "rotation": 90,
+      "requested_steps": [
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 0
+        },
+        {
+          "input": 0,
+          "powered": false,
+          "wait_ticks": 16
+        },
+        {
+          "input": 1,
+          "powered": true,
+          "wait_ticks": 16
+        },
+        {
+          "input": 1,
+          "powered": false,
+          "wait_ticks": 16
+        }
+      ],
+      "applied_inputs": [
+        {
+          "position": {
+            "x": -97000,
+            "y": 181,
+            "z": 998
+          },
+          "game_tick": 144838,
+          "packet_sequence": 2084,
+          "write_sequence": 2085,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": -97000,
+            "y": 181,
+            "z": 998
+          },
+          "game_tick": 144853,
+          "packet_sequence": 2420,
+          "write_sequence": 2421,
+          "kind": "lever",
+          "powered": false
+        },
+        {
+          "position": {
+            "x": -97001,
+            "y": 182,
+            "z": 1000
+          },
+          "game_tick": 144870,
+          "packet_sequence": 3350,
+          "write_sequence": 3351,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": -97001,
+            "y": 182,
+            "z": 1000
+          },
+          "game_tick": 144886,
+          "packet_sequence": 3655,
+          "write_sequence": 3656,
+          "kind": "lever",
+          "powered": false
+        }
+      ],
+      "counts": {
+        "tick_ends": 89,
+        "palette_writes": 44,
+        "delivered_device_ticks": 0,
+        "tick_attempts": 0,
+        "discarded_tick_attempts": 0,
+        "callback_boundaries": 307
+      },
+      "original_classification": "matched_declared_projection",
+      "final_comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v15",
+        "tick_end_count": 89,
+        "tick_mismatches": [],
+        "live_write_count": 44,
+        "model_write_count": 44,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 0,
+        "model_scheduled_count": 0,
+        "first_scheduled_mismatch": null,
+        "first_tick_attempt_mismatch": null,
+        "live_callback_count": 307,
+        "model_callback_count": 307,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection",
+        "model_binary_sha256": "2b99dd87ed6e1179355083d5b061b5c58aab2692b7af4603a25e28d530582524"
+      },
+      "retained_fixture": {
+        "path": "crates/dustroute-translate/tests/fixtures/device-circuits/shapes-step-double-r90.json.gz",
+        "sha256": "43a35a0a9512ca697b92a3aa6ac08aa8b7918f73e2a66d667921718cc118d777"
+      },
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_stopped_normally": true,
+      "original_capture_provenance": {
+        "fixture_sha256": "bd6e7b80d69515b102666c97166d41df29fd33992870893f5ac8e9bc99cb03d1",
+        "actor_sha256": "a12206d3d5f6f75d68c7382e219ba870b8125e7310220b6d2fe71c870cb8bded",
+        "capture_sha256": "57e8593d5b69ff8e7de0ef2d2c78c76dcfc255439fb67586c31ab85ba735c09c",
+        "comparator_sha256": "75ebf5c9475baa11bb0e58a5dc2e0c60939db676825a4611cf733a87f2496cdd",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "baad5a11961c25c532ddd4620f5af07142a4add3e8359bc092fb1c867a5ab19b"
+      },
+      "artifacts": {
+        ".local/e2e-artifacts/passive-shapes-20260928-g.raw.ndjson": "d79e513b265cfb1bfe1fb3731f1239b9c4694d9b39148d5e3139804aef031504",
+        ".local/e2e-artifacts/passive-shapes-20260928-g.server.log": "f605f2d5fff0396d0ed72639eb754df7a5e8b3423ddbb909340c7d14ff2f8eab",
+        ".local/e2e-artifacts/passive-shapes-20260928-g.client.json": "d1fa3ace37b55de982d8a6beee9f96d8e61d999259b66ee20f85781e5c65ac21",
+        ".local/e2e-artifacts/passive-shapes-20260928-g.reference.json": "e5c7818f8bfbb7d4dbd5e24fb46fde1af93a7e272ac30ce508476981c9dff7c6",
+        ".local/e2e-artifacts/passive-shapes-20260928-g.input.json": "763496a8accd22d71c449899b065515423785199880dae396f4c407e73dff8e8",
+        ".local/e2e-artifacts/passive-shapes-20260928-g.model.json": "b30141800ed4b7a7851e2b4e3ee2e5a4c57a2c383c07d74202a5462779f86b8d",
+        ".local/e2e-artifacts/passive-shapes-20260928-g.comparison.json": "c0c630a0876dcd48047ef448762b2a046cbea33ffcc0179b0d41408748f2a615",
+        ".local/e2e-artifacts/passive-shapes-20260928-g.summary.json": "a4201123f905d6d5bb7ad0f04ac37c30c55dc155853ce87aac3fe3f8beca198c",
+        ".local/e2e-artifacts/passive-shapes-final-g.comparison.json": "7c654cfb18cb1bf63fd52e6eacceccdccd4ec0aaf184d8b86ec2a4bd213c3a3d"
+      }
+    },
+    {
+      "run": "h",
+      "fixture": "device-shapes-step-tinted_glass-r0",
+      "origin": {
+        "x": 98000,
+        "y": 180,
+        "z": 1000
+      },
+      "rotation": 0,
+      "requested_steps": [
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 0
+        },
+        {
+          "input": 0,
+          "powered": false,
+          "wait_ticks": 16
+        },
+        {
+          "input": 1,
+          "powered": true,
+          "wait_ticks": 16
+        },
+        {
+          "input": 1,
+          "powered": false,
+          "wait_ticks": 16
+        }
+      ],
+      "applied_inputs": [
+        {
+          "position": {
+            "x": 97998,
+            "y": 181,
+            "z": 1000
+          },
+          "game_tick": 145661,
+          "packet_sequence": 2084,
+          "write_sequence": 2085,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": 97998,
+            "y": 181,
+            "z": 1000
+          },
+          "game_tick": 145677,
+          "packet_sequence": 2432,
+          "write_sequence": 2433,
+          "kind": "lever",
+          "powered": false
+        },
+        {
+          "position": {
+            "x": 98000,
+            "y": 182,
+            "z": 1001
+          },
+          "game_tick": 145693,
+          "packet_sequence": 2778,
+          "write_sequence": 2779,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": 98000,
+            "y": 182,
+            "z": 1001
+          },
+          "game_tick": 145709,
+          "packet_sequence": 3038,
+          "write_sequence": 3039,
+          "kind": "lever",
+          "powered": false
+        }
+      ],
+      "counts": {
+        "tick_ends": 89,
+        "palette_writes": 16,
+        "delivered_device_ticks": 0,
+        "tick_attempts": 0,
+        "discarded_tick_attempts": 0,
+        "callback_boundaries": 83
+      },
+      "original_classification": "matched_declared_projection",
+      "final_comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v15",
+        "tick_end_count": 89,
+        "tick_mismatches": [],
+        "live_write_count": 16,
+        "model_write_count": 16,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 0,
+        "model_scheduled_count": 0,
+        "first_scheduled_mismatch": null,
+        "first_tick_attempt_mismatch": null,
+        "live_callback_count": 83,
+        "model_callback_count": 83,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection",
+        "model_binary_sha256": "2b99dd87ed6e1179355083d5b061b5c58aab2692b7af4603a25e28d530582524"
+      },
+      "retained_fixture": {
+        "path": "crates/dustroute-translate/tests/fixtures/device-circuits/shapes-step-tinted_glass-r0.json.gz",
+        "sha256": "728f83783663ee896dd3de7a298d56f0b4387e730c2c73785e10f66812f1543e"
+      },
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_stopped_normally": true,
+      "original_capture_provenance": {
+        "fixture_sha256": "a1807ff17b550937f9d4cef7b97cf96024dfc1c9baddee395e0d2f233ef5f42d",
+        "actor_sha256": "a12206d3d5f6f75d68c7382e219ba870b8125e7310220b6d2fe71c870cb8bded",
+        "capture_sha256": "57e8593d5b69ff8e7de0ef2d2c78c76dcfc255439fb67586c31ab85ba735c09c",
+        "comparator_sha256": "75ebf5c9475baa11bb0e58a5dc2e0c60939db676825a4611cf733a87f2496cdd",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "baad5a11961c25c532ddd4620f5af07142a4add3e8359bc092fb1c867a5ab19b"
+      },
+      "artifacts": {
+        ".local/e2e-artifacts/passive-shapes-20260928-h.raw.ndjson": "4eebc12557368d952aaf0ed350651073326571f1ed55a706f2522687c0d45d80",
+        ".local/e2e-artifacts/passive-shapes-20260928-h.server.log": "4a67b5233cb87b205d4a3e156d8c53b285cc1e32f121eaffa5c341fa1da0c364",
+        ".local/e2e-artifacts/passive-shapes-20260928-h.client.json": "40af09ca3f4af44e12716955f418871110e84fcf0b489872069ced2858135063",
+        ".local/e2e-artifacts/passive-shapes-20260928-h.reference.json": "3a5a9a84694103f60b6b4912f22c06efdda363524b8773d6664cd076944ca045",
+        ".local/e2e-artifacts/passive-shapes-20260928-h.input.json": "02a18ca2c2d00d1ce38dbbfafc26f6d0952abfa4f1fba185ef104f4e4b293344",
+        ".local/e2e-artifacts/passive-shapes-20260928-h.model.json": "8b45b2db989d65f19c1dc7c78caeca281ed60f38d95887c5f6179a5c86293918",
+        ".local/e2e-artifacts/passive-shapes-20260928-h.comparison.json": "9daed72118e0928f7fa29271caaad06e53be0d0b879b004addd6d821cf16e2cc",
+        ".local/e2e-artifacts/passive-shapes-20260928-h.summary.json": "18535b97e5eb9e333161939dde2fac3b045d6f7f106559a7c45a010b8f9cdd9a",
+        ".local/e2e-artifacts/passive-shapes-final-h.comparison.json": "08772bd2e26beba589b81d69140d4bd8aed8a406ea0a2030823c88e51ede68e5"
+      }
+    },
+    {
+      "run": "i",
+      "fixture": "device-shapes-moving-top-wire-r0",
+      "origin": {
+        "x": 99000,
+        "y": 180,
+        "z": 1000
+      },
+      "rotation": 0,
+      "requested_steps": [
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 0
+        },
+        {
+          "input": 0,
+          "powered": false,
+          "wait_ticks": 40
+        }
+      ],
+      "applied_inputs": [
+        {
+          "position": {
+            "x": 98999,
+            "y": 180,
+            "z": 1000
+          },
+          "game_tick": 146487,
+          "packet_sequence": 2132,
+          "write_sequence": 2133,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": 98999,
+            "y": 180,
+            "z": 1000
+          },
+          "game_tick": 146528,
+          "packet_sequence": 2855,
+          "write_sequence": 2856,
+          "kind": "lever",
+          "powered": false
+        }
+      ],
+      "counts": {
+        "tick_ends": 82,
+        "palette_writes": 19,
+        "delivered_device_ticks": 3,
+        "tick_attempts": 3,
+        "discarded_tick_attempts": 0,
+        "callback_boundaries": 64
+      },
+      "original_classification": "matched_declared_projection",
+      "final_comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v15",
+        "tick_end_count": 82,
+        "tick_mismatches": [],
+        "live_write_count": 19,
+        "model_write_count": 19,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 3,
+        "model_scheduled_count": 3,
+        "first_scheduled_mismatch": null,
+        "first_tick_attempt_mismatch": null,
+        "live_callback_count": 64,
+        "model_callback_count": 64,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection",
+        "model_binary_sha256": "2b99dd87ed6e1179355083d5b061b5c58aab2692b7af4603a25e28d530582524"
+      },
+      "retained_fixture": {
+        "path": "crates/dustroute-translate/tests/fixtures/device-circuits/shapes-moving-top-wire-r0.json.gz",
+        "sha256": "e39b62db4b0bd170fb1831dbe0a271380233adc8144971e0849397e5dd1728e6"
+      },
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_stopped_normally": true,
+      "original_capture_provenance": {
+        "fixture_sha256": "2057777b1a91ac87070b8cfa76b1d2dbb5962886775c0c5e200dd0f0ad9f8961",
+        "actor_sha256": "a12206d3d5f6f75d68c7382e219ba870b8125e7310220b6d2fe71c870cb8bded",
+        "capture_sha256": "57e8593d5b69ff8e7de0ef2d2c78c76dcfc255439fb67586c31ab85ba735c09c",
+        "comparator_sha256": "75ebf5c9475baa11bb0e58a5dc2e0c60939db676825a4611cf733a87f2496cdd",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "baad5a11961c25c532ddd4620f5af07142a4add3e8359bc092fb1c867a5ab19b"
+      },
+      "artifacts": {
+        ".local/e2e-artifacts/passive-shapes-20260928-i.raw.ndjson": "9cedaf2423246a587e30189670d8b7c20f0145237702bf01845b5d8808ce5290",
+        ".local/e2e-artifacts/passive-shapes-20260928-i.server.log": "fb7e95ea9ed2d320bdc209646d234d93da96312ff002d779d8b11d0acf8ea587",
+        ".local/e2e-artifacts/passive-shapes-20260928-i.client.json": "5fda02075a7e967b56dfa007218d99d7f66342e7bc23153eb31384e74e5b63cb",
+        ".local/e2e-artifacts/passive-shapes-20260928-i.reference.json": "911f76ad4ce923fb7afd63a4611307e3f90da4c3d8bd9966e3e00f74699e6bb8",
+        ".local/e2e-artifacts/passive-shapes-20260928-i.input.json": "beaa39583352ff81106562f80f575297781bfa1f48c9448b58ead1b64cc850f3",
+        ".local/e2e-artifacts/passive-shapes-20260928-i.model.json": "d82dc2c99f46195401e369e2294bf25329d88c1e0afb7286647dd2b527c3993a",
+        ".local/e2e-artifacts/passive-shapes-20260928-i.comparison.json": "df25d98df58971c970e165d876d5321b0ee15417b0710afd00e8893d892ab6bd",
+        ".local/e2e-artifacts/passive-shapes-20260928-i.summary.json": "4bf49791de209d609bffad382ff090ac6c253f0024742776f1c5e9a037f6d41d",
+        ".local/e2e-artifacts/passive-shapes-final-i.comparison.json": "a2b4c35b7175b468e140ed7536a8fdc7069fb817b532cd6b6dd1460e281848ec"
+      }
+    },
+    {
+      "run": "j",
+      "fixture": "device-shapes-moving-bottom-button-r90",
+      "origin": {
+        "x": -100000,
+        "y": 180,
+        "z": 1000
+      },
+      "rotation": 90,
+      "requested_steps": [
+        {
+          "input": 1,
+          "powered": true,
+          "wait_ticks": 0
+        },
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 4
+        },
+        {
+          "input": 0,
+          "powered": false,
+          "wait_ticks": 40
+        }
+      ],
+      "applied_inputs": [
+        {
+          "position": {
+            "x": -100000,
+            "y": 179,
+            "z": 1002
+          },
+          "game_tick": 147296,
+          "packet_sequence": 2057,
+          "write_sequence": 2058,
+          "kind": "use_device",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": -100000,
+            "y": 180,
+            "z": 999
+          },
+          "game_tick": 147300,
+          "packet_sequence": 2154,
+          "write_sequence": 2155,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": -100000,
+            "y": 180,
+            "z": 999
+          },
+          "game_tick": 147340,
+          "packet_sequence": 2809,
+          "write_sequence": 2810,
+          "kind": "lever",
+          "powered": false
+        }
+      ],
+      "counts": {
+        "tick_ends": 85,
+        "palette_writes": 20,
+        "delivered_device_ticks": 6,
+        "tick_attempts": 7,
+        "discarded_tick_attempts": 1,
+        "callback_boundaries": 60
+      },
+      "original_classification": "matched_declared_projection",
+      "final_comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v15",
+        "tick_end_count": 85,
+        "tick_mismatches": [],
+        "live_write_count": 20,
+        "model_write_count": 20,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 6,
+        "model_scheduled_count": 6,
+        "first_scheduled_mismatch": null,
+        "first_tick_attempt_mismatch": null,
+        "live_callback_count": 60,
+        "model_callback_count": 60,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection",
+        "model_binary_sha256": "2b99dd87ed6e1179355083d5b061b5c58aab2692b7af4603a25e28d530582524"
+      },
+      "retained_fixture": {
+        "path": "crates/dustroute-translate/tests/fixtures/device-circuits/shapes-moving-bottom-button-r90.json.gz",
+        "sha256": "95621ea92a58801d328b4151cdccf9fc4d5cf1a5e74a2a58d3cc1b53edc3a67b"
+      },
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_stopped_normally": true,
+      "original_capture_provenance": {
+        "fixture_sha256": "42bec469f59f17ebbe99a68bb816238d65d51c3ae61e75a15e0da37dd6bf8e84",
+        "actor_sha256": "a12206d3d5f6f75d68c7382e219ba870b8125e7310220b6d2fe71c870cb8bded",
+        "capture_sha256": "57e8593d5b69ff8e7de0ef2d2c78c76dcfc255439fb67586c31ab85ba735c09c",
+        "comparator_sha256": "75ebf5c9475baa11bb0e58a5dc2e0c60939db676825a4611cf733a87f2496cdd",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "baad5a11961c25c532ddd4620f5af07142a4add3e8359bc092fb1c867a5ab19b"
+      },
+      "artifacts": {
+        ".local/e2e-artifacts/passive-shapes-20260928-j.raw.ndjson": "daef641a45239af322dc28eb26531f2e7489d2f2767c994abee9614c286ab9f2",
+        ".local/e2e-artifacts/passive-shapes-20260928-j.server.log": "2453bfd457a9f2d67d3b23bdaf186ecd7d401ec2da4a87a4f801b89dc48daeec",
+        ".local/e2e-artifacts/passive-shapes-20260928-j.client.json": "103b9dcf8bb5410f472fa9f943c3dc0bf1e57f8ad1beb6236f161df68a368646",
+        ".local/e2e-artifacts/passive-shapes-20260928-j.reference.json": "180d4944171f38e16c77deedf24cd9b31c42d1ada0bc43bc5d6847cd1ec3517f",
+        ".local/e2e-artifacts/passive-shapes-20260928-j.input.json": "7ff93adfc79ca8102e577800561b1fbc6d914f71a92e0dfae52d927882cac06b",
+        ".local/e2e-artifacts/passive-shapes-20260928-j.model.json": "2899f93a010e6b27eaa5d13f3df52784aada723b90b69f46d8b77fb87c454277",
+        ".local/e2e-artifacts/passive-shapes-20260928-j.comparison.json": "bc865c6141a76bf184e600f4f5c125aaf9a170fe49242e16d40944c8a62fb613",
+        ".local/e2e-artifacts/passive-shapes-20260928-j.summary.json": "e96f3be2171cc9dfaf6cc03da18a4792ef6cf3b199cfe7482e87828c8e99f8c5",
+        ".local/e2e-artifacts/passive-shapes-final-j.comparison.json": "44a665d929d1c5ee3c80f8b5f1d2bebccab2358d502e2ffb9dcb2341eff6a31c"
+      }
+    }
+  ],
+  "source_reference": {
+    "jar": "/root/.gradle/caches/fabric-loom/minecraftMaven/net/minecraft/minecraft-merged/1.21.11-net.fabricmc.yarn.1_21_11.1.21.11+build.6-v2/minecraft-merged-1.21.11-net.fabricmc.yarn.1_21_11.1.21.11+build.6-v2.jar",
+    "jar_sha256": "5b4aa12131a872a25dc32e7f017373d6e83502f6919154769296dd3de6af8c1b",
+    "classes": {
+      "SlabBlock": {
+        "sha256": "d8224182dc28edc3766fa0c7c4ca6932c2181b76a009d034d424d240b5cfe713",
+        "methods": [
+          "getOutlineShape",
+          "getStateForNeighborUpdate"
+        ]
+      },
+      "AbstractBlock$Settings": {
+        "sha256": "d4f9035d372a911995bcc4b6ea44725d030b9f0ef951a3d0d7385758492781fe",
+        "methods": [
+          "constructor solidBlockPredicate lambda #5 = method_26248",
+          "method_26248"
+        ]
+      },
+      "Blocks": {
+        "sha256": "12384e63a34df092eef2375056e63b2d398cf8f210cf6e2df2af64be8cc3621b",
+        "methods": [
+          "stone_slab/smooth_stone_slab/glass/tinted_glass registration",
+          "registerStainedGlassBlock",
+          "never"
+        ]
+      },
+      "TransparentBlock": {
+        "sha256": "5c10c046bc52155716b1dfcfa71ae8cfebcd60f7f116d3c6652f8d45ab913c9d",
+        "methods": [
+          "getCodec",
+          "constructor"
+        ]
+      },
+      "TintedGlassBlock": {
+        "sha256": "3801bdfb6d32749b2455d56f7d88d7dc576f5e188e7d17577cbe0d5385fb6d4a",
+        "methods": [
+          "getOpacity"
+        ]
+      },
+      "StainedGlassBlock": {
+        "sha256": "8de6fe05f0f1045dc7f924bc850742bbca7c8b88fd48e3d8c1d7d07fc93485ba",
+        "methods": [
+          "constructor"
+        ]
+      },
+      "SideShapeType": {
+        "sha256": "c98e1dc83c0037a5861cbae64785a566c97fb67b88fcb6e4794957105b82d25f",
+        "methods": [
+          "matches"
+        ]
+      },
+      "RedstoneWireBlock": {
+        "sha256": "0583da64d1ca29a6da959b09b4f6b74d53f8542e81f3f32f557ec332931f77ea",
+        "methods": [
+          "getRenderConnectionType",
+          "canPlaceAt"
+        ]
+      },
+      "SideShapeType$1": {
+        "sha256": "3d7393d5c00c72b955f3dd3c1f78f009d3560d5fab379b2e4193ab6a8e509c2b",
+        "methods": [
+          "matches"
+        ]
+      },
+      "SideShapeType$2": {
+        "sha256": "3ad5acac0922ed7284e2d2ef9bba0b600ea04acf377db82767ff98ead033e1cb",
+        "methods": [
+          "matches"
+        ]
+      },
+      "SideShapeType$3": {
+        "sha256": "afe6411e74f1473bc68fe78e18b1cd013bd44dd63a65a682a81c5d389d7e6c26",
+        "methods": [
+          "matches"
+        ]
+      }
+    }
+  },
+  "probe_sources_sha256": {
+    "/root/DustRoute-minecraft-instrumentation/build.gradle": "f722876c5f961dd6557292526936e8e3a8d4154b22f45d19c59c482e47debb19",
+    "/root/DustRoute-minecraft-instrumentation/gradle/wrapper/gradle-wrapper.properties": "c67b97cdfe41822dbc8dc4614460f4ae0d2eef937d873f4b9011e892b1875c0d",
+    "/root/DustRoute-minecraft-instrumentation/gradle.properties": "bc3b225b1c58f0b6a613a6e3a89abb07267b1ddc50cbf597b7e7eb24a5c5121f",
+    "/root/DustRoute-minecraft-instrumentation/settings.gradle": "6d590f07f64de77b5e28f13244dc8a39e18fde666a3815c06ed8694d805b1da3",
+    "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/CaptureController.java": "ae6c13af15a194097822f0c4925271575b3df314f296ca46cf8c2570a696d9d8",
+    "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/DustRouteInstrumentation.java": "d066cbf8c04dedb4fe0468b20518ba3c4aa09601cc64282ea1db6ec9257c70b0",
+    "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/InstrumentationLog.java": "4896331f77b7f1be0f5462bfa3e7fada4e4eac510c1bc6f946395ef9c7a719d1",
+    "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/ObservationFilter.java": "51ce513b7c41724ad09dbc2b1d6b9178b19380dad7474aacc7f8e715a47d3332",
+    "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/mixin/AbstractBlockStateMixin.java": "b0bcc128a52c3000446dffa1712bee5877c083c764c50366a01a6f1de288c0ef",
+    "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/mixin/ObserverBlockMixin.java": "7be6e71ac12bf927e650fdd1f277c774642acaf8227663dfb2ae23755489a0f1",
+    "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/mixin/PistonBlockEntityMixin.java": "a2d57320171b6b6979b396bd9b8a62655ce19be9283aaa60a6da6f7d66d6e246",
+    "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/mixin/PistonBlockMixin.java": "90d4e22e4a7958412f1df8df1e12d9f52655ac71cd0266d787461b27bb853728",
+    "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/mixin/ServerCommonNetworkHandlerMixin.java": "67db460a232c552bb5452203466cc0cc04fac01fd7d06fefc3a9a1fd2377127c",
+    "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/mixin/ServerPlayNetworkHandlerMixin.java": "51b701457fff1f7c376206c6277c209013d1a5e93e8a33e1c03f682671630807",
+    "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/mixin/ServerWorldMixin.java": "c2d11c0129335c36a2d08fd28a3ff51682e28821c7e7b8f62c36bd61ddf2dc39",
+    "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/mixin/WorldChunkMixin.java": "09fa3f45e45007356ba9ddbea246234d0d147a3e4a0028eeb2afbc0ac7219b53",
+    "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/mixin/WorldMixin.java": "ddc0050a85c83098edcf4c4fe77f2e21c35ea995f66c5c92ec56f8cdacd02593",
+    "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/mixin/WorldTickSchedulerMixin.java": "06c9bf6bec5bbd44621b31ffe237966cc56e8702eb14c4be7360a37357bb66cf",
+    "/root/DustRoute-minecraft-instrumentation/src/main/resources/dustroute-vanilla-instrumentation.mixins.json": "006b4ba66fc0e94215c80539e10320c3bfa57b4ecb8aab6d1f53f41e330c4f6a",
+    "/root/DustRoute-minecraft-instrumentation/src/main/resources/fabric.mod.json": "62d7e74403e53f93d51c576e6cbd58a4c3eb44f1fe7af5db5d7a2afba57960bd"
+  },
+  "probe_reused_uncommitted_work": [
+    " M README.md",
+    " M docs/observation-contract.md",
+    " M scripts/normalize_ndjson.py",
+    " M scripts/test_normalize_ndjson.py",
+    " M src/main/java/dev/dustroute/instrumentation/InstrumentationLog.java",
+    " M src/main/java/dev/dustroute/instrumentation/ObservationFilter.java",
+    " M src/main/java/dev/dustroute/instrumentation/mixin/PistonBlockEntityMixin.java",
+    " M src/main/java/dev/dustroute/instrumentation/mixin/ServerPlayNetworkHandlerMixin.java",
+    " M src/main/java/dev/dustroute/instrumentation/mixin/WorldTickSchedulerMixin.java",
+    " M src/main/resources/dustroute-vanilla-instrumentation.mixins.json",
+    "?? scripts/compress_ndjson.py",
+    "?? scripts/test_compress_ndjson.py",
+    "?? src/main/java/dev/dustroute/instrumentation/CaptureController.java",
+    "?? src/main/java/dev/dustroute/instrumentation/mixin/AbstractBlockStateMixin.java",
+    "?? src/main/java/dev/dustroute/instrumentation/mixin/ObserverBlockMixin.java",
+    "?? src/main/java/dev/dustroute/instrumentation/mixin/PistonBlockMixin.java",
+    "?? src/main/java/dev/dustroute/instrumentation/mixin/WorldChunkMixin.java"
+  ],
+  "sources_sha256": {
+    "crates/dustroute-library/src/runtime_behavior.rs": "51d6a32a19c83a2bb2bb604f4575313f60ca217208f87323a0382b1b1e55a6ff",
+    "crates/dustroute-library/tests/executable_laws.rs": "94d2a44a629a17b72f1e6a0485d9778d1d9a0a08b850ab6a8b99ed397360e7fd",
+    "crates/dustroute-library/tests/execution_context.rs": "43edc9dc8f3c2e7ac405cc315e302b4770b3ecb16da33e757fd9bd9307b69d87",
+    "crates/dustroute-mcp/src/service_blueprint_tests.rs": "d3bf97fd995b7ff63f195048c4ed8d13a7b06c8a39de293a3e7acd79313a90de",
+    "crates/dustroute-minecraft/src/execution_context.rs": "017c5c2233cf05ad31d155893a0e15848e5a22fa560d04e43e36c3460c110738",
+    "crates/dustroute-minecraft/src/physical.rs": "bb718f9ce7b061bfd4053001a9b8e97fc98057e375be7a09d3788c8368177318",
+    "crates/dustroute-minecraft/src/physical/passive.rs": "bef049d33b2b00220f8810c9f266051016e626dd44e70f31870d7d0008f3267d",
+    "crates/dustroute-minecraft/src/piston_electrical.rs": "7207eda12253eeffe8f0e5a4b7baa47f084f9e76ed2ca44420793bfd5523eeab",
+    "crates/dustroute-minecraft/src/time/piston_runtime/mod.rs": "dc91b0fe33162587156511ff6706cfbc91c8a440904b15fd3376d4b13495e173",
+    "crates/dustroute-minecraft/src/world.rs": "7f1a7b9c9d85766680665e3415a21dd7ba1447646f89b854eda167cd1ffc2968",
+    "crates/dustroute-minecraft/tests/passive_shapes.rs": "ccea2e83c945320c109fcb70297b8d0bcb27b0b1511c382ce6abe0f561945a9c",
+    "crates/dustroute-minecraft/tests/physical_admission.rs": "c9dd2bf9db5dab37beabe6c199d157291c13cba518a5f99e32fb78511d3851ff",
+    "crates/dustroute-minecraft/tests/piston_runtime.rs": "4dfa5b8d2d5099959dc0f0a7167fdc2f79344c6cc6f74985fb40620a5fd87da5",
+    "crates/dustroute-minecraft/tests/unified_piston_runtime.rs": "c66f549c7ea9e9cc67a1013a57ef5a41eefda495b097bacd03955c0a7084b286",
+    "crates/dustroute-minecraft/tests/wire_rise_validation.rs": "7bfb8b81f2c13041c9280d8b3f13ce00effcd2406ea1fed844b32ccfb8d3d019",
+    "crates/dustroute-translate/src/minecraft_export.rs": "0b50c9d431275f4d57621a1308efffeeb7d5a794bb7cfccd59abc6ecd45d35cc",
+    "crates/dustroute-translate/src/piston_construction/snapshot.rs": "054fe31ffb8158fcf641743325e057809870ab942186a59bb08d7dd05a3db36f",
+    "crates/dustroute-translate/tests/execution_context.rs": "20160483a317e76c9aa4ef207791f1e817129a7bb8b20579f0c592742be1758a",
+    "crates/dustroute-translate/tests/location_behavior.rs": "c0fea86323b01d2a9d492a6353f83093f092d151ccfea57a0f660fe9a5877c98",
+    "crates/dustroute-translate/tests/passive_shapes.rs": "e1e14a5312497508d6b98e04136289b9375819260edb26dc3eb49dc72676bd6e",
+    "crates/dustroute-translate/tests/support/runtime_blueprint.rs": "41a843d4d2450d7cefce41e5316ab8c366ba25dc7486f476afc9b9ce4990b0ee",
+    "crates/dustroute-translate/tests/unified_piston_behavior.rs": "5a23c3727688deaee90c58bc1f23153cd78c62635b2f4adaa524a7ce7241a3d1",
+    "tools/make_passive_shape_fixtures.py": "47d14931676a71bd3877d5b7e8ab831f3ee36b99c7c94789f64d82de5c8c5ac8",
+    "tools/test_device_circuits.py": "624a88c9e7d673dd154a1f1dbb1961c726f66d730b8039bdef0fcc3af2de9f15"
+  },
+  "model_binary_sha256": "2b99dd87ed6e1179355083d5b061b5c58aab2692b7af4603a25e28d530582524",
+  "validation": [
+    {
+      "name": "fmt",
+      "command": [
+        "cargo",
+        "fmt",
+        "--all"
+      ],
+      "exit_code": 0,
+      "log": ".local/e2e-artifacts/passive-shapes-validation-final-fmt.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "passed_tests_including_doctests": 0
+    },
+    {
+      "name": "build",
+      "command": [
+        "cargo",
+        "build",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-translate",
+        "--example",
+        "compare_electrical_pistons"
+      ],
+      "exit_code": 0,
+      "log": ".local/e2e-artifacts/passive-shapes-validation-final-build.log",
+      "sha256": "99f71393b9903dca098310bb446022a4bdee195ea9996f351a787195555210a6",
+      "passed_tests_including_doctests": 0
+    },
+    {
+      "name": "minecraft",
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-minecraft",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0,
+      "log": ".local/e2e-artifacts/passive-shapes-validation-final-minecraft.log",
+      "sha256": "0381ea616fa11ac2a5278baf761f1a0470f704194b5455b4c7674296723ba016",
+      "passed_tests_including_doctests": 306
+    },
+    {
+      "name": "library",
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-library",
+        "--test",
+        "execution_context",
+        "--test",
+        "executable_laws",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0,
+      "log": ".local/e2e-artifacts/passive-shapes-validation-final-library.log",
+      "sha256": "8288404c0ceb15ee5fb7085461251aee9e844f5c5fbab36a918153f759b3f11d",
+      "passed_tests_including_doctests": 18
+    },
+    {
+      "name": "translate",
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-translate",
+        "--test",
+        "passive_shapes",
+        "--test",
+        "execution_context",
+        "--test",
+        "electrical_piston_construction",
+        "--test",
+        "electrical_piston_adoption",
+        "--test",
+        "electrical_piston_relocation",
+        "--test",
+        "runtime_adoption",
+        "--test",
+        "ordinary_reference_door",
+        "--test",
+        "location_behavior",
+        "--test",
+        "unified_piston_behavior",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0,
+      "log": ".local/e2e-artifacts/passive-shapes-validation-final-translate.log",
+      "sha256": "854e0483c35c003475c23e99b04985636873bdbb7db59b6d9fb9d4d70c5280a5",
+      "passed_tests_including_doctests": 42
+    },
+    {
+      "name": "export",
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-translate",
+        "--lib",
+        "minecraft_export::tests",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0,
+      "log": ".local/e2e-artifacts/passive-shapes-validation-final-export.log",
+      "sha256": "b663866e7b333fa67a2a5167397b4d698d2f0737c5160d57c2891d297ac2bab4",
+      "passed_tests_including_doctests": 5
+    },
+    {
+      "name": "snapshot",
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-translate",
+        "--lib",
+        "snapshot::tests",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0,
+      "log": ".local/e2e-artifacts/passive-shapes-validation-final-snapshot.log",
+      "sha256": "6e6af4d2506fd405e94227d8460451da02d1c7e539999cfa459b9f5516d518ad",
+      "passed_tests_including_doctests": 7
+    },
+    {
+      "name": "mcp",
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-mcp",
+        "--lib",
+        "blueprint_tests",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0,
+      "log": ".local/e2e-artifacts/passive-shapes-validation-final-mcp.log",
+      "sha256": "0ab8dc76c029890770b8231b0b86ed292533964d4b0be1fea8ddb523083c909d",
+      "passed_tests_including_doctests": 15
+    },
+    {
+      "name": "python",
+      "command": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tools",
+        "-p",
+        "test_*.py"
+      ],
+      "exit_code": 0,
+      "log": ".local/e2e-artifacts/passive-shapes-validation-final-python.log",
+      "sha256": "f5e16f9017b207db9970ac8fb4b0117c03511cdcfb342ce650ba3ad73b901239",
+      "passed_tests_including_doctests": 0,
+      "passed_tests": 27
+    },
+    {
+      "name": "clippy",
+      "command": [
+        "cargo",
+        "clippy",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "--workspace",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "exit_code": 0,
+      "log": ".local/e2e-artifacts/passive-shapes-validation-final-clippy.log",
+      "sha256": "bb956ec3ec8d3af5c0554a9a93aa1bfe029a77fe13ec1a7cd58b6093703e732e",
+      "passed_tests_including_doctests": 0
+    },
+    {
+      "name": "fmt-check",
+      "command": [
+        "cargo",
+        "fmt",
+        "--all",
+        "--",
+        "--check"
+      ],
+      "exit_code": 0,
+      "log": ".local/e2e-artifacts/passive-shapes-validation-final-fmt-check.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "passed_tests_including_doctests": 0
+    },
+    {
+      "name": "diff-check",
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit_code": 0,
+      "log": ".local/e2e-artifacts/passive-shapes-validation-final-diff-check.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "passed_tests_including_doctests": 0
+    }
+  ],
+  "preliminary_validation": {
+    "results": [
+      {
+        "name": "fmt",
+        "command": [
+          "cargo",
+          "fmt",
+          "--all"
+        ],
+        "exit_code": 0,
+        "log": ".local/e2e-artifacts/passive-shapes-validation-fmt.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "build",
+        "command": [
+          "cargo",
+          "build",
+          "--offline",
+          "--locked",
+          "-j",
+          "1",
+          "-p",
+          "dustroute-translate",
+          "--example",
+          "compare_electrical_pistons"
+        ],
+        "exit_code": 0,
+        "log": ".local/e2e-artifacts/passive-shapes-validation-build.log",
+        "sha256": "7e8dafb638edfe3439ca6df95c881508dfdb44236157490ba32b48b53d4a45ac"
+      },
+      {
+        "name": "minecraft",
+        "command": [
+          "cargo",
+          "test",
+          "--offline",
+          "--locked",
+          "-j",
+          "1",
+          "-p",
+          "dustroute-minecraft",
+          "--",
+          "--test-threads=1"
+        ],
+        "exit_code": 101,
+        "log": ".local/e2e-artifacts/passive-shapes-validation-minecraft.log",
+        "sha256": "1509a926bcb1dc676cd5aead11baeb020dcba666a965cf4c184ed714d5219ef2"
+      }
+    ],
+    "outcome": "The old wire-rise fixture omitted waterlogged for stone_slab. Current admission requires complete dry slab evidence; the fixture now explicitly supplies waterlogged=false. Incomplete/wet states remain rejected. The complete Minecraft crate and final checks were rerun."
+  },
+  "boundaries": [
+    "Stone and smooth-stone slabs: explicit dry top/bottom/double only; glass, tinted glass and sixteen explicitly registered stained-glass identities.",
+    "Glass identities share source-audited predicates; fresh live samples use tinted and red stained glass, not every color independently.",
+    "Fresh strict placement in isolated known regions; not arbitrary live construction certification.",
+    "Complete bounded tick-end blocks, ordered writes, delivered device ticks, scheduler attempt/discard order and available active-device/piston boundaries.",
+    "No direct observation of hidden registers/histories, shape or inert-target callbacks; no item entities.",
+    "Checkpoint and behavior-state restoration verifies model continuation, not reconstruction of live hidden state.",
+    "Other slabs, stairs/panes, pressure plates, direct piston crushing, slime/honey, inventory/entities/fluids remain excluded.",
+    "Retained raw intervals include original header/end; full capture artifact hashes remain local references.",
+    "Retained 3x3 door and earlier mixed-device observations are replayed; no new live door trial or full workspace test run."
+  ]
+}

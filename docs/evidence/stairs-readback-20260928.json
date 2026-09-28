@@ -1,0 +1,137 @@
+{
+  "schema_version": "dustroute.stair-readback-audit.v1",
+  "status": "paused_before_shared_readback_changes",
+  "date": "2026-09-28",
+  "base_commit": "95eec33",
+  "candidate_execution_revision": "v16 (uncommitted, unverified for adoption)",
+  "classification": "observation_incomplete",
+  "model_compared": false,
+  "diagnostic": {
+    "path": "docs/evidence/stairs-readback-20260928.diagnostic.json.gz",
+    "sha256": "e3cfb533b24fc41201d690b7f48916900f7bddce86025d6dc85bd7224f97961f",
+    "retained_client_fields": [
+      "complete",
+      "cleanup",
+      "enabled_features",
+      "known_region",
+      "origin",
+      "activations",
+      "initial",
+      "final"
+    ]
+  },
+  "sources": {
+    ".local/stair-fixtures/device-stairs-inner-top-left-r0.json": "90ef9e97a962ea7defcfb8b19d0952a5abadf9d522ccd3e9529b8f5a5d38d954",
+    ".local/e2e-artifacts/stairs-20260928-a.raw.ndjson": "e220f79c26745e9524b12d5a54d86d27a935cdaddc285418db24228d604e20bf",
+    ".local/e2e-artifacts/stairs-20260928-a.client.json": "5ad3bc077b7d1d0b31baa3ea33c155029ccd6205900b302cd2d0592ae02c7563",
+    ".local/e2e-artifacts/stairs-20260928-a.summary.json": "09b440c1012fcaaef82b18357a0fdbcae586c43fcd6042262f81c317929461d5",
+    ".local/e2e-artifacts/stairs-20260928-a.comparison.json": "68e76bde6d842a128f490a8a2693fcc9d2574d5f9ffee1c30b7a7ebd65713ca4",
+    ".local/e2e-artifacts/stairs-20260928-a.server.log": "c56c37fb0f89d14d10a892a96a74203800a1b0685fc204da03600ca8cec71fe3"
+  },
+  "target_source": {
+    "jar": "/root/.gradle/caches/fabric-loom/minecraftMaven/net/minecraft/minecraft-merged/1.21.11-net.fabricmc.yarn.1_21_11.1.21.11+build.6-v2/minecraft-merged-1.21.11-net.fabricmc.yarn.1_21_11.1.21.11+build.6-v2.jar",
+    "sha256": "5b4aa12131a872a25dc32e7f017373d6e83502f6919154769296dd3de6af8c1b",
+    "class_sha256": {
+      "net/minecraft/block/StairsBlock.class": "7802b7a7009a9af710757c31587459092efcd4782f7633a5c3a67ca25683f497",
+      "net/minecraft/block/Block.class": "50db238ead15fdf94b4de48fc34023ef16ebb3b9d5f24d5c4f32c8ae103eddbb"
+    }
+  },
+  "input_packet_game_ticks": [
+    148131,
+    148147
+  ],
+  "comparison_window": {
+    "first_game_tick": 148131,
+    "last_game_tick": 148187,
+    "first_sequence": 2231,
+    "last_sequence": 3134,
+    "records": 904,
+    "contiguous": true
+  },
+  "differences": [
+    {
+      "position": [
+        120002,
+        180,
+        999
+      ],
+      "server_derived": [
+        "minecraft:quartz_stairs",
+        [
+          [
+            "facing",
+            "north"
+          ],
+          [
+            "half",
+            "top"
+          ],
+          [
+            "shape",
+            "straight"
+          ],
+          [
+            "waterlogged",
+            "false"
+          ]
+        ]
+      ],
+      "client_final": [
+        "minecraft:quartz_stairs",
+        [
+          [
+            "facing",
+            "north"
+          ],
+          [
+            "half",
+            "top"
+          ],
+          [
+            "shape",
+            "inner_left"
+          ],
+          [
+            "waterlogged",
+            "false"
+          ]
+        ]
+      ]
+    }
+  ],
+  "shape_write": {
+    "kind": "state_commit",
+    "sequence": 2270,
+    "game_tick": 148132,
+    "dimension": "minecraft:overworld",
+    "position": "BlockPos{x=120002, y=180, z=999}",
+    "before": "Block{minecraft:quartz_stairs}[facing=north,half=top,shape=inner_left,waterlogged=false]",
+    "after": "Block{minecraft:quartz_stairs}[facing=north,half=top,shape=straight,waterlogged=false]",
+    "flags": 324
+  },
+  "cleanup_write": {
+    "kind": "state_commit",
+    "sequence": 3628,
+    "game_tick": 148227,
+    "dimension": "minecraft:overworld",
+    "position": "Mutable{x=120002, y=180, z=999}",
+    "before": "Block{minecraft:quartz_stairs}[facing=north,half=top,shape=straight,waterlogged=false]",
+    "after": "Block{minecraft:air}",
+    "flags": 258
+  },
+  "cleanup": {
+    "region_empty": true,
+    "force_load_removed": true,
+    "disconnected_before_finish": null
+  },
+  "server_stopped_normally": true,
+  "validation": {
+    "targeted_rust_tests": 16,
+    "cargo_check_translate": "passed",
+    "compare_electrical_pistons_build": "passed",
+    "full_workspace_tests": "not_run",
+    "remaining_live_cases": "not_run",
+    "public_placement_adoption": "not_verified"
+  },
+  "limitation": "Diagnostic evidence of client/server state disagreement. Not a matched device observation or a simulator conformance result. The original bounded artifact has pre-window evictions and post-window suppression; the declared comparison window is contiguous."
+}

@@ -7,8 +7,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize, schemars::JsonSchema)]
 pub enum RuntimeBehaviorProfile {
-    #[serde(rename = "dustroute.piston-electrical-root-exploration.v6")]
-    UnifiedPistonElectricalRootExplorationV6,
+    #[serde(rename = "dustroute.piston-electrical-root-exploration.v16")]
+    UnifiedPistonElectricalRootExplorationV16,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, schemars::JsonSchema)]
@@ -29,7 +29,7 @@ impl RuntimeBehaviorContext {
     /// body direction. Saved contexts continue to require an explicit profile.
     pub fn fresh_pistons(known_region: Region, input_levers: Vec<Pos>) -> Self {
         Self {
-            profile: RuntimeBehaviorProfile::UnifiedPistonElectricalRootExplorationV6,
+            profile: RuntimeBehaviorProfile::UnifiedPistonElectricalRootExplorationV16,
             initial_condition: crate::behavior_type::BehaviorInitialCondition::FreshConstruction,
             known_region,
             input_levers,
@@ -39,7 +39,7 @@ impl RuntimeBehaviorContext {
 
     pub fn execution_context(&self) -> WorldExecutionContext {
         WorldExecutionContext::for_profile(
-            WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V6,
+            WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V16,
         )
     }
 }

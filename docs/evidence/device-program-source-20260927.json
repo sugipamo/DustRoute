@@ -1,0 +1,23 @@
+{
+  "schema_version": "dustroute.device-program-source-audit.v1",
+  "minecraft_version": "1.21.11",
+  "mappings": "1.21.11+build.6",
+  "named_merged_jar_sha256": "5b4aa12131a872a25dc32e7f017373d6e83502f6919154769296dd3de6af8c1b",
+  "named_class_sha256": {
+    "net/minecraft/block/ButtonBlock.class": "334dcae45f94deb208bb17e35f5630faaebe77775164aa880f9dd2ba228f7fab",
+    "net/minecraft/block/Blocks.class": "12384e63a34df092eef2375056e63b2d398cf8f210cf6e2df2af64be8cc3621b",
+    "net/minecraft/block/BlockSetType.class": "517f0342fe809a4a87f217613866cc8548c5b66c28b1165e016fdec289462947"
+  },
+  "provenance": "crates/dustroute-minecraft/tests/fixtures/piston_runtime_source.meta.json",
+  "inspection": "javap -p -c; Blocks bootstrap mapping checked with javap -p -v; no server started",
+  "findings": [
+    "Blocks stone_button registration uses bootstrap 181 -> method_63368, BlockSetType.STONE, pressTicks=20.",
+    "BlockSetType.STONE sets canButtonBeActivatedByArrows=false.",
+    "ButtonBlock.onUse ignores already powered state; powerOn writes flags 3, updates source/support neighbors, then schedules the block tick.",
+    "Weak output is 15 while powered. Strong output is 15 only in the attached-support query direction.",
+    "scheduledTick checks powered and tryPowerWithProjectiles releases the stone button without entity sampling.",
+    "onStateReplaced notifies when powered and not moved; admitted stone buttons cannot be moved as payloads.",
+    "Sound, game events, explosion activation, projectiles and entities are not modeled in this increment."
+  ],
+  "new_live_trial": false
+}

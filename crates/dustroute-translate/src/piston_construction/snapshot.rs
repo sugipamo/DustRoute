@@ -1,5 +1,5 @@
 //! Lossless Java states for construction commands and expected observations.
-use crate::minecraft_export::{JavaExportConfig, java_block_state};
+use crate::minecraft_export::{JavaExportConfig, device_java_block_state, java_block_state};
 use crate::snapshot::{MinecraftSnapshot, MinecraftSnapshotBlock, assembly_from_snapshot};
 use dustroute_library::blueprint::BlueprintCatalog;
 use dustroute_minecraft::piston_electrical::validate_evidence;
@@ -19,14 +19,18 @@ pub fn electrical_snapshot(world: &World, region: Region) -> Result<MinecraftSna
         if block.kind == BlockKind::Air {
             continue;
         }
-        let encoded =
-            java_block_state(block, &JavaExportConfig::default()).map_err(|e| e.to_string())?;
+        let encoded = if dustroute_minecraft::device_program::program(block).is_some() {
+            device_java_block_state(block)
+        } else {
+            java_block_state(block, &JavaExportConfig::default())
+        }
+        .map_err(|e| e.to_string())?;
         let (name, properties) = encoded
             .split_once('[')
             .map_or((encoded.as_str(), ""), |(n, p)| {
                 (n, p.trim_end_matches(']'))
             });
-        let mut name = name.to_string();
+        let name = name.to_string();
         let mut properties: BTreeMap<String, String> = properties
             .split(',')
             .filter(|s| !s.is_empty())
@@ -35,36 +39,11 @@ pub fn electrical_snapshot(world: &World, region: Region) -> Result<MinecraftSna
                 (k.into(), v.into())
             })
             .collect();
-        match block.kind {
-            BlockKind::Solid | BlockKind::Transparent => {
-                if let Some(observed) = &block.observed_name {
-                    name = format!(
-                        "minecraft:{}",
-                        observed.strip_prefix("minecraft:").unwrap_or(observed)
-                    );
-                }
-            }
-            BlockKind::RedstoneWire => {
-                properties.insert(
-                    "power".into(),
-                    block.power_level.expect("validated level").to_string(),
-                );
-            }
-            BlockKind::Repeater => {
-                properties.insert(
-                    "powered".into(),
-                    block.powered.expect("validated power").to_string(),
-                );
-                properties.insert(
-                    "locked".into(),
-                    block
-                        .observed_properties
-                        .get("locked")
-                        .cloned()
-                        .unwrap_or_else(|| "false".into()),
-                );
-            }
-            _ => {}
+        if block.kind == BlockKind::RedstoneWire {
+            properties.insert(
+                "power".into(),
+                block.power_level.expect("validated level").to_string(),
+            );
         }
         if block.observed_name.is_some() && properties != block.observed_properties {
             return Err(format!(
@@ -122,12 +101,19 @@ pub(super) fn initialization_request(
     // that pulse. Simulate this actual request and verify the complete
     // settled world. Never alter the declared Assembly or use strict
     // writes; later changes to watched cells can still trigger pulses.
-    if block.kind == BlockKind::Observer && block.powered == Some(false) {
-        block.powered = Some(true);
+    if let Some(program) = dustroute_minecraft::device_program::program(&block)
+        && let Some(initialization) = &program.definition().command_initialization
+        && block.powered == Some(initialization.declared_powered)
+    {
+        let property = program.definition().primary_power.name();
+        let powered = initialization.requested_powered;
+        block.powered = Some(powered);
         block
             .observed_properties
-            .insert("powered".into(), "true".into());
-        requested.properties.insert("powered".into(), "true".into());
+            .insert(property.into(), powered.to_string());
+        requested
+            .properties
+            .insert(property.into(), powered.to_string());
     }
     (block, snapshot_state(&requested))
 }

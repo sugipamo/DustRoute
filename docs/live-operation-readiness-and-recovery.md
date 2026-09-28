@@ -32,6 +32,12 @@ at the same endpoint, or make a check and write atomic. A mismatch stops further
 writes and retains the new attempt for inspection. This accepted operational
 limit must remain visible in the plan and documentation.
 
+The shared device extension also has [position-owned torch history](shared-torch-runtime.md).
+Recent burnout history can survive removal at an otherwise empty coordinate;
+block snapshots do not recover it. Applicable fresh-state assumptions are exposed
+in the target-review preview. Reconstruction does not promise to clear that
+server history or certify future circuit behavior from matching visible states.
+
 The companion proposal below records the optional stronger guarantee. It is
 not the current implementation plan or an outstanding request for approval.
 

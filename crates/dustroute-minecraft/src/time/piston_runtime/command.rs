@@ -1,12 +1,10 @@
 //! Exact-state Java command insertion/removal, including pre-write work.
 //! Queue payloads remain in PistonEvent; module boundaries do not change timing.
-use super::electrical::{
-    repeater_jobs, repeater_jobs_for, wire_offset_jobs, world, write_shape_jobs,
-};
+use super::electrical::{wire_offset_jobs, world, write_shape_jobs};
 use super::geometry::{along, delta, offset};
 use super::notifications::adjacent_jobs;
 use super::*;
-use crate::piston_electrical::{full_face, wire_notification_centers};
+use crate::piston_electrical::wire_notification_centers;
 use crate::{BlockKind, DeltaCause, Facing};
 
 pub(super) fn install(
@@ -33,7 +31,9 @@ pub(super) fn install(
             .into_iter()
             .find(|side| side.offset() == support)
             .ok_or_else(|| unsupported("adjacent construction support required"))?;
-        if !full_face(&view.block(offset(pos, support)?)?, side.opposite()) {
+        if !crate::physical::of_kind(block.kind)
+            .supports_attachment(&view.block(offset(pos, support)?)?, side)
+        {
             return Err(unsupported("unsupported command placement support"));
         }
     }
@@ -55,7 +55,7 @@ pub(super) fn preprocess(
     // Block.postProcessState: AbstractBlock.DIRECTIONS, not neighbor-update
     // order. The requested state is NOT yet in the world. Construction exports
     // every property explicitly, so BlockStateArgument.copyPropertiesTo restores
-    // wire arms/repeater lock after their pure shape transforms. Support loss is
+    // wire arms/repeater lock/stair shape after their pure transforms. Support loss is
     // excluded above. Of the admitted stable kinds only observer shapes enqueue
     // work. Keep each callback boundary so queued identity and pre-write state
     // survive checkpoints; do not use a temporary world write.
@@ -83,14 +83,7 @@ pub(super) fn preprocess(
         }),
         ..Default::default()
     };
-    if block.kind == BlockKind::Observer {
-        out.queued = super::devices::observer_shape_ticks(
-            view,
-            pos,
-            block,
-            block.facing == Some(direction.opposite()),
-        )?;
-    }
+    out.queued = super::devices::preprocess(view, pos, block, along(pos, *direction, 1)?)?;
     Ok(out)
 }
 
@@ -117,25 +110,25 @@ pub(super) fn added(
 ) -> Result<RuntimeOutcome<PistonEvent>, RuntimeError> {
     let block = view.block(pos)?;
     let mut jobs = VecDeque::new();
-    match block.kind {
-        BlockKind::Observer => {
-            let mut out = super::devices::observer(
-                view,
+    if crate::device_program::program(&block).is_some() {
+        return Ok(RuntimeOutcome {
+            callbacks: vec![super::devices::event(
                 pos,
-                crate::device_callback_law::ObserverCallback::Added,
-                false,
-            )?;
-            out.continuation = Some(PistonEvent::ElectricalAfterAdded {
+                crate::device_program::Callback::Added,
+                None,
+            )],
+            continuation: Some(PistonEvent::ElectricalAfterAdded {
                 block: Box::new(block),
-            });
-            return Ok(out);
-        }
+            }),
+            ..Default::default()
+        });
+    }
+    match block.kind {
         BlockKind::Piston => jobs.push_back(NeighborJob {
             target: pos,
             source: pos,
             shape: false,
         }),
-        BlockKind::Repeater => jobs.extend(repeater_jobs(view, pos)?),
         BlockKind::RedstoneWire => {
             jobs.push_back(NeighborJob {
                 target: pos,
@@ -238,10 +231,28 @@ pub(super) fn removed(
     pos: Pos,
     before: &Block,
 ) -> Result<RuntimeOutcome<PistonEvent>, RuntimeError> {
+    let jobs = removed_notification_jobs(view, pos, before)?;
+    Ok(RuntimeOutcome {
+        callbacks: vec![call(pos, PistonEvent::Notify { jobs })],
+        continuation: Some(if before.kind == BlockKind::RedstoneWire {
+            PistonEvent::ElectricalRemovedWireUpdate {
+                block: Box::new(before.clone()),
+            }
+        } else {
+            PistonEvent::ElectricalCommandNeighbors
+        }),
+        ..Default::default()
+    })
+}
+
+pub(super) fn removed_notification_jobs(
+    view: RuntimeView<'_>,
+    pos: Pos,
+    before: &Block,
+) -> Result<VecDeque<NeighborJob>, RuntimeError> {
     let mut jobs = VecDeque::new();
+    jobs.extend(super::devices::removed_jobs(view, pos, before)?);
     match before.kind {
-        BlockKind::Observer => jobs.extend(super::devices::removed_jobs(view, pos, before)?),
-        BlockKind::Repeater => jobs.extend(repeater_jobs_for(view, pos, before)?),
         BlockKind::Lever if before.powered == Some(true) => {
             jobs.extend(adjacent_jobs(view, pos, false, false)?);
             let support = super::geometry::offset(
@@ -256,21 +267,10 @@ pub(super) fn removed(
             for side in crate::piston_electrical::SIDES {
                 jobs.extend(adjacent_jobs(view, along(pos, side, 1)?, false, false)?);
             }
-            return Ok(RuntimeOutcome {
-                callbacks: vec![call(pos, PistonEvent::Notify { jobs })],
-                continuation: Some(PistonEvent::ElectricalRemovedWireUpdate {
-                    block: Box::new(before.clone()),
-                }),
-                ..Default::default()
-            });
         }
         _ => {}
     }
-    Ok(RuntimeOutcome {
-        callbacks: vec![call(pos, PistonEvent::Notify { jobs })],
-        continuation: Some(PistonEvent::ElectricalCommandNeighbors),
-        ..Default::default()
-    })
+    Ok(jobs)
 }
 
 pub(super) fn removed_wire_update(
@@ -278,6 +278,23 @@ pub(super) fn removed_wire_update(
     pos: Pos,
     before: &Block,
 ) -> Result<RuntimeOutcome<PistonEvent>, RuntimeError> {
+    Ok(RuntimeOutcome {
+        callbacks: vec![call(
+            pos,
+            PistonEvent::Notify {
+                jobs: removed_wire_jobs(view, pos, before)?,
+            },
+        )],
+        continuation: Some(PistonEvent::ElectricalCommandNeighbors),
+        ..Default::default()
+    })
+}
+
+pub(super) fn removed_wire_jobs(
+    view: RuntimeView<'_>,
+    pos: Pos,
+    before: &Block,
+) -> Result<VecDeque<NeighborJob>, RuntimeError> {
     let mut jobs = VecDeque::new();
     if Some(world(view)?.wire_power_at(pos)?) != before.power_level {
         for center in wire_notification_centers(pos)? {
@@ -285,9 +302,5 @@ pub(super) fn removed_wire_update(
         }
     }
     jobs.extend(wire_offset_jobs(view, pos)?);
-    Ok(RuntimeOutcome {
-        callbacks: vec![call(pos, PistonEvent::Notify { jobs })],
-        continuation: Some(PistonEvent::ElectricalCommandNeighbors),
-        ..Default::default()
-    })
+    Ok(jobs)
 }

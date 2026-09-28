@@ -550,6 +550,7 @@ fn piston_input_connection(world: &World, source: Pos, piston: Pos) -> Result<bo
             reason: match code {
                 1 => "observed wire connection shape is missing",
                 2 => "observed directional input has no facing",
+                3 => "block kind is outside the piston connection law ABI",
                 _ => unreachable!("compiled connection error bounds"),
             }
             .to_owned(),

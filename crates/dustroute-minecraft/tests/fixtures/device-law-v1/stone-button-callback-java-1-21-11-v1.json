@@ -1,0 +1,135 @@
+{
+  "inputs": {
+    "event": 2,
+    "powered": 1
+  },
+  "registers": {
+    "write": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "powered": {
+      "initial": 0,
+      "maximum": 1
+    },
+    "delay": {
+      "initial": 0,
+      "maximum": 20
+    },
+    "notify": {
+      "initial": 0,
+      "maximum": 1
+    }
+  },
+  "histories": {},
+  "handlers": {
+    "evaluate": [
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "input",
+            "name": "event"
+          },
+          "right": {
+            "op": "constant",
+            "value": 0
+          }
+        },
+        "then": [
+          {
+            "op": "if",
+            "condition": {
+              "op": "not",
+              "value": {
+                "op": "input",
+                "name": "powered"
+              }
+            },
+            "then": [
+              {
+                "op": "set",
+                "register": "write",
+                "value": {
+                  "op": "constant",
+                  "value": 1
+                }
+              },
+              {
+                "op": "set",
+                "register": "powered",
+                "value": {
+                  "op": "constant",
+                  "value": 1
+                }
+              },
+              {
+                "op": "set",
+                "register": "delay",
+                "value": {
+                  "op": "constant",
+                  "value": 20
+                }
+              },
+              {
+                "op": "set",
+                "register": "notify",
+                "value": {
+                  "op": "constant",
+                  "value": 1
+                }
+              }
+            ],
+            "otherwise": []
+          }
+        ],
+        "otherwise": [
+          {
+            "op": "if",
+            "condition": {
+              "op": "input",
+              "name": "powered"
+            },
+            "then": [
+              {
+                "op": "set",
+                "register": "notify",
+                "value": {
+                  "op": "constant",
+                  "value": 1
+                }
+              },
+              {
+                "op": "if",
+                "condition": {
+                  "op": "equal",
+                  "left": {
+                    "op": "input",
+                    "name": "event"
+                  },
+                  "right": {
+                    "op": "constant",
+                    "value": 1
+                  }
+                },
+                "then": [
+                  {
+                    "op": "set",
+                    "register": "write",
+                    "value": {
+                      "op": "constant",
+                      "value": 1
+                    }
+                  }
+                ],
+                "otherwise": []
+              }
+            ],
+            "otherwise": []
+          }
+        ]
+      }
+    ]
+  }
+}

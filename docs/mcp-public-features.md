@@ -13,6 +13,11 @@ An offline Blueprint workflow also supports exact source/state records and
 reviewed update proposals. Adopting a proposal saves new revisions locally;
 it does not apply them to Minecraft.
 
+Current block reads use [server-confirmed readback](server-readback.md), shared
+with isolated trials. The bot needs command permissions, and complete confirmation
+is limited to 8,880 cells with all predicates in the same server game tick. Missing
+confirmation fails the observation; client-only data cannot authorize a write.
+
 ## Choose a workflow
 
 | Intent | Entry and continuation |

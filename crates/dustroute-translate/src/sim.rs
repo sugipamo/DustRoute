@@ -5,9 +5,9 @@ use crate::connectivity::{
     repeater_input_pos, repeater_output_pos,
 };
 use crate::electrical::{
-    DeviceOutputState, ElectricalTopology, InstantaneousElectricalState,
-    InstantaneousSolveDidNotConverge, PoweredBlockState, repeater_input_level,
-    solve_instantaneous_with_topology, torch_support_is_powered,
+    DeviceOutputState, ElectricalSolveError, ElectricalTopology, InstantaneousElectricalState,
+    PoweredBlockState, repeater_input_level, solve_instantaneous_with_topology,
+    torch_support_is_powered,
 };
 use crate::torch_law::{self, TorchState};
 use crate::world::{Block, BlockKind, Pos, World};
@@ -32,7 +32,7 @@ pub enum InputMutationError {
         position: Pos,
         level: u8,
     },
-    Solver(InstantaneousSolveDidNotConverge),
+    Solver(ElectricalSolveError),
 }
 
 impl std::fmt::Display for InputMutationError {
@@ -58,8 +58,8 @@ impl std::fmt::Display for InputMutationError {
 
 impl std::error::Error for InputMutationError {}
 
-impl From<InstantaneousSolveDidNotConverge> for InputMutationError {
-    fn from(value: InstantaneousSolveDidNotConverge) -> Self {
+impl From<ElectricalSolveError> for InputMutationError {
+    fn from(value: ElectricalSolveError) -> Self {
         Self::Solver(value)
     }
 }
@@ -321,7 +321,8 @@ pub struct RedstoneTickSimulator {
 }
 
 impl RedstoneTickSimulator {
-    pub fn new(world: World) -> Result<Self, InstantaneousSolveDidNotConverge> {
+    pub fn new(world: World) -> Result<Self, ElectricalSolveError> {
+        crate::electrical::validate_compatibility_kinds(&world)?;
         let laws = builtin_compatibility_world_laws();
         let topology = ElectricalTopology::from_world(&world);
         let devices = DeviceOutputState::initially_lit(&world);
@@ -410,7 +411,7 @@ impl RedstoneTickSimulator {
         if context.profile != WorldExecutionProfile::RedstoneCompatibilityBoundaryV1 {
             return Err("compatibility simulator requires its compatibility world profile".into());
         }
-        context.validate()?;
+        context.validate_world_kinds(&world)?;
         let mut simulator = Self::new(world).map_err(|error| error.to_string())?;
         simulator.scheduler_profile = context.scheduler.expect("validated scheduler");
         Ok(simulator)
@@ -458,7 +459,7 @@ impl RedstoneTickSimulator {
             .sum()
     }
 
-    pub fn settle_instantaneous(&mut self) -> Result<TickState, InstantaneousSolveDidNotConverge> {
+    pub fn settle_instantaneous(&mut self) -> Result<TickState, ElectricalSolveError> {
         self.instantaneous =
             solve_instantaneous_with_topology(&self.world, &self.devices(), 128, &self.topology)?;
         self.notify_torches();
@@ -524,7 +525,7 @@ impl RedstoneTickSimulator {
     /// followed by block-specific events at the same game tick; callers can
     /// therefore observe delayed device updates without making the legacy
     /// redstone tick the primary execution unit.
-    pub fn step_event(&mut self) -> Result<SimulationTransition, InstantaneousSolveDidNotConverge> {
+    pub fn step_event(&mut self) -> Result<SimulationTransition, ElectricalSolveError> {
         debug_assert!(self.scheduler_profile.validate().is_ok());
         if self.event_queue.is_empty() {
             debug_assert!(self.pending_boundary.is_none());
@@ -898,7 +899,7 @@ impl RedstoneTickSimulator {
     /// projection, while the public tick API only returns its final state.
     pub(crate) fn advance_tick_events(
         &mut self,
-    ) -> Result<Vec<SimulationTransition>, InstantaneousSolveDidNotConverge> {
+    ) -> Result<Vec<SimulationTransition>, ElectricalSolveError> {
         let target_tick = if self.pending_boundary.is_some() {
             self.tick
         } else {
@@ -921,14 +922,12 @@ impl RedstoneTickSimulator {
     /// Transition-first alias for one scheduler event. It never drains
     /// multiple events to reach the next state-changing edge; a successful
     /// no-op event is returned explicitly in the `SimulationTransition`.
-    pub fn step_transition(
-        &mut self,
-    ) -> Result<SimulationTransition, InstantaneousSolveDidNotConverge> {
+    pub fn step_transition(&mut self) -> Result<SimulationTransition, ElectricalSolveError> {
         self.step_event()
     }
 
     /// Compatibility projection of one complete historical redstone tick.
-    pub fn advance_tick(&mut self) -> Result<TickState, InstantaneousSolveDidNotConverge> {
+    pub fn advance_tick(&mut self) -> Result<TickState, ElectricalSolveError> {
         Ok(self
             .advance_tick_events()?
             .last()
@@ -1237,10 +1236,7 @@ impl RedstoneTickSimulator {
         self.observer_observations = after;
     }
 
-    pub fn settle_ticks(
-        &mut self,
-        count: usize,
-    ) -> Result<TickState, InstantaneousSolveDidNotConverge> {
+    pub fn settle_ticks(&mut self, count: usize) -> Result<TickState, ElectricalSolveError> {
         let mut state = self.snapshot();
         for _ in 0..count {
             state = self.advance_tick()?;

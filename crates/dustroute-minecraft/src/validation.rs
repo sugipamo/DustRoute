@@ -75,7 +75,7 @@ impl std::error::Error for WorldValidationError {}
 pub struct ValidatedWorld(World);
 
 impl ValidatedWorld {
-    pub const PROFILE: &'static str = "dustroute.initial-placement.explicit-wire-rise.v2";
+    pub const PROFILE: &'static str = "dustroute.initial-placement.explicit-wire-rise.v4";
 
     #[must_use]
     pub fn into_world(self) -> World {
@@ -124,14 +124,18 @@ impl World {
         &self,
         block_at: impl Fn(Pos) -> Option<Block>,
     ) -> Vec<WorldValidationIssue> {
-        let mut issues = self.placement_issues_v1();
+        let mut issues = self.placement_issues_for_contract(true);
         issues.extend(wire_rise_issues(self, block_at));
         issues
     }
 
-    fn placement_issues_v1(&self) -> Vec<WorldValidationIssue> {
-        let mut issues: Vec<_> = self
-            .support_issues()
+    fn placement_issues_for_contract(&self, current: bool) -> Vec<WorldValidationIssue> {
+        let support = if current {
+            self.support_issues()
+        } else {
+            self.support_issues_with_laws(crate::spatial::builtin_spatial_laws())
+        };
+        let mut issues: Vec<_> = support
             .into_iter()
             .map(
                 |(position, kind, support)| WorldValidationIssue::InvalidSupport {
@@ -142,7 +146,9 @@ impl World {
             )
             .collect();
         for (position, block) in self.iter() {
-            if block.capabilities().placement != CapabilityLevel::Full {
+            if block.capabilities().placement != CapabilityLevel::Full
+                || !current && crate::spatial::spatial_kind_v1(block.kind).is_none()
+            {
                 issues.push(WorldValidationIssue::UnsupportedPlacement {
                     position: *position,
                     kind: block.kind,
@@ -154,6 +160,16 @@ impl World {
                     reason: reason.to_owned(),
                 })
             };
+            if current && crate::spatial::spatial_kind_v1(block.kind).is_none() {
+                match crate::device_program::program(block) {
+                    Some(program) => {
+                        if let Err(reason) = program.definition().validate_state(block) {
+                            invalid(&reason);
+                        }
+                    }
+                    None => invalid("unsupported device identity"),
+                }
+            }
             if let Some(offset) = block.support_offset {
                 let adjacent = matches!(
                     (offset.x, offset.y, offset.z),
@@ -226,7 +242,7 @@ impl TryFrom<World> for HistoricalPlacementV1 {
     type Error = WorldValidationError;
 
     fn try_from(world: World) -> Result<Self, Self::Error> {
-        let issues = world.placement_issues_v1();
+        let issues = world.placement_issues_for_contract(false);
         if issues.is_empty() {
             Ok(Self(world))
         } else {

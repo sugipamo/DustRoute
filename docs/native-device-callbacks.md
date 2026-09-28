@@ -1,5 +1,9 @@
 # Native lamp and stationary observer callbacks
 
+This records the original device-law implementation and its evidence. Current
+execution uses the [v8 Rust constant device programs](typed-device-runtime.md);
+the original v1 lamp/observer laws and raw observations remain unchanged.
+
 The common electrical piston runtime implements lamps and stationary/moving
 observers. The supplied 3×3 door now matches the retained Java 1.21.11 run:
 **381 tick-end worlds, 524 ordered palette writes, and 2,118 callback/carrier

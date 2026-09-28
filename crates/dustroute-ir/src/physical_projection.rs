@@ -16,6 +16,7 @@ pub enum TemporalNodeKind {
     Delay,
     Comparator,
     Observer,
+    Memory,
     Actuator,
     Conductor,
 }
@@ -463,7 +464,7 @@ fn edge_timing(
             BlockKind::Piston | BlockKind::PistonHead | BlockKind::MovingPiston => {
                 EdgeBehavior::Mechanical
             }
-            BlockKind::RedstoneWire => EdgeBehavior::OrderSensitive,
+            BlockKind::RedstoneWire | BlockKind::CopperBulb => EdgeBehavior::OrderSensitive,
             BlockKind::Air
             | BlockKind::Solid
             | BlockKind::Transparent
@@ -915,6 +916,7 @@ const fn signal_kind(kind: BlockKind) -> TemporalNodeKind {
         BlockKind::Repeater => TemporalNodeKind::Delay,
         BlockKind::Comparator => TemporalNodeKind::Comparator,
         BlockKind::Observer => TemporalNodeKind::Observer,
+        BlockKind::CopperBulb => TemporalNodeKind::Memory,
         BlockKind::Piston => TemporalNodeKind::Actuator,
         BlockKind::Air
         | BlockKind::Solid

@@ -89,7 +89,7 @@ fn fixture(
     }
     let region = Region::new(Pos::new(-4, -1, -4), Pos::new(20, 10, 4));
     let context = RuntimeBehaviorContext {
-        profile: RuntimeBehaviorProfile::UnifiedPistonElectricalRootExplorationV6,
+        profile: RuntimeBehaviorProfile::UnifiedPistonElectricalRootExplorationV16,
         initial_condition: BehaviorInitialCondition::FreshConstruction,
         known_region: region,
         input_levers: inputs,
@@ -229,7 +229,7 @@ fn moving_an_upward_piston_body_can_close_its_behavior_graph() {
 }
 
 #[test]
-fn unsupported_support_destruction_is_still_undetermined() {
+fn attachment_loss_can_close_the_piston_behavior_graph() {
     let (catalog, mut assembly, instance, binding, context) = fixture(1);
     let mut attached = dustroute_minecraft::Block::new(BlockKind::Lever);
     attached.powered = Some(false);
@@ -243,8 +243,8 @@ fn unsupported_support_destruction_is_still_undetermined() {
     )
     .unwrap();
     let report = model.verify(BehaviorBudget::default());
-    assert_eq!(report.status, CheckStatus::Undetermined, "{report:?}");
-    assert!(report.detail.contains("support"), "{report:?}");
+    assert_eq!(report.status, CheckStatus::Passed, "{report:?}");
+    assert!(report.graph_closed);
 }
 
 #[test]

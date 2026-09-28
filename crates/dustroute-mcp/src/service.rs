@@ -1068,19 +1068,25 @@ fn reverse_request_for_truth_table(
 }
 
 fn is_supported_redstone_name(name: &str) -> bool {
-    matches!(
-        name,
-        "minecraft:redstone_wire"
-            | "minecraft:redstone_torch"
-            | "minecraft:redstone_wall_torch"
-            | "minecraft:repeater"
-            | "minecraft:comparator"
-            | "minecraft:lever"
-            | "minecraft:redstone_block"
-            | "minecraft:observer"
-            | "minecraft:piston"
-            | "minecraft:sticky_piston"
-    )
+    dustroute_translate::world::device_program::BUILTIN_DEVICES
+        .iter()
+        .any(|d| {
+            let short = name.strip_prefix("minecraft:").unwrap_or(name);
+            d.spec().observed_names.contains(&short)
+        })
+        || matches!(
+            name,
+            "minecraft:redstone_wire"
+                | "minecraft:redstone_torch"
+                | "minecraft:redstone_wall_torch"
+                | "minecraft:repeater"
+                | "minecraft:comparator"
+                | "minecraft:lever"
+                | "minecraft:redstone_block"
+                | "minecraft:observer"
+                | "minecraft:piston"
+                | "minecraft:sticky_piston"
+        )
 }
 
 fn is_redstone_candidate_name(name: &str) -> bool {
@@ -1098,6 +1104,8 @@ fn is_redstone_candidate_name(name: &str) -> bool {
                 | "minecraft:sculk_sensor"
                 | "minecraft:calibrated_sculk_sensor"
         )
+        || name.ends_with("_copper_bulb")
+        || name == "minecraft:copper_bulb"
         || name.ends_with("_button")
         || name.ends_with("_pressure_plate")
 }
@@ -8148,9 +8156,9 @@ mod tests {
                     .unwrap();
                 let request: Value = serde_json::from_str(&line).unwrap();
                 assert_eq!(request["method"], "scan_region");
-                let response = json!({ "id": request["id"], "result": {
+                let response = json!({ "id": request["id"], "result": crate::bridge::test_readback_response(&request,json!({
                     "min": request["params"]["min"], "max": request["params"]["max"], "blocks": []
-                }});
+                }))});
                 stream
                     .write_all(format!("{response}\n").as_bytes())
                     .await
@@ -8443,7 +8451,7 @@ mod tests {
                     }),
                     method => panic!("unexpected fake bridge method {method}"),
                 };
-                let response = json!({ "id": request["id"], "result": result });
+                let response = json!({ "id": request["id"], "result": crate::bridge::test_readback_response(&request,result) });
                 stream
                     .write_all(format!("{response}\n").as_bytes())
                     .await
@@ -8575,7 +8583,7 @@ mod tests {
                 };
                 stream
                     .write_all(
-                        format!("{}\n", json!({ "id": request["id"], "result": result }))
+                        format!("{}\n", json!({ "id": request["id"], "result": crate::bridge::test_readback_response(&request,crate::bridge::test_scan_world(&request,result)) }))
                             .as_bytes(),
                     )
                     .await
@@ -8710,7 +8718,7 @@ mod tests {
                 };
                 stream
                     .write_all(
-                        format!("{}\n", json!({ "id": request["id"], "result": result }))
+                        format!("{}\n", json!({ "id": request["id"], "result": crate::bridge::test_readback_response(&request,crate::bridge::test_scan_world(&request,result)) }))
                             .as_bytes(),
                     )
                     .await
@@ -8779,7 +8787,7 @@ mod tests {
                     }
                     method => panic!("unexpected fake bridge method {method}"),
                 };
-                let response = json!({ "id": request["id"], "result": result });
+                let response = json!({ "id": request["id"], "result": crate::bridge::test_readback_response(&request,crate::bridge::test_scan_world(&request,result)) });
                 stream
                     .write_all(format!("{response}\n").as_bytes())
                     .await
@@ -9176,7 +9184,7 @@ mod tests {
                 };
                 stream
                     .write_all(
-                        format!("{}\n", json!({"id":request["id"],"result":result})).as_bytes(),
+                        format!("{}\n", json!({"id":request["id"],"result":crate::bridge::test_readback_response(&request,result)})).as_bytes(),
                     )
                     .await
                     .unwrap();
@@ -9361,7 +9369,7 @@ mod tests {
                     let reply = if let Some(error) = error {
                         json!({"id":req["id"],"error":error})
                     } else {
-                        json!({"id":req["id"],"result":result})
+                        json!({"id":req["id"],"result":crate::bridge::test_readback_response(&req,result)})
                     };
                     stream
                         .write_all(format!("{reply}\n").as_bytes())
@@ -9703,7 +9711,7 @@ mod tests {
                     }
                     other => panic!("unexpected request (planning must not write): {other}"),
                 };
-                let reply = json!({"id":req["id"],"result":result});
+                let reply = json!({"id":req["id"],"result":crate::bridge::test_readback_response(&req,result)});
                 stream
                     .write_all(format!("{reply}\n").as_bytes())
                     .await
@@ -9840,7 +9848,7 @@ mod tests {
                     let reply = if let Some(error) = error {
                         json!({"id":req["id"],"error":error})
                     } else {
-                        json!({"id":req["id"],"result":result})
+                        json!({"id":req["id"],"result":crate::bridge::test_readback_response(&req,result)})
                     };
                     stream
                         .write_all(format!("{reply}\n").as_bytes())
@@ -10014,7 +10022,7 @@ mod tests {
                     let reply = if let Some(error) = error {
                         json!({"id":req["id"],"error":error})
                     } else {
-                        json!({"id":req["id"],"result":result})
+                        json!({"id":req["id"],"result":crate::bridge::test_readback_response(&req,result)})
                     };
                     stream
                         .write_all(format!("{reply}\n").as_bytes())

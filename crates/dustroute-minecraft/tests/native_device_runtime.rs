@@ -157,11 +157,11 @@ fn command_observer_queues_before_write_and_restores_every_suspended_boundary() 
 }
 
 #[test]
-fn command_runtime_rejects_the_pre_command_adapter_checkpoint() {
+fn device_program_runtime_rejects_the_previous_adapter_checkpoint() {
     struct PreviousAdapter;
     impl RuntimeAdapter for PreviousAdapter {
         type Payload = PistonEvent;
-        const REVISION: &'static str = "dustroute.piston-electrical-callbacks.java-1-21-11.v5";
+        const REVISION: &'static str = "dustroute.piston-electrical-callbacks.java-1-21-11.v7";
         fn validate_initial(_: RuntimeView<'_>) -> Result<(), RuntimeError> {
             Ok(())
         }
@@ -456,7 +456,12 @@ fn moved_observer_arrival_pulses_and_pending_ticks_stay_at_their_original_cells(
                     .iter()
                     .any(|r| r.result == DeliveryResult::BlockReplaced
                         && r.invocation.call.target == origin
-                        && r.invocation.call.payload == PistonEvent::ObserverTick)
+                        && r.invocation.call.payload
+                            == PistonEvent::Device {
+                                callback: dustroute_minecraft::device_program::Callback::Tick,
+                                source: None,
+                                captured: None
+                            })
             );
         }
         let mut restored = ElectricalPistonRuntime::from_checkpoint(&suspended.unwrap()).unwrap();
@@ -498,7 +503,12 @@ fn observer_payloads_push_and_pull_in_all_six_directions() {
             .iter()
             .filter(|r| {
                 r.result == DeliveryResult::Executed
-                    && r.invocation.call.payload == PistonEvent::ObserverTick
+                    && r.invocation.call.payload
+                        == PistonEvent::Device {
+                            callback: dustroute_minecraft::device_program::Callback::Tick,
+                            source: None,
+                            captured: None,
+                        }
             })
             .map(|r| (r.invocation.time.game_tick, r.invocation.call.target))
             .collect();

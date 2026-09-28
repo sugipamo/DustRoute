@@ -85,20 +85,40 @@ pub(super) fn notify(
         return Ok(out);
     };
     let block = view.block(job.target)?;
-    if matches!(
-        block.kind,
-        BlockKind::RedstoneWire
-            | BlockKind::Repeater
-            | BlockKind::Observer
-            | BlockKind::RedstoneLamp
-    ) {
-        let mut out = match block.kind {
-            BlockKind::Observer | BlockKind::RedstoneLamp => {
-                super::devices::notify(view, &job, &block)?
-            }
-            _ => super::electrical::notify_device(view, &job, &block)?,
+    if super::support::should_break(view, job.target, &block, job.shape, Some(job.source))? {
+        let mut out = super::support::remove(view, job.target, &block, job.shape)?;
+        if !jobs.is_empty() {
+            out.continuation = Some(PistonEvent::Notify { jobs });
+        }
+        return Ok(out);
+    }
+    if let Some(program) = crate::device_program::program(&block) {
+        let callback = if job.shape {
+            crate::device_program::Callback::Shape
+        } else {
+            crate::device_program::Callback::Neighbor
         };
-        // Device callbacks drain before the enclosing neighbor sequence resumes.
+        if program.definition.handlers.contains_key(&callback) {
+            out.callbacks.push(super::devices::event(
+                job.target,
+                callback,
+                Some(job.source),
+            ));
+        }
+        if !jobs.is_empty() {
+            out.continuation = Some(PistonEvent::Notify { jobs });
+        }
+        return Ok(out);
+    }
+    if block.kind == BlockKind::RedstoneWire {
+        let mut out = super::electrical::notify_wire(view, &job, &block)?;
+        if !jobs.is_empty() {
+            out.continuation = Some(PistonEvent::Notify { jobs });
+        }
+        return Ok(out);
+    }
+    if crate::physical::stairs::state(&block).is_some() {
+        let mut out = super::passive::notify(view, &job, &block)?;
         if !jobs.is_empty() {
             out.continuation = Some(PistonEvent::Notify { jobs });
         }
@@ -170,6 +190,37 @@ pub(super) fn notify(
     }
     if !nested.is_empty() {
         out.continuation = Some(PistonEvent::Notify { jobs: nested });
+    }
+    Ok(out)
+}
+
+/// Source-ordered World.updateComparators routing. Querying the next side is
+/// deferred until the previous receiver and all its nested callbacks return.
+pub(super) fn analog_readers(
+    view: RuntimeView<'_>,
+    pos: Pos,
+    index: u8,
+) -> Result<RuntimeOutcome<PistonEvent>, RuntimeError> {
+    let side = *crate::piston_electrical::HORIZONTAL
+        .get(index as usize)
+        .ok_or_else(|| unsupported("invalid analog reader direction"))?;
+    let mut target = along(pos, side, 1)?;
+    let beside = view.block(target)?;
+    if beside.kind != BlockKind::Comparator && crate::piston_electrical::conducts(&beside) {
+        target = along(target, side, 1)?;
+    }
+    let mut out = RuntimeOutcome::default();
+    if view.block(target)?.kind == BlockKind::Comparator {
+        out.callbacks.push(super::devices::event(
+            target,
+            crate::device_program::Callback::Neighbor,
+            Some(pos),
+        ));
+    }
+    if index < 3 {
+        out.continuation = Some(PistonEvent::NotifyAnalogReaders {
+            next_side: index + 1,
+        });
     }
     Ok(out)
 }

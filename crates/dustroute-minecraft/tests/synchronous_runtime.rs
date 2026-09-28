@@ -37,6 +37,7 @@ enum Task {
     InvalidBundle,
     StageProbe(u8),
     RegisterWrongPayload,
+    StoredOutput(u8, bool),
 }
 
 struct Adapter;
@@ -243,6 +244,19 @@ impl RuntimeAdapter for Adapter {
                 out.queued.push(QueueRequest::ScheduledTick {
                     game_tick: view.time().game_tick + 2,
                     call: call(A, Task::Noop),
+                });
+            }
+            Task::StoredOutput(value, mismatch) => {
+                let target = Block::new(BlockKind::Solid);
+                out.delta = Some(delta(view, vec![(FLAG, target.clone())]));
+                out.outputs.push(OutputEffect {
+                    position: FLAG,
+                    block: BlockIdentity::of(&if mismatch {
+                        Block::new(BlockKind::Transparent)
+                    } else {
+                        target
+                    }),
+                    value,
                 });
             }
             Task::Noop => {}
@@ -794,4 +808,23 @@ fn opaque_checkpoints_also_pin_the_adapter_type_even_if_a_label_is_reused() {
         SynchronousWorldRuntime::<SameLabel>::from_checkpoint(&seeded().checkpoint()),
         Err(RuntimeError::Invalid(_))
     ));
+}
+
+#[test]
+fn stored_output_validation_is_transactional_and_checkpointed() {
+    let mut rt = runtime(Default::default());
+    input(&mut rt, Task::StoredOutput(7, false));
+    assert_eq!(rt.view().stored_output(FLAG).unwrap(), 7);
+    let checkpoint = rt.checkpoint();
+    let restored = SynchronousWorldRuntime::<Adapter>::from_checkpoint(&checkpoint).unwrap();
+    assert_eq!(restored.state_key(), rt.state_key());
+    for task in [Task::StoredOutput(16, false), Task::StoredOutput(3, true)] {
+        let mut failed = SynchronousWorldRuntime::<Adapter>::from_checkpoint(&checkpoint).unwrap();
+        let world = failed.view().world().clone();
+        failed.input_now(call(A, task)).unwrap();
+        assert!(failed.step().is_err());
+        assert_eq!(failed.view().stored_output(FLAG).unwrap(), 7);
+        assert_eq!(failed.view().world(), &world);
+        assert_eq!(failed.trace(), rt.trace());
+    }
 }

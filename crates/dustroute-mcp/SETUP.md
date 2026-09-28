@@ -199,6 +199,15 @@ configured Minecraft server and assist player, written atomically with private
 directory/file permissions on Unix, and use the configured TTL on disk. A running process can still fall back to its repair-plan cache; this is not a strict execution deadline. The
 stored data contains physical patches and verification baselines, not API keys.
 
+Block readback requires Java 1.21.11 command permission for `execute`, `time`,
+`data` and `tellraw`, including read-only operation. The bridge checks the whole
+requested region against the server in one game tick; its 192-command budget
+currently permits at most 8,880 cells, even if `DUSTROUTE_MAX_SCAN_VOLUME` is
+larger. Select smaller regions when confirmation cannot complete. Missing
+permission, unloaded cells or repeated tick crossings fail the observation.
+Only a temporary random command-storage key is written; readback changes no
+world blocks. See [server readback](../../docs/server-readback.md) for the contract.
+
 The visible bot reconnects three seconds after disconnecting. Every scan and
 preview carries the selected dimension, so moving between dimensions invalidates
 the operation instead of silently targeting a different world.

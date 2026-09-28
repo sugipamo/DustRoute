@@ -5,7 +5,7 @@ use super::*;
 use crate::time::piston_runtime::PistonEvent;
 use std::cmp::Ordering;
 
-pub const COMPARISON: &str = "dustroute.piston-electrical-root-comparison.v1";
+pub const COMPARISON: &str = "dustroute.piston-electrical-root-comparison.v3";
 
 /// Opaque, process-local representative of a complete physical root boundary.
 /// Its ordering compares the full canonical record, not a hash. The selected
@@ -85,9 +85,34 @@ impl<A: RuntimeAdapter<Payload = PistonEvent>> SynchronousWorldRuntime<A> {
         }
         let mut state = self.state.clone();
         let old_tick = state.time.game_tick;
-        // Zero is a semantic constructor constant (fresh savedWorldTime = 0).
-        // Positive epochs can share origin 1; moving them to zero is unsound.
-        let epoch = u64::from(old_tick != 0);
+        // Expired entries never contribute to a later query. A representative
+        // keeps every live age; exact checkpoints retain the original record.
+        state.histories.retain(|_, history| {
+            history
+                .times
+                .retain(|t| old_tick.saturating_sub(*t) <= u64::from(history.policy.window));
+            !history.times.is_empty()
+        });
+        // Leave room for past ages while preserving zero as the fresh clock.
+        let epoch = if old_tick == 0 {
+            0
+        } else {
+            state
+                .histories
+                .values()
+                .map(|h| u64::from(h.policy.window))
+                .max()
+                .unwrap_or(0)
+                + 1
+        };
+        for history in state.histories.values_mut() {
+            for time in &mut history.times {
+                *time = old_tick
+                    .checked_sub(*time)
+                    .and_then(|age| epoch.checked_sub(age))
+                    .ok_or(RuntimeError::ClockOverflow)?;
+            }
+        }
         state.time.game_tick = epoch;
         state.processed = 0; // a computation limit per atomic root, not physics
         state.next_id = 0;
@@ -122,12 +147,20 @@ impl<A: RuntimeAdapter<Payload = PistonEvent>> SynchronousWorldRuntime<A> {
                     (invocation.kind, &invocation.call.payload),
                     (
                         InvocationKind::External,
-                        PistonEvent::Initialize | PistonEvent::Input { .. }
+                        PistonEvent::Initialize
+                            | PistonEvent::Input { .. }
+                            | PistonEvent::Device {
+                                callback: crate::device_program::Callback::Use,
+                                source: None,
+                                captured: None
+                            }
                     ) | (
                         InvocationKind::ScheduledTick,
-                        PistonEvent::ElectricalRepeaterTick
-                            | PistonEvent::LampTick
-                            | PistonEvent::ObserverTick
+                        PistonEvent::Device {
+                            callback: crate::device_program::Callback::Tick,
+                            source: None,
+                            captured: None
+                        }
                     ) | (InvocationKind::BlockEvent, PistonEvent::Block { .. })
                         | (InvocationKind::CarrierTick, PistonEvent::CarrierTick)
                 ) {
@@ -163,6 +196,8 @@ impl<A: RuntimeAdapter<Payload = PistonEvent>> SynchronousWorldRuntime<A> {
             state.world.iter().collect::<Vec<_>>(),
             state.pending.iter().collect::<Vec<_>>(),
             state.carriers.iter().collect::<Vec<_>>(),
+            state.outputs.iter().collect::<Vec<_>>(),
+            state.histories.iter().collect::<Vec<_>>(),
             state.staged_carriers.iter().collect::<Vec<_>>(),
             state.next_id,
             state.next_carrier,
@@ -252,6 +287,27 @@ mod tests {
         }
         assert_eq!(original.behavior_state().unwrap(), state);
         assert_eq!(original.checkpoint(), checkpoint);
+    }
+
+    #[test]
+    fn comparison_keeps_hidden_output_when_blocks_and_queues_match() {
+        let mut run = scene();
+        run.run_until_idle().unwrap();
+        let a = run.behavior_state().unwrap();
+        let mut changed =
+            SynchronousWorldRuntime::<ElectricalPistonAdapter>::from_piston_behavior_state(&a)
+                .unwrap();
+        // This test is about the generic runtime record, independent of device admission.
+        changed.state.outputs.insert(INPUT, 7);
+        let b = changed.piston_behavior_state().unwrap();
+        assert_eq!(a.state.world, b.state.world);
+        assert_eq!(a.state.pending, b.state.pending);
+        assert_ne!(a, b);
+        let restored =
+            SynchronousWorldRuntime::<ElectricalPistonAdapter>::from_piston_behavior_state(&b)
+                .unwrap();
+        assert_eq!(restored.view().stored_output(INPUT).unwrap(), 7);
+        assert_eq!(restored.piston_behavior_state().unwrap(), b);
     }
 
     #[test]

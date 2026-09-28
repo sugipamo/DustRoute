@@ -135,13 +135,13 @@ fn repeater_reads_raw_rear_wire_and_only_aligned_side_gates_lock() {
     let mut world = World::new();
     repeater(&mut world, P, Facing::East, false);
     wire(&mut world, P.offset(-1, 0, 0), 7, true);
-    assert!(query(&world).repeater_input(P).unwrap());
+    assert!(query(&world).gate_input_powered(P).unwrap());
     world.place(BlockKind::RedstoneBlock, P.offset(0, 0, -1));
-    assert!(!query(&world).repeater_locked(P).unwrap());
+    assert!(!query(&world).side_gate_powered(P).unwrap());
     repeater(&mut world, P.offset(0, 0, -1), Facing::South, true);
-    assert!(query(&world).repeater_locked(P).unwrap());
+    assert!(query(&world).side_gate_powered(P).unwrap());
     repeater(&mut world, P.offset(0, 0, -1), Facing::North, true);
-    assert!(!query(&world).repeater_locked(P).unwrap());
+    assert!(!query(&world).side_gate_powered(P).unwrap());
 }
 
 #[test]

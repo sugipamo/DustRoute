@@ -1,7 +1,30 @@
 //! Initial-state consistency of explicit vertical dust connections. This does
 //! not infer or rewrite a stored arm, normalize observations, or require every
 //! decorative horizontal arm to terminate at a component.
-use crate::{Block, BlockKind, Pos, WireConnection, World, WorldValidationIssue};
+use crate::{Block, BlockKind, Facing, Pos, WireConnection, World, WorldValidationIssue};
+
+fn current_passive(block: &Block) -> bool {
+    block
+        .observed_name
+        .as_deref()
+        .is_some_and(|n| crate::physical::passive::named(n).is_some())
+}
+
+fn rise(block: &Block, side: Facing) -> Option<WireConnection> {
+    if current_passive(block) {
+        crate::physical::wire_rise_connection(block, side)
+    } else {
+        block.redstone_traits().wire_rise_connection
+    }
+}
+
+fn obstructs(block: &Block) -> bool {
+    if current_passive(block) {
+        crate::physical::of_block(block).is_none_or(|p| p.conducts(block))
+    } else {
+        block.redstone_traits().blocks_wire_rise_when_above
+    }
+}
 
 /// A complete World supplies known air for absent cells. Partial observations
 /// supply None. Known contradictions take precedence over missing evidence.
@@ -52,7 +75,7 @@ pub fn wire_rise_issues(
             let side_rise = *arm == WireConnection::Side
                 && support
                     .as_ref()
-                    .is_some_and(|b| b.redstone_traits().wire_rise_connection == Some(*arm))
+                    .is_some_and(|b| rise(b, *facing) == Some(*arm))
                 && target
                     .as_ref()
                     .is_some_and(|b| b.kind == BlockKind::RedstoneWire);
@@ -63,9 +86,7 @@ pub fn wire_rise_issues(
             let requirements = [
                 (
                     side,
-                    support
-                        .as_ref()
-                        .map(|b| b.redstone_traits().wire_rise_connection == Some(*arm)),
+                    support.as_ref().map(|b| rise(b, *facing) == Some(*arm)),
                     "stored rise arm contradicts the adjacent support geometry",
                 ),
                 (
@@ -75,9 +96,7 @@ pub fn wire_rise_issues(
                 ),
                 (
                     above,
-                    ceiling
-                        .as_ref()
-                        .map(|b| !b.redstone_traits().blocks_wire_rise_when_above),
+                    ceiling.as_ref().map(|b| !obstructs(b)),
                     "stored rise arm is obstructed above the lower wire",
                 ),
             ];

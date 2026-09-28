@@ -6,6 +6,7 @@ const fs = require('node:fs')
 const { once } = require('node:events')
 const mineflayer = require('mineflayer')
 const { Vec3 } = require('vec3')
+const { confirmRegion } = require('../readback')
 const fixture = JSON.parse(fs.readFileSync(process.env.DUSTROUTE_MIXED_FIXTURE, 'utf8'))
 const output = process.env.DUSTROUTE_MIXED_OUTPUT
 if (!output || fs.existsSync(output)) throw new Error('new output path required')
@@ -25,6 +26,11 @@ let disconnected = null
 let ownsRegion = false
 let ownsForceLoad = false
 let phase = 'connect'
+let enabledFeatures = null
+bot._client.on('start_configuration', () => { enabledFeatures = null })
+bot._client.on('feature_flags', packet => {
+  enabledFeatures = Array.isArray(packet.features) ? [...packet.features] : null
+})
 const report = {
   schema_version: 'dustroute.mixed-piston-live.v1', minecraft_version: '1.21.11',
   fixture: fixture.id, captured_at: new Date().toISOString(), origin, placement_mode: placementMode,
@@ -67,6 +73,20 @@ function snapshot () {
   }
   return blocks
 }
+async function confirmSnapshot (label, rows) {
+  if (!fixture.require_server_readback) return rows
+  const candidate = { min: absolute(min), max: absolute(max), blocks: rows.filter(b => b.name !== 'minecraft:air').map(b => ({
+    pos: b.position, name: b.name, properties: Object.fromEntries(Object.entries(b.properties).map(([k, v]) => [k, String(v)]))
+  })) }
+  const confirmed = await confirmRegion(bot, candidate, 'minecraft:overworld')
+  report.server_readbacks ??= {}
+  report.server_readbacks[label] = confirmed
+  const byPosition = new Map(confirmed.blocks.map(b => [`${b.pos.x},${b.pos.y},${b.pos.z}`, b]))
+  return rows.map(b => {
+    const actual = byPosition.get(`${b.position.x},${b.position.y},${b.position.z}`)
+    return { position: b.position, name: actual ? actual.name : 'minecraft:air', properties: actual ? actual.properties : {} }
+  })
+}
 function empty () {
   for (const b of snapshot()) if (b.name !== 'minecraft:air') throw new Error(`occupied ${JSON.stringify(b)}`)
 }
@@ -79,16 +99,27 @@ function sample (label) {
   report.samples.push({ label, client_tick: tick, blocks: positions.map(state) })
 }
 async function approach (p) {
+  const destination = fixture.shared_viewpoint && fixture.viewpoint
+    ? absolute(fixture.viewpoint) : absolute(p).offset(0.5, 0, 2.5)
+  if (![destination.x, destination.y, destination.z].every(Number.isFinite)) throw new Error('invalid viewpoint')
+  if (fixture.shared_viewpoint && fixture.inputs.some(input => destination.distanceTo(absolute(input)) > 4)) {
+    throw new Error('shared viewpoint cannot reach every input')
+  }
   bot.creative.startFlying()
   bot.entity.velocity.set(0, 0, 0)
-  await command(`/tp dustroutetest ${coords({ x: p.x, y: p.y + 1, z: p.z + 2 })}`)
+  await command(`/tp dustroutetest ${destination.x} ${destination.y + 1} ${destination.z}`)
   await bot.waitForTicks(4)
   bot.entity.velocity.set(0, 0, 0)
-  await bot.creative.flyTo(absolute(p).offset(0.5, 0, 2.5))
+  await bot.creative.flyTo(destination)
   await bot.waitForTicks(4)
 }
 async function main () {
   await Promise.race([once(bot, 'spawn'), sleep(30000).then(() => { throw new Error('spawn timeout') })])
+  report.enabled_features = enabledFeatures
+  if (fixture.require_vanilla_features &&
+      (!enabledFeatures || enabledFeatures.length !== 1 || enabledFeatures[0] !== 'minecraft:vanilla')) {
+    throw new Error(`unexpected enabled features: ${JSON.stringify(enabledFeatures)}`)
+  }
   await command('/gamemode creative dustroutetest')
   const low = absolute(min); const high = absolute(max)
   await command(`/forceload add ${low.x} ${low.z} ${high.x} ${high.z}`)
@@ -100,6 +131,7 @@ async function main () {
       await sleep(1000)
     }
   }
+  await confirmSnapshot('empty_before_setup', snapshot())
   ownsRegion = true
   phase = 'setup'
   for (const b of fixture.initial.blocks) {
@@ -110,8 +142,10 @@ async function main () {
   if (!Number.isInteger(warmupTicks) || warmupTicks < 20 || warmupTicks > 200) throw new Error('warmup_ticks must be 20..200')
   await bot.waitForTicks(warmupTicks)
   report.initial = snapshot()
+  const initialConfirmed = await confirmSnapshot('initial', report.initial)
   for (const b of fixture.initial.blocks) {
-    const actual = state(b.pos)
+    const p = absolute(b.pos)
+    const actual = initialConfirmed.find(row => row.position.x === p.x && row.position.y === p.y && row.position.z === p.z)
     if (actual.name !== b.name || Object.entries(b.properties).some(([k, v]) => String(actual.properties[k]) !== String(v))) {
       throw new Error(`initial fixture mismatch ${JSON.stringify({ expected: b, actual })}`)
     }
@@ -151,6 +185,7 @@ async function main () {
   phase = 'settling'
   for (let i = 0; i < settlingTicks; i++) { await bot.waitForTicks(1); sample(`settling_${i}`) }
   report.final = snapshot()
+  await confirmSnapshot('final', report.final)
   report.complete = true
 }
 const deadline = setTimeout(() => bot.end('mixed capture deadline'), 180000)
@@ -163,6 +198,7 @@ main().catch(error => {
       phase = 'cleanup'
       await command(`/fill ${coords(min)} ${coords(max)} minecraft:air`, 500)
       empty()
+      await confirmSnapshot('empty_after_cleanup', snapshot())
       report.cleanup.region_empty = true
     }
     if (ownsForceLoad) {

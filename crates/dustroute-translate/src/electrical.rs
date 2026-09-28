@@ -180,21 +180,36 @@ impl InstantaneousElectricalState {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct InstantaneousSolveDidNotConverge {
-    pub max_iterations: usize,
+pub enum ElectricalSolveError {
+    DidNotConverge { max_iterations: usize },
+    UnsupportedBlock { position: Pos, kind: BlockKind },
 }
 
-impl Display for InstantaneousSolveDidNotConverge {
+impl Display for ElectricalSolveError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "instantaneous network did not converge in {} iterations",
-            self.max_iterations
-        )
+        match self {
+            Self::DidNotConverge { max_iterations } => write!(
+                f,
+                "instantaneous network did not converge in {max_iterations} iterations"
+            ),
+            Self::UnsupportedBlock { position, kind } => write!(
+                f,
+                "compatibility electrical model does not admit {kind:?} at {position:?}"
+            ),
+        }
     }
 }
 
-impl Error for InstantaneousSolveDidNotConverge {}
+pub(crate) fn validate_compatibility_kinds(world: &World) -> Result<(), ElectricalSolveError> {
+    for (position, block) in world.iter() {
+        if !dustroute_minecraft::execution_context::WorldExecutionProfile::RedstoneCompatibilityBoundaryV1.admits_kind(block.kind) {
+            return Err(ElectricalSolveError::UnsupportedBlock { position: *position, kind: block.kind });
+        }
+    }
+    Ok(())
+}
+
+impl Error for ElectricalSolveError {}
 
 /// Potential strong-power targets shared by simulation and physical route checks.
 /// Current ON/OFF state controls the signal level, not connectivity.
@@ -345,7 +360,8 @@ pub fn solve_instantaneous(
     world: &World,
     devices: &DeviceOutputState,
     max_iterations: usize,
-) -> Result<InstantaneousElectricalState, InstantaneousSolveDidNotConverge> {
+) -> Result<InstantaneousElectricalState, ElectricalSolveError> {
+    validate_compatibility_kinds(world)?;
     let topology = ElectricalTopology::from_world(world);
     solve_instantaneous_with_topology(world, devices, max_iterations, &topology)
 }
@@ -355,7 +371,7 @@ pub(crate) fn solve_instantaneous_with_topology(
     devices: &DeviceOutputState,
     max_iterations: usize,
     topology: &ElectricalTopology,
-) -> Result<InstantaneousElectricalState, InstantaneousSolveDidNotConverge> {
+) -> Result<InstantaneousElectricalState, ElectricalSolveError> {
     solve_instantaneous_with_law(world, devices, max_iterations, topology, builtin_dust_law())
 }
 
@@ -365,7 +381,8 @@ pub(crate) fn solve_instantaneous_with_law(
     max_iterations: usize,
     topology: &ElectricalTopology,
     dust_law: &DustLaw,
-) -> Result<InstantaneousElectricalState, InstantaneousSolveDidNotConverge> {
+) -> Result<InstantaneousElectricalState, ElectricalSolveError> {
+    validate_compatibility_kinds(world)?;
     let mut signals: BTreeMap<_, _> = topology
         .positions
         .iter()
@@ -436,7 +453,7 @@ pub(crate) fn solve_instantaneous_with_law(
         signals = next_signals;
         block_power = next_block_power;
     }
-    Err(InstantaneousSolveDidNotConverge { max_iterations })
+    Err(ElectricalSolveError::DidNotConverge { max_iterations })
 }
 
 #[must_use]

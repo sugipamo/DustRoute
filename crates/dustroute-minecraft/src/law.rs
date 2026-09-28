@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 
 pub mod abstract_history;
 pub mod finite;
+pub mod static_program;
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]

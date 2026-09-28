@@ -1,0 +1,104 @@
+{
+  "scope": "Circuit-input comparator milestone; no new live Minecraft measurement",
+  "base_commit": "94ce963cfde4408eb9c30cdb4f44a8422b8fb1db",
+  "profiles": {
+    "execution": "v12",
+    "exploration": "v12",
+    "device_programs": "v6",
+    "physical_admission": "v3",
+    "core_runtime": "v4",
+    "root_comparison": "v2"
+  },
+  "limits": {
+    "cargo_jobs": 1,
+    "test_threads": 1,
+    "new_live_trials": false,
+    "public_mcp_tests_rerun": false,
+    "full_workspace_tests": false
+  },
+  "target_source": {
+    "minecraft": "Java 1.21.11 Yarn build.6",
+    "class_sha256": {
+      "block/ComparatorBlock.class": "b73c728bf082c6ea3a43f8ec2b0276b0d1bdc94ea078a03a123cc5f53a3e2974",
+      "block/entity/ComparatorBlockEntity.class": "dbfc2b37147e06ac0375aa5bae5193082a0b5715a217862068c1ca0322f751ce",
+      "block/AbstractRedstoneGateBlock.class": "1650b9eacd97788b5be6fad0164e71834191298daadcecb2fac90c7c117cfa3d",
+      "block/RedstoneWireBlock.class": "0583da64d1ca29a6da959b09b4f6b74d53f8542e81f3f32f557ec332931f77ea",
+      "world/World.class": "745b101ac1d0231555831f0fcf65e98e89ffd18d45facce363d31243592cad11",
+      "server/world/ServerWorld.class": "737285e67694a14c1f51858e929209c53dc91f3bbe5bd030b09c56e9d71de14f"
+    }
+  },
+  "commands": [
+    {
+      "command": "cargo test --offline --locked -j 1 -p dustroute-minecraft -- --test-threads=1",
+      "exit_code": 0,
+      "passed_including_doctests": 280,
+      "log_sha256": "08c1378abfdd5a5e74e67304c19370996bf240ec1961f36fd63db56b42146d05"
+    },
+    {
+      "command": "cargo test --offline --locked -j 1 -p dustroute-library --test execution_context --test executable_laws -- --test-threads=1",
+      "exit_code": 0,
+      "passed_including_doctests": 18,
+      "log_sha256": "70e6ddefb362e316a9c48fa96f00c7c0dd6c3b33fe4b24a47e1339a0ad46a729"
+    },
+    {
+      "command": "cargo test --offline --locked -j 1 -p dustroute-translate --test comparator_runtime --test copper_bulb --test native_device_observations --test execution_context --test electrical_piston_construction --test command_placement_regression --test ordinary_reference_door --test electrical_piston_relocation --test runtime_adoption --test unified_piston_behavior --test location_behavior -- --test-threads=1",
+      "exit_code": 0,
+      "passed_including_doctests": 45,
+      "log_sha256": "13f16fba07445decdd1eeee9f0617e4557413c2ad797e1c078205cd49516c113"
+    },
+    {
+      "command": "cargo clippy --offline --locked -j 1 --workspace --all-targets -- -D warnings",
+      "exit_code": 0,
+      "passed_including_doctests": null,
+      "log_sha256": "ef868e55c2f18851376109186cf6d872e0ec48183968ff89451c2f2e99a97995"
+    },
+    {
+      "command": "cargo build --offline --locked -j 1 -p dustroute-translate --example compare_electrical_pistons",
+      "exit_code": 0,
+      "passed_including_doctests": null,
+      "log_sha256": "fd9010cd31d1f33c72835ffb8b9e5fc974ee00724645cfa1b099a987d2d4dcca"
+    },
+    {
+      "command": "python3 -m unittest discover -s tools -p 'test_*.py'",
+      "exit_code": 0,
+      "passed_including_doctests": 14,
+      "log_sha256": "09da2b64694c3c50aee6f605cc20aeeef5b6750386e62133d5dd79cc4d8b4187"
+    }
+  ],
+  "rust_sources_sha256": {
+    "crates/dustroute-library/src/builtin_laws.rs": "d2eeecdc14c18bf22423579d84448d9b638dd83bf3bb2b531c944b2485882102",
+    "crates/dustroute-library/src/runtime_behavior.rs": "6a0f13281a2f1fa5e790ec0eca1b10e46ba47a2631f7c9e9cb61e6314ff860db",
+    "crates/dustroute-library/tests/executable_laws.rs": "6014c8dc4b93522856cfb5865d5609827ad881f2751fd3151a3a9b15f48a3372",
+    "crates/dustroute-library/tests/execution_context.rs": "26f0ab9593a0b0b47112e1c040d94d92cf78f359699dbcbba1db95a7ba4d59c7",
+    "crates/dustroute-mcp/src/service_blueprint_tests.rs": "5c9b2fe92439a267f3d19e1f26ce084dc84d308bd5fcea40a6ded2ec3256c6a2",
+    "crates/dustroute-minecraft/src/device_callback_law.rs": "d14193ffbb96240d2d7d11f9e61728fe91650ecdfaf7638da5e0bd235b6127d5",
+    "crates/dustroute-minecraft/src/device_program.rs": "770f71edc0e2aac6068bd0f8fb39e431cba4856dad4efa45975c96a82d81e8a5",
+    "crates/dustroute-minecraft/src/device_program/builtin_laws.rs": "fc5bca722337935cea6fd082e49d92aaee91594e613be9d726034e90d2478eaf",
+    "crates/dustroute-minecraft/src/device_program/builtins.rs": "36c75adb01120b9ce733dc31fc68847710b720f50b591fd80d6c18fa544f9fc3",
+    "crates/dustroute-minecraft/src/device_program/schema.rs": "c2b6f94db422324c55c3a035ccf04f5a5a92e28e2b09fcc390a4cb0c5b44e293",
+    "crates/dustroute-minecraft/src/device_program/state.rs": "50e581c84627b373a81da5104b19811e0ae5e17f729e904065645195dcf127c2",
+    "crates/dustroute-minecraft/src/execution_context.rs": "bde06b65938578bfaa6ea565707a7281b82bbfcc3ccefc8043085d5e4c2ab221",
+    "crates/dustroute-minecraft/src/physical.rs": "f3365a8e950cc0b3debebd3e75a86d1eb4b4debc888be52f8f3f899822b23dad",
+    "crates/dustroute-minecraft/src/piston_electrical.rs": "1b16956a9c82712067ca82231aee37ddf274655302d653aef721c6187e82fa2e",
+    "crates/dustroute-minecraft/src/time/piston_runtime/adapter.rs": "730196adde3506f74d666d0e3435e1472d879050fd44d8bdd1e4cd87de4193f2",
+    "crates/dustroute-minecraft/src/time/piston_runtime/devices.rs": "8d2d97692fcbbfc1cfd94629facbc64778dd8977126c0530b44ea8e9178ba7aa",
+    "crates/dustroute-minecraft/src/time/piston_runtime/electrical.rs": "bb165a4217b90431027856b8172e29e5bc25b136c4dfee017e541da18df74e96",
+    "crates/dustroute-minecraft/src/time/piston_runtime/mod.rs": "8625114a991251063ce3865bc00f6350516334ad9f50da6828101cc37224fcae",
+    "crates/dustroute-minecraft/src/time/piston_runtime/notifications.rs": "47cb48df47903fb350c8d7857561d9336b7c7736d2c84c92d8ab87a6ad401981",
+    "crates/dustroute-minecraft/src/time/runtime/executor.rs": "71d081e62296e1b4b1ab7f425bb510a9d525b1a1fbe67ce8451ee9cfda83a641",
+    "crates/dustroute-minecraft/src/time/runtime/executor/piston_behavior.rs": "e712c3a12003d7f9885c7594e85e83f90d97d65c6c12395d8d4bcd05097869be",
+    "crates/dustroute-minecraft/src/time/runtime/mod.rs": "3464f3f8b4930e2e24d07594507e70af30fbd0fe67c8a4ec274dfa7126835ef3",
+    "crates/dustroute-minecraft/tests/comparator_runtime.rs": "5731113957d5cb49564b6bf297730979e2ff3eae723d4af67f976285e8f12ab6",
+    "crates/dustroute-minecraft/tests/physical_admission.rs": "516af121a4d4fde32bba7987bc37e314f15042e171b09b8962accdf00ad60d80",
+    "crates/dustroute-minecraft/tests/piston_runtime.rs": "c991dfa9c9cfcbe8ff858e09f09a461cdceef55c06b6ebd265d270af49b7324f",
+    "crates/dustroute-minecraft/tests/synchronous_runtime.rs": "3ed6634340248d43f3c6c64ad02079928b98276e6edffdeb9b3dd9714b25ff5d",
+    "crates/dustroute-minecraft/tests/unified_piston_runtime.rs": "743bdadcb0996fff67b559f3bbca3718d5044c9be8306ca1ede321cfbba1507a",
+    "crates/dustroute-translate/src/minecraft_export.rs": "d81bb4dee9c88ee0ff69112b652ae8a9f10a3856083b2e7d453fad3d95fcee1c",
+    "crates/dustroute-translate/tests/comparator_runtime.rs": "28ceaa6dcb58117c0a38d2ed87bdcac08260864012bec7d8e4b3f5e91703bda7",
+    "crates/dustroute-translate/tests/execution_context.rs": "8357f94d5bb082573a71b80536169852f4da7c1b5cd9a432e731e4b99fdcef46",
+    "crates/dustroute-translate/tests/location_behavior.rs": "5c3bb8bfeff9d0f9111c1f220b9cf4366bf8cdc427daf475bdae0a518ed60eda",
+    "crates/dustroute-translate/tests/native_device_observations.rs": "f8aa9f7717685d0fdf4167577971d5e941e76e8911827539182d83134cd0b192",
+    "crates/dustroute-translate/tests/support/runtime_blueprint.rs": "25307ec7512d11674fddd04022176c0beeff0efb5ee18b1b692c53378af73147",
+    "crates/dustroute-translate/tests/unified_piston_behavior.rs": "ce4d32ac139553585832756888346bcd2da4fdac83fe5755beafb7b60a0eee6b"
+  }
+}

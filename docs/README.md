@@ -44,6 +44,9 @@ Git history; diagnostic fixtures have not been promoted into public capability.
 | [Piston transient conformance](piston-transient-conformance.md) | Measured input boundaries, carrier progress and callback-visible state comparisons |
 | [Movable piston bodies](piston-payload-conformance.md) | All-facing ordinary/sticky payloads, shared chains, double-extender evidence and subsequent redstone integration |
 | [Downloaded 3×3 reference door](reference-3x3-door-audit.md) | Static inventory, exact coordinates and implementation/validation history |
+| [Typed device definitions](typed-device-runtime.md) | Rust constants, compile-time contracts, atomic properties, analog signals and concrete variant selection |
+| [Device integration roadmap](device-integration-roadmap.md) | Repeater integration, waxed bulbs, comparator internal state and torch history milestones |
+| [Data-driven block execution](data-driven-block-runtime.md) | Declarative queries, finite tables, ordered effects, lamp/observer migration and stone-button extension |
 | [Native lamp and observer callbacks](native-device-callbacks.md) | Shared scheduler integration and source-backed device callbacks |
 | [Staged piston movement](staged-piston-motion.md) | Complete reference-door comparison, moving observers and resumable movement writes |
 | [Ordinary 3×3 piston-door type](piston-door-type.md) | Implemented completed-operation contract, shape validation, exact-state verification and optional interruption tolerance |
@@ -74,6 +77,7 @@ Git history; diagnostic fixtures have not been promoted into public capability.
 | [Executable lamp laws](blueprint-architecture.md#executable-lamp-laws) | Delayed compatibility updates and immediate bounded updates, each with its original state boundary |
 | [Executable piston laws](blueprint-architecture.md#executable-piston-laws) | Bounded movement/state rules, complete input validation and retained atomic completion checks |
 | [Physical behavior checks](physical-behavior.md) | Executable dust law, pinned circuit/type bindings, retained execution state and proof limits |
+| [Passive shapes and conduction](passive-shapes-runtime.md) | Checked slab/glass state declarations, directional support, exact placement export and independent live comparisons |
 | [Behavioral state reduction](behavior-state-reduction.md) | State inventory, possible reductions and required proof obligations before implementation |
 | [Torch settling proof investigation](torch-settling-proof.md) | Electrical independence, exact continuations from observed prefixes and the boundary for a new proof path |
 | [Abstract behavioral verification](abstract-behavior-verification.md) | Conservative history transitions, universal cycle checks and arbitrary-input NOT model proofs |

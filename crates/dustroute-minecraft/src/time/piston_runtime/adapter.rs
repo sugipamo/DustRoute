@@ -79,6 +79,9 @@ fn validate_initial(view: RuntimeView<'_>) -> Result<(), RuntimeError> {
                 "unsupported initial evidence at {pos:?}"
             )));
         }
+        if crate::device_program::program(block).is_some() {
+            continue;
+        }
         match block.kind {
             BlockKind::Piston => {
                 let dir = facing(block)?;
@@ -150,8 +153,6 @@ fn validate_initial(view: RuntimeView<'_>) -> Result<(), RuntimeError> {
             | BlockKind::RedstoneWire
             | BlockKind::Lever
             | BlockKind::RedstoneBlock
-            | BlockKind::Observer
-            | BlockKind::RedstoneLamp
             | BlockKind::Repeater => {}
             other => {
                 return Err(unsupported(format!(
@@ -170,23 +171,13 @@ fn handle(
     let pos = event.call.target;
     match &event.call.payload {
         PistonEvent::Motion { plan } => super::movement::step(view, pos, plan),
-        PistonEvent::LampTick => super::devices::lamp(view, pos, true),
-        PistonEvent::ObserverTick => super::devices::observer(
-            view,
-            pos,
-            crate::device_callback_law::ObserverCallback::Tick,
-            false,
-        ),
-        PistonEvent::ObserverAfterTick { block, delay } => {
-            super::devices::observer_after_tick(view, pos, block, *delay)
-        }
-        PistonEvent::MovingObserverAdded => super::devices::observer(
-            view,
-            pos,
-            crate::device_callback_law::ObserverCallback::Added,
-            false,
-        ),
-        PistonEvent::MovingObserverAfterAdded { block } => {
+        PistonEvent::Device {
+            callback,
+            source,
+            captured,
+        } => super::devices::start(view, pos, *callback, *source, captured.as_deref()),
+        PistonEvent::DeviceContinue { run } => super::devices::step(view, pos, *run.clone()),
+        PistonEvent::DeviceAfterArrival { block } => {
             let mut jobs = if view.block(pos)? == **block {
                 adjacent_jobs(view, pos, false, true)?
             } else {
@@ -211,6 +202,9 @@ fn handle(
             super::command::remove_shapes(view, pos, block)
         }
         PistonEvent::ElectricalCommandNeighbors => Ok(RuntimeOutcome {
+            continuation: crate::device_program::program(&view.block(pos)?)
+                .filter(|p| p.definition().comparator_output.is_some())
+                .map(|_| PistonEvent::NotifyAnalogReaders { next_side: 0 }),
             callbacks: vec![call(
                 pos,
                 PistonEvent::Notify {
@@ -235,12 +229,9 @@ fn handle(
                 .filter(|(_, b)| {
                     matches!(
                         b.kind,
-                        BlockKind::Piston
-                            | BlockKind::PistonHead
-                            | BlockKind::RedstoneWire
-                            | BlockKind::RedstoneLamp
-                            | BlockKind::Repeater
-                    )
+                        BlockKind::Piston | BlockKind::PistonHead | BlockKind::RedstoneWire
+                    ) || crate::device_program::program(b)
+                        .is_some_and(|p| p.definition.initial_neighbor_update)
                 })
                 .map(|(p, _)| NeighborJob {
                     target: *p,
@@ -276,6 +267,7 @@ fn handle(
             })
         }
         PistonEvent::Notify { jobs } => notify(view, jobs.clone()),
+        PistonEvent::NotifyAnalogReaders { next_side } => analog_readers(view, pos, *next_side),
         PistonEvent::Block {
             event: action,
             facing,
@@ -332,34 +324,7 @@ fn handle(
             finish_or_advance(view, pos, true)
         }
         PistonEvent::CarrierTick => finish_or_advance(view, pos, false),
-        PistonEvent::ElectricalRepeaterTick => super::electrical::repeater_tick(view, pos),
     }
-}
-
-fn no_attached_components(
-    view: RuntimeView<'_>,
-    changes: &[Pos],
-    retracting_body: Option<Pos>,
-) -> Result<(), RuntimeError> {
-    for (p, b) in view.world().iter() {
-        if b.support_pos(*p)
-            .is_some_and(|support| changes.contains(&support))
-        {
-            // A source body retracts in place. Its back-face attachment receives
-            // no shape callback until the stable body is restored; no component
-            // is transported or destroyed. Ordinary payload support still fails.
-            if let Some(body_pos) = retracting_body
-                && b.support_pos(*p) == Some(body_pos)
-                && b.support_offset == view.block(body_pos)?.facing.map(Facing::offset)
-            {
-                continue;
-            }
-            return Err(unsupported(format!(
-                "movement would change component support at {p:?}; destruction/replacement is outside the retained payload subset"
-            )));
-        }
-    }
-    Ok(())
 }
 
 fn begin(
@@ -435,12 +400,6 @@ fn start_extension(
     if !effects.head_carrier || effects.body_carrier {
         return Err(unsupported("unsupported extension carrier effects"));
     }
-    let changes: Vec<_> = moves
-        .iter()
-        .flat_map(|m| [m.from, m.to])
-        .chain([front])
-        .collect();
-    no_attached_components(view, &changes, None)?;
     let mut plan = MotionPlan::new(
         DeltaCause::PistonExtend { piston: pos },
         Some(PistonEvent::ExtendBody {
@@ -481,7 +440,6 @@ fn retract_body(
     if !effects.body_carrier || effects.head_carrier {
         return Err(unsupported("unsupported retraction carrier effects"));
     }
-    no_attached_components(view, &[pos], Some(pos))?;
     // The event's data argument restores the facing of the carried body;
     // movement itself uses the facing of the current receiving state.
     let mut restored = state(body.clone(), false);
@@ -553,7 +511,6 @@ fn retract_payload(
         });
     }
     if decision.pull {
-        no_attached_components(view, &[front, source], None)?;
         let mut plan = MotionPlan::new(DeltaCause::PistonRetract { piston: pos }, None);
         // move(false) removes the old head with flags 276 before the payload
         // destination write (324), then clears the vacated source (82).
@@ -616,14 +573,28 @@ fn finish_or_advance(
         } else {
             (*entity.pushed_block).clone()
         };
+        // Block.postProcessState updates an arriving stair's corner before the
+        // completion write, both for normal completion and forced finish.
+        after = super::passive::transformed(view, pos, &after)?;
         if after.kind == BlockKind::PistonHead && !head_supported(view, pos, &after)? {
             after = Block::new(BlockKind::Air);
         }
-        if after.kind == BlockKind::Observer {
+        if crate::device_program::program(&after).is_some_and(|p| p.definition.preprocess_shapes) {
             // postProcessState evaluates all six neighbor directions before
             // the arrival write. Its facing-side observer callback can enqueue
             // a destination tick even though that cell is still moving.
-            let queued = super::devices::observer_shape_ticks(view, pos, &after, true)?;
+            let queued = super::devices::preprocess(
+                view,
+                pos,
+                &after,
+                along(
+                    pos,
+                    after
+                        .facing
+                        .ok_or_else(|| unsupported("device output required"))?,
+                    -1,
+                )?,
+            )?;
             return Ok(RuntimeOutcome {
                 delta: Some(delta(
                     view,
@@ -636,8 +607,14 @@ fn finish_or_advance(
                     expected: carrier,
                 }],
                 queued,
-                callbacks: vec![call(pos, PistonEvent::MovingObserverAdded)],
-                continuation: Some(PistonEvent::MovingObserverAfterAdded {
+                outputs: vec![],
+                histories: vec![],
+                callbacks: vec![super::devices::event(
+                    pos,
+                    crate::device_program::Callback::Added,
+                    None,
+                )],
+                continuation: Some(PistonEvent::DeviceAfterArrival {
                     block: Box::new(after),
                 }),
             });

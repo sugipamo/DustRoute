@@ -19,10 +19,21 @@ fn new_piston_context_is_unified_but_saved_records_still_require_their_profile()
     );
     assert_eq!(
         context.profile,
-        RuntimeBehaviorProfile::UnifiedPistonElectricalRootExplorationV6
+        RuntimeBehaviorProfile::UnifiedPistonElectricalRootExplorationV16
     );
     resolve_law_references(builtin_laws(), &context.execution_context()).unwrap();
     let saved = serde_json::to_value(&context).unwrap();
+    let mut previous = saved.clone();
+    previous["profile"] = "dustroute.piston-electrical-root-exploration.v12".into();
+    assert!(serde_json::from_value::<RuntimeBehaviorContext>(previous).is_err());
+    let world = context.execution_context();
+    assert_eq!(
+        world.device_program_revision(),
+        Some(dustroute_minecraft::device_program::REVISION)
+    );
+    let mut previous_world = serde_json::to_value(&world).unwrap();
+    previous_world["profile"] = "dustroute.piston-electrical-callbacks.java-1-21-11.v12".into();
+    assert!(serde_json::from_value::<WorldExecutionContext>(previous_world).is_err());
     assert_eq!(
         serde_json::from_value::<RuntimeBehaviorContext>(saved.clone()).unwrap(),
         context
@@ -84,7 +95,7 @@ fn profiles_select_distinct_complete_law_sets_without_extending_proof_capabiliti
         (DustSingleTorchBlockEffectsV1, 6),
         (RedstoneCompatibilityBoundaryV1, 10),
         (BoundedRedstoneEventsV1, 11),
-        (UnifiedPistonElectricalCallbacksJava12111V6, 13),
+        (UnifiedPistonElectricalCallbacksJava12111V16, 18),
     ] {
         let context = WorldExecutionContext::for_profile(profile);
         let saved = builtin_laws().to_json().unwrap();
@@ -114,7 +125,7 @@ fn electrical_context_roundtrips_and_pins_its_connection_program() {
     use dustroute_library::runtime_behavior::{RuntimeBehaviorContext, RuntimeBehaviorProfile};
     use dustroute_minecraft::{Pos, Region};
     let context = RuntimeBehaviorContext {
-        profile: RuntimeBehaviorProfile::UnifiedPistonElectricalRootExplorationV6,
+        profile: RuntimeBehaviorProfile::UnifiedPistonElectricalRootExplorationV16,
         initial_condition:
             dustroute_library::behavior_type::BehaviorInitialCondition::FreshConstruction,
         known_region: Region::new(Pos::new(-4, -4, -4), Pos::new(20, 10, 4)),
@@ -122,7 +133,7 @@ fn electrical_context_roundtrips_and_pins_its_connection_program() {
         root_limits: Default::default(),
     };
     let saved = serde_json::to_string(&context).unwrap();
-    assert!(saved.contains("dustroute.piston-electrical-root-exploration.v6"));
+    assert!(saved.contains("dustroute.piston-electrical-root-exploration.v16"));
     let restored: RuntimeBehaviorContext = serde_json::from_str(&saved).unwrap();
     assert_eq!(context, restored);
     let world = restored.execution_context();
@@ -192,7 +203,7 @@ fn fixed_adapters_reject_a_changed_body_even_when_the_revision_id_matches() {
     for profile in [
         RedstoneCompatibilityBoundaryV1,
         BoundedRedstoneEventsV1,
-        UnifiedPistonElectricalCallbacksJava12111V6,
+        UnifiedPistonElectricalCallbacksJava12111V16,
     ] {
         let context = WorldExecutionContext::for_profile(profile);
         let mut conflict = dust_law_revision().clone();
@@ -266,6 +277,9 @@ fn retired_piston_contexts_are_rejected_instead_of_reinterpreted() {
         "dustroute.piston-electrical-root-exploration.v3",
         "dustroute.piston-electrical-root-exploration.v4",
         "dustroute.piston-electrical-root-exploration.v5",
+        "dustroute.piston-electrical-root-exploration.v13",
+        "dustroute.piston-electrical-root-exploration.v14",
+        "dustroute.piston-electrical-root-exploration.v15",
     ] {
         let mut saved = serde_json::to_value(&context).unwrap();
         saved["profile"] = serde_json::json!(profile);
@@ -287,6 +301,9 @@ fn retired_piston_contexts_are_rejected_instead_of_reinterpreted() {
         "dustroute.piston-electrical-callbacks.java-1-21-11.v3",
         "dustroute.piston-electrical-callbacks.java-1-21-11.v4",
         "dustroute.piston-electrical-callbacks.java-1-21-11.v5",
+        "dustroute.piston-electrical-callbacks.java-1-21-11.v13",
+        "dustroute.piston-electrical-callbacks.java-1-21-11.v14",
+        "dustroute.piston-electrical-callbacks.java-1-21-11.v15",
     ] {
         let mut saved = serde_json::to_value(context.execution_context()).unwrap();
         saved["profile"] = serde_json::json!(profile);

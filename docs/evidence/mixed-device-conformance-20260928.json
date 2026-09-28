@@ -1,0 +1,3241 @@
+{
+  "schema_version": "dustroute.mixed-device-conformance.v1",
+  "date": "2026-09-28",
+  "base_commit": "b2f7ba5",
+  "branch": "codex/data-driven-block-runtime",
+  "target": {
+    "minecraft": "Java 1.21.11",
+    "yarn": "1.21.11+build.6",
+    "enabled_features": [
+      "minecraft:vanilla"
+    ],
+    "loader": "0.19.5",
+    "loom": "1.17.20",
+    "source_world_class_sha256": "745b101ac1d0231555831f0fcf65e98e89ffd18d45facce363d31243592cad11"
+  },
+  "production_physics_changed": false,
+  "public_mcp_changed": false,
+  "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v13",
+  "totals": {
+    "tick_ends": 2225,
+    "palette_writes": 3354,
+    "delivered_device_ticks": 394,
+    "callback_boundaries": 29183
+  },
+  "completed_live_trials": 10,
+  "incomplete_live_trials": 1,
+  "live_probe_modified": false,
+  "runs": [
+    {
+      "run": "a",
+      "fixture": "device-bulb-compare-r0",
+      "origin": {
+        "x": 70000,
+        "y": 180,
+        "z": 1000
+      },
+      "rotation": 0,
+      "requested_steps": [
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 0
+        },
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 26
+        },
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 26
+        },
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 26
+        }
+      ],
+      "applied_offsets": [
+        0,
+        26,
+        53,
+        79
+      ],
+      "applied_inputs": [
+        {
+          "position": {
+            "x": 69999,
+            "y": 181,
+            "z": 1000
+          },
+          "game_tick": 120526,
+          "packet_sequence": 2103,
+          "write_sequence": 2104,
+          "kind": "use_device",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": 69999,
+            "y": 181,
+            "z": 1000
+          },
+          "game_tick": 120552,
+          "packet_sequence": 2604,
+          "write_sequence": 2605,
+          "kind": "use_device",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": 69999,
+            "y": 181,
+            "z": 1000
+          },
+          "game_tick": 120579,
+          "packet_sequence": 3112,
+          "write_sequence": 3113,
+          "kind": "use_device",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": 69999,
+            "y": 181,
+            "z": 1000
+          },
+          "game_tick": 120605,
+          "packet_sequence": 3613,
+          "write_sequence": 3614,
+          "kind": "use_device",
+          "powered": true
+        }
+      ],
+      "comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v13",
+        "tick_end_count": 120,
+        "tick_mismatches": [],
+        "live_write_count": 46,
+        "model_write_count": 46,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 8,
+        "model_scheduled_count": 8,
+        "first_scheduled_mismatch": null,
+        "live_callback_count": 208,
+        "model_callback_count": 208,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared"
+      },
+      "retained_fixture": {
+        "path": "crates/dustroute-translate/tests/fixtures/device-circuits/bulb-compare-r0.json.gz",
+        "sha256": "f71d884336e77999c728f84c75fbbfcaba79d0054cdaa3e6e797098400bf1220"
+      },
+      "final_comparison": ".local/e2e-artifacts/device-circuit-20260928-a.expanded-comparison-v2.json",
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_stopped_normally": true,
+      "enabled_features": [
+        "minecraft:vanilla"
+      ],
+      "original_capture_provenance": {
+        "fixture_sha256": "da74a036537e2c57a86c6fa7f00cffb61a95df7f484f9608d326884313e9d644",
+        "actor_sha256": "446e6d637d7b75ad6672cd7217b000810abded8d998574d035efa4b88a710723",
+        "capture_sha256": "eeea63eceda64db61ec1144ae310bfb6de1d1cebfb16ca1968876dd5426e0d5d",
+        "comparator_sha256": "fd076d8be43e28a58d35c5061f0ec27176d28f394842757b76795c4c8007716c"
+      },
+      "artifacts": {
+        ".local/e2e-artifacts/device-circuit-20260928-a.client.json": "6db256f23c7c5ea7f4c11fecbf5c287c5e3391cf2b11a1481472e07f5e51089b",
+        ".local/e2e-artifacts/device-circuit-20260928-a.comparison.json": "66421a2aa330cc2fb233975126580a6d0bec428de532a0814797df141925c00e",
+        ".local/e2e-artifacts/device-circuit-20260928-a.expanded-comparison-v2.json": "ceacfbc9ce2e8b9630ef16a7298f021c66caec51605873ff061d3b2fdd78d387",
+        ".local/e2e-artifacts/device-circuit-20260928-a.expanded-comparison.json": "c0a2a09764b484ce0f3cf88f2a7173bbed37a00023574f50492ebc674058416b",
+        ".local/e2e-artifacts/device-circuit-20260928-a.expanded-reference.json": "3aae2ef46378989312b79cdea4b6e5c9c891e687003af7ddec79c10ddd69c57b",
+        ".local/e2e-artifacts/device-circuit-20260928-a.input.json": "a096a4e52475aeebffc3508e153032f2469342107d95f25aa7a688c538fd4882",
+        ".local/e2e-artifacts/device-circuit-20260928-a.model.json": "a9060e427155144f320ce273beca738311ee31165dfe094c994af2aa2ada7a9d",
+        ".local/e2e-artifacts/device-circuit-20260928-a.raw.ndjson": "19e8a9175252c746e1c54ffbc46488b2f3700ed3668ea546540420bd138c0428",
+        ".local/e2e-artifacts/device-circuit-20260928-a.reference.json": "c053b890b74b11b7972b4619dace99cea11ae119ee8be996d26ba06fcaca0fc0",
+        ".local/e2e-artifacts/device-circuit-20260928-a.server.log": "b0035f3a615af2f4a8d5cfff712e96d8171cc7c2f203b00499a7ecb7ec6680e5",
+        ".local/e2e-artifacts/device-circuit-20260928-a.summary.json": "02e6d225fdcd6c787f696da462fe34f29cad74838ce80bbcb1c8a71b995a3d77"
+      }
+    },
+    {
+      "run": "b",
+      "fixture": "device-bulb-subtract-r90",
+      "origin": {
+        "x": -71000,
+        "y": 180,
+        "z": 1000
+      },
+      "rotation": 90,
+      "requested_steps": [
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 0
+        },
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 26
+        },
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 26
+        },
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 26
+        }
+      ],
+      "applied_offsets": [
+        0,
+        26,
+        53,
+        79
+      ],
+      "applied_inputs": [
+        {
+          "position": {
+            "x": -71000,
+            "y": 181,
+            "z": 999
+          },
+          "game_tick": 121394,
+          "packet_sequence": 2236,
+          "write_sequence": 2237,
+          "kind": "use_device",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": -71000,
+            "y": 181,
+            "z": 999
+          },
+          "game_tick": 121420,
+          "packet_sequence": 2737,
+          "write_sequence": 2738,
+          "kind": "use_device",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": -71000,
+            "y": 181,
+            "z": 999
+          },
+          "game_tick": 121447,
+          "packet_sequence": 3245,
+          "write_sequence": 3246,
+          "kind": "use_device",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": -71000,
+            "y": 181,
+            "z": 999
+          },
+          "game_tick": 121473,
+          "packet_sequence": 3746,
+          "write_sequence": 3747,
+          "kind": "use_device",
+          "powered": true
+        }
+      ],
+      "comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v13",
+        "tick_end_count": 120,
+        "tick_mismatches": [],
+        "live_write_count": 46,
+        "model_write_count": 46,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 8,
+        "model_scheduled_count": 8,
+        "first_scheduled_mismatch": null,
+        "live_callback_count": 216,
+        "model_callback_count": 216,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared"
+      },
+      "retained_fixture": {
+        "path": "crates/dustroute-translate/tests/fixtures/device-circuits/bulb-subtract-r90.json.gz",
+        "sha256": "aa7e3df64350726f72aea934d3d203d63982f7d9b5a260a2d30a3480fc450838"
+      },
+      "final_comparison": ".local/e2e-artifacts/device-circuit-20260928-b.expanded-comparison-v2.json",
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_stopped_normally": true,
+      "enabled_features": [
+        "minecraft:vanilla"
+      ],
+      "original_capture_provenance": {
+        "fixture_sha256": "09177cd405a4a5429b304d54bf37d599f96e0c8d985d698a6f038e31e501756a",
+        "actor_sha256": "446e6d637d7b75ad6672cd7217b000810abded8d998574d035efa4b88a710723",
+        "capture_sha256": "eeea63eceda64db61ec1144ae310bfb6de1d1cebfb16ca1968876dd5426e0d5d",
+        "comparator_sha256": "fd076d8be43e28a58d35c5061f0ec27176d28f394842757b76795c4c8007716c"
+      },
+      "artifacts": {
+        ".local/e2e-artifacts/device-circuit-20260928-b.client.json": "00230df788c09532b38e4efd1a1c93b49f1a8acdb6e9997a426913dfc9500962",
+        ".local/e2e-artifacts/device-circuit-20260928-b.comparison.json": "66421a2aa330cc2fb233975126580a6d0bec428de532a0814797df141925c00e",
+        ".local/e2e-artifacts/device-circuit-20260928-b.expanded-comparison-v2.json": "692f95be995f45dea34e58c17cba7e7e0e91d35a51c11106d7b39f3af0f9857d",
+        ".local/e2e-artifacts/device-circuit-20260928-b.expanded-comparison.json": "11374cf066617a64956169ef3034d6c4baefff51cccc052d61e4df2e365a5131",
+        ".local/e2e-artifacts/device-circuit-20260928-b.expanded-reference.json": "781f146d2c9a0f6c7e45819270b8c4c5c5255b21251bb5d3f6f19a41b246a542",
+        ".local/e2e-artifacts/device-circuit-20260928-b.input.json": "242f125a55048f17c9870e2aa7d6bb0a8d634b5d08abf446117290890e57e505",
+        ".local/e2e-artifacts/device-circuit-20260928-b.model.json": "9bbe2504bfb49db6b91f8c7099d237d52d5b6b7f9da5513b007b533dce5cbdd9",
+        ".local/e2e-artifacts/device-circuit-20260928-b.raw.ndjson": "01d7e78806724b610b92bd9d7f60081c103f3935cf7d0a85c81d1232414e2d1d",
+        ".local/e2e-artifacts/device-circuit-20260928-b.reference.json": "32680288d883e1926bc18f4797b6b3a5dddd30ab4127e3b1f90ba95cb53db664",
+        ".local/e2e-artifacts/device-circuit-20260928-b.server.log": "c826c5eab4af77cb371fd67db6809c298b430732d79c98e92710628ef94a6cdd",
+        ".local/e2e-artifacts/device-circuit-20260928-b.summary.json": "2e91e4d7d6b225b2ac96245a61dd82de092800bd14f4dda8bb32ec2d359bb2dc"
+      }
+    },
+    {
+      "run": "c",
+      "fixture": "device-torch-feedback-r0",
+      "origin": {
+        "x": 72000,
+        "y": 180,
+        "z": 1000
+      },
+      "rotation": 0,
+      "requested_steps": [
+        {
+          "input": 0,
+          "powered": false,
+          "wait_ticks": 0
+        },
+        {
+          "input": 1,
+          "powered": false,
+          "wait_ticks": 0
+        },
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 80
+        },
+        {
+          "input": 1,
+          "powered": true,
+          "wait_ticks": 0
+        },
+        {
+          "input": 0,
+          "powered": false,
+          "wait_ticks": 180
+        },
+        {
+          "input": 1,
+          "powered": false,
+          "wait_ticks": 0
+        },
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 80
+        },
+        {
+          "input": 1,
+          "powered": true,
+          "wait_ticks": 0
+        }
+      ],
+      "applied_offsets": [
+        0,
+        0,
+        79,
+        79,
+        259,
+        259,
+        339,
+        339
+      ],
+      "applied_inputs": [
+        {
+          "position": {
+            "x": 71999,
+            "y": 180,
+            "z": 1000
+          },
+          "game_tick": 122250,
+          "packet_sequence": 2275,
+          "write_sequence": 2276,
+          "kind": "lever",
+          "powered": false
+        },
+        {
+          "position": {
+            "x": 71999,
+            "y": 180,
+            "z": 1003
+          },
+          "game_tick": 122250,
+          "packet_sequence": 2429,
+          "write_sequence": 2430,
+          "kind": "lever",
+          "powered": false
+        },
+        {
+          "position": {
+            "x": 71999,
+            "y": 180,
+            "z": 1000
+          },
+          "game_tick": 122329,
+          "packet_sequence": 33535,
+          "write_sequence": 33536,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": 71999,
+            "y": 180,
+            "z": 1003
+          },
+          "game_tick": 122329,
+          "packet_sequence": 33645,
+          "write_sequence": 33646,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": 71999,
+            "y": 180,
+            "z": 1000
+          },
+          "game_tick": 122509,
+          "packet_sequence": 35878,
+          "write_sequence": 35879,
+          "kind": "lever",
+          "powered": false
+        },
+        {
+          "position": {
+            "x": 71999,
+            "y": 180,
+            "z": 1003
+          },
+          "game_tick": 122509,
+          "packet_sequence": 36032,
+          "write_sequence": 36033,
+          "kind": "lever",
+          "powered": false
+        },
+        {
+          "position": {
+            "x": 71999,
+            "y": 180,
+            "z": 1000
+          },
+          "game_tick": 122589,
+          "packet_sequence": 68432,
+          "write_sequence": 68433,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": 71999,
+            "y": 180,
+            "z": 1003
+          },
+          "game_tick": 122589,
+          "packet_sequence": 68630,
+          "write_sequence": 68631,
+          "kind": "lever",
+          "powered": true
+        }
+      ],
+      "comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v13",
+        "tick_end_count": 510,
+        "tick_mismatches": [],
+        "live_write_count": 1410,
+        "model_write_count": 1410,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 123,
+        "model_scheduled_count": 123,
+        "first_scheduled_mismatch": null,
+        "live_callback_count": 13216,
+        "model_callback_count": 13216,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared"
+      },
+      "retained_fixture": {
+        "path": "crates/dustroute-translate/tests/fixtures/device-circuits/torch-feedback-r0.json.gz",
+        "sha256": "940a7821a4ad616a754a5cfc830b13122fceed3ee76c7c31dce21ccf6451c41b"
+      },
+      "final_comparison": ".local/e2e-artifacts/device-circuit-20260928-c.expanded-comparison.json",
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_stopped_normally": true,
+      "enabled_features": [
+        "minecraft:vanilla"
+      ],
+      "original_capture_provenance": {
+        "fixture_sha256": "2228765ca0289a89a9910ca17f6182a3105ae951cd01e55b78edbe3dd38a7cfe",
+        "actor_sha256": "446e6d637d7b75ad6672cd7217b000810abded8d998574d035efa4b88a710723",
+        "capture_sha256": "8316139bbf3bc7fdaf81dad8d1b26406a3f67e58eb2b0867c6b2a999cd22e280",
+        "comparator_sha256": "fd076d8be43e28a58d35c5061f0ec27176d28f394842757b76795c4c8007716c"
+      },
+      "artifacts": {
+        ".local/e2e-artifacts/device-circuit-20260928-c.client.json": "f505008df9f29372668f79923dc205dc500bcf42c06350acfe61d4b5854dc2c8",
+        ".local/e2e-artifacts/device-circuit-20260928-c.comparison.json": "8611a0e6e6ff0fb5ad3480bdd9a6685234cef1957bbf4dd5d074615b1f0da9ba",
+        ".local/e2e-artifacts/device-circuit-20260928-c.expanded-comparison.json": "309785a28734472eaf4f2d6906999f37a5d0f39a00bd65ee5343ab00cb11222e",
+        ".local/e2e-artifacts/device-circuit-20260928-c.expanded-input.json": "3092cdd328d1c645bf84f277516e75763121daf66f3c4251394bff5b1b7a99bf",
+        ".local/e2e-artifacts/device-circuit-20260928-c.expanded-model.json": "504cc07df35994c1fcc74e4c8cede8e89ec4cab9e27778cb3627f1189d7526e8",
+        ".local/e2e-artifacts/device-circuit-20260928-c.expanded-reference.json": "4f5dc6e7ec32a51e08fd5ad54f7a91ed4fbbfd80fb356c1bba56f927f0dcaba1",
+        ".local/e2e-artifacts/device-circuit-20260928-c.input.json": "fb19565debd93ed528e0b0337be01f8b7ffde0d2e8263425031cbd6f2c2629b4",
+        ".local/e2e-artifacts/device-circuit-20260928-c.model.json": "dbc5f3978f2596a621350d99111f0a7ddaa0601a5f86dc5a5e50318f4ec3cc61",
+        ".local/e2e-artifacts/device-circuit-20260928-c.raw.ndjson": "1a6f27b768f22d2df128c9f1a218a949079d0742d4b541e75bb713c941eab16c",
+        ".local/e2e-artifacts/device-circuit-20260928-c.reference.json": "5c796e09b2d9a58c63513e56a7d02e6a22c35d61fd4685a600b27739ae60c1af",
+        ".local/e2e-artifacts/device-circuit-20260928-c.server.log": "f19bde2b89002171297421ded37e2309b2993b2d192b62faa524a6f47542e9da",
+        ".local/e2e-artifacts/device-circuit-20260928-c.summary.json": "77f975f78b0dc18a3a631e354e95fbb6082cde11ecc861bd1ac34388c7c44c5b"
+      }
+    },
+    {
+      "run": "d",
+      "fixture": "device-locking-data-first-r0",
+      "origin": {
+        "x": 73000,
+        "y": 180,
+        "z": 1000
+      },
+      "rotation": 0,
+      "requested_steps": [
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 0
+        },
+        {
+          "input": 1,
+          "powered": true,
+          "wait_ticks": 0
+        },
+        {
+          "input": 0,
+          "powered": false,
+          "wait_ticks": 1
+        },
+        {
+          "input": 1,
+          "powered": false,
+          "wait_ticks": 1
+        },
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 1
+        },
+        {
+          "input": 0,
+          "powered": false,
+          "wait_ticks": 1
+        },
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 12
+        },
+        {
+          "input": 1,
+          "powered": true,
+          "wait_ticks": 4
+        },
+        {
+          "input": 0,
+          "powered": false,
+          "wait_ticks": 4
+        },
+        {
+          "input": 1,
+          "powered": false,
+          "wait_ticks": 4
+        },
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 1
+        },
+        {
+          "input": 0,
+          "powered": false,
+          "wait_ticks": 1
+        }
+      ],
+      "applied_offsets": [
+        0,
+        0,
+        0,
+        2,
+        3,
+        4,
+        16,
+        20,
+        24,
+        28,
+        29,
+        30
+      ],
+      "applied_inputs": [
+        {
+          "position": {
+            "x": 72999,
+            "y": 181,
+            "z": 1000
+          },
+          "game_tick": 123610,
+          "packet_sequence": 2208,
+          "write_sequence": 2209,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": 73000,
+            "y": 181,
+            "z": 1002
+          },
+          "game_tick": 123610,
+          "packet_sequence": 2230,
+          "write_sequence": 2231,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": 72999,
+            "y": 181,
+            "z": 1000
+          },
+          "game_tick": 123610,
+          "packet_sequence": 2252,
+          "write_sequence": 2253,
+          "kind": "lever",
+          "powered": false
+        },
+        {
+          "position": {
+            "x": 73000,
+            "y": 181,
+            "z": 1002
+          },
+          "game_tick": 123612,
+          "packet_sequence": 2323,
+          "write_sequence": 2324,
+          "kind": "lever",
+          "powered": false
+        },
+        {
+          "position": {
+            "x": 72999,
+            "y": 181,
+            "z": 1000
+          },
+          "game_tick": 123613,
+          "packet_sequence": 2358,
+          "write_sequence": 2359,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": 72999,
+            "y": 181,
+            "z": 1000
+          },
+          "game_tick": 123614,
+          "packet_sequence": 2461,
+          "write_sequence": 2462,
+          "kind": "lever",
+          "powered": false
+        },
+        {
+          "position": {
+            "x": 72999,
+            "y": 181,
+            "z": 1000
+          },
+          "game_tick": 123626,
+          "packet_sequence": 2857,
+          "write_sequence": 2858,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": 73000,
+            "y": 181,
+            "z": 1002
+          },
+          "game_tick": 123630,
+          "packet_sequence": 2987,
+          "write_sequence": 2988,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": 72999,
+            "y": 181,
+            "z": 1000
+          },
+          "game_tick": 123634,
+          "packet_sequence": 3155,
+          "write_sequence": 3156,
+          "kind": "lever",
+          "powered": false
+        },
+        {
+          "position": {
+            "x": 73000,
+            "y": 181,
+            "z": 1002
+          },
+          "game_tick": 123638,
+          "packet_sequence": 3227,
+          "write_sequence": 3228,
+          "kind": "lever",
+          "powered": false
+        },
+        {
+          "position": {
+            "x": 72999,
+            "y": 181,
+            "z": 1000
+          },
+          "game_tick": 123639,
+          "packet_sequence": 3262,
+          "write_sequence": 3263,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": 72999,
+            "y": 181,
+            "z": 1000
+          },
+          "game_tick": 123640,
+          "packet_sequence": 3319,
+          "write_sequence": 3320,
+          "kind": "lever",
+          "powered": false
+        }
+      ],
+      "comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v13",
+        "tick_end_count": 71,
+        "tick_mismatches": [],
+        "live_write_count": 62,
+        "model_write_count": 62,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 17,
+        "model_scheduled_count": 17,
+        "first_scheduled_mismatch": null,
+        "live_callback_count": 178,
+        "model_callback_count": 178,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection"
+      },
+      "retained_fixture": {
+        "path": "crates/dustroute-translate/tests/fixtures/device-circuits/locking-data-first-r0.json.gz",
+        "sha256": "6edfaf63fd3b9ea4af17d57064ff0029adfd723552b82717d04774203f4eaabb"
+      },
+      "final_comparison": ".local/e2e-artifacts/device-circuit-20260928-d.comparison.json",
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_stopped_normally": true,
+      "enabled_features": [
+        "minecraft:vanilla"
+      ],
+      "original_capture_provenance": {
+        "fixture_sha256": "aa15ec95c675b23609bd9915801ed7c68792b729877d903681558310b16a1717",
+        "actor_sha256": "446e6d637d7b75ad6672cd7217b000810abded8d998574d035efa4b88a710723",
+        "capture_sha256": "2fe78e37c280b4f38cc9751e56902537353a3fb9af264b71240a332aa5885ccc",
+        "comparator_sha256": "8c01c5243a46007c51f8c9179e4f21a3383e86b302bcdc3156179525f37fe811"
+      },
+      "artifacts": {
+        ".local/e2e-artifacts/device-circuit-20260928-d.client.json": "c33b3b72d43ec4ce65734ec0c28aed00c48e1230f12a8623c2b7f52b95244b91",
+        ".local/e2e-artifacts/device-circuit-20260928-d.comparison.json": "ee9e7d29745af470a40b4f8c7fe3c30cb4c8fefa6cb8adc3f2c4215fde8caeee",
+        ".local/e2e-artifacts/device-circuit-20260928-d.input.json": "6b4de8b90139f79468f79c31d92b1efa3c3a60b1a352fb223330257a80843a48",
+        ".local/e2e-artifacts/device-circuit-20260928-d.model.json": "287d1d462cbf793a034e318ecd1df751eff31e61c8fcd9b5e0b6d11bca82e244",
+        ".local/e2e-artifacts/device-circuit-20260928-d.raw.ndjson": "50f63c7d9de07d1eba063d35bc4731e49a81419f12a91cbd53ea8e72234e541d",
+        ".local/e2e-artifacts/device-circuit-20260928-d.reference.json": "ac98d7a5f21224c73315b4b2ddfed19bec55135aad21dd22b995d2e41a7e3c33",
+        ".local/e2e-artifacts/device-circuit-20260928-d.server.log": "919af7c4cda901e6df9786afa5f3d633edcfb1203931fb9bed3b0baae6b74c1c",
+        ".local/e2e-artifacts/device-circuit-20260928-d.summary.json": "efa38b5bae966b3c908f49d7b658cf98c1a48a9a88c35930c3c923e78635eb29"
+      },
+      "force_finish_boundaries": [
+        {
+          "tick": 7,
+          "kind": "finish_begin",
+          "position": [
+            73003,
+            182,
+            1000
+          ],
+          "carrier": {
+            "progress": 1.0,
+            "last_progress": 0.5,
+            "saved_world_time": 6,
+            "extending": true,
+            "source": true,
+            "payload": [
+              "minecraft:piston_head",
+              [
+                [
+                  "facing",
+                  "up"
+                ],
+                [
+                  "short",
+                  "false"
+                ],
+                [
+                  "type",
+                  "sticky"
+                ]
+              ]
+            ]
+          }
+        },
+        {
+          "tick": 7,
+          "kind": "finish_begin",
+          "position": [
+            73003,
+            183,
+            1000
+          ],
+          "carrier": {
+            "progress": 1.0,
+            "last_progress": 0.5,
+            "saved_world_time": 6,
+            "extending": true,
+            "source": false,
+            "payload": [
+              "minecraft:stone",
+              []
+            ]
+          }
+        },
+        {
+          "tick": 13,
+          "kind": "finish_begin",
+          "position": [
+            73003,
+            182,
+            1000
+          ],
+          "carrier": {
+            "progress": 1.0,
+            "last_progress": 0.5,
+            "saved_world_time": 12,
+            "extending": true,
+            "source": true,
+            "payload": [
+              "minecraft:piston_head",
+              [
+                [
+                  "facing",
+                  "up"
+                ],
+                [
+                  "short",
+                  "false"
+                ],
+                [
+                  "type",
+                  "sticky"
+                ]
+              ]
+            ]
+          }
+        },
+        {
+          "tick": 23,
+          "kind": "finish_begin",
+          "position": [
+            73003,
+            182,
+            1000
+          ],
+          "carrier": {
+            "progress": 1.0,
+            "last_progress": 0.5,
+            "saved_world_time": 22,
+            "extending": true,
+            "source": true,
+            "payload": [
+              "minecraft:piston_head",
+              [
+                [
+                  "facing",
+                  "up"
+                ],
+                [
+                  "short",
+                  "false"
+                ],
+                [
+                  "type",
+                  "sticky"
+                ]
+              ]
+            ]
+          }
+        },
+        {
+          "tick": 23,
+          "kind": "finish_begin",
+          "position": [
+            73003,
+            183,
+            1000
+          ],
+          "carrier": {
+            "progress": 1.0,
+            "last_progress": 0.5,
+            "saved_world_time": 22,
+            "extending": true,
+            "source": false,
+            "payload": [
+              "minecraft:stone",
+              []
+            ]
+          }
+        },
+        {
+          "tick": 35,
+          "kind": "finish_begin",
+          "position": [
+            73003,
+            182,
+            1000
+          ],
+          "carrier": {
+            "progress": 1.0,
+            "last_progress": 0.5,
+            "saved_world_time": 34,
+            "extending": true,
+            "source": true,
+            "payload": [
+              "minecraft:piston_head",
+              [
+                [
+                  "facing",
+                  "up"
+                ],
+                [
+                  "short",
+                  "false"
+                ],
+                [
+                  "type",
+                  "sticky"
+                ]
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "run": "e",
+      "fixture": "device-locking-lock-first-r0",
+      "origin": {
+        "x": 74000,
+        "y": 180,
+        "z": 1000
+      },
+      "rotation": 0,
+      "requested_steps": [
+        {
+          "input": 1,
+          "powered": true,
+          "wait_ticks": 0
+        },
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 0
+        },
+        {
+          "input": 0,
+          "powered": false,
+          "wait_ticks": 1
+        },
+        {
+          "input": 1,
+          "powered": false,
+          "wait_ticks": 1
+        },
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 1
+        },
+        {
+          "input": 0,
+          "powered": false,
+          "wait_ticks": 1
+        },
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 12
+        },
+        {
+          "input": 1,
+          "powered": true,
+          "wait_ticks": 4
+        },
+        {
+          "input": 0,
+          "powered": false,
+          "wait_ticks": 4
+        },
+        {
+          "input": 1,
+          "powered": false,
+          "wait_ticks": 4
+        },
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 1
+        },
+        {
+          "input": 0,
+          "powered": false,
+          "wait_ticks": 1
+        }
+      ],
+      "applied_offsets": [
+        0,
+        0,
+        0,
+        1,
+        2,
+        3,
+        16,
+        20,
+        24,
+        28,
+        29,
+        30
+      ],
+      "applied_inputs": [
+        {
+          "position": {
+            "x": 74000,
+            "y": 181,
+            "z": 1002
+          },
+          "game_tick": 124424,
+          "packet_sequence": 2280,
+          "write_sequence": 2281,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": 73999,
+            "y": 181,
+            "z": 1000
+          },
+          "game_tick": 124424,
+          "packet_sequence": 2302,
+          "write_sequence": 2303,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": 73999,
+            "y": 181,
+            "z": 1000
+          },
+          "game_tick": 124424,
+          "packet_sequence": 2324,
+          "write_sequence": 2325,
+          "kind": "lever",
+          "powered": false
+        },
+        {
+          "position": {
+            "x": 74000,
+            "y": 181,
+            "z": 1002
+          },
+          "game_tick": 124425,
+          "packet_sequence": 2360,
+          "write_sequence": 2361,
+          "kind": "lever",
+          "powered": false
+        },
+        {
+          "position": {
+            "x": 73999,
+            "y": 181,
+            "z": 1000
+          },
+          "game_tick": 124426,
+          "packet_sequence": 2418,
+          "write_sequence": 2419,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": 73999,
+            "y": 181,
+            "z": 1000
+          },
+          "game_tick": 124427,
+          "packet_sequence": 2453,
+          "write_sequence": 2454,
+          "kind": "lever",
+          "powered": false
+        },
+        {
+          "position": {
+            "x": 73999,
+            "y": 181,
+            "z": 1000
+          },
+          "game_tick": 124440,
+          "packet_sequence": 2778,
+          "write_sequence": 2779,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": 74000,
+            "y": 181,
+            "z": 1002
+          },
+          "game_tick": 124444,
+          "packet_sequence": 2896,
+          "write_sequence": 2897,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": 73999,
+            "y": 181,
+            "z": 1000
+          },
+          "game_tick": 124448,
+          "packet_sequence": 3079,
+          "write_sequence": 3080,
+          "kind": "lever",
+          "powered": false
+        },
+        {
+          "position": {
+            "x": 74000,
+            "y": 181,
+            "z": 1002
+          },
+          "game_tick": 124452,
+          "packet_sequence": 3151,
+          "write_sequence": 3152,
+          "kind": "lever",
+          "powered": false
+        },
+        {
+          "position": {
+            "x": 73999,
+            "y": 181,
+            "z": 1000
+          },
+          "game_tick": 124453,
+          "packet_sequence": 3186,
+          "write_sequence": 3187,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": 73999,
+            "y": 181,
+            "z": 1000
+          },
+          "game_tick": 124454,
+          "packet_sequence": 3243,
+          "write_sequence": 3244,
+          "kind": "lever",
+          "powered": false
+        }
+      ],
+      "comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v13",
+        "tick_end_count": 71,
+        "tick_mismatches": [],
+        "live_write_count": 50,
+        "model_write_count": 50,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 13,
+        "model_scheduled_count": 13,
+        "first_scheduled_mismatch": null,
+        "live_callback_count": 139,
+        "model_callback_count": 139,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection"
+      },
+      "retained_fixture": {
+        "path": "crates/dustroute-translate/tests/fixtures/device-circuits/locking-lock-first-r0.json.gz",
+        "sha256": "5cfd4b7f2989524f5d150f98db07cf4ba81c7c8876dc2dbbc10bcc5759bbd75c"
+      },
+      "final_comparison": ".local/e2e-artifacts/device-circuit-20260928-e.comparison.json",
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_stopped_normally": true,
+      "enabled_features": [
+        "minecraft:vanilla"
+      ],
+      "original_capture_provenance": {
+        "fixture_sha256": "3f30bc9d000f43d2cd8b050d261a54649a761da04b0c4bdfbc11bc1c93f0282d",
+        "actor_sha256": "446e6d637d7b75ad6672cd7217b000810abded8d998574d035efa4b88a710723",
+        "capture_sha256": "2fe78e37c280b4f38cc9751e56902537353a3fb9af264b71240a332aa5885ccc",
+        "comparator_sha256": "8c01c5243a46007c51f8c9179e4f21a3383e86b302bcdc3156179525f37fe811"
+      },
+      "artifacts": {
+        ".local/e2e-artifacts/device-circuit-20260928-e.client.json": "e64f317a505c44999494b473991809b589beaba586363a0006ff37d8f4bd7a1a",
+        ".local/e2e-artifacts/device-circuit-20260928-e.comparison.json": "d73fb40a8b99519984544bf5ac6d50abfa959709cdaec7a8f5c30c5dd134694d",
+        ".local/e2e-artifacts/device-circuit-20260928-e.input.json": "8ea01af41640dea6400e11348d567fc093abe6c9deb81e25c1e680dc913432dc",
+        ".local/e2e-artifacts/device-circuit-20260928-e.model.json": "a854e101c4689538b274383a8af85ac33d2975627f3f02fe19534fba3f65250f",
+        ".local/e2e-artifacts/device-circuit-20260928-e.raw.ndjson": "924c6e54e2b431e25d1a7295bf213666e77ffb6722cc742650139a57237e9f90",
+        ".local/e2e-artifacts/device-circuit-20260928-e.reference.json": "f776e918f899772d9c357d03ee81c406ad693bd0862428bd073aa174eff4298e",
+        ".local/e2e-artifacts/device-circuit-20260928-e.server.log": "fb2a6d790df29ac64fdbaa5f0af8b8d5c4abe9e54e2e434df57bdd5242a46723",
+        ".local/e2e-artifacts/device-circuit-20260928-e.summary.json": "9aab5f805a521bab7fd0d20d6cf4829aa9303c68f31f40e45af50a7271e2bb15"
+      },
+      "force_finish_boundaries": [
+        {
+          "tick": 7,
+          "kind": "finish_begin",
+          "position": [
+            74003,
+            182,
+            1000
+          ],
+          "carrier": {
+            "progress": 1.0,
+            "last_progress": 0.5,
+            "saved_world_time": 6,
+            "extending": true,
+            "source": true,
+            "payload": [
+              "minecraft:piston_head",
+              [
+                [
+                  "facing",
+                  "up"
+                ],
+                [
+                  "short",
+                  "false"
+                ],
+                [
+                  "type",
+                  "sticky"
+                ]
+              ]
+            ]
+          }
+        },
+        {
+          "tick": 7,
+          "kind": "finish_begin",
+          "position": [
+            74003,
+            183,
+            1000
+          ],
+          "carrier": {
+            "progress": 1.0,
+            "last_progress": 0.5,
+            "saved_world_time": 6,
+            "extending": true,
+            "source": false,
+            "payload": [
+              "minecraft:stone",
+              []
+            ]
+          }
+        },
+        {
+          "tick": 23,
+          "kind": "finish_begin",
+          "position": [
+            74003,
+            182,
+            1000
+          ],
+          "carrier": {
+            "progress": 1.0,
+            "last_progress": 0.5,
+            "saved_world_time": 22,
+            "extending": true,
+            "source": true,
+            "payload": [
+              "minecraft:piston_head",
+              [
+                [
+                  "facing",
+                  "up"
+                ],
+                [
+                  "short",
+                  "false"
+                ],
+                [
+                  "type",
+                  "sticky"
+                ]
+              ]
+            ]
+          }
+        },
+        {
+          "tick": 35,
+          "kind": "finish_begin",
+          "position": [
+            74003,
+            182,
+            1000
+          ],
+          "carrier": {
+            "progress": 1.0,
+            "last_progress": 0.5,
+            "saved_world_time": 34,
+            "extending": true,
+            "source": true,
+            "payload": [
+              "minecraft:piston_head",
+              [
+                [
+                  "facing",
+                  "up"
+                ],
+                [
+                  "short",
+                  "false"
+                ],
+                [
+                  "type",
+                  "sticky"
+                ]
+              ]
+            ]
+          }
+        },
+        {
+          "tick": 35,
+          "kind": "finish_begin",
+          "position": [
+            74003,
+            183,
+            1000
+          ],
+          "carrier": {
+            "progress": 1.0,
+            "last_progress": 0.5,
+            "saved_world_time": 34,
+            "extending": true,
+            "source": false,
+            "payload": [
+              "minecraft:stone",
+              []
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "run": "f2",
+      "fixture": "device-torch-feedback-r90",
+      "origin": {
+        "x": -75020,
+        "y": 180,
+        "z": 1000
+      },
+      "rotation": 90,
+      "requested_steps": [
+        {
+          "input": 0,
+          "powered": false,
+          "wait_ticks": 0
+        },
+        {
+          "input": 1,
+          "powered": false,
+          "wait_ticks": 0
+        },
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 80
+        },
+        {
+          "input": 1,
+          "powered": true,
+          "wait_ticks": 0
+        },
+        {
+          "input": 0,
+          "powered": false,
+          "wait_ticks": 180
+        },
+        {
+          "input": 1,
+          "powered": false,
+          "wait_ticks": 0
+        },
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 80
+        },
+        {
+          "input": 1,
+          "powered": true,
+          "wait_ticks": 0
+        }
+      ],
+      "applied_offsets": [
+        0,
+        0,
+        80,
+        80,
+        260,
+        260,
+        341,
+        341
+      ],
+      "applied_inputs": [
+        {
+          "position": {
+            "x": -75020,
+            "y": 180,
+            "z": 999
+          },
+          "game_tick": 125855,
+          "packet_sequence": 2347,
+          "write_sequence": 2348,
+          "kind": "lever",
+          "powered": false
+        },
+        {
+          "position": {
+            "x": -75023,
+            "y": 180,
+            "z": 999
+          },
+          "game_tick": 125855,
+          "packet_sequence": 2501,
+          "write_sequence": 2502,
+          "kind": "lever",
+          "powered": false
+        },
+        {
+          "position": {
+            "x": -75020,
+            "y": 180,
+            "z": 999
+          },
+          "game_tick": 125935,
+          "packet_sequence": 34901,
+          "write_sequence": 34902,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": -75023,
+            "y": 180,
+            "z": 999
+          },
+          "game_tick": 125935,
+          "packet_sequence": 35099,
+          "write_sequence": 35100,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": -75020,
+            "y": 180,
+            "z": 999
+          },
+          "game_tick": 126115,
+          "packet_sequence": 37377,
+          "write_sequence": 37378,
+          "kind": "lever",
+          "powered": false
+        },
+        {
+          "position": {
+            "x": -75023,
+            "y": 180,
+            "z": 999
+          },
+          "game_tick": 126115,
+          "packet_sequence": 37531,
+          "write_sequence": 37532,
+          "kind": "lever",
+          "powered": false
+        },
+        {
+          "position": {
+            "x": -75020,
+            "y": 180,
+            "z": 999
+          },
+          "game_tick": 126196,
+          "packet_sequence": 69943,
+          "write_sequence": 69944,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": -75023,
+            "y": 180,
+            "z": 999
+          },
+          "game_tick": 126196,
+          "packet_sequence": 70141,
+          "write_sequence": 70142,
+          "kind": "lever",
+          "powered": true
+        }
+      ],
+      "comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v13",
+        "tick_end_count": 512,
+        "tick_mismatches": [],
+        "live_write_count": 1442,
+        "model_write_count": 1442,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 124,
+        "model_scheduled_count": 124,
+        "first_scheduled_mismatch": null,
+        "live_callback_count": 13520,
+        "model_callback_count": 13520,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection"
+      },
+      "retained_fixture": {
+        "path": "crates/dustroute-translate/tests/fixtures/device-circuits/torch-feedback-r90.json.gz",
+        "sha256": "24ba6b240722b39410a56f6d8180494a3ef860a81d3208c90ce14754546006ce"
+      },
+      "final_comparison": ".local/e2e-artifacts/device-circuit-20260928-f2.comparison.json",
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_stopped_normally": true,
+      "enabled_features": [
+        "minecraft:vanilla"
+      ],
+      "original_capture_provenance": {
+        "fixture_sha256": "3f9a26e611e8e1591739a6bae95c53bf14b946a71ef9177ccc522a6ae079483f",
+        "actor_sha256": "a12206d3d5f6f75d68c7382e219ba870b8125e7310220b6d2fe71c870cb8bded",
+        "capture_sha256": "358f0ab9534dc8e2870dc7395493f78b1b423b4216085834449240948bf86a54",
+        "comparator_sha256": "8c01c5243a46007c51f8c9179e4f21a3383e86b302bcdc3156179525f37fe811",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "5ec83518f5472909a0a0ce0ecc64ec9d00563a162532e23bbdb49d007adeffcc"
+      },
+      "artifacts": {
+        ".local/e2e-artifacts/device-circuit-20260928-f2.client.json": "652aa210c3c816303525b1625b4eadc51a287ccc754e58c7b6db258438b460c7",
+        ".local/e2e-artifacts/device-circuit-20260928-f2.comparison.json": "0775265fe609f68a957cf2070e0d32e5caf12c5af6b83fc434f4d8fce9ee2c4d",
+        ".local/e2e-artifacts/device-circuit-20260928-f2.input.json": "e6b2d8fc467175edc10e14afe8af65e9417542a04537b6306a9c8e806ec43a11",
+        ".local/e2e-artifacts/device-circuit-20260928-f2.model.json": "b2fc947623e0c8a9006eb609eaa911d0929399e2465d534cd1ba6a053ecd45dc",
+        ".local/e2e-artifacts/device-circuit-20260928-f2.raw.ndjson": "d4dbcd9c634cd3c01a74138ad41ff954b0928946cb2b02f77cae7f3cbb355e5c",
+        ".local/e2e-artifacts/device-circuit-20260928-f2.reference.json": "6a2261d742cb64452419dcf3c8e1b67ed1af8bb1078fc111ef3d4cf3d29a5f58",
+        ".local/e2e-artifacts/device-circuit-20260928-f2.server.log": "e7eba5170f887be1b44dbd0de856ff61cf36f37619d655ecb080a478bb63a05d",
+        ".local/e2e-artifacts/device-circuit-20260928-f2.summary.json": "ee9294597eeedf2f970fdce1f062ef48d8ab61f53da3f3928de981f2f6a0bd77"
+      }
+    },
+    {
+      "run": "g",
+      "fixture": "device-bulb-compare-r180",
+      "origin": {
+        "x": 76000,
+        "y": 180,
+        "z": 1000
+      },
+      "rotation": 180,
+      "requested_steps": [
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 0
+        },
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 26
+        },
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 26
+        },
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 26
+        }
+      ],
+      "applied_offsets": [
+        0,
+        26,
+        52,
+        78
+      ],
+      "applied_inputs": [
+        {
+          "position": {
+            "x": 76001,
+            "y": 181,
+            "z": 1000
+          },
+          "game_tick": 127213,
+          "packet_sequence": 2115,
+          "write_sequence": 2116,
+          "kind": "use_device",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": 76001,
+            "y": 181,
+            "z": 1000
+          },
+          "game_tick": 127239,
+          "packet_sequence": 2616,
+          "write_sequence": 2617,
+          "kind": "use_device",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": 76001,
+            "y": 181,
+            "z": 1000
+          },
+          "game_tick": 127265,
+          "packet_sequence": 3112,
+          "write_sequence": 3113,
+          "kind": "use_device",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": 76001,
+            "y": 181,
+            "z": 1000
+          },
+          "game_tick": 127291,
+          "packet_sequence": 3613,
+          "write_sequence": 3614,
+          "kind": "use_device",
+          "powered": true
+        }
+      ],
+      "comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v13",
+        "tick_end_count": 119,
+        "tick_mismatches": [],
+        "live_write_count": 46,
+        "model_write_count": 46,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 8,
+        "model_scheduled_count": 8,
+        "first_scheduled_mismatch": null,
+        "live_callback_count": 208,
+        "model_callback_count": 208,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection"
+      },
+      "retained_fixture": {
+        "path": "crates/dustroute-translate/tests/fixtures/device-circuits/bulb-compare-r180.json.gz",
+        "sha256": "951422ec75cdae70bbc83297778fb7d2f17037f34105561b73b0a60165d8145e"
+      },
+      "final_comparison": ".local/e2e-artifacts/device-circuit-20260928-g.comparison.json",
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_stopped_normally": true,
+      "enabled_features": [
+        "minecraft:vanilla"
+      ],
+      "original_capture_provenance": {
+        "fixture_sha256": "30d8f1082a3e0a45c42c29a16cca0d80ef56f8e0b792d644eaf28ac115c71c35",
+        "actor_sha256": "a12206d3d5f6f75d68c7382e219ba870b8125e7310220b6d2fe71c870cb8bded",
+        "capture_sha256": "5d066ce840201a393b5756f10098556ae9eea92f1ae1e49b3273ccb1b985b443",
+        "comparator_sha256": "57028bc185012eb8cbaef63174fbf96532fc4afc237fa0c089775e446d1227bc",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "5ec83518f5472909a0a0ce0ecc64ec9d00563a162532e23bbdb49d007adeffcc"
+      },
+      "artifacts": {
+        ".local/e2e-artifacts/device-circuit-20260928-g.client.json": "4de4b800960f937049ece15f3452df23ce5ab14687fe3a5398eff8b9cbc4ce66",
+        ".local/e2e-artifacts/device-circuit-20260928-g.comparison.json": "832e248a1365595bd835ca558040cc511420d2ec5bb31f96049362e8304d5f9e",
+        ".local/e2e-artifacts/device-circuit-20260928-g.input.json": "d1841c4e417dd28a7d32e7f115f3f690eaa31d20ae915b10f29ff2882a314272",
+        ".local/e2e-artifacts/device-circuit-20260928-g.model.json": "b18db66449349aeeba12fcdb8b002e65d63d5800850f085bab9b448a31a38d77",
+        ".local/e2e-artifacts/device-circuit-20260928-g.raw.ndjson": "a377002a6494973cf22a25c8c26afba4df6cea95bece6d11b3d5b697d08c13b2",
+        ".local/e2e-artifacts/device-circuit-20260928-g.reference.json": "d62c05dae3a37146b51ab3633f0ba86a2e36ad1e23c83f53d623aee13a9c58b3",
+        ".local/e2e-artifacts/device-circuit-20260928-g.server.log": "47630d4c3bf3a84d62eed6c84a3fcf96c8e78deec76d5c7b8d6618c588ec55ed",
+        ".local/e2e-artifacts/device-circuit-20260928-g.summary.json": "fea43eefd018d29cd96702f35fdab11e782dd3e01936e81a04b322d4d2620963"
+      }
+    },
+    {
+      "run": "h",
+      "fixture": "device-bulb-subtract-r270",
+      "origin": {
+        "x": -77000,
+        "y": 180,
+        "z": 1000
+      },
+      "rotation": 270,
+      "requested_steps": [
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 0
+        },
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 26
+        },
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 26
+        },
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 26
+        }
+      ],
+      "applied_offsets": [
+        0,
+        26,
+        52,
+        78
+      ],
+      "applied_inputs": [
+        {
+          "position": {
+            "x": -77000,
+            "y": 181,
+            "z": 1001
+          },
+          "game_tick": 128081,
+          "packet_sequence": 2284,
+          "write_sequence": 2285,
+          "kind": "use_device",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": -77000,
+            "y": 181,
+            "z": 1001
+          },
+          "game_tick": 128107,
+          "packet_sequence": 2785,
+          "write_sequence": 2786,
+          "kind": "use_device",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": -77000,
+            "y": 181,
+            "z": 1001
+          },
+          "game_tick": 128133,
+          "packet_sequence": 3281,
+          "write_sequence": 3282,
+          "kind": "use_device",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": -77000,
+            "y": 181,
+            "z": 1001
+          },
+          "game_tick": 128159,
+          "packet_sequence": 3782,
+          "write_sequence": 3783,
+          "kind": "use_device",
+          "powered": true
+        }
+      ],
+      "comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v13",
+        "tick_end_count": 119,
+        "tick_mismatches": [],
+        "live_write_count": 46,
+        "model_write_count": 46,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 8,
+        "model_scheduled_count": 8,
+        "first_scheduled_mismatch": null,
+        "live_callback_count": 216,
+        "model_callback_count": 216,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection"
+      },
+      "retained_fixture": {
+        "path": "crates/dustroute-translate/tests/fixtures/device-circuits/bulb-subtract-r270.json.gz",
+        "sha256": "840ebd56555c06f631c4a27c8b51965a52b402dc875b6daa3230c899a98bfc9e"
+      },
+      "final_comparison": ".local/e2e-artifacts/device-circuit-20260928-h.comparison.json",
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_stopped_normally": true,
+      "enabled_features": [
+        "minecraft:vanilla"
+      ],
+      "original_capture_provenance": {
+        "fixture_sha256": "69d4595cd112760663f09cf99b2f43256b175e2a499c1718a5393597bb797476",
+        "actor_sha256": "a12206d3d5f6f75d68c7382e219ba870b8125e7310220b6d2fe71c870cb8bded",
+        "capture_sha256": "5d066ce840201a393b5756f10098556ae9eea92f1ae1e49b3273ccb1b985b443",
+        "comparator_sha256": "57028bc185012eb8cbaef63174fbf96532fc4afc237fa0c089775e446d1227bc",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "5ec83518f5472909a0a0ce0ecc64ec9d00563a162532e23bbdb49d007adeffcc"
+      },
+      "artifacts": {
+        ".local/e2e-artifacts/device-circuit-20260928-h.client.json": "bf4870192901f3f6950201283cfd983dcc1be1ccf9fc2b34d266570bdb6fe27a",
+        ".local/e2e-artifacts/device-circuit-20260928-h.comparison.json": "0a4659fb36a9717647ff5c32abcee0df5246f8cd621db4ddd63bcda6a692961e",
+        ".local/e2e-artifacts/device-circuit-20260928-h.input.json": "310cb988d74cc98f6d92edeaba662600ceb376156b637395b567a76c5458080f",
+        ".local/e2e-artifacts/device-circuit-20260928-h.model.json": "1215c5e4dddad5db2add0611b993c173bc9ae64177fd5035a27049d3de40e871",
+        ".local/e2e-artifacts/device-circuit-20260928-h.raw.ndjson": "7a9df21bd40e970b8a30531f313a2389c041afc058b137d3163cf15e5cccac71",
+        ".local/e2e-artifacts/device-circuit-20260928-h.reference.json": "2c615b317717f8cb65eb0efa7701e54f28eeb5866f958a633aaeb935efeb11f3",
+        ".local/e2e-artifacts/device-circuit-20260928-h.server.log": "1c0dc501b3e73c88199738fe85aad3d0f8f1996903da212080107192027af034",
+        ".local/e2e-artifacts/device-circuit-20260928-h.summary.json": "3805baef15507d2404b9a540cdbacc62f190a41f458d4bbba7909215a3840bf6"
+      }
+    },
+    {
+      "run": "i",
+      "fixture": "device-locking-data-first-r90",
+      "origin": {
+        "x": -78000,
+        "y": 180,
+        "z": 1000
+      },
+      "rotation": 90,
+      "requested_steps": [
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 0
+        },
+        {
+          "input": 1,
+          "powered": true,
+          "wait_ticks": 0
+        },
+        {
+          "input": 0,
+          "powered": false,
+          "wait_ticks": 1
+        },
+        {
+          "input": 1,
+          "powered": false,
+          "wait_ticks": 1
+        },
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 1
+        },
+        {
+          "input": 0,
+          "powered": false,
+          "wait_ticks": 1
+        },
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 12
+        },
+        {
+          "input": 1,
+          "powered": true,
+          "wait_ticks": 4
+        },
+        {
+          "input": 0,
+          "powered": false,
+          "wait_ticks": 4
+        },
+        {
+          "input": 1,
+          "powered": false,
+          "wait_ticks": 4
+        },
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 1
+        },
+        {
+          "input": 0,
+          "powered": false,
+          "wait_ticks": 1
+        }
+      ],
+      "applied_offsets": [
+        0,
+        0,
+        1,
+        2,
+        3,
+        4,
+        16,
+        20,
+        24,
+        27,
+        29,
+        30
+      ],
+      "applied_inputs": [
+        {
+          "position": {
+            "x": -78000,
+            "y": 181,
+            "z": 999
+          },
+          "game_tick": 128925,
+          "packet_sequence": 2160,
+          "write_sequence": 2161,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": -78002,
+            "y": 181,
+            "z": 1000
+          },
+          "game_tick": 128925,
+          "packet_sequence": 2182,
+          "write_sequence": 2183,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": -78000,
+            "y": 181,
+            "z": 999
+          },
+          "game_tick": 128926,
+          "packet_sequence": 2218,
+          "write_sequence": 2219,
+          "kind": "lever",
+          "powered": false
+        },
+        {
+          "position": {
+            "x": -78002,
+            "y": 181,
+            "z": 1000
+          },
+          "game_tick": 128927,
+          "packet_sequence": 2276,
+          "write_sequence": 2277,
+          "kind": "lever",
+          "powered": false
+        },
+        {
+          "position": {
+            "x": -78000,
+            "y": 181,
+            "z": 999
+          },
+          "game_tick": 128928,
+          "packet_sequence": 2311,
+          "write_sequence": 2312,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": -78000,
+            "y": 181,
+            "z": 999
+          },
+          "game_tick": 128929,
+          "packet_sequence": 2414,
+          "write_sequence": 2415,
+          "kind": "lever",
+          "powered": false
+        },
+        {
+          "position": {
+            "x": -78000,
+            "y": 181,
+            "z": 999
+          },
+          "game_tick": 128941,
+          "packet_sequence": 2810,
+          "write_sequence": 2811,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": -78002,
+            "y": 181,
+            "z": 1000
+          },
+          "game_tick": 128945,
+          "packet_sequence": 2940,
+          "write_sequence": 2941,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": -78000,
+            "y": 181,
+            "z": 999
+          },
+          "game_tick": 128949,
+          "packet_sequence": 3108,
+          "write_sequence": 3109,
+          "kind": "lever",
+          "powered": false
+        },
+        {
+          "position": {
+            "x": -78002,
+            "y": 181,
+            "z": 1000
+          },
+          "game_tick": 128952,
+          "packet_sequence": 3168,
+          "write_sequence": 3169,
+          "kind": "lever",
+          "powered": false
+        },
+        {
+          "position": {
+            "x": -78000,
+            "y": 181,
+            "z": 999
+          },
+          "game_tick": 128954,
+          "packet_sequence": 3237,
+          "write_sequence": 3238,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": -78000,
+            "y": 181,
+            "z": 999
+          },
+          "game_tick": 128955,
+          "packet_sequence": 3272,
+          "write_sequence": 3273,
+          "kind": "lever",
+          "powered": false
+        }
+      ],
+      "comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v13",
+        "tick_end_count": 71,
+        "tick_mismatches": [],
+        "live_write_count": 62,
+        "model_write_count": 62,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 17,
+        "model_scheduled_count": 17,
+        "first_scheduled_mismatch": null,
+        "live_callback_count": 178,
+        "model_callback_count": 178,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection"
+      },
+      "retained_fixture": {
+        "path": "crates/dustroute-translate/tests/fixtures/device-circuits/locking-data-first-r90.json.gz",
+        "sha256": "7e9c194cc29da5749c53eb0cebaea5ecbf913b93b1fe19689366b34d45461047"
+      },
+      "final_comparison": ".local/e2e-artifacts/device-circuit-20260928-i.comparison.json",
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_stopped_normally": true,
+      "enabled_features": [
+        "minecraft:vanilla"
+      ],
+      "original_capture_provenance": {
+        "fixture_sha256": "66f92806c95af95e46fa1dcbb37fd6e760d24294405a8bfc851f735b6272fdd2",
+        "actor_sha256": "a12206d3d5f6f75d68c7382e219ba870b8125e7310220b6d2fe71c870cb8bded",
+        "capture_sha256": "d07ccc7153d0145aa2e1c3de97bf8b5e108b10f9a54c368c06f05d6ab5152ebb",
+        "comparator_sha256": "57028bc185012eb8cbaef63174fbf96532fc4afc237fa0c089775e446d1227bc",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "5ec83518f5472909a0a0ce0ecc64ec9d00563a162532e23bbdb49d007adeffcc"
+      },
+      "artifacts": {
+        ".local/e2e-artifacts/device-circuit-20260928-i.client.json": "9d681b3b42f543527980ea2bb854c27d82ecd5ac63efbeab74c36b8d2a22c3c5",
+        ".local/e2e-artifacts/device-circuit-20260928-i.comparison.json": "ee9e7d29745af470a40b4f8c7fe3c30cb4c8fefa6cb8adc3f2c4215fde8caeee",
+        ".local/e2e-artifacts/device-circuit-20260928-i.input.json": "7fbbeef4aa42a08a9dd426c09d3fdf02925a234efdb5cb9d4b3a36d36b10e341",
+        ".local/e2e-artifacts/device-circuit-20260928-i.model.json": "fc446c95fee50f9f4a88c5a38f41b9472e813249e541b4a0a80fc7bb4d75e5a8",
+        ".local/e2e-artifacts/device-circuit-20260928-i.raw.ndjson": "21543340ea541227f9fec31d40cba452d2387da48d5ed11436851a989ae2cbe8",
+        ".local/e2e-artifacts/device-circuit-20260928-i.reference.json": "16f596c6057bcb9d8449e70bddab38ce768475ca0507ccab6f878a70c8014c98",
+        ".local/e2e-artifacts/device-circuit-20260928-i.server.log": "e45b084e1fd2aa4b4f51853430e8c112a628f71e830fe5f6a3df2ba592e8ca70",
+        ".local/e2e-artifacts/device-circuit-20260928-i.summary.json": "003d8d6c20ac1f36eb95ec876fadeb77471d10309daf60d4dddfccc0c693f9dc"
+      },
+      "force_finish_boundaries": [
+        {
+          "tick": 7,
+          "kind": "finish_begin",
+          "position": [
+            -78000,
+            182,
+            1003
+          ],
+          "carrier": {
+            "progress": 1.0,
+            "last_progress": 0.5,
+            "saved_world_time": 6,
+            "extending": true,
+            "source": true,
+            "payload": [
+              "minecraft:piston_head",
+              [
+                [
+                  "facing",
+                  "up"
+                ],
+                [
+                  "short",
+                  "false"
+                ],
+                [
+                  "type",
+                  "sticky"
+                ]
+              ]
+            ]
+          }
+        },
+        {
+          "tick": 7,
+          "kind": "finish_begin",
+          "position": [
+            -78000,
+            183,
+            1003
+          ],
+          "carrier": {
+            "progress": 1.0,
+            "last_progress": 0.5,
+            "saved_world_time": 6,
+            "extending": true,
+            "source": false,
+            "payload": [
+              "minecraft:stone",
+              []
+            ]
+          }
+        },
+        {
+          "tick": 13,
+          "kind": "finish_begin",
+          "position": [
+            -78000,
+            182,
+            1003
+          ],
+          "carrier": {
+            "progress": 1.0,
+            "last_progress": 0.5,
+            "saved_world_time": 12,
+            "extending": true,
+            "source": true,
+            "payload": [
+              "minecraft:piston_head",
+              [
+                [
+                  "facing",
+                  "up"
+                ],
+                [
+                  "short",
+                  "false"
+                ],
+                [
+                  "type",
+                  "sticky"
+                ]
+              ]
+            ]
+          }
+        },
+        {
+          "tick": 23,
+          "kind": "finish_begin",
+          "position": [
+            -78000,
+            182,
+            1003
+          ],
+          "carrier": {
+            "progress": 1.0,
+            "last_progress": 0.5,
+            "saved_world_time": 22,
+            "extending": true,
+            "source": true,
+            "payload": [
+              "minecraft:piston_head",
+              [
+                [
+                  "facing",
+                  "up"
+                ],
+                [
+                  "short",
+                  "false"
+                ],
+                [
+                  "type",
+                  "sticky"
+                ]
+              ]
+            ]
+          }
+        },
+        {
+          "tick": 23,
+          "kind": "finish_begin",
+          "position": [
+            -78000,
+            183,
+            1003
+          ],
+          "carrier": {
+            "progress": 1.0,
+            "last_progress": 0.5,
+            "saved_world_time": 22,
+            "extending": true,
+            "source": false,
+            "payload": [
+              "minecraft:stone",
+              []
+            ]
+          }
+        },
+        {
+          "tick": 34,
+          "kind": "finish_begin",
+          "position": [
+            -78000,
+            182,
+            1003
+          ],
+          "carrier": {
+            "progress": 1.0,
+            "last_progress": 0.5,
+            "saved_world_time": 33,
+            "extending": true,
+            "source": true,
+            "payload": [
+              "minecraft:piston_head",
+              [
+                [
+                  "facing",
+                  "up"
+                ],
+                [
+                  "short",
+                  "false"
+                ],
+                [
+                  "type",
+                  "sticky"
+                ]
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "run": "j",
+      "fixture": "device-torch-separated-r0",
+      "origin": {
+        "x": 79000,
+        "y": 180,
+        "z": 1000
+      },
+      "rotation": 0,
+      "requested_steps": [
+        {
+          "input": 0,
+          "powered": false,
+          "wait_ticks": 0
+        },
+        {
+          "input": 1,
+          "powered": false,
+          "wait_ticks": 0
+        },
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 80
+        },
+        {
+          "input": 1,
+          "powered": true,
+          "wait_ticks": 0
+        },
+        {
+          "input": 0,
+          "powered": false,
+          "wait_ticks": 180
+        },
+        {
+          "input": 1,
+          "powered": false,
+          "wait_ticks": 0
+        },
+        {
+          "input": 0,
+          "powered": true,
+          "wait_ticks": 80
+        },
+        {
+          "input": 1,
+          "powered": true,
+          "wait_ticks": 0
+        }
+      ],
+      "applied_offsets": [
+        0,
+        0,
+        80,
+        81,
+        260,
+        260,
+        341,
+        341
+      ],
+      "applied_inputs": [
+        {
+          "position": {
+            "x": 78999,
+            "y": 180,
+            "z": 1000
+          },
+          "game_tick": 129748,
+          "packet_sequence": 2387,
+          "write_sequence": 2388,
+          "kind": "lever",
+          "powered": false
+        },
+        {
+          "position": {
+            "x": 78999,
+            "y": 180,
+            "z": 1003
+          },
+          "game_tick": 129748,
+          "packet_sequence": 2453,
+          "write_sequence": 2454,
+          "kind": "lever",
+          "powered": false
+        },
+        {
+          "position": {
+            "x": 78999,
+            "y": 180,
+            "z": 1000
+          },
+          "game_tick": 129828,
+          "packet_sequence": 6397,
+          "write_sequence": 6398,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": 78999,
+            "y": 180,
+            "z": 1003
+          },
+          "game_tick": 129829,
+          "packet_sequence": 6477,
+          "write_sequence": 6478,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": 78999,
+            "y": 180,
+            "z": 1000
+          },
+          "game_tick": 130008,
+          "packet_sequence": 8693,
+          "write_sequence": 8694,
+          "kind": "lever",
+          "powered": false
+        },
+        {
+          "position": {
+            "x": 78999,
+            "y": 180,
+            "z": 1003
+          },
+          "game_tick": 130008,
+          "packet_sequence": 8759,
+          "write_sequence": 8760,
+          "kind": "lever",
+          "powered": false
+        },
+        {
+          "position": {
+            "x": 78999,
+            "y": 180,
+            "z": 1000
+          },
+          "game_tick": 130089,
+          "packet_sequence": 12715,
+          "write_sequence": 12716,
+          "kind": "lever",
+          "powered": true
+        },
+        {
+          "position": {
+            "x": 78999,
+            "y": 180,
+            "z": 1003
+          },
+          "game_tick": 130089,
+          "packet_sequence": 12781,
+          "write_sequence": 12782,
+          "kind": "lever",
+          "powered": true
+        }
+      ],
+      "comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v13",
+        "tick_end_count": 512,
+        "tick_mismatches": [],
+        "live_write_count": 144,
+        "model_write_count": 144,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 68,
+        "model_scheduled_count": 68,
+        "first_scheduled_mismatch": null,
+        "live_callback_count": 1104,
+        "model_callback_count": 1104,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection"
+      },
+      "retained_fixture": {
+        "path": "crates/dustroute-translate/tests/fixtures/device-circuits/torch-separated-r0.json.gz",
+        "sha256": "613e476ec23a6009da8afbc9cc34af11605dd456fd91574c29e4891994c00bdc"
+      },
+      "final_comparison": ".local/e2e-artifacts/device-circuit-20260928-j.comparison.json",
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "disconnected_before_finish": null
+      },
+      "server_stopped_normally": true,
+      "enabled_features": [
+        "minecraft:vanilla"
+      ],
+      "original_capture_provenance": {
+        "fixture_sha256": "d2c266b4757b1391eb79b69416683cd94db8436089c158ea6915085a24cadae1",
+        "actor_sha256": "a12206d3d5f6f75d68c7382e219ba870b8125e7310220b6d2fe71c870cb8bded",
+        "capture_sha256": "d07ccc7153d0145aa2e1c3de97bf8b5e108b10f9a54c368c06f05d6ab5152ebb",
+        "comparator_sha256": "57028bc185012eb8cbaef63174fbf96532fc4afc237fa0c089775e446d1227bc",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "5ec83518f5472909a0a0ce0ecc64ec9d00563a162532e23bbdb49d007adeffcc"
+      },
+      "artifacts": {
+        ".local/e2e-artifacts/device-circuit-20260928-j.client.json": "24a3ae9dcaa1afac2bc00f423793741a010331a5c4170aab5a4c0fced61895ea",
+        ".local/e2e-artifacts/device-circuit-20260928-j.comparison.json": "2e6d0faa19897e76b4b3e374b7e58500adf13e50d32c26ff94ee9eb10064e9df",
+        ".local/e2e-artifacts/device-circuit-20260928-j.input.json": "e41983213646e9940223dcdb87c5bf7bce627eed4697039900d1ad2364d22ae0",
+        ".local/e2e-artifacts/device-circuit-20260928-j.model.json": "d216c580d3e95e4c3944f04b15b2c49b27de75164146e55d0571c95361c196a5",
+        ".local/e2e-artifacts/device-circuit-20260928-j.raw.ndjson": "1c66cdaf278784f8cc57413d3cef7547ccbd491b31089bbf7e2da3256de5dbe1",
+        ".local/e2e-artifacts/device-circuit-20260928-j.reference.json": "09423f3ad237b962600ba549fdfc22b738718218e1d8fe5ce6bd6e41a6abc6c7",
+        ".local/e2e-artifacts/device-circuit-20260928-j.server.log": "bd7d4cd86d6df7b8ccf2ff775ed446d6d300185188c2c2469778f8a4b53ea049",
+        ".local/e2e-artifacts/device-circuit-20260928-j.summary.json": "d92f0964945f3497394eca5c304667d2db690e67ce2f489ebb3a92e2924a0bba"
+      },
+      "torch_lit_transitions": [
+        {
+          "tick": 3,
+          "position": [
+            79001,
+            180,
+            1000
+          ],
+          "lit": "true"
+        },
+        {
+          "tick": 3,
+          "position": [
+            79001,
+            180,
+            1003
+          ],
+          "lit": "true"
+        },
+        {
+          "tick": 5,
+          "position": [
+            79001,
+            180,
+            1000
+          ],
+          "lit": "false"
+        },
+        {
+          "tick": 5,
+          "position": [
+            79001,
+            180,
+            1003
+          ],
+          "lit": "false"
+        },
+        {
+          "tick": 7,
+          "position": [
+            79001,
+            180,
+            1000
+          ],
+          "lit": "true"
+        },
+        {
+          "tick": 7,
+          "position": [
+            79001,
+            180,
+            1003
+          ],
+          "lit": "true"
+        },
+        {
+          "tick": 9,
+          "position": [
+            79001,
+            180,
+            1000
+          ],
+          "lit": "false"
+        },
+        {
+          "tick": 9,
+          "position": [
+            79001,
+            180,
+            1003
+          ],
+          "lit": "false"
+        },
+        {
+          "tick": 11,
+          "position": [
+            79001,
+            180,
+            1000
+          ],
+          "lit": "true"
+        },
+        {
+          "tick": 11,
+          "position": [
+            79001,
+            180,
+            1003
+          ],
+          "lit": "true"
+        },
+        {
+          "tick": 13,
+          "position": [
+            79001,
+            180,
+            1000
+          ],
+          "lit": "false"
+        },
+        {
+          "tick": 13,
+          "position": [
+            79001,
+            180,
+            1003
+          ],
+          "lit": "false"
+        },
+        {
+          "tick": 15,
+          "position": [
+            79001,
+            180,
+            1000
+          ],
+          "lit": "true"
+        },
+        {
+          "tick": 15,
+          "position": [
+            79001,
+            180,
+            1003
+          ],
+          "lit": "true"
+        },
+        {
+          "tick": 17,
+          "position": [
+            79001,
+            180,
+            1000
+          ],
+          "lit": "false"
+        },
+        {
+          "tick": 17,
+          "position": [
+            79001,
+            180,
+            1003
+          ],
+          "lit": "false"
+        },
+        {
+          "tick": 19,
+          "position": [
+            79001,
+            180,
+            1000
+          ],
+          "lit": "true"
+        },
+        {
+          "tick": 19,
+          "position": [
+            79001,
+            180,
+            1003
+          ],
+          "lit": "true"
+        },
+        {
+          "tick": 21,
+          "position": [
+            79001,
+            180,
+            1000
+          ],
+          "lit": "false"
+        },
+        {
+          "tick": 21,
+          "position": [
+            79001,
+            180,
+            1003
+          ],
+          "lit": "false"
+        },
+        {
+          "tick": 23,
+          "position": [
+            79001,
+            180,
+            1000
+          ],
+          "lit": "true"
+        },
+        {
+          "tick": 23,
+          "position": [
+            79001,
+            180,
+            1003
+          ],
+          "lit": "true"
+        },
+        {
+          "tick": 25,
+          "position": [
+            79001,
+            180,
+            1000
+          ],
+          "lit": "false"
+        },
+        {
+          "tick": 25,
+          "position": [
+            79001,
+            180,
+            1003
+          ],
+          "lit": "false"
+        },
+        {
+          "tick": 27,
+          "position": [
+            79001,
+            180,
+            1000
+          ],
+          "lit": "true"
+        },
+        {
+          "tick": 27,
+          "position": [
+            79001,
+            180,
+            1003
+          ],
+          "lit": "true"
+        },
+        {
+          "tick": 29,
+          "position": [
+            79001,
+            180,
+            1000
+          ],
+          "lit": "false"
+        },
+        {
+          "tick": 29,
+          "position": [
+            79001,
+            180,
+            1003
+          ],
+          "lit": "false"
+        },
+        {
+          "tick": 31,
+          "position": [
+            79001,
+            180,
+            1000
+          ],
+          "lit": "true"
+        },
+        {
+          "tick": 31,
+          "position": [
+            79001,
+            180,
+            1003
+          ],
+          "lit": "true"
+        },
+        {
+          "tick": 33,
+          "position": [
+            79001,
+            180,
+            1000
+          ],
+          "lit": "false"
+        },
+        {
+          "tick": 33,
+          "position": [
+            79001,
+            180,
+            1003
+          ],
+          "lit": "false"
+        },
+        {
+          "tick": 263,
+          "position": [
+            79001,
+            180,
+            1000
+          ],
+          "lit": "true"
+        },
+        {
+          "tick": 263,
+          "position": [
+            79001,
+            180,
+            1003
+          ],
+          "lit": "true"
+        },
+        {
+          "tick": 265,
+          "position": [
+            79001,
+            180,
+            1000
+          ],
+          "lit": "false"
+        },
+        {
+          "tick": 265,
+          "position": [
+            79001,
+            180,
+            1003
+          ],
+          "lit": "false"
+        },
+        {
+          "tick": 267,
+          "position": [
+            79001,
+            180,
+            1000
+          ],
+          "lit": "true"
+        },
+        {
+          "tick": 267,
+          "position": [
+            79001,
+            180,
+            1003
+          ],
+          "lit": "true"
+        },
+        {
+          "tick": 269,
+          "position": [
+            79001,
+            180,
+            1000
+          ],
+          "lit": "false"
+        },
+        {
+          "tick": 269,
+          "position": [
+            79001,
+            180,
+            1003
+          ],
+          "lit": "false"
+        },
+        {
+          "tick": 271,
+          "position": [
+            79001,
+            180,
+            1000
+          ],
+          "lit": "true"
+        },
+        {
+          "tick": 271,
+          "position": [
+            79001,
+            180,
+            1003
+          ],
+          "lit": "true"
+        },
+        {
+          "tick": 273,
+          "position": [
+            79001,
+            180,
+            1000
+          ],
+          "lit": "false"
+        },
+        {
+          "tick": 273,
+          "position": [
+            79001,
+            180,
+            1003
+          ],
+          "lit": "false"
+        },
+        {
+          "tick": 275,
+          "position": [
+            79001,
+            180,
+            1000
+          ],
+          "lit": "true"
+        },
+        {
+          "tick": 275,
+          "position": [
+            79001,
+            180,
+            1003
+          ],
+          "lit": "true"
+        },
+        {
+          "tick": 277,
+          "position": [
+            79001,
+            180,
+            1000
+          ],
+          "lit": "false"
+        },
+        {
+          "tick": 277,
+          "position": [
+            79001,
+            180,
+            1003
+          ],
+          "lit": "false"
+        },
+        {
+          "tick": 279,
+          "position": [
+            79001,
+            180,
+            1000
+          ],
+          "lit": "true"
+        },
+        {
+          "tick": 279,
+          "position": [
+            79001,
+            180,
+            1003
+          ],
+          "lit": "true"
+        },
+        {
+          "tick": 281,
+          "position": [
+            79001,
+            180,
+            1000
+          ],
+          "lit": "false"
+        },
+        {
+          "tick": 281,
+          "position": [
+            79001,
+            180,
+            1003
+          ],
+          "lit": "false"
+        },
+        {
+          "tick": 283,
+          "position": [
+            79001,
+            180,
+            1000
+          ],
+          "lit": "true"
+        },
+        {
+          "tick": 283,
+          "position": [
+            79001,
+            180,
+            1003
+          ],
+          "lit": "true"
+        },
+        {
+          "tick": 285,
+          "position": [
+            79001,
+            180,
+            1000
+          ],
+          "lit": "false"
+        },
+        {
+          "tick": 285,
+          "position": [
+            79001,
+            180,
+            1003
+          ],
+          "lit": "false"
+        },
+        {
+          "tick": 287,
+          "position": [
+            79001,
+            180,
+            1000
+          ],
+          "lit": "true"
+        },
+        {
+          "tick": 287,
+          "position": [
+            79001,
+            180,
+            1003
+          ],
+          "lit": "true"
+        },
+        {
+          "tick": 289,
+          "position": [
+            79001,
+            180,
+            1000
+          ],
+          "lit": "false"
+        },
+        {
+          "tick": 289,
+          "position": [
+            79001,
+            180,
+            1003
+          ],
+          "lit": "false"
+        },
+        {
+          "tick": 291,
+          "position": [
+            79001,
+            180,
+            1000
+          ],
+          "lit": "true"
+        },
+        {
+          "tick": 291,
+          "position": [
+            79001,
+            180,
+            1003
+          ],
+          "lit": "true"
+        },
+        {
+          "tick": 293,
+          "position": [
+            79001,
+            180,
+            1000
+          ],
+          "lit": "false"
+        },
+        {
+          "tick": 293,
+          "position": [
+            79001,
+            180,
+            1003
+          ],
+          "lit": "false"
+        }
+      ]
+    }
+  ],
+  "incomplete_capture": {
+    "classification": "observation_incomplete",
+    "error": "Error: input out of range {\"x\":-74999.5,\"y\":180,\"z\":1001.5}\n    at main (/root/DustRoute/crates/dustroute-mcp/mineflayer/e2e/piston-mixed-live.js:139:61)",
+    "cleanup": {
+      "region_empty": true,
+      "force_load_removed": true,
+      "disconnected_before_finish": null
+    },
+    "server_stopped_normally": true,
+    "model_executed": false,
+    "replacement_capture": "device-circuit-20260928-f2",
+    "artifacts": {
+      ".local/e2e-artifacts/device-circuit-20260928-f.raw.ndjson": "cd784fa1e65ccee8f0ace8549b4ebd6bbe693ee705b21573815cae6b471d9e24",
+      ".local/e2e-artifacts/device-circuit-20260928-f.client.json": "93cfd25abd80ebb7943014cd36285757fc6d9f9669d5bf26ccdd0375a0a3d643",
+      ".local/e2e-artifacts/device-circuit-20260928-f.server.log": "91ef4826ed51c7e664def3416c79c1c8c7de20f45fe8ebf55a1b6c5529b06d95"
+    }
+  },
+  "projection_correction": "Count actual Device Neighbor deliveries under NotifyAnalogReaders: World.updateComparators directly invokes updateNeighbor. Initial A/B comparison mismatches are retained separately. No physical rule changed.",
+  "diagnostic_timeout": "An early full torch trace exceeded a serialization timeout; a projected replay retains all records/deltas and required delivery/carrier metadata. Full/default trace remains available.",
+  "probe_sources_sha256": {
+    "/root/DustRoute-minecraft-instrumentation/build.gradle": "f722876c5f961dd6557292526936e8e3a8d4154b22f45d19c59c482e47debb19",
+    "/root/DustRoute-minecraft-instrumentation/gradle/wrapper/gradle-wrapper.properties": "c67b97cdfe41822dbc8dc4614460f4ae0d2eef937d873f4b9011e892b1875c0d",
+    "/root/DustRoute-minecraft-instrumentation/gradle.properties": "bc3b225b1c58f0b6a613a6e3a89abb07267b1ddc50cbf597b7e7eb24a5c5121f",
+    "/root/DustRoute-minecraft-instrumentation/settings.gradle": "6d590f07f64de77b5e28f13244dc8a39e18fde666a3815c06ed8694d805b1da3",
+    "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/CaptureController.java": "ae6c13af15a194097822f0c4925271575b3df314f296ca46cf8c2570a696d9d8",
+    "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/DustRouteInstrumentation.java": "d066cbf8c04dedb4fe0468b20518ba3c4aa09601cc64282ea1db6ec9257c70b0",
+    "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/InstrumentationLog.java": "4896331f77b7f1be0f5462bfa3e7fada4e4eac510c1bc6f946395ef9c7a719d1",
+    "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/ObservationFilter.java": "51ce513b7c41724ad09dbc2b1d6b9178b19380dad7474aacc7f8e715a47d3332",
+    "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/mixin/AbstractBlockStateMixin.java": "b0bcc128a52c3000446dffa1712bee5877c083c764c50366a01a6f1de288c0ef",
+    "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/mixin/ObserverBlockMixin.java": "7be6e71ac12bf927e650fdd1f277c774642acaf8227663dfb2ae23755489a0f1",
+    "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/mixin/PistonBlockEntityMixin.java": "a2d57320171b6b6979b396bd9b8a62655ce19be9283aaa60a6da6f7d66d6e246",
+    "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/mixin/PistonBlockMixin.java": "90d4e22e4a7958412f1df8df1e12d9f52655ac71cd0266d787461b27bb853728",
+    "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/mixin/ServerCommonNetworkHandlerMixin.java": "67db460a232c552bb5452203466cc0cc04fac01fd7d06fefc3a9a1fd2377127c",
+    "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/mixin/ServerPlayNetworkHandlerMixin.java": "51b701457fff1f7c376206c6277c209013d1a5e93e8a33e1c03f682671630807",
+    "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/mixin/ServerWorldMixin.java": "c2d11c0129335c36a2d08fd28a3ff51682e28821c7e7b8f62c36bd61ddf2dc39",
+    "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/mixin/WorldChunkMixin.java": "09fa3f45e45007356ba9ddbea246234d0d147a3e4a0028eeb2afbc0ac7219b53",
+    "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/mixin/WorldMixin.java": "ddc0050a85c83098edcf4c4fe77f2e21c35ea995f66c5c92ec56f8cdacd02593",
+    "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/mixin/WorldTickSchedulerMixin.java": "06c9bf6bec5bbd44621b31ffe237966cc56e8702eb14c4be7360a37357bb66cf",
+    "/root/DustRoute-minecraft-instrumentation/src/main/resources/dustroute-vanilla-instrumentation.mixins.json": "006b4ba66fc0e94215c80539e10320c3bfa57b4ecb8aab6d1f53f41e330c4f6a",
+    "/root/DustRoute-minecraft-instrumentation/src/main/resources/fabric.mod.json": "62d7e74403e53f93d51c576e6cbd58a4c3eb44f1fe7af5db5d7a2afba57960bd"
+  },
+  "probe_reused_uncommitted_work": [
+    " M README.md",
+    " M docs/observation-contract.md",
+    " M scripts/normalize_ndjson.py",
+    " M scripts/test_normalize_ndjson.py",
+    " M src/main/java/dev/dustroute/instrumentation/InstrumentationLog.java",
+    " M src/main/java/dev/dustroute/instrumentation/ObservationFilter.java",
+    " M src/main/java/dev/dustroute/instrumentation/mixin/PistonBlockEntityMixin.java",
+    " M src/main/java/dev/dustroute/instrumentation/mixin/ServerPlayNetworkHandlerMixin.java",
+    " M src/main/java/dev/dustroute/instrumentation/mixin/WorldTickSchedulerMixin.java",
+    " M src/main/resources/dustroute-vanilla-instrumentation.mixins.json",
+    "?? scripts/compress_ndjson.py",
+    "?? scripts/test_compress_ndjson.py",
+    "?? src/main/java/dev/dustroute/instrumentation/CaptureController.java",
+    "?? src/main/java/dev/dustroute/instrumentation/mixin/AbstractBlockStateMixin.java",
+    "?? src/main/java/dev/dustroute/instrumentation/mixin/ObserverBlockMixin.java",
+    "?? src/main/java/dev/dustroute/instrumentation/mixin/PistonBlockMixin.java",
+    "?? src/main/java/dev/dustroute/instrumentation/mixin/WorldChunkMixin.java"
+  ],
+  "sources_sha256": {
+    "crates/dustroute-translate/examples/compare_electrical_pistons.rs": "162270c4a1d2e4faf13f5d4f9c0c2ce4722e2ce272024ab206e8dd9b8d87060c",
+    "crates/dustroute-mcp/mineflayer/e2e/piston-mixed-live.js": "a12206d3d5f6f75d68c7382e219ba870b8125e7310220b6d2fe71c870cb8bded",
+    "tools/compare_piston_transients.py": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+    "tools/compare_device_circuits.py": "57028bc185012eb8cbaef63174fbf96532fc4afc237fa0c089775e446d1227bc",
+    "tools/observe_device_circuit.py": "d07ccc7153d0145aa2e1c3de97bf8b5e108b10f9a54c368c06f05d6ab5152ebb",
+    "tools/retain_device_circuit.py": "f977bea21eb16e78af065a3151125a8d2702748208c4c3760c06eeb6225081ee",
+    "tools/make_device_circuit_fixtures.py": "8f203e881a29da1ae559e44ee912554c2fad4e30652ede4e10d964bf34d46ba9",
+    "tools/test_device_circuits.py": "ba6bf3a87632ba1d97788c76e293f3198064563ec9b12c2abc8c66f55541c49e",
+    "tools/instrumented_server.py": "7164de1897c7f0388b99b6ab2cac7edb12174add7aaf1a0bd347e5ffb5f3ca6f",
+    "tools/observe_mixed_pistons.py": "2e9f42e245fff707a4b88e2d40a5e9321476b4b1a94a510bd38bba631d9925b8"
+  },
+  "model_binary_sha256": "5ec83518f5472909a0a0ce0ecc64ec9d00563a162532e23bbdb49d007adeffcc",
+  "validation": [
+    {
+      "command": "cargo build --offline --locked -j 1 -p dustroute-translate --example compare_electrical_pistons",
+      "exit_code": 0,
+      "log": ".local/e2e-artifacts/mixed-device-validation-20260928-dustroute-mixed-device-build.log",
+      "sha256": "c7b1d090c065d16074b372cacc3db4061bc90e12439b7ad88366429abbf77e1a"
+    },
+    {
+      "command": "cargo clippy --offline --locked -j 1 --workspace --all-targets -- -D warnings",
+      "exit_code": 0,
+      "log": ".local/e2e-artifacts/mixed-device-validation-20260928-dustroute-mixed-device-clippy.log",
+      "sha256": "29f9e86933d24193893a1d8a8a73f67ad2d96b1c05d06aa207b825e97248f04f"
+    },
+    {
+      "command": "python3 -m unittest discover -s tools -p 'test_*.py'",
+      "exit_code": 0,
+      "log": ".local/e2e-artifacts/mixed-device-validation-20260928-dustroute-mixed-device-final-tests.log",
+      "sha256": "69cda91d38617344532f39208669681459064c74b337e4acbc7b1fffc00c8f6f"
+    },
+    {
+      "command": "cargo fmt --all -- --check",
+      "exit_code": 0
+    },
+    {
+      "command": "node --check crates/dustroute-mcp/mineflayer/e2e/piston-mixed-live.js",
+      "exit_code": 0
+    },
+    {
+      "command": "python3 -m py_compile tools/compare_device_circuits.py tools/compare_piston_transients.py tools/observe_device_circuit.py tools/retain_device_circuit.py tools/make_device_circuit_fixtures.py tools/test_device_circuits.py",
+      "exit_code": 0
+    },
+    {
+      "command": "git diff --check",
+      "exit_code": 0
+    }
+  ],
+  "boundaries": [
+    "Explicit fresh stable worlds created with strict placement, not ordinary construction certification.",
+    "Input application from server palette writes and post-world boundaries, not client requested time.",
+    "Full tick-end world states, ordered palette commits, delivered device block ticks, active-device ordinary notifications, piston events/carriers.",
+    "No direct comparison of hidden output/history contents, shape callbacks or inert-target callbacks.",
+    "Checkpoint and behavior-state restoration verify model continuation, not import of arbitrary live hidden state.",
+    "Different applied timing exists between captures; no blanket rotation, location or input-order invariance.",
+    "Retained fixtures preserve exact bounded raw intervals, not entire original capture files.",
+    "Earlier retained 3x3 door regressions rerun; no new live 3x3 door trial or full Rust workspace test suite."
+  ]
+}

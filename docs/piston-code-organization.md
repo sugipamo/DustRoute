@@ -1,5 +1,9 @@
 # Piston implementation cleanup
 
+This records the completed v6 cleanup. The subsequent
+[data-driven device migration](data-driven-block-runtime.md) advances runtime and
+review to v7 and replaces native device callbacks with declarative programs.
+
 Scope: the supported Java 1.21.11 v6 runtime, exact command construction and
 public custom-Assembly lifecycle. Minecraft observations and their regression
 fixtures remain the reference. This cleanup adds no physics, device support,

@@ -640,7 +640,10 @@ fn ports_for(block: &Block) -> Vec<PhysicalPort> {
             push(PortRole::Output, output, PortChannel::StrongPower);
             push(PortRole::Input, output.opposite(), PortChannel::Observation);
         }
-        BlockKind::Solid | BlockKind::Transparent | BlockKind::RedstoneLamp => {
+        BlockKind::Solid
+        | BlockKind::Transparent
+        | BlockKind::RedstoneLamp
+        | BlockKind::CopperBulb => {
             if !block.redstone_traits().conducts_weak_power {
                 return ports;
             }

@@ -127,8 +127,13 @@ impl SpatialLaws {
     }
 
     fn row(&self, kind: BlockKind, form: u16) -> &[u16] {
+        // Diagnostic geometry remains total. Unsupported kinds have no paths,
+        // support or emission here; admission rejects them before execution.
+        let Some(kind) = spatial_kind_v1(kind) else {
+            return &[0; 18];
+        };
         self.traits
-            .evaluate(&[kind_tag(kind), form])
+            .evaluate(&[kind, form])
             .expect("bounded trait facts")
     }
 
@@ -337,8 +342,8 @@ fn connection(value: u16) -> WireConnection {
         WireConnection::Up,
     ][usize::from(value)]
 }
-pub(crate) fn kind_tag(kind: BlockKind) -> u16 {
-    match kind {
+pub(crate) const fn spatial_kind_v1(kind: BlockKind) -> Option<u16> {
+    Some(match kind {
         BlockKind::Air => 0,
         BlockKind::Solid => 1,
         BlockKind::Transparent => 2,
@@ -355,7 +360,8 @@ pub(crate) fn kind_tag(kind: BlockKind) -> u16 {
         BlockKind::Piston => 13,
         BlockKind::PistonHead => 14,
         BlockKind::MovingPiston => 15,
-    }
+        BlockKind::CopperBulb => return None,
+    })
 }
 fn observed_form(block: &Block) -> u16 {
     if block.requires_live_observation() {

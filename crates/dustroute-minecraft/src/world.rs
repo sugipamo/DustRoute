@@ -71,6 +71,9 @@ pub enum BlockKind {
     /// Transient moving-piston block used while a piston block entity is
     /// animating. The carried block and direction live in `piston_entity`.
     MovingPiston,
+    /// Waxed copper bulbs; oxidation and random ticks are outside the model.
+    /// Append new kinds: existing enum discriminants participate in world IDs.
+    CopperBulb,
 }
 
 /// The two piston variants exposed by Java Edition.  The variant is kept as
@@ -325,6 +328,7 @@ impl BlockKind {
                 | Self::Button
                 | Self::PressurePlate
                 | Self::RedstoneLamp
+                | Self::CopperBulb
                 | Self::RedstoneBlock
                 | Self::Observer
                 | Self::Piston
@@ -333,7 +337,11 @@ impl BlockKind {
 
     #[must_use]
     pub fn properties(self) -> BlockProperties {
-        crate::spatial::builtin_spatial_laws().properties(self)
+        if crate::spatial::spatial_kind_v1(self).is_some() {
+            crate::spatial::builtin_spatial_laws().properties(self)
+        } else {
+            crate::physical::of_kind(self).properties()
+        }
     }
 }
 
@@ -426,7 +434,13 @@ impl Block {
     #[must_use]
     pub fn capabilities(&self) -> BlockCapabilities {
         use CapabilityLevel::{Full, NotApplicable, Partial, Unsupported};
-        if self.requires_live_observation() {
+        if self.requires_live_observation()
+            || (self
+                .observed_name
+                .as_deref()
+                .is_some_and(|n| crate::physical::passive::named(n).is_some())
+                && crate::physical::of_block(self).is_none())
+        {
             return BlockCapabilities {
                 observation: Full,
                 physical_classification: Unsupported,
@@ -504,6 +518,15 @@ impl Block {
                 steady_state: Full,
                 temporal: Partial,
                 repair: Partial,
+                placement: Full,
+            },
+            BlockKind::CopperBulb => BlockCapabilities {
+                observation: Full,
+                physical_classification: Full,
+                connectivity: Full,
+                steady_state: Unsupported,
+                temporal: Partial,
+                repair: Unsupported,
                 placement: Full,
             },
             BlockKind::Comparator => BlockCapabilities {
@@ -587,14 +610,18 @@ impl Block {
 
     #[must_use]
     pub const fn is_observable_output(&self) -> bool {
-        matches!(self.kind, BlockKind::RedstoneLamp)
+        matches!(self.kind, BlockKind::RedstoneLamp | BlockKind::CopperBulb)
     }
 
     /// Resolves physical redstone behavior from the observed block and its
     /// block state. Synthetic blocks retain the historical kind defaults.
     #[must_use]
     pub fn redstone_traits(&self) -> BlockRedstoneTraits {
-        crate::spatial::builtin_spatial_laws().block_traits(self)
+        if crate::spatial::spatial_kind_v1(self.kind).is_some() {
+            crate::spatial::builtin_spatial_laws().block_traits(self)
+        } else {
+            crate::physical::of_kind(self.kind).block_traits(self)
+        }
     }
 }
 
@@ -607,6 +634,10 @@ pub fn observed_name_requires_live_observation(name: &str) -> bool {
     matches!(
         short_name,
         "target"
+            | "copper_bulb"
+            | "exposed_copper_bulb"
+            | "weathered_copper_bulb"
+            | "oxidized_copper_bulb"
             | "daylight_detector"
             | "dispenser"
             | "dropper"
@@ -751,7 +782,31 @@ impl World {
 
     #[must_use]
     pub fn support_issues(&self) -> Vec<(Pos, BlockKind, Option<Pos>)> {
-        self.support_issues_with_laws(crate::spatial::builtin_spatial_laws())
+        self.blocks
+            .iter()
+            .filter_map(|(pos, block)| {
+                let physical = crate::physical::of_kind(block.kind);
+                if physical.support() == crate::physical::Support::None
+                    && !crate::spatial::builtin_spatial_laws().requires_support(block.kind)
+                {
+                    return None;
+                }
+                let support = block.support_pos(*pos);
+                let valid = support.and_then(|p| self.get(p)).is_some_and(|base| {
+                    if physical.support_loss().is_some() && crate::physical::known_geometry(base) {
+                        crate::piston_electrical::SIDES
+                            .into_iter()
+                            .find(|side| Some(side.offset()) == block.support_offset)
+                            .is_some_and(|side| physical.supports_attachment(base, side))
+                    } else {
+                        // Generic placement also admits geometry (e.g. slabs)
+                        // outside the callback adapter's declared evidence subset.
+                        base.redstone_traits().supports_dust_on_top
+                    }
+                });
+                (!valid).then_some((*pos, block.kind, support))
+            })
+            .collect()
     }
 
     /// Diagnose support under an explicit finite spatial model. This returns
@@ -761,17 +816,25 @@ impl World {
         &self,
         laws: &crate::spatial::SpatialLaws,
     ) -> Vec<(Pos, BlockKind, Option<Pos>)> {
+        self.support_issues_using(
+            |kind| laws.requires_support(kind),
+            |block| laws.block_traits(block).supports_dust_on_top,
+        )
+    }
+
+    fn support_issues_using(
+        &self,
+        requires: impl Fn(BlockKind) -> bool,
+        supports: impl Fn(&Block) -> bool,
+    ) -> Vec<(Pos, BlockKind, Option<Pos>)> {
         self.blocks
             .iter()
             .filter_map(|(pos, block)| {
-                let requires = laws.requires_support(block.kind);
-                if !requires {
+                if !requires(block.kind) {
                     return None;
                 }
                 let support = block.support_pos(*pos);
-                let valid = support
-                    .and_then(|at| self.get(at))
-                    .is_some_and(|support| laws.block_traits(support).supports_dust_on_top);
+                let valid = support.and_then(|at| self.get(at)).is_some_and(&supports);
                 (!valid).then_some((*pos, block.kind, support))
             })
             .collect()

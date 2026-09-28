@@ -7,6 +7,8 @@ mod electrical;
 mod geometry;
 mod movement;
 mod notifications;
+mod passive;
+mod support;
 
 use std::collections::VecDeque;
 
@@ -17,7 +19,10 @@ use crate::{Block, Facing, Pos, Region, World};
 pub(crate) use adapter::ElectricalPistonAdapter;
 pub use movement::MotionPlan;
 
-pub const ELECTRICAL_PROFILE: &str = "dustroute.piston-electrical-callbacks.java-1-21-11.v6";
+pub const ELECTRICAL_PROFILE: &str = "dustroute.piston-electrical-callbacks.java-1-21-11.v16";
+
+#[cfg(test)]
+mod device_capability_tests;
 /// All six body directions share one electrical world and synchronous queue.
 /// Live placement requires fresh target review and verified observations.
 pub struct ElectricalPistonRuntime(SynchronousWorldRuntime<ElectricalPistonAdapter>);
@@ -99,9 +104,18 @@ impl ElectricalPistonRuntime {
         self.0
             .input_now(call(source, PistonEvent::Input { powered }))
     }
+    /// Explicit interaction with a registered device; currently stone buttons.
+    /// Use is distinct from assigning a powered state and schedules its own release.
+    pub fn use_now(&mut self, position: Pos) -> Result<u64, RuntimeError> {
+        self.0.input_now(devices::event(
+            position,
+            crate::device_program::Callback::Use,
+            None,
+        ))
+    }
     pub fn execution_context(&self) -> crate::execution_context::WorldExecutionContext {
         crate::execution_context::WorldExecutionContext::for_profile(
-            crate::execution_context::WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V6,
+            crate::execution_context::WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V16,
         )
     }
 }
@@ -123,6 +137,10 @@ pub enum PistonEvent {
     Initialize,
     Input {
         powered: bool,
+    },
+    /// World.updateComparators: each direction is sampled after preceding callbacks.
+    NotifyAnalogReaders {
+        next_side: u8,
     },
     Notify {
         jobs: VecDeque<NeighborJob>,
@@ -151,15 +169,15 @@ pub enum PistonEvent {
         carrier: CarrierId,
     },
     CarrierTick,
-    ElectricalRepeaterTick,
-    LampTick,
-    ObserverTick,
-    ObserverAfterTick {
-        block: Box<Block>,
-        delay: u64,
+    Device {
+        callback: crate::device_program::Callback,
+        source: Option<Pos>,
+        captured: Option<Box<Block>>,
     },
-    MovingObserverAdded,
-    MovingObserverAfterAdded {
+    DeviceContinue {
+        run: Box<crate::device_program::DeviceRun>,
+    },
+    DeviceAfterArrival {
         block: Box<Block>,
     },
     ElectricalInstall {
@@ -196,7 +214,7 @@ pub fn new_piston_runtime(
     limits: RuntimeLimits,
 ) -> Result<ElectricalPistonRuntime, RuntimeError> {
     crate::execution_context::WorldExecutionContext::for_profile(
-        crate::execution_context::WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V6,
+        crate::execution_context::WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V16,
     )
     .validate()
     .map_err(RuntimeError::Invalid)?;
@@ -252,4 +270,17 @@ fn unsupported(message: impl Into<String>) -> RuntimeError {
 
 fn next_tick(tick: u64, delay: u64) -> Result<u64, RuntimeError> {
     tick.checked_add(delay).ok_or(RuntimeError::ClockOverflow)
+}
+
+/// Schedule an explicit use after a world tick, retaining real release timing.
+pub fn schedule_device_use_after_tick(
+    runtime: &mut ElectricalPistonRuntime,
+    game_tick: u64,
+    position: Pos,
+) -> Result<(), RuntimeError> {
+    runtime.0.enqueue(QueueRequest::AfterWorldTick {
+        game_tick,
+        call: devices::event(position, crate::device_program::Callback::Use, None),
+    })?;
+    Ok(())
 }

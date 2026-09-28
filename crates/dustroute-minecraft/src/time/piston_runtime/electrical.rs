@@ -1,9 +1,8 @@
 //! Expanded electrical adapter and source-ordered write/shape callbacks.
-use super::geometry::{along, delta, facing, offset};
+use super::geometry::{along, delta, offset};
 use super::notifications::{adjacent_jobs, shape_jobs};
 use super::*;
-use crate::piston_electrical::{ElectricalWorld, full_face, wire_notification_centers};
-use crate::piston_electrical_law::{RepeaterFacts, builtin_laws};
+use crate::piston_electrical::{ElectricalWorld, wire_notification_centers};
 use crate::{BlockKind, DeltaCause, Facing, WireConnection};
 
 pub(super) fn world(view: RuntimeView<'_>) -> Result<ElectricalWorld<'_>, RuntimeError> {
@@ -45,18 +44,61 @@ pub(super) fn wire_offset_jobs(
 pub(super) fn validate_scope(view: RuntimeView<'_>, fresh: bool) -> Result<(), RuntimeError> {
     let electrical = world(view)?;
     for (pos, block) in view.world().iter() {
-        if fresh && block.kind == BlockKind::Observer && block.powered == Some(true) {
-            return Err(unsupported(
-                "powered observer needs its pending history; resume a checkpoint",
-            ));
+        if let Some(program) = crate::device_program::program(block) {
+            let definition = &program.definition;
+            if fresh && definition.fresh_powered_requires_history && block.powered == Some(true) {
+                return Err(unsupported(
+                    "powered device needs its pending history; resume a checkpoint",
+                ));
+            }
+            for handler in definition.handlers.values() {
+                for input in &handler.inputs {
+                    use crate::device_program::Query;
+                    match input.sample {
+                        Query::HistoryCount => {
+                            view.history_count(
+                                definition
+                                    .history
+                                    .as_ref()
+                                    .ok_or_else(|| unsupported("missing history policy"))?,
+                                *pos,
+                            )?;
+                        }
+                        Query::SupportPowered => {
+                            electrical.support_powered(*pos)?;
+                        }
+                        Query::ReceivingPower => {
+                            electrical.receiving_power(*pos)?;
+                        }
+                        Query::ReceivingLevel => {
+                            electrical.receiving_level(*pos)?;
+                        }
+                        Query::SideLevel { side } => {
+                            electrical.emitted(along(*pos, side, 1)?, side, true)?;
+                        }
+                        Query::GateOutputLevel | Query::GateOutputChanged => {
+                            electrical.gate_output_level(*pos)?;
+                        }
+                        Query::GateInputPowered => {
+                            electrical.gate_input_powered(*pos)?;
+                        }
+                        Query::SideGatePowered => {
+                            electrical.side_gate_powered(*pos)?;
+                        }
+                        Query::OutputGateMisaligned => {
+                            electrical.output_gate_misaligned(*pos)?;
+                        }
+                        _ => {}
+                    }
+                }
+                for effect in &handler.effects {
+                    if let crate::device_program::Effect::Notify { targets, .. } = effect {
+                        super::devices::notification_jobs(view, *pos, block, *targets)?;
+                    }
+                }
+            }
         }
         match block.kind {
-            BlockKind::RedstoneLamp => {
-                electrical.receiving_power(*pos)?;
-            }
-            BlockKind::Observer => {
-                repeater_jobs_for(view, *pos, block)?;
-            }
             BlockKind::Piston => {
                 electrical.piston_powered(*pos)?;
             }
@@ -71,41 +113,22 @@ pub(super) fn validate_scope(view: RuntimeView<'_>, fresh: bool) -> Result<(), R
                     adjacent_jobs(view, center, false, false)?;
                 }
             }
-            BlockKind::Repeater => {
-                electrical.repeater_input(*pos)?;
-                electrical.repeater_locked(*pos)?;
-                repeater_jobs(view, *pos)?;
-            }
             _ => {}
         }
-        if matches!(
-            block.kind,
-            BlockKind::Lever | BlockKind::RedstoneWire | BlockKind::Repeater
-        ) {
+        if crate::physical::of_kind(block.kind).support() != crate::physical::Support::None {
             let offset = block
                 .support_offset
                 .ok_or_else(|| unsupported("electrical support required"))?;
             let support = super::geometry::offset(*pos, offset)?;
-            let side = crate::piston_electrical::SIDES
+            crate::piston_electrical::SIDES
                 .into_iter()
                 .find(|d| d.offset() == offset)
                 .ok_or_else(|| unsupported("adjacent support required"))?;
-            let support_block = view
-                .staged_carriers
-                .get(&support)
-                .cloned()
-                .unwrap_or(view.block(support)?);
-            let retained_body_back = support_block.kind == BlockKind::MovingPiston
-                && support_block
-                    .piston_entity
-                    .as_deref()
-                    .is_some_and(|carrier| {
-                        carrier.source
-                            && !carrier.extending
-                            && carrier.pushed_block.kind == BlockKind::Piston
-                            && carrier.pushed_block.facing == Some(side)
-                    });
-            if !full_face(&support_block, side.opposite()) && !retained_body_back {
+            // During a write/notification sequence the old attachment may
+            // temporarily lack support. Its native callback decides when to
+            // remove it; fresh worlds must still start with valid support.
+            view.block(support)?;
+            if fresh && !super::support::present(view, *pos, block)? {
                 return Err(unsupported(format!(
                     "unsupported electrical support at {pos:?}"
                 )));
@@ -123,8 +146,7 @@ fn side_from_source(job: &NeighborJob) -> Result<Facing, RuntimeError> {
 }
 
 /// RedstoneWireBlock.prepare: diagonal shapes around connected arms, in
-/// Direction.Type.HORIZONTAL order. Components cannot be moved/destroyed in
-/// this profile, so the target identities stay fixed during these callbacks.
+/// Direction.Type.HORIZONTAL order. Each target is resolved again on delivery.
 fn prepare_jobs(
     view: RuntimeView<'_>,
     pos: Pos,
@@ -195,113 +217,7 @@ pub(super) fn input_jobs(
     Ok(jobs)
 }
 
-fn decision(
-    view: RuntimeView<'_>,
-    pos: Pos,
-) -> Result<crate::piston_electrical_law::RepeaterDecision, RuntimeError> {
-    let electrical = world(view)?;
-    let block = view.block(pos)?;
-    let direction = facing(&block)?;
-    let target = view.block(along(pos, direction, 1)?)?;
-    builtin_laws()
-        .repeater(RepeaterFacts {
-            powered: block
-                .powered
-                .ok_or_else(|| unsupported("repeater power required"))?,
-            input: electrical.repeater_input(pos)?,
-            locked: electrical.repeater_locked(pos)?,
-            target_misaligned: target.kind == BlockKind::Repeater
-                && target.facing != Some(direction.opposite()),
-            delay: block
-                .delay
-                .ok_or_else(|| unsupported("repeater delay required"))?,
-        })
-        .ok_or_else(|| unsupported("invalid repeater facts"))
-}
-
-fn queue(
-    view: RuntimeView<'_>,
-    pos: Pos,
-    delay: u64,
-    priority: u8,
-) -> Result<QueueRequest<PistonEvent>, RuntimeError> {
-    Ok(QueueRequest::PrioritizedBlockTick {
-        game_tick: next_tick(view.time().game_tick, delay)?,
-        priority,
-        block: BlockIdentity::of(&view.block(pos)?),
-        call: call(pos, PistonEvent::ElectricalRepeaterTick),
-    })
-}
-
-pub(super) fn repeater_jobs(
-    view: RuntimeView<'_>,
-    pos: Pos,
-) -> Result<VecDeque<NeighborJob>, RuntimeError> {
-    repeater_jobs_for(view, pos, &view.block(pos)?)
-}
-
-pub(super) fn repeater_jobs_for(
-    view: RuntimeView<'_>,
-    pos: Pos,
-    block: &Block,
-) -> Result<VecDeque<NeighborJob>, RuntimeError> {
-    let direction = facing(block)?;
-    let target = along(pos, direction, 1)?;
-    view.block(target)?;
-    let mut jobs = VecDeque::from([NeighborJob {
-        target,
-        source: pos,
-        shape: false,
-    }]);
-    jobs.extend(
-        adjacent_jobs(view, target, false, false)?
-            .into_iter()
-            .filter(|j| j.target != pos),
-    );
-    Ok(jobs)
-}
-
-pub(super) fn repeater_tick(
-    view: RuntimeView<'_>,
-    pos: Pos,
-) -> Result<RuntimeOutcome<PistonEvent>, RuntimeError> {
-    let before = view.block(pos)?;
-    if before.kind != BlockKind::Repeater {
-        return Ok(RuntimeOutcome::default());
-    }
-    let decision = decision(view, pos)?;
-    if !decision.apply {
-        return Ok(RuntimeOutcome::default());
-    }
-    let mut after = before.clone();
-    after.powered = Some(decision.next_powered);
-    if after.observed_name.is_some() {
-        after
-            .observed_properties
-            .insert("powered".into(), decision.next_powered.to_string());
-    }
-    // WorldChunk.onBlockAdded invokes the gate output before World performs
-    // shape replacement, including same-block powered/locked state changes.
-    let mut jobs = repeater_jobs(view, pos)?;
-    jobs.extend(write_shape_jobs(view, pos, &before, &after)?);
-    Ok(RuntimeOutcome {
-        delta: Some(delta(
-            view,
-            [(pos, after)],
-            vec![],
-            DeltaCause::RepeaterTick { repeater: pos },
-        )?),
-        callbacks: vec![call(pos, PistonEvent::Notify { jobs })],
-        queued: if decision.schedule_off {
-            vec![queue(view, pos, decision.delay_game_ticks, 1)?]
-        } else {
-            vec![]
-        },
-        ..Default::default()
-    })
-}
-
-pub(super) fn notify_device(
+pub(super) fn notify_wire(
     view: RuntimeView<'_>,
     job: &NeighborJob,
     block: &Block,
@@ -338,28 +254,6 @@ pub(super) fn notify_device(
                 )?);
                 out.callbacks.push(call(pos, PistonEvent::Notify { jobs }));
             }
-        } else if side != facing(block)? && side != facing(block)?.opposite() {
-            let locked = electrical.repeater_locked(pos)?;
-            let previous = block
-                .observed_properties
-                .get("locked")
-                .map(String::as_str)
-                .unwrap_or("false");
-            if previous != locked.to_string() {
-                let mut after = block.clone();
-                after
-                    .observed_properties
-                    .insert("locked".into(), locked.to_string());
-                let mut jobs = repeater_jobs(view, pos)?;
-                jobs.extend(write_shape_jobs(view, pos, block, &after)?);
-                out.delta = Some(delta(
-                    view,
-                    [(pos, after)],
-                    vec![],
-                    DeltaCause::NeighborUpdate,
-                )?);
-                out.callbacks.push(call(pos, PistonEvent::Notify { jobs }));
-            }
         }
         return Ok(out);
     }
@@ -384,16 +278,6 @@ pub(super) fn notify_device(
                 jobs.extend(adjacent_jobs(view, center, false, false)?);
             }
             out.callbacks.push(call(pos, PistonEvent::Notify { jobs }));
-        }
-    } else {
-        let decision = decision(view, pos)?;
-        if decision.request && !view.block_tick_ticking(pos, &BlockIdentity::of(block)) {
-            out.queued.push(queue(
-                view,
-                pos,
-                decision.delay_game_ticks,
-                decision.priority,
-            )?);
         }
     }
     Ok(out)
