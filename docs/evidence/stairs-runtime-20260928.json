@@ -1,0 +1,3998 @@
+{
+  "schema_version": "dustroute.stairs-and-server-readback.v1",
+  "date": "2026-09-28",
+  "base_commit": "95eec33",
+  "branch": "codex/data-driven-block-runtime",
+  "scope": "Four explicit dry stair identities; shared native confirmation; fresh public Assembly review/construction/removal.",
+  "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v16",
+  "root_exploration": "dustroute.piston-electrical-root-exploration.v16",
+  "physical_admission": "dustroute.physical-admission.java-1-21-11.v7",
+  "placement_validation": "v4",
+  "distinct_stair_cases": 10,
+  "matched_device_captures": 12,
+  "totals": {
+    "tick_end_count": 780,
+    "live_write_count": 214,
+    "live_scheduled_count": 30,
+    "live_callback_count": 721
+  },
+  "runs": [
+    {
+      "run": "stairs-readback-20260928-a",
+      "summary": {
+        "fixture": "device-stairs-inner-top-left-r0",
+        "fixture_sha256": "d6bc6ae1f1c0ec7d6b40b572ad2d97a403f13696625f047018982e2dbf5910e8",
+        "actor_sha256": "32979a514e7b32ba75736d8f3ca423f8c1187d6c90f1b6d96e08364c9ef56264",
+        "readback_sha256": "22d91c568ab58d94b9b9d19b336ba995344688af03a18c252f2b1c4f2f4de37f",
+        "readback_validator_sha256": "1a84a6751f1378551bea7217fdb1a8e387d54dfb2d727a7006dad07f27517863",
+        "capture_sha256": "d9c4d8bf9f209656b3a90ba82d496ed6484d090586c797fdb67adf83061c0a7a",
+        "comparator_sha256": "0e82e4641afd5b12f075a47f1fc0ee11b4c2630c63df56931522d380c36a3414",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "a95b3bf96863b6221fa58b62dab3bba025ef919abec8889166b4d6abd21759d7",
+        "classification": "matched_declared_projection",
+        "applied_inputs": [
+          {
+            "position": {
+              "x": 120999,
+              "y": 180,
+              "z": 1000
+            },
+            "game_tick": 148921,
+            "packet_sequence": 2192,
+            "write_sequence": 2193,
+            "kind": "lever",
+            "powered": true
+          },
+          {
+            "position": {
+              "x": 120999,
+              "y": 180,
+              "z": 1000
+            },
+            "game_tick": 148937,
+            "packet_sequence": 2551,
+            "write_sequence": 2552,
+            "kind": "lever",
+            "powered": false
+          }
+        ],
+        "requested_steps": [
+          {
+            "input": 0,
+            "powered": true,
+            "wait_ticks": 0
+          },
+          {
+            "input": 0,
+            "powered": false,
+            "wait_ticks": 16
+          }
+        ],
+        "cleanup": {
+          "region_empty": true,
+          "force_load_removed": true,
+          "disconnected_before_finish": null
+        },
+        "server_stopped_normally": true,
+        "enabled_features": [
+          "minecraft:vanilla"
+        ],
+        "artifacts": {
+          ".raw.ndjson": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-a.raw.ndjson",
+            "sha256": "b20a0920b6ad91a4d9661a4314facf5272af795c3049114b940b79258b83e269"
+          },
+          ".server.log": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-a.server.log",
+            "sha256": "5e2ed6705b7837e3221e8166556c1c82838997d33bfdcef3cf3317d36035e1c0"
+          },
+          ".client.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-a.client.json",
+            "sha256": "0a9640643dd0d43ee54f3a845d774f8cf0e6549584c08a01ecdbffc3b6b30a93"
+          },
+          ".reference.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-a.reference.json",
+            "sha256": "3856d283663c2619207f5ac4db0e5f19e45e0dcf69c0a3a16e5681260cfa09c7"
+          },
+          ".input.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-a.input.json",
+            "sha256": "fd96db4ecb951b102dd36dcb7faa23a08ffae1cd28683eb44e2d95fb73868129"
+          },
+          ".model.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-a.model.json",
+            "sha256": "341e896ec332e8e0588ee4e61baf019ace8a82132eaff34c222e88a12d3761f8"
+          },
+          ".comparison.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-a.comparison.json",
+            "sha256": "2ffd53b36d795eb1d19e8f4da1a62c218e6c1f2c0ec9b093bdcd7449ed860657"
+          }
+        }
+      },
+      "comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v16",
+        "tick_end_count": 57,
+        "tick_mismatches": [],
+        "live_write_count": 18,
+        "model_write_count": 18,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 3,
+        "model_scheduled_count": 3,
+        "first_scheduled_mismatch": null,
+        "first_tick_attempt_mismatch": null,
+        "live_callback_count": 51,
+        "model_callback_count": 51,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection"
+      },
+      "retained": {
+        "path": "crates/dustroute-translate/tests/fixtures/device-circuits/stairs-inner-top-left-r0.json.gz",
+        "sha256": "6537887ce48bb2e611f217d4764b19b27d66d1122fc53bf91f34e388bb229f1d"
+      },
+      "readbacks": {
+        "empty_before_setup": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "3ffdebc4-3fef-4b62-8cc7-9014e0906053",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 120995,
+            "y": 177,
+            "z": 994
+          },
+          "max": {
+            "x": 121005,
+            "y": 183,
+            "z": 1003
+          },
+          "checked_cells": 770,
+          "start_game_tick": 148801,
+          "end_game_tick": 148801,
+          "nonce": "8a3381708faf6fc72baedcf139f682bb",
+          "snapshot_sha256": "d85f7171ad74dbba54b54ab6b8474d425aa917f1aa3c8389165190cfce34f9f7",
+          "corrections": [],
+          "hidden_runtime_observed": false
+        },
+        "initial": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "73922962-631c-4879-a4cd-6d77a0225ef6",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 120995,
+            "y": 177,
+            "z": 994
+          },
+          "max": {
+            "x": 121005,
+            "y": 183,
+            "z": 1003
+          },
+          "checked_cells": 770,
+          "start_game_tick": 148920,
+          "end_game_tick": 148920,
+          "nonce": "e34a74b52e23ce0507384cf011aa3b3e",
+          "snapshot_sha256": "e29c6ddb90dbd8db3f1bd86fb79ae832e355e5a00ad9d93cccfe2124fd680ba0",
+          "corrections": [],
+          "hidden_runtime_observed": false
+        },
+        "final": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "5667ed42-f7b3-42b0-8a4e-7878fc250000",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 120995,
+            "y": 177,
+            "z": 994
+          },
+          "max": {
+            "x": 121005,
+            "y": 183,
+            "z": 1003
+          },
+          "checked_cells": 770,
+          "start_game_tick": 149018,
+          "end_game_tick": 149018,
+          "nonce": "a9e63c23463972bbdcfa89c529255897",
+          "snapshot_sha256": "15ed4642f2e94fc94181411206e1e714d6df112369068654252b3b617163ec11",
+          "corrections": [
+            {
+              "pos": {
+                "x": 121002,
+                "y": 180,
+                "z": 999
+              },
+              "client": {
+                "pos": {
+                  "x": 121002,
+                  "y": 180,
+                  "z": 999
+                },
+                "name": "minecraft:quartz_stairs",
+                "properties": {
+                  "waterlogged": "false",
+                  "shape": "inner_left",
+                  "half": "top",
+                  "facing": "north"
+                }
+              },
+              "confirmed_shape": "straight"
+            }
+          ],
+          "hidden_runtime_observed": false
+        },
+        "empty_after_cleanup": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "3a10e67e-1a71-46de-9c42-c29316417988",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 120995,
+            "y": 177,
+            "z": 994
+          },
+          "max": {
+            "x": 121005,
+            "y": 183,
+            "z": 1003
+          },
+          "checked_cells": 770,
+          "start_game_tick": 149029,
+          "end_game_tick": 149029,
+          "nonce": "000295d21ff40f33aef9cd376ccf991a",
+          "snapshot_sha256": "d85f7171ad74dbba54b54ab6b8474d425aa917f1aa3c8389165190cfce34f9f7",
+          "corrections": [],
+          "hidden_runtime_observed": false
+        }
+      },
+      "scheduler_attempts": 3
+    },
+    {
+      "run": "stairs-readback-20260928-b",
+      "summary": {
+        "fixture": "device-stairs-inner-top-right-r90",
+        "fixture_sha256": "5966bcdcdfd9805ccc950556db8d731852e516b59c6772cd985e5176995d4613",
+        "actor_sha256": "32979a514e7b32ba75736d8f3ca423f8c1187d6c90f1b6d96e08364c9ef56264",
+        "readback_sha256": "6be591e8af072950e0072731a0872adec76ff48d8a20178bb69a41ec6c5e62f9",
+        "readback_validator_sha256": "51d441e68aba8d900d332fbb59f54f90a0bd4ff5aa3b35d691005fd751a793d3",
+        "capture_sha256": "d9c4d8bf9f209656b3a90ba82d496ed6484d090586c797fdb67adf83061c0a7a",
+        "comparator_sha256": "0e82e4641afd5b12f075a47f1fc0ee11b4c2630c63df56931522d380c36a3414",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "4fad59a062dd03d645e3093dc413a2d6aeffc24a3f7c4dcba2f7c484f4931bc4",
+        "classification": "matched_declared_projection",
+        "applied_inputs": [
+          {
+            "position": {
+              "x": 122000,
+              "y": 180,
+              "z": 999
+            },
+            "game_tick": 149707,
+            "packet_sequence": 2132,
+            "write_sequence": 2133,
+            "kind": "lever",
+            "powered": true
+          },
+          {
+            "position": {
+              "x": 122000,
+              "y": 180,
+              "z": 999
+            },
+            "game_tick": 149722,
+            "packet_sequence": 2479,
+            "write_sequence": 2480,
+            "kind": "lever",
+            "powered": false
+          }
+        ],
+        "requested_steps": [
+          {
+            "input": 0,
+            "powered": true,
+            "wait_ticks": 0
+          },
+          {
+            "input": 0,
+            "powered": false,
+            "wait_ticks": 16
+          }
+        ],
+        "cleanup": {
+          "region_empty": true,
+          "force_load_removed": true,
+          "disconnected_before_finish": null
+        },
+        "server_stopped_normally": true,
+        "enabled_features": [
+          "minecraft:vanilla"
+        ],
+        "artifacts": {
+          ".raw.ndjson": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-b.raw.ndjson",
+            "sha256": "b2afd5d26ebc8e2f329a7e6009a48d3714f448944655472c6da625a42bac8404"
+          },
+          ".server.log": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-b.server.log",
+            "sha256": "f566c5d5bafa4c76196daea907eaf8ce3aec78a444c00a1dc2f3ce8633f152cc"
+          },
+          ".client.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-b.client.json",
+            "sha256": "8bef0d30188d87603bc25b754ac091b0641cde529b14d5d5e5218558e34afb27"
+          },
+          ".reference.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-b.reference.json",
+            "sha256": "924e565112efa6465bef0c204175a7853483f26688af021c1c5f2b6548900de1"
+          },
+          ".input.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-b.input.json",
+            "sha256": "1ceed38e219149cc54e047792f69d2ff1099e277014da30e9262f2f46e918792"
+          },
+          ".model.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-b.model.json",
+            "sha256": "34a245aaef1e89abe0402bb3351874f675cda74fb5c2943eeddaf5f02bf2aab0"
+          },
+          ".comparison.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-b.comparison.json",
+            "sha256": "0d0289f03ac75132289b35780617cd5a70ca7f764f395f27e8888a3a6dd065d4"
+          }
+        }
+      },
+      "comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v16",
+        "tick_end_count": 56,
+        "tick_mismatches": [],
+        "live_write_count": 18,
+        "model_write_count": 18,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 3,
+        "model_scheduled_count": 3,
+        "first_scheduled_mismatch": null,
+        "first_tick_attempt_mismatch": null,
+        "live_callback_count": 52,
+        "model_callback_count": 52,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection"
+      },
+      "retained": {
+        "path": "crates/dustroute-translate/tests/fixtures/device-circuits/stairs-inner-top-right-r90.json.gz",
+        "sha256": "cf3c23bbf078e2c643c79682e2bc01dc3123abc64e09a80cddf402b2d3138b17"
+      },
+      "readbacks": {
+        "empty_before_setup": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "7cdf41dd-7680-445d-beb2-c0f0bff30c7d",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 121997,
+            "y": 177,
+            "z": 995
+          },
+          "max": {
+            "x": 122006,
+            "y": 183,
+            "z": 1006
+          },
+          "checked_cells": 840,
+          "start_game_tick": 149587,
+          "end_game_tick": 149587,
+          "nonce": "507eaaab6fba1368df5b67b1d5a04274",
+          "snapshot_sha256": "af570c586c02f85ef7ff517b99a3e8ae4b67d460d7dc69271de589780c5feb8c",
+          "corrections": [],
+          "hidden_runtime_observed": false
+        },
+        "initial": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "bf7f1d01-f572-4b36-86eb-0e3fa2fbb4a2",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 121997,
+            "y": 177,
+            "z": 995
+          },
+          "max": {
+            "x": 122006,
+            "y": 183,
+            "z": 1006
+          },
+          "checked_cells": 840,
+          "start_game_tick": 149706,
+          "end_game_tick": 149706,
+          "nonce": "86993b93174c9cf12b4fb0923546a642",
+          "snapshot_sha256": "1a918aeb6c19b87839b94e1464605843054acdf1006abcdff552c9290a8f9086",
+          "corrections": [],
+          "hidden_runtime_observed": false
+        },
+        "final": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "ea259b22-6163-4578-84ec-583764c5a877",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 121997,
+            "y": 177,
+            "z": 995
+          },
+          "max": {
+            "x": 122006,
+            "y": 183,
+            "z": 1006
+          },
+          "checked_cells": 840,
+          "start_game_tick": 149803,
+          "end_game_tick": 149803,
+          "nonce": "5e847218f66f1db7fada962f6e812fa5",
+          "snapshot_sha256": "b400abd376620de4229aae4dcc788a956c45f0ea034a344330564f6cf15759c4",
+          "corrections": [
+            {
+              "pos": {
+                "x": 122001,
+                "y": 180,
+                "z": 1002
+              },
+              "client": {
+                "pos": {
+                  "x": 122001,
+                  "y": 180,
+                  "z": 1002
+                },
+                "name": "minecraft:quartz_stairs",
+                "properties": {
+                  "waterlogged": "false",
+                  "shape": "inner_right",
+                  "half": "top",
+                  "facing": "east"
+                }
+              },
+              "confirmed_shape": "straight"
+            }
+          ],
+          "hidden_runtime_observed": false
+        },
+        "empty_after_cleanup": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "0309007d-2149-4383-869b-eb94c51277d5",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 121997,
+            "y": 177,
+            "z": 995
+          },
+          "max": {
+            "x": 122006,
+            "y": 183,
+            "z": 1006
+          },
+          "checked_cells": 840,
+          "start_game_tick": 149813,
+          "end_game_tick": 149813,
+          "nonce": "d393640e7e2a9d3f1ae247f0e3790c3e",
+          "snapshot_sha256": "af570c586c02f85ef7ff517b99a3e8ae4b67d460d7dc69271de589780c5feb8c",
+          "corrections": [],
+          "hidden_runtime_observed": false
+        }
+      },
+      "scheduler_attempts": 3
+    },
+    {
+      "run": "stairs-readback-20260928-c",
+      "summary": {
+        "fixture": "device-stairs-inner-bottom-left-r180",
+        "fixture_sha256": "70f8d117ed5814d9d4d954c8d13744bfe32dde091c014484133a362324278d9f",
+        "actor_sha256": "32979a514e7b32ba75736d8f3ca423f8c1187d6c90f1b6d96e08364c9ef56264",
+        "readback_sha256": "6be591e8af072950e0072731a0872adec76ff48d8a20178bb69a41ec6c5e62f9",
+        "readback_validator_sha256": "51d441e68aba8d900d332fbb59f54f90a0bd4ff5aa3b35d691005fd751a793d3",
+        "capture_sha256": "d9c4d8bf9f209656b3a90ba82d496ed6484d090586c797fdb67adf83061c0a7a",
+        "comparator_sha256": "0e82e4641afd5b12f075a47f1fc0ee11b4c2630c63df56931522d380c36a3414",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "4fad59a062dd03d645e3093dc413a2d6aeffc24a3f7c4dcba2f7c484f4931bc4",
+        "classification": "matched_declared_projection",
+        "applied_inputs": [
+          {
+            "position": {
+              "x": 123001,
+              "y": 180,
+              "z": 1000
+            },
+            "game_tick": 150496,
+            "packet_sequence": 2120,
+            "write_sequence": 2121,
+            "kind": "lever",
+            "powered": true
+          },
+          {
+            "position": {
+              "x": 123001,
+              "y": 180,
+              "z": 1000
+            },
+            "game_tick": 150512,
+            "packet_sequence": 2479,
+            "write_sequence": 2480,
+            "kind": "lever",
+            "powered": false
+          }
+        ],
+        "requested_steps": [
+          {
+            "input": 0,
+            "powered": true,
+            "wait_ticks": 0
+          },
+          {
+            "input": 0,
+            "powered": false,
+            "wait_ticks": 16
+          }
+        ],
+        "cleanup": {
+          "region_empty": true,
+          "force_load_removed": true,
+          "disconnected_before_finish": null
+        },
+        "server_stopped_normally": true,
+        "enabled_features": [
+          "minecraft:vanilla"
+        ],
+        "artifacts": {
+          ".raw.ndjson": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-c.raw.ndjson",
+            "sha256": "e233d345af14a0c17f18ec55ad2fd18fa9048e7e86b672e82a4f5f02169dd5b9"
+          },
+          ".server.log": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-c.server.log",
+            "sha256": "96c3df6de38dd8a484c7a30fec34f18d604b6b761355708839477f5055c2fb5e"
+          },
+          ".client.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-c.client.json",
+            "sha256": "720198c9b871f4f499f0e6f68f82d10c844868899e1ecd450880912e5ddff75d"
+          },
+          ".reference.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-c.reference.json",
+            "sha256": "ae3f98fc7bafb9973ee211a491bd06f947c34ad1e80217c4573c1f4aed321845"
+          },
+          ".input.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-c.input.json",
+            "sha256": "50746679d6a16c013059e7a64187af27f5099e8e79f36d5e3fd1cdd73c34c9f2"
+          },
+          ".model.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-c.model.json",
+            "sha256": "3fba14e2b084cede81426393f0afa028bd09558d2f9d8f42f396e3b72179baa6"
+          },
+          ".comparison.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-c.comparison.json",
+            "sha256": "2ffd53b36d795eb1d19e8f4da1a62c218e6c1f2c0ec9b093bdcd7449ed860657"
+          }
+        }
+      },
+      "comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v16",
+        "tick_end_count": 57,
+        "tick_mismatches": [],
+        "live_write_count": 18,
+        "model_write_count": 18,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 3,
+        "model_scheduled_count": 3,
+        "first_scheduled_mismatch": null,
+        "first_tick_attempt_mismatch": null,
+        "live_callback_count": 51,
+        "model_callback_count": 51,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection"
+      },
+      "retained": {
+        "path": "crates/dustroute-translate/tests/fixtures/device-circuits/stairs-inner-bottom-left-r180.json.gz",
+        "sha256": "290cb8dc5ad0e24e0484e43ebb6262d8056cef3fcb8d3dce74ed105ba5cbfbb2"
+      },
+      "readbacks": {
+        "empty_before_setup": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "340b6e55-63ae-4dcc-95f9-6b5b3d4219f1",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 122995,
+            "y": 177,
+            "z": 997
+          },
+          "max": {
+            "x": 123005,
+            "y": 183,
+            "z": 1006
+          },
+          "checked_cells": 770,
+          "start_game_tick": 150376,
+          "end_game_tick": 150376,
+          "nonce": "a9ec32754f829f67d7447e17e2f915ab",
+          "snapshot_sha256": "c169b50a0ec478fb4dc345a01e2f6ed55b0570c524165b82ba756c5be1bfa700",
+          "corrections": [],
+          "hidden_runtime_observed": false
+        },
+        "initial": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "0d0a5107-3897-44f0-97a2-e405200295cf",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 122995,
+            "y": 177,
+            "z": 997
+          },
+          "max": {
+            "x": 123005,
+            "y": 183,
+            "z": 1006
+          },
+          "checked_cells": 770,
+          "start_game_tick": 150495,
+          "end_game_tick": 150495,
+          "nonce": "390fa317ab0a51c89052faac728d5910",
+          "snapshot_sha256": "732dfd3f311b0ee7a8b96d86684ea4e9bbf324e2430c963000bb2fb5276f9c21",
+          "corrections": [],
+          "hidden_runtime_observed": false
+        },
+        "final": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "dffe0018-91c0-40e9-ad36-2a34386784d1",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 122995,
+            "y": 177,
+            "z": 997
+          },
+          "max": {
+            "x": 123005,
+            "y": 183,
+            "z": 1006
+          },
+          "checked_cells": 770,
+          "start_game_tick": 150593,
+          "end_game_tick": 150593,
+          "nonce": "4593d427616f8e49cf3a87514500536d",
+          "snapshot_sha256": "daae7fa931aa0e8f5b18c68252f650d65293ad990eba6102907a91e2995268ef",
+          "corrections": [
+            {
+              "pos": {
+                "x": 122998,
+                "y": 180,
+                "z": 1001
+              },
+              "client": {
+                "pos": {
+                  "x": 122998,
+                  "y": 180,
+                  "z": 1001
+                },
+                "name": "minecraft:quartz_stairs",
+                "properties": {
+                  "waterlogged": "false",
+                  "shape": "inner_left",
+                  "half": "bottom",
+                  "facing": "south"
+                }
+              },
+              "confirmed_shape": "straight"
+            }
+          ],
+          "hidden_runtime_observed": false
+        },
+        "empty_after_cleanup": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "cda281a6-1ba6-4b63-a97a-89ff98988169",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 122995,
+            "y": 177,
+            "z": 997
+          },
+          "max": {
+            "x": 123005,
+            "y": 183,
+            "z": 1006
+          },
+          "checked_cells": 770,
+          "start_game_tick": 150603,
+          "end_game_tick": 150603,
+          "nonce": "470d652e299653c240a4d6dbf4e9f515",
+          "snapshot_sha256": "c169b50a0ec478fb4dc345a01e2f6ed55b0570c524165b82ba756c5be1bfa700",
+          "corrections": [],
+          "hidden_runtime_observed": false
+        }
+      },
+      "scheduler_attempts": 3
+    },
+    {
+      "run": "stairs-readback-20260928-d",
+      "summary": {
+        "fixture": "device-stairs-inner-bottom-right-r270",
+        "fixture_sha256": "bc48c76f5ef604552749078319404fdbf424ac4aa22b9038444d367e209098a9",
+        "actor_sha256": "32979a514e7b32ba75736d8f3ca423f8c1187d6c90f1b6d96e08364c9ef56264",
+        "readback_sha256": "6be591e8af072950e0072731a0872adec76ff48d8a20178bb69a41ec6c5e62f9",
+        "readback_validator_sha256": "51d441e68aba8d900d332fbb59f54f90a0bd4ff5aa3b35d691005fd751a793d3",
+        "capture_sha256": "d9c4d8bf9f209656b3a90ba82d496ed6484d090586c797fdb67adf83061c0a7a",
+        "comparator_sha256": "0e82e4641afd5b12f075a47f1fc0ee11b4c2630c63df56931522d380c36a3414",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "4fad59a062dd03d645e3093dc413a2d6aeffc24a3f7c4dcba2f7c484f4931bc4",
+        "classification": "matched_declared_projection",
+        "applied_inputs": [
+          {
+            "position": {
+              "x": 124000,
+              "y": 180,
+              "z": 1001
+            },
+            "game_tick": 151295,
+            "packet_sequence": 2216,
+            "write_sequence": 2217,
+            "kind": "lever",
+            "powered": true
+          },
+          {
+            "position": {
+              "x": 124000,
+              "y": 180,
+              "z": 1001
+            },
+            "game_tick": 151311,
+            "packet_sequence": 2575,
+            "write_sequence": 2576,
+            "kind": "lever",
+            "powered": false
+          }
+        ],
+        "requested_steps": [
+          {
+            "input": 0,
+            "powered": true,
+            "wait_ticks": 0
+          },
+          {
+            "input": 0,
+            "powered": false,
+            "wait_ticks": 16
+          }
+        ],
+        "cleanup": {
+          "region_empty": true,
+          "force_load_removed": true,
+          "disconnected_before_finish": null
+        },
+        "server_stopped_normally": true,
+        "enabled_features": [
+          "minecraft:vanilla"
+        ],
+        "artifacts": {
+          ".raw.ndjson": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-d.raw.ndjson",
+            "sha256": "721464746544766bfe1eab0e14674c3452f462cea9b53a47d45bc526224c00d8"
+          },
+          ".server.log": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-d.server.log",
+            "sha256": "7729ffc614f8ff2db507c33237b4361e6d0bdd5ea4af471c36f0b8d71d6090bd"
+          },
+          ".client.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-d.client.json",
+            "sha256": "7fd626d1d3210e406cec3a9d58f7ec48f02c4f120f6f2d12ab4612e1b966c996"
+          },
+          ".reference.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-d.reference.json",
+            "sha256": "68f30d9884d0baab607da541f475de4f1c554d324c605e4732434cac159c7851"
+          },
+          ".input.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-d.input.json",
+            "sha256": "841fec3565bb3b5ccbb4211d75b8bfed3c0edd1b4caaaf1cdbc80ce8a628d178"
+          },
+          ".model.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-d.model.json",
+            "sha256": "c72824b7c39a8ac9934325cef063d5f0ce44918739baace9662f0269341cfe25"
+          },
+          ".comparison.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-d.comparison.json",
+            "sha256": "37ffe76134e9c72ee1b1f3ae42fcae0e42f2aef7354efdaca4ce77e07a1932a7"
+          }
+        }
+      },
+      "comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v16",
+        "tick_end_count": 57,
+        "tick_mismatches": [],
+        "live_write_count": 18,
+        "model_write_count": 18,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 3,
+        "model_scheduled_count": 3,
+        "first_scheduled_mismatch": null,
+        "first_tick_attempt_mismatch": null,
+        "live_callback_count": 52,
+        "model_callback_count": 52,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection"
+      },
+      "retained": {
+        "path": "crates/dustroute-translate/tests/fixtures/device-circuits/stairs-inner-bottom-right-r270.json.gz",
+        "sha256": "efe67acd4accad250012643ae7fb22e8c1d38158ef2b4dfa1044ad3b50f324d8"
+      },
+      "readbacks": {
+        "empty_before_setup": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "562059bd-73c8-4ceb-a148-133c879e1cac",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 123994,
+            "y": 177,
+            "z": 994
+          },
+          "max": {
+            "x": 124003,
+            "y": 183,
+            "z": 1005
+          },
+          "checked_cells": 840,
+          "start_game_tick": 151174,
+          "end_game_tick": 151174,
+          "nonce": "ed879e67d58833dfafd558988484b36d",
+          "snapshot_sha256": "bf436a446d2d8f5124fd3c7825bc41188698e475a8815e5d22e67ef20f18cdff",
+          "corrections": [],
+          "hidden_runtime_observed": false
+        },
+        "initial": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "73c95e2e-0ed6-4e77-8de4-68551b2d830b",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 123994,
+            "y": 177,
+            "z": 994
+          },
+          "max": {
+            "x": 124003,
+            "y": 183,
+            "z": 1005
+          },
+          "checked_cells": 840,
+          "start_game_tick": 151293,
+          "end_game_tick": 151293,
+          "nonce": "ce77dab898b8b3e2b79debef89f62b6e",
+          "snapshot_sha256": "176a34a0759af269c9f189981a253c00a32acb1e60202ff8b257be893e5d25bd",
+          "corrections": [],
+          "hidden_runtime_observed": false
+        },
+        "final": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "97e1fb07-79c3-4cf2-a114-876cf305d7bb",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 123994,
+            "y": 177,
+            "z": 994
+          },
+          "max": {
+            "x": 124003,
+            "y": 183,
+            "z": 1005
+          },
+          "checked_cells": 840,
+          "start_game_tick": 151393,
+          "end_game_tick": 151393,
+          "nonce": "18fcbc964f8d52efb028b664967ead51",
+          "snapshot_sha256": "068fbde190f6cf4d6c4a1e9bb54e43ebea67f503dfff4b2f141bdb3a28230b9b",
+          "corrections": [
+            {
+              "pos": {
+                "x": 123999,
+                "y": 180,
+                "z": 998
+              },
+              "client": {
+                "pos": {
+                  "x": 123999,
+                  "y": 180,
+                  "z": 998
+                },
+                "name": "minecraft:quartz_stairs",
+                "properties": {
+                  "waterlogged": "false",
+                  "shape": "inner_right",
+                  "half": "bottom",
+                  "facing": "west"
+                }
+              },
+              "confirmed_shape": "straight"
+            }
+          ],
+          "hidden_runtime_observed": false
+        },
+        "empty_after_cleanup": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "c898219d-b498-4d98-b06e-c043287a2d60",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 123994,
+            "y": 177,
+            "z": 994
+          },
+          "max": {
+            "x": 124003,
+            "y": 183,
+            "z": 1005
+          },
+          "checked_cells": 840,
+          "start_game_tick": 151404,
+          "end_game_tick": 151404,
+          "nonce": "b09b1e0e6775fa12b83b645cd149ef5e",
+          "snapshot_sha256": "bf436a446d2d8f5124fd3c7825bc41188698e475a8815e5d22e67ef20f18cdff",
+          "corrections": [],
+          "hidden_runtime_observed": false
+        }
+      },
+      "scheduler_attempts": 3
+    },
+    {
+      "run": "stairs-readback-20260928-e",
+      "summary": {
+        "fixture": "device-stairs-outer-top-left-r0",
+        "fixture_sha256": "fb5a39bf85b4be427be5d1cc789b8579137d94e665989fc782839c9ddeda43ae",
+        "actor_sha256": "32979a514e7b32ba75736d8f3ca423f8c1187d6c90f1b6d96e08364c9ef56264",
+        "readback_sha256": "6be591e8af072950e0072731a0872adec76ff48d8a20178bb69a41ec6c5e62f9",
+        "readback_validator_sha256": "51d441e68aba8d900d332fbb59f54f90a0bd4ff5aa3b35d691005fd751a793d3",
+        "capture_sha256": "d9c4d8bf9f209656b3a90ba82d496ed6484d090586c797fdb67adf83061c0a7a",
+        "comparator_sha256": "0e82e4641afd5b12f075a47f1fc0ee11b4c2630c63df56931522d380c36a3414",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "4fad59a062dd03d645e3093dc413a2d6aeffc24a3f7c4dcba2f7c484f4931bc4",
+        "classification": "matched_declared_projection",
+        "applied_inputs": [
+          {
+            "position": {
+              "x": 124999,
+              "y": 180,
+              "z": 1000
+            },
+            "game_tick": 152074,
+            "packet_sequence": 2045,
+            "write_sequence": 2046,
+            "kind": "lever",
+            "powered": true
+          },
+          {
+            "position": {
+              "x": 124999,
+              "y": 180,
+              "z": 1000
+            },
+            "game_tick": 152090,
+            "packet_sequence": 2396,
+            "write_sequence": 2397,
+            "kind": "lever",
+            "powered": false
+          }
+        ],
+        "requested_steps": [
+          {
+            "input": 0,
+            "powered": true,
+            "wait_ticks": 0
+          },
+          {
+            "input": 0,
+            "powered": false,
+            "wait_ticks": 16
+          }
+        ],
+        "cleanup": {
+          "region_empty": true,
+          "force_load_removed": true,
+          "disconnected_before_finish": null
+        },
+        "server_stopped_normally": true,
+        "enabled_features": [
+          "minecraft:vanilla"
+        ],
+        "artifacts": {
+          ".raw.ndjson": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-e.raw.ndjson",
+            "sha256": "d8fe33bb430ca181ea9939465d23cb3d4dba9156b8a83e07d5d8c43061083a1f"
+          },
+          ".server.log": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-e.server.log",
+            "sha256": "9d59527f33369c7be283d97b8c9baffc6c4d869394a0c67c47be623656927842"
+          },
+          ".client.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-e.client.json",
+            "sha256": "d0419666f5f690814dc6ab295f5e417e1f0c7dfa948ad07730a4023780631588"
+          },
+          ".reference.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-e.reference.json",
+            "sha256": "8e6a16adf0f0ca6a0b597c0b9d065b9c2255d6a00f95012c1b46d8e70ef32f06"
+          },
+          ".input.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-e.input.json",
+            "sha256": "9088253d7aea5896991b8ede4e87b3e50bdd24a1761d3302780f1a8287a1cdbd"
+          },
+          ".model.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-e.model.json",
+            "sha256": "040172e5b04f402a3612026904080c34c06cc0106b789bae3cf65bff117ca5bd"
+          },
+          ".comparison.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-e.comparison.json",
+            "sha256": "0e94468a53044dfc9c712aaa24e51fe9b37f6ce637703262e7ed94f0a94df249"
+          }
+        }
+      },
+      "comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v16",
+        "tick_end_count": 57,
+        "tick_mismatches": [],
+        "live_write_count": 17,
+        "model_write_count": 17,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 3,
+        "model_scheduled_count": 3,
+        "first_scheduled_mismatch": null,
+        "first_tick_attempt_mismatch": null,
+        "live_callback_count": 50,
+        "model_callback_count": 50,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection"
+      },
+      "retained": {
+        "path": "crates/dustroute-translate/tests/fixtures/device-circuits/stairs-outer-top-left-r0.json.gz",
+        "sha256": "b8651d44bf51760a422ec66909c09fae09bff25841509ae125c6a0199cde716b"
+      },
+      "readbacks": {
+        "empty_before_setup": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "dd142cf9-2f3b-4672-b9e7-e1441d2385cd",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 124995,
+            "y": 177,
+            "z": 997
+          },
+          "max": {
+            "x": 125005,
+            "y": 185,
+            "z": 1004
+          },
+          "checked_cells": 792,
+          "start_game_tick": 151957,
+          "end_game_tick": 151957,
+          "nonce": "b0a6ee7fd3139285e964ac7f658b7690",
+          "snapshot_sha256": "404c56dd9e4691f4d3a5b3fc0eeba255cfadf1181d6e4dc8a350a06c53c9fa0d",
+          "corrections": [],
+          "hidden_runtime_observed": false
+        },
+        "initial": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "8212f80e-3761-49bf-aa2a-ea04f1ed0fa0",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 124995,
+            "y": 177,
+            "z": 997
+          },
+          "max": {
+            "x": 125005,
+            "y": 185,
+            "z": 1004
+          },
+          "checked_cells": 792,
+          "start_game_tick": 152074,
+          "end_game_tick": 152074,
+          "nonce": "22a441264c492de665b8cfc2c7cf3a0e",
+          "snapshot_sha256": "6515d225064f77d98faba00095447992bd80fc4c202d06cd78ff3f9252b22293",
+          "corrections": [],
+          "hidden_runtime_observed": false
+        },
+        "final": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "d268c2e3-b9fc-4cb9-bece-c91bf9132d26",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 124995,
+            "y": 177,
+            "z": 997
+          },
+          "max": {
+            "x": 125005,
+            "y": 185,
+            "z": 1004
+          },
+          "checked_cells": 792,
+          "start_game_tick": 152171,
+          "end_game_tick": 152171,
+          "nonce": "b1bda6ef6db9b695ee2518f3288f5e20",
+          "snapshot_sha256": "9028eb84d45b2446f748e5da493e7be946a1116c51c901c3c4ae909438136686",
+          "corrections": [
+            {
+              "pos": {
+                "x": 125002,
+                "y": 180,
+                "z": 1001
+              },
+              "client": {
+                "pos": {
+                  "x": 125002,
+                  "y": 180,
+                  "z": 1001
+                },
+                "name": "minecraft:quartz_stairs",
+                "properties": {
+                  "waterlogged": "false",
+                  "shape": "outer_left",
+                  "half": "top",
+                  "facing": "north"
+                }
+              },
+              "confirmed_shape": "straight"
+            }
+          ],
+          "hidden_runtime_observed": false
+        },
+        "empty_after_cleanup": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "2abf5bf5-5c21-4b2e-ad6b-f78d2eeee67a",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 124995,
+            "y": 177,
+            "z": 997
+          },
+          "max": {
+            "x": 125005,
+            "y": 185,
+            "z": 1004
+          },
+          "checked_cells": 792,
+          "start_game_tick": 152182,
+          "end_game_tick": 152182,
+          "nonce": "cbc7493ac57ceaec8c8c5aff3db3afb2",
+          "snapshot_sha256": "404c56dd9e4691f4d3a5b3fc0eeba255cfadf1181d6e4dc8a350a06c53c9fa0d",
+          "corrections": [],
+          "hidden_runtime_observed": false
+        }
+      },
+      "scheduler_attempts": 3
+    },
+    {
+      "run": "stairs-readback-20260928-f",
+      "summary": {
+        "fixture": "device-stairs-outer-bottom-right-r90",
+        "fixture_sha256": "98128524d5bfed6bd26f111d56cd038d59f39386bcf78827fc574d8d1ac1c51d",
+        "actor_sha256": "32979a514e7b32ba75736d8f3ca423f8c1187d6c90f1b6d96e08364c9ef56264",
+        "readback_sha256": "6be591e8af072950e0072731a0872adec76ff48d8a20178bb69a41ec6c5e62f9",
+        "readback_validator_sha256": "51d441e68aba8d900d332fbb59f54f90a0bd4ff5aa3b35d691005fd751a793d3",
+        "capture_sha256": "d9c4d8bf9f209656b3a90ba82d496ed6484d090586c797fdb67adf83061c0a7a",
+        "comparator_sha256": "0e82e4641afd5b12f075a47f1fc0ee11b4c2630c63df56931522d380c36a3414",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "4fad59a062dd03d645e3093dc413a2d6aeffc24a3f7c4dcba2f7c484f4931bc4",
+        "classification": "matched_declared_projection",
+        "applied_inputs": [
+          {
+            "position": {
+              "x": 126000,
+              "y": 180,
+              "z": 999
+            },
+            "game_tick": 152868,
+            "packet_sequence": 2105,
+            "write_sequence": 2106,
+            "kind": "lever",
+            "powered": true
+          },
+          {
+            "position": {
+              "x": 126000,
+              "y": 180,
+              "z": 999
+            },
+            "game_tick": 152884,
+            "packet_sequence": 2456,
+            "write_sequence": 2457,
+            "kind": "lever",
+            "powered": false
+          }
+        ],
+        "requested_steps": [
+          {
+            "input": 0,
+            "powered": true,
+            "wait_ticks": 0
+          },
+          {
+            "input": 0,
+            "powered": false,
+            "wait_ticks": 16
+          }
+        ],
+        "cleanup": {
+          "region_empty": true,
+          "force_load_removed": true,
+          "disconnected_before_finish": null
+        },
+        "server_stopped_normally": true,
+        "enabled_features": [
+          "minecraft:vanilla"
+        ],
+        "artifacts": {
+          ".raw.ndjson": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-f.raw.ndjson",
+            "sha256": "bc9bab44f4631dd96f5a69f2eb99a468c79192e8a9a805a54cb311993bf852d6"
+          },
+          ".server.log": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-f.server.log",
+            "sha256": "805972f25cfe9392604d6adbbf121f74ddba6148837a08b07af444d3558f19d6"
+          },
+          ".client.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-f.client.json",
+            "sha256": "9e99c02f12ffbc71474cb5fd0e37020e35ab493cfa2b90b65b808c3056b5f2be"
+          },
+          ".reference.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-f.reference.json",
+            "sha256": "6006aebffb8b5a7d719deaa104c45353343bdb371c4c83e58e16e9c0532f7fc2"
+          },
+          ".input.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-f.input.json",
+            "sha256": "713797be0b8f76ef8f9141ecde1444fadf6c8efef01d8e249e7c7b4b62a0ef45"
+          },
+          ".model.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-f.model.json",
+            "sha256": "ace05b4f2565a7c8e1b520822080bcebc3b70d6f1b92024da4477b5b008e455f"
+          },
+          ".comparison.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-f.comparison.json",
+            "sha256": "0e94468a53044dfc9c712aaa24e51fe9b37f6ce637703262e7ed94f0a94df249"
+          }
+        }
+      },
+      "comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v16",
+        "tick_end_count": 57,
+        "tick_mismatches": [],
+        "live_write_count": 17,
+        "model_write_count": 17,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 3,
+        "model_scheduled_count": 3,
+        "first_scheduled_mismatch": null,
+        "first_tick_attempt_mismatch": null,
+        "live_callback_count": 50,
+        "model_callback_count": 50,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection"
+      },
+      "retained": {
+        "path": "crates/dustroute-translate/tests/fixtures/device-circuits/stairs-outer-bottom-right-r90.json.gz",
+        "sha256": "607a9eabeacf67566d875f50041b648ce03cadbb45d7039b01bd36e3e95756dc"
+      },
+      "readbacks": {
+        "empty_before_setup": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "ecc69210-9303-4e3b-b51f-d511920e1d11",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 125996,
+            "y": 177,
+            "z": 995
+          },
+          "max": {
+            "x": 126003,
+            "y": 185,
+            "z": 1005
+          },
+          "checked_cells": 792,
+          "start_game_tick": 152750,
+          "end_game_tick": 152750,
+          "nonce": "effc12cb688c6c2695db5e8611ff6493",
+          "snapshot_sha256": "d8b7b4301c4d1bbfc49ff7595ce3ee4ceaa79d0284755e6db237d430618b1bb5",
+          "corrections": [],
+          "hidden_runtime_observed": false
+        },
+        "initial": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "1709c3bf-378e-402c-9c98-b337a73bce78",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 125996,
+            "y": 177,
+            "z": 995
+          },
+          "max": {
+            "x": 126003,
+            "y": 185,
+            "z": 1005
+          },
+          "checked_cells": 792,
+          "start_game_tick": 152866,
+          "end_game_tick": 152866,
+          "nonce": "aa829718319e93417fd68f56361f6da6",
+          "snapshot_sha256": "00af977cce32fbce8fad2e438d1e23b2cd57a817b070bb54afecaa227b2f0518",
+          "corrections": [],
+          "hidden_runtime_observed": false
+        },
+        "final": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "56ecf4ca-dfa9-430d-b567-12d18a492e3e",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 125996,
+            "y": 177,
+            "z": 995
+          },
+          "max": {
+            "x": 126003,
+            "y": 185,
+            "z": 1005
+          },
+          "checked_cells": 792,
+          "start_game_tick": 152965,
+          "end_game_tick": 152965,
+          "nonce": "c193ee3a6816a9f81fb7d15d816eb9d8",
+          "snapshot_sha256": "d87edfb9cb045afac8c1da6ff7c37d146181276f6c27240bddc8239723430ce9",
+          "corrections": [
+            {
+              "pos": {
+                "x": 125999,
+                "y": 180,
+                "z": 1002
+              },
+              "client": {
+                "pos": {
+                  "x": 125999,
+                  "y": 180,
+                  "z": 1002
+                },
+                "name": "minecraft:quartz_stairs",
+                "properties": {
+                  "waterlogged": "false",
+                  "shape": "outer_right",
+                  "half": "bottom",
+                  "facing": "east"
+                }
+              },
+              "confirmed_shape": "straight"
+            }
+          ],
+          "hidden_runtime_observed": false
+        },
+        "empty_after_cleanup": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "28c09774-17cb-4ce4-84d0-a13293a7195b",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 125996,
+            "y": 177,
+            "z": 995
+          },
+          "max": {
+            "x": 126003,
+            "y": 185,
+            "z": 1005
+          },
+          "checked_cells": 792,
+          "start_game_tick": 152976,
+          "end_game_tick": 152976,
+          "nonce": "8d4f3bdd71453071f4226f863c007df7",
+          "snapshot_sha256": "d8b7b4301c4d1bbfc49ff7595ce3ee4ceaa79d0284755e6db237d430618b1bb5",
+          "corrections": [],
+          "hidden_runtime_observed": false
+        }
+      },
+      "scheduler_attempts": 3
+    },
+    {
+      "run": "stairs-readback-20260928-g",
+      "summary": {
+        "fixture": "device-stairs-arrival-top-left-r0",
+        "fixture_sha256": "80d008c587f0cf6d6bafcfa56e4406a09b4586158c6f6ed402443fb3890447f7",
+        "actor_sha256": "32979a514e7b32ba75736d8f3ca423f8c1187d6c90f1b6d96e08364c9ef56264",
+        "readback_sha256": "6be591e8af072950e0072731a0872adec76ff48d8a20178bb69a41ec6c5e62f9",
+        "readback_validator_sha256": "51d441e68aba8d900d332fbb59f54f90a0bd4ff5aa3b35d691005fd751a793d3",
+        "capture_sha256": "d9c4d8bf9f209656b3a90ba82d496ed6484d090586c797fdb67adf83061c0a7a",
+        "comparator_sha256": "0e82e4641afd5b12f075a47f1fc0ee11b4c2630c63df56931522d380c36a3414",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "4fad59a062dd03d645e3093dc413a2d6aeffc24a3f7c4dcba2f7c484f4931bc4",
+        "classification": "matched_declared_projection",
+        "applied_inputs": [
+          {
+            "position": {
+              "x": 126999,
+              "y": 180,
+              "z": 1000
+            },
+            "game_tick": 153658,
+            "packet_sequence": 2104,
+            "write_sequence": 2105,
+            "kind": "lever",
+            "powered": true
+          },
+          {
+            "position": {
+              "x": 126999,
+              "y": 180,
+              "z": 1000
+            },
+            "game_tick": 153674,
+            "packet_sequence": 2426,
+            "write_sequence": 2427,
+            "kind": "lever",
+            "powered": false
+          }
+        ],
+        "requested_steps": [
+          {
+            "input": 0,
+            "powered": true,
+            "wait_ticks": 0
+          },
+          {
+            "input": 0,
+            "powered": false,
+            "wait_ticks": 16
+          }
+        ],
+        "cleanup": {
+          "region_empty": true,
+          "force_load_removed": true,
+          "disconnected_before_finish": null
+        },
+        "server_stopped_normally": true,
+        "enabled_features": [
+          "minecraft:vanilla"
+        ],
+        "artifacts": {
+          ".raw.ndjson": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-g.raw.ndjson",
+            "sha256": "46364a7ed540a8a43e47899cbab10eac32eb8d0d70eeba5507a4f70e1b958977"
+          },
+          ".server.log": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-g.server.log",
+            "sha256": "c0ba0315bff604c4c55b56a747c3f8c85eb6709da304f60d99a1001a6208a738"
+          },
+          ".client.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-g.client.json",
+            "sha256": "1c7ede0a3055868350dd729723cbf2b4d68fb5e1d0bac627aa55e5834a0bd572"
+          },
+          ".reference.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-g.reference.json",
+            "sha256": "bd4d9c1e90a089c5685d2140c8ebdce201c2be36309d4813dff2960dfa577e14"
+          },
+          ".input.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-g.input.json",
+            "sha256": "8bad4098710b58bb28fb8cc1e640883c06f5338c435e88ee183d7ef2f0bab059"
+          },
+          ".model.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-g.model.json",
+            "sha256": "5be9944f6a6c90b4481590495564cb7afc62379e79384f0dee25618afa556c24"
+          },
+          ".comparison.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-g.comparison.json",
+            "sha256": "ef51dd8bd3b99013c121d15afcf27e9864a75f074ddb421768382092f32a1bf6"
+          }
+        }
+      },
+      "comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v16",
+        "tick_end_count": 57,
+        "tick_mismatches": [],
+        "live_write_count": 14,
+        "model_write_count": 14,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 3,
+        "model_scheduled_count": 3,
+        "first_scheduled_mismatch": null,
+        "first_tick_attempt_mismatch": null,
+        "live_callback_count": 42,
+        "model_callback_count": 42,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection"
+      },
+      "retained": {
+        "path": "crates/dustroute-translate/tests/fixtures/device-circuits/stairs-arrival-top-left-r0.json.gz",
+        "sha256": "b49b87c96c955a2859386c25fae40ba27b4e7fb43a5c01c306bdd4b219b8253a"
+      },
+      "readbacks": {
+        "empty_before_setup": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "1e47e38e-df4f-494d-ab20-095af7fb967f",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 126995,
+            "y": 177,
+            "z": 996
+          },
+          "max": {
+            "x": 127005,
+            "y": 185,
+            "z": 1003
+          },
+          "checked_cells": 792,
+          "start_game_tick": 153541,
+          "end_game_tick": 153541,
+          "nonce": "53c3d332f363eaeb20d225fe0b2b1efa",
+          "snapshot_sha256": "50cefdd2abee1998dda483dc6ff345414e1f22f1baf94167f30a2357f78fca64",
+          "corrections": [],
+          "hidden_runtime_observed": false
+        },
+        "initial": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "c6358976-f49f-400b-9ecb-ec080a343302",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 126995,
+            "y": 177,
+            "z": 996
+          },
+          "max": {
+            "x": 127005,
+            "y": 185,
+            "z": 1003
+          },
+          "checked_cells": 792,
+          "start_game_tick": 153657,
+          "end_game_tick": 153657,
+          "nonce": "4c1f5bc4e95451ba570912cf9db54f39",
+          "snapshot_sha256": "eaa53c339cb19d66e139afd249a2c4b1102c772721fdb9b5038e5aa33af73b39",
+          "corrections": [],
+          "hidden_runtime_observed": false
+        },
+        "final": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "3b92417e-b55c-42f8-9d3b-3029e810cafa",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 126995,
+            "y": 177,
+            "z": 996
+          },
+          "max": {
+            "x": 127005,
+            "y": 185,
+            "z": 1003
+          },
+          "checked_cells": 792,
+          "start_game_tick": 153754,
+          "end_game_tick": 153754,
+          "nonce": "24df3886599d3b741ed9b29f2c5202ee",
+          "snapshot_sha256": "08a4cd0c9e5d352d6ec33df31e6758e03327fa501532ac7796480b8e66f3bd65",
+          "corrections": [],
+          "hidden_runtime_observed": false
+        },
+        "empty_after_cleanup": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "47c056cc-06d0-4445-b614-e0b86704a508",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 126995,
+            "y": 177,
+            "z": 996
+          },
+          "max": {
+            "x": 127005,
+            "y": 185,
+            "z": 1003
+          },
+          "checked_cells": 792,
+          "start_game_tick": 153765,
+          "end_game_tick": 153765,
+          "nonce": "b014124657542d60a90a30f689d56753",
+          "snapshot_sha256": "50cefdd2abee1998dda483dc6ff345414e1f22f1baf94167f30a2357f78fca64",
+          "corrections": [],
+          "hidden_runtime_observed": false
+        }
+      },
+      "scheduler_attempts": 3
+    },
+    {
+      "run": "stairs-readback-20260928-h",
+      "summary": {
+        "fixture": "device-stairs-arrival-rapid-bottom-right-r90",
+        "fixture_sha256": "8bdfd606860cf237fd76469e1e09b0b640863ac87f9fd554c7f225322a07f331",
+        "actor_sha256": "32979a514e7b32ba75736d8f3ca423f8c1187d6c90f1b6d96e08364c9ef56264",
+        "readback_sha256": "6be591e8af072950e0072731a0872adec76ff48d8a20178bb69a41ec6c5e62f9",
+        "readback_validator_sha256": "51d441e68aba8d900d332fbb59f54f90a0bd4ff5aa3b35d691005fd751a793d3",
+        "capture_sha256": "d9c4d8bf9f209656b3a90ba82d496ed6484d090586c797fdb67adf83061c0a7a",
+        "comparator_sha256": "0e82e4641afd5b12f075a47f1fc0ee11b4c2630c63df56931522d380c36a3414",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "4fad59a062dd03d645e3093dc413a2d6aeffc24a3f7c4dcba2f7c484f4931bc4",
+        "classification": "matched_declared_projection",
+        "applied_inputs": [
+          {
+            "position": {
+              "x": 128000,
+              "y": 180,
+              "z": 999
+            },
+            "game_tick": 154459,
+            "packet_sequence": 2212,
+            "write_sequence": 2213,
+            "kind": "lever",
+            "powered": true
+          },
+          {
+            "position": {
+              "x": 128000,
+              "y": 180,
+              "z": 999
+            },
+            "game_tick": 154460,
+            "packet_sequence": 2284,
+            "write_sequence": 2285,
+            "kind": "lever",
+            "powered": false
+          },
+          {
+            "position": {
+              "x": 128000,
+              "y": 180,
+              "z": 999
+            },
+            "game_tick": 154461,
+            "packet_sequence": 2361,
+            "write_sequence": 2362,
+            "kind": "lever",
+            "powered": true
+          },
+          {
+            "position": {
+              "x": 128000,
+              "y": 180,
+              "z": 999
+            },
+            "game_tick": 154477,
+            "packet_sequence": 2668,
+            "write_sequence": 2669,
+            "kind": "lever",
+            "powered": false
+          }
+        ],
+        "requested_steps": [
+          {
+            "input": 0,
+            "powered": true,
+            "wait_ticks": 0
+          },
+          {
+            "input": 0,
+            "powered": false,
+            "wait_ticks": 1
+          },
+          {
+            "input": 0,
+            "powered": true,
+            "wait_ticks": 1
+          },
+          {
+            "input": 0,
+            "powered": false,
+            "wait_ticks": 16
+          }
+        ],
+        "cleanup": {
+          "region_empty": true,
+          "force_load_removed": true,
+          "disconnected_before_finish": null
+        },
+        "server_stopped_normally": true,
+        "enabled_features": [
+          "minecraft:vanilla"
+        ],
+        "artifacts": {
+          ".raw.ndjson": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-h.raw.ndjson",
+            "sha256": "fd2d5b2cb116ca37843bb5b6d6264f954caa4163b5eaee2e650c930827c3b6a8"
+          },
+          ".server.log": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-h.server.log",
+            "sha256": "7e3db7df78c331e607e1dc8e836cafc6801c7de566ccfc9336162866d986cc97"
+          },
+          ".client.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-h.client.json",
+            "sha256": "d7d741f27d6dd6cd8a94c738a0ab107636353ebd1fd37a8f2166dc7a08ae25b1"
+          },
+          ".reference.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-h.reference.json",
+            "sha256": "53cd7b112eabe4cfcf39c0ba0ad3dd18aac58efebbfb44aecc7433f3a4ed5882"
+          },
+          ".input.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-h.input.json",
+            "sha256": "9b2cad6999e228c7552db820858a1cea8973750d8a0cefe1930f6825dd338d9a"
+          },
+          ".model.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-h.model.json",
+            "sha256": "fbaf3bc89c16e2c1e10f2ad52f45de30a557bfa8aff1999b9dc955f770dc719f"
+          },
+          ".comparison.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-h.comparison.json",
+            "sha256": "6a7dcd7bfddd42dd310d2b1958e65598f2c7aa840bb03ac306c9357d7db3c3d2"
+          }
+        }
+      },
+      "comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v16",
+        "tick_end_count": 59,
+        "tick_mismatches": [],
+        "live_write_count": 28,
+        "model_write_count": 28,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 6,
+        "model_scheduled_count": 6,
+        "first_scheduled_mismatch": null,
+        "first_tick_attempt_mismatch": null,
+        "live_callback_count": 73,
+        "model_callback_count": 73,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection"
+      },
+      "retained": {
+        "path": "crates/dustroute-translate/tests/fixtures/device-circuits/stairs-arrival-rapid-bottom-right-r90.json.gz",
+        "sha256": "e319c8142d5ea387e8dbcb837ba0e0f58a592e4687225a028b07aef9cb673b6f"
+      },
+      "readbacks": {
+        "empty_before_setup": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "f60f4b66-c344-4048-b7c2-306ebbf0516d",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 127997,
+            "y": 177,
+            "z": 995
+          },
+          "max": {
+            "x": 128004,
+            "y": 185,
+            "z": 1005
+          },
+          "checked_cells": 792,
+          "start_game_tick": 154341,
+          "end_game_tick": 154341,
+          "nonce": "5ea44e35a969c79a793047706323ad29",
+          "snapshot_sha256": "c4800a50cceef17f595660c874a084f188f963d47678ee134903756904063a62",
+          "corrections": [],
+          "hidden_runtime_observed": false
+        },
+        "initial": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "2f0e2a20-c24f-4978-bdb0-11937f0b5010",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 127997,
+            "y": 177,
+            "z": 995
+          },
+          "max": {
+            "x": 128004,
+            "y": 185,
+            "z": 1005
+          },
+          "checked_cells": 792,
+          "start_game_tick": 154458,
+          "end_game_tick": 154458,
+          "nonce": "1b1cd844d00cc532649cb43a7554afce",
+          "snapshot_sha256": "1f6865e024e4e069d12939ed464ad24410f58cb8bb31459dfbc84f25a4bebd6f",
+          "corrections": [],
+          "hidden_runtime_observed": false
+        },
+        "final": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "2e4cd218-8a06-4f5f-bdcf-eecb3af43c81",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 127997,
+            "y": 177,
+            "z": 995
+          },
+          "max": {
+            "x": 128004,
+            "y": 185,
+            "z": 1005
+          },
+          "checked_cells": 792,
+          "start_game_tick": 154559,
+          "end_game_tick": 154559,
+          "nonce": "fb5af2794b2c5f7c2cacfc40aeb8ab87",
+          "snapshot_sha256": "1f6865e024e4e069d12939ed464ad24410f58cb8bb31459dfbc84f25a4bebd6f",
+          "corrections": [],
+          "hidden_runtime_observed": false
+        },
+        "empty_after_cleanup": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "84f33770-7783-4ef8-85d7-bce7d3bcd8a5",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 127997,
+            "y": 177,
+            "z": 995
+          },
+          "max": {
+            "x": 128004,
+            "y": 185,
+            "z": 1005
+          },
+          "checked_cells": 792,
+          "start_game_tick": 154570,
+          "end_game_tick": 154570,
+          "nonce": "49c3de4a80bff9ffb7cea99da31444f7",
+          "snapshot_sha256": "c4800a50cceef17f595660c874a084f188f963d47678ee134903756904063a62",
+          "corrections": [],
+          "hidden_runtime_observed": false
+        }
+      },
+      "scheduler_attempts": 6
+    },
+    {
+      "run": "stairs-readback-20260928-i",
+      "summary": {
+        "fixture": "device-stairs-step-high-face-r0",
+        "fixture_sha256": "9885ad3c4f6bf70bd9d83f2e672cd2f4bb8a6c311f4337651bf56bcd4f295dfc",
+        "actor_sha256": "32979a514e7b32ba75736d8f3ca423f8c1187d6c90f1b6d96e08364c9ef56264",
+        "readback_sha256": "6be591e8af072950e0072731a0872adec76ff48d8a20178bb69a41ec6c5e62f9",
+        "readback_validator_sha256": "51d441e68aba8d900d332fbb59f54f90a0bd4ff5aa3b35d691005fd751a793d3",
+        "capture_sha256": "d9c4d8bf9f209656b3a90ba82d496ed6484d090586c797fdb67adf83061c0a7a",
+        "comparator_sha256": "0e82e4641afd5b12f075a47f1fc0ee11b4c2630c63df56931522d380c36a3414",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "4fad59a062dd03d645e3093dc413a2d6aeffc24a3f7c4dcba2f7c484f4931bc4",
+        "classification": "matched_declared_projection",
+        "applied_inputs": [
+          {
+            "position": {
+              "x": 128998,
+              "y": 181,
+              "z": 1000
+            },
+            "game_tick": 155269,
+            "packet_sequence": 2372,
+            "write_sequence": 2373,
+            "kind": "lever",
+            "powered": true
+          },
+          {
+            "position": {
+              "x": 128998,
+              "y": 181,
+              "z": 1000
+            },
+            "game_tick": 155285,
+            "packet_sequence": 2720,
+            "write_sequence": 2721,
+            "kind": "lever",
+            "powered": false
+          },
+          {
+            "position": {
+              "x": 129000,
+              "y": 182,
+              "z": 1001
+            },
+            "game_tick": 155300,
+            "packet_sequence": 3054,
+            "write_sequence": 3055,
+            "kind": "lever",
+            "powered": true
+          },
+          {
+            "position": {
+              "x": 129000,
+              "y": 182,
+              "z": 1001
+            },
+            "game_tick": 155316,
+            "packet_sequence": 3314,
+            "write_sequence": 3315,
+            "kind": "lever",
+            "powered": false
+          }
+        ],
+        "requested_steps": [
+          {
+            "input": 0,
+            "powered": true,
+            "wait_ticks": 0
+          },
+          {
+            "input": 0,
+            "powered": false,
+            "wait_ticks": 16
+          },
+          {
+            "input": 1,
+            "powered": true,
+            "wait_ticks": 16
+          },
+          {
+            "input": 1,
+            "powered": false,
+            "wait_ticks": 16
+          }
+        ],
+        "cleanup": {
+          "region_empty": true,
+          "force_load_removed": true,
+          "disconnected_before_finish": null
+        },
+        "server_stopped_normally": true,
+        "enabled_features": [
+          "minecraft:vanilla"
+        ],
+        "artifacts": {
+          ".raw.ndjson": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-i.raw.ndjson",
+            "sha256": "9aeef40c1b65e50091a1dde3ed5bd66b1d7c85a388f284a48581ede02f7c6a5f"
+          },
+          ".server.log": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-i.server.log",
+            "sha256": "a06b7d196ce9f928b6700e41942d58112756b28384cbc4473128f0d856e691a2"
+          },
+          ".client.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-i.client.json",
+            "sha256": "b87ab395febc53f6c24af33738c2240b7a2a97c1eb0f6371a836bb93d5c54df8"
+          },
+          ".reference.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-i.reference.json",
+            "sha256": "0fec974081493decd5116360cadec5dc09be6413d60e0bf62d0eab80b632d700"
+          },
+          ".input.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-i.input.json",
+            "sha256": "feab7159170a94b1b2a947b347fb6ef7392374dec6d3d7d461af33dc978c8bfc"
+          },
+          ".model.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-i.model.json",
+            "sha256": "8fd8002c5dabcd1f33513444e336a3575503923bc04a01985baf88595da81529"
+          },
+          ".comparison.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-i.comparison.json",
+            "sha256": "264ec3b285975febc07a0dde01034bd3a7f999efa4887697be4cd3d75782fdf4"
+          }
+        }
+      },
+      "comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v16",
+        "tick_end_count": 88,
+        "tick_mismatches": [],
+        "live_write_count": 16,
+        "model_write_count": 16,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 0,
+        "model_scheduled_count": 0,
+        "first_scheduled_mismatch": null,
+        "first_tick_attempt_mismatch": null,
+        "live_callback_count": 83,
+        "model_callback_count": 83,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection"
+      },
+      "retained": {
+        "path": "crates/dustroute-translate/tests/fixtures/device-circuits/stairs-step-high-face-r0.json.gz",
+        "sha256": "8cbe2b3e43bb2eb918ee427bf2fb0523e5b335668b3a60619758ef164dff9013"
+      },
+      "readbacks": {
+        "empty_before_setup": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "37f4a1eb-feac-4bd4-8a78-80478a52b1f6",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 128995,
+            "y": 177,
+            "z": 996
+          },
+          "max": {
+            "x": 129003,
+            "y": 185,
+            "z": 1004
+          },
+          "checked_cells": 729,
+          "start_game_tick": 155140,
+          "end_game_tick": 155140,
+          "nonce": "99b5ea12b04292a865a42f217ada3f97",
+          "snapshot_sha256": "cb7aeb766f857bea0dec1ee476708853748becf01146bd8b93d84634c810e8db",
+          "corrections": [],
+          "hidden_runtime_observed": false
+        },
+        "initial": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "32e53945-7912-4b18-a3d9-f298f6e83ec7",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 128995,
+            "y": 177,
+            "z": 996
+          },
+          "max": {
+            "x": 129003,
+            "y": 185,
+            "z": 1004
+          },
+          "checked_cells": 729,
+          "start_game_tick": 155267,
+          "end_game_tick": 155267,
+          "nonce": "8020069ac35854dcd898737e15e083b2",
+          "snapshot_sha256": "3689d8b11df8459c908e6e1e08613cca0337d2c14601d1c67370421117ac5cfb",
+          "corrections": [],
+          "hidden_runtime_observed": false
+        },
+        "final": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "5758bb44-29a7-4e97-b398-8bcbf47eca8c",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 128995,
+            "y": 177,
+            "z": 996
+          },
+          "max": {
+            "x": 129003,
+            "y": 185,
+            "z": 1004
+          },
+          "checked_cells": 729,
+          "start_game_tick": 155397,
+          "end_game_tick": 155397,
+          "nonce": "07269fcbc5045c4dfc6ef1690d033bbd",
+          "snapshot_sha256": "3689d8b11df8459c908e6e1e08613cca0337d2c14601d1c67370421117ac5cfb",
+          "corrections": [],
+          "hidden_runtime_observed": false
+        },
+        "empty_after_cleanup": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "f410cac0-ab6e-4cbd-b040-2647b9b60021",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 128995,
+            "y": 177,
+            "z": 996
+          },
+          "max": {
+            "x": 129003,
+            "y": 185,
+            "z": 1004
+          },
+          "checked_cells": 729,
+          "start_game_tick": 155408,
+          "end_game_tick": 155408,
+          "nonce": "73e7fcbbae0e7fcf28b1d25f5b75f4f9",
+          "snapshot_sha256": "cb7aeb766f857bea0dec1ee476708853748becf01146bd8b93d84634c810e8db",
+          "corrections": [],
+          "hidden_runtime_observed": false
+        }
+      },
+      "scheduler_attempts": 0
+    },
+    {
+      "run": "stairs-readback-20260928-j2",
+      "summary": {
+        "fixture": "device-stairs-step-low-face-r90",
+        "fixture_sha256": "592d0284d6ae00c6f3d4f8ff93dd9d79d5b1b566d69e509de3e234df56f6b298",
+        "actor_sha256": "32979a514e7b32ba75736d8f3ca423f8c1187d6c90f1b6d96e08364c9ef56264",
+        "readback_sha256": "f48ef8a54c4e94169ed40cb4b9c5ccb2df4d23ff0044ef0feabac8e72d4713cd",
+        "readback_validator_sha256": "51d441e68aba8d900d332fbb59f54f90a0bd4ff5aa3b35d691005fd751a793d3",
+        "capture_sha256": "d9c4d8bf9f209656b3a90ba82d496ed6484d090586c797fdb67adf83061c0a7a",
+        "comparator_sha256": "0e82e4641afd5b12f075a47f1fc0ee11b4c2630c63df56931522d380c36a3414",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "4fad59a062dd03d645e3093dc413a2d6aeffc24a3f7c4dcba2f7c484f4931bc4",
+        "classification": "matched_declared_projection",
+        "applied_inputs": [
+          {
+            "position": {
+              "x": 131000,
+              "y": 181,
+              "z": 998
+            },
+            "game_tick": 156729,
+            "packet_sequence": 2456,
+            "write_sequence": 2457,
+            "kind": "lever",
+            "powered": true
+          },
+          {
+            "position": {
+              "x": 131000,
+              "y": 181,
+              "z": 998
+            },
+            "game_tick": 156745,
+            "packet_sequence": 2804,
+            "write_sequence": 2805,
+            "kind": "lever",
+            "powered": false
+          },
+          {
+            "position": {
+              "x": 130999,
+              "y": 182,
+              "z": 1000
+            },
+            "game_tick": 156761,
+            "packet_sequence": 3150,
+            "write_sequence": 3151,
+            "kind": "lever",
+            "powered": true
+          },
+          {
+            "position": {
+              "x": 130999,
+              "y": 182,
+              "z": 1000
+            },
+            "game_tick": 156777,
+            "packet_sequence": 3410,
+            "write_sequence": 3411,
+            "kind": "lever",
+            "powered": false
+          }
+        ],
+        "requested_steps": [
+          {
+            "input": 0,
+            "powered": true,
+            "wait_ticks": 0
+          },
+          {
+            "input": 0,
+            "powered": false,
+            "wait_ticks": 16
+          },
+          {
+            "input": 1,
+            "powered": true,
+            "wait_ticks": 16
+          },
+          {
+            "input": 1,
+            "powered": false,
+            "wait_ticks": 16
+          }
+        ],
+        "cleanup": {
+          "region_empty": true,
+          "force_load_removed": true,
+          "disconnected_before_finish": null
+        },
+        "server_stopped_normally": true,
+        "enabled_features": [
+          "minecraft:vanilla"
+        ],
+        "artifacts": {
+          ".raw.ndjson": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-j2.raw.ndjson",
+            "sha256": "4e22b7e3c3f620e5cc24daaf02e98033e17afcbdac123d6a0eed2ffd8afd1cad"
+          },
+          ".server.log": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-j2.server.log",
+            "sha256": "084a3f73b0bd55c86184f358c5b817a250c754b9cf8be37f1d70565f4f005391"
+          },
+          ".client.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-j2.client.json",
+            "sha256": "d9180b722a8e8c2dde98212dd4fb7128f2549053bb9b45a3c946c60abd58bf48"
+          },
+          ".reference.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-j2.reference.json",
+            "sha256": "c2bcf74e3b59212ec912c82cf86ebedac4137ce6ca20767a118282f00574f4a5"
+          },
+          ".input.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-j2.input.json",
+            "sha256": "8a56d1bf2456a619417502d7d9fa9119120efcc7a742c26b0f66304a345375cc"
+          },
+          ".model.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-j2.model.json",
+            "sha256": "4e17bca2bc48bae4a6368e03063dddb3b4da7dd8cd39b4159a5c8b027e3f1de4"
+          },
+          ".comparison.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-j2.comparison.json",
+            "sha256": "dfad77e1c9c36e97dc5ddfbeb5c82fd27382a37a1987c7a895aaecec3ab7c21c"
+          }
+        }
+      },
+      "comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v16",
+        "tick_end_count": 89,
+        "tick_mismatches": [],
+        "live_write_count": 16,
+        "model_write_count": 16,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 0,
+        "model_scheduled_count": 0,
+        "first_scheduled_mismatch": null,
+        "first_tick_attempt_mismatch": null,
+        "live_callback_count": 83,
+        "model_callback_count": 83,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection"
+      },
+      "retained": {
+        "path": "crates/dustroute-translate/tests/fixtures/device-circuits/stairs-step-low-face-r90.json.gz",
+        "sha256": "a786c509e4c8816ad588c9f6ff79b76717ffbab40f974ad71dee7c152c402a8e"
+      },
+      "readbacks": {
+        "empty_before_setup": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "9e9e7277-0a84-42c5-ade5-d61745c41325",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 130996,
+            "y": 177,
+            "z": 995
+          },
+          "max": {
+            "x": 131004,
+            "y": 185,
+            "z": 1003
+          },
+          "checked_cells": 729,
+          "start_game_tick": 156606,
+          "end_game_tick": 156606,
+          "nonce": "aa47ed5c1f26d76f7e440ab69417f8b8",
+          "snapshot_sha256": "8ab265736da422b664fd9635bdb30e5e0ffeaca02a31d7c96258ccc87d74e76d",
+          "corrections": [],
+          "attempts": [
+            {
+              "start_game_tick": 156601,
+              "end_game_tick": 156602,
+              "matched_batches": 16,
+              "batch_count": 16,
+              "unconfirmed_batches": []
+            },
+            {
+              "start_game_tick": 156606,
+              "end_game_tick": 156606,
+              "matched_batches": 16,
+              "batch_count": 16,
+              "unconfirmed_batches": []
+            }
+          ],
+          "hidden_runtime_observed": false
+        },
+        "initial": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "34fb3d9c-aa1e-4a20-a39b-5ab5f23fc0a3",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 130996,
+            "y": 177,
+            "z": 995
+          },
+          "max": {
+            "x": 131004,
+            "y": 185,
+            "z": 1003
+          },
+          "checked_cells": 729,
+          "start_game_tick": 156728,
+          "end_game_tick": 156728,
+          "nonce": "d0067098d1d31759daff262185b417fe",
+          "snapshot_sha256": "030af97e82a53ff9267115d9f003311838275bca481e37111320d1c2b56bfdfc",
+          "corrections": [],
+          "attempts": [
+            {
+              "start_game_tick": 156726,
+              "end_game_tick": 156727,
+              "matched_batches": 16,
+              "batch_count": 16,
+              "unconfirmed_batches": []
+            },
+            {
+              "start_game_tick": 156728,
+              "end_game_tick": 156728,
+              "matched_batches": 16,
+              "batch_count": 16,
+              "unconfirmed_batches": []
+            }
+          ],
+          "hidden_runtime_observed": false
+        },
+        "final": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "a3bf4358-c368-4296-af4c-d1484bead973",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 130996,
+            "y": 177,
+            "z": 995
+          },
+          "max": {
+            "x": 131004,
+            "y": 185,
+            "z": 1003
+          },
+          "checked_cells": 729,
+          "start_game_tick": 156858,
+          "end_game_tick": 156858,
+          "nonce": "ab1d905d23f4e3688a2cbc73a47e6ff4",
+          "snapshot_sha256": "030af97e82a53ff9267115d9f003311838275bca481e37111320d1c2b56bfdfc",
+          "corrections": [],
+          "attempts": [
+            {
+              "start_game_tick": 156858,
+              "end_game_tick": 156858,
+              "matched_batches": 16,
+              "batch_count": 16,
+              "unconfirmed_batches": []
+            }
+          ],
+          "hidden_runtime_observed": false
+        },
+        "empty_after_cleanup": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "106400b0-23cb-466c-8984-c659d0290a31",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 130996,
+            "y": 177,
+            "z": 995
+          },
+          "max": {
+            "x": 131004,
+            "y": 185,
+            "z": 1003
+          },
+          "checked_cells": 729,
+          "start_game_tick": 156869,
+          "end_game_tick": 156869,
+          "nonce": "6e9e2dc32ceeb7cc37a6f7e39fd65c0b",
+          "snapshot_sha256": "8ab265736da422b664fd9635bdb30e5e0ffeaca02a31d7c96258ccc87d74e76d",
+          "corrections": [],
+          "attempts": [
+            {
+              "start_game_tick": 156869,
+              "end_game_tick": 156869,
+              "matched_batches": 16,
+              "batch_count": 16,
+              "unconfirmed_batches": []
+            }
+          ],
+          "hidden_runtime_observed": false
+        }
+      },
+      "scheduler_attempts": 0
+    },
+    {
+      "run": "stairs-predicate-20260928-b",
+      "summary": {
+        "fixture": "device-stairs-inner-top-left-r0",
+        "fixture_sha256": "d6bc6ae1f1c0ec7d6b40b572ad2d97a403f13696625f047018982e2dbf5910e8",
+        "actor_sha256": "32979a514e7b32ba75736d8f3ca423f8c1187d6c90f1b6d96e08364c9ef56264",
+        "readback_sha256": "aff5611c6c2e724d58f62702b6af3db7a1dfc06e40f28d77ff5931b78e4e51f3",
+        "readback_validator_sha256": "37c2fda83d3409f35dbbb6d484b4055ce61fc8f65fece09a860e4f1bce1f28f5",
+        "capture_sha256": "d9c4d8bf9f209656b3a90ba82d496ed6484d090586c797fdb67adf83061c0a7a",
+        "comparator_sha256": "0e82e4641afd5b12f075a47f1fc0ee11b4c2630c63df56931522d380c36a3414",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "4fad59a062dd03d645e3093dc413a2d6aeffc24a3f7c4dcba2f7c484f4931bc4",
+        "classification": "matched_declared_projection",
+        "applied_inputs": [
+          {
+            "position": {
+              "x": 133999,
+              "y": 180,
+              "z": 1000
+            },
+            "game_tick": 158765,
+            "packet_sequence": 2216,
+            "write_sequence": 2217,
+            "kind": "lever",
+            "powered": true
+          },
+          {
+            "position": {
+              "x": 133999,
+              "y": 180,
+              "z": 1000
+            },
+            "game_tick": 158781,
+            "packet_sequence": 2575,
+            "write_sequence": 2576,
+            "kind": "lever",
+            "powered": false
+          }
+        ],
+        "requested_steps": [
+          {
+            "input": 0,
+            "powered": true,
+            "wait_ticks": 0
+          },
+          {
+            "input": 0,
+            "powered": false,
+            "wait_ticks": 16
+          }
+        ],
+        "cleanup": {
+          "region_empty": true,
+          "force_load_removed": true,
+          "disconnected_before_finish": null
+        },
+        "server_stopped_normally": true,
+        "enabled_features": [
+          "minecraft:vanilla"
+        ],
+        "artifacts": {
+          ".raw.ndjson": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-predicate-20260928-b.raw.ndjson",
+            "sha256": "9989369ff09f394b583ce0af2fa0ad561d17189dfe82da7ed518db26a240cff8"
+          },
+          ".server.log": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-predicate-20260928-b.server.log",
+            "sha256": "e37318e3b1a6ed24824490b0ad929070dd792653490c8e265da7f4ef041dcb08"
+          },
+          ".client.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-predicate-20260928-b.client.json",
+            "sha256": "75d2e40233430e56e8da388f9f920d003f7ecf058b8302f8fb44a89b7cbd92b9"
+          },
+          ".reference.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-predicate-20260928-b.reference.json",
+            "sha256": "8c1f311941d5e27b7884030359131ea125ac06c378f7d9b085e7670d569f5cc9"
+          },
+          ".input.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-predicate-20260928-b.input.json",
+            "sha256": "f701ca9d04a31d1fefc092e5b7b1187c7aa243f685716c7de2bbe0b67c23f4be"
+          },
+          ".model.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-predicate-20260928-b.model.json",
+            "sha256": "27377e4d8ea86ac0d19fffdf86fa991b977bd4018481c56bab14d583e20ac4c2"
+          },
+          ".comparison.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-predicate-20260928-b.comparison.json",
+            "sha256": "2ffd53b36d795eb1d19e8f4da1a62c218e6c1f2c0ec9b093bdcd7449ed860657"
+          }
+        }
+      },
+      "comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v16",
+        "tick_end_count": 57,
+        "tick_mismatches": [],
+        "live_write_count": 18,
+        "model_write_count": 18,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 3,
+        "model_scheduled_count": 3,
+        "first_scheduled_mismatch": null,
+        "first_tick_attempt_mismatch": null,
+        "live_callback_count": 51,
+        "model_callback_count": 51,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection"
+      },
+      "retained": {
+        "path": "crates/dustroute-translate/tests/fixtures/device-circuits/stairs-predicate-inner-top-left-r0.json.gz",
+        "sha256": "e024fae3b26e89d7d9f1bece4e133965a18061f79cd3cb0ca3d62302e1ae1899"
+      },
+      "readbacks": {
+        "empty_before_setup": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "aef2893b-e61d-4385-849b-088977bee4c7",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 133995,
+            "y": 177,
+            "z": 994
+          },
+          "max": {
+            "x": 134005,
+            "y": 183,
+            "z": 1003
+          },
+          "checked_cells": 770,
+          "start_game_tick": 158646,
+          "end_game_tick": 158646,
+          "nonce": "c7d6f0db9ea7c44b7ad34b4ed8c367cd",
+          "snapshot_sha256": "ab798ce40fb93c128a5b1860ba9cd6ca7467e805195101ac43499dd316ec1583",
+          "corrections": [],
+          "attempts": [
+            {
+              "start_game_tick": 158642,
+              "end_game_tick": 158643,
+              "matched_batches": 17,
+              "batch_count": 17,
+              "unconfirmed_batches": []
+            },
+            {
+              "start_game_tick": 158644,
+              "end_game_tick": 158645,
+              "matched_batches": 17,
+              "batch_count": 17,
+              "unconfirmed_batches": []
+            },
+            {
+              "start_game_tick": 158646,
+              "end_game_tick": 158646,
+              "matched_batches": 17,
+              "batch_count": 17,
+              "unconfirmed_batches": []
+            }
+          ],
+          "predicate_ticks": [
+            158646,
+            158646,
+            158646,
+            158646,
+            158646,
+            158646,
+            158646,
+            158646,
+            158646,
+            158646,
+            158646,
+            158646,
+            158646,
+            158646,
+            158646,
+            158646,
+            158646
+          ],
+          "hidden_runtime_observed": false
+        },
+        "initial": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "6063845a-ae05-45e5-90ca-cc9e68194ccc",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 133995,
+            "y": 177,
+            "z": 994
+          },
+          "max": {
+            "x": 134005,
+            "y": 183,
+            "z": 1003
+          },
+          "checked_cells": 770,
+          "start_game_tick": 158765,
+          "end_game_tick": 158765,
+          "nonce": "414ddeeb7b851ebb0d8258b381df855b",
+          "snapshot_sha256": "b59c2c03ac9200031ec81fd4f4428d1bb9b20ec4552ca6aabc301e50593e1da5",
+          "corrections": [],
+          "attempts": [
+            {
+              "start_game_tick": 158765,
+              "end_game_tick": 158765,
+              "matched_batches": 17,
+              "batch_count": 17,
+              "unconfirmed_batches": []
+            }
+          ],
+          "predicate_ticks": [
+            158765,
+            158765,
+            158765,
+            158765,
+            158765,
+            158765,
+            158765,
+            158765,
+            158765,
+            158765,
+            158765,
+            158765,
+            158765,
+            158765,
+            158765,
+            158765,
+            158765
+          ],
+          "hidden_runtime_observed": false
+        },
+        "final": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "a95fb474-0721-473c-be7d-5af0e70c22f6",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 133995,
+            "y": 177,
+            "z": 994
+          },
+          "max": {
+            "x": 134005,
+            "y": 183,
+            "z": 1003
+          },
+          "checked_cells": 770,
+          "start_game_tick": 158863,
+          "end_game_tick": 158863,
+          "nonce": "10bfd7f12b8cd1204ef3cea49efe74ea",
+          "snapshot_sha256": "b3d6d001f46ec8d0659c1c04212316cc537b9a594f5591672252106ac24fa8d0",
+          "corrections": [
+            {
+              "pos": {
+                "x": 134002,
+                "y": 180,
+                "z": 999
+              },
+              "client": {
+                "pos": {
+                  "x": 134002,
+                  "y": 180,
+                  "z": 999
+                },
+                "name": "minecraft:quartz_stairs",
+                "properties": {
+                  "waterlogged": "false",
+                  "shape": "inner_left",
+                  "half": "top",
+                  "facing": "north"
+                }
+              },
+              "confirmed_shape": "straight"
+            }
+          ],
+          "attempts": [
+            {
+              "start_game_tick": 158862,
+              "end_game_tick": 158862,
+              "matched_batches": 16,
+              "batch_count": 17,
+              "unconfirmed_batches": [
+                10
+              ]
+            },
+            {
+              "start_game_tick": 158863,
+              "end_game_tick": 158863,
+              "matched_batches": 17,
+              "batch_count": 17,
+              "unconfirmed_batches": []
+            }
+          ],
+          "predicate_ticks": [
+            158863,
+            158863,
+            158863,
+            158863,
+            158863,
+            158863,
+            158863,
+            158863,
+            158863,
+            158863,
+            158863,
+            158863,
+            158863,
+            158863,
+            158863,
+            158863,
+            158863
+          ],
+          "hidden_runtime_observed": false
+        },
+        "empty_after_cleanup": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "df28b56c-9b11-4071-bc34-f0d80a318a00",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 133995,
+            "y": 177,
+            "z": 994
+          },
+          "max": {
+            "x": 134005,
+            "y": 183,
+            "z": 1003
+          },
+          "checked_cells": 770,
+          "start_game_tick": 158874,
+          "end_game_tick": 158874,
+          "nonce": "907f86c4e40e2c75ea664d82dc68ffec",
+          "snapshot_sha256": "ab798ce40fb93c128a5b1860ba9cd6ca7467e805195101ac43499dd316ec1583",
+          "corrections": [],
+          "attempts": [
+            {
+              "start_game_tick": 158874,
+              "end_game_tick": 158874,
+              "matched_batches": 17,
+              "batch_count": 17,
+              "unconfirmed_batches": []
+            }
+          ],
+          "predicate_ticks": [
+            158874,
+            158874,
+            158874,
+            158874,
+            158874,
+            158874,
+            158874,
+            158874,
+            158874,
+            158874,
+            158874,
+            158874,
+            158874,
+            158874,
+            158874,
+            158874,
+            158874
+          ],
+          "hidden_runtime_observed": false
+        }
+      },
+      "scheduler_attempts": 3
+    },
+    {
+      "run": "stairs-predicate-20260928-c",
+      "summary": {
+        "fixture": "device-stairs-step-low-face-r90",
+        "fixture_sha256": "592d0284d6ae00c6f3d4f8ff93dd9d79d5b1b566d69e509de3e234df56f6b298",
+        "actor_sha256": "32979a514e7b32ba75736d8f3ca423f8c1187d6c90f1b6d96e08364c9ef56264",
+        "readback_sha256": "aff5611c6c2e724d58f62702b6af3db7a1dfc06e40f28d77ff5931b78e4e51f3",
+        "readback_validator_sha256": "37c2fda83d3409f35dbbb6d484b4055ce61fc8f65fece09a860e4f1bce1f28f5",
+        "capture_sha256": "d9c4d8bf9f209656b3a90ba82d496ed6484d090586c797fdb67adf83061c0a7a",
+        "comparator_sha256": "0e82e4641afd5b12f075a47f1fc0ee11b4c2630c63df56931522d380c36a3414",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "4fad59a062dd03d645e3093dc413a2d6aeffc24a3f7c4dcba2f7c484f4931bc4",
+        "classification": "matched_declared_projection",
+        "applied_inputs": [
+          {
+            "position": {
+              "x": 135000,
+              "y": 181,
+              "z": 998
+            },
+            "game_tick": 159574,
+            "packet_sequence": 2432,
+            "write_sequence": 2433,
+            "kind": "lever",
+            "powered": true
+          },
+          {
+            "position": {
+              "x": 135000,
+              "y": 181,
+              "z": 998
+            },
+            "game_tick": 159591,
+            "packet_sequence": 2792,
+            "write_sequence": 2793,
+            "kind": "lever",
+            "powered": false
+          },
+          {
+            "position": {
+              "x": 134999,
+              "y": 182,
+              "z": 1000
+            },
+            "game_tick": 159606,
+            "packet_sequence": 3126,
+            "write_sequence": 3127,
+            "kind": "lever",
+            "powered": true
+          },
+          {
+            "position": {
+              "x": 134999,
+              "y": 182,
+              "z": 1000
+            },
+            "game_tick": 159622,
+            "packet_sequence": 3386,
+            "write_sequence": 3387,
+            "kind": "lever",
+            "powered": false
+          }
+        ],
+        "requested_steps": [
+          {
+            "input": 0,
+            "powered": true,
+            "wait_ticks": 0
+          },
+          {
+            "input": 0,
+            "powered": false,
+            "wait_ticks": 16
+          },
+          {
+            "input": 1,
+            "powered": true,
+            "wait_ticks": 16
+          },
+          {
+            "input": 1,
+            "powered": false,
+            "wait_ticks": 16
+          }
+        ],
+        "cleanup": {
+          "region_empty": true,
+          "force_load_removed": true,
+          "disconnected_before_finish": null
+        },
+        "server_stopped_normally": true,
+        "enabled_features": [
+          "minecraft:vanilla"
+        ],
+        "artifacts": {
+          ".raw.ndjson": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-predicate-20260928-c.raw.ndjson",
+            "sha256": "a7ef89f7e3c4ecce39b66b1102c7de3e56e494eb3ab7e6aea7fe21cb5ab3314a"
+          },
+          ".server.log": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-predicate-20260928-c.server.log",
+            "sha256": "57084cbdf7a09b3f53e37391d8ee9d4da128ff2af8c8c835035c0bc9350c1fde"
+          },
+          ".client.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-predicate-20260928-c.client.json",
+            "sha256": "a31a60897f21f2ad7f59f4292391d17a5b6dfbe2238a3e3de71090c97680db75"
+          },
+          ".reference.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-predicate-20260928-c.reference.json",
+            "sha256": "8c63709e0d3a9896b319b36d67ec2144fe426e12c7a171260834a707ce754933"
+          },
+          ".input.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-predicate-20260928-c.input.json",
+            "sha256": "9ca3e990238a22a35d3320bca3532dcd035f99cca130af83e71e032cb5cdfc61"
+          },
+          ".model.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-predicate-20260928-c.model.json",
+            "sha256": "63d664a583e56c901962723706721aed2ba2c4d684fbbc267f65ea52735fe0e8"
+          },
+          ".comparison.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-predicate-20260928-c.comparison.json",
+            "sha256": "dfad77e1c9c36e97dc5ddfbeb5c82fd27382a37a1987c7a895aaecec3ab7c21c"
+          }
+        }
+      },
+      "comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v16",
+        "tick_end_count": 89,
+        "tick_mismatches": [],
+        "live_write_count": 16,
+        "model_write_count": 16,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 0,
+        "model_scheduled_count": 0,
+        "first_scheduled_mismatch": null,
+        "first_tick_attempt_mismatch": null,
+        "live_callback_count": 83,
+        "model_callback_count": 83,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection"
+      },
+      "retained": {
+        "path": "crates/dustroute-translate/tests/fixtures/device-circuits/stairs-predicate-step-low-face-r90.json.gz",
+        "sha256": "130cd482df58ff3b0cb637e8062741aaa0285f49e2688b58c96ff970ae29def5"
+      },
+      "readbacks": {
+        "empty_before_setup": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "1c7d2a0f-acda-4c28-a99a-5d315d3db362",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 134996,
+            "y": 177,
+            "z": 995
+          },
+          "max": {
+            "x": 135004,
+            "y": 185,
+            "z": 1003
+          },
+          "checked_cells": 729,
+          "start_game_tick": 159449,
+          "end_game_tick": 159449,
+          "nonce": "5e7201002a8b9c66603018cfce9a3808",
+          "snapshot_sha256": "9e632f91677f1c71e3a06139965aabb0b7cfa394a69a9652e6785b11dfc556ce",
+          "corrections": [],
+          "attempts": [
+            {
+              "start_game_tick": 159441,
+              "end_game_tick": 159442,
+              "matched_batches": 16,
+              "batch_count": 16,
+              "unconfirmed_batches": []
+            },
+            {
+              "start_game_tick": 159449,
+              "end_game_tick": 159449,
+              "matched_batches": 16,
+              "batch_count": 16,
+              "unconfirmed_batches": []
+            }
+          ],
+          "predicate_ticks": [
+            159449,
+            159449,
+            159449,
+            159449,
+            159449,
+            159449,
+            159449,
+            159449,
+            159449,
+            159449,
+            159449,
+            159449,
+            159449,
+            159449,
+            159449,
+            159449
+          ],
+          "hidden_runtime_observed": false
+        },
+        "initial": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "80c93cf2-04f0-424c-99c9-b689f8c78d37",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 134996,
+            "y": 177,
+            "z": 995
+          },
+          "max": {
+            "x": 135004,
+            "y": 185,
+            "z": 1003
+          },
+          "checked_cells": 729,
+          "start_game_tick": 159573,
+          "end_game_tick": 159573,
+          "nonce": "37282aaf59705377ae7142a58e243345",
+          "snapshot_sha256": "1e685d76813a4fae1e9a87f86baaf1dca2319a8068cc959d6f2858248a410a7f",
+          "corrections": [],
+          "attempts": [
+            {
+              "start_game_tick": 159573,
+              "end_game_tick": 159573,
+              "matched_batches": 16,
+              "batch_count": 16,
+              "unconfirmed_batches": []
+            }
+          ],
+          "predicate_ticks": [
+            159573,
+            159573,
+            159573,
+            159573,
+            159573,
+            159573,
+            159573,
+            159573,
+            159573,
+            159573,
+            159573,
+            159573,
+            159573,
+            159573,
+            159573,
+            159573
+          ],
+          "hidden_runtime_observed": false
+        },
+        "final": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "5a429489-c4fb-4a41-a364-3b66a95306df",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 134996,
+            "y": 177,
+            "z": 995
+          },
+          "max": {
+            "x": 135004,
+            "y": 185,
+            "z": 1003
+          },
+          "checked_cells": 729,
+          "start_game_tick": 159703,
+          "end_game_tick": 159703,
+          "nonce": "498dab9541ad52a28cc98b7b30652968",
+          "snapshot_sha256": "1e685d76813a4fae1e9a87f86baaf1dca2319a8068cc959d6f2858248a410a7f",
+          "corrections": [],
+          "attempts": [
+            {
+              "start_game_tick": 159703,
+              "end_game_tick": 159703,
+              "matched_batches": 16,
+              "batch_count": 16,
+              "unconfirmed_batches": []
+            }
+          ],
+          "predicate_ticks": [
+            159703,
+            159703,
+            159703,
+            159703,
+            159703,
+            159703,
+            159703,
+            159703,
+            159703,
+            159703,
+            159703,
+            159703,
+            159703,
+            159703,
+            159703,
+            159703
+          ],
+          "hidden_runtime_observed": false
+        },
+        "empty_after_cleanup": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "291c3fed-36f1-4ffc-82c6-8061f5bf1e9a",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 134996,
+            "y": 177,
+            "z": 995
+          },
+          "max": {
+            "x": 135004,
+            "y": 185,
+            "z": 1003
+          },
+          "checked_cells": 729,
+          "start_game_tick": 159714,
+          "end_game_tick": 159714,
+          "nonce": "504871db889bb4f63c91dadda4c9f2f6",
+          "snapshot_sha256": "9e632f91677f1c71e3a06139965aabb0b7cfa394a69a9652e6785b11dfc556ce",
+          "corrections": [],
+          "attempts": [
+            {
+              "start_game_tick": 159714,
+              "end_game_tick": 159714,
+              "matched_batches": 16,
+              "batch_count": 16,
+              "unconfirmed_batches": []
+            }
+          ],
+          "predicate_ticks": [
+            159714,
+            159714,
+            159714,
+            159714,
+            159714,
+            159714,
+            159714,
+            159714,
+            159714,
+            159714,
+            159714,
+            159714,
+            159714,
+            159714,
+            159714,
+            159714
+          ],
+          "hidden_runtime_observed": false
+        }
+      },
+      "scheduler_attempts": 0
+    }
+  ],
+  "original_incomplete_diagnostic": "docs/evidence/stairs-readback-20260928.json",
+  "additional_incomplete_or_refused_trials": [
+    {
+      "run": "stairs-readback-20260928-j",
+      "summary": {
+        "fixture": "device-stairs-step-low-face-r90",
+        "fixture_sha256": "592d0284d6ae00c6f3d4f8ff93dd9d79d5b1b566d69e509de3e234df56f6b298",
+        "actor_sha256": "32979a514e7b32ba75736d8f3ca423f8c1187d6c90f1b6d96e08364c9ef56264",
+        "readback_sha256": "6be591e8af072950e0072731a0872adec76ff48d8a20178bb69a41ec6c5e62f9",
+        "readback_validator_sha256": "51d441e68aba8d900d332fbb59f54f90a0bd4ff5aa3b35d691005fd751a793d3",
+        "capture_sha256": "d9c4d8bf9f209656b3a90ba82d496ed6484d090586c797fdb67adf83061c0a7a",
+        "comparator_sha256": "0e82e4641afd5b12f075a47f1fc0ee11b4c2630c63df56931522d380c36a3414",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "4fad59a062dd03d645e3093dc413a2d6aeffc24a3f7c4dcba2f7c484f4931bc4",
+        "classification": "observation_incomplete",
+        "applied_inputs": null,
+        "requested_steps": [
+          {
+            "input": 0,
+            "powered": true,
+            "wait_ticks": 0
+          },
+          {
+            "input": 0,
+            "powered": false,
+            "wait_ticks": 16
+          },
+          {
+            "input": 1,
+            "powered": true,
+            "wait_ticks": 16
+          },
+          {
+            "input": 1,
+            "powered": false,
+            "wait_ticks": 16
+          }
+        ],
+        "cleanup": {
+          "region_empty": true,
+          "force_load_removed": true,
+          "disconnected_before_finish": null
+        },
+        "server_stopped_normally": true,
+        "enabled_features": [
+          "minecraft:vanilla"
+        ],
+        "artifacts": {
+          ".raw.ndjson": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-j.raw.ndjson",
+            "sha256": "c01262fe6ed24397c4e0389269323ed672802fef432a0a29eb0b222afdf05b2a"
+          },
+          ".server.log": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-j.server.log",
+            "sha256": "534d3563c5cd8bf6c302033a7229fdedbeda55c24ff02021054b609beee2ba47"
+          },
+          ".client.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-j.client.json",
+            "sha256": "be28be01caa08678ff9832ea6ad4687d89943fb7649506250b01cf0630f013e0"
+          },
+          ".comparison.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-j.comparison.json",
+            "sha256": "41ed0e46c3f93ccea9012e2840653d3c7aa4448579e48977c9935d504b5bb1f7"
+          }
+        }
+      },
+      "error": "Error: server readback did not confirm a complete region within one game tick\n    at confirmRegion (/root/DustRoute/crates/dustroute-mcp/mineflayer/readback.js:153:9)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async confirmSnapshot (/root/DustRoute/crates/dustroute-mcp/mineflayer/e2e/piston-mixed-live.js:81:21)\n    at async main (/root/DustRoute/crates/dustroute-mcp/mineflayer/e2e/piston-mixed-live.js:145:28)",
+      "summary_sha256": "b78086f965a50aff99ee3f95c6253d0ebbc58c33ad4410b345a2f6f81f57a742",
+      "note": "Retained as incomplete/refused; not promoted to conformance evidence."
+    },
+    {
+      "run": "stairs-readback-20260928-j3",
+      "summary": {
+        "fixture": "device-stairs-step-low-face-r90",
+        "fixture_sha256": "592d0284d6ae00c6f3d4f8ff93dd9d79d5b1b566d69e509de3e234df56f6b298",
+        "actor_sha256": "32979a514e7b32ba75736d8f3ca423f8c1187d6c90f1b6d96e08364c9ef56264",
+        "readback_sha256": "0df65bf06dcdd8945076e6cfe89c0ec73643d2ed8d34ab2ea8242edb0ebafe10",
+        "readback_validator_sha256": "51d441e68aba8d900d332fbb59f54f90a0bd4ff5aa3b35d691005fd751a793d3",
+        "capture_sha256": "d9c4d8bf9f209656b3a90ba82d496ed6484d090586c797fdb67adf83061c0a7a",
+        "comparator_sha256": "0e82e4641afd5b12f075a47f1fc0ee11b4c2630c63df56931522d380c36a3414",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "4fad59a062dd03d645e3093dc413a2d6aeffc24a3f7c4dcba2f7c484f4931bc4",
+        "classification": "observation_incomplete",
+        "applied_inputs": null,
+        "requested_steps": [
+          {
+            "input": 0,
+            "powered": true,
+            "wait_ticks": 0
+          },
+          {
+            "input": 0,
+            "powered": false,
+            "wait_ticks": 16
+          },
+          {
+            "input": 1,
+            "powered": true,
+            "wait_ticks": 16
+          },
+          {
+            "input": 1,
+            "powered": false,
+            "wait_ticks": 16
+          }
+        ],
+        "cleanup": {
+          "region_empty": true,
+          "force_load_removed": true,
+          "disconnected_before_finish": null
+        },
+        "server_stopped_normally": true,
+        "enabled_features": [
+          "minecraft:vanilla"
+        ],
+        "artifacts": {
+          ".raw.ndjson": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-j3.raw.ndjson",
+            "sha256": "0d8600e1147b85e5109456e776f9846084e0063d6e80fceebde21d31a3514b19"
+          },
+          ".server.log": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-j3.server.log",
+            "sha256": "502a70fb738bf557c0a0aa637e64fbea6b1de0c539aa4be2ba7f7253acefa63d"
+          },
+          ".client.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-j3.client.json",
+            "sha256": "3e6a1beb6e713b6da5cca69c3eb8c02ed77f558df14391051e8f2353fb77d67d"
+          },
+          ".comparison.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-readback-20260928-j3.comparison.json",
+            "sha256": "227a2f69a42ac417418d5059d3fc6809eb851173d1da3f4319077557b4ea34c1"
+          }
+        }
+      },
+      "error": "Error: server readback did not confirm a complete region within one game tick: [{\"start_game_tick\":157659,\"end_game_tick\":157660,\"matched_batches\":16,\"batch_count\":16,\"unconfirmed_batches\":[]},{\"start_game_tick\":157660,\"end_game_tick\":157661,\"matched_batches\":16,\"batch_count\":16,\"unconfirmed_batches\":[]},{\"start_game_tick\":157661,\"end_game_tick\":157662,\"matched_batches\":16,\"batch_count\":16,\"unconfirmed_batches\":[]}]\n    at confirmRegion (/root/DustRoute/crates/dustroute-mcp/mineflayer/readback.js:160:9)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async confirmSnapshot (/root/DustRoute/crates/dustroute-mcp/mineflayer/e2e/piston-mixed-live.js:81:21)\n    at async main (/root/DustRoute/crates/dustroute-mcp/mineflayer/e2e/piston-mixed-live.js:188:3)",
+      "summary_sha256": "a87b8a2a4404ef8b70d5054cbce4ebef6b5f352feb6c4b2b53913719aa1114ca",
+      "note": "Retained as incomplete/refused; not promoted to conformance evidence."
+    },
+    {
+      "run": "stairs-predicate-20260928-a",
+      "summary": {
+        "fixture": "device-stairs-inner-top-left-r0",
+        "fixture_sha256": "d6bc6ae1f1c0ec7d6b40b572ad2d97a403f13696625f047018982e2dbf5910e8",
+        "actor_sha256": "32979a514e7b32ba75736d8f3ca423f8c1187d6c90f1b6d96e08364c9ef56264",
+        "readback_sha256": "c327c4c73482e6010581828f76a3c6ad619d335ed20747e8854a5c21ea1ad0d4",
+        "readback_validator_sha256": "51d441e68aba8d900d332fbb59f54f90a0bd4ff5aa3b35d691005fd751a793d3",
+        "capture_sha256": "d9c4d8bf9f209656b3a90ba82d496ed6484d090586c797fdb67adf83061c0a7a",
+        "comparator_sha256": "0e82e4641afd5b12f075a47f1fc0ee11b4c2630c63df56931522d380c36a3414",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "4fad59a062dd03d645e3093dc413a2d6aeffc24a3f7c4dcba2f7c484f4931bc4",
+        "classification": "observation_incomplete",
+        "applied_inputs": null,
+        "requested_steps": [
+          {
+            "input": 0,
+            "powered": true,
+            "wait_ticks": 0
+          },
+          {
+            "input": 0,
+            "powered": false,
+            "wait_ticks": 16
+          }
+        ],
+        "cleanup": {
+          "region_empty": true,
+          "force_load_removed": true,
+          "disconnected_before_finish": null
+        },
+        "server_stopped_normally": true,
+        "enabled_features": [
+          "minecraft:vanilla"
+        ],
+        "artifacts": {
+          ".raw.ndjson": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-predicate-20260928-a.raw.ndjson",
+            "sha256": "1b38ca0c81aa2ed1b0c8552af991ef7c80f4f8901afeb247aa90fb5d1a132ef4"
+          },
+          ".server.log": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-predicate-20260928-a.server.log",
+            "sha256": "b6a74fb42e8e12a099c7be47cead9ca22b9db00abad2925e7ee3f7383342be64"
+          },
+          ".client.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-predicate-20260928-a.client.json",
+            "sha256": "c1769c6a885dbde10503178e116f048f2afe2d78c0b09909e217d8172d9b9182"
+          },
+          ".comparison.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/stairs-predicate-20260928-a.comparison.json",
+            "sha256": "4dd58d53767a449dcdbbb74417376142dc109a0add78fffa17ef6ce6406d1b6c"
+          }
+        }
+      },
+      "error": "Error: server predicate/tick evidence missing\n    at checks (/root/DustRoute/crates/dustroute-mcp/mineflayer/readback.js:121:23)\n    at confirmRegion (/root/DustRoute/crates/dustroute-mcp/mineflayer/readback.js:151:26)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async confirmSnapshot (/root/DustRoute/crates/dustroute-mcp/mineflayer/e2e/piston-mixed-live.js:81:21)\n    at async main (/root/DustRoute/crates/dustroute-mcp/mineflayer/e2e/piston-mixed-live.js:188:3)",
+      "summary_sha256": "e700c10991eebf7cab3000f437fae08a30cd51e9216fb9207ac1b521c892b133",
+      "note": "Retained as incomplete/refused; not promoted to conformance evidence."
+    },
+    {
+      "run": "stairs-public-20260928-a",
+      "summary": {
+        "schema_version": "dustroute.custom-assembly-comparison.v1",
+        "status": "failed",
+        "registry_records": [],
+        "initial_server_status": {
+          "connected": true,
+          "username": "DustRouteBot",
+          "host": "127.0.0.1",
+          "port": 25565,
+          "version": "1.21.11",
+          "dimension": "minecraft:overworld",
+          "enabled_features": [
+            "minecraft:vanilla"
+          ],
+          "position": {
+            "x": 69011.5,
+            "y": -60,
+            "z": 997.5
+          },
+          "metrics": {
+            "requests_total": 3,
+            "errors_total": 0,
+            "request_bytes": 114,
+            "response_bytes": 1358,
+            "total_duration_micros": 954,
+            "max_duration_micros": 821,
+            "scan_requests": 0,
+            "scan_volume_blocks": 0,
+            "scan_non_air_blocks": 0,
+            "requests_by_method": {
+              "status": 3,
+              "visible_players": 0,
+              "approach_player": 0,
+              "observe_player": 0,
+              "scan_region": 0,
+              "get_block": 0,
+              "activate_lever": 0,
+              "approach_lever": 0,
+              "wait_ticks": 0,
+              "start_update_recording": 0,
+              "stop_update_recording": 0,
+              "preview_region": 0,
+              "write_blocks": 0,
+              "place_physical_blocks": 0,
+              "unknown": 0
+            }
+          }
+        },
+        "actor_sha256": "70a33d05c0007efaa788a3a44fef594a692387eeaf85c9e4c3ed6a0d493d0b0d",
+        "loaded_sources_sha256": {
+          "/root/DustRoute/tools/observe_assembly_construction.py": "ce7352aa14163e89bdf0446ac756d8b32ad3a98eaed5a7f36581bc18d141e940",
+          "/root/DustRoute/crates/dustroute-mcp/mineflayer/e2e/piston-assembly-mcp-live.js": "70a33d05c0007efaa788a3a44fef594a692387eeaf85c9e4c3ed6a0d493d0b0d",
+          "/root/DustRoute/target/debug/dustroute-mcp": "f71326c549c10f416bd999e6a10d23dfa4ddfcbd89e9ab37e752f0bf6029854c",
+          "/root/DustRoute/crates/dustroute-mcp/mineflayer/bridge.js": "fd20930613733f1f36b97103033a651a958736c3b79c3c8e2122d5215173c8c8",
+          "/root/DustRoute/crates/dustroute-mcp/mineflayer/readback.js": "aff5611c6c2e724d58f62702b6af3db7a1dfc06e40f28d77ff5931b78e4e51f3",
+          "/root/DustRoute/tools/instrumented_server.py": "7164de1897c7f0388b99b6ab2cac7edb12174add7aaf1a0bd347e5ffb5f3ca6f"
+        },
+        "continuous_construction_capture": true,
+        "actual_capture_mode": "continuous",
+        "cleanup": {
+          "force_load_removed": true
+        },
+        "error": "Error: server readback did not confirm a complete region within one game tick: [{\"start_game_tick\":160366,\"end_game_tick\":160369,\"matched_batches\":100,\"batch_count\":100,\"unconfirmed_batches\":[]},{\"start_game_tick\":160371,\"end_game_tick\":160372,\"matched_batches\":100,\"batch_count\":100,\"unconfirmed_batches\":[]},{\"start_game_tick\":160374,\"end_game_tick\":160375,\"matched_batches\":100,\"batch_count\":100,\"unconfirmed_batches\":[]}]\n    at confirmRegion (/root/DustRoute/crates/dustroute-mcp/mineflayer/readback.js:192:9)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async confirmEmpty (/root/DustRoute/crates/dustroute-mcp/mineflayer/e2e/piston-assembly-mcp-live.js:95:21)\n    at async main (/root/DustRoute/crates/dustroute-mcp/mineflayer/e2e/piston-assembly-mcp-live.js:141:12)",
+        "evidence_limit": "public MCP staged construction with server-confirmed readback receipts; actor probes remain client observations; no hidden readiness or world-lock claim",
+        "artifacts": {
+          ".raw.ndjson": "/root/DustRoute/.local/e2e-artifacts/stairs-public-20260928-a.raw.ndjson",
+          ".server.log": "/root/DustRoute/.local/e2e-artifacts/stairs-public-20260928-a.server.log",
+          ".bridge.log": "/root/DustRoute/.local/e2e-artifacts/stairs-public-20260928-a.bridge.log",
+          ".client.json": "/root/DustRoute/.local/e2e-artifacts/stairs-public-20260928-a.client.json",
+          ".fixture.json": "/root/DustRoute/.local/e2e-artifacts/stairs-public-20260928-a.fixture.json",
+          ".summary.json": "/root/DustRoute/.local/e2e-artifacts/stairs-public-20260928-a.summary.json"
+        },
+        "sha256": {
+          ".raw.ndjson": "ea5520ab0df59aa7dc52dec2f00ee72f77a1b78be03ac64c1e47e966b25209d4",
+          ".server.log": "91f2065bbbe2786323ccbd3344ef1e7e4453cfc91c60b720bc9072ec19f0e86f",
+          ".bridge.log": "f0248410ca31d7a167af0f3130bc8370dc3e6cb0378855d6fdf4f8e9b6429da9",
+          ".client.json": "53486c589492458ce390790389598df2b08afd11a66fbdf2557d5c3cd6a8e2f5",
+          ".fixture.json": "b289539db3c70f8412333d2336141521c0173b434809701d2b31ce5aef85b99b"
+        }
+      },
+      "error": "Error: server readback did not confirm a complete region within one game tick: [{\"start_game_tick\":160366,\"end_game_tick\":160369,\"matched_batches\":100,\"batch_count\":100,\"unconfirmed_batches\":[]},{\"start_game_tick\":160371,\"end_game_tick\":160372,\"matched_batches\":100,\"batch_count\":100,\"unconfirmed_batches\":[]},{\"start_game_tick\":160374,\"end_game_tick\":160375,\"matched_batches\":100,\"batch_count\":100,\"unconfirmed_batches\":[]}]\n    at confirmRegion (/root/DustRoute/crates/dustroute-mcp/mineflayer/readback.js:192:9)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async confirmEmpty (/root/DustRoute/crates/dustroute-mcp/mineflayer/e2e/piston-assembly-mcp-live.js:95:21)\n    at async main (/root/DustRoute/crates/dustroute-mcp/mineflayer/e2e/piston-assembly-mcp-live.js:141:12)",
+      "summary_sha256": "80b555e3062aba6c36c9c31493852d6d091d5aa643f5892618b9b3b6aa68f2d7",
+      "note": "Retained as incomplete/refused; not promoted to conformance evidence."
+    },
+    {
+      "run": "stairs-public-20260928-b",
+      "summary": {
+        "schema_version": "dustroute.custom-assembly-comparison.v1",
+        "status": "failed",
+        "registry_records": [],
+        "initial_server_status": {
+          "connected": true,
+          "username": "DustRouteBot",
+          "host": "127.0.0.1",
+          "port": 25565,
+          "version": "1.21.11",
+          "dimension": "minecraft:overworld",
+          "enabled_features": [
+            "minecraft:vanilla"
+          ],
+          "position": {
+            "x": 141003.5,
+            "y": -60,
+            "z": 997.5
+          },
+          "metrics": {
+            "requests_total": 4,
+            "errors_total": 0,
+            "request_bytes": 152,
+            "response_bytes": 2042,
+            "total_duration_micros": 1063,
+            "max_duration_micros": 764,
+            "scan_requests": 0,
+            "scan_volume_blocks": 0,
+            "scan_non_air_blocks": 0,
+            "requests_by_method": {
+              "status": 4,
+              "visible_players": 0,
+              "approach_player": 0,
+              "observe_player": 0,
+              "scan_region": 0,
+              "get_block": 0,
+              "activate_lever": 0,
+              "approach_lever": 0,
+              "wait_ticks": 0,
+              "start_update_recording": 0,
+              "stop_update_recording": 0,
+              "preview_region": 0,
+              "write_blocks": 0,
+              "place_physical_blocks": 0,
+              "unknown": 0
+            }
+          }
+        },
+        "actor_sha256": "70a33d05c0007efaa788a3a44fef594a692387eeaf85c9e4c3ed6a0d493d0b0d",
+        "loaded_sources_sha256": {
+          "/root/DustRoute/tools/observe_assembly_construction.py": "ce7352aa14163e89bdf0446ac756d8b32ad3a98eaed5a7f36581bc18d141e940",
+          "/root/DustRoute/crates/dustroute-mcp/mineflayer/e2e/piston-assembly-mcp-live.js": "70a33d05c0007efaa788a3a44fef594a692387eeaf85c9e4c3ed6a0d493d0b0d",
+          "/root/DustRoute/target/debug/dustroute-mcp": "c7155e6f73fdc2839a4da036f69855fc52d892db72a8cfa6bfba70cada84fe29",
+          "/root/DustRoute/crates/dustroute-mcp/mineflayer/bridge.js": "fd20930613733f1f36b97103033a651a958736c3b79c3c8e2122d5215173c8c8",
+          "/root/DustRoute/crates/dustroute-mcp/mineflayer/readback.js": "24557604012fc3f110879832ef88020b1a7bb957e32fceda074524fa4b9307de",
+          "/root/DustRoute/tools/instrumented_server.py": "7164de1897c7f0388b99b6ab2cac7edb12174add7aaf1a0bd347e5ffb5f3ca6f"
+        },
+        "continuous_construction_capture": true,
+        "actual_capture_mode": "continuous",
+        "cleanup": {
+          "force_load_removed": true
+        },
+        "error": "Error: server readback did not confirm a complete region within one game tick: [{\"start_game_tick\":161224,\"end_game_tick\":161226,\"matched_batches\":25,\"batch_count\":25,\"unconfirmed_batches\":[]},{\"start_game_tick\":161228,\"end_game_tick\":161229,\"matched_batches\":25,\"batch_count\":25,\"unconfirmed_batches\":[]},{\"start_game_tick\":161233,\"end_game_tick\":161234,\"matched_batches\":25,\"batch_count\":25,\"unconfirmed_batches\":[]}]\n    at confirmRegion (/root/DustRoute/crates/dustroute-mcp/mineflayer/readback.js:194:9)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async confirmEmpty (/root/DustRoute/crates/dustroute-mcp/mineflayer/e2e/piston-assembly-mcp-live.js:95:21)\n    at async main (/root/DustRoute/crates/dustroute-mcp/mineflayer/e2e/piston-assembly-mcp-live.js:141:12)",
+        "evidence_limit": "public MCP staged construction with server-confirmed readback receipts; actor probes remain client observations; no hidden readiness or world-lock claim",
+        "artifacts": {
+          ".raw.ndjson": "/root/DustRoute/.local/e2e-artifacts/stairs-public-20260928-b.raw.ndjson",
+          ".server.log": "/root/DustRoute/.local/e2e-artifacts/stairs-public-20260928-b.server.log",
+          ".bridge.log": "/root/DustRoute/.local/e2e-artifacts/stairs-public-20260928-b.bridge.log",
+          ".client.json": "/root/DustRoute/.local/e2e-artifacts/stairs-public-20260928-b.client.json",
+          ".fixture.json": "/root/DustRoute/.local/e2e-artifacts/stairs-public-20260928-b.fixture.json",
+          ".summary.json": "/root/DustRoute/.local/e2e-artifacts/stairs-public-20260928-b.summary.json"
+        },
+        "sha256": {
+          ".raw.ndjson": "05941dd068d9796e973b3659cb1afe2d2fc56e187e0321005449af9a40b834fa",
+          ".server.log": "17c5a437a502e0a586095888b03e728f19e3fa855d47cb8d1a6bc8c4408157fd",
+          ".bridge.log": "63677ab204ee7bc2b59b5a8842f1936a99586551866b9094e1bad7e6170b4b75",
+          ".client.json": "9e64948e1b8deb34fdd152b1cea25b03423395deab35577eecb835117461a332",
+          ".fixture.json": "b289539db3c70f8412333d2336141521c0173b434809701d2b31ce5aef85b99b"
+        }
+      },
+      "error": "Error: server readback did not confirm a complete region within one game tick: [{\"start_game_tick\":161224,\"end_game_tick\":161226,\"matched_batches\":25,\"batch_count\":25,\"unconfirmed_batches\":[]},{\"start_game_tick\":161228,\"end_game_tick\":161229,\"matched_batches\":25,\"batch_count\":25,\"unconfirmed_batches\":[]},{\"start_game_tick\":161233,\"end_game_tick\":161234,\"matched_batches\":25,\"batch_count\":25,\"unconfirmed_batches\":[]}]\n    at confirmRegion (/root/DustRoute/crates/dustroute-mcp/mineflayer/readback.js:194:9)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async confirmEmpty (/root/DustRoute/crates/dustroute-mcp/mineflayer/e2e/piston-assembly-mcp-live.js:95:21)\n    at async main (/root/DustRoute/crates/dustroute-mcp/mineflayer/e2e/piston-assembly-mcp-live.js:141:12)",
+      "summary_sha256": "7d4c02b2b7c95741945475e4fbc791d0df9f87c4e5685b9175c671568fc2c66b",
+      "note": "Retained as incomplete/refused; not promoted to conformance evidence."
+    },
+    {
+      "run": "stairs-public-20260928-c",
+      "summary": {
+        "schema_version": "dustroute.custom-assembly-comparison.v1",
+        "status": "failed",
+        "registry_records": [],
+        "initial_server_status": {
+          "connected": true,
+          "username": "DustRouteBot",
+          "host": "127.0.0.1",
+          "port": 25565,
+          "version": "1.21.11",
+          "dimension": "minecraft:overworld",
+          "enabled_features": [
+            "minecraft:vanilla"
+          ],
+          "position": {
+            "x": 142003.5,
+            "y": -60,
+            "z": 997.5
+          },
+          "metrics": {
+            "requests_total": 3,
+            "errors_total": 0,
+            "request_bytes": 114,
+            "response_bytes": 1358,
+            "total_duration_micros": 889,
+            "max_duration_micros": 767,
+            "scan_requests": 0,
+            "scan_volume_blocks": 0,
+            "scan_non_air_blocks": 0,
+            "requests_by_method": {
+              "status": 3,
+              "visible_players": 0,
+              "approach_player": 0,
+              "observe_player": 0,
+              "scan_region": 0,
+              "get_block": 0,
+              "activate_lever": 0,
+              "approach_lever": 0,
+              "wait_ticks": 0,
+              "start_update_recording": 0,
+              "stop_update_recording": 0,
+              "preview_region": 0,
+              "write_blocks": 0,
+              "place_physical_blocks": 0,
+              "unknown": 0
+            }
+          }
+        },
+        "actor_sha256": "70a33d05c0007efaa788a3a44fef594a692387eeaf85c9e4c3ed6a0d493d0b0d",
+        "loaded_sources_sha256": {
+          "/root/DustRoute/tools/observe_assembly_construction.py": "ce7352aa14163e89bdf0446ac756d8b32ad3a98eaed5a7f36581bc18d141e940",
+          "/root/DustRoute/crates/dustroute-mcp/mineflayer/e2e/piston-assembly-mcp-live.js": "70a33d05c0007efaa788a3a44fef594a692387eeaf85c9e4c3ed6a0d493d0b0d",
+          "/root/DustRoute/target/debug/dustroute-mcp": "c7155e6f73fdc2839a4da036f69855fc52d892db72a8cfa6bfba70cada84fe29",
+          "/root/DustRoute/crates/dustroute-mcp/mineflayer/bridge.js": "fd20930613733f1f36b97103033a651a958736c3b79c3c8e2122d5215173c8c8",
+          "/root/DustRoute/crates/dustroute-mcp/mineflayer/readback.js": "84b2147c3def9f9031df9b6efba0802b4cbff49b4b84ee1b251e0ce154edb757",
+          "/root/DustRoute/tools/instrumented_server.py": "7164de1897c7f0388b99b6ab2cac7edb12174add7aaf1a0bd347e5ffb5f3ca6f"
+        },
+        "continuous_construction_capture": true,
+        "actual_capture_mode": "continuous",
+        "cleanup": {
+          "force_load_removed": true
+        },
+        "error": "Error: server readback did not confirm a complete region within one game tick: [{\"start_game_tick\":162084,\"end_game_tick\":162085,\"matched_batches\":25,\"batch_count\":25,\"unconfirmed_batches\":[]},{\"start_game_tick\":162087,\"end_game_tick\":162088,\"matched_batches\":25,\"batch_count\":25,\"unconfirmed_batches\":[]},{\"start_game_tick\":162089,\"end_game_tick\":162090,\"matched_batches\":25,\"batch_count\":25,\"unconfirmed_batches\":[]}]\n    at confirmRegion (/root/DustRoute/crates/dustroute-mcp/mineflayer/readback.js:241:9)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async confirmEmpty (/root/DustRoute/crates/dustroute-mcp/mineflayer/e2e/piston-assembly-mcp-live.js:95:21)\n    at async main (/root/DustRoute/crates/dustroute-mcp/mineflayer/e2e/piston-assembly-mcp-live.js:141:12)",
+        "evidence_limit": "public MCP staged construction with server-confirmed readback receipts; actor probes remain client observations; no hidden readiness or world-lock claim",
+        "artifacts": {
+          ".raw.ndjson": "/root/DustRoute/.local/e2e-artifacts/stairs-public-20260928-c.raw.ndjson",
+          ".server.log": "/root/DustRoute/.local/e2e-artifacts/stairs-public-20260928-c.server.log",
+          ".bridge.log": "/root/DustRoute/.local/e2e-artifacts/stairs-public-20260928-c.bridge.log",
+          ".client.json": "/root/DustRoute/.local/e2e-artifacts/stairs-public-20260928-c.client.json",
+          ".fixture.json": "/root/DustRoute/.local/e2e-artifacts/stairs-public-20260928-c.fixture.json",
+          ".summary.json": "/root/DustRoute/.local/e2e-artifacts/stairs-public-20260928-c.summary.json"
+        },
+        "sha256": {
+          ".raw.ndjson": "1303e3d32b7ee9e3897aaaf92c5d05b379774bb44e4038e3952183bc641d28fa",
+          ".server.log": "3e090fa03792ec55af63f5ff4bcac8df8d20653efdb81f12db7103b162bef519",
+          ".bridge.log": "ab380b9a5687f12c4da60419d89c9af3ae22a1be42e6ae2b0ad9c896270e6b36",
+          ".client.json": "4bd84d847a49bc14a8949ad3d2490aabf98fe6c4012a60db233fd20f3e51379a",
+          ".fixture.json": "b289539db3c70f8412333d2336141521c0173b434809701d2b31ce5aef85b99b"
+        }
+      },
+      "error": "Error: server readback did not confirm a complete region within one game tick: [{\"start_game_tick\":162084,\"end_game_tick\":162085,\"matched_batches\":25,\"batch_count\":25,\"unconfirmed_batches\":[]},{\"start_game_tick\":162087,\"end_game_tick\":162088,\"matched_batches\":25,\"batch_count\":25,\"unconfirmed_batches\":[]},{\"start_game_tick\":162089,\"end_game_tick\":162090,\"matched_batches\":25,\"batch_count\":25,\"unconfirmed_batches\":[]}]\n    at confirmRegion (/root/DustRoute/crates/dustroute-mcp/mineflayer/readback.js:241:9)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async confirmEmpty (/root/DustRoute/crates/dustroute-mcp/mineflayer/e2e/piston-assembly-mcp-live.js:95:21)\n    at async main (/root/DustRoute/crates/dustroute-mcp/mineflayer/e2e/piston-assembly-mcp-live.js:141:12)",
+      "summary_sha256": "e6199e67c867aa1bed7047cebae93cc015003c6fd417fbe08ff49f193c6157d7",
+      "note": "Retained as incomplete/refused; not promoted to conformance evidence."
+    }
+  ],
+  "public_workflow": {
+    "path": "docs/evidence/stairs-public-20260928.json.gz",
+    "sha256": "55c99e216e8222601fde9de040cf3b2f872d71b44adda6936198434b8508fdb0",
+    "run": "stairs-public-20260928-d",
+    "status": "passed",
+    "checked_cells": 4785,
+    "build_steps": 15,
+    "removal_steps": 15,
+    "durable_receipts": 62,
+    "process_restarts": 3,
+    "loaded_sources_sha256": {
+      "/root/DustRoute/tools/observe_assembly_construction.py": "ce7352aa14163e89bdf0446ac756d8b32ad3a98eaed5a7f36581bc18d141e940",
+      "/root/DustRoute/crates/dustroute-mcp/mineflayer/e2e/piston-assembly-mcp-live.js": "70a33d05c0007efaa788a3a44fef594a692387eeaf85c9e4c3ed6a0d493d0b0d",
+      "/root/DustRoute/target/debug/dustroute-mcp": "1fa1294d75987b50b29a1ffb26bd58a086fd8eeb9ba49b0eb39ce42c230aebfe",
+      "/root/DustRoute/crates/dustroute-mcp/mineflayer/bridge.js": "fd20930613733f1f36b97103033a651a958736c3b79c3c8e2122d5215173c8c8",
+      "/root/DustRoute/crates/dustroute-mcp/mineflayer/readback.js": "bb332cbc3716e1f34c2a058ee5178e117206b2ecb456ddf7b7d9fc439a1027fb",
+      "/root/DustRoute/tools/instrumented_server.py": "7164de1897c7f0388b99b6ab2cac7edb12174add7aaf1a0bd347e5ffb5f3ca6f"
+    }
+  },
+  "post_public_change": "Only correction accounting was refined after the public trial: repeated shape probes now report the final difference from the original client state. Native query generation is unchanged; the final 11 Node tests include repeated-change and return-to-original cases.",
+  "source_reference": {
+    "jar": "/root/.gradle/caches/fabric-loom/minecraftMaven/net/minecraft/minecraft-merged/1.21.11-net.fabricmc.yarn.1_21_11.1.21.11+build.6-v2/minecraft-merged-1.21.11-net.fabricmc.yarn.1_21_11.1.21.11+build.6-v2.jar",
+    "sha256": "5b4aa12131a872a25dc32e7f017373d6e83502f6919154769296dd3de6af8c1b",
+    "class_sha256": {
+      "net/minecraft/block/StairsBlock.class": "7802b7a7009a9af710757c31587459092efcd4782f7633a5c3a67ca25683f497",
+      "net/minecraft/block/SideShapeType.class": "c98e1dc83c0037a5861cbae64785a566c97fb67b88fcb6e4794957105b82d25f",
+      "net/minecraft/block/entity/PistonBlockEntity.class": "c0f4f67fb2645bd762b8aaf01335c7da0111469793051e4ade39fde2bdfe0e56",
+      "net/minecraft/block/RedstoneWireBlock.class": "0583da64d1ca29a6da959b09b4f6b74d53f8542e81f3f32f557ec332931f77ea",
+      "net/minecraft/block/Block.class": "50db238ead15fdf94b4de48fc34023ef16ebb3b9d5f24d5c4f32c8ae103eddbb"
+    },
+    "audited_behavior": [
+      "StairsBlock shape cuboids and getStairShape neighbor precedence",
+      "SideShapeType FULL/CENTER/RIGID support",
+      "PistonBlockEntity normal and forced finish postProcessState",
+      "RedstoneWireBlock directional rise attachment",
+      "Block flags and shape propagation"
+    ]
+  },
+  "probe_sources_sha256": {
+    "/root/DustRoute-minecraft-instrumentation/build.gradle": "f722876c5f961dd6557292526936e8e3a8d4154b22f45d19c59c482e47debb19",
+    "/root/DustRoute-minecraft-instrumentation/gradle/wrapper/gradle-wrapper.properties": "c67b97cdfe41822dbc8dc4614460f4ae0d2eef937d873f4b9011e892b1875c0d",
+    "/root/DustRoute-minecraft-instrumentation/gradle.properties": "bc3b225b1c58f0b6a613a6e3a89abb07267b1ddc50cbf597b7e7eb24a5c5121f",
+    "/root/DustRoute-minecraft-instrumentation/settings.gradle": "6d590f07f64de77b5e28f13244dc8a39e18fde666a3815c06ed8694d805b1da3",
+    "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/CaptureController.java": "ae6c13af15a194097822f0c4925271575b3df314f296ca46cf8c2570a696d9d8",
+    "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/DustRouteInstrumentation.java": "d066cbf8c04dedb4fe0468b20518ba3c4aa09601cc64282ea1db6ec9257c70b0",
+    "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/InstrumentationLog.java": "4896331f77b7f1be0f5462bfa3e7fada4e4eac510c1bc6f946395ef9c7a719d1",
+    "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/ObservationFilter.java": "51ce513b7c41724ad09dbc2b1d6b9178b19380dad7474aacc7f8e715a47d3332",
+    "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/mixin/AbstractBlockStateMixin.java": "b0bcc128a52c3000446dffa1712bee5877c083c764c50366a01a6f1de288c0ef",
+    "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/mixin/ObserverBlockMixin.java": "7be6e71ac12bf927e650fdd1f277c774642acaf8227663dfb2ae23755489a0f1",
+    "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/mixin/PistonBlockEntityMixin.java": "a2d57320171b6b6979b396bd9b8a62655ce19be9283aaa60a6da6f7d66d6e246",
+    "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/mixin/PistonBlockMixin.java": "90d4e22e4a7958412f1df8df1e12d9f52655ac71cd0266d787461b27bb853728",
+    "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/mixin/ServerCommonNetworkHandlerMixin.java": "67db460a232c552bb5452203466cc0cc04fac01fd7d06fefc3a9a1fd2377127c",
+    "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/mixin/ServerPlayNetworkHandlerMixin.java": "51b701457fff1f7c376206c6277c209013d1a5e93e8a33e1c03f682671630807",
+    "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/mixin/ServerWorldMixin.java": "c2d11c0129335c36a2d08fd28a3ff51682e28821c7e7b8f62c36bd61ddf2dc39",
+    "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/mixin/WorldChunkMixin.java": "09fa3f45e45007356ba9ddbea246234d0d147a3e4a0028eeb2afbc0ac7219b53",
+    "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/mixin/WorldMixin.java": "ddc0050a85c83098edcf4c4fe77f2e21c35ea995f66c5c92ec56f8cdacd02593",
+    "/root/DustRoute-minecraft-instrumentation/src/main/java/dev/dustroute/instrumentation/mixin/WorldTickSchedulerMixin.java": "06c9bf6bec5bbd44621b31ffe237966cc56e8702eb14c4be7360a37357bb66cf",
+    "/root/DustRoute-minecraft-instrumentation/src/main/resources/dustroute-vanilla-instrumentation.mixins.json": "006b4ba66fc0e94215c80539e10320c3bfa57b4ecb8aab6d1f53f41e330c4f6a",
+    "/root/DustRoute-minecraft-instrumentation/src/main/resources/fabric.mod.json": "62d7e74403e53f93d51c576e6cbd58a4c3eb44f1fe7af5db5d7a2afba57960bd"
+  },
+  "probe_reused_uncommitted_work": [
+    " M README.md",
+    " M docs/observation-contract.md",
+    " M scripts/normalize_ndjson.py",
+    " M scripts/test_normalize_ndjson.py",
+    " M src/main/java/dev/dustroute/instrumentation/InstrumentationLog.java",
+    " M src/main/java/dev/dustroute/instrumentation/ObservationFilter.java",
+    " M src/main/java/dev/dustroute/instrumentation/mixin/PistonBlockEntityMixin.java",
+    " M src/main/java/dev/dustroute/instrumentation/mixin/ServerPlayNetworkHandlerMixin.java",
+    " M src/main/java/dev/dustroute/instrumentation/mixin/WorldTickSchedulerMixin.java",
+    " M src/main/resources/dustroute-vanilla-instrumentation.mixins.json",
+    "?? scripts/compress_ndjson.py",
+    "?? scripts/test_compress_ndjson.py",
+    "?? src/main/java/dev/dustroute/instrumentation/CaptureController.java",
+    "?? src/main/java/dev/dustroute/instrumentation/mixin/AbstractBlockStateMixin.java",
+    "?? src/main/java/dev/dustroute/instrumentation/mixin/ObserverBlockMixin.java",
+    "?? src/main/java/dev/dustroute/instrumentation/mixin/PistonBlockMixin.java",
+    "?? src/main/java/dev/dustroute/instrumentation/mixin/WorldChunkMixin.java"
+  ],
+  "instrumentation_source_changed": false,
+  "changed_code_sha256": {
+    "crates/dustroute-library/src/runtime_behavior.rs": "3299bef008a2105850dbdfee35f8dd9984565416b6945d58e4e350694ca580e7",
+    "crates/dustroute-library/tests/executable_laws.rs": "ea8d13e990a87b91a92c19a9a594ebaaf22c3d461330221619e6d367b2b8651d",
+    "crates/dustroute-library/tests/execution_context.rs": "7d4ea31cee6bfcabfa3b63c95c858287f1be1643d0893f19fa79c3244c8a1ff4",
+    "crates/dustroute-mcp/mineflayer/bridge.js": "fd20930613733f1f36b97103033a651a958736c3b79c3c8e2122d5215173c8c8",
+    "crates/dustroute-mcp/mineflayer/e2e/piston-assembly-mcp-live.js": "70a33d05c0007efaa788a3a44fef594a692387eeaf85c9e4c3ed6a0d493d0b0d",
+    "crates/dustroute-mcp/mineflayer/e2e/piston-mixed-live.js": "32979a514e7b32ba75736d8f3ca423f8c1187d6c90f1b6d96e08364c9ef56264",
+    "crates/dustroute-mcp/mineflayer/readback.js": "517f9ebab79a8e18be6e489f6346a5c9a115f5b7d6073c5ff0c2b46fb71e8737",
+    "crates/dustroute-mcp/mineflayer/readback.test.js": "c17a57ade9f7ba08e94ad6e3acecfd4ebdeb8f7f3fc762f700e747c1f30531f9",
+    "crates/dustroute-mcp/src/assembly_registry.rs": "b092885fa7d6539e426f224f0b0df282ddbdfd85c25fbefee1fa555903e26839",
+    "crates/dustroute-mcp/src/bridge.rs": "ec8d18007197d832a10b40490e471161dc42323af9a7651bd745cec0242e10b9",
+    "crates/dustroute-mcp/src/service.rs": "af2e7d787bc19d5caf8f61fc887780bb6577e5413b9ec30ace3b06877a040fb9",
+    "crates/dustroute-mcp/src/service/assembly_placement/execution.rs": "08313abea088379eb639aec670588576b8562410656786aa95ea5e9fbfd931d5",
+    "crates/dustroute-mcp/src/service/assembly_placement/observation.rs": "8501399830acb375e62228ab9ef0c8fc5d0d5eb4398bc8334d7260d9c53b9f58",
+    "crates/dustroute-mcp/src/service_blueprint_tests.rs": "fcf69b0cd8900beee14f7b09180f92717e5bfa9a1a6a24087f6e26e4cb4ae1db",
+    "crates/dustroute-minecraft/src/execution_context.rs": "c0f41b8fee15989e4b54b7c3d41704212d876df529f2edd838d4a0d26739d594",
+    "crates/dustroute-minecraft/src/physical.rs": "5afee7cac6ec45efa96075eb377eae64ce00b41419a083ac2ac682671200979a",
+    "crates/dustroute-minecraft/src/physical/passive.rs": "ba4f5a8d4d7113cb197323abfaa74e6613aaa75898bed73b95bb89dfc5ed26e6",
+    "crates/dustroute-minecraft/src/physical/stairs.rs": "802caa2280bb202905cc41acc280827b9ea5a491c4b81891fee5193d8b300c9a",
+    "crates/dustroute-minecraft/src/piston_electrical.rs": "8f961bc55488b815a272be677926adecae6f0d86c5b76b7d7b524393b7874024",
+    "crates/dustroute-minecraft/src/time/piston_runtime/adapter.rs": "676ff5d574c4341bd1a5e67748bb21bc788d9cea819f244b53e79d2eb08cd908",
+    "crates/dustroute-minecraft/src/time/piston_runtime/command.rs": "e4c65a96bbb23318315d8f9a502bb1f589070ab7e605d2a2d328450562de3de4",
+    "crates/dustroute-minecraft/src/time/piston_runtime/mod.rs": "cf441aaf2b0437bb10e6cf3232b1dfe87ba3d7656eb46090d182254a0ada8c8c",
+    "crates/dustroute-minecraft/src/time/piston_runtime/notifications.rs": "67ea5121784c4ca8845e8bdddb40f583ed353bcfe3cf06729b457a587634c738",
+    "crates/dustroute-minecraft/src/time/piston_runtime/passive.rs": "17fbbec3981c4e31efcd367842f18a371256bb79b938db8cd7368173f1616525",
+    "crates/dustroute-minecraft/src/validation.rs": "5ce28cecdfb99b805095b17a17c970a8ef037efb638de889378d9f74e1533c3c",
+    "crates/dustroute-minecraft/src/validation/wire_rise.rs": "9757b92840781ebf6c873a11d3d535497fd3636f4478d6ecbcb80e911b00804a",
+    "crates/dustroute-minecraft/tests/physical_admission.rs": "ed96973d7281d3557bd515690b3e10cc92c3c1461c3f5519e94bee0f518f25ae",
+    "crates/dustroute-minecraft/tests/piston_runtime.rs": "6ada4adebbe8fd60340b832b6b8328dafb6220484c6aba4c1d9777cc70ff6fed",
+    "crates/dustroute-minecraft/tests/stairs.rs": "fa667b3e8d0885ddd816dd49d4a0d5ac51154eafa6c2ea65b9cd2cba14291caa",
+    "crates/dustroute-minecraft/tests/unified_piston_runtime.rs": "71b8e98dd04b08904b0cd576b7fa7f03f6a105e7619a02cc2505e65b7954897a",
+    "crates/dustroute-minecraft/tests/wire_rise_validation.rs": "9d34a08749db53763cbc05d2b25f7736b70a7cffbd2acccc30123acacf9fb5f3",
+    "crates/dustroute-translate/tests/execution_context.rs": "3dfb2e712abf5bd4d63e10a02e33438bc6aa6970db428d74bb9bea31452d9c0a",
+    "crates/dustroute-translate/tests/location_behavior.rs": "de1cf7bf97537ca2b306a3b7005ddd481c64d0199a5dfd2ad0ef14c6e379753b",
+    "crates/dustroute-translate/tests/stair_construction.rs": "9cc06c5d4f74c7d866663889e874ef4ad6668b5185c83c3f99eafed7a7551f18",
+    "crates/dustroute-translate/tests/support/runtime_blueprint.rs": "ffc4348fd77ead2e2a24cafda4faef609ed54a0e578f8511a19d00cabc34e372",
+    "crates/dustroute-translate/tests/unified_piston_behavior.rs": "b9e3a98cd3f8992aa66cc2940fde7e4eec7c5dfcd6d9e369fb1db4724856a832",
+    "tools/compare_device_circuits.py": "0e82e4641afd5b12f075a47f1fc0ee11b4c2630c63df56931522d380c36a3414",
+    "tools/make_stair_assembly_fixture.py": "aab770e7bb137da4e29ecefe24bee3241b3ff0a5a615347a953d78e79f81d878",
+    "tools/make_stair_fixtures.py": "ee5972e9dcc035cec255dc59c2b9d443c0a55af414dea76e3f0e66631f09d7f0",
+    "tools/observe_assembly_construction.py": "ce7352aa14163e89bdf0446ac756d8b32ad3a98eaed5a7f36581bc18d141e940",
+    "tools/observe_device_circuit.py": "d9c4d8bf9f209656b3a90ba82d496ed6484d090586c797fdb67adf83061c0a7a",
+    "tools/observe_mixed_pistons.py": "0a9877a22fcb6d580c5366c45d4f4b1eaa596b316c6f813d38e43784156bca03",
+    "tools/retain_device_circuit.py": "be7c29557c359cb022d3b040fbbf86f0c8ee47d476e09376823ee359eda79a5a",
+    "tools/server_readback.py": "6c31a6bc06ae8ec296b6b3b1cf4894c0bf7fa026f9b9723667f87e915a92bdc9",
+    "tools/test_server_readback.py": "1dbe52be913d0da58dc6f414ec129a46321cba736a1cbb02430932c83d132ae8"
+  },
+  "final_model_sha256": "4fad59a062dd03d645e3093dc413a2d6aeffc24a3f7c4dcba2f7c484f4931bc4",
+  "validation": [
+    {
+      "name": "fmt",
+      "command": [
+        "cargo",
+        "fmt",
+        "--all"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 1.8,
+      "log": ".local/e2e-artifacts/stairs-validation-final-fmt.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "passed_rust_tests_including_doctests": 0
+    },
+    {
+      "name": "minecraft",
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-minecraft",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 57.22,
+      "log": ".local/e2e-artifacts/stairs-validation-final-minecraft.log",
+      "sha256": "56889c6746aad0dfab992fdb1702e1ee850e06f8119ae51de762aca3907ec0b6",
+      "passed_rust_tests_including_doctests": 314
+    },
+    {
+      "name": "library",
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-library",
+        "--test",
+        "execution_context",
+        "--test",
+        "executable_laws",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 14.03,
+      "log": ".local/e2e-artifacts/stairs-validation-final-library.log",
+      "sha256": "36522b49821901c2fbeacac31d413487988ac76ea68dc6fdfd8037be0c642bc8",
+      "passed_rust_tests_including_doctests": 18
+    },
+    {
+      "name": "translate",
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-translate",
+        "--test",
+        "passive_shapes",
+        "--test",
+        "execution_context",
+        "--test",
+        "electrical_piston_construction",
+        "--test",
+        "electrical_piston_adoption",
+        "--test",
+        "electrical_piston_relocation",
+        "--test",
+        "runtime_adoption",
+        "--test",
+        "ordinary_reference_door",
+        "--test",
+        "location_behavior",
+        "--test",
+        "unified_piston_behavior",
+        "--test",
+        "stair_construction",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 96.75,
+      "log": ".local/e2e-artifacts/stairs-validation-final-translate.log",
+      "sha256": "36aaec67ae1752371f22492ed74135f36f975e9ea4180b6c271524aa38b57fa6",
+      "passed_rust_tests_including_doctests": 43
+    },
+    {
+      "name": "export",
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-translate",
+        "--lib",
+        "minecraft_export::tests",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 26.35,
+      "log": ".local/e2e-artifacts/stairs-validation-final-export.log",
+      "sha256": "83cc9679be3d036ab66ecf08db9b45ee549a19d5a20576a3f5d66d73623466c9",
+      "passed_rust_tests_including_doctests": 5
+    },
+    {
+      "name": "snapshot",
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-translate",
+        "--lib",
+        "snapshot::tests",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.12,
+      "log": ".local/e2e-artifacts/stairs-validation-final-snapshot.log",
+      "sha256": "e26437bb1fe72a364755f38ee66bce519d94302bedf73a5873ed385634f8f0c4",
+      "passed_rust_tests_including_doctests": 7
+    },
+    {
+      "name": "mcp-bridge",
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "-p",
+        "dustroute-mcp",
+        "--lib",
+        "bridge::tests",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 22.9,
+      "log": ".local/e2e-artifacts/stairs-validation-final-mcp-bridge.log",
+      "sha256": "c00eedcb05154fa20b7e3759ae33737080bf5ee8ea8cc994bee5bd18b59f3c52",
+      "passed_rust_tests_including_doctests": 9
+    },
+    {
+      "name": "node",
+      "command": [
+        "npm",
+        "test",
+        "--prefix",
+        "crates/dustroute-mcp/mineflayer"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 1.32,
+      "log": ".local/e2e-artifacts/stairs-validation-final-node.log",
+      "sha256": "7fd8d227b39dd1b9445d8548eb4c4a8ce9c69ac4312ca6d3c5163a8beacf44f0",
+      "passed_rust_tests_including_doctests": 0
+    },
+    {
+      "name": "python",
+      "command": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tools",
+        "-p",
+        "test_*.py"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 236.81,
+      "log": ".local/e2e-artifacts/stairs-validation-final-python.log",
+      "sha256": "9a6139195054c7eedb6068dcd5043fef82bf8746bff2e595506157fa3a1301dd",
+      "passed_rust_tests_including_doctests": 0
+    },
+    {
+      "name": "clippy",
+      "command": [
+        "cargo",
+        "clippy",
+        "--offline",
+        "--locked",
+        "-j",
+        "1",
+        "--workspace",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 52.55,
+      "log": ".local/e2e-artifacts/stairs-validation-final-clippy.log",
+      "sha256": "abc361ced6dcbe2bd082e1ba785ff77ffe0e17256bfaf8775a33eb6218f15588",
+      "passed_rust_tests_including_doctests": 0
+    },
+    {
+      "name": "fmt-check",
+      "command": [
+        "cargo",
+        "fmt",
+        "--all",
+        "--",
+        "--check"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 1.5,
+      "log": ".local/e2e-artifacts/stairs-validation-final-fmt-check.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "passed_rust_tests_including_doctests": 0
+    },
+    {
+      "name": "diff-check",
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.02,
+      "log": ".local/e2e-artifacts/stairs-validation-final-diff-check.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "passed_rust_tests_including_doctests": 0
+    },
+    {
+      "name": "node-final-correction-accounting",
+      "command": [
+        "npm",
+        "test",
+        "--prefix",
+        "crates/dustroute-mcp/mineflayer"
+      ],
+      "exit_code": 0,
+      "log": ".local/e2e-artifacts/stairs-validation-final-node-corrections.log",
+      "sha256": "c7b22824f56728d794cc2608d92c552dd4aa3233928f93c3fbcbcad680b3c18b",
+      "passed_tests": 11
+    }
+  ],
+  "prior_mcp_validation": {
+    "passed_tests": 84,
+    "log": ".local/e2e-artifacts/stairs-validation-mcp-full-before-final-fields.log",
+    "sha256": "64d4a90f9b052b137e4ddee89bce617b46b78194e29907c14c44e2a43eb455ed",
+    "scope": "Full MCP library suite before final optional receipt fields and native observation-interval metadata; final bridge tests and public native workflow cover the subsequent changes."
+  },
+  "boundaries": [
+    "stone_stairs, cobblestone_stairs, quartz_stairs, smooth_quartz_stairs; complete dry states only.",
+    "Native matrix covers declared cases, not every circuit or stair state. Shape/inert callbacks and hidden histories are not directly observed.",
+    "Readback uses standard commands with command permission, no companion-mod addition, no block writes or world tick freeze.",
+    "Current whole-region predicate uses compressed Air comparisons; 8880 cells and 30000 command characters are preflight ceilings. Dense or fragmented regions may need smaller bounds.",
+    "Earlier retained device captures use their recorded confirmation versions; the current compressed single-command path is exercised by the retained public trial.",
+    "Snapshot fingerprints retain original JSON encoding; not canonical after Rust reserialization or cryptographic server attestation.",
+    "No atomic write transaction, hidden runtime reconstruction, unconditional teardown or automatic repair guarantee.",
+    "Retired v15 contexts require fresh review; no checkpoint migration.",
+    "Other stair materials, waterlogging, panes, fluids/items/entities and direct piston crushing remain outside scope.",
+    "Failed captures remain failures. No full workspace test suite; workspace Clippy and the listed targeted regressions were run."
+  ]
+}

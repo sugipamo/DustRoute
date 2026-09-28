@@ -96,7 +96,7 @@ fn arms(block: &Block) -> Result<&BTreeMap<Facing, WireConnection>, RuntimeError
 /// Evidence gate for electrical identities only. Stable piston/head pairing and
 /// physical support must additionally pass the runtime/placement gates.
 pub fn validate_evidence(block: &Block) -> Result<(), RuntimeError> {
-    if !crate::execution_context::WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V15
+    if !crate::execution_context::WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V16
         .admits_kind(block.kind)
     {
         return Err(invalid(format!("unsupported electrical kind {:?}", block.kind)));
@@ -469,15 +469,12 @@ impl<'a> ElectricalWorld<'a> {
         let clear = !conducts(&self.block(along(pos, Facing::Up)?)?);
         let beside = along(pos, side)?;
         let neighbor = self.block(beside)?;
+        let rise = crate::physical::wire_rise_connection(&neighbor, side);
         let connected = if clear
-            && full_face(&neighbor, Facing::Up)
+            && let Some(rise) = rise
             && self.block(along(beside, Facing::Up)?)?.kind == BlockKind::RedstoneWire
         {
-            if full_face(&neighbor, side.opposite()) {
-                WireConnection::Up
-            } else {
-                WireConnection::Side
-            }
+            rise
         } else if Self::wire_connects(&neighbor, side)
             || (!conducts(&neighbor)
                 && self.block(along(beside, Facing::Down)?)?.kind == BlockKind::RedstoneWire)

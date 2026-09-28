@@ -8156,9 +8156,9 @@ mod tests {
                     .unwrap();
                 let request: Value = serde_json::from_str(&line).unwrap();
                 assert_eq!(request["method"], "scan_region");
-                let response = json!({ "id": request["id"], "result": {
+                let response = json!({ "id": request["id"], "result": crate::bridge::test_readback_response(&request,json!({
                     "min": request["params"]["min"], "max": request["params"]["max"], "blocks": []
-                }});
+                }))});
                 stream
                     .write_all(format!("{response}\n").as_bytes())
                     .await
@@ -8451,7 +8451,7 @@ mod tests {
                     }),
                     method => panic!("unexpected fake bridge method {method}"),
                 };
-                let response = json!({ "id": request["id"], "result": result });
+                let response = json!({ "id": request["id"], "result": crate::bridge::test_readback_response(&request,result) });
                 stream
                     .write_all(format!("{response}\n").as_bytes())
                     .await
@@ -8583,7 +8583,7 @@ mod tests {
                 };
                 stream
                     .write_all(
-                        format!("{}\n", json!({ "id": request["id"], "result": result }))
+                        format!("{}\n", json!({ "id": request["id"], "result": crate::bridge::test_readback_response(&request,crate::bridge::test_scan_world(&request,result)) }))
                             .as_bytes(),
                     )
                     .await
@@ -8718,7 +8718,7 @@ mod tests {
                 };
                 stream
                     .write_all(
-                        format!("{}\n", json!({ "id": request["id"], "result": result }))
+                        format!("{}\n", json!({ "id": request["id"], "result": crate::bridge::test_readback_response(&request,crate::bridge::test_scan_world(&request,result)) }))
                             .as_bytes(),
                     )
                     .await
@@ -8787,7 +8787,7 @@ mod tests {
                     }
                     method => panic!("unexpected fake bridge method {method}"),
                 };
-                let response = json!({ "id": request["id"], "result": result });
+                let response = json!({ "id": request["id"], "result": crate::bridge::test_readback_response(&request,crate::bridge::test_scan_world(&request,result)) });
                 stream
                     .write_all(format!("{response}\n").as_bytes())
                     .await
@@ -9184,7 +9184,7 @@ mod tests {
                 };
                 stream
                     .write_all(
-                        format!("{}\n", json!({"id":request["id"],"result":result})).as_bytes(),
+                        format!("{}\n", json!({"id":request["id"],"result":crate::bridge::test_readback_response(&request,result)})).as_bytes(),
                     )
                     .await
                     .unwrap();
@@ -9369,7 +9369,7 @@ mod tests {
                     let reply = if let Some(error) = error {
                         json!({"id":req["id"],"error":error})
                     } else {
-                        json!({"id":req["id"],"result":result})
+                        json!({"id":req["id"],"result":crate::bridge::test_readback_response(&req,result)})
                     };
                     stream
                         .write_all(format!("{reply}\n").as_bytes())
@@ -9711,7 +9711,7 @@ mod tests {
                     }
                     other => panic!("unexpected request (planning must not write): {other}"),
                 };
-                let reply = json!({"id":req["id"],"result":result});
+                let reply = json!({"id":req["id"],"result":crate::bridge::test_readback_response(&req,result)});
                 stream
                     .write_all(format!("{reply}\n").as_bytes())
                     .await
@@ -9848,7 +9848,7 @@ mod tests {
                     let reply = if let Some(error) = error {
                         json!({"id":req["id"],"error":error})
                     } else {
-                        json!({"id":req["id"],"result":result})
+                        json!({"id":req["id"],"result":crate::bridge::test_readback_response(&req,result)})
                     };
                     stream
                         .write_all(format!("{reply}\n").as_bytes())
@@ -10022,7 +10022,7 @@ mod tests {
                     let reply = if let Some(error) = error {
                         json!({"id":req["id"],"error":error})
                     } else {
-                        json!({"id":req["id"],"result":result})
+                        json!({"id":req["id"],"result":crate::bridge::test_readback_response(&req,result)})
                     };
                     stream
                         .write_all(format!("{reply}\n").as_bytes())

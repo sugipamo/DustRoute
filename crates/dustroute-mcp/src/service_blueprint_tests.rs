@@ -188,6 +188,7 @@ async fn custom_electrical_construction_rechecks_adoption_baseline_settings_and_
         wrong_target: bool,
         fail_after_write: Option<usize>,
         lose_write_reply_at: Option<usize>,
+        unverified_readback: bool,
     }
     let root = temporary();
     let durable_root = root.join("assembly-instances");
@@ -272,6 +273,11 @@ async fn custom_electrical_construction_rechecks_adoption_baseline_settings_and_
                     continue;
                 }
             }
+            let result = if transport.lock().unwrap().unverified_readback {
+                result
+            } else {
+                crate::bridge::test_readback_response(&req, result)
+            };
             stream
                 .write_all(format!("{}\n", json!({"id":req["id"],"result":result})).as_bytes())
                 .await
@@ -345,7 +351,7 @@ async fn custom_electrical_construction_rechecks_adoption_baseline_settings_and_
     assert_eq!(planned["ok"], true, "{planned}");
     assert_eq!(
         planned["execution_context"]["profile"],
-        "dustroute.piston-electrical-root-exploration.v15"
+        "dustroute.piston-electrical-root-exploration.v16"
     );
     let id = planned["operation_id"].clone();
     assert_eq!(
@@ -387,6 +393,18 @@ async fn custom_electrical_construction_rechecks_adoption_baseline_settings_and_
         false
     );
     fake.lock().unwrap().partial = false;
+    fake.lock().unwrap().unverified_readback = true;
+    let refused = call(
+        &client,
+        "invoke_operation",
+        json!({"operation_id":id,"confirm":true}),
+    )
+    .await;
+    assert_eq!(
+        refused["ok"], false,
+        "client-only observation must not authorize writes: {refused}"
+    );
+    fake.lock().unwrap().unverified_readback = false;
     assert_eq!(fake.lock().unwrap().writes, 0);
     fake.lock().unwrap().steps = planned["construction_steps"]
         .as_array()
@@ -431,6 +449,13 @@ async fn custom_electrical_construction_rechecks_adoption_baseline_settings_and_
     .await;
     assert_eq!(get["expected_snapshot"], settled);
     assert_eq!(get["fresh_observation"], false);
+    assert_eq!(
+        get["instance"]["attempts"][0]["readbacks"]
+            .as_array()
+            .unwrap()
+            .len(),
+        1 + 2 * planned["construction_steps"].as_array().unwrap().len()
+    );
     // An unrelated catalog append must not invalidate pinned definitions.
     let mut extra = get["pinned_source"]["record"].clone();
     extra["id"] = json!("runtime-test.unrelated-instance.v1");
@@ -1124,7 +1149,7 @@ async fn runtime_blueprint_review_and_adoption_preserve_child_failures_after_res
                 .input_schema,
         )
         .unwrap();
-        assert!(schema.contains("dustroute.piston-electrical-root-exploration.v15"));
+        assert!(schema.contains("dustroute.piston-electrical-root-exploration.v16"));
         assert!(!schema.contains("dustroute.horizontal-piston-root-exploration.v1"));
         let imported=call(&client,"test_circuit_change",json!({"blueprint":{"action":"import","records":{
             "types":fixture.catalog.type_revisions().collect::<Vec<_>>(),
@@ -1154,7 +1179,7 @@ async fn runtime_blueprint_review_and_adoption_preserve_child_failures_after_res
         );
         assert_eq!(
             inspected["result"]["validation"]["placement_validation_profile"],
-            "dustroute.piston-electrical-callbacks.java-1-21-11.v15"
+            "dustroute.piston-electrical-callbacks.java-1-21-11.v16"
         );
         assert_eq!(
             inspected["result"]["world_execution_context"],

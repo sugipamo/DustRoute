@@ -117,6 +117,13 @@ pub(super) fn notify(
         }
         return Ok(out);
     }
+    if crate::physical::stairs::state(&block).is_some() {
+        let mut out = super::passive::notify(view, &job, &block)?;
+        if !jobs.is_empty() {
+            out.continuation = Some(PistonEvent::Notify { jobs });
+        }
+        return Ok(out);
+    }
     let mut nested = VecDeque::new();
     if job.shape {
         if block.kind == BlockKind::PistonHead {

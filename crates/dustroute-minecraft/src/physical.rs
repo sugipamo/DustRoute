@@ -31,8 +31,9 @@ use serde::Deserialize;
 use crate::{Block, BlockKind, Facing, ObservationClassification, PistonState};
 
 pub mod passive;
+pub mod stairs;
 
-pub const REVISION: &str = "dustroute.physical-admission.java-1-21-11.v6";
+pub const REVISION: &str = "dustroute.physical-admission.java-1-21-11.v7";
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
 #[serde(rename_all = "snake_case")]
@@ -103,6 +104,7 @@ pub enum Shape {
     Moving,
     TopHalf,
     BottomHalf,
+    Stairs,
 }
 
 /// Face rules describe support and conduction independently. For example an
@@ -116,6 +118,7 @@ pub enum Faces {
     PistonHead,
     Up,
     Down,
+    Stairs,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
@@ -189,6 +192,10 @@ impl PhysicalSpec {
             "lower support face requires bottom-half geometry"
         );
         check!(
+            !matches!(self.supporting, Faces::Stairs) || matches!(self.shape, Shape::Stairs),
+            "stair faces require stair geometry"
+        );
+        check!(
             !matches!(self.orientation, Orientation::FloorOutput)
                 || matches!(self.support, Support::Below),
             "floor output requires support below"
@@ -243,11 +250,15 @@ impl CheckedPhysical {
     pub fn block_traits(self, block: &Block) -> crate::BlockRedstoneTraits {
         let top = self.full_face(block, Facing::Up);
         let conductor = self.conducts(block);
-        let rise = top.then_some(if matches!(self.0.supporting, Faces::Up) {
-            crate::WireConnection::Side
-        } else {
-            crate::WireConnection::Up
-        });
+        // The legacy aggregate has no direction field; stairs require the
+        // directional wire_rise_connection query instead.
+        let rise = (top && self.0.shape != Shape::Stairs).then_some(
+            if matches!(self.0.supporting, Faces::Up) {
+                crate::WireConnection::Side
+            } else {
+                crate::WireConnection::Up
+            },
+        );
         crate::BlockRedstoneTraits {
             occupied_shape: match self.0.shape {
                 Shape::Empty => crate::OccupiedShape::Empty,
@@ -260,7 +271,7 @@ impl CheckedPhysical {
             conducts_weak_power: conductor,
             conducts_strong_power: conductor,
             strong_power_drives_dust: conductor,
-            permits_wire_rise_beside: rise.is_some(),
+            permits_wire_rise_beside: top,
             wire_rise_connection: rise,
             blocks_wire_rise_when_above: conductor,
         }
@@ -307,7 +318,7 @@ impl CheckedPhysical {
         {
             return physical.center_face(support, face);
         }
-        // FULL and RIGID coincide for the admitted cube/slab/body/head shapes.
+        // FULL and RIGID coincide for the admitted cube/slab/stair/body/head shapes.
         physical.full_face(support, face)
     }
     pub fn center_face(self, block: &Block, side: Facing) -> bool {
@@ -319,6 +330,7 @@ impl CheckedPhysical {
             Faces::None => false,
             Faces::Up => side == Facing::Up,
             Faces::Down => side == Facing::Down,
+            Faces::Stairs => stairs::StairState::parse(block).is_some_and(|s| s.full_face(side)),
             Faces::PistonBody => {
                 block.piston_state == Some(PistonState::Retracted)
                     || block.facing.is_some_and(|f| f != side)
@@ -338,6 +350,9 @@ impl CheckedPhysical {
                 Faces::All => true,
                 Faces::Up => side == Facing::Up,
                 Faces::Down => side == Facing::Down,
+                Faces::Stairs => {
+                    stairs::StairState::parse(block).is_some_and(|s| s.full_face(side))
+                }
                 Faces::PistonBody => {
                     block.piston_state == Some(PistonState::Retracted)
                         || block.facing == Some(side.opposite())
@@ -359,6 +374,23 @@ impl CheckedPhysical {
 
 pub(crate) fn known_geometry(block: &Block) -> bool {
     of_block(block).is_some()
+}
+
+/// Direction from the lower wire to its adjacent support. The top and the
+/// vertical face are separate predicates in native dust rendering.
+pub fn wire_rise_connection(
+    block: &Block,
+    toward_support: Facing,
+) -> Option<crate::WireConnection> {
+    let p = of_block(block)?;
+    if toward_support.horizontal_offset().is_none() || !p.full_face(block, Facing::Up) {
+        return None;
+    }
+    Some(if p.full_face(block, toward_support.opposite()) {
+        crate::WireConnection::Up
+    } else {
+        crate::WireConnection::Side
+    })
 }
 
 /// Resolve current physical facts from identity and state. Kind-only defaults

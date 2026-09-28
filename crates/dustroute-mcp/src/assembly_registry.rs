@@ -74,6 +74,9 @@ pub(crate) struct Attempt {
     pub started_at_unix_ms: u64,
     pub finished_at_unix_ms: Option<u64>,
     pub error: Option<String>,
+    /// Historical readback receipts only; fresh observations are always required.
+    #[serde(default)]
+    pub readbacks: Vec<crate::bridge::ServerReadback>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

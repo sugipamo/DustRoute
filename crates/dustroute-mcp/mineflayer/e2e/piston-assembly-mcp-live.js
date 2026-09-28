@@ -8,6 +8,7 @@ const assert = require('node:assert/strict')
 const { once } = require('node:events')
 const mineflayer = require('mineflayer')
 const { Vec3 } = require('vec3')
+const { confirmRegion } = require('../readback')
 const { McpStdioClient } = require('./runtime')
 const root = path.resolve(__dirname, '../../../..')
 const fixture = JSON.parse(fs.readFileSync(process.env.DUSTROUTE_ASSEMBLY_FIXTURE, 'utf8'))
@@ -88,6 +89,14 @@ function failureSnapshot () {
   }
   return { min: low, max: high, blocks, unknown, complete: unknown.length === 0 }
 }
+async function confirmEmpty (label) {
+  const candidate = failureSnapshot()
+  assert(candidate.complete, 'complete client coverage required before server confirmation')
+  const confirmed = await confirmRegion(bot, candidate, 'minecraft:overworld')
+  assert.equal(confirmed.blocks.length, 0, 'server-confirmed empty region required')
+  report.empty_readbacks ??= {}
+  report.empty_readbacks[label] = confirmed.readback
+}
 async function call (name, args, ok = true) {
   const response = await mcp.callToolRaw(name, args)
   report.calls.push({ name, args, response })
@@ -129,7 +138,7 @@ async function main () {
   forced = true
   await bot.waitForChunksToLoad()
   await sleep(1000)
-  empty(); owned = true
+  empty(); await confirmEmpty('before_setup'); owned = true
   await mcp.initialize()
   await call('test_circuit_change', { blueprint: { action: 'import', records: fixture.records } })
   const request = structuredClone(fixture.request)
@@ -270,6 +279,12 @@ async function main () {
       assert.equal(diagnosis.repair.status, 'not_needed_for_reference_match')
     }
     if (powered) {
+      if (fixture.require_stair_readback_correction) {
+        const actual = await call('manage_assembly', { action: 'observe', instance_id: id })
+        const corrections = actual.observation.readbacks.flatMap(r => r.corrections)
+        assert(corrections.some(c => c.confirmed_shape === 'straight'), 'public readback must independently correct the stale stair shape')
+        report.stair_readback = actual.observation
+      }
       if (persistence) {
         const changed = await call('manage_assembly', { action: 'plan_removal', instance_id: id }, false)
         assert.equal(changed.observation.status, 'changed')
@@ -298,6 +313,7 @@ async function main () {
   } else undone = await call('undo_operation', { operation_id: id, confirm: true })
   assert.equal(undone.status, 'verified')
   empty()
+  await confirmEmpty('after_public_removal')
   report.status = 'passed'
 }
 const deadline = setTimeout(() => { bot.end('construction trial deadline'); mcp.close() }, persistence ? 900000 : 300000)
@@ -314,7 +330,7 @@ main().catch(async error => {
   }
 }).finally(async () => {
   try {
-    if (owned) { await command(`/fill ${coords(low)} ${coords(high)} minecraft:air`); await bot.waitForTicks(20); empty(); report.cleanup.region_empty = true }
+    if (owned) { await command(`/fill ${coords(low)} ${coords(high)} minecraft:air`); await bot.waitForTicks(20); empty(); await confirmEmpty('after_cleanup'); report.cleanup.region_empty = true }
     if (forced) { await command(`/forceload remove ${low.x} ${low.z} ${high.x} ${high.z}`); report.cleanup.force_load_removed = true }
   } catch (error) { report.cleanup.error = String(error); report.status = 'failed'; process.exitCode = 1 }
   fs.writeFileSync(output, JSON.stringify(report, null, 2) + '\n', { flag: 'wx' })

@@ -21,8 +21,8 @@ pub enum WorldExecutionProfile {
     RedstoneCompatibilityBoundaryV1,
     #[serde(rename = "dustroute.bounded-redstone-events.v1")]
     BoundedRedstoneEventsV1,
-    #[serde(rename = "dustroute.piston-electrical-callbacks.java-1-21-11.v15")]
-    UnifiedPistonElectricalCallbacksJava12111V15,
+    #[serde(rename = "dustroute.piston-electrical-callbacks.java-1-21-11.v16")]
+    UnifiedPistonElectricalCallbacksJava12111V16,
 }
 
 impl WorldExecutionProfile {
@@ -45,7 +45,7 @@ impl WorldExecutionProfile {
             Self::RedstoneCompatibilityBoundaryV1 | Self::BoundedRedstoneEventsV1 => {
                 crate::spatial::spatial_kind_v1(kind).is_some()
             }
-            Self::UnifiedPistonElectricalCallbacksJava12111V15 => {
+            Self::UnifiedPistonElectricalCallbacksJava12111V16 => {
                 matches!(
                     kind,
                     Air | Solid
@@ -148,7 +148,7 @@ impl WorldExecutionContext {
     /// separate from the legacy finite spatial-law catalog.
     pub const fn physical_admission_revision(&self) -> Option<&'static str> {
         match self.profile {
-            WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V15 => {
+            WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V16 => {
                 Some(crate::physical::REVISION)
             }
             _ => None,
@@ -211,7 +211,7 @@ impl WorldExecutionContext {
                         Some(crate::piston_law::builtin_piston_laws().default_motion_profile()),
                     )
                 }
-                UnifiedPistonElectricalCallbacksJava12111V15 => {
+                UnifiedPistonElectricalCallbacksJava12111V16 => {
                     laws.retain(|role, _| *role == BlockTraits);
                     laws.insert(Lamp, crate::device_callback_law::LAW_IDS[0].into());
                     laws.insert(Observer, crate::device_callback_law::LAW_IDS[1].into());
@@ -274,7 +274,7 @@ impl WorldExecutionContext {
     pub fn device_program_revision(&self) -> Option<&'static str> {
         matches!(
             self.profile,
-            WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V15
+            WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V16
         )
         .then_some(crate::device_program::REVISION)
     }
@@ -284,7 +284,7 @@ impl WorldExecutionContext {
     pub fn synchronous_runtime_profile(&self) -> Option<&'static str> {
         matches!(
             self.profile,
-            WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V15
+            WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V16
         )
         .then_some(crate::time::runtime::PROFILE)
     }

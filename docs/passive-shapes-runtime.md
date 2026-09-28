@@ -5,6 +5,10 @@ registry and the exact observed block state. A full support face and electrical
 conduction are separate facts. The same resolution feeds electrical queries,
 attachment lifetime, construction validation and literal block export.
 
+This document records the v15 slab/glass milestone. The current v16 extension
+adds [dry stairs and shared server readback](stairs-runtime-readback.md); the
+measurements below remain evidence of the earlier milestone.
+
 ## Admitted states
 
 | Native identities | State | Full support faces | Conducts redstone |

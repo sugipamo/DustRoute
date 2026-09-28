@@ -55,6 +55,9 @@ def snapshot(client, which):
         expected *= region["max"][axis] - region["min"][axis] + 1
     assert len(rows) == expected and len({key(b["position"]) for b in rows}) == expected
     assert all(all(region["min"][a] <= b["position"][a] <= region["max"][a] for a in ("x", "y", "z")) for b in rows)
+    if 'server_readbacks' in client:
+        from server_readback import confirmed_snapshot
+        return confirmed_snapshot(client, which)
     return {**region, "blocks": [
         {"pos": b["position"], "name": b["name"], "properties": properties(b["properties"])}
         for b in rows if b["name"] != "minecraft:air"

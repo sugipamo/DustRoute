@@ -573,6 +573,9 @@ fn finish_or_advance(
         } else {
             (*entity.pushed_block).clone()
         };
+        // Block.postProcessState updates an arriving stair's corner before the
+        // completion write, both for normal completion and forced finish.
+        after = super::passive::transformed(view, pos, &after)?;
         if after.kind == BlockKind::PistonHead && !head_supported(view, pos, &after)? {
             after = Block::new(BlockKind::Air);
         }

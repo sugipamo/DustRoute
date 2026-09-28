@@ -30,6 +30,8 @@ def retain(prefix, fixture_path):
     retained_raw = [raw[0], *raw[begin:end + 1], raw[-1]]
     client_keys = ['complete', 'cleanup', 'enabled_features', 'known_region', 'origin', 'activations', 'initial', 'final']
     retained_client = {k: client[k] for k in client_keys}
+    if 'server_readbacks' in client:
+        retained_client['server_readbacks'] = client['server_readbacks']
     # Verify the retained interval can still independently derive every expected
     # value. No model file is read while promoting an observation.
     assert observe(retained_raw, retained_client, fixture) == observation

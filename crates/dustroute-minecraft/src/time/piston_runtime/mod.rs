@@ -7,6 +7,7 @@ mod electrical;
 mod geometry;
 mod movement;
 mod notifications;
+mod passive;
 mod support;
 
 use std::collections::VecDeque;
@@ -18,7 +19,7 @@ use crate::{Block, Facing, Pos, Region, World};
 pub(crate) use adapter::ElectricalPistonAdapter;
 pub use movement::MotionPlan;
 
-pub const ELECTRICAL_PROFILE: &str = "dustroute.piston-electrical-callbacks.java-1-21-11.v15";
+pub const ELECTRICAL_PROFILE: &str = "dustroute.piston-electrical-callbacks.java-1-21-11.v16";
 
 #[cfg(test)]
 mod device_capability_tests;
@@ -114,7 +115,7 @@ impl ElectricalPistonRuntime {
     }
     pub fn execution_context(&self) -> crate::execution_context::WorldExecutionContext {
         crate::execution_context::WorldExecutionContext::for_profile(
-            crate::execution_context::WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V15,
+            crate::execution_context::WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V16,
         )
     }
 }
@@ -213,7 +214,7 @@ pub fn new_piston_runtime(
     limits: RuntimeLimits,
 ) -> Result<ElectricalPistonRuntime, RuntimeError> {
     crate::execution_context::WorldExecutionContext::for_profile(
-        crate::execution_context::WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V15,
+        crate::execution_context::WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V16,
     )
     .validate()
     .map_err(RuntimeError::Invalid)?;

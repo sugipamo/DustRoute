@@ -68,6 +68,8 @@ def main():
     origin = dict(x=args.x, y=180, z=1000)
     bounds = [fixture['initial'][e][a] + origin[a] for e in ('min', 'max') for a in ('x', 'y', 'z')]
     provenance = dict(fixture_sha256=digest(args.fixture), actor_sha256=digest(ACTOR),
+                      readback_sha256=digest(ACTOR.parent.parent / 'readback.js'),
+                      readback_validator_sha256=digest(Path(__file__).with_name('server_readback.py')),
                       capture_sha256=digest(Path(__file__)), comparator_sha256=digest(Path(__file__).with_name('compare_device_circuits.py')),
                       projection_sha256=digest(Path(__file__).with_name('compare_piston_transients.py')),
                       model_binary_sha256=digest(ROOT / 'target/debug/examples/compare_electrical_pistons'))

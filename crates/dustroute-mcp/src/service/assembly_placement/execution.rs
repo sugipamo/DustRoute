@@ -67,7 +67,8 @@ impl DustRouteMcp {
                     context:proof.context().clone(),expected:proof.settled().clone(),state:InstanceState::NeedsInspection,attempts:vec![],
                     last_observation:None,updated_at_unix_ms:now_ms()? }
             };
-            let baseline = self.bridge.scan_region(bounds.min,bounds.max,&plan.dimension).await.map_err(|e|e.to_string())?;
+            let baseline_readback = self.bridge.scan_region_confirmed(bounds.min,bounds.max,&plan.dimension).await.map_err(|e|e.to_string())?;
+            let baseline = baseline_readback.snapshot;
             if let Some(reconstruction) = plan.reconstruction() {
                 ValidatedAssemblyPlacement::matches(&baseline,&reconstruction.baseline,&status.version)?;
             } else { proof.validate_before(&baseline,&status.version,removal)?; }
@@ -75,7 +76,7 @@ impl DustRouteMcp {
             self.assembly_placements.lock().await.get_mut(&id).ok_or("construction missing")?.state = PistonPlacementState::NeedsInspection;
             record.state = InstanceState::NeedsInspection;
             record.last_observation = None;
-            record.attempts.push(Attempt { operation_id:id,removal,reconstruction:plan.reconstruction().cloned(),verified_steps:0,total_steps:steps.len(),started_at_unix_ms:now_ms()?,finished_at_unix_ms:None,error:None });
+            record.attempts.push(Attempt { operation_id:id,removal,reconstruction:plan.reconstruction().cloned(),verified_steps:0,total_steps:steps.len(),started_at_unix_ms:now_ms()?,finished_at_unix_ms:None,error:None,readbacks:vec![baseline_readback.readback] });
             registry.save(&mut record)?;
             let mut completed = 0;
             let mut run: Result<(),String> = async {
@@ -84,8 +85,11 @@ impl DustRouteMcp {
                     let status = self.bridge.status().await.map_err(|e|e.to_string())?;
                     server_contract(&status,&plan.dimension)?;
                     plan.target.check(&status)?;
-                    let before = self.bridge.scan_region(bounds.min,bounds.max,&plan.dimension).await.map_err(|e|e.to_string())?;
+                    let before_readback = self.bridge.scan_region_confirmed(bounds.min,bounds.max,&plan.dimension).await.map_err(|e|e.to_string())?;
+                    let before = before_readback.snapshot;
                     ValidatedAssemblyPlacement::matches(&before,&expected,&status.version)?;
+                    record.attempts.last_mut().ok_or("missing durable attempt")?.readbacks.push(before_readback.readback);
+                    registry.save(&mut record)?;
                     self.bridge.write_blocks(json!([{"pos":step.position,"state":step.state}]),&plan.dimension).await.map_err(|e|e.to_string())?;
                     // The bridge accepts at most 200 ticks per request. A
                     // modeled chain may need longer before whole-region readback.
@@ -95,7 +99,9 @@ impl DustRouteMcp {
                         self.bridge.wait_ticks(ticks,&plan.dimension).await.map_err(|e|e.to_string())?;
                         remaining -= u64::from(ticks);
                     }
-                    let after = self.bridge.scan_region(bounds.min,bounds.max,&plan.dimension).await.map_err(|e|e.to_string())?;
+                    let after_readback = self.bridge.scan_region_confirmed(bounds.min,bounds.max,&plan.dimension).await.map_err(|e|e.to_string())?;
+                    let after = after_readback.snapshot;
+                    record.attempts.last_mut().ok_or("missing durable attempt")?.readbacks.push(after_readback.readback);
                     let after_status = self.bridge.status().await.map_err(|e|e.to_string())?;
                     plan.target.check(&after_status)?;
                     ValidatedAssemblyPlacement::matches(&after,&step.expected,&after_status.version)?;

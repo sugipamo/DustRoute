@@ -23,6 +23,12 @@ class ReplayOutsideScope(AssertionError):
 def observe(raw, client, fixture):
     assert client['complete'] and client['cleanup']['region_empty'] and client['cleanup']['force_load_removed']
     assert client['cleanup']['disconnected_before_finish'] is None
+    if fixture.get('require_server_readback'):
+        from server_readback import confirmed_snapshot
+        for label in ['initial', 'final', 'empty_before_setup', 'empty_after_cleanup']:
+            verified = confirmed_snapshot(client, label)
+            if label.startswith('empty_'):
+                assert not verified['blocks'], 'server region not empty'
     if client['enabled_features'] != ['minecraft:vanilla'] or raw[0]['minecraft_version'] != '1.21.11':
         raise ReplayOutsideScope('requires Java 1.21.11 with only vanilla features')
     assert raw[0]['heartbeat_mode'] == 'full'
@@ -62,6 +68,11 @@ def observe(raw, client, fixture):
     require_post_world_inputs(raw, applied)
     first = applied[0]['game_tick']
     stop = applied[-1]['game_tick'] + fixture.get('compare_drain_ticks', 40)
+    if fixture.get('require_server_readback'):
+        readbacks = client['server_readbacks']
+        assert readbacks['initial']['readback']['end_game_tick'] <= first
+        assert readbacks['final']['readback']['start_game_tick'] >= stop
+        assert readbacks['empty_after_cleanup']['readback']['start_game_tick'] >= readbacks['final']['readback']['end_game_tick']
     packet_index = next(i for i, r in enumerate(raw) if r.get('sequence') == applied[0]['packet_sequence'])
     begin = max(i for i, r in enumerate(raw[:packet_index]) if r['kind'] == 'server_world_tick'
                 and r['dimension'] == 'minecraft:overworld' and r['phase'] == 'end')

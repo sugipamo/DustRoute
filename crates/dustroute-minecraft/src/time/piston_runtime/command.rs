@@ -55,7 +55,7 @@ pub(super) fn preprocess(
     // Block.postProcessState: AbstractBlock.DIRECTIONS, not neighbor-update
     // order. The requested state is NOT yet in the world. Construction exports
     // every property explicitly, so BlockStateArgument.copyPropertiesTo restores
-    // wire arms/repeater lock after their pure shape transforms. Support loss is
+    // wire arms/repeater lock/stair shape after their pure transforms. Support loss is
     // excluded above. Of the admitted stable kinds only observer shapes enqueue
     // work. Keep each callback boundary so queued identity and pre-write state
     // survive checkpoints; do not use a temporary world write.

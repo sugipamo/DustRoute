@@ -5,8 +5,9 @@ foundation. The current implementation adds repeater callback definitions,
 computed tick priorities, installed shape queries, output-before-shape writes
 and explicit dust connection rules. The approved physical-admission prerequisite
 shares checked geometry and separates executor support from classification.
-Execution/review uses v15 and device programs v7, including
-[passive shapes](passive-shapes-runtime.md) through physical admission v6,
+Execution/review uses v16 and device programs v7, including
+[passive shapes](passive-shapes-runtime.md) and [dry stairs](stairs-runtime-readback.md)
+through physical admission v7,
 [attachment support loss](support-loss-runtime.md), the
 [waxed copper bulb](copper-bulb-runtime.md),
 [circuit comparator](comparator-runtime.md) and

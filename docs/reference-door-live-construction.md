@@ -46,7 +46,7 @@ eight finite live trials; the completion-observation work below remains separate
 
 ## Current command semantics
 
-This section records the v6 construction milestone. The current v15 runtime
+This section records the v6 construction milestone. The current v16 runtime
 also supports [attachment removal after support loss](support-loss-runtime.md)
 and [passive shape states](passive-shapes-runtime.md).
 

@@ -101,6 +101,91 @@ pub struct ObservedBlock {
     pub state: ObservedBlockState,
 }
 
+/// Evidence of command checks in one server game tick, not a world lock or a
+/// claim that scheduled work is exhausted. Saved receipts never authorize reuse.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct ServerReadback {
+    pub schema_version: String,
+    pub kind: String,
+    pub request_id: String,
+    pub dimension: String,
+    pub min: Pos,
+    pub max: Pos,
+    pub checked_cells: u64,
+    pub start_game_tick: u64,
+    pub end_game_tick: u64,
+    pub nonce: String,
+    pub snapshot_sha256: String,
+    pub corrections: Vec<Value>,
+    #[serde(default)]
+    pub predicate_ticks: Vec<u64>,
+    #[serde(default)]
+    pub predicate_batch_cells: Option<u64>,
+    #[serde(default)]
+    pub attempts: Vec<Value>,
+    pub hidden_runtime_observed: bool,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct ConfirmedRegion {
+    #[serde(flatten)]
+    pub snapshot: MinecraftSnapshot,
+    pub readback: ServerReadback,
+}
+
+impl ConfirmedRegion {
+    fn validate(
+        &self,
+        min: Pos,
+        max: Pos,
+        dimension: &str,
+        request: &str,
+    ) -> Result<(), BotBridgeError> {
+        let e = &self.readback;
+        let volume = [(min.x, max.x), (min.y, max.y), (min.z, max.z)]
+            .into_iter()
+            .try_fold(1u64, |n, (a, b)| {
+                let width = i64::from(b) - i64::from(a) + 1;
+                u64::try_from(width)
+                    .ok()
+                    .filter(|w| *w > 0)
+                    .and_then(|w| n.checked_mul(w))
+            });
+        if self.snapshot.min != min
+            || self.snapshot.max != max
+            || e.schema_version != "dustroute.server-readback.v1"
+            || e.kind != "server_confirmed"
+            || e.request_id != request
+            || e.dimension != dimension
+            || e.min != min
+            || e.max != max
+            || volume != Some(e.checked_cells)
+            || e.checked_cells > 262_144
+            || e.start_game_tick != e.end_game_tick
+            || (!e.predicate_ticks.is_empty()
+                && (!(1..=8880).contains(&e.predicate_batch_cells.unwrap_or(48))
+                    || e.predicate_ticks.len() as u64
+                        != e.checked_cells
+                            .div_ceil(e.predicate_batch_cells.unwrap_or(48).max(1))
+                    || e.predicate_ticks
+                        .iter()
+                        .any(|tick| *tick != e.start_game_tick)))
+            || e.hidden_runtime_observed
+            || e.nonce.len() != 32
+            || !e.nonce.bytes().all(|b| b.is_ascii_hexdigit())
+            || e.snapshot_sha256.len() != 64
+            || !e.snapshot_sha256.bytes().all(|b| b.is_ascii_hexdigit())
+        {
+            return Err(BotBridgeError::Protocol(
+                "incomplete, stale or mismatched server readback evidence".into(),
+            ));
+        }
+        dustroute_translate::snapshot::index_literal_snapshot(&self.snapshot)
+            .map_err(BotBridgeError::Protocol)?;
+        Ok(())
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct LeverActivation {
     pub pos: Pos,
@@ -301,11 +386,26 @@ impl BotBridge {
         max: Pos,
         dimension: &str,
     ) -> Result<MinecraftSnapshot, BotBridgeError> {
-        self.request(
+        Ok(self
+            .scan_region_confirmed(min, max, dimension)
+            .await?
+            .snapshot)
+    }
+
+    pub async fn scan_region_confirmed(
+        &self,
+        min: Pos,
+        max: Pos,
+        dimension: &str,
+    ) -> Result<ConfirmedRegion, BotBridgeError> {
+        let request = uuid::Uuid::new_v4().to_string();
+        let region: ConfirmedRegion = self.request(
             "scan_region",
-            json!({ "min": min, "max": max, "dimension": dimension }),
+            json!({ "min": min, "max": max, "dimension": dimension, "readback_request_id": request }),
         )
-        .await
+        .await?;
+        region.validate(min, max, dimension, &request)?;
+        Ok(region)
     }
 
     pub async fn get_block(
@@ -313,8 +413,33 @@ impl BotBridge {
         pos: Pos,
         dimension: &str,
     ) -> Result<ObservedBlock, BotBridgeError> {
-        self.request("get_block", json!({ "pos": pos, "dimension": dimension }))
-            .await
+        #[derive(Deserialize)]
+        struct ConfirmedBlock {
+            #[serde(flatten)]
+            block: ObservedBlock,
+            readback: ServerReadback,
+        }
+        let request = uuid::Uuid::new_v4().to_string();
+        let result: ConfirmedBlock = self
+            .request(
+                "get_block",
+                json!({ "pos": pos, "dimension": dimension, "readback_request_id": request }),
+            )
+            .await?;
+        let region = ConfirmedRegion {
+            snapshot: MinecraftSnapshot {
+                min: pos,
+                max: pos,
+                blocks: vec![dustroute_translate::MinecraftSnapshotBlock {
+                    pos: result.block.pos,
+                    name: result.block.state.name.clone(),
+                    properties: result.block.state.properties.clone(),
+                }],
+            },
+            readback: result.readback,
+        };
+        region.validate(pos, pos, dimension, &request)?;
+        Ok(result.block)
     }
 
     pub async fn activate_lever(
@@ -427,11 +552,102 @@ fn is_valid_minecraft_username(player: &str) -> bool {
             .all(|character| character.is_ascii_alphanumeric() || character == b'_')
 }
 
+/// Transport stubs explicitly provide a receipt. This does not simulate native
+/// confirmation; that behavior is covered by the JS and isolated live trials.
+#[cfg(test)]
+pub(crate) fn test_scan_world(request: &Value, mut world: Value) -> Value {
+    if request["method"] == "scan_region" {
+        let min = &request["params"]["min"];
+        let max = &request["params"]["max"];
+        world["blocks"].as_array_mut().unwrap().retain(|b| {
+            ["x", "y", "z"].into_iter().all(|a| {
+                let v = b["pos"][a].as_i64().unwrap();
+                min[a].as_i64().unwrap() <= v && v <= max[a].as_i64().unwrap()
+            })
+        });
+        world["min"] = min.clone();
+        world["max"] = max.clone();
+    }
+    world
+}
+
+#[cfg(test)]
+pub(crate) fn test_readback_response(request: &Value, mut result: Value) -> Value {
+    let method = request["method"].as_str().unwrap_or("");
+    if !matches!(method, "scan_region" | "get_block") {
+        return result;
+    }
+    let min = if method == "get_block" {
+        &request["params"]["pos"]
+    } else {
+        &request["params"]["min"]
+    };
+    let max = if method == "get_block" {
+        min
+    } else {
+        &request["params"]["max"]
+    };
+    let cells: i64 = ["x", "y", "z"]
+        .into_iter()
+        .map(|a| max[a].as_i64().unwrap() - min[a].as_i64().unwrap() + 1)
+        .product();
+    result["readback"] = json!({
+        "schema_version":"dustroute.server-readback.v1", "kind":"server_confirmed",
+        "request_id":request["params"]["readback_request_id"], "dimension":request["params"]["dimension"],
+        "min":min, "max":max, "checked_cells":cells, "start_game_tick":42, "end_game_tick":42,
+        "nonce":"a".repeat(32), "snapshot_sha256":"b".repeat(64), "corrections":[], "hidden_runtime_observed":false,
+    });
+    result
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
     use tokio::net::TcpListener;
+
+    #[test]
+    fn region_receipt_requires_fresh_request_exact_coverage_and_server_tick() {
+        let pos = Pos::new(0, 180, 0);
+        let request = json!({"method":"scan_region","params":{"min":pos,"max":pos,"dimension":"minecraft:overworld","readback_request_id":"fresh"}});
+        let snapshot = json!({"min":pos,"max":pos,"blocks":[]});
+        assert!(serde_json::from_value::<ConfirmedRegion>(snapshot.clone()).is_err());
+        let mut valid = test_readback_response(&request, snapshot);
+        valid["readback"]["predicate_ticks"] = json!([42]);
+        valid["readback"]["predicate_batch_cells"] = json!(8880);
+        let region: ConfirmedRegion = serde_json::from_value(valid.clone()).unwrap();
+        region
+            .validate(pos, pos, "minecraft:overworld", "fresh")
+            .unwrap();
+        for (field, value) in [
+            ("request_id", json!("old")),
+            ("dimension", json!("minecraft:the_nether")),
+            ("kind", json!("client_snapshot")),
+            ("checked_cells", json!(0)),
+            ("end_game_tick", json!(43)),
+            ("predicate_ticks", json!([43])),
+            ("predicate_ticks", json!([42, 42])),
+            ("predicate_batch_cells", json!(0)),
+            ("hidden_runtime_observed", json!(true)),
+        ] {
+            let mut broken = valid.clone();
+            broken["readback"][field] = value;
+            let region: ConfirmedRegion = serde_json::from_value(broken).unwrap();
+            assert!(
+                region
+                    .validate(pos, pos, "minecraft:overworld", "fresh")
+                    .is_err(),
+                "{field}"
+            );
+        }
+        let mut wrong_bounds = region.clone();
+        wrong_bounds.snapshot.max.x += 1;
+        assert!(
+            wrong_bounds
+                .validate(pos, pos, "minecraft:overworld", "fresh")
+                .is_err()
+        );
+    }
 
     async fn fake_bridge(result: Value) -> String {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();

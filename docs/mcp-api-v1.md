@@ -397,6 +397,15 @@ instance UUID separately from temporary executable plans. `get` returns the
 saved source pins, transform, expected snapshot, concrete execution context and
 lifecycle/progress record; it explicitly reports `fresh_observation: false`.
 
+Attempt records retain `readbacks` for the baseline and each verified step's
+before/after observations. Fresh observations retain both `readbacks`,
+`sample_interval_ticks: 20`, `sample_interval_clock: "client"`, and the measured
+`observed_server_tick_interval`. Receipts identify server-confirmed block states;
+they do not authorize reusing an old observation or reconstruct hidden events.
+See [server readback](server-readback.md) for permission, region and command-size
+limits. Older otherwise-compatible saved attempts default missing `readbacks`
+to an empty list; fresh bridge responses must always supply confirmation.
+
 `observe` returns `observation.status`, independent `revalidation.status`, and
 `removal_eligible`. Observation statuses are `matches`, `changed`,
 `observation_incomplete`, `history_unavailable` and `target_mismatch`.

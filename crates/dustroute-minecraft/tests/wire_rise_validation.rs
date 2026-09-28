@@ -96,6 +96,13 @@ fn top_half_side_rises_and_glass_follow_the_same_clearance_rule() {
                 .observed_properties
                 .insert("waterlogged".into(), "false".into());
         }
+        if name == "minecraft:stone_stairs" {
+            support.observed_properties.extend([
+                ("facing".into(), "east".into()),
+                ("shape".into(), "outer_left".into()),
+                ("waterlogged".into(), "false".into()),
+            ]);
+        }
         let mut world = rise(support, arm);
         assert!(ValidatedWorld::try_from(world.clone()).is_ok(), "{name}");
         // Glass above the lower wire is not the solid obstruction from the audit.

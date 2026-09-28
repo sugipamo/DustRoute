@@ -56,6 +56,7 @@ def main():
     source_hashes = {str(p): digest(p) for p in (
         Path(__file__).resolve(), actor, ROOT / "target/debug/dustroute-mcp",
         ROOT / "crates/dustroute-mcp/mineflayer/bridge.js",
+        ROOT / "crates/dustroute-mcp/mineflayer/readback.js",
         Path(instrumented_server.__file__).resolve(),
     )}
     env = os.environ.copy()
@@ -109,7 +110,7 @@ def main():
                "continuous_construction_capture": args.capture_construction,
                "actual_capture_mode": capture_header["capture_mode"],
                "cleanup": client["cleanup"], "error": client.get("error"),
-               "evidence_limit": "public MCP staged construction and whole-region client readback; server input events retained separately, no complete tick-internal claim",
+               "evidence_limit": "public MCP staged construction with server-confirmed readback receipts; actor probes remain client observations; no hidden readiness or world-lock claim",
                "artifacts": {s: str(p) for s,p in paths.items()},
                "sha256": {s: digest(p) for s,p in paths.items() if p.exists()}}
     save(paths[".summary.json"], summary)

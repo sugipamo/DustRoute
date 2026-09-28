@@ -187,7 +187,7 @@ fn centered_support_and_invalid_attachment_policies_are_distinct_from_full_faces
 #[test]
 fn world_contracts_check_admission_independently_from_physical_geometry() {
     let current = WorldExecutionContext::for_profile(
-        WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V15,
+        WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V16,
     );
     let proof =
         WorldExecutionContext::for_profile(WorldExecutionProfile::DustTorchSynchronousGameTickV1);

@@ -4,6 +4,7 @@ const net = require('node:net')
 const crypto = require('node:crypto')
 const mineflayer = require('mineflayer')
 const { Vec3 } = require('vec3')
+const { confirmRegion, bounds: readbackBounds } = require('./readback')
 const {
   createBridgeMetrics,
   finishRequest,
@@ -206,15 +207,15 @@ function requireDimension (expected) {
   }
 }
 
-async function scanRegion (min, max) {
+async function scanRegion (min, max, dimension, requestId) {
   const low = {
     x: Math.min(min.x, max.x), y: Math.min(min.y, max.y), z: Math.min(min.z, max.z)
   }
   const high = {
     x: Math.max(min.x, max.x), y: Math.max(min.y, max.y), z: Math.max(min.z, max.z)
   }
-  const volume = (high.x - low.x + 1) * (high.y - low.y + 1) * (high.z - low.z + 1)
-  if (volume > 262144) throw new Error(`selected volume ${volume} exceeds the 262144 block limit`)
+  readbackBounds(low, high)
+  const source = bot
   const blocks = []
   for (let x = low.x; x <= high.x; x++) {
     for (let y = low.y; y <= high.y; y++) {
@@ -225,7 +226,7 @@ async function scanRegion (min, max) {
           block = bot.blockAt(new Vec3(x, y, z))
         }
         if (!block) throw new Error(`chunk unavailable at ${x} ${y} ${z}`)
-        if (['air', 'cave_air', 'void_air'].includes(block.name)) continue
+        if (block.name === 'air') continue
         blocks.push({
           pos: { x, y, z },
           name: `minecraft:${block.name}`,
@@ -234,7 +235,10 @@ async function scanRegion (min, max) {
       }
     }
   }
-  return { min: low, max: high, blocks }
+  const result = await confirmRegion(source, { min: low, max: high, blocks }, dimension, { requestId })
+  if (!spawned || bot !== source) throw new Error('connection changed during readback')
+  requireDimension(dimension)
+  return result
 }
 
 async function writeBlocks (changes) {
@@ -330,10 +334,9 @@ async function placePhysicalBlocks (changes) {
   return { placed_changes: changes.length, placement_mode: 'mineflayer_player', retreat: posJson(retreat) }
 }
 
-function getBlock (pos) {
-  const block = bot.blockAt(new Vec3(pos.x, pos.y, pos.z))
-  if (!block) throw new Error(`block is unavailable at ${pos.x} ${pos.y} ${pos.z}`)
-  return { pos, ...blockRecord(block) }
+async function getBlock (pos, dimension, requestId) {
+  const result = await scanRegion(pos, pos, dimension, requestId)
+  return { ...(result.blocks[0] || { pos, name: 'minecraft:air', properties: {} }), readback: result.readback }
 }
 
 async function ensureLeverReachable (pos) {
@@ -496,11 +499,11 @@ async function dispatch (method, params) {
   }
   if (method === 'scan_region') {
     requireDimension(params.dimension)
-    return scanRegion(params.min, params.max)
+    return scanRegion(params.min, params.max, params.dimension, params.readback_request_id)
   }
   if (method === 'get_block') {
     requireDimension(params.dimension)
-    return getBlock(params.pos)
+    return getBlock(params.pos, params.dimension, params.readback_request_id)
   }
   if (method === 'activate_lever') {
     requireDimension(params.dimension)

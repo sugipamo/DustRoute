@@ -8,10 +8,11 @@ new observations or evidence do not silently upgrade an earlier approval.
 approved physical-admission prerequisite are implemented and verified. Device
 rules, query bindings and ordered effects use checked Rust constants; the shared
 runtime owns scheduling, internal outputs and bounded position histories.
-Current execution/root exploration is v15 after the
+Current execution/root exploration is v16 with [dry stairs](stairs-runtime-readback.md), after the
 [passive shape/support/conduction extension](passive-shapes-runtime.md), following
 [attachment support loss](support-loss-runtime.md). Earlier saved approvals need fresh
-review. No further outside-scope prerequisite was required.
+review. The original milestones required no further prerequisite; the later stair
+extension includes the separately approved common server-readback work.
 
 ## Ordered milestones
 

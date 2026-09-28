@@ -16,11 +16,20 @@
 //!     states: PassiveStates::Fixed(physical::of_kind(BlockKind::Observer)),
 //! }]);
 //! ```
+//! Stair families cannot reuse a cube descriptor:
+//! ```compile_fail,E0080
+//! use dustroute_minecraft::{BlockKind, physical::{self, passive::*}};
+//! const BAD: [PassiveSpec; 1] = registry([PassiveSpec {
+//!     names: &["stone_stairs"], kind: BlockKind::Transparent,
+//!     states: PassiveStates::DryStairs(physical::of_kind(BlockKind::Transparent)),
+//! }]);
+//! ```
 use super::*;
 
 #[derive(Clone, Copy, Debug)]
 pub enum PassiveStates {
     Fixed(CheckedPhysical),
+    DryStairs(CheckedPhysical),
     DrySlab {
         bottom: CheckedPhysical,
         top: CheckedPhysical,
@@ -70,6 +79,19 @@ pub const fn registry<const N: usize>(specs: [PassiveSpec; N]) -> [PassiveSpec; 
         );
         assert!(!s.names.is_empty(), "passive names required");
         match s.states {
+            PassiveStates::DryStairs(p) => {
+                passive(p);
+                assert!(
+                    matches!(s.kind, BlockKind::Transparent),
+                    "stair observation kind must be transparent"
+                );
+                assert!(
+                    matches!(p.spec().shape, Shape::Stairs)
+                        && matches!(p.spec().supporting, Faces::Stairs)
+                        && matches!(p.spec().conducting, Faces::None),
+                    "nonconducting stair geometry required"
+                );
+            }
             PassiveStates::Fixed(p) => {
                 passive(p);
                 assert!(
@@ -161,7 +183,24 @@ const TOP: CheckedPhysical = PhysicalSpec {
 }
 .checked();
 
-pub const BUILTINS: [PassiveSpec; 3] = registry([
+pub const BUILTINS: [PassiveSpec; 4] = registry([
+    PassiveSpec {
+        names: &[
+            "stone_stairs",
+            "cobblestone_stairs",
+            "quartz_stairs",
+            "smooth_quartz_stairs",
+        ],
+        kind: BlockKind::Transparent,
+        states: PassiveStates::DryStairs(
+            PhysicalSpec {
+                shape: Shape::Stairs,
+                supporting: Faces::Stairs,
+                ..EMPTY
+            }
+            .checked(),
+        ),
+    },
     PassiveSpec {
         names: &[
             "stone",
@@ -225,6 +264,7 @@ pub(super) fn resolve(block: &Block) -> Option<CheckedPhysical> {
         return None;
     }
     match spec.states {
+        PassiveStates::DryStairs(p) => stairs::StairState::parse(block).map(|_| p),
         PassiveStates::Fixed(physical) => block.observed_properties.is_empty().then_some(physical),
         PassiveStates::DrySlab {
             bottom,
