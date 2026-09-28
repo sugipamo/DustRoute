@@ -202,6 +202,9 @@ fn handle(
             super::command::remove_shapes(view, pos, block)
         }
         PistonEvent::ElectricalCommandNeighbors => Ok(RuntimeOutcome {
+            continuation: crate::device_program::program(&view.block(pos)?)
+                .filter(|p| p.definition().comparator_output.is_some())
+                .map(|_| PistonEvent::NotifyAnalogReaders { next_side: 0 }),
             callbacks: vec![call(
                 pos,
                 PistonEvent::Notify {
@@ -264,6 +267,7 @@ fn handle(
             })
         }
         PistonEvent::Notify { jobs } => notify(view, jobs.clone()),
+        PistonEvent::NotifyAnalogReaders { next_side } => analog_readers(view, pos, *next_side),
         PistonEvent::Block {
             event: action,
             facing,
@@ -634,6 +638,7 @@ fn finish_or_advance(
                     expected: carrier,
                 }],
                 queued,
+                outputs: vec![],
                 callbacks: vec![super::devices::event(
                     pos,
                     crate::device_program::Callback::Added,

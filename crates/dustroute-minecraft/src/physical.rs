@@ -22,7 +22,7 @@ use serde::Deserialize;
 
 use crate::{Block, BlockKind, Facing, ObservationClassification, PistonState};
 
-pub const REVISION: &str = "dustroute.physical-admission.java-1-21-11.v2";
+pub const REVISION: &str = "dustroute.physical-admission.java-1-21-11.v3";
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
 #[serde(rename_all = "snake_case")]
@@ -292,6 +292,11 @@ const WIRE: CheckedPhysical = PhysicalSpec {
 .checked();
 const TORCH: CheckedPhysical = ATTACHED.checked();
 const DIODE: CheckedPhysical = GATE.checked();
+const COMPARATOR: CheckedPhysical = PhysicalSpec {
+    wire_connection: WireConnectionRule::Any,
+    ..GATE
+}
+.checked();
 const INPUT: CheckedPhysical = ATTACHED.checked();
 const PLATE: CheckedPhysical = PhysicalSpec {
     support: Support::Below,
@@ -335,7 +340,8 @@ pub const fn of_kind(kind: BlockKind) -> CheckedPhysical {
         BlockKind::Transparent => GLASS,
         BlockKind::RedstoneWire => WIRE,
         BlockKind::RedstoneTorch => TORCH,
-        BlockKind::Repeater | BlockKind::Comparator => DIODE,
+        BlockKind::Repeater => DIODE,
+        BlockKind::Comparator => COMPARATOR,
         BlockKind::Lever | BlockKind::Button => INPUT,
         BlockKind::PressurePlate => PLATE,
         BlockKind::RedstoneBlock => POWER,

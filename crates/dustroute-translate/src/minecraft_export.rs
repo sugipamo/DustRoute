@@ -150,6 +150,7 @@ pub(crate) fn device_java_block_state(block: &Block) -> Result<String, Minecraft
             property.name(),
             match property {
                 Property::Bool(_) => (value != 0).to_string(),
+                Property::ComparatorMode => if value == 0 { "compare" } else { "subtract" }.into(),
                 _ => value.to_string(),
             },
         );

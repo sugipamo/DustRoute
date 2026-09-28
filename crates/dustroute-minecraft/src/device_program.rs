@@ -14,8 +14,8 @@ pub mod schema;
 mod state;
 pub use state::{BoolProperty, Property, SignalLevel};
 
-pub const REVISION: &str = "dustroute.device-programs.java-1-21-11.v5";
-pub const DEVICE_COUNT: usize = 5;
+pub const REVISION: &str = "dustroute.device-programs.java-1-21-11.v6";
+pub const DEVICE_COUNT: usize = 6;
 pub const BUILTIN_DEVICES: [schema::CheckedDevice; DEVICE_COUNT] = builtins::DEVICES;
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
@@ -43,6 +43,8 @@ pub enum Query {
     SourceAtFront,
     SourceOffAxis,
     GateInputPowered,
+    GateOutputLevel,
+    GateOutputChanged,
     SideGatePowered,
     OutputGateMisaligned,
     State {
@@ -96,6 +98,10 @@ pub enum NotifyTargets {
 #[derive(Clone, Debug, Deserialize)]
 #[serde(tag = "effect", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Effect {
+    WriteOutput {
+        when: Value,
+        level: Value,
+    },
     WriteState {
         when: Value,
         values: Vec<(Property, Value)>,
@@ -166,6 +172,9 @@ impl DeviceDefinition {
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub enum ResolvedEffect {
+    WriteOutput {
+        level: u8,
+    },
     WriteState {
         values: Vec<(Property, u16)>,
         notifications: WriteNotifications,
@@ -225,9 +234,10 @@ impl DeviceProgram {
             || !definition
                 .properties
                 .contains(&Property::Bool(definition.primary_power))
-            || !definition
-                .properties
-                .contains(&definition.signal_level.property())
+            || definition
+                .signal_level
+                .property()
+                .is_some_and(|p| !definition.properties.contains(&p))
             || definition
                 .properties
                 .iter()
@@ -242,10 +252,11 @@ impl DeviceProgram {
         {
             return Err("invalid device definition identity or state property".into());
         }
-        if definition
-            .comparator_output
-            .is_some_and(|output| !definition.properties.contains(&output.property()))
-        {
+        if definition.comparator_output.is_some_and(|output| {
+            output
+                .property()
+                .is_none_or(|p| !definition.properties.contains(&p))
+        }) {
             return Err("comparator readout needs a declared property".into());
         }
         if definition.signal == Signal::Output && !definition.physical().orientation().has_output()
@@ -269,9 +280,17 @@ impl DeviceProgram {
                         }
                         property.maximum()
                     }
-                    Query::ReceivingLevel | Query::SideLevel { .. } => 15,
+                    Query::ReceivingLevel | Query::SideLevel { .. } | Query::GateOutputLevel => 15,
                     _ => 1,
                 };
+                if matches!(
+                    input.sample,
+                    Query::GateOutputLevel | Query::GateOutputChanged
+                ) && (!definition.properties.contains(&Property::ComparatorMode)
+                    || definition.signal_level != SignalLevel::StoredOutput)
+                {
+                    return Err("analog gate query requires mode and stored output".into());
+                }
                 if maximum > input.maximum {
                     return Err("device query exceeds law input domain".into());
                 }
@@ -282,7 +301,11 @@ impl DeviceProgram {
                 }
                 if matches!(
                     input.sample,
-                    Query::GateInputPowered | Query::SideGatePowered | Query::OutputGateMisaligned
+                    Query::GateInputPowered
+                        | Query::SideGatePowered
+                        | Query::OutputGateMisaligned
+                        | Query::GateOutputLevel
+                        | Query::GateOutputChanged
                 ) && definition.physical().orientation() != Orientation::FloorOutput
                 {
                     return Err("gate query requires horizontal floor output".into());
@@ -296,6 +319,8 @@ impl DeviceProgram {
                             | Query::GateInputPowered
                             | Query::SideGatePowered
                             | Query::OutputGateMisaligned
+                            | Query::GateOutputLevel
+                            | Query::GateOutputChanged
                     )
                 {
                     return Err(
@@ -312,6 +337,8 @@ impl DeviceProgram {
                             | Query::GateInputPowered
                             | Query::SideGatePowered
                             | Query::OutputGateMisaligned
+                            | Query::GateOutputLevel
+                            | Query::GateOutputChanged
                     )
                 {
                     return Err("pre-write query cannot assume an installed receiver".into());
@@ -331,6 +358,15 @@ impl DeviceProgram {
             let mut writes = 0;
             for effect in &handler.effects {
                 match effect {
+                    Effect::WriteOutput { when, level } => {
+                        if bound(when)? > 1
+                            || bound(level)? > 15
+                            || definition.signal_level != SignalLevel::StoredOutput
+                            || matches!(callback, Callback::Removed | Callback::Shape)
+                        {
+                            return Err("invalid stored output write".into());
+                        }
+                    }
                     Effect::WriteState {
                         when,
                         values,
@@ -441,6 +477,11 @@ impl DeviceProgram {
             .effects
             .iter()
             .filter_map(|effect| match effect {
+                Effect::WriteOutput { when, level } => {
+                    (value(when) != 0).then_some(ResolvedEffect::WriteOutput {
+                        level: value(level) as u8,
+                    })
+                }
                 Effect::WriteState {
                     when,
                     values,

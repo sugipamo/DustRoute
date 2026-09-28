@@ -89,7 +89,7 @@ fn fixture(
     }
     let region = Region::new(Pos::new(-4, -1, -4), Pos::new(20, 10, 4));
     let context = RuntimeBehaviorContext {
-        profile: RuntimeBehaviorProfile::UnifiedPistonElectricalRootExplorationV11,
+        profile: RuntimeBehaviorProfile::UnifiedPistonElectricalRootExplorationV12,
         initial_condition: BehaviorInitialCondition::FreshConstruction,
         known_region: region,
         input_levers: inputs,

@@ -94,6 +94,24 @@
 //!     }], ..BASE
 //! }.checked();
 //! ```
+//! Internal outputs are bounded and are not Boolean block properties:
+//! ```compile_fail,E0080
+//! use dustroute_minecraft::device_program::{*, schema::*};
+//! const BASE: DeviceSpec = BUILTIN_DEVICES[5].spec();
+//! const BAD: CheckedDevice = DeviceSpec {
+//!     handlers: &[HandlerSpec { callback: Callback::Tick,
+//!         inputs: BASE.handlers[1].inputs,
+//!         operations: &[Operation::WriteOutput { when: Binding::Constant(1), level: Binding::Constant(16) }],
+//!     }], ..BASE
+//! }.checked();
+//! ```
+//! Analog gate aggregation requires a declared construction mode:
+//! ```compile_fail,E0080
+//! use dustroute_minecraft::device_program::{*, schema::*};
+//! const BAD: CheckedDevice = DeviceSpec {
+//!     properties: &[Property::Bool(BoolProperty::Powered)], ..BUILTIN_DEVICES[5].spec()
+//! }.checked();
+//! ```
 //! A timer requires a tick handler:
 //! ```compile_fail,E0080
 //! use dustroute_minecraft::device_program::{*, schema::*};
@@ -146,6 +164,10 @@ impl Binding {
 
 #[derive(Clone, Copy, Debug)]
 pub enum Operation {
+    WriteOutput {
+        when: Binding,
+        level: Binding,
+    },
     Write {
         when: Binding,
         values: &'static [(Property, Binding)],
@@ -218,10 +240,13 @@ impl DeviceSpec {
 
     pub const fn checked(self) -> CheckedDevice {
         if let Some(output) = self.comparator_output {
-            assert!(
-                self.declares(output.property()),
-                "comparator readout needs a declared property"
-            );
+            match output.property() {
+                Some(p) => assert!(
+                    self.declares(p),
+                    "comparator readout needs a declared property"
+                ),
+                None => panic!("comparator readout needs a declared property"),
+            }
         }
         assert!(
             !self.id.is_empty() && !self.law_id.is_empty(),
@@ -254,10 +279,9 @@ impl DeviceSpec {
             self.declares(Property::Bool(self.primary_power)),
             "missing primary state"
         );
-        assert!(
-            self.declares(self.signal_level.property()),
-            "undeclared signal state"
-        );
+        if let Some(p) = self.signal_level.property() {
+            assert!(self.declares(p), "undeclared signal state");
+        }
         i = 0;
         while i < self.properties.len() {
             let mut j = 0;
@@ -327,9 +351,15 @@ impl DeviceSpec {
                         assert!(self.declares(property), "undeclared query property");
                         property.maximum()
                     }
-                    Query::ReceivingLevel | Query::SideLevel { .. } => 15,
+                    Query::ReceivingLevel | Query::SideLevel { .. } | Query::GateOutputLevel => 15,
                     _ => 1,
                 };
+                assert!(
+                    !matches!(q, Query::GateOutputLevel | Query::GateOutputChanged)
+                        || self.declares(Property::ComparatorMode)
+                            && matches!(self.signal_level, SignalLevel::StoredOutput),
+                    "analog gate query requires mode and stored output"
+                );
                 assert!(
                     maximum <= self.law.input_bound(name),
                     "query exceeds law input range"
@@ -345,6 +375,8 @@ impl DeviceSpec {
                         Query::GateInputPowered
                             | Query::SideGatePowered
                             | Query::OutputGateMisaligned
+                            | Query::GateOutputLevel
+                            | Query::GateOutputChanged
                     ) || matches!(self.physical.orientation(), Orientation::FloorOutput),
                     "gate query needs horizontal floor output"
                 );
@@ -359,6 +391,8 @@ impl DeviceSpec {
                                 | Query::GateInputPowered
                                 | Query::SideGatePowered
                                 | Query::OutputGateMisaligned
+                                | Query::GateOutputLevel
+                                | Query::GateOutputChanged
                         ),
                     "detached query needs installed receiver"
                 );
@@ -376,6 +410,15 @@ impl DeviceSpec {
                     "prewrite shape may only schedule"
                 );
                 match op {
+                    Operation::WriteOutput { when, level } => {
+                        assert!(
+                            when.bound(self.law) <= 1
+                                && level.bound(self.law) <= 15
+                                && matches!(self.signal_level, SignalLevel::StoredOutput)
+                                && !matches!(h.callback, Callback::Removed | Callback::Shape),
+                            "invalid stored output write"
+                        );
+                    }
                     Operation::Write {
                         when,
                         values,
@@ -555,6 +598,10 @@ impl CheckedDevice {
                                 .operations
                                 .iter()
                                 .map(|op| match op {
+                                    Operation::WriteOutput { when, level } => Effect::WriteOutput {
+                                        when: when.owned(),
+                                        level: level.owned(),
+                                    },
                                     Operation::Write {
                                         when,
                                         values,

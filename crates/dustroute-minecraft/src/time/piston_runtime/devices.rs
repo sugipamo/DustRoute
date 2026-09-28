@@ -65,6 +65,13 @@ pub(super) fn prepare_program(
                     Query::TickCollected => view
                         .block_tick_ticking(pos, &BlockIdentity::of(before))
                         .into(),
+                    Query::GateOutputLevel => super::electrical::world(view)?
+                        .gate_output_level(pos)?
+                        .into(),
+                    Query::GateOutputChanged => (super::electrical::world(view)?
+                        .gate_output_level(pos)?
+                        != view.stored_output(pos)?)
+                    .into(),
                     Query::GateInputPowered => super::electrical::world(view)?
                         .gate_input_powered(pos)?
                         .into(),
@@ -213,6 +220,13 @@ pub(super) fn step_program(
     };
     run.next += 1;
     match effect {
+        ResolvedEffect::WriteOutput { level } => {
+            out.outputs.push(crate::time::runtime::OutputEffect {
+                position: pos,
+                block: BlockIdentity::of(&run.before),
+                value: level,
+            });
+        }
         ResolvedEffect::WriteState {
             values,
             notifications,
@@ -235,13 +249,20 @@ pub(super) fn step_program(
             if notifications == WriteNotifications::OutputAndShapes {
                 jobs.extend(output_jobs(view, pos, &after)?);
             }
+            if !jobs.is_empty() {
+                out.callbacks.push(call(pos, PistonEvent::Notify { jobs }));
+            }
+            if notifications == WriteNotifications::NeighborsAndShapes
+                && program.definition.comparator_output.is_some()
+            {
+                out.callbacks
+                    .push(call(pos, PistonEvent::NotifyAnalogReaders { next_side: 0 }));
+            }
             if notifications != WriteNotifications::None {
-                jobs.extend(super::electrical::write_shape_jobs(
-                    view,
-                    pos,
-                    &run.before,
-                    &after,
-                )?);
+                let jobs = super::electrical::write_shape_jobs(view, pos, &run.before, &after)?;
+                if !jobs.is_empty() {
+                    out.callbacks.push(call(pos, PistonEvent::Notify { jobs }));
+                }
             }
             out.delta = Some(delta(
                 view,
@@ -249,9 +270,6 @@ pub(super) fn step_program(
                 vec![],
                 DeltaCause::NeighborUpdate,
             )?);
-            if !jobs.is_empty() {
-                out.callbacks.push(call(pos, PistonEvent::Notify { jobs }));
-            }
         }
         ResolvedEffect::Schedule { delay, priority } => {
             out.queued

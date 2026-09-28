@@ -22,6 +22,8 @@ fn decision(callback: Callback, powered: bool, queued: bool, front: bool) -> Vec
                 | Query::State { .. } => panic!("unexpected observer query"),
                 Query::TickCollected
                 | Query::SourceOffAxis
+                | Query::GateOutputLevel
+                | Query::GateOutputChanged
                 | Query::GateInputPowered
                 | Query::SideGatePowered
                 | Query::OutputGateMisaligned => panic!("unexpected gate query"),

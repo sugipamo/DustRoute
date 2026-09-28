@@ -142,7 +142,7 @@ fn piston_support_faces_follow_body_and_head_state_in_every_direction() {
 #[test]
 fn world_contracts_check_admission_independently_from_physical_geometry() {
     let current = WorldExecutionContext::for_profile(
-        WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V11,
+        WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V12,
     );
     let proof =
         WorldExecutionContext::for_profile(WorldExecutionProfile::DustTorchSynchronousGameTickV1);
@@ -157,6 +157,6 @@ fn world_contracts_check_admission_independently_from_physical_geometry() {
     observer.powered = Some(false);
     current.validate_world_kinds(&world).unwrap();
     assert!(proof.validate_world_kinds(&world).is_err());
-    world.place(BlockKind::Comparator, Pos::new(1, 0, 0));
+    world.place(BlockKind::PressurePlate, Pos::new(1, 0, 0));
     assert!(current.validate_world_kinds(&world).is_err());
 }

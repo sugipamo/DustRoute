@@ -446,8 +446,132 @@ pub const REPEATER: CheckedDevice = DeviceSpec {
 }
 .checked();
 
+const fn comparator_inputs(event: u16) -> [(&'static str, Query); 7] {
+    [
+        ("event", Query::Constant { value: event }),
+        (
+            "level",
+            if event < 2 {
+                Query::GateOutputLevel
+            } else {
+                Query::Constant { value: 0 }
+            },
+        ),
+        (
+            "changed",
+            if event < 2 {
+                Query::GateOutputChanged
+            } else {
+                Query::Constant { value: 0 }
+            },
+        ),
+        ("powered", Query::Powered),
+        (
+            "subtract",
+            Query::State {
+                property: Property::ComparatorMode,
+            },
+        ),
+        (
+            "ticking",
+            if event == 0 {
+                Query::TickCollected
+            } else {
+                Query::Constant { value: 0 }
+            },
+        ),
+        (
+            "misaligned",
+            if event == 0 {
+                Query::OutputGateMisaligned
+            } else {
+                Query::Constant { value: 0 }
+            },
+        ),
+    ]
+}
+
+pub const COMPARATOR: CheckedDevice = DeviceSpec {
+    id: "dustroute.device.comparator.circuit.java-1-21-11.v1",
+    kind: BlockKind::Comparator,
+    physical: crate::physical::of_kind(BlockKind::Comparator),
+    observed_names: &["comparator"],
+    synthetic: true,
+    predicates: &[],
+    primary_power: BoolProperty::Powered,
+    properties: &[
+        Property::Bool(BoolProperty::Powered),
+        Property::ComparatorMode,
+    ],
+    law_id: "dustroute.law.comparator.callback.java-1-21-11.v1",
+    law: &builtin_laws::COMPARATOR,
+    signal: Signal::Output,
+    signal_level: SignalLevel::StoredOutput,
+    comparator_output: None,
+    fresh_powered_requires_history: false,
+    initial_neighbor_update: true,
+    preprocess_shapes: false,
+    command_initialization: None,
+    handlers: &[
+        HandlerSpec {
+            callback: Callback::Neighbor,
+            inputs: &comparator_inputs(0),
+            operations: &[Operation::Schedule {
+                delay: Binding::Output("delay"),
+                priority: Binding::Output("priority"),
+            }],
+        },
+        HandlerSpec {
+            callback: Callback::Tick,
+            inputs: &comparator_inputs(1),
+            operations: &[
+                Operation::WriteOutput {
+                    when: Binding::Constant(1),
+                    level: Binding::Output("level"),
+                },
+                Operation::Write {
+                    when: Binding::Output("write"),
+                    values: &[(
+                        Property::Bool(BoolProperty::Powered),
+                        Binding::Output("powered"),
+                    )],
+                    notifications: WriteNotifications::Shapes,
+                },
+                Operation::Notify {
+                    when: Binding::Output("notify"),
+                    targets: NotifyTargets::Output,
+                },
+            ],
+        },
+        HandlerSpec {
+            callback: Callback::Added,
+            inputs: &comparator_inputs(2),
+            operations: &[Operation::Notify {
+                when: Binding::Output("notify"),
+                targets: NotifyTargets::Output,
+            }],
+        },
+        HandlerSpec {
+            callback: Callback::Removed,
+            inputs: &comparator_inputs(2),
+            operations: &[Operation::Notify {
+                when: Binding::Output("notify"),
+                targets: NotifyTargets::Output,
+            }],
+        },
+    ],
+}
+.checked();
+
 pub const DEVICES: [CheckedDevice; DEVICE_COUNT] = {
-    let devices = registry([LAMP, OBSERVER, STONE_BUTTON, REPEATER, COPPER_BULB]);
+    let devices = registry([
+        LAMP,
+        OBSERVER,
+        STONE_BUTTON,
+        REPEATER,
+        COPPER_BULB,
+        COMPARATOR,
+    ]);
     let mut i = 0;
     while i < devices.len() {
         let device = devices[i].spec();

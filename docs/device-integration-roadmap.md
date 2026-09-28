@@ -8,7 +8,7 @@ new observations or evidence do not silently upgrade an earlier approval.
 [approved physical admission prerequisite](device-physical-admission-proposal.md).
 The user approved checked physical descriptors, explicit executor admission,
 independent Law kind adapters and shared observation/support checks. This work
-is complete. The waxed bulb milestone is complete; comparator and torch integration follow. The overall goal is not complete.
+is complete. The waxed bulb milestone is complete; the comparator milestone is complete, followed by torch integration. The overall goal is not complete.
 
 ## Ordered milestones
 
@@ -24,7 +24,7 @@ is complete. The waxed bulb milestone is complete; comparator and torch integrat
    installed-state power sampling and comparator-readable output. Include fresh
    construction, observation, checkpoint and placement/readback boundaries. No
    oxidation or random-tick model is implied.
-3. **Comparator with circuit inputs.** Add compare/subtract mode, gate input
+3. **Comparator with circuit inputs (complete).** Add compare/subtract mode, gate input
    aggregation, output delivery and world-owned internal output state. Keep
    internal output distinct from block-state properties. Define fresh observation
    and restoration rather than inventing missing block-entity values. Inventory
@@ -125,3 +125,23 @@ checks; no new live Minecraft trial or full workspace test run was performed.
 
 [Behavior and boundaries](copper-bulb-runtime.md) and
 [verification manifest](evidence/device-integration-bulb-20260928.json).
+
+## Milestone 3 result
+
+Compare/subtract circuit execution now uses checked definitions and a separately
+pinned 0–15 signal law. Internal output belongs to the common runtime and survives
+checkpoint and behavior-state restoration. Bulb readout changes notify comparators
+through one conductor, with callback ordering retained. Modes are construction
+settings; manual mode switching and missing live block-entity reconstruction are
+not claimed. Execution/exploration is v12, device programs v6, physical admission
+v3, the core runtime record v4 and root comparison v2.
+
+Validation: 260 Minecraft tests, 20 compile-fail doctests, 18 library Law/context
+tests, 45 translation/construction/adoption tests and 14 Python tests passed.
+Workspace/all-target Clippy, formatting and diff checks passed. The rebuilt model
+also passes retained door comparisons; no new live Minecraft trial, new MCP
+operation or full workspace test run was performed.
+
+[Behavior and persistence boundaries](comparator-runtime.md) and
+[verification manifest](evidence/device-integration-comparator-20260928.json).
+The remaining planned milestone is world-owned torch history and delivery.

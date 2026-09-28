@@ -23,7 +23,7 @@ pub use observation::LocationObservation;
 
 /// Delivery contract only. Device laws must be selected separately by an
 /// adapter; this identifier makes no complete Vanilla conformance claim.
-pub const PROFILE: &str = "dustroute.synchronous-world-callbacks.v3";
+pub const PROFILE: &str = "dustroute.synchronous-world-callbacks.v4";
 
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -158,6 +158,7 @@ pub struct Invocation<P> {
 pub struct RuntimeOutcome<P> {
     pub delta: Option<WorldDelta>,
     pub carriers: Vec<CarrierEffect>,
+    pub outputs: Vec<OutputEffect>,
     pub callbacks: Vec<RuntimeCall<P>>,
     pub continuation: Option<P>,
     pub queued: Vec<QueueRequest<P>>,
@@ -168,11 +169,21 @@ impl<P> Default for RuntimeOutcome<P> {
         Self {
             delta: None,
             carriers: Vec::new(),
+            outputs: Vec::new(),
             callbacks: Vec::new(),
             continuation: None,
             queued: Vec::new(),
         }
     }
+}
+
+/// A bounded, world-owned signal register, independent of block-state properties.
+/// Zero is the fresh value; replacement clears the old block's register.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+pub struct OutputEffect {
+    pub position: Pos,
+    pub block: BlockIdentity,
+    pub value: u8,
 }
 
 /// Implementations must be pure with respect to this view and invocation.
@@ -198,6 +209,7 @@ pub struct RuntimeView<'a> {
     pub(crate) region: Region,
     pub(crate) time: RuntimeTime,
     pub(crate) carriers: &'a BTreeMap<Pos, CarrierState>,
+    pub(crate) outputs: &'a BTreeMap<Pos, u8>,
     pub(crate) staged_carriers: &'a BTreeMap<Pos, Block>,
     pub(crate) limits: RuntimeLimits,
     pub(crate) block_ticks: &'a dyn BlockTickQuery,
@@ -214,6 +226,12 @@ pub(crate) trait BlockTickQuery {
 }
 
 impl<'a> RuntimeView<'a> {
+    /// Only a runtime owns this value. A block-state snapshot cannot recover it.
+    pub fn stored_output(self, position: Pos) -> Result<u8, RuntimeError> {
+        self.block(position)?;
+        Ok(self.outputs.get(&position).copied().unwrap_or(0))
+    }
+
     /// Java isQueued excludes the batch already collected for this tick.
     pub fn block_tick_queued(self, position: Pos, block: &BlockIdentity) -> bool {
         self.block_ticks.contains(position, block, self.time, false)
@@ -296,6 +314,7 @@ pub struct RuntimeRecord<P> {
     pub invocation: Invocation<P>,
     pub result: DeliveryResult,
     pub delta: Option<WorldDelta>,
+    pub output_changes: Vec<(Pos, u8, u8)>,
     pub carrier_changes: Vec<(Pos, Option<CarrierState>, Option<CarrierState>)>,
 }
 

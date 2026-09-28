@@ -260,3 +260,85 @@ pub const STONE_BUTTON: StaticLaw = StaticLaw::new(
         )],
     )],
 );
+
+// Java circuit-only comparator arithmetic. Separate finite input aggregation
+// keeps the callback decision bounded without folding hidden state into blocks.
+pub const COMPARATOR_SIGNAL: StaticLaw = StaticLaw::new(
+    &[("rear", 15), ("side", 15), ("subtract", 1)],
+    &[("level", 15)],
+    &[If(
+        Input("subtract"),
+        &[Set(
+            "level",
+            SaturatingSubtract(&Input("rear"), &Input("side")),
+        )],
+        &[If(
+            AtLeast(&Input("rear"), &Input("side")),
+            &[Set("level", Input("rear"))],
+            &[],
+        )],
+    )],
+);
+
+pub const COMPARATOR: StaticLaw = StaticLaw::new(
+    &[
+        ("event", 2),
+        ("level", 15),
+        ("changed", 1),
+        ("powered", 1),
+        ("subtract", 1),
+        ("ticking", 1),
+        ("misaligned", 1),
+    ],
+    &[
+        ("level", 15),
+        ("powered", 1),
+        ("write", 1),
+        ("notify", 1),
+        ("delay", 2),
+        ("priority", 3),
+    ],
+    &[
+        Set("level", Input("level")),
+        Set("powered", Not(&Equal(&Input("level"), &Constant(0)))),
+        Set("priority", Constant(3)),
+        If(Input("misaligned"), &[Set("priority", Constant(2))], &[]),
+        If(
+            Equal(&Input("event"), &Constant(0)),
+            &[If(
+                Not(&Input("ticking")),
+                &[
+                    If(Input("changed"), &[Set("delay", Constant(2))], &[]),
+                    If(
+                        Not(&Equal(&Input("powered"), &Register("powered"))),
+                        &[Set("delay", Constant(2))],
+                        &[],
+                    ),
+                ],
+                &[],
+            )],
+            &[],
+        ),
+        If(
+            Equal(&Input("event"), &Constant(1)),
+            &[
+                If(Input("changed"), &[Set("notify", Constant(1))], &[]),
+                If(Not(&Input("subtract")), &[Set("notify", Constant(1))], &[]),
+                If(
+                    And(
+                        &Register("notify"),
+                        &Not(&Equal(&Input("powered"), &Register("powered"))),
+                    ),
+                    &[Set("write", Constant(1))],
+                    &[],
+                ),
+            ],
+            &[],
+        ),
+        If(
+            Equal(&Input("event"), &Constant(2)),
+            &[Set("notify", Constant(1))],
+            &[],
+        ),
+    ],
+);

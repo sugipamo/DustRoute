@@ -5,8 +5,9 @@ foundation. The current implementation adds repeater callback definitions,
 computed tick priorities, installed shape queries, output-before-shape writes
 and explicit dust connection rules. The approved physical-admission prerequisite
 shares checked geometry and separates executor support from classification.
-Execution/review uses v11 and device programs v5, including the
-[waxed copper bulb](copper-bulb-runtime.md); the v8/v2 validation results
+Execution/review uses v12 and device programs v6, including the
+[waxed copper bulb](copper-bulb-runtime.md) and
+[circuit comparator](comparator-runtime.md); the v8/v2 validation results
 below describe the completed foundation step.
 
 The new repeater bindings read `Delay` (1..4) as a construction-only property;

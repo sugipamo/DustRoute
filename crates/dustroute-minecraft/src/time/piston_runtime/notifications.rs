@@ -179,3 +179,34 @@ pub(super) fn notify(
     }
     Ok(out)
 }
+
+/// Source-ordered World.updateComparators routing. Querying the next side is
+/// deferred until the previous receiver and all its nested callbacks return.
+pub(super) fn analog_readers(
+    view: RuntimeView<'_>,
+    pos: Pos,
+    index: u8,
+) -> Result<RuntimeOutcome<PistonEvent>, RuntimeError> {
+    let side = *crate::piston_electrical::HORIZONTAL
+        .get(index as usize)
+        .ok_or_else(|| unsupported("invalid analog reader direction"))?;
+    let mut target = along(pos, side, 1)?;
+    let beside = view.block(target)?;
+    if beside.kind != BlockKind::Comparator && crate::piston_electrical::conducts(&beside) {
+        target = along(target, side, 1)?;
+    }
+    let mut out = RuntimeOutcome::default();
+    if view.block(target)?.kind == BlockKind::Comparator {
+        out.callbacks.push(super::devices::event(
+            target,
+            crate::device_program::Callback::Neighbor,
+            Some(pos),
+        ));
+    }
+    if index < 3 {
+        out.continuation = Some(PistonEvent::NotifyAnalogReaders {
+            next_side: index + 1,
+        });
+    }
+    Ok(out)
+}

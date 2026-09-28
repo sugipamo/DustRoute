@@ -36,6 +36,7 @@ struct State<P> {
     stack: Vec<Invocation<P>>,
     carriers: BTreeMap<Pos, CarrierState>,
     staged_carriers: BTreeMap<Pos, Block>,
+    outputs: BTreeMap<Pos, u8>,
     next_id: u64,
     next_carrier: u64,
     processed: usize,
@@ -102,6 +103,7 @@ impl<P: Clone + Eq> State<P> {
             time: self.time,
             carriers: &self.carriers,
             staged_carriers: &self.staged_carriers,
+            outputs: &self.outputs,
             limits: self.limits,
             block_ticks: &self.pending,
         }
@@ -438,9 +440,34 @@ impl<P: Clone + Eq> State<P> {
             {
                 self.check_position(pos)?;
             }
+            let identities: Vec<_> = delta
+                .changed_positions()
+                .chain(delta.moves.iter().flat_map(|m| [m.from, m.to]))
+                .map(|pos| (pos, self.world.get(pos).map(BlockIdentity::of)))
+                .collect();
             delta
                 .apply(&mut self.world)
                 .map_err(|e| RuntimeError::Invalid(e.to_string()))?;
+            for (pos, before) in identities {
+                if before != self.world.get(pos).map(BlockIdentity::of) {
+                    self.outputs.remove(&pos);
+                }
+            }
+        }
+        for effect in outcome.outputs {
+            self.check_position(effect.position)?;
+            if effect.value > 15
+                || self.world.get(effect.position).map(BlockIdentity::of) != Some(effect.block)
+            {
+                return Err(RuntimeError::Invalid(
+                    "invalid stored output assignment".into(),
+                ));
+            }
+            if effect.value == 0 {
+                self.outputs.remove(&effect.position);
+            } else {
+                self.outputs.insert(effect.position, effect.value);
+            }
         }
         self.apply_carriers(outcome.carriers)?;
         for queued in outcome.queued {
@@ -532,6 +559,7 @@ impl<A: RuntimeAdapter> SynchronousWorldRuntime<A> {
                 stack: Vec::new(),
                 carriers: BTreeMap::new(),
                 staged_carriers: BTreeMap::new(),
+                outputs: BTreeMap::new(),
                 next_id: 0,
                 next_carrier: 0,
                 processed: 0,
@@ -707,11 +735,26 @@ impl<A: RuntimeAdapter> SynchronousWorldRuntime<A> {
                 (before != after).then_some((pos, before, after))
             })
             .collect();
+        let output_changes = self
+            .state
+            .outputs
+            .keys()
+            .chain(staged.outputs.keys())
+            .copied()
+            .collect::<BTreeSet<_>>()
+            .into_iter()
+            .filter_map(|pos| {
+                let before = self.state.outputs.get(&pos).copied().unwrap_or(0);
+                let after = staged.outputs.get(&pos).copied().unwrap_or(0);
+                (before != after).then_some((pos, before, after))
+            })
+            .collect();
         let record = RuntimeRecord {
             invocation,
             result,
             delta,
             carrier_changes,
+            output_changes,
         };
         self.state = staged;
         self.trace.push(record.clone());

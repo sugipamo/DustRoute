@@ -5,7 +5,7 @@ use super::*;
 use crate::time::piston_runtime::PistonEvent;
 use std::cmp::Ordering;
 
-pub const COMPARISON: &str = "dustroute.piston-electrical-root-comparison.v1";
+pub const COMPARISON: &str = "dustroute.piston-electrical-root-comparison.v2";
 
 /// Opaque, process-local representative of a complete physical root boundary.
 /// Its ordering compares the full canonical record, not a hash. The selected
@@ -171,6 +171,7 @@ impl<A: RuntimeAdapter<Payload = PistonEvent>> SynchronousWorldRuntime<A> {
             state.world.iter().collect::<Vec<_>>(),
             state.pending.iter().collect::<Vec<_>>(),
             state.carriers.iter().collect::<Vec<_>>(),
+            state.outputs.iter().collect::<Vec<_>>(),
             state.staged_carriers.iter().collect::<Vec<_>>(),
             state.next_id,
             state.next_carrier,
@@ -260,6 +261,27 @@ mod tests {
         }
         assert_eq!(original.behavior_state().unwrap(), state);
         assert_eq!(original.checkpoint(), checkpoint);
+    }
+
+    #[test]
+    fn comparison_keeps_hidden_output_when_blocks_and_queues_match() {
+        let mut run = scene();
+        run.run_until_idle().unwrap();
+        let a = run.behavior_state().unwrap();
+        let mut changed =
+            SynchronousWorldRuntime::<ElectricalPistonAdapter>::from_piston_behavior_state(&a)
+                .unwrap();
+        // This test is about the generic runtime record, independent of device admission.
+        changed.state.outputs.insert(INPUT, 7);
+        let b = changed.piston_behavior_state().unwrap();
+        assert_eq!(a.state.world, b.state.world);
+        assert_eq!(a.state.pending, b.state.pending);
+        assert_ne!(a, b);
+        let restored =
+            SynchronousWorldRuntime::<ElectricalPistonAdapter>::from_piston_behavior_state(&b)
+                .unwrap();
+        assert_eq!(restored.view().stored_output(INPUT).unwrap(), 7);
+        assert_eq!(restored.piston_behavior_state().unwrap(), b);
     }
 
     #[test]

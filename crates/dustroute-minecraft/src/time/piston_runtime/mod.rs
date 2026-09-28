@@ -17,7 +17,7 @@ use crate::{Block, Facing, Pos, Region, World};
 pub(crate) use adapter::ElectricalPistonAdapter;
 pub use movement::MotionPlan;
 
-pub const ELECTRICAL_PROFILE: &str = "dustroute.piston-electrical-callbacks.java-1-21-11.v11";
+pub const ELECTRICAL_PROFILE: &str = "dustroute.piston-electrical-callbacks.java-1-21-11.v12";
 
 #[cfg(test)]
 mod device_capability_tests;
@@ -113,7 +113,7 @@ impl ElectricalPistonRuntime {
     }
     pub fn execution_context(&self) -> crate::execution_context::WorldExecutionContext {
         crate::execution_context::WorldExecutionContext::for_profile(
-            crate::execution_context::WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V11,
+            crate::execution_context::WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V12,
         )
     }
 }
@@ -135,6 +135,10 @@ pub enum PistonEvent {
     Initialize,
     Input {
         powered: bool,
+    },
+    /// World.updateComparators: each direction is sampled after preceding callbacks.
+    NotifyAnalogReaders {
+        next_side: u8,
     },
     Notify {
         jobs: VecDeque<NeighborJob>,
@@ -208,7 +212,7 @@ pub fn new_piston_runtime(
     limits: RuntimeLimits,
 ) -> Result<ElectricalPistonRuntime, RuntimeError> {
     crate::execution_context::WorldExecutionContext::for_profile(
-        crate::execution_context::WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V11,
+        crate::execution_context::WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V12,
     )
     .validate()
     .map_err(RuntimeError::Invalid)?;

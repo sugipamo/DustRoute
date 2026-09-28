@@ -64,6 +64,9 @@ pub(super) fn validate_scope(view: RuntimeView<'_>, fresh: bool) -> Result<(), R
                         Query::SideLevel { side } => {
                             electrical.emitted(along(*pos, side, 1)?, side, true)?;
                         }
+                        Query::GateOutputLevel | Query::GateOutputChanged => {
+                            electrical.gate_output_level(*pos)?;
+                        }
                         Query::GateInputPowered => {
                             electrical.gate_input_powered(*pos)?;
                         }

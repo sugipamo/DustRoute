@@ -96,7 +96,7 @@ fn arms(block: &Block) -> Result<&BTreeMap<Facing, WireConnection>, RuntimeError
 /// Evidence gate for electrical identities only. Stable piston/head pairing and
 /// physical support must additionally pass the runtime/placement gates.
 pub fn validate_evidence(block: &Block) -> Result<(), RuntimeError> {
-    if !crate::execution_context::WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V11
+    if !crate::execution_context::WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V12
         .admits_kind(block.kind)
     {
         return Err(invalid(format!("unsupported electrical kind {:?}", block.kind)));
@@ -243,6 +243,7 @@ pub fn full_face(block: &Block, side: Facing) -> bool {
 pub struct ElectricalWorld<'a> {
     world: &'a World,
     region: Region,
+    outputs: Option<&'a BTreeMap<Pos, u8>>,
 }
 
 impl<'a> ElectricalWorld<'a> {
@@ -267,6 +268,7 @@ impl<'a> ElectricalWorld<'a> {
         Ok(Self {
             world: view.world(),
             region: view.known_region(),
+            outputs: Some(view.outputs),
         })
     }
 
@@ -277,7 +279,11 @@ impl<'a> ElectricalWorld<'a> {
             }
             validate_evidence(block)?;
         }
-        Ok(Self { world, region })
+        Ok(Self {
+            world,
+            region,
+            outputs: None,
+        })
     }
 
     pub fn block(&self, pos: Pos) -> Result<Block, RuntimeError> {
@@ -311,7 +317,19 @@ impl<'a> ElectricalWorld<'a> {
             wires_enabled,
         };
         if let Some(program) = crate::device_program::program(&block) {
-            return program.definition.emission(&block, query).map_err(invalid);
+            let definition = program.definition();
+            if definition.signal_level == crate::device_program::SignalLevel::StoredOutput {
+                let stored = self.stored_output(pos)?;
+                let level = if block.powered == Some(true) {
+                    stored
+                } else {
+                    0
+                };
+                return definition
+                    .emission_with_level(&block, query, level)
+                    .map_err(invalid);
+            }
+            return definition.emission(&block, query).map_err(invalid);
         }
         match block.kind {
             BlockKind::Lever => {
@@ -568,6 +586,61 @@ impl<'a> ElectricalWorld<'a> {
             .expect("bounded dust facts"))
     }
 
+    pub fn stored_output(&self, pos: Pos) -> Result<u8, RuntimeError> {
+        self.block(pos)?;
+        Ok(self
+            .outputs
+            .ok_or_else(|| {
+                invalid("device output requires runtime state; block snapshot is insufficient")
+            })?
+            .get(&pos)
+            .copied()
+            .unwrap_or(0))
+    }
+
+    /// Block-only gate inputs, including comparator readout through one solid block.
+    pub fn gate_output_level(&self, pos: Pos) -> Result<u8, RuntimeError> {
+        let block = self.block(pos)?;
+        let direction = output(&block)?;
+        let rear_direction = direction.opposite();
+        let rear = along(pos, rear_direction)?;
+        let rear_block = self.block(rear)?;
+        let mut input = self.emitted(rear, rear_direction, true)?;
+        if rear_block.kind == BlockKind::RedstoneWire {
+            input = input.max(level(&rear_block)?);
+        }
+        if let Some(readout) = self.comparator_readout(rear)? {
+            input = readout;
+        } else if input < 15 && conducts(&rear_block) {
+            if let Some(readout) = self.comparator_readout(along(rear, rear_direction)?)? {
+                input = readout;
+            }
+        }
+        let mut side_input = 0;
+        for side in HORIZONTAL
+            .into_iter()
+            .filter(|d| *d != direction && *d != rear_direction)
+        {
+            let pos = along(pos, side)?;
+            let block = self.block(pos)?;
+            let level = match block.kind {
+                BlockKind::RedstoneWire => level(&block)?,
+                BlockKind::RedstoneBlock => 15,
+                _ => self.emission(pos, side, true)?.strong,
+            };
+            side_input = side_input.max(level);
+        }
+        let definition = crate::device_program::program(&block)
+            .ok_or_else(|| invalid("missing gate definition"))?
+            .definition();
+        let subtract = definition
+            .state(&block, crate::device_program::Property::ComparatorMode)
+            .map_err(invalid)?
+            != 0;
+        crate::device_callback_law::comparator_signal(input, side_input, subtract)
+            .ok_or_else(|| invalid("invalid gate input level"))
+    }
+
     pub fn gate_input_powered(&self, pos: Pos) -> Result<bool, RuntimeError> {
         let query = output(&self.block(pos)?)?.opposite();
         let rear = along(pos, query)?;
@@ -584,7 +657,10 @@ impl<'a> ElectricalWorld<'a> {
             .filter(|d| *d != direction && *d != direction.opposite())
         {
             let target = along(pos, side)?;
-            if self.block(target)?.kind == BlockKind::Repeater {
+            if matches!(
+                self.block(target)?.kind,
+                BlockKind::Repeater | BlockKind::Comparator
+            ) {
                 locked |= self.emission(target, side, true)?.strong > 0;
             }
         }
@@ -594,7 +670,10 @@ impl<'a> ElectricalWorld<'a> {
     pub fn output_gate_misaligned(&self, pos: Pos) -> Result<bool, RuntimeError> {
         let direction = output(&self.block(pos)?)?;
         let target = self.block(along(pos, direction)?)?;
-        Ok(target.kind == BlockKind::Repeater && target.facing != Some(direction.opposite()))
+        Ok(
+            matches!(target.kind, BlockKind::Repeater | BlockKind::Comparator)
+                && target.facing != Some(direction.opposite()),
+        )
     }
 }
 

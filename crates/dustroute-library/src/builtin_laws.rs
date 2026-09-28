@@ -52,6 +52,10 @@ pub fn builtin_laws() -> &'static BlueprintCatalog {
                     .into_iter()
                     .zip(dustroute_minecraft::lamp_law::builtin_programs()),
             )
+            .chain(std::iter::once((
+                dustroute_minecraft::device_callback_law::COMPARATOR_SIGNAL_ID,
+                dustroute_minecraft::device_callback_law::comparator_signal_program(),
+            )))
             .chain(
                 dustroute_minecraft::device_callback_law::LAW_IDS
                     .into_iter()
