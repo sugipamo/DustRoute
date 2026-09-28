@@ -53,6 +53,7 @@ pub enum MinecraftExportError {
     TooManyInputs(usize),
     UnsupportedFacing(Facing),
     UnsupportedTransientBlock(BlockKind),
+    InvalidDeviceState(String),
 }
 
 impl Display for MinecraftExportError {
@@ -71,6 +72,7 @@ impl Display for MinecraftExportError {
             Self::UnsupportedFacing(facing) => {
                 write!(f, "unsupported horizontal facing: {facing:?}")
             }
+            Self::InvalidDeviceState(reason) => write!(f, "invalid device state: {reason}"),
             Self::UnsupportedTransientBlock(kind) => {
                 write!(
                     f,
@@ -130,6 +132,67 @@ fn outward_from_support(offset: Pos) -> Option<Facing> {
         (-1, 0, 0) => Some(Facing::West),
         _ => None,
     }
+}
+
+/// Exact declared state for devices in the current callback registry. Shared
+/// command export uses the same properties as simulation and observation.
+pub(crate) fn device_java_block_state(block: &Block) -> Result<String, MinecraftExportError> {
+    use dustroute_minecraft::device_program::{Orientation, Property, program};
+    let invalid = MinecraftExportError::InvalidDeviceState;
+    let definition = program(block)
+        .ok_or_else(|| invalid("unsupported identity".into()))?
+        .definition();
+    definition.validate_state(block).map_err(invalid)?;
+    let mut properties = BTreeMap::new();
+    for property in &definition.properties {
+        let value = definition.state(block, *property).map_err(invalid)?;
+        properties.insert(
+            property.name(),
+            match property {
+                Property::Bool(_) => (value != 0).to_string(),
+                _ => value.to_string(),
+            },
+        );
+    }
+    match definition.physical().orientation() {
+        Orientation::None => {}
+        Orientation::Output | Orientation::FloorOutput => {
+            let output = block
+                .facing
+                .ok_or_else(|| invalid("output facing required".into()))?;
+            properties.insert("facing", facing_name(output.opposite()).into());
+        }
+        Orientation::Attached => {
+            let support = block
+                .support_offset
+                .ok_or_else(|| invalid("support required".into()))?;
+            let face = match support {
+                Pos { x: 0, y: -1, z: 0 } => "floor",
+                Pos { x: 0, y: 1, z: 0 } => "ceiling",
+                _ if outward_from_support(support).is_some() => "wall",
+                _ => return Err(invalid("adjacent support required".into())),
+            };
+            let facing = block
+                .facing
+                .or_else(|| outward_from_support(support))
+                .unwrap_or(Facing::North);
+            properties.insert("face", face.into());
+            properties.insert("facing", facing_name(facing).into());
+        }
+    }
+    let name = block
+        .observed_name
+        .as_deref()
+        .unwrap_or(&definition.observed_names[0]);
+    let name = name.strip_prefix("minecraft:").unwrap_or(name);
+    Ok(format!(
+        "minecraft:{name}[{}]",
+        properties
+            .into_iter()
+            .map(|(k, v)| format!("{k}={v}"))
+            .collect::<Vec<_>>()
+            .join(",")
+    ))
 }
 
 pub fn java_block_state(
@@ -226,6 +289,7 @@ pub fn java_block_state(
             "minecraft:redstone_lamp[lit={}]",
             block.powered.unwrap_or(false)
         ),
+        BlockKind::CopperBulb => device_java_block_state(block)?,
         BlockKind::Observer => {
             let facing = block.facing.unwrap_or(Facing::North).opposite();
             format!(

@@ -22,7 +22,7 @@ use serde::Deserialize;
 
 use crate::{Block, BlockKind, Facing, ObservationClassification, PistonState};
 
-pub const REVISION: &str = "dustroute.physical-admission.java-1-21-11.v1";
+pub const REVISION: &str = "dustroute.physical-admission.java-1-21-11.v2";
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
 #[serde(rename_all = "snake_case")]
@@ -161,6 +161,37 @@ impl TryFrom<PhysicalSpec> for CheckedPhysical {
 }
 
 impl CheckedPhysical {
+    /// Current descriptors project new kinds into ordinary placement/routing
+    /// traits. Old execution laws continue to use their own finite projection.
+    pub fn properties(self) -> crate::BlockProperties {
+        let conductor = self.0.conducting == Faces::All;
+        crate::BlockProperties {
+            supports_components: self.0.supporting == Faces::All,
+            receives_weak_power: conductor,
+            receives_strong_power: conductor,
+            repeater_reads_block_power: conductor,
+            strong_power_drives_dust: conductor,
+        }
+    }
+    pub fn block_traits(self, block: &Block) -> crate::BlockRedstoneTraits {
+        let top = self.full_face(block, Facing::Up);
+        let conductor = self.conducts(block);
+        let rise = top.then_some(crate::WireConnection::Up);
+        crate::BlockRedstoneTraits {
+            occupied_shape: match self.0.shape {
+                Shape::Empty => crate::OccupiedShape::Empty,
+                Shape::FullCube => crate::OccupiedShape::FullCube,
+                _ => crate::OccupiedShape::Partial,
+            },
+            supports_dust_on_top: top,
+            conducts_weak_power: conductor,
+            conducts_strong_power: conductor,
+            strong_power_drives_dust: conductor,
+            permits_wire_rise_beside: rise.is_some(),
+            wire_rise_connection: rise,
+            blocks_wire_rise_when_above: conductor,
+        }
+    }
     pub const fn same(self, other: Self) -> bool {
         self.0.shape as u8 == other.0.shape as u8
             && self.0.conducting as u8 == other.0.conducting as u8
@@ -300,7 +331,7 @@ const MOVING: CheckedPhysical = PhysicalSpec {
 pub const fn of_kind(kind: BlockKind) -> CheckedPhysical {
     match kind {
         BlockKind::Air => AIR,
-        BlockKind::Solid | BlockKind::RedstoneLamp => SOLID,
+        BlockKind::Solid | BlockKind::RedstoneLamp | BlockKind::CopperBulb => SOLID,
         BlockKind::Transparent => GLASS,
         BlockKind::RedstoneWire => WIRE,
         BlockKind::RedstoneTorch => TORCH,

@@ -455,6 +455,7 @@ const fn connection_kind_v1(kind: BlockKind) -> Option<u16> {
         BlockKind::Piston => 13,
         BlockKind::PistonHead => 14,
         BlockKind::MovingPiston => 15,
+        BlockKind::CopperBulb => return None,
     })
 }
 
@@ -476,5 +477,6 @@ const fn payload_kind_v1(kind: BlockKind) -> Option<u16> {
         BlockKind::Piston => 13,
         BlockKind::PistonHead => 14,
         BlockKind::MovingPiston => 15,
+        BlockKind::CopperBulb => return None,
     })
 }

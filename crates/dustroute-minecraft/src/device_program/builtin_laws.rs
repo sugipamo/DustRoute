@@ -1,6 +1,27 @@
 //! Rust-authored callback rules; const validation runs during compilation.
 use crate::law::static_program::{Expression::*, StaticLaw, Step::*};
 
+pub const COPPER_BULB: StaticLaw = StaticLaw::new(
+    &[("powered", 1), ("lit", 1), ("input", 1)],
+    &[("write", 1), ("powered", 1), ("lit", 1)],
+    &[
+        Set("powered", Input("input")),
+        Set("lit", Input("lit")),
+        If(
+            Not(&Equal(&Input("powered"), &Input("input"))),
+            &[
+                Set("write", Constant(1)),
+                If(
+                    Not(&Input("powered")),
+                    &[Set("lit", Not(&Input("lit")))],
+                    &[],
+                ),
+            ],
+            &[],
+        ),
+    ],
+);
+
 // Discrete target delay, in game ticks. No timer is emitted when the callback
 // leaves `delay` at zero. Keep arithmetic in the checked local rule.
 const GATE_DELAY: &[crate::law::static_program::Step] = &[

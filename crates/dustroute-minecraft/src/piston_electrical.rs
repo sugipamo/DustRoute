@@ -96,7 +96,7 @@ fn arms(block: &Block) -> Result<&BTreeMap<Facing, WireConnection>, RuntimeError
 /// Evidence gate for electrical identities only. Stable piston/head pairing and
 /// physical support must additionally pass the runtime/placement gates.
 pub fn validate_evidence(block: &Block) -> Result<(), RuntimeError> {
-    if !crate::execution_context::WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V10
+    if !crate::execution_context::WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V11
         .admits_kind(block.kind)
     {
         return Err(invalid(format!("unsupported electrical kind {:?}", block.kind)));
@@ -364,6 +364,17 @@ impl<'a> ElectricalWorld<'a> {
             }
         }
         Ok(false)
+    }
+
+    pub fn comparator_readout(&self, pos: Pos) -> Result<Option<u8>, RuntimeError> {
+        let block = self.block(pos)?;
+        match crate::device_program::program(&block) {
+            Some(program) => program
+                .definition()
+                .comparator_readout(&block)
+                .map_err(invalid),
+            None => Ok(None),
+        }
     }
 
     /// Maximum incoming analog signal, including conductor-mediated strong power.

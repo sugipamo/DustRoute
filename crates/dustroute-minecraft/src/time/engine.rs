@@ -1196,17 +1196,19 @@ impl PhysicsEngine {
         &mut self,
         mode: RedstoneRunnerMode,
     ) -> Result<(), PhysicsEngineError> {
-        for (position, block) in self.world.iter() {
-            if !crate::execution_context::WorldExecutionProfile::BoundedRedstoneEventsV1
-                .admits_kind(block.kind)
-            {
-                return Err(RedstonePropagationError::UnsupportedComponent {
-                    position: *position,
-                    kind: block.kind,
-                    reason: "block kind is outside the bounded execution contract".into(),
-                }
-                .into());
-            }
+        let unsupported = self.world.iter().find_map(|(position, block)| {
+            (!crate::execution_context::WorldExecutionProfile::BoundedRedstoneEventsV1
+                .admits_kind(block.kind))
+            .then_some((*position, block.kind))
+        });
+        if let Some((position, kind)) = unsupported {
+            let error = PhysicsEngineError::from(RedstonePropagationError::UnsupportedComponent {
+                position,
+                kind,
+                reason: "block kind is outside the bounded execution contract".into(),
+            });
+            self.mark_trace_failed(&error);
+            return Err(error);
         }
         let redstone_inputs = !matches!(mode, RedstoneRunnerMode::PistonOnly);
         let propagation = matches!(mode, RedstoneRunnerMode::Propagation);

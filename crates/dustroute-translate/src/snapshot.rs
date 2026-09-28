@@ -235,7 +235,9 @@ fn block_from_record(record: &MinecraftSnapshotBlock) -> Result<Block, SnapshotE
                 .and_then(|value| value.parse().ok());
             block.support_offset = Some(Pos::new(0, -1, 0));
         }
-        BlockKind::RedstoneLamp => block.powered = property_bool(record, "lit"),
+        BlockKind::RedstoneLamp | BlockKind::CopperBulb => {
+            block.powered = property_bool(record, "lit")
+        }
         BlockKind::Observer => {
             // Minecraft's `facing` is the observation/front direction. The
             // internal directional convention points toward output/back.

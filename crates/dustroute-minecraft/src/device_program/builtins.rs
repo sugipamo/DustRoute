@@ -2,6 +2,68 @@
 use super::schema::*;
 use super::*;
 
+const BULB_INPUTS: &[(&str, Query)] = &[
+    (
+        "powered",
+        Query::State {
+            property: Property::Bool(BoolProperty::Powered),
+        },
+    ),
+    ("lit", Query::Powered),
+    ("input", Query::ReceivingPower),
+];
+const BULB_WRITE: &[Operation] = &[Operation::Write {
+    when: Binding::Output("write"),
+    values: &[
+        (
+            Property::Bool(BoolProperty::Powered),
+            Binding::Output("powered"),
+        ),
+        (Property::Bool(BoolProperty::Lit), Binding::Output("lit")),
+    ],
+    notifications: WriteNotifications::NeighborsAndShapes,
+}];
+pub const COPPER_BULB: CheckedDevice = DeviceSpec {
+    id: "dustroute.device.waxed-copper-bulb.java-1-21-11.v1",
+    kind: crate::BlockKind::CopperBulb,
+    physical: crate::physical::of_kind(crate::BlockKind::CopperBulb),
+    observed_names: &[
+        "waxed_copper_bulb",
+        "waxed_exposed_copper_bulb",
+        "waxed_weathered_copper_bulb",
+        "waxed_oxidized_copper_bulb",
+    ],
+    synthetic: true,
+    predicates: &[],
+    primary_power: BoolProperty::Lit,
+    properties: &[
+        Property::Bool(BoolProperty::Lit),
+        Property::Bool(BoolProperty::Powered),
+    ],
+    law_id: "dustroute.law.waxed-copper-bulb.callback.java-1-21-11.v1",
+    law: &builtin_laws::COPPER_BULB,
+    signal: Signal::None,
+    signal_level: SignalLevel::Binary(BoolProperty::Lit),
+    comparator_output: Some(SignalLevel::Binary(BoolProperty::Lit)),
+    fresh_powered_requires_history: false,
+    initial_neighbor_update: true,
+    preprocess_shapes: false,
+    command_initialization: None,
+    handlers: &[
+        HandlerSpec {
+            callback: Callback::Neighbor,
+            inputs: BULB_INPUTS,
+            operations: BULB_WRITE,
+        },
+        HandlerSpec {
+            callback: Callback::Added,
+            inputs: BULB_INPUTS,
+            operations: BULB_WRITE,
+        },
+    ],
+}
+.checked();
+
 pub const LAMP: CheckedDevice = DeviceSpec {
     id: "dustroute.device.lamp.java-1-21-11.v1",
     kind: crate::BlockKind::RedstoneLamp,
@@ -15,6 +77,7 @@ pub const LAMP: CheckedDevice = DeviceSpec {
     law: &builtin_laws::LAMP,
     signal: Signal::None,
     signal_level: SignalLevel::Binary(BoolProperty::Lit),
+    comparator_output: None,
     fresh_powered_requires_history: false,
     initial_neighbor_update: true,
     preprocess_shapes: false,
@@ -74,6 +137,7 @@ pub const OBSERVER: CheckedDevice = DeviceSpec {
     law: &builtin_laws::OBSERVER,
     signal: Signal::Output,
     signal_level: SignalLevel::Binary(BoolProperty::Powered),
+    comparator_output: None,
     fresh_powered_requires_history: true,
     initial_neighbor_update: false,
     preprocess_shapes: true,
@@ -165,6 +229,7 @@ pub const STONE_BUTTON: CheckedDevice = DeviceSpec {
     law: &builtin_laws::STONE_BUTTON,
     signal: Signal::Attached,
     signal_level: SignalLevel::Binary(BoolProperty::Powered),
+    comparator_output: None,
     fresh_powered_requires_history: true,
     initial_neighbor_update: false,
     preprocess_shapes: false,
@@ -317,6 +382,7 @@ pub const REPEATER: CheckedDevice = DeviceSpec {
     law: &builtin_laws::REPEATER,
     signal: Signal::Output,
     signal_level: SignalLevel::Binary(BoolProperty::Powered),
+    comparator_output: None,
     fresh_powered_requires_history: false,
     initial_neighbor_update: true,
     preprocess_shapes: false,
@@ -380,8 +446,8 @@ pub const REPEATER: CheckedDevice = DeviceSpec {
 }
 .checked();
 
-pub const DEVICES: [CheckedDevice; 4] = {
-    let devices = registry([LAMP, OBSERVER, STONE_BUTTON, REPEATER]);
+pub const DEVICES: [CheckedDevice; DEVICE_COUNT] = {
+    let devices = registry([LAMP, OBSERVER, STONE_BUTTON, REPEATER, COPPER_BULB]);
     let mut i = 0;
     while i < devices.len() {
         let device = devices[i].spec();

@@ -79,6 +79,10 @@ pub fn behavior_profile(kind: BlockKind) -> BlockBehaviorProfile {
         BlockKind::Button => button::PROFILE,
         BlockKind::PressurePlate => pressure_plate::PROFILE,
         BlockKind::RedstoneLamp => redstone_lamp::PROFILE,
+        BlockKind::CopperBulb => TemporalProfile {
+            update_model: UpdateModel::ImmediateNeighborChain,
+            order_sensitive: true,
+        },
         BlockKind::RedstoneBlock => redstone_block::PROFILE,
         BlockKind::Observer => observer::PROFILE,
         BlockKind::Piston | BlockKind::PistonHead | BlockKind::MovingPiston => piston::PROFILE,

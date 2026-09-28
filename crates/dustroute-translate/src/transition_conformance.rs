@@ -1023,7 +1023,7 @@ fn relative_tick(game_tick: u64, activation_game_tick: u64) -> i64 {
 fn modelled_state(block: &Block) -> NormalizedBlockState {
     let mut properties = block.observed_properties.clone();
     let boolean_property = match block.kind {
-        BlockKind::RedstoneLamp | BlockKind::RedstoneTorch => "lit",
+        BlockKind::RedstoneLamp | BlockKind::RedstoneTorch | BlockKind::CopperBulb => "lit",
         BlockKind::Lever
         | BlockKind::Button
         | BlockKind::PressurePlate
@@ -1121,6 +1121,7 @@ fn block_name(kind: BlockKind) -> &'static str {
         BlockKind::Piston => "piston",
         BlockKind::PistonHead => "piston_head",
         BlockKind::MovingPiston => "moving_piston",
+        BlockKind::CopperBulb => "copper_bulb",
     }
 }
 

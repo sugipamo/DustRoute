@@ -1068,19 +1068,25 @@ fn reverse_request_for_truth_table(
 }
 
 fn is_supported_redstone_name(name: &str) -> bool {
-    matches!(
-        name,
-        "minecraft:redstone_wire"
-            | "minecraft:redstone_torch"
-            | "minecraft:redstone_wall_torch"
-            | "minecraft:repeater"
-            | "minecraft:comparator"
-            | "minecraft:lever"
-            | "minecraft:redstone_block"
-            | "minecraft:observer"
-            | "minecraft:piston"
-            | "minecraft:sticky_piston"
-    )
+    dustroute_translate::world::device_program::BUILTIN_DEVICES
+        .iter()
+        .any(|d| {
+            let short = name.strip_prefix("minecraft:").unwrap_or(name);
+            d.spec().observed_names.contains(&short)
+        })
+        || matches!(
+            name,
+            "minecraft:redstone_wire"
+                | "minecraft:redstone_torch"
+                | "minecraft:redstone_wall_torch"
+                | "minecraft:repeater"
+                | "minecraft:comparator"
+                | "minecraft:lever"
+                | "minecraft:redstone_block"
+                | "minecraft:observer"
+                | "minecraft:piston"
+                | "minecraft:sticky_piston"
+        )
 }
 
 fn is_redstone_candidate_name(name: &str) -> bool {
@@ -1098,6 +1104,8 @@ fn is_redstone_candidate_name(name: &str) -> bool {
                 | "minecraft:sculk_sensor"
                 | "minecraft:calibrated_sculk_sensor"
         )
+        || name.ends_with("_copper_bulb")
+        || name == "minecraft:copper_bulb"
         || name.ends_with("_button")
         || name.ends_with("_pressure_plate")
 }

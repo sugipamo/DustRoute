@@ -161,8 +161,19 @@ impl DeviceDefinition {
     }
 
     pub fn signal_strength(&self, block: &Block) -> Result<u8, String> {
-        let value = self.state(block, self.signal_level.property())? as u8;
-        Ok(match self.signal_level {
+        self.read_level(block, self.signal_level)
+    }
+
+    /// Comparator-readable state is independent of normal weak/strong power.
+    pub fn comparator_readout(&self, block: &Block) -> Result<Option<u8>, String> {
+        self.comparator_output
+            .map(|level| self.read_level(block, level))
+            .transpose()
+    }
+
+    fn read_level(&self, block: &Block, level: SignalLevel) -> Result<u8, String> {
+        let value = self.state(block, level.property())? as u8;
+        Ok(match level {
             SignalLevel::Binary(_) => value * 15,
             SignalLevel::Analog => value,
         })

@@ -21,8 +21,8 @@ pub enum WorldExecutionProfile {
     RedstoneCompatibilityBoundaryV1,
     #[serde(rename = "dustroute.bounded-redstone-events.v1")]
     BoundedRedstoneEventsV1,
-    #[serde(rename = "dustroute.piston-electrical-callbacks.java-1-21-11.v10")]
-    UnifiedPistonElectricalCallbacksJava12111V10,
+    #[serde(rename = "dustroute.piston-electrical-callbacks.java-1-21-11.v11")]
+    UnifiedPistonElectricalCallbacksJava12111V11,
 }
 
 impl WorldExecutionProfile {
@@ -45,7 +45,7 @@ impl WorldExecutionProfile {
             Self::RedstoneCompatibilityBoundaryV1 | Self::BoundedRedstoneEventsV1 => {
                 crate::spatial::spatial_kind_v1(kind).is_some()
             }
-            Self::UnifiedPistonElectricalCallbacksJava12111V10 => {
+            Self::UnifiedPistonElectricalCallbacksJava12111V11 => {
                 matches!(
                     kind,
                     Air | Solid
@@ -55,6 +55,7 @@ impl WorldExecutionProfile {
                         | Lever
                         | Button
                         | RedstoneLamp
+                        | CopperBulb
                         | RedstoneBlock
                         | Observer
                         | Piston
@@ -79,6 +80,7 @@ pub enum LawRole {
     Comparator,
     Observer,
     Lamp,
+    CopperBulb,
     Button,
     PistonState,
     PistonMotion,
@@ -143,7 +145,7 @@ impl WorldExecutionContext {
     /// separate from the legacy finite spatial-law catalog.
     pub const fn physical_admission_revision(&self) -> Option<&'static str> {
         match self.profile {
-            WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V10 => {
+            WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V11 => {
                 Some(crate::physical::REVISION)
             }
             _ => None,
@@ -206,11 +208,12 @@ impl WorldExecutionContext {
                         Some(crate::piston_law::builtin_piston_laws().default_motion_profile()),
                     )
                 }
-                UnifiedPistonElectricalCallbacksJava12111V10 => {
+                UnifiedPistonElectricalCallbacksJava12111V11 => {
                     laws.retain(|role, _| *role == BlockTraits);
                     laws.insert(Lamp, crate::device_callback_law::LAW_IDS[0].into());
                     laws.insert(Observer, crate::device_callback_law::LAW_IDS[1].into());
                     laws.insert(Button, crate::device_callback_law::LAW_IDS[2].into());
+                    laws.insert(CopperBulb, crate::device_callback_law::LAW_IDS[4].into());
                     laws.insert(DustStrength, crate::dust_law::DUST_LAW_REVISION.into());
                     for (role, id) in [SignalEmission, ConductorPower, PistonConnection, Repeater]
                         .into_iter()
@@ -262,7 +265,7 @@ impl WorldExecutionContext {
     pub fn device_program_revision(&self) -> Option<&'static str> {
         matches!(
             self.profile,
-            WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V10
+            WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V11
         )
         .then_some(crate::device_program::REVISION)
     }
@@ -272,7 +275,7 @@ impl WorldExecutionContext {
     pub fn synchronous_runtime_profile(&self) -> Option<&'static str> {
         matches!(
             self.profile,
-            WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V10
+            WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V11
         )
         .then_some(crate::time::runtime::PROFILE)
     }

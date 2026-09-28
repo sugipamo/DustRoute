@@ -1,5 +1,5 @@
 //! Lossless Java states for construction commands and expected observations.
-use crate::minecraft_export::{JavaExportConfig, java_block_state};
+use crate::minecraft_export::{JavaExportConfig, device_java_block_state, java_block_state};
 use crate::snapshot::{MinecraftSnapshot, MinecraftSnapshotBlock, assembly_from_snapshot};
 use dustroute_library::blueprint::BlueprintCatalog;
 use dustroute_minecraft::piston_electrical::validate_evidence;
@@ -19,8 +19,12 @@ pub fn electrical_snapshot(world: &World, region: Region) -> Result<MinecraftSna
         if block.kind == BlockKind::Air {
             continue;
         }
-        let encoded =
-            java_block_state(block, &JavaExportConfig::default()).map_err(|e| e.to_string())?;
+        let encoded = if dustroute_minecraft::device_program::program(block).is_some() {
+            device_java_block_state(block)
+        } else {
+            java_block_state(block, &JavaExportConfig::default())
+        }
+        .map_err(|e| e.to_string())?;
         let (name, properties) = encoded
             .split_once('[')
             .map_or((encoded.as_str(), ""), |(n, p)| {
@@ -48,20 +52,6 @@ pub fn electrical_snapshot(world: &World, region: Region) -> Result<MinecraftSna
                 properties.insert(
                     "power".into(),
                     block.power_level.expect("validated level").to_string(),
-                );
-            }
-            BlockKind::Repeater => {
-                properties.insert(
-                    "powered".into(),
-                    block.powered.expect("validated power").to_string(),
-                );
-                properties.insert(
-                    "locked".into(),
-                    block
-                        .observed_properties
-                        .get("locked")
-                        .cloned()
-                        .unwrap_or_else(|| "false".into()),
                 );
             }
             _ => {}

@@ -7,6 +7,35 @@ use dustroute_minecraft::{
 };
 
 #[test]
+fn old_kind_discriminants_keep_their_archived_world_id_meaning() {
+    // BlockKind's derived Hash contributes these tags to saved ShapeId/StateId.
+    // New kinds must not shift any already published tag.
+    for (tag, kind) in [
+        BlockKind::Air,
+        BlockKind::Solid,
+        BlockKind::Transparent,
+        BlockKind::RedstoneWire,
+        BlockKind::RedstoneTorch,
+        BlockKind::Repeater,
+        BlockKind::Comparator,
+        BlockKind::Lever,
+        BlockKind::Button,
+        BlockKind::PressurePlate,
+        BlockKind::RedstoneLamp,
+        BlockKind::RedstoneBlock,
+        BlockKind::Observer,
+        BlockKind::Piston,
+        BlockKind::PistonHead,
+        BlockKind::MovingPiston,
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        assert_eq!(kind as usize, tag);
+    }
+}
+
+#[test]
 fn registered_identity_is_observable_without_granting_an_execution_profile() {
     for device in BUILTIN_DEVICES {
         let spec = device.spec();
@@ -34,7 +63,7 @@ fn registered_identity_is_observable_without_granting_an_execution_profile() {
     }
     for name in [
         "another_mod:observer",
-        "waxed_copper_bulb",
+        "copper_bulb",
         "unknown",
         "smooth_stone",
     ] {
@@ -113,7 +142,7 @@ fn piston_support_faces_follow_body_and_head_state_in_every_direction() {
 #[test]
 fn world_contracts_check_admission_independently_from_physical_geometry() {
     let current = WorldExecutionContext::for_profile(
-        WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V10,
+        WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V11,
     );
     let proof =
         WorldExecutionContext::for_profile(WorldExecutionProfile::DustTorchSynchronousGameTickV1);

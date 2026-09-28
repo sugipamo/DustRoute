@@ -1,20 +1,22 @@
 //! Target Java callback effects. The shared runtime owns queue identity/time.
 use std::sync::OnceLock;
 
+use crate::device_program::DEVICE_COUNT;
 use crate::law::LawProgram;
 
-pub const LAW_IDS: [&str; 4] = {
+pub const LAW_IDS: [&str; DEVICE_COUNT] = {
     let devices = crate::device_program::BUILTIN_DEVICES;
-    [
-        devices[0].spec().law_id,
-        devices[1].spec().law_id,
-        devices[2].spec().law_id,
-        devices[3].spec().law_id,
-    ]
+    let mut ids = [""; DEVICE_COUNT];
+    let mut i = 0;
+    while i < devices.len() {
+        ids[i] = devices[i].spec().law_id;
+        i += 1;
+    }
+    ids
 };
 
-pub fn builtin_programs() -> &'static [LawProgram; 4] {
-    static PROGRAMS: OnceLock<[LawProgram; 4]> = OnceLock::new();
+pub fn builtin_programs() -> &'static [LawProgram; DEVICE_COUNT] {
+    static PROGRAMS: OnceLock<[LawProgram; DEVICE_COUNT]> = OnceLock::new();
     PROGRAMS.get_or_init(|| {
         crate::device_program::BUILTIN_DEVICES.map(|device| device.spec().law.program())
     })

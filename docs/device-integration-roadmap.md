@@ -8,7 +8,7 @@ new observations or evidence do not silently upgrade an earlier approval.
 [approved physical admission prerequisite](device-physical-admission-proposal.md).
 The user approved checked physical descriptors, explicit executor admission,
 independent Law kind adapters and shared observation/support checks. This work
-is now in scope. The overall goal is not complete.
+is complete. The waxed bulb milestone is complete; comparator and torch integration follow. The overall goal is not complete.
 
 ## Ordered milestones
 
@@ -20,7 +20,7 @@ is now in scope. The overall goal is not complete.
    observations and short-pulse/locking/ordering regressions. Version the runtime
    contract when event payloads or callback ordering change.
    Dust attachment is now a separate `WireConnectionRule` from signal emission.
-2. **Waxed copper bulb.** Admit explicit powered/lit state, rising-edge toggling,
+2. **Waxed copper bulb (complete).** Admit explicit powered/lit state, rising-edge toggling,
    installed-state power sampling and comparator-readable output. Include fresh
    construction, observation, checkpoint and placement/readback boundaries. No
    oxidation or random-tick model is implied.
@@ -107,3 +107,21 @@ Validation: 245 Minecraft tests, 16 compile-fail doctests, 18 library Law/contex
 tests and 40 translation/construction/adoption tests passed. Workspace/all-target
 Clippy passed with warnings denied. No live Minecraft trial or new public MCP
 operation was run. The next milestone is the waxed copper bulb.
+
+## Milestone 2 result
+
+The four waxed bulb identities execute from one checked definition. LIT and
+POWERED remain separate, rising edges toggle LIT, and comparator readout does not
+create ordinary signal emission. Generic device export retains both properties
+through construction and teardown. Unsupported historical executors and piston
+payloads reject the new kind. Execution/exploration is v11, device programs v5,
+physical admission v2 and current ordinary placement v3.
+
+Validation: 250 Minecraft tests, 18 compile-fail doctests, 18 library Law/context
+tests, 43 translation/construction/adoption tests and 14 Python tests passed.
+The rebuilt model passes retained door comparisons. Workspace/all-target Clippy,
+formatting and diff checks passed. These are source-derived and model regression
+checks; no new live Minecraft trial or full workspace test run was performed.
+
+[Behavior and boundaries](copper-bulb-runtime.md) and
+[verification manifest](evidence/device-integration-bulb-20260928.json).

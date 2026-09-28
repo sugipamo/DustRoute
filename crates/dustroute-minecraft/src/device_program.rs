@@ -14,8 +14,9 @@ pub mod schema;
 mod state;
 pub use state::{BoolProperty, Property, SignalLevel};
 
-pub const REVISION: &str = "dustroute.device-programs.java-1-21-11.v4";
-pub const BUILTIN_DEVICES: [schema::CheckedDevice; 4] = builtins::DEVICES;
+pub const REVISION: &str = "dustroute.device-programs.java-1-21-11.v5";
+pub const DEVICE_COUNT: usize = 5;
+pub const BUILTIN_DEVICES: [schema::CheckedDevice; DEVICE_COUNT] = builtins::DEVICES;
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -148,6 +149,7 @@ pub struct DeviceDefinition {
     pub synthetic: bool,
     pub predicates: Vec<(Property, u16)>,
     pub signal_level: SignalLevel,
+    pub comparator_output: Option<SignalLevel>,
     pub signal: Signal,
     pub fresh_powered_requires_history: bool,
     pub initial_neighbor_update: bool,
@@ -240,6 +242,12 @@ impl DeviceProgram {
         {
             return Err("invalid device definition identity or state property".into());
         }
+        if definition
+            .comparator_output
+            .is_some_and(|output| !definition.properties.contains(&output.property()))
+        {
+            return Err("comparator readout needs a declared property".into());
+        }
         if definition.signal == Signal::Output && !definition.physical().orientation().has_output()
             || definition.signal == Signal::Attached
                 && definition.physical().orientation() != Orientation::Attached
@@ -279,7 +287,7 @@ impl DeviceProgram {
                 {
                     return Err("gate query requires horizontal floor output".into());
                 }
-                if matches!(callback, Callback::Removed | Callback::Added)
+                if matches!(callback, Callback::Removed)
                     && matches!(
                         input.sample,
                         Query::ReceivingPower
@@ -479,13 +487,13 @@ impl DeviceDefinition {
     }
 }
 
-pub fn definitions() -> &'static [DeviceDefinition; 4] {
-    static DEFINITIONS: OnceLock<[DeviceDefinition; 4]> = OnceLock::new();
+pub fn definitions() -> &'static [DeviceDefinition; DEVICE_COUNT] {
+    static DEFINITIONS: OnceLock<[DeviceDefinition; DEVICE_COUNT]> = OnceLock::new();
     DEFINITIONS.get_or_init(|| builtins::DEVICES.map(|d| d.definition()))
 }
 
-pub fn programs() -> &'static [DeviceProgram; 4] {
-    static PROGRAMS: OnceLock<[DeviceProgram; 4]> = OnceLock::new();
+pub fn programs() -> &'static [DeviceProgram; DEVICE_COUNT] {
+    static PROGRAMS: OnceLock<[DeviceProgram; DEVICE_COUNT]> = OnceLock::new();
     PROGRAMS.get_or_init(|| builtins::DEVICES.map(|d| d.compile()))
 }
 

@@ -77,6 +77,23 @@
 //!     }], ..BASE
 //! }.checked();
 //! ```
+//! Comparator readouts must refer to declared state:
+//! ```compile_fail,E0080
+//! use dustroute_minecraft::device_program::{*, schema::*};
+//! const BAD: CheckedDevice = DeviceSpec {
+//!     comparator_output: Some(SignalLevel::Analog), ..BUILTIN_DEVICES[4].spec()
+//! }.checked();
+//! ```
+//! Removed blocks cannot sample power as an installed receiver:
+//! ```compile_fail,E0080
+//! use dustroute_minecraft::device_program::{*, schema::*};
+//! const BASE: DeviceSpec = BUILTIN_DEVICES[4].spec();
+//! const BAD: CheckedDevice = DeviceSpec {
+//!     handlers: &[HandlerSpec {
+//!         callback: Callback::Removed, inputs: BASE.handlers[0].inputs, operations: &[],
+//!     }], ..BASE
+//! }.checked();
+//! ```
 //! A timer requires a tick handler:
 //! ```compile_fail,E0080
 //! use dustroute_minecraft::device_program::{*, schema::*};
@@ -165,6 +182,7 @@ pub struct DeviceSpec {
     pub law: &'static StaticLaw,
     pub signal: Signal,
     pub signal_level: SignalLevel,
+    pub comparator_output: Option<SignalLevel>,
     pub fresh_powered_requires_history: bool,
     pub initial_neighbor_update: bool,
     pub preprocess_shapes: bool,
@@ -199,6 +217,12 @@ impl DeviceSpec {
     }
 
     pub const fn checked(self) -> CheckedDevice {
+        if let Some(output) = self.comparator_output {
+            assert!(
+                self.declares(output.property()),
+                "comparator readout needs a declared property"
+            );
+        }
         assert!(
             !self.id.is_empty() && !self.law_id.is_empty(),
             "empty device identity"
@@ -325,7 +349,7 @@ impl DeviceSpec {
                     "gate query needs horizontal floor output"
                 );
                 assert!(
-                    !(matches!(h.callback, Callback::Removed | Callback::Added)
+                    !(matches!(h.callback, Callback::Removed)
                         || matches!(h.callback, Callback::Shape) && self.preprocess_shapes)
                         || !matches!(
                             q,
@@ -492,6 +516,7 @@ impl CheckedDevice {
             law: s.law_id.into(),
             signal: s.signal,
             signal_level: s.signal_level,
+            comparator_output: s.comparator_output,
             fresh_powered_requires_history: s.fresh_powered_requires_history,
             initial_neighbor_update: s.initial_neighbor_update,
             preprocess_shapes: s.preprocess_shapes,
