@@ -96,7 +96,7 @@ fn arms(block: &Block) -> Result<&BTreeMap<Facing, WireConnection>, RuntimeError
 /// Evidence gate for electrical identities only. Stable piston/head pairing and
 /// physical support must additionally pass the runtime/placement gates.
 pub fn validate_evidence(block: &Block) -> Result<(), RuntimeError> {
-    if !crate::execution_context::WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V14
+    if !crate::execution_context::WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V15
         .admits_kind(block.kind)
     {
         return Err(invalid(format!("unsupported electrical kind {:?}", block.kind)));
@@ -173,18 +173,7 @@ pub fn validate_evidence(block: &Block) -> Result<(), RuntimeError> {
     }
     let matches = match block.kind {
         BlockKind::Air => observed.is_none_or(|n| n == "air"),
-        BlockKind::Solid => observed.is_none_or(|n| {
-            matches!(
-                n,
-                "stone"
-                    | "cobblestone"
-                    | "smooth_stone"
-                    | "obsidian"
-                    | "smooth_quartz"
-                    | "cyan_wool"
-            )
-        }),
-        BlockKind::Transparent => observed.is_none_or(|n| n == "glass"),
+        BlockKind::Solid | BlockKind::Transparent => crate::physical::of_block(block).is_some(),
         BlockKind::RedstoneBlock => {
             block.powered != Some(false) && observed.is_none_or(|n| n == "redstone_block")
         }
@@ -246,11 +235,11 @@ pub fn validate_evidence(block: &Block) -> Result<(), RuntimeError> {
 
 /// Current callback geometry is independent of historical spatial Law tags.
 pub fn conducts(block: &Block) -> bool {
-    crate::physical::of_kind(block.kind).conducts(block)
+    crate::physical::of_block(block).is_some_and(|p| p.conducts(block))
 }
 
 pub fn full_face(block: &Block, side: Facing) -> bool {
-    crate::physical::of_kind(block.kind).full_face(block, side)
+    crate::physical::of_block(block).is_some_and(|p| p.full_face(block, side))
 }
 
 #[derive(Clone, Copy)]

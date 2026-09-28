@@ -201,7 +201,7 @@ fn mixed_facings_share_one_queue_with_simultaneous_and_independent_inputs() {
         assert_eq!(
             run.execution_context(),
             WorldExecutionContext::for_profile(
-                WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V14
+                WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V15
             )
         );
         assert_eq!(

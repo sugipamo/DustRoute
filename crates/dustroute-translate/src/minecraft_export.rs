@@ -206,6 +206,29 @@ pub fn java_block_state(
     block: &Block,
     config: &JavaExportConfig,
 ) -> Result<String, MinecraftExportError> {
+    if let Some(name) = block.observed_name.as_deref()
+        && dustroute_minecraft::physical::passive::named(name).is_some()
+    {
+        dustroute_minecraft::piston_electrical::validate_evidence(block)
+            .map_err(|e| MinecraftExportError::InvalidDeviceState(e.to_string()))?;
+        let name = format!(
+            "minecraft:{}",
+            name.strip_prefix("minecraft:").unwrap_or(name)
+        );
+        return Ok(if block.observed_properties.is_empty() {
+            name
+        } else {
+            format!(
+                "{name}[{}]",
+                block
+                    .observed_properties
+                    .iter()
+                    .map(|(k, v)| format!("{k}={v}"))
+                    .collect::<Vec<_>>()
+                    .join(",")
+            )
+        });
+    }
     let state = match block.kind {
         BlockKind::Air => "minecraft:air".into(),
         BlockKind::Solid => config.solid_block.clone(),

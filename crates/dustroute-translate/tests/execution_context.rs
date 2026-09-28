@@ -119,7 +119,7 @@ fn mismatched_profiles_pins_initialization_and_invalid_order_are_rejected() {
         DustSingleTorchBlockEffectsV1,
         RedstoneCompatibilityBoundaryV1,
         BoundedRedstoneEventsV1,
-        UnifiedPistonElectricalCallbacksJava12111V14,
+        UnifiedPistonElectricalCallbacksJava12111V15,
     ] {
         let context = WorldExecutionContext::for_profile(profile);
         if profile != BoundedRedstoneEventsV1 {

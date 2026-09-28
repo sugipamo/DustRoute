@@ -30,7 +30,9 @@ use serde::Deserialize;
 
 use crate::{Block, BlockKind, Facing, ObservationClassification, PistonState};
 
-pub const REVISION: &str = "dustroute.physical-admission.java-1-21-11.v5";
+pub mod passive;
+
+pub const REVISION: &str = "dustroute.physical-admission.java-1-21-11.v6";
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
 #[serde(rename_all = "snake_case")]
@@ -99,6 +101,8 @@ pub enum Shape {
     PistonBody,
     PistonHead,
     Moving,
+    TopHalf,
+    BottomHalf,
 }
 
 /// Face rules describe support and conduction independently. For example an
@@ -110,6 +114,8 @@ pub enum Faces {
     All,
     PistonBody,
     PistonHead,
+    Up,
+    Down,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
@@ -175,6 +181,14 @@ impl PhysicalSpec {
             "piston head faces require head geometry"
         );
         check!(
+            !matches!(self.supporting, Faces::Up) || matches!(self.shape, Shape::TopHalf),
+            "upper support face requires top-half geometry"
+        );
+        check!(
+            !matches!(self.supporting, Faces::Down) || matches!(self.shape, Shape::BottomHalf),
+            "lower support face requires bottom-half geometry"
+        );
+        check!(
             !matches!(self.orientation, Orientation::FloorOutput)
                 || matches!(self.support, Support::Below),
             "floor output requires support below"
@@ -229,11 +243,17 @@ impl CheckedPhysical {
     pub fn block_traits(self, block: &Block) -> crate::BlockRedstoneTraits {
         let top = self.full_face(block, Facing::Up);
         let conductor = self.conducts(block);
-        let rise = top.then_some(crate::WireConnection::Up);
+        let rise = top.then_some(if matches!(self.0.supporting, Faces::Up) {
+            crate::WireConnection::Side
+        } else {
+            crate::WireConnection::Up
+        });
         crate::BlockRedstoneTraits {
             occupied_shape: match self.0.shape {
                 Shape::Empty => crate::OccupiedShape::Empty,
                 Shape::FullCube => crate::OccupiedShape::FullCube,
+                Shape::TopHalf => crate::OccupiedShape::TopHalf,
+                Shape::BottomHalf => crate::OccupiedShape::BottomHalf,
                 _ => crate::OccupiedShape::Partial,
             },
             supports_dust_on_top: top,
@@ -276,7 +296,9 @@ impl CheckedPhysical {
     }
     pub fn supports_attachment(self, support: &Block, toward_support: Facing) -> bool {
         let face = toward_support.opposite();
-        let physical = of_kind(support.kind);
+        let Some(physical) = of_block(support) else {
+            return false;
+        };
         if self
             .0
             .support_loss
@@ -285,16 +307,18 @@ impl CheckedPhysical {
         {
             return physical.center_face(support, face);
         }
-        // FULL and RIGID coincide for the admitted cubes/body/head shapes.
+        // FULL and RIGID coincide for the admitted cube/slab/body/head shapes.
         physical.full_face(support, face)
     }
     pub fn center_face(self, block: &Block, side: Facing) -> bool {
-        if !known_geometry(block) {
+        if of_block(block) != Some(self) {
             return false;
         }
         match self.0.supporting {
             Faces::All => true,
             Faces::None => false,
+            Faces::Up => side == Facing::Up,
+            Faces::Down => side == Facing::Down,
             Faces::PistonBody => {
                 block.piston_state == Some(PistonState::Retracted)
                     || block.facing.is_some_and(|f| f != side)
@@ -305,13 +329,15 @@ impl CheckedPhysical {
         }
     }
     pub fn conducts(self, block: &Block) -> bool {
-        matches!(self.0.conducting, Faces::All) && known_geometry(block)
+        matches!(self.0.conducting, Faces::All) && of_block(block) == Some(self)
     }
     pub fn full_face(self, block: &Block, side: Facing) -> bool {
-        known_geometry(block)
+        of_block(block) == Some(self)
             && match self.0.supporting {
                 Faces::None => false,
                 Faces::All => true,
+                Faces::Up => side == Facing::Up,
+                Faces::Down => side == Facing::Down,
                 Faces::PistonBody => {
                     block.piston_state == Some(PistonState::Retracted)
                         || block.facing == Some(side.opposite())
@@ -332,12 +358,21 @@ impl CheckedPhysical {
 }
 
 pub(crate) fn known_geometry(block: &Block) -> bool {
-    block.observation_classification != ObservationClassification::Coarse
-        && !block.requires_live_observation()
-        && !block
-            .observed_name
-            .as_deref()
-            .is_some_and(|n| n.ends_with("_slab") || n.ends_with("_stairs"))
+    of_block(block).is_some()
+}
+
+/// Resolve current physical facts from identity and state. Kind-only defaults
+/// remain available for synthetic devices and historical finite Law adapters.
+pub fn of_block(block: &Block) -> Option<CheckedPhysical> {
+    if block.observation_classification == ObservationClassification::Coarse
+        || block.requires_live_observation()
+    {
+        return None;
+    }
+    if matches!(block.kind, BlockKind::Solid | BlockKind::Transparent) {
+        return passive::resolve(block);
+    }
+    Some(of_kind(block.kind))
 }
 
 const EMPTY: PhysicalSpec = PhysicalSpec {
@@ -477,6 +512,9 @@ pub const fn of_kind(kind: BlockKind) -> CheckedPhysical {
 pub fn classify(name: &str) -> (BlockKind, ObservationClassification) {
     use BlockKind::*;
     let name = name.strip_prefix("minecraft:").unwrap_or(name);
+    if let Some(spec) = passive::named(name) {
+        return (spec.kind, ObservationClassification::Exact);
+    }
     for device in crate::device_program::BUILTIN_DEVICES {
         let spec = device.spec();
         if spec.observed_names.contains(&name) {
@@ -495,10 +533,8 @@ pub fn classify(name: &str) -> (BlockKind, ObservationClassification) {
         "piston" | "sticky_piston" => Piston,
         "piston_head" => PistonHead,
         "moving_piston" => MovingPiston,
-        "glass" | "tinted_glass" => Transparent,
         n if n.ends_with("_slab") || n.ends_with("_stairs") => Transparent,
-        "stone" | "dirt" | "grass_block" | "bedrock" | "cobblestone" | "deepslate"
-        | "smooth_quartz" | "cyan_wool" => Solid,
+        "dirt" | "grass_block" | "bedrock" | "deepslate" => Solid,
         _ => return (Solid, ObservationClassification::Coarse),
     };
     (kind, ObservationClassification::Exact)

@@ -11,6 +11,7 @@ from unittest.mock import patch
 
 from compare_device_circuits import compare_model, observe
 from make_device_circuit_fixtures import locking_circuit, rotate, torch_feedback
+from make_passive_shape_fixtures import cases as shape_cases
 from observe_device_circuit import compare_capture
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -177,13 +178,58 @@ class DeviceCircuitEvidence(unittest.TestCase):
                             self.assertEqual(dict(transitions[16]['after'][1])['lit'], 'true')
 
     def test_shared_viewpoint_rotates_with_all_inputs(self):
-        for base in [torch_feedback(), locking_circuit()]:
+        for base in [torch_feedback(), locking_circuit(), *[f for f, _ in shape_cases()]]:
             for turns in range(4):
                 fixture = rotate(base, turns)
                 point = fixture['viewpoint']
                 for control in fixture['inputs']:
                     distance_squared = sum((control[a] - point[a]) ** 2 for a in ('x', 'y', 'z'))
                     self.assertLessEqual(distance_squared, 16)
+
+    def test_passive_shape_captures_exercise_conduction_steps_and_detachment(self):
+        for fixture, turns in shape_cases():
+            fixture = rotate(fixture, turns)
+            name = fixture['id'].removeprefix('device-')
+            with self.subTest(case=name):
+                capture = load(FIXTURES / (name + '.json.gz'))
+                self.assertEqual(capture['fixture'], fixture)
+                observed = capture['observed']
+                writes = observed['writes']
+                if 'conduction-' in name:
+                    conducting = 'double' in name
+                    self.assertEqual(any(w['after'][0] == 'minecraft:redstone_wire'
+                                         and dict(w['after'][1])['power'] == '15' for w in writes), conducting)
+                    self.assertEqual(any(w['after'][0] == 'minecraft:redstone_lamp'
+                                         and dict(w['after'][1])['lit'] == 'true' for w in writes), conducting)
+                elif 'step-' in name:
+                    origin = capture['client']['origin']
+                    powers = {1: [], 2: []}
+                    for tick in observed['tick_end_worlds']:
+                        # Inspect the second input alone, after lower input OFF.
+                        if observed['inputs'][2]['tick'] < tick['tick'] < observed['inputs'][3]['tick']:
+                            for pos, state in tick['blocks']:
+                                if state[0] == 'minecraft:redstone_wire':
+                                    powers[pos[1] - origin['y']].append(int(dict(state[1])['power']))
+                    self.assertEqual(max(powers[2]), 15)
+                    self.assertEqual(max(powers[1]), 14 if 'double' in name else 0)
+                    # First input alone must reach both levels for every support.
+                    self.assertTrue(any(w['after'][0] == 'minecraft:redstone_wire'
+                                        and w['position'][1] == origin['y'] + 2
+                                        and dict(w['after'][1])['power'] == '14'
+                                        and w['tick'] < observed['inputs'][1]['tick'] for w in writes))
+                else:
+                    kind = 'stone_button' if 'bottom' in name else 'redstone_wire'
+                    removals = [w for w in writes if w['before'][0] == 'minecraft:' + kind
+                                and w['after'][0] == 'minecraft:air']
+                    self.assertEqual(len(removals), 1)
+                    slab = next(b for b in fixture['initial']['blocks'] if b['name'].endswith('_slab'))
+                    final = observed['tick_end_worlds'][-1]['blocks']
+                    self.assertTrue(any(s[0] == slab['name'] and dict(s[1]) == slab['properties'] for _, s in final))
+                    self.assertTrue(any(w['after'][0] == 'minecraft:redstone_lamp'
+                                        and dict(w['after'][1])['lit'] == 'true' for w in writes))
+                    if kind == 'stone_button':
+                        self.assertEqual(dict(removals[0]['before'][1])['powered'], 'true')
+                        self.assertEqual(sum(not a['delivered'] for a in observed['tick_attempts']), 1)
 
     def test_support_captures_exercise_removal_and_centered_survival(self):
         cases = {'wire-r0': 'redstone_wire', 'powered-wire-r0': 'redstone_wire',

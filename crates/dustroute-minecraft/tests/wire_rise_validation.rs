@@ -91,6 +91,11 @@ fn top_half_side_rises_and_glass_follow_the_same_clearance_rule() {
         if let Some((key, value)) = property {
             support.observed_properties.insert(key.into(), value.into());
         }
+        if name == "minecraft:stone_slab" {
+            support
+                .observed_properties
+                .insert("waterlogged".into(), "false".into());
+        }
         let mut world = rise(support, arm);
         assert!(ValidatedWorld::try_from(world.clone()).is_ok(), "{name}");
         // Glass above the lower wire is not the solid obstruction from the audit.

@@ -46,8 +46,9 @@ eight finite live trials; the completion-observation work below remains separate
 
 ## Current command semantics
 
-This section records the v6 construction milestone. The current v14 runtime
-also supports [attachment removal after support loss](support-loss-runtime.md).
+This section records the v6 construction milestone. The current v15 runtime
+also supports [attachment removal after support loss](support-loss-runtime.md)
+and [passive shape states](passive-shapes-runtime.md).
 
 The v6 adapter models `/setblock <exact state> replace` with flags 258:
 

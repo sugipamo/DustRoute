@@ -77,6 +77,7 @@ Git history; diagnostic fixtures have not been promoted into public capability.
 | [Executable lamp laws](blueprint-architecture.md#executable-lamp-laws) | Delayed compatibility updates and immediate bounded updates, each with its original state boundary |
 | [Executable piston laws](blueprint-architecture.md#executable-piston-laws) | Bounded movement/state rules, complete input validation and retained atomic completion checks |
 | [Physical behavior checks](physical-behavior.md) | Executable dust law, pinned circuit/type bindings, retained execution state and proof limits |
+| [Passive shapes and conduction](passive-shapes-runtime.md) | Checked slab/glass state declarations, directional support, exact placement export and independent live comparisons |
 | [Behavioral state reduction](behavior-state-reduction.md) | State inventory, possible reductions and required proof obligations before implementation |
 | [Torch settling proof investigation](torch-settling-proof.md) | Electrical independence, exact continuations from observed prefixes and the boundary for a new proof path |
 | [Abstract behavioral verification](abstract-behavior-verification.md) | Conservative history transitions, universal cycle checks and arbitrary-input NOT model proofs |

@@ -30,7 +30,7 @@ pub fn electrical_snapshot(world: &World, region: Region) -> Result<MinecraftSna
             .map_or((encoded.as_str(), ""), |(n, p)| {
                 (n, p.trim_end_matches(']'))
             });
-        let mut name = name.to_string();
+        let name = name.to_string();
         let mut properties: BTreeMap<String, String> = properties
             .split(',')
             .filter(|s| !s.is_empty())
@@ -39,22 +39,11 @@ pub fn electrical_snapshot(world: &World, region: Region) -> Result<MinecraftSna
                 (k.into(), v.into())
             })
             .collect();
-        match block.kind {
-            BlockKind::Solid | BlockKind::Transparent => {
-                if let Some(observed) = &block.observed_name {
-                    name = format!(
-                        "minecraft:{}",
-                        observed.strip_prefix("minecraft:").unwrap_or(observed)
-                    );
-                }
-            }
-            BlockKind::RedstoneWire => {
-                properties.insert(
-                    "power".into(),
-                    block.power_level.expect("validated level").to_string(),
-                );
-            }
-            _ => {}
+        if block.kind == BlockKind::RedstoneWire {
+            properties.insert(
+                "power".into(),
+                block.power_level.expect("validated level").to_string(),
+            );
         }
         if block.observed_name.is_some() && properties != block.observed_properties {
             return Err(format!(

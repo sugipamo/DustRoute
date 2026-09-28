@@ -434,7 +434,13 @@ impl Block {
     #[must_use]
     pub fn capabilities(&self) -> BlockCapabilities {
         use CapabilityLevel::{Full, NotApplicable, Partial, Unsupported};
-        if self.requires_live_observation() {
+        if self.requires_live_observation()
+            || (self
+                .observed_name
+                .as_deref()
+                .is_some_and(|n| crate::physical::passive::named(n).is_some())
+                && crate::physical::of_block(self).is_none())
+        {
             return BlockCapabilities {
                 observation: Full,
                 physical_classification: Unsupported,

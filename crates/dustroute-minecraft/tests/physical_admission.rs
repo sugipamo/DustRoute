@@ -61,12 +61,7 @@ fn registered_identity_is_observable_without_granting_an_execution_profile() {
         block.observed_name = Some(format!("minecraft:{name}"));
         assert!(validate_evidence(&block).is_err());
     }
-    for name in [
-        "another_mod:observer",
-        "copper_bulb",
-        "unknown",
-        "smooth_stone",
-    ] {
+    for name in ["another_mod:observer", "copper_bulb", "unknown"] {
         assert_eq!(
             physical::classify(name),
             (BlockKind::Solid, ObservationClassification::Coarse)
@@ -192,7 +187,7 @@ fn centered_support_and_invalid_attachment_policies_are_distinct_from_full_faces
 #[test]
 fn world_contracts_check_admission_independently_from_physical_geometry() {
     let current = WorldExecutionContext::for_profile(
-        WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V14,
+        WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V15,
     );
     let proof =
         WorldExecutionContext::for_profile(WorldExecutionProfile::DustTorchSynchronousGameTickV1);

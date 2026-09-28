@@ -9,9 +9,10 @@ Class hashes and methods are retained in the
 This is static implementation evidence, not a new server observation.
 
 The support-destruction exclusion below describes the initial scope. The current
-v14 runtime adds [attachment support loss](support-loss-runtime.md) for admitted
+v15 runtime includes [attachment support loss](support-loss-runtime.md) for admitted
 components, with separate live evidence; direct piston crushing remains outside
-that extension.
+that extension. [Passive shapes](passive-shapes-runtime.md) further extend support
+and conduction without changing the historical audit below.
 
 ## Differences that must be implemented together
 
