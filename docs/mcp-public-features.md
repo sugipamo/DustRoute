@@ -215,3 +215,5 @@ existing adopted-Assembly placement into a specified empty corridor, and shared
 diagnosis. Arrival-state removal explicitly selects
 `removal_reference="observed_inputs"`; no empty-site search or infinite-flight
 tracking is implied. See [finite-flight lifecycle](flying-machine-lifecycle.md).
+
+`test_circuit_change(blueprint.action="generate_flying_machine")` returns freshly checked, unadopted candidates from four typed body recipes, optional moving blocks, distance, reflection and rotation. See [generation parameters and adoption workflow](flying-machine-generation.md).

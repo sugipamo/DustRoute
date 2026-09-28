@@ -25,6 +25,69 @@ mod door_fixture;
 #[path = "../../dustroute-translate/tests/support/flying_machine_blueprint.rs"]
 mod flight_fixture;
 
+#[tokio::test]
+async fn generated_flight_is_unpublished_then_imported_proposed_and_adopted_after_restart() {
+    let root = temporary();
+    let (client, server) = start(&root).await;
+    let before = call(
+        &client,
+        "get_circuit_revision",
+        json!({"blueprint":{"kind":"archive"}}),
+    )
+    .await;
+    let generated=call(&client,"test_circuit_change",json!({"blueprint":{"action":"generate_flying_machine","request":{
+        "namespace":"public.generated","body":"honey_nose","distance":3,"rotation":"r270","mirrored":true
+    }}})).await;
+    assert_eq!(generated["ok"], true, "{generated}");
+    assert_eq!(generated["catalog_changed"], false);
+    assert_eq!(generated["writes_minecraft"], false);
+    assert_eq!(generated["adoption_authorized"], false);
+    let after = call(
+        &client,
+        "get_circuit_revision",
+        json!({"blueprint":{"kind":"archive"}}),
+    )
+    .await;
+    assert_eq!(before, after);
+    let result = &generated["result"];
+    let imported = call(
+        &client,
+        "test_circuit_change",
+        json!({"blueprint":{"action":"import","records":result["records"]}}),
+    )
+    .await;
+    assert_eq!(imported["ok"], true, "{imported}");
+    let mut request = result["request"].clone();
+    request.as_object_mut().unwrap().remove("id");
+    let created = call(
+        &client,
+        "test_circuit_change",
+        json!({"blueprint":{"action":"propose_update","request":request}}),
+    )
+    .await;
+    assert_eq!(created["ok"], true, "{created}");
+    let operation = created["operation_id"].clone();
+    stop(client, server).await;
+    let (client, server) = start(&root).await;
+    let shown = call(&client, "show_operation", json!({"operation_id":operation})).await;
+    assert_eq!(shown["can_adopt"], true, "{shown}");
+    let adopted = call(
+        &client,
+        "invoke_operation",
+        json!({"operation_id":operation,"confirm":true,"blueprint_decision":{"action":"adopt"}}),
+    )
+    .await;
+    assert_eq!(adopted["ok"], true, "{adopted}");
+    let bad=call(&client,"test_circuit_change",json!({"blueprint":{"action":"generate_flying_machine","request":{
+        "namespace":"public.detached","distance":3,"attachments":[{"position":{"x":0,"y":0,"z":-1},"material":"honey"}]
+    }}})).await;
+    assert_eq!(bad["ok"], false, "{bad}");
+    assert_eq!(bad["catalog_changed"], false);
+    assert_ne!(bad["result"]["verification"]["status"], "passed");
+    stop(client, server).await;
+    fs::remove_dir_all(root).unwrap();
+}
+
 #[test]
 fn flight_placement_and_operating_removal_require_the_entire_reviewed_region() {
     use crate::piston_assembly::ValidatedAssemblyPlacement;

@@ -127,6 +127,11 @@ pub(crate) struct UpdateInput {
 #[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
 #[serde(tag = "action", rename_all = "snake_case", deny_unknown_fields)]
 pub(crate) enum BlueprintWrite {
+    /// Generate one bounded single-launch flying-machine candidate. Returns
+    /// unadopted records, a proposal and fresh model checks without publishing.
+    GenerateFlyingMachine {
+        request: Box<dustroute_library::flying_machine::FlyingMachineRequest>,
+    },
     /// Append unverified definitions/states; never promotes or adopts them.
     Import { records: BlueprintRecords },
     /// Retain the exact modeled Assembly Revision of a saved circuit revision.
@@ -579,6 +584,26 @@ fn perform(
                 return Err("Blueprint request exceeds 4 MiB".into());
             }
             match write {
+                BlueprintWrite::GenerateFlyingMachine { request } => {
+                    let generated = dustroute_translate::flying_machine::generate_flying_machine(
+                        *request,
+                        BehaviorBudget::default(),
+                    )?;
+                    let passed = generated.verification.status == CheckStatus::Passed;
+                    Ok((
+                        Some(
+                            json!({"ok":passed,"schema_version":"dustroute.blueprint-mcp.v1",
+                            "result":generated,"writes_minecraft":false,"catalog_changed":false,
+                            "adoption_authorized":false,
+                            "next_step":if passed {
+                                "Import result.records; propose_update with result.request after removing its id; review and adopt explicitly; then plan placement at the target."
+                            } else {
+                                "Inspect result.verification; this candidate did not establish a usable generated flight."
+                            }}),
+                        ),
+                        false,
+                    ))
+                }
                 BlueprintWrite::EnumerateLayouts { request, budget } => {
                     let budget = budget.unwrap_or_default();
                     if budget.max_layouts > 4096

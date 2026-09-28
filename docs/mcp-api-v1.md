@@ -444,3 +444,7 @@ replay from the design and observed declared inputs. `constructed` is the
 default; `observed_inputs` is rejected on other actions. Preview and execution retain
 and revalidate the selected baseline and steps. See
 [placed Assembly management](placed-assembly-management.md).
+
+### Flying-machine generation
+
+`test_circuit_change` accepts `blueprint.action="generate_flying_machine"` with a typed `request`. It returns `result.records`, `result.request`, declared geometry and fresh model checks without changing the catalog or Minecraft. Only a passed candidate has `ok: true`; failed/undetermined checks remain explicit. Import and explicit fresh adoption remain required. See [parameters](flying-machine-generation.md).

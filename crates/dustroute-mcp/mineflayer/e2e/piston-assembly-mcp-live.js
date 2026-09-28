@@ -131,7 +131,9 @@ async function verifyFlightArrival (plan) {
   assert(persistence, 'flight lifecycle requires durable instances')
   const key = p => `${p.x},${p.y},${p.z}`
   const moving = new Set(fixture.finite_flight.moving_positions.map(p => key(transform(p))))
-  const delta = transform({ x: fixture.finite_flight.distance, y: 0, z: 0 }).minus(origin)
+  assert.equal(moving.size, fixture.finite_flight.moving_positions.length, 'distinct declared moving positions')
+  const displacement = fixture.finite_flight.displacement || { x: fixture.finite_flight.distance, y: 0, z: 0 }
+  const delta = transform(displacement).minus(origin)
   const expected = structuredClone(plan.construction_steps.at(-1).expected)
   let count = 0
   for (const b of expected.blocks) {
@@ -141,14 +143,15 @@ async function verifyFlightArrival (plan) {
     }
     if (b.name === 'minecraft:lever') b.properties.powered = 'true'
   }
-  assert.equal(count, 6, 'translate exactly the declared six engine blocks')
+  assert.equal(count, moving.size, 'translate every declared moving block exactly once')
   const candidate = failureSnapshot()
   assert(candidate.complete)
   const observed = await confirmRegion(bot, candidate, 'minecraft:overworld')
   const canonical = blocks => blocks.map(b => [key(b.pos), b.name, b.properties]).sort((a, b) => a[0].localeCompare(b[0]))
   assert.deepEqual(canonical(observed.blocks), canonical(expected.blocks), 'whole corridor must contain only the arrived engine and fixed launcher/stopper')
   return { expected, observed, distance: fixture.finite_flight.distance,
-    expectation: 'six declared initial engine blocks translated once; fixed blocks unchanged except launcher input',
+    engine_blocks: count, displacement,
+    expectation: 'all declared moving blocks translated once; fixed blocks unchanged except launcher input',
     hidden_readiness_proven: false }
 }
 async function main () {
@@ -164,6 +167,20 @@ async function main () {
   await sleep(1000)
   empty(); await confirmEmpty('before_setup'); owned = true
   await mcp.initialize()
+  if (fixture.generation_request) {
+    const generated = await call('test_circuit_change', { blueprint: { action: 'generate_flying_machine', request: fixture.generation_request } })
+    assert.equal(generated.catalog_changed, false)
+    assert.equal(generated.adoption_authorized, false)
+    assert.equal(generated.writes_minecraft, false)
+    assert.equal(generated.result.verification.status, 'passed')
+    assert.deepEqual(generated.result.records, fixture.records)
+    const proposal = structuredClone(generated.result.request)
+    delete proposal.id
+    assert.deepEqual(proposal, fixture.request)
+    assert.deepEqual(generated.result.moving_positions, fixture.finite_flight.moving_positions)
+    assert.deepEqual(generated.result.displacement, fixture.finite_flight.displacement)
+    report.generated = { specification: fixture.generation_request, verification: generated.result.verification }
+  }
   await call('test_circuit_change', { blueprint: { action: 'import', records: fixture.records } })
   const request = structuredClone(fixture.request)
   const { known_region, input_levers, root_limits } = request.behavior_context

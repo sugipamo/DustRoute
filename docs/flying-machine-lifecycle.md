@@ -97,3 +97,5 @@ cargo build --offline --locked -j 1 -p dustroute-mcp --bin dustroute-mcp -p dust
 target/debug/examples/flying_machine_assembly_fixture > .local/flying-next-public.fixture.json
 python3 tools/observe_assembly_construction.py --run-id flying-next-public --x 280000 --fixture .local/flying-next-public.fixture.json --rotation r90 --persistence --capture-construction
 ```
+
+[生成API](flying-machine-generation.md)では、機体・追加ブロック・距離・回転・鏡像を指定して、この共通経路へ候補を渡せる。

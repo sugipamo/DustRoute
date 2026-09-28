@@ -72,6 +72,7 @@ Git history; diagnostic fixtures have not been promoted into public capability.
 | --- | --- |
 | [Finite flying-machine trial](flying-machine-short-course.md) | Fixed-corridor ten-block flight, absolute-coordinate live comparison and independent arrival checks |
 | [Finite-flight lifecycle](flying-machine-lifecycle.md) | Single-operation type, adopted empty-corridor placement, arrival diagnosis and reviewed removal |
+| [Flying-machine generation](flying-machine-generation.md) | Typed body recipes, attachments, finite travel, reflection and rotation through shared validation |
 | [Differential physics](physics-differential-testing.md) | Comparing model and client-visible observations |
 | [Executable torch law](torch-laws.md) | Blueprint rule execution and server-observed burnout/recovery regressions |
 | [Executable repeater laws](blueprint-architecture.md#executable-repeater-laws) | Retained queue/event models, immutable law data and the short-pulse/locking boundaries |
