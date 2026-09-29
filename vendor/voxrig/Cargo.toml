@@ -1,0 +1,40 @@
+[package]
+name = "voxrig"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+description = "A headless Minecraft client with explicit Java version adapters for externally controlled agents"
+license = "MIT"
+readme = "README.md"
+documentation = "https://docs.rs/voxrig"
+keywords = ["minecraft", "headless", "bot", "client", "protocol"]
+categories = ["game-development", "network-programming"]
+include = [
+    "/src/**",
+    "/data/**",
+    "/examples/**",
+    "/docs/**",
+    "/scripts/generate_java_1_21_11.cjs",
+    "/scripts/prepare_motion_confirmation.py",
+    "/scripts/export_outline_shapes.py",
+    "/scripts/ExportOutlineShapes.java",
+    "/scripts/PrepareOutlineOracle.java",
+    "/README.md",
+    "/LICENSE",
+    "/THIRD_PARTY_NOTICES.md",
+]
+
+[lib]
+name = "voxrig"
+path = "src/lib.rs"
+
+[dependencies]
+anyhow = "1"
+byteorder = "1"
+flate2 = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+
+[dev-dependencies]
+hex = "0.4"

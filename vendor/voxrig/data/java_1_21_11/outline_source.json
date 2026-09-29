@@ -1,0 +1,18 @@
+{
+  "generator": {
+    "scripts/ExportOutlineShapes.java": "0bf830261334327adde96901d629862a1f6fef5cce50f403a86ae67a1691a154",
+    "scripts/PrepareOutlineOracle.java": "a2c6fb7769bfd6e4db7f4841446f978da36ff8886f94905d8e119112ccb349c6",
+    "scripts/export_outline_shapes.py": "c3e4e31bc95592896e502a33db30e36c307fdaa2a5458abe63b21543a7a9d331"
+  },
+  "mappings": "Yarn 1.21.11+build.6 (official -> named)",
+  "mappings_sha256": "d2495bcc4b96ff81d985fa403a3a65a2891d4df31ad71f36a19338aa66daa89a",
+  "minecraft": "Java 1.21.11",
+  "minecraft_merged_sha256": "ad6ee2c9cee9c191b25bf5d0ffec5788c3335f3b3fcf77d6871a7b66b3b5046e",
+  "outputs": {
+    "outline_coverage.json": "88b5ec0d474012479a3d3fb8c4659cee29094700720e37a207b93e0cb0c3a92d",
+    "outline_raycast_cases.json.gz": "284db472a1c17d3347283e292f3ef982b198ebb9c91f7e10e0e9a361d7f1898c",
+    "outline_rotation_cases.json.gz": "837458b1aa9fdf731e4774685ea6ba6711d26f161cdd6d3e8e4caf5f19764430",
+    "outline_shapes.json": "f96c141d4bbfe12d14157ce6228802a9ec4ee5caffa40467c260c054e00311d2"
+  },
+  "transformation": "Package remap and access-flag widening only; native method bodies unchanged. Audited state-only outline and auxiliary raycast boxes. Native BlockView.raycast OUTLINE/NONE with absent ShapeContext. Entity.getRotationVector on an unspawned armor stand, no world simulation."
+}

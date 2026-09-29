@@ -1,0 +1,34 @@
+{
+  "minecraft": "1.21.11 / protocol 774",
+  "cases": [
+    {
+      "case": "a",
+      "capture": "client-operations-a-20260929.json.gz",
+      "sha256": "bc980d931aad1272c194a2293ec78c883315dc4e102079c7c93f436cf457ba70",
+      "trace_complete": true,
+      "packets": 28,
+      "placement_sequence": 1,
+      "removal_sequence": 2,
+      "ack": 2
+    },
+    {
+      "case": "b",
+      "capture": "client-operations-b-20260929.json.gz",
+      "sha256": "786e03869763f36d42f0c55aa9aca06704d6cf46a34dddeff00e640279d39afc",
+      "trace_complete": true,
+      "packets": 12,
+      "placement_sequence": 1,
+      "removal_sequence": 2,
+      "ack": 2
+    }
+  ],
+  "scope": "Creative flight step, view rotation, default stone hotbar submission, normal use-on-block placement, creative dig, acknowledgement, unsigned self-only command response. Not survival mining, general container operations or server-confirmed inventory echo.",
+  "failed": "a: the probe assertion assumed an object text component; native literal messages arrive as compact NBT strings. Native placement/removal and ack succeeded. Corrected literal component handling and ran b. Post-exit entity diagnostics in a found no entity; b held the connection for independent native position/ability checks.",
+  "native": "b: console entity data reported [100.5,182.0,102.5], flying=1; final stone support plus air above matched VOXRIG_OPERATIONS_NATIVE_FINAL.",
+  "cleanup": "OpsProbe disconnected, operator grant revoked, owned support cleared, one force-load removed, all dimensions saved and server stopped normally.",
+  "server_log": {
+    "file": "client-operations-server-20260929.log.gz",
+    "sha256": "91c95224a147d595222f1d334f897010a6b119aa660551da51c6445b38697227"
+  },
+  "later_refinement": "After b, submitted creative inventory writes invalidate the affected local slot until native inventory arrives. This avoids presenting a prior received empty slot as current after submission; covered by boundary tests. No submitted stack is promoted to received inventory."
+}

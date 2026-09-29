@@ -1,0 +1,46 @@
+{
+  "minecraft": "1.21.11",
+  "protocol": 774,
+  "server": "official vanilla, no mod, offline-mode, new isolated world",
+  "server_jar_sha256": "f83b8e093865806f931c7e34aae41b177d4c076335263dd124c75d6d65dd1726",
+  "input": "two ordinary use-on-block packets at [99,180,100], separated by 800ms; 4000ms settling; wall time is not a game tick",
+  "target": [
+    102,
+    180,
+    99
+  ],
+  "captures": {
+    "stairs-packets-20260929.json.gz": {
+      "source": ".local/voxrig-stairs-packet-trace-a.json",
+      "source_sha256": "da27fdb3fa27ac8e9a5653597f2f7d32726d4c79005a1b56b4513b9c714027a3",
+      "retained_sha256": "db93f90219389ee35ddcf9f0d72bef1f446c86becf8696b900b71ead7cadc742"
+    },
+    "stairs-reconnected-20260929.json.gz": {
+      "source": ".local/voxrig-stairs-reconnected-a.json",
+      "source_sha256": "f7ab569e9a530e755c44d11bb91b20af66e7006adeac536a615625044bf72bec",
+      "retained_sha256": "27ebed3ca587b2e21609b32b97e06455e7b6f8c4aab3c2e9ecefb66c0c8ac140"
+    }
+  },
+  "packet_capture": {
+    "complete": true,
+    "after_sequence": 2453,
+    "through_sequence": 2495,
+    "packets": 42,
+    "target_state_update_packets": 0,
+    "piston_block_actions": 2,
+    "chunk_load_or_unload_packets": 0
+  },
+  "observed_shape": {
+    "before": "inner_left",
+    "after": "inner_left",
+    "server_console_after": "straight",
+    "new_connection": "straight"
+  },
+  "connection_identity_note": "process-local IDs; the reconnect capture is from a separate process, so its ID also starts at 1",
+  "limitations": [
+    "single declared fixture, not arbitrary piston conformance",
+    "server console check is after capture; no continuous server tick trace",
+    "vanilla client handler inspected; no vanilla graphical client comparison",
+    "replay retains the discrepancy, not a successful synchronization test"
+  ]
+}

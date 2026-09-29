@@ -4,16 +4,20 @@ This document is for the person configuring the Minecraft server, bot and MCP cl
 
 ## Native Rust client (Java 1.21.11)
 
-With the unpublished Voxrig branch checked out at `../Voxrig`, build and start
-the native MCP client directly:
+The tested Voxrig source is pinned in `vendor/voxrig` with commit and file
+checksums in `vendor/voxrig-source.json`. No separate checkout or Node.js process
+is needed. From the repository root, verify, build and start the native client:
 
 ```bash
+python3 scripts/vendor_voxrig.py --check
+cargo build --locked -j1 -p dustroute-mcp --features voxrig
+
 DUSTROUTE_SERVER_ADDRESS=127.0.0.1:25565 \
   DUSTROUTE_ASSIST_PLAYER=YourMinecraftName \
   DUSTROUTE_BOT_BACKEND=voxrig \
   DUSTROUTE_MC_AUTH=offline \
   DUSTROUTE_MC_VERSION=1.21.11 \
-  cargo run --locked -p dustroute-mcp --features voxrig
+  target/debug/dustroute-mcp
 ```
 
 A build with `--features voxrig` defaults to this backend. There is no Node.js
@@ -29,9 +33,15 @@ Java 1.21.11; unsupported explicit settings fail instead of changing adapters.
 `DUSTROUTE_BOT_BACKEND=mineflayer` explicitly selects the existing bridge, which
 remains the default in builds without the native feature. Follow the Node.js
 steps below only for that backend. Details, live evidence and limits are in
-[the native rollout](../../docs/voxrig-rollout.md). Native gaze currently targets
-static collision geometry; fluids and decorations with empty collision boxes
-need an explicit region rather than a graphical crosshair selection.
+[the native rollout](../../docs/voxrig-rollout.md). Native gaze uses audited static
+outline shapes, including dust, switches and gates. Fluids/entities are excluded;
+unsupported context-dependent shapes and moving geometry report unavailable.
+An explicit region remains available when gaze geometry cannot be determined.
+This is client observation, not a graphical camera-frame receipt.
+
+For offline builds, prefetch the locked Cargo dependencies on the build machine,
+then add `--offline`; the pinned Voxrig source itself needs no network access.
+Maintainer update instructions are in [vendor/README.md](../../vendor/README.md).
 
 ## Start the visible bot
 

@@ -1,0 +1,46 @@
+{
+  "minecraft": "1.21.11 / protocol 774",
+  "cases": [
+    {
+      "material": "slime",
+      "capture": "client-slime-branch-20260929.json.gz",
+      "source_sha256": "da640353746ca347c5a7ca14a0910ee9116259429987cc5d2845e7e164958d75",
+      "retained_sha256": "19b6f0667bc14d2eb8619a8d65c05bd41bf350be0e6de1f5e0725bbdce4f9ed9",
+      "replay": "client-slime-branch-replay-20260929.json.gz",
+      "replay_sha256": "5559068eb99a8eed97c904665792d56b64f2a6c140151b0e7b2be35d95de3a5f",
+      "trace_complete": true,
+      "packets": 78,
+      "issue": null,
+      "confirmation": "client-slime-branch-confirmation-20260929.mcfunction.gz",
+      "confirmation_source_sha256": "c39757d7b6429e31e14230e182e3969df273312641ab9a5dc0bfcdd3beeb4e53",
+      "marker": "VOXRIG_MATCH_SLIME_BRANCH_VERIFIED_770",
+      "cells": 770,
+      "result": 1
+    },
+    {
+      "material": "honey",
+      "capture": "client-honey-branch-20260929.json.gz",
+      "source_sha256": "1a87c5e5c9811053251dc421f9251c93227947fb7c229c1f4cb1b05696435260",
+      "retained_sha256": "9e5c8b9077626f9e2008f429a52e17f32dfb4a653d469f30cf1fc8e880dc65b3",
+      "replay": "client-honey-branch-replay-20260929.json.gz",
+      "replay_sha256": "de6040bc7c9e47f4030ca085e6ca5561609d4f0e38a7342feaaf712cbee17da6",
+      "trace_complete": true,
+      "packets": 58,
+      "issue": null,
+      "confirmation": "client-honey-branch-confirmation-20260929.mcfunction.gz",
+      "confirmation_source_sha256": "bf692cead1bb99b821fa00475311db2e137f97903a77c438f9392694e361ecab",
+      "marker": "VOXRIG_MATCH_HONEY_BRANCH_VERIFIED_770",
+      "cells": 770,
+      "result": 1
+    }
+  ],
+  "fixture": "The earlier stair/piston fixture, replacing [101,180,100] with the selected adhesive, adding the same adhesive at [101,181,100], stone at [100,181,100], and the opposite adhesive at [101,180,101]. Ordinary lever on/off, 800ms spacing, 4s settling.",
+  "scope": "Independent final 770-cell comparisons on the isolated official server, no MOD; moving samples/packet interleavings are client observations, not independent server current-progress traces.",
+  "replay_transformation": "Keep before, trace, after_client as final. Sort transient + on_client + after_client by (receive_sequence,client_tick). Preserve moving cells and non-air/locally changed cells in each sample.",
+  "failed_diagnostic": "The first honey confirmation generation was attempted before the capture writer completed and failed to parse partial JSON; no function was generated. After process completion, regeneration and all-cell native comparison succeeded.",
+  "server_log": {
+    "file": "client-adhesion-server-20260929.log.gz",
+    "sha256": "5497f407a6f6c1d66960e1c3c85ef4f58d698bfab97b96d4b0bfcc698a007941"
+  },
+  "cleanup": "770-cell owned region cleared; 4 owned force-loaded chunks removed; all dimensions saved and server stopped normally."
+}

@@ -1,0 +1,54 @@
+{
+  "minecraft": "1.21.11 / protocol 774",
+  "cases": [
+    {
+      "case": "b",
+      "capture": "client-reference-door-b-20260929.json.gz",
+      "sha256": "456936654a968a052d730b111c5c253c5cb72d312ee8978d6ed85fbe775704f3",
+      "replay": "client-reference-door-b-replay-20260929.json.gz",
+      "replay_sha256": "e0cd76a2ecea00ca66d1d86dd7e9bdbc1ccf1faf63e4f2bd4cb856179b02d168",
+      "packets": 927,
+      "complete": true,
+      "confirmation": "client-reference-door-b-confirmation-20260929.mcfunction.gz",
+      "marker": "VOXRIG_MATCH_REFERENCE_DOOR_B_VERIFIED_770",
+      "result": 1,
+      "cells": 770
+    },
+    {
+      "case": "c",
+      "capture": "client-reference-door-c-20260929.json.gz",
+      "sha256": "8a30eb8a84ee1edbbc654539829d057a0c2c72647637219d6e3eaa9899172544",
+      "replay": "client-reference-door-c-replay-20260929.json.gz",
+      "replay_sha256": "d960cb860c146bc22b75992fff2e7445c13f887f5066fcf0be3790b0db159838",
+      "packets": 78,
+      "complete": true,
+      "confirmation": "client-reference-door-c-confirmation-20260929.mcfunction.gz",
+      "marker": "VOXRIG_MATCH_REFERENCE_DOOR_C_VERIFIED_770",
+      "result": 1,
+      "cells": 770
+    },
+    {
+      "case": "d",
+      "capture": "client-reference-door-d-20260929.json.gz",
+      "sha256": "2cbb7437fd2f85400da55f0b933635957facd4169d46db5d6d4af8fab120998a",
+      "replay": "client-reference-door-d-replay-20260929.json.gz",
+      "replay_sha256": "07a3e588d56ec90e0c15122a8c8be23a43bd4549bd8ea0e8f76ce38d78e35321",
+      "packets": 83,
+      "complete": true,
+      "confirmation": "client-reference-door-d-confirmation-20260929.mcfunction.gz",
+      "marker": "VOXRIG_MATCH_REFERENCE_DOOR_D_VERIFIED_770",
+      "result": 1,
+      "cells": 770
+    }
+  ],
+  "fixture": "User-supplied Bobiloosky one-wide 3x3 door, exact 43 initial cells translated from DustRoute reference-3x3-observed-a-v1.json by (-41900,0,-900). Strict initialization is test setup, not a certified placement sequence.",
+  "source_world_sha256": "2f4e45868baa6d06c3fa197c88db50a7de2e57e5180eb15fea267e21d254e8c6",
+  "scope": "b: two close/open cycles then unload/reload; c: close after reconnect; d: reopen after reconnect. All final regions independently checked. Moving client frames are not native server intermediate ground truth.",
+  "failed": "a: final readback returned 0; only [100,191,100] differed, client air vs actual lever. Fresh native chunks confirmed the lever. Fixed stationary back-face support for retracting piston bodies; added all-six-direction regression. Initial new face query also rejected the native pre-block-entity installation window; corrected before live b. First replay of b used a 64-chunk test cap; matched the live 1024 cap for the full reload capture.",
+  "recovery": "Teleport 256 blocks away invalidated reconstruction with chunk [6,6] required and 770 unavailable cells. Returning refreshed the dependency and cleared the issue.",
+  "cleanup": "Owned circuit region cleared, four force-loads removed, normal server stop.",
+  "server_log": {
+    "file": "client-reference-door-server-20260929.log.gz",
+    "sha256": "741872147bfccb98de18309dc01d34302f3a66b0e9b2057dd0a46f90c069e311"
+  }
+}

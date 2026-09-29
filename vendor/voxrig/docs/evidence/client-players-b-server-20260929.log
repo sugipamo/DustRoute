@@ -1,0 +1,47 @@
+[16:37:59] [ServerMain/INFO]: Environment: Environment[sessionHost=https://sessionserver.mojang.com, servicesHost=https://api.minecraftservices.com, profilesHost=https://api.mojang.com, name=PROD]
+[16:38:00] [ServerMain/INFO]: Loaded 1470 recipes
+[16:38:00] [ServerMain/INFO]: Loaded 1584 advancements
+[16:38:00] [Server thread/INFO]: Starting minecraft server version 1.21.11
+[16:38:00] [Server thread/INFO]: Loading properties
+[16:38:00] [Server thread/INFO]: Default game type: CREATIVE
+[16:38:00] [Server thread/INFO]: Generating keypair
+[16:38:01] [Server thread/INFO]: Starting Minecraft server on 127.0.0.1:25577
+[16:38:01] [Server thread/WARN]: **** SERVER IS RUNNING IN OFFLINE/INSECURE MODE!
+[16:38:01] [Server thread/WARN]: The server will make no attempt to authenticate usernames. Beware.
+[16:38:01] [Server thread/WARN]: While this makes the game possible to play without internet access, it also opens up the ability for hackers to connect with any username they choose.
+[16:38:01] [Server thread/WARN]: To change this, set "online-mode" to "true" in the server.properties file.
+[16:38:01] [Server thread/INFO]: Preparing level "isolated"
+[16:38:01] [Server thread/INFO]: Loading 0 persistent chunks...
+[16:38:01] [Server thread/INFO]: Preparing spawn area: 100%
+[16:38:01] [Server thread/INFO]: Time elapsed: 11 ms
+[16:38:01] [Server thread/INFO]: Done (0.146s)! For help, type "help"
+[16:38:11] [Server thread/INFO]: ViewProbe[/127.0.0.1:38390] logged in with entity id 12 at (100.5, 182.0, 103.5)
+[16:38:11] [Server thread/INFO]: ViewProbe joined the game
+[16:38:12] [Server thread/INFO]: BuildProbe[/127.0.0.1:38406] logged in with entity id 16 at (102.623, 183.0, 102.5)
+[16:38:12] [Server thread/INFO]: BuildProbe joined the game
+[16:38:17] [Server thread/INFO]: Made BuildProbe a server operator
+[16:38:17] [Server thread/INFO]: Teleported ViewProbe to 100.500000, 182.000000, 103.500000
+[16:38:17] [Server thread/INFO]: Teleported BuildProbe to 101.123000, 182.000000, 102.500000
+[16:38:23] [Server thread/INFO]: BuildProbe lost connection: Disconnected
+[16:38:23] [Server thread/INFO]: BuildProbe left the game
+[16:38:24] [Server thread/INFO]: BuildProbe[/127.0.0.1:35062] logged in with entity id 17 at (102.623, 183.0, 102.5)
+[16:38:24] [Server thread/INFO]: BuildProbe joined the game
+[16:38:42] [Server thread/INFO]: BuildProbe has the following entity data: [102.623d, 183.0d, 102.5d]
+[16:38:42] [Server thread/INFO]: BuildProbe has the following entity data: [-90.0f, -30.0f]
+[16:38:42] [Server thread/INFO]: The value of attribute Scale for entity BuildProbe is 1.0
+[16:39:07] [Server thread/INFO]: ViewProbe lost connection: Disconnected
+[16:39:07] [Server thread/INFO]: ViewProbe left the game
+[16:39:07] [Server thread/INFO]: BuildProbe lost connection: Disconnected
+[16:39:07] [Server thread/INFO]: BuildProbe left the game
+[16:39:07] [Server thread/INFO]: Made BuildProbe no longer a server operator
+[16:39:07] [Server thread/INFO]: Stopping the server
+[16:39:07] [Server thread/INFO]: Stopping server
+[16:39:07] [Server thread/INFO]: Saving players
+[16:39:07] [Server thread/INFO]: Saving worlds
+[16:39:07] [Server thread/INFO]: Saving chunks for level 'ServerLevel[isolated]'/minecraft:overworld
+[16:39:08] [Server thread/INFO]: Saving chunks for level 'ServerLevel[isolated]'/minecraft:the_end
+[16:39:08] [Server thread/INFO]: Saving chunks for level 'ServerLevel[isolated]'/minecraft:the_nether
+[16:39:08] [Server thread/INFO]: ThreadedAnvilChunkStorage (isolated): All chunks are saved
+[16:39:08] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM1): All chunks are saved
+[16:39:08] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM-1): All chunks are saved
+[16:39:08] [Server thread/INFO]: ThreadedAnvilChunkStorage: All dimensions are saved

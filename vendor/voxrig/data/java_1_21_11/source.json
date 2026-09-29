@@ -1,0 +1,14 @@
+{
+  "provider": "minecraft-data",
+  "package_version": "3.114.0",
+  "minecraft": "1.21.11",
+  "protocol": 774,
+  "data_version": 4671,
+  "block_data_sha256": "b152350461ff183c7444ad3107a98ac555de579c4afadd092f2c2d03fb5b80eb",
+  "item_data_sha256": "528dc62f92a40981e32ee8826adcf7ad00bce153484c17d5109d0f4353a70264",
+  "collision_data_sha256": "1ee9dd534848604495193ad8b3c06ffd1674cda09a609850c12a9746ba1b9812",
+  "packet_ids_sha256": "55f81e9b0f7eb0f03e42111de7d7e8ffc19b420e3df53fa661643a24ef06d6e1",
+  "transformation": "blocksArray projected to name, minStateId, maxStateId, states; itemsArray to id, name, stackSize; blockCollisionShapes flattened to complete native state IDs and AABBs; packet ID constants generated from login/configuration/play mappings; player entity, pose index, scale attribute and effect particle IDs projected from registries",
+  "generator": "../../scripts/generate_java_1_21_11.cjs",
+  "license_notice": "../../THIRD_PARTY_NOTICES.md"
+}

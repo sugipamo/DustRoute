@@ -39,3 +39,28 @@ selects dust, lever, repeater and comparator from received player gaze, respects
 stone occlusion and rejects unsupported light-block geometry. The final 648 cells
 match an independent server predicate. This is static client-world selection,
 not a graphical camera-frame or server receipt.
+
+The recovery harness now has an explicit OS-process mode. Set
+`MCP_PROCESS_BIN` to the built `dustroute-mcp` executable when running
+`voxrig_assembly_probe`. `PROBE_INTERRUPT=1` routes only that trial MCP client's
+Minecraft connection through an owned loopback proxy, closes its streams after
+the independent actor observes the first world change, then checks durable
+`needs_inspection`, old-operation rejection and newly reviewed reconstruction.
+The listener endpoint remains stable across child restarts. Processes stop by
+closing MCP stdio, and their clean exits/PIDs are recorded. Voxrig connection
+counters are process-local, so these records identify each owning MCP process
+as well; archived receipts are never used as fresh observation capabilities.
+
+The [door process trial](evidence/voxrig/native-process-door-a-20260929-manifest.json)
+passes through four distinct MCP PIDs: interrupted placement, newly reviewed
+reconstruction, later missing-block repair and normal close/open, then removal
+and another restart. All four processes exit cleanly. Independent server
+predicates match each of the four complete 770-cell snapshots. This covers the
+declared TCP interruption and graceful OS-process restarts, not host crashes.
+The native adapter tests, durable registry test and all-target MCP Clippy pass.
+
+Setup now uses an unmodified vendored Voxrig source snapshot at
+`f85514fa830ad0ce8cf4a15d270f932ed6be1e31`. `scripts/vendor_voxrig.py --check`
+checks all 204 recorded files without requiring Voxrig's Git checkout. The
+source repository retains its independent contribution history. A separate
+checkout/build validation is the final acceptance check for this setup change.

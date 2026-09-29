@@ -11,6 +11,7 @@ members = [
     "crates/dustroute-cli",
 ]
 resolver = "2"
+exclude = ["vendor/voxrig"]
 
 [workspace.package]
 version = "0.2.0"

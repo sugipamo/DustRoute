@@ -1,0 +1,60 @@
+{
+  "version": "1.21.11 / protocol 774",
+  "captures": [
+    {
+      "capture": "client-recovery-failed-00-20260929.json.gz",
+      "sha256": "b87fbdcec07c124c57d929a78a7fde604a605d9ba20609e8229321730cda99ae",
+      "restored": false,
+      "failure": null,
+      "complete": true
+    },
+    {
+      "capture": "client-recovery-failed-01-20260929.json.gz",
+      "sha256": "31fd61c86875cf54e2a217df4dde4dcd07bb2183cbed5aad1db64f33a3083f7a",
+      "restored": false,
+      "failure": null,
+      "complete": true
+    },
+    {
+      "capture": "client-recovery-failed-02-20260929.json.gz",
+      "sha256": "607010a895784597a2e62079da9e6cfe5c9b12156e9c7a5ee89e61fc4a660efc",
+      "restored": false,
+      "failure": "missing/invalid piston facing",
+      "complete": true
+    },
+    {
+      "capture": "client-recovery-corrected-00-20260929.json.gz",
+      "sha256": "e102260ba6833e78c7ed1ece6bb8267195ec6c6fbd81306753e77b7118b050ce",
+      "restored": false,
+      "failure": null,
+      "complete": true
+    },
+    {
+      "capture": "client-recovery-corrected-01-20260929.json.gz",
+      "sha256": "f1c3b716e05416a2612b1b5bd4d329270e05cf36f7218182642b98f0316aef36",
+      "restored": false,
+      "failure": null,
+      "complete": true
+    },
+    {
+      "capture": "client-recovery-corrected-02-20260929.json.gz",
+      "sha256": "6c6d64571055b107b915f23fc25cce388de072870affcc5c65cfc33c2f451379",
+      "restored": true,
+      "failure": null,
+      "complete": true
+    }
+  ],
+  "fixture": "Isolated official server, sticky piston at [104,180,104] facing east, stone at [105,180,104], redstone-block input at [103,180,104], 8 ticks on / 8 ticks off using owned diagnostic functions. Native default 20 TPS, no MOD.",
+  "source": "Live ordinary chunk packets; no injected block-entity NBT.",
+  "limitations": [
+    "Restored carrier progress is serialized native previous progress, not simultaneous server current progress.",
+    "Two first corrected connections observed no native mid-motion chunk. The third restored retracting body and payload.",
+    "First initial probe failure before diagnostic capture handling was improved has only a text error log; failed-02 retains the same Byte-facing decoding failure.",
+    "Recovery of dependency chunks is unit-tested; arbitrary chunk refresh availability is not guaranteed by vanilla."
+  ],
+  "server_log": {
+    "file": "client-recovery-server-20260929.log.gz",
+    "sha256": "ef89da3beeaf76f5fcc11bfc08b0219483b6bd3540e59d97fa9a40eb84e01632"
+  },
+  "cleanup": "Owned schedules cleared, fixture settled checked, test region cleared, owned chunk 6,6 force-load removed, server stopped normally."
+}

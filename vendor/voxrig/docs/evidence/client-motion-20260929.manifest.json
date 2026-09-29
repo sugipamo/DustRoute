@@ -1,0 +1,123 @@
+{
+  "server": "Java 1.21.11, offline, isolated vanilla server; diagnostic functions only",
+  "cases": [
+    {
+      "case": "a",
+      "capture": "client-motion-a-20260929.json.gz",
+      "raw_sha256": "0a6548867ee574e8e65840c31f8a2fe475899d1f3e33aebc14ccb671dd3f41e4",
+      "retained_sha256": "0a0faf7d00dc7986cbd9decfa070592d1010c6be1a6bc165f495641ad775f0d9",
+      "trace_complete": true,
+      "packet_count": 100,
+      "issue": {
+        "kind": "unsupported_tick_control"
+      },
+      "input_wait_ms": 800,
+      "block_actions": [
+        0,
+        1
+      ]
+    },
+    {
+      "case": "b",
+      "capture": "client-motion-b-20260929.json.gz",
+      "raw_sha256": "90de7e9899b4beafc791d94f125fc77178931dc900375a496234e7c77520bd78",
+      "retained_sha256": "6aad158352e54c998f7826199420cf6f3372b82b13cfd947e7bb1c71f4682dba",
+      "trace_complete": true,
+      "packet_count": 54,
+      "issue": null,
+      "input_wait_ms": 800,
+      "block_actions": [
+        0,
+        1
+      ],
+      "replay": {
+        "file": "client-motion-b-replay-20260929.json.gz",
+        "retained_sha256": "1116f3ce8ecd08e8fe42ad118f69e86d9c3679aa7420d2cba16939adc7418ff2",
+        "samples": 102
+      }
+    },
+    {
+      "case": "c",
+      "capture": "client-motion-c-20260929.json.gz",
+      "raw_sha256": "210a91a04389280c9447552ee35becae99a922cb7f7a77ac1aa29c79ebc80c00",
+      "retained_sha256": "62c0c164411557b4a75c92796595c62d84e9f71e20ae24d377927b93753f145d",
+      "trace_complete": true,
+      "packet_count": 51,
+      "issue": null,
+      "input_wait_ms": 800,
+      "block_actions": [
+        0,
+        1
+      ],
+      "replay": {
+        "file": "client-motion-c-replay-20260929.json.gz",
+        "retained_sha256": "3373de560a49764c20609cfaf8db8ea1d15a28f2d804c375b9494f3cd0fdcd54",
+        "samples": 100
+      }
+    },
+    {
+      "case": "d",
+      "capture": "client-motion-d-20260929.json.gz",
+      "raw_sha256": "b71d211466b61414a42d703f600918dd121fb4d5a0f50068c745659a8ccbb94d",
+      "retained_sha256": "59fcc69f5a30f3848a2f28c403f1620ca3cbc2617f5401347b0ab0f4e7800c7c",
+      "trace_complete": true,
+      "packet_count": 38,
+      "issue": null,
+      "input_wait_ms": 70,
+      "block_actions": [
+        0,
+        2
+      ],
+      "replay": {
+        "file": "client-motion-d-replay-20260929.json.gz",
+        "retained_sha256": "463472805301030ef826b9af980adf0ba09c8695705d0d68f23d62d439775db2",
+        "samples": 45
+      }
+    }
+  ],
+  "limitations": [
+    "Client frames are not server ticks. Final 770-cell states were independently checked; no continuous server moving-block trace was captured.",
+    "Case a rejected initial STEP_TICK=0; corrected before cases b/c/d.",
+    "First 770-predicate single-line diagnostic overflowed the Java command parser stack; replaced with short early-return checks in one function invocation.",
+    "Case d server startup/setup logged a 2311ms lag before the capture; input waits are wall-time only."
+  ],
+  "server_log": {
+    "file": "client-motion-server-20260929.log.gz",
+    "sha256": "daedc578bdc6002b6b13d05e949e6b0f3747807dca3a2db98999e0df30a2ea64"
+  },
+  "confirmation_functions": {
+    "b": {
+      "file": "client-motion-b-confirmation-20260929.mcfunction.gz",
+      "source_sha256": "a816f66e69d5504e356b42de3acf2737c7fd35348b63c35fc7fa2495c0a2e694",
+      "cells": 770,
+      "result": 1,
+      "marker": "VOXRIG_MATCH_MOTION_B_VERIFIED_770"
+    },
+    "c": {
+      "file": "client-motion-c-confirmation-20260929.mcfunction.gz",
+      "source_sha256": "945f8e432a880a691741c4a2566f733b29cdd0c7a09401dfd25a25f4d93bde26",
+      "cells": 770,
+      "result": 1,
+      "marker": "VOXRIG_MATCH_MOTION_C_VERIFIED_770"
+    },
+    "d": {
+      "file": "client-motion-d-confirmation-20260929.mcfunction.gz",
+      "source_sha256": "732af18f96a043766910b0c2a76cb5db48f65e4408949dfd36e8be5062d7c015",
+      "cells": 770,
+      "result": 1,
+      "marker": "VOXRIG_MATCH_MOTION_D_VERIFIED_770"
+    }
+  },
+  "cleanup": "770-cell test region cleared; 4 owned force-loaded chunks released; server stopped normally and all dimensions saved.",
+  "replay_transformation": {
+    "source": "The corresponding full capture; no world or packet changes.",
+    "preserved": [
+      "before",
+      "trace",
+      "after_client as final"
+    ],
+    "samples": "Sort transient + on_client + after_client by (received.receive_sequence, client_tick), stably.",
+    "sample_fields": "Preserve sequence, client_tick and issue. moving retains all complete cells with moving != null; blocks retains cells whose state name != minecraft:air or origin kind != received.",
+    "encoding": "JSON serialized then gzip-compressed; decompressed JSON equality is verified."
+  }
+}

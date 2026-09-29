@@ -1,0 +1,277 @@
+// Packet IDs generated from minecraft-data 3.114.0, Java 1.21.11 (774).
+pub(crate) mod login_clientbound {
+    pub const DISCONNECT: i32 = 0x00;
+    pub const ENCRYPTION_BEGIN: i32 = 0x01;
+    pub const SUCCESS: i32 = 0x02;
+    pub const COMPRESS: i32 = 0x03;
+    pub const LOGIN_PLUGIN_REQUEST: i32 = 0x04;
+    pub const COOKIE_REQUEST: i32 = 0x05;
+}
+pub(crate) mod login_serverbound {
+    pub const LOGIN_START: i32 = 0x00;
+    pub const ENCRYPTION_BEGIN: i32 = 0x01;
+    pub const LOGIN_PLUGIN_RESPONSE: i32 = 0x02;
+    pub const LOGIN_ACKNOWLEDGED: i32 = 0x03;
+    pub const COOKIE_RESPONSE: i32 = 0x04;
+}
+pub(crate) mod configuration_clientbound {
+    pub const COOKIE_REQUEST: i32 = 0x00;
+    pub const CUSTOM_PAYLOAD: i32 = 0x01;
+    pub const DISCONNECT: i32 = 0x02;
+    pub const FINISH_CONFIGURATION: i32 = 0x03;
+    pub const KEEP_ALIVE: i32 = 0x04;
+    pub const PING: i32 = 0x05;
+    pub const RESET_CHAT: i32 = 0x06;
+    pub const REGISTRY_DATA: i32 = 0x07;
+    pub const REMOVE_RESOURCE_PACK: i32 = 0x08;
+    pub const ADD_RESOURCE_PACK: i32 = 0x09;
+    pub const STORE_COOKIE: i32 = 0x0a;
+    pub const TRANSFER: i32 = 0x0b;
+    pub const FEATURE_FLAGS: i32 = 0x0c;
+    pub const TAGS: i32 = 0x0d;
+    pub const SELECT_KNOWN_PACKS: i32 = 0x0e;
+    pub const CUSTOM_REPORT_DETAILS: i32 = 0x0f;
+    pub const SERVER_LINKS: i32 = 0x10;
+    pub const CLEAR_DIALOG: i32 = 0x11;
+    pub const SHOW_DIALOG: i32 = 0x12;
+    pub const CODE_OF_CONDUCT: i32 = 0x13;
+}
+pub(crate) mod configuration_serverbound {
+    pub const SETTINGS: i32 = 0x00;
+    pub const COOKIE_RESPONSE: i32 = 0x01;
+    pub const CUSTOM_PAYLOAD: i32 = 0x02;
+    pub const FINISH_CONFIGURATION: i32 = 0x03;
+    pub const KEEP_ALIVE: i32 = 0x04;
+    pub const PONG: i32 = 0x05;
+    pub const RESOURCE_PACK_RECEIVE: i32 = 0x06;
+    pub const SELECT_KNOWN_PACKS: i32 = 0x07;
+    pub const CUSTOM_CLICK_ACTION: i32 = 0x08;
+    pub const ACCEPT_CODE_OF_CONDUCT: i32 = 0x09;
+}
+pub(crate) mod play_clientbound {
+    pub const BUNDLE_DELIMITER: i32 = 0x00;
+    pub const SPAWN_ENTITY: i32 = 0x01;
+    pub const ANIMATION: i32 = 0x02;
+    pub const STATISTICS: i32 = 0x03;
+    pub const ACKNOWLEDGE_PLAYER_DIGGING: i32 = 0x04;
+    pub const BLOCK_BREAK_ANIMATION: i32 = 0x05;
+    pub const TILE_ENTITY_DATA: i32 = 0x06;
+    pub const BLOCK_ACTION: i32 = 0x07;
+    pub const BLOCK_CHANGE: i32 = 0x08;
+    pub const BOSS_BAR: i32 = 0x09;
+    pub const DIFFICULTY: i32 = 0x0a;
+    pub const CHUNK_BATCH_FINISHED: i32 = 0x0b;
+    pub const CHUNK_BATCH_START: i32 = 0x0c;
+    pub const CHUNK_BIOMES: i32 = 0x0d;
+    pub const CLEAR_TITLES: i32 = 0x0e;
+    pub const TAB_COMPLETE: i32 = 0x0f;
+    pub const DECLARE_COMMANDS: i32 = 0x10;
+    pub const CLOSE_WINDOW: i32 = 0x11;
+    pub const WINDOW_ITEMS: i32 = 0x12;
+    pub const CRAFT_PROGRESS_BAR: i32 = 0x13;
+    pub const SET_SLOT: i32 = 0x14;
+    pub const COOKIE_REQUEST: i32 = 0x15;
+    pub const SET_COOLDOWN: i32 = 0x16;
+    pub const CHAT_SUGGESTIONS: i32 = 0x17;
+    pub const CUSTOM_PAYLOAD: i32 = 0x18;
+    pub const DAMAGE_EVENT: i32 = 0x19;
+    pub const DEBUG_BLOCK_VALUE: i32 = 0x1a;
+    pub const DEBUG_CHUNK_VALUE: i32 = 0x1b;
+    pub const DEBUG_ENTITY_VALUE: i32 = 0x1c;
+    pub const DEBUG_EVENT: i32 = 0x1d;
+    pub const DEBUG_SAMPLE: i32 = 0x1e;
+    pub const HIDE_MESSAGE: i32 = 0x1f;
+    pub const KICK_DISCONNECT: i32 = 0x20;
+    pub const PROFILELESS_CHAT: i32 = 0x21;
+    pub const ENTITY_STATUS: i32 = 0x22;
+    pub const SYNC_ENTITY_POSITION: i32 = 0x23;
+    pub const EXPLOSION: i32 = 0x24;
+    pub const UNLOAD_CHUNK: i32 = 0x25;
+    pub const GAME_STATE_CHANGE: i32 = 0x26;
+    pub const GAME_TEST_HIGHLIGHT_POS: i32 = 0x27;
+    pub const OPEN_HORSE_WINDOW: i32 = 0x28;
+    pub const HURT_ANIMATION: i32 = 0x29;
+    pub const INITIALIZE_WORLD_BORDER: i32 = 0x2a;
+    pub const KEEP_ALIVE: i32 = 0x2b;
+    pub const MAP_CHUNK: i32 = 0x2c;
+    pub const WORLD_EVENT: i32 = 0x2d;
+    pub const WORLD_PARTICLES: i32 = 0x2e;
+    pub const UPDATE_LIGHT: i32 = 0x2f;
+    pub const LOGIN: i32 = 0x30;
+    pub const MAP: i32 = 0x31;
+    pub const TRADE_LIST: i32 = 0x32;
+    pub const REL_ENTITY_MOVE: i32 = 0x33;
+    pub const ENTITY_MOVE_LOOK: i32 = 0x34;
+    pub const MOVE_MINECART: i32 = 0x35;
+    pub const ENTITY_LOOK: i32 = 0x36;
+    pub const VEHICLE_MOVE: i32 = 0x37;
+    pub const OPEN_BOOK: i32 = 0x38;
+    pub const OPEN_WINDOW: i32 = 0x39;
+    pub const OPEN_SIGN_ENTITY: i32 = 0x3a;
+    pub const PING: i32 = 0x3b;
+    pub const PING_RESPONSE: i32 = 0x3c;
+    pub const CRAFT_RECIPE_RESPONSE: i32 = 0x3d;
+    pub const ABILITIES: i32 = 0x3e;
+    pub const PLAYER_CHAT: i32 = 0x3f;
+    pub const END_COMBAT_EVENT: i32 = 0x40;
+    pub const ENTER_COMBAT_EVENT: i32 = 0x41;
+    pub const DEATH_COMBAT_EVENT: i32 = 0x42;
+    pub const PLAYER_REMOVE: i32 = 0x43;
+    pub const PLAYER_INFO: i32 = 0x44;
+    pub const FACE_PLAYER: i32 = 0x45;
+    pub const POSITION: i32 = 0x46;
+    pub const PLAYER_ROTATION: i32 = 0x47;
+    pub const RECIPE_BOOK_ADD: i32 = 0x48;
+    pub const RECIPE_BOOK_REMOVE: i32 = 0x49;
+    pub const RECIPE_BOOK_SETTINGS: i32 = 0x4a;
+    pub const ENTITY_DESTROY: i32 = 0x4b;
+    pub const REMOVE_ENTITY_EFFECT: i32 = 0x4c;
+    pub const RESET_SCORE: i32 = 0x4d;
+    pub const REMOVE_RESOURCE_PACK: i32 = 0x4e;
+    pub const ADD_RESOURCE_PACK: i32 = 0x4f;
+    pub const RESPAWN: i32 = 0x50;
+    pub const ENTITY_HEAD_ROTATION: i32 = 0x51;
+    pub const MULTI_BLOCK_CHANGE: i32 = 0x52;
+    pub const SELECT_ADVANCEMENT_TAB: i32 = 0x53;
+    pub const SERVER_DATA: i32 = 0x54;
+    pub const ACTION_BAR: i32 = 0x55;
+    pub const WORLD_BORDER_CENTER: i32 = 0x56;
+    pub const WORLD_BORDER_LERP_SIZE: i32 = 0x57;
+    pub const WORLD_BORDER_SIZE: i32 = 0x58;
+    pub const WORLD_BORDER_WARNING_DELAY: i32 = 0x59;
+    pub const WORLD_BORDER_WARNING_REACH: i32 = 0x5a;
+    pub const CAMERA: i32 = 0x5b;
+    pub const UPDATE_VIEW_POSITION: i32 = 0x5c;
+    pub const UPDATE_VIEW_DISTANCE: i32 = 0x5d;
+    pub const SET_CURSOR_ITEM: i32 = 0x5e;
+    pub const SPAWN_POSITION: i32 = 0x5f;
+    pub const SCOREBOARD_DISPLAY_OBJECTIVE: i32 = 0x60;
+    pub const ENTITY_METADATA: i32 = 0x61;
+    pub const ATTACH_ENTITY: i32 = 0x62;
+    pub const ENTITY_VELOCITY: i32 = 0x63;
+    pub const ENTITY_EQUIPMENT: i32 = 0x64;
+    pub const EXPERIENCE: i32 = 0x65;
+    pub const UPDATE_HEALTH: i32 = 0x66;
+    pub const HELD_ITEM_SLOT: i32 = 0x67;
+    pub const SCOREBOARD_OBJECTIVE: i32 = 0x68;
+    pub const SET_PASSENGERS: i32 = 0x69;
+    pub const SET_PLAYER_INVENTORY: i32 = 0x6a;
+    pub const TEAMS: i32 = 0x6b;
+    pub const SCOREBOARD_SCORE: i32 = 0x6c;
+    pub const SIMULATION_DISTANCE: i32 = 0x6d;
+    pub const SET_TITLE_SUBTITLE: i32 = 0x6e;
+    pub const UPDATE_TIME: i32 = 0x6f;
+    pub const SET_TITLE_TEXT: i32 = 0x70;
+    pub const SET_TITLE_TIME: i32 = 0x71;
+    pub const ENTITY_SOUND_EFFECT: i32 = 0x72;
+    pub const SOUND_EFFECT: i32 = 0x73;
+    pub const START_CONFIGURATION: i32 = 0x74;
+    pub const STOP_SOUND: i32 = 0x75;
+    pub const STORE_COOKIE: i32 = 0x76;
+    pub const SYSTEM_CHAT: i32 = 0x77;
+    pub const PLAYERLIST_HEADER: i32 = 0x78;
+    pub const NBT_QUERY_RESPONSE: i32 = 0x79;
+    pub const COLLECT: i32 = 0x7a;
+    pub const ENTITY_TELEPORT: i32 = 0x7b;
+    pub const TEST_INSTANCE_BLOCK_STATUS: i32 = 0x7c;
+    pub const SET_TICKING_STATE: i32 = 0x7d;
+    pub const STEP_TICK: i32 = 0x7e;
+    pub const TRANSFER: i32 = 0x7f;
+    pub const ADVANCEMENTS: i32 = 0x80;
+    pub const ENTITY_UPDATE_ATTRIBUTES: i32 = 0x81;
+    pub const ENTITY_EFFECT: i32 = 0x82;
+    pub const DECLARE_RECIPES: i32 = 0x83;
+    pub const TAGS: i32 = 0x84;
+    pub const SET_PROJECTILE_POWER: i32 = 0x85;
+    pub const CUSTOM_REPORT_DETAILS: i32 = 0x86;
+    pub const SERVER_LINKS: i32 = 0x87;
+    pub const TRACKED_WAYPOINT: i32 = 0x88;
+    pub const CLEAR_DIALOG: i32 = 0x89;
+    pub const SHOW_DIALOG: i32 = 0x8a;
+}
+pub(crate) mod play_serverbound {
+    pub const TELEPORT_CONFIRM: i32 = 0x00;
+    pub const QUERY_BLOCK_NBT: i32 = 0x01;
+    pub const SELECT_BUNDLE_ITEM: i32 = 0x02;
+    pub const SET_DIFFICULTY: i32 = 0x03;
+    pub const CHANGE_GAMEMODE: i32 = 0x04;
+    pub const MESSAGE_ACKNOWLEDGEMENT: i32 = 0x05;
+    pub const CHAT_COMMAND: i32 = 0x06;
+    pub const CHAT_COMMAND_SIGNED: i32 = 0x07;
+    pub const CHAT_MESSAGE: i32 = 0x08;
+    pub const CHAT_SESSION_UPDATE: i32 = 0x09;
+    pub const CHUNK_BATCH_RECEIVED: i32 = 0x0a;
+    pub const CLIENT_COMMAND: i32 = 0x0b;
+    pub const TICK_END: i32 = 0x0c;
+    pub const SETTINGS: i32 = 0x0d;
+    pub const TAB_COMPLETE: i32 = 0x0e;
+    pub const CONFIGURATION_ACKNOWLEDGED: i32 = 0x0f;
+    pub const ENCHANT_ITEM: i32 = 0x10;
+    pub const WINDOW_CLICK: i32 = 0x11;
+    pub const CLOSE_WINDOW: i32 = 0x12;
+    pub const SET_SLOT_STATE: i32 = 0x13;
+    pub const COOKIE_RESPONSE: i32 = 0x14;
+    pub const CUSTOM_PAYLOAD: i32 = 0x15;
+    pub const DEBUG_SUBSCRIPTION_REQUEST: i32 = 0x16;
+    pub const EDIT_BOOK: i32 = 0x17;
+    pub const QUERY_ENTITY_NBT: i32 = 0x18;
+    pub const USE_ENTITY: i32 = 0x19;
+    pub const GENERATE_STRUCTURE: i32 = 0x1a;
+    pub const KEEP_ALIVE: i32 = 0x1b;
+    pub const LOCK_DIFFICULTY: i32 = 0x1c;
+    pub const POSITION: i32 = 0x1d;
+    pub const POSITION_LOOK: i32 = 0x1e;
+    pub const LOOK: i32 = 0x1f;
+    pub const FLYING: i32 = 0x20;
+    pub const VEHICLE_MOVE: i32 = 0x21;
+    pub const STEER_BOAT: i32 = 0x22;
+    pub const PICK_ITEM_FROM_BLOCK: i32 = 0x23;
+    pub const PICK_ITEM_FROM_ENTITY: i32 = 0x24;
+    pub const PING_REQUEST: i32 = 0x25;
+    pub const CRAFT_RECIPE_REQUEST: i32 = 0x26;
+    pub const ABILITIES: i32 = 0x27;
+    pub const BLOCK_DIG: i32 = 0x28;
+    pub const ENTITY_ACTION: i32 = 0x29;
+    pub const PLAYER_INPUT: i32 = 0x2a;
+    pub const PLAYER_LOADED: i32 = 0x2b;
+    pub const PONG: i32 = 0x2c;
+    pub const RECIPE_BOOK: i32 = 0x2d;
+    pub const DISPLAYED_RECIPE: i32 = 0x2e;
+    pub const NAME_ITEM: i32 = 0x2f;
+    pub const RESOURCE_PACK_RECEIVE: i32 = 0x30;
+    pub const ADVANCEMENT_TAB: i32 = 0x31;
+    pub const SELECT_TRADE: i32 = 0x32;
+    pub const SET_BEACON_EFFECT: i32 = 0x33;
+    pub const HELD_ITEM_SLOT: i32 = 0x34;
+    pub const UPDATE_COMMAND_BLOCK: i32 = 0x35;
+    pub const UPDATE_COMMAND_BLOCK_MINECART: i32 = 0x36;
+    pub const SET_CREATIVE_SLOT: i32 = 0x37;
+    pub const UPDATE_JIGSAW_BLOCK: i32 = 0x38;
+    pub const UPDATE_STRUCTURE_BLOCK: i32 = 0x39;
+    pub const SET_TEST_BLOCK: i32 = 0x3a;
+    pub const UPDATE_SIGN: i32 = 0x3b;
+    pub const ARM_ANIMATION: i32 = 0x3c;
+    pub const SPECTATE: i32 = 0x3d;
+    pub const TEST_INSTANCE_BLOCK_ACTION: i32 = 0x3e;
+    pub const BLOCK_PLACE: i32 = 0x3f;
+    pub const USE_ITEM: i32 = 0x40;
+    pub const CUSTOM_CLICK_ACTION: i32 = 0x41;
+}
+
+pub(crate) const KNOWN_PLAY_CLIENTBOUND: &[i32] = &[
+    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+    0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f,
+    0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f,
+    0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f,
+    0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f,
+    0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5a, 0x5b, 0x5c, 0x5d, 0x5e, 0x5f,
+    0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x6b, 0x6c, 0x6d, 0x6e, 0x6f,
+    0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7a, 0x7b, 0x7c, 0x7d, 0x7e, 0x7f,
+    0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89, 0x8a,
+];
+
+// Native tracked-player registry fields.
+pub(crate) const PLAYER_ENTITY_TYPE: i32 = 155;
+pub(crate) const PLAYER_POSE_METADATA: u8 = 6;
+pub(crate) const SCALE_ATTRIBUTE: i32 = 25;
+pub(crate) const ENTITY_EFFECT_PARTICLE: i32 = 21;

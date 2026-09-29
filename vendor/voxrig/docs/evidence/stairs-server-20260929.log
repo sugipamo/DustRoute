@@ -1,0 +1,20 @@
+[11:05:19] [Server thread/INFO]: PacketProbe[/127.0.0.1:39404] logged in with entity id 2 at (-1.5, 4.0, 10.5)
+[11:05:19] [Server thread/INFO]: PacketProbe joined the game
+[11:08:31] [Server thread/INFO]: Teleported PacketProbe to 99.500000, 180.000000, 102.500000
+[11:08:31] [Server thread/INFO]: [Not Secure] [Server] VOXRIG_INITIAL_INNER_LEFT
+[11:08:42] [Server thread/INFO]: PacketProbe lost connection: Disconnected
+[11:08:42] [Server thread/INFO]: PacketProbe left the game
+[11:08:49] [Server thread/INFO]: [Not Secure] [Server] VOXRIG_FINAL_STRAIGHT
+[11:11:39] [Server thread/INFO]: PacketProbe[/127.0.0.1:49748] logged in with entity id 19 at (99.5, 180.0, 102.5)
+[11:11:39] [Server thread/INFO]: PacketProbe joined the game
+[11:12:01] [Server thread/INFO]: Teleported PacketProbe to 99.500000, 180.000000, 102.500000
+[11:12:07] [Server thread/INFO]: PacketProbe lost connection: Disconnected
+[11:12:07] [Server thread/INFO]: PacketProbe left the game
+[11:13:01] [Server thread/INFO]: Unmarked 9 chunks in minecraft:overworld from [-1, -1] to [1, 1] for force loading
+[11:13:01] [Server thread/INFO]: Unmarked 4 chunks in minecraft:overworld from [5, 5] to [6, 6] for force loading
+[11:13:01] [Server thread/INFO]: Stopping the server
+[11:13:02] [Server thread/INFO]: Stopping server
+[11:13:10] [Server thread/INFO]: ThreadedAnvilChunkStorage (isolated): All chunks are saved
+[11:13:10] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM-1): All chunks are saved
+[11:13:10] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM1): All chunks are saved
+[11:13:10] [Server thread/INFO]: ThreadedAnvilChunkStorage: All dimensions are saved

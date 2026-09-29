@@ -1,0 +1,34 @@
+{
+  "schema": "voxrig.native-evidence.v1",
+  "version": "1.21.11",
+  "protocol": 774,
+  "server": "isolated official vanilla; loopback 25577; offline-mode; no MOD",
+  "fixture": "ViewProbe observes BuildProbe; no circuit/world block modifications",
+  "cases": {
+    "a": "Failed: obsolete protocol attribute mapper identified movement_speed 22 as scale; capture retained. Position/rotation/removal matched. Late console queries after probe failed found no entities.",
+    "b": "Passed after using native-verified attributes registry scale ID 25. Move, native angular quantization, scale 2, scale restore, quit and rejoin with same UUID/new entity ID passed. Final console position [102.623,183,102.5], rotation [-90,-30], scale 1 matched. No server-current-time or entity-physics guarantee."
+  },
+  "cleanup": "Temporary BuildProbe OP revoked; both clients disconnected; both servers saved all dimensions and stopped normally. Player data retained in the owned isolated world.",
+  "files": [
+    {
+      "path": "client-players-a-20260929.json.gz",
+      "sha256": "9f82dff77559c049c72a3dc4e2f60ac893d25f954d8369cc45a5c1e546fc6d1f",
+      "bytes": 17093
+    },
+    {
+      "path": "client-players-b-20260929.json.gz",
+      "sha256": "33acfecea80ee1ea16a7be212e7d98a8e30a808d7e3f37222a9596eff00d4e0a",
+      "bytes": 12166
+    },
+    {
+      "path": "client-players-a-server-20260929.log",
+      "sha256": "efd086d4628d1ce3ccb9051f174cf17b03db007734a6b6d3fc4a41f7ff23761e",
+      "bytes": 3661
+    },
+    {
+      "path": "client-players-b-server-20260929.log",
+      "sha256": "dddbb4b7417f9019a55782350c7ee28ebc802e06979ee3e99fed28f27238c21d",
+      "bytes": 3789
+    }
+  ]
+}

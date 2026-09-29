@@ -1,0 +1,5446 @@
+{
+  "generator": "prismarine-physics@1.11.1",
+  "minecraft": "1.16.1",
+  "fixtures": [
+    {
+      "name": "idle",
+      "trajectory": [
+        {
+          "tick": 1,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": false,
+          "collided_horizontal": false,
+          "collided_vertical": false,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 2,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 3,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 4,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 5,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 6,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 7,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 8,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 9,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 10,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 11,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 12,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 13,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 14,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 15,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 16,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 17,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 18,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 19,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 20,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 21,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 22,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 23,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 24,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 25,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 26,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 27,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 28,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 29,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 30,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 31,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 32,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 33,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 34,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 35,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 36,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 37,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 38,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 39,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 40,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        }
+      ]
+    },
+    {
+      "name": "walk",
+      "trajectory": [
+        {
+          "tick": 1,
+          "position": [
+            0.5,
+            1,
+            0.5980000385325829
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.053508021038790266
+          ],
+          "on_ground": false,
+          "collided_horizontal": false,
+          "collided_vertical": false,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 2,
+          "position": [
+            0.5,
+            1,
+            0.6711080595713732
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.06652829914529915
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 3,
+          "position": [
+            0.5,
+            1,
+            0.8356363972492553
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.0898324723721236
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 4,
+          "position": [
+            0.5,
+            1,
+            1.0234689081539619
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.10255655095396975
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 5,
+          "position": [
+            0.5,
+            1,
+            1.2240254976405145
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.10950389785965775
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 6,
+          "position": [
+            0.5,
+            1,
+            1.4315294340327551
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11329714927016339
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 7,
+          "position": [
+            0.5,
+            1,
+            1.6428266218355014
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11536826454029948
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 8,
+          "position": [
+            0.5,
+            1,
+            1.8561949249083838
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11649909347779379
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 9,
+          "position": [
+            0.5,
+            1,
+            2.0706940569187604
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11711652607766568
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 10,
+          "position": [
+            0.5,
+            1,
+            2.285810621529009
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11745364427719573
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 11,
+          "position": [
+            0.5,
+            1,
+            2.501264304338787
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11763771081413914
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 12,
+          "position": [
+            0.5,
+            1,
+            2.716902053685509
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11773821114331023
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 13,
+          "position": [
+            0.5,
+            1,
+            2.9326403033614024
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11779308432303764
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 14,
+          "position": [
+            0.5,
+            1,
+            3.148433426217023
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11782304507916881
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 15,
+          "position": [
+            0.5,
+            1,
+            3.3642565098287744
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11783940365201644
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 16,
+          "position": [
+            0.5,
+            1,
+            3.580095952013374
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11784833543279125
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 17,
+          "position": [
+            0.5,
+            1,
+            3.795944325978748
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.1178532121850943
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 18,
+          "position": [
+            0.5,
+            1,
+            4.011797576696425
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11785587489185176
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 19,
+          "position": [
+            0.5,
+            1,
+            4.2276534901208604
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11785732872974133
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 20,
+          "position": [
+            0.5,
+            1,
+            4.443510857383185
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11785812252522905
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 21,
+          "position": [
+            0.5,
+            1,
+            4.659369018440997
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11785855593756533
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 22,
+          "position": [
+            0.5,
+            1,
+            4.875227612911146
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11785879258070094
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 23,
+          "position": [
+            0.5,
+            1,
+            5.0910864440244294
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11785892178785298
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 24,
+          "position": [
+            0.5,
+            1,
+            5.306945404344865
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.117858992334958
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 25,
+          "position": [
+            0.5,
+            1,
+            5.5228044352124055
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11785903085367733
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 26,
+          "position": [
+            0.5,
+            1,
+            5.738663504598666
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11785905188489808
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 27,
+          "position": [
+            0.5,
+            1,
+            5.9545225950161464
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11785906336794462
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 28,
+          "position": [
+            0.5,
+            1,
+            6.170381696916674
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11785906963768802
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 29,
+          "position": [
+            0.5,
+            1,
+            6.386240805086945
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11785907306096793
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 30,
+          "position": [
+            0.5,
+            1,
+            6.602099916680495
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11785907493007876
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 31,
+          "position": [
+            0.5,
+            1,
+            6.8179590301431565
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11785907595061328
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 32,
+          "position": [
+            0.5,
+            1,
+            7.033818144626353
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11785907650782512
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 33,
+          "position": [
+            0.5,
+            1,
+            7.249677259666761
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11785907681206277
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 34,
+          "position": [
+            0.5,
+            1,
+            7.465536375011407
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11785907697817655
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 35,
+          "position": [
+            0.5,
+            1,
+            7.681395490522166
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11785907706887465
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 36,
+          "position": [
+            0.5,
+            1,
+            7.8972546061236235
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11785907711839583
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 37,
+          "position": [
+            0.5,
+            1,
+            8.113113721774603
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11785907714543438
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 38,
+          "position": [
+            0.5,
+            1,
+            8.328972837452621
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11785907716019745
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 39,
+          "position": [
+            0.5,
+            1,
+            8.544831953145401
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11785907716825807
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 40,
+          "position": [
+            0.5,
+            1,
+            8.760691068846242
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11785907717265917
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        }
+      ]
+    },
+    {
+      "name": "jump",
+      "trajectory": [
+        {
+          "tick": 1,
+          "position": [
+            0.5,
+            1.4199999868869781,
+            0.5
+          ],
+          "velocity": [
+            0,
+            0.33319999363422365,
+            0
+          ],
+          "on_ground": false,
+          "collided_horizontal": false,
+          "collided_vertical": false,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 2,
+          "position": [
+            0.5,
+            1.7531999805212017,
+            0.5
+          ],
+          "velocity": [
+            0,
+            0.24813599859094576,
+            0
+          ],
+          "on_ground": false,
+          "collided_horizontal": false,
+          "collided_vertical": false,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 3,
+          "position": [
+            0.5,
+            2.0013359791121474,
+            0.5
+          ],
+          "velocity": [
+            0,
+            0.16477328182606651,
+            0
+          ],
+          "on_ground": false,
+          "collided_horizontal": false,
+          "collided_vertical": false,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 4,
+          "position": [
+            0.5,
+            2.1661092609382138,
+            0.5
+          ],
+          "velocity": [
+            0,
+            0.08307781780646721,
+            0
+          ],
+          "on_ground": false,
+          "collided_horizontal": false,
+          "collided_vertical": false,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 5,
+          "position": [
+            0.5,
+            2.249187078744681,
+            0.5
+          ],
+          "velocity": [
+            0,
+            0.0030162615090425808,
+            0
+          ],
+          "on_ground": false,
+          "collided_horizontal": false,
+          "collided_vertical": false,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 6,
+          "position": [
+            0.5,
+            2.2522033402537236,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.07544406518948656,
+            0
+          ],
+          "on_ground": false,
+          "collided_horizontal": false,
+          "collided_vertical": false,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 7,
+          "position": [
+            0.5,
+            2.176759275064237,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.15233518685055708,
+            0
+          ],
+          "on_ground": false,
+          "collided_horizontal": false,
+          "collided_vertical": false,
+          "fall_distance": 0.07544406518948676,
+          "sprinting": false
+        },
+        {
+          "tick": 8,
+          "position": [
+            0.5,
+            2.0244240882136797,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.22768848754498797,
+            0
+          ],
+          "on_ground": false,
+          "collided_horizontal": false,
+          "collided_vertical": false,
+          "fall_distance": 0.2277792520400439,
+          "sprinting": false
+        },
+        {
+          "tick": 9,
+          "position": [
+            0.5,
+            1.7967356006686916,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.30153472366278034,
+            0
+          ],
+          "on_ground": false,
+          "collided_horizontal": false,
+          "collided_vertical": false,
+          "fall_distance": 0.45546773958503195,
+          "sprinting": false
+        },
+        {
+          "tick": 10,
+          "position": [
+            0.5,
+            1.4952008770059113,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.3739040364667221,
+            0
+          ],
+          "on_ground": false,
+          "collided_horizontal": false,
+          "collided_vertical": false,
+          "fall_distance": 0.7570024632478123,
+          "sprinting": false
+        },
+        {
+          "tick": 11,
+          "position": [
+            0.5,
+            1.1212968405391892,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.4448259643949201,
+            0
+          ],
+          "on_ground": false,
+          "collided_horizontal": false,
+          "collided_vertical": false,
+          "fall_distance": 1.1309064997145344,
+          "sprinting": false
+        },
+        {
+          "tick": 12,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 13,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 14,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 15,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 16,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 17,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 18,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 19,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 20,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 21,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 22,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 23,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 24,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 25,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 26,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 27,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 28,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 29,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 30,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 31,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 32,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 33,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 34,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 35,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 36,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 37,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 38,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 39,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 40,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        }
+      ]
+    },
+    {
+      "name": "sprint",
+      "trajectory": [
+        {
+          "tick": 1,
+          "position": [
+            0.5,
+            1,
+            0.6274000500923578
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.06956042735042733
+          ],
+          "on_ground": false,
+          "collided_horizontal": false,
+          "collided_vertical": false,
+          "fall_distance": 0,
+          "sprinting": true
+        },
+        {
+          "tick": 2,
+          "position": [
+            0.5,
+            1,
+            0.7224404774427851
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.08648678888888887
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": true
+        },
+        {
+          "tick": 3,
+          "position": [
+            0.5,
+            1,
+            0.9363273164240318
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11678221408376066
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": true
+        },
+        {
+          "tick": 4,
+          "position": [
+            0.5,
+            1,
+            1.1805095806001502
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.13332351624016067
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": true
+        },
+        {
+          "tick": 5,
+          "position": [
+            0.5,
+            1,
+            1.4412331469326687
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.14235506721755506
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": true
+        },
+        {
+          "tick": 6,
+          "position": [
+            0.5,
+            1,
+            1.7109882642425815
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.1472862940512124
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": true
+        },
+        {
+          "tick": 7,
+          "position": [
+            0.5,
+            1,
+            1.9856746083861518
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.14997874390238933
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": true
+        },
+        {
+          "tick": 8,
+          "position": [
+            0.5,
+            1,
+            2.2630534023808986
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.15144882152113193
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": true
+        },
+        {
+          "tick": 9,
+          "position": [
+            0.5,
+            1,
+            2.541902273994388
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.15225148390096538
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": true
+        },
+        {
+          "tick": 10,
+          "position": [
+            0.5,
+            1,
+            2.821553807987711
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.15268973756035442
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": true
+        },
+        {
+          "tick": 11,
+          "position": [
+            0.5,
+            1,
+            3.1016435956404234
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.15292902405838088
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": true
+        },
+        {
+          "tick": 12,
+          "position": [
+            0.5,
+            1,
+            3.381972669791162
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.15305967448630328
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": true
+        },
+        {
+          "tick": 13,
+          "position": [
+            0.5,
+            1,
+            3.662432394369823
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.15313100961994894
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": true
+        },
+        {
+          "tick": 14,
+          "position": [
+            0.5,
+            1,
+            3.9429634540821294
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.15316995860291946
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": true
+        },
+        {
+          "tick": 15,
+          "position": [
+            0.5,
+            1,
+            4.223533462777407
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.15319122474762137
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": true
+        },
+        {
+          "tick": 16,
+          "position": [
+            0.5,
+            1,
+            4.504124737617387
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.15320283606262863
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": true
+        },
+        {
+          "tick": 17,
+          "position": [
+            0.5,
+            1,
+            4.7847276237723735
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.1532091758406226
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": true
+        },
+        {
+          "tick": 18,
+          "position": [
+            0.5,
+            1,
+            5.0653368497053535
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.15321263735940727
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": true
+        },
+        {
+          "tick": 19,
+          "position": [
+            0.5,
+            1,
+            5.345949537157119
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.15321452734866373
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": true
+        },
+        {
+          "tick": 20,
+          "position": [
+            0.5,
+            1,
+            5.62656411459814
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.15321555928279773
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": true
+        },
+        {
+          "tick": 21,
+          "position": [
+            0.5,
+            1,
+            5.907179723973296
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.15321612271883492
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": true
+        },
+        {
+          "tick": 22,
+          "position": [
+            0.5,
+            1,
+            6.187795896784489
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.1532164303549112
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": true
+        },
+        {
+          "tick": 23,
+          "position": [
+            0.5,
+            1,
+            6.468412377231758
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.15321659832420886
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": true
+        },
+        {
+          "tick": 24,
+          "position": [
+            0.5,
+            1,
+            6.7490290256483245
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.15321669003544539
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": true
+        },
+        {
+          "tick": 25,
+          "position": [
+            0.5,
+            1,
+            7.029645765776127
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.1532167401097805
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": true
+        },
+        {
+          "tick": 26,
+          "position": [
+            0.5,
+            1,
+            7.310262555978266
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.1532167674503675
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": true
+        },
+        {
+          "tick": 27,
+          "position": [
+            0.5,
+            1,
+            7.590879373520991
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.153216782378328
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": true
+        },
+        {
+          "tick": 28,
+          "position": [
+            0.5,
+            1,
+            7.871496205991677
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.15321679052899442
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": true
+        },
+        {
+          "tick": 29,
+          "position": [
+            0.5,
+            1,
+            8.15211304661303
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.1532167949792583
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": true
+        },
+        {
+          "tick": 30,
+          "position": [
+            0.5,
+            1,
+            8.432729891684646
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.15321679740910238
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": true
+        },
+        {
+          "tick": 31,
+          "position": [
+            0.5,
+            1,
+            8.713346739186106
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.15321679873579722
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": true
+        },
+        {
+          "tick": 32,
+          "position": [
+            0.5,
+            1,
+            8.99396358801426
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.1532167994601726
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": true
+        },
+        {
+          "tick": 33,
+          "position": [
+            0.5,
+            1,
+            9.27458043756679
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.1532167998556816
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": true
+        },
+        {
+          "tick": 34,
+          "position": [
+            0.5,
+            1,
+            9.55519728751483
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.1532168000716295
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": true
+        },
+        {
+          "tick": 35,
+          "position": [
+            0.5,
+            1,
+            9.835814137678817
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.15321680018953704
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": true
+        },
+        {
+          "tick": 36,
+          "position": [
+            0.5,
+            1,
+            10.116430987960712
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.15321680025391454
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": true
+        },
+        {
+          "tick": 37,
+          "position": [
+            0.5,
+            1,
+            10.397047838306984
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.15321680028906468
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": true
+        },
+        {
+          "tick": 38,
+          "position": [
+            0.5,
+            1,
+            10.677664688688406
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.15321680030825666
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": true
+        },
+        {
+          "tick": 39,
+          "position": [
+            0.5,
+            1,
+            10.95828153908902
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.15321680031873547
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": true
+        },
+        {
+          "tick": 40,
+          "position": [
+            0.5,
+            1,
+            11.238898389500113
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.1532168003244569
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": true
+        }
+      ]
+    },
+    {
+      "name": "fall",
+      "trajectory": [
+        {
+          "tick": 1,
+          "position": [
+            0.5,
+            8,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": false,
+          "collided_horizontal": false,
+          "collided_vertical": false,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 2,
+          "position": [
+            0.5,
+            7.921599998474121,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.1552320045166016,
+            0
+          ],
+          "on_ground": false,
+          "collided_horizontal": false,
+          "collided_vertical": false,
+          "fall_distance": 0.07840000152587923,
+          "sprinting": false
+        },
+        {
+          "tick": 3,
+          "position": [
+            0.5,
+            7.766367993957519,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.230527368912964,
+            0
+          ],
+          "on_ground": false,
+          "collided_horizontal": false,
+          "collided_vertical": false,
+          "fall_distance": 0.23363200604248124,
+          "sprinting": false
+        },
+        {
+          "tick": 4,
+          "position": [
+            0.5,
+            7.535840625044555,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.30431682745754424,
+            0
+          ],
+          "on_ground": false,
+          "collided_horizontal": false,
+          "collided_vertical": false,
+          "fall_distance": 0.4641593749554449,
+          "sprinting": false
+        },
+        {
+          "tick": 5,
+          "position": [
+            0.5,
+            7.231523797587011,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.37663049823865513,
+            0
+          ],
+          "on_ground": false,
+          "collided_horizontal": false,
+          "collided_vertical": false,
+          "fall_distance": 0.7684762024129892,
+          "sprinting": false
+        },
+        {
+          "tick": 6,
+          "position": [
+            0.5,
+            6.854893299348356,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.44749789698341763,
+            0
+          ],
+          "on_ground": false,
+          "collided_horizontal": false,
+          "collided_vertical": false,
+          "fall_distance": 1.1451067006516444,
+          "sprinting": false
+        },
+        {
+          "tick": 7,
+          "position": [
+            0.5,
+            6.407395402364938,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.5169479491049732,
+            0
+          ],
+          "on_ground": false,
+          "collided_horizontal": false,
+          "collided_vertical": false,
+          "fall_distance": 1.592604597635062,
+          "sprinting": false
+        },
+        {
+          "tick": 8,
+          "position": [
+            0.5,
+            5.890447453259965,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.5850090015087522,
+            0
+          ],
+          "on_ground": false,
+          "collided_horizontal": false,
+          "collided_vertical": false,
+          "fall_distance": 2.1095525467400353,
+          "sprinting": false
+        },
+        {
+          "tick": 9,
+          "position": [
+            0.5,
+            5.305438451751212,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.6517088341626173,
+            0
+          ],
+          "on_ground": false,
+          "collided_horizontal": false,
+          "collided_vertical": false,
+          "fall_distance": 2.694561548248788,
+          "sprinting": false
+        },
+        {
+          "tick": 10,
+          "position": [
+            0.5,
+            4.653729617588595,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.7170746714356033,
+            0
+          ],
+          "on_ground": false,
+          "collided_horizontal": false,
+          "collided_vertical": false,
+          "fall_distance": 3.3462703824114053,
+          "sprinting": false
+        },
+        {
+          "tick": 11,
+          "position": [
+            0.5,
+            3.9366549461529914,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.7811331932098841,
+            0
+          ],
+          "on_ground": false,
+          "collided_horizontal": false,
+          "collided_vertical": false,
+          "fall_distance": 4.063345053847009,
+          "sprinting": false
+        },
+        {
+          "tick": 12,
+          "position": [
+            0.5,
+            3.155521752943107,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.8439105457704985,
+            0
+          ],
+          "on_ground": false,
+          "collided_horizontal": false,
+          "collided_vertical": false,
+          "fall_distance": 4.844478247056893,
+          "sprinting": false
+        },
+        {
+          "tick": 13,
+          "position": [
+            0.5,
+            2.311611207172609,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.9054323524772837,
+            0
+          ],
+          "on_ground": false,
+          "collided_horizontal": false,
+          "collided_vertical": false,
+          "fall_distance": 5.688388792827391,
+          "sprinting": false
+        },
+        {
+          "tick": 14,
+          "position": [
+            0.5,
+            1.4061788546953253,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.9657237242233685,
+            0
+          ],
+          "on_ground": false,
+          "collided_horizontal": false,
+          "collided_vertical": false,
+          "fall_distance": 6.593821145304675,
+          "sprinting": false
+        },
+        {
+          "tick": 15,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 16,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 17,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 18,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 19,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 20,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 21,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 22,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 23,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 24,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 25,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 26,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 27,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 28,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 29,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 30,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 31,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 32,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 33,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 34,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 35,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 36,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 37,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 38,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 39,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 40,
+          "position": [
+            0.5,
+            1,
+            0.5
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        }
+      ]
+    },
+    {
+      "name": "wall",
+      "trajectory": [
+        {
+          "tick": 1,
+          "position": [
+            0.5,
+            1,
+            0.5980000385325829
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.053508021038790266
+          ],
+          "on_ground": false,
+          "collided_horizontal": false,
+          "collided_vertical": false,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 2,
+          "position": [
+            0.5,
+            1,
+            0.6711080595713732
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.06652829914529915
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 3,
+          "position": [
+            0.5,
+            1,
+            0.8356363972492553
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.0898324723721236
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 4,
+          "position": [
+            0.5,
+            1,
+            1.0234689081539619
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.10255655095396975
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 5,
+          "position": [
+            0.5,
+            1,
+            1.2240254976405145
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.10950389785965775
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 6,
+          "position": [
+            0.5,
+            1,
+            1.4315294340327551
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11329714927016339
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 7,
+          "position": [
+            0.5,
+            1,
+            1.6428266218355014
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11536826454029948
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 8,
+          "position": [
+            0.5,
+            1,
+            1.8561949249083838
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11649909347779379
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 9,
+          "position": [
+            0.5,
+            1,
+            2.0706940569187604
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11711652607766568
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 10,
+          "position": [
+            0.5,
+            1,
+            2.285810621529009
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11745364427719573
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 11,
+          "position": [
+            0.5,
+            1,
+            2.501264304338787
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11763771081413914
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 12,
+          "position": [
+            0.5,
+            1,
+            2.716902053685509
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11773821114331023
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 13,
+          "position": [
+            0.5,
+            1,
+            2.9326403033614024
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11779308432303764
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 14,
+          "position": [
+            0.5,
+            1,
+            3.148433426217023
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11782304507916881
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 15,
+          "position": [
+            0.5,
+            1,
+            3.3642565098287744
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11783940365201644
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 16,
+          "position": [
+            0.5,
+            1,
+            3.580095952013374
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11784833543279125
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 17,
+          "position": [
+            0.5,
+            1,
+            3.7
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": true,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 18,
+          "position": [
+            0.5,
+            1,
+            3.7
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": true,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 19,
+          "position": [
+            0.5,
+            1,
+            3.7
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": true,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 20,
+          "position": [
+            0.5,
+            1,
+            3.7
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": true,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 21,
+          "position": [
+            0.5,
+            1,
+            3.7
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": true,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 22,
+          "position": [
+            0.5,
+            1,
+            3.7
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": true,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 23,
+          "position": [
+            0.5,
+            1,
+            3.7
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": true,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 24,
+          "position": [
+            0.5,
+            1,
+            3.7
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": true,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 25,
+          "position": [
+            0.5,
+            1,
+            3.7
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": true,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 26,
+          "position": [
+            0.5,
+            1,
+            3.7
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": true,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 27,
+          "position": [
+            0.5,
+            1,
+            3.7
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": true,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 28,
+          "position": [
+            0.5,
+            1,
+            3.7
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": true,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 29,
+          "position": [
+            0.5,
+            1,
+            3.7
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": true,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 30,
+          "position": [
+            0.5,
+            1,
+            3.7
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": true,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 31,
+          "position": [
+            0.5,
+            1,
+            3.7
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": true,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 32,
+          "position": [
+            0.5,
+            1,
+            3.7
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": true,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 33,
+          "position": [
+            0.5,
+            1,
+            3.7
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": true,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 34,
+          "position": [
+            0.5,
+            1,
+            3.7
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": true,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 35,
+          "position": [
+            0.5,
+            1,
+            3.7
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": true,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 36,
+          "position": [
+            0.5,
+            1,
+            3.7
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": true,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 37,
+          "position": [
+            0.5,
+            1,
+            3.7
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": true,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 38,
+          "position": [
+            0.5,
+            1,
+            3.7
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": true,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 39,
+          "position": [
+            0.5,
+            1,
+            3.7
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": true,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 40,
+          "position": [
+            0.5,
+            1,
+            3.7
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": true,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        }
+      ]
+    },
+    {
+      "name": "slab",
+      "trajectory": [
+        {
+          "tick": 1,
+          "position": [
+            0.5,
+            1,
+            0.5980000385325829
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.053508021038790266
+          ],
+          "on_ground": false,
+          "collided_horizontal": false,
+          "collided_vertical": false,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 2,
+          "position": [
+            0.5,
+            1,
+            0.6711080595713732
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.06652829914529915
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 3,
+          "position": [
+            0.5,
+            1,
+            0.8356363972492553
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.0898324723721236
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 4,
+          "position": [
+            0.5,
+            1,
+            1.0234689081539619
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.10255655095396975
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 5,
+          "position": [
+            0.5,
+            1,
+            1.2240254976405145
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.10950389785965775
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 6,
+          "position": [
+            0.5,
+            1,
+            1.4315294340327551
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11329714927016339
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 7,
+          "position": [
+            0.5,
+            1,
+            1.6428266218355014
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11536826454029948
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 8,
+          "position": [
+            0.5,
+            1.5,
+            1.8561949249083838
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11649909347779379
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 9,
+          "position": [
+            0.5,
+            1.5,
+            2.0706940569187604
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11711652607766568
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 10,
+          "position": [
+            0.5,
+            1.5,
+            2.285810621529009
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11745364427719573
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 11,
+          "position": [
+            0.5,
+            1.5,
+            2.501264304338787
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11763771081413914
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 12,
+          "position": [
+            0.5,
+            1.5,
+            2.716902053685509
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11773821114331023
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 13,
+          "position": [
+            0.5,
+            1.5,
+            2.9326403033614024
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11779308432303764
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 14,
+          "position": [
+            0.5,
+            1.5,
+            3.148433426217023
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11782304507916881
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 15,
+          "position": [
+            0.5,
+            1.5,
+            3.3642565098287744
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11783940365201644
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 16,
+          "position": [
+            0.5,
+            1.421599998474121,
+            3.580095952013374
+          ],
+          "velocity": [
+            0,
+            -0.1552320045166016,
+            0.11784833543279125
+          ],
+          "on_ground": false,
+          "collided_horizontal": false,
+          "collided_vertical": false,
+          "fall_distance": 0.078400001525879,
+          "sprinting": false
+        },
+        {
+          "tick": 17,
+          "position": [
+            0.5,
+            1.2663679939575194,
+            3.7175442874461653
+          ],
+          "velocity": [
+            0,
+            -0.230527368912964,
+            0.12507798524384003
+          ],
+          "on_ground": false,
+          "collided_horizontal": false,
+          "collided_vertical": false,
+          "fall_distance": 0.23363200604248058,
+          "sprinting": false
+        },
+        {
+          "tick": 18,
+          "position": [
+            0.5,
+            1.0358406250445555,
+            3.8622222726900053
+          ],
+          "velocity": [
+            0,
+            -0.30431682745754424,
+            0.13165696657189443
+          ],
+          "on_ground": false,
+          "collided_horizontal": false,
+          "collided_vertical": false,
+          "fall_distance": 0.46415937495544446,
+          "sprinting": false
+        },
+        {
+          "tick": 19,
+          "position": [
+            0.5,
+            1,
+            4.0134792392619
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.13764383958042395
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 20,
+          "position": [
+            0.5,
+            1,
+            4.249123117374907
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.12866155744970176
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 21,
+          "position": [
+            0.5,
+            1,
+            4.475784713357192
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.12375723140632743
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 22,
+          "position": [
+            0.5,
+            1,
+            4.6975419832961025
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.12107946938664504
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 23,
+          "position": [
+            0.5,
+            1,
+            4.916621491215331
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11961741132389846
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 24,
+          "position": [
+            0.5,
+            1,
+            5.134238941071812
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11881912762163882
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 25,
+          "position": [
+            0.5,
+            1,
+            5.351058107226034
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11838326472020505
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 26,
+          "position": [
+            0.5,
+            1,
+            5.567441410478822
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11814528357602222
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 27,
+          "position": [
+            0.5,
+            1,
+            5.783586732587427
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11801534587129839
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 28,
+          "position": [
+            0.5,
+            1,
+            5.9996021169913085
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.1179443998845192
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 29,
+          "position": [
+            0.5,
+            1,
+            6.215546555408411
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11790566337573775
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 30,
+          "position": [
+            0.5,
+            1,
+            6.431452257316732
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11788451324194309
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        }
+      ]
+    },
+    {
+      "name": "stairs",
+      "trajectory": [
+        {
+          "tick": 1,
+          "position": [
+            0.5,
+            1,
+            0.5980000385325829
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.053508021038790266
+          ],
+          "on_ground": false,
+          "collided_horizontal": false,
+          "collided_vertical": false,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 2,
+          "position": [
+            0.5,
+            1,
+            0.6711080595713732
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.06652829914529915
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 3,
+          "position": [
+            0.5,
+            1,
+            0.8356363972492553
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.0898324723721236
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 4,
+          "position": [
+            0.5,
+            1,
+            1.0234689081539619
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.10255655095396975
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 5,
+          "position": [
+            0.5,
+            1,
+            1.2240254976405145
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.10950389785965775
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 6,
+          "position": [
+            0.5,
+            1,
+            1.4315294340327551
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11329714927016339
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 7,
+          "position": [
+            0.5,
+            1,
+            1.6428266218355014
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0.11536826454029948
+          ],
+          "on_ground": true,
+          "collided_horizontal": false,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 8,
+          "position": [
+            0.5,
+            1,
+            1.7
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": true,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 9,
+          "position": [
+            0.5,
+            1,
+            1.7
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": true,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 10,
+          "position": [
+            0.5,
+            1,
+            1.7
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": true,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 11,
+          "position": [
+            0.5,
+            1,
+            1.7
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": true,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 12,
+          "position": [
+            0.5,
+            1,
+            1.7
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": true,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 13,
+          "position": [
+            0.5,
+            1,
+            1.7
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": true,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 14,
+          "position": [
+            0.5,
+            1,
+            1.7
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": true,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 15,
+          "position": [
+            0.5,
+            1,
+            1.7
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": true,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 16,
+          "position": [
+            0.5,
+            1,
+            1.7
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": true,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 17,
+          "position": [
+            0.5,
+            1,
+            1.7
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": true,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 18,
+          "position": [
+            0.5,
+            1,
+            1.7
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": true,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 19,
+          "position": [
+            0.5,
+            1,
+            1.7
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": true,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 20,
+          "position": [
+            0.5,
+            1,
+            1.7
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": true,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 21,
+          "position": [
+            0.5,
+            1,
+            1.7
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": true,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 22,
+          "position": [
+            0.5,
+            1,
+            1.7
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": true,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 23,
+          "position": [
+            0.5,
+            1,
+            1.7
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": true,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 24,
+          "position": [
+            0.5,
+            1,
+            1.7
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": true,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 25,
+          "position": [
+            0.5,
+            1,
+            1.7
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": true,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 26,
+          "position": [
+            0.5,
+            1,
+            1.7
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": true,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 27,
+          "position": [
+            0.5,
+            1,
+            1.7
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": true,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 28,
+          "position": [
+            0.5,
+            1,
+            1.7
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": true,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 29,
+          "position": [
+            0.5,
+            1,
+            1.7
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": true,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        },
+        {
+          "tick": 30,
+          "position": [
+            0.5,
+            1,
+            1.7
+          ],
+          "velocity": [
+            0,
+            -0.0784000015258789,
+            0
+          ],
+          "on_ground": true,
+          "collided_horizontal": true,
+          "collided_vertical": true,
+          "fall_distance": 0,
+          "sprinting": false
+        }
+      ]
+    }
+  ]
+}

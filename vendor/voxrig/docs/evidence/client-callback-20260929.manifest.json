@@ -1,0 +1,20 @@
+{
+  "minecraft": "1.21.11 / protocol 774",
+  "capture": "client-callback-20260929.json.gz",
+  "sha256": "625a2fc95438ea96a7fe348ec3b573095d5885878c727bd2f63606745bee3aa7",
+  "replay": "client-callback-replay-20260929.json.gz",
+  "replay_sha256": "66f75c404a6c2f44b26d45a59ca80b73b536c00724316c732e611196cec3b576",
+  "packets": 108,
+  "complete": true,
+  "cells": 770,
+  "confirmation": "client-callback-confirmation-20260929.mcfunction.gz",
+  "marker": "VOXRIG_MATCH_CALLBACK_VERIFIED_770",
+  "result": 1,
+  "scope": "Final native comparison, diagonal wire prepare and wire/gate support removal; intermediate samples are client frames, not server tick traces.",
+  "setup_failure": "First server/probe started without a persistent stdin: teleport/setup could not be delivered and probe rejected out-of-reach interaction. Server process received SIGINT; no world writes were submitted. One retry preceded server readiness and failed connection. Corrected tty run completed.",
+  "source_capture_sha256": "eb46f4f3b8dc4e9ca096dca79464671f3ad61bc08e985a9391ba6e98c204c5e1",
+  "server_log": {
+    "file": "client-callback-server-20260929.log.gz",
+    "sha256": "8c6ad4f2218e29d293d890317d265fb2109c6a68e1f26ee6f0324fd02dad83b1"
+  }
+}

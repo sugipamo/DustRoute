@@ -1,0 +1,32 @@
+/target
+/.local/
+/test-server/server.jar
+
+# JavaScript reference-tool dependencies and bundled runtimes
+/reference/node_modules/
+/tools/
+
+# Minecraft server runtime state
+/test-server/world/
+/test-server/logs/
+/test-server/crash-reports/
+/test-server/cache/
+/test-server/libraries/
+/test-server/versions/
+/test-server/banned-ips.json
+/test-server/banned-players.json
+/test-server/eula.txt
+/test-server/ops.json
+/test-server/usercache.json
+/test-server/whitelist.json
+
+# Local diagnostic artifacts
+/reports/*.log
+/reports/*.invalid.log
+
+# Editor and operating-system files
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
