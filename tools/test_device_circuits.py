@@ -10,7 +10,8 @@ import unittest
 from unittest.mock import patch
 
 from compare_device_circuits import compare_model, observe
-from make_device_circuit_fixtures import locking_circuit, rotate, torch_feedback
+from make_device_circuit_fixtures import locking_circuit, torch_feedback
+from fixture_geometry import rotate
 from make_passive_shape_fixtures import cases as shape_cases
 from observe_device_circuit import compare_capture
 

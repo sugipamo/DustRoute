@@ -1,0 +1,524 @@
+'use strict'
+
+const crypto = require('node:crypto')
+const { Vec3 } = require('vec3')
+const { confirmRegion, bounds: readbackBounds } = require('./readback')
+const { snapshotMetrics } = require('./metrics')
+
+// Each session owns its bot, reconnect timer, recording and observed clock.
+// Construction and importing this module never connect to Minecraft.
+function createBotSession (config, bridgeMetrics, {
+  createBot = options => require('mineflayer').createBot(options),
+  log = message => process.stderr.write(message),
+  schedule = setTimeout,
+  cancel = clearTimeout
+} = {}) {
+  let bot = null
+  let spawned = false
+  let shuttingDown = false
+  let reconnectTimer = null
+  let updateRecording = null
+  let observedGameTick = 0
+  let enabledFeatures = null
+
+  function connectBot () {
+    if (shuttingDown) return
+    enabledFeatures = null
+    bot = createBot({
+      host: config.host,
+      port: config.port,
+      username: config.username,
+      auth: config.auth,
+      version: config.version,
+      hideErrors: false
+    })
+    bot._client.on('start_configuration', () => { enabledFeatures = null })
+    bot._client.on('feature_flags', packet => {
+      enabledFeatures = Array.isArray(packet.features) ? [...packet.features] : null
+    })
+    bot.once('spawn', async () => {
+      spawned = true
+      observedGameTick = Number((bot.time && bot.time.age) || 0)
+      await bot.waitForChunksToLoad()
+      log(`[dustroute-bot] ${bot.username} joined ${config.host}:${config.port}\n`)
+    })
+    bot.on('physicsTick', () => {
+      if (spawned) observedGameTick += 1
+    })
+    bot.on('end', reason => {
+      spawned = false
+      enabledFeatures = null
+      updateRecording = null
+      log(`[dustroute-bot] disconnected: ${String(reason)}; reconnecting in 3s\n`)
+      if (!shuttingDown) reconnectTimer = schedule(connectBot, 3000)
+    })
+    bot.on('kicked', reason => log(`[dustroute-bot] kicked: ${String(reason)}\n`))
+    bot.on('error', error => log(`[dustroute-bot] ${error.stack || error}\n`))
+    bot.on('blockUpdate', (oldBlock, newBlock) => {
+      const recording = updateRecording
+      if (!recording || recording.dimension !== currentDimension()) return
+      const block = newBlock || oldBlock
+      if (!block || !inside(block.position, recording.min, recording.max)) return
+      recording.seenEvents += 1
+      if (recording.events.length >= recording.maxEvents) {
+        recording.truncated = true
+        return
+      }
+      const gameTick = observedGameTick
+      if (recording.lastGameTick !== gameTick) {
+        recording.lastGameTick = gameTick
+        recording.nextSubTickOrder = 0
+      }
+      const subTickOrder = recording.nextSubTickOrder
+      recording.nextSubTickOrder += 1
+      recording.events.push({
+        sequence: recording.seenEvents,
+        game_tick: gameTick,
+        sub_tick_order: subTickOrder,
+        event_kind: 'state_transition',
+        cause: 'packet_observation',
+        source: 'live_mineflayer',
+        cause_sequence: null,
+        pos: posJson(block.position),
+        before: blockRecord(oldBlock),
+        after: blockRecord(newBlock)
+      })
+    })
+  }
+
+  function directionFromRotation (yaw, pitch) {
+    const cosPitch = Math.cos(pitch)
+    return new Vec3(-Math.sin(yaw) * cosPitch, Math.sin(pitch), -Math.cos(yaw) * cosPitch)
+  }
+
+  function targetFromPlayer (username, maxDistance) {
+    const entity = Object.values(bot.entities).find(entity => entity.username === username)
+    if (!entity) throw new Error(`player is not visible to the bot: ${username}`)
+    const eyeHeight = entity.height ? Math.min(entity.height, 1.62) : 1.62
+    const origin = entity.position.offset(0, eyeHeight, 0)
+    const direction = directionFromRotation(entity.yaw, entity.pitch)
+    let previous = null
+    for (let distance = 0; distance <= maxDistance; distance += 0.1) {
+      const point = origin.plus(direction.scaled(distance))
+      const blockPos = point.floored()
+      if (previous && previous.equals(blockPos)) continue
+      previous = blockPos
+      const block = bot.blockAt(blockPos)
+      if (block && block.boundingBox !== 'empty') {
+        return { entity, origin, block, distance }
+      }
+    }
+    return { entity, origin, block: null, distance: null }
+  }
+
+  async function approachPlayer (username) {
+    if (!/^[A-Za-z0-9_]{1,16}$/.test(username)) {
+      throw new Error(`invalid Minecraft player name: ${username}`)
+    }
+    if (username === bot.username) throw new Error('the assist player cannot be the bot itself')
+    const existing = Object.values(bot.entities).find(entity => entity.username === username)
+    if (existing) {
+      return {
+        player: username,
+        moved: false,
+        position: posJson(bot.entity.position),
+        distance: bot.entity.position.distanceTo(existing.position),
+        dimension: currentDimension()
+      }
+    }
+    // The dedicated test server grants the visible bot permission to join the
+    // configured player. Teleporting only the bot leaves the circuit untouched.
+    bot.chat(`/tp ${bot.username} ${username}`)
+    await bot.waitForTicks(5)
+    const entity = Object.values(bot.entities).find(entity => entity.username === username)
+    if (!entity) throw new Error(`player could not be reacquired after moving the bot: ${username}`)
+    return {
+      player: username,
+      moved: true,
+      position: posJson(bot.entity.position),
+      distance: bot.entity.position.distanceTo(entity.position),
+      dimension: currentDimension()
+    }
+  }
+
+  function propertiesOf (block) {
+    return Object.fromEntries(
+      Object.entries(block.getProperties()).map(([key, value]) => [key, String(value)])
+    )
+  }
+
+  function posJson (pos) {
+    return { x: pos.x, y: pos.y, z: pos.z }
+  }
+
+  function blockRecord (block) {
+    if (!block) return null
+    return {
+      name: `minecraft:${block.name}`,
+      properties: propertiesOf(block)
+    }
+  }
+
+  function inside (pos, min, max) {
+    return pos.x >= Math.min(min.x, max.x) && pos.x <= Math.max(min.x, max.x) &&
+      pos.y >= Math.min(min.y, max.y) && pos.y <= Math.max(min.y, max.y) &&
+      pos.z >= Math.min(min.z, max.z) && pos.z <= Math.max(min.z, max.z)
+  }
+
+  function currentDimension () {
+    const value = bot && bot.game && bot.game.dimension ? String(bot.game.dimension) : 'unknown'
+    return value.includes(':') ? value : `minecraft:${value}`
+  }
+
+  function requireDimension (expected) {
+    const actual = currentDimension()
+    if (expected && expected !== actual) {
+      throw new Error(`bot dimension changed: expected ${expected}, currently ${actual}`)
+    }
+  }
+
+  async function scanRegion (min, max, dimension, requestId) {
+    const low = {
+      x: Math.min(min.x, max.x), y: Math.min(min.y, max.y), z: Math.min(min.z, max.z)
+    }
+    const high = {
+      x: Math.max(min.x, max.x), y: Math.max(min.y, max.y), z: Math.max(min.z, max.z)
+    }
+    readbackBounds(low, high)
+    const source = bot
+    const blocks = []
+    for (let x = low.x; x <= high.x; x++) {
+      for (let y = low.y; y <= high.y; y++) {
+        for (let z = low.z; z <= high.z; z++) {
+          let block = bot.blockAt(new Vec3(x, y, z))
+          if (!block) {
+            await bot.waitForChunksToLoad()
+            block = bot.blockAt(new Vec3(x, y, z))
+          }
+          if (!block) throw new Error(`chunk unavailable at ${x} ${y} ${z}`)
+          if (block.name === 'air') continue
+          blocks.push({
+            pos: { x, y, z },
+            name: `minecraft:${block.name}`,
+            properties: propertiesOf(block)
+          })
+        }
+      }
+    }
+    const result = await confirmRegion(source, { min: low, max: high, blocks }, dimension, { requestId })
+    if (!spawned || bot !== source) throw new Error('connection changed during readback')
+    requireDimension(dimension)
+    return result
+  }
+
+  async function writeBlocks (changes) {
+    if (!Array.isArray(changes)) throw new Error('changes must be an array')
+    if (changes.length > 32768) throw new Error('write exceeds the 32768 block limit')
+    const statePattern = /^minecraft:[a-z0-9_]+(?:\[[a-z0-9_=,]+\])?$/
+    for (let index = 0; index < changes.length; index++) {
+      const change = changes[index]
+      const { x, y, z } = change.pos || {}
+      if (![x, y, z].every(Number.isInteger)) throw new Error('write position must use integers')
+      if (typeof change.state !== 'string' || !statePattern.test(change.state)) {
+        throw new Error(`invalid Minecraft block state at change ${index}`)
+      }
+      bot.chat(`/setblock ${x} ${y} ${z} ${change.state} replace`)
+      if ((index + 1) % 1000 === 0) await bot.waitForTicks(1)
+    }
+    await bot.waitForTicks(2)
+    return { submitted_changes: changes.length }
+  }
+
+  async function placePhysicalBlocks (changes) {
+    if (!Array.isArray(changes) || changes.length === 0) throw new Error('physical changes must be a non-empty array')
+    if (changes.length > 128) throw new Error('normal player placement is limited to 128 changes')
+    const Item = require('prismarine-item')(config.version)
+    let highestY = -64
+    let centerX = 0
+    let centerZ = 0
+    bot.chat(`/gamemode creative ${bot.username}`)
+    await bot.waitForTicks(2)
+    for (const change of changes) {
+      const { x, y, z } = change.pos || {}
+      if (![x, y, z].every(Number.isInteger)) throw new Error('physical placement position must use integers')
+      highestY = Math.max(highestY, y)
+      centerX += x
+      centerZ += z
+      bot.chat(`/tp ${bot.username} ${x + 0.5} ${y + 3} ${z + 0.5}`)
+      await bot.waitForTicks(3)
+      bot.creative.startFlying()
+      const existing = bot.blockAt(new Vec3(x, y, z))
+      if (existing && !['air', 'cave_air', 'void_air'].includes(existing.name)) {
+        await bot.dig(existing, true)
+        await bot.waitForTicks(1)
+      }
+      if (change.action === 'dig') continue
+      if (change.action !== 'place') throw new Error(`unknown physical action: ${String(change.action)}`)
+      const itemName = String(change.item || '').replace(/^minecraft:/, '')
+      const itemDefinition = bot.registry.itemsByName[itemName]
+      if (!itemDefinition) throw new Error(`unknown placement item: ${itemName}`)
+      await bot.creative.setInventorySlot(36, new Item(itemDefinition.id, 1))
+      const held = bot.inventory.slots[36]
+      if (!held) throw new Error(`failed to prepare placement item: ${itemName}`)
+      await bot.equip(held, 'hand')
+      const referencePos = new Vec3(change.reference.x, change.reference.y, change.reference.z)
+      const reference = bot.blockAt(referencePos)
+      if (!reference || reference.boundingBox === 'empty') {
+        throw new Error(`placement support is unavailable at ${referencePos.x} ${referencePos.y} ${referencePos.z}`)
+      }
+      const facingMatch = String(change.state || '').match(/(?:\[|,)facing=([a-z]+)/)
+      const desiredFacing = facingMatch && facingMatch[1]
+      const approaches = desiredFacing
+        ? [[0, -2], [2, 0], [0, 2], [-2, 0]]
+        : [[0, 0]]
+      let placed = null
+      for (const [dx, dz] of approaches) {
+        if (dx !== 0 || dz !== 0) {
+          bot.chat(`/tp ${bot.username} ${x + dx + 0.5} ${y + 2} ${z + dz + 0.5}`)
+          await bot.waitForTicks(2)
+          bot.creative.startFlying()
+        }
+        await bot.placeBlock(reference, new Vec3(change.face.x, change.face.y, change.face.z))
+        await bot.waitForTicks(2)
+        placed = bot.blockAt(new Vec3(x, y, z))
+        if (!desiredFacing || (placed && propertiesOf(placed).facing === desiredFacing)) break
+        if (placed && !['air', 'cave_air', 'void_air'].includes(placed.name)) {
+          await bot.dig(placed, true)
+          await bot.waitForTicks(1)
+        }
+        placed = null
+      }
+      if (!placed || ['air', 'cave_air', 'void_air'].includes(placed.name)) {
+        throw new Error(`normal placement did not create a block at ${x} ${y} ${z}`)
+      }
+      if (desiredFacing && propertiesOf(placed).facing !== desiredFacing) {
+        throw new Error(`normal placement could not orient block at ${x} ${y} ${z} toward ${desiredFacing}`)
+      }
+    }
+    centerX = centerX / changes.length
+    centerZ = centerZ / changes.length
+    const retreat = new Vec3(Math.floor(centerX) + 0.5, highestY + 16, Math.floor(centerZ) + 0.5)
+    bot.chat(`/tp ${bot.username} ${retreat.x} ${retreat.y} ${retreat.z}`)
+    await bot.waitForTicks(3)
+    bot.creative.startFlying()
+    return { placed_changes: changes.length, placement_mode: 'mineflayer_player', retreat: posJson(retreat) }
+  }
+
+  async function getBlock (pos, dimension, requestId) {
+    const result = await scanRegion(pos, pos, dimension, requestId)
+    return { ...(result.blocks[0] || { pos, name: 'minecraft:air', properties: {} }), readback: result.readback }
+  }
+
+  async function ensureLeverReachable (pos) {
+    let block = bot.blockAt(new Vec3(pos.x, pos.y, pos.z))
+    if (!block) throw new Error(`block is unavailable at ${pos.x} ${pos.y} ${pos.z}`)
+    if (block.name !== 'lever') throw new Error(`activation target is not a lever: minecraft:${block.name}`)
+    let distance = bot.entity.position.distanceTo(block.position.offset(0.5, 0.5, 0.5))
+    let moved = false
+    if (distance > 5.5) {
+      let approach = null
+      for (const dy of [2, 3, 4]) {
+        for (const [dx, dz] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]]) {
+          const feet = block.position.offset(dx, dy, dz)
+          const feetBlock = bot.blockAt(feet)
+          const headBlock = bot.blockAt(feet.offset(0, 1, 0))
+          const center = feet.offset(0.5, 0, 0.5)
+          if (feetBlock && headBlock && feetBlock.boundingBox === 'empty' && headBlock.boundingBox === 'empty' && center.distanceTo(block.position.offset(0.5, 0.5, 0.5)) <= 5.5) {
+            approach = center
+            break
+          }
+        }
+        if (approach) break
+      }
+      if (!approach) throw new Error(`no safe air position is available within reach of lever at ${pos.x} ${pos.y} ${pos.z}`)
+      bot.chat(`/tp ${bot.username} ${approach.x} ${approach.y} ${approach.z}`)
+      await bot.waitForTicks(3)
+      bot.creative.startFlying()
+      block = bot.blockAt(new Vec3(pos.x, pos.y, pos.z))
+      if (!block || block.name !== 'lever') throw new Error('lever became unavailable after bot approach')
+      distance = bot.entity.position.distanceTo(block.position.offset(0.5, 0.5, 0.5))
+      if (distance > 5.5) throw new Error(`bot is still ${distance.toFixed(2)} blocks from the lever after approach`)
+      moved = true
+    }
+    return { block, moved, distance }
+  }
+
+  async function approachLever (pos) {
+    const approach = await ensureLeverReachable(pos)
+    return { pos, moved: approach.moved, distance: approach.distance }
+  }
+
+  async function activateLever (pos) {
+    const approach = await ensureLeverReachable(pos)
+    const block = approach.block
+    const before = propertiesOf(block).powered === 'true'
+    await bot.lookAt(block.position.offset(0.5, 0.5, 0.5), true)
+    await bot.activateBlock(block)
+    let after = before
+    for (let attempt = 0; attempt < 5 && after === before; attempt++) {
+      await bot.waitForTicks(1)
+      const afterBlock = bot.blockAt(block.position)
+      after = afterBlock && propertiesOf(afterBlock).powered === 'true'
+    }
+    if (after === before) throw new Error('lever state did not change after normal player activation')
+    return { pos, before_powered: before, after_powered: after, bot_approached: approach.moved }
+  }
+
+  function startUpdateRecording (params) {
+    if (updateRecording) throw new Error('a block update recording is already active')
+    const maxEvents = Number(params.max_events || 16384)
+    if (!Number.isInteger(maxEvents) || maxEvents < 1 || maxEvents > 65536) {
+      throw new Error('max_events must be 1..65536')
+    }
+    for (const value of [params.min.x, params.min.y, params.min.z, params.max.x, params.max.y, params.max.z]) {
+      if (!Number.isInteger(value)) throw new Error('recording bounds must use integers')
+    }
+    const volume = (Math.abs(params.max.x - params.min.x) + 1) *
+      (Math.abs(params.max.y - params.min.y) + 1) *
+      (Math.abs(params.max.z - params.min.z) + 1)
+    if (volume > 262144) throw new Error(`recording volume ${volume} exceeds the 262144 block limit`)
+    const id = crypto.randomUUID()
+    updateRecording = {
+      id,
+      dimension: currentDimension(),
+      min: params.min,
+      max: params.max,
+      maxEvents,
+      seenEvents: 0,
+      truncated: false,
+      lastGameTick: null,
+      nextSubTickOrder: 0,
+      startedGameTick: observedGameTick,
+      events: []
+    }
+    return { recording_id: id, started_game_tick: updateRecording.startedGameTick }
+  }
+
+  function stopUpdateRecording (recordingId) {
+    if (!updateRecording || updateRecording.id !== recordingId) {
+      throw new Error('block update recording does not exist or has a different id')
+    }
+    const result = {
+      recording_id: updateRecording.id,
+      started_game_tick: updateRecording.startedGameTick,
+      stopped_game_tick: observedGameTick,
+      seen_events: updateRecording.seenEvents,
+      truncated: updateRecording.truncated,
+      events: updateRecording.events
+    }
+    updateRecording = null
+    return result
+  }
+
+  function previewRegion (player, min, max) {
+    const low = { x: Math.min(min.x, max.x), y: Math.min(min.y, max.y), z: Math.min(min.z, max.z) }
+    const high = { x: Math.max(min.x, max.x), y: Math.max(min.y, max.y), z: Math.max(min.z, max.z) }
+    const corners = []
+    for (const x of [low.x, high.x + 1]) {
+      for (const y of [low.y, high.y + 1]) {
+        for (const z of [low.z, high.z + 1]) corners.push({ x, y, z })
+      }
+    }
+    for (const point of corners) {
+      bot.chat(`/particle minecraft:end_rod ${point.x} ${point.y} ${point.z} 0.15 0.15 0.15 0.01 12 force ${player}`)
+    }
+    bot.chat(`/msg ${player} DustRoute selection: (${low.x}, ${low.y}, ${low.z}) to (${high.x}, ${high.y}, ${high.z})`)
+    return { min: low, max: high, particle_corners: corners.length }
+  }
+
+  async function dispatch (method, params) {
+    if (method === 'status') {
+      return {
+        connected: spawned,
+        username: (bot && bot.username) || config.username,
+        host: config.host,
+        port: config.port,
+        version: config.version,
+        dimension: spawned ? currentDimension() : null,
+        enabled_features: spawned ? enabledFeatures : null,
+        position: spawned ? posJson(bot.entity.position) : null,
+        metrics: snapshotMetrics(bridgeMetrics)
+      }
+    }
+    if (!spawned) throw new Error('Minecraft bot has not spawned')
+    if (method === 'visible_players') {
+      return Object.values(bot.entities)
+        .filter(entity => entity.type === 'player' && entity.username && entity.username !== bot.username)
+        .map(entity => ({
+          player: entity.username,
+          position: posJson(entity.position),
+          distance_from_bot: bot.entity.position.distanceTo(entity.position),
+          dimension: currentDimension()
+        }))
+    }
+    if (method === 'approach_player') {
+      return approachPlayer(params.player)
+    }
+    if (method === 'observe_player') {
+      const target = targetFromPlayer(params.player, Number(params.max_distance || 64))
+      return {
+        player: params.player,
+        eye_position: posJson(target.origin),
+        yaw: target.entity.yaw,
+        pitch: target.entity.pitch,
+        targeted_block: target.block ? posJson(target.block.position) : null,
+        targeted_face: null,
+        distance: target.distance,
+        dimension: currentDimension()
+      }
+    }
+    if (method === 'scan_region') {
+      requireDimension(params.dimension)
+      return scanRegion(params.min, params.max, params.dimension, params.readback_request_id)
+    }
+    if (method === 'get_block') {
+      requireDimension(params.dimension)
+      return getBlock(params.pos, params.dimension, params.readback_request_id)
+    }
+    if (method === 'activate_lever') {
+      requireDimension(params.dimension)
+      return activateLever(params.pos)
+    }
+    if (method === 'approach_lever') {
+      requireDimension(params.dimension)
+      return approachLever(params.pos)
+    }
+    if (method === 'wait_ticks') {
+      requireDimension(params.dimension)
+      const ticks = Number(params.ticks)
+      if (!Number.isInteger(ticks) || ticks < 1 || ticks > 200) throw new Error('ticks must be 1..200')
+      await bot.waitForTicks(ticks)
+      return { waited_ticks: ticks, game_tick: observedGameTick }
+    }
+    if (method === 'start_update_recording') {
+      requireDimension(params.dimension)
+      return startUpdateRecording(params)
+    }
+    if (method === 'stop_update_recording') {
+      requireDimension(params.dimension)
+      return stopUpdateRecording(params.recording_id)
+    }
+    if (method === 'preview_region') {
+      requireDimension(params.dimension)
+      return previewRegion(params.player, params.min, params.max)
+    }
+    if (method === 'write_blocks') {
+      requireDimension(params.dimension)
+      return writeBlocks(params.changes)
+    }
+    if (method === 'place_physical_blocks') {
+      requireDimension(params.dimension)
+      return placePhysicalBlocks(params.changes)
+    }
+    throw new Error(`unknown method: ${method}`)
+  }
+
+  function shutdown () {
+    shuttingDown = true
+    if (reconnectTimer) cancel(reconnectTimer)
+    if (bot) bot.quit('DustRoute MCP stopped')
+  }
+  return { connect: connectBot, dispatch, shutdown }
+}
+
+module.exports = { createBotSession }

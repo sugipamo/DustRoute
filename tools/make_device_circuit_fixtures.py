@@ -3,12 +3,7 @@
 import argparse
 import json
 from pathlib import Path
-
-DIRECTIONS = ('north', 'east', 'south', 'west')
-
-
-def position(x, y, z):
-    return dict(x=x, y=y, z=z)
+from fixture_geometry import DIRECTIONS, position, rotate
 
 
 def bulb_circuit(subtract=False):
@@ -42,32 +37,6 @@ def bulb_circuit(subtract=False):
         sample_full_region=True, require_vanilla_features=True,
         initial_hidden_state='fresh comparator output zero; no queued work; no torches',
     )
-
-
-def rotate(fixture, turns):
-    fixture = json.loads(json.dumps(fixture))
-
-    def pos(p):
-        x, z = p['x'], p['z']
-        for _ in range(turns):
-            x, z = -z, x
-        return position(x, p['y'], z)
-
-    def side(s):
-        return DIRECTIONS[(DIRECTIONS.index(s) + turns) % 4] if s in DIRECTIONS else s
-
-    for b in fixture['initial']['blocks']:
-        b['pos'] = pos(b['pos'])
-        b['properties'] = {side(k): side(v) if k == 'facing' else v for k, v in b['properties'].items()}
-    if fixture.get('shared_viewpoint'):
-        first = fixture['inputs'][0]
-        fixture['viewpoint'] = pos(position(first['x'] + 0.5, first['y'], first['z'] + 2.5))
-    fixture['inputs'] = [pos(p) for p in fixture['inputs']]
-    for edge, fn, offset in [('min', min, -3), ('max', max, 3)]:
-        fixture['initial'][edge] = {a: fn(b['pos'][a] for b in fixture['initial']['blocks']) + offset for a in ('x', 'y', 'z')}
-    fixture['id'] += f'-r{90 * turns}'
-    fixture['rotation'] = 90 * turns
-    return fixture
 
 
 def torch_feedback():

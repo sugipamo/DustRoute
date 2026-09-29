@@ -8,7 +8,8 @@ import socket
 import subprocess
 import time
 
-from observe_mixed_pistons import ROOT, digest, save
+from observe_mixed_pistons import ROOT
+from observation_records import digest, save
 import instrumented_server
 from instrumented_server import InstrumentedServer, ensure_private_server
 

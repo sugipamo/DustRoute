@@ -9,7 +9,8 @@ import json
 from pathlib import Path
 import subprocess
 
-from observe_mixed_pistons import ROOT, digest, key, properties, save
+from observe_mixed_pistons import ROOT
+from observation_records import digest, key, properties, save
 
 
 def main():

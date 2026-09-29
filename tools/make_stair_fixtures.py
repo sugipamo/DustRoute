@@ -4,8 +4,8 @@ import argparse
 import json
 from pathlib import Path
 
-from make_device_circuit_fixtures import position, rotate
-from make_passive_shape_fixtures import add, step
+from fixture_geometry import add, position, rotate
+from make_passive_shape_fixtures import step
 from make_support_loss_fixtures import circuit
 
 

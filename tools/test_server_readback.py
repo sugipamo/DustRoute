@@ -8,7 +8,7 @@ import unittest
 from compare_device_circuits import observe
 from server_readback import confirmed_snapshot
 from make_stair_fixtures import cases
-from make_device_circuit_fixtures import rotate
+from fixture_geometry import rotate
 
 ROOT = Path(__file__).resolve().parents[1]
 

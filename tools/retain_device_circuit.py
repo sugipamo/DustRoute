@@ -11,7 +11,7 @@ import json
 from pathlib import Path
 
 from compare_device_circuits import observe
-from observe_mixed_pistons import digest
+from observation_records import digest
 
 
 def retain(prefix, fixture_path):

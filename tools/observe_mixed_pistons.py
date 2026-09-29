@@ -6,10 +6,10 @@ files. Applied inputs are actual server lever state changes paired with received
 packets; requested client delays never substitute for applied game ticks.
 """
 import argparse
-import hashlib
 import json
 import os
 from pathlib import Path
+from observation_records import save, digest, pos, key, properties
 import re
 import subprocess
 import time
@@ -20,31 +20,6 @@ ROOT = Path(__file__).resolve().parents[1]
 ACTOR = ROOT / "crates/dustroute-mcp/mineflayer/e2e/piston-mixed-live.js"
 MODEL = ROOT / "crates/dustroute-translate/examples/compare_electrical_pistons.rs"
 WINDOW = 160
-
-
-def save(path, value):
-    with path.open("x") as output:
-        json.dump(value, output, indent=2)
-        output.write("\n")
-
-
-def digest(path):
-    return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
-def pos(raw):
-    m = re.fullmatch(r"(?:BlockPos|Mutable)\{x=(-?\d+), y=(-?\d+), z=(-?\d+)\}", raw)
-    if not m:
-        raise ValueError(f"unrecognized server position {raw!r}")
-    return dict(zip(("x", "y", "z"), map(int, m.groups())))
-
-
-def key(position):
-    return tuple(position[n] for n in ("x", "y", "z"))
-
-
-def properties(values):
-    return {k: str(v).lower() if isinstance(v, bool) else str(v) for k, v in values.items()}
 
 
 def snapshot(client, which):

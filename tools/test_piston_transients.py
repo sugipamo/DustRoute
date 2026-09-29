@@ -8,7 +8,8 @@ import subprocess
 import tempfile
 import unittest
 
-from compare_piston_transients import compare, live_trace, model_trace, live_writes, model_writes, state, world_rows
+from compare_piston_transients import compare, live_trace, model_trace, live_writes, model_writes
+from observation_records import state, world_rows
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = sorted(path for pattern in ('piston-transient-observed-*-v2.json', 'piston-payload-observed-*-v2.json', 'observer-movement-observed-*-v1.json')

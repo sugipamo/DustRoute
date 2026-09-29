@@ -8,7 +8,8 @@ import argparse
 import json
 from pathlib import Path
 
-from observe_mixed_pistons import digest, save, snapshot
+from observation_records import digest, save
+from observe_mixed_pistons import snapshot
 
 
 def main():

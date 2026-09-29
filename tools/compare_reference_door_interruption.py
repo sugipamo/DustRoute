@@ -11,7 +11,8 @@ from pathlib import Path
 import subprocess
 import sys
 
-from observe_mixed_pistons import ROOT, digest, save
+from observe_mixed_pistons import ROOT
+from observation_records import digest, save
 
 
 def compact(live, raw_path):

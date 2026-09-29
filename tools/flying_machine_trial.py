@@ -4,10 +4,8 @@ import argparse
 import json
 from pathlib import Path
 
-from make_device_circuit_fixtures import position, rotate
-from make_passive_shape_fixtures import add
-from observe_mixed_pistons import key
-from compare_piston_transients import state, world_rows
+from fixture_geometry import add, position, rotate
+from observation_records import key, state, world_rows
 
 DISTANCE = 10
 ENGINE = {(0, 0, 0), (0, 0, 1), (0, 1, 0),

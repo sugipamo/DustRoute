@@ -9,7 +9,8 @@ import time
 
 from compare_device_circuits import ReplayOutsideScope, compare_model, observe
 from instrumented_server import InstrumentedServer, ensure_private_server
-from observe_mixed_pistons import ACTOR, ROOT, digest, save
+from observe_mixed_pistons import ACTOR, ROOT
+from observation_records import digest, save
 
 
 def compare_capture(paths, fixture):

@@ -9,8 +9,8 @@ import hashlib
 import json
 from pathlib import Path
 
-from compare_piston_transients import AIR, model_state, state, live_trace, model_trace, live_writes, model_writes, compare as compare_events
-from observe_mixed_pistons import key
+from observation_records import AIR, key, state
+from compare_piston_transients import model_state, live_trace, model_trace, live_writes, model_writes, compare as compare_events
 
 
 def compare(reference, trial, model):

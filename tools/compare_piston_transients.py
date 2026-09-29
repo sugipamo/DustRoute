@@ -7,24 +7,12 @@ separately. No client sample supplies internal timing.
 """
 import argparse
 import json
-import re
 from pathlib import Path
-from observe_mixed_pistons import applied_inputs, key, pos, require_post_world_inputs, snapshot
+from observation_records import AIR, inside, key, parse_state, pos, state, world_rows
+from observe_mixed_pistons import applied_inputs, require_post_world_inputs, snapshot
 
-AIR = ('minecraft:air', ())
 OBSERVED = {'minecraft:piston', 'minecraft:sticky_piston', 'minecraft:piston_head',
             'minecraft:moving_piston', 'minecraft:redstone_wire', 'minecraft:repeater'}
-
-
-def state(name, props):
-    return name, tuple(sorted((k, str(v).lower() if isinstance(v, bool) else str(v)) for k, v in props.items()))
-
-
-def parse_state(text):
-    match = re.fullmatch(r'Block\{([^}]+)\}(?:\[([^]]*)\])?', text)
-    if not match:
-        raise ValueError(f'unsupported observed state {text!r}')
-    return state(match[1], dict(item.split('=', 1) for item in (match[2] or '').split(',') if item))
 
 
 def model_state(block):
@@ -42,14 +30,6 @@ def model_state(block):
         return state('minecraft:moving_piston', dict(facing=entity['facing'].lower(), type=variant))
     assert block['observed_name'], f'unobserved model block: {block}'
     return state(block['observed_name'], block['observed_properties'])
-
-
-def world_rows(world):
-    return [(p, b) for p, b in sorted(world.items()) if b != AIR]
-
-
-def inside(p, region):
-    return all(region['min'][a] <= v <= region['max'][a] for a, v in zip(('x', 'y', 'z'), p))
 
 
 def live_trace(raw, client, *, settle_ticks=8, epoch=1, verified_inputs=None,

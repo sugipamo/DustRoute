@@ -4,7 +4,7 @@ import argparse
 import json
 from pathlib import Path
 
-from make_device_circuit_fixtures import position, rotate
+from fixture_geometry import position, rotate
 
 
 def circuit(kind, body_top=False):

@@ -3,8 +3,8 @@
 import argparse
 import json
 from pathlib import Path
+from fixture_geometry import add, position, rotate
 
-from make_device_circuit_fixtures import position, rotate
 from make_support_loss_fixtures import circuit
 
 
@@ -16,11 +16,6 @@ def base(name):
                 packet_input=True, align_first_input=True, shared_viewpoint=True,
                 sample_full_region=True, require_vanilla_features=True, compare_tick_attempts=True,
                 initial_hidden_state='fresh stable placement, zero comparator output, empty queue/history')
-
-
-def add(fixture, x, y, z, name, **properties):
-    fixture['initial']['blocks'].append(dict(pos=position(x, y, z), name='minecraft:' + name,
-                                           properties={k: str(v).lower() for k, v in properties.items()}))
 
 
 def passive(fixture, name, slab_type):

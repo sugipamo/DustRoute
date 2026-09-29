@@ -15,11 +15,9 @@ from pathlib import Path
 import subprocess
 import time
 
-from compare_piston_transients import AIR, inside, parse_state, state, world_rows
+from observation_records import AIR, digest, inside, key, parse_state, pos, save, state, world_rows
 from instrumented_server import InstrumentedServer, ensure_private_server
-from observe_mixed_pistons import (
-    ACTOR, ROOT, applied_inputs, digest, key, pos, require_post_world_inputs, save, snapshot,
-)
+from observe_mixed_pistons import ACTOR, ROOT, applied_inputs, require_post_world_inputs, snapshot
 
 
 def analyze(raw, client, fixture, *, interrupted=False):
