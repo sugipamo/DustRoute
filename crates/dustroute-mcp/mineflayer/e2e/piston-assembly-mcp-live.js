@@ -134,7 +134,7 @@ async function verifyFlightArrival (plan) {
   assert.equal(moving.size, fixture.finite_flight.moving_positions.length, 'distinct declared moving positions')
   const displacement = fixture.finite_flight.displacement || { x: fixture.finite_flight.distance, y: 0, z: 0 }
   const delta = transform(displacement).minus(origin)
-  const expected = structuredClone(plan.construction_steps.at(-1).expected)
+  let expected = structuredClone(plan.construction_steps.at(-1).expected)
   let count = 0
   for (const b of expected.blocks) {
     if (moving.has(key(b.pos))) {
@@ -144,6 +144,22 @@ async function verifyFlightArrival (plan) {
     if (b.name === 'minecraft:lever') b.properties.powered = 'true'
   }
   assert.equal(count, moving.size, 'translate every declared moving block exactly once')
+  if (fixture.expected_arrival) {
+    // The engine definition declares endpoint native states independently of
+    // the simulator. Keep this check valid when a new engine has different
+    // resting states at arrival. Only facing is directional in these recipes.
+    const directions = ['north', 'east', 'south', 'west']
+    const quarterTurns = { r0: 0, r90: 1, r180: 2, r270: 3 }[rotation]
+    const blocks = fixture.expected_arrival.blocks.map(b => {
+      const properties = { ...b.properties }
+      assert(Object.keys(properties).every(k => ['facing', 'powered', 'extended', 'face'].includes(k)), 'undeclared directional property')
+      const index = directions.indexOf(properties.facing)
+      if (index >= 0) properties.facing = directions[(index + quarterTurns) % 4]
+      return { ...b, pos: transform(b.pos), properties }
+    })
+    assert.deepEqual(blocks.map(b => key(b.pos)).sort(), expected.blocks.map(b => key(b.pos)).sort(), 'declared endpoints must retain all translated and fixed parts')
+    expected = { min: low, max: high, blocks }
+  }
   const candidate = failureSnapshot()
   assert(candidate.complete)
   const observed = await confirmRegion(bot, candidate, 'minecraft:overworld')
@@ -151,7 +167,7 @@ async function verifyFlightArrival (plan) {
   assert.deepEqual(canonical(observed.blocks), canonical(expected.blocks), 'whole corridor must contain only the arrived engine and fixed launcher/stopper')
   return { expected, observed, distance: fixture.finite_flight.distance,
     engine_blocks: count, displacement,
-    expectation: 'all declared moving blocks translated once; fixed blocks unchanged except launcher input',
+    expectation: fixture.expected_arrival ? 'independently declared native arrival at translated and fixed positions' : 'all declared moving blocks translated once; fixed blocks unchanged except launcher input',
     hidden_readiness_proven: false }
 }
 async function main () {
@@ -179,6 +195,7 @@ async function main () {
     assert.deepEqual(proposal, fixture.request)
     assert.deepEqual(generated.result.moving_positions, fixture.finite_flight.moving_positions)
     assert.deepEqual(generated.result.displacement, fixture.finite_flight.displacement)
+    assert.deepEqual(generated.result.expected_arrival, fixture.expected_arrival)
     report.generated = { specification: fixture.generation_request, verification: generated.result.verification }
   }
   await call('test_circuit_change', { blueprint: { action: 'import', records: fixture.records } })

@@ -10,6 +10,9 @@ pub struct FlyingMachineRequest {
     pub namespace: String,
     /// One-way travel before the generated stopper, between 1 and 16 blocks.
     pub distance: u16,
+    /// Selects a declarative engine layout; all engines use the same runtime.
+    #[serde(default)]
+    pub engine: FlyingMachineEngine,
     #[serde(default)]
     pub body: FlyingMachineBody,
     /// Rotate the complete source design; placement can subsequently relocate it.
@@ -24,7 +27,19 @@ pub struct FlyingMachineRequest {
     pub attachments: Vec<FlyingMachineAttachment>,
 }
 
-#[derive(Clone, Copy, Debug, Default, Deserialize, Serialize, schemars::JsonSchema)]
+#[derive(
+    Clone, Copy, Debug, Default, Eq, PartialEq, Deserialize, Serialize, schemars::JsonSchema,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum FlyingMachineEngine {
+    #[default]
+    SlimeRelay,
+    HoneyDirect,
+}
+
+#[derive(
+    Clone, Copy, Debug, Default, Eq, PartialEq, Deserialize, Serialize, schemars::JsonSchema,
+)]
 #[serde(rename_all = "snake_case")]
 pub enum FlyingMachineBody {
     #[default]

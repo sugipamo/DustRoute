@@ -447,4 +447,4 @@ and revalidate the selected baseline and steps. See
 
 ### Flying-machine generation
 
-`test_circuit_change` accepts `blueprint.action="generate_flying_machine"` with a typed `request`. It returns `result.records`, `result.request`, declared geometry and fresh model checks without changing the catalog or Minecraft. Only a passed candidate has `ok: true`; failed/undetermined checks remain explicit. Import and explicit fresh adoption remain required. See [parameters](flying-machine-generation.md).
+`test_circuit_change` accepts `blueprint.action="generate_flying_machine"` with a typed `request`, including `engine="slime_relay"` (default) or `engine="honey_direct"`. Engine definitions select geometry and endpoint requirements, never a different runtime. It returns `result.records`, `result.request`, declared geometry and fresh model checks without changing the catalog or Minecraft. Only a passed candidate has `ok: true`; failed/undetermined checks remain explicit. Import and explicit fresh adoption remain required. See [parameters](flying-machine-generation.md).

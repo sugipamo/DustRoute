@@ -27,6 +27,15 @@ mod flight_fixture;
 
 #[tokio::test]
 async fn generated_flight_is_unpublished_then_imported_proposed_and_adopted_after_restart() {
+    check_generated_flight(None, "honey_nose").await;
+}
+
+#[tokio::test]
+async fn generated_honey_engine_is_unpublished_then_freshly_adopted_after_restart() {
+    check_generated_flight(Some("honey_direct"), "compact").await;
+}
+
+async fn check_generated_flight(engine: Option<&str>, body: &str) {
     let root = temporary();
     let (client, server) = start(&root).await;
     let before = call(
@@ -35,9 +44,16 @@ async fn generated_flight_is_unpublished_then_imported_proposed_and_adopted_afte
         json!({"blueprint":{"kind":"archive"}}),
     )
     .await;
-    let generated=call(&client,"test_circuit_change",json!({"blueprint":{"action":"generate_flying_machine","request":{
-        "namespace":"public.generated","body":"honey_nose","distance":3,"rotation":"r270","mirrored":true
-    }}})).await;
+    let mut specification = json!({"namespace":"public.generated","body":body,"distance":3,"rotation":"r270","mirrored":true});
+    if let Some(engine) = engine {
+        specification["engine"] = json!(engine);
+    }
+    let generated = call(
+        &client,
+        "test_circuit_change",
+        json!({"blueprint":{"action":"generate_flying_machine","request":specification}}),
+    )
+    .await;
     assert_eq!(generated["ok"], true, "{generated}");
     assert_eq!(generated["catalog_changed"], false);
     assert_eq!(generated["writes_minecraft"], false);

@@ -9,6 +9,7 @@ fn request() -> FlyingMachineRequest {
     FlyingMachineRequest {
         namespace: "generated.test".into(),
         distance: 4,
+        engine: FlyingMachineEngine::SlimeRelay,
         body: FlyingMachineBody::Compact,
         rotation: RotationY::R0,
         mirrored: false,
@@ -81,6 +82,114 @@ fn generated_bodies_rotations_reflections_and_distances_use_common_checks() {
             }
         }
     }
+}
+
+#[test]
+fn direct_honey_engine_uses_the_same_checks_in_every_horizontal_orientation() {
+    for body in [FlyingMachineBody::Compact, FlyingMachineBody::SideBlocks] {
+        for (index, rotation) in [
+            RotationY::R0,
+            RotationY::R90,
+            RotationY::R180,
+            RotationY::R270,
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            for mirrored in [false, true] {
+                let generated = generate_flying_machine(
+                    FlyingMachineRequest {
+                        engine: FlyingMachineEngine::HoneyDirect,
+                        body,
+                        rotation,
+                        mirrored,
+                        distance: [1, 4, 8, 16][index],
+                        ..request()
+                    },
+                    BehaviorBudget::default(),
+                )
+                .unwrap();
+                assert_eq!(
+                    generated.verification.status,
+                    CheckStatus::Passed,
+                    "{body:?}/{rotation:?}/{mirrored}: {:?}",
+                    generated.verification
+                );
+                assert_eq!(
+                    generated.moving_positions.len(),
+                    if body == FlyingMachineBody::Compact {
+                        8
+                    } else {
+                        10
+                    }
+                );
+                assert!(
+                    !generated
+                        .initial
+                        .blocks
+                        .iter()
+                        .any(|b| b.name == "minecraft:slime_block")
+                );
+                // Unlike the relay engine, the two observers watch opposite
+                // horizontal directions and the fixed launcher is behind it.
+                assert!(
+                    generated
+                        .initial
+                        .blocks
+                        .iter()
+                        .filter(|b| b.name == "minecraft:observer")
+                        .all(|b| b.properties["facing"] != "up")
+                );
+                let p = Pos::new(-2, 0, if mirrored { -1 } else { 1 });
+                assert_eq!(generated.context.input_levers, vec![rotation.pos(p)]);
+                assert!(
+                    generated.verification.construction_steps > 0
+                        && generated.verification.removal_steps > 0
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn engine_selection_preserves_old_requests_and_rejects_invalid_combinations() {
+    let old: FlyingMachineRequest =
+        serde_json::from_value(serde_json::json!({"namespace":"old", "distance":2})).unwrap();
+    assert_eq!(old.engine, FlyingMachineEngine::SlimeRelay);
+    assert!(
+        serde_json::from_value::<FlyingMachineRequest>(
+            serde_json::json!({"namespace":"bad", "distance":2,"engine":"invented"})
+        )
+        .is_err()
+    );
+    let r = FlyingMachineRequest {
+        engine: FlyingMachineEngine::HoneyDirect,
+        ..request()
+    };
+    assert!(
+        generate_flying_machine(
+            FlyingMachineRequest {
+                body: FlyingMachineBody::SlimeWings,
+                ..r.clone()
+            },
+            BehaviorBudget::default()
+        )
+        .is_err()
+    );
+    // A material attached to the slime engine can be detached on the honey
+    // engine. Engine selection never reuses the earlier successful review.
+    let detached = generate_flying_machine(
+        FlyingMachineRequest {
+            attachments: vec![FlyingMachineAttachment {
+                position: Pos::new(0, 0, -1),
+                material: FlyingMachineMaterial::Slime,
+            }],
+            ..r
+        },
+        BehaviorBudget::default(),
+    )
+    .unwrap();
+    assert_ne!(detached.verification.status, CheckStatus::Passed);
 }
 
 #[test]

@@ -186,7 +186,7 @@ pub(super) fn build(
     state.parents = vec![base.id.clone()];
     state.assembly.instances[0].revision = next_parent.id.clone();
     let request=BlueprintUpdateRequest {id:BlueprintUpdateId::new(format!("{}.proposal.v1",spec.namespace)).map_err(str::to_owned)?,
-        title:format!("Generate {:?}, {}-block finite flight",spec.body,spec.distance),
+        title:format!("Generate {:?}/{:?}, {}-block finite flight",spec.engine,spec.body,spec.distance),
         description:"Explicit generated layout and arrival requirement; no automatic import, adoption or world placement.".into(),
         base_state:base.id.clone(),base_parent:parent.id.clone(),candidate_parent:next_parent.id.clone(),
         parent_instance:vec![InstanceId::new("root").map_err(str::to_owned)?],

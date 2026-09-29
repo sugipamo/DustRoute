@@ -1,6 +1,7 @@
 //! Bounded authoring of flying machines through ordinary Blueprint contracts.
 //! Recipes supply data. Every candidate uses the shared physical verifier and
 //! construction/operating-reference/removal paths; no flight-specific runtime.
+mod definitions;
 mod recipe;
 mod sources;
 

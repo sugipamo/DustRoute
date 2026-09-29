@@ -216,4 +216,4 @@ diagnosis. Arrival-state removal explicitly selects
 `removal_reference="observed_inputs"`; no empty-site search or infinite-flight
 tracking is implied. See [finite-flight lifecycle](flying-machine-lifecycle.md).
 
-`test_circuit_change(blueprint.action="generate_flying_machine")` returns freshly checked, unadopted candidates from four typed body recipes, optional moving blocks, distance, reflection and rotation. See [generation parameters and adoption workflow](flying-machine-generation.md).
+`test_circuit_change(blueprint.action="generate_flying_machine")` returns freshly checked, unadopted candidates from typed engine and body definitions, optional moving blocks, distance, reflection and rotation. Engines are `slime_relay` (default; four bodies) and `honey_direct` (compact or side blocks). Both use the shared physical runtime and adoption/placement checks. See [generation parameters and adoption workflow](flying-machine-generation.md).

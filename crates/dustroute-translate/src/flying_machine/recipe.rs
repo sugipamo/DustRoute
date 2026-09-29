@@ -4,89 +4,13 @@ use crate::piston_construction::electrical_snapshot;
 use crate::snapshot::assembly_from_snapshot;
 use crate::{MinecraftSnapshot, MinecraftSnapshotBlock, Pos, Region};
 use dustroute_library::blueprint::BlueprintCatalog;
-use dustroute_library::flying_machine::{
-    FlyingMachineBody, FlyingMachineMaterial, FlyingMachineRequest,
-};
+use dustroute_library::flying_machine::{FlyingMachineMaterial, FlyingMachineRequest};
 use dustroute_library::runtime_behavior::RuntimeBehaviorContext;
 use std::collections::BTreeSet;
 
-#[derive(Clone, Copy)]
-enum PartKind {
-    Push,
-    Pull,
-    Observer,
-    Material(FlyingMachineMaterial),
-}
-#[derive(Clone, Copy)]
-struct Part {
-    p: Pos,
-    kind: PartKind,
-}
-use FlyingMachineMaterial::{Glass, Honey, Slime, Stone};
-const ENGINE: &[Part] = &[
-    Part {
-        p: Pos::new(0, 0, 0),
-        kind: PartKind::Material(Slime),
-    },
-    Part {
-        p: Pos::new(0, 0, 1),
-        kind: PartKind::Push,
-    },
-    Part {
-        p: Pos::new(0, 1, 0),
-        kind: PartKind::Observer,
-    },
-    Part {
-        p: Pos::new(1, 0, 0),
-        kind: PartKind::Pull,
-    },
-    Part {
-        p: Pos::new(1, 0, 1),
-        kind: PartKind::Material(Slime),
-    },
-    Part {
-        p: Pos::new(1, 1, 1),
-        kind: PartKind::Observer,
-    },
-];
-const SIDES: &[Part] = &[
-    Part {
-        p: Pos::new(0, 0, -1),
-        kind: PartKind::Material(Stone),
-    },
-    Part {
-        p: Pos::new(1, 0, 2),
-        kind: PartKind::Material(Stone),
-    },
-];
-const WINGS: &[Part] = &[
-    Part {
-        p: Pos::new(0, 0, -1),
-        kind: PartKind::Material(Slime),
-    },
-    Part {
-        p: Pos::new(1, 0, 2),
-        kind: PartKind::Material(Slime),
-    },
-    Part {
-        p: Pos::new(0, 0, -2),
-        kind: PartKind::Material(Stone),
-    },
-    Part {
-        p: Pos::new(1, 0, 3),
-        kind: PartKind::Material(Stone),
-    },
-];
-const NOSE: &[Part] = &[
-    Part {
-        p: Pos::new(2, 0, 1),
-        kind: PartKind::Material(Honey),
-    },
-    Part {
-        p: Pos::new(2, 0, 2),
-        kind: PartKind::Material(Glass),
-    },
-];
+use super::definitions::{EngineDefinition, Part, State, definition};
+use dustroute_minecraft::Facing;
+
 fn native(p: Pos, name: &str, properties: &[(&str, &str)]) -> MinecraftSnapshotBlock {
     MinecraftSnapshotBlock {
         pos: p,
@@ -97,34 +21,50 @@ fn native(p: Pos, name: &str, properties: &[(&str, &str)]) -> MinecraftSnapshotB
             .collect(),
     }
 }
+fn facing_name(facing: Facing) -> &'static str {
+    match facing {
+        Facing::North => "north",
+        Facing::East => "east",
+        Facing::South => "south",
+        Facing::West => "west",
+        Facing::Up => "up",
+        Facing::Down => "down",
+    }
+}
 impl Part {
     fn native(self) -> MinecraftSnapshotBlock {
-        match self.kind {
-            PartKind::Push => native(
-                self.p,
-                "piston",
-                &[("facing", "east"), ("extended", "false")],
+        let p = self.position;
+        match self.state {
+            State::Piston { facing, sticky } => native(
+                p,
+                if sticky { "sticky_piston" } else { "piston" },
+                &[("facing", facing_name(facing)), ("extended", "false")],
             ),
-            PartKind::Pull => native(
-                self.p,
-                "sticky_piston",
-                &[("facing", "west"), ("extended", "false")],
-            ),
-            PartKind::Observer => native(
-                self.p,
+            State::Observer { watching } => native(
+                p,
                 "observer",
-                &[("facing", "up"), ("powered", "false")],
+                &[("facing", facing_name(watching)), ("powered", "false")],
             ),
-            PartKind::Material(m) => native(
-                self.p,
+            State::Material(m) => native(
+                p,
                 match m {
-                    Stone => "stone",
-                    Glass => "glass",
-                    Slime => "slime_block",
-                    Honey => "honey_block",
+                    FlyingMachineMaterial::Stone => "stone",
+                    FlyingMachineMaterial::Glass => "glass",
+                    FlyingMachineMaterial::Slime => "slime_block",
+                    FlyingMachineMaterial::Honey => "honey_block",
                 },
                 &[],
             ),
+            State::WallLever { facing, powered } => native(
+                p,
+                "lever",
+                &[
+                    ("face", "wall"),
+                    ("facing", facing_name(facing)),
+                    ("powered", if powered { "true" } else { "false" }),
+                ],
+            ),
+            State::Obsidian => native(p, "obsidian", &[]),
         }
     }
 }
@@ -139,6 +79,13 @@ pub(super) struct Recipe {
 }
 
 pub(super) fn expand(request: &FlyingMachineRequest) -> Result<Recipe, String> {
+    expand_definition(request, definition(request.engine))
+}
+
+fn expand_definition(
+    request: &FlyingMachineRequest,
+    engine: &EngineDefinition,
+) -> Result<Recipe, String> {
     if request.namespace.is_empty()
         || request.namespace.len() > 64
         || !request
@@ -153,57 +100,90 @@ pub(super) fn expand(request: &FlyingMachineRequest) -> Result<Recipe, String> {
     if !(1..=16).contains(&request.distance) || request.attachments.len() > 12 {
         return Err("generation supports distances 1..16 and at most 12 additional blocks".into());
     }
-    let body = match request.body {
-        FlyingMachineBody::Compact => &[][..],
-        FlyingMachineBody::SideBlocks => SIDES,
-        FlyingMachineBody::SlimeWings => WINGS,
-        FlyingMachineBody::HoneyNose => NOSE,
-    };
-    let mut parts: Vec<_> = ENGINE.iter().chain(body).copied().collect();
+    let body = engine
+        .bodies
+        .iter()
+        .find(|(body, _)| *body == request.body)
+        .map(|(_, parts)| *parts)
+        .ok_or("body is not defined for this engine")?;
+    let mut parts: Vec<_> = engine.moving.iter().chain(body).copied().collect();
     for extra in &request.attachments {
         let p = extra.position;
         if !(-4..=4).contains(&p.x) || !(-2..=3).contains(&p.y) || !(-5..=5).contains(&p.z) {
             return Err("attachment coordinates exceed the bounded source envelope".into());
         }
         parts.push(Part {
-            p,
-            kind: PartKind::Material(extra.material),
+            position: p,
+            state: State::Material(extra.material),
         });
     }
-    let moving: BTreeSet<_> = parts.iter().map(|p| p.p).collect();
+    let moving: BTreeSet<_> = parts.iter().map(|p| p.position).collect();
     if moving.len() != parts.len() {
         return Err("duplicate engine/body/attachment position".into());
     }
     let distance = i32::from(request.distance);
-    // Stop the leading material in the pushing row. The physical verifier,
-    // not this geometric rule, establishes whether the whole machine arrives.
+    // All engines declare a contact row. Geometry proposes a stopper, and the
+    // ordinary physical verifier decides whether that stops the whole machine.
     let front = parts
         .iter()
-        .filter(|p| p.p.y == 0 && p.p.z == 1)
-        .map(|p| p.p.x)
+        .filter(|p| (p.position.y, p.position.z) == engine.stopper_lane)
+        .map(|p| p.position.x)
         .max()
-        .unwrap();
-    let control = Pos::new(0, 2, 0);
-    let mut blocks: Vec<_> = parts.into_iter().map(Part::native).collect();
-    blocks.extend([
-        native(Pos::new(-1, 2, 0), "stone", &[]),
-        native(
-            control,
-            "lever",
-            &[("face", "wall"), ("facing", "east"), ("powered", "false")],
+        .ok_or("engine stopper contact row is empty")?;
+    let control = engine.launch;
+    let mut declared: Vec<_> = parts
+        .into_iter()
+        .chain(engine.fixed.iter().copied())
+        .collect();
+    declared.push(Part {
+        position: Pos::new(
+            front + distance + 1,
+            engine.stopper_lane.0,
+            engine.stopper_lane.1,
         ),
-        native(Pos::new(front + distance + 1, 0, 1), "obsidian", &[]),
-    ]);
-    if blocks.iter().map(|b| b.pos).collect::<BTreeSet<_>>().len() != blocks.len() {
+        state: State::Obsidian,
+    });
+    let positions: BTreeSet<_> = declared.iter().map(|p| p.position).collect();
+    if positions.len() != declared.len() {
         return Err("moving blocks overlap the launcher or stopper".into());
     }
-    let mut arrival = blocks.clone();
+    if moving.contains(&control)
+        || !declared.iter().any(|p| {
+            p.position == control && matches!(p.state, State::WallLever { powered: false, .. })
+        })
+    {
+        return Err("engine requires a fixed initially OFF launch lever".into());
+    }
+    let overrides: BTreeSet<_> = engine
+        .arrival_overrides
+        .iter()
+        .map(|p| p.position)
+        .collect();
+    if overrides.len() != engine.arrival_overrides.len() || !overrides.is_subset(&positions) {
+        return Err("arrival overrides must name distinct existing parts".into());
+    }
+    let blocks: Vec<_> = declared.iter().map(|p| p.native()).collect();
+    let mut arrival: Vec<_> = declared
+        .iter()
+        .map(|p| {
+            engine
+                .arrival_overrides
+                .iter()
+                .find(|after| after.position == p.position)
+                .unwrap_or(p)
+                .native()
+        })
+        .collect();
+    if !arrival.iter().any(|b| {
+        b.pos == control
+            && b.name == "minecraft:lever"
+            && b.properties.get("powered").is_some_and(|v| v == "true")
+    }) {
+        return Err("arrival must retain the launch lever held ON".into());
+    }
     for b in &mut arrival {
         if moving.contains(&b.pos) {
             b.pos.x += distance;
-        }
-        if b.pos == control && b.name == "minecraft:lever" {
-            b.properties.insert("powered".into(), "true".into());
         }
     }
     if arrival.iter().map(|b| b.pos).collect::<BTreeSet<_>>().len() != arrival.len() {
@@ -227,6 +207,14 @@ pub(super) fn expand(request: &FlyingMachineRequest) -> Result<Recipe, String> {
     let convert = |mut blocks: Vec<MinecraftSnapshotBlock>| -> Result<MinecraftSnapshot, String> {
         for b in &mut blocks {
             b.pos = mirror(b.pos);
+            match b.properties.get_mut("facing") {
+                Some(facing) if request.mirrored => match facing.as_str() {
+                    "north" => *facing = "south".into(),
+                    "south" => *facing = "north".into(),
+                    _ => {}
+                },
+                _ => {}
+            }
         }
         let a = mirror(region.min);
         let b = mirror(region.max);
@@ -284,4 +272,74 @@ pub(super) fn expand(request: &FlyingMachineRequest) -> Result<Recipe, String> {
         context,
         sweep,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use dustroute_library::flying_machine::FlyingMachineEngine;
+
+    #[test]
+    fn unregistered_definition_transforms_facings_and_independent_arrival_states() {
+        // A geometry-only fixture: it is deliberately not a working engine.
+        // Native directions and endpoint declarations must survive the common
+        // projection without invoking an engine-specific branch or simulation.
+        const MOVING: &[Part] = &[Part {
+            position: Pos::new(0, 0, 1),
+            state: State::Observer {
+                watching: Facing::North,
+            },
+        }];
+        const ARRIVAL: &[Part] = &[
+            Part {
+                position: Pos::new(0, 0, 1),
+                state: State::Observer {
+                    watching: Facing::East,
+                },
+            },
+            Part {
+                position: Pos::new(0, 2, 0),
+                state: State::WallLever {
+                    facing: Facing::East,
+                    powered: true,
+                },
+            },
+        ];
+        let engine = EngineDefinition {
+            moving: MOVING,
+            arrival_overrides: ARRIVAL,
+            ..*definition(FlyingMachineEngine::SlimeRelay)
+        };
+        let request: FlyingMachineRequest = serde_json::from_value(serde_json::json!({
+            "namespace":"geometry", "distance":4, "rotation":"r90", "mirrored":true
+        }))
+        .unwrap();
+        let recipe = expand_definition(&request, &engine).unwrap();
+        let initial = recipe
+            .initial
+            .blocks
+            .iter()
+            .find(|b| b.name == "minecraft:observer")
+            .unwrap();
+        let arrived = recipe
+            .arrival
+            .blocks
+            .iter()
+            .find(|b| b.name == "minecraft:observer")
+            .unwrap();
+        assert_eq!(initial.pos, Pos::new(1, 0, 0));
+        assert_eq!(initial.properties["facing"], "west");
+        assert_eq!(arrived.pos, Pos::new(1, 0, 4));
+        assert_eq!(arrived.properties["facing"], "south");
+        let invalid = EngineDefinition {
+            arrival_overrides: &[],
+            ..engine
+        };
+        assert!(
+            expand_definition(&request, &invalid)
+                .err()
+                .unwrap()
+                .contains("held ON")
+        );
+    }
 }
