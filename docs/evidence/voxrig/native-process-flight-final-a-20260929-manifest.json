@@ -1,0 +1,46 @@
+{
+  "case": "native-process-flight-final-a-20260929",
+  "server": "owned isolated vanilla Java 1.21.11; no MOD",
+  "dustroute_commit": "d58542a73f1fef09e4d53b88314c66f77308d654",
+  "voxrig_commit": "47a05029e126cb049ee8a7536e5df867f3851c12",
+  "build": "git archive into independent /tmp checkout; all local Cargo manifests under export; built offline/locked/-j1 using shared compiled dependency cache",
+  "run_directory": "/tmp/dustroute-native-final-6g3gk054",
+  "executable_sha256": "b0132704bb01daf3052407fe18197e0d268bd104d84cc34b91353d3f944d18de",
+  "mcp_pids": [
+    76419,
+    77411,
+    77538
+  ],
+  "specification": {
+    "body": "honey_nose",
+    "distance": 3,
+    "rotation": "r270",
+    "mirrored": true
+  },
+  "observations": [
+    "public generation/import/review/adoption and 11-step placement",
+    "preview and external-change gates refuse stale/unreviewed application",
+    "distinct MCP process restores durable applied instance and requires fresh observation",
+    "ordinary activation moves engine 3 blocks north; all 1134 cells match public generator expected arrival",
+    "placed, arrived and removed regions independently confirmed in two disjoint 567-cell parts each",
+    "third process freshly observes removed state; all 3 processes exit cleanly"
+  ],
+  "limits": [
+    "one declared flight variant; no arbitrary engine or entity claim",
+    "normal TCP transport; interruption case is retained separately for door",
+    "server assertions are test instrumentation, not runtime receipts"
+  ],
+  "cleanup": "conditional removal emptied 1134 cells; temporary OP grants revoked; isolated server stopped normally",
+  "sha256": {
+    "native-process-flight-final-a-20260929.jsonl.gz": "ec5da864ec768aea65a7a752d53ee4bd0da69020dd0369fa1a769e0a95253caf",
+    "native-process-flight-final-a-20260929-server.log.gz": "4040c290f2a91f062417008322fc22b8a97199b71141df8dc80935fc11ceb1df",
+    "native-process-flight-final-a-20260929-mcp-stderr.log.gz": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+    "native-process-flight-final-a-20260929-arrival.json": "d13e4f721cfe8f14a0de3993bd0de148f67f53db98e666c85dd99c75a5af146a",
+    "native-process-flight-final-a-20260929-placed-a.mcfunction": "47a3f2c164347059ced1d5355d810b65afe213bf891fd965d1f1718c19064369",
+    "native-process-flight-final-a-20260929-placed-b.mcfunction": "e9ca499a33298538f2cfd6aab39719e768c1860ed71b158c4001fcc11e9ab4fa",
+    "native-process-flight-final-a-20260929-operated-a.mcfunction": "4e6dcef85b3e817c74b3263c7e1bf5cd3a1b63acd3c7f78ef88ba571100368c9",
+    "native-process-flight-final-a-20260929-operated-b.mcfunction": "8bb0e4cc0ed4c2d6ba8bbfeda461c0c9496546375578e3033fc1f155db5d2073",
+    "native-process-flight-final-a-20260929-removed-a.mcfunction": "16ed3a3bf2bccb2d995cc57dc3cd60da0503f177bb0feffe908ba4529d753038",
+    "native-process-flight-final-a-20260929-removed-b.mcfunction": "8080ea1ded02f47ac9a8e4488516a33549b197dd5cd2e08adc6a3b43e612078d"
+  }
+}

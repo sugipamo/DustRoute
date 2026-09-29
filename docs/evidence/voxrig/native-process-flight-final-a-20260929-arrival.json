@@ -1,0 +1,139 @@
+{
+  "cells_compared": 1134,
+  "differences": 0,
+  "displacement": {
+    "x": 0,
+    "y": 0,
+    "z": -3
+  },
+  "expected_arrival": {
+    "blocks": [
+      {
+        "name": "minecraft:glass",
+        "pos": {
+          "x": -2,
+          "y": 0,
+          "z": -5
+        },
+        "properties": {}
+      },
+      {
+        "name": "minecraft:obsidian",
+        "pos": {
+          "x": -1,
+          "y": 0,
+          "z": -6
+        },
+        "properties": {}
+      },
+      {
+        "name": "minecraft:honey_block",
+        "pos": {
+          "x": -1,
+          "y": 0,
+          "z": -5
+        },
+        "properties": {}
+      },
+      {
+        "name": "minecraft:slime_block",
+        "pos": {
+          "x": -1,
+          "y": 0,
+          "z": -4
+        },
+        "properties": {}
+      },
+      {
+        "name": "minecraft:piston",
+        "pos": {
+          "x": -1,
+          "y": 0,
+          "z": -3
+        },
+        "properties": {
+          "extended": "false",
+          "facing": "north"
+        }
+      },
+      {
+        "name": "minecraft:observer",
+        "pos": {
+          "x": -1,
+          "y": 1,
+          "z": -4
+        },
+        "properties": {
+          "facing": "up",
+          "powered": "false"
+        }
+      },
+      {
+        "name": "minecraft:sticky_piston",
+        "pos": {
+          "x": 0,
+          "y": 0,
+          "z": -4
+        },
+        "properties": {
+          "extended": "false",
+          "facing": "south"
+        }
+      },
+      {
+        "name": "minecraft:slime_block",
+        "pos": {
+          "x": 0,
+          "y": 0,
+          "z": -3
+        },
+        "properties": {}
+      },
+      {
+        "name": "minecraft:observer",
+        "pos": {
+          "x": 0,
+          "y": 1,
+          "z": -3
+        },
+        "properties": {
+          "facing": "up",
+          "powered": "false"
+        }
+      },
+      {
+        "name": "minecraft:lever",
+        "pos": {
+          "x": 0,
+          "y": 2,
+          "z": 0
+        },
+        "properties": {
+          "face": "wall",
+          "facing": "north",
+          "powered": "true"
+        }
+      },
+      {
+        "name": "minecraft:stone",
+        "pos": {
+          "x": 0,
+          "y": 2,
+          "z": 1
+        },
+        "properties": {}
+      }
+    ],
+    "max": {
+      "x": 3,
+      "y": 5,
+      "z": 4
+    },
+    "min": {
+      "x": -5,
+      "y": -3,
+      "z": -9
+    }
+  },
+  "source": "public generate_flying_machine result, translated by (100,180,100)"
+}

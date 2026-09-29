@@ -8,6 +8,10 @@ The tested Voxrig source is pinned in `vendor/voxrig` with commit and file
 checksums in `vendor/voxrig-source.json`. No separate checkout or Node.js process
 is needed. From the repository root, verify, build and start the native client:
 
+This standalone checkout route was validated with Rust/Cargo 1.98.0 on Linux
+x86_64. Exact build and runtime evidence is linked from
+[native client usability](../../docs/native-client-usability.md).
+
 ```bash
 python3 scripts/vendor_voxrig.py --check
 cargo build --locked -j1 -p dustroute-mcp --features voxrig

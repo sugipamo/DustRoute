@@ -63,9 +63,27 @@ Setup now uses an unmodified vendored Voxrig source snapshot at
 `47a05029e126cb049ee8a7536e5df867f3851c12`. `scripts/vendor_voxrig.py --check`
 checks all 204 recorded files without requiring Voxrig's Git checkout. The
 source repository retains its independent contribution history. A separate
-checkout/build validation is the final acceptance check for this setup change.
+Git archive checkout passed the offline locked native executable build and the
+default workspace/all-target check on Linux x86_64 with Rust/Cargo 1.98.0. All
+local Cargo package paths were inside the exported checkout; only Cargo's
+package/build caches were shared. The verifier also rejects modified or
+unmanaged build inputs in an isolated negative-check fixture.
 
 Final outline review added world-coordinate edge cases at 100, 42,000 and
 29,999,980. A native miss at a lever edge initially reproduced as a false hit;
 applying the native epsilon after translating the box fixes it. The final 118
 Voxrig tests, Clippy and regenerated oracle checksum check pass with this fix.
+
+The [standalone flight trial](evidence/voxrig/native-process-flight-final-a-20260929-manifest.json)
+runs the exported build through three distinct MCP processes. The public
+generator's mirrored `honey_nose`, rotated 270 degrees, is adopted and placed,
+survives process restart, moves three blocks north and is conditionally removed.
+All 1,134 arrival cells match the generator's prediction. Placed, arrived and
+removed states also match independent server assertions in two disjoint 567-cell
+parts each. A third process observes the removed record afresh. Temporary OP
+grants were revoked and the isolated server stopped normally.
+
+All three usability steps are complete for these declared cases.
+[Validation records](evidence/voxrig/native-usability-validation-20260929.json)
+retain build/test logs, scope and checksums. No upstream Voxrig PR has been
+submitted; its local source branch and commit ancestry are preserved.

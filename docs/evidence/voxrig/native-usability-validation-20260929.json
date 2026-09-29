@@ -1,0 +1,20 @@
+{
+  "source_commit": "d58542a73f1fef09e4d53b88314c66f77308d654",
+  "voxrig_commit": "47a05029e126cb049ee8a7536e5df867f3851c12",
+  "target": "x86_64-unknown-linux-gnu",
+  "toolchain": "rustc/cargo 1.98.0",
+  "source_files": 204,
+  "source_verification": "local manifest check; independent Git source comparison; isolated fixture confirms changed/missing or unmanaged build inputs are rejected",
+  "build_sources": "all local package paths resolved inside independent git archive; Cargo package cache and compiled target cache reused; no sibling Voxrig checkout used",
+  "validation_scope": "118 final Voxrig tests; native raycast+rotation oracles and world-edge regression; native MCP all-target Clippy and 3 adapter + 1 registry tests; independent native executable build and default workspace all-target check. Not a claim that the complete MCP test suite was rerun.",
+  "sha256": {
+    "native-usability-native-build-20260929.log.gz": "d110e9b0f9114fe02a860953efb4ae43046ce7e31f152dba18138f763f221840",
+    "native-usability-default-check-20260929.log.gz": "260c51255b316809e0e033ea8b3ad9a4491ceef0db4e92b3507b3cff86fe96bc",
+    "native-usability-toolchain-20260929.log.gz": "6af4e3fc3099e45d925533610971eb56118b90c50dea7ed06f6002855eb63ec3",
+    "native-usability-voxrig-tests-20260929.log.gz": "7111fb1065b083e64b39a1a83d03e7874c43d608802d46189055a154e0d353f6",
+    "native-usability-voxrig-clippy-20260929.log.gz": "8b44ae01357c89dac3e00997b57ded947494ae3e6bc73f1361e7372efe80be79",
+    "native-usability-native-mcp-clippy-20260929.log.gz": "6e1a0e18b0e69462d7bb707390e71b71e933f25df8b2cd5a92734ae567142db2",
+    "native-usability-native-adapter-tests-20260929.log.gz": "426c735f1286f2f8221c2ea4a129ac6f98352d0338ced1b612e9cddd9a8ebfba",
+    "native-usability-registry-tests-20260929.log.gz": "81caf5d5284a221daa2c22cac01bf39226e73a800e6ec2d038215548d812c2e1"
+  }
+}

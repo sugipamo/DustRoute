@@ -7,12 +7,15 @@ and 1.21.11 coexist in Voxrig; DustRoute's physical context remains 1.21.11.
 Entities in the circuit simulator remain deferred. A new large prerequisite
 outside this scope stops the task for a report.
 
-Voxrig is developed in the sibling `../Voxrig` checkout on
-`codex/dustroute-client`, with separate local commits for later upstream review.
-No remote submission has been made. The Cargo `voxrig` feature uses this explicit
-path while the branch is unpublished. A clean checkout needs that sibling; this
-is not a crates.io dependency or an unpinned fetch at build time.
-The operation/recording adapter was validated with sibling commit `b98785e`.
+Voxrig keeps its separate development history on `codex/native-client-usability`
+for later upstream review; no upstream submission has been made. The Cargo
+`voxrig` feature now uses the unmodified `vendor/voxrig` snapshot pinned to
+`47a05029e126cb049ee8a7536e5df867f3851c12`. A clean DustRoute checkout needs no
+sibling repository. [Vendor instructions](../vendor/README.md) describe checksum
+verification and deliberate updates from tested source commits.
+The original operation/recording evidence used `b98785e`; the subsequent
+[usability work](native-client-usability.md) adds static outline targeting,
+actual MCP process recovery trials and an independent-checkout runtime trial.
 
 ## Observation boundary
 
