@@ -133,6 +133,31 @@ pub struct ConfirmedRegion {
     pub readback: ServerReadback,
 }
 
+/// Process-local validation result. Public `ConfirmedRegion` remains a wire /
+/// archive DTO; deserializing it does not produce this observation capability.
+#[derive(Debug, Serialize)]
+#[serde(transparent)]
+pub(crate) struct ValidatedRegion(ConfirmedRegion);
+
+impl ValidatedRegion {
+    pub(crate) fn into_record(self) -> ConfirmedRegion {
+        self.0
+    }
+
+    #[cfg(test)]
+    pub(crate) fn test_sample(record: ConfirmedRegion) -> Self {
+        record
+            .validate(
+                record.snapshot.min,
+                record.snapshot.max,
+                &record.readback.dimension,
+                &record.readback.request_id,
+            )
+            .expect("valid synthetic receipt");
+        Self(record)
+    }
+}
+
 impl ConfirmedRegion {
     fn validate(
         &self,
@@ -398,6 +423,18 @@ impl BotBridge {
         max: Pos,
         dimension: &str,
     ) -> Result<ConfirmedRegion, BotBridgeError> {
+        Ok(self
+            .scan_region_validated(min, max, dimension)
+            .await?
+            .into_record())
+    }
+
+    pub(crate) async fn scan_region_validated(
+        &self,
+        min: Pos,
+        max: Pos,
+        dimension: &str,
+    ) -> Result<ValidatedRegion, BotBridgeError> {
         let request = uuid::Uuid::new_v4().to_string();
         let region: ConfirmedRegion = self.request(
             "scan_region",
@@ -405,7 +442,7 @@ impl BotBridge {
         )
         .await?;
         region.validate(min, max, dimension, &request)?;
-        Ok(region)
+        Ok(ValidatedRegion(region))
     }
 
     pub async fn get_block(

@@ -124,6 +124,27 @@ pub(crate) struct UpdateInput {
     pub behavior_context: Option<RequestedBehaviorContext>,
 }
 
+impl UpdateInput {
+    fn into_request(self, id: BlueprintUpdateId) -> BlueprintUpdateRequest {
+        BlueprintUpdateRequest {
+            id,
+            title: self.title,
+            description: self.description,
+            base_state: self.base_state,
+            base_parent: self.base_parent,
+            candidate_parent: self.candidate_parent,
+            parent_instance: self.parent_instance,
+            child_before: self.child_before,
+            previous_child: self.previous_child,
+            child_after: self.child_after,
+            next_child: self.next_child,
+            revisions: self.revisions,
+            candidate_state: self.candidate_state,
+            behavior_context: self.behavior_context.map(RequestedBehaviorContext::resolve),
+        }
+    }
+}
+
 #[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
 #[serde(tag = "action", rename_all = "snake_case", deny_unknown_fields)]
 pub(crate) enum BlueprintWrite {
@@ -660,16 +681,8 @@ fn perform(
                 BlueprintWrite::ProposeUpdate { request } => {
                     let id = BlueprintUpdateId::new(uuid::Uuid::new_v4().to_string())
                         .map_err(str::to_owned)?;
-                    let mut value = serde_json::to_value(&request).map_err(|e| e.to_string())?;
-                    value["behavior_context"] = serde_json::to_value(
-                        request
-                            .behavior_context
-                            .map(RequestedBehaviorContext::resolve),
-                    )
-                    .map_err(|e| e.to_string())?;
-                    value["id"] = json!(id);
                     updates
-                        .create(serde_json::from_value(value).map_err(|e| e.to_string())?)
+                        .create(request.into_request(id.clone()))
                         .map_err(|e| e.to_string())?;
                     Ok((Some(operation(updates, &id, false)?), true))
                 }

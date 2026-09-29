@@ -9,6 +9,22 @@ use serde::de::DeserializeOwned;
 
 const DEFAULT_TTL_SECONDS: u64 = 60 * 60;
 
+/// Only these expendable records share TTL/rename storage. Catalogs retain
+/// their separate locks and file sync; instances retain file + directory sync.
+#[derive(Clone, Copy, Debug)]
+pub(crate) enum PlanRecordKind {
+    Repairs,
+    CircuitRevisions,
+}
+impl PlanRecordKind {
+    const fn directory(self) -> &'static str {
+        match self {
+            Self::Repairs => "repairs",
+            Self::CircuitRevisions => "circuit_revisions",
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub(crate) struct PlanStateStore {
     root: PathBuf,
@@ -48,11 +64,11 @@ impl PlanStateStore {
 
     pub(crate) fn save<T: Serialize>(
         &self,
-        kind: &str,
+        kind: PlanRecordKind,
         id: uuid::Uuid,
         value: &T,
     ) -> Result<(), String> {
-        let directory = self.root.join(kind);
+        let directory = self.root.join(kind.directory());
         fs::create_dir_all(&directory).map_err(|error| error.to_string())?;
         restrict_directory(&self.root)?;
         restrict_directory(&directory)?;
@@ -70,10 +86,10 @@ impl PlanStateStore {
 
     pub(crate) fn load<T: DeserializeOwned>(
         &self,
-        kind: &str,
+        kind: PlanRecordKind,
         id: uuid::Uuid,
     ) -> Result<Option<T>, String> {
-        let path = self.root.join(kind).join(format!("{id}.json"));
+        let path = self.root.join(kind.directory()).join(format!("{id}.json"));
         let bytes = match fs::read(&path) {
             Ok(bytes) => bytes,
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
@@ -143,7 +159,7 @@ mod tests {
         let id = uuid::Uuid::new_v4();
         writer
             .save(
-                "repairs",
+                PlanRecordKind::Repairs,
                 id,
                 &ExamplePlan {
                     value: "previewable".to_owned(),
@@ -151,7 +167,7 @@ mod tests {
             )
             .unwrap();
         assert_eq!(
-            reader.load("repairs", id).unwrap(),
+            reader.load(PlanRecordKind::Repairs, id).unwrap(),
             Some(ExamplePlan {
                 value: "previewable".to_owned()
             })

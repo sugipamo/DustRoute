@@ -1,4 +1,5 @@
 //! Exercise public tool routing and durable decisions through a real MCP session.
+use super::test_support::{call, connected, start, stop, temporary};
 use super::*;
 use crate::blueprint_mcp::{AssemblyGrounding, BlueprintRecords, BlueprintWrite, Command, execute};
 use dustroute_library::PortDirection;
@@ -6,14 +7,8 @@ use dustroute_library::assembly::*;
 use dustroute_library::blueprint::*;
 use dustroute_library::builtin_blueprints::*;
 use dustroute_translate::{Block, Region, RotationY};
-use rmcp::{
-    ServiceExt,
-    model::{CallToolRequestParams, ClientInfo, ContentBlock},
-};
-use std::{
-    fs,
-    path::{Path, PathBuf},
-};
+
+use std::fs;
 
 pub(crate) use flight_fixture::base as runtime_fixture;
 
@@ -351,139 +346,9 @@ async fn ordinary_door_public_proposal_survives_restart_and_is_freshly_adopted()
 
 #[tokio::test]
 async fn custom_electrical_construction_rechecks_adoption_baseline_settings_and_each_write() {
-    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-    use tokio::net::TcpListener;
-    #[derive(Default)]
-    struct Fake {
-        snapshot: Option<Value>,
-        steps: VecDeque<Value>,
-        writes: usize,
-        partial: bool,
-        unknown_features: bool,
-        wrong_target: bool,
-        fail_after_write: Option<usize>,
-        lose_write_reply_at: Option<usize>,
-        unverified_readback: bool,
-    }
     let root = temporary();
-    let durable_root = root.join("assembly-instances");
-    let fake = Arc::new(std::sync::Mutex::new(Fake::default()));
-    let transport = fake.clone();
-    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let address = listener.local_addr().unwrap().to_string();
-    let bridge = tokio::spawn(async move {
-        loop {
-            let (mut stream, _) = listener.accept().await.unwrap();
-            let mut line = String::new();
-            BufReader::new(&mut stream)
-                .read_line(&mut line)
-                .await
-                .unwrap();
-            let req: Value = serde_json::from_str(&line).unwrap();
-            let result = {
-                let mut state = transport.lock().unwrap();
-                match req["method"].as_str().unwrap() {
-                    "status" => {
-                        json!({"connected":true,"username":"bot","host":if state.wrong_target {"other-server"}else{"localhost"},"port":25565,"version":"1.21.11","dimension":"minecraft:overworld","enabled_features":if state.unknown_features {Value::Null}else{json!(["minecraft:vanilla"])}})
-                    }
-                    "observe_player" => {
-                        json!({"player":"Tester","eye_position":{"x":0.0,"y":180.0,"z":0.0},"yaw":0.0,"pitch":0.0,"dimension":"minecraft:overworld"})
-                    }
-                    "scan_region" => {
-                        let mut snapshot = state.snapshot.clone().unwrap_or_else(|| json!({"min":req["params"]["min"],"max":req["params"]["max"],"blocks":[]}));
-                        if state.partial
-                            || state.fail_after_write.is_some_and(|n| state.writes >= n)
-                        {
-                            snapshot["min"]["x"] =
-                                json!(snapshot["min"]["x"].as_i64().unwrap() + 1);
-                        }
-                        snapshot
-                    }
-                    "preview_region" => json!({"particle_corners":8}),
-                    "wait_ticks" => json!({"waited":true}),
-                    "write_blocks" => {
-                        // Transport stub only: physical callback conformance is
-                        // covered by independent server captures, not this mock.
-                        let expected = state.steps.pop_front().expect("unexpected write");
-                        let active: Vec<Value> = fs::read_dir(&durable_root)
-                            .unwrap()
-                            .filter_map(|entry| {
-                                let path = entry.unwrap().path();
-                                if path.extension().and_then(|s| s.to_str()) != Some("json") {
-                                    return None;
-                                }
-                                let record: Value =
-                                    serde_json::from_slice(&fs::read(path).unwrap()).unwrap();
-                                (record["state"] == "needs_inspection").then_some(record)
-                            })
-                            .collect();
-                        assert_eq!(
-                            active.len(),
-                            1,
-                            "durable intent must exist before every write"
-                        );
-                        let attempt = active[0]["attempts"].as_array().unwrap().last().unwrap();
-                        assert_eq!(
-                            attempt["verified_steps"].as_u64().unwrap() as usize,
-                            attempt["total_steps"].as_u64().unwrap() as usize
-                                - state.steps.len()
-                                - 1
-                        );
-                        assert_eq!(
-                            req["params"]["changes"],
-                            json!([{"pos":expected["position"],"state":expected["state"]}])
-                        );
-                        state.snapshot = Some(expected["expected"].clone());
-                        state.writes += 1;
-                        json!({"submitted_changes":1})
-                    }
-                    method => panic!("unexpected transport method {method}"),
-                }
-            };
-            if req["method"] == "write_blocks" {
-                let state = transport.lock().unwrap();
-                if state.lose_write_reply_at == Some(state.writes) {
-                    // The simulated server applied the command but the TCP
-                    // reply is lost. No process or host fault is injected.
-                    continue;
-                }
-            }
-            let result = if transport.lock().unwrap().unverified_readback {
-                result
-            } else {
-                crate::bridge::test_readback_response(&req, result)
-            };
-            stream
-                .write_all(format!("{}\n", json!({"id":req["id"],"result":result})).as_bytes())
-                .await
-                .unwrap();
-        }
-    });
-    async fn connected(root: &Path, address: &str) -> (Client, tokio::task::JoinHandle<()>) {
-        let mut service = DustRouteMcp::with_policy_and_player(
-            address,
-            McpPolicy {
-                read_only: false,
-                ..Default::default()
-            },
-            "Tester",
-        );
-        service.state_store = PlanStateStore::new(root.to_path_buf(), 3600);
-        let (server_io, client_io) = tokio::io::duplex(1024 * 1024);
-        let server = tokio::spawn(async move {
-            service
-                .serve(server_io)
-                .await
-                .unwrap()
-                .waiting()
-                .await
-                .unwrap();
-        });
-        (
-            ClientInfo::default().serve(client_io).await.unwrap(),
-            server,
-        )
-    }
+    let (fake, address, bridge) =
+        super::test_support::start_construction_bridge(root.join("assembly-instances")).await;
     let f = runtime_fixture::electrical_fixture(false);
     let (client, server) = connected(&root, &address).await;
     let imported = call(&client,"test_circuit_change",json!({"blueprint":{"action":"import","records":{
@@ -1669,49 +1534,6 @@ pub(crate) fn placement_fixture() -> (Value, Value) {
             "revisions":[next_parent,next_child],"candidate_state":candidate
         }}}),
     )
-}
-
-type Client = rmcp::service::RunningService<rmcp::RoleClient, ClientInfo>;
-async fn start(root: &Path) -> (Client, tokio::task::JoinHandle<()>) {
-    // A dead bridge endpoint proves these are local catalog operations, even with read-only world policy.
-    let mut service =
-        DustRouteMcp::with_policy_and_player("127.0.0.1:1", McpPolicy::default(), "Tester");
-    service.state_store = PlanStateStore::new(root.to_path_buf(), 3600);
-    let (server_io, client_io) = tokio::io::duplex(1024 * 1024);
-    let server = tokio::spawn(async move {
-        service
-            .serve(server_io)
-            .await
-            .unwrap()
-            .waiting()
-            .await
-            .unwrap();
-    });
-    (
-        ClientInfo::default().serve(client_io).await.unwrap(),
-        server,
-    )
-}
-async fn call(client: &Client, name: &str, args: Value) -> Value {
-    let result = client
-        .call_tool(
-            CallToolRequestParams::new(name.to_owned())
-                .with_arguments(args.as_object().unwrap().clone()),
-        )
-        .await
-        .unwrap();
-    let ContentBlock::Text(text) = &result.content[0] else {
-        panic!("expected JSON text")
-    };
-    serde_json::from_str(&text.text)
-        .unwrap_or_else(|e| panic!("{name} returned non-JSON: {} ({e})", text.text))
-}
-fn temporary() -> PathBuf {
-    std::env::temp_dir().join(format!("dustroute-mcp-blueprints-{}", uuid::Uuid::new_v4()))
-}
-async fn stop(client: Client, server: tokio::task::JoinHandle<()>) {
-    client.cancel().await.unwrap();
-    server.await.unwrap();
 }
 
 #[tokio::test]

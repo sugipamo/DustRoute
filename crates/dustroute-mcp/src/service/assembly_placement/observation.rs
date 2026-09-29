@@ -1,7 +1,7 @@
 //! Fresh observation outcomes. Only unchanged confirmed samples expose a
 //! baseline; saved JSON is presentation/history, never a live capability.
 use super::*;
-use crate::bridge::{ConfirmedRegion, ServerReadback};
+use crate::bridge::{ServerReadback, ValidatedRegion};
 use dustroute_translate::{MinecraftSnapshot, RegionBounds};
 
 const SAMPLE_INTERVAL: u16 = 20;
@@ -91,12 +91,14 @@ pub(super) fn stable_baseline(
 }
 
 fn compare_samples(
-    first: ConfirmedRegion,
-    second: ConfirmedRegion,
+    first: ValidatedRegion,
+    second: ValidatedRegion,
     expected: &MinecraftSnapshot,
     version: &str,
     bounds: RegionBounds,
 ) -> Result<ObservationOutcome, String> {
+    let first = first.into_record();
+    let second = second.into_record();
     let interval = second
         .readback
         .start_game_tick
@@ -161,7 +163,7 @@ impl DustRouteMcp {
             }
             let first = self
                 .bridge
-                .scan_region_confirmed(bounds.min, bounds.max, &record.target.dimension)
+                .scan_region_validated(bounds.min, bounds.max, &record.target.dimension)
                 .await
                 .map_err(|e| e.to_string())?;
             // Unchanged samples do not establish empty queues or hidden history.
@@ -173,7 +175,7 @@ impl DustRouteMcp {
             record.target.check(&status)?;
             let second = self
                 .bridge
-                .scan_region_confirmed(bounds.min, bounds.max, &record.target.dimension)
+                .scan_region_validated(bounds.min, bounds.max, &record.target.dimension)
                 .await
                 .map_err(|e| e.to_string())?;
             let expected = if record.state == InstanceState::Removed {
@@ -209,18 +211,19 @@ mod tests {
     }
     // Transport validation has its own tests. These synthetic receipts exercise
     // the subsequent sample classification, not server confirmation itself.
-    fn sample(snapshot: MinecraftSnapshot, tick: u64) -> ConfirmedRegion {
-        ConfirmedRegion {
+    fn sample(snapshot: MinecraftSnapshot, tick: u64) -> ValidatedRegion {
+        let record = crate::bridge::ConfirmedRegion {
             readback: serde_json::from_value(json!({
                 "schema_version":"dustroute.server-readback.v1", "kind":"server_confirmed",
                 "request_id":tick.to_string(), "dimension":"minecraft:overworld",
-                "min":snapshot.min,"max":snapshot.max,"checked_cells":2,
+                "min":snapshot.min,"max":snapshot.max,"checked_cells":(snapshot.max.x-snapshot.min.x+1) as u64,
                 "start_game_tick":tick,"end_game_tick":tick,"nonce":"0".repeat(32),
                 "snapshot_sha256":"0".repeat(64),"corrections":[],"hidden_runtime_observed":false
             }))
             .unwrap(),
             snapshot,
-        }
+        };
+        ValidatedRegion::test_sample(record)
     }
     fn observation(outcome: ObservationOutcome) -> InstanceObservation {
         InstanceObservation {
@@ -237,7 +240,10 @@ mod tests {
         for expected in [actual.clone(), snapshot(false)] {
             let first = sample(actual.clone(), 10);
             let second = sample(actual.clone(), 32);
-            let readbacks = json!([first.readback, second.readback]);
+            let readbacks = json!([
+                serde_json::to_value(&first).unwrap()["readback"],
+                serde_json::to_value(&second).unwrap()["readback"]
+            ]);
             let reason = ValidatedAssemblyPlacement::matches(&actual, &expected, "1.21.11").err();
             let result =
                 observation(compare_samples(first, second, &expected, "1.21.11", bounds).unwrap());

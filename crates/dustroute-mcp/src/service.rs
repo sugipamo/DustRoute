@@ -1,9 +1,32 @@
 use std::collections::hash_map::DefaultHasher;
-use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 mod assembly_placement;
+mod circuit_capture;
+mod circuit_reports;
+use circuit_reports::{
+    bounds_json, circuit_identity_json, focused_explanation_json, focused_hierarchy_role_json,
+    focused_role_json, hierarchical_result_json, mixed_ir_json, raw_world_inspection,
+    reverse_result_json, revision_json, revision_validation,
+};
+mod requests;
+#[cfg(test)]
+mod test_support;
+use requests::{
+    AnalyzeLookedAtParams, ConfirmedOperationParams, CoordinateParam, DiagnoseLookedAtParams,
+    DiscoverCircuitParams, GetCircuitRevisionParams, GetLookedAtCircuitIrParams,
+    GetRepairContextParams, InspectLookedAtWorldParams, InvokeOperationParams, MarkCornerParams,
+    NewMacroOptimizationParams, NewOptimizationParams, NewPistonDoorParams, ObserveParams,
+    OperationParams, OptimizationContractParam, OptimizationSearchParam, PlayerParams,
+    PreviewPlacementParams, PreviewRepairParams, PreviewTransitionParams, ProposeRepairsParams,
+    ProposeTransitionParams, RunTransitionParams, ShowOperationParams,
+    StartSelectedRegionConversionParams, TestCircuitChangeParams, TransitionContractParam,
+};
+mod placement_registry;
+use circuit_capture::{CircuitCapture, DiscoveryObservation, is_redstone_candidate_name};
+use placement_registry::PlacementRegistry;
 
 use dustroute_app::DustRouteService;
 use dustroute_optimize::{
@@ -32,7 +55,7 @@ use rmcp::{
         wrapper::Parameters,
     },
     model::{GetPromptResult, Implementation, PromptMessage, Role, ServerCapabilities, ServerInfo},
-    prompt, prompt_handler, prompt_router, schemars, tool, tool_handler, tool_router,
+    prompt, prompt_handler, prompt_router, tool, tool_handler, tool_router,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -44,15 +67,15 @@ use crate::api::{
     DIAGNOSTIC_SCHEMA_V1, ErrorResponse, McpErrorCode, OPTIMIZATION_SCHEMA_V1, PLACEMENT_SCHEMA_V1,
     REPAIR_CONTEXT_SCHEMA_V1, REPAIR_SCHEMA_V1, TRANSITION_SCHEMA_V1, TransitionTraceResponse,
 };
-use crate::state::PlanStateStore;
+use crate::state::{PlanRecordKind, PlanStateStore};
 use crate::{
     BlockChange, BotBridge, McpPolicy, OperationKind, OperationRegistry, OperationStatus,
     PlacementPlan, SelectionSession, TransitionSafety, TransitionSafetyAssessment,
-    assess_transition_safety, behavior_trace_from_recording, discover_connected_region,
-    plan_world_overlay, scenario_trace_from_recording_with_initial,
+    assess_transition_safety, behavior_trace_from_recording, plan_world_overlay,
+    scenario_trace_from_recording_with_initial,
 };
 
-const MAX_FLAT_ANALYSIS_COMPONENTS: usize = 512;
+use circuit_reports::MAX_FLAT_ANALYSIS_COMPONENTS;
 const MAX_TRUTH_TABLE_INPUTS: usize = 16;
 const MAX_TRUTH_TABLE_SETTLE_TICKS: usize = 256;
 const MAX_TRUTH_TABLE_ROWS: usize = 65_536;
@@ -93,18 +116,38 @@ const DEBUG_ONLY_TOOLS: [&str; 7] = [
     "stop_operation",
 ];
 
+/// Selection geometry and its dimension share one lock and one lifetime.
+struct LocatedSelection {
+    session: SelectionSession,
+    dimension: Option<String>,
+}
+impl LocatedSelection {
+    fn new(player: &str) -> Self {
+        Self {
+            session: SelectionSession::new(player),
+            dimension: None,
+        }
+    }
+    fn with_bounds(
+        player: &str,
+        bounds: dustroute_translate::RegionBounds,
+        dimension: String,
+    ) -> Self {
+        let mut selected = Self::new(player);
+        selected.session.set_bounds(bounds);
+        selected.dimension = Some(dimension);
+        selected
+    }
+}
+
 #[derive(Clone)]
 pub struct DustRouteMcp {
     bridge: BotBridge,
-    selections: Arc<Mutex<HashMap<String, SelectionSession>>>,
-    selection_dimensions: Arc<Mutex<HashMap<String, String>>>,
+    selections: Arc<Mutex<HashMap<String, LocatedSelection>>>,
     circuits: Arc<Mutex<HashMap<uuid::Uuid, StoredCircuit>>>,
     tool_router: ToolRouter<Self>,
     prompt_router: PromptRouter<Self>,
-    plans: Arc<Mutex<HashMap<uuid::Uuid, PlacementPlan>>>,
-    plan_dimensions: Arc<Mutex<HashMap<uuid::Uuid, String>>>,
-    revision_placements: Arc<Mutex<HashMap<uuid::Uuid, RevisionPlacementContext>>>,
-    applied_plans: Arc<Mutex<HashMap<uuid::Uuid, bool>>>,
+    placements: Arc<Mutex<PlacementRegistry>>,
     transition_plans: Arc<Mutex<HashMap<uuid::Uuid, StoredTransitionPlan>>>,
     door_plans: Arc<Mutex<HashMap<uuid::Uuid, StoredDoorPlan>>>,
     piston_placements: Arc<Mutex<HashMap<uuid::Uuid, StoredPistonPlacement>>>,
@@ -159,12 +202,6 @@ struct StoredDoorPlan {
     expires_at: Instant,
 }
 
-#[derive(Debug, Deserialize, schemars::JsonSchema)]
-struct NewPistonDoorParams {
-    circuit_id: String,
-    target: crate::piston_door::DoorState,
-}
-
 #[derive(Clone, Debug)]
 struct StoredCircuit {
     player: String,
@@ -175,247 +212,6 @@ struct StoredCircuit {
     expansion: Value,
     complete: bool,
     expires_at: Instant,
-}
-
-#[derive(Debug, Deserialize, schemars::JsonSchema)]
-struct PlayerParams {
-    /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
-    #[schemars(skip)]
-    player: Option<String>,
-}
-
-#[derive(Debug, Deserialize, schemars::JsonSchema)]
-struct ObserveParams {
-    /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
-    #[schemars(skip)]
-    player: Option<String>,
-    /// Ray-cast limit in blocks. Defaults to 64.
-    max_distance: Option<f64>,
-}
-
-#[derive(Debug, Deserialize, schemars::JsonSchema)]
-struct InspectLookedAtWorldParams {
-    /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
-    #[schemars(skip)]
-    player: Option<String>,
-    /// Maximum redstone components followed from the gaze target, from 1 through 32768. Defaults to 8192.
-    max_components: Option<usize>,
-    /// Maximum Manhattan gap followed between nearby components, from 1 through 16. Defaults to 2 so a one-block break remains visible.
-    component_gap: Option<u32>,
-    /// Ray-cast limit in blocks. Defaults to 64.
-    max_distance: Option<f64>,
-    /// Include a raw non-air block list in addition to the redstone list. Defaults to false.
-    include_block_list: Option<bool>,
-    /// Maximum entries returned in each block list, from 1 through 2048. Defaults to 256.
-    max_listed_blocks: Option<usize>,
-}
-
-#[derive(Debug, Deserialize, schemars::JsonSchema)]
-struct MarkCornerParams {
-    /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
-    #[schemars(skip)]
-    player: Option<String>,
-    /// Either `first` or `second`.
-    corner: String,
-    /// Ray-cast limit in blocks. Defaults to 64.
-    max_distance: Option<f64>,
-}
-
-#[derive(Debug, Deserialize, schemars::JsonSchema)]
-struct DiscoverCircuitParams {
-    /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
-    #[schemars(skip)]
-    player: Option<String>,
-    /// Maximum redstone components followed from the gaze target. Defaults to 8192.
-    max_components: Option<usize>,
-    /// Extra blocks around the discovered circuit. Defaults to 1.
-    padding: Option<i32>,
-    /// Maximum Manhattan distance used to discover a nearby disconnected fragment, from 1 through 16. Defaults to 2.
-    fragment_gap: Option<u32>,
-}
-
-#[derive(Debug, Deserialize, schemars::JsonSchema)]
-struct AnalyzeLookedAtParams {
-    /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
-    #[schemars(skip)]
-    player: Option<String>,
-    /// Maximum redstone components followed from the gaze target. Defaults to 8192.
-    max_components: Option<usize>,
-    /// Maximum Manhattan gap considered for broken connections, from 1 through 16. Defaults to 2.
-    fragment_gap: Option<u32>,
-    /// Explicitly enumerate a bounded truth table. Defaults to false.
-    include_truth_table: Option<bool>,
-    /// Maximum inferred input count for truth-table enumeration. Defaults to 16;
-    /// the row and work budgets may reject a smaller practical budget.
-    truth_table_max_inputs: Option<usize>,
-    /// Settle ticks used by truth-table rows. Defaults to 60, maximum 256.
-    truth_table_settle_ticks: Option<usize>,
-    /// Maximum truth-table rows. Defaults to 256, maximum 65536.
-    truth_table_max_rows: Option<usize>,
-    /// Maximum estimated full-world work units. Defaults to 2,000,000.
-    truth_table_max_work_units: Option<u64>,
-    /// Maximum cumulative instantaneous solver iterations. Defaults to 1,000,000.
-    truth_table_max_solver_iterations: Option<usize>,
-    /// Maximum elapsed time for exhaustive inference in milliseconds. Defaults to 120,000.
-    truth_table_max_elapsed_millis: Option<u64>,
-    /// Observation source: gaze (default) or selected_region.
-    scope: Option<String>,
-    /// Immutable circuit snapshot ID returned by an earlier circuit read. When supplied, gaze is not read again.
-    circuit_id: Option<String>,
-}
-
-#[derive(Debug, Deserialize, schemars::JsonSchema)]
-struct StartSelectedRegionConversionParams {
-    /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
-    #[schemars(skip)]
-    player: Option<String>,
-    /// Explicitly enumerate a bounded truth table. Defaults to false.
-    include_truth_table: Option<bool>,
-    /// Maximum inferred input count for truth-table enumeration. Defaults to 16.
-    truth_table_max_inputs: Option<usize>,
-    /// Settle ticks used by truth-table rows. Defaults to 60, maximum 256.
-    truth_table_settle_ticks: Option<usize>,
-    /// Maximum truth-table rows. Defaults to 256, maximum 65536.
-    truth_table_max_rows: Option<usize>,
-    /// Maximum estimated full-world work units. Defaults to 2,000,000.
-    truth_table_max_work_units: Option<u64>,
-    /// Maximum cumulative instantaneous solver iterations. Defaults to 1,000,000.
-    truth_table_max_solver_iterations: Option<usize>,
-    /// Maximum elapsed time for exhaustive inference in milliseconds. Defaults to 120,000.
-    truth_table_max_elapsed_millis: Option<u64>,
-}
-
-#[derive(Debug, Deserialize, schemars::JsonSchema)]
-struct DiagnoseLookedAtParams {
-    /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
-    #[schemars(skip)]
-    player: Option<String>,
-    /// Maximum redstone components followed from the gaze target. Defaults to 8192.
-    max_components: Option<usize>,
-    /// Maximum Manhattan gap considered when discovering broken fragments, from 1 through 16. Defaults to 2.
-    fragment_gap: Option<u32>,
-    /// Immutable circuit snapshot ID returned by an earlier circuit read. Omit to capture the circuit at the current gaze.
-    circuit_id: Option<String>,
-}
-
-#[derive(Debug, Deserialize, schemars::JsonSchema)]
-struct GetLookedAtCircuitIrParams {
-    /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
-    #[schemars(skip)]
-    player: Option<String>,
-    /// Maximum redstone components followed from the gaze target. Defaults to 8192.
-    max_components: Option<usize>,
-    /// Maximum Manhattan gap considered when discovering broken fragments. Defaults to 2.
-    fragment_gap: Option<u32>,
-    /// Expand one mixed-IR node from the returned summary into physical block details.
-    node_id: Option<usize>,
-    /// Analysis ID returned by the summary call. Required with node_id to prevent stale expansion.
-    analysis_id: Option<String>,
-    /// Immutable circuit snapshot ID returned by an earlier circuit read. Omit to capture the circuit at the current gaze.
-    circuit_id: Option<String>,
-}
-
-#[derive(Debug, Deserialize, schemars::JsonSchema)]
-struct TestCircuitChangeParams {
-    /// Alternative to block edits: append Blueprint drafts, capture an Assembly,
-    /// or create an explicit child-update proposal. Does not write Minecraft.
-    blueprint: Option<crate::blueprint_mcp::BlueprintWrite>,
-    /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
-    #[schemars(skip)]
-    player: Option<String>,
-    /// Virtual full-state replacements (up to 64). Air deletes; empty creates an unchanged revision.
-    #[serde(default)]
-    changes: Vec<VirtualBlockChangeParam>,
-    /// Number of simulator ticks after applying the virtual changes. Defaults to 64, maximum 256.
-    simulation_ticks: Option<usize>,
-    /// Exactly one of circuit_id (observed snapshot) or revision_id (hypothetical parent).
-    circuit_id: Option<String>,
-    revision_id: Option<String>,
-}
-
-#[derive(Debug, Deserialize, schemars::JsonSchema)]
-struct VirtualBlockChangeParam {
-    position: CoordinateParam,
-    /// Replacement block name such as minecraft:stone. Block-state properties default to empty.
-    block: String,
-    /// Full replacement properties; omitted means an empty property map.
-    #[serde(default)]
-    properties: BTreeMap<String, String>,
-}
-
-#[derive(Debug, Deserialize, schemars::JsonSchema)]
-struct GetCircuitRevisionParams {
-    /// Alternative to revision_id: read the local Blueprint catalog or an exact
-    /// source/type/classification/Assembly record. Saved records are not proof.
-    blueprint: Option<crate::blueprint_mcp::BlueprintRead>,
-    #[serde(default)]
-    revision_id: String,
-    /// Include the literal snapshot and modeled Assembly Revision, if available.
-    include_snapshot: Option<bool>,
-}
-
-#[derive(Clone, Copy, Debug, Deserialize, schemars::JsonSchema)]
-struct CoordinateParam {
-    x: i32,
-    y: i32,
-    z: i32,
-}
-
-#[derive(Debug, Deserialize, schemars::JsonSchema)]
-struct PreviewPlacementParams {
-    /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
-    #[schemars(skip)]
-    player: Option<String>,
-    /// Built-in circuit: half-adder, half-subtractor, mux2, decoder1to2, full-adder, or piston-door-1x2.
-    #[serde(default)]
-    circuit: String,
-    /// Alternative to a built-in name: plan the cumulative revision diff at its original coordinates.
-    revision_id: Option<String>,
-    /// Alternative to circuit/revision: an adopted Assembly whose ancestry is grounded in a complete captured Circuit Revision. Reflected only at the original dimension and coordinates.
-    assembly_revision_id: Option<dustroute_library::blueprint::AssemblyRevisionId>,
-    /// Construct the adopted Assembly at an explicit new target, after a fresh
-    /// review there. Requires the unified electrical execution context.
-    assembly_target: Option<assembly_placement::AssemblyPlacementTarget>,
-    /// Maximum number of blocks allowed in one placement plan. Defaults to 32768.
-    max_blocks: Option<usize>,
-    /// Run directional compression followed by global compaction before creating the placement plan.
-    optimize: Option<bool>,
-}
-
-#[derive(Debug, Deserialize, schemars::JsonSchema)]
-struct OperationParams {
-    /// Operation UUID returned by a start or preview tool.
-    operation_id: String,
-}
-
-#[derive(Debug, Deserialize, schemars::JsonSchema)]
-struct ConfirmedOperationParams {
-    /// Operation UUID returned by new_placement.
-    operation_id: String,
-    /// Must be true to acknowledge that this call changes the test world.
-    confirm: bool,
-}
-
-#[derive(Debug, Deserialize, schemars::JsonSchema)]
-struct ShowOperationParams {
-    /// Operation UUID returned by a new_* tool or a Blueprint update proposal.
-    operation_id: String,
-    /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
-    #[schemars(skip)]
-    player: Option<String>,
-}
-
-#[derive(Debug, Deserialize, schemars::JsonSchema)]
-struct InvokeOperationParams {
-    /// Required for Blueprint update operations; never used for world changes.
-    /// Adoption revalidates the candidate and appends immutable records locally.
-    blueprint_decision: Option<crate::blueprint_mcp::BlueprintDecision>,
-    /// Operation UUID returned by a new_* tool or a Blueprint update proposal.
-    operation_id: String,
-    /// Acknowledge the previewed action: a local Blueprint decision or a world operation.
-    confirm: bool,
-    /// Optional signal contracts used only by transition-test operations.
-    contracts: Option<Vec<TransitionContractParam>>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -460,113 +256,6 @@ struct StoredTransitionPlan {
     restoration_verified: bool,
 }
 
-#[derive(Debug, Deserialize, schemars::JsonSchema)]
-struct ProposeTransitionParams {
-    /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
-    #[schemars(skip)]
-    player: Option<String>,
-    /// Number of game ticks observed after activation, from 1 through 200. Defaults to 20.
-    observation_ticks: Option<u16>,
-    /// Maximum block update events recorded, from 1 through 65536. Defaults to 16384.
-    max_events: Option<usize>,
-    /// Circuit snapshot to use when creating transition plans.
-    circuit_id: String,
-}
-
-#[derive(Debug, Deserialize, schemars::JsonSchema)]
-struct PreviewTransitionParams {
-    operation_id: String,
-    /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
-    #[schemars(skip)]
-    player: Option<String>,
-}
-
-#[derive(Debug, Deserialize, schemars::JsonSchema)]
-struct RunTransitionParams {
-    operation_id: String,
-    /// Must be true because this normally activates a lever in the test world.
-    confirm: bool,
-    /// Optional output contracts used to distinguish candidates, confirmed hazards, and intended pulses.
-    contracts: Option<Vec<TransitionContractParam>>,
-}
-
-#[derive(Debug, Deserialize, schemars::JsonSchema)]
-struct TransitionContractParam {
-    x: i32,
-    y: i32,
-    z: i32,
-    /// steady_state_only, stable_high, stable_low, intentional_high_pulse, intentional_low_pulse, maximum_high_pulse, or maximum_low_pulse.
-    intent: String,
-    /// Widths for live scenarios are measured in game ticks.
-    minimum_width_ticks: Option<u64>,
-    /// Required for intentional and maximum-width pulse contracts.
-    maximum_width_ticks: Option<u64>,
-}
-
-#[derive(Debug)]
-struct AdaptiveComponentScan {
-    snapshot: dustroute_translate::MinecraftSnapshot,
-    component_count: usize,
-    component_limit: usize,
-    limit_reached: bool,
-    scanned_tiles: usize,
-    scanned_block_positions: usize,
-}
-
-#[derive(Debug, Deserialize, schemars::JsonSchema)]
-struct ProposeRepairsParams {
-    /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
-    #[schemars(skip)]
-    player: Option<String>,
-    /// Maximum Manhattan gap between disconnected fragments. Defaults to 2.
-    max_gap: Option<u32>,
-    /// Circuit snapshot to use when creating repair plans.
-    circuit_id: String,
-}
-
-#[derive(Debug, Deserialize, schemars::JsonSchema)]
-struct GetRepairContextParams {
-    /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
-    #[schemars(skip)]
-    player: Option<String>,
-    /// Immutable circuit snapshot used to ground every fact and hypothesis.
-    circuit_id: String,
-    /// Optional repair operation returned by new_repair. When omitted, the highest-ranked current hypothesis is explained.
-    operation_id: Option<String>,
-    /// Maximum Manhattan gap considered for repair evidence. Defaults to 2.
-    max_gap: Option<u32>,
-}
-
-#[derive(Debug, Deserialize, schemars::JsonSchema)]
-struct OptimizationFocusParam {
-    min: CoordinateParam,
-    max: CoordinateParam,
-}
-
-#[derive(Debug, Deserialize, schemars::JsonSchema)]
-struct NewOptimizationParams {
-    /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
-    #[schemars(skip)]
-    player: Option<String>,
-    /// Immutable observed circuit to optimize.
-    circuit_id: String,
-    /// Inclusive physical region that may change. Every block outside remains fixed.
-    focus: OptimizationFocusParam,
-    /// Currently wire_length. Future objectives will be added explicitly.
-    objective: String,
-    /// Explicit preservation contract. Omitted fields use the documented safe defaults.
-    contract: Option<OptimizationContractParam>,
-    /// Optional bounded-search limits. Omitted fields use safe defaults.
-    search: Option<OptimizationSearchParam>,
-}
-
-#[derive(Debug, Default, Deserialize, schemars::JsonSchema)]
-struct OptimizationSearchParam {
-    max_expansions: Option<usize>,
-    max_candidates: Option<usize>,
-    max_millis: Option<u64>,
-}
-
 fn optimization_search_budget(
     param: Option<OptimizationSearchParam>,
 ) -> Result<PhysicalOptimizationSearchBudget, String> {
@@ -586,70 +275,6 @@ fn optimization_search_budget(
         return Err("max_millis must be 1..=10000".to_owned());
     }
     Ok(budget)
-}
-
-#[derive(Debug, Deserialize, schemars::JsonSchema)]
-struct NewMacroOptimizationParams {
-    /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
-    #[schemars(skip)]
-    player: Option<String>,
-    /// Immutable observed circuit containing the proposed functional cell.
-    circuit_id: String,
-    /// Candidate component_id returned by convert_from_circuit.
-    component_id: String,
-    /// Explicit preservation contract. Omitted fields use the documented safe defaults.
-    contract: Option<OptimizationContractParam>,
-}
-
-#[derive(Debug, Default, Deserialize, schemars::JsonSchema)]
-struct OptimizationContractParam {
-    logical: Option<LogicalContractParam>,
-    timing: Option<TimingContractParam>,
-    pulse: Option<PulseContractParam>,
-    analog: Option<AnalogContractParam>,
-    boundary: Option<BoundaryContractParam>,
-    mutation: Option<MutationContractParam>,
-}
-
-#[derive(Debug, Default, Deserialize, schemars::JsonSchema)]
-struct LogicalContractParam {
-    /// Currently exact_truth_table.
-    mode: Option<String>,
-}
-
-#[derive(Debug, Default, Deserialize, schemars::JsonSchema)]
-struct TimingContractParam {
-    /// exact_trace, exact_transitions, bounded_delay, settled_value_only, or preserve_order.
-    mode: Option<String>,
-    maximum_added_redstone_ticks: Option<usize>,
-    settle_deadline_redstone_ticks: Option<usize>,
-}
-
-#[derive(Debug, Default, Deserialize, schemars::JsonSchema)]
-struct PulseContractParam {
-    allow_new_pulses: Option<bool>,
-    allow_removed_pulses: Option<bool>,
-    maximum_width_delta_redstone_ticks: Option<usize>,
-}
-
-#[derive(Debug, Default, Deserialize, schemars::JsonSchema)]
-struct AnalogContractParam {
-    preserve_strength: Option<bool>,
-}
-
-#[derive(Debug, Default, Deserialize, schemars::JsonSchema)]
-struct BoundaryContractParam {
-    preserve_blocks: Option<bool>,
-    preserve_facing: Option<bool>,
-    preserve_driver_positions: Option<bool>,
-}
-
-#[derive(Debug, Default, Deserialize, schemars::JsonSchema)]
-struct MutationContractParam {
-    focus_only: Option<bool>,
-    allow_temporary_expansion: Option<bool>,
-    maximum_changed_blocks: Option<usize>,
-    automatic_apply: Option<bool>,
 }
 
 fn optimization_contract_from_param(
@@ -796,15 +421,6 @@ fn contract_assessment_json(assessment: &OptimizationContractAssessment) -> Valu
         "boundary": contract_check_json(&assessment.boundary),
         "mutation": contract_check_json(&assessment.mutation),
     })
-}
-
-#[derive(Debug, Deserialize, schemars::JsonSchema)]
-struct PreviewRepairParams {
-    /// Repair operation UUID returned by new_repair.
-    operation_id: String,
-    /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
-    #[schemars(skip)]
-    player: Option<String>,
 }
 
 fn json_text(mut value: Value) -> String {
@@ -982,10 +598,6 @@ fn transition_contracts(
     Ok(contracts)
 }
 
-fn bounds_json(bounds: dustroute_translate::RegionBounds) -> Value {
-    json!({ "min": bounds.min, "max": bounds.max })
-}
-
 fn mark_observation_incomplete(scene: &mut dustroute_physical::PhysicalScene) {
     for region in &mut scene.observation.regions {
         region.completeness = dustroute_physical::RegionCompleteness::PartiallyUnavailable;
@@ -1067,1096 +679,6 @@ fn reverse_request_for_truth_table(
         ))
 }
 
-fn is_supported_redstone_name(name: &str) -> bool {
-    dustroute_translate::world::device_program::BUILTIN_DEVICES
-        .iter()
-        .any(|d| {
-            let short = name.strip_prefix("minecraft:").unwrap_or(name);
-            d.spec().observed_names.contains(&short)
-        })
-        || matches!(
-            name,
-            "minecraft:redstone_wire"
-                | "minecraft:redstone_torch"
-                | "minecraft:redstone_wall_torch"
-                | "minecraft:repeater"
-                | "minecraft:comparator"
-                | "minecraft:lever"
-                | "minecraft:redstone_block"
-                | "minecraft:observer"
-                | "minecraft:piston"
-                | "minecraft:sticky_piston"
-        )
-}
-
-fn is_redstone_candidate_name(name: &str) -> bool {
-    is_supported_redstone_name(name)
-        || matches!(
-            name,
-            "minecraft:observer"
-                | "minecraft:redstone_lamp"
-                | "minecraft:target"
-                | "minecraft:dispenser"
-                | "minecraft:dropper"
-                | "minecraft:hopper"
-                | "minecraft:daylight_detector"
-                | "minecraft:tripwire_hook"
-                | "minecraft:sculk_sensor"
-                | "minecraft:calibrated_sculk_sensor"
-        )
-        || name.ends_with("_copper_bulb")
-        || name == "minecraft:copper_bulb"
-        || name.ends_with("_button")
-        || name.ends_with("_pressure_plate")
-}
-
-fn position_on_boundary(position: Pos, min: Pos, max: Pos) -> bool {
-    position.x == min.x
-        || position.x == max.x
-        || position.y == min.y
-        || position.y == max.y
-        || position.z == min.z
-        || position.z == max.z
-}
-
-fn raw_world_inspection(
-    snapshot: &dustroute_translate::MinecraftSnapshot,
-    target: Pos,
-    dimension: &str,
-    include_block_list: bool,
-    max_listed_blocks: usize,
-) -> Value {
-    let size = Pos::new(
-        snapshot.max.x - snapshot.min.x + 1,
-        snapshot.max.y - snapshot.min.y + 1,
-        snapshot.max.z - snapshot.min.z + 1,
-    );
-    let volume = i64::from(size.x) * i64::from(size.y) * i64::from(size.z);
-    let mut counts = BTreeMap::<String, usize>::new();
-    let mut chunks = BTreeSet::new();
-    let mut redstone = Vec::new();
-    let mut modeled_redstone_count = 0_usize;
-    let mut boundary_non_air_count = 0_usize;
-    let mut boundary_redstone_count = 0_usize;
-    let mut state_property_counts = BTreeMap::<String, usize>::new();
-    let mut target_block = None;
-    for block in &snapshot.blocks {
-        *counts.entry(block.name.clone()).or_default() += 1;
-        chunks.insert((block.pos.x.div_euclid(16), block.pos.z.div_euclid(16)));
-        if position_on_boundary(block.pos, snapshot.min, snapshot.max) {
-            boundary_non_air_count += 1;
-        }
-        for property in block.properties.keys() {
-            *state_property_counts.entry(property.clone()).or_default() += 1;
-        }
-        if block.pos == target {
-            target_block = Some(block);
-        }
-        if is_redstone_candidate_name(&block.name) {
-            if is_supported_redstone_name(&block.name) {
-                modeled_redstone_count += 1;
-            }
-            if position_on_boundary(block.pos, snapshot.min, snapshot.max) {
-                boundary_redstone_count += 1;
-            }
-            redstone.push(block);
-        }
-    }
-    redstone.sort_by_key(|block| {
-        (
-            block.pos.x.abs_diff(target.x)
-                + block.pos.y.abs_diff(target.y)
-                + block.pos.z.abs_diff(target.z),
-            block.pos,
-        )
-    });
-    let listed_redstone = redstone.iter().take(max_listed_blocks).collect::<Vec<_>>();
-    let listed_blocks = include_block_list.then(|| {
-        snapshot
-            .blocks
-            .iter()
-            .take(max_listed_blocks)
-            .collect::<Vec<_>>()
-    });
-    let non_air_count = snapshot.blocks.len();
-    let air_count = usize::try_from(volume)
-        .unwrap_or(usize::MAX)
-        .saturating_sub(non_air_count);
-    json!({
-        "ok": true,
-        "mode": "raw_world_inspection",
-        "inference_applied": false,
-        "dimension": dimension,
-        "target": target,
-        "target_block": target_block,
-        "scan": {
-            "requested_and_returned_bounds": { "min": snapshot.min, "max": snapshot.max },
-            "size": size,
-            "volume": volume,
-            "complete": true,
-            "completeness_basis": "the bridge rejects the entire scan if any coordinate is unavailable",
-            "chunk_columns_with_non_air_blocks": chunks.len()
-        },
-        "counts": {
-            "air": air_count,
-            "non_air": non_air_count,
-            "redstone_candidates": redstone.len(),
-            "modeled_redstone": modeled_redstone_count,
-            "unmodeled_redstone_candidates": redstone.len().saturating_sub(modeled_redstone_count),
-            "by_block_name": counts,
-            "state_properties_present": state_property_counts
-        },
-        "boundary": {
-            "non_air_blocks": boundary_non_air_count,
-            "redstone_candidates": boundary_redstone_count,
-            "redstone_touches_boundary": boundary_redstone_count > 0,
-            "guidance": (boundary_redstone_count > 0).then_some(
-                "redstone reaches the raw scan boundary; increase the radius before assuming the circuit is complete"
-            )
-        },
-        "redstone_blocks": listed_redstone,
-        "redstone_blocks_truncated": redstone.len() > max_listed_blocks,
-        "blocks": listed_blocks,
-        "blocks_truncated": include_block_list && non_air_count > max_listed_blocks
-    })
-}
-
-fn logical_role_json(translated: &dustroute_translate::ReverseResult) -> Value {
-    serde_json::to_value(dustroute_translate::derive_local_logic(translated))
-        .unwrap_or_else(|error| json!({ "classification": "unknown", "reason": error.to_string() }))
-}
-
-fn focused_role_json(translated: &dustroute_translate::ReverseResult, target: Pos) -> Value {
-    let focused = dustroute_translate::classify_focused_role(translated, target);
-    let physical_component = translated
-        .analysis
-        .scene
-        .component_at(target)
-        .map(|component| component.id);
-    let recognized_gates = physical_component
-        .map(|component| {
-            translated
-                .gate_view
-                .gates
-                .iter()
-                .filter(|gate| gate.physical_components.contains(&component))
-                .collect::<Vec<_>>()
-        })
-        .unwrap_or_default();
-    let observed_block = translated
-        .analysis
-        .scene
-        .component_at(target)
-        .map(|component| &component.block);
-    let Some(component_id) = focused.signal_component else {
-        return json!({
-            "position": target,
-            "block": observed_block.map(|block| block.kind),
-            "observed_name": observed_block.and_then(|block| block.observed_name.as_deref()),
-            "observed_properties": observed_block.map(|block| &block.observed_properties),
-            "capabilities": observed_block.map(dustroute_physical::Block::capabilities),
-            "physical_component": physical_component,
-            "recognized_gates": recognized_gates,
-            "role": "support_or_unresolved"
-        });
-    };
-    json!({
-        "position": target,
-        "block": observed_block.map(|block| block.kind),
-        "observed_name": observed_block.and_then(|block| block.observed_name.as_deref()),
-        "observed_properties": observed_block.map(|block| &block.observed_properties),
-        "capabilities": observed_block.map(dustroute_physical::Block::capabilities),
-        "physical_component": physical_component,
-        "recognized_gates": recognized_gates,
-        "signal_component": component_id,
-        "incoming_components": focused.incoming_components,
-        "outgoing_components": focused.outgoing_components,
-        "role": focused.role
-    })
-}
-
-fn focused_explanation_json(
-    analysis: &dustroute_translate::PhysicalAnalysis,
-    target: Pos,
-    analysis_complete: bool,
-) -> Value {
-    serde_json::to_value(dustroute_translate::explain_focused_component(
-        analysis,
-        target,
-        analysis_complete,
-    ))
-    .unwrap_or_else(|error| {
-        json!({
-            "position": target,
-            "status": "unavailable",
-            "reason": format!("focused explanation serialization failed: {error}"),
-        })
-    })
-}
-
-fn focused_scene_explanation_json(
-    scene: &dustroute_physical::PhysicalScene,
-    hierarchy: &dustroute_ir::HierarchicalIr,
-    target: Pos,
-    analysis_complete: bool,
-) -> Value {
-    serde_json::to_value(dustroute_translate::explain_focused_scene(
-        scene,
-        hierarchy,
-        target,
-        analysis_complete,
-    ))
-    .unwrap_or_else(|error| {
-        json!({
-            "position": target,
-            "status": "unavailable",
-            "reason": format!("focused explanation serialization failed: {error}"),
-        })
-    })
-}
-
-fn focused_hierarchy_role_json(
-    scene: &dustroute_physical::PhysicalScene,
-    hierarchy: &dustroute_ir::HierarchicalIr,
-    target: Pos,
-) -> Value {
-    let Some(component) = scene.component_at(target) else {
-        return json!({
-            "position": target,
-            "role": "support_or_unresolved",
-            "recognized_cells": []
-        });
-    };
-    let incoming = scene
-        .connections
-        .iter()
-        .filter(|connection| connection.sink.component == component.id)
-        .map(|connection| connection.source.component)
-        .collect::<BTreeSet<_>>();
-    let outgoing = scene
-        .connections
-        .iter()
-        .filter(|connection| connection.source.component == component.id)
-        .map(|connection| connection.sink.component)
-        .collect::<BTreeSet<_>>();
-    let cells = hierarchy
-        .cell_graph
-        .value
-        .cells
-        .gates
-        .iter()
-        .filter(|cell| cell.physical_components.contains(&component.id))
-        .collect::<Vec<_>>();
-    let role = if incoming.len() > 1 {
-        "signal_merge"
-    } else if outgoing.len() > 1 {
-        "signal_branch"
-    } else if !incoming.is_empty() || !outgoing.is_empty() {
-        "intermediate_path"
-    } else {
-        "isolated_or_unresolved"
-    };
-    json!({
-        "position": target,
-        "block": component.block.kind,
-        "observed_name": component.block.observed_name,
-        "observed_properties": component.block.observed_properties,
-        "capabilities": component.block.capabilities(),
-        "physical_component": component.id,
-        "incoming_components": incoming,
-        "outgoing_components": outgoing,
-        "recognized_cells": cells,
-        "role": role,
-        "physical_origin": hierarchy.cell_graph.provenance.physical_positions.get(&component.id)
-    })
-}
-
-fn capability_report_json(scene: &dustroute_physical::PhysicalScene) -> Value {
-    const MAX_CAPABILITY_ISSUE_SAMPLES: usize = 32;
-    let report = scene.capability_report();
-    let mut counts = BTreeMap::<String, usize>::new();
-    for issue in &report.issues {
-        *counts
-            .entry(format!("{:?}:{:?}", issue.stage, issue.level).to_lowercase())
-            .or_default() += 1;
-    }
-    json!({
-        "groups": report.groups,
-        "issue_count": report.issues.len(),
-        "issue_counts_by_stage_and_level": counts,
-        "issue_samples": report.issues.iter().take(MAX_CAPABILITY_ISSUE_SAMPLES).collect::<Vec<_>>(),
-        "issues_truncated": report.issues.len() > MAX_CAPABILITY_ISSUE_SAMPLES
-    })
-}
-
-fn signal_liveness_json(
-    scene: &dustroute_physical::PhysicalScene,
-    focus: Option<dustroute_physical::Pos>,
-) -> Value {
-    const MAX_FINDINGS: usize = 64;
-    const MAX_RANKED_FINDINGS: usize = 16;
-    let report = dustroute_translate::analyze_signal_liveness(scene);
-    let ranked = focus.map(|focus| {
-        dustroute_translate::rank_liveness_findings(scene, &report, focus)
-            .into_iter()
-            .take(MAX_RANKED_FINDINGS)
-            .collect::<Vec<_>>()
-    });
-    let source_counts =
-        report
-            .sources
-            .iter()
-            .fold(BTreeMap::<String, usize>::new(), |mut counts, source| {
-                let kind = match source.kind {
-                    dustroute_translate::SignalSourceKind::ControllableInput => {
-                        "controllable_input"
-                    }
-                    dustroute_translate::SignalSourceKind::IntrinsicSource => "intrinsic_source",
-                    dustroute_translate::SignalSourceKind::ObservationBoundary => {
-                        "observation_boundary"
-                    }
-                    dustroute_translate::SignalSourceKind::InferredPrimaryInput => {
-                        "inferred_primary_input"
-                    }
-                };
-                *counts.entry(kind.to_owned()).or_default() += 1;
-                counts
-            });
-    let external_input_waiting = report
-        .required_input_assessments
-        .iter()
-        .filter(|assessment| {
-            assessment.status == dustroute_translate::RequiredInputStatus::AwaitingExternalInput
-        })
-        .take(MAX_FINDINGS)
-        .collect::<Vec<_>>();
-    json!({
-        "physical_traversal_group_count": scene.physical_traversal_groups().len(),
-        "directed_signal_region_count": report.directed_regions.len(),
-        "cyclic_directed_signal_region_count": report.directed_regions.iter().filter(|region| region.cyclic).count(),
-        "drive_source_count": report.drive_sources.len(),
-        "source_counts_by_kind": source_counts,
-        "source_evidence": report.sources.iter().take(MAX_FINDINGS).collect::<Vec<_>>(),
-        "drive_reachable_component_count": report.drive_reachable.len(),
-        "potentially_drive_reachable_component_count": report.potential_drive_reachable.len(),
-        "external_input_waiting_count": report.required_input_assessments.iter().filter(|assessment| assessment.status == dustroute_translate::RequiredInputStatus::AwaitingExternalInput).count(),
-        "external_input_waiting": external_input_waiting,
-        "undriven_required_input_count": report.undriven_inputs.len(),
-        "undriven_required_inputs": report.undriven_inputs.iter().take(MAX_FINDINGS).collect::<Vec<_>>(),
-        "ranked_findings_near_focus": ranked,
-        "findings_truncated": report.undriven_inputs.len() > MAX_FINDINGS,
-        "interpretation": "confirmed sources, inferred primary inputs, and genuine no-source failures are separate; inferred external inputs are not automatic repair evidence"
-    })
-}
-
-fn hierarchical_result_json(
-    bounds: dustroute_translate::RegionBounds,
-    hierarchy: &dustroute_ir::HierarchicalIr,
-    focused: Value,
-    expansion: &Value,
-    focus: Option<dustroute_physical::Pos>,
-) -> Value {
-    let scene = &hierarchy.physical_graph.value.scene;
-    let mixed = dustroute_ir::build_mixed_ir(hierarchy);
-    let mixed_counts = mixed
-        .nodes
-        .iter()
-        .fold(BTreeMap::new(), |mut counts, node| {
-            let representation = match &node.kind {
-                dustroute_ir::MixedNodeKind::LogicGate { .. } => "logic_gate",
-                dustroute_ir::MixedNodeKind::TimedCell { .. } => "timed_cell",
-                dustroute_ir::MixedNodeKind::PhysicalRegion => "physical_region",
-                dustroute_ir::MixedNodeKind::Boundary { .. } => "boundary",
-            };
-            *counts.entry(representation).or_insert(0_usize) += 1;
-            counts
-        });
-    let analysis_complete =
-        expansion["limit_reached"] != Value::Bool(true) && scene.observation.is_complete();
-    let focused_explanation = focus
-        .map(|target| focused_scene_explanation_json(scene, hierarchy, target, analysis_complete));
-    json!({
-        "ok": true,
-        "analysis_mode": "hierarchical_local_first",
-        "bounds": bounds_json(bounds),
-        "analysis_complete": expansion["limit_reached"] != Value::Bool(true),
-        "focused_component": focused,
-        "focused_explanation": focused_explanation,
-        "expansion": expansion,
-        "block_capabilities": capability_report_json(scene),
-        "signal_liveness": signal_liveness_json(scene, focus),
-        "stages": {
-            "physical_snapshot": {
-                "completeness": hierarchy.physical_snapshot.completeness,
-                "components": scene.components.len(),
-                "diagnostic_count": hierarchy.physical_snapshot.diagnostics.len(),
-                "diagnostics": hierarchy.physical_snapshot.diagnostics.iter().take(16).collect::<Vec<_>>(),
-                "diagnostics_truncated": hierarchy.physical_snapshot.diagnostics.len() > 16
-            },
-            "physical_graph": {
-                "completeness": hierarchy.physical_graph.completeness,
-                "directed_connections": scene.connections.len(),
-                "physical_traversal_groups": scene.physical_traversal_groups().len(),
-                "fragments": scene.fragments.len(),
-                "unresolved": hierarchy.physical_graph.unresolved
-            },
-            "cell_graph": {
-                "completeness": hierarchy.cell_graph.completeness,
-                "cell_count": hierarchy.cell_graph.value.cells.gates.len(),
-                "unresolved_component_count": hierarchy.cell_graph.unresolved.len(),
-                "detail": "represented by mixed_ir node references; recursive cell payload omitted"
-            },
-            "logic_graph": {
-                "completeness": hierarchy.logic_graph.completeness,
-                "expression_count": hierarchy.logic_graph.value.expressions.expressions.len(),
-                "detail": "recursive expressions omitted; follow mixed_ir edges by node id"
-            },
-            "mixed_ir": {
-                "physical_component_count": mixed.physical_component_count,
-                "recognized_component_count": mixed.recognized_component_count,
-                "unresolved_component_count": mixed.unresolved_component_count,
-                "node_count": mixed.nodes.len(),
-                "edge_count": mixed.edges.len(),
-                "representation_counts": mixed_counts,
-                "nodes": mixed.nodes,
-                "edges": mixed.edges
-            },
-            "functional_graph": {
-                "completeness": hierarchy.functional_graph.completeness,
-                "functions": hierarchy.functional_graph.value.functions,
-                "validity": hierarchy.temporal.timing,
-            }
-        },
-        "temporal": {
-            "timing": hierarchy.temporal.timing,
-            "timed_nodes": hierarchy.temporal.timed_circuit.nodes.len(),
-            "timed_edges": hierarchy.temporal.timed_circuit.edges.len(),
-            "steady_state_retained_components": hierarchy.temporal.steady_state.retained_components.len(),
-            "steady_state_compressed_components": hierarchy.temporal.steady_state.compressed_components.len(),
-            "steady_state_edges": hierarchy.temporal.steady_state.edges.len(),
-            "transient_assessment": {
-                "status": "not_simulated",
-                "findings": [],
-                "guidance": "timing risk is structural only; run transition scenarios before claiming that a pulse was observed"
-            }
-        },
-        "truth_table": null,
-        "truth_table_status": "skipped_large_circuit",
-        "truth_table_skip": {
-            "code": "flat_analysis_component_threshold",
-            "component_count": expansion["components_loaded"],
-            "threshold": MAX_FLAT_ANALYSIS_COMPONENTS,
-            "guidance": "set include_truth_table=true to request bounded exhaustive simulation"
-        },
-        "truth_table_skipped": "large circuits use local cells and hierarchical summaries instead of a flat whole-circuit truth table"
-    })
-}
-
-fn circuit_identity_json(
-    hierarchy: &dustroute_ir::HierarchicalIr,
-    logical_role: Option<&dustroute_translate::LogicalRole>,
-    analysis_complete: bool,
-    repair_count: usize,
-) -> Value {
-    const MAX_CANDIDATE_SAMPLES: usize = 8;
-    const MAX_GATE_SAMPLES: usize = 12;
-    let mut local_gate_counts = BTreeMap::<String, usize>::new();
-    for gate in &hierarchy.cell_graph.value.cells.gates {
-        *local_gate_counts
-            .entry(format!("{:?}", gate.kind).to_lowercase())
-            .or_default() += 1;
-    }
-    let mut candidates = hierarchy
-        .functional_graph
-        .value
-        .functions
-        .candidates
-        .iter()
-        .collect::<Vec<_>>();
-    candidates.sort_by_key(|candidate| {
-        let status = match candidate.status {
-            dustroute_ir::RecognitionStatus::Complete => 3_u8,
-            dustroute_ir::RecognitionStatus::Partial => 2,
-            dustroute_ir::RecognitionStatus::BoundaryLimited => 1,
-            dustroute_ir::RecognitionStatus::Conflicting => 0,
-        };
-        (
-            std::cmp::Reverse(candidate.confidence),
-            std::cmp::Reverse(status),
-        )
-    });
-    let truth_table_candidate = logical_role.filter(|role| {
-        !matches!(
-            role.classification,
-            dustroute_translate::FunctionalClassification::Unknown
-                | dustroute_translate::FunctionalClassification::Unclassified
-        )
-    });
-    let primary = truth_table_candidate
-        .map(|role| {
-            json!({
-                "kind": role.classification,
-                "confidence": "certain",
-                "status": "complete",
-                "basis": role.basis,
-                "input_count": role.input_count,
-                "output_count": role.output_count,
-                "output_functions": role.output_functions
-            })
-        })
-        .or_else(|| candidates.first().map(|candidate| json!(candidate)));
-    let classification_level = if primary.is_some() {
-        "higher_function"
-    } else if !local_gate_counts.is_empty() {
-        "local_gate_network"
-    } else {
-        "physical_only"
-    };
-    let mut uncertainty_reasons = Vec::new();
-    if !analysis_complete {
-        uncertainty_reasons.push("component_limit_reached");
-    }
-    if !hierarchy.physical_graph.unresolved.is_empty() {
-        uncertainty_reasons.push("unresolved_physical_connections");
-    }
-    if !hierarchy.cell_graph.unresolved.is_empty() {
-        uncertainty_reasons.push("unresolved_local_components");
-    }
-    if primary.is_none() {
-        uncertainty_reasons.push("no_registered_higher_level_pattern_matched");
-    }
-    let candidate_count = candidates.len();
-    let candidate_samples = candidates
-        .iter()
-        .take(MAX_CANDIDATE_SAMPLES)
-        .map(|candidate| {
-            json!({
-                "kind": candidate.kind,
-                "confidence": candidate.confidence,
-                "status": candidate.status,
-                "covered_gate_count": candidate.covered_gates.len(),
-                "missing_features": candidate.missing_features,
-                "conflicts": candidate.conflicts,
-            })
-        })
-        .collect::<Vec<_>>();
-    let local_gates = &hierarchy.cell_graph.value.cells.gates;
-    let local_gate_samples = local_gates
-        .iter()
-        .take(MAX_GATE_SAMPLES)
-        .map(|gate| {
-            json!({
-                "id": gate.id,
-                "kind": gate.kind,
-                "status": gate.status,
-                "confidence": gate.confidence,
-                "input_count": gate.inputs.len(),
-                "output_count": gate.outputs.len(),
-                "physical_component_count": gate.physical_components.len(),
-                "physical_components": gate.physical_components,
-            })
-        })
-        .collect::<Vec<_>>();
-    json!({
-        "classification_level": classification_level,
-        "primary_candidate": primary,
-        "higher_level_candidate_count": candidate_count,
-        "higher_level_candidate_samples": candidate_samples,
-        "higher_level_candidates_truncated": candidate_count > MAX_CANDIDATE_SAMPLES,
-        "local_gate_counts": local_gate_counts,
-        "local_gate_count": local_gates.len(),
-        "local_gate_samples": local_gate_samples,
-        "local_gates_truncated": local_gates.len() > MAX_GATE_SAMPLES,
-        "analysis_complete": analysis_complete,
-        "uncertainty_reasons": uncertainty_reasons,
-        "repair_candidate_count": repair_count,
-        "repair_available": repair_count > 0,
-        "temporal_validity": hierarchy.temporal.timing,
-        "interpretation": "primary_candidate is a ranked registered pattern; sampled local gates and mixed_ir node references provide bounded drill-down evidence"
-    })
-}
-
-fn mixed_ir_json(
-    hierarchy: &dustroute_ir::HierarchicalIr,
-    expanded_node_id: Option<usize>,
-) -> Result<Value, String> {
-    let scene = &hierarchy.physical_graph.value.scene;
-    let mixed = dustroute_ir::build_mixed_ir(hierarchy);
-    let nodes = mixed
-        .nodes
-        .iter()
-        .map(|node| {
-            let positions = node
-                .physical_components
-                .iter()
-                .filter_map(|component| scene.components.get(component.0).map(|item| item.pos))
-                .collect::<Vec<_>>();
-            let min = positions.iter().copied().reduce(|left, right| Pos {
-                x: left.x.min(right.x),
-                y: left.y.min(right.y),
-                z: left.z.min(right.z),
-            });
-            let max = positions.iter().copied().reduce(|left, right| Pos {
-                x: left.x.max(right.x),
-                y: left.y.max(right.y),
-                z: left.z.max(right.z),
-            });
-            json!({
-                "id": node.id,
-                "kind": node.kind,
-                "recognition": node.recognition,
-                "confidence": node.confidence,
-                "component_count": node.physical_components.len(),
-                "bounds": { "min": min, "max": max },
-                "expandable": node.expandable,
-            })
-        })
-        .collect::<Vec<_>>();
-    let expanded_node = if let Some(id) = expanded_node_id {
-        let node = mixed
-            .nodes
-            .get(id)
-            .filter(|node| node.id.0 == id)
-            .ok_or_else(|| format!("mixed IR node {id} does not exist"))?;
-        let components = node
-            .physical_components
-            .iter()
-            .filter_map(|component| scene.components.get(component.0))
-            .map(|component| {
-                json!({
-                    "id": component.id,
-                    "position": component.pos,
-                    "block": component.block.kind,
-                    "observed_name": component.block.observed_name,
-                    "observed_properties": component.block.observed_properties,
-                })
-            })
-            .collect::<Vec<_>>();
-        let incoming = mixed
-            .edges
-            .iter()
-            .filter(|edge| edge.sink == node.id)
-            .collect::<Vec<_>>();
-        let outgoing = mixed
-            .edges
-            .iter()
-            .filter(|edge| edge.source == node.id)
-            .collect::<Vec<_>>();
-        Some(json!({
-            "id": node.id,
-            "kind": node.kind,
-            "recognition": node.recognition,
-            "confidence": node.confidence,
-            "components": components,
-            "incoming": incoming,
-            "outgoing": outgoing,
-        }))
-    } else {
-        None
-    };
-    Ok(json!({
-        "physical_component_count": mixed.physical_component_count,
-        "recognized_component_count": mixed.recognized_component_count,
-        "unresolved_component_count": mixed.unresolved_component_count,
-        "node_count": mixed.nodes.len(),
-        "edge_count": mixed.edges.len(),
-        "nodes": nodes,
-        "edges": mixed.edges,
-        "expanded_node": expanded_node,
-    }))
-}
-
-fn virtual_analysis_summary(
-    scene: &dustroute_physical::PhysicalScene,
-    focus: Pos,
-    complete: bool,
-) -> Value {
-    let hierarchy = dustroute_ir::derive_hierarchy(scene);
-    let mixed = dustroute_ir::build_mixed_ir(&hierarchy);
-    let diagnostic = dustroute_translate::diagnose_scene(scene, Some(focus), complete);
-    let faults = diagnostic
-        .diagnosis
-        .findings
-        .iter()
-        .filter(|finding| {
-            matches!(&finding.evidence, dustroute_translate::diagnostic::report::FindingEvidence::Connectivity(f) if f.status == dustroute_translate::CircuitDiagnosticStatus::ProbableFault)
-        })
-        .collect::<Vec<_>>();
-    let mut representations = BTreeMap::<&str, usize>::new();
-    for node in &mixed.nodes {
-        let name = match node.kind {
-            dustroute_ir::MixedNodeKind::LogicGate { .. } => "logic_gate",
-            dustroute_ir::MixedNodeKind::TimedCell { .. } => "timed_cell",
-            dustroute_ir::MixedNodeKind::PhysicalRegion => "physical_region",
-            dustroute_ir::MixedNodeKind::Boundary { .. } => "boundary",
-        };
-        *representations.entry(name).or_default() += 1;
-    }
-    json!({
-        "health": diagnostic.health,
-        "diagnostic_counts": diagnostic.counts,
-        "source_counts": diagnostic.source_counts,
-        "probable_faults": faults,
-        "mixed_ir": {
-            "physical_components": mixed.physical_component_count,
-            "recognized_components": mixed.recognized_component_count,
-            "unresolved_components": mixed.unresolved_component_count,
-            "nodes": mixed.nodes.len(),
-            "edges": mixed.edges.len(),
-            "representations": representations,
-        },
-        "identity": circuit_identity_json(&hierarchy, None, complete, 0),
-    })
-}
-
-fn revision_json(r: &crate::revision::CircuitRevision, include_snapshot: bool) -> Value {
-    let mut value = json!({"ok":true,"schema_version":r.schema_version,"analysis_mode":"virtual_circuit_revision","revision_id":r.revision_id,"parent_revision_ids":r.parent_revision_ids,"base_observation_id":r.base_observation_id,"dimension":r.dimension,"bounds":{"min":r.snapshot.min,"max":r.snapshot.max},"changes":r.changes,"validation":r.validation,"analysis_complete":r.complete,"mutation_performed":false,"live_world_evidence":false,"placement_authorized":false,"retention":"DUSTROUTE_PLAN_TTL_SECONDS (default 3600 seconds); reads do not extend lifetime"});
-    if include_snapshot {
-        value["snapshot"] = json!(r.snapshot);
-        value["assembly_revision"] = json!(r.assembly);
-    }
-    value["assembly_state"] = match &r.assembly {
-        Some(record) => json!({
-            "status": "available",
-            "assembly_revision_id": record.id,
-            "parent_assembly_revision_ids": record.parents,
-            "source_revision_ids": record.assembly.instances.iter().map(|instance| &instance.revision).collect::<std::collections::BTreeSet<_>>(),
-            "block_records": record.assembly.blocks.len(),
-            "source_instances": record.assembly.instances.len(),
-            "connections": record.assembly.connections.len(),
-            "scope": "saved hypothetical state; source references are interpretations, not restored evidence"
-        }),
-        None => json!({"status": "unavailable_or_legacy"}),
-    };
-    value
-}
-
-fn revision_validation(
-    snapshot: &dustroute_translate::MinecraftSnapshot,
-    dimension: &str,
-    focus: Pos,
-    complete: bool,
-    ticks: usize,
-) -> Value {
-    let world = match world_from_snapshot(snapshot) {
-        Ok(world) => world,
-        Err(error) => {
-            return json!({"status":"unavailable","error":error.to_string(),"simulation":{"status":"not_run"}});
-        }
-    };
-    let issues = world.placement_issues();
-    let bounds = dustroute_translate::RegionBounds::new(snapshot.min, snapshot.max);
-    let mut analysis = dustroute_translate::analyze_world_region(&world, bounds);
-    analysis.scene.observation.dimension = dimension.into();
-    let summary = virtual_analysis_summary(&analysis.scene, focus, complete);
-    let simulation = if !complete || !issues.is_empty() {
-        json!({"status":"not_run","reason":"incomplete observation or unsupported/invalid placement"})
-    } else {
-        match simulated_terminal_summary(&world, &analysis, ticks) {
-            Ok(result) => json!({"status":"simulated","result":result}),
-            Err(error) => json!({"status":"unavailable","error":error}),
-        }
-    };
-    json!({"status":if !complete {"incomplete"} else if issues.is_empty() {"structurally_valid"} else {"invalid_or_unsupported"},"placement_issues":issues,"summary":summary,"simulation":simulation,"property_validation":"simulator-supported properties only; not an exhaustive Java block-state schema"})
-}
-
-fn simulated_terminal_summary(
-    world: &dustroute_translate::World,
-    analysis: &dustroute_translate::RegionAnalysis,
-    ticks: usize,
-) -> Result<Value, String> {
-    let mut simulator = dustroute_translate::RedstoneTickSimulator::new(world.clone())
-        .map_err(|error| error.to_string())?;
-    let mut state = simulator.snapshot();
-    for _ in 0..ticks {
-        state = simulator
-            .advance_tick()
-            .map_err(|error| error.to_string())?;
-    }
-    let terminal = |item: &dustroute_translate::InferredTerminal| {
-        json!({
-            "position": item.anchor,
-            "powered": state.powered(item.anchor),
-            "strength": state.strength(item.anchor),
-            "confidence": item.confidence,
-        })
-    };
-    Ok(json!({
-        "ticks": ticks,
-        "inputs": analysis.inputs.iter().map(terminal).collect::<Vec<_>>(),
-        "outputs": analysis.outputs.iter().map(terminal).collect::<Vec<_>>(),
-    }))
-}
-
-fn truth_table_status(translated: &dustroute_translate::ReverseResult) -> &'static str {
-    if translated.truth_table.is_some() {
-        "computed"
-    } else if matches!(
-        translated.truth_table_error.as_ref(),
-        Some(
-            dustroute_translate::TruthTableError::BudgetExceeded { .. }
-                | dustroute_translate::TruthTableError::RuntimeBudgetExceeded { .. }
-                | dustroute_translate::TruthTableError::ElapsedBudgetExceeded { .. }
-        )
-    ) {
-        "budget_exceeded"
-    } else if translated.truth_table_error.is_some() {
-        "unavailable"
-    } else {
-        "not_requested"
-    }
-}
-
-fn json_u128(value: u128) -> Value {
-    u64::try_from(value)
-        .map(|value| json!(value))
-        .unwrap_or_else(|_| Value::String(value.to_string()))
-}
-
-fn truth_table_error_details(error: Option<&dustroute_translate::TruthTableError>) -> Value {
-    let Some(error) = error else {
-        return Value::Null;
-    };
-    match error {
-        dustroute_translate::TruthTableError::BudgetExceeded {
-            rows,
-            max_rows,
-            estimated_work_units,
-            max_work_units,
-        } => json!({
-            "code": "budget_exceeded",
-            "message": error.to_string(),
-            "rows": rows,
-            "max_rows": max_rows,
-            "estimated_work_units": json_u128(*estimated_work_units),
-            "max_work_units": json_u128(*max_work_units),
-        }),
-        dustroute_translate::TruthTableError::RuntimeBudgetExceeded {
-            rows,
-            completed_rows,
-            solver_iterations,
-            max_solver_iterations,
-        } => json!({
-            "code": "runtime_budget_exceeded",
-            "message": error.to_string(),
-            "rows": rows,
-            "completed_rows": completed_rows,
-            "solver_iterations": solver_iterations,
-            "max_solver_iterations": max_solver_iterations,
-        }),
-        dustroute_translate::TruthTableError::ElapsedBudgetExceeded {
-            rows,
-            completed_rows,
-            elapsed_millis,
-            max_elapsed_millis,
-        } => json!({
-            "code": "elapsed_budget_exceeded",
-            "message": error.to_string(),
-            "rows": rows,
-            "completed_rows": completed_rows,
-            "elapsed_millis": json_u128(*elapsed_millis),
-            "max_elapsed_millis": max_elapsed_millis,
-        }),
-        dustroute_translate::TruthTableError::NonSettling {
-            row,
-            settle_ticks,
-            pending_events,
-        } => json!({
-            "code": "non_settling",
-            "message": error.to_string(),
-            "row": row,
-            "settle_ticks": settle_ticks,
-            "pending_events": pending_events,
-        }),
-        dustroute_translate::TruthTableError::TooManyInputs(count) => json!({
-            "code": "too_many_inputs",
-            "message": error.to_string(),
-            "input_count": count,
-        }),
-        dustroute_translate::TruthTableError::IncompleteObservation => {
-            json!({ "code": "incomplete_observation", "message": error.to_string() })
-        }
-        dustroute_translate::TruthTableError::NoInputs => {
-            json!({ "code": "no_inputs", "message": error.to_string() })
-        }
-        dustroute_translate::TruthTableError::NoOutputs => {
-            json!({ "code": "no_outputs", "message": error.to_string() })
-        }
-        dustroute_translate::TruthTableError::UnmappedExternalInputs(positions) => json!({
-            "code": "unmapped_external_inputs",
-            "message": error.to_string(),
-            "positions": positions,
-        }),
-        dustroute_translate::TruthTableError::UnmappedObservableOutputs(positions) => json!({
-            "code": "unmapped_observable_outputs",
-            "message": error.to_string(),
-            "positions": positions,
-        }),
-        dustroute_translate::TruthTableError::AmbiguousInputMapping {
-            external_inputs,
-            inferred_inputs,
-        } => json!({
-            "code": "ambiguous_input_mapping",
-            "message": error.to_string(),
-            "external_input_count": external_inputs,
-            "inferred_input_count": inferred_inputs,
-        }),
-        dustroute_translate::TruthTableError::AmbiguousOutputMapping {
-            observable_outputs,
-            inferred_outputs,
-        } => json!({
-            "code": "ambiguous_output_mapping",
-            "message": error.to_string(),
-            "observable_output_count": observable_outputs,
-            "inferred_output_count": inferred_outputs,
-        }),
-        dustroute_translate::TruthTableError::NoDriverPosition(position) => json!({
-            "code": "no_driver_position",
-            "message": error.to_string(),
-            "position": position,
-        }),
-        dustroute_translate::TruthTableError::InvalidDriver {
-            position,
-            expected,
-            actual,
-        } => json!({
-            "code": "invalid_driver",
-            "message": error.to_string(),
-            "position": position,
-            "expected": expected,
-            "actual": actual,
-        }),
-        dustroute_translate::TruthTableError::Simulation(message) => json!({
-            "code": "simulation_error",
-            "message": message,
-        }),
-    }
-}
-
-fn reverse_result_json(
-    bounds: dustroute_translate::RegionBounds,
-    translated: &dustroute_translate::ReverseResult,
-) -> Value {
-    let mut hierarchy = dustroute_ir::hierarchy_from_views(
-        &translated.analysis.scene,
-        translated.gate_view.clone(),
-        translated.expression_view.clone(),
-        translated.functional_view.clone(),
-    );
-    hierarchy.temporal = translated.temporal.clone();
-    json!({
-        "ok": true,
-        "bounds": bounds_json(bounds),
-        "redstone_blocks": translated.analysis.redstone_blocks.len(),
-        "physical": {
-            "components": translated.analysis.scene.components.len(),
-            "verified_connections": translated.analysis.scene.connections.len(),
-            "physical_traversal_groups": translated.analysis.scene.physical_traversal_groups().len(),
-            "connected_fragments": translated.analysis.scene.fragments.len(),
-            "nearby_gap_candidates": translated.analysis.scene.gap_candidates(2),
-            "observation": translated.analysis.scene.observation,
-            "analysis_complete": translated.analysis.scene.observation.is_complete(),
-            "block_capabilities": capability_report_json(&translated.analysis.scene),
-        },
-        "signal_liveness": signal_liveness_json(&translated.analysis.scene, None),
-        "stages": {
-            "observed_world": {
-                "bounds": bounds_json(bounds),
-                "redstone_blocks": translated.analysis.redstone_blocks.len()
-            },
-            "physical_scene": {
-                "completeness": hierarchy.physical_snapshot.completeness,
-                "components": hierarchy.physical_snapshot.value.scene.components.len(),
-                "diagnostics": hierarchy.physical_snapshot.diagnostics
-            },
-            "electrical_network": {
-                "completeness": hierarchy.physical_graph.completeness,
-                "directed_connections": hierarchy.physical_graph.value.scene.connections.len(),
-                "unresolved": hierarchy.physical_graph.unresolved
-            },
-            "timed_behavior": {
-                "timing": hierarchy.temporal.timing,
-                "devices": hierarchy.temporal.behavior.devices.len(),
-                "traces": hierarchy.temporal.behavior.traces.len()
-            },
-            "local_logic": {
-                "completeness": hierarchy.logic_graph.completeness,
-                "cells": hierarchy.cell_graph.value.cells,
-                "expressions": hierarchy.logic_graph.value.expressions
-            },
-            "functional_candidates": {
-                "completeness": hierarchy.functional_graph.completeness,
-                "functions": hierarchy.functional_graph.value.functions,
-                "unresolved": hierarchy.functional_graph.unresolved
-            }
-        },
-        "gate_view": translated.gate_view,
-        "expression_view": translated.expression_view,
-        "functional_view": translated.functional_view,
-        "physical_function_model": translated.functional_network.as_ref().map(|model| json!({
-            "output_functions": model.output_functions.iter().map(|output| json!({
-                "output_index": output.output_index,
-                "position": output.terminal.anchor,
-                "expression": output.expression.to_string(),
-                "truth_column": output.truth_column,
-            })).collect::<Vec<_>>(),
-            "shared_physical_components": model.physical_influences.iter()
-                .filter(|influence| influence.shared_role)
-                .map(|influence| json!({
-                    "component": influence.component,
-                    "positions": influence.positions,
-                    "input_dependencies": influence.input_dependencies,
-                    "output_dependencies": influence.output_dependencies,
-                })).collect::<Vec<_>>(),
-            "interpretation": "Output functions are derived from the shared physical network. Physical components are not assigned exclusive gate identities."
-        })),
-        "functional_validity": translated.temporal.timing,
-        "behavior_ir": {
-            "temporal_devices": translated.temporal.behavior.devices,
-            "trace_count": translated.temporal.behavior.traces.len(),
-            "timing": translated.temporal.timing,
-            "timed_nodes": translated.temporal.timed_circuit.nodes.len(),
-            "timed_edges": translated.temporal.timed_circuit.edges.len(),
-            "steady_state_projection": translated.temporal.steady_state,
-            "transient_assessment": {
-                "status": if translated.temporal.behavior.traces.is_empty() { "not_simulated" } else { "observed_initial_state_only" },
-                "assessments": translated.temporal.transients,
-                "guidance": "hazard_candidate means a measured transient has no registered intent; hazard_confirmed requires an explicit signal contract. Initial-state settling does not cover every input transition."
-            },
-        },
-        "inputs": translated.analysis.inputs.iter().map(|terminal| json!({
-            "position": terminal.anchor,
-            "component": terminal.component,
-            "confidence": format!("{:?}", terminal.confidence).to_lowercase(),
-        })).collect::<Vec<_>>(),
-        "interface_evidence": translated.analysis.interface,
-        "unsupported_observed_blocks": translated.analysis.unsupported.iter().map(|(position, block)| json!({"position": position, "block": block})).collect::<Vec<_>>(),
-        "outputs": translated.analysis.outputs.iter().map(|terminal| json!({
-            "position": terminal.anchor,
-            "component": terminal.component,
-            "confidence": format!("{:?}", terminal.confidence).to_lowercase(),
-        })).collect::<Vec<_>>(),
-        "expressions": translated.expressions.iter().map(ToString::to_string).collect::<Vec<_>>(),
-        "logical_role": logical_role_json(translated),
-        "truth_table_semantics": translated.truth_table_semantics,
-        "truth_table": translated.truth_table.as_ref().map(|table| table.rows.iter().map(|row| json!({
-            "inputs": row.inputs,
-            "outputs": row.outputs,
-        })).collect::<Vec<_>>()),
-        "truth_table_status": truth_table_status(translated),
-        "truth_table_error": translated.truth_table_error.as_ref().map(ToString::to_string),
-        "truth_table_error_details": truth_table_error_details(translated.truth_table_error.as_ref()),
-        "diagnostics": {
-            "signal_islands": translated.analysis.diagnostics.signal_islands.len(),
-            "isolated_redstone": translated.analysis.diagnostics.isolated_redstone.len(),
-            "unreachable_components": translated.analysis.diagnostics.unreachable_from_inputs.len(),
-            "components_without_output_path": translated.analysis.diagnostics.cannot_reach_outputs.len(),
-            "invalid_supports": translated.analysis.diagnostics.invalid_supports.len(),
-            "non_controllable_torches": translated.analysis.diagnostics.non_controllable_torches.len(),
-        }
-    })
-}
-
 impl DustRouteMcp {
     async fn blueprint_command(
         &self,
@@ -2213,14 +735,10 @@ impl DustRouteMcp {
         Self {
             bridge: BotBridge::new(bridge_address),
             selections: Arc::new(Mutex::new(HashMap::new())),
-            selection_dimensions: Arc::new(Mutex::new(HashMap::new())),
             circuits: Arc::new(Mutex::new(HashMap::new())),
             tool_router,
             prompt_router: Self::prompt_router(),
-            plans: Arc::new(Mutex::new(HashMap::new())),
-            plan_dimensions: Arc::new(Mutex::new(HashMap::new())),
-            revision_placements: Arc::new(Mutex::new(HashMap::new())),
-            applied_plans: Arc::new(Mutex::new(HashMap::new())),
+            placements: Arc::new(Mutex::new(PlacementRegistry::default())),
             transition_plans: Arc::new(Mutex::new(HashMap::new())),
             door_plans: Arc::new(Mutex::new(HashMap::new())),
             piston_placements: Arc::new(Mutex::new(HashMap::new())),
@@ -2261,7 +779,8 @@ impl DustRouteMcp {
         operation_id: uuid::Uuid,
         plan: StoredRepairPlan,
     ) -> Result<(), String> {
-        self.state_store.save("repairs", operation_id, &plan)
+        self.state_store
+            .save(PlanRecordKind::Repairs, operation_id, &plan)
     }
 
     async fn repair_plan(
@@ -2270,7 +789,7 @@ impl DustRouteMcp {
     ) -> Result<Option<StoredRepairPlan>, String> {
         // Disk retention applies equally before and after a service restart.
         // An expired or removed record must not be resurrected from memory.
-        self.state_store.load("repairs", operation_id)
+        self.state_store.load(PlanRecordKind::Repairs, operation_id)
     }
 
     fn resolve_player(&self, requested: Option<&str>) -> Result<String, String> {
@@ -2296,6 +815,24 @@ impl DustRouteMcp {
             .map(|error| json_text(json!({ "ok": false, "error": error.to_string() })))
     }
 
+    async fn placement_view(&self, id: uuid::Uuid) -> Result<PlacementPlan, String> {
+        if let Some(context) = self.placements.lock().await.revision(&id) {
+            let player = self.resolve_player(None)?;
+            self.policy
+                .authorize_player(&player)
+                .map_err(|error| error.to_string())?;
+            if context.player != player {
+                return Err("placement belongs to another player".into());
+            }
+        }
+        self.placements
+            .lock()
+            .await
+            .get(&id)
+            .cloned()
+            .ok_or_else(|| "unknown operation ID".into())
+    }
+
     async fn mutate_placement(&self, params: ConfirmedOperationParams, undo: bool) -> String {
         if !params.confirm {
             return json_text(json!({
@@ -2313,7 +850,7 @@ impl DustRouteMcp {
                 return error_text(McpErrorCode::InvalidArgument, error.to_string(), false);
             }
         };
-        if let Some(context) = self.revision_placements.lock().await.get(&operation_id) {
+        if let Some(context) = self.placements.lock().await.revision(&operation_id) {
             let player = match self.resolve_player(None) {
                 Ok(player) => player,
                 Err(error) => return json_text(json!({"ok":false,"error":error})),
@@ -2327,15 +864,15 @@ impl DustRouteMcp {
                 );
             }
         }
-        let plan = match self.plans.lock().await.get(&operation_id).cloned() {
+        let plan = match self.placements.lock().await.get(&operation_id).cloned() {
             Some(plan) => plan,
             None => return json_text(json!({ "ok": false, "error": "unknown operation ID" })),
         };
         let dimension = match self
-            .plan_dimensions
+            .placements
             .lock()
             .await
-            .get(&operation_id)
+            .dimension(&operation_id)
             .cloned()
         {
             Some(dimension) => dimension,
@@ -2349,13 +886,7 @@ impl DustRouteMcp {
         if let Err(error) = self.policy.authorize_dimension(&dimension) {
             return json_text(json!({ "ok": false, "error": error.to_string() }));
         }
-        let is_applied = self
-            .applied_plans
-            .lock()
-            .await
-            .get(&operation_id)
-            .copied()
-            .unwrap_or(false);
+        let is_applied = self.placements.lock().await.is_applied(&operation_id);
         if undo && !is_applied {
             return json_text(json!({ "ok": false, "error": "placement plan is not applied" }));
         }
@@ -2364,11 +895,7 @@ impl DustRouteMcp {
         }
         if !undo
             && (self.policy.preview_required
-                || self
-                    .revision_placements
-                    .lock()
-                    .await
-                    .contains_key(&operation_id))
+                || self.placements.lock().await.has_revision(&operation_id))
             && !plan.previewed
         {
             return error_text(
@@ -2394,7 +921,7 @@ impl DustRouteMcp {
             Err(error) => return json_text(json!({ "ok": false, "error": error })),
         };
         if !baseline_matches {
-            if let Some(stored) = self.plans.lock().await.get_mut(&operation_id) {
+            if let Some(stored) = self.placements.lock().await.get_mut(&operation_id) {
                 stored.previewed = false;
             }
             return json_text(json!({
@@ -2482,8 +1009,11 @@ impl DustRouteMcp {
                 json!({"ok":false,"error":error,"status":"needs_inspection","retry_allowed":false}),
             );
         }
-        self.applied_plans.lock().await.insert(operation_id, !undo);
-        if let Some(stored) = self.plans.lock().await.get_mut(&operation_id) {
+        self.placements
+            .lock()
+            .await
+            .set_applied(&operation_id, !undo);
+        if let Some(stored) = self.placements.lock().await.get_mut(&operation_id) {
             stored.previewed = false;
         }
         self.operations
@@ -3042,20 +1572,17 @@ impl DustRouteMcp {
         &self,
         player: &str,
     ) -> Result<(dustroute_translate::RegionBounds, String), String> {
-        let bounds = self
-            .selections
-            .lock()
-            .await
+        let selections = self.selections.lock().await;
+        let selected = selections
             .get(player)
-            .ok_or_else(|| "no selection session for player".to_owned())?
+            .ok_or_else(|| "no selection session for player".to_owned())?;
+        let bounds = selected
+            .session
             .bounds()
             .map_err(|error| error.to_string())?;
-        let dimension = self
-            .selection_dimensions
-            .lock()
-            .await
-            .get(player)
-            .cloned()
+        let dimension = selected
+            .dimension
+            .clone()
             .ok_or_else(|| "selection has no dimension".to_owned())?;
         Ok((bounds, dimension))
     }
@@ -3099,44 +1626,64 @@ impl DustRouteMcp {
         Ok((id, circuit))
     }
 
+    async fn discover_selection(
+        &self,
+        player: &str,
+        max_components: Option<usize>,
+        padding: i32,
+        fragment_gap: u32,
+    ) -> Result<DiscoveryObservation, String> {
+        self.resolve_player(Some(player))?;
+        self.policy
+            .authorize_player(player)
+            .map_err(|error| error.to_string())?;
+        let discovery = CircuitCapture {
+            bridge: &self.bridge,
+            policy: &self.policy,
+        }
+        .discover(
+            player,
+            max_components.unwrap_or(8192),
+            padding,
+            fragment_gap,
+        )
+        .await?;
+        self.selections.lock().await.insert(
+            player.to_owned(),
+            LocatedSelection::with_bounds(
+                player,
+                discovery.candidate.bounds.into(),
+                discovery.dimension.clone(),
+            ),
+        );
+        Ok(discovery)
+    }
+
     async fn capture_looked_at_circuit(
         &self,
         player: &str,
         max_components: Option<usize>,
         fragment_gap: u32,
     ) -> Result<(uuid::Uuid, StoredCircuit), String> {
-        let discovery_text = self
-            .resolve_looked_at_circuit(Parameters(DiscoverCircuitParams {
-                player: Some(player.to_owned()),
-                max_components,
-                padding: Some(1),
-                fragment_gap: Some(fragment_gap),
-            }))
-            .await;
-        let discovery: Value = serde_json::from_str(&discovery_text)
-            .map_err(|error| format!("invalid discovery response: {error}"))?;
-        if discovery.get("ok") != Some(&Value::Bool(true)) {
-            return Err(discovery["error"]
-                .as_str()
-                .unwrap_or("circuit discovery failed")
-                .to_owned());
-        }
-        let target = serde_json::from_value::<Pos>(discovery["candidate"]["seed"].clone())
-            .map_err(|error| format!("invalid discovery target: {error}"))?;
+        let discovery = self
+            .discover_selection(player, max_components, 1, fragment_gap)
+            .await?;
+        let target = discovery.candidate.seed;
         let (bounds, dimension) = self.selected_region(player).await?;
         let snapshot = self
             .bridge
             .scan_region(bounds.min, bounds.max, &dimension)
             .await
             .map_err(|error| error.to_string())?;
-        let complete = discovery["expansion"]["limit_reached"] != Value::Bool(true);
+        let complete = !discovery.expansion.limit_reached;
         let circuit = StoredCircuit {
             player: player.to_owned(),
             dimension,
             bounds,
             target: Some(target),
             snapshot,
-            expansion: discovery["expansion"].clone(),
+            expansion: serde_json::to_value(&discovery.expansion)
+                .map_err(|error| error.to_string())?,
             complete,
             expires_at: Instant::now() + CIRCUIT_SNAPSHOT_TTL,
         };
@@ -3159,176 +1706,6 @@ impl DustRouteMcp {
             }
         }
     }
-
-    async fn scan_connected_components(
-        &self,
-        target: Pos,
-        dimension: &str,
-        max_components: usize,
-        component_gap: i32,
-    ) -> Result<AdaptiveComponentScan, String> {
-        const TILE_SIZE: i32 = 16;
-        const SEED_DISTANCE: i32 = 2;
-
-        let seed_bounds = dustroute_translate::RegionBounds::new(
-            Pos::new(
-                target.x - SEED_DISTANCE,
-                target.y - SEED_DISTANCE,
-                target.z - SEED_DISTANCE,
-            ),
-            Pos::new(
-                target.x + SEED_DISTANCE,
-                target.y + SEED_DISTANCE,
-                target.z + SEED_DISTANCE,
-            ),
-        );
-        self.policy
-            .validate_region(seed_bounds)
-            .map_err(|error| error.to_string())?;
-        let seed_snapshot = self
-            .bridge
-            .scan_region(seed_bounds.min, seed_bounds.max, dimension)
-            .await
-            .map_err(|error| error.to_string())?;
-        let seed = seed_snapshot
-            .blocks
-            .iter()
-            .filter(|block| is_redstone_candidate_name(&block.name))
-            .min_by_key(|block| (manhattan_pos(block.pos, target), block.pos))
-            .filter(|block| manhattan_pos(block.pos, target) <= SEED_DISTANCE)
-            .map(|block| block.pos)
-            .ok_or_else(|| {
-                "no redstone component was found within 2 blocks of the gaze target".to_owned()
-            })?;
-
-        let mut blocks = seed_snapshot
-            .blocks
-            .into_iter()
-            .map(|block| (block.pos, block))
-            .collect::<BTreeMap<_, _>>();
-        let mut candidates = blocks
-            .values()
-            .filter(|block| is_redstone_candidate_name(&block.name))
-            .map(|block| block.pos)
-            .collect::<BTreeSet<_>>();
-        let mut loaded_tiles = BTreeSet::<(i32, i32, i32)>::new();
-        let mut queued = BTreeSet::from([seed]);
-        let mut queue = VecDeque::from([seed]);
-        let mut connected = BTreeSet::new();
-        let mut limit_reached = false;
-
-        while let Some(current) = queue.pop_front() {
-            if connected.len() == max_components {
-                limit_reached = true;
-                break;
-            }
-            queued.remove(&current);
-            if !connected.insert(current) {
-                continue;
-            }
-
-            let min_tile = Pos::new(
-                (current.x - component_gap).div_euclid(TILE_SIZE),
-                (current.y - component_gap).div_euclid(TILE_SIZE),
-                (current.z - component_gap).div_euclid(TILE_SIZE),
-            );
-            let max_tile = Pos::new(
-                (current.x + component_gap).div_euclid(TILE_SIZE),
-                (current.y + component_gap).div_euclid(TILE_SIZE),
-                (current.z + component_gap).div_euclid(TILE_SIZE),
-            );
-            for tile_x in min_tile.x..=max_tile.x {
-                for tile_y in min_tile.y..=max_tile.y {
-                    for tile_z in min_tile.z..=max_tile.z {
-                        let tile = (tile_x, tile_y, tile_z);
-                        if !loaded_tiles.insert(tile) {
-                            continue;
-                        }
-                        let min =
-                            Pos::new(tile_x * TILE_SIZE, tile_y * TILE_SIZE, tile_z * TILE_SIZE);
-                        let max = Pos::new(
-                            min.x + TILE_SIZE - 1,
-                            min.y + TILE_SIZE - 1,
-                            min.z + TILE_SIZE - 1,
-                        );
-                        let bounds = dustroute_translate::RegionBounds::new(min, max);
-                        self.policy
-                            .validate_region(bounds)
-                            .map_err(|error| error.to_string())?;
-                        let snapshot = self
-                            .bridge
-                            .scan_region(min, max, dimension)
-                            .await
-                            .map_err(|error| error.to_string())?;
-                        for block in snapshot.blocks {
-                            if is_redstone_candidate_name(&block.name) {
-                                candidates.insert(block.pos);
-                            }
-                            blocks.insert(block.pos, block);
-                        }
-                    }
-                }
-            }
-
-            for dx in -component_gap..=component_gap {
-                for dy in -component_gap..=component_gap {
-                    for dz in -component_gap..=component_gap {
-                        if dx.abs() + dy.abs() + dz.abs() > component_gap {
-                            continue;
-                        }
-                        let neighbor = current.offset(dx, dy, dz);
-                        if neighbor != current
-                            && candidates.contains(&neighbor)
-                            && !connected.contains(&neighbor)
-                            && queued.insert(neighbor)
-                        {
-                            queue.push_back(neighbor);
-                        }
-                    }
-                }
-            }
-        }
-        if !queue.is_empty() {
-            limit_reached = true;
-        }
-
-        let mut min = target;
-        let mut max = target;
-        for pos in &connected {
-            min = Pos::new(min.x.min(pos.x), min.y.min(pos.y), min.z.min(pos.z));
-            max = Pos::new(max.x.max(pos.x), max.y.max(pos.y), max.z.max(pos.z));
-        }
-        min = Pos::new(min.x - 1, min.y - 1, min.z - 1);
-        max = Pos::new(max.x + 1, max.y + 1, max.z + 1);
-        let snapshot_blocks = blocks
-            .into_values()
-            .filter(|block| {
-                block.pos.x >= min.x
-                    && block.pos.x <= max.x
-                    && block.pos.y >= min.y
-                    && block.pos.y <= max.y
-                    && block.pos.z >= min.z
-                    && block.pos.z <= max.z
-            })
-            .collect();
-        let scanned_tiles = loaded_tiles.len();
-        Ok(AdaptiveComponentScan {
-            snapshot: dustroute_translate::MinecraftSnapshot {
-                min,
-                max,
-                blocks: snapshot_blocks,
-            },
-            component_count: connected.len(),
-            component_limit: max_components,
-            limit_reached,
-            scanned_tiles,
-            scanned_block_positions: 125 + scanned_tiles * 4096,
-        })
-    }
-}
-
-fn manhattan_pos(a: Pos, b: Pos) -> i32 {
-    (a.x - b.x).abs() + (a.y - b.y).abs() + (a.z - b.z).abs()
 }
 
 fn bounds_for_changes(
@@ -3623,14 +2000,17 @@ impl DustRouteMcp {
         if let Err(error) = self.policy.authorize_dimension(&observation.dimension) {
             return json_text(json!({ "ok": false, "error": error.to_string() }));
         }
-        let scan = match self
-            .scan_connected_components(
-                target,
-                &observation.dimension,
-                max_components,
-                component_gap as i32,
-            )
-            .await
+        let scan = match (CircuitCapture {
+            bridge: &self.bridge,
+            policy: &self.policy,
+        })
+        .scan_connected_components(
+            target,
+            &observation.dimension,
+            max_components,
+            component_gap as i32,
+        )
+        .await
         {
             Ok(scan) => scan,
             Err(error) => {
@@ -3722,29 +2102,24 @@ impl DustRouteMcp {
             return json_text(json!({ "ok": false, "error": error.to_string() }));
         }
         let mut selections = self.selections.lock().await;
-        let session = selections
+        let selected = selections
             .entry(player.clone())
-            .or_insert_with(|| SelectionSession::new(&player));
+            .or_insert_with(|| LocatedSelection::new(&player));
         let result = match params.corner.as_str() {
             "first" => {
-                session.mark_first(target);
-                self.selection_dimensions
-                    .lock()
-                    .await
-                    .insert(player.clone(), observation.dimension.clone());
+                selected.session.mark_first(target);
+                selected.dimension = Some(observation.dimension.clone());
                 json!({ "ok": true, "corner": "first", "position": target })
             }
-            "second" => match self
-                .selection_dimensions
-                .lock()
-                .await
-                .get(&player)
+            "second" => match selected
+                .dimension
+                .as_ref()
                 .filter(|dimension| *dimension == &observation.dimension)
             {
                 None => {
                     json!({ "ok": false, "error": "player changed dimension between region corners" })
                 }
-                Some(_) => match session.mark_second(target) {
+                Some(_) => match selected.session.mark_second(target) {
                     Ok(bounds) => {
                         json!({ "ok": true, "corner": "second", "position": target, "bounds": bounds_json(bounds) })
                     }
@@ -3770,94 +2145,18 @@ impl DustRouteMcp {
         if let Some(error) = self.authorize_player(&player) {
             return error;
         }
-        let max_components = params.max_components.unwrap_or(8192);
-        let padding = params.padding.unwrap_or(1);
-        let fragment_gap = params.fragment_gap.unwrap_or(2);
-        if !(1..=32768).contains(&max_components)
-            || !(0..=8).contains(&padding)
-            || !(1..=16).contains(&fragment_gap)
-        {
-            return json_text(json!({
-                "ok": false,
-                "error": "max_components must be 1..32768, padding 0..8, and fragment_gap 1..16"
-            }));
-        }
-        let observation = match self.bridge.observe_player(&player, 64.0).await {
-            Ok(observation) => observation,
-            Err(error) => {
-                return json_text(json!({ "ok": false, "error": error.to_string() }));
-            }
-        };
-        let Some(target) = observation.targeted_block else {
-            return json_text(
-                json!({ "ok": false, "error": "the player is not looking at a block" }),
-            );
-        };
-        if let Err(error) = self.policy.authorize_dimension(&observation.dimension) {
-            return json_text(json!({ "ok": false, "error": error.to_string() }));
-        }
-        let scan = match self
-            .scan_connected_components(
-                target,
-                &observation.dimension,
-                max_components,
-                fragment_gap as i32,
+        match self
+            .discover_selection(
+                &player,
+                params.max_components,
+                params.padding.unwrap_or(1),
+                params.fragment_gap.unwrap_or(2),
             )
             .await
         {
-            Ok(scan) => scan,
-            Err(error) => {
-                return json_text(json!({ "ok": false, "error": error }));
-            }
-        };
-        let scan_bounds =
-            dustroute_translate::RegionBounds::new(scan.snapshot.min, scan.snapshot.max);
-        let snapshot = scan.snapshot.clone();
-        let world = match world_from_snapshot_for_service(&snapshot) {
-            Ok(world) => world,
-            Err(error) => return json_text(json!({ "ok": false, "error": error })),
-        };
-        let analysis = dustroute_translate::analyze_world_region(&world, scan_bounds);
-        let discovery = match discover_connected_region(
-            &analysis,
-            target,
-            2,
-            fragment_gap,
-            padding,
-            usize::MAX,
-        ) {
-            Ok(discovery) => discovery,
-            Err(error) => {
-                return json_text(json!({ "ok": false, "error": error.to_string() }));
-            }
-        };
-        let bounds: dustroute_translate::RegionBounds = discovery.bounds.into();
-        self.selections
-            .lock()
-            .await
-            .entry(player.clone())
-            .or_insert_with(|| SelectionSession::new(&player))
-            .set_bounds(bounds);
-        self.selection_dimensions
-            .lock()
-            .await
-            .insert(player, observation.dimension);
-        json_text(json!({
-            "ok": true,
-            "candidate": discovery,
-            "expansion": {
-                "strategy": "adjacent_component_flood_fill",
-                "components_loaded": scan.component_count,
-                "component_limit": scan.component_limit,
-                "limit_reached": scan.limit_reached,
-                "scanned_tiles": scan.scanned_tiles,
-                "scanned_block_positions": scan.scanned_block_positions
-            },
-            "warning": scan.limit_reached.then_some(
-                "the circuit exceeds the component limit; analysis is incomplete"
-            ),
-            "next_step": "call show_region and ask the player to confirm the highlighted candidate"
-        }))
+            Ok(discovery) => json_text(discovery.response()),
+            Err(error) => json_text(json!({"ok": false, "error": error})),
+        }
     }
 
     #[tool(
@@ -4112,7 +2411,7 @@ impl DustRouteMcp {
                 },
             }
             if serde_json::to_vec(&revision).map_err(|e|e.to_string())?.len()>crate::revision::MAX_BYTES {return Err("revision record exceeds 4 MiB".into());}
-            self.state_store.save("circuit_revisions",revision.revision_id,&revision)?;
+            self.state_store.save(PlanRecordKind::CircuitRevisions,revision.revision_id,&revision)?;
             Ok(revision_json(&revision,false))
         }.await;
         json_text(result.unwrap_or_else(|error| json!({"ok":false,"error":error})))
@@ -4126,7 +2425,7 @@ impl DustRouteMcp {
         let id = uuid::Uuid::parse_str(id).map_err(|e| format!("invalid revision_id: {e}"))?;
         let r: crate::revision::CircuitRevision = self
             .state_store
-            .load("circuit_revisions", id)?
+            .load(PlanRecordKind::CircuitRevisions, id)?
             .ok_or("unknown or expired revision_id")?;
         if r.player != player
             || r.revision_id != id
@@ -4822,11 +3121,10 @@ impl DustRouteMcp {
                 "call show_operation, obtain explicit player confirmation, then call invoke_operation with confirm=true"
             }
         });
-        self.plans.lock().await.insert(operation_id, plan);
-        self.plan_dimensions
+        self.placements
             .lock()
             .await
-            .insert(operation_id, observation.dimension);
+            .insert(plan, observation.dimension, None);
         self.operations
             .record_completed(
                 operation_id,
@@ -4876,25 +3174,11 @@ impl DustRouteMcp {
                 json!({"ok":true,"read_only":self.policy.read_only,"plan":{"operation_id":operation_id,"origin":plan.proof.origin(),"bounds":bounds_json(plan.proof.bounds()),"changes":plan.proof.writes(false),"undo_changes":plan.proof.writes(true),"previewed":plan.previewed,"state":format!("{:?}",plan.state)}}),
             );
         }
-        if let Some(context) = self.revision_placements.lock().await.get(&operation_id) {
-            let player = match self.resolve_player(None) {
-                Ok(player) => player,
-                Err(error) => return json_text(json!({"ok":false,"error":error})),
-            };
-            if let Some(error) = self.authorize_player(&player) {
-                return error;
+        match self.placement_view(operation_id).await {
+            Ok(plan) => {
+                json_text(json!({"ok": true, "read_only": self.policy.read_only, "plan": plan}))
             }
-            if context.player != player {
-                return json_text(
-                    json!({"ok":false,"error":"placement belongs to another player"}),
-                );
-            }
-        }
-        match self.plans.lock().await.get(&operation_id) {
-            Some(plan) => {
-                json_text(json!({ "ok": true, "read_only": self.policy.read_only, "plan": plan }))
-            }
-            None => json_text(json!({ "ok": false, "error": "unknown operation ID" })),
+            Err(error) => json_text(json!({"ok": false, "error": error})),
         }
     }
 
@@ -6382,9 +4666,10 @@ impl DustRouteMcp {
                 }),
         };
         let response = json!({"ok":true,"operation_id":id,"source":source,"revision_id":revision.revision_id,"base_observation_id":revision.base_observation_id,"bounds":bounds_json(bounds),"plan":plan,"read_only":self.policy.read_only,"next_step":"show_operation then invoke_operation(confirm=true)","validation_scope":"fresh model review when declared, modeled placement, exact live base and surrounding context; not general functional equivalence"});
-        self.revision_placements.lock().await.insert(
-            id,
-            RevisionPlacementContext {
+        self.placements.lock().await.insert(
+            plan,
+            revision.dimension.clone(),
+            Some(RevisionPlacementContext {
                 player,
                 dimension: revision.dimension.clone(),
                 version: status.version,
@@ -6393,13 +4678,8 @@ impl DustRouteMcp {
                 expires_at: Instant::now() + Duration::from_secs(300),
                 consumed: false,
                 undo_consumed: false,
-            },
+            }),
         );
-        self.plan_dimensions
-            .lock()
-            .await
-            .insert(id, revision.dimension);
-        self.plans.lock().await.insert(id, plan);
         self.operations
             .record_completed(id, OperationKind::PlacementPreview, response.clone())
             .await;
@@ -6413,7 +4693,7 @@ impl DustRouteMcp {
         after: bool,
         consume: bool,
     ) -> Result<(), String> {
-        let Some(context) = self.revision_placements.lock().await.get(&id).cloned() else {
+        let Some(context) = self.placements.lock().await.revision(&id).cloned() else {
             return Ok(());
         };
         let player = self.resolve_player(None)?;
@@ -6464,8 +4744,10 @@ impl DustRouteMcp {
             );
         }
         if consume {
-            let mut contexts = self.revision_placements.lock().await;
-            let stored = contexts.get_mut(&id).ok_or("revision placement missing")?;
+            let mut contexts = self.placements.lock().await;
+            let stored = contexts
+                .revision_mut(&id)
+                .ok_or("revision placement missing")?;
             if !undo && stored.expires_at <= Instant::now() {
                 return Err("revision placement expired during scan".into());
             }
@@ -7463,10 +5745,10 @@ impl DustRouteMcp {
                 .await;
         }
         let revision_context = self
-            .revision_placements
+            .placements
             .lock()
             .await
-            .get(&operation_id)
+            .revision(&operation_id)
             .cloned();
         if let Some(context) = revision_context {
             let player = match self.resolve_player(params.player.as_deref()) {
@@ -7493,7 +5775,7 @@ impl DustRouteMcp {
                 .await
             {
                 Ok(_) => {
-                    if let Some(plan) = self.plans.lock().await.get_mut(&operation_id) {
+                    if let Some(plan) = self.placements.lock().await.get_mut(&operation_id) {
                         plan.previewed = true;
                     }
                 }
@@ -7505,25 +5787,21 @@ impl DustRouteMcp {
                 }))
                 .await;
         }
-        if self.plans.lock().await.contains_key(&operation_id) {
-            if let Some(plan) = self.plans.lock().await.get_mut(&operation_id) {
+        if self.placements.lock().await.contains_key(&operation_id) {
+            if let Some(plan) = self.placements.lock().await.get_mut(&operation_id) {
                 plan.previewed = true;
             }
-            let result = self
-                .get_circuit_placement(Parameters(OperationParams {
-                    operation_id: params.operation_id,
-                }))
-                .await;
-            let preview_succeeded = serde_json::from_str::<Value>(&result)
-                .ok()
-                .and_then(|value| value.get("ok").and_then(Value::as_bool))
-                .unwrap_or(false);
-            if !preview_succeeded {
-                if let Some(plan) = self.plans.lock().await.get_mut(&operation_id) {
-                    plan.previewed = false;
+            return match self.placement_view(operation_id).await {
+                Ok(plan) => {
+                    json_text(json!({"ok": true, "read_only": self.policy.read_only, "plan": plan}))
                 }
-            }
-            return result;
+                Err(error) => {
+                    if let Some(plan) = self.placements.lock().await.get_mut(&operation_id) {
+                        plan.previewed = false;
+                    }
+                    json_text(json!({"ok": false, "error": error}))
+                }
+            };
         }
         match self.repair_plan(operation_id).await {
             Ok(Some(_)) => {
@@ -7619,7 +5897,7 @@ impl DustRouteMcp {
         if self.door_plans.lock().await.contains_key(&operation_id) {
             return self.invoke_piston_door(operation_id, params.confirm).await;
         }
-        if self.plans.lock().await.contains_key(&operation_id) {
+        if self.placements.lock().await.contains_key(&operation_id) {
             return self
                 .mutate_placement(
                     ConfirmedOperationParams {
@@ -7713,7 +5991,7 @@ impl DustRouteMcp {
                 false,
             );
         }
-        if self.plans.lock().await.contains_key(&operation_id) {
+        if self.placements.lock().await.contains_key(&operation_id) {
             return self.mutate_placement(params, true).await;
         }
         match self.repair_plan(operation_id).await {
@@ -7794,9 +6072,9 @@ impl DustRouteMcp {
             return error;
         }
         if let Some(session) = self.selections.lock().await.get_mut(&player) {
-            session.clear();
+            session.session.clear();
+            session.dimension = None;
         }
-        self.selection_dimensions.lock().await.remove(&player);
         json_text(json!({ "ok": true, "player": player }))
     }
 }
@@ -7838,6 +6116,7 @@ impl ServerHandler for DustRouteMcp {
 
 #[cfg(test)]
 mod tests {
+    use super::requests::{LogicalContractParam, TimingContractParam};
     use rmcp::{
         ServiceExt,
         model::{CallToolRequestParams, ClientInfo, ContentBlock},
@@ -8184,12 +6463,11 @@ mod tests {
         .unwrap();
         plan.changes[0].after = dustroute_translate::Block::new(BlockKind::Repeater);
         let id = plan.operation_id;
-        service.plans.lock().await.insert(id, plan);
         service
-            .plan_dimensions
+            .placements
             .lock()
             .await
-            .insert(id, "minecraft:overworld".into());
+            .insert(plan, "minecraft:overworld".into(), None);
         let response: Value = serde_json::from_str(
             &service
                 .mutate_placement(
@@ -8205,7 +6483,7 @@ mod tests {
         assert_eq!(response["ok"], false);
         assert!(response["error"].as_str().unwrap().contains("validation"));
         server.await.unwrap();
-        assert!(!service.applied_plans.lock().await.contains_key(&id));
+        assert!(!service.placements.lock().await.is_applied(&id));
     }
 
     #[tokio::test]
@@ -8225,12 +6503,11 @@ mod tests {
         )
         .unwrap();
         let operation_id = plan.operation_id;
-        service.plans.lock().await.insert(operation_id, plan);
         service
-            .plan_dimensions
+            .placements
             .lock()
             .await
-            .insert(operation_id, "minecraft:overworld".into());
+            .insert(plan, "minecraft:overworld".into(), None);
 
         let rejected: Value = serde_json::from_str(
             &service
@@ -8246,7 +6523,7 @@ mod tests {
         assert_eq!(rejected["error_code"], "invalid_state");
         assert!(
             !service
-                .plans
+                .placements
                 .lock()
                 .await
                 .get(&operation_id)
@@ -8266,7 +6543,7 @@ mod tests {
         assert_eq!(shown["plan"]["previewed"], true);
         assert!(
             service
-                .plans
+                .placements
                 .lock()
                 .await
                 .get(&operation_id)
@@ -8811,18 +7088,10 @@ mod tests {
         };
         let service = make_service();
         let bounds = dustroute_translate::RegionBounds::new(Pos::new(0, 0, 0), Pos::new(2, 2, 0));
-        service
-            .selections
-            .lock()
-            .await
-            .entry("builder".into())
-            .or_insert_with(|| SelectionSession::new("builder"))
-            .set_bounds(bounds);
-        service
-            .selection_dimensions
-            .lock()
-            .await
-            .insert("builder".into(), "minecraft:overworld".into());
+        service.selections.lock().await.insert(
+            "builder".into(),
+            LocatedSelection::with_bounds("builder", bounds, "minecraft:overworld".into()),
+        );
 
         let shown: Value = serde_json::from_str(
             &service
@@ -9414,7 +7683,11 @@ mod tests {
                 legacy.assembly = None;
                 service
                     .state_store
-                    .save("circuit_revisions", legacy.revision_id, &legacy)
+                    .save(
+                        PlanRecordKind::CircuitRevisions,
+                        legacy.revision_id,
+                        &legacy,
+                    )
                     .unwrap();
                 let denied: Value = serde_json::from_str(
                     &service
@@ -9594,7 +7867,7 @@ mod tests {
                 .snapshot,
             snapshot
         );
-        assert!(service.plans.lock().await.is_empty());
+        assert!(service.placements.lock().await.is_empty());
         assert!(service.door_plans.lock().await.is_empty());
         assert!(service.piston_placements.lock().await.is_empty());
         // A fresh service can read/edit revisions without the original observation or bridge.
@@ -10134,18 +8407,10 @@ mod tests {
                     }
                 );
             }
-            service
-                .selections
-                .lock()
-                .await
-                .entry("builder".into())
-                .or_insert_with(|| SelectionSession::new("builder"))
-                .set_bounds(bounds);
-            service
-                .selection_dimensions
-                .lock()
-                .await
-                .insert("builder".into(), "minecraft:overworld".into());
+            service.selections.lock().await.insert(
+                "builder".into(),
+                LocatedSelection::with_bounds("builder", bounds, "minecraft:overworld".into()),
+            );
             let fresh: Value = serde_json::from_str(
                 &service
                     .show_region(Parameters(PlayerParams { player: None }))

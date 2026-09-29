@@ -14,6 +14,7 @@ use dustroute_library::assembly::AssemblyRevision;
 use dustroute_library::blueprint::{AssemblyRevisionId, BlueprintCatalog};
 use dustroute_library::runtime_behavior::RuntimeBehaviorContext;
 use dustroute_translate::assembly_transform::AssemblyTransform;
+use rmcp::schemars;
 use validation::{
     ConstructionSource, proof_from_basis, server_contract, source_basis_matches, source_identity,
 };
