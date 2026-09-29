@@ -12,23 +12,24 @@ async fn main() -> anyhow::Result<()> {
 #[allow(dead_code)]
 #[path = "../../dustroute-translate/tests/support/reference_door_blueprint.rs"]
 mod door_fixture;
+#[cfg(feature = "voxrig")]
+#[path = "support/voxrig_process_session.rs"]
+mod process_session;
 
 #[cfg(feature = "voxrig")]
 mod trial {
+    use super::process_session::{self, McpClient, Proxy, ServerTask, Session};
     use dustroute_mcp::{BotBridge, DustRouteMcp, McpConfig, McpPolicy};
     use dustroute_physical::Pos;
     use rmcp::{
         ServiceExt,
         model::{CallToolRequestParams, ClientInfo, ContentBlock},
-        service::{RoleClient, RunningService},
     };
     use serde_json::{Value, json};
     use std::{fs::File, io::Write, time::Duration};
     use voxrig::{ConnectionConfig, MinecraftVersion, Server};
     const DIM: &str = "minecraft:overworld";
     const ORIGIN: Pos = Pos::new(100, 180, 100);
-    type McpClient = RunningService<RoleClient, ClientInfo>;
-    type Session = (McpClient, tokio::task::JoinHandle<anyhow::Result<()>>);
     fn translated(p: Pos) -> Pos {
         Pos::new(p.x + ORIGIN.x, p.y + ORIGIN.y, p.z + ORIGIN.z)
     }
@@ -49,7 +50,15 @@ mod trial {
         anyhow::ensure!(n > 0, "closed stdin");
         Ok(())
     }
-    async fn start(port: u16) -> anyhow::Result<Session> {
+    async fn start(port: u16, file: &mut File) -> anyhow::Result<Session> {
+        if std::env::var_os("MCP_PROCESS_BIN").is_some() {
+            let session = process_session::start_process(port).await?;
+            record(
+                file,
+                &json!({"stage":"mcp_process_started","pid":session.1.pid(),"port":port}),
+            )?;
+            return Ok(session);
+        }
         let policy = McpPolicy {
             read_only: false,
             allowed_region: Some(dustroute_mcp::discovery::RegionBoundsDto {
@@ -70,12 +79,18 @@ mod trial {
             service.serve(server_io).await?.waiting().await?;
             Ok(())
         });
-        Ok((ClientInfo::default().serve(client_io).await?, server))
+        Ok((
+            ClientInfo::default().serve(client_io).await?,
+            ServerTask::Memory(server),
+        ))
     }
-    async fn stop((client, server): Session) -> anyhow::Result<()> {
-        client.cancel().await?;
-        server.await??;
-        Ok(())
+    async fn stop(session: Session, file: &mut File) -> anyhow::Result<()> {
+        let pid = session.1.pid();
+        process_session::stop(session).await?;
+        record(
+            file,
+            &json!({"stage":"mcp_process_stopped","pid":pid,"clean_exit":true}),
+        )
     }
     async fn call(
         client: &McpClient,
@@ -166,9 +181,27 @@ mod trial {
             MinecraftVersion::Java1_21_11,
         ))
         .await?;
-        let mut session = Some(start(port).await?);
+        let proxy = if std::env::var("PROBE_INTERRUPT").as_deref() == Ok("1") {
+            anyhow::ensure!(
+                std::env::var_os("MCP_PROCESS_BIN").is_some(),
+                "interruption trial requires real MCP process"
+            );
+            Some(Proxy::start(port).await?)
+        } else {
+            None
+        };
+        let mcp_port = proxy.as_ref().map_or(port, |p| p.port);
+        let mut session = Some(start(mcp_port, &mut file).await?);
         pause("READY; creative+OP DustRouteBot and McpProbe; tp both near 100 190 104; owned area 80 170 80 .. 120 205 120 must be clear; enter").await?;
-        let result = run(&actor, &mut session, &mut file, port, &case).await;
+        let result = run(
+            &actor,
+            &mut session,
+            &mut file,
+            mcp_port,
+            &case,
+            proxy.as_ref(),
+        )
+        .await;
         record(
             &mut file,
             &json!({"stage":"result","error":result.as_ref().err().map(|e|format!("{e:#}"))}),
@@ -177,7 +210,10 @@ mod trial {
         // and cleaned by the isolated server operator before disconnection.
         pause("TRIAL_FINISHED; capture flushed. Independently inspect/confirm and clean the declared area, revoke OP, then enter").await?;
         if let Some(session) = session.take() {
-            stop(session).await?;
+            stop(session, &mut file).await?;
+        }
+        if let Some(proxy) = proxy {
+            proxy.stop().await?;
         }
         result
     }
@@ -187,6 +223,7 @@ mod trial {
         file: &mut File,
         port: u16,
         case: &str,
+        proxy: Option<&Proxy>,
     ) -> anyhow::Result<()> {
         let client = &session.as_ref().unwrap().0;
         let (records, mut request) = if case == "door" {
@@ -283,21 +320,124 @@ mod trial {
         )
         .await?;
         write(actor, min, "minecraft:air").await?;
-        let applied = call(
-            client,
-            file,
-            "invoke_operation",
-            json!({"operation_id":id,"confirm":true}),
-            true,
-        )
-        .await?;
+        let applied = if let Some(proxy) = proxy {
+            let cutoff = async {
+                tokio::time::timeout(Duration::from_secs(30), async {
+                    loop {
+                        let observation = actor.scan_client_region(min, max, DIM).await?;
+                        if observation
+                            .snapshot()
+                            .blocks
+                            .iter()
+                            .any(|b| b.name != "minecraft:air")
+                        {
+                            proxy.cut_connection();
+                            return Ok::<_, anyhow::Error>(observation);
+                        }
+                        tokio::time::sleep(Duration::from_millis(20)).await;
+                    }
+                })
+                .await?
+            };
+            let (failure, cutoff) = tokio::join!(
+                call(
+                    client,
+                    file,
+                    "invoke_operation",
+                    json!({"operation_id":id,"confirm":true}),
+                    false
+                ),
+                cutoff
+            );
+            let failure = failure?;
+            record(
+                file,
+                &json!({"stage":"connection_cut_after_first_world_change","after_client":cutoff?.observation()}),
+            )?;
+            anyhow::ensure!(
+                failure["status"] == "needs_inspection" && failure["retry_allowed"] == false,
+                "cut was not reported as interrupted: {failure}"
+            );
+            let saved = call(
+                client,
+                file,
+                "manage_assembly",
+                json!({"action":"get","instance_id":id}),
+                true,
+            )
+            .await?;
+            anyhow::ensure!(
+                saved["instance"]["state"] == "needs_inspection"
+                    && saved["fresh_observation"] == false,
+                "partial operation not durably inspectable"
+            );
+            stop(session.take().unwrap(), file).await?;
+            *session = Some(start(port, file).await?);
+            actor.wait_ticks(20, DIM).await?;
+            let client = &session.as_ref().unwrap().0;
+            call(
+                client,
+                file,
+                "invoke_operation",
+                json!({"operation_id":id,"confirm":true}),
+                false,
+            )
+            .await?;
+            let saved = call(
+                client,
+                file,
+                "manage_assembly",
+                json!({"action":"get","instance_id":id}),
+                true,
+            )
+            .await?;
+            anyhow::ensure!(
+                saved["instance"]["state"] == "needs_inspection"
+                    && saved["fresh_observation"] == false,
+                "restart lost interrupted state"
+            );
+            call(
+                client,
+                file,
+                "manage_assembly",
+                json!({"action":"diagnose","instance_id":id}),
+                true,
+            )
+            .await?;
+            let repair = call(
+                client,
+                file,
+                "manage_assembly",
+                json!({"action":"plan_reconstruction","instance_id":id}),
+                true,
+            )
+            .await?;
+            call(
+                client,
+                file,
+                "invoke_operation",
+                json!({"operation_id":repair["operation_id"],"confirm":true}),
+                false,
+            )
+            .await?;
+            show_apply(client, file, &repair["operation_id"]).await?
+        } else {
+            call(
+                client,
+                file,
+                "invoke_operation",
+                json!({"operation_id":id,"confirm":true}),
+                true,
+            )
+            .await?
+        };
         anyhow::ensure!(applied["status"] == "verified", "placement unverified");
         capture(actor, file, "placed", min, max).await?;
         pause("PLACED; client capture flushed; independently confirm the full region, then enter")
             .await?;
-        stop(session.take().unwrap()).await?;
+        stop(session.take().unwrap(), file).await?;
         tokio::time::sleep(Duration::from_millis(250)).await;
-        *session = Some(start(port).await?);
+        *session = Some(start(port, file).await?);
         actor.wait_ticks(20, DIM).await?;
         let client = &session.as_ref().unwrap().0;
         let saved = call(
@@ -458,9 +598,9 @@ mod trial {
                 .all(|b| b.name == "minecraft:air"),
             "removal left blocks"
         );
-        stop(session.take().unwrap()).await?;
+        stop(session.take().unwrap(), file).await?;
         tokio::time::sleep(Duration::from_millis(250)).await;
-        *session = Some(start(port).await?);
+        *session = Some(start(port, file).await?);
         actor.wait_ticks(20, DIM).await?;
         let final_observation = call(
             &session.as_ref().unwrap().0,

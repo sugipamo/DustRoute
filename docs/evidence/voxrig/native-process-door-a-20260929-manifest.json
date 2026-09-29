@@ -1,0 +1,42 @@
+{
+  "case": "native-process-door-a-20260929",
+  "server": "owned isolated vanilla Java 1.21.11; no MOD",
+  "dustroute_base": "9be31a1",
+  "voxrig_code": "bf291cfa49cb0d3296acc2ca1aa2148da6eda65f",
+  "mcp_pids": [
+    66440,
+    66509,
+    66664,
+    68363
+  ],
+  "transport": "real dustroute-mcp executable over stdio; Minecraft connection through stable owned loopback proxy",
+  "interruption": "close only proxy TCP streams after actor observes first world change; no host fault or process kill",
+  "observations": [
+    "partial placement reports needs_inspection and retry_allowed=false",
+    "partial record persists after clean MCP process exit and new process",
+    "old operation ID rejected after restart; archived record reports fresh_observation=false",
+    "new diagnosis, reconstruction plan and preview restore complete door",
+    "second restart preserves applied instance; missing quartz diagnosed and reconstructed with stale-world/preview gates",
+    "closed and reopened 3x3 aperture match; 770 cells at each placed/closed/reopened/removed stage independently confirmed",
+    "fourth MCP process freshly observes removed instance; all four processes exit cleanly"
+  ],
+  "limits": [
+    "graceful MCP process exits, not SIGKILL or host crash",
+    "connection counters are process-local; PIDs identify owning processes",
+    "evidence applies to declared door and interruption point"
+  ],
+  "cleanup": "conditional removal emptied owned 770-cell region; both OP grants revoked",
+  "sha256": {
+    "native-process-door-a-20260929.jsonl.gz": "8d37358d18f471b4674f6c667b53e3553be803cf300b055f3ae0f2dbb0953722",
+    "native-process-door-a-20260929-server.log.gz": "b3bc904c8c415426168ce95c9c14653e7defd463f1bb75f218cce9c45fe7487b",
+    "native-process-door-a-20260929-mcp-stderr.log.gz": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+    "native-process-door-a-20260929-placed.mcfunction": "98fd164fe07817add2ebca0f038a17a8c8ec0cb1e80766505301e61a854347b9",
+    "native-process-door-a-20260929-operated.mcfunction": "a20cc4dbd6df24833a63dfcbfba8ea14b5de7cd6becf54f06acc6f508957e6e1",
+    "native-process-door-a-20260929-reopened.mcfunction": "127d88906990e14c57e7e10feef9e418b554faed0a32efe687964cb534a808aa",
+    "native-process-door-a-20260929-removed.mcfunction": "e051f5a65b7c08d684ac5d9887e714289603f3966f27f109c567ab087c56d1f2"
+  },
+  "source_sha256": {
+    "crates/dustroute-mcp/examples/voxrig_assembly_probe.rs": "59476370516e81a6519847f40ea783d59ebfbdea4e122e01f08a940fcf7f2a00",
+    "crates/dustroute-mcp/examples/support/voxrig_process_session.rs": "ff7da07c4aa259b9addfe47da35a6d808bc2979b5b59d460a4e8bb9078e3e39a"
+  }
+}
