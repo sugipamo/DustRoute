@@ -318,12 +318,12 @@ cannot suppress a child's failed or undetermined requirement. This is separate
 from type and physical-behavior evidence, and does not certify live conformance.
 
 All catalogs now use v13; v1–v12 are rejected as described in the
-[cutover guide](architecture-cutover.md). Law requirements need proposal-history v3. A pending candidate's
-requirements also require v3, even if the committed catalog has no such source.
+[cutover guide](architecture-cutover.md). All proposal histories use v5 and retain
+law requirements even when only an unadopted candidate declares them.
 Older immutable records remain unchanged. Generated optimized candidates declare
 their pinned world laws; port movement cannot silently replace those laws.
 
-Explicit observation bindings need proposal-history v4 with the current catalog.
+Explicit observation bindings are retained in the current v5 proposal history.
 The existing fixed-geometry proof contexts cannot certify them. Location-only
 repeated-settling bindings can use the separate moving-world context below.
 

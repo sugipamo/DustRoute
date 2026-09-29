@@ -17,6 +17,18 @@ use crate::state::PlanStateStore;
 
 const MAX_ARCHIVE_BYTES: u64 = 16 * 1024 * 1024;
 const MAX_REQUEST_BYTES: usize = 4 * 1024 * 1024;
+const STORE_SCHEMA: &str = "dustroute.mcp-blueprints.v2";
+
+/// Current stores always carry the grounding map, including when it is empty.
+/// An absent map is a retired representation, never invented placement evidence.
+#[derive(Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct StoredBlueprints {
+    schema: String,
+    owner: String,
+    archive: Value,
+    groundings: BTreeMap<AssemblyRevisionId, AssemblyGrounding>,
+}
 
 /// New requests may select the standard piston context without an orientation
 /// or profile ID. Resolve it before storage; saved records never gain defaults.
@@ -826,19 +838,17 @@ fn transaction<T>(
                 return Err("stored Blueprint archive exceeds 16 MiB".into());
             }
             let saved: Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-            if saved["owner"] != player || saved["schema"] != "dustroute.mcp-blueprints.v1" {
-                return Err("Blueprint archive owner/schema mismatch".into());
+            if saved["schema"] != STORE_SCHEMA {
+                return Err("retired or unsupported MCP Blueprint store; preserve the archive separately and recreate/review with v2".into());
             }
-            let updates = BlueprintUpdates::from_json(&saved["archive"].to_string())
+            let saved: StoredBlueprints = serde_json::from_value(saved)
+                .map_err(|e| format!("invalid current MCP Blueprint store: {e}"))?;
+            if saved.owner != player {
+                return Err("Blueprint archive owner mismatch".into());
+            }
+            let updates = BlueprintUpdates::from_json(&saved.archive.to_string())
                 .map_err(|e| e.to_string())?;
-            let groundings = serde_json::from_value(
-                saved
-                    .get("groundings")
-                    .cloned()
-                    .unwrap_or_else(|| json!({})),
-            )
-            .map_err(|error| format!("invalid Assembly grounding archive: {error}"))?;
-            (updates, groundings)
+            (updates, saved.groundings)
         }
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => (
             BlueprintUpdates::new(
@@ -852,9 +862,12 @@ fn transaction<T>(
     if write {
         let archive: Value = serde_json::from_str(&updates.to_json().map_err(|e| e.to_string())?)
             .map_err(|e| e.to_string())?;
-        let bytes = serde_json::to_vec(
-            &json!({"schema":"dustroute.mcp-blueprints.v1","owner":player,"archive":archive,"groundings":groundings}),
-        )
+        let bytes = serde_json::to_vec(&StoredBlueprints {
+            schema: STORE_SCHEMA.into(),
+            owner: player.into(),
+            archive,
+            groundings,
+        })
         .map_err(|e| e.to_string())?;
         if bytes.len() as u64 > MAX_ARCHIVE_BYTES {
             return Err("Blueprint catalog exceeds 16 MiB; no changes saved".into());

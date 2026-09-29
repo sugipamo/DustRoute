@@ -92,9 +92,8 @@ All catalogs, including explicit observation bindings, now use
 [cutover guide](architecture-cutover.md). The
 original autonomous and signal-only repeated-settling binding shapes retain their
 JSON representation and validation rules, including rejection of BlockState.
-Proposal histories containing explicit observation bindings use
-`dustroute.blueprint-updates.v4`, including bindings present only in an unadopted
-candidate. Older history versions cannot conceal or discard those declarations.
+Every proposal history now uses `dustroute.blueprint-updates.v5`; retired v1–v4
+are rejected. Bindings present only in an unadopted candidate are also retained.
 
 `BlockPattern`, explicit source Air and static type bindings keep their existing
 snapshot meanings. A declared location predicate is a separate observation, not

@@ -1215,9 +1215,44 @@ fn blueprint_store_is_atomic_scoped_and_locked_across_instances() {
             .unwrap()
             .is_some()
     );
-    let mut legacy: Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
-    legacy.as_object_mut().unwrap().remove("groundings");
-    fs::write(&path, serde_json::to_vec(&legacy).unwrap()).unwrap();
+    let current: Value = serde_json::from_slice(&before).unwrap();
+    assert_eq!(current["schema"], "dustroute.mcp-blueprints.v2");
+    assert_eq!(
+        current["archive"]["schema"],
+        "dustroute.blueprint-updates.v5"
+    );
+    assert_eq!(current["groundings"], json!({}));
+    let mut old_store = current.clone();
+    old_store["schema"] = json!("dustroute.mcp-blueprints.v1");
+    let mut missing_groundings = current.clone();
+    missing_groundings
+        .as_object_mut()
+        .unwrap()
+        .remove("groundings");
+    let mut refused = vec![(old_store, "retired"), (missing_groundings, "groundings")];
+    for version in 1..5 {
+        let mut old_history = current.clone();
+        old_history["archive"]["schema"] = json!(format!("dustroute.blueprint-updates.v{version}"));
+        refused.push((old_history, "retired"));
+    }
+    for (record, reason) in refused {
+        let bytes = serde_json::to_vec(&record).unwrap();
+        fs::write(&path, &bytes).unwrap();
+        assert!(
+            execute(&other, "Tester", Command::Read(BlueprintRead::Archive))
+                .unwrap_err()
+                .contains(reason)
+        );
+        // A write must not replace rejected history with a fresh empty catalog.
+        let write = serde_json::from_value(records["blueprint"].clone()).unwrap();
+        assert!(
+            execute(&other, "Tester", Command::Write(write))
+                .unwrap_err()
+                .contains(reason)
+        );
+        assert_eq!(fs::read(&path).unwrap(), bytes);
+    }
+    fs::write(&path, &before).unwrap();
     assert!(
         execute(&other, "Tester", Command::Read(BlueprintRead::Archive))
             .unwrap()

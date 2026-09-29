@@ -180,48 +180,14 @@ pub struct BlueprintUpdates {
     proposals: BTreeMap<BlueprintUpdateId, BlueprintUpdate>,
 }
 
+const UPDATE_ARCHIVE_SCHEMA: &str = "dustroute.blueprint-updates.v5";
+
 #[derive(Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 struct UpdateArchive {
     schema: String,
     catalog: serde_json::Value,
     proposals: Vec<BlueprintUpdate>,
-}
-
-fn required_update_schema<'a>(
-    catalog: &'a BlueprintCatalog,
-    proposals: impl Iterator<Item = &'a BlueprintUpdate>,
-) -> u8 {
-    let proposals: Vec<_> = proposals.collect();
-    if proposals.iter().any(|proposal| {
-        proposal.request.behavior_context.as_ref().is_some_and(BehaviorReviewContext::is_runtime)
-            || proposal.events.iter().any(|event| matches!(event, UpdateEvent::Validated {report} if report.behavior_context.as_ref().is_some_and(BehaviorReviewContext::is_runtime)))
-    }) { return 5; }
-    catalog
-        .revisions()
-        .chain(
-            proposals
-                .iter()
-                .flat_map(|proposal| &proposal.request.revisions),
-        )
-        .map(|source| {
-            if source.behavior_bindings.iter().any(|b| {
-                matches!(
-                    b,
-                    dustroute_library::blueprint::BehaviorBinding::Observed { .. }
-                )
-            }) {
-                4
-            } else if !source.required_laws.is_empty() {
-                3
-            } else if !source.static_type_bindings.is_empty() {
-                2
-            } else {
-                1
-            }
-        })
-        .max()
-        .unwrap_or(1)
 }
 
 impl BlueprintUpdates {
@@ -493,10 +459,7 @@ impl BlueprintUpdates {
         let catalog = serde_json::from_str(&self.catalog.to_json()?)
             .map_err(|error| BlueprintUpdateError::Invalid(error.to_string()))?;
         serde_json::to_string_pretty(&UpdateArchive {
-            schema: format!(
-                "dustroute.blueprint-updates.v{}",
-                required_update_schema(&self.catalog, self.proposals.values())
-            ),
+            schema: UPDATE_ARCHIVE_SCHEMA.into(),
             catalog,
             proposals: self.proposals.values().cloned().collect(),
         })
@@ -506,20 +469,12 @@ impl BlueprintUpdates {
     pub fn from_json(input: &str) -> Result<Self, BlueprintUpdateError> {
         let archive: UpdateArchive = serde_json::from_str(input)
             .map_err(|error| BlueprintUpdateError::Invalid(error.to_string()))?;
-        let version = match archive.schema.as_str() {
-            "dustroute.blueprint-updates.v1" => 1,
-            "dustroute.blueprint-updates.v2" => 2,
-            "dustroute.blueprint-updates.v3" => 3,
-            "dustroute.blueprint-updates.v4" => 4,
-            "dustroute.blueprint-updates.v5" => 5,
-            _ => return invalid("unsupported blueprint updates schema"),
-        };
-        let mut restored = Self::new(BlueprintCatalog::from_json(&archive.catalog.to_string())?);
-        if version < required_update_schema(&restored.catalog, archive.proposals.iter()) {
+        if archive.schema != UPDATE_ARCHIVE_SCHEMA {
             return invalid(
-                "blueprint updates schema cannot retain declared obligations, including unadopted candidates",
+                "retired or unsupported blueprint updates schema; recreate and freshly review proposals with the current version (v5)",
             );
         }
+        let mut restored = Self::new(BlueprintCatalog::from_json(&archive.catalog.to_string())?);
         for proposal in archive.proposals {
             let request = &proposal.request;
             if restored.proposals.contains_key(&request.id) {

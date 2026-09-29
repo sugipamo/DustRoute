@@ -80,8 +80,8 @@ was added. Saved diagnostics cannot authorize adoption; checks run again after
 restart. See the [MCP workflow](blueprint-mcp.md#periodic-obligations).
 
 All catalogs now use `dustroute.blueprint-catalog.v13`; retired v1–v12 archives
-are rejected. The MCP response and update archive envelopes retain their
-versions, but update archives containing retired catalogs also fail loading.
+are rejected. The MCP response envelope is unchanged. Every update archive now
+uses v5; old update versions and archives containing retired catalogs fail loading.
 See the [cutover guide](architecture-cutover.md).
 Contextual MCP reports for a catalog containing a finite-burst type
 use the additional scope value

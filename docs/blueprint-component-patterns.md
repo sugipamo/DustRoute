@@ -104,11 +104,9 @@ circuit. This limitation is not encoded as a NOT type requirement.
 All catalogs now use `dustroute.blueprint-catalog.v13`. Earlier v1–v12 archives
 are rejected; bundled primitive definitions retain their immutable IDs inside
 current v13 containers. See the [cutover guide](architecture-cutover.md).
-Proposal histories containing these bindings need at least `dustroute.blueprint-updates.v2`,
-including when only an unadopted candidate has the new obligation and the embedded
-catalog has no such binding. Relabeling these histories as v1 is rejected. Histories
-without newer features can use the v1 update envelope with a current catalog.
-Physical law requirements need proposal-history v3; see the
+Every proposal history now uses `dustroute.blueprint-updates.v5`; v1–v4 are rejected.
+Static bindings and law requirements are retained even when they occur only in
+an unadopted candidate. Their checks still require fresh evidence; see the
 [law requirement contract](blueprint-mcp.md#physical-law-requirements).
 The legacy physical-cell adapter rejects obligations and interfaces it cannot
 retain. Adopting the stronger lever realization is an explicit revision change;

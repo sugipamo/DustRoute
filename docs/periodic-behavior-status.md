@@ -114,8 +114,8 @@ checks may be reused only within that exact review/context.
 
 All current catalogs use v13 and preserve periodic and finite-burst contracts.
 Retired v1–v12 archives are rejected; see the [cutover guide](architecture-cutover.md).
-Update archives retain their existing envelope and an explicit context
-where needed. No new MCP tool or automatic adoption path was added: existing
+Update archives use v5 and retain an explicit context where needed. Earlier
+update versions are rejected. No new MCP tool or automatic adoption path was added: existing
 Assembly reads and proposal/review/decision tools carry these fields. See the
 [MCP contract](blueprint-mcp.md#periodic-obligations).
 

@@ -302,12 +302,10 @@ Attribution must distinguish a candidate interpretation from verified obligation
 
 All current catalogs use v13. Retired v1–v12 archives are rejected rather than
 upgraded implicitly; see the [cutover guide](architecture-cutover.md).
-Proposal histories use updates v2 for static bindings and v3 for law requirements,
-including when the declaration exists only in an unadopted candidate. Histories
-without those features can use the v1 update envelope with a current catalog.
-Explicit observation bindings require updates
-v4, including unadopted candidates. Relabeling newer features as an older format is
-rejected. Reload and adoption preserve source/type/law dependencies and do not
+Every proposal history uses updates v5; v1–v4 are rejected. Static bindings, law
+requirements and explicit observations remain present even when declared only in
+unadopted candidates. Reload and adoption preserve source/type/law dependencies
+and do not
 trust saved success reports.
 
 Adopting a Blueprint or Assembly currently does not construct it in Minecraft.

@@ -27,6 +27,7 @@ Git history; diagnostic fixtures have not been promoted into public capability.
 | [Architecture readability audit](architecture-readability-audit.md) | Remaining responsibility, type and module boundaries; evidence and recommended refactoring order |
 | [Architecture migration](architecture-migration.md) | Migration progress, preserved contracts, deferred concerns and regression evidence |
 | [Architecture cutover](architecture-cutover.md) | Typed workflow boundaries, retired formats/APIs, migration impact and current checks |
+| [Cutover verification and format retirement](architecture-cutover-validation.md) | Additional regressions, one current update/store format and preserved evidence |
 | [Stabilization and legacy paths](stabilization-legacy-paths.md) | Retired piston profiles, removed fallbacks, saved-data impact and remaining active paths |
 | [Physical IR](physical-ir.md) | Observations, evidence and derived representations |
 | [Physical function model](physical-function-model.md) | Shared circuitry and bounded functional inference |

@@ -25,8 +25,10 @@ Assembly ID and declared Blueprint occurrences; read those with
 prove a fault or authorize an update.
 
 The [architecture cutover guide](../../docs/architecture-cutover.md) lists the
-retired catalog/instance/repair formats and coordinated Rust/JS Bridge update.
+retired catalog/update/store/instance/repair formats and coordinated Rust/JS Bridge update.
 Legacy mutation RPC names and untyped acknowledgements are no longer accepted.
+Every update archive uses v5; the player-scoped Blueprint store uses v2 with an
+explicit grounding map. Old stores are refused without rewriting their files.
 
 ## Choose the next tool from the task
 
@@ -103,16 +105,15 @@ For snapshot requirements on the realization itself, use
 `static_type_bindings: [{type_revision, port}]` with a `Signal`, `BlockKind` or
 `BlockPattern` type. These are checked even without a connected consumer;
 `dustroute.lever.wall.v2` uses this to assert actual lever identity. Older pins
-remain unchanged. These declarations require catalog v8.
+remain unchanged. All current declarations use catalog v13 and update history v5.
 Use `required_laws: ["<immutable law revision ID>", ...]` to declare a source's
 physical law dependencies. The selected world context must provide every required
 Revision, including the laws' own dependencies. Missing context is undetermined;
 a mismatched Revision fails. Declarations neither create physical state nor
 certify live Minecraft conformance. Shared and nested sources use one physical
-state and event stream. Law requirements need catalog v9 and proposal-history v3,
-including requirements that occur only in a pending candidate.
-Explicit `observed_inputs`/`observed_outputs` bindings require catalog v10 and
-at least proposal-history v4. They declare named signal/location observations;
+state and event stream. Law requirements remain in update history even when
+declared only by a pending candidate.
+Explicit `observed_inputs`/`observed_outputs` bindings declare named signal/location observations;
 fixed-geometry proof contexts leave them undetermined. For supported location-only
 `RepeatedSettling`, new requests use `behavior_context: {"piston": {
 "known_region": ..., "input_levers": [...], "root_limits": {...}}}`.

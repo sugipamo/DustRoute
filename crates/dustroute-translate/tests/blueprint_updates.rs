@@ -523,14 +523,21 @@ fn publishing_a_new_child_definition_does_not_update_or_adopt_any_parent() {
 }
 
 #[test]
-fn unadopted_static_obligations_require_new_history_schema_and_survive_reload() {
+fn current_archive_retains_unadopted_static_obligations_and_rejects_retired_formats() {
     let (mut updates, mut request) = fixture(Pos::new(6, 0, 0));
-    assert!(
-        updates
-            .to_json()
-            .unwrap()
-            .contains("dustroute.blueprint-updates.v1")
-    );
+    // The current format is required even before any behavioral declaration.
+    let initial = updates.to_json().unwrap();
+    assert!(initial.contains("dustroute.blueprint-updates.v5"));
+    let restored = BlueprintUpdates::from_json(&initial).unwrap();
+    assert_eq!(restored.catalog(), updates.catalog());
+    assert_eq!(restored.proposals().count(), 0);
+    for version in 1..5 {
+        let retired = initial.replace(
+            "dustroute.blueprint-updates.v5",
+            &format!("dustroute.blueprint-updates.v{version}"),
+        );
+        assert!(BlueprintUpdates::from_json(&retired).is_err());
+    }
     let requirement = TypeRevisionId::new("test.known-air.v1").unwrap();
     updates
         .append_type(TypeRevision {
@@ -551,16 +558,16 @@ fn unadopted_static_obligations_require_new_history_schema_and_survive_reload() 
         port: parent.ports[0].name.clone(),
     });
     // No validation event exists yet, and no committed source uses the new field.
-    // An older reader must reject the format rather than discard this obligation.
+    // A reload must retain the pending obligation before any review is recorded.
     let original = updates.catalog().to_json().unwrap();
     updates.create(request.clone()).unwrap();
     let archive = updates.to_json().unwrap();
-    assert!(archive.contains("dustroute.blueprint-updates.v2"));
+    assert!(archive.contains("dustroute.blueprint-updates.v5"));
     assert!(original.contains("dustroute.blueprint-catalog.v13"));
     assert!(!original.contains("static_type_bindings"));
     assert!(
         BlueprintUpdates::from_json(&archive.replace(
-            "dustroute.blueprint-updates.v2",
+            "dustroute.blueprint-updates.v5",
             "dustroute.blueprint-updates.v1"
         ))
         .is_err()
@@ -592,11 +599,11 @@ fn unadopted_law_requirements_survive_reload_and_require_world_evidence() {
     assert!(!original.contains("required_laws"));
     updates.create(request.clone()).unwrap();
     let archive = updates.to_json().unwrap();
-    assert!(archive.contains("dustroute.blueprint-updates.v3"));
-    for version in 1..3 {
+    assert!(archive.contains("dustroute.blueprint-updates.v5"));
+    for version in 1..5 {
         assert!(
             BlueprintUpdates::from_json(&archive.replace(
-                "dustroute.blueprint-updates.v3",
+                "dustroute.blueprint-updates.v5",
                 &format!("dustroute.blueprint-updates.v{version}"),
             ))
             .is_err()
@@ -650,11 +657,11 @@ fn unadopted_observation_bindings_cannot_be_hidden_in_an_old_history_schema() {
     assert!(!original.contains("observed_outputs"));
     updates.create(request.clone()).unwrap();
     let archive = updates.to_json().unwrap();
-    assert!(archive.contains("dustroute.blueprint-updates.v4"));
-    for version in 1..4 {
+    assert!(archive.contains("dustroute.blueprint-updates.v5"));
+    for version in 1..5 {
         assert!(
             BlueprintUpdates::from_json(&archive.replace(
-                "dustroute.blueprint-updates.v4",
+                "dustroute.blueprint-updates.v5",
                 &format!("dustroute.blueprint-updates.v{version}")
             ))
             .is_err()
