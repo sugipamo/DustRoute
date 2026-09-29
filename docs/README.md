@@ -25,6 +25,7 @@ Git history; diagnostic fixtures have not been promoted into public capability.
 | --- | --- |
 | [Development](development.md) | Workspace boundaries, local checks, CLI and examples |
 | [Architecture readability audit](architecture-readability-audit.md) | Remaining responsibility, type and module boundaries; evidence and recommended refactoring order |
+| [Architecture migration](architecture-migration.md) | Migration progress, preserved contracts, deferred concerns and regression evidence |
 | [Stabilization and legacy paths](stabilization-legacy-paths.md) | Retired piston profiles, removed fallbacks, saved-data impact and remaining active paths |
 | [Physical IR](physical-ir.md) | Observations, evidence and derived representations |
 | [Physical function model](physical-function-model.md) | Shared circuitry and bounded functional inference |
