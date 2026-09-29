@@ -62,6 +62,8 @@ pub struct GeneratedFlyingMachine {
     pub initial: MinecraftSnapshot,
     pub expected_arrival: MinecraftSnapshot,
     pub moving_positions: Vec<Pos>,
+    /// Declared crops must disappear; any final occupant is defined by expected_arrival.
+    pub destroyed_positions: Vec<Pos>,
     pub displacement: Pos,
     pub verification: FlyingMachineVerification,
 }
@@ -82,6 +84,7 @@ pub fn generate_flying_machine(
         initial: recipe.initial,
         expected_arrival: recipe.arrival,
         moving_positions: recipe.moving,
+        destroyed_positions: recipe.destroyed,
         displacement: recipe.delta,
         verification: FlyingMachineVerification {
             status: CheckStatus::Undetermined,

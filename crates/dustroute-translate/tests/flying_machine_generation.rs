@@ -14,7 +14,95 @@ fn request() -> FlyingMachineRequest {
         rotation: RotationY::R0,
         mirrored: false,
         attachments: vec![],
+        harvest_targets: vec![],
     }
+}
+
+fn harvest_request() -> FlyingMachineRequest {
+    FlyingMachineRequest {
+        attachments: vec![
+            FlyingMachineAttachment {
+                position: Pos::new(0, 0, -1),
+                material: FlyingMachineMaterial::Slime,
+            },
+            FlyingMachineAttachment {
+                position: Pos::new(0, 0, -2),
+                material: FlyingMachineMaterial::Stone,
+            },
+        ],
+        harvest_targets: (1..=4)
+            .map(|x| FlyingMachineHarvestTarget {
+                position: Pos::new(x, 0, -2),
+                crop: if x % 2 == 0 {
+                    FlyingMachineCrop::Melon
+                } else {
+                    FlyingMachineCrop::Pumpkin
+                },
+            })
+            .collect(),
+        ..request()
+    }
+}
+
+#[test]
+fn harvest_requires_all_targets_removed_and_payload_arrival_after_restore() {
+    for rotation in [
+        RotationY::R0,
+        RotationY::R90,
+        RotationY::R180,
+        RotationY::R270,
+    ] {
+        for mirrored in [false, true] {
+            let generated = generate_flying_machine(
+                FlyingMachineRequest {
+                    rotation,
+                    mirrored,
+                    ..harvest_request()
+                },
+                BehaviorBudget::default(),
+            )
+            .unwrap();
+            assert_eq!(
+                generated.verification.status,
+                CheckStatus::Passed,
+                "{rotation:?}/{mirrored}: {:?}",
+                generated.verification
+            );
+            assert_eq!(generated.destroyed_positions.len(), 4);
+            assert_eq!(
+                generated.initial.blocks.len() - generated.expected_arrival.blocks.len(),
+                4
+            );
+            assert!(
+                !generated
+                    .expected_arrival
+                    .blocks
+                    .iter()
+                    .any(|b| matches!(b.name.as_str(), "minecraft:pumpkin" | "minecraft:melon"))
+            );
+            if rotation == RotationY::R0 && !mirrored {
+                let mut updates = BlueprintUpdates::new(generated.records.catalog().unwrap());
+                updates.create(generated.request.clone()).unwrap();
+                let mut restored =
+                    BlueprintUpdates::from_json(&updates.to_json().unwrap()).unwrap();
+                restored.adopt(&generated.request.id).unwrap();
+            }
+        }
+    }
+}
+
+#[test]
+fn unreached_crop_cannot_be_a_successful_harvest_and_overlap_is_rejected() {
+    let mut request = harvest_request();
+    request.harvest_targets.push(FlyingMachineHarvestTarget {
+        position: Pos::new(4, 0, -3),
+        crop: FlyingMachineCrop::Melon,
+    });
+    let generated = generate_flying_machine(request, BehaviorBudget::default()).unwrap();
+    assert_ne!(generated.verification.status, CheckStatus::Passed);
+    let mut request = harvest_request();
+    request.harvest_targets[0].position = Pos::new(0, 0, 0);
+    assert!(generate_flying_machine(request, BehaviorBudget::default()).is_err());
 }
 
 #[test]

@@ -45,6 +45,23 @@ pub struct PassiveSpec {
 }
 
 impl PassiveSpec {
+    pub const fn piston_destroys(&self) -> bool {
+        match self.states {
+            PassiveStates::Fixed(p) | PassiveStates::DryStairs(p) => {
+                matches!(p.spec().piston_reaction, PistonReaction::Destroy)
+            }
+            PassiveStates::DrySlab {
+                bottom,
+                top,
+                double,
+            } => {
+                matches!(bottom.spec().piston_reaction, PistonReaction::Destroy)
+                    || matches!(top.spec().piston_reaction, PistonReaction::Destroy)
+                    || matches!(double.spec().piston_reaction, PistonReaction::Destroy)
+            }
+        }
+    }
+
     pub const fn adhesion(&self) -> Adhesion {
         match self.states {
             PassiveStates::Fixed(p) => p.spec().adhesion,
@@ -72,8 +89,11 @@ const fn same_name(a: &str, b: &str) -> bool {
 const fn passive(p: CheckedPhysical) {
     assert!(
         matches!(p.support(), Support::None)
-            && matches!(p.spec().piston_reaction, PistonReaction::Normal)
             && matches!(p.spec().orientation, Orientation::None)
+            && matches!(
+                p.spec().piston_reaction,
+                PistonReaction::Normal | PistonReaction::Destroy
+            )
             && matches!(p.spec().wire_connection, WireConnectionRule::None),
         "passive blocks cannot declare attachment, signal axes or dust terminals"
     );
@@ -193,7 +213,18 @@ const TOP: CheckedPhysical = PhysicalSpec {
 }
 .checked();
 
-pub const BUILTINS: [PassiveSpec; 6] = registry([
+pub const BUILTINS: [PassiveSpec; 7] = registry([
+    PassiveSpec {
+        names: &["pumpkin", "melon"],
+        kind: BlockKind::Solid,
+        states: PassiveStates::Fixed(
+            PhysicalSpec {
+                piston_reaction: PistonReaction::Destroy,
+                ..SOLID.spec()
+            }
+            .checked(),
+        ),
+    },
     PassiveSpec {
         names: &["slime_block"],
         kind: BlockKind::Transparent,

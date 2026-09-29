@@ -81,9 +81,9 @@ fn materials_keep_native_support_conduction_and_pair_rules_separate() {
 }
 
 #[test]
-fn older_execution_profiles_do_not_gain_adhesion_from_material_registration() {
+fn older_execution_profiles_do_not_gain_motion_from_material_registration() {
     use dustroute_minecraft::execution_context::{WorldExecutionContext, WorldExecutionProfile::*};
-    for name in ["slime_block", "honey_block"] {
+    for name in ["slime_block", "honey_block", "pumpkin", "melon"] {
         let mut w = World::new();
         w.set(ZERO, material(name));
         for profile in [
@@ -98,7 +98,7 @@ fn older_execution_profiles_do_not_gain_adhesion_from_material_registration() {
                     .is_err()
             );
         }
-        WorldExecutionContext::for_profile(UnifiedPistonElectricalCallbacksJava12111V17)
+        WorldExecutionContext::for_profile(UnifiedPistonElectricalCallbacksJava12111V18)
             .validate_world_kinds(&w)
             .unwrap();
         let mut malformed = material(name);
@@ -117,6 +117,152 @@ fn older_execution_profiles_do_not_gain_adhesion_from_material_registration() {
             .is_err()
         );
     }
+}
+
+#[test]
+fn passive_destruction_is_exact_and_works_in_all_six_directions() {
+    for name in ["pumpkin", "melon"] {
+        let mut bad = material(name);
+        bad.observed_properties.insert("age".into(), "7".into());
+        assert!(validate_evidence(&bad).is_err());
+        for dir in SIDES {
+            for count in [0, 1, 12] {
+                let (mut w, input) = world(dir);
+                for n in 1..=count {
+                    w.set(at(ZERO, dir, n), material("stone"));
+                }
+                w.set(at(ZERO, dir, count + 1), material(name));
+                let mut r = run(w);
+                on(&mut r, input);
+                assert_eq!(
+                    r.view().block(ZERO).unwrap().piston_state,
+                    Some(PistonState::Extended)
+                );
+                assert_eq!(
+                    r.view().block(at(ZERO, dir, 1)).unwrap().kind,
+                    BlockKind::PistonHead
+                );
+                for n in 2..=count + 1 {
+                    assert_eq!(r.view().block(at(ZERO, dir, n)).unwrap(), material("stone"));
+                }
+                assert!(
+                    !r.view()
+                        .world()
+                        .iter()
+                        .any(|(_, b)| b.observed_name.as_deref()
+                            == Some(&format!("minecraft:{name}")))
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn over_limit_does_not_partially_destroy_the_last_target() {
+    let (mut w, input) = world(Facing::East);
+    for x in 1..=13 {
+        w.set(Pos::new(x, 0, 0), material("stone"));
+    }
+    w.set(Pos::new(14, 0, 0), material("melon"));
+    let before = w.clone();
+    let mut r = run(w);
+    on(&mut r, input);
+    for x in 0..=14 {
+        let pos = Pos::new(x, 0, 0);
+        assert_eq!(r.view().block(pos).unwrap(), *before.get(pos).unwrap());
+    }
+}
+
+#[test]
+fn side_contact_does_not_destroy_but_a_moving_branch_does() {
+    let (mut w, input) = world(Facing::East);
+    w.set(Pos::new(1, 0, 0), material("slime_block"));
+    w.set(Pos::new(1, 1, 0), material("melon"));
+    w.set(Pos::new(1, 0, 1), material("stone"));
+    w.set(Pos::new(2, 0, 1), material("pumpkin"));
+    let mut r = run(w);
+    on(&mut r, input);
+    assert_eq!(
+        r.view().block(Pos::new(1, 1, 0)).unwrap(),
+        material("melon")
+    );
+    assert_eq!(
+        r.view().block(Pos::new(2, 0, 1)).unwrap(),
+        material("stone")
+    );
+    assert_eq!(
+        r.view().block(Pos::new(1, 0, 1)).unwrap().kind,
+        BlockKind::Air
+    );
+}
+
+#[test]
+fn blocked_branch_cancels_collected_destruction() {
+    let (mut w, input) = world(Facing::East);
+    w.set(Pos::new(1, 0, 0), material("slime_block"));
+    w.set(Pos::new(2, 0, 0), material("melon"));
+    w.set(Pos::new(1, 1, 0), material("stone"));
+    w.set(Pos::new(2, 1, 0), material("obsidian"));
+    let before = w.clone();
+    let mut r = run(w);
+    on(&mut r, input);
+    for (pos, b) in before.iter().filter(|(pos, _)| **pos != input) {
+        assert_eq!(r.view().block(*pos).unwrap(), *b);
+    }
+}
+
+#[test]
+fn sticky_retraction_does_not_destroy_its_direct_target() {
+    let (mut w, input) = world(Facing::East);
+    w.set(Pos::new(3, 0, 0), material("melon"));
+    let mut r = run(w);
+    on(&mut r, input);
+    r.install_now(Pos::new(2, 0, 0), material("pumpkin"))
+        .unwrap();
+    r.run_until_idle().unwrap();
+    r.input_now(input, false).unwrap();
+    r.run_until_idle().unwrap();
+    assert_eq!(
+        r.view().block(ZERO).unwrap().piston_state,
+        Some(PistonState::Retracted)
+    );
+    assert_eq!(
+        r.view().block(Pos::new(2, 0, 0)).unwrap(),
+        material("pumpkin")
+    );
+    assert_eq!(
+        r.view().block(Pos::new(3, 0, 0)).unwrap(),
+        material("melon")
+    );
+}
+
+#[test]
+fn checkpoint_between_two_destructions_retains_remaining_motion_and_notifications() {
+    let (mut w, input) = world(Facing::East);
+    w.set(Pos::new(1, 0, 0), material("slime_block"));
+    w.set(Pos::new(1, 1, 0), material("stone"));
+    let targets = [Pos::new(2, 0, 0), Pos::new(2, 1, 0)];
+    for p in targets {
+        w.set(p, material("melon"));
+    }
+    let mut runtime = run(w);
+    schedule_electrical_input_after_tick(&mut runtime, 1, input, true).unwrap();
+    let checkpoint = loop {
+        assert!(runtime.microstep().unwrap().is_some());
+        if targets
+            .iter()
+            .filter(|p| runtime.view().block(**p).unwrap().kind == BlockKind::Air)
+            .count()
+            == 1
+        {
+            break runtime.checkpoint();
+        }
+    };
+    let mut restored = ElectricalPistonRuntime::from_checkpoint(&checkpoint).unwrap();
+    runtime.run_until_idle().unwrap();
+    restored.run_until_idle().unwrap();
+    assert_eq!(restored.state_key(), runtime.state_key());
+    assert_eq!(restored.trace(), runtime.trace());
 }
 
 #[test]

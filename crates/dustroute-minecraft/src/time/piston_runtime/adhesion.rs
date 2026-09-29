@@ -9,11 +9,32 @@ fn adhesion(block: &Block) -> Adhesion {
     physical::of_block(block).map_or(Adhesion::None, |p| p.spec().adhesion)
 }
 
-// These admitted attachments have native DESTROY reaction. They do not join a
-// side/back attachment, but destruction in the movement path remains unsupported.
+// DESTROY blocks never join a side/back attachment.
 fn destroys(block: &Block) -> bool {
     physical::of_block(block)
         .is_some_and(|p| p.spec().piston_reaction == physical::PistonReaction::Destroy)
+}
+
+/// Collection order is retained independently for moves and destruction.
+/// Destroyed blocks do not count toward the movement limit.
+pub(super) struct CollectedMotion {
+    pub moves: Vec<BlockMove>,
+    pub destroyed: Vec<Pos>,
+}
+
+fn require_passive_destruction(block: &Block) -> Result<(), RuntimeError> {
+    if block
+        .observed_name
+        .as_deref()
+        .and_then(physical::passive::named)
+        .is_none()
+        || !destroys(block)
+    {
+        return Err(unsupported(
+            "piston destruction callbacks for this block are not modeled",
+        ));
+    }
+    Ok(())
 }
 
 pub(super) fn attachable(pos: Pos, block: &Block) -> Result<bool, RuntimeError> {
@@ -29,7 +50,7 @@ pub(super) fn collect(
     body_pos: Pos,
     body: &Block,
     extending: bool,
-) -> Result<Option<Vec<BlockMove>>, RuntimeError> {
+) -> Result<Option<CollectedMotion>, RuntimeError> {
     let dir = facing(body)?;
     let geometry = crate::piston_motion_law::builtin_laws()
         .geometry(false, false, view.time().section, 0)
@@ -47,9 +68,11 @@ pub(super) fn collect(
     let block = view.block(start)?;
     if block.kind != BlockKind::Air && !attachable(start, &block)? {
         if extending && destroys(&block) {
-            return Err(unsupported(
-                "piston destruction in movement path is not modeled",
-            ));
+            require_passive_destruction(&block)?;
+            return Ok(Some(CollectedMotion {
+                moves: Vec::new(),
+                destroyed: vec![start],
+            }));
         }
         return Ok(None);
     }
@@ -61,6 +84,7 @@ pub(super) fn collect(
         motion,
         extending,
         moved: Vec::new(),
+        destroyed: Vec::new(),
     };
     if !collector.line(start)? {
         return Ok(None);
@@ -73,7 +97,7 @@ pub(super) fn collect(
         }
         i += 1;
     }
-    collector
+    let moves = collector
         .moved
         .into_iter()
         .rev()
@@ -84,8 +108,11 @@ pub(super) fn collect(
                 block: view.block(from)?,
             })
         })
-        .collect::<Result<Vec<_>, _>>()
-        .map(Some)
+        .collect::<Result<Vec<_>, RuntimeError>>()?;
+    Ok(Some(CollectedMotion {
+        moves,
+        destroyed: collector.destroyed.into_iter().rev().collect(),
+    }))
 }
 
 struct Collector<'a> {
@@ -95,6 +122,7 @@ struct Collector<'a> {
     motion: Facing,
     extending: bool,
     moved: Vec<Pos>,
+    destroyed: Vec<Pos>,
     limit: usize,
 }
 impl Collector<'_> {
@@ -160,6 +188,11 @@ impl Collector<'_> {
             }
             let block = self.block(pos)?;
             if block.kind == BlockKind::Air {
+                return Ok(true);
+            }
+            if destroys(&block) {
+                require_passive_destruction(&block)?;
+                self.destroyed.push(pos);
                 return Ok(true);
             }
             if !movable(pos, &block)? || pos == self.body_pos {

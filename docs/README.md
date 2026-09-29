@@ -74,6 +74,7 @@ Git history; diagnostic fixtures have not been promoted into public capability.
 | [Finite-flight lifecycle](flying-machine-lifecycle.md) | Single-operation type, adopted empty-corridor placement, arrival diagnosis and reviewed removal |
 | [Flying-machine generation](flying-machine-generation.md) | Typed body recipes, attachments, finite travel, reflection and rotation through shared validation |
 | [Declarative flying-machine engines](flying-machine-engines.md) | Typed engine definitions, shared verification and live lifecycle evidence |
+| [Harvest pass and practical roadmap](flying-machine-practical-roadmap.md) | Pumpkin/melon destruction, generated harvest contracts and the remaining survival-construction prerequisites |
 | [Differential physics](physics-differential-testing.md) | Comparing model and client-visible observations |
 | [Executable torch law](torch-laws.md) | Blueprint rule execution and server-observed burnout/recovery regressions |
 | [Executable repeater laws](blueprint-architecture.md#executable-repeater-laws) | Retained queue/event models, immutable law data and the short-pulse/locking boundaries |

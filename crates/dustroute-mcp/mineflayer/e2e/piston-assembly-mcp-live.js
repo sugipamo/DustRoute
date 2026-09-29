@@ -135,6 +135,12 @@ async function verifyFlightArrival (plan) {
   const displacement = fixture.finite_flight.displacement || { x: fixture.finite_flight.distance, y: 0, z: 0 }
   const delta = transform(displacement).minus(origin)
   let expected = structuredClone(plan.construction_steps.at(-1).expected)
+  const destroyed = new Set((fixture.finite_flight.destroyed_positions || []).map(p => key(transform(p))))
+  assert.equal(destroyed.size, (fixture.finite_flight.destroyed_positions || []).length, 'distinct declared destruction targets')
+  const crops = expected.blocks.filter(b => destroyed.has(key(b.pos)))
+  assert.equal(crops.length, destroyed.size, 'every declared crop exists initially')
+  assert(crops.every(b => ['minecraft:pumpkin', 'minecraft:melon'].includes(b.name) && !moving.has(key(b.pos))), 'only declared mature crops may disappear')
+  expected.blocks = expected.blocks.filter(b => !destroyed.has(key(b.pos)))
   let count = 0
   for (const b of expected.blocks) {
     if (moving.has(key(b.pos))) {
@@ -166,7 +172,7 @@ async function verifyFlightArrival (plan) {
   const canonical = blocks => blocks.map(b => [key(b.pos), b.name, b.properties]).sort((a, b) => a[0].localeCompare(b[0]))
   assert.deepEqual(canonical(observed.blocks), canonical(expected.blocks), 'whole corridor must contain only the arrived engine and fixed launcher/stopper')
   return { expected, observed, distance: fixture.finite_flight.distance,
-    engine_blocks: count, displacement,
+    engine_blocks: count, destroyed_blocks: crops.length, displacement,
     expectation: fixture.expected_arrival ? 'independently declared native arrival at translated and fixed positions' : 'all declared moving blocks translated once; fixed blocks unchanged except launcher input',
     hidden_readiness_proven: false }
 }
@@ -194,6 +200,7 @@ async function main () {
     delete proposal.id
     assert.deepEqual(proposal, fixture.request)
     assert.deepEqual(generated.result.moving_positions, fixture.finite_flight.moving_positions)
+    assert.deepEqual(generated.result.destroyed_positions, fixture.finite_flight.destroyed_positions || [])
     assert.deepEqual(generated.result.displacement, fixture.finite_flight.displacement)
     assert.deepEqual(generated.result.expected_arrival, fixture.expected_arrival)
     report.generated = { specification: fixture.generation_request, verification: generated.result.verification }

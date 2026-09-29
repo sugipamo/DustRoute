@@ -21,21 +21,23 @@ pub enum WorldExecutionProfile {
     RedstoneCompatibilityBoundaryV1,
     #[serde(rename = "dustroute.bounded-redstone-events.v1")]
     BoundedRedstoneEventsV1,
-    #[serde(rename = "dustroute.piston-electrical-callbacks.java-1-21-11.v17")]
-    UnifiedPistonElectricalCallbacksJava12111V17,
+    #[serde(rename = "dustroute.piston-electrical-callbacks.java-1-21-11.v18")]
+    UnifiedPistonElectricalCallbacksJava12111V18,
 }
 
 impl WorldExecutionProfile {
-    /// Adhesive motion is only implemented by the current shared runtime.
+    /// Adhesive motion and passive destruction require the current runtime.
     /// Recognizing a passive material must not widen an older executor.
     pub fn admits_block(self, block: &crate::Block) -> bool {
         self.admits_kind(block.kind)
-            && (matches!(self, Self::UnifiedPistonElectricalCallbacksJava12111V17)
+            && (matches!(self, Self::UnifiedPistonElectricalCallbacksJava12111V18)
                 || !block
                     .observed_name
                     .as_deref()
                     .and_then(crate::physical::passive::named)
-                    .is_some_and(|s| s.adhesion() != crate::physical::Adhesion::None))
+                    .is_some_and(|s| {
+                        s.adhesion() != crate::physical::Adhesion::None || s.piston_destroys()
+                    }))
     }
 
     /// Kind admission is independent of registry membership and physical
@@ -57,7 +59,7 @@ impl WorldExecutionProfile {
             Self::RedstoneCompatibilityBoundaryV1 | Self::BoundedRedstoneEventsV1 => {
                 crate::spatial::spatial_kind_v1(kind).is_some()
             }
-            Self::UnifiedPistonElectricalCallbacksJava12111V17 => {
+            Self::UnifiedPistonElectricalCallbacksJava12111V18 => {
                 matches!(
                     kind,
                     Air | Solid
@@ -160,7 +162,7 @@ impl WorldExecutionContext {
     /// separate from the legacy finite spatial-law catalog.
     pub const fn physical_admission_revision(&self) -> Option<&'static str> {
         match self.profile {
-            WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V17 => {
+            WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V18 => {
                 Some(crate::physical::REVISION)
             }
             _ => None,
@@ -223,7 +225,7 @@ impl WorldExecutionContext {
                         Some(crate::piston_law::builtin_piston_laws().default_motion_profile()),
                     )
                 }
-                UnifiedPistonElectricalCallbacksJava12111V17 => {
+                UnifiedPistonElectricalCallbacksJava12111V18 => {
                     laws.retain(|role, _| *role == BlockTraits);
                     laws.insert(Lamp, crate::device_callback_law::LAW_IDS[0].into());
                     laws.insert(Observer, crate::device_callback_law::LAW_IDS[1].into());
@@ -286,7 +288,7 @@ impl WorldExecutionContext {
     pub fn device_program_revision(&self) -> Option<&'static str> {
         matches!(
             self.profile,
-            WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V17
+            WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V18
         )
         .then_some(crate::device_program::REVISION)
     }
@@ -296,7 +298,7 @@ impl WorldExecutionContext {
     pub fn synchronous_runtime_profile(&self) -> Option<&'static str> {
         matches!(
             self.profile,
-            WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V17
+            WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V18
         )
         .then_some(crate::time::runtime::PROFILE)
     }

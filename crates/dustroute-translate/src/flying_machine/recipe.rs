@@ -4,7 +4,9 @@ use crate::piston_construction::electrical_snapshot;
 use crate::snapshot::assembly_from_snapshot;
 use crate::{MinecraftSnapshot, MinecraftSnapshotBlock, Pos, Region};
 use dustroute_library::blueprint::BlueprintCatalog;
-use dustroute_library::flying_machine::{FlyingMachineMaterial, FlyingMachineRequest};
+use dustroute_library::flying_machine::{
+    FlyingMachineCrop, FlyingMachineMaterial, FlyingMachineRequest,
+};
 use dustroute_library::runtime_behavior::RuntimeBehaviorContext;
 use std::collections::BTreeSet;
 
@@ -73,6 +75,7 @@ pub(super) struct Recipe {
     pub initial: MinecraftSnapshot,
     pub arrival: MinecraftSnapshot,
     pub moving: Vec<Pos>,
+    pub destroyed: Vec<Pos>,
     pub delta: Pos,
     pub context: RuntimeBehaviorContext,
     pub sweep: BTreeSet<Pos>,
@@ -162,7 +165,31 @@ fn expand_definition(
     if overrides.len() != engine.arrival_overrides.len() || !overrides.is_subset(&positions) {
         return Err("arrival overrides must name distinct existing parts".into());
     }
-    let blocks: Vec<_> = declared.iter().map(|p| p.native()).collect();
+    let mut blocks: Vec<_> = declared.iter().map(|p| p.native()).collect();
+    if request.harvest_targets.len() > 128 {
+        return Err("generation supports at most 128 mature crop targets".into());
+    }
+    let mut destroyed = BTreeSet::new();
+    for target in &request.harvest_targets {
+        let p = target.position;
+        if !(-4..=distance + 4).contains(&p.x)
+            || !(-2..=3).contains(&p.y)
+            || !(-5..=5).contains(&p.z)
+        {
+            return Err("harvest coordinates exceed the bounded course envelope".into());
+        }
+        if positions.contains(&p) || !destroyed.insert(p) {
+            return Err("duplicate crop or crop overlapping initial equipment".into());
+        }
+        blocks.push(native(
+            p,
+            match target.crop {
+                FlyingMachineCrop::Pumpkin => "pumpkin",
+                FlyingMachineCrop::Melon => "melon",
+            },
+            &[],
+        ));
+    }
     let mut arrival: Vec<_> = declared
         .iter()
         .map(|p| {
@@ -268,6 +295,7 @@ fn expand_definition(
         initial,
         arrival,
         moving: moving.into_iter().map(project).collect(),
+        destroyed: destroyed.into_iter().map(project).collect(),
         delta: request.rotation.pos(Pos::new(distance, 0, 0)),
         context,
         sweep,

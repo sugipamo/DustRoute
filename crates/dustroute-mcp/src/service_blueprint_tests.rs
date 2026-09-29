@@ -27,15 +27,20 @@ mod flight_fixture;
 
 #[tokio::test]
 async fn generated_flight_is_unpublished_then_imported_proposed_and_adopted_after_restart() {
-    check_generated_flight(None, "honey_nose").await;
+    check_generated_flight(None, "honey_nose", false).await;
 }
 
 #[tokio::test]
 async fn generated_honey_engine_is_unpublished_then_freshly_adopted_after_restart() {
-    check_generated_flight(Some("honey_direct"), "compact").await;
+    check_generated_flight(Some("honey_direct"), "compact", false).await;
 }
 
-async fn check_generated_flight(engine: Option<&str>, body: &str) {
+#[tokio::test]
+async fn generated_harvest_is_unpublished_then_freshly_adopted_after_restart() {
+    check_generated_flight(None, "compact", true).await;
+}
+
+async fn check_generated_flight(engine: Option<&str>, body: &str, harvest: bool) {
     let root = temporary();
     let (client, server) = start(&root).await;
     let before = call(
@@ -47,6 +52,17 @@ async fn check_generated_flight(engine: Option<&str>, body: &str) {
     let mut specification = json!({"namespace":"public.generated","body":body,"distance":3,"rotation":"r270","mirrored":true});
     if let Some(engine) = engine {
         specification["engine"] = json!(engine);
+    }
+    if harvest {
+        specification["attachments"] = json!([
+            {"position":{"x":0,"y":0,"z":-1}, "material":"slime"},
+            {"position":{"x":0,"y":0,"z":-2}, "material":"stone"}
+        ]);
+        specification["harvest_targets"] = json!([
+            {"position":{"x":1,"y":0,"z":-2}, "crop":"pumpkin"},
+            {"position":{"x":2,"y":0,"z":-2}, "crop":"melon"},
+            {"position":{"x":3,"y":0,"z":-2}, "crop":"pumpkin"}
+        ]);
     }
     let generated = call(
         &client,
@@ -66,6 +82,10 @@ async fn check_generated_flight(engine: Option<&str>, body: &str) {
     .await;
     assert_eq!(before, after);
     let result = &generated["result"];
+    assert_eq!(
+        result["destroyed_positions"].as_array().unwrap().len(),
+        if harvest { 3 } else { 0 }
+    );
     let imported = call(
         &client,
         "test_circuit_change",
@@ -506,7 +526,7 @@ async fn custom_electrical_construction_rechecks_adoption_baseline_settings_and_
     assert_eq!(planned["ok"], true, "{planned}");
     assert_eq!(
         planned["execution_context"]["profile"],
-        "dustroute.piston-electrical-root-exploration.v17"
+        "dustroute.piston-electrical-root-exploration.v18"
     );
     let id = planned["operation_id"].clone();
     assert_eq!(
@@ -1304,7 +1324,7 @@ async fn runtime_blueprint_review_and_adoption_preserve_child_failures_after_res
                 .input_schema,
         )
         .unwrap();
-        assert!(schema.contains("dustroute.piston-electrical-root-exploration.v17"));
+        assert!(schema.contains("dustroute.piston-electrical-root-exploration.v18"));
         assert!(!schema.contains("dustroute.horizontal-piston-root-exploration.v1"));
         let imported=call(&client,"test_circuit_change",json!({"blueprint":{"action":"import","records":{
             "types":fixture.catalog.type_revisions().collect::<Vec<_>>(),
@@ -1334,7 +1354,7 @@ async fn runtime_blueprint_review_and_adoption_preserve_child_failures_after_res
         );
         assert_eq!(
             inspected["result"]["validation"]["placement_validation_profile"],
-            "dustroute.piston-electrical-callbacks.java-1-21-11.v17"
+            "dustroute.piston-electrical-callbacks.java-1-21-11.v18"
         );
         assert_eq!(
             inspected["result"]["world_execution_context"],

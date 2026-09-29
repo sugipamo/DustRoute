@@ -25,6 +25,10 @@ pub struct FlyingMachineRequest {
     /// Detached, obstructing and overloaded additions must fail verification.
     #[serde(default)]
     pub attachments: Vec<FlyingMachineAttachment>,
+    /// Initially present mature crop blocks which this single flight must break.
+    /// Coordinates use the same source frame as attachments. No growth or loot contract.
+    #[serde(default)]
+    pub harvest_targets: Vec<FlyingMachineHarvestTarget>,
 }
 
 #[derive(
@@ -63,4 +67,18 @@ pub enum FlyingMachineMaterial {
     Glass,
     Slime,
     Honey,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct FlyingMachineHarvestTarget {
+    pub position: Pos,
+    pub crop: FlyingMachineCrop,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum FlyingMachineCrop {
+    Pumpkin,
+    Melon,
 }

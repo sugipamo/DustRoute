@@ -21,6 +21,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "generation_verification":generated.verification,"expected_arrival":generated.expected_arrival,
             "finite_flight":{"distance":generated.specification.distance,
                 "displacement":generated.displacement,"moving_positions":generated.moving_positions,
+                "destroyed_positions":generated.destroyed_positions,
                 "wait_ticks":u64::from(generated.specification.distance)*12+40}
         }))?
     );

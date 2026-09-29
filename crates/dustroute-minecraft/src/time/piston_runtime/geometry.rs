@@ -240,7 +240,7 @@ pub(super) fn push_moves(
     view: RuntimeView<'_>,
     pos: Pos,
     body: &Block,
-) -> Result<Option<Vec<BlockMove>>, RuntimeError> {
+) -> Result<Option<super::adhesion::CollectedMotion>, RuntimeError> {
     super::adhesion::collect(view, pos, body, true)
 }
 

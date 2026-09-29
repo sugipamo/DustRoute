@@ -41,7 +41,7 @@ use crate::{Block, BlockKind, Facing, ObservationClassification, PistonState};
 pub mod passive;
 pub mod stairs;
 
-pub const REVISION: &str = "dustroute.physical-admission.java-1-21-11.v8";
+pub const REVISION: &str = "dustroute.physical-admission.java-1-21-11.v9";
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
 #[serde(rename_all = "snake_case")]

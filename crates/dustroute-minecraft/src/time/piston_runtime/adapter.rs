@@ -390,7 +390,7 @@ fn start_extension(
     view: RuntimeView<'_>,
     pos: Pos,
     body: Block,
-    moves: Vec<BlockMove>,
+    collected: super::adhesion::CollectedMotion,
 ) -> Result<RuntimeOutcome<PistonEvent>, RuntimeError> {
     let dir = facing(&body)?;
     let effects = builtin_laws()
@@ -406,6 +406,13 @@ fn start_extension(
             body: Box::new(body.clone()),
         }),
     );
+    let super::adhesion::CollectedMotion { moves, destroyed } = collected;
+    // Native flags 18: no shape or ordinary notifications during the initial
+    // destruction writes. Admitted passive targets have no removal callback.
+    // Item entities and loot are outside this block-state projection.
+    for position in &destroyed {
+        plan.write(*position, Block::new(BlockKind::Air), false);
+    }
     for movement in &moves {
         plan.write(
             movement.to,
@@ -416,6 +423,9 @@ fn start_extension(
     plan.write(front, moving(head(&body)?, dir, true, true), true);
     clear_sources(view, &mut plan, &moves, Some(front))?;
     let mut jobs = VecDeque::new();
+    for position in destroyed {
+        jobs.extend(adjacent_jobs(view, position, false, false)?);
+    }
     for source in moves.iter().map(|m| m.from).chain([front]) {
         jobs.extend(adjacent_jobs(view, source, false, false)?);
     }
@@ -534,7 +544,11 @@ fn retract_payload(
         if view.block(front)?.kind == BlockKind::PistonHead {
             plan.write(front, Block::new(BlockKind::Air), false);
         }
-        if let Some(moves) = super::adhesion::collect(view, pos, body, false)? {
+        if let Some(collected) = super::adhesion::collect(view, pos, body, false)? {
+            let super::adhesion::CollectedMotion { moves, destroyed } = collected;
+            for position in &destroyed {
+                plan.write(*position, Block::new(BlockKind::Air), false);
+            }
             for movement in &moves {
                 plan.write(
                     movement.to,
@@ -544,6 +558,9 @@ fn retract_payload(
             }
             clear_sources(view, &mut plan, &moves, None)?;
             let mut jobs = VecDeque::new();
+            for position in destroyed {
+                jobs.extend(adjacent_jobs(view, position, false, false)?);
+            }
             for movement in &moves {
                 jobs.extend(adjacent_jobs(view, movement.from, false, false)?);
             }

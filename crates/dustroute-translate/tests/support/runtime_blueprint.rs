@@ -83,7 +83,7 @@ pub fn electrical_fixture(child_violation: bool) -> Fixture {
             world.place(BlockKind::RedstoneBlock, pos.offset(0, 0, -1));
         }
     }
-    f.context.profile = RuntimeBehaviorProfile::UnifiedPistonElectricalRootExplorationV17;
+    f.context.profile = RuntimeBehaviorProfile::UnifiedPistonElectricalRootExplorationV18;
     f.context.known_region = Region::new(Pos::new(-6, -2, -5), Pos::new(22, 12, 5));
     f.context.input_levers = vec![input];
     let next = f
@@ -295,7 +295,7 @@ pub fn fixture(child_violation: bool, relocate: bool) -> Fixture {
         record.block = rotation.block(&record.block);
     }
     let context = RuntimeBehaviorContext {
-        profile: RuntimeBehaviorProfile::UnifiedPistonElectricalRootExplorationV17,
+        profile: RuntimeBehaviorProfile::UnifiedPistonElectricalRootExplorationV18,
         initial_condition: BehaviorInitialCondition::FreshConstruction,
         known_region: region,
         input_levers: vec![transform(Pos::new(-1, 1, 0))],
