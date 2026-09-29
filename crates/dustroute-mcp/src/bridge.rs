@@ -20,6 +20,8 @@ use tokio::net::TcpStream;
 pub struct BotBridge {
     address: String,
     timeout: Duration,
+    #[cfg(feature = "voxrig")]
+    native: Option<std::sync::Arc<crate::voxrig_bridge::VoxrigBridge>>,
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
@@ -326,6 +328,8 @@ impl BotBridge {
         Self {
             address: address.into(),
             timeout: Duration::from_secs(10),
+            #[cfg(feature = "voxrig")]
+            native: None,
         }
     }
 
@@ -335,11 +339,44 @@ impl BotBridge {
         self
     }
 
+    /// Connect the Rust adapter explicitly. Its observations retain client provenance.
+    #[cfg(feature = "voxrig")]
+    pub async fn connect_voxrig(config: voxrig::ConnectionConfig) -> Result<Self, BotBridgeError> {
+        let native = crate::voxrig_bridge::VoxrigBridge::connect(config).await?;
+        Ok(Self {
+            address: String::new(),
+            timeout: Duration::from_secs(10),
+            native: Some(std::sync::Arc::new(native)),
+        })
+    }
+
+    /// A complete client reconstruction, never a `ValidatedRegion` capability.
+    #[cfg(feature = "voxrig")]
+    pub async fn scan_client_region(
+        &self,
+        min: Pos,
+        max: Pos,
+        dimension: &str,
+    ) -> Result<crate::voxrig_bridge::ClientRegion, BotBridgeError> {
+        let native = self.native.as_ref().ok_or_else(|| {
+            BotBridgeError::Protocol("client reconstruction requires the Voxrig adapter".into())
+        })?;
+        tokio::time::timeout(self.timeout, native.observe_region(min, max, dimension))
+            .await
+            .map_err(|_| BotBridgeError::Timeout(self.timeout))?
+    }
+
     async fn request<T: for<'de> Deserialize<'de>>(
         &self,
         method: &str,
         params: Value,
     ) -> Result<T, BotBridgeError> {
+        #[cfg(feature = "voxrig")]
+        if self.native.is_some() {
+            return Err(BotBridgeError::Protocol(format!(
+                "Voxrig operation is not implemented: {method}"
+            )));
+        }
         let timeout = self.timeout;
         let operation = async {
             let mut stream = TcpStream::connect(&self.address).await?;

@@ -18,6 +18,8 @@ mod source_identity;
 mod state;
 mod storage;
 pub mod transition;
+#[cfg(feature = "voxrig")]
+pub mod voxrig_bridge;
 
 pub use api::{
     DIAGNOSTIC_SCHEMA_V1, ERROR_SCHEMA_V1, ErrorResponse, McpErrorCode, PLACEMENT_SCHEMA_V1,
