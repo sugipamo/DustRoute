@@ -1,14 +1,19 @@
-//! Native client observation boundary. Client evidence cannot construct a
-//! server-confirmed capability or be silently substituted for command readback.
+//! Native client observation boundary. Client evidence retains its own source
+//! and cannot construct a server-confirmed capability.
 use crate::bridge::BotBridgeError;
 use dustroute_physical::Pos;
 use dustroute_translate::snapshot::{MinecraftSnapshot, MinecraftSnapshotBlock};
 use serde::Serialize;
 use voxrig::versions::java_1_21_11::reconstruction::ClientObservation;
 use voxrig::{Client, ConnectionConfig, MinecraftVersion, Region};
+mod operations;
 
 pub struct VoxrigBridge {
     client: Client,
+    host: String,
+    port: u16,
+    username: String,
+    mutations: tokio::sync::Mutex<()>,
 }
 impl std::fmt::Debug for VoxrigBridge {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -117,9 +122,18 @@ impl VoxrigBridge {
                 "DustRoute physical context requires Java 1.21.11".into(),
             ));
         }
+        let host = config.server.host.clone();
+        let port = config.server.port;
+        let username = config.username.clone();
         let client = Client::connect(config).await.map_err(native_error)?;
         client.wait_until_ready().await.map_err(native_error)?;
-        Ok(Self { client })
+        Ok(Self {
+            client,
+            host,
+            port,
+            username,
+            mutations: tokio::sync::Mutex::new(()),
+        })
     }
     pub async fn observe_region(
         &self,

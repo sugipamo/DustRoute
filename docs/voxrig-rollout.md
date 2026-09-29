@@ -12,6 +12,7 @@ Voxrig is developed in the sibling `../Voxrig` checkout on
 No remote submission has been made. The Cargo `voxrig` feature uses this explicit
 path while the branch is unpublished. A clean checkout needs that sibling; this
 is not a crates.io dependency or an unpinned fetch at build time.
+The operation/recording adapter was validated with sibling commit `b98785e`.
 
 ## Observation boundary
 
@@ -24,14 +25,100 @@ moving carriers remain attached. Frames/revisions are not server ticks.
 Incomplete reconstruction, pending chunk recovery, unavailable cells, a wrong
 dimension or incomplete coverage rejects the scan. The Rust type has no
 Deserialize implementation, so saved data cannot create a fresh capability.
-It also cannot construct `ValidatedRegion` or `ServerReadback`: existing confirmed
-placement/repair paths retain their current contract until separately migrated.
+It also cannot construct `ValidatedRegion` or `ServerReadback`. Shared workflows
+consume a fresh observation capability whose source is explicit. The native path
+does not issue per-cell confirmation commands or silently fall back to Mineflayer.
 The adapter does not run DustRoute's simulator to manufacture observations.
 
-At this increment only the explicit observation API is connected. Existing
-Mineflayer RPC remains selected by `BotBridge::new`; operations on a native
-bridge that have not been implemented reject explicitly. MCP runtime selection,
-operation APIs and the final evidence-policy migration are subsequent steps.
+Durable attempts retain `ObservationEvidence`: the existing server receipt or a
+strict `dustroute.client-readback.v1` receipt with connection, receive sequence,
+client frame, revisions, dimension, bounds, captured time and moving flag. Client
+receipts have no server tick. Reading saved evidence cannot construct the private
+fresh capability. Construction rejects active moving carriers even when their
+visible block name looks stationary. Two-sample instance observation also rejects
+motion, changed states, reversed clocks and changed connections. Neither quiet
+samples nor a successful step proves empty server queues or excludes a later edit.
+
+Existing Mineflayer RPC remains selected by `BotBridge::new`; unsupported native
+operations reject explicitly. Native status, player/target observation, client
+waits, lever approach/activation, command batches, creative physical placement/
+removal, particle previews and ordered block recordings use typed Rust calls.
+
+Build with `--features voxrig` and select `DUSTROUTE_BOT_BACKEND=voxrig` to connect
+the MCP process directly. `DUSTROUTE_SERVER_ADDRESS`, `DUSTROUTE_BOT_NAME`,
+`DUSTROUTE_ASSIST_PLAYER` and the existing policy configuration still apply.
+The native adapter requires offline authentication and Java 1.21.11; it rejects
+other explicit auth/version settings. A feature-enabled build defaults to Voxrig;
+`DUSTROUTE_BOT_BACKEND=mineflayer` keeps the separate bridge available. Builds
+without that feature still default to Mineflayer and reject a native selection.
+No bridge JavaScript process is required by the native selection.
+
+Native player targets carry `targeting_geometry=block_collision`, connection and
+receive sequence. These use static collision boxes, not graphical outlines;
+fluids/empty collision decorations are skipped, while unavailable/moving geometry
+rejects the query. Native waits identify their client wall-time clock. Neither
+waiting nor dispatching commands creates server-confirmed evidence.
+
+Creative physical placement preflights the whole batch's positions, item IDs,
+reference adjacency and faces. It requires received teleport positions and
+observes each removal/placement. An unexpected block/orientation stops the batch;
+the world may already have changed and must be inspected before retry. It does
+not claim survival construction or all placement orientations. Command writes
+return submission receipts; previews likewise report submission only.
+
+Native update recordings preserve received block-state packets and their packet
+order. They do not include every reconstructed piston frame. Chunk replacement,
+unload or world change invalidates a recording; overflow reports truncation.
+`clock=client_frame20_hz` is explicit. Transition traces use `client_tick` or
+`client_redstone_tick`, with no `game_tick` claim. A client width cannot confirm
+or violate a game-tick width requirement; comparisons report incompatible clocks.
+
+The `bridge-a` and `bridge-b` manifests in `docs/evidence/voxrig/` retain isolated
+native bridge trials: status, players, a prescribed stone collision target,
+previews, lever toggle, stone placement/removal and a complete final region.
+Independent native functions confirmed all 648 cells, including air. Trial B
+also retained 12 ordered block updates with no truncation. The explicit
+server-confirmed scan API rejected native client evidence.
+Trial C rechecks the current adapter and the maximum 200-tick client wait.
+Intentional local waiting and bounded per-step mutation waits are included in
+the timeout budget; the default transport timeout no longer expires merely
+because the caller requested its supported maximum wait.
+
+`mcp-door-a-20260929.manifest.json` retains the real public MCP lifecycle: import,
+fresh adoption, 43-step placement, persisted instance reopening on a new service/
+native connection, missing-quartz diagnosis and reviewed reconstruction, ordinary
+close/open, conditional removal, then a fresh observation of the saved removed
+record. Missing previews and changed baselines were refused for placement and
+repair. Each of placed/closed/reopened/removed regions independently matched all
+770 server cells. The MCP restarts use new service instances within one process;
+they do not claim new OS processes. The additional stationary-carrier refusal was
+added after the probe build and has a separate regression test.
+
+`mcp-flight-a-20260929.manifest.json` covers a public generated `honey_nose`
+machine (distance 3, rotation r270, mirrored). Its 11-step placement, ordinary
+lever launch, declared arrival, diagnosis, reviewed operating-state removal and
+saved removed instance all pass over native MCP. The full 1,134-cell arrival
+matches the generator's declared endpoint. Independent vanilla functions check
+placed/arrived/removed states in two bounded 567-cell subregions each. These are
+explicit stable-state comparisons, not an atomic snapshot claim.
+
+The live harness is `crates/dustroute-mcp/examples/voxrig_assembly_probe.rs`.
+Build with `cargo build --locked -p dustroute-mcp --features voxrig --examples`,
+then run it with `MC_PORT`, a **new** isolated `DUSTROUTE_STATE_DIR`, a new
+`TRACE_OUTPUT` JSONL path, and `PROBE_CASE=door` or `flight`. It uses only loopback,
+permits mutations in its declared disposable bounds and pauses before setup and
+each independent comparison. It holds clients on failure so the operator can
+capture and clean the exact failed world. Do not run it on a player world.
+Extract a captured `after_client` record for Voxrig's
+`scripts/prepare_motion_confirmation.py`; larger regions need disjoint bounded
+parts, as retained in the flight evidence. Revoke test OP grants after cleanup.
+
+All seven rollout stages now have implementations and declared-case evidence.
+The retained Mineflayer backend is explicitly selectable; deleting it would also
+remove currently separate authentication/targeting behavior and is not part of
+this verified-path migration. Native APIs reject unsupported observations. Broad
+inventory components, online authentication, graphical outlines, arbitrary
+circuits and the historical 1.16.1 movement discrepancy remain separate limits.
 
 ## Native evidence already retained in Voxrig
 
@@ -45,8 +132,9 @@ operation APIs and the final evidence-policy migration are subsequent steps.
   the failure, fix and six-direction regression are retained.
 
 These comparisons use an isolated vanilla 1.21.11 server and independent command
-assertions as test instrumentation. They do not claim arbitrary circuits, native
-server progress equality for every client frame, or public placement completion.
+assertions as test instrumentation. Runtime scans do not use those assertions.
+They do not claim arbitrary circuits, server progress equality for every client
+frame, survival construction, graphical outline targeting or entity physics.
 
 Observation increment validation: `cargo check --offline -j1 -p dustroute-mcp
 --features voxrig` resolved only the new local dependency and required feature
@@ -54,4 +142,28 @@ packages; subsequent commands use `--locked`. Eleven bridge/adapter tests pass,
 including stale evidence, invalid coverage and native provenance rejection.
 All-target feature-enabled Clippy with warnings denied, package formatting and
 diff checks pass. Logs are `.local/voxrig-adapter-{check,tests,clippy}.log`.
-End-to-end native operations and runtime selection are not claimed by this increment.
+That earlier increment covered observation only. Subsequent native operation and
+MCP workflow evidence is listed above.
+
+## Final validation (2026-09-29)
+
+- MCP library: 111 tests pass, including source-bound observations, construction,
+  human-damage diagnosis, interrupted repair, durable removal and moving-carrier
+  refusal (`.local/voxrig-final-mcp-tests.log`, one test thread).
+- After the final clock-comparison changes: 27 IR tests, 11 scenario tests and
+  all 8 MCP transition tests pass (`.local/voxrig-final-{ir,scenario,transition}-tests.log`).
+- Feature-enabled IR/translate/MCP all-target Clippy passes with warnings denied;
+  the default-feature workspace/all-target check also passes
+  (`.local/voxrig-final-{clippy,default-workspace-check}.log`).
+- Both native probe examples build with the final timeout budget. Bridge trial C
+  passes the 200-frame wait and final independent readback. Door/flight retained
+  builds precede the additional carrier refusal and timeout adjustments, as
+  recorded in their manifests. No second full MCP-suite pass is claimed after
+  the targeted timing changes.
+- Voxrig: 114 unit tests/all targets, 1 doctest, all-target Clippy, format,
+  pinned generator and package-list checks pass. Its local commit `b98785e`
+  remains ready for separate upstream review; no push or PR was made.
+
+Cargo checks were sequential with `--offline --locked -j1`. Live servers were
+owned loopback vanilla instances, without a companion MOD; trial fixtures and
+temporary operator grants were removed and each server stopped normally.

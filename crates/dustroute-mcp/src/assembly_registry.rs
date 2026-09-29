@@ -78,7 +78,7 @@ pub(crate) struct Attempt {
     pub error: Option<String>,
     /// Historical readback receipts only; fresh observations are always required.
     #[serde(default)]
-    pub readbacks: Vec<crate::bridge::ServerReadback>,
+    pub readbacks: Vec<crate::observation_evidence::ObservationEvidence>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

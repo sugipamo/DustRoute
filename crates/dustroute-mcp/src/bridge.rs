@@ -83,6 +83,19 @@ pub struct PlayerObservation {
     /// True when the bot had to move to the configured player before observing.
     #[serde(default)]
     pub reacquired: bool,
+    /// Native collision targeting is distinct from the rendered selection outline.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub targeting_geometry: Option<TargetingGeometry>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connection_id: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub receive_sequence: Option<u64>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TargetingGeometry {
+    BlockCollision,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -237,10 +250,32 @@ pub struct LeverApproach {
 pub struct UpdateRecordingStarted {
     pub recording_id: String,
     pub started_game_tick: u64,
+    #[serde(default, skip_serializing_if = "RecordingClock::is_legacy")]
+    pub clock: RecordingClock,
+}
+
+/// Existing field names ending in `game_tick` belong to this explicit clock.
+/// Native recordings never populate the server game-time epoch.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RecordingClock {
+    #[default]
+    MineflayerEstimatedGameTick,
+    ClientFrame20Hz,
+}
+impl RecordingClock {
+    fn is_legacy(&self) -> bool {
+        matches!(self, Self::MineflayerEstimatedGameTick)
+    }
+    pub(crate) fn game_tick(self, value: u64) -> Option<u64> {
+        self.is_legacy().then_some(value)
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct BlockUpdateEvent {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub native_packet: Option<NativePacketBoundary>,
     pub sequence: u64,
     pub game_tick: u64,
     /// Packet order within the observed physics/game tick. Mineflayer cannot
@@ -272,10 +307,19 @@ pub struct BlockUpdateEvent {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct NativePacketBoundary {
+    pub connection_id: u64,
+    pub receive_sequence: u64,
+    pub packet_order: usize,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct UpdateRecording {
     pub recording_id: String,
     pub started_game_tick: u64,
     pub stopped_game_tick: u64,
+    #[serde(default, skip_serializing_if = "RecordingClock::is_legacy")]
+    pub clock: RecordingClock,
     pub seen_events: usize,
     pub truncated: bool,
     pub events: Vec<BlockUpdateEvent>,
@@ -411,6 +455,10 @@ impl BotBridge {
     }
 
     pub async fn status(&self) -> Result<BotStatus, BotBridgeError> {
+        #[cfg(feature = "voxrig")]
+        if let Some(native) = &self.native {
+            return self.native_timeout(native.status()).await;
+        }
         self.request("status", json!({})).await
     }
 
@@ -425,6 +473,12 @@ impl BotBridge {
             )));
         }
         let params = json!({ "player": player, "max_distance": max_distance });
+        #[cfg(feature = "voxrig")]
+        if let Some(native) = &self.native {
+            return self
+                .native_timeout(native.observe_player(player, max_distance))
+                .await;
+        }
         match self.request("observe_player", params.clone()).await {
             Ok(observation) => Ok(observation),
             Err(BotBridgeError::Protocol(message))
@@ -443,6 +497,10 @@ impl BotBridge {
     }
 
     pub async fn visible_players(&self) -> Result<Vec<VisiblePlayer>, BotBridgeError> {
+        #[cfg(feature = "voxrig")]
+        if let Some(native) = &self.native {
+            return self.native_timeout(native.visible_players()).await;
+        }
         self.request("visible_players", json!({})).await
     }
 
@@ -453,9 +511,39 @@ impl BotBridge {
         dimension: &str,
     ) -> Result<MinecraftSnapshot, BotBridgeError> {
         Ok(self
-            .scan_region_confirmed(min, max, dimension)
+            .scan_region_observed(min, max, dimension)
             .await?
             .snapshot)
+    }
+
+    /// Observations retain their selected backend's evidence. Client records are
+    /// not server-confirmed and cannot satisfy `scan_region_confirmed`.
+    pub async fn scan_region_observed(
+        &self,
+        min: Pos,
+        max: Pos,
+        dimension: &str,
+    ) -> Result<crate::observation_evidence::ObservationRecord, BotBridgeError> {
+        Ok(self
+            .scan_region_fresh(min, max, dimension)
+            .await?
+            .into_record())
+    }
+    pub(crate) async fn scan_region_fresh(
+        &self,
+        min: Pos,
+        max: Pos,
+        dimension: &str,
+    ) -> Result<crate::observation_evidence::FreshRegion, BotBridgeError> {
+        #[cfg(feature = "voxrig")]
+        if self.native.is_some() {
+            return crate::observation_evidence::FreshRegion::client(
+                self.scan_client_region(min, max, dimension).await?,
+            );
+        }
+        Ok(crate::observation_evidence::FreshRegion::server(
+            self.scan_region_validated(min, max, dimension).await?,
+        ))
     }
 
     pub async fn scan_region_confirmed(
@@ -491,6 +579,18 @@ impl BotBridge {
         pos: Pos,
         dimension: &str,
     ) -> Result<ObservedBlock, BotBridgeError> {
+        #[cfg(feature = "voxrig")]
+        if self.native.is_some() {
+            let region = self.scan_client_region(pos, pos, dimension).await?;
+            let block = &region.snapshot().blocks[0];
+            return Ok(ObservedBlock {
+                pos: block.pos,
+                state: ObservedBlockState {
+                    name: block.name.clone(),
+                    properties: block.properties.clone(),
+                },
+            });
+        }
         #[derive(Deserialize)]
         struct ConfirmedBlock {
             #[serde(flatten)]
@@ -525,6 +625,12 @@ impl BotBridge {
         pos: Pos,
         dimension: &str,
     ) -> Result<LeverActivation, BotBridgeError> {
+        #[cfg(feature = "voxrig")]
+        if let Some(native) = &self.native {
+            return self
+                .native_timeout(native.activate_lever(pos, dimension))
+                .await;
+        }
         self.request(
             "activate_lever",
             json!({ "pos": pos, "dimension": dimension }),
@@ -537,6 +643,12 @@ impl BotBridge {
         pos: Pos,
         dimension: &str,
     ) -> Result<LeverApproach, BotBridgeError> {
+        #[cfg(feature = "voxrig")]
+        if let Some(native) = &self.native {
+            return self
+                .native_timeout(native.approach_lever(pos, dimension))
+                .await;
+        }
         self.request(
             "approach_lever",
             json!({ "pos": pos, "dimension": dimension }),
@@ -545,6 +657,15 @@ impl BotBridge {
     }
 
     pub async fn wait_ticks(&self, ticks: u16, dimension: &str) -> Result<Value, BotBridgeError> {
+        #[cfg(feature = "voxrig")]
+        if let Some(native) = &self.native {
+            return self
+                .native_timeout_with_wait(
+                    Duration::from_millis(u64::from(ticks.min(200)) * 50),
+                    native.wait_ticks(ticks, dimension),
+                )
+                .await;
+        }
         self.request(
             "wait_ticks",
             json!({ "ticks": ticks, "dimension": dimension }),
@@ -559,6 +680,12 @@ impl BotBridge {
         dimension: &str,
         max_events: usize,
     ) -> Result<UpdateRecordingStarted, BotBridgeError> {
+        #[cfg(feature = "voxrig")]
+        if let Some(native) = &self.native {
+            return self
+                .native_timeout(native.start_update_recording(min, max, dimension, max_events))
+                .await;
+        }
         self.request(
             "start_update_recording",
             json!({
@@ -576,6 +703,12 @@ impl BotBridge {
         recording_id: &str,
         dimension: &str,
     ) -> Result<UpdateRecording, BotBridgeError> {
+        #[cfg(feature = "voxrig")]
+        if let Some(native) = &self.native {
+            return self
+                .native_timeout(native.stop_update_recording(recording_id, dimension))
+                .await;
+        }
         self.request(
             "stop_update_recording",
             json!({ "recording_id": recording_id, "dimension": dimension }),
@@ -590,6 +723,12 @@ impl BotBridge {
         max: Pos,
         dimension: &str,
     ) -> Result<Value, BotBridgeError> {
+        #[cfg(feature = "voxrig")]
+        if let Some(native) = &self.native {
+            return self
+                .native_timeout(native.preview_region(player, min, max, dimension))
+                .await;
+        }
         self.request(
             "preview_region",
             json!({ "player": player, "min": min, "max": max, "dimension": dimension }),
@@ -602,6 +741,17 @@ impl BotBridge {
         changes: &[CommandWrite],
         dimension: &str,
     ) -> Result<CommandSubmission, BotBridgeError> {
+        #[cfg(feature = "voxrig")]
+        if let Some(native) = &self.native {
+            return self
+                .native_timeout_with_wait(
+                    Duration::from_millis(
+                        (changes.len().min(COMMAND_LIMIT) / 64) as u64 * 50 + 100,
+                    ),
+                    native.write_blocks(changes, dimension),
+                )
+                .await;
+        }
         if changes.len() > COMMAND_LIMIT {
             return Err(BotBridgeError::Protocol(
                 "command write limit exceeded".into(),
@@ -630,6 +780,17 @@ impl BotBridge {
         changes: &[PhysicalChange],
         dimension: &str,
     ) -> Result<PhysicalSubmission, BotBridgeError> {
+        #[cfg(feature = "voxrig")]
+        if let Some(native) = &self.native {
+            return self
+                .native_timeout_with_wait(
+                    // Per change: received teleport (3s), dig and place observations
+                    // (1.5s each). Setup/retreat and transport use the base budget.
+                    Duration::from_secs(changes.len().min(PHYSICAL_LIMIT) as u64 * 6),
+                    native.place_physical_blocks(changes, dimension),
+                )
+                .await;
+        }
         if changes.is_empty() || changes.len() > PHYSICAL_LIMIT {
             return Err(BotBridgeError::Protocol(
                 "physical write limit exceeded".into(),
@@ -652,9 +813,31 @@ impl BotBridge {
         }
         Ok(result)
     }
+
+    #[cfg(feature = "voxrig")]
+    async fn native_timeout<T>(
+        &self,
+        operation: impl std::future::Future<Output = Result<T, BotBridgeError>>,
+    ) -> Result<T, BotBridgeError> {
+        self.native_timeout_with_wait(Duration::ZERO, operation)
+            .await
+    }
+
+    /// Requested local waiting does not consume the transport timeout budget.
+    #[cfg(feature = "voxrig")]
+    async fn native_timeout_with_wait<T>(
+        &self,
+        wait: Duration,
+        operation: impl std::future::Future<Output = Result<T, BotBridgeError>>,
+    ) -> Result<T, BotBridgeError> {
+        let limit = self.timeout.saturating_add(wait);
+        tokio::time::timeout(limit, operation)
+            .await
+            .map_err(|_| BotBridgeError::Timeout(limit))?
+    }
 }
 
-fn is_valid_minecraft_username(player: &str) -> bool {
+pub(crate) fn is_valid_minecraft_username(player: &str) -> bool {
     !player.is_empty()
         && player.len() <= 16
         && player

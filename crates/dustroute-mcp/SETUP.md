@@ -2,9 +2,40 @@
 
 This document is for the person configuring the Minecraft server, bot and MCP client. For tool use, see the [LLM guide](README.md).
 
+## Native Rust client (Java 1.21.11)
+
+With the unpublished Voxrig branch checked out at `../Voxrig`, build and start
+the native MCP client directly:
+
+```bash
+DUSTROUTE_SERVER_ADDRESS=127.0.0.1:25565 \
+  DUSTROUTE_ASSIST_PLAYER=YourMinecraftName \
+  DUSTROUTE_BOT_BACKEND=voxrig \
+  DUSTROUTE_MC_AUTH=offline \
+  DUSTROUTE_MC_VERSION=1.21.11 \
+  cargo run --locked -p dustroute-mcp --features voxrig
+```
+
+A build with `--features voxrig` defaults to this backend. There is no Node.js
+bridge process for this selection. Start the vanilla server and register the bot
+as described below; the same mutation policy and player/region restrictions
+apply. World writes remain disabled by default. Previews, teleport approach and
+Assembly construction still need operator command permission. Observation uses
+received packets and supported client reconstruction without per-cell commands;
+it explicitly reports client evidence, never server-confirmed evidence. No server
+MOD is required. The backend currently requires offline authentication and
+Java 1.21.11; unsupported explicit settings fail instead of changing adapters.
+
+`DUSTROUTE_BOT_BACKEND=mineflayer` explicitly selects the existing bridge, which
+remains the default in builds without the native feature. Follow the Node.js
+steps below only for that backend. Details, live evidence and limits are in
+[the native rollout](../../docs/voxrig-rollout.md). Native gaze currently targets
+static collision geometry; fluids and decorations with empty collision boxes
+need an explicit region rather than a graphical crosshair selection.
+
 ## Start the visible bot
 
-Live integration requires Node.js 22/npm, Java 21, and the official Minecraft
+The Mineflayer backend requires Node.js 22/npm, Java 21, and the official Minecraft
 Java Edition 1.21.11 server JAR. Keep the server and its generated world under
 an ignored directory such as `.local/minecraft-server-1.21.11`; do not copy the
 JAR, world, logs, operator lists, or authentication data into the repository.

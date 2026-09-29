@@ -4,6 +4,15 @@ Use DustRoute to observe Minecraft redstone, explain evidence, create hypothetic
 
 This is the tool-use guide. Server installation, credentials, permissions and transport configuration belong in [SETUP.md](SETUP.md). Detailed subsystem examples are in [REFERENCE.md](REFERENCE.md); the complete 22-tool default inventory and 7 debug additions are in the [public feature guide](../../docs/mcp-public-features.md). Use the connected server's tool schemas for exact arguments.
 
+The native Voxrig backend observes received packets and supported client
+reconstruction. Its `client_reconstructed` readbacks retain connection, receive
+sequence and client frame; they do not confirm server ticks or hidden queues.
+Mineflayer keeps its separate command-confirmed readback contract. Saved evidence
+from either source never authorizes writes without a fresh observation. Native
+gaze uses `block_collision`, not graphical outlines; use a selected region for
+non-collidable circuit decorations. Native recordings use client frames, so they
+cannot satisfy a pulse-width requirement stated in server game ticks.
+
 Custom electrical Assembly construction returns a durable `instance_id`.
 After MCP restart, use `manage_assembly` (`list`, `get`, `observe`, `diagnose`, `plan_removal`, `plan_reconstruction`)
 to read records, freshly compare/revalidate the world and preview a new

@@ -29,6 +29,8 @@ Minecraft内で調べたい回路を見るか、範囲を選び、MCPに接続�
 
 DustRouteは、Minecraft内のbotとMCP対応のAIクライアントをつないで使います。現在の実サーバー検証環境はMinecraft Java Edition 1.21.11です。
 
+Rust製クライアントのVoxrig経路では、受信パケットとクライアント側の状態再現から観測します。サーバーMODや観測用の常時コマンド照合は不要です。現在は隣接したVoxrigチェックアウト、`--features voxrig`でのビルド、offline認証が必要です。既存のMineflayer経路も明示的に選べます。詳しくは[ネイティブ接続の設定](crates/dustroute-mcp/SETUP.md#native-rust-client-java-12111)を参照してください。
+
 1. [セットアップ手順](crates/dustroute-mcp/SETUP.md)に沿って、Minecraftサーバーとbotを準備します。
 2. 同じ手順でMCPサーバーを起動し、AIクライアントに接続します。
 3. Minecraftに入り、まず接続確認と回路の観測から試します。

@@ -1,5 +1,11 @@
 # Server-confirmed block readback
 
+This document describes the **Mineflayer backend**. The native Voxrig backend
+has a separate [client-observation contract](voxrig-rollout.md): its normal scans
+do not issue confirmation commands and cannot return `ServerReadback` or satisfy
+the explicit `scan_region_confirmed` API. Shared workflows retain the selected
+source in their durable evidence and do not silently change backend on failure.
+
 The Mineflayer bridge and isolated device trials share `mineflayer/readback.js`.
 It confirms a client-derived candidate with Java 1.21.11 block predicates before
 returning it as a current world observation. It does not take expected states

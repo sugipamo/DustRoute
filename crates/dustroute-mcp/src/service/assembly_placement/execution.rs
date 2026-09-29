@@ -73,7 +73,7 @@ impl AssemblyService<'_> {
                     context:proof.context().clone(),expected:proof.settled().clone(),state:InstanceState::NeedsInspection,attempts:vec![],
                     last_observation:None,updated_at_unix_ms:now_ms()? }
             };
-            let baseline_readback = self.bridge.scan_region_validated(bounds.min,bounds.max,&plan.dimension).await.map_err(|e|e.to_string())?.into_record();
+            let baseline_readback = self.bridge.scan_region_fresh(bounds.min,bounds.max,&plan.dimension).await.map_err(|e|e.to_string())?.into_stationary_record()?;
             let baseline = baseline_readback.snapshot;
             if let Some(reconstruction) = plan.reconstruction() {
                 ValidatedAssemblyPlacement::matches(&baseline,&reconstruction.baseline,&status.version)?;
@@ -93,7 +93,7 @@ impl AssemblyService<'_> {
                     let status = self.bridge.status().await.map_err(|e|e.to_string())?;
                     server_contract(&status,&plan.dimension)?;
                     plan.target.check(&status)?;
-                    let before_readback = self.bridge.scan_region_validated(bounds.min,bounds.max,&plan.dimension).await.map_err(|e|e.to_string())?.into_record();
+                    let before_readback = self.bridge.scan_region_fresh(bounds.min,bounds.max,&plan.dimension).await.map_err(|e|e.to_string())?.into_stationary_record()?;
                     let before = before_readback.snapshot;
                     ValidatedAssemblyPlacement::matches(&before,&expected,&status.version)?;
                     record.attempts.last_mut().ok_or("missing durable attempt")?.readbacks.push(before_readback.readback);
@@ -107,7 +107,7 @@ impl AssemblyService<'_> {
                         self.bridge.wait_ticks(ticks,&plan.dimension).await.map_err(|e|e.to_string())?;
                         remaining -= u64::from(ticks);
                     }
-                    let after_readback = self.bridge.scan_region_validated(bounds.min,bounds.max,&plan.dimension).await.map_err(|e|e.to_string())?.into_record();
+                    let after_readback = self.bridge.scan_region_fresh(bounds.min,bounds.max,&plan.dimension).await.map_err(|e|e.to_string())?.into_stationary_record()?;
                     let after = after_readback.snapshot;
                     record.attempts.last_mut().ok_or("missing durable attempt")?.readbacks.push(after_readback.readback);
                     let after_status = self.bridge.status().await.map_err(|e|e.to_string())?;

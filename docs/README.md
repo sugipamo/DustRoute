@@ -24,6 +24,7 @@ Git history; diagnostic fixtures have not been promoted into public capability.
 | Document | Read it for |
 | --- | --- |
 | [Development](development.md) | Workspace boundaries, local checks, CLI and examples |
+| [Native Voxrig client rollout](voxrig-rollout.md) | Version adapters, moving-state reconstruction, explicit client evidence and live MCP door/flight lifecycles |
 | [Architecture readability audit](architecture-readability-audit.md) | Remaining responsibility, type and module boundaries; evidence and recommended refactoring order |
 | [Architecture migration](architecture-migration.md) | Migration progress, preserved contracts, deferred concerns and regression evidence |
 | [Architecture cutover](architecture-cutover.md) | Typed workflow boundaries, retired formats/APIs, migration impact and current checks |

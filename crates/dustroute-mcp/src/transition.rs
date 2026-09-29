@@ -10,6 +10,7 @@ use dustroute_translate::{
 };
 use serde::{Deserialize, Serialize};
 
+use crate::bridge::RecordingClock;
 use crate::{BlockUpdateEvent, UpdateRecording};
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -135,12 +136,16 @@ pub fn scenario_trace_from_recording_with_initial(
 ) -> ScenarioTrace {
     let mut trace = ScenarioTrace {
         duration_redstone_ticks,
-        duration_game_ticks: Some(
+        duration_game_ticks: recording.clock.game_tick(
             recording
                 .stopped_game_tick
                 .saturating_sub(recording.started_game_tick),
         ),
-        time_unit: TraceTimeUnit::RedstoneTick,
+        time_unit: if recording.clock == RecordingClock::ClientFrame20Hz {
+            TraceTimeUnit::ClientRedstoneTick
+        } else {
+            TraceTimeUnit::RedstoneTick
+        },
         ..ScenarioTrace::default()
     };
     let mut last = BTreeMap::new();
@@ -188,7 +193,7 @@ pub fn scenario_trace_from_recording_with_initial(
                         event.cause,
                         event.source,
                         event.cause_sequence,
-                        Some(event.game_tick),
+                        recording.clock.game_tick(event.game_tick),
                         event.phase,
                     )
                 })
@@ -197,7 +202,7 @@ pub fn scenario_trace_from_recording_with_initial(
                     EventCause::InitialSnapshot,
                     EventSource::InitialSnapshot,
                     None,
-                    Some(recording.started_game_tick),
+                    recording.clock.game_tick(recording.started_game_tick),
                     TransitionPhase::Unknown,
                 ));
             last.insert(*position, value);
@@ -254,7 +259,7 @@ pub fn scenario_trace_from_recording_with_initial(
                 .iter_mut()
                 .find(|event| event.position == update.pos && event.redstone_tick == 0)
         {
-            initial.game_tick = Some(update.game_tick);
+            initial.game_tick = recording.clock.game_tick(update.game_tick);
             initial.phase = update.phase;
             initial.strength = value.0;
             initial.powered = value.1;
@@ -264,7 +269,7 @@ pub fn scenario_trace_from_recording_with_initial(
         trace.events.push(ScenarioEvent {
             redstone_tick,
             sub_tick_order: update.sub_tick_order,
-            game_tick: Some(update.game_tick),
+            game_tick: recording.clock.game_tick(update.game_tick),
             phase: update.phase,
             event_kind: update.event_kind,
             cause: update.cause,
@@ -328,7 +333,7 @@ pub fn behavior_trace_from_recording(
             events.push(BehaviorEvent {
                 tick: first.game_tick.saturating_sub(recording.started_game_tick),
                 sub_tick_order: first.sub_tick_order,
-                game_tick: Some(first.game_tick),
+                game_tick: recording.clock.game_tick(first.game_tick),
                 phase: first.phase,
                 event_kind: first.event_kind,
                 cause: first.cause,
@@ -349,7 +354,7 @@ pub fn behavior_trace_from_recording(
             events.push(BehaviorEvent {
                 tick: update.game_tick.saturating_sub(recording.started_game_tick),
                 sub_tick_order: update.sub_tick_order,
-                game_tick: Some(update.game_tick),
+                game_tick: recording.clock.game_tick(update.game_tick),
                 phase: update.phase,
                 event_kind: update.event_kind,
                 cause: update.cause,
@@ -371,7 +376,11 @@ pub fn behavior_trace_from_recording(
     });
     BehaviorTrace {
         label: label.into(),
-        time_unit: TraceTimeUnit::GameTick,
+        time_unit: if recording.clock == RecordingClock::ClientFrame20Hz {
+            TraceTimeUnit::ClientTick
+        } else {
+            TraceTimeUnit::GameTick
+        },
         events,
         stable: !recording.truncated,
         status: if recording.truncated {
@@ -489,6 +498,7 @@ mod tests {
             properties: BTreeMap::from([("power".to_owned(), power.to_owned())]),
         };
         let recording = UpdateRecording {
+            clock: RecordingClock::default(),
             recording_id: "r".to_owned(),
             started_game_tick: 100,
             stopped_game_tick: 104,
@@ -496,6 +506,7 @@ mod tests {
             truncated: false,
             events: vec![
                 BlockUpdateEvent {
+                    native_packet: None,
                     sequence: 1,
                     game_tick: 101,
                     sub_tick_order: 0,
@@ -509,6 +520,7 @@ mod tests {
                     after: Some(state("15")),
                 },
                 BlockUpdateEvent {
+                    native_packet: None,
                     sequence: 2,
                     game_tick: 102,
                     sub_tick_order: 0,
@@ -527,6 +539,24 @@ mod tests {
         assert_eq!(trace.time_unit, TraceTimeUnit::GameTick);
         let pulses = dustroute_ir::observe_pulses(&trace);
         assert_eq!(pulses[0].width_ticks, 1);
+        let mut native = recording.clone();
+        native.clock = RecordingClock::ClientFrame20Hz;
+        for event in &mut native.events {
+            event.source = EventSource::LiveVoxrig;
+        }
+        let trace = behavior_trace_from_recording(&native, &scene, "native frames");
+        assert_eq!(trace.time_unit, TraceTimeUnit::ClientTick);
+        assert!(trace.events.iter().all(|event| event.game_tick.is_none()));
+        let scenario =
+            scenario_trace_from_recording(&native, &BTreeSet::from([Pos::new(0, 1, 0)]), 2);
+        assert_eq!(scenario.time_unit, TraceTimeUnit::ClientRedstoneTick);
+        assert!(scenario.duration_game_ticks.is_none());
+        assert!(
+            scenario
+                .events
+                .iter()
+                .all(|event| event.game_tick.is_none())
+        );
     }
 
     #[test]
@@ -537,12 +567,14 @@ mod tests {
             properties: BTreeMap::from([("powered".to_owned(), powered.to_owned())]),
         };
         let recording = UpdateRecording {
+            clock: RecordingClock::default(),
             recording_id: "live".to_owned(),
             started_game_tick: 100,
             stopped_game_tick: 112,
             seen_events: 1,
             truncated: false,
             events: vec![BlockUpdateEvent {
+                native_packet: None,
                 sequence: 4,
                 game_tick: 103,
                 sub_tick_order: 0,
@@ -571,12 +603,14 @@ mod tests {
     fn truncated_live_recording_cannot_claim_a_complete_transition_trace() {
         let pos = Pos::new(1, 1, 0);
         let mut recording = UpdateRecording {
+            clock: RecordingClock::default(),
             recording_id: "truncated".to_owned(),
             started_game_tick: 40,
             stopped_game_tick: 42,
             seen_events: 2,
             truncated: true,
             events: vec![BlockUpdateEvent {
+                native_packet: None,
                 sequence: 1,
                 game_tick: 40,
                 sub_tick_order: 0,
@@ -609,12 +643,14 @@ mod tests {
             properties: BTreeMap::from([("powered".to_owned(), powered.to_owned())]),
         };
         let recording = UpdateRecording {
+            clock: RecordingClock::default(),
             recording_id: "live".to_owned(),
             started_game_tick: 100,
             stopped_game_tick: 104,
             seen_events: 1,
             truncated: false,
             events: vec![BlockUpdateEvent {
+                native_packet: None,
                 sequence: 1,
                 game_tick: 100,
                 sub_tick_order: 0,

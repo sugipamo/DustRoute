@@ -240,6 +240,16 @@ behavioral equivalence, while state, redstone tick, and within-tick order are
 still compared. Exact game-tick or known-phase differences are reported
 separately; an unknown phase does not become a false mismatch.
 
+The native backend records `source=live_voxrig` and preserves a `native_packet`
+boundary (connection ID, receive sequence, cell order). Its recording clock is
+`client_frame20_hz`; the compatibility fields named `*_game_tick` carry that
+explicitly declared local clock and must not be interpreted as server ticks.
+Projected traces use `time_unit=client_tick` or `client_redstone_tick` and omit
+server `game_tick` values. Cross-clock trace comparisons report
+`time_unit_mismatch`; pulse-width contracts with a different clock remain
+unconfirmed. Received state recordings exclude reconstructed piston frames and
+hidden scheduler events. See [native evidence](voxrig-rollout.md).
+
 Temporal IR responses additionally expose a game-tick `transition_delay` for
 stateful edges and devices. It can be `same_game_tick`, an exact game-tick
 value, a bounded game-tick range, or `unavailable`; clients must not infer an

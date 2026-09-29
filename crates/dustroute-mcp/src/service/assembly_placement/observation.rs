@@ -1,7 +1,7 @@
-//! Fresh observation outcomes. Only unchanged confirmed samples expose a
+//! Fresh observation outcomes. Only complete, unchanged samples expose a
 //! baseline; saved JSON is presentation/history, never a live capability.
 use super::*;
-use crate::bridge::{ServerReadback, ValidatedRegion};
+use crate::observation_evidence::{FreshRegion, ObservationEvidence};
 use dustroute_translate::{snapshot::MinecraftSnapshot, world_reverse::RegionBounds};
 
 const SAMPLE_INTERVAL: u16 = 20;
@@ -14,10 +14,12 @@ enum SampleClock {
 
 #[derive(Debug, serde::Serialize)]
 struct SampleEvidence {
-    readbacks: [ServerReadback; 2],
+    readbacks: [ObservationEvidence; 2],
     sample_interval_ticks: u16,
     sample_interval_clock: SampleClock,
-    observed_server_tick_interval: u64,
+    observed_server_tick_interval: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    observed_client_tick_interval: Option<u64>,
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -91,35 +93,34 @@ pub(super) fn stable_baseline(
 }
 
 fn compare_samples(
-    first: ValidatedRegion,
-    second: ValidatedRegion,
+    first: FreshRegion,
+    second: FreshRegion,
     expected: &MinecraftSnapshot,
     version: &str,
     bounds: RegionBounds,
 ) -> Result<ObservationOutcome, String> {
     let first = first.into_record();
     let second = second.into_record();
-    let interval = second
-        .readback
-        .start_game_tick
-        .checked_sub(first.readback.end_game_tick)
-        .ok_or("server clock moved backwards between observations")?;
+    let interval = second.readback.interval_since(&first.readback)?;
     for sample in [&first.snapshot, &second.snapshot] {
         if sample.min != bounds.min || sample.max != bounds.max {
             return Err("exact complete observation region required".into());
         }
         crate::revision::blocks(sample)?;
     }
+    let native_moving = first.readback.moving() || second.readback.moving();
     let evidence = SampleEvidence {
         readbacks: [first.readback, second.readback],
         sample_interval_ticks: SAMPLE_INTERVAL,
         sample_interval_clock: SampleClock::Client,
-        observed_server_tick_interval: interval,
+        observed_server_tick_interval: interval.server_ticks,
+        observed_client_tick_interval: interval.client_ticks,
     };
     let moving = [&first.snapshot, &second.snapshot]
         .iter()
         .any(|s| s.blocks.iter().any(|b| b.name == "minecraft:moving_piston"));
     if moving
+        || native_moving
         || ValidatedAssemblyPlacement::matches(&second.snapshot, &first.snapshot, version).is_err()
     {
         return Ok(ObservationOutcome::HistoryUnavailable {
@@ -163,7 +164,7 @@ impl AssemblyService<'_> {
             }
             let first = self
                 .bridge
-                .scan_region_validated(bounds.min, bounds.max, &record.target.dimension)
+                .scan_region_fresh(bounds.min, bounds.max, &record.target.dimension)
                 .await
                 .map_err(|e| e.to_string())?;
             // Unchanged samples do not establish empty queues or hidden history.
@@ -175,7 +176,7 @@ impl AssemblyService<'_> {
             record.target.check(&status)?;
             let second = self
                 .bridge
-                .scan_region_validated(bounds.min, bounds.max, &record.target.dimension)
+                .scan_region_fresh(bounds.min, bounds.max, &record.target.dimension)
                 .await
                 .map_err(|e| e.to_string())?;
             let expected = if record.state == InstanceState::Removed {
@@ -211,7 +212,7 @@ mod tests {
     }
     // Transport validation has its own tests. These synthetic receipts exercise
     // the subsequent sample classification, not server confirmation itself.
-    fn sample(snapshot: MinecraftSnapshot, tick: u64) -> ValidatedRegion {
+    fn sample(snapshot: MinecraftSnapshot, tick: u64) -> FreshRegion {
         let record = crate::bridge::ConfirmedRegion {
             readback: serde_json::from_value(json!({
                 "schema_version":"dustroute.server-readback.v1", "kind":"server_confirmed",
@@ -223,7 +224,7 @@ mod tests {
             .unwrap(),
             snapshot,
         };
-        ValidatedRegion::test_sample(record)
+        FreshRegion::server(crate::bridge::ValidatedRegion::test_sample(record))
     }
     fn observation(outcome: ObservationOutcome) -> InstanceObservation {
         InstanceObservation {

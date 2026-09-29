@@ -53,6 +53,7 @@ pub struct CommandSubmission {
 #[serde(rename_all = "snake_case")]
 pub enum PhysicalPlacementMode {
     MineflayerPlayer,
+    VoxrigCreativePlayer,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

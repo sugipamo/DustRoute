@@ -767,6 +767,31 @@ impl DustRouteMcp {
         service
     }
 
+    /// Explicit native offline client. Connecting does not grant server confirmation.
+    #[cfg(feature = "voxrig")]
+    pub async fn connect_voxrig(
+        config: McpConfig,
+        policy: McpPolicy,
+        username: &str,
+    ) -> Result<Self, crate::bridge::BotBridgeError> {
+        let (host, port) = config.server_address.rsplit_once(':').ok_or_else(|| {
+            crate::bridge::BotBridgeError::Protocol("server endpoint unavailable".into())
+        })?;
+        let host = host.trim_start_matches('[').trim_end_matches(']');
+        let port = port
+            .parse::<u16>()
+            .map_err(|_| crate::bridge::BotBridgeError::Protocol("invalid server port".into()))?;
+        let connection = voxrig::ConnectionConfig::offline(
+            voxrig::Server::new(host, port),
+            username,
+            voxrig::MinecraftVersion::Java1_21_11,
+        );
+        let bridge = BotBridge::connect_voxrig(connection).await?;
+        let mut service = Self::with_config(config, policy);
+        service.bridge = bridge;
+        Ok(service)
+    }
+
     fn optimization_workflow(&self) -> optimization_workflow::OptimizationWorkflow<'_> {
         optimization_workflow::OptimizationWorkflow {
             policy: &self.policy,
