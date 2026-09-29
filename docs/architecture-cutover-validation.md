@@ -5,6 +5,12 @@ additional consumers and retained physical comparisons before removing remaining
 storage compatibility. Keep current-format reload, fresh adoption and explicit
 rejection of retired data. No new Minecraft feature is required.
 
+The later [live operation checks](architecture-cutover-live-validation.md) cover
+fresh adoption, restart, construction, operation, repair and removal on the
+private Java server. They also identify and fix a bounded-context validation
+defect in upward wire repair; those results are separate from the offline pass
+reported below.
+
 ## Inventory and scope
 
 | Boundary | Finding | Action |

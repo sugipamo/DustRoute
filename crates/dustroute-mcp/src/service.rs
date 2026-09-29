@@ -6857,69 +6857,72 @@ mod tests {
         });
         let service =
             DustRouteMcp::with_policy_and_player(address, McpPolicy::default(), "builder");
-        let proposed: Value = serde_json::from_str(
-            &service
-                .new_placement(Parameters(
-                    serde_json::from_value(json!({"circuit":"half-adder"})).unwrap(),
-                ))
-                .await,
-        )
-        .unwrap();
-        assert_eq!(proposed["ok"], true, "{proposed}");
-        let full: Value = serde_json::from_str(
-            &service
-                .get_circuit_placement(Parameters(OperationParams {
-                    operation_id: proposed["operation_id"].as_str().unwrap().into(),
-                }))
-                .await,
-        )
-        .unwrap();
-        let plan: PlacementPlan = serde_json::from_value(full["plan"].clone()).unwrap();
-        let saved = plan.assembly.as_ref().unwrap();
-        assert_eq!(saved.coordinate_origin, origin);
-        assert_eq!(
-            json!(saved.revision.id),
-            proposed["assembly_state"]["assembly_revision_id"]
-        );
-        let view = saved
-            .revision
-            .assembly
-            .inspect(dustroute_library::builtin_blueprints::builtin_blueprints())
+        for optimize in [false, true] {
+            let proposed: Value = serde_json::from_str(
+                &service
+                    .new_placement(Parameters(
+                        serde_json::from_value(json!({"circuit":"half-adder","optimize":optimize}))
+                            .unwrap(),
+                    ))
+                    .await,
+            )
             .unwrap();
-        assert!(!view.source_differences().is_empty());
-        assert!(
-            view.occurrences
-                .values()
-                .any(|occurrence| occurrence.revision.as_str()
-                    == dustroute_library::builtin_blueprints::NOT_TOP_REVISION)
-        );
-        let world = view.proposed_world();
-        assert_eq!(world.iter().count(), plan.changes.len());
-        for change in &plan.changes {
-            let local = change.pos.offset(-origin.x, -origin.y, -origin.z);
-            assert_eq!(world.get(local), Some(&change.after));
-        }
-        assert!(!plan.previewed);
-        let shown: Value = serde_json::from_str(
-            &service
-                .show_operation(Parameters(ShowOperationParams {
-                    operation_id: proposed["operation_id"].as_str().unwrap().into(),
-                    player: None,
-                }))
-                .await,
-        )
-        .unwrap();
-        assert_eq!(shown["ok"], true);
-        assert_eq!(shown["plan"]["assembly"], full["plan"]["assembly"]);
-        assert_eq!(shown["plan"]["previewed"], true);
-        let mut legacy = full["plan"].clone();
-        legacy.as_object_mut().unwrap().remove("assembly");
-        assert!(
-            serde_json::from_value::<PlacementPlan>(legacy)
-                .unwrap()
+            assert_eq!(proposed["ok"], true, "{proposed}");
+            let full: Value = serde_json::from_str(
+                &service
+                    .get_circuit_placement(Parameters(OperationParams {
+                        operation_id: proposed["operation_id"].as_str().unwrap().into(),
+                    }))
+                    .await,
+            )
+            .unwrap();
+            let plan: PlacementPlan = serde_json::from_value(full["plan"].clone()).unwrap();
+            let saved = plan.assembly.as_ref().unwrap();
+            assert_eq!(saved.coordinate_origin, origin);
+            assert_eq!(
+                json!(saved.revision.id),
+                proposed["assembly_state"]["assembly_revision_id"]
+            );
+            let view = saved
+                .revision
                 .assembly
-                .is_none()
-        );
+                .inspect(dustroute_library::builtin_blueprints::builtin_blueprints())
+                .unwrap();
+            assert!(!view.source_differences().is_empty());
+            assert!(
+                view.occurrences
+                    .values()
+                    .any(|occurrence| occurrence.revision.as_str()
+                        == dustroute_library::builtin_blueprints::NOT_TOP_REVISION)
+            );
+            let world = view.proposed_world();
+            assert_eq!(world.iter().count(), plan.changes.len());
+            for change in &plan.changes {
+                let local = change.pos.offset(-origin.x, -origin.y, -origin.z);
+                assert_eq!(world.get(local), Some(&change.after));
+            }
+            assert!(!plan.previewed);
+            let shown: Value = serde_json::from_str(
+                &service
+                    .show_operation(Parameters(ShowOperationParams {
+                        operation_id: proposed["operation_id"].as_str().unwrap().into(),
+                        player: None,
+                    }))
+                    .await,
+            )
+            .unwrap();
+            assert_eq!(shown["ok"], true);
+            assert_eq!(shown["plan"]["assembly"], full["plan"]["assembly"]);
+            assert_eq!(shown["plan"]["previewed"], true);
+            let mut legacy = full["plan"].clone();
+            legacy.as_object_mut().unwrap().remove("assembly");
+            assert!(
+                serde_json::from_value::<PlacementPlan>(legacy)
+                    .unwrap()
+                    .assembly
+                    .is_none()
+            );
+        }
         server.abort();
     }
 

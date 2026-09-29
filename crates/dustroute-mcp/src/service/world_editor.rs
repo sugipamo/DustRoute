@@ -9,8 +9,13 @@ use crate::bridge_protocol::{PhysicalChange, PhysicalSubmission};
 use crate::{BlockChange, BotBridge, McpPolicy};
 use dustroute_physical::{BlockKind, PhysicalBlockChange, Pos};
 use dustroute_translate::minecraft_export::JavaExportConfig;
+use dustroute_translate::world_reverse::RegionBounds;
 use std::collections::BTreeMap;
 use tokio::time::sleep;
+
+#[cfg(test)]
+#[path = "world_editor_tests.rs"]
+mod tests;
 
 pub(super) struct WorldEditor<'a> {
     pub bridge: &'a BotBridge,
@@ -107,23 +112,68 @@ impl WorldEditor<'_> {
             return dustroute_app::ValidatedBlockChanges::new(&region, Vec::new())
                 .map_err(|e| e.to_string());
         };
-        // Include adjacent support and dependent blocks. Any unresolved support
-        // at the scan boundary remains a validation failure, never inferred air.
-        let min = min.offset(-1, -1, -1);
-        let max = max.offset(1, 1, 1);
-        self.policy
-            .validate_region(dustroute_translate::world_reverse::RegionBounds::new(
-                min, max,
-            ))
-            .map_err(|e| e.to_string())?;
-        let snapshot = self
-            .bridge
-            .scan_region(min, max, dimension)
-            .await
-            .map_err(|e| e.to_string())?;
-        let baseline = world_from_snapshot_for_service(&snapshot)?;
-        dustroute_app::ValidatedBlockChanges::new(&baseline, changes.to_vec())
-            .map_err(|error| format!("{}: {:?}", error, error.issues))
+        // Adjacent dependents can themselves need evidence outside this first
+        // scan (e.g. the support below a lower wire beside an upward repair).
+        // Expand from the shared validator's missing evidence, never by inventing
+        // support or dropping boundary blocks. Every rescan remains policy-bound.
+        let mut bounds = RegionBounds::new(min.offset(-1, -1, -1), max.offset(1, 1, 1));
+        for _ in 0..8 {
+            self.policy
+                .validate_region(bounds)
+                .map_err(|e| e.to_string())?;
+            let snapshot = self
+                .bridge
+                .scan_region(bounds.min, bounds.max, dimension)
+                .await
+                .map_err(|e| e.to_string())?;
+            let baseline = dustroute_translate::snapshot::literal_world_from_snapshot(&snapshot)
+                .map_err(|error| error.to_string())?;
+            let mut candidate = baseline.clone();
+            for change in changes {
+                candidate.set(change.pos, change.after.clone());
+            }
+            let mut expanded = bounds;
+            for issue in candidate.placement_issues_with_lookup(|pos| {
+                bounds.contains(pos).then(|| {
+                    candidate
+                        .get(pos)
+                        .cloned()
+                        .unwrap_or_else(|| dustroute_physical::Block::new(BlockKind::Air))
+                })
+            }) {
+                use dustroute_physical::WorldValidationIssue;
+                let needed = match issue {
+                    WorldValidationIssue::InvalidSupport {
+                        support: Some(pos), ..
+                    } if !bounds.contains(pos) => vec![pos],
+                    WorldValidationIssue::UnknownWireConnection {
+                        required_positions, ..
+                    } => required_positions,
+                    _ => continue,
+                };
+                for pos in needed {
+                    expanded.min = Pos::new(
+                        expanded.min.x.min(pos.x),
+                        expanded.min.y.min(pos.y),
+                        expanded.min.z.min(pos.z),
+                    );
+                    expanded.max = Pos::new(
+                        expanded.max.x.max(pos.x),
+                        expanded.max.y.max(pos.y),
+                        expanded.max.z.max(pos.z),
+                    );
+                }
+            }
+            if expanded == bounds {
+                return dustroute_app::ValidatedBlockChanges::new(&baseline, changes.to_vec())
+                    .map_err(|error| format!("{}: {:?}", error, error.issues));
+            }
+            bounds = expanded;
+        }
+        Err(
+            "placement validation needs context beyond the 8-scan limit; no changes submitted"
+                .into(),
+        )
     }
 
     pub(super) async fn write_validated_physical_changes(

@@ -5,7 +5,7 @@
       "/fill 699 102 -1 752 109 25 minecraft:air",
       "/setblock 700 103 0 minecraft:stone"
     ]},
-    { "kind": "aim", "position": { "x": 700.5, "y": 106, "z": 6.5 }, "target": { "x": 700, "y": 103, "z": 0 } },
+    { "kind": "aim", "position": { "x": 700.5, "y": 106, "z": -6.5 }, "target": { "x": 700, "y": 103, "z": 0 } },
     { "kind": "mcp", "tool": "new_placement", "arguments": {
       "circuit": "half-adder",
       "max_blocks": 4096,

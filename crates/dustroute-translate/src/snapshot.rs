@@ -85,11 +85,19 @@ pub fn world_from_snapshot_json(json: &str) -> Result<(MinecraftSnapshot, World)
 }
 
 pub fn world_from_snapshot(snapshot: &MinecraftSnapshot) -> Result<World, SnapshotError> {
+    let mut world = literal_world_from_snapshot(snapshot)?;
+    update_wire_shapes(&mut world);
+    Ok(world)
+}
+
+/// Decode observed states without inferring wire geometry from omitted cells.
+/// Coverage and physical validity must still be checked by the caller. Live
+/// placement validation uses this so a partial scan cannot erase a rise arm.
+pub fn literal_world_from_snapshot(snapshot: &MinecraftSnapshot) -> Result<World, SnapshotError> {
     let mut world = World::new();
     for record in &snapshot.blocks {
         world.set(record.pos, block_from_record(record)?);
     }
-    update_wire_shapes(&mut world);
     Ok(world)
 }
 

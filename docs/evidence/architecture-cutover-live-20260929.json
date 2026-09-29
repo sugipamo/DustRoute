@@ -1,0 +1,528 @@
+{
+  "schema_version": "dustroute.architecture-cutover-live-validation.v1",
+  "status": "partially_verified_with_remaining_blocker",
+  "minecraft_version": "1.21.11",
+  "environment": "existing private instrumented Java server; fresh MCP state per run; no user catalog used",
+  "baseline_commit": "8ce3e4166375ad1c1a8b8d2fe182af3dd26c048b",
+  "mutation_protocol": "dustroute.bridge-mutation.v1",
+  "lifecycle_trials_before_context_repair": [
+    {
+      "kind": "door",
+      "status": "passed",
+      "origin": {
+        "x": 410000,
+        "y": 180,
+        "z": 1000
+      },
+      "rotation": "r0",
+      "stages": [
+        {
+          "kind": "construction",
+          "verified_steps": 43,
+          "server_confirmed_readbacks": 87
+        },
+        {
+          "kind": "reconstruction",
+          "verified_steps": 85,
+          "server_confirmed_readbacks": 171
+        },
+        {
+          "kind": "removal",
+          "verified_steps": 43,
+          "server_confirmed_readbacks": 87
+        }
+      ],
+      "stores": [
+        {
+          "path": ".local/e2e-artifacts/cutover-live-door-20260929-a.state/3c2797e6019a5e48/blueprints/eacc6112be1267b1/catalog.json",
+          "sha256": "a4b71ee2faa7c0c8cb8712e076477ab6a91127d39f59b3178cbfe02e731ca2e8",
+          "store": "dustroute.mcp-blueprints.v2",
+          "history": "dustroute.blueprint-updates.v5",
+          "catalog": "dustroute.blueprint-catalog.v13",
+          "groundings_present": true
+        }
+      ],
+      "mcp_calls": 39,
+      "expected_refusals": 12,
+      "restart": {
+        "after_adoption": true,
+        "transport": "new_stdio_process",
+        "after_placement": true,
+        "after_removal": true
+      },
+      "persistence_checks": {
+        "listed_after_restart": true,
+        "fresh_review": true,
+        "missing_chunks_refused": true,
+        "external_change_detected": true,
+        "preview_required": true,
+        "changed_after_preview_refused": true,
+        "removal_retained": true
+      },
+      "diagnoses": [
+        {
+          "label": "initial_open",
+          "status": "matches_reference",
+          "world_unchanged": true
+        },
+        {
+          "label": "missing_client_chunks",
+          "status": "observation_unavailable",
+          "world_unchanged": true
+        },
+        {
+          "label": "player_added_chest",
+          "status": "differences_found",
+          "world_unchanged": true
+        },
+        {
+          "label": "player_removed_quartz",
+          "status": "differences_found",
+          "world_unchanged": true
+        },
+        {
+          "label": "normal_closed",
+          "status": "matches_reference",
+          "world_unchanged": true
+        },
+        {
+          "label": "normal_open",
+          "status": "matches_reference",
+          "world_unchanged": true
+        },
+        {
+          "label": "normal_closed",
+          "status": "matches_reference",
+          "world_unchanged": true
+        },
+        {
+          "label": "normal_open",
+          "status": "matches_reference",
+          "world_unchanged": true
+        }
+      ],
+      "input_count": 4,
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true
+      },
+      "server_stopped_normally": true,
+      "loaded_sources_sha256": {
+        "/root/DustRoute/tools/observe_assembly_construction.py": "1b80c5ec638d0671ed6664cd517868e8e7c41715db8acd3c067111bfc2341020",
+        "/root/DustRoute/crates/dustroute-mcp/mineflayer/e2e/piston-assembly-mcp-live.js": "e67b8dec284f0fa85f94bf87c4f024752ab6d0b8de309c3bd27881f94559d8c0",
+        "/root/DustRoute/target/debug/dustroute-mcp": "577f7a03b12839972bd8189a70a6e3e3f2914153605cd3e20804c128b99f52d9",
+        "/root/DustRoute/crates/dustroute-mcp/mineflayer/bridge.js": "ef50f4d4f7e87613bbd0f03e1f25ac275622fad9ba6493d6d8ead5702c5509e3",
+        "/root/DustRoute/crates/dustroute-mcp/mineflayer/readback.js": "517f9ebab79a8e18be6e489f6346a5c9a115f5b7d6073c5ff0c2b46fb71e8737",
+        "/root/DustRoute/tools/instrumented_server.py": "7164de1897c7f0388b99b6ab2cac7edb12174add7aaf1a0bd347e5ffb5f3ca6f"
+      },
+      "summary": {
+        "path": ".local/e2e-artifacts/cutover-live-door-20260929-a.summary.json",
+        "sha256": "3299617a7865287638bc29afc103e7d9bd789c21099f45e5fb983e64bcd6244e"
+      },
+      "artifacts": [
+        {
+          "path": ".local/e2e-artifacts/cutover-live-door-20260929-a.raw.ndjson",
+          "sha256": "fbb39bf3cc2e4c580904941a5cc003a500d7e1b9b807d02ceeae43f9e69c14fe"
+        },
+        {
+          "path": ".local/e2e-artifacts/cutover-live-door-20260929-a.server.log",
+          "sha256": "7b9d98c9408fe7a3c65ceed33ffb3ee4fb31b76d9d0550e73795efd177384158"
+        },
+        {
+          "path": ".local/e2e-artifacts/cutover-live-door-20260929-a.bridge.log",
+          "sha256": "0b5f71a85f1fe1986494122fe3fed98d3e240bc6b64ca3ee41817b90e68fdcd0"
+        },
+        {
+          "path": ".local/e2e-artifacts/cutover-live-door-20260929-a.client.json",
+          "sha256": "75bc0ede42c5e0cfec10b731303028ce98a2b9ec63f40e16b0fd36056a618c29"
+        },
+        {
+          "path": ".local/e2e-artifacts/cutover-live-door-20260929-a.fixture.json",
+          "sha256": "b25b8d64b60af0f618cee113c006db5765f8c47920e745a27c0ae70aefca6605"
+        }
+      ],
+      "close_open_cycles": 2,
+      "aperture_cells_per_probe": 9
+    },
+    {
+      "kind": "flight",
+      "status": "passed",
+      "origin": {
+        "x": 411000,
+        "y": 180,
+        "z": 1000
+      },
+      "rotation": "r90",
+      "stages": [
+        {
+          "kind": "construction",
+          "verified_steps": 9,
+          "server_confirmed_readbacks": 19
+        },
+        {
+          "kind": "removal",
+          "verified_steps": 9,
+          "server_confirmed_readbacks": 19
+        }
+      ],
+      "stores": [
+        {
+          "path": ".local/e2e-artifacts/cutover-live-flight-20260929-a.state/3c2797e6019a5e48/blueprints/eacc6112be1267b1/catalog.json",
+          "sha256": "3e0bc44b6aca06590f08f4593d472eb48d27b0cce86f5664075d69a43f527229",
+          "store": "dustroute.mcp-blueprints.v2",
+          "history": "dustroute.blueprint-updates.v5",
+          "catalog": "dustroute.blueprint-catalog.v13",
+          "groundings_present": true
+        }
+      ],
+      "mcp_calls": 28,
+      "expected_refusals": 11,
+      "restart": {
+        "after_adoption": true,
+        "transport": "new_stdio_process",
+        "after_placement": true,
+        "after_arrival": true,
+        "after_removal": true
+      },
+      "persistence_checks": {
+        "listed_after_restart": true,
+        "fresh_review": true,
+        "missing_chunks_refused": true,
+        "external_change_detected": true,
+        "unsaved_removal_plan_not_reused": true,
+        "preview_required": true,
+        "changed_after_preview_refused": true,
+        "removal_retained": true
+      },
+      "diagnoses": [
+        {
+          "label": "arrived_after_restart",
+          "status": "matches_reference",
+          "world_unchanged": true
+        }
+      ],
+      "input_count": 1,
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true
+      },
+      "server_stopped_normally": true,
+      "loaded_sources_sha256": {
+        "/root/DustRoute/tools/observe_assembly_construction.py": "1b80c5ec638d0671ed6664cd517868e8e7c41715db8acd3c067111bfc2341020",
+        "/root/DustRoute/crates/dustroute-mcp/mineflayer/e2e/piston-assembly-mcp-live.js": "e67b8dec284f0fa85f94bf87c4f024752ab6d0b8de309c3bd27881f94559d8c0",
+        "/root/DustRoute/target/debug/dustroute-mcp": "577f7a03b12839972bd8189a70a6e3e3f2914153605cd3e20804c128b99f52d9",
+        "/root/DustRoute/crates/dustroute-mcp/mineflayer/bridge.js": "ef50f4d4f7e87613bbd0f03e1f25ac275622fad9ba6493d6d8ead5702c5509e3",
+        "/root/DustRoute/crates/dustroute-mcp/mineflayer/readback.js": "517f9ebab79a8e18be6e489f6346a5c9a115f5b7d6073c5ff0c2b46fb71e8737",
+        "/root/DustRoute/tools/instrumented_server.py": "7164de1897c7f0388b99b6ab2cac7edb12174add7aaf1a0bd347e5ffb5f3ca6f"
+      },
+      "summary": {
+        "path": ".local/e2e-artifacts/cutover-live-flight-20260929-a.summary.json",
+        "sha256": "7cb1b7b86b1e5ec95b2be19c94ef0df657b464ed20953a28bf09aa475709d1c9"
+      },
+      "artifacts": [
+        {
+          "path": ".local/e2e-artifacts/cutover-live-flight-20260929-a.raw.ndjson",
+          "sha256": "09006e31bfca8fe02b8ec94e7daa2fd4cca3e259f59db7995494e63f3c9a4793"
+        },
+        {
+          "path": ".local/e2e-artifacts/cutover-live-flight-20260929-a.server.log",
+          "sha256": "c0050bb372606fc5647eb74abeaa2b2e462b465bc525d6e3d29723bc811dca73"
+        },
+        {
+          "path": ".local/e2e-artifacts/cutover-live-flight-20260929-a.bridge.log",
+          "sha256": "cda2f29b1261cd1a6036bd092004f6b7897d5f844fa2f75cb0ca7946fd8de2de"
+        },
+        {
+          "path": ".local/e2e-artifacts/cutover-live-flight-20260929-a.client.json",
+          "sha256": "c5be572f7ae9b77af2de347d2ba418156d3386350ba5591860401b45544d58a9"
+        },
+        {
+          "path": ".local/e2e-artifacts/cutover-live-flight-20260929-a.fixture.json",
+          "sha256": "75e5da275747b56facdcd270c08f7406c1ac723a9ebdf9218020ea6977cff0a6"
+        }
+      ],
+      "arrival": {
+        "distance": 10,
+        "engine_blocks": 6,
+        "destroyed_blocks": 0,
+        "hidden_readiness_proven": false,
+        "removal_retained_after_restart": true,
+        "readback": {
+          "schema_version": "dustroute.server-readback.v1",
+          "kind": "server_confirmed",
+          "request_id": "b73d4ac4-ce9b-4550-ba39-191dd73e7eea",
+          "dimension": "minecraft:overworld",
+          "min": {
+            "x": 410996,
+            "y": 177,
+            "z": 996
+          },
+          "max": {
+            "x": 411003,
+            "y": 185,
+            "z": 1015
+          },
+          "checked_cells": 1440,
+          "start_game_tick": 203288,
+          "end_game_tick": 203288,
+          "nonce": "95d4e1e9ad5ec1c34cc9b82cf0e35a3e",
+          "snapshot_sha256": "e6178669bb8b1105ff7f2cbc64b693f2ddab9fc10eb07f3b8b54df0df3e070f9",
+          "corrections": [],
+          "attempts": [
+            {
+              "start_game_tick": 203288,
+              "end_game_tick": 203288,
+              "matched_batches": 1,
+              "batch_count": 1,
+              "unconfirmed_batches": []
+            }
+          ],
+          "predicate_ticks": [
+            203288
+          ],
+          "predicate_batch_cells": 8880,
+          "hidden_runtime_observed": false
+        }
+      }
+    }
+  ],
+  "basic_trials": {
+    "a": {
+      "status": "failed_before_context_fix",
+      "exit_code": 1,
+      "passed": [
+        "normal_circuit",
+        "reversed_directional_device",
+        "repair_and_undo",
+        "transition_run_and_restore",
+        "api_error_contract"
+      ],
+      "server_stopped_normally": true,
+      "artifacts": [
+        {
+          "path": ".local/e2e-artifacts/cutover-live-basic-20260929-a.summary.json",
+          "sha256": "ee705996563c6bab3214bfa30f617fe0ce5d7f650e221be45554c07e1dc2aece"
+        },
+        {
+          "path": ".local/e2e-artifacts/cutover-live-basic-20260929-a.runner.log",
+          "sha256": "2e74313c324946e3d515e68118be8f07968b67db6e0b086cc11f37c7bec7742c"
+        },
+        {
+          "path": ".local/e2e-artifacts/cutover-live-basic-20260929-a.server.log",
+          "sha256": "e826d73a5bcf6ad9c6bc938290cad07abd9c3e8a9e0a72486170b9e116f11b20"
+        },
+        {
+          "path": ".local/e2e-artifacts/cutover-live-basic-20260929-a.bridge.log",
+          "sha256": "a3844cdb5ede1760cd0acdc0be569c05d875a0adaa39d5e16d9cd3d82f0e73eb"
+        }
+      ],
+      "failure_artifact": {
+        "path": ".local/e2e-artifacts/1790674462216-vertical_dust_repair_and_undo.json",
+        "sha256": "f37b003dfd9bec7f4438cdde91f55aaff08edc7c737cb5bbc178f5cd9e9500c5"
+      }
+    },
+    "b": {
+      "status": "fixture_footing_rejected",
+      "exit_code": 1,
+      "passed": [
+        "normal_circuit",
+        "reversed_directional_device",
+        "repair_and_undo",
+        "transition_run_and_restore",
+        "api_error_contract",
+        "vertical_dust_repair_and_undo"
+      ],
+      "server_stopped_normally": true,
+      "artifacts": [
+        {
+          "path": ".local/e2e-artifacts/cutover-live-basic-20260929-b.summary.json",
+          "sha256": "e996e6dfaf1ba793c079b0a4ffa2df2069e26d1e74fb15dba25c700d2f8bcad7"
+        },
+        {
+          "path": ".local/e2e-artifacts/cutover-live-basic-20260929-b.runner.log",
+          "sha256": "9107081e817736dfd5113910f9bf3cac26d35debc68a29cf1daaf706bf5fcfc8"
+        },
+        {
+          "path": ".local/e2e-artifacts/cutover-live-basic-20260929-b.server.log",
+          "sha256": "9d9b1e072716fcbc24fa7f648990f1e241cc4366a623ad24f0ab509e68ecf191"
+        },
+        {
+          "path": ".local/e2e-artifacts/cutover-live-basic-20260929-b.bridge.log",
+          "sha256": "c0260273fdd864921f09d07b25cb9302668fbc2bc4d666742f890a5dd4037bb7"
+        }
+      ],
+      "failure_artifact": {
+        "path": ".local/e2e-artifacts/1790675075179-guarded_optimized_placement.json",
+        "sha256": "441ec0128f27d86b60867ff562bb9550644ae9ebc4063053f1b6d754858e903c"
+      }
+    },
+    "c": {
+      "status": "blocked_by_confirmation_volume",
+      "exit_code": 1,
+      "passed": [],
+      "server_stopped_normally": true,
+      "artifacts": [
+        {
+          "path": ".local/e2e-artifacts/cutover-live-basic-20260929-c.summary.json",
+          "sha256": "d296b66512f94b70b2c5192c3aefa8ae14714eb45bcfb3bbb905bcff11ad7df0"
+        },
+        {
+          "path": ".local/e2e-artifacts/cutover-live-basic-20260929-c.runner.log",
+          "sha256": "66fb9a50c51ad13fc1b2342c5148d474b23170b8c0edce5143b14cd4cd486613"
+        },
+        {
+          "path": ".local/e2e-artifacts/cutover-live-basic-20260929-c.server.log",
+          "sha256": "25e7f3fd1f753e33b36707f4c9d8b1a6a93e5db594892a09ee8a681e7df8ec59"
+        },
+        {
+          "path": ".local/e2e-artifacts/cutover-live-basic-20260929-c.bridge.log",
+          "sha256": "a342e9c81ed57af6933a8eb750a1805f2579101a04a8e2b2e4a28c675ad2cf01"
+        }
+      ],
+      "failure_artifact": {
+        "path": ".local/e2e-artifacts/1790675409827-guarded_optimized_placement.json",
+        "sha256": "5bee3fd99e84206820433e79abf9b05e6ee7d8eae3f5556ce000ccea91efdb14"
+      }
+    }
+  },
+  "unique_basic_scenarios_passed_after_repair": 6,
+  "checks_after_repair": [
+    {
+      "name": "context-tests",
+      "exit_code": 0,
+      "results": [
+        "test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 100 filtered out; finished in 0.05s"
+      ],
+      "artifact": {
+        "path": ".local/cutover-live-context-tests.log",
+        "sha256": "9443e905770916d9a033850f73cfbe85243460a601823142d3fc610daf1c6118"
+      }
+    },
+    {
+      "name": "repair-tests",
+      "exit_code": 0,
+      "results": [
+        "test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 100 filtered out; finished in 0.20s"
+      ],
+      "artifact": {
+        "path": ".local/cutover-live-repair-tests.log",
+        "sha256": "6a175fdac2ab78c11529c4bcac1297e7a257af482b3af7e14b9191d315551f47"
+      }
+    },
+    {
+      "name": "placement-tests",
+      "exit_code": 0,
+      "results": [
+        "test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 91 filtered out; finished in 15.68s"
+      ],
+      "artifact": {
+        "path": ".local/cutover-live-placement-tests.log",
+        "sha256": "288e7a10e58ae82056c35f2fbcdcef419a0412b4ca14dcf3575ae70d7d5d6dba"
+      }
+    },
+    {
+      "name": "snapshot-tests",
+      "exit_code": 0,
+      "results": [
+        "test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 153 filtered out; finished in 0.02s"
+      ],
+      "artifact": {
+        "path": ".local/cutover-live-snapshot-tests.log",
+        "sha256": "3baa9af5aa7df133eaa13669078ff6e1b03ae2b42c440ea1fd85907d481618e5"
+      }
+    },
+    {
+      "name": "optimized-placement-tests",
+      "exit_code": 0,
+      "results": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 105 filtered out; finished in 35.02s"
+      ],
+      "artifact": {
+        "path": ".local/cutover-live-optimized-placement-tests.log",
+        "sha256": "0710cc9e0ec6c8120d255e32e79d984362826f70dbea8f21077ed9a2d0812ef4"
+      }
+    },
+    {
+      "name": "fixed-build",
+      "exit_code": 0,
+      "results": [],
+      "artifact": {
+        "path": ".local/cutover-live-fixed-build.log",
+        "sha256": "69b5195f4c9813b2f1972de1277e80b6c6d9b2e093edf1588227fd1b647cfc37"
+      }
+    },
+    {
+      "name": "fmt",
+      "exit_code": 0,
+      "results": [],
+      "artifact": {
+        "path": ".local/cutover-live-fmt.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "name": "clippy",
+      "exit_code": 0,
+      "results": [],
+      "artifact": {
+        "path": ".local/cutover-live-clippy.log",
+        "sha256": "9a3253683b462582c5917bf837fbd3620ea3ba64b6e9d5b51dd9bb93e2aec4e9"
+      }
+    }
+  ],
+  "remaining_blocker": {
+    "scenario": "guarded_optimized_placement",
+    "changes": 451,
+    "placement_region_cells": 7395,
+    "validation_region_cells": 11501,
+    "bridge_confirmation_limit_cells": 8880,
+    "failed_before_mutation_submission": true,
+    "scope": "ordinary builtin placement; no assertion that every large-placement path shares this result"
+  },
+  "not_run": [
+    "focused_physical_wire_optimization"
+  ],
+  "fixed_binary": {
+    "path": "target/debug/dustroute-mcp",
+    "sha256": "ade5eab7fe4c2fc18e5a68f18fa9038e49a085a92abeec167c8c5d0e2082463e"
+  },
+  "fixed_sources": [
+    {
+      "path": "crates/dustroute-mcp/src/service/world_editor.rs",
+      "sha256": "8b03960c8e4c28d1e4d74291d3ac142b44726857ff9ca1b64ec28d3e4956dd65"
+    },
+    {
+      "path": "crates/dustroute-mcp/src/service.rs",
+      "sha256": "26ba0ed0a733069135e0d2237fb3538d7e406bbce017fc487693cea64412787b"
+    },
+    {
+      "path": "crates/dustroute-mcp/src/service/world_editor_tests.rs",
+      "sha256": "ec44030fd66a6a37fa8f670d2d84ef29432aa9e5e2688db3dd9731d9e7b8c16b"
+    },
+    {
+      "path": "crates/dustroute-translate/src/snapshot.rs",
+      "sha256": "bd7dd067384592313c70fd421a3cf76fcaffa61cbf08b9549cfab4205b0ff2e7"
+    },
+    {
+      "path": "crates/dustroute-mcp/src/bridge_protocol.rs",
+      "sha256": "c2a85fb8b7a82faa2970ce47d1b70933ab3654b805b8c7bf8bf43f2362c79c21"
+    },
+    {
+      "path": "crates/dustroute-mcp/mineflayer/mutation-protocol.js",
+      "sha256": "c92ef129c30b829fea834d468f4f6ac4f88fd13ff918bfa197006570694c9efc"
+    },
+    {
+      "path": "crates/dustroute-mcp/mineflayer/bridge.js",
+      "sha256": "ef50f4d4f7e87613bbd0f03e1f25ac275622fad9ba6493d6d8ead5702c5509e3"
+    },
+    {
+      "path": "crates/dustroute-mcp/mineflayer/e2e/runner.js",
+      "sha256": "21a92542fc73ce9956e6e75339b84d22236c65b0e59b51f1f2002a6a6ba9370f"
+    },
+    {
+      "path": "crates/dustroute-mcp/mineflayer/e2e/scenarios/18-optimized-placement.json",
+      "sha256": "7983a25e51165d3d15e8c8ef7a3179b51a6c66c8c7be9403600ef3e793322853"
+    }
+  ],
+  "scope_limit": "finite representative workflows, not all 32 basic scenarios, all block combinations, hidden readiness, atomic world access, or long-duration reliability; lifecycle trials precede the WorldEditor-only context repair"
+}
