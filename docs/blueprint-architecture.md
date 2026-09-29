@@ -145,8 +145,9 @@ The new contract preserves the meaning of `RepeatedSettling`. The existing
 meaning and historical rejection evidence. The reference door explicitly binds
 `dustroute.type.piston-door-3x3.v1` in new mechanism/parent/Assembly v3 records,
 forked from literal v1. Fresh review/adoption retains every other obligation.
-Catalog v11 protects this contract; existing references and saved results are
-not rewritten.
+The contract was introduced in catalog v11; current archives require v13.
+Existing references and historical evidence are not rewritten. Retired archives
+are rejected; see the [cutover guide](architecture-cutover.md).
 
 Normal-cycle behavior and measured live agreement satisfy the user's functional
 acceptance criterion for this reference door. Fresh model verification and
@@ -299,12 +300,12 @@ a modeled projection does not manufacture missing properties or hidden state.
 General attribution of observations to library realizations is migration work.
 Attribution must distinguish a candidate interpretation from verified obligations.
 
-Catalogs retain their minimum required schema version. Current catalogs support
-v1 through v10; static type bindings require v8, `required_laws` requires v9,
-and explicit observation bindings require v10.
+All current catalogs use v13. Retired v1–v12 archives are rejected rather than
+upgraded implicitly; see the [cutover guide](architecture-cutover.md).
 Proposal histories use updates v2 for static bindings and v3 for law requirements,
 including when the declaration exists only in an unadopted candidate. Histories
-without those features remain v1. Explicit observation bindings require updates
+without those features can use the v1 update envelope with a current catalog.
+Explicit observation bindings require updates
 v4, including unadopted candidates. Relabeling newer features as an older format is
 rejected. Reload and adoption preserve source/type/law dependencies and do not
 trust saved success reports.

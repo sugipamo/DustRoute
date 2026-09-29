@@ -209,8 +209,8 @@ fn main() {
         );
     }
     for cell in [
-        dustroute_translate::not_top_cell(),
-        dustroute_translate::not_cell(),
+        dustroute_translate::cells::not_top_cell(),
+        dustroute_translate::cells::not_cell(),
     ] {
         let mut world = cell.world;
         let input = Pos::new(-1, 0, 0);

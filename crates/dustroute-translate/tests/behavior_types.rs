@@ -6,7 +6,7 @@ use dustroute_library::blueprint::*;
 use dustroute_library::builtin_blueprints::*;
 use dustroute_translate::behavior_type::*;
 use dustroute_translate::promotion::CheckStatus;
-use dustroute_translate::{Block, BlockKind};
+use dustroute_translate::{world::Block, world::BlockKind};
 
 fn not_type() -> TypeRevision {
     TypeRevision {
@@ -169,11 +169,11 @@ fn new_behavior_type_round_trips_without_rebinding_connection_types_or_old_archi
     assert_eq!(catalog.type_revision(&old_wire.id), Some(&old_wire));
     assert!(catalog.insert_type(not_type()).is_err());
     let saved = catalog.to_json().unwrap();
-    assert!(saved.contains("dustroute.blueprint-catalog.v3"));
+    assert!(saved.contains("dustroute.blueprint-catalog.v13"));
     assert_eq!(BlueprintCatalog::from_json(&saved).unwrap(), catalog);
     assert!(
         BlueprintCatalog::from_json(&saved.replace(
-            "dustroute.blueprint-catalog.v3",
+            "dustroute.blueprint-catalog.v13",
             "dustroute.blueprint-catalog.v2"
         ))
         .is_err()

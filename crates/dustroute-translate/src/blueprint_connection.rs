@@ -9,7 +9,7 @@ use dustroute_library::blueprint::{
 };
 
 use crate::connectivity::{PhysicalStepKind, physical_step};
-use crate::{Block, BlockKind, Pos, RotationY, ValidatedWorld};
+use crate::{cells::RotationY, world::Block, world::BlockKind, world::Pos, world::ValidatedWorld};
 
 /// A selected port of one placed occurrence. Other ports and classifications
 /// of the producer do not participate in connection typing.

@@ -1,6 +1,9 @@
 use std::time::Instant;
 
-use dustroute_translate::{Block, BlockKind, Pos, World, extract_connectivity, update_wire_shapes};
+use dustroute_translate::{
+    connectivity::extract_connectivity, wire::update_wire_shapes, world::Block, world::BlockKind,
+    world::Pos, world::World,
+};
 
 fn main() {
     for component_count in [100, 500, 1_000, 2_000, 4_000, 8_000] {

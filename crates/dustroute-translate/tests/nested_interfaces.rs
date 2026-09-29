@@ -5,7 +5,8 @@ use dustroute_library::builtin_blueprints::*;
 use dustroute_translate::assembly::{AssemblyValidationError, validate_assembly};
 use dustroute_translate::compiler::baseline_blueprint_selection;
 use dustroute_translate::{
-    BaselineCompileConfig, BaselineCompiler, DagBuilder, GateKind, Pos, RotationY,
+    cells::RotationY, compiler::BaselineCompileConfig, compiler::BaselineCompiler, ir::DagBuilder,
+    ir::GateKind, world::Pos,
 };
 
 fn id(value: &str) -> BlueprintRevisionId {
@@ -20,7 +21,7 @@ fn port(path: &[&str], name: &str) -> BlueprintPortRef {
         port: name.into(),
     }
 }
-fn inverter() -> dustroute_translate::LogicDag {
+fn inverter() -> dustroute_translate::ir::LogicDag {
     let mut builder = DagBuilder::new();
     let input = builder.input("in");
     let output = builder.gate(GateKind::Not, &[input], None);
@@ -102,11 +103,13 @@ fn promoted_not_reuses_internal_routes_and_nested_requirements_when_compiled_aga
         if input {
             world.set(
                 reused.input_positions["in"].offset(-1, 0, 0),
-                dustroute_translate::Block::new(dustroute_translate::BlockKind::RedstoneBlock),
+                dustroute_translate::world::Block::new(
+                    dustroute_translate::world::BlockKind::RedstoneBlock,
+                ),
             );
         }
-        dustroute_translate::update_wire_shapes(&mut world);
-        let settled = dustroute_translate::RedstoneTickSimulator::new(world)
+        dustroute_translate::wire::update_wire_shapes(&mut world);
+        let settled = dustroute_translate::sim::RedstoneTickSimulator::new(world)
             .unwrap()
             .settle_ticks(64)
             .unwrap();
@@ -184,14 +187,16 @@ fn source_aliases_keep_rotated_type_frames_and_cannot_bypass_parent_or_child_req
     use dustroute_translate::blueprint_connection::{
         BlueprintEndpoint, check_blueprint_connection,
     };
-    use dustroute_translate::{Block, BlockKind, ValidatedWorld, World};
+    use dustroute_translate::{
+        world::Block, world::BlockKind, world::ValidatedWorld, world::World,
+    };
     let mut catalog = builtin_blueprints().clone();
     let mut local = World::new();
     for x in 0..5 {
         local.set(Pos::new(x, 0, 0), Block::new(BlockKind::Solid));
         local.place(BlockKind::RedstoneWire, Pos::new(x, 1, 0));
     }
-    dustroute_translate::update_wire_shapes(&mut local);
+    dustroute_translate::wire::update_wire_shapes(&mut local);
     let required = TypeRevisionId::new("adjacent-wire.v1").unwrap();
     catalog
         .insert_type(TypeRevision {

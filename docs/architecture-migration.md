@@ -1,5 +1,9 @@
 # Architecture migration
 
+This document records the previous compatibility-preserving pass. The subsequent
+[architecture cutover](architecture-cutover.md) supersedes its deferred items
+and storage/API compatibility policy.
+
 This implements the [readability audit](architecture-readability-audit.md) on
 `codex/coauthoring-architecture`. Public behavior, JSON, stored records and
 execution-profile revisions remain compatibility constraints. Tables are checked

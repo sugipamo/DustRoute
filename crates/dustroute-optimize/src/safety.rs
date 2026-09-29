@@ -196,7 +196,10 @@ pub fn assess_optimization_safety(
 #[cfg(test)]
 mod tests {
     use dustroute_physical::{Block, BlockKind, FrontierReason, ObservationFrontier, Pos, World};
-    use dustroute_translate::{RegionBounds, TruthTableComparison, analyze_world_region};
+    use dustroute_translate::{
+        world_reverse::RegionBounds, world_reverse::TruthTableComparison,
+        world_reverse::analyze_world_region,
+    };
 
     use super::*;
 

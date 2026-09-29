@@ -43,7 +43,7 @@ fn live_probes(
     let source: serde_json::Value = serde_json::from_str(include_str!(
         "../tests/fixtures/reference-3x3-bobiloosky-v1.json"
     ))?;
-    let mut aperture: Vec<dustroute_translate::Pos> =
+    let mut aperture: Vec<dustroute_translate::world::Pos> =
         serde_json::from_value(source["aperture"].clone())?;
     if let Some(transform) = target {
         for pos in &mut aperture {
@@ -66,7 +66,7 @@ fn target_construction(
     transform: AssemblyTransform,
 ) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
     use dustroute_minecraft::piston_electrical::along;
-    use dustroute_translate::{BlockKind, Pos};
+    use dustroute_translate::{world::BlockKind, world::Pos};
     use std::collections::{BTreeMap, BTreeSet};
     let mut catalog = f.catalog.clone();
     catalog.insert_revisions(f.request.revisions.clone())?;

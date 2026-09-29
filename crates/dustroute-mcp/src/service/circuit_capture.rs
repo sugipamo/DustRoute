@@ -36,7 +36,7 @@ impl DiscoveryObservation {
 
 #[derive(Debug)]
 pub(super) struct AdaptiveComponentScan {
-    pub(super) snapshot: dustroute_translate::MinecraftSnapshot,
+    pub(super) snapshot: dustroute_translate::snapshot::MinecraftSnapshot,
     pub(super) component_count: usize,
     pub(super) component_limit: usize,
     pub(super) limit_reached: bool,
@@ -79,10 +79,13 @@ impl CircuitCapture<'_> {
                 fragment_gap as i32,
             )
             .await?;
-        let bounds = dustroute_translate::RegionBounds::new(scan.snapshot.min, scan.snapshot.max);
-        let world =
-            dustroute_translate::world_from_snapshot(&scan.snapshot).map_err(|e| e.to_string())?;
-        let analysis = dustroute_translate::analyze_world_region(&world, bounds);
+        let bounds = dustroute_translate::world_reverse::RegionBounds::new(
+            scan.snapshot.min,
+            scan.snapshot.max,
+        );
+        let world = dustroute_translate::snapshot::world_from_snapshot(&scan.snapshot)
+            .map_err(|e| e.to_string())?;
+        let analysis = dustroute_translate::world_reverse::analyze_world_region(&world, bounds);
         let candidate =
             discover_connected_region(&analysis, target, 2, fragment_gap, padding, usize::MAX)
                 .map_err(|e| e.to_string())?;
@@ -110,7 +113,7 @@ impl CircuitCapture<'_> {
         const TILE_SIZE: i32 = 16;
         const SEED_DISTANCE: i32 = 2;
 
-        let seed_bounds = dustroute_translate::RegionBounds::new(
+        let seed_bounds = dustroute_translate::world_reverse::RegionBounds::new(
             Pos::new(
                 target.x - SEED_DISTANCE,
                 target.y - SEED_DISTANCE,
@@ -191,7 +194,8 @@ impl CircuitCapture<'_> {
                             min.y + TILE_SIZE - 1,
                             min.z + TILE_SIZE - 1,
                         );
-                        let bounds = dustroute_translate::RegionBounds::new(min, max);
+                        let bounds =
+                            dustroute_translate::world_reverse::RegionBounds::new(min, max);
                         self.policy
                             .validate_region(bounds)
                             .map_err(|error| error.to_string())?;
@@ -253,7 +257,7 @@ impl CircuitCapture<'_> {
             .collect();
         let scanned_tiles = loaded_tiles.len();
         Ok(AdaptiveComponentScan {
-            snapshot: dustroute_translate::MinecraftSnapshot {
+            snapshot: dustroute_translate::snapshot::MinecraftSnapshot {
                 min,
                 max,
                 blocks: snapshot_blocks,

@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use super::ConnectivityFinding;
 use super::difference::SnapshotDifference;
-use crate::Pos;
+use crate::world::Pos;
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -244,7 +244,7 @@ impl Diagnosis {
 mod tests {
     use super::*;
     use crate::diagnostic::difference::differences;
-    use crate::{MinecraftSnapshot, MinecraftSnapshotBlock, RotationY};
+    use crate::{cells::RotationY, snapshot::MinecraftSnapshot, snapshot::MinecraftSnapshotBlock};
     use dustroute_library::assembly::Assembly;
     use dustroute_library::blueprint::{BlueprintInclusion, BlueprintRevisionId, InstanceId};
     use dustroute_library::builtin_blueprints::{NOT_TOP_REVISION, builtin_blueprints};

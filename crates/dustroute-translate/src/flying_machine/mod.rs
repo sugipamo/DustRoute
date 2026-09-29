@@ -9,7 +9,7 @@ use crate::behavior_type::BehaviorBudget;
 use crate::blueprint_update::{BlueprintUpdateRequest, BlueprintUpdates, RecordedReview};
 use crate::piston_construction::ElectricalConstruction;
 use crate::promotion::CheckStatus;
-use crate::{MinecraftSnapshot, Pos};
+use crate::{snapshot::MinecraftSnapshot, world::Pos};
 use dustroute_library::assembly::AssemblyRevision;
 use dustroute_library::blueprint::{BlueprintCatalog, BlueprintRevision, TypeRevision};
 use dustroute_library::flying_machine::FlyingMachineRequest;

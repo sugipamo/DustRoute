@@ -323,7 +323,9 @@ fn final_values_match(case: &crate::MacroTransitionCase) -> bool {
     case.original_outputs.last() == case.candidate_outputs.last()
 }
 
-fn sufficient_comparison(comparison: &dustroute_translate::TruthTableComparison) -> bool {
+fn sufficient_comparison(
+    comparison: &dustroute_translate::world_reverse::TruthTableComparison,
+) -> bool {
     comparison.comparable
         && comparison.expected_inputs > 0
         && comparison.expected_outputs > 0
@@ -553,7 +555,7 @@ mod tests {
         let structural = MacroStructuralReport::default();
         let steady = MacroSteadyStateReport {
             state: ContextualVerificationState::Passed,
-            comparison: Some(dustroute_translate::TruthTableComparison {
+            comparison: Some(dustroute_translate::world_reverse::TruthTableComparison {
                 comparable: true,
                 expected_inputs: 0,
                 actual_inputs: 0,

@@ -2,7 +2,9 @@
 use super::boundary::{boundary_terminal_mapping, set_driver_in_world};
 use super::{ContextualVerificationState, MacroSteadyStateReport};
 use dustroute_physical::World;
-use dustroute_translate::{InferredTruthTable, RegionBounds, TruthTableRow};
+use dustroute_translate::{
+    world_reverse::InferredTruthTable, world_reverse::RegionBounds, world_reverse::TruthTableRow,
+};
 
 /// Re-infers the materialized circuit, identifies its terminals by the fixed
 /// boundary components, and compares rows in the original boundary order.
@@ -17,15 +19,17 @@ pub fn verify_macro_steady_state(
     let Some((low, high)) = materialized.bounds() else {
         return unavailable_steady("materialized world is empty");
     };
-    let analysis =
-        dustroute_translate::analyze_world_region(materialized, RegionBounds::new(low, high));
+    let analysis = dustroute_translate::world_reverse::analyze_world_region(
+        materialized,
+        RegionBounds::new(low, high),
+    );
     if expected.inputs.len() > max_inputs {
         return unavailable_steady("too many inputs for steady-state verification");
     }
     let Some((original_low, original_high)) = original.bounds() else {
         return unavailable_steady("original world is empty");
     };
-    let original_analysis = dustroute_translate::analyze_world_region(
+    let original_analysis = dustroute_translate::world_reverse::analyze_world_region(
         original,
         RegionBounds::new(original_low, original_high),
     );
@@ -33,7 +37,11 @@ pub fn verify_macro_steady_state(
         .inputs
         .iter()
         .map(|terminal| {
-            dustroute_translate::inferred_input_driver(original, &original_analysis, terminal)
+            dustroute_translate::world_reverse::inferred_input_driver(
+                original,
+                &original_analysis,
+                terminal,
+            )
         })
         .collect::<Result<Vec<_>, _>>()
     {
@@ -67,8 +75,8 @@ pub fn verify_macro_steady_state(
                 return unavailable_steady(&error);
             }
         }
-        dustroute_translate::update_wire_shapes(&mut driven);
-        let state = match dustroute_translate::RedstoneTickSimulator::new(driven)
+        dustroute_translate::wire::update_wire_shapes(&mut driven);
+        let state = match dustroute_translate::sim::RedstoneTickSimulator::new(driven)
             .and_then(|mut simulator| simulator.settle_ticks(settle_ticks))
         {
             Ok(state) => state,
@@ -88,7 +96,8 @@ pub fn verify_macro_steady_state(
         outputs: expected.outputs.clone(),
         rows,
     };
-    let comparison = dustroute_translate::compare_truth_tables(expected, &normalized);
+    let comparison =
+        dustroute_translate::world_reverse::compare_truth_tables(expected, &normalized);
     let differing_assignments = expected
         .rows
         .iter()

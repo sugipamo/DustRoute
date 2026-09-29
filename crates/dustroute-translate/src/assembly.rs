@@ -18,7 +18,7 @@ use crate::multinet::MultiNetRouting;
 use crate::multinet::{root_path, rooted_parent};
 use crate::physical::PlacementCircuit;
 use crate::port_realization::terminal_for_endpoint;
-use crate::{Region, ValidatedWorld, World, WorldValidationError};
+use crate::{world::Region, world::ValidatedWorld, world::World, world::WorldValidationError};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum AssemblyValidationError {

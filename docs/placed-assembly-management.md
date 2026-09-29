@@ -138,8 +138,9 @@ valid histories can end differently; such layouts require explicit diagnosis.
 The preview includes `operating_removal.baseline` and modeled teardown steps.
 Execution rebuilds them, checks the record revision and full baseline again,
 then verifies each step through the existing server readback gates. A restart
-requires a new plan; v3 instance records retain the reference and steps as
-history only. v1/v2 history remains readable but cannot carry this new field.
+requires a new plan; current v4 instance records retain the reference and steps
+as history only. Retired v1–v3 records are rejected; see the
+[cutover guide](architecture-cutover.md).
 Default `removal_reference: "constructed"` retains the original baseline rule.
 Neither option proves hidden server queues empty or makes check/write atomic.
 
@@ -163,7 +164,7 @@ construction needs its own reviewed empty-site plan.
 Configure a durable `DUSTROUTE_STATE_DIR`; its default lives in the operating
 system's temporary directory and is not a permanent storage guarantee.
 `<scoped state directory>/assembly-instances/<instance UUID>.json` has schema
-`dustroute.placed-assembly.v3`, a monotonically increasing record revision and
+`dustroute.placed-assembly.v4`, a monotonically increasing record revision and
 no TTL. `DUSTROUTE_PLAN_TTL_SECONDS` does not expire these files. Records are
 limited to 32 MiB each. A registry file lock serializes updates and construction
 attempts across MCP instances using the same state directory; another request
@@ -176,6 +177,8 @@ removal records `removed`. Both histories survive process restart. Interrupted
 or uncertain work remains `needs_inspection`, even if a later observation happens
 to match. It cannot be automatically retried, rolled back or promoted to applied
 from snapshots. Corrupt or unknown-schema files are errors, not empty registries.
+Retired v1–v3 records are also rejected. See the [cutover guide](architecture-cutover.md)
+before preserving or discarding old instance history; no live blocks are changed.
 
 ## Reconstruction after damage or interrupted work
 
@@ -224,12 +227,11 @@ writes, and delayed old commands cannot be ruled out. These conditions are
 returned with the plan; the server-guaranteed option remains
 [deferred](live-operation-readiness-and-recovery.md).
 
-The v2 record adds an explicit optional reconstruction journal containing the
-observed baseline and the proposed sequence. Existing v1 records remain readable
-as history and are upgraded to v2 on save, without promoting lifecycle state,
-converting runtime checkpoints or changing pins. Older v1-only binaries reject
-v2 rather than interpreting a reconstruction as an ordinary placement. Registry
-limits and synchronization remain the same.
+The optional reconstruction journal contains the observed baseline and proposed
+sequence. It was introduced in v2 and is retained in current v4 records. Retired
+v1–v3 records are now rejected, without promoting lifecycle state, converting
+runtime checkpoints or changing pins. See the [cutover guide](architecture-cutover.md).
+Registry limits and synchronization remain the same.
 
 The [reconstruction report](evidence/reference-door-reconstruction-20260927.json)
 retains the 15 passing Rust tests, 90 modeled recovery starting states, and the

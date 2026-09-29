@@ -4,7 +4,7 @@ use std::time::{Duration, Instant};
 use dustroute_physical::{
     Block, BlockKind, PhysicalBlockChange, PhysicalPatch, PhysicalPatchReason, Pos, World,
 };
-use dustroute_translate::{RegionBounds, dust_connected};
+use dustroute_translate::{wire::dust_connected, world_reverse::RegionBounds};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PhysicalWireOptimization {
@@ -557,7 +557,7 @@ fn candidate_dust_connection(world: &World, first: Pos, second: Pos) -> bool {
     let mut candidate = world.clone();
     candidate.place(BlockKind::RedstoneWire, first);
     candidate.place(BlockKind::RedstoneWire, second);
-    dustroute_translate::update_wire_shapes(&mut candidate);
+    dustroute_translate::wire::update_wire_shapes(&mut candidate);
     dust_connected(&candidate, first, second)
 }
 
@@ -776,7 +776,7 @@ const fn contains(bounds: RegionBounds, pos: Pos) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use dustroute_translate::update_wire_shapes;
+    use dustroute_translate::wire::update_wire_shapes;
 
     #[test]
     fn shortens_a_supported_detour_and_preserves_every_block_outside_focus() {
@@ -856,7 +856,7 @@ mod tests {
         // adjacency was never a weak-power path, even though the old graph
         // admitted it. Keep this negative check, then use the fixed endpoint's
         // supporting lamp so both the detour and shortened path really drive it.
-        assert!(!dustroute_translate::physical_step_connected(
+        assert!(!dustroute_translate::connectivity::physical_step_connected(
             &world,
             Pos::new(4, 1, 0),
             Pos::new(5, 1, 0)
@@ -874,17 +874,23 @@ mod tests {
         assert!(signal.power(Pos::new(4, 0, 0)).weak > 0);
         let bounds = RegionBounds::new(Pos::new(-1, 0, 0), Pos::new(5, 1, 2));
         let focus = RegionBounds::new(Pos::new(0, 1, 0), Pos::new(4, 1, 2));
-        let analysis = dustroute_translate::analyze_world_region(&world, bounds);
-        let truth = dustroute_translate::infer_truth_table(&world, &analysis, 4, 64)
+        let analysis = dustroute_translate::world_reverse::analyze_world_region(&world, bounds);
+        let truth = dustroute_translate::world_reverse::infer_truth_table(&world, &analysis, 4, 64)
             .expect("detour truth table");
         let optimization = optimize_physical_wire_path(&world, focus).unwrap();
         let mut optimized = optimization.patch.apply_virtual(&world).unwrap();
         update_wire_shapes(&mut optimized);
-        let optimized_analysis = dustroute_translate::analyze_world_region(&optimized, bounds);
-        let optimized_truth =
-            dustroute_translate::infer_truth_table(&optimized, &optimized_analysis, 4, 64)
-                .expect("optimized truth table");
-        let comparison = dustroute_translate::compare_truth_tables(&truth, &optimized_truth);
+        let optimized_analysis =
+            dustroute_translate::world_reverse::analyze_world_region(&optimized, bounds);
+        let optimized_truth = dustroute_translate::world_reverse::infer_truth_table(
+            &optimized,
+            &optimized_analysis,
+            4,
+            64,
+        )
+        .expect("optimized truth table");
+        let comparison =
+            dustroute_translate::world_reverse::compare_truth_tables(&truth, &optimized_truth);
         let steady = crate::MacroSteadyStateReport {
             state: if comparison.comparable && comparison.differing_bits == 0 {
                 crate::ContextualVerificationState::Passed

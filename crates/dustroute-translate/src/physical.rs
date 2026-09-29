@@ -3,7 +3,7 @@ use std::error::Error;
 use std::fmt::{Display, Formatter};
 
 use crate::cells::{PlacedCell, PortKind};
-use crate::logic::GateKind;
+use crate::ir::logic::GateKind;
 use crate::routing::{RouteResult, materialize_route};
 use crate::wire::update_wire_shapes;
 use crate::world::{Block, BlockKind, Facing, Pos, World};

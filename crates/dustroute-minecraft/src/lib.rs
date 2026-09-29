@@ -3,7 +3,8 @@
 //! This crate deliberately has no dependency on DustRoute physical or logical
 //! IRs. Version-sensitive Minecraft behavior belongs here.
 
-mod block_state;
+pub mod block_contract;
+pub mod block_state;
 pub mod blocks;
 pub mod comparator_law;
 mod delta;

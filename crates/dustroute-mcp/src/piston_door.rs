@@ -1,6 +1,6 @@
 //! Exact, version-pinned operation contract for an already built 1x2 door.
 //! This is not a general placement proof and never creates ValidatedWorld.
-use dustroute_translate::{MinecraftSnapshot, Pos, RegionBounds};
+use dustroute_translate::{snapshot::MinecraftSnapshot, world::Pos, world_reverse::RegionBounds};
 use rmcp::schemars::{self, JsonSchema};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -78,8 +78,11 @@ pub fn inspect(
     version: &str,
     complete: bool,
     known: Option<&VerifiedDoor>,
-) -> dustroute_translate::PistonObservation {
-    use dustroute_translate::{PistonObservation as Report, PistonObservationState as State};
+) -> dustroute_translate::piston_observation::PistonObservation {
+    use dustroute_translate::{
+        piston_observation::PistonObservation as Report,
+        piston_observation::PistonObservationState as State,
+    };
     if version != "1.21.11" {
         return Report::unresolved(
             State::UnsupportedVersion,
@@ -113,11 +116,11 @@ pub fn inspect(
         state: DoorState::Open,
     };
     let expected = contract();
-    dustroute_translate::observe_piston_mechanism(
+    dustroute_translate::piston_observation::observe_piston_mechanism(
         snapshot,
         complete,
         version,
-        &dustroute_translate::PistonObservationContract {
+        &dustroute_translate::piston_observation::PistonObservationContract {
             version: "1.21.11",
             open: &expected.open,
             closed: &expected.closed,
@@ -228,17 +231,15 @@ mod tests {
         assert!(
             proof
                 .writes(true)
-                .as_array()
-                .unwrap()
                 .iter()
-                .all(|b| b["state"] == "minecraft:air")
+                .all(|b| b.state.name() == "minecraft:air")
         );
-        let world = dustroute_translate::world_from_snapshot(proof.initial()).unwrap();
-        assert!(dustroute_translate::ValidatedWorld::try_from(world).is_err());
+        let world = dustroute_translate::snapshot::world_from_snapshot(proof.initial()).unwrap();
+        assert!(dustroute_translate::world::ValidatedWorld::try_from(world).is_err());
     }
     #[test]
     fn reverse_observation_distinguishes_evidence_without_authorizing_it() {
-        use dustroute_translate::PistonObservationState as S;
+        use dustroute_translate::piston_observation::PistonObservationState as S;
         let open = sample(DoorState::Open);
         let closed = sample(DoorState::Closed);
         let known = verify(&open, "1.21.11").unwrap();
@@ -317,8 +318,8 @@ mod tests {
             assert_eq!(door.state(), state);
             assert_eq!(door.lever(), Pos::new(1102, 180, 1004));
             assert!(
-                dustroute_translate::ValidatedWorld::try_from(
-                    dustroute_translate::world_from_snapshot(&s).unwrap()
+                dustroute_translate::world::ValidatedWorld::try_from(
+                    dustroute_translate::snapshot::world_from_snapshot(&s).unwrap()
                 )
                 .is_err()
             );
@@ -406,13 +407,13 @@ impl ValidatedDoorPlacement {
         verify(&initial, version)?;
         // Retain all ordinary structural/state checks. Only this exact fixed
         // template may carry the already verified pistons through this proof.
-        let world =
-            dustroute_translate::world_from_snapshot(&initial).map_err(|e| e.to_string())?;
+        let world = dustroute_translate::snapshot::world_from_snapshot(&initial)
+            .map_err(|e| e.to_string())?;
         if world.placement_issues().iter().any(|issue| {
             !matches!(
                 issue,
-                dustroute_translate::WorldValidationIssue::UnsupportedPlacement {
-                    kind: dustroute_translate::BlockKind::Piston,
+                dustroute_translate::world::WorldValidationIssue::UnsupportedPlacement {
+                    kind: dustroute_translate::world::BlockKind::Piston,
                     ..
                 }
             )
@@ -460,7 +461,7 @@ impl ValidatedDoorPlacement {
         }
         Ok(())
     }
-    pub fn writes(&self, undo: bool) -> serde_json::Value {
+    pub fn writes(&self, undo: bool) -> Vec<crate::bridge_protocol::CommandWrite> {
         let mut blocks = self.initial.blocks.iter().collect::<Vec<_>>();
         blocks.sort_by_key(|b| {
             (
@@ -478,26 +479,27 @@ impl ValidatedDoorPlacement {
         if undo {
             blocks.reverse();
         }
-        serde_json::json!(
-            blocks
-                .into_iter()
-                .map(|b| {
-                    let props = b
-                        .properties
-                        .iter()
-                        .map(|(k, v)| format!("{k}={v}"))
-                        .collect::<Vec<_>>()
-                        .join(",");
-                    let state = if undo {
-                        "minecraft:air".into()
-                    } else if props.is_empty() {
-                        b.name.clone()
-                    } else {
-                        format!("{}[{props}]", b.name)
-                    };
-                    serde_json::json!({"pos":b.pos,"state":state})
-                })
-                .collect::<Vec<_>>()
-        )
+        blocks
+            .into_iter()
+            .map(|b| {
+                let props = b
+                    .properties
+                    .iter()
+                    .map(|(k, v)| format!("{k}={v}"))
+                    .collect::<Vec<_>>()
+                    .join(",");
+                let state = if undo {
+                    "minecraft:air".into()
+                } else if props.is_empty() {
+                    b.name.clone()
+                } else {
+                    format!("{}[{props}]", b.name)
+                };
+                crate::bridge_protocol::CommandWrite {
+                    pos: b.pos,
+                    state: state.parse().expect("validated door native state"),
+                }
+            })
+            .collect::<Vec<_>>()
     }
 }

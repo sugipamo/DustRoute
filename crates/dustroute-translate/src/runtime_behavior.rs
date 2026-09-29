@@ -10,8 +10,9 @@ use dustroute_library::blueprint::{
 use dustroute_library::execution_context::{check_law_requirements, resolve_law_references};
 use dustroute_library::location_observation::LocationPredicate;
 use dustroute_library::runtime_behavior::RuntimeBehaviorContext;
+use dustroute_minecraft::time::piston_runtime::PistonBehaviorState;
 use dustroute_minecraft::time::piston_runtime::{ElectricalPistonRuntime, new_piston_runtime};
-use dustroute_minecraft::time::runtime::{PistonBehaviorState, RuntimeView};
+use dustroute_minecraft::time::runtime::RuntimeView;
 use dustroute_minecraft::{BlockKind, Pos};
 
 use crate::behavior_type::{

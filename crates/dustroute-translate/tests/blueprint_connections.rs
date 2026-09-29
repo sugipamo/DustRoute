@@ -4,7 +4,9 @@ use dustroute_library::builtin_blueprints::*;
 use dustroute_translate::blueprint_connection::{
     BlueprintConnectionError, BlueprintEndpoint, check_blueprint_connection,
 };
-use dustroute_translate::{Block, BlockKind, Facing, Pos, ValidatedWorld, World};
+use dustroute_translate::{
+    world::Block, world::BlockKind, world::Facing, world::Pos, world::ValidatedWorld, world::World,
+};
 
 fn id(value: &str) -> BlueprintRevisionId {
     BlueprintRevisionId::new(value).unwrap()
@@ -299,7 +301,9 @@ fn selecting_a_port_does_not_apply_other_output_requirements_and_directions_are_
 #[test]
 fn compiler_enforces_consumer_types_and_pins_selected_revisions() {
     use dustroute_translate::compiler::baseline_blueprint_selection;
-    use dustroute_translate::{BaselineCompiler, CompileError, DagBuilder, GateKind};
+    use dustroute_translate::{
+        compiler::BaselineCompiler, compiler::CompileError, ir::DagBuilder, ir::GateKind,
+    };
     let mut catalog = builtin_blueprints().clone();
     let mut consumer = catalog.revision(&id(NOT_TOP_REVISION)).unwrap().clone();
     consumer.id = id("typed-not.v1");
@@ -344,7 +348,9 @@ fn compiler_enforces_consumer_types_and_pins_selected_revisions() {
 #[test]
 fn compiler_does_not_assume_requirements_on_external_inputs_are_satisfied() {
     use dustroute_translate::compiler::baseline_blueprint_selection;
-    use dustroute_translate::{BaselineCompiler, CompileError, DagBuilder, GateKind};
+    use dustroute_translate::{
+        compiler::BaselineCompiler, compiler::CompileError, ir::DagBuilder, ir::GateKind,
+    };
     let mut catalog = builtin_blueprints().clone();
     let mut boundary = catalog.revision(&id(BUFFER_REVISION)).unwrap().clone();
     boundary.id = id("typed-boundary.v1");

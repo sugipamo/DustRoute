@@ -9,7 +9,7 @@ use dustroute_translate::piston_construction::{
     ElectricalConstruction, ElectricalConstructionStep,
 };
 use dustroute_translate::promotion::{CheckStatus, review_assembly_with_context};
-use dustroute_translate::{MinecraftSnapshot, RegionBounds};
+use dustroute_translate::{snapshot::MinecraftSnapshot, world_reverse::RegionBounds};
 
 #[derive(Clone, Debug)]
 pub(crate) struct ValidatedAssemblyPlacement {
@@ -150,7 +150,7 @@ impl ValidatedAssemblyPlacement {
     fn observed_inputs(
         &self,
         observed: &MinecraftSnapshot,
-    ) -> Result<Vec<(dustroute_translate::Pos, bool)>, String> {
+    ) -> Result<Vec<(dustroute_translate::world::Pos, bool)>, String> {
         let blocks = crate::revision::blocks(observed)?;
         self.context
             .input_levers

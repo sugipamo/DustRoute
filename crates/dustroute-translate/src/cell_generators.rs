@@ -2,7 +2,7 @@
 //! Runtime cell lookup must not invoke this module.
 
 use crate::cells::{InputPort, OutputPort, PhysicalCell, PortKind};
-use crate::logic::GateKind;
+use crate::ir::logic::GateKind;
 use crate::world::{Block, BlockKind, Facing, Pos, World};
 
 #[must_use]
@@ -359,7 +359,8 @@ pub fn external_xor_cell() -> PhysicalCell {
 pub fn compiled_xor_cell() -> Result<PhysicalCell, String> {
     static CELL: std::sync::OnceLock<Result<PhysicalCell, String>> = std::sync::OnceLock::new();
     CELL.get_or_init(|| {
-        let mut cell = compiled_xor_cell_with_config(crate::BaselineCompileConfig::default())?;
+        let mut cell =
+            compiled_xor_cell_with_config(crate::compiler::BaselineCompileConfig::default())?;
         cell.name = "dustroute.xor.compiled_baseline.1_21_11".into();
         Ok(cell)
     })
@@ -369,10 +370,10 @@ pub fn compiled_xor_cell() -> Result<PhysicalCell, String> {
 pub fn compact_compiled_xor_cell() -> Result<PhysicalCell, String> {
     static CELL: std::sync::OnceLock<Result<PhysicalCell, String>> = std::sync::OnceLock::new();
     CELL.get_or_init(|| {
-        let mut cell = compiled_xor_cell_with_config(crate::BaselineCompileConfig {
+        let mut cell = compiled_xor_cell_with_config(crate::compiler::BaselineCompileConfig {
             spacing_x: 9,
             lane_gap: 6,
-            ..crate::BaselineCompileConfig::default()
+            ..crate::compiler::BaselineCompileConfig::default()
         })?;
         cell.name = "dustroute.xor.compact_compiled.1_21_11".into();
         Ok(cell)
@@ -381,16 +382,16 @@ pub fn compact_compiled_xor_cell() -> Result<PhysicalCell, String> {
 }
 
 pub fn compiled_xor_cell_with_config(
-    config: crate::BaselineCompileConfig,
+    config: crate::compiler::BaselineCompileConfig,
 ) -> Result<PhysicalCell, String> {
-    let mut builder = crate::logic::DagBuilder::new();
+    let mut builder = crate::ir::logic::DagBuilder::new();
     let a = builder.input("a");
     let b = builder.input("b");
     let out = builder.gate(GateKind::Xor, &[a, b], Some("xor"));
     let dag = builder
         .finish([("out".into(), out)])
         .map_err(|error| error.to_string())?;
-    let compiled = crate::BaselineCompiler::new(config)
+    let compiled = crate::compiler::BaselineCompiler::new(config)
         .compile_with_cell_source(&dag, primitive_cell_for)
         .map_err(|error| error.to_string())?;
     let input = |name: &str| {

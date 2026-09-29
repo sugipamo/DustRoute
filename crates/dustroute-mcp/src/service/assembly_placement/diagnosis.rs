@@ -1,8 +1,8 @@
 //! Read-only diagnosis of a registered design, regardless of who changed it.
 use super::*;
-use dustroute_translate::MinecraftSnapshot;
 use dustroute_translate::diagnostic::difference::{DifferenceKind, differences};
 use dustroute_translate::diagnostic::report::{Diagnosis, RepairStatus};
+use dustroute_translate::snapshot::MinecraftSnapshot;
 use std::collections::BTreeMap;
 
 #[derive(serde::Serialize)]
@@ -77,7 +77,7 @@ struct ComparisonDetails {
     interpretation: &'static str,
 }
 
-impl DustRouteMcp {
+impl AssemblyService<'_> {
     pub(super) async fn diagnose_instance(
         &self,
         record: &PlacedAssembly,

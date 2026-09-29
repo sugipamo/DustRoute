@@ -35,7 +35,7 @@ pub fn materialize_macro_replacement(
 ) -> Result<MaterializedMacroReplacement, MacroRealizationError> {
     let known_regions = observed
         .bounds()
-        .map(|(min, max)| dustroute_translate::Region::new(min, max))
+        .map(|(min, max)| dustroute_translate::world::Region::new(min, max))
         .into_iter()
         .collect::<Vec<_>>();
     materialize_macro_replacement_in_known_regions(
@@ -52,7 +52,7 @@ pub fn materialize_macro_replacement(
 pub fn materialize_macro_replacement_in_known_regions(
     plan: &MacroReplacementPlan,
     observed: &World,
-    known_regions: &[dustroute_translate::Region],
+    known_regions: &[dustroute_translate::world::Region],
     replaceable: &BTreeSet<Pos>,
     max_wire_run: usize,
 ) -> Result<MaterializedMacroReplacement, MacroRealizationError> {
@@ -244,7 +244,7 @@ fn materialize_macro_geometry(
             }
         }
     }
-    dustroute_translate::update_wire_shapes(&mut world);
+    dustroute_translate::wire::update_wire_shapes(&mut world);
     let positions = observed
         .positions()
         .chain(world.positions())

@@ -75,9 +75,9 @@ The explicit reference candidate registers the type and introduces
 and its type/evidence keep their original meanings. No user catalog or reference
 is automatically updated.
 
-Catalogs containing the new type require `dustroute.blueprint-catalog.v11`, even
-before a binding exists. Downgrading to v1–v10 is rejected. Proposal history uses
-the existing v5 native-context format with that v11 catalog. Saved reports never
+All catalogs now require `dustroute.blueprint-catalog.v13`; retired v1–v12 are
+rejected. See the [cutover guide](architecture-cutover.md). Proposal history uses
+the existing v5 native-context format with a v13 catalog. Saved reports never
 grant adoption: reload and adoption perform fresh physical review. Public MCP
 uses the existing import → propose_update → show_operation → adopt tools, and
 rechecks after service restart. No new public tool or special door execution

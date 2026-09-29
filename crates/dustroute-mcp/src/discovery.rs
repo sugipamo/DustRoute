@@ -3,7 +3,7 @@ use std::error::Error;
 use std::fmt::{Display, Formatter};
 
 use dustroute_physical::Pos;
-use dustroute_translate::{RegionAnalysis, RegionBounds};
+use dustroute_translate::{world_reverse::RegionAnalysis, world_reverse::RegionBounds};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -147,7 +147,7 @@ fn manhattan(a: Pos, b: Pos) -> i32 {
 #[cfg(test)]
 mod tests {
     use dustroute_physical::{Block, BlockKind, World};
-    use dustroute_translate::{RegionBounds, analyze_world_region};
+    use dustroute_translate::{world_reverse::RegionBounds, world_reverse::analyze_world_region};
 
     use super::*;
 
@@ -160,7 +160,7 @@ mod tests {
         }
         world.set(Pos::new(20, 0, 0), Block::new(BlockKind::Solid));
         world.set(Pos::new(20, 1, 0), Block::new(BlockKind::RedstoneWire));
-        dustroute_translate::update_wire_shapes(&mut world);
+        dustroute_translate::wire::update_wire_shapes(&mut world);
         let scan = RegionBounds::new(Pos::new(-2, -1, -2), Pos::new(22, 3, 2));
         let analysis = analyze_world_region(&world, scan);
         let found = discover_connected_region(&analysis, Pos::new(0, 0, 0), 2, 2, 1, 100).unwrap();
@@ -176,7 +176,7 @@ mod tests {
             world.set(Pos::new(x, 0, 0), Block::new(BlockKind::Solid));
             world.set(Pos::new(x, 1, 0), Block::new(BlockKind::RedstoneWire));
         }
-        dustroute_translate::update_wire_shapes(&mut world);
+        dustroute_translate::wire::update_wire_shapes(&mut world);
         let scan = RegionBounds::new(Pos::new(0, 0, 0), Pos::new(2, 2, 0));
         let analysis = analyze_world_region(&world, scan);
         let found = discover_connected_region(&analysis, Pos::new(1, 1, 0), 1, 2, 0, 100).unwrap();
@@ -190,7 +190,7 @@ mod tests {
             world.set(Pos::new(x, 0, 0), Block::new(BlockKind::Solid));
             world.set(Pos::new(x, 1, 0), Block::new(BlockKind::RedstoneWire));
         }
-        dustroute_translate::update_wire_shapes(&mut world);
+        dustroute_translate::wire::update_wire_shapes(&mut world);
         let scan = RegionBounds::new(Pos::new(-2, -1, -2), Pos::new(6, 3, 2));
         let analysis = analyze_world_region(&world, scan);
         let found = discover_connected_region(&analysis, Pos::new(0, 1, 0), 1, 2, 0, 100).unwrap();

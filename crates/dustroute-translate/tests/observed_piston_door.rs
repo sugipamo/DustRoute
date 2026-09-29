@@ -1,9 +1,12 @@
 use std::collections::BTreeMap;
 
 use dustroute_translate::{
-    Facing, MinecraftSnapshot, MinecraftSnapshotBlock, ObservedPistonCellState, ObservedPistonDoor,
-    ObservedPistonDoorOrientationStatus, ObservedPistonDoorRecognitionError,
-    ObservedPistonDoorState, Pos, recognize_observed_piston_door,
+    observed_piston_door::ObservedPistonCellState, observed_piston_door::ObservedPistonDoor,
+    observed_piston_door::ObservedPistonDoorOrientationStatus,
+    observed_piston_door::ObservedPistonDoorRecognitionError,
+    observed_piston_door::ObservedPistonDoorState,
+    observed_piston_door::recognize_observed_piston_door, snapshot::MinecraftSnapshot,
+    snapshot::MinecraftSnapshotBlock, world::Facing, world::Pos,
 };
 
 const FIXTURE: &str = include_str!("fixtures/observed_3x3_piston_door_closed.json");
@@ -55,12 +58,8 @@ fn recognizes_closed_observed_reference_and_reports_control_boundary() {
     assert_eq!(recognition.orientation.alternatives.len(), 2);
     assert_eq!(recognition.cells.len(), 9);
     assert_eq!(recognition.pistons.len(), 18);
-    assert!(
-        recognition
-            .pistons
-            .iter()
-            .all(|piston| piston.state == dustroute_translate::ObservedPistonState::Retracted)
-    );
+    assert!(recognition.pistons.iter().all(|piston| piston.state
+        == dustroute_translate::observed_piston_door::ObservedPistonState::Retracted));
     assert_eq!(recognition.control.repeater_positions.len(), 18);
     assert_eq!(recognition.control.piston_input_edges.len(), 18);
     assert!(!recognition.control.complete);
@@ -219,7 +218,7 @@ fn missing_piston_state_is_reported_without_guessing_the_piston_phase() {
     );
     assert_eq!(
         recognition.pistons[0].state,
-        dustroute_translate::ObservedPistonState::Unknown
+        dustroute_translate::observed_piston_door::ObservedPistonState::Unknown
     );
 }
 
@@ -275,7 +274,7 @@ fn moving_piston_panel_part_is_retained_as_transition_evidence() {
     assert_eq!(cell.current_position, Some(Pos::new(0, 0, 0)));
     assert_eq!(
         cell.current_block.as_ref().map(|block| block.kind),
-        Some(dustroute_translate::BlockKind::MovingPiston)
+        Some(dustroute_translate::world::BlockKind::MovingPiston)
     );
 }
 

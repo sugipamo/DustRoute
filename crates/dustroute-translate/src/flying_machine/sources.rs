@@ -2,7 +2,7 @@
 use super::{FlyingMachineRecords, recipe::Recipe};
 use crate::blueprint_update::BlueprintUpdateRequest;
 use crate::snapshot::assembly_from_snapshot;
-use crate::{BlockKind, PistonState, Pos, RotationY};
+use crate::{cells::RotationY, world::BlockKind, world::PistonState, world::Pos};
 use dustroute_library::assembly::AssemblyRevision;
 use dustroute_library::behavior_type::SingleOperation;
 use dustroute_library::blueprint::*;

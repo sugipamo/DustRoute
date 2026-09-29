@@ -1,6 +1,6 @@
 //! Local immutable definitions and proposal decisions, never Minecraft writes.
 use std::fs::{self, OpenOptions};
-use std::io::{Read, Write};
+use std::io::Read;
 
 use dustroute_library::assembly::AssemblyRevision;
 use dustroute_library::behavior_context::BehaviorReviewContext;
@@ -36,8 +36,8 @@ pub(crate) struct FreshPistonRequest {
 #[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 struct FreshPistonAssumptions {
-    known_region: dustroute_translate::Region,
-    input_levers: Vec<dustroute_translate::Pos>,
+    known_region: dustroute_translate::world::Region,
+    input_levers: Vec<dustroute_translate::world::Pos>,
     #[serde(default)]
     root_limits: dustroute_library::runtime_behavior::RuntimeLimits,
 }
@@ -192,8 +192,6 @@ pub(crate) enum Command {
     Get(uuid::Uuid),
     Decide(uuid::Uuid, Option<BlueprintDecision>, bool),
     Undo(uuid::Uuid),
-    PlacementBasis(AssemblyRevisionId),
-    ConstructionBasis(AssemblyRevisionId),
 }
 
 /// Durable literal placement evidence, separate from Assembly interpretation
@@ -206,7 +204,7 @@ pub(crate) struct AssemblyGrounding {
     pub base_observation_id: uuid::Uuid,
     pub dimension: String,
     pub complete: bool,
-    pub base_snapshot: dustroute_translate::MinecraftSnapshot,
+    pub base_snapshot: dustroute_translate::snapshot::MinecraftSnapshot,
 }
 
 pub(crate) fn failure(message: impl ToString) -> Value {
@@ -329,11 +327,21 @@ fn assembly_lifecycle(
     }
 }
 
+#[derive(Debug)]
+pub(crate) struct GroundedSource {
+    pub record: AssemblyRevision,
+    pub adopted_by: BlueprintUpdateId,
+    pub grounding_assembly_revision_id: AssemblyRevisionId,
+    pub grounding: AssemblyGrounding,
+    /// Display report only; admission already checked the typed PromotionReport.
+    pub fresh_review: Value,
+}
+
 fn placement_basis(
     updates: &BlueprintUpdates,
     groundings: &BTreeMap<AssemblyRevisionId, AssemblyGrounding>,
     id: &AssemblyRevisionId,
-) -> Result<Value, String> {
+) -> Result<GroundedSource, String> {
     let adopted = updates
         .proposals()
         .filter(|proposal| {
@@ -370,20 +378,19 @@ fn placement_basis(
     let grounding = groundings
         .get(&ancestor.id)
         .ok_or("captured Assembly grounding is missing")?;
-    Ok(json!({
-        "record":record,
-        "adopted_by":proposal.request().id,
-        "grounding_assembly_revision_id":ancestor.id,
-        "grounding":grounding,
-        "fresh_review":report_json(&report, updates.catalog()),
-        "behavior_context":proposal.request().behavior_context,
-    }))
+    Ok(GroundedSource {
+        record: record.clone(),
+        adopted_by: proposal.request().id.clone(),
+        grounding_assembly_revision_id: ancestor.id.clone(),
+        grounding: grounding.clone(),
+        fresh_review: report_json(&report, updates.catalog()),
+    })
 }
 
 fn construction_basis(
     updates: &BlueprintUpdates,
     id: &AssemblyRevisionId,
-) -> Result<Value, String> {
+) -> Result<crate::source_identity::SourceIdentity, String> {
     let adopted = updates
         .proposals()
         .filter(|p| p.status() == UpdateStatus::Adopted && p.request().candidate_state.id == *id)
@@ -405,12 +412,19 @@ fn construction_basis(
     if report.status() != CheckStatus::Passed {
         return Err("fresh adopted Assembly review did not pass".into());
     }
-    Ok(
-        json!({"record":updates.catalog().assembly(id).ok_or("adopted Assembly is missing")?,
-        "adopted_by":proposal.request().id, "behavior_context":context,
-        "catalog_json":updates.catalog().to_json().map_err(|e|e.to_string())?,
-        "fresh_review":report_json(&report, updates.catalog())}),
-    )
+    let BehaviorReviewContext::Runtime(context) = context else {
+        unreachable!("context checked above")
+    };
+    Ok(crate::source_identity::SourceIdentity {
+        record: updates
+            .catalog()
+            .assembly(id)
+            .ok_or("adopted Assembly is missing")?
+            .clone(),
+        adopted_by: proposal.request().id.clone(),
+        context: context.clone(),
+        catalog: updates.catalog().clone(),
+    })
 }
 
 fn read(
@@ -566,10 +580,6 @@ fn perform(
 ) -> Result<(Option<Value>, bool), String> {
     match command {
         Command::Read(query) => Ok((Some(read(updates, groundings, query)?), false)),
-        Command::PlacementBasis(id) => {
-            Ok((Some(placement_basis(updates, groundings, &id)?), false))
-        }
-        Command::ConstructionBasis(id) => Ok((Some(construction_basis(updates, &id)?), false)),
         Command::Capture { record, grounding } => {
             let id = record.id.clone();
             if grounding.assembly_revision_id != id || !grounding.complete {
@@ -751,6 +761,41 @@ pub(crate) fn execute(
     player: &str,
     command: Command,
 ) -> Result<Option<Value>, String> {
+    transaction(store, player, |updates, groundings| {
+        perform(updates, groundings, command)
+    })
+}
+
+pub(crate) fn grounded_source(
+    store: &PlanStateStore,
+    player: &str,
+    id: &AssemblyRevisionId,
+) -> Result<GroundedSource, String> {
+    transaction(store, player, |updates, groundings| {
+        Ok((placement_basis(updates, groundings, id)?, false))
+    })
+}
+
+/// Read a freshly reviewed construction source without serializing through a tool response.
+pub(crate) fn construction_source(
+    store: &PlanStateStore,
+    player: &str,
+    id: &AssemblyRevisionId,
+) -> Result<crate::source_identity::SourceIdentity, String> {
+    transaction(store, player, |updates, _| {
+        Ok((construction_basis(updates, id)?, false))
+    })
+}
+
+/// Owns the catalog lock, load/validate/save contract for every application entry.
+fn transaction<T>(
+    store: &PlanStateStore,
+    player: &str,
+    action: impl FnOnce(
+        &mut BlueprintUpdates,
+        &mut BTreeMap<AssemblyRevisionId, AssemblyGrounding>,
+    ) -> Result<(T, bool), String>,
+) -> Result<T, String> {
     let root = store.blueprint_root(player);
     fs::create_dir_all(&root).map_err(|e| e.to_string())?;
     #[cfg(unix)]
@@ -803,7 +848,7 @@ pub(crate) fn execute(
         ),
         Err(e) => return Err(e.to_string()),
     };
-    let (result, write) = perform(&mut updates, &mut groundings, command)?;
+    let (result, write) = action(&mut updates, &mut groundings)?;
     if write {
         let archive: Value = serde_json::from_str(&updates.to_json().map_err(|e| e.to_string())?)
             .map_err(|e| e.to_string())?;
@@ -814,25 +859,8 @@ pub(crate) fn execute(
         if bytes.len() as u64 > MAX_ARCHIVE_BYTES {
             return Err("Blueprint catalog exceeds 16 MiB; no changes saved".into());
         }
-        let temporary = root.join(format!(".{}.tmp", uuid::Uuid::new_v4()));
-        let mut options = OpenOptions::new();
-        options.write(true).create_new(true);
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::OpenOptionsExt;
-            options.mode(0o600);
-        }
-        let save = (|| {
-            let mut file = options.open(&temporary)?;
-            file.write_all(&bytes)?;
-            file.sync_all()?;
-            fs::rename(&temporary, &path)
-        })()
-        .map_err(|e: std::io::Error| e.to_string());
-        if save.is_err() {
-            let _ = fs::remove_file(&temporary);
-        }
-        save?;
+        crate::storage::replace(&path, &bytes, crate::storage::Durability::FileAndDirectory)
+            .map_err(|e| e.to_string())?;
     }
     Ok(result)
 }

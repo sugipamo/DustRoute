@@ -4,7 +4,7 @@ use super::{
     ContextualVerificationState, MacroTransitionCase, MacroTransitionEdge, MacroTransitionReport,
 };
 use dustroute_physical::{Pos, World};
-use dustroute_translate::{InferredTruthTable, RegionBounds};
+use dustroute_translate::{world_reverse::InferredTruthTable, world_reverse::RegionBounds};
 
 /// Exhaustively compares ordered input transitions for small Boolean cells.
 /// Output samples include tick zero after the simultaneous input update.
@@ -88,12 +88,16 @@ pub fn verify_boundary_strengths(
     let (low, high) = original
         .bounds()
         .ok_or_else(|| "strength-verification world is empty".to_owned())?;
-    let analysis =
-        dustroute_translate::analyze_world_region(original, RegionBounds::new(low, high));
+    let analysis = dustroute_translate::world_reverse::analyze_world_region(
+        original,
+        RegionBounds::new(low, high),
+    );
     let drivers = truth
         .inputs
         .iter()
-        .map(|terminal| dustroute_translate::inferred_input_driver(original, &analysis, terminal))
+        .map(|terminal| {
+            dustroute_translate::world_reverse::inferred_input_driver(original, &analysis, terminal)
+        })
         .collect::<Result<Vec<_>, _>>()
         .map_err(|error| error.to_string())?;
     for row in &truth.rows {
@@ -117,16 +121,16 @@ pub fn verify_boundary_strengths(
 
 fn settled_state_for_inputs(
     world: &World,
-    drivers: &[dustroute_translate::InferredInputDriver],
+    drivers: &[dustroute_translate::world_reverse::InferredInputDriver],
     inputs: &[bool],
     settle_ticks: usize,
-) -> Result<dustroute_translate::TickState, String> {
+) -> Result<dustroute_translate::sim::TickState, String> {
     let mut driven = world.clone();
     for (driver, powered) in drivers.iter().zip(inputs) {
         set_driver_in_world(&mut driven, *driver, *powered)?;
     }
-    dustroute_translate::update_wire_shapes(&mut driven);
-    dustroute_translate::RedstoneTickSimulator::new(driven)
+    dustroute_translate::wire::update_wire_shapes(&mut driven);
+    dustroute_translate::sim::RedstoneTickSimulator::new(driven)
         .and_then(|mut simulator| simulator.settle_ticks(settle_ticks))
         .map_err(|error| error.to_string())
 }
@@ -231,7 +235,7 @@ pub(super) fn transition_edges(trace: &[Vec<bool>]) -> Vec<MacroTransitionEdge> 
 
 struct MacroTransitionContext {
     world: World,
-    drivers: Vec<dustroute_translate::InferredInputDriver>,
+    drivers: Vec<dustroute_translate::world_reverse::InferredInputDriver>,
     outputs: Vec<Pos>,
 }
 
@@ -243,8 +247,11 @@ fn prepare_transition_context(
     let (low, high) = world
         .bounds()
         .ok_or_else(|| "transition world is empty".to_owned())?;
-    let analysis = dustroute_translate::analyze_world_region(world, RegionBounds::new(low, high));
-    let inferred = dustroute_translate::infer_truth_table(
+    let analysis = dustroute_translate::world_reverse::analyze_world_region(
+        world,
+        RegionBounds::new(low, high),
+    );
+    let inferred = dustroute_translate::world_reverse::infer_truth_table(
         world,
         &analysis,
         expected.inputs.len(),
@@ -261,8 +268,12 @@ fn prepare_transition_context(
     let drivers = mapping
         .iter()
         .map(|index| {
-            dustroute_translate::inferred_input_driver(world, &analysis, &inferred.inputs[*index])
-                .map_err(|error| error.to_string())
+            dustroute_translate::world_reverse::inferred_input_driver(
+                world,
+                &analysis,
+                &inferred.inputs[*index],
+            )
+            .map_err(|error| error.to_string())
         })
         .collect::<Result<Vec<_>, _>>()?;
     Ok(MacroTransitionContext {
@@ -278,28 +289,30 @@ fn prepare_transition_context(
 
 fn simulate_boundary_transition(
     context: &MacroTransitionContext,
-    settled: &dustroute_translate::RedstoneTickSimulator,
+    settled: &dustroute_translate::sim::RedstoneTickSimulator,
     to: &[bool],
     observe_ticks: usize,
 ) -> Result<Vec<Vec<bool>>, String> {
     let mut simulator = settled.clone();
     for (driver, powered) in context.drivers.iter().zip(to) {
         match driver {
-            dustroute_translate::InferredInputDriver::Lever(pos) => simulator
+            dustroute_translate::world_reverse::InferredInputDriver::Lever(pos) => simulator
                 .set_powered(*pos, *powered)
                 .map_err(|error| error.to_string())?,
-            dustroute_translate::InferredInputDriver::Button(pos) => simulator
+            dustroute_translate::world_reverse::InferredInputDriver::Button(pos) => simulator
                 .set_button_state(*pos, *powered)
                 .map_err(|error| error.to_string())?,
-            dustroute_translate::InferredInputDriver::PressurePlate(pos) => simulator
-                .set_pressure_plate_level(*pos, if *powered { 15 } else { 0 })
-                .map_err(|error| error.to_string())?,
-            dustroute_translate::InferredInputDriver::External(pos) => simulator
+            dustroute_translate::world_reverse::InferredInputDriver::PressurePlate(pos) => {
+                simulator
+                    .set_pressure_plate_level(*pos, if *powered { 15 } else { 0 })
+                    .map_err(|error| error.to_string())?
+            }
+            dustroute_translate::world_reverse::InferredInputDriver::External(pos) => simulator
                 .set_external_powered(*pos, *powered)
                 .map_err(|error| error.to_string())?,
         };
     }
-    let observe = |state: &dustroute_translate::TickState| {
+    let observe = |state: &dustroute_translate::sim::TickState| {
         context
             .outputs
             .iter()
@@ -320,7 +333,7 @@ fn settled_transition_states(
     context: &MacroTransitionContext,
     state_count: usize,
     settle_ticks: usize,
-) -> Result<Vec<dustroute_translate::RedstoneTickSimulator>, String> {
+) -> Result<Vec<dustroute_translate::sim::RedstoneTickSimulator>, String> {
     (0..state_count)
         .map(|value| {
             let mut driven = context.world.clone();
@@ -331,8 +344,8 @@ fn settled_transition_states(
             {
                 set_driver_in_world(&mut driven, *driver, powered)?;
             }
-            dustroute_translate::update_wire_shapes(&mut driven);
-            let mut simulator = dustroute_translate::RedstoneTickSimulator::new(driven)
+            dustroute_translate::wire::update_wire_shapes(&mut driven);
+            let mut simulator = dustroute_translate::sim::RedstoneTickSimulator::new(driven)
                 .map_err(|error| error.to_string())?;
             simulator
                 .settle_ticks(settle_ticks)

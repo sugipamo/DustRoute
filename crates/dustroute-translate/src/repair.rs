@@ -139,8 +139,8 @@ fn compose_multi_fault_repair(
             break;
         };
         working_world = candidate.patch.apply_virtual(&working_world).ok()?;
-        crate::update_wire_shapes(&mut working_world);
-        working_scene = crate::analyze_world_region(&working_world, bounds).scene;
+        crate::wire::update_wire_shapes(&mut working_world);
+        working_scene = crate::world_reverse::analyze_world_region(&working_world, bounds).scene;
         confidence_percent = confidence_percent.min(candidate.patch.confidence_percent);
         changes.extend(candidate.patch.changes);
         evidence.extend(candidate.evidence);
@@ -171,7 +171,10 @@ fn compose_multi_fault_repair(
     })
 }
 
-fn scene_bounds(circuit: &PhysicalScene, world: &World) -> Option<crate::RegionBounds> {
+fn scene_bounds(
+    circuit: &PhysicalScene,
+    world: &World,
+) -> Option<crate::world_reverse::RegionBounds> {
     circuit
         .observation
         .regions
@@ -191,11 +194,11 @@ fn scene_bounds(circuit: &PhysicalScene, world: &World) -> Option<crate::RegionB
                 ),
             )
         })
-        .map(|bounds| crate::RegionBounds::new(bounds.min, bounds.max))
+        .map(|bounds| crate::world_reverse::RegionBounds::new(bounds.min, bounds.max))
         .or_else(|| {
             world
                 .bounds()
-                .map(|(min, max)| crate::RegionBounds::new(min, max))
+                .map(|(min, max)| crate::world_reverse::RegionBounds::new(min, max))
         })
 }
 
@@ -294,7 +297,7 @@ const fn repair_reason_priority(reason: RepairReason) -> u8 {
 }
 
 fn liveness_bridge_repairs(world: &World, circuit: &PhysicalScene) -> Vec<RepairProposal> {
-    let report = crate::analyze_signal_liveness(circuit);
+    let report = crate::liveness::analyze_signal_liveness(circuit);
     let by_id = circuit
         .components
         .iter()
@@ -330,11 +333,9 @@ fn liveness_bridge_repairs(world: &World, circuit: &PhysicalScene) -> Vec<Repair
         Pos::new(0, 0, -1),
     ];
     let mut candidates = BTreeMap::<Pos, (ComponentId, ComponentId)>::new();
-    for finding in report
-        .undriven_inputs
-        .iter()
-        .filter(|finding| finding.failure == crate::DriveFailure::DisconnectedRequiredInput)
-    {
+    for finding in report.undriven_inputs.iter().filter(|finding| {
+        finding.failure == crate::liveness::DriveFailure::DisconnectedRequiredInput
+    }) {
         let Some(device) = by_id.get(&finding.device) else {
             continue;
         };
@@ -649,7 +650,7 @@ fn missing_support_repairs(world: &World, circuit: &PhysicalScene) -> Vec<Repair
 }
 
 fn direction_repairs(world: &World, circuit: &PhysicalScene) -> Vec<RepairProposal> {
-    let liveness = crate::analyze_signal_liveness(circuit);
+    let liveness = crate::liveness::analyze_signal_liveness(circuit);
     let by_pos: BTreeMap<_, _> = circuit
         .components
         .iter()
@@ -682,7 +683,7 @@ fn direction_repairs(world: &World, circuit: &PhysicalScene) -> Vec<RepairPropos
         if neighbors.len() == 1
             && liveness.undriven_inputs.iter().any(|finding| {
                 finding.device == component.id
-                    && finding.failure == crate::DriveFailure::DisconnectedRequiredInput
+                    && finding.failure == crate::liveness::DriveFailure::DisconnectedRequiredInput
             })
             && liveness.drive_reachable.contains(&neighbors[0].1)
         {
@@ -760,16 +761,19 @@ fn evaluate_repair(
     patch: &PhysicalPatch,
 ) -> Option<RepairImpact> {
     let mut repaired = patch.apply_virtual(world).ok()?;
-    crate::update_wire_shapes(&mut repaired);
+    crate::wire::update_wire_shapes(&mut repaired);
     let bounds = scene_bounds(circuit, &repaired)?;
-    let analysis = crate::analyze_world_region(&repaired, bounds);
-    let before_liveness = crate::analyze_signal_liveness(circuit);
-    let after_liveness = crate::analyze_signal_liveness(&analysis.scene);
-    let before_electrical =
-        crate::solve_instantaneous(world, &crate::DeviceOutputState::initially_lit(world), 128);
-    let after_electrical = crate::solve_instantaneous(
+    let analysis = crate::world_reverse::analyze_world_region(&repaired, bounds);
+    let before_liveness = crate::liveness::analyze_signal_liveness(circuit);
+    let after_liveness = crate::liveness::analyze_signal_liveness(&analysis.scene);
+    let before_electrical = crate::electrical::solve_instantaneous(
+        world,
+        &crate::electrical::DeviceOutputState::initially_lit(world),
+        128,
+    );
+    let after_electrical = crate::electrical::solve_instantaneous(
         &repaired,
-        &crate::DeviceOutputState::initially_lit(&repaired),
+        &crate::electrical::DeviceOutputState::initially_lit(&repaired),
         128,
     );
     let temporal = analysis.scene.temporal_assessment();
@@ -784,14 +788,14 @@ fn evaluate_repair(
             .required_input_assessments
             .iter()
             .filter(|assessment| {
-                assessment.status == crate::RequiredInputStatus::AwaitingExternalInput
+                assessment.status == crate::liveness::RequiredInputStatus::AwaitingExternalInput
             })
             .count(),
         external_input_waiting_after: after_liveness
             .required_input_assessments
             .iter()
             .filter(|assessment| {
-                assessment.status == crate::RequiredInputStatus::AwaitingExternalInput
+                assessment.status == crate::liveness::RequiredInputStatus::AwaitingExternalInput
             })
             .count(),
         drive_reachable_components_before: before_liveness.drive_reachable.len(),
@@ -810,7 +814,7 @@ fn evaluate_repair(
     })
 }
 
-fn energized_position_count(state: &crate::InstantaneousElectricalState) -> usize {
+fn energized_position_count(state: &crate::electrical::InstantaneousElectricalState) -> usize {
     state
         .signal_levels
         .iter()
@@ -842,7 +846,9 @@ fn fragments_for(
 
 #[cfg(test)]
 mod tests {
-    use crate::{RegionBounds, analyze_world_region, update_wire_shapes};
+    use crate::{
+        wire::update_wire_shapes, world_reverse::RegionBounds, world_reverse::analyze_world_region,
+    };
 
     use super::*;
 
@@ -984,9 +990,9 @@ mod tests {
             &world,
             RegionBounds::new(Pos::new(-1, -1, -1), Pos::new(4, 3, 1)),
         );
-        let report = crate::analyze_signal_liveness(&analysis.scene);
+        let report = crate::liveness::analyze_signal_liveness(&analysis.scene);
         assert!(report.undriven_inputs.iter().any(|finding| {
-            finding.failure == crate::DriveFailure::DisconnectedRequiredInput
+            finding.failure == crate::liveness::DriveFailure::DisconnectedRequiredInput
                 && finding.immediate_sources.is_empty()
         }));
 

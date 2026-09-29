@@ -4,7 +4,7 @@ use dustroute_library::blueprint::BlueprintCatalog;
 use dustroute_minecraft::time::piston_runtime::new_piston_runtime;
 use dustroute_translate::piston_construction::electrical_snapshot;
 use dustroute_translate::snapshot::assembly_from_snapshot;
-use dustroute_translate::{MinecraftSnapshot, Region};
+use dustroute_translate::{snapshot::MinecraftSnapshot, world::Region};
 
 #[test]
 fn observer_command_reproduces_retained_stage_38_displacement() {
@@ -29,10 +29,10 @@ fn observer_command_reproduces_retained_stage_38_displacement() {
         "fixtures/reference-door-command-prefix-v1.json"
     ))
     .unwrap();
-    let requested: Vec<dustroute_translate::MinecraftSnapshotBlock> =
+    let requested: Vec<dustroute_translate::snapshot::MinecraftSnapshotBlock> =
         serde_json::from_value(commands["commands"].clone()).unwrap();
     let mut run = new_piston_runtime(
-        dustroute_translate::World::new(),
+        dustroute_translate::world::World::new(),
         region,
         Default::default(),
     )

@@ -4,9 +4,13 @@ use std::fmt::{Display, Formatter};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
+use crate::bridge_protocol::{
+    COMMAND_LIMIT, CommandSubmission, CommandWrite, MUTATION_PROTOCOL, MutationRequest,
+    PHYSICAL_LIMIT, PhysicalChange, PhysicalSubmission,
+};
 use dustroute_ir::{EventCause, EventKind, EventSource, TransitionPhase};
 use dustroute_physical::Pos;
-use dustroute_translate::MinecraftSnapshot;
+use dustroute_translate::snapshot::MinecraftSnapshot;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
@@ -467,7 +471,7 @@ impl BotBridge {
             snapshot: MinecraftSnapshot {
                 min: pos,
                 max: pos,
-                blocks: vec![dustroute_translate::MinecraftSnapshotBlock {
+                blocks: vec![dustroute_translate::snapshot::MinecraftSnapshotBlock {
                     pos: result.block.pos,
                     name: result.block.state.name.clone(),
                     properties: result.block.state.properties.clone(),
@@ -558,26 +562,58 @@ impl BotBridge {
 
     pub async fn write_blocks(
         &self,
-        changes: Value,
+        changes: &[CommandWrite],
         dimension: &str,
-    ) -> Result<Value, BotBridgeError> {
-        self.request(
-            "write_blocks",
-            json!({ "changes": changes, "dimension": dimension }),
-        )
-        .await
+    ) -> Result<CommandSubmission, BotBridgeError> {
+        if changes.len() > COMMAND_LIMIT {
+            return Err(BotBridgeError::Protocol(
+                "command write limit exceeded".into(),
+            ));
+        }
+        let result: CommandSubmission = self
+            .request(
+                "submit_command_batch",
+                serde_json::to_value(MutationRequest {
+                    protocol: MUTATION_PROTOCOL,
+                    changes,
+                    dimension,
+                })?,
+            )
+            .await?;
+        if result.submitted_changes != changes.len() {
+            return Err(BotBridgeError::Protocol(
+                "incomplete submission; inspect live state before retry".into(),
+            ));
+        }
+        Ok(result)
     }
 
     pub async fn place_physical_blocks(
         &self,
-        changes: Value,
+        changes: &[PhysicalChange],
         dimension: &str,
-    ) -> Result<Value, BotBridgeError> {
-        self.request(
-            "place_physical_blocks",
-            json!({ "changes": changes, "dimension": dimension }),
-        )
-        .await
+    ) -> Result<PhysicalSubmission, BotBridgeError> {
+        if changes.is_empty() || changes.len() > PHYSICAL_LIMIT {
+            return Err(BotBridgeError::Protocol(
+                "physical write limit exceeded".into(),
+            ));
+        }
+        let result: PhysicalSubmission = self
+            .request(
+                "submit_physical_batch",
+                serde_json::to_value(MutationRequest {
+                    protocol: MUTATION_PROTOCOL,
+                    changes,
+                    dimension,
+                })?,
+            )
+            .await?;
+        if result.placed_changes != changes.len() {
+            return Err(BotBridgeError::Protocol(
+                "incomplete placement submission; inspect live state before retry".into(),
+            ));
+        }
+        Ok(result)
     }
 }
 

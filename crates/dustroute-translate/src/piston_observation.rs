@@ -1,6 +1,6 @@
 //! Read-only reverse interpretation of a pinned piston mechanism.
 //! Reports evidence, never authorizes placement or predicts an unfinished move.
-use crate::{MinecraftSnapshot, Pos, RegionBounds};
+use crate::{snapshot::MinecraftSnapshot, world::Pos, world_reverse::RegionBounds};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 

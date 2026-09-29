@@ -13,8 +13,8 @@ use serde::{Deserialize, Serialize};
 use crate::connectivity::EdgeKind;
 use crate::world_reverse::{RegionBounds, analyze_world_region};
 use crate::{
-    Block, BlockKind, Facing, MinecraftSnapshot, MinecraftSnapshotBlock, PistonVariant, Pos, World,
-    world_from_snapshot,
+    snapshot::MinecraftSnapshot, snapshot::MinecraftSnapshotBlock, snapshot::world_from_snapshot,
+    world::Block, world::BlockKind, world::Facing, world::PistonVariant, world::Pos, world::World,
 };
 
 /// Versioned JSON contract for observed 3x3 piston-door recognition.

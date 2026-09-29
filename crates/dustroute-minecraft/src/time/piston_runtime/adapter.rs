@@ -712,3 +712,30 @@ fn finish_or_advance(
         ..RuntimeOutcome::default()
     })
 }
+
+impl RootComparisonAdapter for ElectricalPistonAdapter {
+    const COMPARISON: &'static str = "dustroute.piston-electrical-root-comparison.v3";
+    fn permits_root(kind: InvocationKind, payload: &PistonEvent) -> bool {
+        matches!(
+            (kind, payload),
+            (
+                InvocationKind::External,
+                PistonEvent::Initialize
+                    | PistonEvent::Input { .. }
+                    | PistonEvent::Device {
+                        callback: crate::device_program::Callback::Use,
+                        source: None,
+                        captured: None
+                    }
+            ) | (
+                InvocationKind::ScheduledTick,
+                PistonEvent::Device {
+                    callback: crate::device_program::Callback::Tick,
+                    source: None,
+                    captured: None
+                }
+            ) | (InvocationKind::BlockEvent, PistonEvent::Block { .. })
+                | (InvocationKind::CarrierTick, PistonEvent::CarrierTick)
+        )
+    }
+}

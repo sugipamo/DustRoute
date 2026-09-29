@@ -13,7 +13,7 @@ pub(super) fn conditions() -> Value {
     })
 }
 
-impl DustRouteMcp {
+impl AssemblyService<'_> {
     pub(super) async fn plan_assembly_reconstruction(
         &self,
         record: PlacedAssembly,
@@ -44,7 +44,11 @@ impl DustRouteMcp {
             "reconstruction":reconstruction,"reconstruction_conditions":conditions(),
             "fresh_target_review":proof.review(),"observation":report,
             "next_step":"show_operation; confirm all observed blocks may be removed and rebuilt, then invoke_operation(confirm=true)"});
-        let mut plans = self.assembly_placements.lock().await;
+        let mut plans = self
+            .plans
+            .table::<assembly_placement::StoredAssemblyPlacement>()
+            .lock()
+            .await;
         plans.retain(|_, p| {
             p.state != PistonPlacementState::Planned || p.expires_at > Instant::now()
         });

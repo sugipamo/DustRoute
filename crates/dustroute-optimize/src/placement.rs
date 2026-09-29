@@ -4,7 +4,7 @@ use dustroute_translate::cell_library::{
     CellLibrary, default_cell_library, verify_cell_with_settle_ticks,
 };
 use dustroute_translate::cells::RotationY;
-use dustroute_translate::logic::GateKind;
+use dustroute_translate::ir::logic::GateKind;
 use dustroute_translate::physical::{CellId, Endpoint, PhysicalNode, PlacementCircuit, Route};
 use dustroute_translate::world::Pos;
 
@@ -99,7 +99,7 @@ pub fn refresh_route_endpoints(pc: &mut PlacementCircuit) {
             terminal.endpoint = refresh_endpoint(
                 pc,
                 &terminal.endpoint,
-                terminal.direction == dustroute_translate::TerminalDirection::Output,
+                terminal.direction == dustroute_translate::physical::TerminalDirection::Output,
             );
             (name, terminal)
         })

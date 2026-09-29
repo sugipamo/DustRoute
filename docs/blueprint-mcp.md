@@ -207,7 +207,8 @@ fails. There is no stopping deadline, exact count above the minimum, fixed
 coordinate or required burnout mechanism. Restartability is not included. Both
 checks use complete execution-state recurrence, preserving histories and pending
 callbacks. See [finite-burst semantics and evidence](finite-burst-behavior.md).
-Catalogs containing this type use v5; periodic-only catalogs retain v4.
+All current catalogs use v13; retired v1–v12 archives are rejected.
+See the [cutover guide](architecture-cutover.md).
 
 A Blueprint attaches either obligation to its own named output via
 `behavior_bindings`:
@@ -316,19 +317,20 @@ unsupported world adapter cannot pass merely because the IDs match. Parent succe
 cannot suppress a child's failed or undetermined requirement. This is separate
 from type and physical-behavior evidence, and does not certify live conformance.
 
-Law requirements require catalog v9 and proposal-history v3. A pending candidate's
+All catalogs now use v13; v1–v12 are rejected as described in the
+[cutover guide](architecture-cutover.md). Law requirements need proposal-history v3. A pending candidate's
 requirements also require v3, even if the committed catalog has no such source.
 Older immutable records remain unchanged. Generated optimized candidates declare
 their pinned world laws; port movement cannot silently replace those laws.
 
-Explicit observation bindings use at least catalog v10 and proposal-history v4.
+Explicit observation bindings need proposal-history v4 with the current catalog.
 The existing fixed-geometry proof contexts cannot certify them. Location-only
 repeated-settling bindings can use the separate moving-world context below.
 
 `PistonDoor` adds a completed-operation protocol without changing
 `RepeatedSettling`. Its `piston_door` contract has one logical `closed_input` and
 a 3×3 matrix of Air/Solid observation names, bound using `Observed`. It requires
-catalog v11 and the moving-world context (proposal history v5). The same public
+the current catalog and moving-world context (proposal history v5). The same public
 import/propose/show/adopt workflow performs fresh shape, behavior, Law and child
 checks after restart. See [the contract](piston-door-type.md) and
 [reference adoption evidence](reference-door-ordinary-adoption.md). An adopted

@@ -4,6 +4,7 @@ pub mod api;
 mod assembly_registry;
 mod blueprint_mcp;
 pub mod bridge;
+pub mod bridge_protocol;
 pub mod config;
 pub mod discovery;
 pub mod operations;
@@ -13,7 +14,9 @@ pub mod policy;
 mod revision;
 pub mod selection;
 pub mod service;
+mod source_identity;
 mod state;
+mod storage;
 pub mod transition;
 
 pub use api::{

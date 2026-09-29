@@ -14,7 +14,7 @@ use dustroute_minecraft::time::piston_runtime::{
 use dustroute_translate::behavior_type::{BehaviorCounterexample, BehaviorModel, WitnessAction};
 use dustroute_translate::piston_construction::electrical_snapshot;
 use dustroute_translate::runtime_behavior::RuntimeBehaviorModel;
-use dustroute_translate::{BlockKind, Pos};
+use dustroute_translate::{world::BlockKind, world::Pos};
 use serde_json::json;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

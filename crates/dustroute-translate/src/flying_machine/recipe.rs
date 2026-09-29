@@ -2,7 +2,9 @@
 use crate::assembly_transform::AssemblyTransform;
 use crate::piston_construction::electrical_snapshot;
 use crate::snapshot::assembly_from_snapshot;
-use crate::{MinecraftSnapshot, MinecraftSnapshotBlock, Pos, Region};
+use crate::{
+    snapshot::MinecraftSnapshot, snapshot::MinecraftSnapshotBlock, world::Pos, world::Region,
+};
 use dustroute_library::blueprint::BlueprintCatalog;
 use dustroute_library::flying_machine::{
     FlyingMachineCrop, FlyingMachineMaterial, FlyingMachineRequest,

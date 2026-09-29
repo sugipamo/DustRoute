@@ -19,12 +19,12 @@ fn periodic_types_round_trip_but_cannot_be_certified_from_a_snapshot() {
     catalog.insert_type(definition.clone()).unwrap();
     assert!(catalog.insert_type(definition.clone()).is_err());
     let json = catalog.to_json().unwrap();
-    assert!(json.contains("dustroute.blueprint-catalog.v4"));
+    assert!(json.contains("dustroute.blueprint-catalog.v13"));
     let loaded = BlueprintCatalog::from_json(&json).unwrap();
     assert_eq!(loaded.type_revision(&id), Some(&definition));
     for old in ["v1", "v2", "v3"] {
         assert!(
-            BlueprintCatalog::from_json(&json.replace("catalog.v4", &format!("catalog.{old}")))
+            BlueprintCatalog::from_json(&json.replace("catalog.v13", &format!("catalog.{old}")))
                 .is_err()
         );
     }

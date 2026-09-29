@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 
-use dustroute_translate::RegionBounds;
+use dustroute_translate::world_reverse::RegionBounds;
 use serde::{Deserialize, Serialize};
 
 use crate::discovery::RegionBoundsDto;

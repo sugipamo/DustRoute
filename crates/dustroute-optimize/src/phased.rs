@@ -438,7 +438,7 @@ pub(crate) fn optimize_staged_windowed_with_library(
 #[cfg(test)]
 mod tests {
     use dustroute_translate::cells::{PlacedCell, PortKind, RotationY, not_cell};
-    use dustroute_translate::logic::GateKind;
+    use dustroute_translate::ir::logic::GateKind;
 
     use super::*;
 

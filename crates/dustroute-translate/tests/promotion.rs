@@ -3,7 +3,10 @@ use dustroute_library::assembly::*;
 use dustroute_library::blueprint::*;
 use dustroute_library::builtin_blueprints::*;
 use dustroute_translate::promotion::*;
-use dustroute_translate::{Block, BlockKind, Pos, Region, RotationY, World, update_wire_shapes};
+use dustroute_translate::{
+    cells::RotationY, wire::update_wire_shapes, world::Block, world::BlockKind, world::Pos,
+    world::Region, world::World,
+};
 
 fn id(value: &str) -> BlueprintRevisionId {
     BlueprintRevisionId::new(value).unwrap()
@@ -93,7 +96,7 @@ fn cross() -> (BlueprintCatalog, Assembly, BlueprintRevision) {
 fn wire_to_block_routes_use_actual_arms_through_rotation_reload_and_adoption() {
     use dustroute_translate::assembly::validate_assembly;
     use dustroute_translate::electrical::{DeviceOutputState, solve_instantaneous};
-    use dustroute_translate::{Facing, WireConnection};
+    use dustroute_translate::{world::Facing, world::WireConnection};
     let dust = Pos::new(0, 1, 0);
     let sink = Pos::new(1, 1, 0);
     for rotation in [
@@ -334,7 +337,7 @@ fn shared_wire_promotion_preserves_actual_layout_and_each_child_source_after_rel
     assert_eq!(catalog.revision(&child.id), Some(&child));
     let loaded = BlueprintCatalog::from_json(&catalog.to_json().unwrap()).unwrap();
     let mut archive: serde_json::Value = serde_json::from_str(&catalog.to_json().unwrap()).unwrap();
-    assert_eq!(archive["schema"], "dustroute.blueprint-catalog.v2");
+    assert_eq!(archive["schema"], "dustroute.blueprint-catalog.v13");
     archive["schema"] = "dustroute.blueprint-catalog.v1".into();
     assert!(BlueprintCatalog::from_json(&archive.to_string()).is_err());
     let expanded = loaded.expand(&id("cross.v1")).unwrap();
@@ -557,8 +560,8 @@ fn reviewed_dependencies_cannot_be_rebound_in_another_catalog() {
 #[test]
 fn compiled_half_adder_passes_initial_checks_without_certifying_its_behavior() {
     let mut catalog = builtin_blueprints().clone();
-    let compiled = dustroute_translate::BaselineCompiler::new(Default::default())
-        .compile(&dustroute_translate::half_adder())
+    let compiled = dustroute_translate::compiler::BaselineCompiler::new(Default::default())
+        .compile(&dustroute_translate::circuits::half_adder())
         .unwrap();
     let review = PromotionCandidate::prepare(
         &catalog,

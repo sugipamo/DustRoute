@@ -14,7 +14,8 @@ use dustroute_translate::assembly::validate_assembly;
 use dustroute_translate::electrical::{DeviceOutputState, solve_instantaneous};
 use dustroute_translate::promotion::review_assembly;
 use dustroute_translate::{
-    Block, BlockKind, Facing, Pos, Region, RotationY, WireConnection, World,
+    cells::RotationY, world::Block, world::BlockKind, world::Facing, world::Pos, world::Region,
+    world::WireConnection, world::World,
 };
 
 fn terminal(name: &str, block: Block, port: BlueprintPort) -> BlueprintRevision {

@@ -1,8 +1,8 @@
 use std::time::Instant;
 
 use dustroute_translate::{
-    Block, BlockKind, Pos, RegionBounds, World, analyze_signal_liveness, analyze_world_region,
-    update_wire_shapes,
+    liveness::analyze_signal_liveness, wire::update_wire_shapes, world::Block, world::BlockKind,
+    world::Pos, world::World, world_reverse::RegionBounds, world_reverse::analyze_world_region,
 };
 
 fn main() {

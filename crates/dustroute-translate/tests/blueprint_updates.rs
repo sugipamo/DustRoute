@@ -4,7 +4,9 @@ use dustroute_library::builtin_blueprints::*;
 use dustroute_library::{PortDirection, Provenance};
 use dustroute_translate::blueprint_update::*;
 use dustroute_translate::promotion::{CheckStatus, review_assembly};
-use dustroute_translate::{Block, BlockKind, GateKind, Pos, Region, RotationY};
+use dustroute_translate::{
+    cells::RotationY, ir::GateKind, world::Block, world::BlockKind, world::Pos, world::Region,
+};
 
 fn id(value: &str) -> BlueprintRevisionId {
     BlueprintRevisionId::new(value).unwrap()
@@ -284,14 +286,17 @@ fn nested_shared_not_update_roundtrips_reviews_and_adopts_without_changing_histo
     );
     // Separate behavioral evidence: the two concrete NOT worlds still invert.
     for (state_id, mut cell) in [
-        (state("state.v1"), dustroute_translate::not_top_cell()),
-        (state("state.v2"), dustroute_translate::not_cell()),
+        (
+            state("state.v1"),
+            dustroute_translate::cells::not_top_cell(),
+        ),
+        (state("state.v2"), dustroute_translate::cells::not_cell()),
     ] {
         let assembly = &loaded.catalog().assembly(&state_id).unwrap().assembly;
         cell.world = dustroute_translate::assembly::validate_assembly(loaded.catalog(), assembly)
             .unwrap()
             .into_world();
-        assert!(dustroute_translate::verify_cell(GateKind::Not, &cell).valid);
+        assert!(dustroute_translate::cell_library::verify_cell(GateKind::Not, &cell).valid);
     }
     let mut reloaded = BlueprintUpdates::from_json(&loaded.to_json().unwrap()).unwrap();
     assert_eq!(reloaded.proposal(&request.id), loaded.proposal(&request.id));
@@ -551,7 +556,7 @@ fn unadopted_static_obligations_require_new_history_schema_and_survive_reload() 
     updates.create(request.clone()).unwrap();
     let archive = updates.to_json().unwrap();
     assert!(archive.contains("dustroute.blueprint-updates.v2"));
-    assert!(original.contains("dustroute.blueprint-catalog.v7"));
+    assert!(original.contains("dustroute.blueprint-catalog.v13"));
     assert!(!original.contains("static_type_bindings"));
     assert!(
         BlueprintUpdates::from_json(&archive.replace(

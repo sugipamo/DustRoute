@@ -1,3 +1,4 @@
+use crate::native_state::NativeBlockState;
 use std::collections::BTreeMap;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
@@ -9,7 +10,7 @@ use zip::CompressionMethod;
 use zip::write::SimpleFileOptions;
 
 use crate::compiler::BaselineCompileResult;
-use crate::logic::LogicError;
+use crate::ir::logic::LogicError;
 use crate::world::{
     Block, BlockKind, Facing, PistonVariant, Pos, WireConnection, piston_state, piston_variant,
 };
@@ -136,16 +137,15 @@ fn outward_from_support(offset: Pos) -> Option<Facing> {
 
 /// Exact declared state for devices in the current callback registry. Shared
 /// command export uses the same properties as simulation and observation.
-pub(crate) fn device_java_block_state(block: &Block) -> Result<String, MinecraftExportError> {
+fn device_native_state(block: &Block) -> Result<NativeBlockState, MinecraftExportError> {
     use dustroute_minecraft::device_program::{Orientation, Property, program};
     let invalid = MinecraftExportError::InvalidDeviceState;
     let definition = program(block)
         .ok_or_else(|| invalid("unsupported identity".into()))?
         .definition();
-    definition.validate_state(block).map_err(invalid)?;
+    let state = definition.state_view(block).map_err(invalid)?;
     let mut properties = BTreeMap::new();
-    for property in &definition.properties {
-        let value = definition.state(block, *property).map_err(invalid)?;
+    for (property, value) in state.properties() {
         properties.insert(
             property.name(),
             match property {
@@ -192,99 +192,107 @@ pub(crate) fn device_java_block_state(block: &Block) -> Result<String, Minecraft
         }
     }
     let name = definition.native_identity(block).map_err(invalid)?;
-    Ok(format!(
-        "minecraft:{name}[{}]",
-        properties
-            .into_iter()
-            .map(|(k, v)| format!("{k}={v}"))
-            .collect::<Vec<_>>()
-            .join(",")
-    ))
+    NativeBlockState::from_parts(
+        format!("minecraft:{name}"),
+        properties.into_iter().map(|(k, v)| (k.into(), v)).collect(),
+    )
+    .map_err(invalid)
 }
 
-pub fn java_block_state(
+#[derive(Clone, Copy, Debug)]
+pub enum ExportPurpose {
+    InitialPlacement,
+    ExactElectrical,
+}
+
+/// Encoding policy is explicit. Neither purpose authorizes a world mutation.
+pub fn native_block_state(
     block: &Block,
     config: &JavaExportConfig,
-) -> Result<String, MinecraftExportError> {
+    purpose: ExportPurpose,
+) -> Result<NativeBlockState, MinecraftExportError> {
+    let invalid = MinecraftExportError::InvalidDeviceState;
+    let exact = matches!(purpose, ExportPurpose::ExactElectrical);
+    if exact {
+        let state = dustroute_minecraft::block_state::ElectricalBlock::try_from_block(block)
+            .map_err(|e| invalid(e.to_string()))?;
+        if matches!(
+            state.state(),
+            dustroute_minecraft::block_state::ElectricalState::Device(_)
+        ) {
+            return device_native_state(block);
+        }
+    }
     if let Some(name) = block.observed_name.as_deref()
         && dustroute_minecraft::physical::passive::named(name).is_some()
     {
         dustroute_minecraft::piston_electrical::validate_evidence(block)
-            .map_err(|e| MinecraftExportError::InvalidDeviceState(e.to_string()))?;
-        let name = format!(
-            "minecraft:{}",
-            name.strip_prefix("minecraft:").unwrap_or(name)
-        );
-        return Ok(if block.observed_properties.is_empty() {
-            name
-        } else {
+            .map_err(|e| invalid(e.to_string()))?;
+        return NativeBlockState::from_parts(
             format!(
-                "{name}[{}]",
-                block
-                    .observed_properties
-                    .iter()
-                    .map(|(k, v)| format!("{k}={v}"))
-                    .collect::<Vec<_>>()
-                    .join(",")
-            )
-        });
+                "minecraft:{}",
+                name.strip_prefix("minecraft:").unwrap_or(name)
+            ),
+            block.observed_properties.clone(),
+        )
+        .map_err(invalid);
     }
-    let state = match block.kind {
-        BlockKind::Air => "minecraft:air".into(),
-        BlockKind::Solid => config.solid_block.clone(),
-        BlockKind::Transparent => config.transparent_block.clone(),
-        BlockKind::RedstoneBlock => "minecraft:redstone_block".into(),
+    let mut properties = BTreeMap::<String, String>::new();
+    let mut put = |name: &str, value: String| {
+        properties.insert(name.into(), value);
+    };
+    let name = match block.kind {
+        BlockKind::Air => "minecraft:air",
+        BlockKind::Solid => return config.solid_block.parse().map_err(invalid),
+        BlockKind::Transparent => return config.transparent_block.parse().map_err(invalid),
+        BlockKind::RedstoneBlock => "minecraft:redstone_block",
         BlockKind::RedstoneWire => {
-            let connections = block.wire_connections.as_ref();
-            let values = [Facing::North, Facing::East, Facing::South, Facing::West]
-                .map(|facing| {
-                    let connection = connections
-                        .and_then(|states| states.get(&facing))
-                        .copied()
-                        .unwrap_or(WireConnection::None);
-                    format!(
-                        "{}={}",
-                        facing_name(facing),
-                        wire_connection_name(connection)
-                    )
-                })
-                .join(",");
-            format!("minecraft:redstone_wire[{values},power=0]")
+            for side in [Facing::North, Facing::East, Facing::South, Facing::West] {
+                let connection = block
+                    .wire_connections
+                    .as_ref()
+                    .and_then(|s| s.get(&side))
+                    .copied()
+                    .unwrap_or(WireConnection::None);
+                put(facing_name(side), wire_connection_name(connection).into());
+            }
+            put(
+                "power",
+                if exact {
+                    block.power_level.expect("validated wire power")
+                } else {
+                    0
+                }
+                .to_string(),
+            );
+            "minecraft:redstone_wire"
         }
         BlockKind::Repeater | BlockKind::Comparator => {
             let facing = block.facing.unwrap_or(Facing::North).opposite();
             if facing.horizontal_offset().is_none() {
                 return Err(MinecraftExportError::UnsupportedFacing(facing));
             }
+            put("facing", facing_name(facing).into());
+            put("powered", "false".into());
             if block.kind == BlockKind::Repeater {
-                format!(
-                    "minecraft:repeater[delay={},facing={},locked=false,powered=false]",
-                    block.delay.unwrap_or(1).clamp(1, 4),
-                    facing_name(facing)
-                )
+                put("delay", block.delay.unwrap_or(1).clamp(1, 4).to_string());
+                put("locked", "false".into());
+                "minecraft:repeater"
             } else {
-                format!(
-                    "minecraft:comparator[facing={},mode=compare,powered=false]",
-                    facing_name(facing)
-                )
+                put("mode", "compare".into());
+                "minecraft:comparator"
             }
         }
         BlockKind::RedstoneTorch => {
+            put("lit", "true".into());
             if let Some(facing) = block.support_offset.and_then(outward_from_support) {
-                format!(
-                    "minecraft:redstone_wall_torch[facing={},lit=true]",
-                    facing_name(facing)
-                )
+                put("facing", facing_name(facing).into());
+                "minecraft:redstone_wall_torch"
             } else {
-                "minecraft:redstone_torch[lit=true]".into()
+                "minecraft:redstone_torch"
             }
         }
         BlockKind::Lever => {
-            let powered = if block.powered.unwrap_or(false) {
-                "true"
-            } else {
-                "false"
-            };
             let (face, facing) = match block.support_offset {
                 Some(offset) if offset.y < 0 => ("floor", block.facing.unwrap_or(Facing::North)),
                 Some(offset) if offset.y > 0 => ("ceiling", block.facing.unwrap_or(Facing::North)),
@@ -294,69 +302,75 @@ pub fn java_block_state(
                 ),
                 None => ("floor", block.facing.unwrap_or(Facing::North)),
             };
-            format!(
-                "minecraft:lever[face={face},facing={},powered={powered}]",
-                facing_name(facing)
-            )
+            put("face", face.into());
+            put("facing", facing_name(facing).into());
+            put("powered", block.powered.unwrap_or(false).to_string());
+            "minecraft:lever"
         }
-        BlockKind::Button => format!(
-            "{}[face=floor,facing=north,powered={}]",
+        BlockKind::Button => {
+            put("face", "floor".into());
+            put("facing", "north".into());
+            put("powered", block.powered.unwrap_or(false).to_string());
             block
                 .observed_name
                 .as_deref()
-                .unwrap_or("minecraft:stone_button"),
-            block.powered.unwrap_or(false)
-        ),
-        BlockKind::PressurePlate => format!(
-            "{}[powered={}]",
+                .unwrap_or("minecraft:stone_button")
+        }
+        BlockKind::PressurePlate => {
+            put("powered", block.powered.unwrap_or(false).to_string());
             block
                 .observed_name
                 .as_deref()
-                .unwrap_or("minecraft:stone_pressure_plate"),
-            block.powered.unwrap_or(false)
-        ),
-        BlockKind::RedstoneLamp => format!(
-            "minecraft:redstone_lamp[lit={}]",
-            block.powered.unwrap_or(false)
-        ),
-        BlockKind::CopperBulb => device_java_block_state(block)?,
+                .unwrap_or("minecraft:stone_pressure_plate")
+        }
+        BlockKind::RedstoneLamp => {
+            put("lit", block.powered.unwrap_or(false).to_string());
+            "minecraft:redstone_lamp"
+        }
+        BlockKind::CopperBulb => return device_native_state(block),
         BlockKind::Observer => {
-            let facing = block.facing.unwrap_or(Facing::North).opposite();
-            format!(
-                "minecraft:observer[facing={},powered={}]",
-                facing_name(facing),
-                block.powered.unwrap_or(false)
-            )
+            put(
+                "facing",
+                facing_name(block.facing.unwrap_or(Facing::North).opposite()).into(),
+            );
+            put("powered", block.powered.unwrap_or(false).to_string());
+            "minecraft:observer"
         }
         BlockKind::Piston => {
-            let name = match piston_variant(block) {
+            put(
+                "facing",
+                facing_name(block.facing.unwrap_or(Facing::North)).into(),
+            );
+            put("extended", piston_state(block).is_extended().to_string());
+            match piston_variant(block) {
                 PistonVariant::Normal => "minecraft:piston",
                 PistonVariant::Sticky => "minecraft:sticky_piston",
-            };
-            let extended = piston_state(block).is_extended();
-            format!(
-                "{name}[facing={},extended={extended}]",
-                facing_name(block.facing.unwrap_or(Facing::North))
-            )
+            }
         }
         BlockKind::PistonHead => {
-            let state = block.piston_head.as_ref();
-            let facing = state
-                .map(|state| state.facing)
-                .or(block.facing)
-                .unwrap_or(Facing::North);
-            let variant = state
-                .map(|state| state.variant)
-                .unwrap_or_else(|| piston_variant(block));
-            let short = state.is_some_and(|state| state.short);
-            format!(
-                "minecraft:piston_head[facing={},short={short},type={}]",
-                facing_name(facing),
-                match variant {
+            let head = block.piston_head.as_ref();
+            put(
+                "facing",
+                facing_name(
+                    head.map(|s| s.facing)
+                        .or(block.facing)
+                        .unwrap_or(Facing::North),
+                )
+                .into(),
+            );
+            put("short", head.is_some_and(|s| s.short).to_string());
+            put(
+                "type",
+                match head
+                    .map(|s| s.variant)
+                    .unwrap_or_else(|| piston_variant(block))
+                {
                     PistonVariant::Normal => "normal",
                     PistonVariant::Sticky => "sticky",
                 }
-            )
+                .into(),
+            );
+            "minecraft:piston_head"
         }
         BlockKind::MovingPiston => {
             return Err(MinecraftExportError::UnsupportedTransientBlock(
@@ -364,7 +378,15 @@ pub fn java_block_state(
             ));
         }
     };
-    Ok(state)
+    NativeBlockState::from_parts(name.into(), properties).map_err(invalid)
+}
+
+pub fn initial_java_block_state(
+    block: &Block,
+    config: &JavaExportConfig,
+) -> Result<String, MinecraftExportError> {
+    native_block_state(block, config, ExportPurpose::InitialPlacement)
+        .map(|state| state.to_string())
 }
 
 fn coordinate(value: i32, relative: bool) -> String {
@@ -389,10 +411,10 @@ fn xyz(pos: Pos, config: &JavaExportConfig) -> String {
 }
 
 /// Full-world export accepts only placement-validated initial worlds.
-/// `java_block_state` remains a low-level formatter, not placement approval.
+/// `initial_java_block_state` remains a low-level formatter, not placement approval.
 ///
 /// ```compile_fail
-/// use dustroute_translate::{World, JavaExportConfig, world_setblock_commands};
+/// use dustroute_translate::{world::World, minecraft_export::JavaExportConfig, minecraft_export::world_setblock_commands};
 /// world_setblock_commands(&World::new(), &JavaExportConfig::default()).unwrap();
 /// ```
 pub fn world_setblock_commands(
@@ -416,7 +438,7 @@ pub fn world_setblock_commands(
             Ok(format!(
                 "setblock {} {} replace",
                 xyz(*pos, config),
-                java_block_state(block, config)?
+                initial_java_block_state(block, config)?
             ))
         })
         .collect()
@@ -672,9 +694,9 @@ pub fn compiled_circuit_datapack(
 
 #[cfg(test)]
 mod tests {
-    use crate::World;
     use crate::circuits::half_adder;
     use crate::compiler::{BaselineCompileConfig, BaselineCompiler};
+    use crate::world::World;
 
     use super::*;
 
@@ -685,27 +707,72 @@ mod tests {
         repeater.facing = Some(Facing::East);
         repeater.delay = Some(2);
         assert_eq!(
-            java_block_state(&repeater, &config).unwrap(),
+            initial_java_block_state(&repeater, &config).unwrap(),
             "minecraft:repeater[delay=2,facing=west,locked=false,powered=false]"
         );
         let mut observer = Block::new(BlockKind::Observer);
         observer.facing = Some(Facing::East);
         observer.powered = Some(true);
         assert_eq!(
-            java_block_state(&observer, &config).unwrap(),
+            initial_java_block_state(&observer, &config).unwrap(),
             "minecraft:observer[facing=west,powered=true]"
         );
         let head = Block::piston_head(Facing::East, PistonVariant::Sticky, false);
         assert_eq!(
-            java_block_state(&head, &config).unwrap(),
+            initial_java_block_state(&head, &config).unwrap(),
             "minecraft:piston_head[facing=east,short=false,type=sticky]"
         );
         assert!(matches!(
-            java_block_state(&Block::new(BlockKind::MovingPiston), &config),
+            initial_java_block_state(&Block::new(BlockKind::MovingPiston), &config),
             Err(MinecraftExportError::UnsupportedTransientBlock(
                 BlockKind::MovingPiston
             ))
         ));
+    }
+
+    #[test]
+    fn export_purpose_distinguishes_initialization_from_exact_electrical_state() {
+        let config = JavaExportConfig::default();
+        let mut repeater = Block::new(BlockKind::Repeater);
+        repeater.facing = Some(Facing::East);
+        repeater.support_offset = Some(Facing::Down.offset());
+        repeater.delay = Some(3);
+        repeater.powered = Some(true);
+        repeater
+            .observed_properties
+            .insert("locked".into(), "true".into());
+        let initial =
+            native_block_state(&repeater, &config, ExportPurpose::InitialPlacement).unwrap();
+        let exact = native_block_state(&repeater, &config, ExportPurpose::ExactElectrical).unwrap();
+        assert_eq!(initial.properties()["powered"], "false");
+        assert_eq!(initial.properties()["locked"], "false");
+        assert_eq!(exact.properties()["powered"], "true");
+        assert_eq!(exact.properties()["locked"], "true");
+        assert_eq!(exact.properties()["delay"], "3");
+        assert_eq!(exact.properties()["facing"], "west");
+        let mut wire = Block::new(BlockKind::RedstoneWire);
+        wire.power_level = Some(11);
+        wire.support_offset = Some(Facing::Down.offset());
+        wire.wire_connections = Some(
+            dustroute_minecraft::piston_electrical::HORIZONTAL
+                .into_iter()
+                .map(|side| (side, WireConnection::Side))
+                .collect(),
+        );
+        assert_eq!(
+            native_block_state(&wire, &config, ExportPurpose::InitialPlacement)
+                .unwrap()
+                .properties()["power"],
+            "0"
+        );
+        assert_eq!(
+            native_block_state(&wire, &config, ExportPurpose::ExactElectrical)
+                .unwrap()
+                .properties()["power"],
+            "11"
+        );
+        wire.power_level = None;
+        assert!(native_block_state(&wire, &config, ExportPurpose::ExactElectrical).is_err());
     }
 
     #[test]

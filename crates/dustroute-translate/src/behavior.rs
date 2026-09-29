@@ -8,7 +8,7 @@ use dustroute_ir::{
 use dustroute_minecraft::time::PhysicsEventPhase;
 use dustroute_physical::{BlockKind, ComponentId, PhysicalScene, Pos, World};
 
-use crate::{RedstoneTickSimulator, SimulationEventKind, TickState};
+use crate::{sim::RedstoneTickSimulator, sim::SimulationEventKind, sim::TickState};
 
 /// Compatibility projection of the canonical transition simulation.
 ///
@@ -216,7 +216,9 @@ fn transition_phase(phase: PhysicsEventPhase) -> TransitionPhase {
 mod tests {
     use dustroute_minecraft::{Block, BlockKind, Facing, Pos};
 
-    use crate::{RegionBounds, analyze_world_region, update_wire_shapes};
+    use crate::{
+        wire::update_wire_shapes, world_reverse::RegionBounds, world_reverse::analyze_world_region,
+    };
 
     use super::*;
 
@@ -284,9 +286,9 @@ mod tests {
         world.place(BlockKind::RedstoneWire, Pos::new(1, 1, 0));
         world.place(BlockKind::RedstoneWire, Pos::new(1, 1, 1));
         let repeater_a = world.place(BlockKind::Repeater, Pos::new(2, 1, 0));
-        repeater_a.facing = Some(crate::Facing::East);
+        repeater_a.facing = Some(crate::world::Facing::East);
         let repeater_b = world.place(BlockKind::Repeater, Pos::new(2, 1, 1));
-        repeater_b.facing = Some(crate::Facing::East);
+        repeater_b.facing = Some(crate::world::Facing::East);
         update_wire_shapes(&mut world);
         let analysis = analyze_world_region(
             &world,

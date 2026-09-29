@@ -12,7 +12,7 @@ pub(crate) mod builtin_laws;
 mod builtins;
 pub mod schema;
 mod state;
-pub use state::{BoolProperty, Property, SignalLevel};
+pub use state::{BoolProperty, DeviceState, Property, SignalLevel};
 
 pub const REVISION: &str = "dustroute.device-programs.java-1-21-11.v7";
 pub const DEVICE_COUNT: usize = 7;

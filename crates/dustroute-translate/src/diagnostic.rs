@@ -14,8 +14,8 @@ use dustroute_physical::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    DriveFailure, RequiredInputStatus, SignalSourceKind, analyze_signal_liveness,
-    rank_liveness_findings,
+    liveness::DriveFailure, liveness::RequiredInputStatus, liveness::SignalSourceKind,
+    liveness::analyze_signal_liveness, liveness::rank_liveness_findings,
 };
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -253,7 +253,7 @@ fn recommend_action(
     scene: &PhysicalScene,
     focus: Option<Pos>,
     observation_complete: bool,
-    liveness: &crate::SignalLivenessReport,
+    liveness: &crate::liveness::SignalLivenessReport,
     findings: &[ConnectivityFinding],
 ) -> RecommendedAction {
     if !observation_complete {
@@ -264,21 +264,20 @@ fn recommend_action(
             requires_confirmation: false,
         };
     }
-    if let Some(ranked) =
-        focus
-            .map(|focus| rank_liveness_findings(scene, liveness, focus))
-            .and_then(|ranked| ranked.into_iter().next())
-            .or_else(|| {
-                liveness.undriven_inputs.first().cloned().map(|finding| {
-                    crate::RankedLivenessFinding {
-                        finding,
-                        manhattan_distance_from_focus: 0,
-                        downstream_component_count: 0,
-                        nearby_gap_candidate_count: 0,
-                        suspicion_score: 0,
-                    }
-                })
+    if let Some(ranked) = focus
+        .map(|focus| rank_liveness_findings(scene, liveness, focus))
+        .and_then(|ranked| ranked.into_iter().next())
+        .or_else(|| {
+            liveness.undriven_inputs.first().cloned().map(|finding| {
+                crate::liveness::RankedLivenessFinding {
+                    finding,
+                    manhattan_distance_from_focus: 0,
+                    downstream_component_count: 0,
+                    nearby_gap_candidate_count: 0,
+                    suspicion_score: 0,
+                }
             })
+        })
     {
         return RecommendedAction {
             kind: RecommendedActionKind::InspectFault,
@@ -364,7 +363,10 @@ fn manhattan(left: Pos, right: Pos) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Block, Facing, RegionBounds, World, analyze_world_region};
+    use crate::{
+        world::Block, world::Facing, world::World, world_reverse::RegionBounds,
+        world_reverse::analyze_world_region,
+    };
 
     #[test]
     fn separates_an_external_input_from_a_probable_fault() {

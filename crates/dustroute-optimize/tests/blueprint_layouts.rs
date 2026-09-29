@@ -38,7 +38,8 @@ fn same_named_not_candidates_are_replaced_by_revision_and_retained_after_rotatio
     use dustroute_library::builtin_blueprints::{NOT_SIDE_REVISION, NOT_TOP_REVISION};
     use dustroute_optimize::{apply_mutation, candidate_mutations};
     use dustroute_translate::{
-        CellLibrary, GateKind, PlacedCell, PlacementCircuit, Pos, RotationY, not_cell, not_top_cell,
+        cell_library::CellLibrary, cells::PlacedCell, cells::RotationY, cells::not_cell,
+        cells::not_top_cell, ir::GateKind, physical::PlacementCircuit, world::Pos,
     };
     let mut top = not_top_cell();
     let mut side = not_cell();

@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 use dustroute_library::blueprint::BlueprintCatalog;
 use dustroute_minecraft::time::piston_runtime::{new_piston_runtime, schedule_electrical_input};
 use dustroute_minecraft::{Pos, Region};
-use dustroute_translate::MinecraftSnapshot;
+use dustroute_translate::snapshot::MinecraftSnapshot;
 use dustroute_translate::snapshot::assembly_from_snapshot;
 use serde::Deserialize;
 

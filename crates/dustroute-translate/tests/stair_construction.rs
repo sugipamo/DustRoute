@@ -1,6 +1,6 @@
 use dustroute_library::blueprint::BlueprintCatalog;
 use dustroute_minecraft::{Facing, Pos, Region, RotationY, World};
-use dustroute_translate::minecraft_export::{JavaExportConfig, java_block_state};
+use dustroute_translate::minecraft_export::{JavaExportConfig, initial_java_block_state};
 use dustroute_translate::piston_construction::{ElectricalConstruction, electrical_snapshot};
 use dustroute_translate::snapshot::{MinecraftSnapshot, assembly_from_snapshot};
 
@@ -56,7 +56,7 @@ fn stair_corner_construction_rotation_save_reload_and_removal_preserve_literal_s
                     .iter()
                     .any(|s| s.position == rotation.pos(Pos::new(0, 0, 1)))
             );
-            let literal = java_block_state(
+            let literal = initial_java_block_state(
                 world.get(Pos::default()).unwrap(),
                 &JavaExportConfig::default(),
             )

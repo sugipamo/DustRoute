@@ -277,7 +277,7 @@ fn unknown_coordinates_and_missing_properties_are_not_false_or_air() {
 fn explicit_bindings_roundtrip_in_a_new_archive_without_rewriting_old_types() {
     let catalog = catalog();
     let saved = catalog.to_json().unwrap();
-    assert!(saved.contains("dustroute.blueprint-catalog.v10"));
+    assert!(saved.contains("dustroute.blueprint-catalog.v13"));
     let loaded = BlueprintCatalog::from_json(&saved).unwrap();
     assert_eq!(
         loaded.revision(&revision().id),
@@ -287,7 +287,7 @@ fn explicit_bindings_roundtrip_in_a_new_archive_without_rewriting_old_types() {
     for version in 1..=9 {
         assert!(
             BlueprintCatalog::from_json(
-                &saved.replace("catalog.v10", &format!("catalog.v{version}"))
+                &saved.replace("catalog.v13", &format!("catalog.v{version}"))
             )
             .is_err()
         );

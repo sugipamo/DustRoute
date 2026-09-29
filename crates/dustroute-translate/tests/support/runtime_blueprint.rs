@@ -7,7 +7,8 @@ use dustroute_library::runtime_behavior::{RuntimeBehaviorContext, RuntimeBehavio
 use dustroute_library::{PortDirection, Provenance};
 use dustroute_translate::blueprint_update::BlueprintUpdateRequest;
 use dustroute_translate::{
-    BlockKind, Facing, PistonState, PistonVariant, Pos, Region, RotationY, World,
+    cells::RotationY, world::BlockKind, world::Facing, world::PistonState, world::PistonVariant,
+    world::Pos, world::Region, world::World,
 };
 use std::collections::BTreeMap;
 
@@ -41,9 +42,9 @@ pub fn electrical_fixture(child_violation: bool) -> Fixture {
                 (
                     d,
                     if matches!(d, Facing::East | Facing::West) {
-                        dustroute_translate::WireConnection::Side
+                        dustroute_translate::world::WireConnection::Side
                     } else {
-                        dustroute_translate::WireConnection::None
+                        dustroute_translate::world::WireConnection::None
                     },
                 )
             })

@@ -7,7 +7,7 @@ use super::{
 use crate::MacroReplacementCandidate;
 use dustroute_library::blueprint::{BlueprintCatalog, BlueprintRevisionId};
 use dustroute_physical::Pos;
-use dustroute_translate::{PhysicalCell, PlacedCell, RotationY};
+use dustroute_translate::{cells::PhysicalCell, cells::PlacedCell, cells::RotationY};
 use std::collections::BTreeSet;
 use std::sync::Arc;
 

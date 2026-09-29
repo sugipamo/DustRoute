@@ -84,7 +84,7 @@ fn historical_v1_execution_remains_reproducible_but_does_not_authorize_current_p
     world.place(BlockKind::Lever, input).powered = Some(false);
     world.place(BlockKind::RedstoneWire, lower);
     world.place(BlockKind::RedstoneWire, upper);
-    dustroute_translate::update_wire_shapes(&mut world);
+    dustroute_translate::wire::update_wire_shapes(&mut world);
     world.set(lower.offset(0, 1, 0), Block::new(BlockKind::Solid));
     assert!(dustroute_minecraft::ValidatedWorld::try_from(world.clone()).is_err());
     let catalog = catalog(&world, relation(false));
@@ -325,8 +325,8 @@ fn physical_torch_execution_uses_the_selected_program_and_reports_a_wrong_rule()
 #[test]
 fn composed_not_with_dust_retains_burnout_state_and_matches_the_compatibility_simulator() {
     for cell in [
-        dustroute_translate::not_top_cell(),
-        dustroute_translate::not_cell(),
+        dustroute_translate::cells::not_top_cell(),
+        dustroute_translate::cells::not_cell(),
     ] {
         let mut world = cell.world;
         let input = Pos::new(-1, 0, 0);
@@ -345,7 +345,7 @@ fn composed_not_with_dust_retains_burnout_state_and_matches_the_compatibility_si
         )
         .unwrap();
         let mut state = model.initial_state().unwrap();
-        let mut old = dustroute_translate::RedstoneTickSimulator::new(world).unwrap();
+        let mut old = dustroute_translate::sim::RedstoneTickSimulator::new(world).unwrap();
         for tick in 0..=220 {
             if tick % 2 == 0 {
                 assert_eq!(
@@ -572,8 +572,8 @@ fn measure_full_physical_not_reachability() {
 fn history_abstraction_closes_arbitrary_input_not_graphs_without_modifying_execution() {
     let mut layouts = vec![torch_world(false), torch_world(true)];
     for cell in [
-        dustroute_translate::not_top_cell(),
-        dustroute_translate::not_cell(),
+        dustroute_translate::cells::not_top_cell(),
+        dustroute_translate::cells::not_cell(),
     ] {
         let mut world = cell.world;
         let input = Pos::new(-1, 0, 0);

@@ -1,6 +1,7 @@
 'use strict'
 
 const crypto = require('node:crypto')
+const { PROTOCOL, validateMutation } = require('./mutation-protocol')
 const { Vec3 } = require('vec3')
 const { confirmRegion, bounds: readbackBounds } = require('./readback')
 const { snapshotMetrics } = require('./metrics')
@@ -226,7 +227,7 @@ function createBotSession (config, bridgeMetrics, {
       if ((index + 1) % 1000 === 0) await bot.waitForTicks(1)
     }
     await bot.waitForTicks(2)
-    return { submitted_changes: changes.length }
+    return { protocol: PROTOCOL, submitted_changes: changes.length }
   }
 
   async function placePhysicalBlocks (changes) {
@@ -301,7 +302,7 @@ function createBotSession (config, bridgeMetrics, {
     bot.chat(`/tp ${bot.username} ${retreat.x} ${retreat.y} ${retreat.z}`)
     await bot.waitForTicks(3)
     bot.creative.startFlying()
-    return { placed_changes: changes.length, placement_mode: 'mineflayer_player', retreat: posJson(retreat) }
+    return { protocol: PROTOCOL, placed_changes: changes.length, placement_mode: 'mineflayer_player', retreat: posJson(retreat) }
   }
 
   async function getBlock (pos, dimension, requestId) {
@@ -502,13 +503,13 @@ function createBotSession (config, bridgeMetrics, {
       requireDimension(params.dimension)
       return previewRegion(params.player, params.min, params.max)
     }
-    if (method === 'write_blocks') {
+    if (method === 'submit_command_batch') {
       requireDimension(params.dimension)
-      return writeBlocks(params.changes)
+      return writeBlocks(validateMutation(method, params))
     }
-    if (method === 'place_physical_blocks') {
+    if (method === 'submit_physical_batch') {
       requireDimension(params.dimension)
-      return placePhysicalBlocks(params.changes)
+      return placePhysicalBlocks(validateMutation(method, params))
     }
     throw new Error(`unknown method: ${method}`)
   }

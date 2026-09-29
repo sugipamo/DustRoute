@@ -283,12 +283,12 @@ fn observation_frontier(
         .filter(|component| component.block.kind.is_redstone_related())
     {
         for (at_boundary, direction) in [
-            (component.pos.x == bounds.min.x, crate::Facing::West),
-            (component.pos.x == bounds.max.x, crate::Facing::East),
-            (component.pos.y == bounds.min.y, crate::Facing::Down),
-            (component.pos.y == bounds.max.y, crate::Facing::Up),
-            (component.pos.z == bounds.min.z, crate::Facing::North),
-            (component.pos.z == bounds.max.z, crate::Facing::South),
+            (component.pos.x == bounds.min.x, crate::world::Facing::West),
+            (component.pos.x == bounds.max.x, crate::world::Facing::East),
+            (component.pos.y == bounds.min.y, crate::world::Facing::Down),
+            (component.pos.y == bounds.max.y, crate::world::Facing::Up),
+            (component.pos.z == bounds.min.z, crate::world::Facing::North),
+            (component.pos.z == bounds.max.z, crate::world::Facing::South),
         ] {
             if at_boundary {
                 frontier.push(dustroute_physical::ObservationFrontier {

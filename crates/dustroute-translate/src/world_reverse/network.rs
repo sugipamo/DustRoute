@@ -4,7 +4,7 @@ use super::{
     FunctionalNetworkModel, InferredOutputFunction, InferredTruthTable, PhysicalInfluence,
     RegionAnalysis,
 };
-use crate::expr::Expr;
+use crate::ir::expr::Expr;
 use crate::world::World;
 use std::collections::BTreeSet;
 

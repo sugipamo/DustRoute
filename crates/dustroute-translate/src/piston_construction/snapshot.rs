@@ -1,10 +1,9 @@
 //! Lossless Java states for construction commands and expected observations.
-use crate::minecraft_export::{JavaExportConfig, device_java_block_state, java_block_state};
+use crate::minecraft_export::{ExportPurpose, JavaExportConfig, native_block_state};
 use crate::snapshot::{MinecraftSnapshot, MinecraftSnapshotBlock, assembly_from_snapshot};
 use dustroute_library::blueprint::BlueprintCatalog;
 use dustroute_minecraft::piston_electrical::validate_evidence;
 use dustroute_minecraft::{Block, BlockKind, Region, World};
-use std::collections::BTreeMap;
 
 /// Exact Java state export for admitted electrical identities. Historical
 /// generic export deliberately initializes some devices OFF; this path must
@@ -19,32 +18,14 @@ pub fn electrical_snapshot(world: &World, region: Region) -> Result<MinecraftSna
         if block.kind == BlockKind::Air {
             continue;
         }
-        let encoded = if dustroute_minecraft::device_program::program(block).is_some() {
-            device_java_block_state(block)
-        } else {
-            java_block_state(block, &JavaExportConfig::default())
-        }
+        let state = native_block_state(
+            block,
+            &JavaExportConfig::default(),
+            ExportPurpose::ExactElectrical,
+        )
         .map_err(|e| e.to_string())?;
-        let (name, properties) = encoded
-            .split_once('[')
-            .map_or((encoded.as_str(), ""), |(n, p)| {
-                (n, p.trim_end_matches(']'))
-            });
-        let name = name.to_string();
-        let mut properties: BTreeMap<String, String> = properties
-            .split(',')
-            .filter(|s| !s.is_empty())
-            .map(|s| {
-                let (k, v) = s.split_once('=').expect("typed exporter state");
-                (k.into(), v.into())
-            })
-            .collect();
-        if block.kind == BlockKind::RedstoneWire {
-            properties.insert(
-                "power".into(),
-                block.power_level.expect("validated level").to_string(),
-            );
-        }
+        let name = state.name().to_owned();
+        let properties = state.properties().clone();
         if block.observed_name.is_some() && properties != block.observed_properties {
             return Err(format!(
                 "lossless electrical export requires exact supported properties at {pos:?}"

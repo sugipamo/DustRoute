@@ -5,9 +5,10 @@ mod planning;
 use dustroute_ir::LogicDag;
 use dustroute_physical::World;
 use dustroute_translate::{
-    ForwardOptions, ForwardResult, PhysicalAnalysis, RegionBounds, ReverseRequest, ReverseResult,
-    TranslateError, Translator, analyze_physical_region, decoder_1_to_2, full_adder, half_adder,
-    half_subtractor, mux_2_to_1,
+    analysis::PhysicalAnalysis, analysis::analyze_physical_region, api::ForwardOptions,
+    api::ForwardResult, api::ReverseRequest, api::ReverseResult, api::TranslateError,
+    api::Translator, circuits::decoder_1_to_2, circuits::full_adder, circuits::half_adder,
+    circuits::half_subtractor, circuits::mux_2_to_1, world_reverse::RegionBounds,
 };
 
 pub use planning::{

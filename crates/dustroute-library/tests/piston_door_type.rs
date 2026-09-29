@@ -18,12 +18,12 @@ fn registered_door_alone_requires_new_schema_and_cannot_be_downgraded() {
         .insert_type(definition(PistonDoor::three_by_three()))
         .unwrap();
     let saved = catalog.to_json().unwrap();
-    assert!(saved.contains("dustroute.blueprint-catalog.v11"));
+    assert!(saved.contains("dustroute.blueprint-catalog.v13"));
     assert_eq!(BlueprintCatalog::from_json(&saved).unwrap(), catalog);
     for version in 1..=10 {
         assert!(
             BlueprintCatalog::from_json(
-                &saved.replace("catalog.v11", &format!("catalog.v{version}"))
+                &saved.replace("catalog.v13", &format!("catalog.v{version}"))
             )
             .is_err()
         );

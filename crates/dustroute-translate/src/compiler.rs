@@ -6,7 +6,7 @@ use crate::assembly::{AssemblyValidationError, validate_assembly_occurrences};
 use crate::blueprint::blueprint_cell_for_routing;
 use crate::blueprint_connection::BlueprintConnectionError;
 use crate::cells::{PhysicalCell, PlacedCell, RotationY};
-use crate::logic::{GateKind, LogicDag, LogicError, NodeId};
+use crate::ir::logic::{GateKind, LogicDag, LogicError, NodeId};
 use crate::multinet::{
     LegalityReport, MultiNetError, MultiNetRouting, NetId, RipupRoutingError, RoutingJob,
     materialize_multinet, route_jobs_ripup, validate_routing_legality,

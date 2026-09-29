@@ -103,8 +103,9 @@ to electrical resolution and neighbor delivery before the local handler resumes;
 the law program itself retains its original Revision. Unsupported nested block
 effects are rejected. See [clock conformance](periodic-clock-conformance.md).
 
-Law-bearing Blueprint records use catalog schema v3. Existing v1/v2 archives
-remain readable; records are never rebound under an existing Revision ID.
+Law-bearing Blueprint records, like all current catalogs, use schema v13.
+Retired v1–v12 archives are rejected; see the [cutover guide](architecture-cutover.md).
+Records are never rebound under an existing Revision ID.
 `builtin_laws()` loads this law as a regular Blueprint catalog, which can be
 imported into other catalogs. It is separate from the frozen geometric asset;
 no new MCP tool is introduced. Legacy cell projection rejects executable-law

@@ -6,7 +6,7 @@ use dustroute_library::blueprint::{
 use dustroute_library::builtin_blueprints::*;
 
 use crate::cells::{PhysicalCell, PortKind};
-use crate::logic::GateKind;
+use crate::ir::logic::GateKind;
 use crate::sim::RedstoneTickSimulator;
 use crate::wire::update_wire_shapes;
 use crate::world::{BlockKind, Facing, Pos};

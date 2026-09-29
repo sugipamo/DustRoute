@@ -14,7 +14,7 @@ fn position_on_boundary(position: Pos, min: Pos, max: Pos) -> bool {
 }
 
 pub(in super::super) fn raw_world_inspection(
-    snapshot: &dustroute_translate::MinecraftSnapshot,
+    snapshot: &dustroute_translate::snapshot::MinecraftSnapshot,
     target: Pos,
     dimension: &str,
     include_block_list: bool,

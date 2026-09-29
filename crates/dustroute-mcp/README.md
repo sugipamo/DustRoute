@@ -24,6 +24,10 @@ Assembly ID and declared Blueprint occurrences; read those with
 `get_circuit_revision(blueprint.kind=assembly|blueprint)`. A source link does not
 prove a fault or authorize an update.
 
+The [architecture cutover guide](../../docs/architecture-cutover.md) lists the
+retired catalog/instance/repair formats and coordinated Rust/JS Bridge update.
+Legacy mutation RPC names and untyped acknowledgements are no longer accepted.
+
 ## Choose the next tool from the task
 
 | User intent | Tools and decision |

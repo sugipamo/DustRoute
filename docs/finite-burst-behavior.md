@@ -79,11 +79,11 @@ proposal/review/decision tools carry the contract; no burst-specific endpoint
 was added. Saved diagnostics cannot authorize adoption; checks run again after
 restart. See the [MCP workflow](blueprint-mcp.md#periodic-obligations).
 
-Catalogs containing this type use `dustroute.blueprint-catalog.v5`. Catalogs
-without it keep the existing version selection (periodic types use v4).
-Versions v1 through v5 remain readable; earlier labels cannot contain a
-finite-burst type. The MCP response and update archive envelopes retain their
-versions. Contextual MCP reports for a catalog containing a finite-burst type
+All catalogs now use `dustroute.blueprint-catalog.v13`; retired v1–v12 archives
+are rejected. The MCP response and update archive envelopes retain their
+versions, but update archives containing retired catalogs also fail loading.
+See the [cutover guide](architecture-cutover.md).
+Contextual MCP reports for a catalog containing a finite-burst type
 use the additional scope value
 `placement_connections_and_declared_behavioral_obligations`; the existing
 periodic scope value remains unchanged for earlier catalogs. Neither scope

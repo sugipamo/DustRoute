@@ -133,10 +133,10 @@ branches of `get_circuit_revision` and `test_circuit_change`, and the explicit
 history are not behavioral or live-world evidence. Optional `behavior_context`
 selects fresh checks of declared `Periodic`, `FiniteBurst` and `RepeatedSettling`
 obligations. Repeated-settling requires complete port mappings and explicit actual
-input drivers; see [contextual adoption](repeated-settling-adoption.md). Its bindings
-require at least catalog v6; direct-device ports and block-kind requirements use v7;
-self-bound `static_type_bindings` require v8; finite-burst types require v5; earlier catalogs and existing
-periodic response scope values remain supported. Such catalogs use the additional
+input drivers; see [contextual adoption](repeated-settling-adoption.md). All current
+catalogs use v13; catalog v1–v12 are rejected as described in the
+[cutover guide](architecture-cutover.md). Existing periodic response scope values
+remain supported. Catalogs with these obligations use the additional
 contextual scope value `placement_connections_and_declared_behavioral_obligations`. Scoped results
 use `declared_behavior_verified`, `behavior_status` and `behavior_scope`; legacy
 `behavior_verified` and `live_world_verified` remain false. The complete record input
@@ -428,11 +428,12 @@ client samples do not prove empty server queues; no companion MOD is required.
 Failed attempts are preserved; this is a new operation, never a blind retry.
 The response retains a `diagnosis` even when reconstruction planning fails.
 
-Registry records use schema `dustroute.placed-assembly.v2` (v1 readable as history
-and upgraded on save), no TTL, and lifecycle
+Registry records use schema `dustroute.placed-assembly.v4`, no TTL, and lifecycle
 `needs_inspection | applied | removed`. A failure after an attempted write keeps
 `needs_inspection`, the verified prefix and an error. Persisted records and old
-observations never deserialize into execution permission. See the
+observations never deserialize into execution permission. Retired v1–v3 records
+are rejected without automatic upgrade; see the [cutover guide](architecture-cutover.md).
+See the
 [complete persistence and conditional-removal contract](placed-assembly-management.md).
 
 ### Removal after a completed operation

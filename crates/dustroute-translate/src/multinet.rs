@@ -824,7 +824,7 @@ const DUST_CONTACT_OFFSETS: [(i32, i32, i32); 12] = [
 #[cfg(test)]
 mod tests {
     use crate::cells::{PlacedCell, RotationY, terminal_cell};
-    use crate::logic::GateKind;
+    use crate::ir::logic::GateKind;
 
     use super::*;
 

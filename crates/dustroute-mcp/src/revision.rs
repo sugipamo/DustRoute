@@ -1,7 +1,9 @@
 //! Immutable hypothetical snapshots, never live-world evidence or write plans.
 use dustroute_library::assembly::AssemblyRevision;
 use dustroute_library::blueprint::AssemblyRevisionId;
-use dustroute_translate::{MinecraftSnapshot, MinecraftSnapshotBlock, Pos};
+use dustroute_translate::{
+    snapshot::MinecraftSnapshot, snapshot::MinecraftSnapshotBlock, world::Pos,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet};
@@ -46,7 +48,7 @@ impl CircuitRevision {
         let mut assembly = dustroute_translate::snapshot::assembly_from_snapshot(
             &self.snapshot,
             "Hypothetical circuit state",
-            vec![dustroute_translate::Region::new(
+            vec![dustroute_translate::world::Region::new(
                 self.snapshot.min,
                 self.snapshot.max,
             )],
@@ -268,7 +270,7 @@ mod tests {
         let view = current.assembly.inspect(builtin_blueprints()).unwrap();
         assert_eq!(
             view.block_at(Pos::default()).unwrap().kind,
-            dustroute_translate::BlockKind::Air
+            dustroute_translate::world::BlockKind::Air
         );
         assert!(!view.source_differences().is_empty());
         assert_eq!(original.assembly.as_ref(), Some(&state));

@@ -20,6 +20,9 @@ use crate::{Block, Facing, Pos, Region, World};
 pub(crate) use adapter::ElectricalPistonAdapter;
 pub use movement::MotionPlan;
 
+pub type PistonBehaviorState = RootBehaviorState<PistonEvent>;
+pub const BEHAVIOR_COMPARISON: &str = ElectricalPistonAdapter::COMPARISON;
+
 pub const ELECTRICAL_PROFILE: &str = "dustroute.piston-electrical-callbacks.java-1-21-11.v18";
 
 #[cfg(test)]
@@ -57,14 +60,14 @@ impl ElectricalPistonRuntime {
             .input_now(call(position, PistonEvent::ElectricalRemove))
     }
     pub fn behavior_state(&self) -> Result<PistonBehaviorState, RuntimeError> {
-        self.0.piston_behavior_state()
+        self.0.root_behavior_state()
     }
     /// Resume only a state captured by this exact runtime and adapter revision.
     pub fn from_behavior_state(state: &PistonBehaviorState) -> Result<Self, RuntimeError> {
-        SynchronousWorldRuntime::from_piston_behavior_state(state).map(Self)
+        SynchronousWorldRuntime::from_root_behavior_state(state).map(Self)
     }
     pub fn advance_behavior_clock(&mut self) -> Result<bool, RuntimeError> {
-        self.0.piston_behavior_clock()
+        self.0.advance_root_clock()
     }
     pub fn from_checkpoint(
         checkpoint: &RuntimeCheckpoint<PistonEvent>,

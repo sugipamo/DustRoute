@@ -10,7 +10,7 @@ use dustroute_translate::blueprint_update::BlueprintUpdates;
 use dustroute_translate::promotion::CheckStatus;
 use dustroute_translate::runtime_behavior::RuntimeBehaviorModel;
 use dustroute_translate::runtime_review::review_assembly_in_runtime_context;
-use dustroute_translate::{BlockKind, Pos, RotationY};
+use dustroute_translate::{cells::RotationY, world::BlockKind, world::Pos};
 
 fn path() -> Vec<InstanceId> {
     vec![
@@ -26,7 +26,7 @@ fn ordinary_door_is_freshly_adopted_and_reverified_after_archive_restart() {
     let mut updates = BlueprintUpdates::new(f.catalog);
     updates.create(f.request.clone()).unwrap();
     let saved = updates.to_json().unwrap();
-    assert!(saved.contains("dustroute.blueprint-catalog.v11"));
+    assert!(saved.contains("dustroute.blueprint-catalog.v13"));
     let mut restored = BlueprintUpdates::from_json(&saved).unwrap();
     restored.adopt(&f.request.id).unwrap();
     assert_eq!(
@@ -199,7 +199,13 @@ fn inverted_control_polarity_is_read_from_binding_and_detects_wrong_initial_stat
     .unwrap();
     let report = model.verify(BehaviorBudget::default());
     assert_eq!(report.status, CheckStatus::Failed, "{report:?}");
-    assert!(report.detail.contains("initial aperture"));
+    assert!(report.detail.contains("initial observations"), "{report:?}");
+    let counterexample = report.counterexample.unwrap();
+    assert_eq!(counterexample.held_inputs, vec![true]);
+    assert_ne!(
+        counterexample.cycle_outputs[0],
+        counterexample.expected_outputs
+    );
 }
 
 #[test]

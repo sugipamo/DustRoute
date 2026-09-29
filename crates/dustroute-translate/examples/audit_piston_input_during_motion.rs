@@ -5,7 +5,7 @@ use dustroute_minecraft::time::{PhysicsEngine, PhysicsEventKind};
 use dustroute_minecraft::{
     Block, BlockKind, Facing, PistonState, PistonVariant, Pos, Region, World,
 };
-use dustroute_translate::{MinecraftSnapshot, world_from_snapshot};
+use dustroute_translate::{snapshot::MinecraftSnapshot, snapshot::world_from_snapshot};
 use serde_json::{Value, json};
 
 fn simple_world() -> (World, Region, Pos, Vec<Pos>) {

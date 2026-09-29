@@ -3,8 +3,8 @@ use dustroute_minecraft::time::piston_runtime::{
     ElectricalPistonRuntime, new_piston_runtime, schedule_electrical_input_after_tick,
 };
 use dustroute_minecraft::{BlockKind, ObservationClassification, Pos, Region, World};
-use dustroute_translate::MinecraftSnapshot;
 use dustroute_translate::piston_construction::{ElectricalConstruction, electrical_snapshot};
+use dustroute_translate::snapshot::MinecraftSnapshot;
 use dustroute_translate::snapshot::assembly_from_snapshot;
 
 fn import(value: serde_json::Value) -> (World, Region) {

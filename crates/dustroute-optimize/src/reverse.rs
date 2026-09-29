@@ -2,8 +2,8 @@ use std::collections::BTreeSet;
 
 use dustroute_translate::cell_library::default_cell_library;
 use dustroute_translate::cells::PlacedCell;
-use dustroute_translate::expr::{Expr, best_by_size};
-use dustroute_translate::logic::GateKind;
+use dustroute_translate::ir::expr::{Expr, best_by_size};
+use dustroute_translate::ir::logic::GateKind;
 use dustroute_translate::physical::{CellId, Endpoint, PlacementCircuit, RouteId};
 use dustroute_translate::port_realization::terminal_for_endpoint;
 use dustroute_translate::routing::{RouterConfig, astar_route};

@@ -97,12 +97,10 @@ existing child and parent references stay unchanged.
 
 ## Compatibility and limits
 
-Catalogs with the relation binding form need at least `dustroute.blueprint-catalog.v6`.
-Direct-device ports and block-kind requirements need v7; self-bound static
-requirements need v8 and do not change the relation contract. See
-[component patterns](blueprint-component-patterns.md).
-Catalogs without it retain the earlier required version. Versions v1–v5 remain
-readable; relabeling a new binding archive as an older version is rejected.
+All catalogs now use `dustroute.blueprint-catalog.v13`; retired v1–v12 archives
+are rejected. See the [cutover guide](architecture-cutover.md).
+Direct-device ports, block-kind requirements and self-bound static requirements
+do not change the relation contract. See [component patterns](blueprint-component-patterns.md).
 Autonomous bindings keep their JSON shape:
 `{"behavior_type":"clock.type.v1","output_port":"pulse"}`.
 The new relation form cannot mix with `output_port` or accept unknown fields.

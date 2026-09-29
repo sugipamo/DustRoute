@@ -1,6 +1,6 @@
 # Observed 3×3 piston-door recognition
 
-`dustroute_translate::recognize_observed_piston_door` is the read-only bridge
+`dustroute_translate::observed_piston_door::recognize_observed_piston_door` is the read-only bridge
 from a bounded `MinecraftSnapshot` to a structural description of an existing
 two-sided 3×3 piston-door shape.  It is deliberately separate from
 `PistonDoorScenario`: recognition does not create a runnable scenario, schedule

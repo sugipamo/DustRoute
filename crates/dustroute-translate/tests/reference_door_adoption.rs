@@ -10,7 +10,7 @@ use dustroute_translate::behavior_type::BehaviorModel;
 use dustroute_translate::blueprint_update::BlueprintUpdates;
 use dustroute_translate::piston_construction::{ElectricalConstruction, electrical_snapshot};
 use dustroute_translate::runtime_behavior::RuntimeBehaviorModel;
-use dustroute_translate::{BlockKind, Pos, RotationY};
+use dustroute_translate::{cells::RotationY, world::BlockKind, world::Pos};
 
 #[test]
 fn production_planner_builds_and_removes_the_exact_reference_door_after_relocation() {

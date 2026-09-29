@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::PathBuf;
 
-use dustroute_translate::{PhysicalTrace, TraceSource};
+use dustroute_translate::{physics_trace::PhysicalTrace, physics_trace::TraceSource};
 
 #[test]
 fn promoted_minecraft_differential_traces_are_valid_and_have_metadata() {

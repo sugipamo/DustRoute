@@ -1,4 +1,8 @@
-//! Core intermediate representations and compiler stages for DustRoute.
+//! Translation responsibilities are exposed through their owning modules.
+//! Start with `api` for translation, `analysis` / `diagnostic` for explanation,
+//! `behavior_type` / `runtime_review` for evidence, and `piston_construction`
+//! for ordered construction. Domain primitives retain their original crate
+//! through `world` and `ir`. Former flat-root compatibility exports are removed.
 
 pub mod abstract_behavior;
 pub mod analysis;
@@ -28,16 +32,12 @@ pub mod location_behavior;
 pub mod runtime_behavior;
 pub mod runtime_review;
 pub mod torch_law;
-pub mod expr {
-    pub use dustroute_ir::expr::*;
-}
-pub mod logic {
-    pub use dustroute_ir::logic::*;
-}
+pub use dustroute_ir as ir;
 pub mod liveness;
 pub mod minecraft_export;
 pub mod minecraft_semantics;
 pub mod multinet;
+pub mod native_state;
 pub mod observed_piston_door;
 pub mod periodic;
 pub mod physical;
@@ -57,165 +57,9 @@ pub mod snapshot;
 pub mod transition_conformance;
 pub mod vanilla_instrumentation;
 pub mod wire;
-pub mod world {
-    pub use dustroute_minecraft::*;
-}
+pub use dustroute_minecraft as world;
 pub mod world_reverse;
 
-pub use analysis::{
-    BooleanFunction, FocusedConnection, FocusedExplanation, FocusedPath, FocusedRole,
-    FunctionalClassification, LocalSignalRole, LogicalRole, PhysicalAnalysis, SemanticEquivalence,
-    SignalPath, analyze_physical_region, classify_focused_role, classify_truth_table,
-    compare_live_trace, derive_local_logic, explain_focused_component, explain_focused_scene,
-    explain_signal_path, propose_scenarios, simulate_scenario, verify_semantic_equivalence,
-};
-pub use api::{
-    ForwardOptions, ForwardResult, ReverseRequest, ReverseResult, TranslateError, Translator,
-    TruthTableSemantics,
-};
-pub use behavior::{simulate_behavior_trace, simulate_transition_trace};
-pub use cell_library::{
-    CellLibrary, CellVerification, default_cell_library, verify_cell, verify_cell_with_settle_ticks,
-};
-pub use cells::{
-    InputPort, OutputPort, PhysicalCell, PlacedCell, PortKind, RotationY, and_cell,
-    baseline_cell_for, buffered_boundary_cell, compact_compiled_xor_cell, compiled_xor_cell,
-    compiled_xor_cell_with_config, external_xor_cell, nand_cell, not_cell, not_top_cell,
-    or_buffered_cell, terminal_cell,
-};
-pub use circuits::{decoder_1_to_2, full_adder, half_adder, half_subtractor, mux_2_to_1};
-pub use compiler::{BaselineCompileConfig, BaselineCompileResult, BaselineCompiler, CompileError};
-pub use connectivity::{
-    ConnectivityEdge, EdgeKind, PhysicalConnectivityGraph, PhysicalStep, PhysicalStepKind,
-    build_physical_circuit, extract_connectivity, observer_input_pos, observer_output_pos,
-    physical_step, physical_step_connected, piston_input_connected,
-};
-pub use diagnostic::report::{Diagnosis, Finding as DiagnosticFinding};
-pub use diagnostic::{
-    CircuitDiagnosticReport, CircuitDiagnosticStatus, ConnectivityFinding, DiagnosticConfidence,
-    DiagnosticCounts, DiagnosticHealth, RecommendedAction, RecommendedActionKind, diagnose_scene,
-};
-pub use dustroute_ir::{
-    DagBuilder, EventCause, EventKind, EventSource, Expr, GateKind, LogicDag, LogicError,
-    LogicNode, NodeId, TransitionDelay, TransitionElapsed, TransitionId, TransitionRecord,
-    TransitionTime, TransitionTrace, best_by_size, rewrites_once, search_equivalents,
-};
-pub use dustroute_minecraft::time::{
-    PhysicsEventPhase, PhysicsTime, SamePhaseOrder, SchedulerEvidence, SchedulerProfile,
-    SchedulerProfileError, SchedulerProfileId, ZeroDelayPolicy,
-};
-pub use dustroute_minecraft::{
-    Block, BlockChange, BlockKind, BlockMove, BlockProperties, BlockRedstoneTraits, ChangeReason,
-    DEFAULT_PISTON_MOTION_PROFILE, DeltaCause, Facing, OccupiedShape, PistonAction,
-    PistonBlockEntityState, PistonError, PistonHeadState, PistonMotionProfile,
-    PistonMotionProfileError, PistonPlan, PistonPlanningContext, PistonState, PistonVariant, Pos,
-    Region, RegionSet, Shape, ShapeId, ValidatedWorld, WireConnection, World, WorldDelta,
-    WorldDeltaError, WorldValidationError, WorldValidationIssue,
-    observed_name_requires_live_observation,
-};
-pub use electrical::{
-    DeviceOutputState, InstantaneousElectricalState, MAX_SIGNAL, PoweredBlockState,
-    solve_instantaneous,
-};
-pub use liveness::{
-    DirectedSignalRegion, DriveFailure, RankedLivenessFinding, RequiredInputAssessment,
-    RequiredInputStatus, SignalLivenessReport, SignalSource, SignalSourceKind, UndrivenInput,
-    analyze_signal_liveness, rank_liveness_findings,
-};
-pub use minecraft_export::{
-    DataPack, JavaExportConfig, MinecraftExportError, compiled_circuit_datapack,
-    isolated_build_commands, java_block_state, world_setblock_commands,
-};
-pub use minecraft_semantics::{SemanticProbe, semantic_probes, semantics_datapack};
-pub use multinet::{
-    BrokenStep, LegalityReport, MultiNetRouting, NetId, RerouteEvent, RipupRoutingError,
-    RipupRoutingResult, RoutedNet, RoutingJob, materialize_multinet, route_jobs_ripup,
-    route_jobs_ripup_with_fixed, route_net_tree, validate_routing_legality,
-};
-pub use observed_piston_door::{
-    OBSERVED_PISTON_DOOR_SCHEMA, ObservedBlockEvidence, ObservedPiston, ObservedPistonCellState,
-    ObservedPistonDoor, ObservedPistonDoorCandidate, ObservedPistonDoorCell,
-    ObservedPistonDoorControl, ObservedPistonDoorGeometry, ObservedPistonDoorObservation,
-    ObservedPistonDoorOrientation, ObservedPistonDoorOrientationStatus,
-    ObservedPistonDoorRecognitionError, ObservedPistonDoorState, ObservedPistonInputEdge,
-    ObservedPistonRole, ObservedPistonState, ObservedRecognitionStatus,
-    recognize_observed_piston_door,
-};
-pub use physical::{
-    CellId, Endpoint, PhysicalError, PlacementCircuit, Route, RouteId, TerminalContract,
-    TerminalDirection,
-};
-pub use physics_trace::{
-    PhysicalBlockObservation, PhysicalProperty, PhysicalTrace, PhysicalTraceComparison,
-    PhysicalTraceMismatch, PhysicalValue, TraceSource, compare_physical_traces,
-    simulate_cell_trace, simulate_world_trace, simulator_observations,
-};
-pub use piston_door::{
-    DEFAULT_PISTON_DOOR_EVENT_BUDGET, PISTON_DOOR_FANOUT_SCHEMA, PistonDoorCell, PistonDoorControl,
-    PistonDoorCoordinateConvention, PistonDoorExpected, PistonDoorScenario,
-    PistonDoorScenarioError, PistonDoorScope, PistonDoorWorld,
-};
-pub use port_realization::{
-    PortRealization, PortRealizationError, realize_sink_endpoint, realize_source_endpoint,
-    terminal_for_endpoint,
-};
-pub use repair::{
-    propose_scene_component_removal, propose_scene_repairs, propose_scene_repairs_near,
-};
-pub use routing::{
-    RouteNotFound, RouteResult, RouterConfig, astar_route, insert_repeaters, materialize_route,
-};
-pub use routing_resources::{
-    RoutingResources, branch_stair_clearances, electrical_keepout_for_wire, horizontal_neighbors,
-};
-pub use scenario::{
-    Scenario, ScenarioAction, ScenarioCapability, ScenarioDifference, ScenarioEvent,
-    ScenarioExpectation, ScenarioPulseExpectation, ScenarioRun, ScenarioSafety, ScenarioTrace,
-    compare_scenario_traces, run_scenario,
-};
-pub use sim::{
-    InputMutationError, RedstoneTickSimulator, SimulationEventKind, SimulationTransition,
-    SimulationTransitionKind, TickState,
-};
-pub use snapshot::{
-    MinecraftSnapshot, MinecraftSnapshotBlock, SnapshotError, world_from_snapshot,
-    world_from_snapshot_json,
-};
-pub use transition_conformance::{
-    ConformanceField, ConformanceIssue, ConformanceStatus, NormalizedBlockState,
-    NormalizedNeighborUpdate, NormalizedPistonState, NormalizedTransition,
-    NormalizedTransitionTrace, ObservedSchedulerFixture, SameTickOrderEvidence,
-    TransitionConformance, TransitionEvidence, compare_transition_traces,
-    normalize_observed_fixture, normalize_transition_trace,
-    normalize_vanilla_instrumentation_artifact, observed_fixture_from_json,
-};
-pub use vanilla_instrumentation::{
-    InputTimingObservation, InstrumentationCapture, InstrumentationClock,
-    InstrumentationCompleteness, InstrumentationEvidence, InstrumentationMethod,
-    InstrumentedBlockState, InstrumentedStateEvent, NeighborUpdateObservation,
-    OrderedTickObservation, PistonStateKind, PistonStateObservation, StreamCompleteness,
-    VANILLA_INSTRUMENTATION_SCHEMA, VanillaInstrumentationArtifact, VanillaInstrumentationMetadata,
-    parse_and_validate_instrumentation,
-};
-pub use wire::{
-    DustTransfer, dust_connected, dust_transfer, dust_transmits, infer_wire_connection,
-    update_wire_shapes, wire_has_arm,
-};
-pub use world_reverse::{
-    FunctionalNetworkModel, InferredInputDriver, InferredOutputFunction, InferredTerminal,
-    InferredTruthTable, InterfaceEvidence, PhysicalInfluence, RegionAnalysis, RegionBounds,
-    SignalComponent, SignalDiagnostics, TerminalConfidence, TruthTableBudget, TruthTableComparison,
-    TruthTableError, TruthTableExecutionStats, TruthTableRow, analyze_world_region,
-    analyze_world_region_in_dimension, apply_inferred_input_driver, compare_truth_tables,
-    derive_functional_network, derive_functional_network_with_budget, infer_output_expressions,
-    infer_truth_table, infer_truth_table_with_budget, infer_truth_table_with_budget_and_stats,
-    inferred_input_driver,
-};
-
 pub mod piston_observation;
-pub use piston_observation::{
-    PistonObservation, PistonObservationContract, PistonObservationIssue, PistonObservationState,
-    observe_piston_mechanism,
-};
 
 mod world_laws;

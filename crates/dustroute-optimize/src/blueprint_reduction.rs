@@ -15,7 +15,7 @@ use dustroute_translate::physical_behavior::{
     PhysicalBehaviorModel, PhysicalBehaviorSelection, PhysicalOutput,
 };
 use dustroute_translate::promotion::{CheckStatus, PromotionReport, review_assembly_in_context};
-use dustroute_translate::{Block, BlockKind, Pos};
+use dustroute_translate::{world::Block, world::BlockKind, world::Pos};
 use serde::{Deserialize, Serialize};
 
 mod enumeration;
@@ -683,7 +683,7 @@ fn search_layout(
         return Ok(true);
     }
     report.stats.layouts_examined += 1;
-    let mut world = dustroute_translate::World::new();
+    let mut world = dustroute_translate::world::World::new();
     for b in &blocks {
         world.set(b.position, b.block.clone());
     }
@@ -879,7 +879,7 @@ pub fn reduce_blueprint_blocks(
             )? {
                 return Ok(report);
             }
-            let mut world = dustroute_translate::World::new();
+            let mut world = dustroute_translate::world::World::new();
             for b in &blocks {
                 world.set(b.position, b.block.clone());
             }

@@ -1,5 +1,5 @@
 use dustroute_physical::{PhysicalDiagnostic, PhysicalScene};
-use dustroute_translate::{SignalDiagnostics, TruthTableComparison};
+use dustroute_translate::{world_reverse::SignalDiagnostics, world_reverse::TruthTableComparison};
 
 use dustroute_translate::physical::PlacementCircuit;
 
@@ -155,7 +155,9 @@ mod tests {
         Block, BlockKind, ComponentId, Observation, PhysicalComponent, PhysicalScene,
         Pos as PhysicalPos, SceneBounds, VerifiedTopology,
     };
-    use dustroute_translate::{Pos, SignalDiagnostics, TruthTableComparison};
+    use dustroute_translate::{
+        world::Pos, world_reverse::SignalDiagnostics, world_reverse::TruthTableComparison,
+    };
 
     use super::*;
 

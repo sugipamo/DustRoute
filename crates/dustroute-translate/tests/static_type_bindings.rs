@@ -3,7 +3,9 @@ use dustroute_library::blueprint::*;
 use dustroute_library::builtin_primitives::*;
 use dustroute_translate::assembly::validate_assembly;
 use dustroute_translate::promotion::*;
-use dustroute_translate::{Block, BlockKind, Pos, Region, RotationY};
+use dustroute_translate::{
+    cells::RotationY, world::Block, world::BlockKind, world::Pos, world::Region,
+};
 
 fn id(s: &str) -> BlueprintRevisionId {
     BlueprintRevisionId::new(s).unwrap()

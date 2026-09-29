@@ -15,8 +15,8 @@ const METRIC_METHODS = Object.freeze([
   'start_update_recording',
   'stop_update_recording',
   'preview_region',
-  'write_blocks',
-  'place_physical_blocks'
+  'submit_command_batch',
+  'submit_physical_batch'
 ])
 
 const KNOWN_METHODS = new Set(METRIC_METHODS)

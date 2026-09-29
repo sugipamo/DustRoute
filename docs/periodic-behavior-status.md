@@ -112,10 +112,9 @@ cannot authorize adoption. Failure leaves old pins and the catalog intact.
 Verification budgets are shared across obligations within one review; identical
 checks may be reused only within that exact review/context.
 
-Catalog v4 preserves periodic types and bindings. Catalogs containing a
-finite-burst type use v5, which also preserves periodic contracts. All versions
-v1 through v5 remain readable; labels earlier than v4 cannot contain periodic
-types. Update archives retain their existing envelope and an explicit context
+All current catalogs use v13 and preserve periodic and finite-burst contracts.
+Retired v1–v12 archives are rejected; see the [cutover guide](architecture-cutover.md).
+Update archives retain their existing envelope and an explicit context
 where needed. No new MCP tool or automatic adoption path was added: existing
 Assembly reads and proposal/review/decision tools carry these fields. See the
 [MCP contract](blueprint-mcp.md#periodic-obligations).

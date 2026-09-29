@@ -4,7 +4,7 @@ use dustroute_minecraft::time::{
     BlockEventKind, EventExecutionStatus, PhysicsEngineError, PhysicsEventKind, TraceStatus,
 };
 use dustroute_minecraft::{Block, BlockKind, PistonAction, PistonState, Pos};
-use dustroute_translate::{PistonDoorScenario, PistonDoorScenarioError};
+use dustroute_translate::{piston_door::PistonDoorScenario, piston_door::PistonDoorScenarioError};
 use serde::Deserialize;
 
 const FIXTURE: &str = include_str!("fixtures/3x3_piston_shuttle_fanout.json");
@@ -37,7 +37,7 @@ fn reference_fixture() -> ReferenceFixture {
         .expect("reference 3x3 piston fixture must be valid JSON")
 }
 
-fn piston_position(cell: &dustroute_translate::PistonDoorCell, z: i32) -> Pos {
+fn piston_position(cell: &dustroute_translate::piston_door::PistonDoorCell, z: i32) -> Pos {
     Pos::new(cell.x, cell.y, z)
 }
 
@@ -426,16 +426,17 @@ fn malformed_scenario_is_rejected_without_falling_back_to_a_different_layout() {
 fn normal_execution_rejects_the_unbuildable_model_before_running() {
     for result in [scenario().run_open(), scenario().run_cycle()] {
         let error = result.unwrap_err();
-        let dustroute_translate::PistonDoorScenarioError::Validation(error) = error else {
+        let dustroute_translate::piston_door::PistonDoorScenarioError::Validation(error) = error
+        else {
             panic!("expected validation failure")
         };
         assert!(error.issues.iter().any(|issue| matches!(
             issue,
-            dustroute_translate::WorldValidationIssue::InvalidSupport { .. }
+            dustroute_translate::world::WorldValidationIssue::InvalidSupport { .. }
         )));
         assert!(error.issues.iter().any(|issue| matches!(
             issue,
-            dustroute_translate::WorldValidationIssue::SyntheticInputDriver { .. }
+            dustroute_translate::world::WorldValidationIssue::SyntheticInputDriver { .. }
         )));
     }
 }

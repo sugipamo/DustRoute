@@ -1,10 +1,11 @@
 use super::*;
-use crate::expr::Expr;
+use crate::ir::expr::Expr;
 use crate::wire::update_wire_shapes;
 use crate::world::{Block, BlockKind, Pos, World};
 use crate::{
-    BaselineCompileConfig, BaselineCompiler, decoder_1_to_2, full_adder, half_adder,
-    half_subtractor, mux_2_to_1,
+    circuits::decoder_1_to_2, circuits::full_adder, circuits::half_adder,
+    circuits::half_subtractor, circuits::mux_2_to_1, compiler::BaselineCompileConfig,
+    compiler::BaselineCompiler,
 };
 use std::collections::BTreeSet;
 
@@ -101,7 +102,7 @@ fn broken_torch_support_is_detected_and_changes_truth_table() {
 
 #[test]
 fn compact_xor_is_derived_from_shared_physics_without_gate_partitioning() {
-    let cell = crate::compact_compiled_xor_cell().unwrap();
+    let cell = crate::cells::compact_compiled_xor_cell().unwrap();
     let (min, max) = cell.world.bounds().unwrap();
     let analysis = analyze_world_region(&cell.world, RegionBounds::new(min, max));
     let model = derive_functional_network(&cell.world, &analysis, 16, 64).unwrap();
@@ -190,7 +191,7 @@ fn runtime_budget_fails_closed_without_returning_partial_rows() {
         .unwrap();
     let (min, max) = compiled.world.bounds().unwrap();
     let bounds = RegionBounds::new(min, max);
-    let request = crate::ReverseRequest::new(bounds)
+    let request = crate::api::ReverseRequest::new(bounds)
         .with_truth_table(16)
         .with_settle_ticks(16)
         .with_truth_table_budget(
@@ -198,7 +199,7 @@ fn runtime_budget_fails_closed_without_returning_partial_rows() {
                 .with_max_solver_iterations(0)
                 .with_max_elapsed_millis(None),
         );
-    let result = crate::Translator.reverse(&compiled.world, request);
+    let result = crate::api::Translator.reverse(&compiled.world, request);
     assert!(result.truth_table.is_none());
     assert!(result.functional_network.is_none());
     assert!(matches!(
@@ -250,7 +251,7 @@ fn incomplete_settle_window_is_not_claimed_as_a_truth_table() {
     lever.support_offset = Some(Pos::new(0, -1, 0));
     world.place(BlockKind::RedstoneWire, Pos::new(1, 1, 0));
     let repeater = world.place(BlockKind::Repeater, Pos::new(2, 1, 0));
-    repeater.facing = Some(crate::Facing::East);
+    repeater.facing = Some(crate::world::Facing::East);
     repeater.delay = Some(1);
     world.place(BlockKind::RedstoneWire, Pos::new(3, 1, 0));
     update_wire_shapes(&mut world);

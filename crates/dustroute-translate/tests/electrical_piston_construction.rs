@@ -3,8 +3,8 @@ mod fixture;
 
 use dustroute_library::blueprint::BlueprintCatalog;
 use dustroute_minecraft::{BlockKind, Facing, Pos, Region, World};
-use dustroute_translate::MinecraftSnapshot;
 use dustroute_translate::piston_construction::{ElectricalConstruction, electrical_snapshot};
+use dustroute_translate::snapshot::MinecraftSnapshot;
 use dustroute_translate::snapshot::assembly_from_snapshot;
 
 #[test]

@@ -19,7 +19,7 @@ fn finite_burst_round_trips_in_v5_and_snapshot_evidence_cannot_certify_it() {
     catalog.insert_type(definition.clone()).unwrap();
     assert!(catalog.insert_type(definition.clone()).is_err());
     let saved = catalog.to_json().unwrap();
-    assert!(saved.contains("dustroute.blueprint-catalog.v5"));
+    assert!(saved.contains("dustroute.blueprint-catalog.v13"));
     assert_eq!(
         BlueprintCatalog::from_json(&saved)
             .unwrap()
@@ -29,7 +29,7 @@ fn finite_burst_round_trips_in_v5_and_snapshot_evidence_cannot_certify_it() {
     for version in ["v1", "v2", "v3", "v4"] {
         assert!(
             BlueprintCatalog::from_json(
-                &saved.replace("catalog.v5", &format!("catalog.{version}"))
+                &saved.replace("catalog.v13", &format!("catalog.{version}"))
             )
             .is_err()
         );

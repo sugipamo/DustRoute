@@ -10,7 +10,7 @@ use std::fmt::{Display, Formatter};
 
 use serde::{Deserialize, Serialize};
 
-use crate::Pos;
+use crate::world::Pos;
 
 pub const VANILLA_INSTRUMENTATION_SCHEMA: &str = "dustroute.vanilla-instrumentation.v1";
 

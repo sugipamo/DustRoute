@@ -433,7 +433,7 @@ impl Block {
 
     #[must_use]
     pub fn capabilities(&self) -> BlockCapabilities {
-        use CapabilityLevel::{Full, NotApplicable, Partial, Unsupported};
+        use CapabilityLevel::{Full, Partial, Unsupported};
         if self.requires_live_observation()
             || (self
                 .observed_name
@@ -451,132 +451,15 @@ impl Block {
                 placement: Unsupported,
             };
         }
-        match self.kind {
-            BlockKind::Air => BlockCapabilities {
-                observation: Full,
-                physical_classification: Full,
-                connectivity: NotApplicable,
-                steady_state: NotApplicable,
-                temporal: NotApplicable,
-                repair: NotApplicable,
-                placement: Full,
-            },
-            BlockKind::Solid | BlockKind::Transparent => {
-                let exact = self.observation_classification != ObservationClassification::Coarse;
-                BlockCapabilities {
-                    observation: Full,
-                    physical_classification: if exact { Full } else { Partial },
-                    connectivity: if exact { Full } else { Partial },
-                    steady_state: NotApplicable,
-                    temporal: NotApplicable,
-                    repair: NotApplicable,
-                    placement: if exact { Full } else { Unsupported },
-                }
-            }
-            BlockKind::RedstoneWire => BlockCapabilities {
-                observation: Full,
-                physical_classification: Full,
-                connectivity: Full,
-                steady_state: Full,
-                temporal: Partial,
-                repair: Full,
-                placement: Full,
-            },
-            BlockKind::RedstoneTorch | BlockKind::Repeater => BlockCapabilities {
-                observation: Full,
-                physical_classification: Full,
-                connectivity: Full,
-                steady_state: Full,
-                temporal: Partial,
-                repair: Partial,
-                placement: Full,
-            },
-            BlockKind::Lever | BlockKind::RedstoneBlock => BlockCapabilities {
-                observation: Full,
-                physical_classification: Full,
-                connectivity: Full,
-                steady_state: Full,
-                temporal: Full,
-                repair: Partial,
-                placement: Full,
-            },
-            BlockKind::PressurePlate => BlockCapabilities {
-                observation: Full,
-                physical_classification: Full,
-                connectivity: Full,
-                steady_state: Full,
-                // Occupancy, entity filtering, and weighted level changes are
-                // observed but not reproduced by the block-only simulator.
-                temporal: Partial,
-                repair: Partial,
-                placement: Full,
-            },
-            BlockKind::Button | BlockKind::RedstoneLamp => BlockCapabilities {
-                observation: Full,
-                physical_classification: Full,
-                connectivity: Full,
-                steady_state: Full,
-                temporal: Partial,
-                repair: Partial,
-                placement: Full,
-            },
-            BlockKind::CopperBulb => BlockCapabilities {
-                observation: Full,
-                physical_classification: Full,
-                connectivity: Full,
-                steady_state: Unsupported,
-                temporal: Partial,
-                repair: Unsupported,
-                placement: Full,
-            },
-            BlockKind::Comparator => BlockCapabilities {
-                observation: Full,
-                physical_classification: Full,
-                connectivity: Full,
-                steady_state: Full,
-                temporal: Partial,
-                repair: Partial,
-                placement: Full,
-            },
-            BlockKind::Observer => BlockCapabilities {
-                observation: Full,
-                physical_classification: Full,
-                connectivity: Full,
-                // An observer is a pulse source, not a steady-state
-                // conductor. Its event semantics are modeled below.
-                steady_state: NotApplicable,
-                temporal: Full,
-                repair: Partial,
-                placement: Full,
-            },
-            BlockKind::Piston => BlockCapabilities {
-                observation: Full,
-                physical_classification: Partial,
-                connectivity: Partial,
-                steady_state: Unsupported,
-                temporal: Unsupported,
-                repair: Unsupported,
-                placement: Unsupported,
-            },
-            BlockKind::PistonHead => BlockCapabilities {
-                observation: Full,
-                physical_classification: Partial,
-                connectivity: Partial,
-                steady_state: Partial,
-                temporal: Partial,
-                repair: Unsupported,
-                placement: Unsupported,
-            },
-            BlockKind::MovingPiston => BlockCapabilities {
-                observation: Full,
-                physical_classification: Partial,
-                connectivity: Unsupported,
-                steady_state: Unsupported,
-                temporal: Partial,
-                repair: Unsupported,
-                placement: Unsupported,
-            },
+        let mut capabilities = self.kind.contract().analysis;
+        if matches!(self.kind, BlockKind::Solid | BlockKind::Transparent)
+            && self.observation_classification == ObservationClassification::Coarse
+        {
+            capabilities.physical_classification = Partial;
+            capabilities.connectivity = Partial;
+            capabilities.placement = Unsupported;
         }
+        capabilities
     }
 
     #[must_use]

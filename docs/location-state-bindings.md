@@ -87,9 +87,9 @@ now establishes that relationship and retains the complete execution context.
 
 ## Compatibility and contextual verification
 
-Catalogs containing explicit observation bindings use
-`dustroute.blueprint-catalog.v10`. Loading such bindings under an older schema is
-rejected. Catalogs without them continue to select their existing schema. The
+All catalogs, including explicit observation bindings, now use
+`dustroute.blueprint-catalog.v13`. Retired v1–v12 archives are rejected; see the
+[cutover guide](architecture-cutover.md). The
 original autonomous and signal-only repeated-settling binding shapes retain their
 JSON representation and validation rules, including rejection of BlockState.
 Proposal histories containing explicit observation bindings use

@@ -586,7 +586,7 @@ fn arbitrary_input_not_promotes_with_fresh_proof_and_keeps_immutable_sources() {
     assert_eq!(adopted.blocks, assembly.blocks);
     assert_eq!(catalog.revision(&original.id), Some(&original));
     let saved = catalog.to_json().unwrap();
-    assert!(saved.contains("dustroute.blueprint-catalog.v6"));
+    assert!(saved.contains("dustroute.blueprint-catalog.v13"));
     let loaded = BlueprintCatalog::from_json(&saved).unwrap();
     assert_eq!(loaded.to_json().unwrap(), saved);
     assert_eq!(
@@ -596,7 +596,7 @@ fn arbitrary_input_not_promotes_with_fresh_proof_and_keeps_immutable_sources() {
     for version in 1..6 {
         assert!(
             BlueprintCatalog::from_json(
-                &saved.replace("catalog.v6", &format!("catalog.v{version}"))
+                &saved.replace("catalog.v13", &format!("catalog.v{version}"))
             )
             .is_err()
         );

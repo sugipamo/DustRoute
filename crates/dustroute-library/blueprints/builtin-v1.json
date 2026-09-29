@@ -1,5 +1,5 @@
 {
-  "schema": "dustroute.blueprint-catalog.v1",
+  "schema": "dustroute.blueprint-catalog.v13",
   "types": [
     {
       "id": "dustroute.type.block-power-output.v1",

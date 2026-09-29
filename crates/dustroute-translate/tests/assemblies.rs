@@ -2,9 +2,11 @@ use dustroute_library::assembly::*;
 use dustroute_library::blueprint::*;
 use dustroute_library::builtin_blueprints::*;
 use dustroute_translate::assembly::{AssemblyValidationError, validate_assembly};
-use dustroute_translate::{BaselineCompiler, BlockKind, DagBuilder, GateKind};
+use dustroute_translate::{
+    compiler::BaselineCompiler, ir::DagBuilder, ir::GateKind, world::BlockKind,
+};
 
-fn inverter() -> dustroute_translate::LogicDag {
+fn inverter() -> dustroute_translate::ir::LogicDag {
     let mut builder = DagBuilder::new();
     let input = builder.input("in");
     let output = builder.gate(GateKind::Not, &[input], None);
@@ -14,7 +16,10 @@ fn inverter() -> dustroute_translate::LogicDag {
 #[test]
 fn captured_native_states_and_observation_coverage_are_not_inferred() {
     use dustroute_translate::snapshot::assembly_from_snapshot;
-    use dustroute_translate::{Facing, MinecraftSnapshot, Pos, Region, WireConnection};
+    use dustroute_translate::{
+        snapshot::MinecraftSnapshot, world::Facing, world::Pos, world::Region,
+        world::WireConnection,
+    };
     let snapshot: MinecraftSnapshot = serde_json::from_value(serde_json::json!({
         "min": {"x": 0, "y": 0, "z": 0}, "max": {"x": 3, "y": 1, "z": 0},
         "blocks": [
@@ -39,7 +44,7 @@ fn captured_native_states_and_observation_coverage_are_not_inferred() {
     assert_eq!(wire.observed_properties, snapshot.blocks[0].properties);
     assert_eq!(wire.power_level, Some(7));
     assert_ne!(
-        dustroute_translate::world_from_snapshot(&snapshot)
+        dustroute_translate::snapshot::world_from_snapshot(&snapshot)
             .unwrap()
             .get(Pos::new(0, 1, 0))
             .unwrap()
@@ -78,7 +83,7 @@ fn half_adder_roundtrip_restores_composed_wire_states_and_preserves_source_revis
     let mut catalog = builtin_blueprints().clone();
     let sources = catalog.to_json().unwrap();
     let compiled = BaselineCompiler::new(Default::default())
-        .compile(&dustroute_translate::half_adder())
+        .compile(&dustroute_translate::circuits::half_adder())
         .unwrap();
     let assembly = compiled.assembly.as_ref().unwrap();
     let view = assembly.inspect(&catalog).unwrap();
@@ -147,7 +152,9 @@ fn half_adder_roundtrip_restores_composed_wire_states_and_preserves_source_revis
 
 #[test]
 fn replacing_a_shared_not_arrangement_can_change_its_nesting_without_mutating_history() {
-    use dustroute_translate::{Pos, Region, blueprint::blueprint_cell, verify_cell};
+    use dustroute_translate::{
+        blueprint::blueprint_cell, cell_library::verify_cell, world::Pos, world::Region,
+    };
     let mut catalog = builtin_blueprints().clone();
     let top_id = BlueprintRevisionId::new(NOT_TOP_REVISION).unwrap();
     let side_id = BlueprintRevisionId::new(NOT_SIDE_REVISION).unwrap();
@@ -283,7 +290,7 @@ fn exact_type_requirements_are_checked_against_actual_state_after_loading() {
     validate_assembly(&catalog, &actual).unwrap();
     // Requirements use producer-local coordinates/states, while connections
     // and placed blocks rotate together in the actual world.
-    let rotation = dustroute_translate::RotationY::R90;
+    let rotation = dustroute_translate::cells::RotationY::R90;
     for instance in &mut actual.instances {
         instance.origin = rotation.pos(instance.origin);
         instance.rotation = rotation.then(instance.rotation);
@@ -293,8 +300,10 @@ fn exact_type_requirements_are_checked_against_actual_state_after_loading() {
         record.block = rotation.block(&record.block);
     }
     for region in &mut actual.known_regions {
-        *region =
-            dustroute_translate::Region::new(rotation.pos(region.min), rotation.pos(region.max));
+        *region = dustroute_translate::world::Region::new(
+            rotation.pos(region.min),
+            rotation.pos(region.max),
+        );
     }
     for connection in &mut actual.connections {
         for position in &mut connection.path {

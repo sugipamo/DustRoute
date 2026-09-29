@@ -3,7 +3,7 @@ use dustroute_translate::behavior_type::BehaviorBudget;
 use dustroute_translate::blueprint_update::BlueprintUpdates;
 use dustroute_translate::flying_machine::generate_flying_machine;
 use dustroute_translate::promotion::CheckStatus;
-use dustroute_translate::{Pos, RotationY};
+use dustroute_translate::{cells::RotationY, world::Pos};
 
 fn request() -> FlyingMachineRequest {
     FlyingMachineRequest {

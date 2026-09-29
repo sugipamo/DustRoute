@@ -101,15 +101,14 @@ verification currently drives actual external levers as its supported test
 arrangement; it does not yet universally stimulate every possible upstream
 circuit. This limitation is not encoded as a NOT type requirement.
 
-Static type bindings require at least `dustroute.blueprint-catalog.v8`. Direct-device
-ports and block-kind types alone still need v7. Earlier catalogs retain their
-minimum schema version and remain readable; relabeling newer features with an
-older schema is rejected. The original v7 primitive archive remains available.
+All catalogs now use `dustroute.blueprint-catalog.v13`. Earlier v1–v12 archives
+are rejected; bundled primitive definitions retain their immutable IDs inside
+current v13 containers. See the [cutover guide](architecture-cutover.md).
 Proposal histories containing these bindings need at least `dustroute.blueprint-updates.v2`,
 including when only an unadopted candidate has the new obligation and the embedded
-catalog still uses v7. Relabeling these histories as v1 is rejected. Older histories
-without newer features remain v1 and readable. Physical law requirements raise
-these minima to catalog v9 and proposal-history v3; see the
+catalog has no such binding. Relabeling these histories as v1 is rejected. Histories
+without newer features can use the v1 update envelope with a current catalog.
+Physical law requirements need proposal-history v3; see the
 [law requirement contract](blueprint-mcp.md#physical-law-requirements).
 The legacy physical-cell adapter rejects obligations and interfaces it cannot
 retain. Adopting the stronger lever realization is an explicit revision change;

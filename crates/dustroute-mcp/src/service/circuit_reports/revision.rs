@@ -11,13 +11,13 @@ fn virtual_analysis_summary(
 ) -> Value {
     let hierarchy = dustroute_ir::derive_hierarchy(scene);
     let mixed = dustroute_ir::build_mixed_ir(&hierarchy);
-    let diagnostic = dustroute_translate::diagnose_scene(scene, Some(focus), complete);
+    let diagnostic = dustroute_translate::diagnostic::diagnose_scene(scene, Some(focus), complete);
     let faults = diagnostic
         .diagnosis
         .findings
         .iter()
         .filter(|finding| {
-            matches!(&finding.evidence, dustroute_translate::diagnostic::report::FindingEvidence::Connectivity(f) if f.status == dustroute_translate::CircuitDiagnosticStatus::ProbableFault)
+            matches!(&finding.evidence, dustroute_translate::diagnostic::report::FindingEvidence::Connectivity(f) if f.status == dustroute_translate::diagnostic::CircuitDiagnosticStatus::ProbableFault)
         })
         .collect::<Vec<_>>();
     let mut representations = BTreeMap::<&str, usize>::new();
@@ -73,21 +73,21 @@ pub(in super::super) fn revision_json(
 }
 
 pub(in super::super) fn revision_validation(
-    snapshot: &dustroute_translate::MinecraftSnapshot,
+    snapshot: &dustroute_translate::snapshot::MinecraftSnapshot,
     dimension: &str,
     focus: Pos,
     complete: bool,
     ticks: usize,
 ) -> Value {
-    let world = match dustroute_translate::world_from_snapshot(snapshot) {
+    let world = match dustroute_translate::snapshot::world_from_snapshot(snapshot) {
         Ok(world) => world,
         Err(error) => {
             return json!({"status":"unavailable","error":error.to_string(),"simulation":{"status":"not_run"}});
         }
     };
     let issues = world.placement_issues();
-    let bounds = dustroute_translate::RegionBounds::new(snapshot.min, snapshot.max);
-    let mut analysis = dustroute_translate::analyze_world_region(&world, bounds);
+    let bounds = dustroute_translate::world_reverse::RegionBounds::new(snapshot.min, snapshot.max);
+    let mut analysis = dustroute_translate::world_reverse::analyze_world_region(&world, bounds);
     analysis.scene.observation.dimension = dimension.into();
     let summary = virtual_analysis_summary(&analysis.scene, focus, complete);
     let simulation = if !complete || !issues.is_empty() {
@@ -102,11 +102,11 @@ pub(in super::super) fn revision_validation(
 }
 
 fn simulated_terminal_summary(
-    world: &dustroute_translate::World,
-    analysis: &dustroute_translate::RegionAnalysis,
+    world: &dustroute_translate::world::World,
+    analysis: &dustroute_translate::world_reverse::RegionAnalysis,
     ticks: usize,
 ) -> Result<Value, String> {
-    let mut simulator = dustroute_translate::RedstoneTickSimulator::new(world.clone())
+    let mut simulator = dustroute_translate::sim::RedstoneTickSimulator::new(world.clone())
         .map_err(|error| error.to_string())?;
     let mut state = simulator.snapshot();
     for _ in 0..ticks {
@@ -114,7 +114,7 @@ fn simulated_terminal_summary(
             .advance_tick()
             .map_err(|error| error.to_string())?;
     }
-    let terminal = |item: &dustroute_translate::InferredTerminal| {
+    let terminal = |item: &dustroute_translate::world_reverse::InferredTerminal| {
         json!({
             "position": item.anchor,
             "powered": state.powered(item.anchor),

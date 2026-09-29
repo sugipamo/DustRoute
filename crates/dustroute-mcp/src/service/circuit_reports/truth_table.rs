@@ -10,13 +10,13 @@ fn json_u128(value: u128) -> Value {
 }
 
 pub(in super::super) fn truth_table_error_details(
-    error: Option<&dustroute_translate::TruthTableError>,
+    error: Option<&dustroute_translate::world_reverse::TruthTableError>,
 ) -> Value {
     let Some(error) = error else {
         return Value::Null;
     };
     match error {
-        dustroute_translate::TruthTableError::BudgetExceeded {
+        dustroute_translate::world_reverse::TruthTableError::BudgetExceeded {
             rows,
             max_rows,
             estimated_work_units,
@@ -29,7 +29,7 @@ pub(in super::super) fn truth_table_error_details(
             "estimated_work_units": json_u128(*estimated_work_units),
             "max_work_units": json_u128(*max_work_units),
         }),
-        dustroute_translate::TruthTableError::RuntimeBudgetExceeded {
+        dustroute_translate::world_reverse::TruthTableError::RuntimeBudgetExceeded {
             rows,
             completed_rows,
             solver_iterations,
@@ -42,7 +42,7 @@ pub(in super::super) fn truth_table_error_details(
             "solver_iterations": solver_iterations,
             "max_solver_iterations": max_solver_iterations,
         }),
-        dustroute_translate::TruthTableError::ElapsedBudgetExceeded {
+        dustroute_translate::world_reverse::TruthTableError::ElapsedBudgetExceeded {
             rows,
             completed_rows,
             elapsed_millis,
@@ -55,7 +55,7 @@ pub(in super::super) fn truth_table_error_details(
             "elapsed_millis": json_u128(*elapsed_millis),
             "max_elapsed_millis": max_elapsed_millis,
         }),
-        dustroute_translate::TruthTableError::NonSettling {
+        dustroute_translate::world_reverse::TruthTableError::NonSettling {
             row,
             settle_ticks,
             pending_events,
@@ -66,31 +66,35 @@ pub(in super::super) fn truth_table_error_details(
             "settle_ticks": settle_ticks,
             "pending_events": pending_events,
         }),
-        dustroute_translate::TruthTableError::TooManyInputs(count) => json!({
+        dustroute_translate::world_reverse::TruthTableError::TooManyInputs(count) => json!({
             "code": "too_many_inputs",
             "message": error.to_string(),
             "input_count": count,
         }),
-        dustroute_translate::TruthTableError::IncompleteObservation => {
+        dustroute_translate::world_reverse::TruthTableError::IncompleteObservation => {
             json!({ "code": "incomplete_observation", "message": error.to_string() })
         }
-        dustroute_translate::TruthTableError::NoInputs => {
+        dustroute_translate::world_reverse::TruthTableError::NoInputs => {
             json!({ "code": "no_inputs", "message": error.to_string() })
         }
-        dustroute_translate::TruthTableError::NoOutputs => {
+        dustroute_translate::world_reverse::TruthTableError::NoOutputs => {
             json!({ "code": "no_outputs", "message": error.to_string() })
         }
-        dustroute_translate::TruthTableError::UnmappedExternalInputs(positions) => json!({
-            "code": "unmapped_external_inputs",
-            "message": error.to_string(),
-            "positions": positions,
-        }),
-        dustroute_translate::TruthTableError::UnmappedObservableOutputs(positions) => json!({
+        dustroute_translate::world_reverse::TruthTableError::UnmappedExternalInputs(positions) => {
+            json!({
+                "code": "unmapped_external_inputs",
+                "message": error.to_string(),
+                "positions": positions,
+            })
+        }
+        dustroute_translate::world_reverse::TruthTableError::UnmappedObservableOutputs(
+            positions,
+        ) => json!({
             "code": "unmapped_observable_outputs",
             "message": error.to_string(),
             "positions": positions,
         }),
-        dustroute_translate::TruthTableError::AmbiguousInputMapping {
+        dustroute_translate::world_reverse::TruthTableError::AmbiguousInputMapping {
             external_inputs,
             inferred_inputs,
         } => json!({
@@ -99,7 +103,7 @@ pub(in super::super) fn truth_table_error_details(
             "external_input_count": external_inputs,
             "inferred_input_count": inferred_inputs,
         }),
-        dustroute_translate::TruthTableError::AmbiguousOutputMapping {
+        dustroute_translate::world_reverse::TruthTableError::AmbiguousOutputMapping {
             observable_outputs,
             inferred_outputs,
         } => json!({
@@ -108,12 +112,12 @@ pub(in super::super) fn truth_table_error_details(
             "observable_output_count": observable_outputs,
             "inferred_output_count": inferred_outputs,
         }),
-        dustroute_translate::TruthTableError::NoDriverPosition(position) => json!({
+        dustroute_translate::world_reverse::TruthTableError::NoDriverPosition(position) => json!({
             "code": "no_driver_position",
             "message": error.to_string(),
             "position": position,
         }),
-        dustroute_translate::TruthTableError::InvalidDriver {
+        dustroute_translate::world_reverse::TruthTableError::InvalidDriver {
             position,
             expected,
             actual,
@@ -124,7 +128,7 @@ pub(in super::super) fn truth_table_error_details(
             "expected": expected,
             "actual": actual,
         }),
-        dustroute_translate::TruthTableError::Simulation(message) => json!({
+        dustroute_translate::world_reverse::TruthTableError::Simulation(message) => json!({
             "code": "simulation_error",
             "message": message,
         }),
@@ -132,8 +136,8 @@ pub(in super::super) fn truth_table_error_details(
 }
 
 pub(in super::super) fn reverse_result_json(
-    bounds: dustroute_translate::RegionBounds,
-    translated: &dustroute_translate::ReverseResult,
+    bounds: dustroute_translate::world_reverse::RegionBounds,
+    translated: &dustroute_translate::api::ReverseResult,
 ) -> Value {
     let mut hierarchy = dustroute_ir::hierarchy_from_views(
         &translated.analysis.scene,

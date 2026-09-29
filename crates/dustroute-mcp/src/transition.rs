@@ -5,7 +5,9 @@ use dustroute_ir::{
     TransitionPhase,
 };
 use dustroute_physical::{ComponentId, PhysicalScene};
-use dustroute_translate::{MinecraftSnapshot, ScenarioEvent, ScenarioTrace};
+use dustroute_translate::{
+    scenario::ScenarioEvent, scenario::ScenarioTrace, snapshot::MinecraftSnapshot,
+};
 use serde::{Deserialize, Serialize};
 
 use crate::{BlockUpdateEvent, UpdateRecording};
@@ -129,7 +131,7 @@ pub fn scenario_trace_from_recording_with_initial(
     recording: &UpdateRecording,
     observe: &BTreeSet<dustroute_physical::Pos>,
     duration_redstone_ticks: u64,
-    initial: Option<&dustroute_translate::MinecraftSnapshot>,
+    initial: Option<&dustroute_translate::snapshot::MinecraftSnapshot>,
 ) -> ScenarioTrace {
     let mut trace = ScenarioTrace {
         duration_redstone_ticks,
@@ -424,7 +426,8 @@ fn strength_state(state: &crate::ObservedBlockState) -> u8 {
 mod tests {
     use dustroute_physical::{Block, BlockKind, Observation, Pos, SceneBounds, VerifiedTopology};
     use dustroute_translate::{
-        MinecraftSnapshotBlock, Scenario, ScenarioDifference, compare_scenario_traces, run_scenario,
+        scenario::Scenario, scenario::ScenarioDifference, scenario::compare_scenario_traces,
+        scenario::run_scenario, snapshot::MinecraftSnapshotBlock,
     };
 
     use super::*;

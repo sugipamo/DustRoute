@@ -558,9 +558,9 @@ fn partial_recorded_wire_states_cannot_start_behavior_exploration() {
         "fixtures/piston-low-layer/07-single-input-two-row.json"
     ))
     .unwrap();
-    let snapshot: dustroute_translate::MinecraftSnapshot =
+    let snapshot: dustroute_translate::snapshot::MinecraftSnapshot =
         serde_json::from_value(case["initial"].clone()).unwrap();
-    let world = dustroute_translate::world_from_snapshot(&snapshot).unwrap();
+    let world = dustroute_translate::snapshot::world_from_snapshot(&snapshot).unwrap();
     let input: Pos = serde_json::from_value(case["input"].clone()).unwrap();
     let (mut catalog, mut assembly, path, _, _) = fixture(RotationY::R0);
     let mut source = catalog

@@ -1,6 +1,6 @@
 use dustroute_library::blueprint::BlueprintCatalog;
 use dustroute_minecraft::{Pos, Region};
-use dustroute_translate::minecraft_export::{JavaExportConfig, java_block_state};
+use dustroute_translate::minecraft_export::{JavaExportConfig, initial_java_block_state};
 use dustroute_translate::piston_construction::{ElectricalConstruction, electrical_snapshot};
 use dustroute_translate::snapshot::{MinecraftSnapshot, assembly_from_snapshot};
 
@@ -38,7 +38,7 @@ fn passive_shape_construction_preserves_states_support_order_and_teardown() {
         assert!(world.support_issues().is_empty());
         let slab = world.get(Pos::new(0, 1, 0)).unwrap();
         assert_eq!(
-            java_block_state(slab, &JavaExportConfig::default()).unwrap(),
+            initial_java_block_state(slab, &JavaExportConfig::default()).unwrap(),
             format!("minecraft:smooth_stone_slab[type={state},waterlogged=false]")
         );
         let plan = ElectricalConstruction::new(&world, region, Default::default()).unwrap();
@@ -75,7 +75,7 @@ fn incomplete_and_waterlogged_slab_states_cannot_be_exported_or_planned() {
             .unwrap()
             .proposed_world();
         assert!(
-            java_block_state(
+            initial_java_block_state(
                 world.get(Pos::default()).unwrap(),
                 &JavaExportConfig::default()
             )

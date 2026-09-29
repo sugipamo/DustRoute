@@ -78,10 +78,12 @@ impl PlanStateStore {
         });
         let bytes = serde_json::to_vec(&envelope).map_err(|error| error.to_string())?;
         let destination = directory.join(format!("{id}.json"));
-        let temporary = directory.join(format!(".{id}.{}.tmp", uuid::Uuid::new_v4()));
-        fs::write(&temporary, bytes).map_err(|error| error.to_string())?;
-        restrict_file(&temporary)?;
-        fs::rename(&temporary, destination).map_err(|error| error.to_string())
+        crate::storage::replace(
+            &destination,
+            &bytes,
+            crate::storage::Durability::ReplaceOnly,
+        )
+        .map_err(|error| error.to_string())
     }
 
     pub(crate) fn load<T: DeserializeOwned>(
@@ -125,17 +127,6 @@ fn restrict_directory(path: &std::path::Path) -> Result<(), String> {
 
 #[cfg(not(unix))]
 fn restrict_directory(_path: &std::path::Path) -> Result<(), String> {
-    Ok(())
-}
-
-#[cfg(unix)]
-fn restrict_file(path: &std::path::Path) -> Result<(), String> {
-    use std::os::unix::fs::PermissionsExt;
-    fs::set_permissions(path, fs::Permissions::from_mode(0o600)).map_err(|error| error.to_string())
-}
-
-#[cfg(not(unix))]
-fn restrict_file(_path: &std::path::Path) -> Result<(), String> {
     Ok(())
 }
 

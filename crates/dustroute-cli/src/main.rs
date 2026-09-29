@@ -6,9 +6,10 @@ use std::io::Read;
 
 use dustroute_app::DustRouteService;
 use dustroute_translate::{
-    ForwardOptions, JavaExportConfig, PistonDoorScenario, PistonDoorScenarioError, Pos,
-    RegionBounds, ReverseRequest, compiled_circuit_datapack, semantics_datapack,
-    world_from_snapshot_json,
+    api::ForwardOptions, api::ReverseRequest, minecraft_export::JavaExportConfig,
+    minecraft_export::compiled_circuit_datapack, minecraft_semantics::semantics_datapack,
+    piston_door::PistonDoorScenario, piston_door::PistonDoorScenarioError,
+    snapshot::world_from_snapshot_json, world::Pos, world_reverse::RegionBounds,
 };
 use serde_json::{Value, json};
 
@@ -278,7 +279,7 @@ fn parse_translation(value: &str) -> Result<Pos, String> {
     ))
 }
 
-fn world_state_json(world: &dustroute_translate::World) -> Value {
+fn world_state_json(world: &dustroute_translate::world::World) -> Value {
     let blocks = world
         .iter()
         .map(|(position, block)| json!({ "position": position, "block": block }))

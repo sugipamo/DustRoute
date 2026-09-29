@@ -565,8 +565,9 @@ fn ports_for(block: &Block) -> Vec<PhysicalPort> {
             push(PortRole::Output, face, PortChannel::Observation);
         }
     }
-    match block.kind {
-        BlockKind::RedstoneWire => {
+    use dustroute_minecraft::block_contract::PortLayout;
+    match block.kind.contract().ports {
+        PortLayout::Wire => {
             for face in horizontal {
                 push(PortRole::Bidirectional, face, PortChannel::RedstoneSignal);
             }
@@ -582,7 +583,7 @@ fn ports_for(block: &Block) -> Vec<PhysicalPort> {
             );
             push(PortRole::Support, Facing::Down, PortChannel::Structural);
         }
-        BlockKind::Repeater | BlockKind::Comparator => {
+        PortLayout::Diode => {
             let facing = block.facing.unwrap_or(Facing::North);
             push(PortRole::Output, facing, PortChannel::RedstoneSignal);
             push(
@@ -598,7 +599,7 @@ fn ports_for(block: &Block) -> Vec<PhysicalPort> {
             }
             push(PortRole::Support, Facing::Down, PortChannel::Structural);
         }
-        BlockKind::RedstoneTorch => {
+        PortLayout::Torch => {
             for face in horizontal {
                 push(PortRole::Output, face, PortChannel::RedstoneSignal);
             }
@@ -612,10 +613,7 @@ fn ports_for(block: &Block) -> Vec<PhysicalPort> {
             };
             push(PortRole::Control, control_face, PortChannel::RedstoneSignal);
         }
-        BlockKind::Lever
-        | BlockKind::Button
-        | BlockKind::PressurePlate
-        | BlockKind::RedstoneBlock => {
+        PortLayout::Source => {
             for face in horizontal {
                 push(PortRole::Output, face, PortChannel::StrongPower);
             }
@@ -625,7 +623,7 @@ fn ports_for(block: &Block) -> Vec<PhysicalPort> {
                 push(PortRole::Output, face, PortChannel::StrongPower);
             }
         }
-        BlockKind::Piston => {
+        PortLayout::Piston => {
             for face in horizontal {
                 push(PortRole::Input, face, PortChannel::RedstoneSignal);
             }
@@ -635,15 +633,12 @@ fn ports_for(block: &Block) -> Vec<PhysicalPort> {
                 PortChannel::Mechanical,
             );
         }
-        BlockKind::Observer => {
+        PortLayout::Observer => {
             let output = block.facing.unwrap_or(Facing::North);
             push(PortRole::Output, output, PortChannel::StrongPower);
             push(PortRole::Input, output.opposite(), PortChannel::Observation);
         }
-        BlockKind::Solid
-        | BlockKind::Transparent
-        | BlockKind::RedstoneLamp
-        | BlockKind::CopperBulb => {
+        PortLayout::PassiveConductor => {
             if !block.redstone_traits().conducts_weak_power {
                 return ports;
             }
@@ -658,7 +653,7 @@ fn ports_for(block: &Block) -> Vec<PhysicalPort> {
                 push(PortRole::Bidirectional, face, PortChannel::WeakPower);
             }
         }
-        BlockKind::Air | BlockKind::PistonHead | BlockKind::MovingPiston => {}
+        PortLayout::None => {}
     }
     ports
 }

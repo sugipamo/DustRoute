@@ -68,7 +68,7 @@ pub(super) async fn start_construction_bridge(
                     }
                     "preview_region" => json!({"particle_corners":8}),
                     "wait_ticks" => json!({"waited":true}),
-                    "write_blocks" => {
+                    "submit_command_batch" => {
                         // Transport stub only: physical callback conformance is
                         // covered by independent server captures, not this mock.
                         let expected = state.steps.pop_front().expect("unexpected write");
@@ -102,12 +102,12 @@ pub(super) async fn start_construction_bridge(
                         );
                         state.snapshot = Some(expected["expected"].clone());
                         state.writes += 1;
-                        json!({"submitted_changes":1})
+                        json!({"protocol":crate::bridge_protocol::MUTATION_PROTOCOL,"submitted_changes":1})
                     }
                     method => panic!("unexpected transport method {method}"),
                 }
             };
-            if req["method"] == "write_blocks" {
+            if req["method"] == "submit_command_batch" {
                 let state = transport.lock().unwrap();
                 if state.lose_write_reply_at == Some(state.writes) {
                     // The simulated server applied the command but the TCP

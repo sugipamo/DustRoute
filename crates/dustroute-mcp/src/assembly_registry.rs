@@ -1,23 +1,21 @@
 //! Durable facts about world operations, deliberately separate from executable
 //! capabilities and TTL-bound plans. A file lock spans each mutation attempt.
 use std::fs::{self, File, OpenOptions};
-use std::io::{Read, Write};
+use std::io::Read;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use dustroute_library::assembly::Assembly;
 use dustroute_library::blueprint::AssemblyRevisionId;
 use dustroute_library::runtime_behavior::RuntimeBehaviorContext;
-use dustroute_translate::{MinecraftSnapshot, assembly_transform::AssemblyTransform};
+use dustroute_translate::{assembly_transform::AssemblyTransform, snapshot::MinecraftSnapshot};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
 use crate::{bridge::BotStatus, state::PlanStateStore};
 
-const SCHEMA: &str = "dustroute.placed-assembly.v3";
-const RECONSTRUCTION_SCHEMA: &str = "dustroute.placed-assembly.v2";
-const LEGACY_SCHEMA: &str = "dustroute.placed-assembly.v1";
+const SCHEMA: &str = "dustroute.placed-assembly.v4";
 const MAX_BYTES: u64 = 32 * 1024 * 1024;
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
@@ -103,7 +101,7 @@ pub(crate) struct PlacedAssembly {
     pub revision: u64,
     pub player: String,
     pub assembly_id: AssemblyRevisionId,
-    pub source_identity: Value,
+    pub source_identity: crate::source_identity::SourceIdentity,
     pub transform: AssemblyTransform,
     pub target: TargetServer,
     pub assembly: Assembly,
@@ -174,19 +172,14 @@ impl RegistryLock {
         if bytes.len() as u64 > MAX_BYTES {
             return Err("placed Assembly record exceeds 32 MiB".into());
         }
-        let record: PlacedAssembly = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-        if !matches!(
-            record.schema.as_str(),
-            SCHEMA | RECONSTRUCTION_SCHEMA | LEGACY_SCHEMA
-        ) || record.instance_id != id
+        let header: Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+        if header["schema"] != SCHEMA {
+            return Err("retired placed Assembly format; preserve the old record separately and recapture/re-adopt with v4".into());
+        }
+        let record: PlacedAssembly = serde_json::from_value(header).map_err(|e| e.to_string())?;
+        if record.schema != SCHEMA
+            || record.instance_id != id
             || record.revision == 0
-            || (record.schema == LEGACY_SCHEMA
-                && record.attempts.iter().any(|a| a.reconstruction.is_some()))
-            || (record.schema != SCHEMA
-                && record
-                    .attempts
-                    .iter()
-                    .any(|a| a.operating_removal.is_some()))
             || record.attempts.iter().any(|a| {
                 a.operating_removal.is_some() && (!a.removal || a.reconstruction.is_some())
             })
@@ -233,16 +226,11 @@ impl RegistryLock {
         let previous = self.load(record.instance_id)?;
         if previous.as_ref().map_or(0, |r| r.revision) != record.revision
             || previous.as_ref().is_some_and(|r| r.player != record.player)
-            || !matches!(
-                record.schema.as_str(),
-                SCHEMA | RECONSTRUCTION_SCHEMA | LEGACY_SCHEMA
-            )
+            || record.schema != SCHEMA
         {
             return Err("placed Assembly record changed; reobserve and replan".into());
         }
         let mut next = record.clone();
-        // Read legacy records as history; only a save upgrades the container.
-        // Older binaries reject new operation semantics instead of guessing.
         next.schema = SCHEMA.into();
         next.revision = next
             .revision
@@ -253,21 +241,15 @@ impl RegistryLock {
         if bytes.len() as u64 > MAX_BYTES {
             return Err("placed Assembly record exceeds 32 MiB".into());
         }
-        let temporary = self.root.join(format!(".{}.tmp", Uuid::new_v4()));
         let destination = self.root.join(format!("{}.json", record.instance_id));
-        let save = (|| -> std::io::Result<()> {
-            let mut file = options(true).open(&temporary)?;
-            file.write_all(&bytes)?;
-            file.sync_all()?;
-            fs::rename(&temporary, destination)?;
-            File::open(&self.root)?.sync_all()
-        })();
-        if let Err(error) = save {
-            let _ = fs::remove_file(temporary);
-            return Err(format!(
-                "placed Assembly persistence failed; inspect before retry: {error}"
-            ));
-        }
+        crate::storage::replace(
+            &destination,
+            &bytes,
+            crate::storage::Durability::FileAndDirectory,
+        )
+        .map_err(|error| {
+            format!("placed Assembly persistence failed; inspect before retry: {error}")
+        })?;
         *record = next;
         Ok(())
     }
@@ -292,7 +274,7 @@ fn options(exclusive: bool) -> OpenOptions {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use dustroute_translate::{Pos, Region, RotationY};
+    use dustroute_translate::{cells::RotationY, world::Pos, world::Region};
 
     #[test]
     fn durable_registry_rejects_competing_writers_stale_values_wrong_owners_and_corrupt_records() {
@@ -307,7 +289,24 @@ mod tests {
             revision: 0,
             player: "Tester".into(),
             assembly_id: AssemblyRevisionId::new("test.assembly.v1").unwrap(),
-            source_identity: Value::Null,
+            source_identity: crate::source_identity::SourceIdentity {
+                record: dustroute_library::assembly::AssemblyRevision {
+                    id: AssemblyRevisionId::new("test.source.v1").unwrap(),
+                    parents: vec![],
+                    assembly: Assembly {
+                        name: "source".into(),
+                        instances: vec![],
+                        blocks: vec![],
+                        known_regions: vec![Region::new(pos, pos)],
+                        connections: vec![],
+                        boundaries: vec![],
+                    },
+                },
+                adopted_by: dustroute_library::blueprint::BlueprintUpdateId::new("test.adoption")
+                    .unwrap(),
+                context: RuntimeBehaviorContext::fresh_pistons(Region::new(pos, pos), vec![]),
+                catalog: Default::default(),
+            },
             transform: AssemblyTransform {
                 source_anchor: pos,
                 target_anchor: pos,
@@ -349,7 +348,7 @@ mod tests {
             .assembly_instance_root()
             .join(format!("{}.json", record.instance_id));
         let mut old: Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
-        old["schema"] = serde_json::json!(LEGACY_SCHEMA);
+        old["schema"] = serde_json::json!(SCHEMA);
         old["updated_at_unix_ms"] = serde_json::json!(1);
         fs::write(&path, serde_json::to_vec(&old).unwrap()).unwrap();
         drop(registry);
@@ -363,9 +362,7 @@ mod tests {
             1,
             "plan TTL must never erase placed records"
         );
-        let mut legacy = reopened.get(record.instance_id, "Tester").unwrap();
-        assert_eq!(legacy.schema, LEGACY_SCHEMA);
-        reopened.save(&mut legacy).unwrap();
+        let legacy = reopened.get(record.instance_id, "Tester").unwrap();
         assert_eq!(legacy.schema, SCHEMA);
         assert_eq!(legacy.state, InstanceState::NeedsInspection);
         let mut history = serde_json::to_value(&legacy).unwrap();
@@ -381,7 +378,11 @@ mod tests {
                 .operating_removal
                 .is_some()
         );
-        for schema in [LEGACY_SCHEMA, RECONSTRUCTION_SCHEMA] {
+        for schema in [
+            "dustroute.placed-assembly.v1",
+            "dustroute.placed-assembly.v2",
+            "dustroute.placed-assembly.v3",
+        ] {
             history["schema"] = serde_json::json!(schema);
             fs::write(&path, serde_json::to_vec(&history).unwrap()).unwrap();
             assert!(reopened.get(record.instance_id, "Tester").is_err());
@@ -391,7 +392,7 @@ mod tests {
                 .unwrap()
                 .remove("operating_removal");
             fs::write(&path, serde_json::to_vec(&old_without_removal).unwrap()).unwrap();
-            assert!(reopened.get(record.instance_id, "Tester").is_ok());
+            assert!(reopened.get(record.instance_id, "Tester").is_err());
         }
         history["schema"] = serde_json::json!(SCHEMA);
         history["attempts"][0]["removal"] = serde_json::json!(false);

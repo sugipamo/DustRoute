@@ -1,50 +1,46 @@
-//! Comparison for one pinned physical adapter, never a generic scheduler
-//! optimization. No world block, pending root, tick section or carrier progress
+//! Root normalization explicitly enabled by an adapter comparison contract. No world block, pending root, tick section or carrier progress
 //! is removed. Exact checkpoints and cumulative diagnostic budgets are unchanged.
 use super::*;
-use crate::time::piston_runtime::PistonEvent;
 use std::cmp::Ordering;
 
 mod comparison;
-
-pub const COMPARISON: &str = "dustroute.piston-electrical-root-comparison.v3";
 
 /// Opaque, process-local representative of a complete physical root boundary.
 /// Its ordering compares the full canonical record, not a hash. The selected
 /// adapter never reads event/cause IDs, absolute positive tick numbers or trace
 /// records. Computation counters are renewed per root; limits are retained.
 #[derive(Clone, Debug)]
-pub struct PistonBehaviorState {
-    state: State<PistonEvent>,
+pub struct RootBehaviorState<P> {
+    state: State<P>,
     key: Vec<u8>,
 }
 
-impl PistonBehaviorState {
-    pub const COMPARISON: &'static str = COMPARISON;
-}
-impl PartialEq for PistonBehaviorState {
+impl<P> PartialEq for RootBehaviorState<P> {
     fn eq(&self, other: &Self) -> bool {
         self.key == other.key
     }
 }
-impl Eq for PistonBehaviorState {}
-impl PartialOrd for PistonBehaviorState {
+impl<P> Eq for RootBehaviorState<P> {}
+impl<P> PartialOrd for RootBehaviorState<P> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
-impl Ord for PistonBehaviorState {
+impl<P> Ord for RootBehaviorState<P> {
     fn cmp(&self, other: &Self) -> Ordering {
         self.key.cmp(&other.key)
     }
 }
 
-impl<A: RuntimeAdapter<Payload = PistonEvent>> SynchronousWorldRuntime<A> {
+impl<A: RootComparisonAdapter> SynchronousWorldRuntime<A>
+where
+    A::Payload: Serialize,
+{
     /// Supply the next External boundary before jumping to a later queued
     /// root. A world clock continues even with an empty event queue. Without
     /// this boundary an explorer would miss inputs before a carrier's next
     /// tick, or after an idle interval. This does not execute or delete work.
-    pub(crate) fn piston_behavior_clock(&mut self) -> Result<bool, RuntimeError> {
+    pub(crate) fn advance_root_clock(&mut self) -> Result<bool, RuntimeError> {
         self.ensure_running()?;
         if !self.at_input_boundary() {
             return Err(RuntimeError::InputInsideCallback);
@@ -74,7 +70,9 @@ impl<A: RuntimeAdapter<Payload = PistonEvent>> SynchronousWorldRuntime<A> {
         };
         Ok(true)
     }
-    pub(crate) fn piston_behavior_state(&self) -> Result<PistonBehaviorState, RuntimeError> {
+    pub(crate) fn root_behavior_state(
+        &self,
+    ) -> Result<RootBehaviorState<A::Payload>, RuntimeError> {
         self.ensure_running()?;
         if !self.at_input_boundary() {
             return Err(RuntimeError::InputInsideCallback);
@@ -145,29 +143,9 @@ impl<A: RuntimeAdapter<Payload = PistonEvent>> SynchronousWorldRuntime<A> {
                 let invocation = &mut delivery.invocation;
                 // Only these queued payloads are emitted by the pinned adapter.
                 // A new suspended operation cannot silently lose captured state.
-                if !matches!(
-                    (invocation.kind, &invocation.call.payload),
-                    (
-                        InvocationKind::External,
-                        PistonEvent::Initialize
-                            | PistonEvent::Input { .. }
-                            | PistonEvent::Device {
-                                callback: crate::device_program::Callback::Use,
-                                source: None,
-                                captured: None
-                            }
-                    ) | (
-                        InvocationKind::ScheduledTick,
-                        PistonEvent::Device {
-                            callback: crate::device_program::Callback::Tick,
-                            source: None,
-                            captured: None
-                        }
-                    ) | (InvocationKind::BlockEvent, PistonEvent::Block { .. })
-                        | (InvocationKind::CarrierTick, PistonEvent::CarrierTick)
-                ) {
+                if !A::permits_root(invocation.kind, &invocation.call.payload) {
                     return Err(RuntimeError::Invalid(
-                        "unsupported root payload in piston behavior comparison".into(),
+                        "unsupported root payload in behavior comparison".into(),
                     ));
                 }
                 invocation.id = state.next_id;
@@ -189,12 +167,12 @@ impl<A: RuntimeAdapter<Payload = PistonEvent>> SynchronousWorldRuntime<A> {
             pending.insert(time, queue);
         }
         state.pending = pending;
-        let key = comparison::PhysicalRootRecord::from_state(&state).encode()?;
-        Ok(PistonBehaviorState { state, key })
+        let key = comparison::RootRecord::from_state(&state, A::COMPARISON).encode()?;
+        Ok(RootBehaviorState { state, key })
     }
 
-    pub(crate) fn from_piston_behavior_state(
-        state: &PistonBehaviorState,
+    pub(crate) fn from_root_behavior_state(
+        state: &RootBehaviorState<A::Payload>,
     ) -> Result<Self, RuntimeError> {
         Self::check_restore_identity(&state.state, "behavior state")?;
         Ok(Self {
@@ -248,7 +226,7 @@ mod tests {
         let captured = runtime.behavior_state().unwrap();
         let state = &captured.state;
         let previous_key = serde_json::to_vec(&(
-            COMPARISON,
+            ElectricalPistonAdapter::COMPARISON,
             state.profile,
             state.adapter,
             state.region,
@@ -307,19 +285,19 @@ mod tests {
         run.run_until_idle().unwrap();
         let a = run.behavior_state().unwrap();
         let mut changed =
-            SynchronousWorldRuntime::<ElectricalPistonAdapter>::from_piston_behavior_state(&a)
+            SynchronousWorldRuntime::<ElectricalPistonAdapter>::from_root_behavior_state(&a)
                 .unwrap();
         // This test is about the generic runtime record, independent of device admission.
         changed.state.outputs.insert(INPUT, 7);
-        let b = changed.piston_behavior_state().unwrap();
+        let b = changed.root_behavior_state().unwrap();
         assert_eq!(a.state.world, b.state.world);
         assert_eq!(a.state.pending, b.state.pending);
         assert_ne!(a, b);
         let restored =
-            SynchronousWorldRuntime::<ElectricalPistonAdapter>::from_piston_behavior_state(&b)
+            SynchronousWorldRuntime::<ElectricalPistonAdapter>::from_root_behavior_state(&b)
                 .unwrap();
         assert_eq!(restored.view().stored_output(INPUT).unwrap(), 7);
-        assert_eq!(restored.piston_behavior_state().unwrap(), b);
+        assert_eq!(restored.root_behavior_state().unwrap(), b);
     }
 
     #[test]
@@ -353,13 +331,13 @@ mod tests {
         run.run_until_idle().unwrap();
         let state = run.behavior_state().unwrap();
         let mut changed =
-            SynchronousWorldRuntime::<ElectricalPistonAdapter>::from_piston_behavior_state(&state)
+            SynchronousWorldRuntime::<ElectricalPistonAdapter>::from_root_behavior_state(&state)
                 .unwrap();
         changed.state.time.game_tick = 1;
-        assert_ne!(state, changed.piston_behavior_state().unwrap());
+        assert_ne!(state, changed.root_behavior_state().unwrap());
         changed.state.time.game_tick = 0;
         changed.state.time.section = TickSection::BlockEvents;
-        assert_ne!(state, changed.piston_behavior_state().unwrap());
+        assert_ne!(state, changed.root_behavior_state().unwrap());
 
         run.input_now(INPUT, true).unwrap();
         run.step().unwrap();
@@ -368,7 +346,7 @@ mod tests {
         assert!(state.state.carriers.contains_key(&OUT));
         for modify in [0, 1, 2, 3] {
             let mut changed =
-                SynchronousWorldRuntime::<ElectricalPistonAdapter>::from_piston_behavior_state(
+                SynchronousWorldRuntime::<ElectricalPistonAdapter>::from_root_behavior_state(
                     &state,
                 )
                 .unwrap();
@@ -407,7 +385,7 @@ mod tests {
             }
             assert_ne!(
                 state,
-                changed.piston_behavior_state().unwrap(),
+                changed.root_behavior_state().unwrap(),
                 "change {modify}"
             );
         }
@@ -422,7 +400,7 @@ mod tests {
         }
         let state = run.behavior_state().unwrap();
         let mut changed =
-            SynchronousWorldRuntime::<ElectricalPistonAdapter>::from_piston_behavior_state(&state)
+            SynchronousWorldRuntime::<ElectricalPistonAdapter>::from_root_behavior_state(&state)
                 .unwrap();
         changed
             .state
@@ -431,7 +409,7 @@ mod tests {
             .unwrap()
             .history
             .saved_world_time = changed.state.time.game_tick;
-        assert_ne!(state, changed.piston_behavior_state().unwrap());
+        assert_ne!(state, changed.root_behavior_state().unwrap());
     }
 
     #[test]
@@ -487,13 +465,13 @@ mod tests {
         run.run_until_idle().unwrap();
         let state = run.behavior_state().unwrap();
         let mut failed =
-            SynchronousWorldRuntime::<ElectricalPistonAdapter>::from_piston_behavior_state(&state)
+            SynchronousWorldRuntime::<ElectricalPistonAdapter>::from_root_behavior_state(&state)
                 .unwrap();
         failed.status = TraceStatus::Failed {
             error: "unsupported physical step".into(),
         };
         assert!(matches!(
-            failed.piston_behavior_state(),
+            failed.root_behavior_state(),
             Err(RuntimeError::Failed(_))
         ));
     }

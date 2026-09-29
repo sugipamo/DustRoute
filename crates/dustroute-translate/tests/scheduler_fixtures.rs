@@ -1,6 +1,8 @@
 use std::collections::BTreeMap;
 
-use dustroute_translate::{PhysicsEventPhase, SchedulerProfile, SchedulerProfileId};
+use dustroute_translate::{
+    world::time::PhysicsEventPhase, world::time::SchedulerProfile, world::time::SchedulerProfileId,
+};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]

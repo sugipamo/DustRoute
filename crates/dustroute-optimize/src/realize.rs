@@ -15,7 +15,9 @@ use dustroute_translate::world_reverse::{
     InferredTerminal, InferredTruthTable, RegionAnalysis, RegionBounds, TerminalConfidence,
     TruthTableComparison, analyze_world_region, compare_truth_tables, infer_truth_table,
 };
-use dustroute_translate::{RedstoneTickSimulator, TruthTableRow, update_wire_shapes};
+use dustroute_translate::{
+    sim::RedstoneTickSimulator, wire::update_wire_shapes, world_reverse::TruthTableRow,
+};
 
 use crate::phased::optimize_staged_windowed_with_library;
 use crate::{OptimizationPlan, StagedOptimizationResult};
@@ -330,7 +332,7 @@ fn route_and_materialize(
 fn changed_cells(
     before: &PlacementCircuit,
     after: &PlacementCircuit,
-) -> BTreeSet<dustroute_translate::CellId> {
+) -> BTreeSet<dustroute_translate::physical::CellId> {
     before
         .cells
         .iter()
@@ -345,7 +347,7 @@ fn same_endpoint_identity(left: &Endpoint, right: &Endpoint) -> bool {
 fn route_and_materialize_focused(
     circuit: &PlacementCircuit,
     original_routing: &MultiNetRouting,
-    focus: &BTreeSet<dustroute_translate::CellId>,
+    focus: &BTreeSet<dustroute_translate::physical::CellId>,
     config: OptimizationRoutingConfig,
 ) -> Result<(MultiNetRouting, LegalityReport, World), OptimizationRealizationError> {
     let fixed = MultiNetRouting {
@@ -469,9 +471,9 @@ fn analysis_bounds(first: &World, second: &World, margin: i32) -> RegionBounds {
 
 fn boundary_endpoints(circuit: &PlacementCircuit, inputs: bool) -> Vec<Endpoint> {
     let direction = if inputs {
-        dustroute_translate::TerminalDirection::Input
+        dustroute_translate::physical::TerminalDirection::Input
     } else {
-        dustroute_translate::TerminalDirection::Output
+        dustroute_translate::physical::TerminalDirection::Output
     };
     if !circuit.terminals.is_empty() {
         return circuit
@@ -538,7 +540,7 @@ fn canonical_table(
     let mut rows = table
         .rows
         .iter()
-        .map(|row| dustroute_translate::TruthTableRow {
+        .map(|row| dustroute_translate::world_reverse::TruthTableRow {
             inputs: input_order.iter().map(|index| row.inputs[*index]).collect(),
             outputs: output_order
                 .iter()
@@ -739,10 +741,12 @@ pub fn optimization_patch(
 #[cfg(test)]
 mod tests {
     use dustroute_translate::cells::{PlacedCell, PortKind, RotationY, not_cell};
-    use dustroute_translate::logic::GateKind;
+    use dustroute_translate::ir::logic::GateKind;
     use dustroute_translate::physical::PlacementCircuit;
     use dustroute_translate::world::Pos;
-    use dustroute_translate::{BaselineCompileConfig, BaselineCompiler, half_adder};
+    use dustroute_translate::{
+        circuits::half_adder, compiler::BaselineCompileConfig, compiler::BaselineCompiler,
+    };
 
     use super::*;
 
@@ -895,7 +899,7 @@ mod tests {
                 .terminals
                 .values()
                 .filter(|terminal| {
-                    terminal.direction == dustroute_translate::TerminalDirection::Input
+                    terminal.direction == dustroute_translate::physical::TerminalDirection::Input
                 })
                 .count(),
             2
@@ -907,7 +911,7 @@ mod tests {
                 .terminals
                 .values()
                 .filter(|terminal| {
-                    terminal.direction == dustroute_translate::TerminalDirection::Output
+                    terminal.direction == dustroute_translate::physical::TerminalDirection::Output
                 })
                 .count(),
             2
@@ -942,7 +946,7 @@ mod tests {
         let compiled = BaselineCompiler::new(BaselineCompileConfig::default())
             .compile(&half_adder())
             .unwrap();
-        let focus = dustroute_translate::CellId(7);
+        let focus = dustroute_translate::physical::CellId(7);
         let mut candidate = compiled.physical.clone();
         candidate.cells.get_mut(&focus).unwrap().placed.origin =
             candidate.cells[&focus].placed.origin.offset(0, 0, -1);

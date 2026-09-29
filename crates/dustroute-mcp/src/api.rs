@@ -1,7 +1,7 @@
 //! Stable JSON-facing MCP response contracts.
 
 use dustroute_physical::Pos;
-use dustroute_translate::{ScenarioEvent, ScenarioTrace};
+use dustroute_translate::{scenario::ScenarioEvent, scenario::ScenarioTrace};
 use serde::Serialize;
 
 pub const ERROR_SCHEMA_V1: &str = "dustroute.error.v1";

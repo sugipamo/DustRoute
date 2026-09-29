@@ -1,20 +1,22 @@
 use dustroute_ir::derive_hierarchy;
 use dustroute_physical::{BlockKind, CapabilityLevel, CapabilityStage, Pos};
 use dustroute_translate::{
-    DeviceOutputState, RegionBounds, ReverseRequest, Translator, analyze_world_region,
-    extract_connectivity, solve_instantaneous, world_from_snapshot_json,
+    api::ReverseRequest, api::Translator, connectivity::extract_connectivity,
+    electrical::DeviceOutputState, electrical::solve_instantaneous,
+    snapshot::world_from_snapshot_json, world_reverse::RegionBounds,
+    world_reverse::analyze_world_region,
 };
 
 fn load(
     source: &str,
 ) -> (
-    dustroute_translate::MinecraftSnapshot,
-    dustroute_translate::World,
+    dustroute_translate::snapshot::MinecraftSnapshot,
+    dustroute_translate::world::World,
 ) {
     world_from_snapshot_json(source).expect("fixture must be a valid lossless observation")
 }
 
-fn analyze(source: &str) -> dustroute_translate::RegionAnalysis {
+fn analyze(source: &str) -> dustroute_translate::world_reverse::RegionAnalysis {
     let (snapshot, world) = load(source);
     analyze_world_region(&world, RegionBounds::new(snapshot.min, snapshot.max))
 }
@@ -43,7 +45,7 @@ fn all_observation_regression_fixtures_import() {
 #[test]
 fn live_comparator_modes_match_analog_simulation() {
     let (_, world) = load(include_str!("fixtures/comparator_modes_live.json"));
-    let mut simulator = dustroute_translate::RedstoneTickSimulator::new(world).unwrap();
+    let mut simulator = dustroute_translate::sim::RedstoneTickSimulator::new(world).unwrap();
     let state = simulator.advance_tick().unwrap();
     assert_eq!(state.strength(Pos::new(2, 1, 0)), 15);
     assert_eq!(state.strength(Pos::new(2, 1, 5)), 1);

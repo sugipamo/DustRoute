@@ -1,4 +1,4 @@
-use crate::logic::GateKind;
+use crate::ir::logic::GateKind;
 use crate::world::{Block, Facing, Pos, World};
 
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]

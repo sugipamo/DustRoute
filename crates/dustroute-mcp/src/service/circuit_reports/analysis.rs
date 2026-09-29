@@ -6,17 +6,19 @@ use serde_json::{Value, json};
 use std::collections::{BTreeMap, BTreeSet};
 
 pub(in super::super) fn logical_role_json(
-    translated: &dustroute_translate::ReverseResult,
+    translated: &dustroute_translate::api::ReverseResult,
 ) -> Value {
-    serde_json::to_value(dustroute_translate::derive_local_logic(translated))
-        .unwrap_or_else(|error| json!({ "classification": "unknown", "reason": error.to_string() }))
+    serde_json::to_value(dustroute_translate::analysis::derive_local_logic(
+        translated,
+    ))
+    .unwrap_or_else(|error| json!({ "classification": "unknown", "reason": error.to_string() }))
 }
 
 pub(in super::super) fn focused_role_json(
-    translated: &dustroute_translate::ReverseResult,
+    translated: &dustroute_translate::api::ReverseResult,
     target: Pos,
 ) -> Value {
-    let focused = dustroute_translate::classify_focused_role(translated, target);
+    let focused = dustroute_translate::analysis::classify_focused_role(translated, target);
     let physical_component = translated
         .analysis
         .scene
@@ -65,11 +67,11 @@ pub(in super::super) fn focused_role_json(
 }
 
 pub(in super::super) fn focused_explanation_json(
-    analysis: &dustroute_translate::PhysicalAnalysis,
+    analysis: &dustroute_translate::analysis::PhysicalAnalysis,
     target: Pos,
     analysis_complete: bool,
 ) -> Value {
-    serde_json::to_value(dustroute_translate::explain_focused_component(
+    serde_json::to_value(dustroute_translate::analysis::explain_focused_component(
         analysis,
         target,
         analysis_complete,
@@ -89,7 +91,7 @@ fn focused_scene_explanation_json(
     target: Pos,
     analysis_complete: bool,
 ) -> Value {
-    serde_json::to_value(dustroute_translate::explain_focused_scene(
+    serde_json::to_value(dustroute_translate::analysis::explain_focused_scene(
         scene,
         hierarchy,
         target,
@@ -184,9 +186,9 @@ pub(in super::super) fn signal_liveness_json(
 ) -> Value {
     const MAX_FINDINGS: usize = 64;
     const MAX_RANKED_FINDINGS: usize = 16;
-    let report = dustroute_translate::analyze_signal_liveness(scene);
+    let report = dustroute_translate::liveness::analyze_signal_liveness(scene);
     let ranked = focus.map(|focus| {
-        dustroute_translate::rank_liveness_findings(scene, &report, focus)
+        dustroute_translate::liveness::rank_liveness_findings(scene, &report, focus)
             .into_iter()
             .take(MAX_RANKED_FINDINGS)
             .collect::<Vec<_>>()
@@ -197,14 +199,16 @@ pub(in super::super) fn signal_liveness_json(
             .iter()
             .fold(BTreeMap::<String, usize>::new(), |mut counts, source| {
                 let kind = match source.kind {
-                    dustroute_translate::SignalSourceKind::ControllableInput => {
+                    dustroute_translate::liveness::SignalSourceKind::ControllableInput => {
                         "controllable_input"
                     }
-                    dustroute_translate::SignalSourceKind::IntrinsicSource => "intrinsic_source",
-                    dustroute_translate::SignalSourceKind::ObservationBoundary => {
+                    dustroute_translate::liveness::SignalSourceKind::IntrinsicSource => {
+                        "intrinsic_source"
+                    }
+                    dustroute_translate::liveness::SignalSourceKind::ObservationBoundary => {
                         "observation_boundary"
                     }
-                    dustroute_translate::SignalSourceKind::InferredPrimaryInput => {
+                    dustroute_translate::liveness::SignalSourceKind::InferredPrimaryInput => {
                         "inferred_primary_input"
                     }
                 };
@@ -215,7 +219,8 @@ pub(in super::super) fn signal_liveness_json(
         .required_input_assessments
         .iter()
         .filter(|assessment| {
-            assessment.status == dustroute_translate::RequiredInputStatus::AwaitingExternalInput
+            assessment.status
+                == dustroute_translate::liveness::RequiredInputStatus::AwaitingExternalInput
         })
         .take(MAX_FINDINGS)
         .collect::<Vec<_>>();
@@ -228,7 +233,7 @@ pub(in super::super) fn signal_liveness_json(
         "source_evidence": report.sources.iter().take(MAX_FINDINGS).collect::<Vec<_>>(),
         "drive_reachable_component_count": report.drive_reachable.len(),
         "potentially_drive_reachable_component_count": report.potential_drive_reachable.len(),
-        "external_input_waiting_count": report.required_input_assessments.iter().filter(|assessment| assessment.status == dustroute_translate::RequiredInputStatus::AwaitingExternalInput).count(),
+        "external_input_waiting_count": report.required_input_assessments.iter().filter(|assessment| assessment.status == dustroute_translate::liveness::RequiredInputStatus::AwaitingExternalInput).count(),
         "external_input_waiting": external_input_waiting,
         "undriven_required_input_count": report.undriven_inputs.len(),
         "undriven_required_inputs": report.undriven_inputs.iter().take(MAX_FINDINGS).collect::<Vec<_>>(),
@@ -239,7 +244,7 @@ pub(in super::super) fn signal_liveness_json(
 }
 
 pub(in super::super) fn hierarchical_result_json(
-    bounds: dustroute_translate::RegionBounds,
+    bounds: dustroute_translate::world_reverse::RegionBounds,
     hierarchy: &dustroute_ir::HierarchicalIr,
     focused: Value,
     expansion: &Value,
@@ -343,7 +348,7 @@ pub(in super::super) fn hierarchical_result_json(
 
 pub(in super::super) fn circuit_identity_json(
     hierarchy: &dustroute_ir::HierarchicalIr,
-    logical_role: Option<&dustroute_translate::LogicalRole>,
+    logical_role: Option<&dustroute_translate::analysis::LogicalRole>,
     analysis_complete: bool,
     repair_count: usize,
 ) -> Value {
@@ -377,8 +382,8 @@ pub(in super::super) fn circuit_identity_json(
     let truth_table_candidate = logical_role.filter(|role| {
         !matches!(
             role.classification,
-            dustroute_translate::FunctionalClassification::Unknown
-                | dustroute_translate::FunctionalClassification::Unclassified
+            dustroute_translate::analysis::FunctionalClassification::Unknown
+                | dustroute_translate::analysis::FunctionalClassification::Unclassified
         )
     });
     let primary = truth_table_candidate

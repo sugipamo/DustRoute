@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 use crate::promotion::{
     CheckResult, CheckStatus, OccurrenceReview, PromotionReport, review_assembly_with_context,
 };
-use crate::{Block, Pos, Region};
+use crate::{world::Block, world::Pos, world::Region};
 
 /// All proposed edits are explicit. The paths to children are relative to the
 /// selected parent occurrence; before/after paths may differ after decomposition.

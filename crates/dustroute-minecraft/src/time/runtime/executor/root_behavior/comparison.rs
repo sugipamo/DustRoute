@@ -2,7 +2,7 @@
 //! Normalization and admissible boundaries are owned by the caller. The named
 //! record documents the compared fields; its array encoding preserves v3 order.
 use super::super::Delivery;
-use super::{COMPARISON, PistonEvent, State};
+use super::State;
 use crate::time::runtime::RuntimeError;
 use crate::time::runtime::history::RecentHistory;
 use crate::time::runtime::{CarrierState, RuntimeLimits, RuntimeTime};
@@ -11,13 +11,14 @@ use serde::ser::SerializeTuple;
 use serde::{Serialize, Serializer};
 use std::collections::VecDeque;
 
-pub(super) struct PhysicalRootRecord<'a> {
+pub(super) struct RootRecord<'a, P> {
+    schema: &'static str,
     profile: &'static str,
     adapter: &'static str,
     region: Region,
     time: RuntimeTime,
     blocks: Vec<(&'a Pos, &'a Block)>,
-    pending: Vec<(&'a RuntimeTime, &'a VecDeque<Delivery<PistonEvent>>)>,
+    pending: Vec<(&'a RuntimeTime, &'a VecDeque<Delivery<P>>)>,
     carriers: Vec<(&'a Pos, &'a CarrierState)>,
     outputs: Vec<(&'a Pos, &'a u8)>,
     histories: Vec<(&'a (String, Pos), &'a RecentHistory)>,
@@ -26,9 +27,10 @@ pub(super) struct PhysicalRootRecord<'a> {
     next_carrier: u64,
     limits: RuntimeLimits,
 }
-impl<'a> PhysicalRootRecord<'a> {
-    pub(super) fn from_state(state: &'a State<PistonEvent>) -> Self {
+impl<'a, P: Serialize> RootRecord<'a, P> {
+    pub(super) fn from_state(state: &'a State<P>, schema: &'static str) -> Self {
         Self {
+            schema,
             profile: state.profile,
             adapter: state.adapter,
             region: state.region,
@@ -48,10 +50,10 @@ impl<'a> PhysicalRootRecord<'a> {
         serde_json::to_vec(self).map_err(|e| RuntimeError::Invalid(e.to_string()))
     }
 }
-impl Serialize for PhysicalRootRecord<'_> {
+impl<P: Serialize> Serialize for RootRecord<'_, P> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut record = serializer.serialize_tuple(14)?;
-        record.serialize_element(COMPARISON)?;
+        record.serialize_element(self.schema)?;
         record.serialize_element(self.profile)?;
         record.serialize_element(self.adapter)?;
         record.serialize_element(&self.region)?;

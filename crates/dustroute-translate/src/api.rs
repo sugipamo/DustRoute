@@ -4,10 +4,13 @@ use std::fmt::{Display, Formatter};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    BaselineCompileConfig, BaselineCompileResult, BaselineCompiler, CompileError, Expr,
-    FunctionalNetworkModel, InferredTruthTable, LogicDag, RegionAnalysis, RegionBounds,
-    TruthTableBudget, TruthTableComparison, TruthTableError, World, analyze_world_region,
-    compare_truth_tables, derive_functional_network_with_budget,
+    compiler::BaselineCompileConfig, compiler::BaselineCompileResult, compiler::BaselineCompiler,
+    compiler::CompileError, ir::Expr, ir::LogicDag, world::World,
+    world_reverse::FunctionalNetworkModel, world_reverse::InferredTruthTable,
+    world_reverse::RegionAnalysis, world_reverse::RegionBounds, world_reverse::TruthTableBudget,
+    world_reverse::TruthTableComparison, world_reverse::TruthTableError,
+    world_reverse::analyze_world_region, world_reverse::compare_truth_tables,
+    world_reverse::derive_functional_network_with_budget,
 };
 use dustroute_ir::TemporalAnalysis;
 
@@ -148,7 +151,7 @@ impl Translator {
         let analysis = analyze_world_region(world, request.bounds);
         let mut temporal = TemporalAnalysis::from_scene(&analysis.scene);
         if !temporal.behavior.devices.is_empty()
-            && let Ok(trace) = crate::simulate_behavior_trace(
+            && let Ok(trace) = crate::behavior::simulate_behavior_trace(
                 world,
                 &analysis.scene,
                 &temporal,
@@ -411,11 +414,14 @@ mod tests {
     use dustroute_ir::{DerivedExpr, RecognizedGateKind};
 
     use super::*;
-    use crate::half_adder;
+    use crate::circuits::half_adder;
 
     #[test]
     fn truth_table_is_explicitly_opted_in() {
-        let bounds = RegionBounds::new(crate::Pos::new(0, 0, 0), crate::Pos::new(1, 1, 1));
+        let bounds = RegionBounds::new(
+            crate::world::Pos::new(0, 0, 0),
+            crate::world::Pos::new(1, 1, 1),
+        );
         let default_request = ReverseRequest::new(bounds);
         assert!(!default_request.infer_truth_table);
         assert!(default_request.observation_complete);
@@ -439,7 +445,7 @@ mod tests {
         assert!(reverse.truth_table.is_none());
         assert!(matches!(
             reverse.truth_table_error,
-            Some(crate::TruthTableError::IncompleteObservation)
+            Some(crate::world_reverse::TruthTableError::IncompleteObservation)
         ));
         assert!(reverse.functional_network.is_none());
         assert_eq!(reverse.truth_table_semantics, TruthTableSemantics::Unknown);
@@ -530,25 +536,25 @@ mod tests {
         let missing = world
             .iter()
             .find_map(|(pos, block)| {
-                if block.kind != crate::BlockKind::RedstoneWire {
+                if block.kind != crate::world::BlockKind::RedstoneWire {
                     return None;
                 }
                 let east_west = world.kind_at(pos.offset(-1, 0, 0))
-                    == crate::BlockKind::RedstoneWire
-                    && world.kind_at(pos.offset(1, 0, 0)) == crate::BlockKind::RedstoneWire;
+                    == crate::world::BlockKind::RedstoneWire
+                    && world.kind_at(pos.offset(1, 0, 0)) == crate::world::BlockKind::RedstoneWire;
                 let north_south = world.kind_at(pos.offset(0, 0, -1))
-                    == crate::BlockKind::RedstoneWire
-                    && world.kind_at(pos.offset(0, 0, 1)) == crate::BlockKind::RedstoneWire;
+                    == crate::world::BlockKind::RedstoneWire
+                    && world.kind_at(pos.offset(0, 0, 1)) == crate::world::BlockKind::RedstoneWire;
                 (east_west || north_south).then_some(*pos)
             })
             .expect("compiled half adder should contain an inline wire");
         world.remove(missing);
-        crate::update_wire_shapes(&mut world);
+        crate::wire::update_wire_shapes(&mut world);
         let (min, max) = forward.compiled.world.bounds().unwrap();
         let bounds = RegionBounds::new(min.offset(-1, -1, -1), max.offset(1, 1, 1));
         let analysis = analyze_world_region(&world, bounds);
         let gates = dustroute_ir::recognize_gates(&analysis.scene);
-        let repairs = crate::propose_scene_repairs(&world, &analysis.scene, 2);
+        let repairs = crate::repair::propose_scene_repairs(&world, &analysis.scene, 2);
         assert!(
             gates
                 .gates

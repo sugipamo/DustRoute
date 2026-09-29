@@ -4,7 +4,7 @@ use dustroute_minecraft::time::PhysicsEngine;
 use dustroute_minecraft::{
     BlockKind, PistonState, PistonVariant, Pos, Region, World, piston_state, piston_variant,
 };
-use dustroute_translate::{MinecraftSnapshot, world_from_snapshot};
+use dustroute_translate::{snapshot::MinecraftSnapshot, snapshot::world_from_snapshot};
 use serde::Deserialize;
 use serde_json::{Value, json};
 

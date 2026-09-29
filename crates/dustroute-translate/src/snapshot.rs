@@ -100,7 +100,7 @@ pub fn world_from_snapshot(snapshot: &MinecraftSnapshot) -> Result<World, Snapsh
 pub fn assembly_from_snapshot(
     snapshot: &MinecraftSnapshot,
     name: impl Into<String>,
-    known_regions: Vec<crate::Region>,
+    known_regions: Vec<crate::world::Region>,
 ) -> Result<dustroute_library::assembly::Assembly, SnapshotError> {
     use dustroute_library::assembly::Assembly;
     use dustroute_library::blueprint::{BlueprintCatalog, PositionedBlock};
@@ -111,7 +111,7 @@ pub fn assembly_from_snapshot(
     {
         return Err(invalid("reversed bounds"));
     }
-    let bounds = crate::Region::new(snapshot.min, snapshot.max);
+    let bounds = crate::world::Region::new(snapshot.min, snapshot.max);
     if known_regions
         .iter()
         .any(|region| !bounds.contains(region.min) || !bounds.contains(region.max))

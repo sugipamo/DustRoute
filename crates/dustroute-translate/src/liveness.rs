@@ -548,7 +548,10 @@ fn manhattan(left: Pos, right: Pos) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Block, Facing, RegionBounds, World, analyze_world_region};
+    use crate::{
+        world::Block, world::Facing, world::World, world_reverse::RegionBounds,
+        world_reverse::analyze_world_region,
+    };
 
     #[test]
     fn reports_a_repeater_whose_required_input_is_missing() {

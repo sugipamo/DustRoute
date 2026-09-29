@@ -277,8 +277,8 @@ fn law_revisions_round_trip_and_modified_rules_execute_without_rebinding_the_sou
     catalog.insert_revision(changed.clone()).unwrap();
     assert!(catalog.insert_revision(original.clone()).is_err());
     let saved = catalog.to_json().unwrap();
-    assert!(saved.contains("dustroute.blueprint-catalog.v3"));
-    assert!(BlueprintCatalog::from_json(&saved.replace("catalog.v3", "catalog.v2")).is_err());
+    assert!(saved.contains("dustroute.blueprint-catalog.v13"));
+    assert!(BlueprintCatalog::from_json(&saved.replace("catalog.v13", "catalog.v2")).is_err());
     let loaded = BlueprintCatalog::from_json(&saved).unwrap();
     assert_eq!(loaded.revision(&original.id), Some(&original));
     assert_eq!(loaded.revision(&changed.id), Some(&changed));
@@ -376,7 +376,7 @@ fn law_requirements_are_immutable_dependencies_and_cannot_be_silently_downgraded
     source.required_laws = vec![torch_law_revision().id.clone()];
     catalog.insert_revision(source.clone()).unwrap();
     let saved = catalog.to_json().unwrap();
-    assert!(saved.contains("dustroute.blueprint-catalog.v9"));
+    assert!(saved.contains("dustroute.blueprint-catalog.v13"));
     assert_eq!(
         BlueprintCatalog::from_json(&saved)
             .unwrap()
@@ -386,7 +386,7 @@ fn law_requirements_are_immutable_dependencies_and_cannot_be_silently_downgraded
     for version in 1..9 {
         assert!(
             BlueprintCatalog::from_json(
-                &saved.replace("catalog.v9", &format!("catalog.v{version}"))
+                &saved.replace("catalog.v13", &format!("catalog.v{version}"))
             )
             .is_err()
         );

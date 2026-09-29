@@ -4,7 +4,7 @@
 use dustroute_minecraft::time::piston_runtime::new_piston_runtime;
 use dustroute_minecraft::time::runtime::{RuntimeError, RuntimeLimits};
 use dustroute_minecraft::{Pos, Region};
-use dustroute_translate::{MinecraftSnapshot, world_from_snapshot};
+use dustroute_translate::{snapshot::MinecraftSnapshot, snapshot::world_from_snapshot};
 use serde_json::Value;
 
 #[test]

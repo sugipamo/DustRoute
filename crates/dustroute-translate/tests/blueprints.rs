@@ -1,8 +1,8 @@
 use dustroute_library::blueprint::*;
 use dustroute_translate::blueprint::*;
 use dustroute_translate::{
-    Block, BlockKind, GateKind, Pos, baseline_cell_for, default_cell_library, not_cell,
-    not_top_cell, verify_cell,
+    cell_library::default_cell_library, cell_library::verify_cell, cells::baseline_cell_for,
+    cells::not_cell, cells::not_top_cell, ir::GateKind, world::Block, world::BlockKind, world::Pos,
 };
 
 fn id(name: &str) -> BlueprintRevisionId {
@@ -25,8 +25,8 @@ fn frozen_archive_is_reproduced_by_independent_authoring_recipes() {
 
 #[test]
 fn frozen_compilation_preserves_the_authoring_geometry_and_validation() {
-    let compiler = dustroute_translate::BaselineCompiler::new(Default::default());
-    let circuit = dustroute_translate::half_adder();
+    let compiler = dustroute_translate::compiler::BaselineCompiler::new(Default::default());
+    let circuit = dustroute_translate::circuits::half_adder();
     let frozen = compiler.compile(&circuit).unwrap();
     let generated = compiler
         .compile_with_cell_source(

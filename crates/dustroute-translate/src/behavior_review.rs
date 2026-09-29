@@ -9,7 +9,6 @@ use dustroute_library::blueprint::{
     TypeContract, TypeRevisionId,
 };
 
-use crate::Pos;
 use crate::abstract_behavior::{HISTORY_ABSTRACTION_METHOD, verify_abstract_repeated_settling};
 use crate::behavior_type::BehaviorBudget;
 use crate::finite_burst::verify_finite_burst;
@@ -17,6 +16,7 @@ use crate::periodic::verify_periodic;
 use crate::physical_behavior::abstract_history::PhysicalHistoryAbstraction;
 use crate::physical_behavior::{PhysicalExecutionModel, PhysicalOutput};
 use crate::promotion::{CheckKind, CheckResult, CheckStatus};
+use crate::world::Pos;
 
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 struct BoundBehavior {

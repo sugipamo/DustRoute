@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use dustroute_library::{Catalog, Component, ComponentId, ComponentKind, PhysicalMetrics};
-use dustroute_translate::{BlockKind, FunctionalNetworkModel, World};
+use dustroute_translate::{world::BlockKind, world::World, world_reverse::FunctionalNetworkModel};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct ObservedMacroMetrics {
@@ -289,11 +289,16 @@ const fn volume(size: [usize; 3]) -> usize {
 mod tests {
     use super::*;
     use dustroute_library::{DUSTROUTE_COMPACT_XOR_ID, REDSTONE_COMPILER_XOR_ID, builtin_catalog};
-    use dustroute_translate::{RegionBounds, analyze_world_region, derive_functional_network};
+    use dustroute_translate::{
+        world_reverse::RegionBounds, world_reverse::analyze_world_region,
+        world_reverse::derive_functional_network,
+    };
 
     #[test]
     fn shared_xor_function_finds_only_the_smaller_minecraft_verified_macro() {
-        let world = dustroute_translate::compiled_xor_cell().unwrap().world;
+        let world = dustroute_translate::cells::compiled_xor_cell()
+            .unwrap()
+            .world;
         let (low, high) = world.bounds().unwrap();
         let analysis = analyze_world_region(&world, RegionBounds::new(low, high));
         let model = derive_functional_network(&world, &analysis, 8, 64).unwrap();

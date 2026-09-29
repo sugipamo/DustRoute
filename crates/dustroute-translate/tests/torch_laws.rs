@@ -2,7 +2,10 @@ use std::collections::BTreeMap;
 
 use dustroute_library::builtin_laws::{TORCH_LAW_REVISION, builtin_laws, torch_law_revision};
 use dustroute_minecraft::law::{ExecutableLaw, LawState};
-use dustroute_translate::{Block, BlockKind, Facing, Pos, RedstoneTickSimulator, World};
+use dustroute_translate::{
+    sim::RedstoneTickSimulator, world::Block, world::BlockKind, world::Facing, world::Pos,
+    world::World,
+};
 use serde::Deserialize;
 
 fn input(law: &ExecutableLaw, state: &LawState, powered: bool) -> LawState {

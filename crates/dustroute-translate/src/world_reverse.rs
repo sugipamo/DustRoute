@@ -1,7 +1,7 @@
 //! Region analysis: topology and interface evidence feed bounded execution;
 //! complete truth tables feed expression and dependency inference.
 use crate::connectivity::PhysicalConnectivityGraph;
-use crate::expr::Expr;
+use crate::ir::expr::Expr;
 use crate::world::{BlockKind, Pos};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};

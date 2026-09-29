@@ -21,12 +21,12 @@ fn single_operation_archives_require_v12_and_reject_invalid_observations() {
     let mut catalog = BlueprintCatalog::default();
     catalog.insert_type(definition()).unwrap();
     let archive = catalog.to_json().unwrap();
-    assert!(archive.contains("dustroute.blueprint-catalog.v12"));
+    assert!(archive.contains("dustroute.blueprint-catalog.v13"));
     assert_eq!(BlueprintCatalog::from_json(&archive).unwrap(), catalog);
     for version in 1..=11 {
         assert!(
             BlueprintCatalog::from_json(
-                &archive.replace("catalog.v12", &format!("catalog.v{version}"))
+                &archive.replace("catalog.v13", &format!("catalog.v{version}"))
             )
             .is_err()
         );

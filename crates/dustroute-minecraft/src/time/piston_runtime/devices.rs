@@ -34,22 +34,20 @@ pub(super) fn prepare_program(
     if callback == Callback::Use && !program.definition.handlers.contains_key(&callback) {
         return Err(unsupported("device has no use handler"));
     }
+    let state = program.definition.state_view(before).map_err(unsupported)?;
     program
         .prepare(callback, before, |query| {
             let read = || -> Result<u16, RuntimeError> {
                 Ok(match query {
                     Query::Constant { value } => *value,
-                    Query::Powered => program
-                        .definition
-                        .state(
-                            before,
-                            crate::device_program::Property::Bool(program.definition.primary_power),
-                        )
-                        .map_err(unsupported)?,
-                    Query::State { property } => program
-                        .definition
-                        .state(before, *property)
-                        .map_err(unsupported)?,
+                    Query::Powered => state
+                        .get(crate::device_program::Property::Bool(
+                            program.definition.primary_power,
+                        ))
+                        .ok_or_else(|| unsupported("undeclared primary state"))?,
+                    Query::State { property } => state
+                        .get(*property)
+                        .ok_or_else(|| unsupported("undeclared device state"))?,
                     Query::HistoryCount => view
                         .history_count(
                             program

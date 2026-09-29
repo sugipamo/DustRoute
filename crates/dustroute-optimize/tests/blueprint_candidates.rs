@@ -9,7 +9,8 @@ use dustroute_translate::blueprint::blueprint_cell_for_routing;
 use dustroute_translate::compiler::baseline_blueprint_selection;
 use dustroute_translate::promotion::{CheckStatus, review_assembly};
 use dustroute_translate::{
-    BaselineCompiler, Block, BlockKind, CellLibrary, DagBuilder, GateKind, Pos, Region,
+    cell_library::CellLibrary, compiler::BaselineCompiler, ir::DagBuilder, ir::GateKind,
+    world::Block, world::BlockKind, world::Pos, world::Region,
 };
 
 fn id(value: &str) -> BlueprintRevisionId {
@@ -19,7 +20,7 @@ fn instance(value: &str) -> InstanceId {
     InstanceId::new(value).unwrap()
 }
 
-fn inverter() -> dustroute_translate::LogicDag {
+fn inverter() -> dustroute_translate::ir::LogicDag {
     let mut builder = DagBuilder::new();
     let input = builder.input("in");
     let output = builder.gate(GateKind::Not, &[input], None);
@@ -150,8 +151,8 @@ fn catalog_discovery_compiles_nested_shared_candidates_without_builtin_registrat
                 Block::new(BlockKind::RedstoneBlock),
             );
         }
-        dustroute_translate::update_wire_shapes(&mut world);
-        let settled = dustroute_translate::RedstoneTickSimulator::new(world)
+        dustroute_translate::wire::update_wire_shapes(&mut world);
+        let settled = dustroute_translate::sim::RedstoneTickSimulator::new(world)
             .unwrap()
             .settle_ticks(64)
             .unwrap();
@@ -194,7 +195,7 @@ fn parent_behavior_pass_does_not_admit_a_broken_shared_child() {
         &library,
         &boundaries(),
     );
-    let Err(dustroute_translate::CompileError::Review(report)) = result else {
+    let Err(dustroute_translate::compiler::CompileError::Review(report)) = result else {
         panic!("broken child must stop compilation: {result:?}")
     };
     assert!(
@@ -338,7 +339,7 @@ fn typed_macro_requires_explicit_upstream_context_and_keeps_shared_occurrences()
     assert!(matches!(
         validate_assembly_occurrences(&changed_catalog, &unknown),
         Err(AssemblyValidationError::World(error)) if error.issues.iter().any(|issue|
-            matches!(issue, dustroute_translate::WorldValidationIssue::UnknownWireConnection { .. }))
+            matches!(issue, dustroute_translate::world::WorldValidationIssue::UnknownWireConnection { .. }))
     ));
 }
 

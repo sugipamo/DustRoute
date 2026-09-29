@@ -79,6 +79,35 @@ impl SignalLevel {
     }
 }
 
+/// A read-only projection of one definition's validated declared properties.
+/// It cannot be deserialized and retains the borrow of the unmodified block.
+pub struct DeviceState<'a> {
+    definition: &'a DeviceDefinition,
+    block: &'a Block,
+}
+impl DeviceState<'_> {
+    pub fn definition(&self) -> &DeviceDefinition {
+        self.definition
+    }
+    pub fn properties(&self) -> impl Iterator<Item = (Property, u16)> + '_ {
+        self.definition.properties.iter().map(|p| {
+            (
+                *p,
+                self.definition
+                    .state(self.block, *p)
+                    .expect("validated borrowed device state"),
+            )
+        })
+    }
+    pub fn get(&self, property: Property) -> Option<u16> {
+        self.definition.properties.contains(&property).then(|| {
+            self.definition
+                .state(self.block, property)
+                .expect("validated borrowed device state")
+        })
+    }
+}
+
 impl DeviceDefinition {
     /// Concrete identity for scheduler guards and native export. A mounted
     /// variant changes block identity, while facing/power changes do not.
@@ -160,6 +189,17 @@ impl DeviceDefinition {
         Ok(value)
     }
 
+    pub fn state_view<'a>(&'a self, block: &'a Block) -> Result<DeviceState<'a>, String> {
+        if block.kind != self.kind {
+            return Err("device state kind does not match its definition".into());
+        }
+        self.validate_state(block)?;
+        Ok(DeviceState {
+            definition: self,
+            block,
+        })
+    }
+
     pub fn validate_state(&self, block: &Block) -> Result<(), String> {
         if self.signal_level == SignalLevel::StoredOutput && block.power_level.is_some() {
             return Err("internal device output is not a block-state power property".into());
@@ -177,7 +217,7 @@ impl DeviceDefinition {
         before: &Block,
         values: &[(Property, u16)],
     ) -> Result<Block, String> {
-        self.validate_state(before)?;
+        let _state = self.state_view(before)?;
         let mut after = before.clone();
         for (index, (property, value)) in values.iter().enumerate() {
             if !self.properties.contains(property)

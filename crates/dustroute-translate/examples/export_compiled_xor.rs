@@ -1,6 +1,7 @@
 use dustroute_translate::{
-    BaselineCompileConfig, JavaExportConfig, compiled_xor_cell, compiled_xor_cell_with_config,
-    world_setblock_commands,
+    cells::compiled_xor_cell, cells::compiled_xor_cell_with_config,
+    compiler::BaselineCompileConfig, minecraft_export::JavaExportConfig,
+    minecraft_export::world_setblock_commands,
 };
 use serde_json::json;
 

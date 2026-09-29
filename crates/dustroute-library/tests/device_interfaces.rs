@@ -53,7 +53,7 @@ fn independent_lever_type_checks_identity_without_fixing_powered_state() {
 #[test]
 fn new_interfaces_are_output_only_and_archives_cannot_hide_their_version() {
     let original = builtin_primitives().to_json().unwrap();
-    assert!(original.contains("dustroute.blueprint-catalog.v8"));
+    assert!(original.contains("dustroute.blueprint-catalog.v13"));
     assert_eq!(
         BlueprintCatalog::from_json(&original)
             .unwrap()
@@ -61,10 +61,10 @@ fn new_interfaces_are_output_only_and_archives_cannot_hide_their_version() {
             .unwrap(),
         original
     );
-    for version in 1..=7 {
+    for version in 1..=12 {
         assert!(
             BlueprintCatalog::from_json(&original.replace(
-                "blueprint-catalog.v8",
+                "blueprint-catalog.v13",
                 &format!("blueprint-catalog.v{version}")
             ))
             .is_err()
@@ -88,7 +88,7 @@ fn new_interfaces_are_output_only_and_archives_cannot_hide_their_version() {
 fn static_bindings_are_explicit_versioned_and_reject_incomplete_or_behavioral_declarations() {
     let legacy =
         BlueprintCatalog::from_json(include_str!("../blueprints/primitives-v1.json")).unwrap();
-    assert!(legacy.to_json().unwrap().contains("blueprint-catalog.v7"));
+    assert!(legacy.to_json().unwrap().contains("blueprint-catalog.v13"));
     assert_eq!(
         legacy.revision(&BlueprintRevisionId::new(LEGACY_LEVER_REVISION).unwrap()),
         builtin_primitives().revision(&BlueprintRevisionId::new(LEGACY_LEVER_REVISION).unwrap())

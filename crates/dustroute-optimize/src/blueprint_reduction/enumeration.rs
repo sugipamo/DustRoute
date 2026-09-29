@@ -66,22 +66,30 @@ pub fn enumerate_torch_supports(
         global_minimality_proven: false,
     };
     for (name, offset, facing) in [
-        ("top", Pos::new(0, 1, 0), dustroute_translate::Facing::Up),
-        ("east", Pos::new(1, 0, 0), dustroute_translate::Facing::East),
+        (
+            "top",
+            Pos::new(0, 1, 0),
+            dustroute_translate::world::Facing::Up,
+        ),
+        (
+            "east",
+            Pos::new(1, 0, 0),
+            dustroute_translate::world::Facing::East,
+        ),
         (
             "west",
             Pos::new(-1, 0, 0),
-            dustroute_translate::Facing::West,
+            dustroute_translate::world::Facing::West,
         ),
         (
             "south",
             Pos::new(0, 0, 1),
-            dustroute_translate::Facing::South,
+            dustroute_translate::world::Facing::South,
         ),
         (
             "north",
             Pos::new(0, 0, -1),
-            dustroute_translate::Facing::North,
+            dustroute_translate::world::Facing::North,
         ),
     ] {
         if report.placements_examined >= budget.max_layouts.min(budget.max_bindings)

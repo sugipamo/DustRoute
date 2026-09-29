@@ -2,7 +2,7 @@
 //! baseline; saved JSON is presentation/history, never a live capability.
 use super::*;
 use crate::bridge::{ServerReadback, ValidatedRegion};
-use dustroute_translate::{MinecraftSnapshot, RegionBounds};
+use dustroute_translate::{snapshot::MinecraftSnapshot, world_reverse::RegionBounds};
 
 const SAMPLE_INTERVAL: u16 = 20;
 
@@ -143,7 +143,7 @@ fn compare_samples(
     })
 }
 
-impl DustRouteMcp {
+impl AssemblyService<'_> {
     pub(super) async fn observe_instance(&self, record: &PlacedAssembly) -> InstanceObservation {
         let bounds = RegionBounds::new(record.expected.min, record.expected.max);
         let observed: Result<ObservationOutcome, String> = async {

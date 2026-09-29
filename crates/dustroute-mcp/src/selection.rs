@@ -2,7 +2,7 @@ use std::error::Error;
 use std::fmt::{Display, Formatter};
 
 use dustroute_physical::Pos;
-use dustroute_translate::RegionBounds;
+use dustroute_translate::world_reverse::RegionBounds;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]

@@ -10,14 +10,11 @@ use crate::assembly_registry::{
     Attempt, InstanceState, PlacedAssembly, RegistryLock, TargetServer, now_ms,
 };
 use crate::piston_assembly::ValidatedAssemblyPlacement;
-use dustroute_library::assembly::AssemblyRevision;
-use dustroute_library::blueprint::{AssemblyRevisionId, BlueprintCatalog};
-use dustroute_library::runtime_behavior::RuntimeBehaviorContext;
+use crate::source_identity::SourceIdentity;
+use dustroute_library::blueprint::AssemblyRevisionId;
 use dustroute_translate::assembly_transform::AssemblyTransform;
 use rmcp::schemars;
-use validation::{
-    ConstructionSource, proof_from_basis, server_contract, source_basis_matches, source_identity,
-};
+use validation::{proof_from_basis, server_contract};
 
 #[derive(Clone, Debug, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -26,7 +23,7 @@ pub(super) struct AssemblyPlacementTarget {
     source_anchor: CoordinateParam,
     target_anchor: CoordinateParam,
     #[serde(default)]
-    rotation: dustroute_translate::RotationY,
+    rotation: dustroute_translate::cells::RotationY,
 }
 impl AssemblyPlacementTarget {
     fn transform(&self) -> AssemblyTransform {
@@ -44,7 +41,7 @@ pub(super) struct StoredAssemblyPlacement {
     player: String,
     dimension: String,
     assembly_id: AssemblyRevisionId,
-    source_identity: Value,
+    source_identity: SourceIdentity,
     proof: ValidatedAssemblyPlacement,
     previewed: bool,
     state: PistonPlacementState,
@@ -158,7 +155,18 @@ enum AssemblyManagementAction {
     PlanReconstruction,
 }
 
-impl DustRouteMcp {
+/// Durable Assembly workflow; no MCP router, selection map or circuit cache.
+pub(super) struct AssemblyService<'a> {
+    pub bridge: &'a BotBridge,
+    pub policy: &'a McpPolicy,
+    pub state_store: &'a PlanStateStore,
+    pub plans: &'a OperationPlans,
+    pub operations: &'a OperationRegistry,
+    pub mutation_lock: &'a Mutex<()>,
+    pub player_scope: player_scope::PlayerScope<'a>,
+}
+
+impl AssemblyService<'_> {
     async fn rebuild_instance_proof(
         &self,
         record: &PlacedAssembly,
@@ -166,7 +174,7 @@ impl DustRouteMcp {
         let basis = self
             .construction_basis(&record.player, record.assembly_id.clone())
             .await?;
-        if !source_basis_matches(&record.source_identity, &basis)? {
+        if !record.source_identity.matches(&basis) {
             return Err("saved source/adoption/context differs from the current catalog; no automatic revision replacement".into());
         }
         let transform = record.transform;
@@ -186,11 +194,11 @@ impl DustRouteMcp {
         Ok(proof)
     }
 
-    pub(super) async fn manage_placed_assembly(&self, params: ManageAssemblyParams) -> String {
+    pub(super) async fn manage_placed_assembly(&self, params: ManageAssemblyParams) -> Value {
         let result: Result<Value,String> = async {
-            let player = self.resolve_player(None)?;
-            if let Some(error) = self.authorize_player(&player) { return Err(error); }
-            let registry = RegistryLock::acquire(&self.state_store)?;
+            let player = self.player_scope.resolve(None)?;
+            if let Some(error) = self.player_scope.authorize(&player).err() { return Err(error); }
+            let registry = RegistryLock::acquire(self.state_store)?;
             let reconstruct = matches!(params.action, AssemblyManagementAction::PlanReconstruction);
             let diagnose = matches!(params.action, AssemblyManagementAction::Diagnose);
             let operating = params.removal_reference == RemovalReference::ObservedInputs;
@@ -267,7 +275,7 @@ impl DustRouteMcp {
                 "operator_requirement":"let prior operations finish and keep external inputs and edits out of the region during removal",
                 "fresh_target_review":proof.review(),"observation":report,
                 "next_step":"show_operation, then invoke_operation(confirm=true)"});
-            let mut plans = self.assembly_placements.lock().await;
+            let mut plans = self.plans.table::<assembly_placement::StoredAssemblyPlacement>().lock().await;
             plans.retain(|_,p|p.state != PistonPlacementState::Planned || p.expires_at > Instant::now());
             if plans.len() >= 256 { return Err("too many retained Assembly construction plans".into()); }
             plans.insert(operation_id,StoredAssemblyPlacement { player,dimension:record.target.dimension.clone(),assembly_id:record.assembly_id,
@@ -277,42 +285,34 @@ impl DustRouteMcp {
             self.operations.record_completed(operation_id,OperationKind::PlacementPreview,response.clone()).await;
             Ok(response)
         }.await;
-        json_text(result.unwrap_or_else(|error| json!({"ok":false,"error":error})))
+        result.unwrap_or_else(|error| json!({"ok":false,"error":error}))
     }
 
     async fn construction_basis(
         &self,
         player: &str,
         id: AssemblyRevisionId,
-    ) -> Result<Value, String> {
+    ) -> Result<SourceIdentity, String> {
         let store = self.state_store.clone();
         let player = player.to_owned();
         tokio::task::spawn_blocking(move || {
-            crate::blueprint_mcp::execute(
-                &store,
-                &player,
-                crate::blueprint_mcp::Command::ConstructionBasis(id),
-            )
+            crate::blueprint_mcp::construction_source(&store, &player, &id)
         })
         .await
-        .map_err(|e| e.to_string())??
-        .ok_or_else(|| "adopted construction basis is unavailable".into())
+        .map_err(|e| e.to_string())?
     }
 
-    pub(super) async fn plan_assembly_construction(
-        &self,
-        params: PreviewPlacementParams,
-    ) -> String {
+    pub(super) async fn plan_assembly_construction(&self, params: PreviewPlacementParams) -> Value {
         let result: Result<Value, String> = async {
             if !params.circuit.is_empty() || params.revision_id.is_some() || params.optimize.unwrap_or(false) {
                 return Err("assembly_target requires only an adopted assembly_revision_id".into());
             }
             let id = params.assembly_revision_id.ok_or("assembly_revision_id required")?;
             let target = params.assembly_target.ok_or("assembly_target required")?;
-            let player = self.resolve_player(params.player.as_deref())?;
-            if let Some(error) = self.authorize_player(&player) { return Err(error); }
+            let player = self.player_scope.resolve(params.player.as_deref())?;
+            if let Some(error) = self.player_scope.authorize(&player).err() { return Err(error); }
             let basis = self.construction_basis(&player, id.clone()).await?;
-            let ConstructionSource { record, context, catalog } = ConstructionSource::parse(&basis)?;
+            let SourceIdentity { record, context, catalog, .. } = basis.clone();
             let count = record.assembly.blocks.len();
             if count == 0 || count > 256 || params.max_blocks.is_some_and(|n| count > n) {
                 return Err("custom construction budget is 1 through 256 block records, also bounded by max_blocks".into());
@@ -323,7 +323,7 @@ impl DustRouteMcp {
             let dimension = observation.dimension;
             self.policy.authorize_dimension(&dimension).map_err(|e|e.to_string())?;
             let region = target.transform().region(context.known_region)?;
-            let bounds = dustroute_translate::RegionBounds::new(region.min, region.max);
+            let bounds = dustroute_translate::world_reverse::RegionBounds::new(region.min, region.max);
             self.policy.validate_region(bounds).map_err(|e|e.to_string())?;
             let status = self.bridge.status().await.map_err(|e|e.to_string())?;
             server_contract(&status, &dimension)?;
@@ -335,20 +335,20 @@ impl DustRouteMcp {
             self.policy.validate_placement_size(proof.steps(true).len().max(proof.steps(false).len())).map_err(|e|e.to_string())?;
             let operation_id = uuid::Uuid::new_v4();
             let response = json!({"ok":true,"operation_id":operation_id,"kind":"custom_piston_assembly_construction", "assembly_revision_id":id,
-                "adopted_by":basis["adopted_by"], "bounds":bounds_json(bounds), "dimension":dimension,
+                "adopted_by":basis.adopted_by, "bounds":bounds_json(bounds), "dimension":dimension,
                 "proposed_assembly":proof.assembly(), "execution_context":proof.context(), "fresh_target_review":proof.review(),
                 "construction_steps":proof.steps(false), "undo_steps":proof.steps(true), "live_world_verified":false,
                 "read_only":self.policy.read_only, "next_step":"show_operation, then invoke_operation(confirm=true)",
                 "undo_requirement":"exact constructed settled state and unchanged entire observation region"});
-            let mut plans = self.assembly_placements.lock().await;
+            let mut plans = self.plans.table::<assembly_placement::StoredAssemblyPlacement>().lock().await;
             plans.retain(|_,p| p.state != PistonPlacementState::Planned || p.expires_at > Instant::now());
             if plans.len() >= 256 { return Err("too many retained Assembly construction plans".into()); }
-            plans.insert(operation_id, StoredAssemblyPlacement { player, dimension, assembly_id:id, source_identity:source_identity(&basis), proof, previewed:false, state:PistonPlacementState::Planned, expires_at:Instant::now()+Duration::from_secs(300), transform, target:target_server, action:AssemblyPlacementAction::Construct });
+            plans.insert(operation_id, StoredAssemblyPlacement { player, dimension, assembly_id:id, source_identity:basis, proof, previewed:false, state:PistonPlacementState::Planned, expires_at:Instant::now()+Duration::from_secs(300), transform, target:target_server, action:AssemblyPlacementAction::Construct });
             drop(plans);
             self.operations.record_completed(operation_id,OperationKind::PlacementPreview,response.clone()).await;
             Ok(response)
         }.await;
-        json_text(result.unwrap_or_else(|e| json!({"ok":false,"error":e})))
+        result.unwrap_or_else(|e| json!({"ok":false,"error":e}))
     }
 
     async fn owned_assembly_plan(
@@ -356,12 +356,13 @@ impl DustRouteMcp {
         id: uuid::Uuid,
         player: Option<&str>,
     ) -> Result<StoredAssemblyPlacement, String> {
-        let player = self.resolve_player(player)?;
-        if let Some(error) = self.authorize_player(&player) {
+        let player = self.player_scope.resolve(player)?;
+        if let Some(error) = self.player_scope.authorize(&player).err() {
             return Err(error);
         }
         let plan = self
-            .assembly_placements
+            .plans
+            .table::<assembly_placement::StoredAssemblyPlacement>()
             .lock()
             .await
             .get(&id)
@@ -373,7 +374,7 @@ impl DustRouteMcp {
         Ok(plan)
     }
 
-    pub(super) async fn get_assembly_construction(&self, id: uuid::Uuid) -> String {
+    pub(super) async fn get_assembly_construction(&self, id: uuid::Uuid) -> Value {
         let result: Result<Value,String> = async {
             let plan = self.owned_assembly_plan(id,None).await?;
             Ok(json!({"ok":true,"operation_id":id,"kind":plan.kind(),"assembly_revision_id":plan.assembly_id,
@@ -382,20 +383,20 @@ impl DustRouteMcp {
                 "steps":plan.steps(false),"operating_removal":plan.operating_removal(),"reconstruction":plan.reconstruction(),"reconstruction_conditions":plan.reconstruction().map(|_|reconstruction::conditions()),
                 "previewed":plan.previewed,"state":format!("{:?}",plan.state),"stored_history_is_validation_proof":false}))
         }.await;
-        json_text(result.unwrap_or_else(|e| json!({"ok":false,"error":e})))
+        result.unwrap_or_else(|e| json!({"ok":false,"error":e}))
     }
 
     pub(super) async fn show_assembly_construction(
         &self,
         id: uuid::Uuid,
         player: Option<&str>,
-    ) -> String {
+    ) -> Value {
         let result: Result<Value,String> = async {
             let plan = self.owned_assembly_plan(id,player).await?;
             if plan.state != PistonPlacementState::Planned || plan.expires_at <= Instant::now() { return Err("construction preview is expired or consumed".into()); }
             let bounds = plan.proof.bounds();
             if let Some((instance_id, revision)) = plan.instance() {
-                let registry = RegistryLock::acquire(&self.state_store)?;
+                let registry = RegistryLock::acquire(self.state_store)?;
                 let record = registry.get(instance_id, &plan.player)?;
                 if record.revision != revision || (plan.is_removal() && record.state != InstanceState::Applied) {
                     return Err("placed Assembly record changed; reobserve and replan removal".into());
@@ -404,9 +405,9 @@ impl DustRouteMcp {
             self.policy.authorize_dimension(&plan.dimension).map_err(|e|e.to_string())?;
             self.policy.validate_region(bounds).map_err(|e|e.to_string())?;
             let preview = self.bridge.preview_region(&plan.player,bounds.min,bounds.max,&plan.dimension).await.map_err(|e|e.to_string())?;
-            self.assembly_placements.lock().await.get_mut(&id).ok_or("construction missing")?.previewed = true;
+            self.plans.table::<assembly_placement::StoredAssemblyPlacement>().lock().await.get_mut(&id).ok_or("construction missing")?.previewed = true;
             Ok(json!({"ok":true,"operation_id":id,"preview":preview,"bounds":bounds_json(bounds),"kind":plan.kind(),"steps":plan.steps(false),"construction_steps":plan.proof.steps(false),"undo_steps":plan.proof.steps(true),"operating_removal":plan.operating_removal(),"reconstruction":plan.reconstruction(),"reconstruction_conditions":plan.reconstruction().map(|_|reconstruction::conditions())}))
         }.await;
-        json_text(result.unwrap_or_else(|e| json!({"ok":false,"error":e})))
+        result.unwrap_or_else(|e| json!({"ok":false,"error":e}))
     }
 }

@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{BlockKind, PhysicalCell, Pos, TickState, World};
+use crate::{cells::PhysicalCell, sim::TickState, world::BlockKind, world::Pos, world::World};
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -86,10 +86,10 @@ pub fn simulator_observations(
                 block_kind: block.kind,
                 wire_connections: (block.kind == BlockKind::RedstoneWire).then(|| {
                     [
-                        crate::Facing::North,
-                        crate::Facing::East,
-                        crate::Facing::South,
-                        crate::Facing::West,
+                        crate::world::Facing::North,
+                        crate::world::Facing::East,
+                        crate::world::Facing::South,
+                        crate::world::Facing::West,
                     ]
                     .into_iter()
                     .map(|facing| {
@@ -98,7 +98,7 @@ pub fn simulator_observations(
                             .as_ref()
                             .and_then(|connections| connections.get(&facing))
                             .copied()
-                            .unwrap_or(crate::WireConnection::None);
+                            .unwrap_or(crate::world::WireConnection::None);
                         (
                             format!("{facing:?}").to_ascii_lowercase(),
                             format!("{connection:?}").to_ascii_lowercase(),
@@ -139,7 +139,7 @@ pub fn simulate_world_trace(
 ) -> Result<PhysicalTrace, String> {
     let observed_world = world.clone();
     let mut simulator =
-        crate::RedstoneTickSimulator::new(world).map_err(|error| error.to_string())?;
+        crate::sim::RedstoneTickSimulator::new(world).map_err(|error| error.to_string())?;
     let mut state = simulator
         .settle_ticks(settle_redstone_ticks)
         .map_err(|error| error.to_string())?;

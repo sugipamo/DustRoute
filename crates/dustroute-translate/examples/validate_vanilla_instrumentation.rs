@@ -21,7 +21,8 @@ fn main() {
             std::process::exit(1);
         }
     };
-    match dustroute_translate::parse_and_validate_instrumentation(&source) {
+    match dustroute_translate::vanilla_instrumentation::parse_and_validate_instrumentation(&source)
+    {
         Ok(artifact) => {
             println!(
                 "valid {} instrumentation: scenario={}, ordered_ticks={}, state_events={}, piston_states={}, neighbor_updates={}",

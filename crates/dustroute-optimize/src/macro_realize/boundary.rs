@@ -2,7 +2,9 @@
 use super::routing::facing_between;
 use super::{MacroBoundaryDirection, MacroBoundaryPort};
 use dustroute_physical::{Pos, World};
-use dustroute_translate::{FunctionalNetworkModel, InferredTruthTable, PhysicalCell};
+use dustroute_translate::{
+    cells::PhysicalCell, world_reverse::FunctionalNetworkModel, world_reverse::InferredTruthTable,
+};
 
 /// Extracts the replaceable cell's externally visible contract. Support
 /// blocks are intentionally absent: they remain physical realization detail.
@@ -74,7 +76,7 @@ pub fn extract_model_boundary(model: &FunctionalNetworkModel) -> Vec<MacroBounda
 pub fn extract_model_boundary_with_context(
     model: &FunctionalNetworkModel,
     world: &World,
-    analysis: &dustroute_translate::RegionAnalysis,
+    analysis: &dustroute_translate::world_reverse::RegionAnalysis,
 ) -> Vec<MacroBoundaryPort> {
     let mut boundary = extract_model_boundary(model);
     for port in boundary
@@ -84,15 +86,16 @@ pub fn extract_model_boundary_with_context(
         let Some(terminal) = model.truth_table.inputs.get(port.observed_index) else {
             continue;
         };
-        let Ok(driver) = dustroute_translate::inferred_input_driver(world, analysis, terminal)
+        let Ok(driver) =
+            dustroute_translate::world_reverse::inferred_input_driver(world, analysis, terminal)
         else {
             continue;
         };
         let driver_position = match driver {
-            dustroute_translate::InferredInputDriver::Lever(pos)
-            | dustroute_translate::InferredInputDriver::Button(pos)
-            | dustroute_translate::InferredInputDriver::PressurePlate(pos)
-            | dustroute_translate::InferredInputDriver::External(pos) => pos,
+            dustroute_translate::world_reverse::InferredInputDriver::Lever(pos)
+            | dustroute_translate::world_reverse::InferredInputDriver::Button(pos)
+            | dustroute_translate::world_reverse::InferredInputDriver::PressurePlate(pos)
+            | dustroute_translate::world_reverse::InferredInputDriver::External(pos) => pos,
         };
         port.driver_position = Some(driver_position);
         port.facing = facing_between(port.position, driver_position);
@@ -103,7 +106,7 @@ pub fn extract_model_boundary_with_context(
 pub(super) fn boundary_terminal_mapping(
     anchors: impl Iterator<Item = Pos>,
     actual: &InferredTruthTable,
-    analysis: &dustroute_translate::RegionAnalysis,
+    analysis: &dustroute_translate::world_reverse::RegionAnalysis,
     inputs: bool,
 ) -> Option<Vec<usize>> {
     let terminals = if inputs {
@@ -135,9 +138,9 @@ pub(super) fn boundary_terminal_mapping(
 
 pub(super) fn set_driver_in_world(
     world: &mut World,
-    driver: dustroute_translate::InferredInputDriver,
+    driver: dustroute_translate::world_reverse::InferredInputDriver,
     powered: bool,
 ) -> Result<(), String> {
-    dustroute_translate::apply_inferred_input_driver(world, driver, powered)
+    dustroute_translate::world_reverse::apply_inferred_input_driver(world, driver, powered)
         .map_err(|error| error.to_string())
 }

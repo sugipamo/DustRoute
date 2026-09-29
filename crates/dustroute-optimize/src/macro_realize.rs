@@ -3,7 +3,7 @@
 use dustroute_library::assembly::Assembly;
 use dustroute_library::blueprint::BlueprintCatalog;
 use dustroute_physical::{Facing, PhysicalPatch, Pos, World};
-use dustroute_translate::{PlacedCell, TruthTableComparison};
+use dustroute_translate::{cells::PlacedCell, world_reverse::TruthTableComparison};
 use std::sync::Arc;
 mod boundary;
 mod materialize;
@@ -194,15 +194,18 @@ mod tests {
     use super::routing::manhattan_path;
     use super::*;
     use dustroute_physical::{Block, BlockKind};
-    use dustroute_translate::RotationY;
+    use dustroute_translate::cells::RotationY;
     use std::collections::BTreeSet;
 
     use crate::{ObservedMacroMetrics, find_builtin_verified_macro_replacements};
-    use dustroute_translate::{RegionBounds, analyze_world_region, derive_functional_network};
+    use dustroute_translate::{
+        world_reverse::RegionBounds, world_reverse::analyze_world_region,
+        world_reverse::derive_functional_network,
+    };
 
     #[test]
     fn plans_compact_xor_against_fixed_baseline_ports_without_authorizing_apply() {
-        let baseline = dustroute_translate::compiled_xor_cell().unwrap();
+        let baseline = dustroute_translate::cells::compiled_xor_cell().unwrap();
         let (low, high) = baseline.world.bounds().unwrap();
         let analysis = analyze_world_region(&baseline.world, RegionBounds::new(low, high));
         let model = derive_functional_network(&baseline.world, &analysis, 8, 64).unwrap();
@@ -259,8 +262,10 @@ mod tests {
         );
         // This synthetic fixture declares the full working volume as known;
         // real callers must pass actual scan coverage, not derive new evidence.
-        let known =
-            dustroute_translate::Region::new(Pos::new(-100, -10, -100), Pos::new(100, 20, 100));
+        let known = dustroute_translate::world::Region::new(
+            Pos::new(-100, -10, -100),
+            Pos::new(100, 20, 100),
+        );
         let materialized = materialize_macro_replacement_in_known_regions(
             &plan,
             &baseline.world,
@@ -324,7 +329,7 @@ mod tests {
 
     #[test]
     fn structural_validation_rejects_immutable_obstacles_and_cross_net_contacts() {
-        let baseline = dustroute_translate::compiled_xor_cell().unwrap();
+        let baseline = dustroute_translate::cells::compiled_xor_cell().unwrap();
         let (low, high) = baseline.world.bounds().unwrap();
         let analysis = analyze_world_region(&baseline.world, RegionBounds::new(low, high));
         let model = derive_functional_network(&baseline.world, &analysis, 8, 64).unwrap();
@@ -355,7 +360,7 @@ mod tests {
     #[test]
     fn materializes_supported_wire_refreshes_strength_and_round_trips_patch() {
         let placed = PlacedCell {
-            cell: dustroute_translate::terminal_cell("source"),
+            cell: dustroute_translate::cells::terminal_cell("source"),
             origin: Pos::new(0, 0, 0),
             rotation: RotationY::R0,
         };
@@ -405,7 +410,7 @@ mod tests {
 
     #[test]
     fn steady_state_verification_rebinds_terminals_by_boundary_component() {
-        let cell = dustroute_translate::compact_compiled_xor_cell().unwrap();
+        let cell = dustroute_translate::cells::compact_compiled_xor_cell().unwrap();
         let (low, high) = cell.world.bounds().unwrap();
         let analysis = analyze_world_region(&cell.world, RegionBounds::new(low, high));
         let expected = derive_functional_network(&cell.world, &analysis, 8, 64)
@@ -422,7 +427,7 @@ mod tests {
 
     #[test]
     fn transition_verification_covers_single_and_multi_input_changes() {
-        let cell = dustroute_translate::compact_compiled_xor_cell().unwrap();
+        let cell = dustroute_translate::cells::compact_compiled_xor_cell().unwrap();
         let (low, high) = cell.world.bounds().unwrap();
         let analysis = analyze_world_region(&cell.world, RegionBounds::new(low, high));
         let expected = derive_functional_network(&cell.world, &analysis, 8, 64)

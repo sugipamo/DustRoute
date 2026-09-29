@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use crate::vanilla_instrumentation::{
     PistonStateKind, PistonStateObservation, StreamCompleteness, VanillaInstrumentationArtifact,
 };
-use crate::{Block, BlockKind, Facing, Pos, WireConnection};
+use crate::{world::Block, world::BlockKind, world::Facing, world::Pos, world::WireConnection};
 use dustroute_minecraft::piston_state;
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]

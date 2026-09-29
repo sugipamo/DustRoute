@@ -1,5 +1,5 @@
 {
-  "schema": "dustroute.blueprint-catalog.v7",
+  "schema": "dustroute.blueprint-catalog.v13",
   "types": [
     {
       "id": "dustroute.type.device-output.v1",

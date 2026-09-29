@@ -1,4 +1,4 @@
-use crate::logic::{DagBuilder, GateKind, LogicDag};
+use crate::ir::logic::{DagBuilder, GateKind, LogicDag};
 
 pub fn half_adder() -> LogicDag {
     let mut b = DagBuilder::new();

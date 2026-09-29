@@ -1,6 +1,6 @@
 use dustroute_library::blueprint::BlueprintCatalog;
 use dustroute_minecraft::{Pos, Region, RotationY, World};
-use dustroute_translate::minecraft_export::{JavaExportConfig, java_block_state};
+use dustroute_translate::minecraft_export::{JavaExportConfig, initial_java_block_state};
 use dustroute_translate::piston_construction::{ElectricalConstruction, electrical_snapshot};
 use dustroute_translate::snapshot::{MinecraftSnapshot, assembly_from_snapshot};
 
@@ -49,7 +49,7 @@ fn adhesion_materials_roundtrip_and_construct_in_every_horizontal_rotation() {
         for p in [Pos::new(1, 0, 0), Pos::new(1, 0, 1)] {
             let b = w.get(rotation.pos(p)).unwrap();
             assert_eq!(
-                java_block_state(b, &JavaExportConfig::default()).unwrap(),
+                initial_java_block_state(b, &JavaExportConfig::default()).unwrap(),
                 b.observed_name.clone().unwrap()
             );
         }

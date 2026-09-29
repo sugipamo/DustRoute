@@ -1,11 +1,15 @@
 use dustroute_minecraft::PistonAction;
 use dustroute_minecraft::time::{PhysicsEngine, TraceStatus};
 use dustroute_translate::{
-    Block, BlockKind, Facing, NormalizedBlockState, NormalizedTransition,
-    NormalizedTransitionTrace, Pos, RedstoneTickSimulator, SameTickOrderEvidence,
-    TransitionEvidence, WireConnection, World, compare_transition_traces,
-    normalize_observed_fixture, normalize_transition_trace, observed_fixture_from_json,
-    update_wire_shapes,
+    sim::RedstoneTickSimulator, transition_conformance::NormalizedBlockState,
+    transition_conformance::NormalizedTransition,
+    transition_conformance::NormalizedTransitionTrace,
+    transition_conformance::SameTickOrderEvidence, transition_conformance::TransitionEvidence,
+    transition_conformance::compare_transition_traces,
+    transition_conformance::normalize_observed_fixture,
+    transition_conformance::normalize_transition_trace,
+    transition_conformance::observed_fixture_from_json, wire::update_wire_shapes, world::Block,
+    world::BlockKind, world::Facing, world::Pos, world::WireConnection, world::World,
 };
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -71,7 +75,7 @@ fn observed_without_input(fixture_index: usize, input: Pos) -> NormalizedTransit
 
 fn block_state(
     block: &Block,
-    state: &dustroute_translate::TickState,
+    state: &dustroute_translate::sim::TickState,
     position: Pos,
 ) -> NormalizedBlockState {
     let mut properties = BTreeMap::new();
@@ -207,14 +211,15 @@ fn repeater_observer_fixture_is_connected_to_real_simulation() {
     assert_eq!(result.compared_transitions, 7, "{result:#?}");
     assert_eq!(
         result.status,
-        dustroute_translate::ConformanceStatus::Mismatch
+        dustroute_translate::transition_conformance::ConformanceStatus::Mismatch
     );
     assert_eq!(result.issues.len(), 4, "{result:#?}");
     assert_eq!(
         result
             .issues
             .iter()
-            .filter(|issue| issue.field == dustroute_translate::ConformanceField::RelativeGameTick)
+            .filter(|issue| issue.field
+                == dustroute_translate::transition_conformance::ConformanceField::RelativeGameTick)
             .count(),
         1
     );
@@ -222,7 +227,8 @@ fn repeater_observer_fixture_is_connected_to_real_simulation() {
         result
             .issues
             .iter()
-            .filter(|issue| issue.field == dustroute_translate::ConformanceField::SameTickOrder)
+            .filter(|issue| issue.field
+                == dustroute_translate::transition_conformance::ConformanceField::SameTickOrder)
             .count(),
         2
     );
@@ -251,21 +257,19 @@ fn piston_fixture_is_connected_to_engine_transition_trace() {
     assert_eq!(modelled.transitions[0].relative_game_tick, 1);
     assert_eq!(
         result.status,
-        dustroute_translate::ConformanceStatus::Unavailable
+        dustroute_translate::transition_conformance::ConformanceStatus::Unavailable
     );
-    assert!(
-        !result
-            .issues
-            .iter()
-            .any(|issue| issue.field == dustroute_translate::ConformanceField::AfterName)
-    );
+    assert!(!result.issues.iter().any(|issue| issue.field
+        == dustroute_translate::transition_conformance::ConformanceField::AfterName));
     assert!(result.issues.iter().any(|issue| {
-        issue.field == dustroute_translate::ConformanceField::ChangeOrder
-            && issue.status == dustroute_translate::ConformanceStatus::Unavailable
+        issue.field == dustroute_translate::transition_conformance::ConformanceField::ChangeOrder
+            && issue.status
+                == dustroute_translate::transition_conformance::ConformanceStatus::Unavailable
     }));
     assert!(result.issues.iter().any(|issue| {
-        issue.field == dustroute_translate::ConformanceField::SameTickOrder
-            && issue.status == dustroute_translate::ConformanceStatus::Unavailable
+        issue.field == dustroute_translate::transition_conformance::ConformanceField::SameTickOrder
+            && issue.status
+                == dustroute_translate::transition_conformance::ConformanceStatus::Unavailable
     }));
 }
 
@@ -290,11 +294,15 @@ fn piston_instrumentation_fixture_compares_typed_moving_and_stable_states() {
     engine.schedule_redstone_input(0, input_pos, true);
     engine.run_redstone_piston_events().unwrap();
 
-    let artifact = dustroute_translate::parse_and_validate_instrumentation(include_str!(
-        "fixtures/vanilla_1_21_11_offline_piston_input.json"
-    ))
-    .unwrap();
-    let mut observed = dustroute_translate::normalize_vanilla_instrumentation_artifact(&artifact);
+    let artifact =
+        dustroute_translate::vanilla_instrumentation::parse_and_validate_instrumentation(
+            include_str!("fixtures/vanilla_1_21_11_offline_piston_input.json"),
+        )
+        .unwrap();
+    let mut observed =
+        dustroute_translate::transition_conformance::normalize_vanilla_instrumentation_artifact(
+            &artifact,
+        );
     observed
         .transitions
         .retain(|transition| transition.position != input_pos);
@@ -307,14 +315,16 @@ fn piston_instrumentation_fixture_compares_typed_moving_and_stable_states() {
     let result = compare_transition_traces(&observed, &modelled);
     assert_ne!(
         result.status,
-        dustroute_translate::ConformanceStatus::Mismatch,
+        dustroute_translate::transition_conformance::ConformanceStatus::Mismatch,
         "{result:#?}"
     );
     assert_eq!(result.compared_transitions, 0, "{result:#?}");
     assert!(
         !result.issues.iter().any(|issue| {
-            issue.field == dustroute_translate::ConformanceField::PistonState
-                && issue.status == dustroute_translate::ConformanceStatus::Mismatch
+            issue.field
+                == dustroute_translate::transition_conformance::ConformanceField::PistonState
+                && issue.status
+                    == dustroute_translate::transition_conformance::ConformanceStatus::Mismatch
         }),
         "{result:#?}"
     );

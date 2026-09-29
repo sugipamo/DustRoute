@@ -1,10 +1,12 @@
 use std::time::Instant;
 
 use dustroute_translate::{
-    BaselineCompileConfig, BaselineCompiler, Block, BlockKind, LogicDag, Pos, RegionBounds,
-    TruthTableBudget, analyze_signal_liveness, analyze_world_region, decoder_1_to_2,
-    extract_connectivity, full_adder, half_adder, half_subtractor,
-    infer_truth_table_with_budget_and_stats, mux_2_to_1,
+    circuits::decoder_1_to_2, circuits::full_adder, circuits::half_adder,
+    circuits::half_subtractor, circuits::mux_2_to_1, compiler::BaselineCompileConfig,
+    compiler::BaselineCompiler, connectivity::extract_connectivity, ir::LogicDag,
+    liveness::analyze_signal_liveness, world::Block, world::BlockKind, world::Pos,
+    world_reverse::RegionBounds, world_reverse::TruthTableBudget,
+    world_reverse::analyze_world_region, world_reverse::infer_truth_table_with_budget_and_stats,
 };
 use serde::Serialize;
 
@@ -182,7 +184,10 @@ fn observe(
     observation
 }
 
-fn pad_world_with_non_conductive_blocks(world: &mut dustroute_translate::World, target: usize) {
+fn pad_world_with_non_conductive_blocks(
+    world: &mut dustroute_translate::world::World,
+    target: usize,
+) {
     let mut index = 0_i32;
     while world.iter().count() < target {
         let position = Pos::new(index, 100, 100);

@@ -5,7 +5,10 @@ use dustroute_ir::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{BlockKind, MinecraftSnapshot, Pos, RedstoneTickSimulator, world_from_snapshot};
+use crate::{
+    sim::RedstoneTickSimulator, snapshot::MinecraftSnapshot, snapshot::world_from_snapshot,
+    world::BlockKind, world::Pos,
+};
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -450,7 +453,7 @@ fn simulated_event_metadata(
 }
 
 fn unavailable_capability(
-    world: &crate::World,
+    world: &crate::world::World,
     scenario: &Scenario,
 ) -> Option<(ScenarioCapability, Vec<Pos>, String)> {
     for capability in &scenario.required_capabilities {
@@ -780,7 +783,7 @@ pub fn compare_scenario_traces(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::MinecraftSnapshotBlock;
+    use crate::snapshot::MinecraftSnapshotBlock;
 
     #[test]
     fn runs_a_shared_repeater_scenario_and_compares_traces() {

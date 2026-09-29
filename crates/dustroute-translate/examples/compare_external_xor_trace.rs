@@ -3,7 +3,8 @@ use std::env;
 use std::fs;
 
 use dustroute_translate::{
-    PhysicalTrace, compare_physical_traces, external_xor_cell, simulate_cell_trace,
+    cells::external_xor_cell, physics_trace::PhysicalTrace, physics_trace::compare_physical_traces,
+    physics_trace::simulate_cell_trace,
 };
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

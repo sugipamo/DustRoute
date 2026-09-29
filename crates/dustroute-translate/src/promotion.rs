@@ -17,7 +17,7 @@ use dustroute_library::blueprint::{
 use crate::behavior_review::BehaviorReview;
 use crate::behavior_type::BehaviorBudget;
 use crate::blueprint_connection::check_port_connection;
-use crate::{BlockKind, Pos, ValidatedWorld, WorldValidationIssue};
+use crate::{world::BlockKind, world::Pos, world::ValidatedWorld, world::WorldValidationIssue};
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -78,7 +78,7 @@ impl PromotionReport {
         {
             dustroute_minecraft::time::piston_runtime::ELECTRICAL_PROFILE
         } else {
-            crate::ValidatedWorld::PROFILE
+            crate::world::ValidatedWorld::PROFILE
         }
     }
     /// Aggregates only the checks actually recorded, within their stated scope.

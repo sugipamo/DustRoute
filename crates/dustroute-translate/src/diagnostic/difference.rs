@@ -3,7 +3,7 @@
 use std::collections::BTreeSet;
 
 use crate::snapshot::{MinecraftSnapshotBlock, index_literal_snapshot};
-use crate::{MinecraftSnapshot, Pos};
+use crate::{snapshot::MinecraftSnapshot, world::Pos};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Deserialize, Serialize)]

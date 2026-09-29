@@ -21,7 +21,7 @@ fn native_proposal_relocates_ports_and_adopts_only_after_fresh_reload_review() {
     assert_eq!(report.status(), CheckStatus::Passed, "{report:?}");
     assert_ne!(
         report.placement_validation_profile(),
-        dustroute_translate::ValidatedWorld::PROFILE
+        dustroute_translate::world::ValidatedWorld::PROFILE
     );
     assert_eq!(updates.catalog(), &original);
     let saved = updates.to_json().unwrap();

@@ -16,19 +16,21 @@ pub(super) use revision::revision_json;
 pub(super) use revision::revision_validation;
 pub(super) use truth_table::reverse_result_json;
 
-pub(super) fn bounds_json(bounds: dustroute_translate::RegionBounds) -> Value {
+pub(super) fn bounds_json(bounds: dustroute_translate::world_reverse::RegionBounds) -> Value {
     json!({ "min": bounds.min, "max": bounds.max })
 }
 
-pub(super) fn truth_table_status(translated: &dustroute_translate::ReverseResult) -> &'static str {
+pub(super) fn truth_table_status(
+    translated: &dustroute_translate::api::ReverseResult,
+) -> &'static str {
     if translated.truth_table.is_some() {
         "computed"
     } else if matches!(
         translated.truth_table_error.as_ref(),
         Some(
-            dustroute_translate::TruthTableError::BudgetExceeded { .. }
-                | dustroute_translate::TruthTableError::RuntimeBudgetExceeded { .. }
-                | dustroute_translate::TruthTableError::ElapsedBudgetExceeded { .. }
+            dustroute_translate::world_reverse::TruthTableError::BudgetExceeded { .. }
+                | dustroute_translate::world_reverse::TruthTableError::RuntimeBudgetExceeded { .. }
+                | dustroute_translate::world_reverse::TruthTableError::ElapsedBudgetExceeded { .. }
         )
     ) {
         "budget_exceeded"

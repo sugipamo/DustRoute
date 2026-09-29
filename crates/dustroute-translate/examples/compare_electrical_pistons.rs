@@ -7,7 +7,7 @@ use dustroute_minecraft::time::piston_runtime::{
 };
 use dustroute_minecraft::time::runtime::RuntimeLimits;
 use dustroute_minecraft::{BlockKind, Pos, Region};
-use dustroute_translate::MinecraftSnapshot;
+use dustroute_translate::snapshot::MinecraftSnapshot;
 use dustroute_translate::snapshot::assembly_from_snapshot;
 use serde::{Deserialize, Serialize};
 use serde_json::json;

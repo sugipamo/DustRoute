@@ -5,8 +5,8 @@ use std::marker::PhantomData;
 use super::*;
 use crate::time::TraceStatus;
 
-mod piston_behavior;
-pub use piston_behavior::PistonBehaviorState;
+mod root_behavior;
+pub use root_behavior::RootBehaviorState;
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 enum Guard {

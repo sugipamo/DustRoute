@@ -1,7 +1,7 @@
 //! Bounded route geometry and repeater sites.
 use super::{MacroBoundaryDirection, MacroBoundaryPort, MacroPortRoute, MacroRealizationError};
 use dustroute_physical::{Facing, Pos};
-use dustroute_translate::{PhysicalCell, PlacedCell};
+use dustroute_translate::{cells::PhysicalCell, cells::PlacedCell};
 use std::collections::BTreeSet;
 
 pub(super) fn repeater_sites(

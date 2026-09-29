@@ -601,7 +601,7 @@ fn finite_burst_obligations_and_consumer_requirements_need_fresh_context_for_pro
     review.adopt(&mut catalog).unwrap();
     assert_eq!(catalog.revision(&original.id), Some(&original));
     let saved = catalog.to_json().unwrap();
-    assert!(saved.contains("dustroute.blueprint-catalog.v5"));
+    assert!(saved.contains("dustroute.blueprint-catalog.v13"));
     let loaded = BlueprintCatalog::from_json(&saved).unwrap();
     assert!(
         validate_assembly_in_context(

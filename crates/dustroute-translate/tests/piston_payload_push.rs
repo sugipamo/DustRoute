@@ -1,6 +1,9 @@
 use dustroute_minecraft::time::{PhysicsEngine, TraceStatus};
 use dustroute_minecraft::{BlockKind, Region, piston_state, piston_variant};
-use dustroute_translate::{MinecraftSnapshot, MinecraftSnapshotBlock, Pos, world_from_snapshot};
+use dustroute_translate::{
+    snapshot::MinecraftSnapshot, snapshot::MinecraftSnapshotBlock, snapshot::world_from_snapshot,
+    world::Pos,
+};
 use serde_json::Value;
 
 #[test]

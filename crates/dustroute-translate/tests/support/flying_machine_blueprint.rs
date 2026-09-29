@@ -9,7 +9,7 @@ use dustroute_library::blueprint::*;
 use dustroute_library::location_observation::{LocationPredicate, ObservedPort};
 use dustroute_library::runtime_behavior::RuntimeBehaviorContext;
 use dustroute_translate::snapshot::{MinecraftSnapshot, assembly_from_snapshot};
-use dustroute_translate::{BlockKind, PistonState, Pos, Region};
+use dustroute_translate::{world::BlockKind, world::PistonState, world::Pos, world::Region};
 use std::collections::BTreeMap;
 
 pub fn fixture() -> base::Fixture {

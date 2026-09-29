@@ -1,13 +1,13 @@
 //! Consume one reviewed attempt, verify each write and persist partial progress.
 use super::*;
 
-impl DustRouteMcp {
+impl AssemblyService<'_> {
     pub(in crate::service) async fn mutate_assembly_construction(
         &self,
         id: uuid::Uuid,
         confirm: bool,
         undo: bool,
-    ) -> String {
+    ) -> Value {
         let result: Result<Value,String> = async {
             if !confirm { return Err("confirm=true is required".into()); }
             self.policy.authorize_mutation().map_err(|e|e.to_string())?;
@@ -19,9 +19,9 @@ impl DustRouteMcp {
             }
             let removal = undo || plan.is_removal();
             let instance_id = plan.instance().map_or(id, |(instance_id,_)|instance_id);
-            let registry = RegistryLock::acquire(&self.state_store)?;
+            let registry = RegistryLock::acquire(self.state_store)?;
             let basis = self.construction_basis(&plan.player,plan.assembly_id.clone()).await?;
-            if !source_basis_matches(&plan.source_identity, &basis)? { return Err("adopted source or context changed; create a new construction plan".into()); }
+            if !plan.source_identity.matches(&basis) { return Err("adopted source or context changed; create a new construction plan".into()); }
             let transform = plan.transform;
             let reconstruct_from = plan.reconstruction().map(|r| r.baseline.clone());
             let remove_from = plan.operating_removal().map(|r| r.baseline.clone());
@@ -81,7 +81,7 @@ impl DustRouteMcp {
                 ValidatedAssemblyPlacement::matches(&baseline,&operating.baseline,&status.version)?;
             } else { proof.validate_before(&baseline,&status.version,removal)?; }
             if !undo && plan.expires_at <= Instant::now() { return Err("construction expired during validation".into()); }
-            self.assembly_placements.lock().await.get_mut(&id).ok_or("construction missing")?.state = PistonPlacementState::NeedsInspection;
+            self.plans.table::<assembly_placement::StoredAssemblyPlacement>().lock().await.get_mut(&id).ok_or("construction missing")?.state = PistonPlacementState::NeedsInspection;
             record.state = InstanceState::NeedsInspection;
             record.last_observation = None;
             record.attempts.push(Attempt { operation_id:id,removal,reconstruction:plan.reconstruction().cloned(),operating_removal:plan.operating_removal().cloned(),verified_steps:0,total_steps:steps.len(),started_at_unix_ms:now_ms()?,finished_at_unix_ms:None,error:None,readbacks:vec![baseline_readback.readback] });
@@ -98,7 +98,7 @@ impl DustRouteMcp {
                     ValidatedAssemblyPlacement::matches(&before,&expected,&status.version)?;
                     record.attempts.last_mut().ok_or("missing durable attempt")?.readbacks.push(before_readback.readback);
                     registry.save(&mut record)?;
-                    self.bridge.write_blocks(json!([{"pos":step.position,"state":step.state}]),&plan.dimension).await.map_err(|e|e.to_string())?;
+                    self.bridge.write_blocks(&[CommandWrite { pos:step.position, state:step.state.parse()? }],&plan.dimension).await.map_err(|e|e.to_string())?;
                     // The bridge accepts at most 200 ticks per request. A
                     // modeled chain may need longer before whole-region readback.
                     let mut remaining = step.wait_ticks;
@@ -126,7 +126,7 @@ impl DustRouteMcp {
             attempt.error = run.as_ref().err().cloned();
             if let Err(error) = registry.save(&mut record) { run = Err(error); }
             if run.is_ok() {
-                self.assembly_placements.lock().await.get_mut(&id).ok_or("construction missing")?.state = if removal {PistonPlacementState::Undone} else {PistonPlacementState::Applied};
+                self.plans.table::<assembly_placement::StoredAssemblyPlacement>().lock().await.get_mut(&id).ok_or("construction missing")?.state = if removal {PistonPlacementState::Undone} else {PistonPlacementState::Applied};
             }
             let response = json!({"ok":run.is_ok(),"operation_id":id,"instance_id":instance_id,"record_revision":record.revision,"undo":removal,"kind":plan.kind(),"verified_steps":completed,"total_steps":steps.len(),
                 "reconstruction_conditions":plan.reconstruction().map(|_|reconstruction::conditions()),
@@ -134,6 +134,6 @@ impl DustRouteMcp {
             self.operations.record_completed(id,if removal {OperationKind::PlacementUndo}else{OperationKind::PlacementApply},response.clone()).await;
             Ok(response)
         }.await;
-        json_text(result.unwrap_or_else(|e| json!({"ok":false,"error":e})))
+        result.unwrap_or_else(|e| json!({"ok":false,"error":e}))
     }
 }

@@ -11,7 +11,9 @@ use dustroute_translate::blueprint_update::{
     BlueprintUpdateRequest, BlueprintUpdates, UpdateStatus,
 };
 use dustroute_translate::promotion::{CheckStatus, review_assembly_in_context};
-use dustroute_translate::{Block, BlockKind, Facing, Pos, Region, World};
+use dustroute_translate::{
+    world::Block, world::BlockKind, world::Facing, world::Pos, world::Region, world::World,
+};
 use std::collections::BTreeMap;
 
 fn id(s: &str) -> BlueprintRevisionId {

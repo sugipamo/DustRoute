@@ -1,8 +1,8 @@
 //! Short-lived executable placements. Progress records and durable Assembly
 //! instances have different lifetimes and are deliberately owned elsewhere.
 use super::RevisionPlacementContext;
+use super::operation_plans::{PlanGuard, PlanTable};
 use crate::PlacementPlan;
-use std::collections::HashMap;
 use uuid::Uuid;
 
 enum PlacementSource {
@@ -13,19 +13,28 @@ enum PlacementSource {
 #[derive(Clone, Copy)]
 enum AppliedState {
     Unapplied,
+    NeedsInspection,
     Applied,
+    Undone,
 }
 
-struct PlacementEntry {
+pub(super) struct PlacementEntry {
     plan: PlacementPlan,
     dimension: String,
     source: PlacementSource,
     applied: AppliedState,
 }
 
-#[derive(Default)]
+pub(super) struct PlacementTable(pub(super) PlanTable<PlacementEntry>);
+impl PlacementTable {
+    pub async fn lock(&self) -> PlacementRegistry {
+        PlacementRegistry {
+            entries: self.0.lock().await,
+        }
+    }
+}
 pub(super) struct PlacementRegistry {
-    entries: HashMap<Uuid, PlacementEntry>,
+    entries: PlanGuard<PlacementEntry>,
 }
 
 impl PlacementRegistry {
@@ -51,9 +60,6 @@ impl PlacementRegistry {
                 applied: AppliedState::Unapplied,
             },
         );
-    }
-    pub fn contains_key(&self, id: &Uuid) -> bool {
-        self.entries.contains_key(id)
     }
     pub fn get(&self, id: &Uuid) -> Option<&PlacementPlan> {
         self.entries.get(id).map(|entry| &entry.plan)
@@ -84,12 +90,25 @@ impl PlacementRegistry {
             .get(id)
             .is_some_and(|entry| matches!(entry.applied, AppliedState::Applied))
     }
+    pub fn begin(&mut self, id: &Uuid, undo: bool) -> Result<(), String> {
+        let entry = self.entries.get_mut(id).ok_or("placement missing")?;
+        let ready = if undo {
+            matches!(entry.applied, AppliedState::Applied)
+        } else {
+            matches!(entry.applied, AppliedState::Unapplied)
+        };
+        if !ready {
+            return Err("placement was already attempted; inspect and create a new plan".into());
+        }
+        entry.applied = AppliedState::NeedsInspection;
+        Ok(())
+    }
     pub fn set_applied(&mut self, id: &Uuid, applied: bool) {
         if let Some(entry) = self.entries.get_mut(id) {
             entry.applied = if applied {
                 AppliedState::Applied
             } else {
-                AppliedState::Unapplied
+                AppliedState::Undone
             };
         }
     }

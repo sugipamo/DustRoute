@@ -18,7 +18,7 @@ use serde::Serialize;
 use crate::{Block, BlockKind, PistonVariant, Pos, Region, World, WorldDelta};
 
 pub use executor::{
-    PistonBehaviorState, RuntimeCheckpoint, RuntimeStateKey, SynchronousWorldRuntime,
+    RootBehaviorState, RuntimeCheckpoint, RuntimeStateKey, SynchronousWorldRuntime,
 };
 pub use history::{HistoryChange, HistoryEffect, HistoryPolicy, HistoryRule, RecentHistory};
 
@@ -216,6 +216,15 @@ pub trait RuntimeAdapter: 'static {
         invocation: &Invocation<Self::Payload>,
         view: RuntimeView<'_>,
     ) -> Result<RuntimeOutcome<Self::Payload>, RuntimeError>;
+}
+
+/// Opt-in contract for comparing complete root boundaries. Implementors must
+/// not observe diagnostic IDs, absolute positive epochs or per-root work counts.
+/// The runtime keeps world state, queue order, relative delays and live histories.
+/// Adapters decide which suspended payloads satisfy those conditions.
+pub trait RootComparisonAdapter: RuntimeAdapter {
+    const COMPARISON: &'static str;
+    fn permits_root(kind: InvocationKind, payload: &Self::Payload) -> bool;
 }
 
 #[derive(Clone, Copy)]

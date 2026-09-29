@@ -47,9 +47,9 @@ not the current implementation plan or an outstanding request for approval.
 new previewed reconstruction operation. It retains the observed baseline,
 differences, proposed stages and conditions; invocation freshly reviews and
 resimulates, checks the saved record revision and current samples, then uses the
-shared per-step write/readback journal. The v2 registry preserves previous
-failed attempts; v1 history remains readable and upgrades on save without
-changing lifecycle state or execution pins. See the
+shared per-step write/readback journal. The current v4 registry preserves previous
+failed attempts. Retired v1–v3 records are rejected without changing lifecycle
+state or execution pins; see the [cutover guide](architecture-cutover.md) and
 [public contract](placed-assembly-management.md#reconstruction-after-damage-or-interrupted-work).
 
 The [verification report](evidence/reference-door-reconstruction-20260927.json)
