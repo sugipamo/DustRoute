@@ -174,6 +174,12 @@ fn classify(pulse: PulseObservation, intent: Option<&SignalIntent>) -> Transient
                 pulse.polarity
             ),
         ),
+        Some(SignalIntent::IntentionalPulse { polarity, time_unit, .. }
+            | SignalIntent::MaximumPulseWidth { polarity, time_unit, .. })
+            if *polarity == pulse.polarity && *time_unit != pulse.time_unit => (
+                TransientVerdict::HazardCandidate,
+                "the observed pulse uses a different clock; its width cannot confirm or violate the registered timing requirement".to_owned(),
+            ),
         Some(SignalIntent::IntentionalPulse {
             polarity,
             time_unit,
@@ -309,5 +315,30 @@ mod tests {
             assess_transients(&pulse_trace(), &intentional).findings[0].verdict,
             TransientVerdict::IntentionalPulse
         );
+    }
+
+    #[test]
+    fn client_frame_width_does_not_confirm_or_violate_server_tick_timing() {
+        let mut trace = pulse_trace();
+        trace.time_unit = TraceTimeUnit::ClientTick;
+        for intent in [
+            SignalIntent::IntentionalPulse {
+                polarity: PulsePolarity::Low,
+                time_unit: TraceTimeUnit::GameTick,
+                minimum_width_ticks: 1,
+                maximum_width_ticks: 2,
+            },
+            SignalIntent::MaximumPulseWidth {
+                polarity: PulsePolarity::Low,
+                time_unit: TraceTimeUnit::GameTick,
+                maximum_width_ticks: 0,
+            },
+        ] {
+            let contracts = BTreeMap::from([(ComponentId(7), intent)]);
+            assert_eq!(
+                assess_transients(&trace, &contracts).findings[0].verdict,
+                TransientVerdict::HazardCandidate
+            );
+        }
     }
 }

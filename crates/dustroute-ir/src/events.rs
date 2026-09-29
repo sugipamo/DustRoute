@@ -89,6 +89,8 @@ pub enum EventSource {
     #[default]
     Unknown,
     LiveMineflayer,
+    /// Native received packets; timestamps are identified by the recording clock.
+    LiveVoxrig,
     Simulator,
     InitialSnapshot,
 }

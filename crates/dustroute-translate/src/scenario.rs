@@ -203,6 +203,10 @@ pub struct ScenarioTrace {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum ScenarioDifference {
+    TimeUnitMismatch {
+        expected: TraceTimeUnit,
+        actual: TraceTimeUnit,
+    },
     FinalStrength {
         position: Pos,
         expected: u8,
@@ -596,6 +600,13 @@ fn compare_expectation(
             });
         }
     }
+    if !expected.pulses.is_empty() && actual.time_unit != TraceTimeUnit::RedstoneTick {
+        differences.push(ScenarioDifference::TimeUnitMismatch {
+            expected: TraceTimeUnit::RedstoneTick,
+            actual: actual.time_unit,
+        });
+        return differences;
+    }
     for expected in &expected.pulses {
         let widths = pulse_widths(actual, expected.position, expected.powered);
         if widths.is_empty() {
@@ -660,6 +671,13 @@ pub fn compare_scenario_traces(
             expected: expected.status.clone(),
             actual: actual.status.clone(),
         });
+    }
+    if expected.time_unit != actual.time_unit {
+        differences.push(ScenarioDifference::TimeUnitMismatch {
+            expected: expected.time_unit,
+            actual: actual.time_unit,
+        });
+        return differences;
     }
     if expected.events.len() != actual.events.len() {
         differences.push(ScenarioDifference::EventCount {
@@ -784,6 +802,22 @@ pub fn compare_scenario_traces(
 mod tests {
     use super::*;
     use crate::snapshot::MinecraftSnapshotBlock;
+
+    #[test]
+    fn equal_values_with_client_frames_do_not_prove_server_timing_equivalence() {
+        let expected = ScenarioTrace::default();
+        let actual = ScenarioTrace {
+            time_unit: TraceTimeUnit::ClientRedstoneTick,
+            ..expected.clone()
+        };
+        assert_eq!(
+            compare_scenario_traces(&expected, &actual),
+            vec![ScenarioDifference::TimeUnitMismatch {
+                expected: TraceTimeUnit::RedstoneTick,
+                actual: TraceTimeUnit::ClientRedstoneTick,
+            }]
+        );
+    }
 
     #[test]
     fn runs_a_shared_repeater_scenario_and_compares_traces() {

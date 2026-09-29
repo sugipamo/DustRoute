@@ -255,6 +255,10 @@ pub enum TraceTimeUnit {
     #[default]
     RedstoneTick,
     GameTick,
+    /// Connection-local 20 Hz observation frames, not server ticks.
+    ClientTick,
+    /// Pairs of connection-local frames, used for nominal redstone comparison.
+    ClientRedstoneTick,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
