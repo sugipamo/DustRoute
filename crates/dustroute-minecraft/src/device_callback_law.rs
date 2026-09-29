@@ -15,6 +15,26 @@ pub const LAW_IDS: [&str; DEVICE_COUNT] = {
     ids
 };
 
+/// Resolve a built-in law by device kind, independent of registry order.
+/// Missing or ambiguous kinds fail during constant evaluation of profile pins.
+pub const fn law_id_for(kind: crate::BlockKind) -> &'static str {
+    let devices = crate::device_program::BUILTIN_DEVICES;
+    let mut found = None;
+    let mut i = 0;
+    while i < devices.len() {
+        let spec = devices[i].spec();
+        if spec.kind as usize == kind as usize {
+            assert!(found.is_none(), "ambiguous device law kind");
+            found = Some(spec.law_id);
+        }
+        i += 1;
+    }
+    match found {
+        Some(id) => id,
+        None => panic!("no built-in device law for kind"),
+    }
+}
+
 pub fn builtin_programs() -> &'static [LawProgram; DEVICE_COUNT] {
     static PROGRAMS: OnceLock<[LawProgram; DEVICE_COUNT]> = OnceLock::new();
     PROGRAMS.get_or_init(|| {

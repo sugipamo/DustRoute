@@ -111,6 +111,34 @@ pub enum LawRole {
     PistonHead,
 }
 
+/// The role assignment is explicit; registry array order is not a contract.
+const DEVICE_LAWS: [(LawRole, &str); crate::device_program::DEVICE_COUNT] = {
+    use crate::BlockKind;
+    use crate::device_callback_law::law_id_for;
+    let bindings = [
+        (LawRole::Lamp, law_id_for(BlockKind::RedstoneLamp)),
+        (LawRole::Observer, law_id_for(BlockKind::Observer)),
+        (LawRole::Button, law_id_for(BlockKind::Button)),
+        (LawRole::Repeater, law_id_for(BlockKind::Repeater)),
+        (LawRole::CopperBulb, law_id_for(BlockKind::CopperBulb)),
+        (LawRole::Comparator, law_id_for(BlockKind::Comparator)),
+        (LawRole::Torch, law_id_for(BlockKind::RedstoneTorch)),
+    ];
+    let mut i = 0;
+    while i < bindings.len() {
+        let mut j = i + 1;
+        while j < bindings.len() {
+            assert!(
+                bindings[i].0 as usize != bindings[j].0 as usize,
+                "duplicate device law role"
+            );
+            j += 1;
+        }
+        i += 1;
+    }
+    bindings
+};
+
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum InitializationPolicy {
@@ -227,12 +255,6 @@ impl WorldExecutionContext {
                 }
                 UnifiedPistonElectricalCallbacksJava12111V18 => {
                     laws.retain(|role, _| *role == BlockTraits);
-                    laws.insert(Lamp, crate::device_callback_law::LAW_IDS[0].into());
-                    laws.insert(Observer, crate::device_callback_law::LAW_IDS[1].into());
-                    laws.insert(Button, crate::device_callback_law::LAW_IDS[2].into());
-                    laws.insert(CopperBulb, crate::device_callback_law::LAW_IDS[4].into());
-                    laws.insert(Comparator, crate::device_callback_law::LAW_IDS[5].into());
-                    laws.insert(Torch, crate::device_callback_law::LAW_IDS[6].into());
                     laws.insert(
                         ComparatorSignal,
                         crate::device_callback_law::COMPARATOR_SIGNAL_ID.into(),
@@ -244,7 +266,7 @@ impl WorldExecutionContext {
                     {
                         laws.insert(role, id.into());
                     }
-                    laws.insert(Repeater, crate::device_callback_law::LAW_IDS[3].into());
+                    laws.extend(DEVICE_LAWS.map(|(role, id)| (role, id.into())));
                     laws.insert(
                         PistonPayload,
                         crate::piston_law::ELECTRICAL_PAYLOAD_LAW.into(),

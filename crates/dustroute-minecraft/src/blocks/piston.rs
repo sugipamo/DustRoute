@@ -1406,12 +1406,10 @@ fn ensure_movable(position: Pos, block: &Block) -> Result<(), PistonError> {
 }
 
 fn set_piston_state(block: &mut Block, state: PistonState) {
-    block.piston_state = Some(state);
-    if block.observed_name.is_some() {
-        block
-            .observed_properties
-            .insert("extended".to_owned(), state.is_extended().to_string());
-    }
+    block
+        .piston_state_mut()
+        .expect("validated piston body")
+        .set_extension(state);
 }
 
 /// A piston may receive a signal-only update while its moving block entity is

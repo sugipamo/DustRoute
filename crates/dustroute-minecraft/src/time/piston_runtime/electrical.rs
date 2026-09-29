@@ -231,20 +231,10 @@ pub(super) fn notify_wire(
             let shape = electrical.wire_neighbor_shape(pos, side)?;
             if Some(&shape) != block.wire_connections.as_ref() {
                 let mut after = block.clone();
-                if after.observed_name.is_some() {
-                    for (direction, connection) in &shape {
-                        after.observed_properties.insert(
-                            super::geometry::facing_name(*direction).into(),
-                            match connection {
-                                WireConnection::None => "none",
-                                WireConnection::Side => "side",
-                                WireConnection::Up => "up",
-                            }
-                            .into(),
-                        );
-                    }
-                }
-                after.wire_connections = Some(shape);
+                after
+                    .wire_state_mut()
+                    .expect("wire kind checked above")
+                    .set_shape(shape);
                 let jobs = write_shape_jobs(view, pos, block, &after)?;
                 out.delta = Some(delta(
                     view,
@@ -261,12 +251,10 @@ pub(super) fn notify_wire(
         let power = electrical.wire_power(pos)?;
         if block.power_level != Some(power) {
             let mut after = block.clone();
-            after.power_level = Some(power);
-            if after.observed_name.is_some() {
-                after
-                    .observed_properties
-                    .insert("power".into(), power.to_string());
-            }
+            after
+                .wire_state_mut()
+                .expect("wire kind checked above")
+                .set_power(power);
             let mut jobs = write_shape_jobs(view, pos, block, &after)?;
             out.delta = Some(delta(
                 view,

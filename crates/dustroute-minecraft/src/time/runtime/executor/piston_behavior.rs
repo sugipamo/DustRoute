@@ -5,6 +5,8 @@ use super::*;
 use crate::time::piston_runtime::PistonEvent;
 use std::cmp::Ordering;
 
+mod comparison;
+
 pub const COMPARISON: &str = "dustroute.piston-electrical-root-comparison.v3";
 
 /// Opaque, process-local representative of a complete physical root boundary.
@@ -187,23 +189,7 @@ impl<A: RuntimeAdapter<Payload = PistonEvent>> SynchronousWorldRuntime<A> {
             pending.insert(time, queue);
         }
         state.pending = pending;
-        let key = serde_json::to_vec(&(
-            COMPARISON,
-            state.profile,
-            state.adapter,
-            state.region,
-            state.time,
-            state.world.iter().collect::<Vec<_>>(),
-            state.pending.iter().collect::<Vec<_>>(),
-            state.carriers.iter().collect::<Vec<_>>(),
-            state.outputs.iter().collect::<Vec<_>>(),
-            state.histories.iter().collect::<Vec<_>>(),
-            state.staged_carriers.iter().collect::<Vec<_>>(),
-            state.next_id,
-            state.next_carrier,
-            state.limits,
-        ))
-        .map_err(|e| RuntimeError::Invalid(e.to_string()))?;
+        let key = comparison::PhysicalRootRecord::from_state(&state).encode()?;
         Ok(PistonBehaviorState { state, key })
     }
 
@@ -253,6 +239,32 @@ mod tests {
             RuntimeLimits::default(),
         )
         .unwrap()
+    }
+
+    #[test]
+    fn comparison_record_preserves_the_v3_byte_order() {
+        let mut runtime = scene();
+        schedule_electrical_input(&mut runtime, 1, INPUT, true).unwrap();
+        let captured = runtime.behavior_state().unwrap();
+        let state = &captured.state;
+        let previous_key = serde_json::to_vec(&(
+            COMPARISON,
+            state.profile,
+            state.adapter,
+            state.region,
+            state.time,
+            state.world.iter().collect::<Vec<_>>(),
+            state.pending.iter().collect::<Vec<_>>(),
+            state.carriers.iter().collect::<Vec<_>>(),
+            state.outputs.iter().collect::<Vec<_>>(),
+            state.histories.iter().collect::<Vec<_>>(),
+            state.staged_carriers.iter().collect::<Vec<_>>(),
+            state.next_id,
+            state.next_carrier,
+            state.limits,
+        ))
+        .unwrap();
+        assert_eq!(captured.key, previous_key);
     }
 
     #[test]

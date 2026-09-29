@@ -57,15 +57,13 @@ pub(super) fn offset(pos: Pos, v: Pos) -> Result<Pos, RuntimeError> {
 }
 
 pub(super) fn state(mut body: Block, extended: bool) -> Block {
-    body.piston_state = Some(if extended {
-        PistonState::Extended
-    } else {
-        PistonState::Retracted
-    });
-    if body.observed_name.is_some() {
-        body.observed_properties
-            .insert("extended".into(), extended.to_string());
-    }
+    body.piston_state_mut()
+        .expect("validated piston body")
+        .set_extension(if extended {
+            PistonState::Extended
+        } else {
+            PistonState::Retracted
+        });
     body
 }
 
