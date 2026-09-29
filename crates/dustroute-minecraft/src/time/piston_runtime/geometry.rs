@@ -240,37 +240,8 @@ pub(super) fn push_moves(
     view: RuntimeView<'_>,
     pos: Pos,
     body: &Block,
-) -> Result<Option<Vec<BlockMove>>, RuntimeError> {
-    let dir = facing(body)?;
-    let geometry = builtin_laws()
-        .geometry(false, false, view.time().section, 0)
-        .expect("fixed facts");
-    let mut cursor = along(pos, dir, geometry.head)?;
-    let mut moves = Vec::new();
-    loop {
-        let block = view.block(cursor)?;
-        if block.kind == BlockKind::Air {
-            break;
-        }
-        if !movable(cursor, &block)? || moves.len() >= geometry.limit {
-            return Ok(None);
-        }
-        let to = along(cursor, dir, 1)?;
-        moves.push(BlockMove {
-            from: cursor,
-            to,
-            block,
-        });
-        cursor = to;
-    }
-    if !builtin_laws().chain_supported(
-        moves.len(),
-        moves.iter().any(|m| m.block.kind == BlockKind::Piston),
-    ) {
-        return Ok(None);
-    }
-    moves.reverse();
-    Ok(Some(moves))
+) -> Result<Option<super::adhesion::CollectedMotion>, RuntimeError> {
+    super::adhesion::collect(view, pos, body, true)
 }
 
 pub(super) fn head_supported(

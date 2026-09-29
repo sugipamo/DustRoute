@@ -63,6 +63,7 @@ The existing contracts and their meanings remain unchanged:
 | `BlockPattern` | Exact states at declared offsets in the terminal's local frame; unspecified positions are unconstrained |
 | `RepeatedSettling` | A complete named Boolean input/output relation; whenever inputs are held, outputs must eventually remain correct, including after changes during settling |
 | `PistonDoor` | One fixed 3×3 aperture, Air when open and Solid when closed; new commands only after certified completion |
+| `SingleOperation` | One initially false input may rise once from any completed initial phase; declared completed observations must eventually remain correct; no reset/reuse promise |
 | `Periodic` | An autonomous single Boolean output eventually follows a nonconstant recurring waveform |
 | `FiniteBurst` | An autonomous single Boolean output falls at least twice and eventually remains OFF |
 

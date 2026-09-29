@@ -390,7 +390,7 @@ fn start_extension(
     view: RuntimeView<'_>,
     pos: Pos,
     body: Block,
-    moves: Vec<BlockMove>,
+    collected: super::adhesion::CollectedMotion,
 ) -> Result<RuntimeOutcome<PistonEvent>, RuntimeError> {
     let dir = facing(&body)?;
     let effects = builtin_laws()
@@ -406,6 +406,13 @@ fn start_extension(
             body: Box::new(body.clone()),
         }),
     );
+    let super::adhesion::CollectedMotion { moves, destroyed } = collected;
+    // Native flags 18: no shape or ordinary notifications during the initial
+    // destruction writes. Admitted passive targets have no removal callback.
+    // Item entities and loot are outside this block-state projection.
+    for position in &destroyed {
+        plan.write(*position, Block::new(BlockKind::Air), false);
+    }
     for movement in &moves {
         plan.write(
             movement.to,
@@ -414,9 +421,11 @@ fn start_extension(
         );
     }
     plan.write(front, moving(head(&body)?, dir, true, true), true);
-    // In a linear push every old source is overwritten by the next carrier
-    // or by the source head. No premature air write is made at these cells.
+    clear_sources(view, &mut plan, &moves, Some(front))?;
     let mut jobs = VecDeque::new();
+    for position in destroyed {
+        jobs.extend(adjacent_jobs(view, position, false, false)?);
+    }
     for source in moves.iter().map(|m| m.from).chain([front]) {
         jobs.extend(adjacent_jobs(view, source, false, false)?);
     }
@@ -425,6 +434,24 @@ fn start_extension(
         continuation: Some(plan.event()),
         ..Default::default()
     })
+}
+
+fn clear_sources(
+    view: RuntimeView<'_>,
+    plan: &mut MotionPlan,
+    moves: &[BlockMove],
+    head: Option<Pos>,
+) -> Result<(), RuntimeError> {
+    let vacated = super::adhesion::vacated(moves, head)?;
+    for source in &vacated {
+        plan.write(*source, Block::new(BlockKind::Air), false);
+    }
+    // All flags-82 removals precede every explicit shape update. Ordinary
+    // notifications follow in reverse PistonHandler collection order.
+    for source in vacated {
+        plan.notify(shape_jobs(view, source)?);
+    }
+    Ok(())
 }
 
 fn retract_body(
@@ -497,7 +524,7 @@ fn retract_payload(
         && action == PistonBlockEvent::Retract
         && block.kind != BlockKind::Air
     {
-        facts.pullable = movable(source, &block)?;
+        facts.pullable = super::adhesion::attachable(source, &block)?;
     }
     let decision = builtin_laws().control(facts);
     if decision.finish_payload {
@@ -517,11 +544,28 @@ fn retract_payload(
         if view.block(front)?.kind == BlockKind::PistonHead {
             plan.write(front, Block::new(BlockKind::Air), false);
         }
-        plan.write(front, moving(block, dir, false, false), true);
-        plan.write(source, Block::new(BlockKind::Air), false);
-        let mut jobs = shape_jobs(view, source)?;
-        jobs.extend(adjacent_jobs(view, source, false, false)?);
-        plan.notify(jobs);
+        if let Some(collected) = super::adhesion::collect(view, pos, body, false)? {
+            let super::adhesion::CollectedMotion { moves, destroyed } = collected;
+            for position in &destroyed {
+                plan.write(*position, Block::new(BlockKind::Air), false);
+            }
+            for movement in &moves {
+                plan.write(
+                    movement.to,
+                    moving(movement.block.clone(), dir, false, false),
+                    true,
+                );
+            }
+            clear_sources(view, &mut plan, &moves, None)?;
+            let mut jobs = VecDeque::new();
+            for position in destroyed {
+                jobs.extend(adjacent_jobs(view, position, false, false)?);
+            }
+            for movement in &moves {
+                jobs.extend(adjacent_jobs(view, movement.from, false, false)?);
+            }
+            plan.notify(jobs);
+        }
         return Ok(RuntimeOutcome {
             continuation: Some(plan.event()),
             ..Default::default()

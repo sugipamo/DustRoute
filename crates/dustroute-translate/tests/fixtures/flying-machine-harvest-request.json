@@ -1,0 +1,18 @@
+{
+  "namespace": "harvest.slime.20260929",
+  "engine": "slime_relay",
+  "body": "compact",
+  "distance": 4,
+  "rotation": "r0",
+  "mirrored": false,
+  "attachments": [
+    {"position": {"x": 0, "y": 0, "z": -1}, "material": "slime"},
+    {"position": {"x": 0, "y": 0, "z": -2}, "material": "stone"}
+  ],
+  "harvest_targets": [
+    {"position": {"x": 1, "y": 0, "z": -2}, "crop": "pumpkin"},
+    {"position": {"x": 2, "y": 0, "z": -2}, "crop": "melon"},
+    {"position": {"x": 3, "y": 0, "z": -2}, "crop": "pumpkin"},
+    {"position": {"x": 4, "y": 0, "z": -2}, "crop": "melon"}
+  ]
+}

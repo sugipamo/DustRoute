@@ -23,9 +23,10 @@ def load(path):
     return json.loads(gzip.decompress(path.read_bytes()))
 
 
-def trial_for(observed, projected=True):
+def trial_for(observed, projected=True, restoration_scope='movement_or_device'):
     return dict(initial=observed['initial'], inputs=observed['inputs'], trace=True,
-                verify_restoration=True, device_projection=projected)
+                verify_restoration=True, device_projection=projected,
+                restoration_scope=restoration_scope)
 
 
 def replay(trial):
@@ -49,7 +50,7 @@ class DeviceCircuitEvidence(unittest.TestCase):
                 captured = load(path)
                 actual = observe(captured['raw_interval'], captured['client'], captured['fixture'])
                 self.assertEqual(json.loads(json.dumps(actual)), captured['observed'])
-                trial = trial_for(actual)
+                trial = trial_for(actual, restoration_scope=captured['fixture'].get('restoration_scope', 'movement_or_device'))
                 run = replay(trial)
                 self.assertEqual(run.returncode, 0, run.stderr)
                 result = compare_model(actual, trial, json.loads(run.stdout))
@@ -63,6 +64,21 @@ class DeviceCircuitEvidence(unittest.TestCase):
         first['game_tick'] += 1
         with self.assertRaises(AssertionError):
             observe(capture['raw_interval'], capture['client'], capture['fixture'])
+
+    def test_nonmoving_trial_requires_explicit_input_notification_restoration(self):
+        capture = load(FIXTURES / 'adhesion-blocked.json.gz')
+        strict = replay(trial_for(capture['observed']))
+        self.assertNotEqual(strict.returncode, 0)
+        self.assertIn('suspended movement/device checkpoint', strict.stderr)
+        explicit = replay(trial_for(capture['observed'], restoration_scope='input_notifications'))
+        self.assertEqual(explicit.returncode, 0, explicit.stderr)
+        model = json.loads(explicit.stdout)
+        self.assertTrue(model['restoration_verified'])
+        self.assertEqual(model['restoration_scope'], 'input_notifications')
+        moving = load(FIXTURES / 'adhesion-slime.json.gz')
+        rejected = replay(trial_for(moving['observed'], restoration_scope='input_notifications'))
+        self.assertNotEqual(rejected.returncode, 0)
+        self.assertIn('unexpectedly moved', rejected.stderr)
 
     def test_missing_commit_or_heartbeat_never_counts_as_agreement(self):
         for kind in ['state_commit', 'server_world_tick']:

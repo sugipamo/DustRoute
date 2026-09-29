@@ -83,6 +83,10 @@ pub enum TypeContract {
     PistonDoor {
         requirement: Box<crate::behavior_type::PistonDoor>,
     },
+    /// A single false-to-true command from a completed initial state.
+    SingleOperation {
+        requirement: crate::behavior_type::SingleOperation,
+    },
     /// Autonomous nonconstant recurrence after a finite startup.
     Periodic {
         requirement: crate::behavior_type::Periodic,
@@ -484,6 +488,11 @@ impl BlueprintCatalog {
                     .validate()
                     .map_err(|message| BlueprintError::Invalid(message.into()))?;
             }
+            TypeContract::SingleOperation { requirement } => {
+                requirement
+                    .validate()
+                    .map_err(|message| BlueprintError::Invalid(message.into()))?;
+            }
             TypeContract::Periodic { requirement } => {
                 requirement
                     .validate()
@@ -582,6 +591,7 @@ impl BlueprintCatalog {
                     .all(|record| block_at(record.position).as_ref() == Some(&record.block)),
                 TypeContract::RepeatedSettling { .. }
                 | TypeContract::PistonDoor { .. }
+                | TypeContract::SingleOperation { .. }
                 | TypeContract::Periodic { .. }
                 | TypeContract::FiniteBurst { .. } => {
                     return Err(BlueprintError::BehavioralEvidenceRequired(required.clone()));
@@ -700,6 +710,12 @@ impl BlueprintCatalog {
             schema: if self
                 .types
                 .values()
+                .any(|t| matches!(t.contract, TypeContract::SingleOperation { .. }))
+            {
+                "dustroute.blueprint-catalog.v12"
+            } else if self
+                .types
+                .values()
                 .any(|t| matches!(t.contract, TypeContract::PistonDoor { .. }))
             {
                 "dustroute.blueprint-catalog.v11"
@@ -787,20 +803,33 @@ impl BlueprintCatalog {
                 | "dustroute.blueprint-catalog.v9"
                 | "dustroute.blueprint-catalog.v10"
                 | "dustroute.blueprint-catalog.v11"
+                | "dustroute.blueprint-catalog.v12"
         ) {
             return invalid("unsupported blueprint archive schema");
         }
-        if archive.schema != "dustroute.blueprint-catalog.v11"
+        if archive.schema != "dustroute.blueprint-catalog.v12"
             && archive
                 .types
                 .iter()
-                .any(|t| matches!(t.contract, TypeContract::PistonDoor { .. }))
+                .any(|t| matches!(t.contract, TypeContract::SingleOperation { .. }))
+        {
+            return invalid("single-operation types require blueprint archive v12");
+        }
+        if !matches!(
+            archive.schema.as_str(),
+            "dustroute.blueprint-catalog.v11" | "dustroute.blueprint-catalog.v12"
+        ) && archive
+            .types
+            .iter()
+            .any(|t| matches!(t.contract, TypeContract::PistonDoor { .. }))
         {
             return invalid("completed-operation piston-door types require blueprint archive v11");
         }
         if !matches!(
             archive.schema.as_str(),
-            "dustroute.blueprint-catalog.v10" | "dustroute.blueprint-catalog.v11"
+            "dustroute.blueprint-catalog.v10"
+                | "dustroute.blueprint-catalog.v11"
+                | "dustroute.blueprint-catalog.v12"
         ) && archive.revisions.iter().any(|r| {
             r.behavior_bindings
                 .iter()
@@ -813,6 +842,7 @@ impl BlueprintCatalog {
             "dustroute.blueprint-catalog.v9"
                 | "dustroute.blueprint-catalog.v10"
                 | "dustroute.blueprint-catalog.v11"
+                | "dustroute.blueprint-catalog.v12"
         ) && archive
             .revisions
             .iter()
@@ -826,6 +856,7 @@ impl BlueprintCatalog {
                 | "dustroute.blueprint-catalog.v9"
                 | "dustroute.blueprint-catalog.v10"
                 | "dustroute.blueprint-catalog.v11"
+                | "dustroute.blueprint-catalog.v12"
         ) && archive
             .revisions
             .iter()
@@ -840,6 +871,7 @@ impl BlueprintCatalog {
                 | "dustroute.blueprint-catalog.v9"
                 | "dustroute.blueprint-catalog.v10"
                 | "dustroute.blueprint-catalog.v11"
+                | "dustroute.blueprint-catalog.v12"
         ) && needs_device_schema(archive.types.iter(), archive.revisions.iter())
         {
             return invalid("device terminals and block-kind types require blueprint archive v7");
@@ -852,6 +884,7 @@ impl BlueprintCatalog {
                 | "dustroute.blueprint-catalog.v9"
                 | "dustroute.blueprint-catalog.v10"
                 | "dustroute.blueprint-catalog.v11"
+                | "dustroute.blueprint-catalog.v12"
         ) && archive.revisions.iter().any(|revision| {
             revision
                 .behavior_bindings
@@ -869,6 +902,7 @@ impl BlueprintCatalog {
                 | "dustroute.blueprint-catalog.v9"
                 | "dustroute.blueprint-catalog.v10"
                 | "dustroute.blueprint-catalog.v11"
+                | "dustroute.blueprint-catalog.v12"
         ) && archive
             .types
             .iter()
@@ -886,6 +920,7 @@ impl BlueprintCatalog {
                 | "dustroute.blueprint-catalog.v9"
                 | "dustroute.blueprint-catalog.v10"
                 | "dustroute.blueprint-catalog.v11"
+                | "dustroute.blueprint-catalog.v12"
         ) && archive
             .types
             .iter()
@@ -904,6 +939,7 @@ impl BlueprintCatalog {
                 | "dustroute.blueprint-catalog.v9"
                 | "dustroute.blueprint-catalog.v10"
                 | "dustroute.blueprint-catalog.v11"
+                | "dustroute.blueprint-catalog.v12"
         ) && (archive
             .revisions
             .iter()
@@ -1089,6 +1125,10 @@ impl BlueprintCatalog {
                         TypeContract::RepeatedSettling { relation } => (
                             relation.inputs.iter().map(String::as_str).collect(),
                             relation.outputs.iter().map(String::as_str).collect(),
+                        ),
+                        TypeContract::SingleOperation { requirement } => (
+                            vec![requirement.input.as_str()],
+                            requirement.outputs.iter().map(String::as_str).collect(),
                         ),
                         TypeContract::Periodic { requirement } => {
                             (vec![], vec![requirement.output.as_str()])

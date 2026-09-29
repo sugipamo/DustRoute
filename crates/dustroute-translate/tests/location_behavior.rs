@@ -236,7 +236,7 @@ fn runtime_context(
     region: Region,
 ) -> dustroute_library::runtime_behavior::RuntimeBehaviorContext {
     dustroute_library::runtime_behavior::RuntimeBehaviorContext {
-        profile:dustroute_library::runtime_behavior::RuntimeBehaviorProfile::UnifiedPistonElectricalRootExplorationV16,
+        profile:dustroute_library::runtime_behavior::RuntimeBehaviorProfile::UnifiedPistonElectricalRootExplorationV18,
         initial_condition:dustroute_library::behavior_type::BehaviorInitialCondition::FreshConstruction,
         known_region:region,
         input_levers:assembly.blocks.iter().filter(|r|r.block.kind==BlockKind::Lever).map(|r|r.position).collect(),
@@ -324,7 +324,7 @@ fn vertical_runtime_context_executes_a_blueprint_observation_binding() {
     catalog.insert_type(definition).unwrap();
     catalog.insert_revision(source).unwrap();
     let context = dustroute_library::runtime_behavior::RuntimeBehaviorContext {
-        profile: dustroute_library::runtime_behavior::RuntimeBehaviorProfile::UnifiedPistonElectricalRootExplorationV16,
+        profile: dustroute_library::runtime_behavior::RuntimeBehaviorProfile::UnifiedPistonElectricalRootExplorationV18,
         initial_condition: dustroute_library::behavior_type::BehaviorInitialCondition::FreshConstruction,
         known_region: region,
         input_levers: vec![Pos::new(-1, 3, 0)],

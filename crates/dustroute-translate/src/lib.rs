@@ -23,6 +23,7 @@ pub mod diagnostic;
 pub mod dust_law;
 pub mod electrical;
 pub mod finite_burst;
+pub mod flying_machine;
 pub mod location_behavior;
 pub mod runtime_behavior;
 pub mod runtime_review;

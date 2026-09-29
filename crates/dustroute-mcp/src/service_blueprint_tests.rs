@@ -15,12 +15,187 @@ use std::{
     path::{Path, PathBuf},
 };
 
-#[path = "../../dustroute-translate/tests/support/runtime_blueprint.rs"]
-pub(crate) mod runtime_fixture;
+pub(crate) use flight_fixture::base as runtime_fixture;
 
 #[allow(dead_code)]
 #[path = "../../dustroute-translate/tests/support/reference_door_blueprint.rs"]
 mod door_fixture;
+
+#[allow(dead_code)]
+#[path = "../../dustroute-translate/tests/support/flying_machine_blueprint.rs"]
+mod flight_fixture;
+
+#[tokio::test]
+async fn generated_flight_is_unpublished_then_imported_proposed_and_adopted_after_restart() {
+    check_generated_flight(None, "honey_nose", false).await;
+}
+
+#[tokio::test]
+async fn generated_honey_engine_is_unpublished_then_freshly_adopted_after_restart() {
+    check_generated_flight(Some("honey_direct"), "compact", false).await;
+}
+
+#[tokio::test]
+async fn generated_harvest_is_unpublished_then_freshly_adopted_after_restart() {
+    check_generated_flight(None, "compact", true).await;
+}
+
+async fn check_generated_flight(engine: Option<&str>, body: &str, harvest: bool) {
+    let root = temporary();
+    let (client, server) = start(&root).await;
+    let before = call(
+        &client,
+        "get_circuit_revision",
+        json!({"blueprint":{"kind":"archive"}}),
+    )
+    .await;
+    let mut specification = json!({"namespace":"public.generated","body":body,"distance":3,"rotation":"r270","mirrored":true});
+    if let Some(engine) = engine {
+        specification["engine"] = json!(engine);
+    }
+    if harvest {
+        specification["attachments"] = json!([
+            {"position":{"x":0,"y":0,"z":-1}, "material":"slime"},
+            {"position":{"x":0,"y":0,"z":-2}, "material":"stone"}
+        ]);
+        specification["harvest_targets"] = json!([
+            {"position":{"x":1,"y":0,"z":-2}, "crop":"pumpkin"},
+            {"position":{"x":2,"y":0,"z":-2}, "crop":"melon"},
+            {"position":{"x":3,"y":0,"z":-2}, "crop":"pumpkin"}
+        ]);
+    }
+    let generated = call(
+        &client,
+        "test_circuit_change",
+        json!({"blueprint":{"action":"generate_flying_machine","request":specification}}),
+    )
+    .await;
+    assert_eq!(generated["ok"], true, "{generated}");
+    assert_eq!(generated["catalog_changed"], false);
+    assert_eq!(generated["writes_minecraft"], false);
+    assert_eq!(generated["adoption_authorized"], false);
+    let after = call(
+        &client,
+        "get_circuit_revision",
+        json!({"blueprint":{"kind":"archive"}}),
+    )
+    .await;
+    assert_eq!(before, after);
+    let result = &generated["result"];
+    assert_eq!(
+        result["destroyed_positions"].as_array().unwrap().len(),
+        if harvest { 3 } else { 0 }
+    );
+    let imported = call(
+        &client,
+        "test_circuit_change",
+        json!({"blueprint":{"action":"import","records":result["records"]}}),
+    )
+    .await;
+    assert_eq!(imported["ok"], true, "{imported}");
+    let mut request = result["request"].clone();
+    request.as_object_mut().unwrap().remove("id");
+    let created = call(
+        &client,
+        "test_circuit_change",
+        json!({"blueprint":{"action":"propose_update","request":request}}),
+    )
+    .await;
+    assert_eq!(created["ok"], true, "{created}");
+    let operation = created["operation_id"].clone();
+    stop(client, server).await;
+    let (client, server) = start(&root).await;
+    let shown = call(&client, "show_operation", json!({"operation_id":operation})).await;
+    assert_eq!(shown["can_adopt"], true, "{shown}");
+    let adopted = call(
+        &client,
+        "invoke_operation",
+        json!({"operation_id":operation,"confirm":true,"blueprint_decision":{"action":"adopt"}}),
+    )
+    .await;
+    assert_eq!(adopted["ok"], true, "{adopted}");
+    let bad=call(&client,"test_circuit_change",json!({"blueprint":{"action":"generate_flying_machine","request":{
+        "namespace":"public.detached","distance":3,"attachments":[{"position":{"x":0,"y":0,"z":-1},"material":"honey"}]
+    }}})).await;
+    assert_eq!(bad["ok"], false, "{bad}");
+    assert_eq!(bad["catalog_changed"], false);
+    assert_ne!(bad["result"]["verification"]["status"], "passed");
+    stop(client, server).await;
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn flight_placement_and_operating_removal_require_the_entire_reviewed_region() {
+    use crate::piston_assembly::ValidatedAssemblyPlacement;
+    use dustroute_translate::assembly_transform::AssemblyTransform;
+    let mut f = flight_fixture::fixture();
+    f.catalog.insert_revisions(f.request.revisions).unwrap();
+    let transform = AssemblyTransform {
+        source_anchor: Pos::default(),
+        target_anchor: Pos::new(270_000, 180, 1000),
+        rotation: RotationY::R90,
+    };
+    let region = transform.region(f.context.known_region).unwrap();
+    let empty = dustroute_translate::MinecraftSnapshot {
+        min: region.min,
+        max: region.max,
+        blocks: vec![],
+    };
+    let new = |baseline: &dustroute_translate::MinecraftSnapshot| {
+        ValidatedAssemblyPlacement::new(
+            &f.catalog,
+            &f.request.candidate_state.assembly,
+            &f.context,
+            transform,
+            baseline,
+            "1.21.11",
+        )
+    };
+    let proof = new(&empty).unwrap();
+    assert!(new(proof.settled()).is_err());
+    let mut partial = empty.clone();
+    partial.min.x += 1;
+    assert!(new(&partial).is_err());
+    let mut input = proof.settled().clone();
+    input
+        .blocks
+        .iter_mut()
+        .find(|b| b.name == "minecraft:lever")
+        .unwrap()
+        .properties
+        .insert("powered".into(), "true".into());
+    assert!(
+        proof.operating_removal(&input).is_err(),
+        "departed layout with active input is not arrival"
+    );
+    let arrived = proof.operating_reference(&input).unwrap();
+    assert!(proof.validate_before(&arrived, "1.21.11", true).is_err());
+    let removal = proof.operating_removal(&arrived).unwrap();
+    assert_eq!(removal.baseline, arrived);
+    assert!(removal.steps.last().unwrap().expected.blocks.is_empty());
+    let mut damaged = arrived.clone();
+    damaged.blocks.retain(|b| b.name != "minecraft:slime_block");
+    assert!(proof.operating_removal(&damaged).is_err());
+    let mut obstructed = arrived.clone();
+    let mut foreign = arrived
+        .blocks
+        .iter()
+        .find(|b| b.name == "minecraft:stone")
+        .unwrap()
+        .clone();
+    foreign.pos = arrived.min;
+    obstructed.blocks.push(foreign);
+    assert!(proof.operating_removal(&obstructed).is_err());
+    let mut changed_input = arrived.clone();
+    changed_input
+        .blocks
+        .iter_mut()
+        .find(|b| b.name == "minecraft:lever")
+        .unwrap()
+        .properties
+        .insert("powered".into(), "false".into());
+    assert!(proof.operating_removal(&changed_input).is_err());
+}
 
 #[test]
 fn ordinary_door_command_initialization_connects_to_full_readback_gates() {
@@ -351,7 +526,7 @@ async fn custom_electrical_construction_rechecks_adoption_baseline_settings_and_
     assert_eq!(planned["ok"], true, "{planned}");
     assert_eq!(
         planned["execution_context"]["profile"],
-        "dustroute.piston-electrical-root-exploration.v16"
+        "dustroute.piston-electrical-root-exploration.v18"
     );
     let id = planned["operation_id"].clone();
     assert_eq!(
@@ -1149,7 +1324,7 @@ async fn runtime_blueprint_review_and_adoption_preserve_child_failures_after_res
                 .input_schema,
         )
         .unwrap();
-        assert!(schema.contains("dustroute.piston-electrical-root-exploration.v16"));
+        assert!(schema.contains("dustroute.piston-electrical-root-exploration.v18"));
         assert!(!schema.contains("dustroute.horizontal-piston-root-exploration.v1"));
         let imported=call(&client,"test_circuit_change",json!({"blueprint":{"action":"import","records":{
             "types":fixture.catalog.type_revisions().collect::<Vec<_>>(),
@@ -1179,7 +1354,7 @@ async fn runtime_blueprint_review_and_adoption_preserve_child_failures_after_res
         );
         assert_eq!(
             inspected["result"]["validation"]["placement_validation_profile"],
-            "dustroute.piston-electrical-callbacks.java-1-21-11.v16"
+            "dustroute.piston-electrical-callbacks.java-1-21-11.v18"
         );
         assert_eq!(
             inspected["result"]["world_execution_context"],

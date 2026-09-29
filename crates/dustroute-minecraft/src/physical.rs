@@ -10,6 +10,14 @@
 //!     ..of_kind(dustroute_minecraft::BlockKind::Solid).spec()
 //! }.checked();
 //! ```
+//! Adhesion does not turn a glass descriptor into a slime material:
+//! ```compile_fail,E0080
+//! use dustroute_minecraft::{BlockKind, physical::*};
+//! const BAD: CheckedPhysical = PhysicalSpec {
+//!     adhesion: Adhesion::Slime,
+//!     ..of_kind(BlockKind::Transparent).spec()
+//! }.checked();
+//! ```
 //! Support loss requires an attachment with a compatible notification trigger:
 //! ```compile_fail,E0080
 //! use dustroute_minecraft::physical::*;
@@ -33,7 +41,7 @@ use crate::{Block, BlockKind, Facing, ObservationClassification, PistonState};
 pub mod passive;
 pub mod stairs;
 
-pub const REVISION: &str = "dustroute.physical-admission.java-1-21-11.v7";
+pub const REVISION: &str = "dustroute.physical-admission.java-1-21-11.v9";
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
 #[serde(rename_all = "snake_case")]
@@ -105,6 +113,7 @@ pub enum Shape {
     TopHalf,
     BottomHalf,
     Stairs,
+    Honey,
 }
 
 /// Face rules describe support and conduction independently. For example an
@@ -119,6 +128,31 @@ pub enum Faces {
     Up,
     Down,
     Stairs,
+    Honey,
+}
+
+/// Material relation, independent of support, conduction and movability.
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum Adhesion {
+    None,
+    Slime,
+    Honey,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum PistonReaction {
+    Normal,
+    Destroy,
+}
+impl Adhesion {
+    pub const fn sticks_to(self, other: Self) -> bool {
+        !matches!(
+            (self, other),
+            (Self::Slime, Self::Honey) | (Self::Honey, Self::Slime)
+        ) && (!matches!(self, Self::None) || !matches!(other, Self::None))
+    }
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
@@ -131,6 +165,8 @@ pub struct PhysicalSpec {
     pub support_loss: Option<SupportLoss>,
     pub orientation: Orientation,
     pub wire_connection: WireConnectionRule,
+    pub adhesion: Adhesion,
+    pub piston_reaction: PistonReaction,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
@@ -146,6 +182,24 @@ impl PhysicalSpec {
                 }
             };
         }
+        check!(
+            match self.adhesion {
+                Adhesion::None => true,
+                Adhesion::Slime =>
+                    matches!(self.shape, Shape::FullCube)
+                        && matches!(self.supporting, Faces::All)
+                        && matches!(self.conducting, Faces::All),
+                Adhesion::Honey =>
+                    matches!(self.shape, Shape::Honey)
+                        && matches!(self.supporting, Faces::Honey)
+                        && matches!(self.conducting, Faces::None),
+            } && (matches!(self.adhesion, Adhesion::None) || matches!(self.support, Support::None)),
+            "adhesive materials require their native geometry and no attachment"
+        );
+        check!(
+            matches!(self.shape, Shape::Honey) == matches!(self.supporting, Faces::Honey),
+            "honey support requires honey geometry"
+        );
         check!(
             self.support_loss.is_none() || !matches!(self.support, Support::None),
             "support-loss behavior requires an attachment"
@@ -292,6 +346,8 @@ impl CheckedPhysical {
             }
             && self.0.orientation as u8 == other.0.orientation as u8
             && self.0.wire_connection as u8 == other.0.wire_connection as u8
+            && self.0.adhesion as u8 == other.0.adhesion as u8
+            && self.0.piston_reaction as u8 == other.0.piston_reaction as u8
     }
     pub const fn spec(self) -> PhysicalSpec {
         self.0
@@ -328,6 +384,7 @@ impl CheckedPhysical {
         match self.0.supporting {
             Faces::All => true,
             Faces::None => false,
+            Faces::Honey => side == Facing::Down,
             Faces::Up => side == Facing::Up,
             Faces::Down => side == Facing::Down,
             Faces::Stairs => stairs::StairState::parse(block).is_some_and(|s| s.full_face(side)),
@@ -347,6 +404,7 @@ impl CheckedPhysical {
         of_block(block) == Some(self)
             && match self.0.supporting {
                 Faces::None => false,
+                Faces::Honey => false,
                 Faces::All => true,
                 Faces::Up => side == Facing::Up,
                 Faces::Down => side == Facing::Down,
@@ -415,6 +473,8 @@ const EMPTY: PhysicalSpec = PhysicalSpec {
     support_loss: None,
     orientation: Orientation::None,
     wire_connection: WireConnectionRule::None,
+    adhesion: Adhesion::None,
+    piston_reaction: PistonReaction::Normal,
 };
 const CUBE: PhysicalSpec = PhysicalSpec {
     shape: Shape::FullCube,
@@ -423,6 +483,7 @@ const CUBE: PhysicalSpec = PhysicalSpec {
 };
 const COMPONENT: PhysicalSpec = PhysicalSpec {
     shape: Shape::Partial,
+    piston_reaction: PistonReaction::Destroy,
     ..EMPTY
 };
 const GATE: PhysicalSpec = PhysicalSpec {
@@ -458,6 +519,7 @@ const SOLID: CheckedPhysical = PhysicalSpec {
 .checked();
 const GLASS: CheckedPhysical = CUBE.checked();
 const WIRE: CheckedPhysical = PhysicalSpec {
+    piston_reaction: PistonReaction::Destroy,
     support: Support::Below,
     support_loss: Some(SupportLoss {
         trigger: SupportTrigger::ShapeAndNeighbor,

@@ -59,6 +59,7 @@ enum AssemblyPlacementAction {
     Remove {
         instance_id: uuid::Uuid,
         revision: u64,
+        operating: Option<Box<crate::assembly_registry::OperatingRemoval>>,
     },
     Reconstruct {
         instance_id: uuid::Uuid,
@@ -74,6 +75,7 @@ impl StoredAssemblyPlacement {
             AssemblyPlacementAction::Remove {
                 instance_id,
                 revision,
+                ..
             }
             | AssemblyPlacementAction::Reconstruct {
                 instance_id,
@@ -91,6 +93,12 @@ impl StoredAssemblyPlacement {
     fn is_removal(&self) -> bool {
         matches!(self.action, AssemblyPlacementAction::Remove { .. })
     }
+    fn operating_removal(&self) -> Option<&crate::assembly_registry::OperatingRemoval> {
+        match &self.action {
+            AssemblyPlacementAction::Remove { operating, .. } => operating.as_deref(),
+            _ => None,
+        }
+    }
     fn kind(&self) -> &'static str {
         match self.action {
             AssemblyPlacementAction::Construct => "custom_piston_assembly_construction",
@@ -103,7 +111,12 @@ impl StoredAssemblyPlacement {
         undo: bool,
     ) -> &[dustroute_translate::piston_construction::ElectricalConstructionStep] {
         self.reconstruction().map_or_else(
-            || self.proof.steps(undo || self.is_removal()),
+            || {
+                self.operating_removal().map_or_else(
+                    || self.proof.steps(undo || self.is_removal()),
+                    |r| r.steps.as_slice(),
+                )
+            },
             |r| r.steps.as_slice(),
         )
     }
@@ -115,6 +128,20 @@ pub(super) struct ManageAssemblyParams {
     action: AssemblyManagementAction,
     /// UUID returned as instance_id by construction. Required except for list.
     instance_id: Option<String>,
+    /// Explicitly review removal from the settled reference for observed inputs.
+    /// Only valid with plan_removal. Does not infer live runtime history.
+    #[serde(default)]
+    removal_reference: RemovalReference,
+}
+
+#[derive(
+    Clone, Copy, Debug, Default, Deserialize, Serialize, schemars::JsonSchema, PartialEq, Eq,
+)]
+#[serde(rename_all = "snake_case")]
+enum RemovalReference {
+    #[default]
+    Constructed,
+    ObservedInputs,
 }
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
@@ -165,6 +192,10 @@ impl DustRouteMcp {
             let registry = RegistryLock::acquire(&self.state_store)?;
             let reconstruct = matches!(params.action, AssemblyManagementAction::PlanReconstruction);
             let diagnose = matches!(params.action, AssemblyManagementAction::Diagnose);
+            let operating = params.removal_reference == RemovalReference::ObservedInputs;
+            if operating && !matches!(params.action, AssemblyManagementAction::PlanRemoval) {
+                return Err("removal_reference=observed_inputs requires plan_removal".into());
+            }
             let (observe, removal) = match params.action {
                 AssemblyManagementAction::List => {
                     if params.instance_id.is_some() { return Err("list does not take an instance_id".into()); }
@@ -209,24 +240,35 @@ impl DustRouteMcp {
             if diagnose {
                 return Ok(json!({"ok":true,"instance":record.summary(),"diagnosis":observation["diagnosis"],"observation":observation}));
             }
-            if !removal || !eligible {
+            if !removal || (!operating && !eligible) {
                 return Ok(json!({"ok":!removal,"instance":record.summary(),"observation":observation,
                     "error":if removal {Some("conditional removal requires an applied record, matching observation and fresh passing review")}else{None}}));
             }
             let proof = proof?;
-            self.policy.validate_placement_size(proof.steps(true).len()).map_err(|e|e.to_string())?;
+            if record.state != InstanceState::Applied { return Err("removal requires an applied instance".into()); }
+            let operating_plan = if operating {
+                let baseline = observation::stable_baseline(&observation)?;
+                let model = proof.clone();
+                Some(Box::new(tokio::task::spawn_blocking(move || model.operating_removal(&baseline))
+                    .await.map_err(|e|e.to_string())??))
+            } else { None };
+            let steps = operating_plan.as_ref().map_or_else(||proof.steps(true), |p|p.steps.as_slice());
+            self.policy.validate_placement_size(steps.len()).map_err(|e|e.to_string())?;
             let operation_id = uuid::Uuid::new_v4();
             let response = json!({"ok":true,"kind":"placed_assembly_removal","operation_id":operation_id,"instance_id":id,
                 "record_revision":record.revision,"bounds":bounds_json(proof.bounds()),"dimension":record.target.dimension,
                 "read_only":self.policy.read_only,
-                "removal_steps":proof.steps(true),"fresh_target_review":proof.review(),"observation":observation,
+                "removal_steps":steps,"removal_reference":params.removal_reference,"operating_removal":operating_plan,
+                "server_readiness_proven":false,"runtime_history_reconstructed":false,
+                "operator_requirement":"let prior operations finish and keep external inputs and edits out of the region during removal",
+                "fresh_target_review":proof.review(),"observation":observation,
                 "next_step":"show_operation, then invoke_operation(confirm=true)"});
             let mut plans = self.assembly_placements.lock().await;
             plans.retain(|_,p|p.state != PistonPlacementState::Planned || p.expires_at > Instant::now());
             if plans.len() >= 256 { return Err("too many retained Assembly construction plans".into()); }
             plans.insert(operation_id,StoredAssemblyPlacement { player,dimension:record.target.dimension.clone(),assembly_id:record.assembly_id,
                 source_identity:record.source_identity,proof,previewed:false,state:PistonPlacementState::Planned,
-                expires_at:Instant::now()+Duration::from_secs(300),transform:record.transform,target:record.target,action:AssemblyPlacementAction::Remove { instance_id:id, revision:record.revision } });
+                expires_at:Instant::now()+Duration::from_secs(300),transform:record.transform,target:record.target,action:AssemblyPlacementAction::Remove { instance_id:id, revision:record.revision, operating:operating_plan } });
             drop(plans);
             self.operations.record_completed(operation_id,OperationKind::PlacementPreview,response.clone()).await;
             Ok(response)
@@ -333,7 +375,7 @@ impl DustRouteMcp {
             Ok(json!({"ok":true,"operation_id":id,"kind":plan.kind(),"assembly_revision_id":plan.assembly_id,
                 "bounds":bounds_json(plan.proof.bounds()), "proposed_assembly":plan.proof.assembly(),
                 "construction_steps":plan.proof.steps(false),"undo_steps":plan.proof.steps(true),
-                "steps":plan.steps(false),"reconstruction":plan.reconstruction(),"reconstruction_conditions":plan.reconstruction().map(|_|reconstruction::conditions()),
+                "steps":plan.steps(false),"operating_removal":plan.operating_removal(),"reconstruction":plan.reconstruction(),"reconstruction_conditions":plan.reconstruction().map(|_|reconstruction::conditions()),
                 "previewed":plan.previewed,"state":format!("{:?}",plan.state),"stored_history_is_validation_proof":false}))
         }.await;
         json_text(result.unwrap_or_else(|e| json!({"ok":false,"error":e})))
@@ -359,7 +401,7 @@ impl DustRouteMcp {
             self.policy.validate_region(bounds).map_err(|e|e.to_string())?;
             let preview = self.bridge.preview_region(&plan.player,bounds.min,bounds.max,&plan.dimension).await.map_err(|e|e.to_string())?;
             self.assembly_placements.lock().await.get_mut(&id).ok_or("construction missing")?.previewed = true;
-            Ok(json!({"ok":true,"operation_id":id,"preview":preview,"bounds":bounds_json(bounds),"kind":plan.kind(),"steps":plan.steps(false),"construction_steps":plan.proof.steps(false),"undo_steps":plan.proof.steps(true),"reconstruction":plan.reconstruction(),"reconstruction_conditions":plan.reconstruction().map(|_|reconstruction::conditions())}))
+            Ok(json!({"ok":true,"operation_id":id,"preview":preview,"bounds":bounds_json(bounds),"kind":plan.kind(),"steps":plan.steps(false),"construction_steps":plan.proof.steps(false),"undo_steps":plan.proof.steps(true),"operating_removal":plan.operating_removal(),"reconstruction":plan.reconstruction(),"reconstruction_conditions":plan.reconstruction().map(|_|reconstruction::conditions())}))
         }.await;
         json_text(result.unwrap_or_else(|e| json!({"ok":false,"error":e})))
     }

@@ -75,7 +75,7 @@ impl std::error::Error for WorldValidationError {}
 pub struct ValidatedWorld(World);
 
 impl ValidatedWorld {
-    pub const PROFILE: &'static str = "dustroute.initial-placement.explicit-wire-rise.v4";
+    pub const PROFILE: &'static str = "dustroute.initial-placement.explicit-wire-rise.v5";
 
     #[must_use]
     pub fn into_world(self) -> World {

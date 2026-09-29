@@ -26,7 +26,8 @@ def compare_capture(paths, fixture):
                     error=f'{type(error).__name__}: {error}'), observation
     save(paths['.reference.json'], observation)
     trial = dict(initial=observation['initial'], inputs=observation['inputs'], trace=True,
-                 verify_restoration=True, device_projection=True)
+                 verify_restoration=True, device_projection=True,
+                 restoration_scope=fixture.get('restoration_scope', 'movement_or_device'))
     save(paths['.input.json'], trial)
     try:
         model = subprocess.run([str(ROOT / 'target/debug/examples/compare_electrical_pistons'), str(paths['.input.json'])],

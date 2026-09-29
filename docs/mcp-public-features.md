@@ -166,7 +166,7 @@ fallback for its undo data.
 - Blueprint updates accept explicit candidate definitions and state. Parent,
   descendant and shared-occurrence checks must all pass for adoption; their
   default scope is initial placement and connections. Explicit model context
-  additionally checks declared `Periodic`, `FiniteBurst`, `RepeatedSettling` or `PistonDoor` obligations,
+  additionally checks declared `Periodic`, `FiniteBurst`, `RepeatedSettling`, `PistonDoor` or `SingleOperation` obligations,
   without a numerical-timing, restartability or live-world guarantee. Imported
   drafts remain unverified. Full [Blueprint workflow](blueprint-mcp.md).
 - The [ordinary 3×3 door type](piston-door-type.md) verifies repeated open/close
@@ -184,6 +184,11 @@ fallback for its undo data.
   requirements at intermediate states. Adopted custom Assemblies can use
   `assembly_target` for fresh target review, ordered installation, whole-region
   readback and conditional undo. See [scope and live evidence](custom-piston-assembly-placement.md).
+- The current context retains declared [slime/honey block adhesion](piston-adhesion.md):
+  branches, push/pull, shared twelve-block limit and nonadhesion between the two
+  materials. The v18 context also breaks mature pumpkin/melon blocks in a
+  piston destination. Other direct component destruction and entity
+  carrying/bouncing/sliding remain outside scope. Earlier approvals require fresh review.
 - Placement uses command writes, not survival inventory gathering/construction.
 - Merge, entity handling, long-running endurance optimization and arbitrary
   fully autonomous design are outside the current scope.
@@ -205,3 +210,16 @@ apply/undo each have three-trial Java 1.21.11 evidence. Evidence files describe
 the tested binary and scope; they are not a claim about every possible circuit.
 
 - Blueprint `enumerate_layouts` lists and verifies torch/support patterns in component scope; see [component patterns](blueprint-component-patterns.md).
+
+A finite flying machine can use `SingleOperation` for one launch/arrival, the
+existing adopted-Assembly placement into a specified empty corridor, and shared
+diagnosis. Arrival-state removal explicitly selects
+`removal_reference="observed_inputs"`; no empty-site search or infinite-flight
+tracking is implied. See [finite-flight lifecycle](flying-machine-lifecycle.md).
+
+`test_circuit_change(blueprint.action="generate_flying_machine")` returns freshly checked, unadopted candidates from typed engine and body definitions, optional moving blocks, distance, reflection and rotation. Engines are `slime_relay` (default; four bodies) and `honey_direct` (compact or side blocks). Both use the shared physical runtime and adoption/placement checks. See [generation parameters and adoption workflow](flying-machine-generation.md).
+
+Optional `harvest_targets` declare mature pumpkin/melon blocks that must disappear
+during that flight while every moving part arrives. This is a single harvest pass,
+not natural growth, repeated farming or item collection. See
+[harvest scope and survival-construction boundary](flying-machine-practical-roadmap.md).

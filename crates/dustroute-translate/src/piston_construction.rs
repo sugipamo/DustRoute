@@ -103,6 +103,32 @@ impl ElectricalConstruction {
         inputs: &[(Pos, bool)],
         limits: RuntimeLimits,
     ) -> Result<MinecraftSnapshot, String> {
+        let runtime = self.operating_runtime(inputs, limits)?;
+        electrical_snapshot(
+            runtime.view().world(),
+            Region::new(self.initial.min, self.initial.max),
+        )
+    }
+
+    /// Tear down the same settled reference used by diagnosis. The runtime is
+    /// replayed from the declared initial conditions, never from a live snapshot.
+    /// Callers must independently match the full live region to this baseline.
+    pub fn operating_removal(
+        &self,
+        inputs: &[(Pos, bool)],
+        limits: RuntimeLimits,
+    ) -> Result<(MinecraftSnapshot, Vec<ElectricalConstructionStep>), String> {
+        let mut runtime = self.operating_runtime(inputs, limits)?;
+        let region = Region::new(self.initial.min, self.initial.max);
+        let baseline = electrical_snapshot(runtime.view().world(), region)?;
+        Ok((baseline, teardown(&mut runtime, region)?))
+    }
+
+    fn operating_runtime(
+        &self,
+        inputs: &[(Pos, bool)],
+        limits: RuntimeLimits,
+    ) -> Result<ElectricalPistonRuntime, String> {
         let world = literal_world(&self.initial)?;
         let region = Region::new(self.initial.min, self.initial.max);
         let mut seen = BTreeSet::new();
@@ -123,7 +149,7 @@ impl ElectricalConstruction {
                 .map_err(|e| e.to_string())?;
             runtime.run_until_idle().map_err(|e| e.to_string())?;
         }
-        electrical_snapshot(runtime.view().world(), region)
+        Ok(runtime)
     }
 
     /// Reconstruct the declared initial state by tearing down an observed

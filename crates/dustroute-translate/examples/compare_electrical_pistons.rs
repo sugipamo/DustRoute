@@ -9,7 +9,7 @@ use dustroute_minecraft::time::runtime::RuntimeLimits;
 use dustroute_minecraft::{BlockKind, Pos, Region};
 use dustroute_translate::MinecraftSnapshot;
 use dustroute_translate::snapshot::assembly_from_snapshot;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 #[derive(Deserialize)]
@@ -32,9 +32,20 @@ struct Trial {
     trace: bool,
     #[serde(default)]
     verify_restoration: bool,
+    #[serde(default)]
+    restoration_scope: RestorationScope,
     /// Retain commits and delivery metadata, omitting bulky continuation payloads.
     #[serde(default)]
     device_projection: bool,
+}
+
+#[derive(Clone, Copy, Default, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+enum RestorationScope {
+    #[default]
+    MovementOrDevice,
+    /// Explicit negative trial: no carriers, resume a changed input's callbacks.
+    InputNotifications,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -76,13 +87,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut exact_checkpoint = None;
     let mut behavior_state = None;
     let mut device_state_changed = false;
+    let mut input_state_changed = false;
+    let mut had_carrier = false;
     if trial.verify_restoration {
         while let Some(record) = rt.microstep()? {
             device_state_changed |=
                 !record.output_changes.is_empty() || !record.history_changes.is_empty();
+            input_state_changed |=
+                matches!(record.invocation.call.payload, PistonEvent::Input { .. })
+                    && record
+                        .delta
+                        .as_ref()
+                        .is_some_and(|d| d.changes.iter().any(|c| c.before != c.after));
+            had_carrier |= record
+                .carrier_changes
+                .iter()
+                .any(|(_, _, after)| after.is_some());
+            let state_changed = match trial.restoration_scope {
+                RestorationScope::MovementOrDevice => device_state_changed,
+                RestorationScope::InputNotifications => input_state_changed,
+            };
             if exact_checkpoint.is_none()
                 && !rt.at_input_boundary()
-                && (device_state_changed
+                && (state_changed
                     || record
                         .carrier_changes
                         .iter()
@@ -92,7 +119,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             if behavior_state.is_none()
                 && rt.at_input_boundary()
-                && (device_state_changed
+                && (state_changed
                     || rt
                         .view()
                         .world()
@@ -100,6 +127,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         .any(|(_, b)| b.kind == BlockKind::MovingPiston))
             {
                 behavior_state = Some(rt.behavior_state()?);
+            }
+        }
+        if trial.restoration_scope == RestorationScope::InputNotifications {
+            if had_carrier {
+                return Err(
+                    "input-notification restoration trial unexpectedly moved a block".into(),
+                );
+            }
+            if !input_state_changed {
+                return Err("input-notification restoration trial requires a changed input".into());
             }
         }
         let mut exact = ElectricalPistonRuntime::from_checkpoint(
@@ -167,6 +204,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         serde_json::to_string_pretty(
             &json!({"source":"dustroute_model","profile":ELECTRICAL_PROFILE,"status":rt.status(),"pending":rt.pending_count(),"final_time":rt.view().time(),"blocks":blocks,"changes":changes,
                 "restoration_verified": trial.verify_restoration,
+                "restoration_scope": trial.restoration_scope,
                 "trace_projection":if trial.device_projection {"device_circuit"} else {"full"}, "trace":trace})
         )?
     );

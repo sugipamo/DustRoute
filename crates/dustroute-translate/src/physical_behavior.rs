@@ -360,7 +360,7 @@ impl PhysicalExecutionModel {
         // The fixed topology queries at most this halo. Unknown cells cannot be
         // read as air. Check arithmetic and offsets before generic world checks.
         for (position, block) in world.iter() {
-            if !context.execution_context().profile.admits_kind(block.kind)
+            if !context.execution_context().profile.admits_block(block)
                 || block.observation_classification == ObservationClassification::Coarse
                 || block.requires_live_observation()
             {

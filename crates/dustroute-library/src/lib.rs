@@ -15,6 +15,7 @@ pub mod builtin_primitives;
 mod catalog;
 mod component;
 pub mod execution_context;
+pub mod flying_machine;
 mod interfaces;
 pub mod location_observation;
 pub mod runtime_behavior;

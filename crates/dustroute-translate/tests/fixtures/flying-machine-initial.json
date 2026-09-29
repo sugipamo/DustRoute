@@ -1,0 +1,111 @@
+{
+  "blocks": [
+    {
+      "pos": {
+        "x": -1,
+        "y": 2,
+        "z": 0
+      },
+      "name": "minecraft:stone",
+      "properties": {}
+    },
+    {
+      "pos": {
+        "x": 0,
+        "y": 2,
+        "z": 0
+      },
+      "name": "minecraft:lever",
+      "properties": {
+        "face": "wall",
+        "facing": "east",
+        "powered": "false"
+      }
+    },
+    {
+      "pos": {
+        "x": 0,
+        "y": 1,
+        "z": 0
+      },
+      "name": "minecraft:observer",
+      "properties": {
+        "facing": "up",
+        "powered": "false"
+      }
+    },
+    {
+      "pos": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      },
+      "name": "minecraft:observer",
+      "properties": {
+        "facing": "up",
+        "powered": "false"
+      }
+    },
+    {
+      "pos": {
+        "x": 12,
+        "y": 0,
+        "z": 1
+      },
+      "name": "minecraft:obsidian",
+      "properties": {}
+    },
+    {
+      "pos": {
+        "x": 0,
+        "y": 0,
+        "z": 1
+      },
+      "name": "minecraft:piston",
+      "properties": {
+        "facing": "east",
+        "extended": "false"
+      }
+    },
+    {
+      "pos": {
+        "x": 1,
+        "y": 0,
+        "z": 0
+      },
+      "name": "minecraft:sticky_piston",
+      "properties": {
+        "facing": "west",
+        "extended": "false"
+      }
+    },
+    {
+      "pos": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "name": "minecraft:slime_block",
+      "properties": {}
+    },
+    {
+      "pos": {
+        "x": 1,
+        "y": 0,
+        "z": 1
+      },
+      "name": "minecraft:slime_block",
+      "properties": {}
+    }
+  ],
+  "min": {
+    "x": -4,
+    "y": -3,
+    "z": -3
+  },
+  "max": {
+    "x": 15,
+    "y": 5,
+    "z": 4
+  }
+}

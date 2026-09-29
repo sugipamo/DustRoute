@@ -127,6 +127,55 @@ async function restartMcp () {
   report.process_restarts ||= []
   report.process_restarts.push({ before_pid: beforePid, after_pid: mcp.process.pid, exit_code: exitCode, signal })
 }
+async function verifyFlightArrival (plan) {
+  assert(persistence, 'flight lifecycle requires durable instances')
+  const key = p => `${p.x},${p.y},${p.z}`
+  const moving = new Set(fixture.finite_flight.moving_positions.map(p => key(transform(p))))
+  assert.equal(moving.size, fixture.finite_flight.moving_positions.length, 'distinct declared moving positions')
+  const displacement = fixture.finite_flight.displacement || { x: fixture.finite_flight.distance, y: 0, z: 0 }
+  const delta = transform(displacement).minus(origin)
+  let expected = structuredClone(plan.construction_steps.at(-1).expected)
+  const destroyed = new Set((fixture.finite_flight.destroyed_positions || []).map(p => key(transform(p))))
+  assert.equal(destroyed.size, (fixture.finite_flight.destroyed_positions || []).length, 'distinct declared destruction targets')
+  const crops = expected.blocks.filter(b => destroyed.has(key(b.pos)))
+  assert.equal(crops.length, destroyed.size, 'every declared crop exists initially')
+  assert(crops.every(b => ['minecraft:pumpkin', 'minecraft:melon'].includes(b.name) && !moving.has(key(b.pos))), 'only declared mature crops may disappear')
+  expected.blocks = expected.blocks.filter(b => !destroyed.has(key(b.pos)))
+  let count = 0
+  for (const b of expected.blocks) {
+    if (moving.has(key(b.pos))) {
+      b.pos = { x: b.pos.x + delta.x, y: b.pos.y, z: b.pos.z + delta.z }
+      count++
+    }
+    if (b.name === 'minecraft:lever') b.properties.powered = 'true'
+  }
+  assert.equal(count, moving.size, 'translate every declared moving block exactly once')
+  if (fixture.expected_arrival) {
+    // The engine definition declares endpoint native states independently of
+    // the simulator. Keep this check valid when a new engine has different
+    // resting states at arrival. Only facing is directional in these recipes.
+    const directions = ['north', 'east', 'south', 'west']
+    const quarterTurns = { r0: 0, r90: 1, r180: 2, r270: 3 }[rotation]
+    const blocks = fixture.expected_arrival.blocks.map(b => {
+      const properties = { ...b.properties }
+      assert(Object.keys(properties).every(k => ['facing', 'powered', 'extended', 'face'].includes(k)), 'undeclared directional property')
+      const index = directions.indexOf(properties.facing)
+      if (index >= 0) properties.facing = directions[(index + quarterTurns) % 4]
+      return { ...b, pos: transform(b.pos), properties }
+    })
+    assert.deepEqual(blocks.map(b => key(b.pos)).sort(), expected.blocks.map(b => key(b.pos)).sort(), 'declared endpoints must retain all translated and fixed parts')
+    expected = { min: low, max: high, blocks }
+  }
+  const candidate = failureSnapshot()
+  assert(candidate.complete)
+  const observed = await confirmRegion(bot, candidate, 'minecraft:overworld')
+  const canonical = blocks => blocks.map(b => [key(b.pos), b.name, b.properties]).sort((a, b) => a[0].localeCompare(b[0]))
+  assert.deepEqual(canonical(observed.blocks), canonical(expected.blocks), 'whole corridor must contain only the arrived engine and fixed launcher/stopper')
+  return { expected, observed, distance: fixture.finite_flight.distance,
+    engine_blocks: count, destroyed_blocks: crops.length, displacement,
+    expectation: fixture.expected_arrival ? 'independently declared native arrival at translated and fixed positions' : 'all declared moving blocks translated once; fixed blocks unchanged except launcher input',
+    hidden_readiness_proven: false }
+}
 async function main () {
   await Promise.race([once(bot, 'spawn'), sleep(30000).then(() => { throw new Error('actor spawn timeout') })])
   await command('/gamemode creative dustroutetest')
@@ -140,6 +189,22 @@ async function main () {
   await sleep(1000)
   empty(); await confirmEmpty('before_setup'); owned = true
   await mcp.initialize()
+  if (fixture.generation_request) {
+    const generated = await call('test_circuit_change', { blueprint: { action: 'generate_flying_machine', request: fixture.generation_request } })
+    assert.equal(generated.catalog_changed, false)
+    assert.equal(generated.adoption_authorized, false)
+    assert.equal(generated.writes_minecraft, false)
+    assert.equal(generated.result.verification.status, 'passed')
+    assert.deepEqual(generated.result.records, fixture.records)
+    const proposal = structuredClone(generated.result.request)
+    delete proposal.id
+    assert.deepEqual(proposal, fixture.request)
+    assert.deepEqual(generated.result.moving_positions, fixture.finite_flight.moving_positions)
+    assert.deepEqual(generated.result.destroyed_positions, fixture.finite_flight.destroyed_positions || [])
+    assert.deepEqual(generated.result.displacement, fixture.finite_flight.displacement)
+    assert.deepEqual(generated.result.expected_arrival, fixture.expected_arrival)
+    report.generated = { specification: fixture.generation_request, verification: generated.result.verification }
+  }
   await call('test_circuit_change', { blueprint: { action: 'import', records: fixture.records } })
   const request = structuredClone(fixture.request)
   const { known_region, input_levers, root_limits } = request.behavior_context
@@ -150,6 +215,13 @@ async function main () {
   // Reopen the real persistent archive in a new MCP process before placement.
   await restartMcp()
   report.restart = { after_adoption: true, transport: 'new_stdio_process' }
+  if (fixture.finite_flight) {
+    await command(`/setblock ${coords(low)} minecraft:stone`)
+    await call('new_placement', { assembly_revision_id: fixture.request.candidate_state.id,
+      assembly_target: { source_anchor: { x: 0, y: 0, z: 0 }, target_anchor: origin, rotation } }, false)
+    await command(`/setblock ${coords(low)} minecraft:air`)
+    report.occupied_target_refused = true
+  }
   const plan = await call('new_placement', { assembly_revision_id: fixture.request.candidate_state.id,
     assembly_target: { source_anchor: { x: 0, y: 0, z: 0 }, target_anchor: origin, rotation } })
   if (fixture.target_construction) {
@@ -258,12 +330,20 @@ async function main () {
       preview_required: true, changed_after_preview_refused: true, verified_steps: repaired.verified_steps,
       restored_after_restart: true }
   }
-  for (const probe of fixture.live_probes?.snapshots || [{ powered: true }, { powered: false }]) {
+  for (const probe of fixture.live_probes?.snapshots || (fixture.finite_flight ? [{ powered: true }] : [{ powered: true }, { powered: false }])) {
     const powered = probe.powered
     await bot.activateBlock(bot.blockAt(input))
     report.inputs.push({ position: input, powered, evidence: 'actual application ticks retained in server capture' })
-    await bot.waitForTicks(fixture.live_probes?.wait_ticks || 20)
-    if (fixture.live_probes) {
+    await bot.waitForTicks(fixture.finite_flight?.wait_ticks || fixture.live_probes?.wait_ticks || 20)
+    if (fixture.finite_flight) {
+      report.flight = await verifyFlightArrival(plan)
+      await restartMcp()
+      report.restart.after_arrival = true
+      const diagnosis = await diagnoseUnchanged(id, 'arrived_after_restart')
+      assert.equal(diagnosis.status, 'matches_reference')
+      assert.equal(diagnosis.reference.mode, 'observed_inputs')
+      assert.equal(diagnosis.summary.differing_positions, 0)
+    } else if (fixture.live_probes) {
       report.inputs.at(-1).whole_region_readback = readbackProbe(probe)
       report.inputs.at(-1).client_wait_ticks = fixture.live_probes.wait_ticks
     } else {
@@ -293,7 +373,25 @@ async function main () {
   }
   let undone
   if (persistence) {
-    const removal = await call('manage_assembly', { action: 'plan_removal', instance_id: id })
+    const removalArgs = { action: 'plan_removal', instance_id: id,
+      ...(fixture.finite_flight ? { removal_reference: 'observed_inputs' } : {}) }
+    if (fixture.finite_flight) {
+      const pending = await call('manage_assembly', removalArgs)
+      await call('show_operation', { operation_id: pending.operation_id })
+      await restartMcp()
+      await call('invoke_operation', { operation_id: pending.operation_id, confirm: true }, false)
+      report.persistence_checks.unsaved_removal_plan_not_reused = true
+      await command(`/setblock ${coords(low)} minecraft:stone`)
+      await call('manage_assembly', removalArgs, false)
+      await command(`/setblock ${coords(low)} minecraft:air`)
+    }
+    const removal = await call('manage_assembly', removalArgs)
+    if (fixture.finite_flight) {
+      assert.equal(removal.removal_reference, 'observed_inputs')
+      assert.equal(removal.runtime_history_reconstructed, false)
+      assert.equal(removal.server_readiness_proven, false)
+      assert(removal.operating_removal.baseline.blocks.length > 0)
+    }
     await call('invoke_operation', { operation_id: removal.operation_id, confirm: true }, false)
     await call('show_operation', { operation_id: removal.operation_id })
     await command(`/setblock ${coords(low)} minecraft:stone`)
@@ -307,6 +405,10 @@ async function main () {
     assert.equal(removed.instance.state, 'removed')
     assert.equal(removed.observation.status, 'matches')
     assert.equal(removed.observation.removal_eligible, false)
+    if (fixture.finite_flight) {
+      assert.deepEqual(removed.instance.attempts.at(-1).operating_removal, removal.operating_removal)
+      report.flight.removal_retained_after_restart = true
+    }
     report.persistence_checks.preview_required = true
     report.persistence_checks.changed_after_preview_refused = true
     report.persistence_checks.removal_retained = true

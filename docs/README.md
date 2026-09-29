@@ -43,6 +43,7 @@ Git history; diagnostic fixtures have not been promoted into public capability.
 | [Electrical piston live evidence](piston-electrical-live-evidence.md) | Applied input times, observed mixed/interference/quasi results and public construction trials |
 | [Piston transient conformance](piston-transient-conformance.md) | Measured input boundaries, carrier progress and callback-visible state comparisons |
 | [Movable piston bodies](piston-payload-conformance.md) | All-facing ordinary/sticky payloads, shared chains, double-extender evidence and subsequent redstone integration |
+| [Slime and honey adhesion](piston-adhesion.md) | Ordered branching movement, material relations, scope and verification |
 | [Downloaded 3×3 reference door](reference-3x3-door-audit.md) | Static inventory, exact coordinates and implementation/validation history |
 | [Typed device definitions](typed-device-runtime.md) | Rust constants, compile-time contracts, atomic properties, analog signals and concrete variant selection |
 | [Device integration roadmap](device-integration-roadmap.md) | Repeater integration, waxed bulbs, comparator internal state and torch history milestones |
@@ -69,6 +70,11 @@ Git history; diagnostic fixtures have not been promoted into public capability.
 
 | Document | Read it for |
 | --- | --- |
+| [Finite flying-machine trial](flying-machine-short-course.md) | Fixed-corridor ten-block flight, absolute-coordinate live comparison and independent arrival checks |
+| [Finite-flight lifecycle](flying-machine-lifecycle.md) | Single-operation type, adopted empty-corridor placement, arrival diagnosis and reviewed removal |
+| [Flying-machine generation](flying-machine-generation.md) | Typed body recipes, attachments, finite travel, reflection and rotation through shared validation |
+| [Declarative flying-machine engines](flying-machine-engines.md) | Typed engine definitions, shared verification and live lifecycle evidence |
+| [Harvest pass and practical roadmap](flying-machine-practical-roadmap.md) | Pumpkin/melon destruction, generated harvest contracts and the remaining survival-construction prerequisites |
 | [Differential physics](physics-differential-testing.md) | Comparing model and client-visible observations |
 | [Executable torch law](torch-laws.md) | Blueprint rule execution and server-observed burnout/recovery regressions |
 | [Executable repeater laws](blueprint-architecture.md#executable-repeater-laws) | Retained queue/event models, immutable law data and the short-pulse/locking boundaries |

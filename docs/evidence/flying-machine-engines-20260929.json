@@ -1,0 +1,340 @@
+{
+  "schema_version": "dustroute.declarative-engine-evidence.v1",
+  "status": "passed",
+  "date": "2026-09-29",
+  "base_commit": "a374ad9",
+  "runtime_revision": "v17 unchanged",
+  "runs": [
+    {
+      "run_id": "engine-direct-20260929-a",
+      "status": "passed",
+      "specification": {
+        "attachments": [],
+        "body": "compact",
+        "distance": 4,
+        "engine": "honey_direct",
+        "mirrored": true,
+        "namespace": "flight.engine.honey.v1",
+        "rotation": "r90"
+      },
+      "model_checks": {
+        "status": "passed",
+        "detail": "declared single-operation contract, exact native arrival, staged construction and arrival removal passed in the model; import/proposal/adoption and target revalidation are still required",
+        "construction_steps": 11,
+        "removal_steps": 11,
+        "live_world_verified": false
+      },
+      "origin": {
+        "x": 300000,
+        "y": 180,
+        "z": 1000
+      },
+      "placement_rotation": "r90",
+      "known_region": {
+        "min": {
+          "x": 299990,
+          "y": 177,
+          "z": 997
+        },
+        "max": {
+          "x": 300006,
+          "y": 183,
+          "z": 1004
+        }
+      },
+      "applied_inputs": [
+        {
+          "position": {
+            "x": 300002,
+            "y": 180,
+            "z": 1001
+          },
+          "powered": true,
+          "game_tick": 188440,
+          "packet_sequence": 8785,
+          "write_sequence": 8796
+        }
+      ],
+      "flight": {
+        "engine_blocks": 8,
+        "displacement": {
+          "x": 0,
+          "y": 0,
+          "z": 4
+        },
+        "distance": 4,
+        "hidden_readiness_proven": false,
+        "target_displacement": {
+          "x": -4,
+          "y": 0,
+          "z": 0
+        }
+      },
+      "verified_operations": [
+        {
+          "kind": "custom_piston_assembly_construction",
+          "steps": 11
+        },
+        {
+          "kind": "placed_assembly_removal",
+          "steps": 11
+        }
+      ],
+      "diagnosis": "matches_reference",
+      "restart_count": 5,
+      "guards": {
+        "occupied_target_refused": true,
+        "listed_after_restart": true,
+        "fresh_review": true,
+        "missing_chunks_refused": true,
+        "external_change_detected": true,
+        "unsaved_removal_plan_not_reused": true,
+        "preview_required": true,
+        "changed_after_preview_refused": true,
+        "removal_retained": true
+      },
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "server_stopped_normally": true
+      },
+      "raw_capture": {
+        "records": 21656,
+        "contiguous": true,
+        "footer": {
+          "kind": "artifact_end",
+          "capture_mode": "continuous",
+          "capture_state": "closed_no_input",
+          "input_observed": false,
+          "anchor_game_tick": null,
+          "end_game_tick": null,
+          "last_sequence": 21656,
+          "emitted_records": 21656,
+          "suppressed_records": 0,
+          "evicted_records": 0,
+          "write_errors": 0,
+          "heartbeat_mode": "full"
+        }
+      },
+      "loaded_sources_sha256": {
+        "/root/DustRoute/tools/observe_assembly_construction.py": "ce7352aa14163e89bdf0446ac756d8b32ad3a98eaed5a7f36581bc18d141e940",
+        "/root/DustRoute/crates/dustroute-mcp/mineflayer/e2e/piston-assembly-mcp-live.js": "4ec60e0281a26843d2aa67b923ce860cec585460be88f45bf615229caf8cc9e2",
+        "/root/DustRoute/target/debug/dustroute-mcp": "392869d1c82fdc76ad0aff7e09c825f8626453f54fa5b5ea1c733360b744820b",
+        "/root/DustRoute/crates/dustroute-mcp/mineflayer/bridge.js": "fd20930613733f1f36b97103033a651a958736c3b79c3c8e2122d5215173c8c8",
+        "/root/DustRoute/crates/dustroute-mcp/mineflayer/readback.js": "517f9ebab79a8e18be6e489f6346a5c9a115f5b7d6073c5ff0c2b46fb71e8737",
+        "/root/DustRoute/tools/instrumented_server.py": "7164de1897c7f0388b99b6ab2cac7edb12174add7aaf1a0bd347e5ffb5f3ca6f"
+      },
+      "artifacts_sha256": {
+        ".raw.ndjson": "a7762504f6ecab03b42095f2b9fd03b1680fe75eb738c66df0fbb752498740ad",
+        ".server.log": "3f8134570f4267b81525ad939f40113344d6602d2cd257fafad4614f30049ea1",
+        ".bridge.log": "1c8b22e79c538898bc0a220bd62461501f3f492c160e6f4dc2fbc0f5806f51c1",
+        ".client.json": "9e507a537fdcb4778c638f84852d69b29c65b4aacb6d26f959ca87d9c1cb1ae2",
+        ".fixture.json": "3aead9313f7c48a877d3b7bd5c5f162afe6f4d258e5fc4d0ddd519e3c81e500f"
+      },
+      "local_prefix": ".local/e2e-artifacts/engine-direct-20260929-a"
+    },
+    {
+      "run_id": "engine-relay-20260929-a",
+      "status": "passed",
+      "specification": {
+        "attachments": [],
+        "body": "slime_wings",
+        "distance": 5,
+        "engine": "slime_relay",
+        "mirrored": false,
+        "namespace": "flight.engine.relay.v1",
+        "rotation": "r0"
+      },
+      "model_checks": {
+        "status": "passed",
+        "detail": "declared single-operation contract, exact native arrival, staged construction and arrival removal passed in the model; import/proposal/adoption and target revalidation are still required",
+        "construction_steps": 13,
+        "removal_steps": 13,
+        "live_world_verified": false
+      },
+      "origin": {
+        "x": 310000,
+        "y": 180,
+        "z": 1000
+      },
+      "placement_rotation": "r270",
+      "known_region": {
+        "min": {
+          "x": 309995,
+          "y": 177,
+          "z": 990
+        },
+        "max": {
+          "x": 310006,
+          "y": 185,
+          "z": 1004
+        }
+      },
+      "applied_inputs": [
+        {
+          "position": {
+            "x": 310000,
+            "y": 182,
+            "z": 1000
+          },
+          "powered": true,
+          "game_tick": 190223,
+          "packet_sequence": 10731,
+          "write_sequence": 10742
+        }
+      ],
+      "flight": {
+        "engine_blocks": 10,
+        "displacement": {
+          "x": 5,
+          "y": 0,
+          "z": 0
+        },
+        "distance": 5,
+        "hidden_readiness_proven": false,
+        "target_displacement": {
+          "x": 0,
+          "y": 0,
+          "z": -5
+        }
+      },
+      "verified_operations": [
+        {
+          "kind": "custom_piston_assembly_construction",
+          "steps": 13
+        },
+        {
+          "kind": "placed_assembly_removal",
+          "steps": 13
+        }
+      ],
+      "diagnosis": "matches_reference",
+      "restart_count": 5,
+      "guards": {
+        "occupied_target_refused": true,
+        "listed_after_restart": true,
+        "fresh_review": true,
+        "missing_chunks_refused": true,
+        "external_change_detected": true,
+        "unsaved_removal_plan_not_reused": true,
+        "preview_required": true,
+        "changed_after_preview_refused": true,
+        "removal_retained": true
+      },
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "server_stopped_normally": true
+      },
+      "raw_capture": {
+        "records": 27011,
+        "contiguous": true,
+        "footer": {
+          "kind": "artifact_end",
+          "capture_mode": "continuous",
+          "capture_state": "closed_no_input",
+          "input_observed": false,
+          "anchor_game_tick": null,
+          "end_game_tick": null,
+          "last_sequence": 27011,
+          "emitted_records": 27011,
+          "suppressed_records": 0,
+          "evicted_records": 0,
+          "write_errors": 0,
+          "heartbeat_mode": "full"
+        }
+      },
+      "loaded_sources_sha256": {
+        "/root/DustRoute/tools/observe_assembly_construction.py": "ce7352aa14163e89bdf0446ac756d8b32ad3a98eaed5a7f36581bc18d141e940",
+        "/root/DustRoute/crates/dustroute-mcp/mineflayer/e2e/piston-assembly-mcp-live.js": "4ec60e0281a26843d2aa67b923ce860cec585460be88f45bf615229caf8cc9e2",
+        "/root/DustRoute/target/debug/dustroute-mcp": "392869d1c82fdc76ad0aff7e09c825f8626453f54fa5b5ea1c733360b744820b",
+        "/root/DustRoute/crates/dustroute-mcp/mineflayer/bridge.js": "fd20930613733f1f36b97103033a651a958736c3b79c3c8e2122d5215173c8c8",
+        "/root/DustRoute/crates/dustroute-mcp/mineflayer/readback.js": "517f9ebab79a8e18be6e489f6346a5c9a115f5b7d6073c5ff0c2b46fb71e8737",
+        "/root/DustRoute/tools/instrumented_server.py": "7164de1897c7f0388b99b6ab2cac7edb12174add7aaf1a0bd347e5ffb5f3ca6f"
+      },
+      "artifacts_sha256": {
+        ".raw.ndjson": "493f04edd4f87ca06413978229745864fcdbc8dacb70f831fcbf826e16055e84",
+        ".server.log": "ce57f74e2e153080166b162aa14cd81d2746b7466f356565c23764330ba5eaf6",
+        ".bridge.log": "d560fa00bf31c9d1d7f10f196d612e14c73474b5a043726cc84aedaa5eee18f6",
+        ".client.json": "70e3174684d9a16133a0f20381f5cfef4c0557e0a1c17f274c557cfd3c65d4e2",
+        ".fixture.json": "b40663f657afed9791993b842b3705e0dea42e3fce9bef9d44f6874759366591"
+      },
+      "local_prefix": ".local/e2e-artifacts/engine-relay-20260929-a"
+    }
+  ],
+  "retained_observations": {
+    "path": "docs/evidence/flying-machine-engines-20260929.observations.json.gz",
+    "sha256": "7f7bdcbd8da72d720127a187b1274b81fee96cf2761392b60cf9d2a239723f26"
+  },
+  "validation": {
+    "generation_matrix_and_negative_tests": {
+      "log": ".local/engine-definitions-tests.log",
+      "sha256": "da6685f9855ffb2667f220a757095b989b8ccabb0264a85e047354387d0ef4ac"
+    },
+    "definition_projection_test": {
+      "log": ".local/engine-definitions-geometry-test.log",
+      "sha256": "0ec0335777628d3f8d17764b2c4f5528c5d709c33175f7053eab15797bf7a4a5"
+    },
+    "public_api_tests": {
+      "log": ".local/engine-definitions-mcp-tests.log",
+      "sha256": "9bbd711c3746d70e2de1530ee0bfe504bc863c5fdcb09e128a9c235ed38b0564"
+    },
+    "workspace_clippy": {
+      "log": ".local/engine-definitions-clippy.log",
+      "sha256": "aeecc212c2e0c469923012669de4dc13283a4f0c8dfac0239b725b0d4c6a9c13"
+    },
+    "fmt": {
+      "log": ".local/engine-definitions-fmt.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "model_matrix": {
+    "cases": 48,
+    "engine_bodies": {
+      "slime_relay": [
+        "compact",
+        "side_blocks",
+        "slime_wings",
+        "honey_nose"
+      ],
+      "honey_direct": [
+        "compact",
+        "side_blocks"
+      ]
+    },
+    "rotations": [
+      "r0",
+      "r90",
+      "r180",
+      "r270"
+    ],
+    "mirrored": [
+      false,
+      true
+    ],
+    "distance_by_rotation": [
+      1,
+      4,
+      8,
+      16
+    ]
+  },
+  "negative_cases": [
+    "detached honey on slime and detached slime on honey",
+    "undefined engine/body combination",
+    "unknown engine identifier",
+    "excess connected payload",
+    "overlapping engine or launcher",
+    "out-of-range coordinates/distance",
+    "exhausted state budget"
+  ],
+  "scope": "Two declarative engines and generated single-operation contracts, independent declared native endpoints, public generation/import/fresh adoption/placement/arrival diagnosis/removal. No physical runtime changes.",
+  "limits": [
+    "Two registered engine definitions, not synthesis of arbitrary engines or arbitrary engine JSON ingestion.",
+    "Only two new live cases; all other candidates require fresh model and target checks.",
+    "No infinite flight, reversal/retrigger contract, moving observation window, automatic empty-site search or entity transport.",
+    "Position type checks and exact native endpoint generation checks are separate; generated reports cannot authorize edited definitions or live writes.",
+    "Full retained server capture is provenance for inputs and workflow; this task does not claim a new tick-by-tick physical comparator run.",
+    "Continuous capture footer bounded-trigger input_observed is not used; actual input is identified by the packet and applied lever write."
+  ]
+}

@@ -1,0 +1,568 @@
+{
+  "schema_version": "dustroute.flying-machine-harvest-evidence.v1",
+  "status": "passed",
+  "date": "2026-09-29",
+  "base_commit": "9c12c96",
+  "runtime_revision": "dustroute.piston-electrical-callbacks.java-1-21-11.v18",
+  "physical_admission_revision": "v9",
+  "physical_trials": [
+    {
+      "kind": "branch",
+      "summary": {
+        "fixture": "device-harvest-branch-r0",
+        "fixture_sha256": "c422e1d137c6635c9fd05a00cbac36289119d45aa2382ac369614d20874a4890",
+        "actor_sha256": "32979a514e7b32ba75736d8f3ca423f8c1187d6c90f1b6d96e08364c9ef56264",
+        "readback_sha256": "517f9ebab79a8e18be6e489f6346a5c9a115f5b7d6073c5ff0c2b46fb71e8737",
+        "readback_validator_sha256": "6c31a6bc06ae8ec296b6b3b1cf4894c0bf7fa026f9b9723667f87e915a92bdc9",
+        "capture_sha256": "51efae75a602419872e5fc9ec4254ad4fab14bf274434d34cf26e699f8161032",
+        "comparator_sha256": "78a609a21b98ac4afa38e1b34349c88c354e369b2d1dccbe897e8c3cea90d507",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "c8e3f46a8e9376c6c31dcb99e1a81eebcb47c53235df8a5d4d9d6be81d522373",
+        "classification": "matched_declared_projection",
+        "applied_inputs": [
+          {
+            "position": {
+              "x": 319999,
+              "y": 180,
+              "z": 1000
+            },
+            "game_tick": 191552,
+            "packet_sequence": 2502,
+            "write_sequence": 2503,
+            "kind": "lever",
+            "powered": true
+          },
+          {
+            "position": {
+              "x": 319999,
+              "y": 180,
+              "z": 1000
+            },
+            "game_tick": 191572,
+            "packet_sequence": 2918,
+            "write_sequence": 2919,
+            "kind": "lever",
+            "powered": false
+          }
+        ],
+        "requested_steps": [
+          {
+            "input": 0,
+            "powered": true,
+            "wait_ticks": 12
+          },
+          {
+            "input": 0,
+            "powered": false,
+            "wait_ticks": 20
+          }
+        ],
+        "cleanup": {
+          "region_empty": true,
+          "force_load_removed": true,
+          "disconnected_before_finish": null
+        },
+        "server_stopped_normally": true,
+        "enabled_features": [
+          "minecraft:vanilla"
+        ],
+        "artifacts": {
+          ".raw.ndjson": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/harvest-branch-20260929.raw.ndjson",
+            "sha256": "9282ed2683516e907ab70eef67d6cac7e86fcebf4c32c865fced9993e8fdf0cf"
+          },
+          ".server.log": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/harvest-branch-20260929.server.log",
+            "sha256": "382435b11882fa7c978a20100f03545901285a7469e479573f71a316231d9faf"
+          },
+          ".client.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/harvest-branch-20260929.client.json",
+            "sha256": "15361aa9434386c7603d80eb5d660aceb388e357f8f6828a44a3539afc457e8d"
+          },
+          ".reference.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/harvest-branch-20260929.reference.json",
+            "sha256": "b9aa324530e1d7a4f915182aef1d481819c2e64c3ef602b82a9d3f35f04f1e46"
+          },
+          ".input.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/harvest-branch-20260929.input.json",
+            "sha256": "e113250f5dc2a4e23ee7510915a6b5aa7990e901ecc60d8177fae6c04a1dd4bf"
+          },
+          ".model.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/harvest-branch-20260929.model.json",
+            "sha256": "4ef229eb5526e5a79184c3c6ecc02d7dc94ff4a0d511b6937852aae5b1462faf"
+          },
+          ".comparison.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/harvest-branch-20260929.comparison.json",
+            "sha256": "ed81507ffa488f22bb7f2cb327f3d8979e215938a56a6b1617f860908681ea1d"
+          }
+        }
+      },
+      "comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v18",
+        "tick_end_count": 61,
+        "tick_mismatches": [],
+        "live_write_count": 29,
+        "model_write_count": 29,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 6,
+        "model_scheduled_count": 6,
+        "first_scheduled_mismatch": null,
+        "first_tick_attempt_mismatch": null,
+        "live_callback_count": 74,
+        "model_callback_count": 74,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "restoration_scope": "movement_or_device",
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection"
+      },
+      "retained": "crates/dustroute-translate/tests/fixtures/device-circuits/harvest-branch.json.gz",
+      "retained_sha256": "81e03405d381da4b4d3b44749de544038e99a4f072a3574e05e74807e9cec374"
+    },
+    {
+      "kind": "limit12",
+      "summary": {
+        "fixture": "device-harvest-limit12-r0",
+        "fixture_sha256": "15081471bd56ee7f34b906816ee4b9ab841d53fdd9df39fc05e38cd2271492d8",
+        "actor_sha256": "32979a514e7b32ba75736d8f3ca423f8c1187d6c90f1b6d96e08364c9ef56264",
+        "readback_sha256": "517f9ebab79a8e18be6e489f6346a5c9a115f5b7d6073c5ff0c2b46fb71e8737",
+        "readback_validator_sha256": "6c31a6bc06ae8ec296b6b3b1cf4894c0bf7fa026f9b9723667f87e915a92bdc9",
+        "capture_sha256": "51efae75a602419872e5fc9ec4254ad4fab14bf274434d34cf26e699f8161032",
+        "comparator_sha256": "78a609a21b98ac4afa38e1b34349c88c354e369b2d1dccbe897e8c3cea90d507",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "c8e3f46a8e9376c6c31dcb99e1a81eebcb47c53235df8a5d4d9d6be81d522373",
+        "classification": "matched_declared_projection",
+        "applied_inputs": [
+          {
+            "position": {
+              "x": 320999,
+              "y": 180,
+              "z": 1000
+            },
+            "game_tick": 192376,
+            "packet_sequence": 2517,
+            "write_sequence": 2518,
+            "kind": "lever",
+            "powered": true
+          },
+          {
+            "position": {
+              "x": 320999,
+              "y": 180,
+              "z": 1000
+            },
+            "game_tick": 192395,
+            "packet_sequence": 3167,
+            "write_sequence": 3168,
+            "kind": "lever",
+            "powered": false
+          }
+        ],
+        "requested_steps": [
+          {
+            "input": 0,
+            "powered": true,
+            "wait_ticks": 12
+          },
+          {
+            "input": 0,
+            "powered": false,
+            "wait_ticks": 20
+          }
+        ],
+        "cleanup": {
+          "region_empty": true,
+          "force_load_removed": true,
+          "disconnected_before_finish": null
+        },
+        "server_stopped_normally": true,
+        "enabled_features": [
+          "minecraft:vanilla"
+        ],
+        "artifacts": {
+          ".raw.ndjson": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/harvest-limit12-20260929.raw.ndjson",
+            "sha256": "1b9d8828f79cd1e4e765eef78276192751a1f871e79ae586e8ce5f324c056f75"
+          },
+          ".server.log": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/harvest-limit12-20260929.server.log",
+            "sha256": "ca46283c0d4863e99f36a5ca9f8b12079d04d72072d7be800cec1a90c064379e"
+          },
+          ".client.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/harvest-limit12-20260929.client.json",
+            "sha256": "6263e5627b5d6e0a620ec3aedc8823271bd9967bf377d937e1db9369884becc9"
+          },
+          ".reference.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/harvest-limit12-20260929.reference.json",
+            "sha256": "82431ad99ccecd774ac8923188ecea49de6c5c08a1faa44bba14011b0a07a146"
+          },
+          ".input.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/harvest-limit12-20260929.input.json",
+            "sha256": "389b322ab689f7824281ea945906d522cfd8797d77351975c1262558f48a8c18"
+          },
+          ".model.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/harvest-limit12-20260929.model.json",
+            "sha256": "c8e3265f827881a8fae06eeba223e8c8c63c79bc12ad926683f7b9bf8b6bd72d"
+          },
+          ".comparison.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/harvest-limit12-20260929.comparison.json",
+            "sha256": "591987f216ffa523912a3e8bf74d73aace6eb41c8967f9fbcc52af04902c8a63"
+          }
+        }
+      },
+      "comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v18",
+        "tick_end_count": 60,
+        "tick_mismatches": [],
+        "live_write_count": 36,
+        "model_write_count": 36,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 0,
+        "model_scheduled_count": 0,
+        "first_scheduled_mismatch": null,
+        "first_tick_attempt_mismatch": null,
+        "live_callback_count": 147,
+        "model_callback_count": 147,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "restoration_scope": "movement_or_device",
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection"
+      },
+      "retained": "crates/dustroute-translate/tests/fixtures/device-circuits/harvest-limit12.json.gz",
+      "retained_sha256": "d8043114f9ea39fd829a7734b28ff8739ae2af7439a4e22594c12f35a70a91f7"
+    },
+    {
+      "kind": "up",
+      "summary": {
+        "fixture": "device-harvest-up-r0",
+        "fixture_sha256": "0ad1c2e3719a31dfb730846a574c07cc63e4ee990f6ceb42685bff51a925badd",
+        "actor_sha256": "32979a514e7b32ba75736d8f3ca423f8c1187d6c90f1b6d96e08364c9ef56264",
+        "readback_sha256": "517f9ebab79a8e18be6e489f6346a5c9a115f5b7d6073c5ff0c2b46fb71e8737",
+        "readback_validator_sha256": "6c31a6bc06ae8ec296b6b3b1cf4894c0bf7fa026f9b9723667f87e915a92bdc9",
+        "capture_sha256": "51efae75a602419872e5fc9ec4254ad4fab14bf274434d34cf26e699f8161032",
+        "comparator_sha256": "78a609a21b98ac4afa38e1b34349c88c354e369b2d1dccbe897e8c3cea90d507",
+        "projection_sha256": "ba5c192b727237419c07c1eaeb4dd156a533f15b80eaec6c1acc048ba27c36e7",
+        "model_binary_sha256": "c8e3f46a8e9376c6c31dcb99e1a81eebcb47c53235df8a5d4d9d6be81d522373",
+        "classification": "matched_declared_projection",
+        "applied_inputs": [
+          {
+            "position": {
+              "x": 322000,
+              "y": 179,
+              "z": 1000
+            },
+            "game_tick": 193177,
+            "packet_sequence": 2421,
+            "write_sequence": 2422,
+            "kind": "lever",
+            "powered": true
+          },
+          {
+            "position": {
+              "x": 322000,
+              "y": 179,
+              "z": 1000
+            },
+            "game_tick": 193197,
+            "packet_sequence": 2736,
+            "write_sequence": 2737,
+            "kind": "lever",
+            "powered": false
+          }
+        ],
+        "requested_steps": [
+          {
+            "input": 0,
+            "powered": true,
+            "wait_ticks": 12
+          },
+          {
+            "input": 0,
+            "powered": false,
+            "wait_ticks": 20
+          }
+        ],
+        "cleanup": {
+          "region_empty": true,
+          "force_load_removed": true,
+          "disconnected_before_finish": null
+        },
+        "server_stopped_normally": true,
+        "enabled_features": [
+          "minecraft:vanilla"
+        ],
+        "artifacts": {
+          ".raw.ndjson": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/harvest-up-20260929.raw.ndjson",
+            "sha256": "1ffbb8a27047982827c578e2f698e12f880bc8ebf939600e4483599106cf773d"
+          },
+          ".server.log": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/harvest-up-20260929.server.log",
+            "sha256": "3914385115d7a5a785983f54e96da2b18ec9b25758534382f9dd7581e3f978c7"
+          },
+          ".client.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/harvest-up-20260929.client.json",
+            "sha256": "9f1886df9e18e29dd707a5fd80f6850ca2349fa7cb571e0e41ff069f0650ad75"
+          },
+          ".reference.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/harvest-up-20260929.reference.json",
+            "sha256": "d25e67982f13d779d698482c448f32ca768168f052706036378232d9cc92373e"
+          },
+          ".input.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/harvest-up-20260929.input.json",
+            "sha256": "ce98960baa75780c6fc36093c897e7dec1596b16cfdc1a5b42e7ada12147164e"
+          },
+          ".model.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/harvest-up-20260929.model.json",
+            "sha256": "aa71573b8cbd5b752b1159006d6b1541ee61ca7bb12dea5844c9bf4bc6ea52d8"
+          },
+          ".comparison.json": {
+            "path": "/root/DustRoute/.local/e2e-artifacts/harvest-up-20260929.comparison.json",
+            "sha256": "5e6cebefe3860c4597890a201a8cdabcb994210b4dc065378ad2204d48d66fcc"
+          }
+        }
+      },
+      "comparison": {
+        "schema_version": "dustroute.device-circuit-comparison.v1",
+        "profile": "dustroute.piston-electrical-callbacks.java-1-21-11.v18",
+        "tick_end_count": 61,
+        "tick_mismatches": [],
+        "live_write_count": 9,
+        "model_write_count": 9,
+        "first_write_mismatch": null,
+        "live_scheduled_count": 0,
+        "model_scheduled_count": 0,
+        "first_scheduled_mismatch": null,
+        "first_tick_attempt_mismatch": null,
+        "live_callback_count": 30,
+        "model_callback_count": 30,
+        "first_callback_mismatch": null,
+        "restoration_verified": true,
+        "restoration_scope": "movement_or_device",
+        "scope": "complete tick-end block states, palette writes, delivered device block ticks, active-device ordinary notifications and piston event/carrier boundaries; hidden registers/histories, shape and inert-target callbacks not compared",
+        "classification": "matched_declared_projection"
+      },
+      "retained": "crates/dustroute-translate/tests/fixtures/device-circuits/harvest-up.json.gz",
+      "retained_sha256": "06af2e9b492f69fb4972e2122fa3ea25ee3dd75d2bdea13828d9bf8f4087bb6d"
+    }
+  ],
+  "lifecycle": {
+    "run_id": "harvest-flight-20260929",
+    "status": "passed",
+    "specification": {
+      "attachments": [
+        {
+          "material": "slime",
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": -1
+          }
+        },
+        {
+          "material": "stone",
+          "position": {
+            "x": 0,
+            "y": 0,
+            "z": -2
+          }
+        }
+      ],
+      "body": "compact",
+      "distance": 4,
+      "engine": "slime_relay",
+      "harvest_targets": [
+        {
+          "crop": "pumpkin",
+          "position": {
+            "x": 1,
+            "y": 0,
+            "z": -2
+          }
+        },
+        {
+          "crop": "melon",
+          "position": {
+            "x": 2,
+            "y": 0,
+            "z": -2
+          }
+        },
+        {
+          "crop": "pumpkin",
+          "position": {
+            "x": 3,
+            "y": 0,
+            "z": -2
+          }
+        },
+        {
+          "crop": "melon",
+          "position": {
+            "x": 4,
+            "y": 0,
+            "z": -2
+          }
+        }
+      ],
+      "mirrored": false,
+      "namespace": "harvest.slime.20260929",
+      "rotation": "r0"
+    },
+    "origin": {
+      "x": 323000,
+      "y": 180,
+      "z": 1000
+    },
+    "placement_rotation": "r90",
+    "known_region": {
+      "min": {
+        "x": 322996,
+        "y": 177,
+        "z": 996
+      },
+      "max": {
+        "x": 323005,
+        "y": 185,
+        "z": 1009
+      }
+    },
+    "applied_inputs": [
+      {
+        "position": {
+          "x": 323000,
+          "y": 182,
+          "z": 1000
+        },
+        "powered": true,
+        "game_tick": 194608,
+        "packet_sequence": 9989,
+        "write_sequence": 10000
+      }
+    ],
+    "flight": {
+      "engine_blocks": 8,
+      "destroyed_blocks": 4,
+      "displacement": {
+        "x": 4,
+        "y": 0,
+        "z": 0
+      },
+      "distance": 4,
+      "hidden_readiness_proven": false
+    },
+    "verified_operations": [
+      {
+        "kind": "custom_piston_assembly_construction",
+        "steps": 15
+      },
+      {
+        "kind": "placed_assembly_removal",
+        "steps": 11
+      }
+    ],
+    "diagnosis": "matches_reference",
+    "restart_count": 5,
+    "guards": {
+      "occupied_target_refused": true,
+      "listed_after_restart": true,
+      "fresh_review": true,
+      "missing_chunks_refused": true,
+      "external_change_detected": true,
+      "unsaved_removal_plan_not_reused": true,
+      "preview_required": true,
+      "changed_after_preview_refused": true,
+      "removal_retained": true
+    },
+    "cleanup": {
+      "region_empty": true,
+      "force_load_removed": true,
+      "server_stopped_normally": true
+    },
+    "loaded_sources_sha256": {
+      "/root/DustRoute/tools/observe_assembly_construction.py": "ce7352aa14163e89bdf0446ac756d8b32ad3a98eaed5a7f36581bc18d141e940",
+      "/root/DustRoute/crates/dustroute-mcp/mineflayer/e2e/piston-assembly-mcp-live.js": "e67b8dec284f0fa85f94bf87c4f024752ab6d0b8de309c3bd27881f94559d8c0",
+      "/root/DustRoute/target/debug/dustroute-mcp": "5ec7ea0ee0776070aa9e0d624916f324add5a9ba6c75aad34124fb1be058f641",
+      "/root/DustRoute/crates/dustroute-mcp/mineflayer/bridge.js": "fd20930613733f1f36b97103033a651a958736c3b79c3c8e2122d5215173c8c8",
+      "/root/DustRoute/crates/dustroute-mcp/mineflayer/readback.js": "517f9ebab79a8e18be6e489f6346a5c9a115f5b7d6073c5ff0c2b46fb71e8737",
+      "/root/DustRoute/tools/instrumented_server.py": "7164de1897c7f0388b99b6ab2cac7edb12174add7aaf1a0bd347e5ffb5f3ca6f"
+    },
+    "artifacts_sha256": {
+      ".raw.ndjson": "19133f4697a0d6745a4b0e618be5d802709b30b247a39baa2a0a90cd3a01285a",
+      ".server.log": "1d03282eb1823f878bcaf2984c3570172c95fe1143e2e378f527db050b68a1a3",
+      ".bridge.log": "09e2b6271d76b502ed652efb73df0dc7c3fe102bec69627b197ad92a41093c99",
+      ".client.json": "50ddc68b0c36413d37224a37c59a75e53ae01c642eeb3b158213353a6de031df",
+      ".fixture.json": "34a4e1e940fd9016f908ae8ba39fc72ff6e654725f36aacd54294738d4a1e703"
+    },
+    "local_prefix": ".local/e2e-artifacts/harvest-flight-20260929"
+  },
+  "retained_observations": {
+    "path": "docs/evidence/flying-machine-harvest-20260929.observations.json.gz",
+    "sha256": "9df7941e10de3ee904367ef9650300e5291b6fc16e0e3c0f02676239a3a996d5"
+  },
+  "native_source_digest": {
+    ".local/piston-adhesion-source.javap": "a7ae509cf27925a06ce682211f5eb9c7f07aa26cda727d9347601e21b59d2c08",
+    ".local/piston-adhesion-blocks.javap": "6481a05a9e2a8d64f7fa6fc96d408fd7acbfd5df59ef29fbd16a413ca1c32535"
+  },
+  "scope": "Passive pumpkin/melon destruction and a finite harvest pass through shared generation, fresh adoption, command construction, observed arrival diagnosis and removal.",
+  "limits": [
+    "No entity physics, loot amount or item collection.",
+    "No natural growth, water, repeated harvest, automatic crop discovery or farm seeding protocol.",
+    "Other direct device destruction remains unsupported.",
+    "Survival placement and temporary construction structures are not implemented; construction in this evidence uses commands.",
+    "Three component trials compare tick-end states, writes and declared callbacks; the full-flight lifecycle checks declared endpoints and construction stages, not a new tick-by-tick flight comparison.",
+    "One live harvest layout; other candidates and targets still require fresh review.",
+    "The whole initial fixture includes prepared crop blocks; it does not place an engine into an existing active farm."
+  ],
+  "validation": {
+    "runtime": {
+      "log": ".local/harvest-runtime-tests.log",
+      "sha256": "d09fc0c88a91f68d72a9809dd1be33152d11a15609d30cc1f9b4a497ad0d46a1",
+      "passed_tests": 32
+    },
+    "generation_and_context": {
+      "log": ".local/harvest-regression-tests.log",
+      "sha256": "ee7242778b963fbae3e4e917c7f4104dc6f71ddeb5138c85f9d7f1baa54ea793",
+      "passed_tests": 21
+    },
+    "public_api": {
+      "log": ".local/harvest-mcp-test.log",
+      "sha256": "38a0f11c0ebedc812cc4ba1c568b48fc2a6b944c5d4f6c10e3dbd5f64cd5f95f",
+      "passed_tests": 3
+    },
+    "retained_observations": {
+      "log": ".local/harvest-evidence-replay.log",
+      "sha256": "7bbd3a2cde6fc98088d406b0156212f722d04a203163be62b43ab20274253157",
+      "passed_tests": null
+    },
+    "workspace_clippy": {
+      "log": ".local/harvest-clippy.log",
+      "sha256": "c1827c3b7e2d744d34cf287903609f4552225e637e82cd510b71c82a52fba94c",
+      "passed_tests": null
+    },
+    "fmt": {
+      "log": ".local/harvest-fmt.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "passed_tests": null
+    }
+  },
+  "retained_physical_fixture_count": 58,
+  "model_matrix": {
+    "existing_transport_configurations": 48,
+    "harvest_configurations": 8,
+    "harvest_rotations": [
+      "r0",
+      "r90",
+      "r180",
+      "r270"
+    ],
+    "harvest_mirrored": [
+      false,
+      true
+    ],
+    "harvest_distance": 4
+  }
+}

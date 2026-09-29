@@ -1,0 +1,1228 @@
+{
+  "schema_version": "dustroute.generated-flight-evidence.v1",
+  "status": "passed",
+  "date": "2026-09-28",
+  "base_commit": "ee7c2c6",
+  "runtime_revision": "v17 unchanged",
+  "runs": [
+    {
+      "run_id": "generated-honey-20260928-a",
+      "status": "passed",
+      "specification": {
+        "attachments": [],
+        "body": "honey_nose",
+        "distance": 6,
+        "mirrored": true,
+        "namespace": "flight.generated.honey.v1",
+        "rotation": "r180"
+      },
+      "model_checks": {
+        "construction_steps": 11,
+        "detail": "declared single-operation contract, exact native arrival, staged construction and arrival removal passed in the model; import/proposal/adoption and target revalidation are still required",
+        "live_world_verified": false,
+        "removal_steps": 11,
+        "review": {
+          "arrangement": [
+            {
+              "detail": "complete actual world accepted by the native initial-placement gate",
+              "kind": "placement",
+              "status": "passed"
+            }
+          ],
+          "behavior": [
+            {
+              "detail": "[InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))]: {\"type_revision\":\"flight.generated.honey.v1.arrival.v1\",\"status\":\"passed\",\"reachable_states\":347,\"evaluated_steps\":347,\"graph_closed\":true,\"detail\":\"closed completed-operation graph; 1 ready physical cycle phases checked; held-input intermediate observations remain correct; one rising command only; reverse/reset/reuse not promised; interruption tolerance is not required\",\"counterexample\":null}",
+              "kind": "behavior",
+              "status": "passed"
+            }
+          ],
+          "behavior_context": {
+            "initial_condition": "fresh_construction",
+            "input_levers": [
+              {
+                "x": 0,
+                "y": 2,
+                "z": 0
+              }
+            ],
+            "known_region": {
+              "max": {
+                "x": 4,
+                "y": 5,
+                "z": 5
+              },
+              "min": {
+                "x": -12,
+                "y": -3,
+                "z": -3
+              }
+            },
+            "profile": "dustroute.piston-electrical-root-exploration.v17",
+            "root_limits": {
+              "max_call_depth": 512,
+              "max_microsteps": 100000,
+              "max_pending": 10000
+            }
+          },
+          "occurrences": [
+            [
+              [
+                "root"
+              ],
+              {
+                "checks": [
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: -9, y: 0, z: 1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: -2, y: 0, z: 1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: -2, y: 0, z: 2 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: -1, y: 0, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: -1, y: 0, z: 1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: -1, y: 1, z: 1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 0, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 0, z: 1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 1, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 2, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: 1, y: 2, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  }
+                ],
+                "revision": "flight.generated.honey.v1.parent.v2"
+              }
+            ],
+            [
+              [
+                "root",
+                "machine"
+              ],
+              {
+                "checks": [
+                  {
+                    "detail": "declared laws selected by this world context",
+                    "kind": "physical_law",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "[InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))]: {\"type_revision\":\"flight.generated.honey.v1.arrival.v1\",\"status\":\"passed\",\"reachable_states\":347,\"evaluated_steps\":347,\"graph_closed\":true,\"detail\":\"closed completed-operation graph; 1 ready physical cycle phases checked; held-input intermediate observations remain correct; one rising command only; reverse/reset/reuse not promised; interruption tolerance is not required\",\"counterexample\":null}",
+                    "kind": "behavior",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: -9, y: 0, z: 1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: -2, y: 0, z: 1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: -2, y: 0, z: 2 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: -1, y: 0, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: -1, y: 0, z: 1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: -1, y: 1, z: 1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 0, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 0, z: 1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 1, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 2, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: 1, y: 2, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"input\" } at Pos { x: 0, y: 2, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_0\" } at Pos { x: -9, y: 0, z: 1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_1\" } at Pos { x: -8, y: 0, z: 1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_2\" } at Pos { x: -8, y: 0, z: 2 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_3\" } at Pos { x: -7, y: 0, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_4\" } at Pos { x: -7, y: 0, z: 1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_5\" } at Pos { x: -7, y: 0, z: 2 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_6\" } at Pos { x: -7, y: 1, z: 1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_7\" } at Pos { x: -6, y: 0, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_8\" } at Pos { x: -6, y: 0, z: 1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_9\" } at Pos { x: -6, y: 0, z: 2 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_10\" } at Pos { x: -6, y: 1, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_11\" } at Pos { x: -6, y: 1, z: 1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_12\" } at Pos { x: -5, y: 0, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_13\" } at Pos { x: -5, y: 0, z: 1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_14\" } at Pos { x: -5, y: 0, z: 2 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_15\" } at Pos { x: -5, y: 1, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_16\" } at Pos { x: -5, y: 1, z: 1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_17\" } at Pos { x: -4, y: 0, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_18\" } at Pos { x: -4, y: 0, z: 1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_19\" } at Pos { x: -4, y: 0, z: 2 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_20\" } at Pos { x: -4, y: 1, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_21\" } at Pos { x: -4, y: 1, z: 1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_22\" } at Pos { x: -3, y: 0, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_23\" } at Pos { x: -3, y: 0, z: 1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_24\" } at Pos { x: -3, y: 0, z: 2 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_25\" } at Pos { x: -3, y: 1, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_26\" } at Pos { x: -3, y: 1, z: 1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_27\" } at Pos { x: -2, y: 0, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_28\" } at Pos { x: -2, y: 0, z: 1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_29\" } at Pos { x: -2, y: 0, z: 2 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_30\" } at Pos { x: -2, y: 1, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_31\" } at Pos { x: -2, y: 1, z: 1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_32\" } at Pos { x: -1, y: 0, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_33\" } at Pos { x: -1, y: 0, z: 1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_34\" } at Pos { x: -1, y: 1, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_35\" } at Pos { x: -1, y: 1, z: 1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_36\" } at Pos { x: 0, y: 0, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_37\" } at Pos { x: 0, y: 0, z: 1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_38\" } at Pos { x: 0, y: 1, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_39\" } at Pos { x: 0, y: 2, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_40\" } at Pos { x: 1, y: 2, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_41\" } at Pos { x: -7, y: 0, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_42\" } at Pos { x: -6, y: 0, z: 1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  }
+                ],
+                "revision": "flight.generated.honey.v1.machine.v2"
+              }
+            ]
+          ]
+        },
+        "status": "passed"
+      },
+      "origin": {
+        "x": 280000,
+        "y": 180,
+        "z": 1000
+      },
+      "placement_rotation": "r0",
+      "known_region": {
+        "min": {
+          "x": 279988,
+          "y": 177,
+          "z": 997
+        },
+        "max": {
+          "x": 280004,
+          "y": 185,
+          "z": 1005
+        }
+      },
+      "applied_inputs": [
+        {
+          "position": {
+            "x": 280000,
+            "y": 182,
+            "z": 1000
+          },
+          "powered": true,
+          "game_tick": 184669,
+          "packet_sequence": 11293,
+          "write_sequence": 11304
+        }
+      ],
+      "flight": {
+        "engine_blocks": 8,
+        "displacement": {
+          "x": -6,
+          "y": 0,
+          "z": 0
+        },
+        "distance": 6,
+        "hidden_readiness_proven": false
+      },
+      "verified_operations": [
+        {
+          "kind": "custom_piston_assembly_construction",
+          "steps": 11
+        },
+        {
+          "kind": "placed_assembly_removal",
+          "steps": 11
+        }
+      ],
+      "diagnosis": "matches_reference",
+      "restart_count": 5,
+      "guards": {
+        "occupied_target_refused": true,
+        "listed_after_restart": true,
+        "fresh_review": true,
+        "missing_chunks_refused": true,
+        "external_change_detected": true,
+        "unsaved_removal_plan_not_reused": true,
+        "preview_required": true,
+        "changed_after_preview_refused": true,
+        "removal_retained": true
+      },
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "server_stopped_normally": true
+      },
+      "raw_capture": {
+        "records": 27745,
+        "contiguous": true,
+        "footer": {
+          "kind": "artifact_end",
+          "capture_mode": "continuous",
+          "capture_state": "closed_no_input",
+          "input_observed": false,
+          "anchor_game_tick": null,
+          "end_game_tick": null,
+          "last_sequence": 27745,
+          "emitted_records": 27745,
+          "suppressed_records": 0,
+          "evicted_records": 0,
+          "write_errors": 0,
+          "heartbeat_mode": "full"
+        }
+      },
+      "loaded_sources_sha256": {
+        "/root/DustRoute/tools/observe_assembly_construction.py": "ce7352aa14163e89bdf0446ac756d8b32ad3a98eaed5a7f36581bc18d141e940",
+        "/root/DustRoute/crates/dustroute-mcp/mineflayer/e2e/piston-assembly-mcp-live.js": "13e93420cb154e57d2a746eee0beceb2dbd0de1099b5730fdf9c503bf1ccecb9",
+        "/root/DustRoute/target/debug/dustroute-mcp": "f93e09366aca251979ad57ae12ba3d53c82590484be8ab7151488e4ba176a395",
+        "/root/DustRoute/crates/dustroute-mcp/mineflayer/bridge.js": "fd20930613733f1f36b97103033a651a958736c3b79c3c8e2122d5215173c8c8",
+        "/root/DustRoute/crates/dustroute-mcp/mineflayer/readback.js": "517f9ebab79a8e18be6e489f6346a5c9a115f5b7d6073c5ff0c2b46fb71e8737",
+        "/root/DustRoute/tools/instrumented_server.py": "7164de1897c7f0388b99b6ab2cac7edb12174add7aaf1a0bd347e5ffb5f3ca6f"
+      },
+      "artifacts_sha256": {
+        ".raw.ndjson": "b4ed934e9ce8047e84420ccba5161e5ecf945decdedf6af10e13da69cf28aa53",
+        ".server.log": "80c540eaab5e20bc3aadbe8239652f7422fe54b851708d7e829ac4005ac31181",
+        ".bridge.log": "c8ddcd8e89e389c59cf52456327ddfc2d0e85da021302c8523afd83db4fa3357",
+        ".client.json": "7b3d62bb781c41d7b6bfd33db402b094349585187d2a9bbe28598c17f9bde80a",
+        ".fixture.json": "318b8b09940877da9cdd5f1da6e4d64989f951d267270b330718c869a47caae8"
+      },
+      "local_prefix": ".local/e2e-artifacts/generated-honey-20260928-a"
+    },
+    {
+      "run_id": "generated-wings-20260928-a",
+      "status": "passed",
+      "specification": {
+        "attachments": [
+          {
+            "material": "glass",
+            "position": {
+              "x": 0,
+              "y": -1,
+              "z": 0
+            }
+          }
+        ],
+        "body": "slime_wings",
+        "distance": 4,
+        "mirrored": false,
+        "namespace": "flight.generated.wings.v1",
+        "rotation": "r90"
+      },
+      "model_checks": {
+        "construction_steps": 14,
+        "detail": "declared single-operation contract, exact native arrival, staged construction and arrival removal passed in the model; import/proposal/adoption and target revalidation are still required",
+        "live_world_verified": false,
+        "removal_steps": 14,
+        "review": {
+          "arrangement": [
+            {
+              "detail": "complete actual world accepted by the native initial-placement gate",
+              "kind": "placement",
+              "status": "passed"
+            }
+          ],
+          "behavior": [
+            {
+              "detail": "[InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))]: {\"type_revision\":\"flight.generated.wings.v1.arrival.v1\",\"status\":\"passed\",\"reachable_states\":271,\"evaluated_steps\":271,\"graph_closed\":true,\"detail\":\"closed completed-operation graph; 1 ready physical cycle phases checked; held-input intermediate observations remain correct; one rising command only; reverse/reset/reuse not promised; interruption tolerance is not required\",\"counterexample\":null}",
+              "kind": "behavior",
+              "status": "passed"
+            }
+          ],
+          "behavior_context": {
+            "initial_condition": "fresh_construction",
+            "input_levers": [
+              {
+                "x": 0,
+                "y": 2,
+                "z": 0
+              }
+            ],
+            "known_region": {
+              "max": {
+                "x": 5,
+                "y": 5,
+                "z": 9
+              },
+              "min": {
+                "x": -6,
+                "y": -4,
+                "z": -4
+              }
+            },
+            "profile": "dustroute.piston-electrical-root-exploration.v17",
+            "root_limits": {
+              "max_call_depth": 512,
+              "max_microsteps": 100000,
+              "max_pending": 10000
+            }
+          },
+          "occurrences": [
+            [
+              [
+                "root"
+              ],
+              {
+                "checks": [
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: -3, y: 0, z: 1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: -2, y: 0, z: 1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: -1, y: 0, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: -1, y: 0, z: 1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: -1, y: 0, z: 6 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: -1, y: 1, z: 1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: -1, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 0, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 0, z: 1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 1, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 2, z: -1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 2, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: 1, y: 0, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: 2, y: 0, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  }
+                ],
+                "revision": "flight.generated.wings.v1.parent.v2"
+              }
+            ],
+            [
+              [
+                "root",
+                "machine"
+              ],
+              {
+                "checks": [
+                  {
+                    "detail": "declared laws selected by this world context",
+                    "kind": "physical_law",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "[InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))]: {\"type_revision\":\"flight.generated.wings.v1.arrival.v1\",\"status\":\"passed\",\"reachable_states\":271,\"evaluated_steps\":271,\"graph_closed\":true,\"detail\":\"closed completed-operation graph; 1 ready physical cycle phases checked; held-input intermediate observations remain correct; one rising command only; reverse/reset/reuse not promised; interruption tolerance is not required\",\"counterexample\":null}",
+                    "kind": "behavior",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: -3, y: 0, z: 1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: -2, y: 0, z: 1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: -1, y: 0, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: -1, y: 0, z: 1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: -1, y: 0, z: 6 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: -1, y: 1, z: 1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: -1, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 0, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 0, z: 1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 1, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 2, z: -1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: 0, y: 2, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: 1, y: 0, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "known claimed position; source differences are not equality requirements at Pos { x: 2, y: 0, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "placement",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"input\" } at Pos { x: 0, y: 2, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_0\" } at Pos { x: -3, y: 0, z: 1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_1\" } at Pos { x: -3, y: 0, z: 2 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_2\" } at Pos { x: -3, y: 0, z: 3 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_3\" } at Pos { x: -3, y: 0, z: 4 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_4\" } at Pos { x: -3, y: 0, z: 5 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_5\" } at Pos { x: -2, y: 0, z: 1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_6\" } at Pos { x: -2, y: 0, z: 2 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_7\" } at Pos { x: -2, y: 0, z: 3 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_8\" } at Pos { x: -2, y: 0, z: 4 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_9\" } at Pos { x: -2, y: 0, z: 5 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_10\" } at Pos { x: -1, y: 0, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_11\" } at Pos { x: -1, y: 0, z: 1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_12\" } at Pos { x: -1, y: 0, z: 2 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_13\" } at Pos { x: -1, y: 0, z: 3 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_14\" } at Pos { x: -1, y: 0, z: 4 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_15\" } at Pos { x: -1, y: 0, z: 5 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_16\" } at Pos { x: -1, y: 0, z: 6 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_17\" } at Pos { x: -1, y: 1, z: 1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_18\" } at Pos { x: -1, y: 1, z: 2 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_19\" } at Pos { x: -1, y: 1, z: 3 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_20\" } at Pos { x: -1, y: 1, z: 4 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_21\" } at Pos { x: -1, y: 1, z: 5 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_22\" } at Pos { x: 0, y: -1, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_23\" } at Pos { x: 0, y: -1, z: 1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_24\" } at Pos { x: 0, y: -1, z: 2 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_25\" } at Pos { x: 0, y: -1, z: 3 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_26\" } at Pos { x: 0, y: -1, z: 4 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_27\" } at Pos { x: 0, y: 0, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_28\" } at Pos { x: 0, y: 0, z: 1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_29\" } at Pos { x: 0, y: 0, z: 2 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_30\" } at Pos { x: 0, y: 0, z: 3 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_31\" } at Pos { x: 0, y: 0, z: 4 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_32\" } at Pos { x: 0, y: 0, z: 5 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_33\" } at Pos { x: 0, y: 1, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_34\" } at Pos { x: 0, y: 1, z: 1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_35\" } at Pos { x: 0, y: 1, z: 2 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_36\" } at Pos { x: 0, y: 1, z: 3 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_37\" } at Pos { x: 0, y: 1, z: 4 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_38\" } at Pos { x: 0, y: 2, z: -1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_39\" } at Pos { x: 0, y: 2, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_40\" } at Pos { x: 1, y: 0, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_41\" } at Pos { x: 1, y: 0, z: 1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_42\" } at Pos { x: 1, y: 0, z: 2 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_43\" } at Pos { x: 1, y: 0, z: 3 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_44\" } at Pos { x: 1, y: 0, z: 4 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_45\" } at Pos { x: 2, y: 0, z: 0 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_46\" } at Pos { x: 2, y: 0, z: 1 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_47\" } at Pos { x: 2, y: 0, z: 2 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_48\" } at Pos { x: 2, y: 0, z: 3 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_49\" } at Pos { x: 2, y: 0, z: 4 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_50\" } at Pos { x: -1, y: 0, z: 4 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  },
+                  {
+                    "detail": "fixed terminal BlueprintPortRef { instance: [InstanceId(ComponentId(\"root\")), InstanceId(ComponentId(\"machine\"))], port: \"observation_51\" } at Pos { x: 0, y: 0, z: 5 }; checked throughout the closed reachable graph and every committed microstep",
+                    "kind": "port",
+                    "status": "passed"
+                  }
+                ],
+                "revision": "flight.generated.wings.v1.machine.v2"
+              }
+            ]
+          ]
+        },
+        "status": "passed"
+      },
+      "origin": {
+        "x": 290000,
+        "y": 180,
+        "z": 1000
+      },
+      "placement_rotation": "r0",
+      "known_region": {
+        "min": {
+          "x": 289994,
+          "y": 176,
+          "z": 996
+        },
+        "max": {
+          "x": 290005,
+          "y": 185,
+          "z": 1009
+        }
+      },
+      "applied_inputs": [
+        {
+          "position": {
+            "x": 290000,
+            "y": 182,
+            "z": 1000
+          },
+          "powered": true,
+          "game_tick": 186664,
+          "packet_sequence": 10618,
+          "write_sequence": 10629
+        }
+      ],
+      "flight": {
+        "engine_blocks": 11,
+        "displacement": {
+          "x": 0,
+          "y": 0,
+          "z": 4
+        },
+        "distance": 4,
+        "hidden_readiness_proven": false
+      },
+      "verified_operations": [
+        {
+          "kind": "custom_piston_assembly_construction",
+          "steps": 14
+        },
+        {
+          "kind": "placed_assembly_removal",
+          "steps": 14
+        }
+      ],
+      "diagnosis": "matches_reference",
+      "restart_count": 5,
+      "guards": {
+        "occupied_target_refused": true,
+        "listed_after_restart": true,
+        "fresh_review": true,
+        "missing_chunks_refused": true,
+        "external_change_detected": true,
+        "unsaved_removal_plan_not_reused": true,
+        "preview_required": true,
+        "changed_after_preview_refused": true,
+        "removal_retained": true
+      },
+      "cleanup": {
+        "region_empty": true,
+        "force_load_removed": true,
+        "server_stopped_normally": true
+      },
+      "raw_capture": {
+        "records": 25705,
+        "contiguous": true,
+        "footer": {
+          "kind": "artifact_end",
+          "capture_mode": "continuous",
+          "capture_state": "closed_no_input",
+          "input_observed": false,
+          "anchor_game_tick": null,
+          "end_game_tick": null,
+          "last_sequence": 25705,
+          "emitted_records": 25705,
+          "suppressed_records": 0,
+          "evicted_records": 0,
+          "write_errors": 0,
+          "heartbeat_mode": "full"
+        }
+      },
+      "loaded_sources_sha256": {
+        "/root/DustRoute/tools/observe_assembly_construction.py": "ce7352aa14163e89bdf0446ac756d8b32ad3a98eaed5a7f36581bc18d141e940",
+        "/root/DustRoute/crates/dustroute-mcp/mineflayer/e2e/piston-assembly-mcp-live.js": "13e93420cb154e57d2a746eee0beceb2dbd0de1099b5730fdf9c503bf1ccecb9",
+        "/root/DustRoute/target/debug/dustroute-mcp": "f93e09366aca251979ad57ae12ba3d53c82590484be8ab7151488e4ba176a395",
+        "/root/DustRoute/crates/dustroute-mcp/mineflayer/bridge.js": "fd20930613733f1f36b97103033a651a958736c3b79c3c8e2122d5215173c8c8",
+        "/root/DustRoute/crates/dustroute-mcp/mineflayer/readback.js": "517f9ebab79a8e18be6e489f6346a5c9a115f5b7d6073c5ff0c2b46fb71e8737",
+        "/root/DustRoute/tools/instrumented_server.py": "7164de1897c7f0388b99b6ab2cac7edb12174add7aaf1a0bd347e5ffb5f3ca6f"
+      },
+      "artifacts_sha256": {
+        ".raw.ndjson": "f3b42f36f56192445df511debd7ea6440520a989f70339f03f8e24eac05ef226",
+        ".server.log": "81bc5def66f9d1bbd37ffc92a76f6a1757e13824aea18016390eae900226764c",
+        ".bridge.log": "9790da41936dc521532b69005c58aa4922fe8d9eba9b1a6147a8e541a1ea38de",
+        ".client.json": "5d1c8b3c0ac26ccae1586776632e6ef1926b596067f2c2210019ee859150a697",
+        ".fixture.json": "7c98a33e01d1f79caf22892318d810944d71d70963646f6b8ce336eef3c1b992"
+      },
+      "local_prefix": ".local/e2e-artifacts/generated-wings-20260928-a"
+    }
+  ],
+  "retained_observations": {
+    "path": "docs/evidence/flying-machine-generation-20260928.observations.json.gz",
+    "sha256": "3f37ae3c6fc80714ee17c968ab91ca630361b65a6d3fa64d5666b33ebc7a3c68"
+  },
+  "validation": {
+    "generation_matrix_and_negative_tests": {
+      "log": ".local/flying-generation-tests.log",
+      "sha256": "bf6da82ecaeaee21be41ce86b16420fb3d047ed16c033cec8e75b522fb2b9e4c"
+    },
+    "overload_test": {
+      "log": ".local/flying-generation-overload-test.log",
+      "sha256": "11220318bc2b0d9306b97469b91c881b02e99355c9cb025e50b82ceec5adf768"
+    },
+    "public_api_test": {
+      "log": ".local/flying-generation-mcp-tests.log",
+      "sha256": "9c30642286c370583786fbbd48f518189b41e2447934f664b0acd9473778a706"
+    },
+    "workspace_clippy": {
+      "log": ".local/flying-generation-clippy.log",
+      "sha256": "c3736fe6b5e3e35acb38abfba5b133571ee432bd4a3a0556eefaf730eb79afc9"
+    },
+    "fmt": {
+      "log": ".local/flying-generation-fmt.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "model_matrix": {
+    "cases": 32,
+    "bodies": [
+      "compact",
+      "side_blocks",
+      "slime_wings",
+      "honey_nose"
+    ],
+    "rotations": [
+      "r0",
+      "r90",
+      "r180",
+      "r270"
+    ],
+    "mirrored": [
+      false,
+      true
+    ],
+    "distance_by_rotation": [
+      1,
+      4,
+      8,
+      16
+    ]
+  },
+  "negative_cases": [
+    "detached honey attachment",
+    "excess connected payload",
+    "overlapping engine or launcher",
+    "out-of-range coordinates/distance",
+    "exhausted state budget"
+  ],
+  "scope": "Typed recipes and generated single-operation contracts, independent declared native endpoints, public generation/import/fresh adoption/placement/arrival diagnosis/removal. No physical runtime changes.",
+  "limits": [
+    "Four variants of the existing slime piston engine, not synthesis of arbitrary engines.",
+    "Only two new live cases; all other candidates require fresh model and target checks.",
+    "No infinite flight, reversal/retrigger contract, moving observation window, automatic empty-site search or entity transport.",
+    "Position type checks and exact native endpoint generation checks are separate; generated reports cannot authorize edited definitions or live writes.",
+    "Full retained server capture is provenance for inputs and workflow; this task does not claim a new tick-by-tick physical comparator run.",
+    "Continuous capture footer bounded-trigger input_observed is not used; actual input is identified by the packet and applied lever write."
+  ],
+  "source_sha256": {
+    "crates/dustroute-library/src/flying_machine.rs": "1036ed157b373d80ad3f546bf053b61d89969d816e43f4688b042656f431a3bf",
+    "crates/dustroute-translate/src/flying_machine/mod.rs": "1bdac04b9eca925a705b60c8700e4dca964b97d5c186181738dc7efe3e01c85f",
+    "crates/dustroute-translate/src/flying_machine/recipe.rs": "f9dc6c2296c6742265784a0c2df555ba4b798e3f1a48321eeca2def47f57ed1c",
+    "crates/dustroute-translate/src/flying_machine/sources.rs": "78f68ad03ebc9de61d68aab9874637bb14403106be9533b1cce6ad3875219a04",
+    "crates/dustroute-translate/examples/generate_flying_machine.rs": "d9c73635de85cc411c73e42574d2be54bfc6396fb363bd976b8e93d450e4c24d",
+    "crates/dustroute-translate/tests/flying_machine_generation.rs": "851bed64ac55c69f3b18bfda533e67a5870f2b5b995802bd51423de8d13b5d9d",
+    "crates/dustroute-mcp/src/blueprint_mcp.rs": "c3c3bb95a11ea3c192ae451885960797692c9c75bc1e7617e6be0faf4bc55f18",
+    "crates/dustroute-mcp/src/service_blueprint_tests.rs": "c5c0669ae94d9ed4fbc5144b619d838b15300c4ae969321d75916b1713f2c185"
+  }
+}

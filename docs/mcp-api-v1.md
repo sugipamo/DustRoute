@@ -410,7 +410,7 @@ to an empty list; fresh bridge responses must always supply confirmation.
 `removal_eligible`. Observation statuses are `matches`, `changed`,
 `observation_incomplete`, `history_unavailable` and `target_mismatch`.
 `ok: true` on an observation means the diagnostic request completed, not that
-physical state matched or removal is permitted. A refusal by `plan_removal`
+physical state matched or removal is permitted. A refusal by default `plan_removal`
 returns `ok: false` with diagnostics. A successful plan returns a new
 `operation_id` for `show_operation` and `invoke_operation(confirm=true)`.
 
@@ -434,3 +434,17 @@ and upgraded on save), no TTL, and lifecycle
 `needs_inspection`, the verified prefix and an error. Persisted records and old
 observations never deserialize into execution permission. See the
 [complete persistence and conditional-removal contract](placed-assembly-management.md).
+
+### Removal after a completed operation
+
+`manage_assembly(action="plan_removal", instance_id=...,
+removal_reference="observed_inputs")` explicitly selects the same settled
+reference as diagnosis. It requires exact whole-region agreement with a fresh
+replay from the design and observed declared inputs. `constructed` is the
+default; `observed_inputs` is rejected on other actions. Preview and execution retain
+and revalidate the selected baseline and steps. See
+[placed Assembly management](placed-assembly-management.md).
+
+### Flying-machine generation
+
+`test_circuit_change` accepts `blueprint.action="generate_flying_machine"` with a typed `request`, including `engine="slime_relay"` (default) or `engine="honey_direct"`. Engine definitions select geometry and endpoint requirements, never a different runtime. It returns `result.records`, `result.request`, declared geometry and fresh model checks without changing the catalog or Minecraft. Only a passed candidate has `ok: true`; failed/undetermined checks remain explicit. Import and explicit fresh adoption remain required. See [parameters](flying-machine-generation.md).

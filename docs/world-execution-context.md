@@ -35,12 +35,15 @@ proof; an adapter must also compile and implement the selected program.
 | `dustroute.redstone-compatibility-boundary.v1` | Fixed dust, torch, spatial, repeater, comparator, observer and lamp programs | Existing device seeds, caches, observations and queues; explicit compatibility mutation APIs | Two-game-tick boundaries and the configured compatibility event ordering |
 | `dustroute.bounded-redstone-events.v1` | Fixed spatial/dust, bounded repeater/lamp, and four piston programs | Supplied blocks with an initially empty event queue; explicitly scheduled inputs/world changes | Existing event queue, scheduler and piston activation/completion settings |
 
-| `dustroute.piston-electrical-callbacks.java-1-21-11.v9` | Fourteen fixed roles (including declarative observer/lamp/stone-button/repeater callbacks and observer payload v3) for block traits, dust, electrical emission/conduction, payload and motion; all six body facings | Explicit stable fresh construction, initialization notifications and actual levers/device uses between synchronous calls | One callback queue with source-ordered notifications and independent carrier ticks |
+| `dustroute.piston-electrical-callbacks.java-1-21-11.v17` | Eighteen fixed roles including device callbacks, comparator output, torch history, electrical queries, payload and motion; all six body facings and declared slime/honey adhesion | Explicit stable fresh construction, initialization notifications and actual levers/device uses between synchronous calls | One callback queue with source-ordered notifications and independent carrier ticks |
 
-The v9 profile pins `dustroute.device-programs.java-1-21-11.v3` in addition to
-its selected laws. It includes stone-button use/release in the library runtime;
+The v17 profile pins `dustroute.device-programs.java-1-21-11.v7` and physical
+admission v8 in addition to its selected laws. It includes stone-button use/release in the library runtime;
 the behavioral explorer continues to accept explicit lever bindings. Previous
-electrical v1–v8 execution contexts/checkpoints are not automatically migrated.
+electrical v1–v16 execution contexts/checkpoints are not automatically migrated.
+Adhesive materials are explicitly excluded from the older execution adapters,
+including the standalone bounded piston planner. Their passive registration
+does not grant those adapters branching movement. See [adhesion](piston-adhesion.md).
 See [typed device definitions](typed-device-runtime.md) for compile-time contracts,
 multiple properties, analog signals and variant selection.
 
