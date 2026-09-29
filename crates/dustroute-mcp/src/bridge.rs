@@ -83,7 +83,7 @@ pub struct PlayerObservation {
     /// True when the bot had to move to the configured player before observing.
     #[serde(default)]
     pub reacquired: bool,
-    /// Native collision targeting is distinct from the rendered selection outline.
+    /// Explicit native geometry policy; not a rendered-frame or server receipt.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub targeting_geometry: Option<TargetingGeometry>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -96,6 +96,7 @@ pub struct PlayerObservation {
 #[serde(rename_all = "snake_case")]
 pub enum TargetingGeometry {
     BlockCollision,
+    BlockOutline,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]

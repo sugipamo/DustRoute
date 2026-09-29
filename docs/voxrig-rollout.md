@@ -53,10 +53,12 @@ other explicit auth/version settings. A feature-enabled build defaults to Voxrig
 without that feature still default to Mineflayer and reject a native selection.
 No bridge JavaScript process is required by the native selection.
 
-Native player targets carry `targeting_geometry=block_collision`, connection and
-receive sequence. These use static collision boxes, not graphical outlines;
-fluids/empty collision decorations are skipped, while unavailable/moving geometry
-rejects the query. Native waits identify their client wall-time clock. Neither
+Native player targets now carry `targeting_geometry=block_outline`, connection and
+receive sequence. Audited native static outlines include dust, switches and
+gates; fluids are skipped, while unsupported/unavailable/moving geometry rejects
+the query. This is received player/client-world evidence, not an interpolated
+graphical frame. Voxrig retains its explicitly named collision query for callers
+that need it. Native waits identify their client wall-time clock. Neither
 waiting nor dispatching commands creates server-confirmed evidence.
 
 Creative physical placement preflights the whole batch's positions, item IDs,
@@ -117,7 +119,7 @@ All seven rollout stages now have implementations and declared-case evidence.
 The retained Mineflayer backend is explicitly selectable; deleting it would also
 remove currently separate authentication/targeting behavior and is not part of
 this verified-path migration. Native APIs reject unsupported observations. Broad
-inventory components, online authentication, graphical outlines, arbitrary
+inventory components, online authentication, context-dependent outlines, arbitrary
 circuits and the historical 1.16.1 movement discrepancy remain separate limits.
 
 ## Native evidence already retained in Voxrig
@@ -134,7 +136,7 @@ circuits and the historical 1.16.1 movement discrepancy remain separate limits.
 These comparisons use an isolated vanilla 1.21.11 server and independent command
 assertions as test instrumentation. Runtime scans do not use those assertions.
 They do not claim arbitrary circuits, server progress equality for every client
-frame, survival construction, graphical outline targeting or entity physics.
+frame, survival construction, complete graphical targeting or entity physics.
 
 Observation increment validation: `cargo check --offline -j1 -p dustroute-mcp
 --features voxrig` resolved only the new local dependency and required feature

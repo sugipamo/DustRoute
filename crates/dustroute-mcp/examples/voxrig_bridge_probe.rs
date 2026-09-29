@@ -49,7 +49,7 @@ mod trial {
         pause("READY; creative both, OP BridgeProbe; clear owned 98 180 98 .. 106 187 106; teleport BridgeProbe 100.5 182 103.5 and AimProbe 104.5 182 103.5 yaw 180 pitch 0; enter").await?;
         bridge.wait_ticks(20, DIM).await?;
         let mut steps = Vec::new();
-        let result = run(&bridge, &mut steps).await;
+        let result = run(&bridge, &remote, &mut steps).await;
         serde_json::to_writer(
             file,
             &json!({"steps":steps,"error":result.as_ref().err().map(ToString::to_string)}),
@@ -60,7 +60,11 @@ mod trial {
         remote.disconnect().await?;
         result
     }
-    async fn run(bridge: &BotBridge, steps: &mut Vec<Value>) -> anyhow::Result<()> {
+    async fn run(
+        bridge: &BotBridge,
+        remote: &Client,
+        steps: &mut Vec<Value>,
+    ) -> anyhow::Result<()> {
         steps.push(json!({"stage":"status","value":bridge.status().await?}));
         let recording = bridge
             .start_update_recording(Pos::new(98, 180, 98), Pos::new(106, 187, 106), DIM, 1024)
@@ -91,6 +95,10 @@ mod trial {
             "target mismatch: {target:?}"
         );
         steps.push(json!({"stage":"target","value":target}));
+        if std::env::var("PROBE_OUTLINE").as_deref() == Ok("1") {
+            // Explicit opt-in: AimProbe also needs OP on the isolated fixture server.
+            outline_targets(bridge, remote, steps).await?;
+        }
         steps.push(json!({"stage":"preview","value":bridge.preview_region("AimProbe",Pos::new(100,180,100),Pos::new(106,183,100),DIM).await?}));
         let activation = bridge.activate_lever(Pos::new(100, 181, 100), DIM).await?;
         anyhow::ensure!(
@@ -162,6 +170,97 @@ mod trial {
                 .is_err(),
             "client scan was labelled server-confirmed"
         );
+        Ok(())
+    }
+    async fn outline_targets(
+        bridge: &BotBridge,
+        remote: &Client,
+        steps: &mut Vec<Value>,
+    ) -> anyhow::Result<()> {
+        let p = Pos::new(104, 183, 100);
+        bridge
+            .write_blocks(
+                &[CommandWrite {
+                    pos: Pos::new(104, 182, 100),
+                    state: "minecraft:stone".parse().unwrap(),
+                }],
+                DIM,
+            )
+            .await?;
+        remote
+            .java_1_21_11_operations()?
+            .send_command("tp @s 104.5 185 100.5 0 90")
+            .await?;
+        for state in [
+            "minecraft:redstone_wire[east=none,north=none,power=0,south=none,west=none]",
+            "minecraft:lever[face=floor,facing=north,powered=false]",
+            "minecraft:repeater[delay=1,facing=north,locked=false,powered=false]",
+            "minecraft:comparator[facing=north,mode=compare,powered=false]",
+        ] {
+            bridge
+                .write_blocks(
+                    &[CommandWrite {
+                        pos: p,
+                        state: state.parse().unwrap(),
+                    }],
+                    DIM,
+                )
+                .await?;
+            bridge.wait_ticks(10, DIM).await?;
+            let target = bridge.observe_player("AimProbe", 8.0).await?;
+            steps.push(json!({"stage":"outline_target","state":state,"value":target}));
+            anyhow::ensure!(
+                target.targeted_block == Some(p)
+                    && target.targeted_face.as_deref() == Some("up")
+                    && target.targeting_geometry
+                        == Some(dustroute_mcp::bridge::TargetingGeometry::BlockOutline),
+                "thin target mismatch: {target:?}"
+            );
+        }
+        let obstruction = Pos::new(104, 184, 100);
+        bridge
+            .write_blocks(
+                &[CommandWrite {
+                    pos: obstruction,
+                    state: "minecraft:stone".parse().unwrap(),
+                }],
+                DIM,
+            )
+            .await?;
+        bridge.wait_ticks(10, DIM).await?;
+        let target = bridge.observe_player("AimProbe", 8.0).await?;
+        steps.push(json!({"stage":"outline_occlusion","value":target}));
+        anyhow::ensure!(
+            target.targeted_block == Some(obstruction),
+            "occlusion mismatch"
+        );
+        bridge
+            .write_blocks(
+                &[CommandWrite {
+                    pos: obstruction,
+                    state: "minecraft:light[level=15,waterlogged=false]"
+                        .parse()
+                        .unwrap(),
+                }],
+                DIM,
+            )
+            .await?;
+        bridge.wait_ticks(10, DIM).await?;
+        let error = bridge.observe_player("AimProbe", 8.0).await.unwrap_err();
+        anyhow::ensure!(
+            error.to_string().contains("outline geometry unsupported"),
+            "unexpected error: {error}"
+        );
+        steps.push(json!({"stage":"outline_unsupported","error":error.to_string()}));
+        bridge
+            .write_blocks(
+                &[CommandWrite {
+                    pos: obstruction,
+                    state: "minecraft:air".parse().unwrap(),
+                }],
+                DIM,
+            )
+            .await?;
         Ok(())
     }
 }

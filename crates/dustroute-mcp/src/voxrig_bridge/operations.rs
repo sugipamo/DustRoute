@@ -95,7 +95,7 @@ impl VoxrigBridge {
             reacquired = true;
         }
         let target = operations
-            .observe_player_target(player, max_distance)
+            .observe_player_outline_target(player, max_distance)
             .await
             .map_err(native_error)?;
         use voxrig::versions::java_1_21_11::reconstruction::Direction;
@@ -125,7 +125,7 @@ impl VoxrigBridge {
             distance: target.hit.as_ref().map(|h| h.distance),
             dimension: target.dimension,
             reacquired,
-            targeting_geometry: Some(TargetingGeometry::BlockCollision),
+            targeting_geometry: Some(TargetingGeometry::BlockOutline),
             connection_id: Some(target.connection_id),
             receive_sequence: Some(target.receive_sequence),
         })

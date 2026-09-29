@@ -1,0 +1,31 @@
+{
+  "case": "native-outline-a-20260929",
+  "server": "isolated official vanilla Java 1.21.11 on 127.0.0.1:25577; no MOD",
+  "dustroute_base": "89e0d1d",
+  "voxrig_base": "b98785e",
+  "implementation": "native-client-usability outline working tree; source hashes below",
+  "observations": [
+    "received AimProbe gaze selects dust, lever, repeater and comparator",
+    "nearer stone occludes comparator",
+    "unsupported held-item-dependent light shape rejects query",
+    "200 local ticks wait succeeds; native block recording retained",
+    "independent server function confirms all 648 final cells; returns 1"
+  ],
+  "limits": [
+    "not a graphical frame/camera comparison",
+    "not a server receipt in runtime",
+    "static audited outlines only; no fluid or entity targets"
+  ],
+  "cleanup": "owned fixture cleared and both temporary OP grants revoked",
+  "sha256": {
+    "native-outline-a-20260929.json.gz": "0b5e73b17b93329e6d974c857f4e69e12732fb8012942a707f34a579080556bb",
+    "native-outline-a-20260929-server.log.gz": "970e808a2e2640b40e7347651b5c85e367216979530e9a4cc4bdd77e4543690a",
+    "native-outline-a-20260929.mcfunction": "2c801eea2f978db13b0064634a6119c9d9d02aa2a34836b75c16574ba3b34369"
+  },
+  "source_sha256": {
+    "crates/dustroute-mcp/examples/voxrig_bridge_probe.rs": "4cf55296c42cac0564b175554eb68a8651c9325e0076fe80e21ba62931947544",
+    "crates/dustroute-mcp/src/voxrig_bridge/operations.rs": "bb3d223880a1f085b06363823425e773726356409cdbe2fcb9607fb40bd052f7",
+    "/root/Voxrig/src/versions/java_1_21_11/client/raycast.rs": "bd89acca019aaca103c3213a6e6d1135e0484e3a9c71a271a4b2a928994ac039",
+    "/root/Voxrig/src/versions/java_1_21_11/client/raycast/outline.rs": "d35d0d03c60d0c9a3537d5737bfe3c07ddad5949cab3f14622b965b2b7e63205"
+  }
+}
