@@ -111,6 +111,8 @@ pub(crate) struct PlacedAssembly {
     pub expected: MinecraftSnapshot,
     pub state: InstanceState,
     pub attempts: Vec<Attempt>,
+    /// Archived presentation only. Fresh operation baselines come from the
+    /// typed live observation path, never by decoding this saved report.
     pub last_observation: Option<Value>,
     pub updated_at_unix_ms: u64,
 }

@@ -74,12 +74,7 @@ pub fn differences(
                     if before == after {
                         continue;
                     }
-                    kinds.insert(match key.as_str() {
-                        "facing" | "axis" | "face" => DifferenceKind::Orientation,
-                        "powered" | "power" | "lit" | "extended" | "short" | "locked" | "north"
-                        | "east" | "south" | "west" => DifferenceKind::State,
-                        _ => DifferenceKind::Configuration,
-                    });
+                    kinds.insert(super::property_policy::role(key).difference_kind());
                     properties.push(PropertyDifference {
                         property: key.clone(),
                         observed: before.cloned(),
@@ -153,5 +148,33 @@ mod tests {
         actual.max = target.max;
         actual.blocks.push(actual.blocks[0].clone());
         assert!(differences(&actual, &target).is_err());
+    }
+
+    #[test]
+    fn unsupported_block_properties_still_receive_literal_classification() {
+        let target: MinecraftSnapshot = serde_json::from_value(json!({
+            "min":{"x":0,"y":0,"z":0},"max":{"x":0,"y":0,"z":0},
+            "blocks":[{"pos":{"x":0,"y":0,"z":0},"name":"example:unmodeled", "properties":{"new_setting":"a","axis":"x"}}]
+        })).unwrap();
+        let mut actual = target.clone();
+        actual.blocks[0]
+            .properties
+            .insert("new_setting".into(), "b".into());
+        actual.blocks[0]
+            .properties
+            .insert("axis".into(), "z".into());
+        actual.blocks[0]
+            .properties
+            .insert("lit".into(), "true".into());
+        let findings = differences(&actual, &target).unwrap();
+        assert_eq!(
+            findings[0].kinds,
+            BTreeSet::from([
+                DifferenceKind::Orientation,
+                DifferenceKind::Configuration,
+                DifferenceKind::State
+            ])
+        );
+        assert_eq!(findings[0].properties.len(), 3);
     }
 }

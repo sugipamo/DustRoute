@@ -215,22 +215,25 @@ impl DustRouteMcp {
                     "expected_snapshot":record.expected,"pinned_source":record.source_identity,"fresh_observation":false}));
             }
             let proof = self.rebuild_instance_proof(&record).await;
-            let mut observation = self.observe_instance(&record).await;
-            observation["revalidation"] = match &proof {
+            let observation = self.observe_instance(&record).await;
+            let eligible = record.state == InstanceState::Applied && proof.is_ok() && observation.matches_reference();
+            // JSON starts at the presentation/archive boundary; decisions above
+            // and operation baselines below use the fresh typed observation.
+            let mut report = serde_json::to_value(&observation).map_err(|e|e.to_string())?;
+            report["revalidation"] = match &proof {
                 Ok(proof) => json!({"status":"passed","fresh_target_review":proof.review()}),
                 Err(error) => json!({"status":"failed","reason":error}),
             };
-            let eligible = record.state == InstanceState::Applied && proof.is_ok() && observation["status"] == "matches";
-            observation["removal_eligible"] = json!(eligible);
+            report["removal_eligible"] = json!(eligible);
             if diagnose || reconstruct {
-                observation["diagnosis"] = self.diagnose_instance(&record,&proof,&observation).await;
+                report["diagnosis"] = self.diagnose_instance(&record,&proof,&observation).await;
             }
-            record.last_observation = Some(observation.clone());
+            record.last_observation = Some(report.clone());
             registry.save(&mut record)?;
             if reconstruct {
-                let diagnosis = observation["diagnosis"].clone();
+                let diagnosis = report["diagnosis"].clone();
                 let attempt = async {
-                    self.plan_assembly_reconstruction(record, proof?, observation).await
+                    self.plan_assembly_reconstruction(record, proof?, observation, report).await
                 }.await;
                 return Ok(match attempt {
                     Ok(mut plan) => { plan["diagnosis"] = diagnosis; plan },
@@ -238,10 +241,10 @@ impl DustRouteMcp {
                 });
             }
             if diagnose {
-                return Ok(json!({"ok":true,"instance":record.summary(),"diagnosis":observation["diagnosis"],"observation":observation}));
+                return Ok(json!({"ok":true,"instance":record.summary(),"diagnosis":report["diagnosis"],"observation":report}));
             }
             if !removal || (!operating && !eligible) {
-                return Ok(json!({"ok":!removal,"instance":record.summary(),"observation":observation,
+                return Ok(json!({"ok":!removal,"instance":record.summary(),"observation":report,
                     "error":if removal {Some("conditional removal requires an applied record, matching observation and fresh passing review")}else{None}}));
             }
             let proof = proof?;
@@ -261,7 +264,7 @@ impl DustRouteMcp {
                 "removal_steps":steps,"removal_reference":params.removal_reference,"operating_removal":operating_plan,
                 "server_readiness_proven":false,"runtime_history_reconstructed":false,
                 "operator_requirement":"let prior operations finish and keep external inputs and edits out of the region during removal",
-                "fresh_target_review":proof.review(),"observation":observation,
+                "fresh_target_review":proof.review(),"observation":report,
                 "next_step":"show_operation, then invoke_operation(confirm=true)"});
             let mut plans = self.assembly_placements.lock().await;
             plans.retain(|_,p|p.state != PistonPlacementState::Planned || p.expires_at > Instant::now());

@@ -65,7 +65,7 @@ impl DustRouteMcp {
                 } else if let Some(operating) = plan.operating_removal() {
                     let actual = observation::stable_baseline(&observation)?;
                     ValidatedAssemblyPlacement::matches(&actual,&operating.baseline,&status.version)?;
-                } else if observation["status"] != "matches" { return Err(format!("fresh removal observation refused: {observation}")); }
+                } else if !observation.matches_reference() { return Err(format!("fresh removal observation refused: {observation}")); }
                 record
             } else {
                 PlacedAssembly { schema:PlacedAssembly::schema(),instance_id,revision:0,player:plan.player.clone(),assembly_id:plan.assembly_id.clone(),

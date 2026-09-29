@@ -1,26 +1,13 @@
 //! Deterministic support/watch precedence and teardown selection.
 //! These are candidate orders; the shared runtime verifies every step.
+use super::policy::{Predecessor, for_kind};
 use dustroute_minecraft::piston_electrical::along;
 use dustroute_minecraft::{Block, BlockKind, Pos, World};
 use std::collections::{BTreeMap, BTreeSet};
 
 pub(super) fn ordered_blocks(literal: &World) -> Vec<(Pos, Block)> {
     let mut remaining: Vec<_> = literal.iter().map(|(p, b)| (*p, b.clone())).collect();
-    remaining.sort_by_key(|(p, b)| {
-        (
-            match b.kind {
-                BlockKind::Solid | BlockKind::Transparent => 0,
-                BlockKind::Piston => 1,
-                BlockKind::RedstoneWire | BlockKind::Repeater => 2,
-                BlockKind::Lever => 3,
-                BlockKind::RedstoneBlock => 4,
-                _ => 5,
-            },
-            p.y,
-            p.x,
-            p.z,
-        )
-    });
+    remaining.sort_by_key(|(p, b)| (for_kind(b.kind).build, p.y, p.x, p.z));
     remaining
 }
 
@@ -34,7 +21,7 @@ pub(super) fn observer_predecessors(
     // Observer Block.facing is its output; the watched side is opposite.
     let mut observer_predecessors = BTreeMap::new();
     for (pos, block) in remaining {
-        if block.kind == BlockKind::Observer {
+        if for_kind(block.kind).predecessor == Predecessor::OccupiedWatchedCell {
             let output = block.facing.ok_or("observer output required")?;
             let watched = along(*pos, output.opposite()).map_err(|e| e.to_string())?;
             if literal
@@ -81,7 +68,7 @@ pub(super) fn next_build_index(
 pub(super) fn next_removal_position(world: &World) -> Result<Pos, String> {
     world
         .iter()
-        .filter(|(_, b)| b.kind != BlockKind::PistonHead)
+        .filter(|(_, b)| for_kind(b.kind).removal.is_some())
         .filter(|(pos, _)| {
             !world.iter().any(|(other, block)| {
                 block.support_offset.is_some_and(|d| {
@@ -91,19 +78,7 @@ pub(super) fn next_removal_position(world: &World) -> Result<Pos, String> {
                 })
             })
         })
-        .min_by_key(|(p, b)| {
-            (
-                match b.kind {
-                    BlockKind::Lever | BlockKind::RedstoneBlock => 0,
-                    BlockKind::RedstoneWire | BlockKind::Repeater => 1,
-                    BlockKind::Piston => 2,
-                    _ => 3,
-                },
-                p.y,
-                p.x,
-                p.z,
-            )
-        })
+        .min_by_key(|(p, b)| (for_kind(b.kind).removal, p.y, p.x, p.z))
         .map(|(p, _)| *p)
         .ok_or_else(|| "teardown has an orphan piston head".into())
 }

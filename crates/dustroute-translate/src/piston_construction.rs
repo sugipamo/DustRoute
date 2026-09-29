@@ -3,6 +3,7 @@
 //! certificate. The MCP layer must independently establish those conditions.
 mod diagnostics;
 mod order;
+pub mod policy;
 mod snapshot;
 
 pub use snapshot::electrical_snapshot;

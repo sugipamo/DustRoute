@@ -18,7 +18,8 @@ impl DustRouteMcp {
         &self,
         record: PlacedAssembly,
         proof: ValidatedAssemblyPlacement,
-        observation: Value,
+        observation: observation::InstanceObservation,
+        report: Value,
     ) -> Result<Value, String> {
         if record.state == InstanceState::Removed {
             return Err("removed instances need a new placement plan".into());
@@ -41,7 +42,7 @@ impl DustRouteMcp {
             "bounds":bounds_json(proof.bounds()),"dimension":record.target.dimension,
             "read_only":self.policy.read_only,"differences":differences,
             "reconstruction":reconstruction,"reconstruction_conditions":conditions(),
-            "fresh_target_review":proof.review(),"observation":observation,
+            "fresh_target_review":proof.review(),"observation":report,
             "next_step":"show_operation; confirm all observed blocks may be removed and rebuilt, then invoke_operation(confirm=true)"});
         let mut plans = self.assembly_placements.lock().await;
         plans.retain(|_, p| {

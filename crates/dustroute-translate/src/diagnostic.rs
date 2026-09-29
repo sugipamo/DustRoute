@@ -1,6 +1,7 @@
 //! Stable, presentation-neutral circuit diagnostics for MCP and other clients.
 
 pub mod difference;
+pub mod property_policy;
 pub mod report;
 
 use report::Diagnosis;
