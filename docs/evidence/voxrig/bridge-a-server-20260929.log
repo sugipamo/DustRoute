@@ -1,0 +1,66 @@
+[16:54:38] [ServerMain/INFO]: Environment: Environment[sessionHost=https://sessionserver.mojang.com, servicesHost=https://api.minecraftservices.com, profilesHost=https://api.mojang.com, name=PROD]
+[16:54:40] [ServerMain/INFO]: Loaded 1470 recipes
+[16:54:40] [ServerMain/INFO]: Loaded 1584 advancements
+[16:54:40] [Server thread/INFO]: Starting minecraft server version 1.21.11
+[16:54:40] [Server thread/INFO]: Loading properties
+[16:54:40] [Server thread/INFO]: Default game type: CREATIVE
+[16:54:40] [Server thread/INFO]: Generating keypair
+[16:54:40] [Server thread/INFO]: Starting Minecraft server on 127.0.0.1:25577
+[16:54:40] [Server thread/WARN]: **** SERVER IS RUNNING IN OFFLINE/INSECURE MODE!
+[16:54:40] [Server thread/WARN]: The server will make no attempt to authenticate usernames. Beware.
+[16:54:40] [Server thread/WARN]: While this makes the game possible to play without internet access, it also opens up the ability for hackers to connect with any username they choose.
+[16:54:40] [Server thread/WARN]: To change this, set "online-mode" to "true" in the server.properties file.
+[16:54:40] [Server thread/INFO]: Preparing level "isolated"
+[16:54:40] [Server thread/INFO]: Loading 0 persistent chunks...
+[16:54:40] [Server thread/INFO]: Time elapsed: 11 ms
+[16:54:40] [Server thread/INFO]: Done (0.172s)! For help, type "help"
+[16:55:07] [Server thread/INFO]: BridgeProbe[/127.0.0.1:42776] logged in with entity id 12 at (100.5, -60.0, 107.5)
+[16:55:07] [Server thread/INFO]: BridgeProbe joined the game
+[16:55:08] [Server thread/INFO]: AimProbe[/127.0.0.1:42782] logged in with entity id 16 at (110.5, -60.0, 102.5)
+[16:55:08] [Server thread/INFO]: AimProbe joined the game
+[16:55:14] [Server thread/INFO]: Made BridgeProbe a server operator
+[16:55:14] [Server thread/INFO]: No blocks were filled
+[16:55:14] [Server thread/INFO]: Teleported BridgeProbe to 100.500000, 182.000000, 103.500000
+[16:55:14] [Server thread/INFO]: Teleported AimProbe to 104.500000, 182.000000, 103.500000
+[16:55:16] [Server thread/INFO]: [BridgeProbe: Changed the block at 100, 180, 100]
+[16:55:16] [Server thread/INFO]: [BridgeProbe: Changed the block at 100, 181, 100]
+[16:55:16] [Server thread/INFO]: [BridgeProbe: Changed the block at 102, 180, 100]
+[16:55:16] [Server thread/INFO]: [BridgeProbe: Changed the block at 104, 183, 100]
+[16:55:16] [Server thread/INFO]: [BridgeProbe: Changed the block at 106, 181, 100]
+[16:55:17] [Server thread/INFO]: [BridgeProbe: Displaying particle minecraft:end_rod]
+[16:55:17] [Server thread/INFO]: [BridgeProbe: Displaying particle minecraft:end_rod]
+[16:55:17] [Server thread/INFO]: [BridgeProbe: Displaying particle minecraft:end_rod]
+[16:55:17] [Server thread/INFO]: [BridgeProbe: Displaying particle minecraft:end_rod]
+[16:55:17] [Server thread/INFO]: [BridgeProbe: Displaying particle minecraft:end_rod]
+[16:55:17] [Server thread/INFO]: [BridgeProbe: Displaying particle minecraft:end_rod]
+[16:55:17] [Server thread/INFO]: [BridgeProbe: Displaying particle minecraft:end_rod]
+[16:55:17] [Server thread/INFO]: [BridgeProbe: Displaying particle minecraft:end_rod]
+[16:55:17] [Server thread/INFO]: [BridgeProbe: Teleported BridgeProbe to 102.500000, 183.000000, 100.500000]
+[16:55:17] [Server thread/INFO]: [BridgeProbe: Teleported BridgeProbe to 102.500000, 197.000000, 100.500000]
+[16:55:17] [Server thread/INFO]: [BridgeProbe: Teleported BridgeProbe to 102.500000, 183.000000, 100.500000]
+[16:55:17] [Server thread/INFO]: [BridgeProbe: Teleported BridgeProbe to 102.500000, 197.000000, 100.500000]
+[16:55:29] [Server thread/INFO]: [Not Secure] [Server] VOXRIG_BRIDGE_FINAL_MATCH
+[16:55:29] [Server thread/INFO]: BridgeProbe has the following entity data: [102.5d, 197.0d, 100.5d]
+[16:55:53] [Server thread/INFO]: Reloading!
+[16:55:53] [Server thread/INFO]: Loaded 1470 recipes
+[16:55:53] [Server thread/INFO]: Loaded 1584 advancements
+[16:56:01] [Server thread/INFO]: Running function voxrig:bridge_a_20260929
+[16:56:01] [Server thread/INFO]: [Not Secure] [Server] VOXRIG_MATCH_BRIDGE_A_20260929_648
+[16:56:01] [Server thread/INFO]: Function voxrig:bridge_a_20260929 returned 1
+[16:56:02] [Server thread/INFO]: BridgeProbe lost connection: Disconnected
+[16:56:02] [Server thread/INFO]: BridgeProbe left the game
+[16:56:02] [Server thread/INFO]: AimProbe lost connection: Disconnected
+[16:56:02] [Server thread/INFO]: AimProbe left the game
+[16:56:02] [Server thread/INFO]: That position is not loaded
+[16:56:02] [Server thread/INFO]: Made BridgeProbe no longer a server operator
+[16:56:02] [Server thread/INFO]: Stopping the server
+[16:56:02] [Server thread/INFO]: Stopping server
+[16:56:02] [Server thread/INFO]: Saving players
+[16:56:02] [Server thread/INFO]: Saving worlds
+[16:56:02] [Server thread/INFO]: Saving chunks for level 'ServerLevel[isolated]'/minecraft:overworld
+[16:56:02] [Server thread/INFO]: Saving chunks for level 'ServerLevel[isolated]'/minecraft:the_nether
+[16:56:02] [Server thread/INFO]: Saving chunks for level 'ServerLevel[isolated]'/minecraft:the_end
+[16:56:02] [Server thread/INFO]: ThreadedAnvilChunkStorage (isolated): All chunks are saved
+[16:56:02] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM-1): All chunks are saved
+[16:56:02] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM1): All chunks are saved
+[16:56:02] [Server thread/INFO]: ThreadedAnvilChunkStorage: All dimensions are saved

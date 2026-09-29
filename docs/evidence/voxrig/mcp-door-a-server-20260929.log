@@ -1,0 +1,276 @@
+[17:24:26] [ServerMain/INFO]: Environment: Environment[sessionHost=https://sessionserver.mojang.com, servicesHost=https://api.minecraftservices.com, profilesHost=https://api.mojang.com, name=PROD]
+[17:24:27] [ServerMain/INFO]: Loaded 1470 recipes
+[17:24:27] [ServerMain/INFO]: Loaded 1584 advancements
+[17:24:27] [Server thread/INFO]: Starting minecraft server version 1.21.11
+[17:24:27] [Server thread/INFO]: Loading properties
+[17:24:27] [Server thread/INFO]: Default game type: CREATIVE
+[17:24:27] [Server thread/INFO]: Generating keypair
+[17:24:28] [Server thread/INFO]: Starting Minecraft server on 127.0.0.1:25577
+[17:24:28] [Server thread/WARN]: **** SERVER IS RUNNING IN OFFLINE/INSECURE MODE!
+[17:24:28] [Server thread/WARN]: The server will make no attempt to authenticate usernames. Beware.
+[17:24:28] [Server thread/WARN]: While this makes the game possible to play without internet access, it also opens up the ability for hackers to connect with any username they choose.
+[17:24:28] [Server thread/WARN]: To change this, set "online-mode" to "true" in the server.properties file.
+[17:24:28] [Server thread/INFO]: Preparing level "isolated"
+[17:24:28] [Server thread/INFO]: Loading 0 persistent chunks...
+[17:24:28] [Server thread/INFO]: Preparing spawn area: 100%
+[17:24:28] [Server thread/INFO]: Time elapsed: 11 ms
+[17:24:28] [Server thread/INFO]: Done (0.158s)! For help, type "help"
+[17:25:02] [Server thread/INFO]: McpProbe[/127.0.0.1:42786] logged in with entity id 12 at (107.5, -60.0, 99.5)
+[17:25:02] [Server thread/INFO]: McpProbe joined the game
+[17:25:02] [Server thread/INFO]: DustRouteBot[/127.0.0.1:42798] logged in with entity id 15 at (99.5, -60.0, 96.5)
+[17:25:02] [Server thread/INFO]: DustRouteBot joined the game
+[17:25:03] [Server thread/INFO]: Made DustRouteBot a server operator
+[17:25:03] [Server thread/INFO]: Made McpProbe a server operator
+[17:25:03] [Server thread/INFO]: Teleported DustRouteBot to 100.500000, 194.000000, 104.500000
+[17:25:03] [Server thread/INFO]: Teleported McpProbe to 104.500000, 194.000000, 104.500000
+[17:25:04] [Server thread/INFO]: No blocks were filled
+[17:25:30] [Server thread/INFO]: [DustRouteBot: Displaying particle minecraft:end_rod]
+[17:25:30] [Server thread/INFO]: [DustRouteBot: Displaying particle minecraft:end_rod]
+[17:25:30] [Server thread/INFO]: [DustRouteBot: Displaying particle minecraft:end_rod]
+[17:25:30] [Server thread/INFO]: [DustRouteBot: Displaying particle minecraft:end_rod]
+[17:25:30] [Server thread/INFO]: [DustRouteBot: Displaying particle minecraft:end_rod]
+[17:25:30] [Server thread/INFO]: [DustRouteBot: Displaying particle minecraft:end_rod]
+[17:25:30] [Server thread/INFO]: [DustRouteBot: Displaying particle minecraft:end_rod]
+[17:25:30] [Server thread/INFO]: [DustRouteBot: Displaying particle minecraft:end_rod]
+[17:25:30] [Server thread/INFO]: [McpProbe: Changed the block at 98, 180, 95]
+[17:25:36] [Server thread/INFO]: [McpProbe: Changed the block at 98, 180, 95]
+[17:25:43] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 182, 98]
+[17:25:43] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 182, 102]
+[17:25:44] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 184, 101]
+[17:25:44] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 184, 102]
+[17:25:45] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 185, 99]
+[17:25:45] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 185, 100]
+[17:25:46] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 185, 101]
+[17:25:46] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 186, 98]
+[17:25:47] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 186, 102]
+[17:25:47] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 187, 98]
+[17:25:48] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 187, 102]
+[17:25:48] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 188, 97]
+[17:25:49] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 188, 98]
+[17:25:49] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 188, 102]
+[17:25:49] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 188, 103]
+[17:25:50] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 189, 99]
+[17:25:50] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 189, 100]
+[17:25:51] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 189, 101]
+[17:25:51] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 183, 100]
+[17:25:52] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 184, 100]
+[17:25:52] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 185, 98]
+[17:25:53] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 186, 97]
+[17:25:53] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 186, 103]
+[17:25:54] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 187, 97]
+[17:25:54] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 187, 103]
+[17:25:55] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 190, 99]
+[17:25:55] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 190, 100]
+[17:25:56] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 190, 101]
+[17:25:56] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 183, 98]
+[17:25:57] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 183, 102]
+[17:25:57] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 189, 97]
+[17:25:57] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 189, 103]
+[17:25:58] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 191, 100]
+[17:25:58] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 182, 101]
+[17:25:59] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 182, 100]
+[17:25:59] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 182, 99]
+[17:26:00] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 183, 99]
+[17:26:00] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 183, 101]
+[17:26:01] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 184, 98]
+[17:26:01] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 184, 99]
+[17:26:02] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 185, 102]
+[17:26:02] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 189, 98]
+[17:26:03] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 189, 102]
+[17:26:17] [Server thread/INFO]: Reloading!
+[17:26:18] [Server thread/INFO]: Loaded 1470 recipes
+[17:26:18] [Server thread/INFO]: Loaded 1584 advancements
+[17:26:28] [Server thread/INFO]: Running function voxrig:mcp_door_a_placed
+[17:26:28] [Server thread/INFO]: [Not Secure] [Server] VOXRIG_MATCH_MCP_DOOR_A_PLACED_770
+[17:26:28] [Server thread/INFO]: Function voxrig:mcp_door_a_placed returned 1
+[17:26:29] [Server thread/INFO]: DustRouteBot lost connection: Disconnected
+[17:26:29] [Server thread/INFO]: DustRouteBot left the game
+[17:26:30] [Server thread/INFO]: DustRouteBot[/127.0.0.1:45468] logged in with entity id 19 at (100.5, 194.0, 104.5)
+[17:26:30] [Server thread/INFO]: DustRouteBot joined the game
+[17:26:39] [Server thread/INFO]: [McpProbe: Changed the block at 100, 189, 100]
+[17:26:56] [Server thread/INFO]: [DustRouteBot: Displaying particle minecraft:end_rod]
+[17:26:56] [Server thread/INFO]: [DustRouteBot: Displaying particle minecraft:end_rod]
+[17:26:56] [Server thread/INFO]: [DustRouteBot: Displaying particle minecraft:end_rod]
+[17:26:56] [Server thread/INFO]: [DustRouteBot: Displaying particle minecraft:end_rod]
+[17:26:56] [Server thread/INFO]: [DustRouteBot: Displaying particle minecraft:end_rod]
+[17:26:56] [Server thread/INFO]: [DustRouteBot: Displaying particle minecraft:end_rod]
+[17:26:56] [Server thread/INFO]: [DustRouteBot: Displaying particle minecraft:end_rod]
+[17:26:56] [Server thread/INFO]: [DustRouteBot: Displaying particle minecraft:end_rod]
+[17:26:57] [Server thread/INFO]: [McpProbe: Changed the block at 98, 180, 95]
+[17:27:05] [Server thread/INFO]: [McpProbe: Changed the block at 98, 180, 95]
+[17:27:14] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 191, 100]
+[17:27:14] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 183, 98]
+[17:27:15] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 183, 99]
+[17:27:16] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 183, 102]
+[17:27:17] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 189, 97]
+[17:27:17] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 189, 103]
+[17:27:18] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 183, 100]
+[17:27:18] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 184, 100]
+[17:27:19] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 185, 98]
+[17:27:19] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 186, 97]
+[17:27:20] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 186, 103]
+[17:27:21] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 187, 97]
+[17:27:21] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 187, 103]
+[17:27:22] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 190, 99]
+[17:27:22] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 190, 100]
+[17:27:23] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 190, 101]
+[17:27:23] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 182, 98]
+[17:27:24] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 182, 99]
+[17:27:24] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 182, 100]
+[17:27:25] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 182, 101]
+[17:27:26] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 182, 102]
+[17:27:26] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 183, 101]
+[17:27:27] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 184, 98]
+[17:27:27] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 184, 99]
+[17:27:28] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 184, 101]
+[17:27:29] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 184, 102]
+[17:27:29] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 185, 100]
+[17:27:30] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 185, 101]
+[17:27:30] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 185, 102]
+[17:27:31] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 185, 103]
+[17:27:31] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 186, 98]
+[17:27:32] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 186, 102]
+[17:27:32] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 187, 98]
+[17:27:33] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 187, 102]
+[17:27:34] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 188, 97]
+[17:27:34] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 188, 98]
+[17:27:35] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 188, 102]
+[17:27:35] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 188, 103]
+[17:27:36] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 189, 98]
+[17:27:36] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 189, 99]
+[17:27:37] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 189, 101]
+[17:27:38] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 189, 102]
+[17:27:38] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 182, 98]
+[17:27:39] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 182, 102]
+[17:27:39] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 184, 101]
+[17:27:40] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 184, 102]
+[17:27:40] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 185, 99]
+[17:27:41] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 185, 100]
+[17:27:42] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 185, 101]
+[17:27:42] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 186, 98]
+[17:27:43] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 186, 102]
+[17:27:43] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 187, 98]
+[17:27:44] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 187, 102]
+[17:27:44] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 188, 97]
+[17:27:45] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 188, 98]
+[17:27:45] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 188, 102]
+[17:27:46] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 188, 103]
+[17:27:47] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 189, 99]
+[17:27:47] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 189, 100]
+[17:27:48] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 189, 101]
+[17:27:49] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 183, 100]
+[17:27:49] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 184, 100]
+[17:27:50] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 185, 98]
+[17:27:50] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 186, 97]
+[17:27:51] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 186, 103]
+[17:27:51] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 187, 97]
+[17:27:52] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 187, 103]
+[17:27:52] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 190, 99]
+[17:27:53] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 190, 100]
+[17:27:54] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 190, 101]
+[17:27:54] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 183, 98]
+[17:27:55] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 183, 102]
+[17:27:55] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 189, 97]
+[17:27:56] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 189, 103]
+[17:27:56] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 191, 100]
+[17:27:57] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 182, 101]
+[17:27:57] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 182, 100]
+[17:27:58] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 182, 99]
+[17:27:59] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 183, 99]
+[17:27:59] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 183, 101]
+[17:28:00] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 184, 98]
+[17:28:00] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 184, 99]
+[17:28:01] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 185, 102]
+[17:28:01] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 189, 98]
+[17:28:02] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 189, 102]
+[17:28:03] [Server thread/INFO]: [McpProbe: Teleported McpProbe to 100.500000, 191.000000, 98.500000]
+[17:28:35] [Server thread/INFO]: Reloading!
+[17:28:35] [Server thread/INFO]: Loaded 1470 recipes
+[17:28:35] [Server thread/INFO]: Loaded 1584 advancements
+[17:29:16] [Server thread/INFO]: Running function voxrig:mcp_door_a_operated
+[17:29:16] [Server thread/INFO]: [Not Secure] [Server] VOXRIG_MATCH_MCP_DOOR_A_OPERATED_770
+[17:29:16] [Server thread/INFO]: Function voxrig:mcp_door_a_operated returned 1
+[17:29:44] [Server thread/INFO]: Reloading!
+[17:29:44] [Server thread/INFO]: Loaded 1470 recipes
+[17:29:44] [Server thread/INFO]: Loaded 1584 advancements
+[17:30:41] [Server thread/INFO]: Running function voxrig:mcp_door_a_reopened
+[17:30:41] [Server thread/INFO]: [Not Secure] [Server] VOXRIG_MATCH_MCP_DOOR_A_REOPENED_770
+[17:30:41] [Server thread/INFO]: Function voxrig:mcp_door_a_reopened returned 1
+[17:30:51] [Server thread/INFO]: [DustRouteBot: Displaying particle minecraft:end_rod]
+[17:30:51] [Server thread/INFO]: [DustRouteBot: Displaying particle minecraft:end_rod]
+[17:30:51] [Server thread/INFO]: [DustRouteBot: Displaying particle minecraft:end_rod]
+[17:30:51] [Server thread/INFO]: [DustRouteBot: Displaying particle minecraft:end_rod]
+[17:30:51] [Server thread/INFO]: [DustRouteBot: Displaying particle minecraft:end_rod]
+[17:30:51] [Server thread/INFO]: [DustRouteBot: Displaying particle minecraft:end_rod]
+[17:30:51] [Server thread/INFO]: [DustRouteBot: Displaying particle minecraft:end_rod]
+[17:30:51] [Server thread/INFO]: [DustRouteBot: Displaying particle minecraft:end_rod]
+[17:30:59] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 191, 100]
+[17:31:00] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 183, 98]
+[17:31:01] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 183, 99]
+[17:31:02] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 183, 102]
+[17:31:03] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 189, 97]
+[17:31:04] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 189, 103]
+[17:31:04] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 183, 100]
+[17:31:05] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 184, 100]
+[17:31:06] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 185, 98]
+[17:31:06] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 186, 97]
+[17:31:07] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 186, 103]
+[17:31:08] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 187, 97]
+[17:31:09] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 187, 103]
+[17:31:09] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 190, 99]
+[17:31:10] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 190, 100]
+[17:31:11] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 190, 101]
+[17:31:11] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 182, 98]
+[17:31:12] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 182, 99]
+[17:31:13] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 182, 100]
+[17:31:13] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 182, 101]
+[17:31:14] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 182, 102]
+[17:31:15] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 183, 101]
+[17:31:15] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 184, 98]
+[17:31:16] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 184, 99]
+[17:31:17] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 184, 101]
+[17:31:17] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 184, 102]
+[17:31:18] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 185, 100]
+[17:31:18] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 185, 101]
+[17:31:19] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 185, 102]
+[17:31:20] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 185, 103]
+[17:31:20] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 186, 98]
+[17:31:21] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 186, 102]
+[17:31:21] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 187, 98]
+[17:31:22] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 187, 102]
+[17:31:22] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 188, 97]
+[17:31:23] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 188, 98]
+[17:31:24] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 188, 102]
+[17:31:24] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 188, 103]
+[17:31:25] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 189, 98]
+[17:31:25] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 189, 99]
+[17:31:26] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 189, 100]
+[17:31:27] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 189, 101]
+[17:31:27] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 189, 102]
+[17:31:28] [Server thread/INFO]: DustRouteBot lost connection: Disconnected
+[17:31:28] [Server thread/INFO]: DustRouteBot left the game
+[17:31:29] [Server thread/INFO]: DustRouteBot[/127.0.0.1:42180] logged in with entity id 20 at (100.5, 194.0, 104.5)
+[17:31:29] [Server thread/INFO]: DustRouteBot joined the game
+[17:32:05] [Server thread/INFO]: Reloading!
+[17:32:05] [Server thread/INFO]: Loaded 1470 recipes
+[17:32:05] [Server thread/INFO]: Loaded 1584 advancements
+[17:32:19] [Server thread/INFO]: Running function voxrig:mcp_door_a_removed
+[17:32:19] [Server thread/INFO]: [Not Secure] [Server] VOXRIG_MATCH_MCP_DOOR_A_REMOVED_770
+[17:32:19] [Server thread/INFO]: Function voxrig:mcp_door_a_removed returned 1
+[17:32:19] [Server thread/INFO]: Made DustRouteBot no longer a server operator
+[17:32:19] [Server thread/INFO]: Made McpProbe no longer a server operator
+[17:32:20] [Server thread/INFO]: McpProbe lost connection: Disconnected
+[17:32:20] [Server thread/INFO]: McpProbe left the game
+[17:32:20] [Server thread/INFO]: DustRouteBot lost connection: Disconnected
+[17:32:20] [Server thread/INFO]: DustRouteBot left the game
+[17:32:20] [Server thread/INFO]: Stopping the server
+[17:32:20] [Server thread/INFO]: Stopping server
+[17:32:20] [Server thread/INFO]: Saving players
+[17:32:20] [Server thread/INFO]: Saving worlds
+[17:32:20] [Server thread/INFO]: Saving chunks for level 'ServerLevel[isolated]'/minecraft:overworld
+[17:32:20] [Server thread/INFO]: Saving chunks for level 'ServerLevel[isolated]'/minecraft:the_end
+[17:32:20] [Server thread/INFO]: Saving chunks for level 'ServerLevel[isolated]'/minecraft:the_nether
+[17:32:20] [Server thread/INFO]: ThreadedAnvilChunkStorage (isolated): All chunks are saved
+[17:32:20] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM1): All chunks are saved
+[17:32:20] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM-1): All chunks are saved
+[17:32:20] [Server thread/INFO]: ThreadedAnvilChunkStorage: All dimensions are saved

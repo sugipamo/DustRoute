@@ -1,0 +1,120 @@
+[17:33:16] [ServerMain/INFO]: Environment: Environment[sessionHost=https://sessionserver.mojang.com, servicesHost=https://api.minecraftservices.com, profilesHost=https://api.mojang.com, name=PROD]
+[17:33:18] [ServerMain/INFO]: Loaded 1470 recipes
+[17:33:18] [ServerMain/INFO]: Loaded 1584 advancements
+[17:33:18] [Server thread/INFO]: Starting minecraft server version 1.21.11
+[17:33:18] [Server thread/INFO]: Loading properties
+[17:33:18] [Server thread/INFO]: Default game type: CREATIVE
+[17:33:18] [Server thread/INFO]: Generating keypair
+[17:33:18] [Server thread/INFO]: Starting Minecraft server on 127.0.0.1:25577
+[17:33:18] [Server thread/WARN]: **** SERVER IS RUNNING IN OFFLINE/INSECURE MODE!
+[17:33:18] [Server thread/WARN]: The server will make no attempt to authenticate usernames. Beware.
+[17:33:18] [Server thread/WARN]: While this makes the game possible to play without internet access, it also opens up the ability for hackers to connect with any username they choose.
+[17:33:18] [Server thread/WARN]: To change this, set "online-mode" to "true" in the server.properties file.
+[17:33:18] [Server thread/INFO]: Preparing level "isolated"
+[17:33:18] [Server thread/INFO]: Loading 0 persistent chunks...
+[17:33:18] [Server thread/INFO]: Preparing spawn area: 100%
+[17:33:18] [Server thread/INFO]: Time elapsed: 11 ms
+[17:33:18] [Server thread/INFO]: Done (0.167s)! For help, type "help"
+[17:33:34] [Server thread/INFO]: McpProbe[/127.0.0.1:45636] logged in with entity id 11 at (100.5, 191.0, 98.5)
+[17:33:34] [Server thread/INFO]: McpProbe joined the game
+[17:33:34] [Server thread/INFO]: No player was found
+[17:33:34] [Server thread/INFO]: Made DustRouteBot a server operator
+[17:33:34] [Server thread/INFO]: Made McpProbe a server operator
+[17:33:34] [Server thread/INFO]: No entity was found
+[17:33:34] [Server thread/INFO]: Teleported McpProbe to 104.500000, 186.000000, 104.500000
+[17:33:34] [Server thread/INFO]: DustRouteBot[/127.0.0.1:45638] logged in with entity id 14 at (100.5, 194.0, 104.5)
+[17:33:34] [Server thread/INFO]: DustRouteBot joined the game
+[17:33:51] [Server thread/INFO]: Teleported DustRouteBot to 100.500000, 186.000000, 104.500000
+[17:33:59] [Server thread/INFO]: [DustRouteBot: Displaying particle minecraft:end_rod]
+[17:33:59] [Server thread/INFO]: [DustRouteBot: Displaying particle minecraft:end_rod]
+[17:33:59] [Server thread/INFO]: [DustRouteBot: Displaying particle minecraft:end_rod]
+[17:33:59] [Server thread/INFO]: [DustRouteBot: Displaying particle minecraft:end_rod]
+[17:33:59] [Server thread/INFO]: [DustRouteBot: Displaying particle minecraft:end_rod]
+[17:33:59] [Server thread/INFO]: [DustRouteBot: Displaying particle minecraft:end_rod]
+[17:33:59] [Server thread/INFO]: [DustRouteBot: Displaying particle minecraft:end_rod]
+[17:33:59] [Server thread/INFO]: [DustRouteBot: Displaying particle minecraft:end_rod]
+[17:33:59] [Server thread/INFO]: [McpProbe: Changed the block at 95, 177, 91]
+[17:34:01] [Server thread/INFO]: [McpProbe: Changed the block at 95, 177, 91]
+[17:34:03] [Server thread/INFO]: [DustRouteBot: Changed the block at 98, 180, 98]
+[17:34:04] [Server thread/INFO]: [DustRouteBot: Changed the block at 99, 180, 94]
+[17:34:04] [Server thread/INFO]: [DustRouteBot: Changed the block at 99, 180, 98]
+[17:34:04] [Server thread/INFO]: [DustRouteBot: Changed the block at 99, 180, 99]
+[17:34:05] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 180, 100]
+[17:34:05] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 182, 101]
+[17:34:06] [Server thread/INFO]: [DustRouteBot: Changed the block at 99, 180, 100]
+[17:34:06] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 180, 99]
+[17:34:07] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 182, 100]
+[17:34:07] [Server thread/INFO]: [DustRouteBot: Changed the block at 99, 181, 99]
+[17:34:08] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 181, 100]
+[17:35:11] [Server thread/INFO]: Reloading!
+[17:35:12] [Server thread/INFO]: Loaded 1470 recipes
+[17:35:12] [Server thread/INFO]: Loaded 1584 advancements
+[17:35:25] [Server thread/INFO]: Running function voxrig:mcp_flight_a_placed_a
+[17:35:25] [Server thread/INFO]: [Not Secure] [Server] VOXRIG_MATCH_MCP_FLIGHT_A_PLACED_A_567
+[17:35:25] [Server thread/INFO]: Function voxrig:mcp_flight_a_placed_a returned 1
+[17:35:25] [Server thread/INFO]: Running function voxrig:mcp_flight_a_placed_b
+[17:35:25] [Server thread/INFO]: [Not Secure] [Server] VOXRIG_MATCH_MCP_FLIGHT_A_PLACED_B_567
+[17:35:25] [Server thread/INFO]: Function voxrig:mcp_flight_a_placed_b returned 1
+[17:35:26] [Server thread/INFO]: DustRouteBot lost connection: Disconnected
+[17:35:26] [Server thread/INFO]: DustRouteBot left the game
+[17:35:26] [Server thread/INFO]: DustRouteBot[/127.0.0.1:46558] logged in with entity id 16 at (100.5, 186.0, 104.5)
+[17:35:26] [Server thread/INFO]: DustRouteBot joined the game
+[17:35:32] [Server thread/INFO]: [McpProbe: Teleported McpProbe to 100.500000, 182.000000, 98.500000]
+[17:36:17] [Server thread/INFO]: Reloading!
+[17:36:17] [Server thread/INFO]: Loaded 1470 recipes
+[17:36:17] [Server thread/INFO]: Loaded 1584 advancements
+[17:36:27] [Server thread/INFO]: Running function voxrig:mcp_flight_a_operated_a
+[17:36:27] [Server thread/INFO]: [Not Secure] [Server] VOXRIG_MATCH_MCP_FLIGHT_A_OPERATED_A_567
+[17:36:27] [Server thread/INFO]: Function voxrig:mcp_flight_a_operated_a returned 1
+[17:36:27] [Server thread/INFO]: Running function voxrig:mcp_flight_a_operated_b
+[17:36:27] [Server thread/INFO]: [Not Secure] [Server] VOXRIG_MATCH_MCP_FLIGHT_A_OPERATED_B_567
+[17:36:27] [Server thread/INFO]: Function voxrig:mcp_flight_a_operated_b returned 1
+[17:36:31] [Server thread/INFO]: [DustRouteBot: Displaying particle minecraft:end_rod]
+[17:36:31] [Server thread/INFO]: [DustRouteBot: Displaying particle minecraft:end_rod]
+[17:36:31] [Server thread/INFO]: [DustRouteBot: Displaying particle minecraft:end_rod]
+[17:36:31] [Server thread/INFO]: [DustRouteBot: Displaying particle minecraft:end_rod]
+[17:36:31] [Server thread/INFO]: [DustRouteBot: Displaying particle minecraft:end_rod]
+[17:36:31] [Server thread/INFO]: [DustRouteBot: Displaying particle minecraft:end_rod]
+[17:36:31] [Server thread/INFO]: [DustRouteBot: Displaying particle minecraft:end_rod]
+[17:36:31] [Server thread/INFO]: [DustRouteBot: Displaying particle minecraft:end_rod]
+[17:36:33] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 182, 100]
+[17:36:34] [Server thread/INFO]: [DustRouteBot: Changed the block at 99, 180, 97]
+[17:36:34] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 180, 96]
+[17:36:35] [Server thread/INFO]: [DustRouteBot: Changed the block at 98, 180, 95]
+[17:36:35] [Server thread/INFO]: [DustRouteBot: Changed the block at 99, 180, 94]
+[17:36:35] [Server thread/INFO]: [DustRouteBot: Changed the block at 99, 180, 95]
+[17:36:36] [Server thread/INFO]: [DustRouteBot: Changed the block at 99, 180, 96]
+[17:36:36] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 180, 97]
+[17:36:37] [Server thread/INFO]: [DustRouteBot: Changed the block at 99, 181, 96]
+[17:36:37] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 181, 97]
+[17:36:38] [Server thread/INFO]: [DustRouteBot: Changed the block at 100, 182, 101]
+[17:36:38] [Server thread/INFO]: DustRouteBot lost connection: Disconnected
+[17:36:38] [Server thread/INFO]: DustRouteBot left the game
+[17:36:39] [Server thread/INFO]: DustRouteBot[/127.0.0.1:38244] logged in with entity id 18 at (100.5, 186.0, 104.5)
+[17:36:39] [Server thread/INFO]: DustRouteBot joined the game
+[17:38:08] [Server thread/INFO]: Reloading!
+[17:38:08] [Server thread/INFO]: Loaded 1470 recipes
+[17:38:08] [Server thread/INFO]: Loaded 1584 advancements
+[17:38:46] [Server thread/INFO]: Running function voxrig:mcp_flight_a_removed_a
+[17:38:46] [Server thread/INFO]: [Not Secure] [Server] VOXRIG_MATCH_MCP_FLIGHT_A_REMOVED_A_567
+[17:38:46] [Server thread/INFO]: Function voxrig:mcp_flight_a_removed_a returned 1
+[17:38:46] [Server thread/INFO]: Running function voxrig:mcp_flight_a_removed_b
+[17:38:46] [Server thread/INFO]: [Not Secure] [Server] VOXRIG_MATCH_MCP_FLIGHT_A_REMOVED_B_567
+[17:38:46] [Server thread/INFO]: Function voxrig:mcp_flight_a_removed_b returned 1
+[17:38:46] [Server thread/INFO]: Made DustRouteBot no longer a server operator
+[17:38:46] [Server thread/INFO]: Made McpProbe no longer a server operator
+[17:38:47] [Server thread/INFO]: McpProbe lost connection: Disconnected
+[17:38:47] [Server thread/INFO]: McpProbe left the game
+[17:38:47] [Server thread/INFO]: DustRouteBot lost connection: Disconnected
+[17:38:47] [Server thread/INFO]: DustRouteBot left the game
+[17:38:47] [Server thread/INFO]: Stopping the server
+[17:38:47] [Server thread/INFO]: Stopping server
+[17:38:47] [Server thread/INFO]: Saving players
+[17:38:47] [Server thread/INFO]: Saving worlds
+[17:38:47] [Server thread/INFO]: Saving chunks for level 'ServerLevel[isolated]'/minecraft:overworld
+[17:38:47] [Server thread/INFO]: Saving chunks for level 'ServerLevel[isolated]'/minecraft:the_end
+[17:38:47] [Server thread/INFO]: Saving chunks for level 'ServerLevel[isolated]'/minecraft:the_nether
+[17:38:47] [Server thread/INFO]: ThreadedAnvilChunkStorage (isolated): All chunks are saved
+[17:38:47] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM1): All chunks are saved
+[17:38:47] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM-1): All chunks are saved
+[17:38:47] [Server thread/INFO]: ThreadedAnvilChunkStorage: All dimensions are saved

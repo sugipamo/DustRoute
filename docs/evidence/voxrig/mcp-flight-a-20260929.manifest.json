@@ -1,0 +1,62 @@
+{
+  "schema": 1,
+  "date": "2026-09-29",
+  "server": "isolated vanilla Java 1.21.11, loopback 25577, no mods",
+  "client": "Voxrig native only",
+  "mcp_transport": "real rmcp tools over in-memory duplex; new service and native connection on each restart; same isolated durable directory",
+  "status": "passed",
+  "specification": {
+    "body": "honey_nose",
+    "distance": 3,
+    "rotation": "r270",
+    "mirrored": true
+  },
+  "verified": [
+    "public generation, import, proposal review and fresh adoption",
+    "11-step placement, preview and stale baseline gates",
+    "persisted instance reopened on new native connection; old operation refused",
+    "ordinary lever activation, three-block northward displacement",
+    "full 1134-cell client region matches independently declared generator expected_arrival",
+    "placed and arrived regions each independently confirmed by two 567-cell vanilla functions",
+    "arrival diagnosis matches reference, reviewed operating-state removal",
+    "new native connection reopens removed instance and observes empty region",
+    "empty region independently confirmed by two 567-cell functions"
+  ],
+  "limits": [
+    "client receipt is not server confirmation",
+    "server functions are independent test instrumentation, not runtime observation",
+    "two subregion checks are not an atomic snapshot guarantee",
+    "new MCP services share the OS process",
+    "stationary-carrier refusal and longer-wait timeout budget were added after this build; covered separately"
+  ],
+  "cleanup": "public removal emptied declared region; OP revoked; clients disconnected; server stopped normally",
+  "files": {
+    "mcp-flight-a-20260929.jsonl.gz": {
+      "sha256": "449c2bb66d1222ff22df6678a16cc9ada6e213da34f0a60acba008bd84660a3f"
+    },
+    "mcp-flight-a-arrival-20260929.json": {
+      "sha256": "d416fe32add47579f412d97321693f332cb82a43a11457079b1dbf16906da597"
+    },
+    "mcp-flight-a-operated-a-20260929.mcfunction": {
+      "sha256": "8d99383e2017045c84c109827f25d27cbd9d9c27be682a17b53461040d4c2b70"
+    },
+    "mcp-flight-a-operated-b-20260929.mcfunction": {
+      "sha256": "7e117451556080e2da45ed0179f7ee87bbe6168a30b367d3b62545d51271b9a0"
+    },
+    "mcp-flight-a-placed-a-20260929.mcfunction": {
+      "sha256": "04558d03595d195382019786d3409ebf0f50aed73814823d2f253ff896d74e6f"
+    },
+    "mcp-flight-a-placed-b-20260929.mcfunction": {
+      "sha256": "d9e09068d2ed28020862276d7aa6bd8c44a90ffe1e449e008ede125cee00755b"
+    },
+    "mcp-flight-a-removed-a-20260929.mcfunction": {
+      "sha256": "2bd175713a759bd0e3b3c8d78c4b9862fc18f3fc65c2dfefaaf7ff3b0926388e"
+    },
+    "mcp-flight-a-removed-b-20260929.mcfunction": {
+      "sha256": "6bef4033f4db74667655ee3410006b7b7dc14336b4ae2a7752288da9fa3728dc"
+    },
+    "mcp-flight-a-server-20260929.log": {
+      "sha256": "c0e5c65040cfeb0a7dc317b640299079376d9680c6789778ac2f2376406f3c96"
+    }
+  }
+}

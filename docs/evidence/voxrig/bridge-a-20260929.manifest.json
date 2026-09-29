@@ -1,0 +1,35 @@
+{
+  "schema": "dustroute.native-evidence.v1",
+  "minecraft": "1.21.11",
+  "server": "owned isolated official vanilla, offline, loopback25577, no MOD",
+  "trial": "Typed BotBridge native client: command writes, other-player collision target, particle preview, lever toggle, creative stone placement and removal, native retreat and region observation. No Mineflayer process used.",
+  "result": "All trial assertions passed; independent function returned1 and matched648cells. Client evidence correctly rejected by server-confirmed scan API.",
+  "limits": [
+    "Static collision targeting is not a graphical outline/crosshair comparison.",
+    "Preview submission was accepted by server; no visual screenshot claim.",
+    "Full MCP placement, repair, cancellation and recording workflows are not covered by this trial."
+  ],
+  "cleanup": "Initial fill after clients disconnected failed because chunk unloaded, retained in server log. Server restarted; owned chunk force-loaded; five remaining fixture cells removed; force-load removed; OP already revoked; all dimensions saved and server stopped normally.",
+  "files": [
+    {
+      "path": "bridge-a-20260929.json.gz",
+      "sha256": "53ffdd76d7b30315618dd60f49c9c9f4f6a56973154959076637ed373920a8cc",
+      "bytes": 7329
+    },
+    {
+      "path": "bridge-a-cleanup-20260929.log",
+      "sha256": "af617de9ff849f450700294034ee520fd82d82d72099985f06d3e96b1540c2b0",
+      "bytes": 2579
+    },
+    {
+      "path": "bridge-a-confirmation-20260929.mcfunction",
+      "sha256": "add13b4c4b32c781bc6caad2c3f6d64c3cbbf393c7dd8c662bb70a107c59e30d",
+      "bytes": 38688
+    },
+    {
+      "path": "bridge-a-server-20260929.log",
+      "sha256": "cd398ec41fac55501bf30265b3c34d3ba41132054a7044f6edcdadfedd8b1030",
+      "bytes": 5370
+    }
+  ]
+}

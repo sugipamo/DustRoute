@@ -1,0 +1,47 @@
+{
+  "schema": 1,
+  "date": "2026-09-29",
+  "server": "isolated vanilla Java 1.21.11, loopback 25577, no mods",
+  "client": "Voxrig native; no Mineflayer process",
+  "mcp_transport": "real rmcp tools over in-memory duplex; new service and native connection on each restart; same isolated durable directory",
+  "status": "passed",
+  "verified": [
+    "ordinary 3x3 Blueprint import/review/adoption",
+    "43-step placement with client reconstruction readbacks",
+    "unpreviewed apply refused",
+    "external change after preview refused",
+    "new connection reopens durable instance but cannot reuse old operation",
+    "human removed one quartz: exactly one missing finding, reconstruction plan available",
+    "repair requires preview and rejects a changed baseline; teardown and rebuild verified",
+    "closed and open 3x3 aperture; diagnosis matches observed-input reference",
+    "conditional removal; new connection retains removed record",
+    "placed, closed, reopened and empty regions independently confirmed at all 770 cells each"
+  ],
+  "limits": [
+    "quiet client observations do not prove empty server queues",
+    "MCP restarts are new service/connection instances within one OS process",
+    "stationary-carrier gate added after this probe build; separate unit regression covers the additional refusal",
+    "read-only server functions are independent test instrumentation, not runtime scans"
+  ],
+  "cleanup": "public removal emptied 770 cells; OP revoked; clients disconnected; server stopped normally",
+  "files": {
+    "mcp-door-a-20260929.jsonl.gz": {
+      "sha256": "c581ec695b797fc69f87dbb86e1ff30e31313c9d93708d1ae2623935d4b6e940"
+    },
+    "mcp-door-a-operated-20260929.mcfunction": {
+      "sha256": "201bde9dac258a63414eeb62eac920f5bdb1f095353dda56a64bcce8bbaa0728"
+    },
+    "mcp-door-a-placed-20260929.mcfunction": {
+      "sha256": "673e94a86677012db61235a8f18b3741b94bd21c08b325258d414d02c2f64127"
+    },
+    "mcp-door-a-removed-20260929.mcfunction": {
+      "sha256": "193324ad235e6057d6d12002d9b235ce2a85e3bc50fca6be4a7be7f68e132426"
+    },
+    "mcp-door-a-reopened-20260929.mcfunction": {
+      "sha256": "6a2705013fdf4f3a60f64cde1f62dc2ea05a23cf007598483b3698c1a20bac02"
+    },
+    "mcp-door-a-server-20260929.log": {
+      "sha256": "29e0deaed37bce9fc659752294961112bc40ba5e4a3051cc97bf93b39b71b385"
+    }
+  }
+}

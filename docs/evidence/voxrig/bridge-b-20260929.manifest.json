@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "date": "2026-09-29",
+  "server": "isolated vanilla Java 1.21.11; loopback 25577; no mods",
+  "transport": "native Voxrig clients only",
+  "observed": [
+    "12 received block changes with native packet ordering, client_frame20_hz clock, no truncation",
+    "stone collision target, creative placement/removal, lever toggle",
+    "independent final 648-cell function returned 1",
+    "explicit server-confirmed API rejects native client evidence"
+  ],
+  "limits": [
+    "recording contains received block state packets, not every reconstructed moving frame",
+    "client timing is not server tick timing",
+    "submission receipts are not server confirmation"
+  ],
+  "cleanup": "owned fixture cleared while clients connected; operator revoked; clients and server stopped normally",
+  "files": {
+    "bridge-b-20260929.json.gz": {
+      "sha256": "090f855095003fe6b82012cc79a3edd3753202efc1bdd3a450636a6c57f1aa3f"
+    },
+    "bridge-b-server-20260929.log": {
+      "sha256": "5d274a6a8c01658877e6c79ad75749dde214101ea2f837966630bb295980e14a"
+    },
+    "bridge-b-confirmation-20260929.mcfunction": {
+      "sha256": "e493f6186476ac1d06217c98ffb8fa4e92f59a1ba635d5fd36af894e545a4dd2"
+    }
+  }
+}

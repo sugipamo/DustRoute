@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "date": "2026-09-29",
+  "server": "isolated vanilla Java 1.21.11, loopback25577, no mods",
+  "status": "passed",
+  "client": "Voxrig b98785e with current native DustRoute operation adapter",
+  "verified": [
+    "12 ordered received block updates, no truncation",
+    "static player target, preview, native lever interaction, creative placement/removal",
+    "maximum supported 200-tick wait completes and explicitly reports client_wall_time_20hz",
+    "independent full 648-cell confirmation returned1",
+    "native observation is refused by explicit server-confirmed API"
+  ],
+  "limits": [
+    "waited client time does not establish server progress",
+    "large physical batches have bounded per-step budgets but this fixture places/removes one block"
+  ],
+  "cleanup": "owned fixture removed while clients connected, OP revoked, clients and server stopped normally",
+  "files": {
+    "bridge-c-20260929.json.gz": {
+      "sha256": "2cdf683d0e32ade3b472ab73167e58c97b0bd84ea8f120d76617901782293f1a"
+    },
+    "bridge-c-server-20260929.log": {
+      "sha256": "489023f540e9d4c3a6d3df5b9749ad063b93b224c5ba204e1cbce2a309210962"
+    },
+    "bridge-c-confirmation-20260929.mcfunction": {
+      "sha256": "84b530db27fe275e17935db5dd653759aff3dae3eafd7f82f3261f0d4946a64e"
+    }
+  }
+}

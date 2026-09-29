@@ -1,0 +1,10 @@
+{
+  "complete_cells": 1134,
+  "declared_displacement": {
+    "x": 0,
+    "y": 0,
+    "z": -3
+  },
+  "differences": [],
+  "basis": "public generator declared expected_arrival, translated to placement origin; full region including air"
+}
