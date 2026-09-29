@@ -30,12 +30,17 @@ Native float angles and sine-table indexing determine the outline ray direction.
 ## Independent native oracle
 
 The original Java helper invokes the local game's shape and raycast methods;
-expected hits are not calculated by the Rust implementation. The retained 25,370
+expected hits are not calculated by the Rust implementation. The retained 25,394
 cases cover every distinct supported outline/auxiliary shape pair, axis faces,
 edges, thin layers, inside starts, randomized rays, zero length, negative
 coordinates and multi-cell crossing ties. Another 2,304 cases call native
 `Entity.getRotationVector`. Every native state ID/name/property is checked against
 the existing registry using a stable identity checksum.
+
+World-coordinate edge regressions include positions 100, 42,000 and 29,999,980.
+The original local-coordinate epsilon check incorrectly selected a lever for
+native miss case 25376 at `(100.3124999, 180.5, 98)`. Translating each box to world
+coordinates before intersection preserves native rounding and passes the case.
 
 Regeneration requires locally obtained Java 1.21.11 merged development input,
 Yarn `1.21.11+build.6` mappings (`official`, `intermediary`, `named` namespaces),

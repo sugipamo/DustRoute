@@ -133,7 +133,6 @@ fn intersect(
     if delta.iter().map(|d| d * d).sum::<f64>() < 1e-7 || boxes.is_empty() {
         return None;
     }
-    let local: [f64; 3] = std::array::from_fn(|i| start[i] - f64::from(cell[i]));
     let inside: [f64; 3] =
         std::array::from_fn(|i| start[i] + delta[i] * 0.001 - f64::from(cell[i]));
     if boxes
@@ -162,6 +161,9 @@ fn intersect(
     let mut best = 1.0;
     let mut face = None;
     for bounds in boxes {
+        // Native Box.offset precedes ray intersection. Applying epsilon in local
+        // coordinates changes edge inclusion after world-coordinate rounding.
+        let bounds: [f64; 6] = std::array::from_fn(|i| bounds[i] + f64::from(cell[i % 3]));
         for axis in 0..3 {
             if delta[axis].abs() <= 1e-7 {
                 continue;
@@ -171,11 +173,11 @@ fn intersect(
             } else {
                 bounds[axis + 3]
             };
-            let t = (near - local[axis]) / delta[axis];
+            let t = (near - start[axis]) / delta[axis];
             if t > 0.0
                 && t < best
                 && (0..3).filter(|&i| i != axis).all(|i| {
-                    let v = local[i] + t * delta[i];
+                    let v = start[i] + t * delta[i];
                     bounds[i] - 1e-7 < v && v < bounds[i + 3] + 1e-7
                 })
             {
@@ -248,7 +250,7 @@ mod tests {
         .read_to_string(&mut text)
         .unwrap();
         let cases: Vec<Case> = serde_json::from_str(&text).unwrap();
-        assert_eq!(cases.len(), 25370);
+        assert_eq!(cases.len(), 25394);
         for (index, case) in cases.iter().enumerate() {
             let got = cast(case.start, case.end, |p| {
                 native_state(

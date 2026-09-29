@@ -137,6 +137,18 @@ public final class ExportOutlineShapes {
         for (double[] end : List.of(new double[]{3,3,3},new double[]{3,3,0.5},new double[]{0.5,3,3},
                 new double[]{3,0.5,3},new double[]{-2,-2,-2},new double[]{0.5,0.5,0.5}))
             cases.add(sample(cells,new double[]{0.5,0.5,0.5},end));
+        // Epsilon comparisons happen in world coordinates, including far builds.
+        var lever=Blocks.LEVER.getDefaultState();
+        var box=lever.getOutlineShape(EmptyBlockView.INSTANCE,BlockPos.ORIGIN).getBoundingBox();
+        for (int shift : new int[]{0,100,42000,29999980}) {
+            var position=new BlockPos(shift,180,shift);
+            for (double edge : new double[]{shift+box.minX,shift+box.maxX}) {
+                for (double epsilon : new double[]{-1e-7,0,1e-7}) {
+                    double x=edge+epsilon, y=180+(box.minY+box.maxY)/2;
+                    cases.add(sample(Map.of(position,lever),new double[]{x,y,shift-2},new double[]{x,y,shift+2}));
+                }
+            }
+        }
         Files.writeString(Path.of(args[2]),JSON.toJson(cases)+"\n");
         // Pure Entity rotation math; no game world or entity simulation is run.
         var entity = new net.minecraft.entity.decoration.ArmorStandEntity(net.minecraft.entity.EntityType.ARMOR_STAND,null);

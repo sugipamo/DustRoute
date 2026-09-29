@@ -16,10 +16,10 @@
     "data/java_1_21_11/collision_shapes.json": "1ee9dd534848604495193ad8b3c06ffd1674cda09a609850c12a9746ba1b9812",
     "data/java_1_21_11/items.json": "528dc62f92a40981e32ee8826adcf7ad00bce153484c17d5109d0f4353a70264",
     "data/java_1_21_11/outline_coverage.json": "88b5ec0d474012479a3d3fb8c4659cee29094700720e37a207b93e0cb0c3a92d",
-    "data/java_1_21_11/outline_raycast_cases.json.gz": "284db472a1c17d3347283e292f3ef982b198ebb9c91f7e10e0e9a361d7f1898c",
+    "data/java_1_21_11/outline_raycast_cases.json.gz": "a1900f4eed584de07fe3628bcae4fb57f0df2d94e11d4a3dfe23d75e36a251d4",
     "data/java_1_21_11/outline_rotation_cases.json.gz": "837458b1aa9fdf731e4774685ea6ba6711d26f161cdd6d3e8e4caf5f19764430",
     "data/java_1_21_11/outline_shapes.json": "f96c141d4bbfe12d14157ce6228802a9ec4ee5caffa40467c260c054e00311d2",
-    "data/java_1_21_11/outline_source.json": "03b13bd4d58c98328d8086688644733e609205e437a238b6c5d281401beaa909",
+    "data/java_1_21_11/outline_source.json": "7a0cd1a511ab009a3dc9e2cf222cd8fb7a203b9be93b1f99cf572373aed4e134",
     "data/java_1_21_11/source.json": "ea9a050eeb3513b9017b4112da1f1beabaec218b828a922989e2355308d09578",
     "data/materials.json": "64172813642aae7c05321fe36136a37b2f98845732541e025d296628a7944b1f",
     "data/prismarine_physics_fixtures.json": "8333fc4d2b7e10d609bc390d0721e2d51baa9bf2cc0e56ba32dc643e63b323cb",
@@ -101,7 +101,7 @@
     "docs/index.md": "1d4382431e8f477f7f478dd5a31a569311b503ce2d3440c5bd6a8b544106da5d",
     "docs/java-1.21.11-operations.md": "6b686e9b9c8656fd5b883a210f72e0fbba42ca9827e3f94ac290b359805ab7ed",
     "docs/piston-client-update-prerequisite.md": "927578565c3ff1a4373e56755793de62912c41a3894a142e2f54684e0b62f7e2",
-    "docs/player-targeting.md": "321e716e6aaf39c3f098a9d307540cd0d34b5ea7f01b8410e31cb6279c9571f2",
+    "docs/player-targeting.md": "a0486e564b692620129f51f2a9a9d13839091acd50bd11f9cd3de9b83125b27d",
     "docs/protocol-coverage.md": "cea48bbffb301cbb98e9a3e9d625a84bb3bc959637c4b5f53c3239f1ff681bb3",
     "docs/pull-request-preparation.md": "0f7082846b855ab463b6f5ac4c21e8b37b3b5956334ef80836644e93d7008cd1",
     "docs/state-and-events.md": "613af1bede1ff324d3c94bec4afade2cb4aaeb93d0b275e3885e5b44d6ff785e",
@@ -151,7 +151,7 @@
     "examples/version_observation_probe.rs": "81e4cd7b8fde4b536cdb74ecc0355566f5c1284ac5e640f8835201c41b852864",
     "examples/wall_probe.rs": "ffa0a8729a43fe2184614889099c47d07c05dd90b9d4f3c529e1dbc59fc14c91",
     "examples/window_probe.rs": "c04ffc5e8bcaf99deffa758e71648ca6df4178c2335110dff74aae3e667dd264",
-    "scripts/ExportOutlineShapes.java": "0bf830261334327adde96901d629862a1f6fef5cce50f403a86ae67a1691a154",
+    "scripts/ExportOutlineShapes.java": "17c0c682428a5fa7fa67cbb5d91483f5dc693d3d33839decc059d4c33c5b6e81",
     "scripts/PrepareOutlineOracle.java": "a2c6fb7769bfd6e4db7f4841446f978da36ff8886f94905d8e119112ccb349c6",
     "scripts/export_outline_shapes.py": "c3e4e31bc95592896e502a33db30e36c307fdaa2a5458abe63b21543a7a9d331",
     "scripts/generate_java_1_21_11.cjs": "e9466d6b3d921395f7dba6a18716326706736b776d4edb8a1301e30d3f994c8e",
@@ -187,7 +187,7 @@
     "src/versions/java_1_21_11/client/players.rs": "933007e9c3f79ce6bc98b6151313c50dbdd64595efcc5354db76a17119a696ad",
     "src/versions/java_1_21_11/client/players/tests.rs": "55c74a71714ba878d0f85cad67668df7bc043e1ecec7d966348b1912de724abc",
     "src/versions/java_1_21_11/client/raycast.rs": "bd89acca019aaca103c3213a6e6d1135e0484e3a9c71a271a4b2a928994ac039",
-    "src/versions/java_1_21_11/client/raycast/outline.rs": "d35d0d03c60d0c9a3537d5737bfe3c07ddad5949cab3f14622b965b2b7e63205",
+    "src/versions/java_1_21_11/client/raycast/outline.rs": "4eb7614732cbcd86e9a9a4fad071b9d1861a5a301050f228d41a55071837b75c",
     "src/versions/java_1_21_11/client/recording.rs": "de3c6ad62e7229218ec041f66c33e2902bbb9d397296b52d6ab1d2315d37a426",
     "src/versions/java_1_21_11/client/tests.rs": "4cb53de3ee0243abc9d76b734fca3d1a7457893570e8bed9e2f129b1aa1440b5",
     "src/versions/java_1_21_11/component_nbt.rs": "bce1b6920f3d9fd958c102d2a93818c36fad4b604783b4baa71e219fe52f83ab",
@@ -221,5 +221,5 @@
     "scripts"
   ],
   "repository": "https://github.com/sugipamo/Voxrig",
-  "revision": "f85514fa830ad0ce8cf4a15d270f932ed6be1e31"
+  "revision": "47a05029e126cb049ee8a7536e5df867f3851c12"
 }

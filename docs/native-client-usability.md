@@ -28,7 +28,7 @@ unchanged. Both repositories now use `codex/native-client-usability`.
 Existing validation at the baseline is recorded in [the native rollout](voxrig-rollout.md).
 
 Player targeting is implemented. Voxrig exports audited state-only native
-outline/auxiliary shapes for 22,899 states and retains 25,370 independent native
+outline/auxiliary shapes for 22,899 states and retains 25,394 independent native
 raycast cases plus 2,304 native rotation cases. The complete native state identity
 mapping is verified. All 118 Voxrig tests, its doctest, Clippy and reproducible
 data generation checks pass. DustRoute chooses `block_outline`; the explicit
@@ -60,7 +60,12 @@ declared TCP interruption and graceful OS-process restarts, not host crashes.
 The native adapter tests, durable registry test and all-target MCP Clippy pass.
 
 Setup now uses an unmodified vendored Voxrig source snapshot at
-`f85514fa830ad0ce8cf4a15d270f932ed6be1e31`. `scripts/vendor_voxrig.py --check`
+`47a05029e126cb049ee8a7536e5df867f3851c12`. `scripts/vendor_voxrig.py --check`
 checks all 204 recorded files without requiring Voxrig's Git checkout. The
 source repository retains its independent contribution history. A separate
 checkout/build validation is the final acceptance check for this setup change.
+
+Final outline review added world-coordinate edge cases at 100, 42,000 and
+29,999,980. A native miss at a lever edge initially reproduced as a false hit;
+applying the native epsilon after translating the box fixes it. The final 118
+Voxrig tests, Clippy and regenerated oracle checksum check pass with this fix.
