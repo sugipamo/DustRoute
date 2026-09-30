@@ -149,9 +149,8 @@ Mock plan/preview/apply medians were 87.984/81.972, 46.740/43.237 and
 225.700/236.384 ms respectively. Application did **not** get uniformly faster.
 Wait counts, proof counts and eight file/directory syncs remain unchanged;
 the native two-write workflow still accounts for 3.6 seconds of explicit
-waits. No updated live-native end-to-end timing is available yet. The new
-trace counters make hit rates and actual materialization measurable on a
-normally scheduled start of the updated MCP.
+waits. This offline comparison did not measure updated live-native tool
+requests; the separate dummy-player measurements below now cover that path.
 
 MCP's broad regression run passed 129 tests before final identity/hash
 refinements; affected/new paths were then checked with targeted tests,
@@ -160,6 +159,84 @@ including retained real-packet replay. Native/default target checks,
 Clippy with warnings denied, and formatting checks validate the source
 configuration. Model validation results are still computed rather than
 cached; `ValidationKey` currently pins mixed-IR analysis identity.
+
+## Live native read speed with a dummy player
+
+[`measurements/observation-speed-live-20260930.json`](measurements/observation-speed-live-20260930.json)
+records 55 successful `get_world` calls through an additional read-only native
+MCP on loopback HTTP. Source commit `0e3ea75` was built with one Cargo worker
+in the unoptimized debug profile. The existing Java 1.21.11 server and
+`DustRouteBot` stayed running. A separate `dustroutetest` dummy looked down at
+the existing flying-machine observer; `readspeedbot` observed it from nearby.
+No blocks were placed/removed and no machine input was activated.
+
+Each case has one first acquisition, nine repeats with 50 ms gaps, and a final
+acquisition preceded by a one-second wait. The explicit bounds differ from
+the automatic discovery tile, so each first call misses the region caches.
+Durations include the HTTP request, MCP handler, response and JSON decoding;
+block lists were disabled. All calls returned a complete scan and none
+reacquired the player.
+
+| scope / requested cells | first call | repeat median, 9 calls | repeat range | delayed call |
+| --- | ---: | ---: | ---: | ---: |
+| automatic discovery / 4,221 | 52.360 ms | 9.643 ms | 9.214–11.919 ms | 9.620 ms |
+| explicit 7×6×8 / 336 | 5.989 ms | 3.847 ms | 3.443–4.406 ms | 3.843 ms |
+| explicit 12×6×10 / 720 | 7.631 ms | 5.457 ms | 4.557–5.919 ms | 5.940 ms |
+| explicit 16×16×16 / 4,096 | 31.606 ms | 11.487 ms | 11.345–13.964 ms | 12.066 ms |
+| explicit 32×32×32 / 32,768 | 253.322 ms | 74.327 ms | 72.156–78.364 ms | 75.210 ms |
+
+Every repeat and delayed native scan hit its generation cache. Repeats
+materialized, converted and hashed **zero cells**. All 44 explicit captures
+issued distinct observation and circuit IDs. Delayed explicit captures kept
+the same content IDs while advancing capture time, local tick and receive
+sequence. Automatic raw inspection does not expose those IDs, so its ID
+comparison fields are null. This establishes reuse with independent
+acquisition metadata on this stationary live scene; it does not establish
+server-authoritative observation of hidden events.
+
+The first automatic call also spent 21.305 ms in gaze observation. Its
+repeats spent most of their handler time in discovery merging. On the large
+explicit region, reused native observation/conversion took about 0.03 ms
+combined in the first repeat, while the complete tool still took tens of
+milliseconds. The handler still indexes/validates the literal snapshot and
+builds the raw inventory over the complete region on each capture. The
+current trace does not separate all those local steps, so it cannot attribute
+the remaining duration to any one function.
+
+Dummy and observer connection/ready durations were 531.461 and 395.353 ms.
+After console positioning, the probe deliberately waited five seconds for
+chunk streaming; that wait is excluded from the table and is not a measured
+minimum loading requirement. HTTP initialization took its own recorded
+duration; `get_bot_status` took 1.840 ms. The successful setup used lowercase
+`readspeedbot`, matching the offline whitelist profile.
+
+The larger regions contain 18 non-air blocks and nine redstone candidates.
+These results apply to a loaded, stationary, mostly-air scene through local
+HTTP. Dense circuits, moving machines, unloaded chunks, remote transport and
+boundary-spanning automatic discovery require separate measurements. The
+earlier older-process median of 25.598 ms and this 9.643 ms repeat median
+indicate improved reuse, but different acquisition conditions prevent a
+controlled before/after speedup claim. No live plan/preview/apply timing was
+added, and construction waits retain their previous requirements.
+
+The reusable harness is
+[`../crates/dustroute-mcp/examples/observation_speed_probe.rs`](../crates/dustroute-mcp/examples/observation_speed_probe.rs).
+Build it with `cargo build --offline --locked -j 1 -p dustroute-mcp --features
+voxrig --example observation_speed_probe`. It requires `MC_PORT`,
+`PROBE_HTTP_BIND` (loopback only), `PROBE_DUMMY`, `PROBE_OBSERVER`, and an
+isolated `DUSTROUTE_STATE_DIR`; set `DUSTROUTE_PERFORMANCE_TRACE=1` for counters.
+Use dedicated test-player names, allowlist them as required by the server,
+position the creative dummy and nearby observer from the server console,
+then enter a newline at its setup barrier. After `MEASUREMENT_READY`, use an
+HTTP MCP client to call `get_world` with the arguments retained in the
+measurement artifact. A final newline shuts down the temporary MCP and
+disconnects its clients. This run removed its temporary whitelist entry and
+confirmed that only the original `DustRouteBot` remained online.
+
+The example passed its native build and Clippy with warnings denied. The
+live assertions verified complete scopes, no reacquisition, cache counters,
+unique IDs and advancing delayed receipts. Production read semantics were
+not changed for this measurement.
 
 ## Opt-in request phase tracing
 

@@ -74,7 +74,11 @@ not receive-packet counts or independent server observations.
 Offline probes compare the previous native double-decode loop and conversion
 against repeated shared acquisitions, and rerun the production handler
 fixture from the earlier performance investigation. They do not connect to
-Minecraft. Results and limits are recorded in the performance document.
+Minecraft. A separate 55-call live dummy-player run confirms reuse on a
+stationary loaded scene: every repeated scan hit, with zero repeated
+materialization, conversion or hashing and fresh explicit acquisition IDs
+and advancing delayed receipts. Results and limits are recorded in the
+[performance document](performance-observation.md#live-native-read-speed-with-a-dummy-player).
 
 Remaining work includes finer dirty-region/section invalidation, sharing
 overlapping regions, avoiding owned copies in remaining compatibility APIs,
