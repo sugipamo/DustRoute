@@ -74,6 +74,95 @@ fn virtual_design() -> Value {
 }
 
 #[tokio::test]
+async fn virtual_design_updates_require_adoption_retain_pins_and_leave_base_unchanged() {
+    let root = temporary();
+    let (client, server) = start(&root).await;
+    let previous = virtual_design();
+    let original = call(
+        &client,
+        "test_circuit_change",
+        json!({"blueprint":{"action":"generate_building_design","request":previous}}),
+    )
+    .await;
+    assert_eq!(original["ok"], true, "{original}");
+    let op = propose_generated(&client, &original["result"]).await;
+    let base = original["result"]["request"]["candidate_state"]["id"].clone();
+    let mut design = previous.clone();
+    design["namespace"] = json!("public.design.updated");
+    design["parts"][1]["shapes"][0]["material"] = json!("tinted_glass");
+    let request = json!({"base_assembly_revision_id":base,"previous":previous,"design":design});
+    let unadopted = call(
+        &client,
+        "test_circuit_change",
+        json!({"blueprint":{"action":"generate_building_design_update","request":request}}),
+    )
+    .await;
+    assert_eq!(unadopted["ok"], false);
+    adopt(&client, &op).await;
+    let before = call(
+        &client,
+        "get_circuit_revision",
+        json!({"blueprint":{"kind":"archive"}}),
+    )
+    .await;
+    let generated = call(
+        &client,
+        "test_circuit_change",
+        json!({"blueprint":{"action":"generate_building_design_update","request":request}}),
+    )
+    .await;
+    assert_eq!(generated["ok"], true, "{generated}");
+    assert_eq!(generated["result"]["request"]["base_state"], base);
+    assert_eq!(
+        generated["result"]["diff"]["blocks"]
+            .as_array()
+            .unwrap()
+            .len(),
+        2
+    );
+    assert_eq!(
+        generated["result"]["retained_revisions"]["shell"],
+        "public.design.shell.v1"
+    );
+    assert_eq!(generated["result"]["placed_instances_modified"], false);
+    assert_eq!(
+        before,
+        call(
+            &client,
+            "get_circuit_revision",
+            json!({"blueprint":{"kind":"archive"}})
+        )
+        .await
+    );
+    let mut wrong = request.clone();
+    wrong["previous"]["spaces"] = json!([]);
+    let rejected = call(
+        &client,
+        "test_circuit_change",
+        json!({"blueprint":{"action":"generate_building_design_update","request":wrong}}),
+    )
+    .await;
+    assert_eq!(rejected["ok"], false);
+    assert_eq!(rejected["errors"][0]["code"], "base_design_mismatch");
+    let op = propose_generated(&client, &generated["result"]).await;
+    stop(client, server).await;
+    let (client, server) = start(&root).await;
+    adopt(&client, &op).await;
+    let old = call(
+        &client,
+        "get_circuit_revision",
+        json!({"blueprint":{"kind":"assembly","id":base}}),
+    )
+    .await;
+    assert_eq!(
+        old["result"]["record"]["assembly"],
+        original["result"]["request"]["candidate_state"]["assembly"]
+    );
+    stop(client, server).await;
+    std::fs::remove_dir_all(root).unwrap();
+}
+
+#[tokio::test]
 async fn virtual_design_returns_structured_combined_world_failures_without_publishing() {
     let root = temporary();
     let (client, server) = start(&root).await;

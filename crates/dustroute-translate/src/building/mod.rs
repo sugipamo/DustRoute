@@ -6,10 +6,12 @@ mod door;
 mod door_interface;
 mod geometry;
 mod sources;
+mod update;
 pub use design::{
     AttachedDesignComponent, BuildingDesignError, GeneratedBuildingDesign, generate_building_design,
 };
 pub use door::{AttachedBuildingDoor, generate_building_with_door};
+pub use update::{GeneratedBuildingDesignUpdate, generate_building_design_update};
 
 use crate::blueprint_update::{BlueprintUpdateRequest, BlueprintUpdates, RecordedReview};
 use crate::piston_construction::{ElectricalConstruction, construction_batches};

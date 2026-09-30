@@ -154,6 +154,12 @@ pub(crate) enum BlueprintWrite {
     GenerateBuildingDesign {
         request: Box<dustroute_library::building::BuildingDesignRequest>,
     },
+    /// Generate a diff against a uniquely adopted immutable design. Check the
+    /// previous structured input, retain unchanged pins, freshly review the new
+    /// candidate. Does not replace a placed instance or publish definitions.
+    GenerateBuildingDesignUpdate {
+        request: Box<dustroute_library::building::BuildingDesignUpdateRequest>,
+    },
     /// Generate a bounded enclosure, its structural obligations and a proposal.
     /// Does not import, adopt or write any Minecraft blocks.
     GenerateBuilding {
@@ -649,6 +655,36 @@ fn perform(
                 return Err("Blueprint request exceeds 4 MiB".into());
             }
             match write {
+                BlueprintWrite::GenerateBuildingDesignUpdate { request } => {
+                    let generated = (|| {
+                        let base = construction_basis(updates, &request.base_assembly_revision_id)?;
+                        let previous = request
+                            .previous
+                            .component
+                            .as_ref()
+                            .map(|c| construction_basis(updates, &c.assembly_revision_id))
+                            .transpose()?;
+                        let next = request
+                            .design
+                            .component
+                            .as_ref()
+                            .map(|c| construction_basis(updates, &c.assembly_revision_id))
+                            .transpose()?;
+                        dustroute_translate::building::generate_building_design_update(
+                            *request,
+                            &base.catalog,
+                            previous.as_ref().map(|s| &s.context),
+                            next.as_ref().map(|s| &s.context),
+                        )
+                    })();
+                    let mut response = building_result_json(generated);
+                    if response["ok"] == true {
+                        response["next_step"] = json!(
+                            "Import result.records; propose_update with result.request after removing its id; inspect diff, review and adopt. Existing placed instances retain their pinned source; a separate site-edit operation is required to modify one."
+                        );
+                    }
+                    Ok((Some(response), false))
+                }
                 BlueprintWrite::GenerateBuildingDesign { request } => {
                     let source = request
                         .component

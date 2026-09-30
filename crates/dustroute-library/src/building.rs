@@ -108,6 +108,17 @@ pub struct BuildingDesignRequest {
     pub component: Option<BuildingDesignComponent>,
 }
 
+/// An immutable update, not an instruction to modify a placed building.
+/// The previous structured input is checked against the selected Assembly and
+/// every retained occurrence/obligation, rather than trusted as provenance.
+#[derive(Clone, Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct BuildingDesignUpdateRequest {
+    pub base_assembly_revision_id: AssemblyRevisionId,
+    pub previous: BuildingDesignRequest,
+    pub design: BuildingDesignRequest,
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct BuildingDesignPart {

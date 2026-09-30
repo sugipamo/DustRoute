@@ -42,3 +42,12 @@ refused adoption and all building generators. Native runtime requirements retain
 the actual failure time/input observations; behavior reports retain their
 counterexamples. Offline checks cover failed versus undetermined, omission
 counts, saving/reloading and public generation without catalog mutation.
+
+Stage 2 is implemented through `generate_building_design_update`. The base must
+match the supplied previous structured input, including retained air/type and
+nested equipment requirements. Unchanged direct-child pins remain unchanged;
+the candidate descends from the actual selected base. Public tests establish
+unique-adoption gating, non-publishing generation, diff/review/adoption after
+restart and preservation of the old Assembly. This does not upgrade a placed
+instance. Assembly-record loading now resolves ancestry independently of input
+order, including updates across different namespaces.

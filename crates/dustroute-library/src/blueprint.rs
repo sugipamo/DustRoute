@@ -57,8 +57,36 @@ impl BlueprintRecords {
             catalog.insert_classification(definition.clone())?;
         }
         catalog.insert_revisions(self.revisions.clone())?;
+        let mut ids = std::collections::BTreeSet::new();
         for assembly in &self.assemblies {
-            catalog.insert_assembly(assembly.clone())?;
+            if !ids.insert(&assembly.id) {
+                return Err(BlueprintError::DuplicateAssembly(assembly.id.clone()));
+            }
+        }
+        let mut pending = self.assemblies.iter().collect::<Vec<_>>();
+        while !pending.is_empty() {
+            let previous = pending.len();
+            let mut remaining = Vec::new();
+            for assembly in pending {
+                if assembly
+                    .parents
+                    .iter()
+                    .all(|id| catalog.assembly(id).is_some())
+                {
+                    catalog.insert_assembly(assembly.clone())?;
+                } else {
+                    remaining.push(assembly);
+                }
+            }
+            if remaining.len() == previous {
+                let parent = remaining[0]
+                    .parents
+                    .iter()
+                    .find(|id| catalog.assembly(id).is_none())
+                    .expect("unresolved parent");
+                return Err(BlueprintError::UnknownAssembly(parent.clone()));
+            }
+            pending = remaining;
         }
         Ok(catalog)
     }

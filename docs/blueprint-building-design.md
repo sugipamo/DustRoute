@@ -84,6 +84,41 @@ is descriptive; the checked property is Air at every declared coordinate.
 Other unoccupied cells in `known_region` are also fixed Air. All solids must lie
 strictly inside the outer boundary, leaving a guard cell on all six sides.
 
+## Updating an existing design
+
+`test_circuit_change(blueprint.action=generate_building_design_update)` accepts
+`base_assembly_revision_id`, `previous` (the earlier `BuildingDesignRequest`),
+and `design` (the revised input with a new namespace). Public MCP requires the
+base and any selected equipment sources to have exactly one adopted proposal
+and freshly passing runtime review. Keep the structured input with the design;
+it is returned by generation, but is not recovered from descriptive names.
+
+The earlier input is regenerated for comparison and checked against the exact
+Assembly, every occurrence and retained obligation. Mismatched physical state,
+spaces, routes, ports or additional custom requirements are refused with
+`base_design_mismatch`; this entry does not silently weaken a general Blueprint.
+Use an explicit general proposal for a design this input cannot express.
+
+The result uses the ordinary `records`/`request` workflow. Its proposal descends
+directly from the selected base Assembly, parent and building definition, with
+the ordinary structural/physical `diff`. Equivalent unchanged direct children
+keep their earlier immutable revision pins, including equipment's nested
+sources. Changed named children descend from their previous definitions; new
+or removed children and requirements are visible in the diff. The whole new
+candidate is reviewed and its construction/removal simulated again.
+
+For example, submit the earlier room as `previous`, and as `design` change the
+namespace to `trial.windowed-room-v2` and the window material to `tinted_glass`.
+The diff contains the two changed glass cells; shell and room pins are retained.
+Generation publishes nothing. Import, propose, inspect and adopt explicitly.
+Saved/restarted proposals still require fresh review for adoption.
+
+Adoption leaves earlier Assemblies and all placed-instance source identities
+unchanged. It does not upgrade a built structure or authorize its replacement.
+Site editing needs a separately observed and previewed operation. Internal
+comparison definitions and artificial empty baselines are not published as
+the update's selected base.
+
 ## Equipment composition
 
 The optional `component` pins one existing Assembly Revision. It can contain

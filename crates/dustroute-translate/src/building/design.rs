@@ -85,6 +85,22 @@ pub fn generate_building_design(
     specification: BuildingDesignRequest,
     source: Option<(&BlueprintCatalog, &RuntimeBehaviorContext)>,
 ) -> Result<GeneratedBuildingDesign, BuildingDesignError> {
+    prepare_design(specification, source)?.finish()
+}
+
+pub(super) struct PreparedDesign {
+    pub specification: BuildingDesignRequest,
+    pub records: BlueprintRecords,
+    pub request: BlueprintUpdateRequest,
+    pub context: RuntimeBehaviorContext,
+    pub geometry: super::geometry::Geometry,
+    pub component: Option<AttachedDesignComponent>,
+}
+
+pub(super) fn prepare_design(
+    specification: BuildingDesignRequest,
+    source: Option<(&BlueprintCatalog, &RuntimeBehaviorContext)>,
+) -> Result<PreparedDesign, BuildingDesignError> {
     let mut geometry = design_geometry::expand(&specification)?;
     let prepared = specification
         .component
@@ -117,25 +133,46 @@ pub fn generate_building_design(
             )
         })
         .transpose()?;
-    let verification = verify_candidate(&records, &request, &context, &geometry.initial)?;
-    Ok(GeneratedBuildingDesign {
-        unique_blocks: geometry.initial.blocks.len(),
-        parts: geometry
-            .parts
-            .into_iter()
-            .map(|(n, b)| (n, b.len()))
-            .collect(),
-        spaces: specification
-            .spaces
-            .iter()
-            .map(|s| (s.name.clone(), s.region))
-            .collect(),
+    Ok(PreparedDesign {
         specification,
         records,
         request,
         context,
-        expected: geometry.initial,
+        geometry,
         component: info,
-        verification,
     })
+}
+
+impl PreparedDesign {
+    pub(super) fn finish(self) -> Result<GeneratedBuildingDesign, BuildingDesignError> {
+        let Self {
+            specification,
+            records,
+            request,
+            context,
+            geometry,
+            component,
+        } = self;
+        let verification = verify_candidate(&records, &request, &context, &geometry.initial)?;
+        Ok(GeneratedBuildingDesign {
+            unique_blocks: geometry.initial.blocks.len(),
+            parts: geometry
+                .parts
+                .into_iter()
+                .map(|(n, b)| (n, b.len()))
+                .collect(),
+            spaces: specification
+                .spaces
+                .iter()
+                .map(|s| (s.name.clone(), s.region))
+                .collect(),
+            specification,
+            records,
+            request,
+            context,
+            expected: geometry.initial,
+            component,
+            verification,
+        })
+    }
 }
