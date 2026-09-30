@@ -17,6 +17,8 @@ pub struct BuildingDesignError {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub position: Option<Pos>,
     pub detail: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub diagnostics: Option<Box<crate::review_diagnostics::ReviewDiagnostics>>,
 }
 impl BuildingDesignError {
     pub(super) fn new(code: &'static str, detail: impl Into<String>) -> Self {
@@ -25,12 +27,23 @@ impl BuildingDesignError {
             item: None,
             position: None,
             detail: detail.into(),
+            diagnostics: None,
         }
     }
     pub(super) fn at(mut self, name: &str, position: Option<Pos>) -> Self {
         self.item = Some(name.into());
         self.position = position;
         self
+    }
+}
+impl From<String> for BuildingDesignError {
+    fn from(detail: String) -> Self {
+        Self::new("invalid_building", detail)
+    }
+}
+impl From<&str> for BuildingDesignError {
+    fn from(detail: &str) -> Self {
+        Self::new("invalid_building", detail)
     }
 }
 impl std::fmt::Display for BuildingDesignError {
@@ -104,8 +117,7 @@ pub fn generate_building_design(
             )
         })
         .transpose()?;
-    let verification = verify_candidate(&records, &request, &context, &geometry.initial)
-        .map_err(|e| BuildingDesignError::new("verification_not_established", e))?;
+    let verification = verify_candidate(&records, &request, &context, &geometry.initial)?;
     Ok(GeneratedBuildingDesign {
         unique_blocks: geometry.initial.blocks.len(),
         parts: geometry

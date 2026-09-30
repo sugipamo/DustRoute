@@ -2,7 +2,7 @@
 //! actual world. Reserved motion space is a request, never a behavior certificate.
 use super::component::{attach_assembly, merge_records};
 use super::door_interface::{align_aperture, door_boundaries};
-use super::{GeneratedBuilding, finish, geometry, sources};
+use super::{BuildingDesignError, GeneratedBuilding, finish, geometry, sources};
 use crate::location_behavior::LocationBehaviorBinding;
 use crate::piston_construction::electrical_snapshot;
 use crate::runtime_behavior::RuntimeBehaviorModel;
@@ -35,7 +35,7 @@ pub fn generate_building_with_door(
     request: BuildingWithDoorRequest,
     source_catalog: &BlueprintCatalog,
     source_context: &RuntimeBehaviorContext,
-) -> Result<GeneratedBuilding, String> {
+) -> Result<GeneratedBuilding, BuildingDesignError> {
     let specification = request.building;
     let attachment = request.door;
     let (mut geometry, entrance) = geometry::expand(&specification)?;

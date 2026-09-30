@@ -60,6 +60,10 @@ impl<'a> BehaviorReview<'a> {
             kind: CheckKind::Behavior,
             status: CheckStatus::Undetermined,
             detail: format!("{id}: {detail}"),
+            evidence: Some(Box::new(crate::review_diagnostics::CheckEvidence {
+                type_revision: Some(id.clone()),
+                ..Default::default()
+            })),
         }
     }
 
@@ -170,10 +174,11 @@ impl<'a> BehaviorReview<'a> {
         path: &InstancePath,
         view: &AssemblyView,
     ) -> CheckResult {
-        let result = match self.bind(binding, path, view) {
+        let mut result = match self.bind(binding, path, view) {
             Ok(bound) => self.check_bound(binding.behavior_type(), bound),
             Err(error) => Self::unknown(binding.behavior_type(), error),
         };
+        result.evidence.as_mut().expect("behavior evidence").binding = Some(binding.clone());
         self.checks.push(result.clone());
         result
     }
@@ -234,10 +239,11 @@ impl<'a> BehaviorReview<'a> {
                     .into(),
             )
         })();
-        let result = match bound {
+        let mut result = match bound {
             Ok(bound) => self.check_bound(id, bound),
             Err(error) => Self::unknown(id, error),
         };
+        result.evidence.as_mut().expect("behavior evidence").port = Some(source.clone());
         self.checks.push(result.clone());
         result
     }
@@ -292,7 +298,7 @@ impl<'a> BehaviorReview<'a> {
                             report.status,
                             report.reachable_states,
                             report.evaluated_steps,
-                            serde_json::to_string(&report).expect("serializable diagnostics"),
+                            serde_json::to_value(&report).expect("serializable diagnostics"),
                         ))
                     }
                     TypeContract::FiniteBurst { .. } => {
@@ -301,7 +307,7 @@ impl<'a> BehaviorReview<'a> {
                             report.status,
                             report.reachable_states,
                             report.evaluated_steps,
-                            serde_json::to_string(&report).expect("serializable diagnostics"),
+                            serde_json::to_value(&report).expect("serializable diagnostics"),
                         ))
                     }
                     TypeContract::RepeatedSettling { relation } => {
@@ -321,11 +327,7 @@ impl<'a> BehaviorReview<'a> {
                                     report.status,
                                     report.abstract_states,
                                     report.evaluated_transitions,
-                                    format!(
-                                        "abstraction={HISTORY_ABSTRACTION_METHOD}; {}",
-                                        serde_json::to_string(&report)
-                                            .expect("serializable diagnostics")
-                                    ),
+                                    serde_json::json!({"abstraction_method":HISTORY_ABSTRACTION_METHOD,"report":report}),
                                 )
                             },
                         )
@@ -338,6 +340,11 @@ impl<'a> BehaviorReview<'a> {
                         self.budget.max_steps = self.budget.max_steps.saturating_sub(steps);
                         result.status = status;
                         result.detail = format!("{scope}: {diagnostics}");
+                        result
+                            .evidence
+                            .as_mut()
+                            .expect("behavior type evidence")
+                            .behavior = Some(diagnostics);
                     }
                     Err(error) => result.detail = format!("{scope}: {error}"),
                 }

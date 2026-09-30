@@ -50,6 +50,7 @@ pub mod piston_door_type;
 pub mod port_realization;
 pub mod promotion;
 pub mod repair;
+pub mod review_diagnostics;
 pub mod routing;
 pub mod routing_resources;
 pub mod scenario;

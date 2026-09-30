@@ -179,6 +179,7 @@ fn exactly_256_blocks_are_admitted_and_a_larger_design_is_rejected() {
     assert!(
         generate_building(request)
             .unwrap_err()
+            .detail
             .contains("256-block")
     );
 }

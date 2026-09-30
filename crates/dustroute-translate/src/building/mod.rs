@@ -47,7 +47,9 @@ pub struct BuildingVerification {
 }
 
 /// Fresh structural and construction review, not adoption or site observation.
-pub fn generate_building(specification: BuildingRequest) -> Result<GeneratedBuilding, String> {
+pub fn generate_building(
+    specification: BuildingRequest,
+) -> Result<GeneratedBuilding, BuildingDesignError> {
     let (geometry, entrance) = geometry::expand(&specification)?;
     let context = RuntimeBehaviorContext::fresh_pistons(geometry.region, vec![]);
     let (records, request) = sources::build(&specification, &geometry, &context)?;
@@ -70,7 +72,7 @@ fn finish(
     request: BlueprintUpdateRequest,
     context: RuntimeBehaviorContext,
     door: Option<AttachedBuildingDoor>,
-) -> Result<GeneratedBuilding, String> {
+) -> Result<GeneratedBuilding, BuildingDesignError> {
     let verification = verify_candidate(&records, &request, &context, &geometry.initial)?;
     Ok(GeneratedBuilding {
         specification,
@@ -94,7 +96,7 @@ fn verify_candidate(
     request: &BlueprintUpdateRequest,
     context: &RuntimeBehaviorContext,
     expected: &MinecraftSnapshot,
-) -> Result<BuildingVerification, String> {
+) -> Result<BuildingVerification, BuildingDesignError> {
     if expected.blocks.len() > 256 {
         return Err("generated building exceeds the 256-block custom Assembly budget".into());
     }
@@ -112,19 +114,16 @@ fn verify_candidate(
     )
     .map_err(|e| e.to_string())?;
     if report.status() != CheckStatus::Passed {
-        let details = report
-            .arrangement
-            .iter()
-            .chain(report.occurrences.values().flat_map(|r| &r.checks))
-            .filter(|check| check.status != CheckStatus::Passed)
-            .take(3)
-            .map(|check| check.detail.as_str())
-            .collect::<Vec<_>>();
-        return Err(format!(
-            "generated building whole-Assembly review did not pass ({:?}): {}",
-            report.status(),
-            details.join("; ")
-        ));
+        return Err(BuildingDesignError {
+            code: "verification_not_established",
+            item: None,
+            position: None,
+            detail: format!(
+                "whole-Assembly review {:?}; inspect diagnostics.findings before changing the design",
+                report.status()
+            ),
+            diagnostics: Some(Box::new(report.diagnostics(64))),
+        });
     }
     let world = request
         .candidate_state
@@ -133,14 +132,18 @@ fn verify_candidate(
         .map_err(|e| e.to_string())?
         .proposed_world();
     let construction =
-        ElectricalConstruction::new(&world, context.known_region, context.root_limits)?;
+        ElectricalConstruction::new(&world, context.known_region, context.root_limits)
+            .map_err(|e| BuildingDesignError::new("construction_not_established", e))?;
     if construction.settled() != expected
         || !construction
             .remove_steps()
             .last()
             .is_some_and(|s| s.expected.blocks.is_empty())
     {
-        return Err("building construction or teardown differs from declared geometry".into());
+        return Err(BuildingDesignError::new(
+            "construction_mismatch",
+            "building construction or teardown differs from declared geometry",
+        ));
     }
     Ok(BuildingVerification {
         status: CheckStatus::Passed,

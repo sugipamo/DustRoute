@@ -45,6 +45,8 @@ pub struct CheckResult {
     pub kind: CheckKind,
     pub status: CheckStatus,
     pub detail: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub evidence: Option<Box<crate::review_diagnostics::CheckEvidence>>,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -130,6 +132,7 @@ fn result(kind: CheckKind, status: CheckStatus, detail: impl Into<String>) -> Ch
         kind,
         status,
         detail: detail.into(),
+        evidence: None,
     }
 }
 
@@ -151,6 +154,88 @@ fn translated(position: Pos, offset: Pos) -> Result<Pos, BlueprintError> {
 }
 
 fn port_type_check(
+    catalog: &BlueprintCatalog,
+    view: &AssemblyView,
+    source_reference: &AssemblyPortRef,
+    requirements: &[TypeRevisionId],
+    kind: CheckKind,
+) -> Result<CheckResult, BlueprintError> {
+    use crate::review_diagnostics::{CheckEvidence, CheckExpectation, ReviewObservation};
+    let mut check = port_type_check_raw(catalog, view, source_reference, requirements, kind)?;
+    if check.status == CheckStatus::Passed {
+        return Ok(check);
+    }
+    let (port, rotation) = view.resolved_port(source_reference)?;
+    let mut evidence = CheckEvidence {
+        port: Some(source_reference.clone()),
+        position: Some(port.position),
+        observation: Some(ReviewObservation::InitialAssembly),
+        ..Default::default()
+    };
+    'types: for id in requirements {
+        let definition = catalog
+            .type_revision(id)
+            .ok_or_else(|| BlueprintError::UnknownType(id.clone()))?;
+        let cells = match &definition.contract {
+            TypeContract::BlockPattern { blocks } => blocks
+                .iter()
+                .map(|b| {
+                    Ok((
+                        translated(
+                            port.position,
+                            rotation
+                                .checked_pos(b.position)
+                                .ok_or(BlueprintError::CoordinateOverflow)?,
+                        )?,
+                        CheckExpectation::Exact {
+                            block: Box::new(
+                                rotation
+                                    .checked_block(&b.block)
+                                    .ok_or(BlueprintError::CoordinateOverflow)?,
+                            ),
+                        },
+                    ))
+                })
+                .collect::<Result<Vec<_>, BlueprintError>>()?,
+            TypeContract::BlockKind { block_kind } => vec![(
+                port.position,
+                CheckExpectation::BlockKind {
+                    block_kind: *block_kind,
+                },
+            )],
+            TypeContract::Signal { port_kind } => vec![(
+                port.position,
+                CheckExpectation::Interface {
+                    port_kind: *port_kind,
+                },
+            )],
+            _ => vec![],
+        };
+        for (position, expected) in cells {
+            let actual = view.block_at(position);
+            let mismatch = match (&expected, &actual) {
+                (_, None) => check.status == CheckStatus::Undetermined,
+                (CheckExpectation::Exact { block }, Some(actual)) => actual != &**block,
+                (CheckExpectation::BlockKind { block_kind }, Some(actual)) => {
+                    actual.kind != *block_kind
+                }
+                (CheckExpectation::Interface { port_kind }, _) => port.kind != *port_kind,
+                _ => false,
+            };
+            if mismatch {
+                evidence.type_revision = Some(id.clone());
+                evidence.position = Some(position);
+                evidence.expected = Some(expected);
+                evidence.actual = actual.map(Box::new);
+                break 'types;
+            }
+        }
+    }
+    check.evidence = Some(Box::new(evidence));
+    Ok(check)
+}
+
+fn port_type_check_raw(
     catalog: &BlueprintCatalog,
     view: &AssemblyView,
     source_reference: &AssemblyPortRef,
@@ -356,18 +441,22 @@ pub fn review_assembly_in_context(
             .and_then(|pos| view.membership.get(&pos))
             .cloned()
             .unwrap_or_default();
-        report.record(
-            paths,
-            result(
-                CheckKind::Placement,
-                if unknown {
-                    CheckStatus::Undetermined
-                } else {
-                    CheckStatus::Failed
-                },
-                format!("{issue:?}"),
-            ),
+        let mut finding = result(
+            CheckKind::Placement,
+            if unknown {
+                CheckStatus::Undetermined
+            } else {
+                CheckStatus::Failed
+            },
+            format!("{issue:?}"),
         );
+        finding.evidence = Some(Box::new(crate::review_diagnostics::CheckEvidence {
+            position,
+            actual: position.and_then(|p| view.block_at(p)).map(Box::new),
+            observation: Some(crate::review_diagnostics::ReviewObservation::InitialAssembly),
+            ..Default::default()
+        }));
+        report.record(paths, finding);
     }
     // Unknown portions of an occurrence cannot be certified from a sparse world.
     for (position, claims) in &view.source_claims {

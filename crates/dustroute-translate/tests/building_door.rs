@@ -157,6 +157,7 @@ fn malformed_attachments_and_oversized_compositions_are_rejected() {
     assert!(
         generate_building_with_door(r, &extended_catalog, &excessive_context)
             .unwrap_err()
+            .detail
             .contains("8192")
     );
 }
@@ -186,9 +187,7 @@ fn retained_door_requirements_are_not_waived_by_reservation() {
     f.catalog
         .insert_assembly(f.request.candidate_state)
         .unwrap();
-    assert!(
-        generate_building_with_door(request(), &f.catalog, &f.context)
-            .unwrap_err()
-            .contains("whole-Assembly review did not pass")
-    );
+    let error = generate_building_with_door(request(), &f.catalog, &f.context).unwrap_err();
+    assert_eq!(error.code, "verification_not_established");
+    assert_eq!(error.diagnostics.unwrap().status, CheckStatus::Failed);
 }

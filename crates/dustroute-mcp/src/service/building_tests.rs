@@ -1,5 +1,6 @@
 //! Public building lifecycle. The bridge is a transport stub, not live proof.
 use super::blueprint_tests::door_fixture;
+use super::blueprint_tests::runtime_fixture;
 use super::test_support::*;
 use serde_json::{Value, json};
 
@@ -70,6 +71,71 @@ fn virtual_design() -> Value {
             {"name":"window","shapes":[{"kind":"blocks","material":"glass",
                 "positions":[{"x":4,"y":1,"z":2},{"x":4,"y":2,"z":2}]}]}],
         "spaces":[{"name":"room","region":{"min":{"x":1,"y":1,"z":1},"max":{"x":3,"y":2,"z":3}}}]})
+}
+
+#[tokio::test]
+async fn virtual_design_returns_structured_combined_world_failures_without_publishing() {
+    let root = temporary();
+    let (client, server) = start(&root).await;
+    let f = runtime_fixture::fixture(false, false);
+    let source = json!({"records":{"types":f.catalog.type_revisions().collect::<Vec<_>>(),
+        "revisions":f.catalog.revisions().collect::<Vec<_>>(),"assemblies":[f.base]},"request":f.request});
+    let proposal = propose_generated(&client, &source).await;
+    adopt(&client, &proposal).await;
+    let before = call(
+        &client,
+        "get_circuit_revision",
+        json!({"blueprint":{"kind":"archive"}}),
+    )
+    .await;
+    let generated=call(&client,"test_circuit_change",json!({"blueprint":{"action":"generate_building_design","request":{
+        "namespace":"public.bad-motion","name":"Insufficient motion allocation",
+        "known_region":f.context.known_region,
+        "parts":[{"name":"marker","shapes":[{"kind":"blocks","material":"stone","positions":[{"x":2,"y":1,"z":0}]}]}],
+        "component":{"name":"engine","assembly_revision_id":f.request.candidate_state.id,
+            "source_anchor":{"x":0,"y":0,"z":0},"target_anchor":{"x":0,"y":0,"z":0},"rotation":"r0",
+            "reserved_space":{"min":{"x":-1,"y":0,"z":0},"max":{"x":1,"y":1,"z":0}}}
+    }}})).await;
+    assert_eq!(generated["ok"], false, "{generated}");
+    assert!(generated.get("result").is_none());
+    assert_eq!(
+        generated["errors"][0]["code"],
+        "verification_not_established"
+    );
+    let diagnostics = &generated["errors"][0]["diagnostics"];
+    assert_eq!(diagnostics["status"], "failed");
+    let marker = diagnostics["findings"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|f| {
+            f["evidence"]["type_revision"] == "public.bad-motion.marker.pattern.v1"
+                && f["status"] == "failed"
+        })
+        .unwrap();
+    assert_eq!(marker["evidence"]["position"], json!({"x":2,"y":1,"z":0}));
+    assert!(marker["instance"].is_array());
+    assert_eq!(
+        marker["evidence"]["observation"]["stage"],
+        "committed_runtime_state"
+    );
+    assert!(
+        marker["evidence"]["inputs"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|i| i["powered"] == true)
+    );
+    assert_eq!(
+        before,
+        call(
+            &client,
+            "get_circuit_revision",
+            json!({"blueprint":{"kind":"archive"}})
+        )
+        .await
+    );
+    stop(client, server).await;
 }
 
 #[tokio::test]

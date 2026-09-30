@@ -472,6 +472,38 @@ async fn runtime_blueprint_review_and_adoption_preserve_child_failures_after_res
             if broken_child { "failed" } else { "passed" },
             "{inspected}"
         );
+        let diagnostics = &inspected["result"]["validation"]["diagnostics"];
+        assert_eq!(
+            diagnostics["schema_version"],
+            "dustroute.review-diagnostics.v1"
+        );
+        assert_eq!(diagnostics["live_world_verified"], false);
+        if broken_child {
+            let finding = diagnostics["findings"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|f| {
+                    f["status"] == "failed"
+                        && f["kind"] == "static_type"
+                        && f["evidence"]["position"] == json!({"x":0,"y":1,"z":0})
+                })
+                .unwrap();
+            assert!(finding["instance"].is_array());
+            assert!(finding["revision"].is_string());
+            assert_eq!(
+                finding["evidence"]["observation"]["stage"],
+                "committed_runtime_state"
+            );
+            assert!(
+                finding["evidence"]["inputs"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .any(|i| i["position"] == json!({"x":-1,"y":1,"z":0})
+                        && i["powered"].is_boolean())
+            );
+        }
         assert_eq!(
             inspected["result"]["validation"]["scope"],
             "whole_realization_declared_obligations_in_moving_world_model"

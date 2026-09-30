@@ -18,6 +18,7 @@ use serde::Serialize;
 
 use crate::behavior_type::{BehaviorBudget, BehaviorModel, BehaviorTypeReport};
 use crate::promotion::{CheckKind, CheckResult, CheckStatus, OccurrenceReview, aggregate};
+use crate::review_diagnostics::{CheckEvidence, CheckExpectation, ReviewInput, ReviewObservation};
 use crate::runtime_behavior::{RuntimeBehaviorModel, RuntimeBehaviorState, fresh_runtime};
 
 #[derive(Clone, Debug, Serialize)]
@@ -55,26 +56,24 @@ fn check(kind: CheckKind, status: CheckStatus, detail: impl Into<String>) -> Che
         kind,
         status,
         detail: detail.into(),
+        evidence: None,
     }
 }
 
-enum Expected {
-    Known,
-    Kind(BlockKind),
-    Exact(Box<Block>),
-    Interface(BlueprintPortKind),
-}
+type Expected = CheckExpectation;
 struct Requirement {
     path: InstancePath,
     position: Pos,
     kind: CheckKind,
     label: String,
     expected: Expected,
+    evidence_context: CheckEvidence,
     evidence: Option<CheckResult>,
 }
 #[derive(Default)]
 struct Monitor {
     requirements: Vec<Requirement>,
+    input_levers: Vec<Pos>,
 }
 impl Monitor {
     fn add(
@@ -91,10 +90,30 @@ impl Monitor {
             kind,
             label,
             expected,
+            evidence_context: CheckEvidence {
+                position: Some(position),
+                ..Default::default()
+            },
             evidence: None,
         });
     }
-    fn observe(&mut self, mut lookup: impl FnMut(Pos) -> Result<Block, String>, at: &str) {
+    fn observe(
+        &mut self,
+        mut lookup: impl FnMut(Pos) -> Result<Block, String>,
+        at: &str,
+        observation: ReviewObservation,
+    ) {
+        let inputs = self
+            .input_levers
+            .iter()
+            .map(|position| ReviewInput {
+                position: *position,
+                powered: lookup(*position)
+                    .ok()
+                    .filter(|b| b.kind == BlockKind::Lever)
+                    .and_then(|b| b.powered),
+            })
+            .collect::<Vec<_>>();
         for requirement in &mut self.requirements {
             if requirement
                 .evidence
@@ -103,14 +122,14 @@ impl Monitor {
             {
                 continue;
             }
-            let (status, detail) = match lookup(requirement.position) {
-                Err(reason) => (CheckStatus::Undetermined, reason),
+            let (status, detail, actual) = match lookup(requirement.position) {
+                Err(reason) => (CheckStatus::Undetermined, reason, None),
                 Ok(actual) => {
                     let satisfied = match &requirement.expected {
                         Expected::Known => true,
-                        Expected::Kind(kind) => actual.kind == *kind,
-                        Expected::Exact(block) => actual == **block,
-                        Expected::Interface(kind) => {
+                        Expected::BlockKind { block_kind } => actual.kind == *block_kind,
+                        Expected::Exact { block } => actual == **block,
+                        Expected::Interface { port_kind: kind } => {
                             *kind == BlueprintPortKind::BlockState
                                 || kind.matches_signal_block(&actual)
                         }
@@ -118,18 +137,29 @@ impl Monitor {
                     if satisfied {
                         continue;
                     }
-                    (CheckStatus::Failed, format!("actual block {actual:?}"))
+                    (
+                        CheckStatus::Failed,
+                        format!("actual block {actual:?}"),
+                        Some(Box::new(actual)),
+                    )
                 }
             };
             if requirement.evidence.is_none() || status == CheckStatus::Failed {
-                requirement.evidence = Some(check(
+                let mut finding = check(
                     requirement.kind,
                     status,
                     format!(
                         "{} at {:?}; {at}; {detail}",
                         requirement.label, requirement.position
                     ),
-                ));
+                );
+                let mut evidence = requirement.evidence_context.clone();
+                evidence.expected = Some(requirement.expected.clone());
+                evidence.actual = actual;
+                evidence.observation = Some(observation.clone());
+                evidence.inputs = inputs.clone();
+                finding.evidence = Some(Box::new(evidence));
+                requirement.evidence = Some(finding);
             }
         }
     }
@@ -141,6 +171,9 @@ impl Monitor {
                     .map_err(|e| e.to_string())
             },
             &format!("runtime {:?}", view.time()),
+            ReviewObservation::CommittedRuntimeState {
+                time: view.time().into(),
+            },
         );
     }
     fn finish(self, closed: bool, report: &mut RuntimeAssemblyReport) {
@@ -151,7 +184,13 @@ impl Monitor {
                 } else {
                     (CheckStatus::Undetermined, "no contradiction observed, but the physical graph was not closed")
                 };
-                check(r.kind, status, format!("{} at {:?}; {scope}", r.label, r.position))
+                let mut finding=check(r.kind, status, format!("{} at {:?}; {scope}", r.label, r.position));
+                if !closed {
+                    let mut evidence=r.evidence_context;
+                    evidence.expected=Some(r.expected);
+                    finding.evidence=Some(Box::new(evidence));
+                }
+                finding
             });
             report.record(&r.path, evidence);
         }
@@ -243,8 +282,17 @@ fn static_requirement(
                 port.position,
                 kind,
                 label,
-                Expected::Kind(*block_kind),
+                Expected::BlockKind {
+                    block_kind: *block_kind,
+                },
             );
+            let evidence = &mut monitor
+                .requirements
+                .last_mut()
+                .expect("added requirement")
+                .evidence_context;
+            evidence.type_revision = Some(id.clone());
+            evidence.port = Some(reference.clone());
         }
         TypeContract::BlockPattern { blocks } => {
             for record in blocks {
@@ -265,8 +313,17 @@ fn static_requirement(
                     position,
                     kind,
                     label.clone(),
-                    Expected::Exact(Box::new(block)),
+                    Expected::Exact {
+                        block: Box::new(block),
+                    },
                 );
+                let evidence = &mut monitor
+                    .requirements
+                    .last_mut()
+                    .expect("added requirement")
+                    .evidence_context;
+                evidence.type_revision = Some(id.clone());
+                evidence.port = Some(reference.clone());
             }
         }
         _ => {
@@ -340,7 +397,10 @@ pub fn review_assembly_in_runtime_context(
         arrangement: vec![],
         behavior: vec![],
     };
-    let mut monitor = Monitor::default();
+    let mut monitor = Monitor {
+        input_levers: context.input_levers.clone(),
+        ..Default::default()
+    };
     for (position, claims) in &view.source_claims {
         for (path, block) in claims {
             monitor.add(
@@ -354,7 +414,9 @@ pub fn review_assembly_in_runtime_context(
                 }
                 .into(),
                 if block.kind == BlockKind::Air {
-                    Expected::Kind(BlockKind::Air)
+                    Expected::BlockKind {
+                        block_kind: BlockKind::Air,
+                    }
                 } else {
                     Expected::Known
                 },
@@ -425,8 +487,16 @@ pub fn review_assembly_in_runtime_context(
                 actual.position,
                 CheckKind::Port,
                 format!("fixed terminal {reference:?}"),
-                Expected::Interface(actual.kind),
+                Expected::Interface {
+                    port_kind: actual.kind,
+                },
             );
+            monitor
+                .requirements
+                .last_mut()
+                .expect("added terminal")
+                .evidence_context
+                .port = Some(reference.clone());
             if port.direction == PortDirection::Input && !port.required_source_types.is_empty() {
                 let canonical = view.canonical_port_ref(&reference)?;
                 let mut found = false;
@@ -504,6 +574,7 @@ pub fn review_assembly_in_runtime_context(
                 .ok_or_else(|| "unknown initial coordinate".into())
         },
         "initial Assembly",
+        ReviewObservation::InitialAssembly,
     );
     let mut runtime = fresh_runtime(catalog, assembly, context);
     match &runtime {
@@ -565,14 +636,19 @@ pub fn review_assembly_in_runtime_context(
                 RuntimeBehaviorModel::from_fresh_assembly(catalog, assembly, path, binding, context)
             };
             match result {
-                Err(e) => report.record(
-                    path,
-                    check(
+                Err(e) => {
+                    let mut result = check(
                         CheckKind::Behavior,
                         CheckStatus::Undetermined,
                         format!("{}: {e}", binding.behavior_type()),
-                    ),
-                ),
+                    );
+                    result.evidence = Some(Box::new(CheckEvidence {
+                        type_revision: Some(binding.behavior_type().clone()),
+                        binding: Some(binding.clone()),
+                        ..Default::default()
+                    }));
+                    report.record(path, result);
+                }
                 Ok(model) => {
                     let behavior = model.verify_observed(
                         &Audited {
@@ -584,18 +660,24 @@ pub fn review_assembly_in_runtime_context(
                     closed |= behavior.graph_closed;
                     budget.max_states = budget.max_states.saturating_sub(behavior.reachable_states);
                     budget.max_steps = budget.max_steps.saturating_sub(behavior.evaluated_steps);
-                    report.record(
-                        path,
-                        check(
-                            CheckKind::Behavior,
-                            behavior.status,
-                            format!(
-                                "{path:?}: {}",
-                                serde_json::to_string(&behavior)
-                                    .expect("serializable behavior diagnostics")
-                            ),
+                    let mut result = check(
+                        CheckKind::Behavior,
+                        behavior.status,
+                        format!(
+                            "{path:?}: {}",
+                            serde_json::to_string(&behavior)
+                                .expect("serializable behavior diagnostics")
                         ),
                     );
+                    result.evidence = Some(Box::new(CheckEvidence {
+                        type_revision: Some(binding.behavior_type().clone()),
+                        binding: Some(binding.clone()),
+                        behavior: Some(
+                            serde_json::to_value(&behavior).expect("serializable verifier report"),
+                        ),
+                        ..Default::default()
+                    }));
+                    report.record(path, result);
                     report.behavior.push(RuntimeBindingReport {
                         instance: path.clone(),
                         report: behavior,

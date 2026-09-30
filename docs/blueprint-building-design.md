@@ -13,6 +13,11 @@ a running Minecraft server nor a live site. `ok: true` means the declared checks
 passed under the recorded model/context. It does not mean the design is attractive,
 walkable, survival-buildable or already safe to place in an unobserved world.
 
+Errors use the shared [structured review diagnostics](blueprint-review-diagnostics.md).
+Inspect the failed requirement and its coordinate, expected/observed state and
+available input/time evidence before changing geometry. Undetermined checks
+need additional evidence or review budget; they are not proven violations.
+
 ## Example: a room with a window and open entrance
 
 ```json

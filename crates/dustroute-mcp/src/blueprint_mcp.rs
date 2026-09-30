@@ -250,6 +250,7 @@ pub(crate) fn report_json(report: &PromotionReport, catalog: &BlueprintCatalog) 
         "placement_connections_and_declared_periodic_obligations"
     };
     json!({"status":report.status(),"fresh":true,"scope":scope,
+        "diagnostics":report.diagnostics(64),
         "placement_validation_profile":report.placement_validation_profile(),
         "initial_state_checks_passed":report.status()==CheckStatus::Passed,
         "checks":RecordedReview::from(report),
@@ -596,6 +597,16 @@ fn generated_building_json(generated: impl Serialize) -> Value {
         "next_step":"Import result.records; propose_update with result.request after removing its id; review and adopt; then new_placement with assembly_target. After interrupted placement, diagnose and create a fresh reconstruction plan."})
 }
 
+fn building_result_json<T: Serialize>(
+    result: Result<T, dustroute_translate::building::BuildingDesignError>,
+) -> Value {
+    match result {
+        Ok(generated) => generated_building_json(generated),
+        Err(error) => json!({"ok":false,"schema_version":"dustroute.blueprint-mcp.v1",
+            "errors":[error],"writes_minecraft":false,"catalog_changed":false,"adoption_authorized":false}),
+    }
+}
+
 fn perform(
     updates: &mut BlueprintUpdates,
     groundings: &mut BTreeMap<AssemblyRevisionId, AssemblyGrounding>,
@@ -660,21 +671,11 @@ fn perform(
                             ));
                         }
                     };
-                    Ok((
-                        Some(match generated {
-                            Ok(result) => generated_building_json(result),
-                            Err(error) => {
-                                json!({"ok":false,"schema_version":"dustroute.blueprint-mcp.v1",
-                            "errors":[error],"writes_minecraft":false,"catalog_changed":false,
-                            "adoption_authorized":false})
-                            }
-                        }),
-                        false,
-                    ))
+                    Ok((Some(building_result_json(generated)), false))
                 }
                 BlueprintWrite::GenerateBuilding { request } => {
-                    let generated = dustroute_translate::building::generate_building(*request)?;
-                    Ok((Some(generated_building_json(generated)), false))
+                    let generated = dustroute_translate::building::generate_building(*request);
+                    Ok((Some(building_result_json(generated)), false))
                 }
                 BlueprintWrite::GenerateBuildingWithDoor { request } => {
                     let source = construction_basis(updates, &request.door.assembly_revision_id)?;
@@ -682,8 +683,8 @@ fn perform(
                         *request,
                         &source.catalog,
                         &source.context,
-                    )?;
-                    Ok((Some(generated_building_json(generated)), false))
+                    );
+                    Ok((Some(building_result_json(generated)), false))
                 }
                 BlueprintWrite::GenerateFlyingMachine { request } => {
                     let generated = dustroute_translate::flying_machine::generate_flying_machine(
