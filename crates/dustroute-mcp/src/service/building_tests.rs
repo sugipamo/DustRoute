@@ -1,4 +1,5 @@
 //! Public building lifecycle. The bridge is a transport stub, not live proof.
+use super::blueprint_tests::door_fixture;
 use super::test_support::*;
 use serde_json::{Value, json};
 
@@ -88,6 +89,165 @@ async fn apply(client: &Client, plan: &Value) -> Value {
         json!({"operation_id":plan["operation_id"],"confirm":true}),
     )
     .await
+}
+
+#[tokio::test]
+async fn building_with_adopted_door_uses_common_public_placement_and_removal() {
+    let root = temporary();
+    let (fake, address, bridge) = start_construction_bridge(root.join("assembly-instances")).await;
+    let (client, server) = start(&root).await;
+    let f = door_fixture::ordinary_fixture();
+    let generate = json!({"blueprint":{"action":"generate_building_with_door","request":{
+        "building":{"namespace":"public.door-house","width":9,"depth":3,"height":8,
+            "entrance":{"offset":3,"width":3,"height":3}},
+        "door":{"assembly_revision_id":f.request.candidate_state.id,"instance":["root","mechanism"],
+            "behavior_type":"dustroute.type.piston-door-3x3.v1","rotation":"r270",
+            "reserved_space":{"min":{"x":0,"y":2,"z":-3},"max":{"x":0,"y":11,"z":3}}}
+    }}});
+    assert_eq!(
+        call(&client, "test_circuit_change", generate.clone()).await["ok"],
+        false,
+        "a source without unique adoption is refused"
+    );
+    let imported = call(
+        &client,
+        "test_circuit_change",
+        json!({"blueprint":{"action":"import","records":{
+            "types":f.catalog.type_revisions().collect::<Vec<_>>(),
+            "revisions":f.catalog.revisions().collect::<Vec<_>>(),"assemblies":[f.base]
+        }}}),
+    )
+    .await;
+    assert_eq!(imported["ok"], true, "{imported}");
+    let mut source_request = serde_json::to_value(f.request).unwrap();
+    source_request.as_object_mut().unwrap().remove("id");
+    let source_proposal = call(
+        &client,
+        "test_circuit_change",
+        json!({"blueprint":{"action":"propose_update","request":source_request}}),
+    )
+    .await;
+    assert_eq!(source_proposal["ok"], true, "{source_proposal}");
+    assert_eq!(
+        call(&client, "test_circuit_change", generate.clone()).await["ok"],
+        false,
+        "a pending source proposal is not adoption"
+    );
+    adopt(&client, &source_proposal["operation_id"]).await;
+    let before = call(
+        &client,
+        "get_circuit_revision",
+        json!({"blueprint":{"kind":"archive"}}),
+    )
+    .await;
+    let generated = call(&client, "test_circuit_change", generate).await;
+    assert_eq!(generated["ok"], true, "{generated}");
+    assert_eq!(generated["writes_minecraft"], false);
+    assert_eq!(generated["catalog_changed"], false);
+    assert_eq!(generated["adoption_authorized"], false);
+    assert_eq!(
+        generated["result"]["verification"]["live_world_verified"],
+        false
+    );
+    assert_eq!(
+        generated["result"]["expected"]["blocks"]
+            .as_array()
+            .unwrap()
+            .len(),
+        168
+    );
+    assert_eq!(
+        generated["result"]["door"]["control"],
+        json!({"x":4,"y":6,"z":0})
+    );
+    assert_eq!(
+        before,
+        call(
+            &client,
+            "get_circuit_revision",
+            json!({"blueprint":{"kind":"archive"}})
+        )
+        .await
+    );
+    let result = generated["result"].clone();
+    assert_eq!(
+        call(
+            &client,
+            "test_circuit_change",
+            json!({"blueprint":{"action":"import","records":result["records"]}})
+        )
+        .await["ok"],
+        true
+    );
+    let mut request = result["request"].clone();
+    request.as_object_mut().unwrap().remove("id");
+    let proposal = call(
+        &client,
+        "test_circuit_change",
+        json!({"blueprint":{"action":"propose_update","request":request}}),
+    )
+    .await;
+    assert_eq!(proposal["ok"], true, "{proposal}");
+    stop(client, server).await;
+    let (client, server) = connected(&root, &address).await;
+    adopt(&client, &proposal["operation_id"]).await;
+    let plan = call(&client, "new_placement", target(&result)).await;
+    assert_eq!(plan["ok"], true, "{plan}");
+    assert_eq!(plan["construction_steps"].as_array().unwrap().len(), 168);
+    preview(&client, &plan).await;
+    fake.lock().unwrap().steps = plan["construction_steps"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .cloned()
+        .collect();
+    let applied = apply(&client, &plan).await;
+    assert_eq!(applied["ok"], true, "{applied}");
+    assert_eq!(applied["verified_steps"], 168);
+    let writes = fake.lock().unwrap().writes;
+    stop(client, server).await;
+    let (client, server) = connected(&root, &address).await;
+    let instance = plan["operation_id"].clone();
+    let diagnosis = call(
+        &client,
+        "manage_assembly",
+        json!({"action":"diagnose","instance_id":instance}),
+    )
+    .await;
+    assert_eq!(
+        diagnosis["diagnosis"]["status"], "matches_reference",
+        "{diagnosis}"
+    );
+    assert_eq!(
+        fake.lock().unwrap().writes,
+        writes,
+        "diagnosis must not write"
+    );
+    let removal = call(
+        &client,
+        "manage_assembly",
+        json!({"action":"plan_removal","instance_id":instance}),
+    )
+    .await;
+    assert_eq!(removal["ok"], true, "{removal}");
+    preview(&client, &removal).await;
+    fake.lock().unwrap().steps = removal["removal_steps"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .cloned()
+        .collect();
+    let removed = apply(&client, &removal).await;
+    assert_eq!(removed["ok"], true, "{removed}");
+    assert!(
+        fake.lock().unwrap().snapshot.as_ref().unwrap()["blocks"]
+            .as_array()
+            .unwrap()
+            .is_empty()
+    );
+    stop(client, server).await;
+    bridge.abort();
+    let _ = bridge.await;
 }
 
 #[tokio::test]

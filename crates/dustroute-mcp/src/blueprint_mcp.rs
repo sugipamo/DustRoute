@@ -154,6 +154,11 @@ pub(crate) enum BlueprintWrite {
     GenerateBuilding {
         request: Box<dustroute_library::building::BuildingRequest>,
     },
+    /// Compose a bounded enclosure and a uniquely adopted, typed 3x3 door.
+    /// Freshly checks the whole world; neither publishes nor places it.
+    GenerateBuildingWithDoor {
+        request: Box<dustroute_library::building::BuildingWithDoorRequest>,
+    },
     /// Generate one bounded single-launch flying-machine candidate. Returns
     /// unadopted records, a proposal and fresh model checks without publishing.
     GenerateFlyingMachine {
@@ -579,6 +584,13 @@ fn import(updates: &mut BlueprintUpdates, records: BlueprintRecords) -> Result<(
     Ok(())
 }
 
+fn generated_building_json(generated: dustroute_translate::building::GeneratedBuilding) -> Value {
+    json!({"ok":true,"schema_version":"dustroute.blueprint-mcp.v1",
+        "result":generated,"writes_minecraft":false,"catalog_changed":false,
+        "adoption_authorized":false,
+        "next_step":"Import result.records; propose_update with result.request after removing its id; review and adopt; then new_placement with assembly_target. After interrupted placement, diagnose and create a fresh reconstruction plan."})
+}
+
 fn perform(
     updates: &mut BlueprintUpdates,
     groundings: &mut BTreeMap<AssemblyRevisionId, AssemblyGrounding>,
@@ -623,15 +635,16 @@ fn perform(
             match write {
                 BlueprintWrite::GenerateBuilding { request } => {
                     let generated = dustroute_translate::building::generate_building(*request)?;
-                    Ok((
-                        Some(
-                            json!({"ok":true,"schema_version":"dustroute.blueprint-mcp.v1",
-                        "result":generated,"writes_minecraft":false,"catalog_changed":false,
-                        "adoption_authorized":false,
-                        "next_step":"Import result.records; propose_update with result.request after removing its id; review and adopt; then new_placement with assembly_target. After interrupted placement, diagnose and create a fresh reconstruction plan."}),
-                        ),
-                        false,
-                    ))
+                    Ok((Some(generated_building_json(generated)), false))
+                }
+                BlueprintWrite::GenerateBuildingWithDoor { request } => {
+                    let source = construction_basis(updates, &request.door.assembly_revision_id)?;
+                    let generated = dustroute_translate::building::generate_building_with_door(
+                        *request,
+                        &source.catalog,
+                        &source.context,
+                    )?;
+                    Ok((Some(generated_building_json(generated)), false))
                 }
                 BlueprintWrite::GenerateFlyingMachine { request } => {
                     let generated = dustroute_translate::flying_machine::generate_flying_machine(

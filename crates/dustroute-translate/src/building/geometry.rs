@@ -11,6 +11,8 @@ pub(super) struct Geometry {
     pub initial: MinecraftSnapshot,
     pub parts: Vec<(&'static str, Vec<MinecraftSnapshotBlock>)>,
     pub entrance: BuildingEntrance,
+    /// Explicit component-owned cells are excluded from fixed-shell patterns.
+    pub reserved: Vec<Region>,
 }
 
 pub(super) fn expand(request: &BuildingRequest) -> Result<Geometry, String> {
@@ -86,9 +88,6 @@ pub(super) fn expand(request: &BuildingRequest) -> Result<Geometry, String> {
         .flat_map(|(_, blocks)| blocks.iter().cloned())
         .map(|b| (b.pos, b))
         .collect();
-    if blocks.len() > 256 {
-        return Err("generated building exceeds the 256-block custom Assembly budget".into());
-    }
     let region = Region::new(Pos::new(-1, -1, -1), Pos::new(w, h, d));
     Ok(Geometry {
         region,
@@ -99,5 +98,6 @@ pub(super) fn expand(request: &BuildingRequest) -> Result<Geometry, String> {
         },
         parts,
         entrance,
+        reserved: vec![],
     })
 }

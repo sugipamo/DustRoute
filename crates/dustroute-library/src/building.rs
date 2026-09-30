@@ -1,5 +1,31 @@
 //! Bounded building intent. These requests contain no execution permission.
+use crate::blueprint::{AssemblyRevisionId, InstancePath, TypeRevisionId};
+use dustroute_minecraft::{Region, RotationY};
 use serde::{Deserialize, Serialize};
+
+/// Compose an existing typed door with an enclosure. Generation grants no
+/// adoption or execution permission. The selected source remains immutable.
+#[derive(Clone, Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct BuildingWithDoorRequest {
+    pub building: BuildingRequest,
+    pub door: BuildingDoorAttachment,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct BuildingDoorAttachment {
+    pub assembly_revision_id: AssemblyRevisionId,
+    /// Occurrence declaring the selected PistonDoor behavioral binding.
+    pub instance: InstancePath,
+    pub behavior_type: TypeRevisionId,
+    /// Orient the source aperture parallel to the building's north wall.
+    pub rotation: RotationY,
+    /// Motion space in the original Assembly frame, not building coordinates.
+    /// All mechanism cells and terminals must fit. The first composition path
+    /// supports a one-block-deep mechanism inside the north-wall frame.
+    pub reserved_space: Region,
+}
 
 #[derive(Clone, Debug, Deserialize, Serialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]

@@ -63,6 +63,39 @@ minimum-patch repairs are not implied by the completed milestone.
 
 ## Follow-up roadmap
 
+### Typed door composition — implemented 2026-09-30
+
+Compose a bounded enclosure with an existing uniquely adopted `PistonDoor`
+Assembly, preserving its immutable occurrences, bindings and required Laws.
+The first supported component is a one-block-deep 3x3 mechanism mounted in the
+north-wall frame. A declared source-frame motion region owns its cells; fixed
+building patterns cover every other cell of the combined known rectangle.
+Generation must close the complete operation graph while auditing fixed
+structure at every committed microstep, then verify shared build and removal.
+This introduces no independent building physics or isolated-child pass reuse.
+
+Acceptance includes exported input/aperture aliases, source immutability,
+restart/adoption, malformed or insufficient reservations rejected, and public
+MCP placement/readback/diagnosis/removal in the offline transport fixture.
+Existing live-door evidence is not evidence for the combined building. No live
+trial, external controller routing, moving-time commands, terrain replacement,
+new block physics or automatic clearance inference is included in this step.
+If one of those becomes a prerequisite, stop and report before implementing it.
+
+The initial model feasibility check passed for a 9x3x8 enclosure with 43 existing
+door cells (168 non-air cells total). Its construction and teardown reuse the
+ordinary electrical construction path. The implementation adds typed requests
+and a new action on the existing public `test_circuit_change` tool.
+
+Model and offline public-MCP acceptance checks passed: 39 model regressions and
+four building lifecycle tests, 43 distinct tests. Combined generation,
+source immutability, exported aliases, relocated review, restart/adoption,
+insufficient reservations and retained child invariants are checked. The new
+MCP case requires source adoption, freshly generates/reviews the building,
+places all 168 cells through the common transport path, restarts, diagnoses and
+removes it. Existing interruption/reconstruction tests also pass. This is not
+live-building evidence and the running MCP/server has not been replaced.
+
 1. Expand passive building materials through checked Rust constant declarations,
    with recording, construction and behavior capabilities kept explicit.
 2. Add bounded composition of multiple structures and protection of existing

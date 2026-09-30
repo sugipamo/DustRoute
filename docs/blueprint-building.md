@@ -113,6 +113,87 @@ A partially submitted batch verifies no prefix of that batch and remains
 There is no automatic replay or resume. Exact verified completion permits a new
 `plan_removal` operation or same-process conditional undo.
 
+## Buildings containing a typed piston door
+
+Use `test_circuit_change(blueprint.action="generate_building_with_door")` to
+compose an enclosure with an existing, **uniquely adopted** door Assembly. The
+source proposal must have an explicit runtime context and freshly pass review.
+The selected occurrence must retain an observed `PistonDoor` binding. Its
+definitions and completed-operation input contract are not rewritten.
+
+For the existing Bobiloosky reference design, after importing and adopting its
+ordinary-door proposal, the request is:
+
+```json
+{
+  "blueprint": {
+    "action": "generate_building_with_door",
+    "request": {
+      "building": {
+        "namespace": "trial.door-house",
+        "width": 9, "depth": 3, "height": 8,
+        "entrance": {"offset": 3, "width": 3, "height": 3}
+      },
+      "door": {
+        "assembly_revision_id": "reference-door.state.v3",
+        "instance": ["root", "mechanism"],
+        "behavior_type": "dustroute.type.piston-door-3x3.v1",
+        "rotation": "r270",
+        "reserved_space": {
+          "min": {"x": 0, "y": 2, "z": -3},
+          "max": {"x": 0, "y": 11, "z": 3}
+        }
+      }
+    }
+  }
+}
+```
+
+Read the actual immutable Assembly ID from the catalog; IDs in this example
+describe the reference fixture, not a preinstalled adoption. The generator is
+not tied to that fixture. It reads the selected definition and its typed
+aperture, aligns the nine cells with the requested opening, then authors a new
+wrapper around the source Assembly and its original children and routes.
+
+The initial supported mount is one block deep in local z=0, strictly between
+the north-wall corners and below the roof. The entrance must explicitly be
+3x3. `reserved_space` is in **original Assembly coordinates**; it must be a
+known, bounded rectangle containing every initial mechanism block and all
+selected input/output terminals. The generator removes shell cells only inside
+that transformed reservation. Parts cannot be removed entirely. The complete
+building plus mechanism stays within 256 non-air cells and 8192 known cells.
+
+The example contains 43 door cells and 125 fixed building cells. The transformed
+motion space is x=1..7, y=-3..6, z=0; the aperture is x=3..5, y=1..3, z=0. The
+mechanism extends below the floor, so the target must include empty space below
+it as well as all other declared clearance. The exact roof above it remains
+fixed. This is composition into an empty volume, not insertion into existing
+terrain or an existing occupied building.
+
+The body, outer parent and Assembly boundary export `door_control` as an input
+and `door_aperture_0_0` through `door_aperture_2_2` as outputs. These are
+`BlockState` aliases to the original lever and aperture terminals, not dust
+signal outputs or newly routed wires. `result.door` gives transformed positions,
+the source IDs, reservation, rotation and `closed_when_powered` polarity. An
+outside controller or more accessible switch needs a separate explicit design
+and fresh verification; generation does not add one.
+
+The building's exact fixed pattern excludes reserved component cells. Every
+other cell, including air, is audited through the complete **combined**
+operation graph and every committed microstep. Thus a door moving outside its
+reservation, disturbing fixed structure or failing an inherited child condition
+cannot pass. Reservation alone certifies nothing, and isolated adoption does
+not grant a combined-world pass. Insufficient proof budgets remain undetermined.
+Commands during movement remain outside the ordinary-door input contract.
+
+Import, propose, review/adopt and target placement use the same workflow above.
+Source adoption does not adopt the generated building. Shared construction,
+per-batch readback, durable instances, diagnosis, reconstruction and removal
+continue to apply. Diagnosis compares against the generated settled reference;
+a normally closed door can differ from an initially open reference, so do not
+treat every reported difference as human damage or automatically rebuild it.
+There is no new live-state classifier or automatic door-operation tool here.
+
 ## Evidence and limits
 
 The model tests check geometry independently, all four rotations/relocations,
@@ -137,7 +218,17 @@ Formatting passed for library, translate and MCP. Clippy passed with warnings
 denied for these packages' libraries and tests in both default and Voxrig-enabled
 configurations. Validation used `--offline --locked -j 1`, with one test thread.
 
-Arbitrary architecture, wood palettes, stairs/doors in generated buildings,
+The door-composition follow-up also passed 43 distinct checks on 2026-09-30:
+39 model regressions (including three composition cases and five existing
+ordinary-door cases), and four building lifecycle cases using the Voxrig-enabled
+offline MCP transport fixture. The new public case checks unique source adoption,
+side-effect-free generation, independent building adoption after restart,
+rotation/relocation, 168-step placement and readback, restart diagnosis and
+complete removal. Its fixture uses model-derived readbacks and is not a live
+Minecraft comparison. Clippy covers the libraries and tests in default and
+Voxrig-enabled configurations; builds/tests remain offline, locked and serial.
+
+Arbitrary architecture, wood palettes, stairs and ordinary hinged doors in generated buildings,
 larger multi-part jobs, existing terrain/circuit integration, survival inventory,
 entities, fluids, falling-block execution and block-entity contents are future
 work. See the [building roadmap](blueprint-building-roadmap.md).

@@ -104,7 +104,12 @@ authors floor/wall/roof definitions, an opening and exact air-clearance contract
 from typed dimensions and existing materials. Generation returns fresh structural
 and shared construction checks without publishing or writing blocks. Import the
 records and propose the returned request, then use the normal review/adoption and
-empty-site placement workflow. See [building parameters, scope and recovery](../../docs/blueprint-building.md).
+empty-site placement workflow. `generate_building_with_door` additionally mounts
+a uniquely adopted typed 3x3 door, retaining its original requirements and
+exporting control/aperture aliases. The combined world is freshly reviewed;
+explicit motion space separates the mechanism from fixed building patterns.
+The initial mount is one block deep in the north-wall frame.
+See [building parameters, scope and recovery](../../docs/blueprint-building.md).
 
 Start with `get_circuit_revision({"blueprint":{"kind":"catalog"}})` and read the
 relevant exact records. Use the tool schema to supply an explicit candidate via

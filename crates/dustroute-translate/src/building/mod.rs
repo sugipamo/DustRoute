@@ -1,6 +1,9 @@
 //! Building authoring uses ordinary immutable Blueprints and shared physics.
+mod door;
+mod door_interface;
 mod geometry;
 mod sources;
+pub use door::{AttachedBuildingDoor, generate_building_with_door};
 
 use crate::blueprint_update::{BlueprintUpdateRequest, BlueprintUpdates, RecordedReview};
 use crate::piston_construction::{ElectricalConstruction, construction_batches};
@@ -21,6 +24,8 @@ pub struct GeneratedBuilding {
     pub context: RuntimeBehaviorContext,
     pub expected: MinecraftSnapshot,
     pub parts: BTreeMap<String, usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub door: Option<AttachedBuildingDoor>,
     pub verification: BuildingVerification,
 }
 
@@ -40,6 +45,20 @@ pub fn generate_building(specification: BuildingRequest) -> Result<GeneratedBuil
     let geometry = geometry::expand(&specification)?;
     let context = RuntimeBehaviorContext::fresh_pistons(geometry.region, vec![]);
     let (records, request) = sources::build(&specification, &geometry, &context)?;
+    finish(specification, geometry, records, request, context, None)
+}
+
+fn finish(
+    specification: BuildingRequest,
+    geometry: geometry::Geometry,
+    records: BlueprintRecords,
+    request: BlueprintUpdateRequest,
+    context: RuntimeBehaviorContext,
+    door: Option<AttachedBuildingDoor>,
+) -> Result<GeneratedBuilding, String> {
+    if geometry.initial.blocks.len() > 256 {
+        return Err("generated building exceeds the 256-block custom Assembly budget".into());
+    }
     let mut updates = BlueprintUpdates::new(records.catalog().map_err(|e| e.to_string())?);
     updates.create(request.clone()).map_err(|e| e.to_string())?;
     let mut catalog = records.catalog().map_err(|e| e.to_string())?;
@@ -63,7 +82,7 @@ pub fn generate_building(specification: BuildingRequest) -> Result<GeneratedBuil
             .map(|check| check.detail.as_str())
             .collect::<Vec<_>>();
         return Err(format!(
-            "generated building structural review did not pass ({:?}): {}",
+            "generated building whole-Assembly review did not pass ({:?}): {}",
             report.status(),
             details.join("; ")
         ));
@@ -99,6 +118,7 @@ pub fn generate_building(specification: BuildingRequest) -> Result<GeneratedBuil
         request,
         context,
         expected: geometry.initial,
+        door,
         parts: geometry
             .parts
             .into_iter()

@@ -87,6 +87,11 @@ pub(super) fn build(
         .map(|name| BlueprintRevisionId::new(name).map_err(str::to_owned))
         .collect::<Result<_, _>>()?;
     for (name, blocks) in &geometry.parts {
+        if blocks.is_empty() {
+            return Err(format!(
+                "component reservation removes the complete building {name}"
+            ));
+        }
         let part_snapshot = crate::snapshot::MinecraftSnapshot {
             min: geometry.region.min,
             max: geometry.region.max,
@@ -132,6 +137,9 @@ pub(super) fn build(
         for y in r.min.y..=r.max.y {
             for z in r.min.z..=r.max.z {
                 let position = Pos::new(x, y, z);
+                if geometry.reserved.iter().any(|r| r.contains(position)) {
+                    continue;
+                }
                 pattern.push(PositionedBlock {
                     position,
                     block: world

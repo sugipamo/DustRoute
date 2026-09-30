@@ -14,7 +14,7 @@ pub(crate) use flight_fixture::base as runtime_fixture;
 
 #[allow(dead_code)]
 #[path = "../../dustroute-translate/tests/support/reference_door_blueprint.rs"]
-mod door_fixture;
+pub(super) mod door_fixture;
 
 #[allow(dead_code)]
 #[path = "../../dustroute-translate/tests/support/flying_machine_blueprint.rs"]
