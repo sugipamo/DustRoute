@@ -266,11 +266,21 @@ fn settled_step(
     state: String,
     start: u64,
 ) -> Result<ElectricalConstructionStep, String> {
+    settled_step_observed(runtime, region, position, state, start, &mut |_| Ok(()))
+}
+
+fn settled_step_observed(
+    runtime: &mut ElectricalPistonRuntime,
+    region: Region,
+    position: Pos,
+    state: String,
+    start: u64,
+    observer: &mut impl FnMut(dustroute_minecraft::time::runtime::RuntimeView<'_>) -> Result<(), String>,
+) -> Result<ElectricalConstructionStep, String> {
     // Finish the submitted command and all its synchronous callbacks first.
     // Merely observing zero elapsed ticks after run_until_idle would hide
     // scheduled block events at the same tick.
-    if !runtime
-        .step()
+    if !observed_root(runtime, observer)
         .map_err(|e| format!("construction command at {position:?}: {e}"))?
     {
         return Err("construction command was not executed".into());
@@ -278,9 +288,9 @@ fn settled_step(
     let immediate_idle = runtime.pending_count() == 0
         && runtime.at_input_boundary()
         && runtime.view().time().game_tick == start;
-    runtime
-        .run_until_idle()
-        .map_err(|e| format!("construction settling at {position:?}: {e}"))?;
+    while observed_root(runtime, observer)
+        .map_err(|e| format!("construction settling at {position:?}: {e}"))?
+    {}
     let wait_ticks = runtime
         .view()
         .time()
@@ -298,4 +308,23 @@ fn settled_step(
         expected: electrical_snapshot(runtime.view().world(), region)?,
         immediate_idle,
     })
+}
+
+/// Same root-operation boundary as Runtime::step, with every committed
+/// callback observed before the next mutation can obscure it.
+fn observed_root(
+    runtime: &mut ElectricalPistonRuntime,
+    observer: &mut impl FnMut(dustroute_minecraft::time::runtime::RuntimeView<'_>) -> Result<(), String>,
+) -> Result<bool, String> {
+    if runtime.microstep().map_err(|e| e.to_string())?.is_none() {
+        return Ok(false);
+    }
+    observer(runtime.view())?;
+    while !runtime.at_input_boundary() {
+        if runtime.microstep().map_err(|e| e.to_string())?.is_none() {
+            return Err("unfinished construction callback".into());
+        }
+        observer(runtime.view())?;
+    }
+    Ok(true)
 }

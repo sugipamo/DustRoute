@@ -67,6 +67,155 @@ async fn fixture() -> (
 }
 
 #[tokio::test]
+async fn scoped_edit_checks_permissions_and_retains_scope_in_undo_and_restart_history() {
+    let (root, fake, address, bridge) = fixture().await;
+    let (client, server) = connected(&root, &address).await;
+    let initial = propose(&client).await;
+    let scope = json!({"editable":[{"min":{"x":101,"y":101,"z":106},"max":{"x":101,"y":101,"z":107}}],
+        "protected":[{"min":{"x":101,"y":101,"z":104},"max":{"x":102,"y":102,"z":105}}]});
+    let invalid = json!({"revision_id":initial["revision_id"],"edit_scop":scope});
+    let rejected = client
+        .call_tool(
+            rmcp::model::CallToolRequestParams::new("new_placement")
+                .with_arguments(invalid.as_object().unwrap().clone()),
+        )
+        .await
+        .unwrap();
+    assert_eq!(rejected.is_error, Some(true));
+    let rmcp::model::ContentBlock::Text(reason) = &rejected.content[0] else {
+        panic!("expected parameter diagnostics")
+    };
+    assert!(reason.text.contains("unknown field `edit_scop`"));
+    let incompatible = call(
+        &client,
+        "new_placement",
+        json!({"circuit":"half-adder","edit_scope":scope}),
+    )
+    .await;
+    assert_eq!(incompatible["ok"], false);
+    let mut denied = scope.clone();
+    denied["editable"][0]["max"]["z"] = json!(106);
+    let refusal = call(
+        &client,
+        "new_placement",
+        json!({"revision_id":initial["revision_id"],"edit_scope":denied}),
+    )
+    .await;
+    assert_eq!(refusal["ok"], false);
+    assert!(
+        refusal["error"]
+            .as_str()
+            .unwrap()
+            .contains("declared write")
+    );
+    assert_eq!(fake.lock().unwrap().writes, 0);
+    let plan = call(
+        &client,
+        "new_placement",
+        json!({"revision_id":initial["revision_id"],"edit_scope":scope}),
+    )
+    .await;
+    assert_eq!(plan["ok"], true, "{plan}");
+    assert_eq!(plan["edit_scope"], scope);
+    let operation = json!({"operation_id":plan["operation_id"],"confirm":true});
+    assert_eq!(
+        call(&client, "show_operation", operation.clone()).await["ok"],
+        true
+    );
+    fake.lock().unwrap().steps = plan["steps"].as_array().unwrap().iter().cloned().collect();
+    assert_eq!(
+        call(&client, "invoke_operation", operation.clone()).await["ok"],
+        true
+    );
+    fake.lock().unwrap().steps = plan["undo_steps"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .cloned()
+        .collect();
+    assert_eq!(
+        call(&client, "undo_operation", operation.clone()).await["ok"],
+        true
+    );
+    stop(client, server).await;
+    let (client, server) = connected(&root, &address).await;
+    let history = call(
+        &client,
+        "get_operation",
+        json!({"operation_id":plan["operation_id"]}),
+    )
+    .await;
+    assert_eq!(history["record"]["edit_scope"], scope);
+    assert_eq!(history["record"]["state"], "undone");
+    assert_eq!(history["executable_plan_restored"], false);
+    assert_eq!(
+        call(&client, "undo_operation", operation).await["ok"],
+        false
+    );
+    stop(client, server).await;
+    bridge.abort();
+    std::fs::remove_dir_all(root).unwrap();
+}
+
+#[tokio::test]
+async fn scoped_inert_building_edits_use_common_physics_and_check_protected_readback() {
+    let (root, fake, address, bridge) = fixture().await;
+    let mut snapshot = machine();
+    snapshot["blocks"] = json!([
+        {"pos":{"x":101,"y":101,"z":104},"name":"minecraft:stone"},
+        {"pos":{"x":102,"y":101,"z":104},"name":"minecraft:glass"}]);
+    fake.lock().unwrap().snapshot = Some(snapshot.clone());
+    let (client, server) = connected(&root, &address).await;
+    let captured = call(
+        &client,
+        "get_world",
+        json!({"region":{"min":snapshot["min"],"max":snapshot["max"]},"include_block_list":true}),
+    )
+    .await;
+    assert_eq!(captured["ok"], true, "{captured}");
+    let revision = call(
+        &client,
+        "test_circuit_change",
+        json!({"circuit_id":captured["circuit_id"],"changes":[
+        {"position":{"x":101,"y":101,"z":104},"block":"minecraft:smooth_quartz"}]}),
+    )
+    .await;
+    assert_eq!(revision["ok"], true, "{revision}");
+    let scope = json!({"editable":[{"min":{"x":101,"y":101,"z":104},"max":{"x":101,"y":101,"z":104}}],
+        "protected":[{"min":{"x":102,"y":101,"z":104},"max":{"x":102,"y":101,"z":104}}]});
+    let plan = call(
+        &client,
+        "new_placement",
+        json!({"revision_id":revision["revision_id"],"edit_scope":scope}),
+    )
+    .await;
+    assert_eq!(plan["ok"], true, "{plan}");
+    assert_eq!(plan["kind"], "electrical_revision_modification");
+    let operation = json!({"operation_id":plan["operation_id"],"confirm":true});
+    fake.lock().unwrap().snapshot.as_mut().unwrap()["blocks"][1]["name"] = json!("minecraft:stone");
+    assert_eq!(
+        call(&client, "show_operation", operation.clone()).await["ok"],
+        false
+    );
+    assert_eq!(fake.lock().unwrap().writes, 0);
+    fake.lock().unwrap().snapshot.as_mut().unwrap()["blocks"][1]["name"] = json!("minecraft:glass");
+    assert_eq!(
+        call(&client, "show_operation", operation.clone()).await["ok"],
+        true
+    );
+    fake.lock().unwrap().steps = plan["steps"].as_array().unwrap().iter().cloned().collect();
+    assert_eq!(
+        call(&client, "invoke_operation", operation).await["ok"],
+        true
+    );
+    assert!(fake.lock().unwrap().snapshot.as_ref().unwrap()["blocks"].as_array().unwrap().iter().any(|b|
+        b["name"]=="minecraft:glass" && b["pos"]==json!({"x":102,"y":101,"z":104})));
+    stop(client, server).await;
+    bridge.abort();
+    std::fs::remove_dir_all(root).unwrap();
+}
+
+#[tokio::test]
 async fn electrical_edit_public_capture_preview_apply_undo_and_restart_history() {
     let (root, fake, address, bridge) = fixture().await;
     let (client, server) = connected(&root, &address).await;

@@ -218,6 +218,7 @@ impl RegionParam {
 }
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub(super) struct PreviewPlacementParams {
     /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
     #[schemars(skip)]
@@ -232,6 +233,11 @@ pub(super) struct PreviewPlacementParams {
     /// Construct the adopted Assembly at an explicit new target, after a fresh
     /// review there. Requires the unified electrical execution context.
     pub(super) assembly_target: Option<assembly_placement::AssemblyPlacementTarget>,
+    /// For a captured revision or grounded Assembly at its original site:
+    /// explicit editable/protected world regions. Every observed cell outside
+    /// editable regions is protected throughout modeled command callbacks.
+    /// Does not change ownership, adoption or a placed instance's source.
+    pub(super) edit_scope: Option<dustroute_library::world_edit::WorldEditScope>,
     /// Maximum number of blocks allowed in one placement plan. Defaults to 32768.
     pub(super) max_blocks: Option<usize>,
     /// Run directional compression followed by global compaction before creating the placement plan.

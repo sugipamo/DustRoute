@@ -25,11 +25,14 @@ impl ElectricalEditPlan {
             "source":self.source,"revision_id":self.revision_id,"read_only":read_only,
             "bounds":{"min":self.proof.before().min,"max":self.proof.before().max},
             "before":self.proof.before(),"after":self.proof.after(),
+            "edit_scope":self.proof.scope(),
             "steps":self.proof.steps(false),"undo_steps":self.proof.steps(true),
             "execution_batches":construction_executor::batch_summary(self.proof.steps(false)),
             "undo_execution_batches":construction_executor::batch_summary(self.proof.steps(true)),
             "conditions":{"stationary_observation_required":true,"model_initial_queue":"assumed_empty",
                 "runtime_history_reconstructed":false,"functional_behavior_verified":false,
+                "protected_state_checked":"every modeled committed microstep, forward and undo; live full-region readback at batch boundaries",
+                "outside_editable":"all other observed cells are protected; no ownership inferred",
                 "fixed_environment":"enclosed source water only; source or containment changes are unsupported",
                 "natural_growth":"not modeled; live state drift stops execution",
                 "operator_requirement":"finish prior motion and keep external inputs/edits out of the work region"},
@@ -79,13 +82,18 @@ impl DustRouteMcp {
         assembly_placement::server_contract(&status, &revision.dimension)?;
         let target = TargetServer::observed(&status, &revision.dimension)?;
         let baseline = before.clone();
+        let scope = params.edit_scope.clone().unwrap_or_else(|| {
+            dustroute_library::world_edit::WorldEditScope::entire(
+                dustroute_translate::world::Region::new(before.min, before.max),
+            )
+        });
         let capture = current();
         let queued_at = std::time::Instant::now();
         let proof = tokio::task::spawn_blocking(move || {
             capture.record_queue(queued_at);
             capture.in_blocking(|| {
                 let _measurement = span(Phase::ModelProof);
-                ElectricalModification::new(&before, &after, Default::default())
+                ElectricalModification::new_scoped(&before, &after, scope, Default::default())
             })
         })
         .await
@@ -266,13 +274,14 @@ impl DustRouteMcp {
         }
         let before = plan.proof.before().clone();
         let after = plan.proof.after().clone();
+        let scope = plan.proof.scope().clone();
         let capture = current();
         let queued_at = std::time::Instant::now();
         let proof = tokio::task::spawn_blocking(move || {
             capture.record_queue(queued_at);
             capture.in_blocking(|| {
                 let _measurement = span(Phase::ModelProof);
-                ElectricalModification::new(&before, &after, Default::default())
+                ElectricalModification::new_scoped(&before, &after, scope, Default::default())
             })
         })
         .await
@@ -296,6 +305,7 @@ impl DustRouteMcp {
                 || record.source_revision_id != plan.revision_id
                 || record.before != *proof.before()
                 || record.after != *proof.after()
+                || record.edit_scope.as_ref() != Some(proof.scope())
             {
                 return Err("edit record differs from the undo plan".into());
             }
@@ -313,6 +323,7 @@ impl DustRouteMcp {
                 target: plan.target.clone(),
                 before: proof.before().clone(),
                 after: proof.after().clone(),
+                edit_scope: Some(proof.scope().clone()),
                 state: EditState::NeedsInspection,
                 attempts: vec![],
             }

@@ -21,6 +21,7 @@ mod interfaces;
 pub mod location_observation;
 pub mod runtime_behavior;
 mod verify;
+pub mod world_edit;
 
 pub use builtin::{
     DUSTROUTE_COMPACT_XOR_ID, DUSTROUTE_COMPILED_XOR_ID, REDSTONE_COMPILER_XOR_ID, builtin_catalog,

@@ -29,6 +29,9 @@ pub(crate) struct EditRecord {
     pub target: TargetServer,
     pub before: MinecraftSnapshot,
     pub after: MinecraftSnapshot,
+    /// Missing on earlier historical records; never restored as a capability.
+    #[serde(default)]
+    pub edit_scope: Option<dustroute_library::world_edit::WorldEditScope>,
     pub state: EditState,
     pub attempts: Vec<EditAttempt>,
 }

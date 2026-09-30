@@ -107,6 +107,13 @@ sources. Changed named children descend from their previous definitions; new
 or removed children and requirements are visible in the diff. The whole new
 candidate is reviewed and its construction/removal simulated again.
 
+Update `records` contains only the new referenced types needed before proposing.
+The adopted base and historical sources already exist in the selected catalog;
+they are not retransmitted on every edit. Candidate definitions stay in
+`request.revisions` until adoption. This is an incremental bundle, not a
+standalone export. Keeping unrelated history or unused regenerated contracts
+out of the bundle prevents import size from growing with every revision.
+
 For example, submit the earlier room as `previous`, and as `design` change the
 namespace to `trial.windowed-room-v2` and the window material to `tinted_glass`.
 The diff contains the two changed glass cells; shell and room pins are retained.
@@ -118,6 +125,10 @@ unchanged. It does not upgrade a built structure or authorize its replacement.
 Site editing needs a separately observed and previewed operation. Internal
 comparison definitions and artificial empty baselines are not published as
 the update's selected base.
+
+For edits at a captured existing site, use the typed
+[world edit scope](world-edit-scope.md) to declare editable and protected space.
+This does not turn design adoption into a placed-instance upgrade.
 
 ## Equipment composition
 

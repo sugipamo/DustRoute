@@ -51,3 +51,31 @@ unique-adoption gating, non-publishing generation, diff/review/adoption after
 restart and preservation of the old Assembly. This does not upgrade a placed
 instance. Assembly-record loading now resolves ancestry independently of input
 order, including updates across different namespaces.
+
+Stage 3 adds typed editable/protected regions to the existing captured-revision
+and grounded-Assembly edit path. All other observed cells are protected;
+forward/undo proofs inspect every committed model microstep. Public planning
+retains preview/target/stationary/readback gates and persisted scope, without
+inferring ownership or upgrading placed source identities. Fresh ungrounded
+construction remains an empty-target operation. See
+[world edit scope](world-edit-scope.md) for the supported bounds and live limits.
+
+Offline validation completed with serial offline/locked Cargo jobs and serial
+test threads:
+
+- Model regressions cover building/design/door generation, repeated design
+  updates, moving-world evidence/adoption, permission boundaries, transient
+  protected pulses, shared electrical/adhesive/stair/flight construction, and
+  immutable Blueprint records/connections/updates.
+- Library Assembly/Blueprint regressions: 16 passed.
+- Default MCP library suite: 139 passed, 2 opt-in performance tests ignored.
+  After the later incremental-bundle adjustment, the affected public update
+  workflow was rerun and passed.
+- Voxrig-enabled virtual-design workflows: 4 passed; scoped workflows/store
+  regression: 3 passed. These use transport fixtures, not a live Minecraft world.
+- Clippy for affected libraries/tests passed with warnings denied, both default
+  and Voxrig enabled. Formatting and whitespace checks passed.
+
+No live placement, server restart or world changes were performed. No unplanned
+block physics, entity or survival-building prerequisite was introduced. Model
+protection does not establish server atomicity or recover hidden pending work.

@@ -125,6 +125,19 @@ async fn virtual_design_updates_require_adoption_retain_pins_and_leave_base_unch
         "public.design.shell.v1"
     );
     assert_eq!(generated["result"]["placed_instances_modified"], false);
+    assert!(
+        generated["result"]["records"]["assemblies"]
+            .as_array()
+            .unwrap()
+            .is_empty()
+    );
+    assert_eq!(
+        generated["result"]["records"]["types"]
+            .as_array()
+            .unwrap()
+            .len(),
+        2
+    );
     assert_eq!(
         before,
         call(

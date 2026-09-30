@@ -128,7 +128,7 @@ pub fn generate_building_design_update(
         }
     }
     next.records = base_records(catalog, &next)?;
-    let design = next.finish()?;
+    let mut design = next.finish()?;
     let mut updates = BlueprintUpdates::new(design.records.catalog().map_err(|e| e.to_string())?);
     updates
         .create(design.request.clone())
@@ -136,6 +136,28 @@ pub fn generate_building_design_update(
     let diff = updates
         .diff(&design.request.id)
         .map_err(|e| e.to_string())?;
+    // This is an update against a catalog that already owns the adopted base.
+    // Sending all historical sources again can make a valid bounded update
+    // exceed the public import budget after only a few revisions.
+    let referenced_types = design
+        .request
+        .revisions
+        .iter()
+        .flat_map(|r| {
+            r.static_type_bindings
+                .iter()
+                .map(|b| &b.type_revision)
+                .chain(r.behavior_bindings.iter().map(|b| b.behavior_type()))
+                .chain(r.ports.iter().flat_map(|p| p.required_source_types.iter()))
+        })
+        .collect::<BTreeSet<_>>();
+    design
+        .records
+        .types
+        .retain(|t| catalog.type_revision(&t.id).is_none() && referenced_types.contains(&t.id));
+    design.records.classifications.clear();
+    design.records.revisions.clear();
+    design.records.assemblies.clear();
     Ok(GeneratedBuildingDesignUpdate {
         base_assembly_revision_id: base.id.clone(),
         design,

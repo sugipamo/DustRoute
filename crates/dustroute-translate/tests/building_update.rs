@@ -55,6 +55,13 @@ fn updates_descend_from_the_selected_base_retain_pins_and_survive_restart() {
         "test.update.before.space.gap.v1"
     );
     assert!(!generated.placed_instances_modified);
+    assert!(generated.design.records.assemblies.is_empty());
+    assert!(generated.design.records.revisions.is_empty());
+    assert_eq!(
+        generated.design.records.types.len(),
+        2,
+        "only changed window and clearance contracts are imported"
+    );
     let changed = generated
         .design
         .request

@@ -428,6 +428,27 @@ context. It returns separate body/total counts and per-candidate status; it neve
 publishes a definition. See [component patterns](blueprint-component-patterns.md)
 for the complete request and explicit adoption workflow.
 
+## Author, diagnose and revise structured buildings
+
+`generate_building_design` accepts explicit geometry and named permanent-Air
+requirements. `generate_building_design_update` checks the supplied previous
+input against a uniquely adopted base, retains unchanged child pins, and returns
+an ordinary immutable update/diff. Both freshly review the combined world and
+construction; they publish no records or Minecraft writes. See
+[building design input and updates](blueprint-building-design.md).
+
+Generation failures and proposal review/refused adoption expose the shared
+[structured review diagnostics](blueprint-review-diagnostics.md), including
+failed versus undetermined checks and available occurrence/type/coordinate,
+expected/actual block, runtime input/time and counterexample evidence.
+
+For a captured revision or grounded Assembly at its original coordinates,
+`new_placement(edit_scope=…)` declares editable/protected regions and uses the
+shared physical modification path, including for inert building blocks.
+[Scope checks](world-edit-scope.md) cover every committed model microstep and
+forward/undo; live verification remains full-region readback at batch boundaries.
+Design adoption never updates placed-instance source identities automatically.
+
 ## Follow design references from a diagnosis
 
 Registered placed-Assembly diagnosis now returns its exact Assembly Revision ID
