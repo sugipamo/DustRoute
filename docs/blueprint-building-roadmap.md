@@ -63,6 +63,41 @@ minimum-patch repairs are not implied by the completed milestone.
 
 ## Follow-up roadmap
 
+### Caller-authored virtual designs — 2026-09-30
+
+Add a typed `generate_building_design` entry for LLM-authored explicit geometry:
+named parts, fill/shell/individual-cell shapes, local cutouts and permanent air
+spaces. Use checked existing cube materials and the ordinary immutable Blueprint
+parts, exact structural obligations, current physics and shared construction.
+Conflicting claims report item/coordinate; identical material claims deduplicate
+physical cells. Import/adoption remain separate from successful generation.
+
+One optional pinned equipment Assembly is transformed and wrapped through the
+same helper as door/enclosure composition. All retained child requirements are
+freshly checked in the combined world. Motion space must be explicit and cannot
+silently erase structure or weaken permanent-Air contracts. Public MCP requires
+unique source adoption. Separate active-source joint proof, new materials/physics,
+terrain preparation, automatic wiring and large job partitioning are outside
+this step. If one becomes a prerequisite, stop and report before implementing it.
+
+Acceptance: independent geometry/material/air checks, L-shaped and windowed-room
+designs, meaningful conflict correction, source immutability and retained child
+failures, nonzero transform anchors, fresh adoption after restart, and an offline
+public generation→placement→readback→diagnosis→removal lifecycle with occupied
+target rejection. No live-server changes or new live-world evidence are implied.
+See [structured design contract](blueprint-building-design.md).
+
+The entry is implemented at the model and offline public-MCP level. Six new
+model tests and two new public lifecycle/adoption tests pass, alongside twelve
+existing building/door model cases and four public building regressions (24
+distinct tests). The two new public cases also pass with Voxrig enabled.
+The public lifecycle covers error correction, no generation side effects,
+restart/adoption, an occupied-target rejection, placement/readback, diagnosis
+and removal. Clippy with warnings denied passes for affected libraries/tests in
+both feature configurations. Cargo jobs are offline, locked and serial.
+This evidence uses a transport stub, not a Minecraft physics oracle. No new live
+trial has run and the changed MCP has not been deployed to the running server.
+
 ### Typed door composition — implemented 2026-09-30
 
 Compose a bounded enclosure with an existing uniquely adopted `PistonDoor`

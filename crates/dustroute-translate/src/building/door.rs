@@ -1,6 +1,7 @@
 //! A typed mechanism remains an immutable child; all proof uses the combined
 //! actual world. Reserved motion space is a request, never a behavior certificate.
-use super::door_interface::{aliases, align_aperture, door_boundaries};
+use super::component::{attach_assembly, merge_records};
+use super::door_interface::{align_aperture, door_boundaries};
 use super::{GeneratedBuilding, finish, geometry, sources};
 use crate::location_behavior::LocationBehaviorBinding;
 use crate::piston_construction::electrical_snapshot;
@@ -37,8 +38,8 @@ pub fn generate_building_with_door(
 ) -> Result<GeneratedBuilding, String> {
     let specification = request.building;
     let attachment = request.door;
-    let mut geometry = geometry::expand(&specification)?;
-    if geometry.entrance.width != 3 || geometry.entrance.height != 3 {
+    let (mut geometry, entrance) = geometry::expand(&specification)?;
+    if entrance.width != 3 || entrance.height != 3 {
         return Err("a typed 3x3 door requires an explicit 3-wide, 3-high entrance".into());
     }
     let source = source_catalog
@@ -90,11 +91,7 @@ pub fn generate_building_with_door(
         .flatten()
         .map(|c| resolved.outputs[&c.air].position)
         .collect::<Vec<_>>();
-    let transform = align_aperture(
-        &aperture,
-        attachment.rotation,
-        i32::from(geometry.entrance.offset),
-    )?;
+    let transform = align_aperture(&aperture, attachment.rotation, i32::from(entrance.offset))?;
     bounded_region(attachment.reserved_space)?;
     if !source_context
         .known_region
@@ -176,50 +173,15 @@ pub fn generate_building_with_door(
         return Err("building namespace collides with an existing door component".into());
     }
     let door_instance = InstanceId::new("door").map_err(str::to_owned)?;
-    let building_instance = InstanceId::new("building").map_err(str::to_owned)?;
-    let root_instance = InstanceId::new("root").map_err(str::to_owned)?;
-    let mut ports = wrapper.ports.clone();
-    for port in &mut ports {
-        port.position = transform.position(port.position)?;
-        port.facing = port.facing.map(|f| attachment.rotation.facing(f));
-    }
-    let body = proposal
-        .revisions
-        .iter_mut()
-        .find(|r| r.id == proposal.next_child)
-        .ok_or("building body is missing")?;
-    body.inclusions.push(BlueprintInclusion {
-        instance: door_instance.clone(),
-        revision: wrapper.id.clone(),
-        origin: transform.target_anchor,
-        rotation: transform.rotation,
-    });
-    body.ports.extend(ports.clone());
-    body.port_bindings.extend(aliases(&ports, &door_instance));
-    let parent = proposal
-        .revisions
-        .iter_mut()
-        .find(|r| r.id == proposal.candidate_parent)
-        .ok_or("building parent is missing")?;
-    parent.ports = ports.clone();
-    parent.port_bindings = aliases(&ports, &building_instance);
-    let assembly = &mut proposal.candidate_state.assembly;
-    assembly.name = "Enclosure with typed piston door".into();
-    assembly.blocks.extend(moved.blocks);
-    assembly.boundaries = aliases(&ports, &root_instance);
-    for mut connection in moved.connections {
-        for endpoint in [&mut connection.source, &mut connection.sink] {
-            endpoint.instance.splice(
-                0..0,
-                [
-                    root_instance.clone(),
-                    building_instance.clone(),
-                    door_instance.clone(),
-                ],
-            );
-        }
-        assembly.connections.push(connection);
-    }
+    let ports = attach_assembly(
+        &mut proposal,
+        &wrapper,
+        moved,
+        transform,
+        &door_instance,
+        "",
+    )?;
+    proposal.candidate_state.assembly.name = "Enclosure with typed piston door".into();
     proposal.title = format!(
         "Build {} by {} by {} enclosure with a typed 3x3 door",
         specification.width, specification.height, specification.depth
@@ -236,7 +198,9 @@ pub fn generate_building_with_door(
         .insert_revisions(proposal.revisions.clone())
         .map_err(|e| e.to_string())?;
     geometry.initial = electrical_snapshot(
-        &assembly
+        &proposal
+            .candidate_state
+            .assembly
             .inspect(&catalog)
             .map_err(|e| e.to_string())?
             .proposed_world(),
@@ -269,6 +233,7 @@ pub fn generate_building_with_door(
     };
     let mut generated = finish(
         specification,
+        entrance,
         geometry,
         records,
         proposal,
@@ -309,43 +274,6 @@ fn bounded_region(region: Region) -> Result<(), String> {
         return Err(
             "door building requires valid rectangular regions with at most 8192 known cells".into(),
         );
-    }
-    Ok(())
-}
-
-fn merge_records(catalog: &mut BlueprintCatalog, records: &BlueprintRecords) -> Result<(), String> {
-    for t in &records.types {
-        match catalog.type_revision(&t.id) {
-            Some(existing) if existing == t => {}
-            Some(_) => return Err("building namespace collides with an existing type".into()),
-            None => catalog.insert_type(t.clone()).map_err(|e| e.to_string())?,
-        }
-    }
-    for r in &records.revisions {
-        if catalog
-            .revision(&r.id)
-            .is_some_and(|existing| existing != r)
-        {
-            return Err("building namespace collides with an existing definition".into());
-        }
-    }
-    catalog
-        .insert_revisions(
-            records
-                .revisions
-                .iter()
-                .filter(|r| catalog.revision(&r.id).is_none())
-                .cloned()
-                .collect(),
-        )
-        .map_err(|e| e.to_string())?;
-    for a in &records.assemblies {
-        if catalog.assembly(&a.id).is_some() {
-            return Err("building namespace collides with an existing Assembly".into());
-        }
-        catalog
-            .insert_assembly(a.clone())
-            .map_err(|e| e.to_string())?;
     }
     Ok(())
 }

@@ -14,11 +14,30 @@ pub(super) fn build(
     geometry: &Geometry,
     context: &RuntimeBehaviorContext,
 ) -> Result<(BlueprintRecords, BlueprintUpdateRequest), String> {
+    build_layout(
+        &spec.namespace,
+        &format!(
+            "Build {} by {} by {} enclosure",
+            spec.width, spec.height, spec.depth
+        ),
+        geometry,
+        &[],
+        context,
+    )
+}
+
+pub(super) fn build_layout(
+    namespace: &str,
+    title: &str,
+    geometry: &Geometry,
+    spaces: &[dustroute_library::building::BuildingDesignSpace],
+    context: &RuntimeBehaviorContext,
+) -> Result<(BlueprintRecords, BlueprintUpdateRequest), String> {
     let id = |suffix: &str| {
-        BlueprintRevisionId::new(format!("{}.{suffix}", spec.namespace)).map_err(str::to_owned)
+        BlueprintRevisionId::new(format!("{namespace}.{suffix}")).map_err(str::to_owned)
     };
     let state_id = |suffix: &str| {
-        AssemblyRevisionId::new(format!("{}.{suffix}", spec.namespace)).map_err(str::to_owned)
+        AssemblyRevisionId::new(format!("{namespace}.{suffix}")).map_err(str::to_owned)
     };
     let include = |name: &str, revision| {
         Ok::<_, String>(BlueprintInclusion {
@@ -29,12 +48,8 @@ pub(super) fn build(
         })
     };
     let mut catalog = dustroute_library::builtin_laws::builtin_laws().clone();
-    let mut assembly = assembly_from_snapshot(
-        &geometry.initial,
-        "Generated enclosure",
-        vec![geometry.region],
-    )
-    .map_err(|e| e.to_string())?;
+    let mut assembly = assembly_from_snapshot(&geometry.initial, title, vec![geometry.region])
+        .map_err(|e| e.to_string())?;
     let template = BlueprintRevision {
         id: id("empty.v1")?,
         parents: vec![],
@@ -67,7 +82,7 @@ pub(super) fn build(
         id: state_id("state.v1")?,
         parents: vec![],
         assembly: Assembly {
-            name: "Unbuilt enclosure site".into(),
+            name: "Unbuilt building site".into(),
             instances: vec![include("root", parent.id.clone())?],
             blocks: vec![],
             known_regions: vec![geometry.region],
@@ -79,7 +94,7 @@ pub(super) fn build(
     let mut body = template.clone();
     body.id = id("building.v2")?;
     body.parents = vec![original.id.clone()];
-    body.name = "Exact enclosure and clearance".into();
+    body.name = "Exact structure and clearance".into();
     body.required_laws = context
         .execution_context()
         .laws
@@ -97,11 +112,11 @@ pub(super) fn build(
             max: geometry.region.max,
             blocks: blocks.clone(),
         };
-        let part = assembly_from_snapshot(&part_snapshot, *name, vec![geometry.region])
+        let part = assembly_from_snapshot(&part_snapshot, name, vec![geometry.region])
             .map_err(|e| e.to_string())?;
         let mut definition = template.clone();
         definition.id = id(&format!("{name}.v1"))?;
-        definition.name = (*name).into();
+        definition.name = name.clone();
         definition.blocks = part.blocks;
         let anchor = definition.blocks[0].position;
         let pattern = definition
@@ -119,12 +134,45 @@ pub(super) fn build(
         require_pattern(
             &mut catalog,
             &mut definition,
-            &spec.namespace,
+            namespace,
             &format!("{name}.pattern.v1"),
             anchor,
             pattern,
         )?;
         body.inclusions.push(include(name, definition.id.clone())?);
+        revisions.push(definition);
+    }
+    for space in spaces {
+        let mut definition = template.clone();
+        definition.id = id(&format!("space.{}.v1", space.name))?;
+        definition.name = format!("Permanent air: {}", space.name);
+        let mut pattern = Vec::new();
+        for x in space.region.min.x..=space.region.max.x {
+            for y in space.region.min.y..=space.region.max.y {
+                for z in space.region.min.z..=space.region.max.z {
+                    pattern.push(PositionedBlock {
+                        position: Pos::new(
+                            x - space.region.min.x,
+                            y - space.region.min.y,
+                            z - space.region.min.z,
+                        ),
+                        block: Block::new(BlockKind::Air),
+                    });
+                }
+            }
+        }
+        require_pattern(
+            &mut catalog,
+            &mut definition,
+            namespace,
+            &format!("space.{}.pattern.v1", space.name),
+            space.region.min,
+            pattern,
+        )?;
+        body.inclusions.push(include(
+            &format!("space.{}", space.name),
+            definition.id.clone(),
+        )?);
         revisions.push(definition);
     }
     let world = assembly
@@ -153,7 +201,7 @@ pub(super) fn build(
     require_pattern(
         &mut catalog,
         &mut body,
-        &spec.namespace,
+        namespace,
         "clearance.pattern.v1",
         Pos::default(),
         pattern,
@@ -171,14 +219,10 @@ pub(super) fn build(
     let next_child = body.id.clone();
     revisions.extend([body, next_parent.clone()]);
     let request = BlueprintUpdateRequest {
-        id: BlueprintUpdateId::new(format!("{}.proposal.v1", spec.namespace))
-            .map_err(str::to_owned)?,
-        title: format!(
-            "Build {} by {} by {} enclosure",
-            spec.width, spec.height, spec.depth
-        ),
+        id: BlueprintUpdateId::new(format!("{namespace}.proposal.v1")).map_err(str::to_owned)?,
+        title: title.into(),
         description: concat!(
-            "Exact building geometry, passage and one-block air perimeter; ",
+            "Exact building geometry and declared air clearance; ",
             "only a completely observed empty target site is admitted. ",
             "No automatic publication or world writes."
         )

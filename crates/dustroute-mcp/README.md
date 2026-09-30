@@ -99,6 +99,15 @@ saving the plan; reads do not. Unreadable saved state returns an error.
 
 ## Review an offline Blueprint update
 
+For an LLM-authored virtual design, use
+`test_circuit_change(blueprint.action="generate_building_design")` with named
+parts, `fill`/`shell`/`blocks` shapes, local cutouts and permanent air spaces.
+An optional uniquely adopted equipment Assembly keeps its original requirements
+and can expose explicit terminals. Material/space conflicts return item names
+and coordinates for correction. A successful result permits the ordinary
+import/review/adoption/placement planning path; it is not live-site evidence or
+write permission. See [structured design input](../../docs/blueprint-building-design.md).
+
 For a small building, `test_circuit_change(blueprint.action="generate_building")`
 authors floor/wall/roof definitions, an opening and exact air-clearance contracts
 from typed dimensions and existing materials. Generation returns fresh structural

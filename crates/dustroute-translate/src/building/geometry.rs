@@ -9,13 +9,12 @@ use std::collections::BTreeMap;
 pub(super) struct Geometry {
     pub region: Region,
     pub initial: MinecraftSnapshot,
-    pub parts: Vec<(&'static str, Vec<MinecraftSnapshotBlock>)>,
-    pub entrance: BuildingEntrance,
+    pub parts: Vec<(String, Vec<MinecraftSnapshotBlock>)>,
     /// Explicit component-owned cells are excluded from fixed-shell patterns.
     pub reserved: Vec<Region>,
 }
 
-pub(super) fn expand(request: &BuildingRequest) -> Result<Geometry, String> {
+pub(super) fn expand(request: &BuildingRequest) -> Result<(Geometry, BuildingEntrance), String> {
     if request.namespace.is_empty()
         || request.namespace.len() > 64
         || !request.namespace.bytes().all(|c| {
@@ -79,9 +78,9 @@ pub(super) fn expand(request: &BuildingRequest) -> Result<Geometry, String> {
             }
         }
     }
-    let mut parts = vec![("floor", floor), ("walls", walls)];
+    let mut parts = vec![("floor".into(), floor), ("walls".into(), walls)];
     if roof {
-        parts.push(("roof", ceiling));
+        parts.push(("roof".into(), ceiling));
     }
     let blocks: BTreeMap<_, _> = parts
         .iter()
@@ -89,15 +88,17 @@ pub(super) fn expand(request: &BuildingRequest) -> Result<Geometry, String> {
         .map(|b| (b.pos, b))
         .collect();
     let region = Region::new(Pos::new(-1, -1, -1), Pos::new(w, h, d));
-    Ok(Geometry {
-        region,
-        initial: MinecraftSnapshot {
-            min: region.min,
-            max: region.max,
-            blocks: blocks.into_values().collect(),
+    Ok((
+        Geometry {
+            region,
+            initial: MinecraftSnapshot {
+                min: region.min,
+                max: region.max,
+                blocks: blocks.into_values().collect(),
+            },
+            parts,
+            reserved: vec![],
         },
-        parts,
         entrance,
-        reserved: vec![],
-    })
+    ))
 }

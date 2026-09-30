@@ -1,8 +1,14 @@
 //! Building authoring uses ordinary immutable Blueprints and shared physics.
+mod component;
+mod design;
+mod design_geometry;
 mod door;
 mod door_interface;
 mod geometry;
 mod sources;
+pub use design::{
+    AttachedDesignComponent, BuildingDesignError, GeneratedBuildingDesign, generate_building_design,
+};
 pub use door::{AttachedBuildingDoor, generate_building_with_door};
 
 use crate::blueprint_update::{BlueprintUpdateRequest, BlueprintUpdates, RecordedReview};
@@ -42,21 +48,54 @@ pub struct BuildingVerification {
 
 /// Fresh structural and construction review, not adoption or site observation.
 pub fn generate_building(specification: BuildingRequest) -> Result<GeneratedBuilding, String> {
-    let geometry = geometry::expand(&specification)?;
+    let (geometry, entrance) = geometry::expand(&specification)?;
     let context = RuntimeBehaviorContext::fresh_pistons(geometry.region, vec![]);
     let (records, request) = sources::build(&specification, &geometry, &context)?;
-    finish(specification, geometry, records, request, context, None)
+    finish(
+        specification,
+        entrance,
+        geometry,
+        records,
+        request,
+        context,
+        None,
+    )
 }
 
 fn finish(
     specification: BuildingRequest,
+    entrance: BuildingEntrance,
     geometry: geometry::Geometry,
     records: BlueprintRecords,
     request: BlueprintUpdateRequest,
     context: RuntimeBehaviorContext,
     door: Option<AttachedBuildingDoor>,
 ) -> Result<GeneratedBuilding, String> {
-    if geometry.initial.blocks.len() > 256 {
+    let verification = verify_candidate(&records, &request, &context, &geometry.initial)?;
+    Ok(GeneratedBuilding {
+        specification,
+        entrance,
+        records,
+        request,
+        context,
+        expected: geometry.initial,
+        door,
+        parts: geometry
+            .parts
+            .into_iter()
+            .map(|(name, blocks)| (name, blocks.len()))
+            .collect(),
+        verification,
+    })
+}
+
+fn verify_candidate(
+    records: &BlueprintRecords,
+    request: &BlueprintUpdateRequest,
+    context: &RuntimeBehaviorContext,
+    expected: &MinecraftSnapshot,
+) -> Result<BuildingVerification, String> {
+    if expected.blocks.len() > 256 {
         return Err("generated building exceeds the 256-block custom Assembly budget".into());
     }
     let mut updates = BlueprintUpdates::new(records.catalog().map_err(|e| e.to_string())?);
@@ -93,8 +132,9 @@ fn finish(
         .inspect(&catalog)
         .map_err(|e| e.to_string())?
         .proposed_world();
-    let construction = ElectricalConstruction::new(&world, geometry.region, context.root_limits)?;
-    if construction.settled() != &geometry.initial
+    let construction =
+        ElectricalConstruction::new(&world, context.known_region, context.root_limits)?;
+    if construction.settled() != expected
         || !construction
             .remove_steps()
             .last()
@@ -102,7 +142,7 @@ fn finish(
     {
         return Err("building construction or teardown differs from declared geometry".into());
     }
-    let verification = BuildingVerification {
+    Ok(BuildingVerification {
         status: CheckStatus::Passed,
         review: RecordedReview::from(&report),
         construction_steps: construction.build_steps().len(),
@@ -110,20 +150,5 @@ fn finish(
         removal_steps: construction.remove_steps().len(),
         removal_batches: construction_batches(construction.remove_steps()).count(),
         live_world_verified: false,
-    };
-    Ok(GeneratedBuilding {
-        specification,
-        entrance: geometry.entrance,
-        records,
-        request,
-        context,
-        expected: geometry.initial,
-        door,
-        parts: geometry
-            .parts
-            .into_iter()
-            .map(|(name, blocks)| (name.into(), blocks.len()))
-            .collect(),
-        verification,
     })
 }

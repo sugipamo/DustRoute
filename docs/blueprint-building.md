@@ -5,6 +5,11 @@ pinned floor, walls and optional flat roof. Its declared structure includes the
 opening, empty interior and a one-block air perimeter on all six sides.
 There is no separate building physics engine or unchecked bulk-write route.
 
+For explicit caller/LLM geometry rather than enclosure dimensions, see
+[virtual building design input](blueprint-building-design.md). It accepts named
+parts, shapes, cutouts and permanent air spaces, plus a pinned equipment Assembly,
+and continues through this same adoption and placement workflow.
+
 ## Request
 
 Use the ordinary `test_circuit_change` tool:

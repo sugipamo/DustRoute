@@ -65,19 +65,6 @@ pub(super) fn door_boundaries(
     Ok((boundaries, *powered))
 }
 
-pub(super) fn aliases(ports: &[BlueprintPort], instance: &InstanceId) -> Vec<BlueprintPortBinding> {
-    ports
-        .iter()
-        .map(|p| BlueprintPortBinding {
-            name: p.name.clone(),
-            port: BlueprintPortRef {
-                instance: vec![instance.clone()],
-                port: p.name.clone(),
-            },
-        })
-        .collect()
-}
-
 pub(super) fn align_aperture(
     aperture: &[Pos],
     rotation: RotationY,

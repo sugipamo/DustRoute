@@ -35,6 +35,11 @@ async fn generate_and_propose(client: &Client) -> (Value, Value) {
     .await;
     assert_eq!(before, after, "generation must not publish definitions");
     let result = generated["result"].clone();
+    let operation = propose_generated(client, &result).await;
+    (result, operation)
+}
+
+async fn propose_generated(client: &Client, result: &Value) -> Value {
     let imported = call(
         client,
         "test_circuit_change",
@@ -51,7 +56,196 @@ async fn generate_and_propose(client: &Client) -> (Value, Value) {
     )
     .await;
     assert_eq!(proposed["ok"], true, "{proposed}");
-    (result, proposed["operation_id"].clone())
+    proposed["operation_id"].clone()
+}
+
+fn virtual_design() -> Value {
+    json!({"namespace":"public.design","name":"Room with window",
+        "known_region":{"min":{"x":-1,"y":-1,"z":-1},"max":{"x":5,"y":4,"z":5}},
+        "parts":[
+            {"name":"shell","shapes":[{"kind":"shell","material":"stone",
+                "region":{"min":{"x":0,"y":0,"z":0},"max":{"x":4,"y":3,"z":4}}}],
+                "cutouts":[{"min":{"x":2,"y":1,"z":0},"max":{"x":2,"y":2,"z":0}},
+                    {"min":{"x":4,"y":1,"z":2},"max":{"x":4,"y":2,"z":2}}]},
+            {"name":"window","shapes":[{"kind":"blocks","material":"glass",
+                "positions":[{"x":4,"y":1,"z":2},{"x":4,"y":2,"z":2}]}]}],
+        "spaces":[{"name":"room","region":{"min":{"x":1,"y":1,"z":1},"max":{"x":3,"y":2,"z":3}}}]})
+}
+
+#[tokio::test]
+async fn virtual_design_components_require_unique_adoption_and_keep_pinned_requirements() {
+    let root = temporary();
+    let (client, server) = start(&root).await;
+    let (source, proposal) = generate_and_propose(&client).await;
+    let generate = json!({"blueprint":{"action":"generate_building_design","request":{
+        "namespace":"public.composition","name":"Two structures",
+        "known_region":{"min":{"x":-1,"y":-1,"z":-1},"max":{"x":12,"y":4,"z":5}},
+        "parts":[{"name":"marker","shapes":[{"kind":"blocks","material":"glass","positions":[{"x":0,"y":0,"z":0}]}]}],
+        "component":{"name":"room","assembly_revision_id":source["request"]["candidate_state"]["id"],
+            "source_anchor":{"x":0,"y":0,"z":0},"target_anchor":{"x":7,"y":0,"z":0},"rotation":"r0",
+            "reserved_space":{"min":{"x":0,"y":0,"z":0},"max":{"x":4,"y":3,"z":4}}}
+    }}});
+    let rejected = call(&client, "test_circuit_change", generate.clone()).await;
+    assert_eq!(rejected["ok"], false);
+    assert_eq!(
+        rejected["errors"][0]["code"],
+        "source_not_adopted_or_reviewable"
+    );
+    adopt(&client, &proposal).await;
+    let before = call(
+        &client,
+        "get_circuit_revision",
+        json!({"blueprint":{"kind":"archive"}}),
+    )
+    .await;
+    let generated = call(&client, "test_circuit_change", generate).await;
+    assert_eq!(generated["ok"], true, "{generated}");
+    assert_eq!(generated["result"]["unique_blocks"], 81);
+    assert_eq!(
+        generated["result"]["component"]["origin"],
+        json!({"x":7,"y":0,"z":0})
+    );
+    assert_eq!(
+        before,
+        call(
+            &client,
+            "get_circuit_revision",
+            json!({"blueprint":{"kind":"archive"}})
+        )
+        .await
+    );
+    let proposal = propose_generated(&client, &generated["result"]).await;
+    stop(client, server).await;
+    let (client, server) = start(&root).await;
+    adopt(&client, &proposal).await;
+    stop(client, server).await;
+}
+
+#[tokio::test]
+async fn virtual_design_error_correction_adoption_restart_placement_and_removal() {
+    let root = temporary();
+    let (fake, address, bridge) = start_construction_bridge(root.join("assembly-instances")).await;
+    let (client, server) = start(&root).await;
+    let before = call(
+        &client,
+        "get_circuit_revision",
+        json!({"blueprint":{"kind":"archive"}}),
+    )
+    .await;
+    let mut broken = virtual_design();
+    broken["parts"][0]["cutouts"].as_array_mut().unwrap().pop();
+    let error = call(
+        &client,
+        "test_circuit_change",
+        json!({"blueprint":{"action":"generate_building_design","request":broken}}),
+    )
+    .await;
+    assert_eq!(error["ok"], false, "{error}");
+    assert_eq!(error["errors"][0]["code"], "material_conflict");
+    assert_eq!(error["errors"][0]["item"], "window");
+    assert_eq!(error["errors"][0]["position"], json!({"x":4,"y":1,"z":2}));
+    assert!(error.get("result").is_none());
+    let generated = call(
+        &client,
+        "test_circuit_change",
+        json!({"blueprint":{"action":"generate_building_design","request":virtual_design()}}),
+    )
+    .await;
+    assert_eq!(generated["ok"], true, "{generated}");
+    for flag in ["writes_minecraft", "catalog_changed", "adoption_authorized"] {
+        assert_eq!(generated[flag], false);
+    }
+    assert_eq!(generated["result"]["unique_blocks"], 80);
+    assert_eq!(
+        generated["result"]["verification"]["live_world_verified"],
+        false
+    );
+    assert_eq!(
+        before,
+        call(
+            &client,
+            "get_circuit_revision",
+            json!({"blueprint":{"kind":"archive"}})
+        )
+        .await
+    );
+    assert_eq!(fake.lock().unwrap().writes, 0);
+    let result = generated["result"].clone();
+    let proposal = propose_generated(&client, &result).await;
+    stop(client, server).await;
+    let (client, server) = connected(&root, &address).await;
+    assert_eq!(
+        call(&client, "new_placement", target(&result)).await["ok"],
+        false
+    );
+    adopt(&client, &proposal).await;
+    let plan = call(&client, "new_placement", target(&result)).await;
+    assert_eq!(plan["ok"], true, "{plan}");
+    assert_eq!(plan["construction_steps"].as_array().unwrap().len(), 80);
+    preview(&client, &plan).await;
+    {
+        let mut state = fake.lock().unwrap();
+        state.snapshot = Some(
+            json!({"min":plan["bounds"]["min"],"max":plan["bounds"]["max"],
+            "blocks":[{"pos":plan["bounds"]["min"],"name":"minecraft:stone"}]}),
+        );
+    }
+    assert_eq!(
+        apply(&client, &plan).await["ok"],
+        false,
+        "occupied air guard must prevent writes"
+    );
+    assert_eq!(fake.lock().unwrap().writes, 0);
+    {
+        let mut state = fake.lock().unwrap();
+        state.snapshot = None;
+        state.steps = plan["construction_steps"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .cloned()
+            .collect();
+    }
+    let applied = apply(&client, &plan).await;
+    assert_eq!(applied["ok"], true, "{applied}");
+    assert_eq!(applied["verified_steps"], 80);
+    stop(client, server).await;
+    let (client, server) = connected(&root, &address).await;
+    let diagnosis = call(
+        &client,
+        "manage_assembly",
+        json!({"action":"diagnose","instance_id":plan["operation_id"]}),
+    )
+    .await;
+    assert_eq!(
+        diagnosis["diagnosis"]["status"], "matches_reference",
+        "{diagnosis}"
+    );
+    let removal = call(
+        &client,
+        "manage_assembly",
+        json!({"action":"plan_removal","instance_id":plan["operation_id"]}),
+    )
+    .await;
+    assert_eq!(removal["ok"], true, "{removal}");
+    preview(&client, &removal).await;
+    fake.lock().unwrap().steps = removal["removal_steps"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .cloned()
+        .collect();
+    let removed = apply(&client, &removal).await;
+    assert_eq!(removed["ok"], true, "{removed}");
+    assert!(
+        fake.lock().unwrap().snapshot.as_ref().unwrap()["blocks"]
+            .as_array()
+            .unwrap()
+            .is_empty()
+    );
+    stop(client, server).await;
+    bridge.abort();
+    let _ = bridge.await;
 }
 
 fn target(result: &Value) -> Value {

@@ -1,6 +1,7 @@
 //! Bounded building intent. These requests contain no execution permission.
+use crate::assembly::AssemblyBoundary;
 use crate::blueprint::{AssemblyRevisionId, InstancePath, TypeRevisionId};
-use dustroute_minecraft::{Region, RotationY};
+use dustroute_minecraft::{Pos, Region, RotationY};
 use serde::{Deserialize, Serialize};
 
 /// Compose an existing typed door with an enclosure. Generation grants no
@@ -88,4 +89,74 @@ pub struct BuildingEntrance {
     pub width: u16,
     /// Opening begins above the floor at y=1.
     pub height: u16,
+}
+
+/// A caller-authored virtual design. Geometry is explicit; names describe intent
+/// but do not claim walkability, aesthetics, inventory or live-site permission.
+#[derive(Clone, Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct BuildingDesignRequest {
+    pub namespace: String,
+    pub name: String,
+    /// Complete observed rectangle, including a one-cell empty outer boundary.
+    pub known_region: Region,
+    pub parts: Vec<BuildingDesignPart>,
+    #[serde(default)]
+    pub spaces: Vec<BuildingDesignSpace>,
+    /// A pinned Assembly can contain many nested devices. This initial entry
+    /// attaches one Assembly and preserves all of its retained requirements.
+    pub component: Option<BuildingDesignComponent>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct BuildingDesignPart {
+    pub name: String,
+    pub shapes: Vec<BuildingDesignShape>,
+    /// Subtracted from this part only, before parts are combined. No implicit
+    /// last-writer-wins precedence exists between parts or materials.
+    #[serde(default)]
+    pub cutouts: Vec<Region>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+pub enum BuildingDesignShape {
+    Fill {
+        region: Region,
+        material: BuildingMaterial,
+    },
+    Shell {
+        region: Region,
+        material: BuildingMaterial,
+    },
+    Blocks {
+        positions: Vec<Pos>,
+        material: BuildingMaterial,
+    },
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct BuildingDesignSpace {
+    pub name: String,
+    /// A permanent exact-Air contract, including during equipment operation.
+    /// Use component.reserved_space for cells that may move/change instead.
+    pub region: Region,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct BuildingDesignComponent {
+    pub name: String,
+    pub assembly_revision_id: AssemblyRevisionId,
+    pub source_anchor: Pos,
+    pub target_anchor: Pos,
+    pub rotation: RotationY,
+    /// Original source coordinates. Must contain every mechanism cell and input.
+    pub reserved_space: Region,
+    /// Explicit source terminals to expose as `<component name>.<terminal>`.
+    /// Omitted/empty preserves the source Assembly's existing boundaries.
+    #[serde(default)]
+    pub exports: Vec<AssemblyBoundary>,
 }

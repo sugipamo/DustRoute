@@ -149,6 +149,11 @@ impl UpdateInput {
 #[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
 #[serde(tag = "action", rename_all = "snake_case", deny_unknown_fields)]
 pub(crate) enum BlueprintWrite {
+    /// Author explicit virtual geometry and permanent air spaces, optionally
+    /// wrapping one uniquely adopted equipment Assembly. No world writes.
+    GenerateBuildingDesign {
+        request: Box<dustroute_library::building::BuildingDesignRequest>,
+    },
     /// Generate a bounded enclosure, its structural obligations and a proposal.
     /// Does not import, adopt or write any Minecraft blocks.
     GenerateBuilding {
@@ -584,7 +589,7 @@ fn import(updates: &mut BlueprintUpdates, records: BlueprintRecords) -> Result<(
     Ok(())
 }
 
-fn generated_building_json(generated: dustroute_translate::building::GeneratedBuilding) -> Value {
+fn generated_building_json(generated: impl Serialize) -> Value {
     json!({"ok":true,"schema_version":"dustroute.blueprint-mcp.v1",
         "result":generated,"writes_minecraft":false,"catalog_changed":false,
         "adoption_authorized":false,
@@ -633,6 +638,40 @@ fn perform(
                 return Err("Blueprint request exceeds 4 MiB".into());
             }
             match write {
+                BlueprintWrite::GenerateBuildingDesign { request } => {
+                    let source = request
+                        .component
+                        .as_ref()
+                        .map(|c| construction_basis(updates, &c.assembly_revision_id))
+                        .transpose();
+                    let generated = match source {
+                        Ok(source) => dustroute_translate::building::generate_building_design(
+                            *request,
+                            source.as_ref().map(|s| (&s.catalog, &s.context)),
+                        ),
+                        Err(detail) => {
+                            return Ok((
+                                Some(json!({"ok":false,
+                            "schema_version":"dustroute.blueprint-mcp.v1", "errors":[{
+                                "code":"source_not_adopted_or_reviewable", "detail":detail,
+                                "item":request.component.as_ref().map(|c| &c.name)}],
+                            "writes_minecraft":false,"catalog_changed":false,"adoption_authorized":false})),
+                                false,
+                            ));
+                        }
+                    };
+                    Ok((
+                        Some(match generated {
+                            Ok(result) => generated_building_json(result),
+                            Err(error) => {
+                                json!({"ok":false,"schema_version":"dustroute.blueprint-mcp.v1",
+                            "errors":[error],"writes_minecraft":false,"catalog_changed":false,
+                            "adoption_authorized":false})
+                            }
+                        }),
+                        false,
+                    ))
+                }
                 BlueprintWrite::GenerateBuilding { request } => {
                     let generated = dustroute_translate::building::generate_building(*request)?;
                     Ok((Some(generated_building_json(generated)), false))
