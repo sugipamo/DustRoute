@@ -98,8 +98,9 @@ another revision can fix them. A translation error reports `unavailable` and
 also preserves the draft. Incomplete observations or placement issues prevent
 simulation. `structurally_valid` means only the modeled placement checks passed;
 Java property validation is not exhaustive, and simulation is not proof of all
-input behavior, functional equivalence or physical-world correctness. General
-piston simulation/placement restrictions remain in force.
+input behavior, functional equivalence or physical-world correctness. Supported
+stationary piston/crop diffs additionally report common-runtime construction
+checks; they do not gain functional proof from static diagnostics.
 
 Limits are 64 edits per call, 4096 observed block records/non-air result blocks,
 4 MiB per saved record and 1–256 simulation ticks (default 64), together with
@@ -186,7 +187,7 @@ target context and then verifies restoration of the base context. Undo attempts
 are also consumed before writing. These in-memory placement/undo records do not
 survive MCP restart, independently of the persisted revision records.
 
-Supported stationary piston diffs use `ElectricalModification` instead of the
+Supported stationary piston or cane/fixed-environment diffs use `ElectricalModification` instead of the
 ordinary placement validator. The original context is retained and only changed
 positions are written. Forward and undo sequences use the common electrical
 construction runtime and each command must settle to a complete expected state.
@@ -205,7 +206,10 @@ This proves modeled placement and the observed local result, not functional
 equivalence, all input transitions, or distant circuit effects beyond the
 captured one-block context. Stationary piston edits are limited to identities
 and states supported by the common physical runtime. Unknown devices and
-unmodeled crop/fluid behavior remain rejected. Merge remains outside this
+unmodeled crop/fluid behavior remain rejected. Cane ages and declared soil/enclosed
+source water are retained exactly; support loss must be reflected in the complete
+target state. Water-source or containment changes, natural growth and irrigation
+construction are not supported. Merge remains outside this
 increment.
 
 Placement evidence (2026-09-07): 62 MCP tests passed and all-target Clippy

@@ -28,6 +28,17 @@ impl RuntimeAdapter for ElectricalPistonAdapter {
             delta
                 .apply(&mut world)
                 .map_err(|e| RuntimeError::Invalid(e.to_string()))?;
+            for (pos, before) in view
+                .world()
+                .iter()
+                .filter(|(_, b)| crate::physical::environment::is_water(b))
+            {
+                if world.get(*pos) != Some(before) {
+                    return Err(unsupported(
+                        "a fixed water source cannot be changed by this executor",
+                    ));
+                }
+            }
             let mut staged_carriers = view.staged_carriers.clone();
             for effect in &out.carriers {
                 match effect {
@@ -59,6 +70,14 @@ fn validate_initial(view: RuntimeView<'_>) -> Result<(), RuntimeError> {
         .world()
         .placement_issues_with_lookup(|p| view.block(p).ok());
     for issue in issues {
+        if let WorldValidationIssue::UnsupportedPlacement { position, .. } = &issue {
+            let block = view.block(*position)?;
+            if crate::physical::environment::is_water(&block)
+                || crate::physical::plants::of_block(&block).is_some()
+            {
+                continue;
+            }
+        }
         if !matches!(
             issue,
             WorldValidationIssue::UnsupportedPlacement {
@@ -73,7 +92,7 @@ fn validate_initial(view: RuntimeView<'_>) -> Result<(), RuntimeError> {
     }
     for (pos, block) in view.world().iter() {
         if block.observation_classification == ObservationClassification::Coarse
-            || block.requires_live_observation()
+            || (block.requires_live_observation() && !crate::physical::environment::is_water(block))
         {
             return Err(unsupported(format!(
                 "unsupported initial evidence at {pos:?}"
@@ -171,6 +190,7 @@ fn handle(
     let pos = event.call.target;
     match &event.call.payload {
         PistonEvent::Motion { plan } => super::movement::step(view, pos, plan),
+        PistonEvent::SupportTick => super::support::tick(view, pos),
         PistonEvent::Device {
             callback,
             source,
@@ -714,7 +734,7 @@ fn finish_or_advance(
 }
 
 impl RootComparisonAdapter for ElectricalPistonAdapter {
-    const COMPARISON: &'static str = "dustroute.piston-electrical-root-comparison.v3";
+    const COMPARISON: &'static str = "dustroute.piston-electrical-root-comparison.v4";
     fn permits_root(kind: InvocationKind, payload: &PistonEvent) -> bool {
         matches!(
             (kind, payload),
@@ -734,7 +754,8 @@ impl RootComparisonAdapter for ElectricalPistonAdapter {
                     source: None,
                     captured: None
                 }
-            ) | (InvocationKind::BlockEvent, PistonEvent::Block { .. })
+            ) | (InvocationKind::ScheduledTick, PistonEvent::SupportTick)
+                | (InvocationKind::BlockEvent, PistonEvent::Block { .. })
                 | (InvocationKind::CarrierTick, PistonEvent::CarrierTick)
         )
     }

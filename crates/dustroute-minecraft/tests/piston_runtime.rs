@@ -485,7 +485,7 @@ fn vertical_pistons_push_pull_and_preserve_interruption_for_both_directions() {
             );
             assert_eq!(run.view().block(front).unwrap().kind, expected_front);
             assert_eq!(run.view().block(out).unwrap().kind, expected_out);
-            assert_eq!(run.execution_context().profile, dustroute_minecraft::execution_context::WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V18);
+            assert_eq!(run.execution_context().profile, dustroute_minecraft::execution_context::WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V19);
         }
     }
 }

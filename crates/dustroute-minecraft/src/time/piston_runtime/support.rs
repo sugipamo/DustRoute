@@ -6,6 +6,50 @@ use super::*;
 use crate::physical::SupportTrigger;
 use crate::{BlockKind, DeltaCause, PistonState};
 
+pub(super) fn query(
+    view: RuntimeView<'_>,
+    pos: Pos,
+    block: &Block,
+    query: crate::physical::lifetime::SupportQuery,
+) -> Result<bool, RuntimeError> {
+    query.evaluate(block, &mut |d| view.block(offset(pos, d)?))
+}
+
+pub(super) fn delayed_update(
+    view: RuntimeView<'_>,
+    pos: Pos,
+    block: &Block,
+    shape: bool,
+) -> Result<RuntimeOutcome<PistonEvent>, RuntimeError> {
+    let mut out = RuntimeOutcome::default();
+    if let Some(spec) = crate::physical::plants::of_block(block)
+        && shape
+        && !query(view, pos, block, spec.support.query)?
+    {
+        out.queued.push(QueueRequest::PrioritizedBlockTick {
+            game_tick: next_tick(view.time().game_tick, spec.support.delay)?,
+            priority: spec.support.priority,
+            block: BlockIdentity::of(block),
+            call: call(pos, PistonEvent::SupportTick),
+        });
+    }
+    Ok(out)
+}
+
+pub(super) fn tick(
+    view: RuntimeView<'_>,
+    pos: Pos,
+) -> Result<RuntimeOutcome<PistonEvent>, RuntimeError> {
+    let block = view.block(pos)?;
+    let Some(spec) = crate::physical::plants::of_block(&block) else {
+        return Ok(RuntimeOutcome::default());
+    };
+    if !query(view, pos, &block, spec.support.query)? {
+        return remove(view, pos, &block, false);
+    }
+    Ok(RuntimeOutcome::default())
+}
+
 pub(super) fn present(
     view: RuntimeView<'_>,
     pos: Pos,

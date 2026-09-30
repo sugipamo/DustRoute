@@ -38,10 +38,14 @@ use serde::Deserialize;
 
 use crate::{Block, BlockKind, Facing, ObservationClassification, PistonState};
 
+pub mod environment;
+pub mod lifetime;
+pub mod native_state;
 pub mod passive;
+pub mod plants;
 pub mod stairs;
 
-pub const REVISION: &str = "dustroute.physical-admission.java-1-21-11.v9";
+pub const REVISION: &str = "dustroute.physical-admission.java-1-21-11.v10";
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
 #[serde(rename_all = "snake_case")]
@@ -455,9 +459,15 @@ pub fn wire_rise_connection(
 /// remain available for synthetic devices and historical finite Law adapters.
 pub fn of_block(block: &Block) -> Option<CheckedPhysical> {
     if block.observation_classification == ObservationClassification::Coarse
-        || block.requires_live_observation()
+        || (block.requires_live_observation() && !environment::is_water(block))
     {
         return None;
+    }
+    if let Some(spec) = environment::of_block(block) {
+        return Some(spec.physical);
+    }
+    if let Some(spec) = plants::of_block(block) {
+        return Some(spec.physical);
     }
     if matches!(block.kind, BlockKind::Solid | BlockKind::Transparent) {
         return passive::resolve(block);
@@ -606,6 +616,12 @@ pub const fn of_kind(kind: BlockKind) -> CheckedPhysical {
 pub fn classify(name: &str) -> (BlockKind, ObservationClassification) {
     use BlockKind::*;
     let name = name.strip_prefix("minecraft:").unwrap_or(name);
+    if let Some(spec) = environment::named(name) {
+        return (spec.kind, ObservationClassification::Exact);
+    }
+    if let Some(spec) = plants::named(name) {
+        return (spec.kind, ObservationClassification::Exact);
+    }
     if let Some(spec) = passive::named(name) {
         return (spec.kind, ObservationClassification::Exact);
     }
@@ -632,4 +648,24 @@ pub fn classify(name: &str) -> (BlockKind, ObservationClassification) {
         _ => return (Solid, ObservationClassification::Coarse),
     };
     (kind, ObservationClassification::Exact)
+}
+
+/// Routing hint only: these identities need the world callback adapter rather
+/// than the ordinary fixed circuit placement validator. Not admission proof.
+pub fn requires_callback_runtime_name(name: &str) -> bool {
+    matches!(
+        classify(name).0,
+        BlockKind::Piston | BlockKind::PistonHead | BlockKind::MovingPiston
+    ) || plants::named(name).is_some()
+        || environment::named(name)
+            .is_some_and(|s| s.role == environment::EnvironmentRole::EnclosedWaterSource)
+}
+pub fn requires_callback_runtime(block: &Block) -> bool {
+    matches!(
+        block.kind,
+        BlockKind::Piston | BlockKind::PistonHead | BlockKind::MovingPiston
+    ) || block
+        .observed_name
+        .as_deref()
+        .is_some_and(requires_callback_runtime_name)
 }

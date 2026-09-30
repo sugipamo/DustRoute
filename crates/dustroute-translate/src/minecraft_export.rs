@@ -224,7 +224,9 @@ pub fn native_block_state(
         }
     }
     if let Some(name) = block.observed_name.as_deref()
-        && dustroute_minecraft::physical::passive::named(name).is_some()
+        && (dustroute_minecraft::physical::passive::named(name).is_some()
+            || dustroute_minecraft::physical::environment::named(name).is_some()
+            || dustroute_minecraft::physical::plants::named(name).is_some())
     {
         dustroute_minecraft::piston_electrical::validate_evidence(block)
             .map_err(|e| invalid(e.to_string()))?;

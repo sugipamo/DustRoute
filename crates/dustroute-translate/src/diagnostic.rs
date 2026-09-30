@@ -139,6 +139,18 @@ pub fn diagnose_scene(
                 inferred: true,
             }),
             RequiredInputStatus::Disconnected | RequiredInputStatus::NoKnownSource => {
+                if !static_driver_assessment_supported(scene, assessment.position) {
+                    findings.push(ConnectivityFinding {
+                        status: CircuitDiagnosticStatus::Unsupported,
+                        confidence: DiagnosticConfidence::High,
+                        position: Some(assessment.position), component: Some(assessment.device),
+                        block: Some(assessment.block),
+                        reason: "static directional connectivity cannot establish piston control, quasi-connectivity or moving-world behavior; an explicit runtime requirement is needed".into(),
+                        evidence: vec![format!("static_input_status={:?}",assessment.status), "functional_test_not_performed".into()],
+                        related_components: assessment.immediate_sources.clone(), inferred: false,
+                    });
+                    continue;
+                }
                 let (confidence, reason, evidence) = match assessment.status {
                     RequiredInputStatus::Disconnected => (
                         DiagnosticConfidence::High,
@@ -249,6 +261,12 @@ pub fn diagnose_scene(
     }
 }
 
+fn static_driver_assessment_supported(scene: &PhysicalScene, position: Pos) -> bool {
+    scene
+        .component_at(position)
+        .is_none_or(|c| !crate::world::physical::requires_callback_runtime(&c.block))
+}
+
 fn recommend_action(
     scene: &PhysicalScene,
     focus: Option<Pos>,
@@ -266,17 +284,24 @@ fn recommend_action(
     }
     if let Some(ranked) = focus
         .map(|focus| rank_liveness_findings(scene, liveness, focus))
-        .and_then(|ranked| ranked.into_iter().next())
+        .and_then(|ranked| {
+            ranked
+                .into_iter()
+                .find(|r| static_driver_assessment_supported(scene, r.finding.position))
+        })
         .or_else(|| {
-            liveness.undriven_inputs.first().cloned().map(|finding| {
-                crate::liveness::RankedLivenessFinding {
+            liveness
+                .undriven_inputs
+                .iter()
+                .find(|f| static_driver_assessment_supported(scene, f.position))
+                .cloned()
+                .map(|finding| crate::liveness::RankedLivenessFinding {
                     finding,
                     manhattan_distance_from_focus: 0,
                     downstream_component_count: 0,
                     nearby_gap_candidate_count: 0,
                     suspicion_score: 0,
-                }
-            })
+                })
         })
     {
         return RecommendedAction {
@@ -413,5 +438,24 @@ mod tests {
             report.recommended_next_action.kind,
             RecommendedActionKind::ExpandObservation
         );
+    }
+
+    #[test]
+    fn a_static_piston_input_gap_is_not_a_proven_mechanism_fault() {
+        let mut world = World::new();
+        let pos = Pos::new(0, 0, 0);
+        world.place(BlockKind::Piston, pos).facing = Some(Facing::Up);
+        let analysis = analyze_world_region(
+            &world,
+            RegionBounds::new(Pos::new(-3, -3, -3), Pos::new(3, 3, 3)),
+        );
+        let report = diagnose_scene(&analysis.scene, Some(pos), true);
+        assert_eq!(report.counts.probable_faults, 0);
+        assert!(report.counts.unsupported > 0);
+        assert_eq!(
+            report.recommended_next_action.kind,
+            RecommendedActionKind::ReviewUnsupportedBehavior
+        );
+        assert!(!report.diagnosis.functional_test_performed);
     }
 }

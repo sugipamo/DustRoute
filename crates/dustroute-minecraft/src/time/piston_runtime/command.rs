@@ -37,6 +37,14 @@ pub(super) fn install(
             return Err(unsupported("unsupported command placement support"));
         }
     }
+    if let Some(plant) = crate::physical::plants::of_block(block)
+        && !super::support::query(view, pos, block, plant.support.query)?
+    {
+        // Native preprocessing can reserve a support tick before insertion.
+        // This construction scope only installs already supported plants;
+        // do not accept an invalid intermediate plant without that callback.
+        return Err(unsupported("unsupported command placement plant support"));
+    }
     Ok(RuntimeOutcome {
         continuation: Some(PistonEvent::ElectricalPreprocess {
             block: Box::new(block.clone()),

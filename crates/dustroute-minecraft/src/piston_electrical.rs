@@ -96,13 +96,13 @@ fn arms(block: &Block) -> Result<&BTreeMap<Facing, WireConnection>, RuntimeError
 /// Evidence gate for electrical identities only. Stable piston/head pairing and
 /// physical support must additionally pass the runtime/placement gates.
 pub fn validate_evidence(block: &Block) -> Result<(), RuntimeError> {
-    if !crate::execution_context::WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V18
+    if !crate::execution_context::WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V19
         .admits_kind(block.kind)
     {
         return Err(invalid(format!("unsupported electrical kind {:?}", block.kind)));
     }
     if block.observation_classification == ObservationClassification::Coarse
-        || block.requires_live_observation()
+        || (block.requires_live_observation() && !crate::physical::environment::is_water(block))
     {
         return Err(invalid("coarse or unsupported electrical observation"));
     }

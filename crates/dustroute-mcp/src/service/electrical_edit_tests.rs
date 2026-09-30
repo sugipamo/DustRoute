@@ -293,3 +293,75 @@ async fn electrical_edit_keeps_read_only_policy_and_requires_explicit_confirmati
     bridge.abort();
     std::fs::remove_dir_all(root).unwrap();
 }
+
+#[tokio::test]
+async fn electrical_edit_harvests_and_restores_a_declared_column_with_fixed_water() {
+    let (root, fake, address, bridge) = fixture().await;
+    let snapshot: Value = serde_json::from_str(include_str!(
+        "../../../dustroute-translate/tests/fixtures/sugar-cane-static-root.json"
+    ))
+    .unwrap();
+    {
+        let mut state = fake.lock().unwrap();
+        state.snapshot = Some(snapshot.clone());
+        state.gaze_target = Some(json!({"x":0,"y":1,"z":0}));
+    }
+    let (client, server) = connected(&root, &address).await;
+    let captured = call(
+        &client,
+        "get_world",
+        json!({"region":{"min":snapshot["min"],"max":snapshot["max"]}}),
+    )
+    .await;
+    assert_eq!(captured["ok"], true, "{captured}");
+    let revision = call(
+        &client,
+        "test_circuit_change",
+        json!({"circuit_id":captured["circuit_id"],"changes":[
+            {"position":{"x":0,"y":2,"z":0},"block":"minecraft:air"},
+            {"position":{"x":0,"y":3,"z":0},"block":"minecraft:air"}
+        ]}),
+    )
+    .await;
+    assert_eq!(
+        revision["validation"]["electrical_modification"]["status"], "passed",
+        "{revision}"
+    );
+    assert_eq!(
+        revision["validation"]["before"]["summary"]["functional_behavior_verified"],
+        false
+    );
+    assert_eq!(
+        revision["validation"]["before"]["status"],
+        "invalid_or_unsupported"
+    );
+    let plan = call(
+        &client,
+        "new_placement",
+        json!({"revision_id":revision["revision_id"]}),
+    )
+    .await;
+    assert_eq!(plan["ok"], true, "{plan}");
+    assert_eq!(plan["steps"].as_array().unwrap().len(), 1);
+    assert!(plan["steps"][0]["wait_ticks"].as_u64().unwrap() >= 1);
+    let op = json!({"operation_id":plan["operation_id"],"confirm":true});
+    assert_eq!(
+        call(&client, "show_operation", op.clone()).await["ok"],
+        true
+    );
+    fake.lock().unwrap().steps = plan["steps"].as_array().unwrap().iter().cloned().collect();
+    let applied = call(&client, "invoke_operation", op.clone()).await;
+    assert_eq!(applied["ok"], true, "{applied}");
+    fake.lock().unwrap().steps = plan["undo_steps"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .cloned()
+        .collect();
+    let undone = call(&client, "undo_operation", op).await;
+    assert_eq!(undone["ok"], true, "{undone}");
+    assert_eq!(fake.lock().unwrap().writes, 3);
+    stop(client, server).await;
+    bridge.abort();
+    std::fs::remove_dir_all(root).unwrap();
+}

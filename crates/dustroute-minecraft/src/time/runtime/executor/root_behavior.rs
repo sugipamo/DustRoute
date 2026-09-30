@@ -220,7 +220,7 @@ mod tests {
     }
 
     #[test]
-    fn comparison_record_preserves_the_v3_byte_order() {
+    fn comparison_record_preserves_the_pinned_byte_order() {
         let mut runtime = scene();
         schedule_electrical_input(&mut runtime, 1, INPUT, true).unwrap();
         let captured = runtime.behavior_state().unwrap();

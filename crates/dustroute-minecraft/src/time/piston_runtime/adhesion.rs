@@ -23,11 +23,12 @@ pub(super) struct CollectedMotion {
 }
 
 fn require_passive_destruction(block: &Block) -> Result<(), RuntimeError> {
-    if block
+    if (block
         .observed_name
         .as_deref()
         .and_then(physical::passive::named)
         .is_none()
+        && physical::plants::of_block(block).is_none())
         || !destroys(block)
     {
         return Err(unsupported(

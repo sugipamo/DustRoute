@@ -98,7 +98,7 @@ fn older_execution_profiles_do_not_gain_motion_from_material_registration() {
                     .is_err()
             );
         }
-        WorldExecutionContext::for_profile(UnifiedPistonElectricalCallbacksJava12111V18)
+        WorldExecutionContext::for_profile(UnifiedPistonElectricalCallbacksJava12111V19)
             .validate_world_kinds(&w)
             .unwrap();
         let mut malformed = material(name);

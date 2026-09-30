@@ -44,7 +44,9 @@ impl RuntimeView<'_> {
             }
         } else if carrier.is_some() || block.piston_entity.is_some() {
             return Err(RuntimeError::CarrierConflict(position));
-        } else if block.requires_live_observation() {
+        } else if block.requires_live_observation()
+            && !crate::physical::environment::is_water(&block)
+        {
             return Err(RuntimeError::Invalid(
                 "location needs unsupported live evidence".into(),
             ));

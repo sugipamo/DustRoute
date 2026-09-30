@@ -5,6 +5,7 @@ mod adhesion;
 mod command;
 mod devices;
 mod electrical;
+mod environment;
 mod geometry;
 mod movement;
 mod notifications;
@@ -23,10 +24,12 @@ pub use movement::MotionPlan;
 pub type PistonBehaviorState = RootBehaviorState<PistonEvent>;
 pub const BEHAVIOR_COMPARISON: &str = ElectricalPistonAdapter::COMPARISON;
 
-pub const ELECTRICAL_PROFILE: &str = "dustroute.piston-electrical-callbacks.java-1-21-11.v18";
+pub const ELECTRICAL_PROFILE: &str = "dustroute.piston-electrical-callbacks.java-1-21-11.v19";
 
 #[cfg(test)]
 mod device_capability_tests;
+#[cfg(test)]
+mod support_tests;
 /// All six body directions share one electrical world and synchronous queue.
 /// Live placement requires fresh target review and verified observations.
 pub struct ElectricalPistonRuntime(SynchronousWorldRuntime<ElectricalPistonAdapter>);
@@ -119,7 +122,7 @@ impl ElectricalPistonRuntime {
     }
     pub fn execution_context(&self) -> crate::execution_context::WorldExecutionContext {
         crate::execution_context::WorldExecutionContext::for_profile(
-            crate::execution_context::WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V18,
+            crate::execution_context::WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V19,
         )
     }
 }
@@ -184,6 +187,8 @@ pub enum PistonEvent {
     DeviceAfterArrival {
         block: Box<Block>,
     },
+    /// Identity-guarded ordinary block tick; reevaluates the current support.
+    SupportTick,
     ElectricalInstall {
         block: Box<Block>,
     },
@@ -218,7 +223,7 @@ pub fn new_piston_runtime(
     limits: RuntimeLimits,
 ) -> Result<ElectricalPistonRuntime, RuntimeError> {
     crate::execution_context::WorldExecutionContext::for_profile(
-        crate::execution_context::WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V18,
+        crate::execution_context::WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V19,
     )
     .validate()
     .map_err(RuntimeError::Invalid)?;

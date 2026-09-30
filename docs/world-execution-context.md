@@ -34,13 +34,15 @@ proof; an adapter must also compile and implement the selected program.
 | `dustroute.dust-single-torch-block-effects.v1` | Same law families, at most one torch; supported local block effects | Same fresh construction and physical input binding checks | Synchronous feedback after visible torch changes, with the existing single callback slot |
 | `dustroute.redstone-compatibility-boundary.v1` | Fixed dust, torch, spatial, repeater, comparator, observer and lamp programs | Existing device seeds, caches, observations and queues; explicit compatibility mutation APIs | Two-game-tick boundaries and the configured compatibility event ordering |
 | `dustroute.bounded-redstone-events.v1` | Fixed spatial/dust, bounded repeater/lamp, and four piston programs | Supplied blocks with an initially empty event queue; explicitly scheduled inputs/world changes | Existing event queue, scheduler and piston activation/completion settings |
+| `dustroute.piston-electrical-callbacks.java-1-21-11.v19` | Eighteen fixed roles including device callbacks, comparator output, torch history, electrical queries, payload and motion; all six body facings, slime/honey adhesion and declared crop destruction/support | Explicit stable fresh construction, initialization notifications and actual levers/device uses between synchronous calls; declared fixed soil and enclosed source water | One callback queue with source-ordered notifications, independent carrier ticks and deferred support ticks |
 
-| `dustroute.piston-electrical-callbacks.java-1-21-11.v17` | Eighteen fixed roles including device callbacks, comparator output, torch history, electrical queries, payload and motion; all six body facings and declared slime/honey adhesion | Explicit stable fresh construction, initialization notifications and actual levers/device uses between synchronous calls | One callback queue with source-ordered notifications and independent carrier ticks |
-
-The v17 profile pins `dustroute.device-programs.java-1-21-11.v7` and physical
-admission v8 in addition to its selected laws. It includes stone-button use/release in the library runtime;
+The v19 profile pins `dustroute.device-programs.java-1-21-11.v7` and physical
+admission v10 in addition to its selected laws. It includes stone-button use/release in the library runtime;
 the behavioral explorer continues to accept explicit lever bindings. Previous
-electrical v1–v16 execution contexts/checkpoints are not automatically migrated.
+electrical v1–v18 execution contexts/checkpoints are rejected rather than migrated.
+The v19 root comparison contract v4 retains identity-guarded deferred support
+ticks in addition to device ticks and carriers. See the
+[fixed environment and cane scope](existing-machine-modification.md).
 Adhesive materials are explicitly excluded from the older execution adapters,
 including the standalone bounded piston planner. Their passive registration
 does not grant those adapters branching movement. See [adhesion](piston-adhesion.md).

@@ -3570,10 +3570,7 @@ impl DustRouteMcp {
         let old = world_from_snapshot(&before).map_err(|e| e.to_string())?;
         let new = world_from_snapshot(&after).map_err(|e| e.to_string())?;
         if old.iter().chain(new.iter()).any(|(_, block)| {
-            matches!(
-                block.kind,
-                BlockKind::Piston | BlockKind::PistonHead | BlockKind::MovingPiston
-            )
+            dustroute_translate::world::physical::requires_callback_runtime(block)
         }) {
             return self
                 .plan_electrical_edit(params, &revision, before, after, status, source)

@@ -158,6 +158,7 @@ limits](blueprint-mcp.md#persistence-and-live-world-boundary).
 | --- | --- |
 | General built-in placement | In-memory, no dedicated five-minute expiry; undo checks and restores captured blocks |
 | Revision placement | In-memory, five-minute pre-apply expiry; exact region/context checks before apply and undo; write attempts are consumed |
+| Stationary electrical revision edit | Five-minute process-local plan; durable write intents, verified stages and operation history; after restart reobserve and replan |
 | Fixed 1×2 construction | In-memory, five-minute pre-apply expiry; removal requires the exact original open layout |
 | Custom electrical Assembly | Five-minute process-local construction/removal/reconstruction plans; durable instance records and stage progress; after restart use `manage_assembly` to reobserve and replan |
 | Fixed 1×2 activation | In-memory, five minutes, single-use; no undo; reobserve and create a new target-state plan |
@@ -191,8 +192,10 @@ fallback for its undo data.
 - Invalid drafts remain editable. Structural checks and initial-state simulation
   do not prove all-input behavior or exhaustive Java property validity.
 - Revision placement checks the base and one-block context, shared placement
-  legality and lossless export. It does not allow general piston placement or
-  certify distant circuit effects.
+  legality and lossless export. Supported stationary piston/crop edits use the
+  common callback runtime for each forward/undo stage and complete readback;
+  they do not certify distant circuit effects or a flying/harvesting type.
+  See [existing-machine modification](existing-machine-modification.md).
 - Existing wire optimization is limited to a non-branching dust path with fixed
   endpoints; macro replacement requires a verified compatible candidate.
 - Blueprint `optimize` searches the supplied Assembly or an explicit component body under one explicit
@@ -224,8 +227,10 @@ fallback for its undo data.
   readback and conditional undo. See [scope and live evidence](custom-piston-assembly-placement.md).
 - The current context retains declared [slime/honey block adhesion](piston-adhesion.md):
   branches, push/pull, shared twelve-block limit and nonadhesion between the two
-  materials. The v18 context also breaks mature pumpkin/melon blocks in a
-  piston destination. Other direct component destruction and entity
+  materials. The current v19 context retains mature pumpkin/melon destruction
+  and adds cane destruction/deferred support in declared soil and enclosed
+  source water. Flowing water, growth and field construction are outside this
+  scope. Other direct component destruction and entity
   carrying/bouncing/sliding remain outside scope. Earlier approvals require fresh review.
 - Placement uses command writes, not survival inventory gathering/construction.
 - Merge, entity handling, long-running endurance optimization and arbitrary
@@ -261,3 +266,9 @@ Optional `harvest_targets` declare mature pumpkin/melon blocks that must disappe
 during that flight while every moving part arrives. This is a single harvest pass,
 not natural growth, repeated farming or item collection. See
 [harvest scope and survival-construction boundary](flying-machine-practical-roadmap.md).
+
+An explicitly imported engine can also be reviewed through the same Blueprint
+workflow. The [observed-engine cane example](existing-machine-modification.md)
+declares finite flight, cleared upper crops and retained roots in a fixed field;
+it has model/MCP regression coverage, with no new live Java comparison yet.
+Static diagnostics explicitly report that no functional flight/harvest test ran.

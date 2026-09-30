@@ -435,6 +435,14 @@ impl Block {
     pub fn capabilities(&self) -> BlockCapabilities {
         use CapabilityLevel::{Full, Partial, Unsupported};
         if self.requires_live_observation()
+            || self
+                .observed_name
+                .as_deref()
+                .is_some_and(|name| crate::physical::plants::named(name).is_some())
+            || self.observed_name.as_deref().is_some_and(|name| {
+                crate::physical::environment::named(name).is_some()
+                    && crate::physical::environment::of_block(self).is_none()
+            })
             || (self
                 .observed_name
                 .as_deref()

@@ -43,7 +43,16 @@ pub(super) fn wire_offset_jobs(
 
 pub(super) fn validate_scope(view: RuntimeView<'_>, fresh: bool) -> Result<(), RuntimeError> {
     let electrical = world(view)?;
+    super::environment::validate(view)?;
     for (pos, block) in view.world().iter() {
+        if let Some(plant) = crate::physical::plants::of_block(block)
+            && fresh
+            && !super::support::query(view, *pos, block, plant.support.query)?
+        {
+            return Err(unsupported(format!(
+                "invalid initial plant support at {pos:?}"
+            )));
+        }
         if let Some(program) = crate::device_program::program(block) {
             let definition = &program.definition;
             if fresh && definition.fresh_powered_requires_history && block.powered == Some(true) {

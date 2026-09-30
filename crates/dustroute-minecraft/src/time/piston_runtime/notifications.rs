@@ -92,6 +92,13 @@ pub(super) fn notify(
         }
         return Ok(out);
     }
+    if crate::physical::plants::of_block(&block).is_some() {
+        let mut out = super::support::delayed_update(view, job.target, &block, job.shape)?;
+        if !jobs.is_empty() {
+            out.continuation = Some(PistonEvent::Notify { jobs });
+        }
+        return Ok(out);
+    }
     if let Some(program) = crate::device_program::program(&block) {
         let callback = if job.shape {
             crate::device_program::Callback::Shape

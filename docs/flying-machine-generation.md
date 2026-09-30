@@ -8,7 +8,9 @@
 現在は `harvest_targets` で成熟済みカボチャ・スイカの破壊も要求できる。
 初期作物の除去と移動部品の到着を同時に検証する。
 [収穫範囲・実機証拠・建築側の残作業](flying-machine-practical-roadmap.md)を参照。
-以下の過去の実機証拠は当時の版に対応し、新規検証は v18 を使う。
+以下の過去の実機証拠は当時の版に対応し、新規検証は v19 を使う。
+v19の固定環境・サトウキビは [明示した機体と畑の更新経路](existing-machine-modification.md)で扱い、
+この生成APIの `harvest_targets.crop` は引き続きカボチャ・スイカに限る。
 
 | engine | 駆動部 | 使用できるbody |
 | --- | --- | --- |

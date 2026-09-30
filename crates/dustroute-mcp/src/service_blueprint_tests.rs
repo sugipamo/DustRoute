@@ -21,6 +21,57 @@ mod door_fixture;
 mod flight_fixture;
 
 #[tokio::test]
+async fn observed_engine_cane_trial_is_publicly_reviewed_and_adopted_after_restart() {
+    let fixture = flight_fixture::observed_cane_fixture();
+    let root = temporary();
+    let (client, server) = start(&root).await;
+    let imported = call(
+        &client,
+        "test_circuit_change",
+        json!({"blueprint":{
+            "action":"import", "records":{
+                "types":fixture.catalog.type_revisions().collect::<Vec<_>>(),
+                "classifications":fixture.catalog.classifications().collect::<Vec<_>>(),
+                "revisions":fixture.catalog.revisions().collect::<Vec<_>>(),
+                "assemblies":[fixture.base]
+            }
+        }}),
+    )
+    .await;
+    assert_eq!(imported["ok"], true, "{imported}");
+    let mut request = serde_json::to_value(&fixture.request).unwrap();
+    request.as_object_mut().unwrap().remove("id");
+    let created = call(
+        &client,
+        "test_circuit_change",
+        json!({"blueprint":{
+            "action":"propose_update", "request":request
+        }}),
+    )
+    .await;
+    assert_eq!(created["ok"], true, "{created}");
+    let operation = created["operation_id"].clone();
+    stop(client, server).await;
+    let (client, server) = start(&root).await;
+    let shown = call(&client, "show_operation", json!({"operation_id":operation})).await;
+    assert_eq!(shown["can_adopt"], true, "{shown}");
+    assert_eq!(shown["validation"]["behavior_status"], "passed");
+    let adopted = call(
+        &client,
+        "invoke_operation",
+        json!({
+            "operation_id":operation, "confirm":true,
+            "blueprint_decision":{"action":"adopt"}
+        }),
+    )
+    .await;
+    assert_eq!(adopted["ok"], true, "{adopted}");
+    assert_eq!(adopted["writes_minecraft"], false);
+    stop(client, server).await;
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[tokio::test]
 async fn generated_flight_is_unpublished_then_imported_proposed_and_adopted_after_restart() {
     check_generated_flight(None, "honey_nose", false).await;
 }
@@ -397,7 +448,7 @@ async fn runtime_blueprint_review_and_adoption_preserve_child_failures_after_res
                 .input_schema,
         )
         .unwrap();
-        assert!(schema.contains("dustroute.piston-electrical-root-exploration.v18"));
+        assert!(schema.contains("dustroute.piston-electrical-root-exploration.v19"));
         assert!(!schema.contains("dustroute.horizontal-piston-root-exploration.v1"));
         let imported=call(&client,"test_circuit_change",json!({"blueprint":{"action":"import","records":{
             "types":fixture.catalog.type_revisions().collect::<Vec<_>>(),
@@ -427,7 +478,7 @@ async fn runtime_blueprint_review_and_adoption_preserve_child_failures_after_res
         );
         assert_eq!(
             inspected["result"]["validation"]["placement_validation_profile"],
-            "dustroute.piston-electrical-callbacks.java-1-21-11.v18"
+            "dustroute.piston-electrical-callbacks.java-1-21-11.v19"
         );
         assert_eq!(
             inspected["result"]["world_execution_context"],

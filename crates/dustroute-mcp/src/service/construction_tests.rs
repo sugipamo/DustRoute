@@ -133,7 +133,7 @@ async fn construction_checks_adoption_preview_baseline_and_observation_before_wr
     assert_eq!(planned["ok"], true, "{planned}");
     assert_eq!(
         planned["execution_context"]["profile"],
-        "dustroute.piston-electrical-root-exploration.v18"
+        "dustroute.piston-electrical-root-exploration.v19"
     );
     let id = planned["operation_id"].clone();
     assert_eq!(

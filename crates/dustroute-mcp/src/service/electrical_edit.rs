@@ -27,6 +27,8 @@ impl ElectricalEditPlan {
             "steps":self.proof.steps(false),"undo_steps":self.proof.steps(true),
             "conditions":{"stationary_observation_required":true,"model_initial_queue":"assumed_empty",
                 "runtime_history_reconstructed":false,"functional_behavior_verified":false,
+                "fixed_environment":"enclosed source water only; source or containment changes are unsupported",
+                "natural_growth":"not modeled; live state drift stops execution",
                 "operator_requirement":"finish prior motion and keep external inputs/edits out of the work region"},
             "validation_scope":"complete declared state and per-command physics; no flying/harvest contract implied",
             "next_step":"show_operation then confirm invoke_operation; no automatic retry/rollback"})

@@ -44,6 +44,8 @@ fn virtual_analysis_summary(
             "representations": representations,
         },
         "identity": circuit_identity_json(&hierarchy, None, complete, 0),
+        "scope": "static connectivity and capability diagnostics; no piston flight or harvest contract evaluated",
+        "functional_behavior_verified": false,
     })
 }
 
@@ -106,15 +108,12 @@ pub(in super::super) fn electrical_modification_validation(
     after: &dustroute_translate::snapshot::MinecraftSnapshot,
     complete: bool,
 ) -> Option<Value> {
-    if !before.blocks.iter().chain(&after.blocks).any(|b| {
-        matches!(
-            b.name.as_str(),
-            "minecraft:piston"
-                | "minecraft:sticky_piston"
-                | "minecraft:piston_head"
-                | "minecraft:moving_piston"
-        )
-    }) {
+    if !before
+        .blocks
+        .iter()
+        .chain(&after.blocks)
+        .any(|b| dustroute_translate::world::physical::requires_callback_runtime_name(&b.name))
+    {
         return None;
     }
     if !complete {
