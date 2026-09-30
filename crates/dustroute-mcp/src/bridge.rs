@@ -21,6 +21,7 @@ use tokio::net::TcpStream;
 pub struct BotBridge {
     address: String,
     timeout: Duration,
+    contents: std::sync::Arc<crate::snapshot_content::SnapshotContents>,
     #[cfg(feature = "voxrig")]
     native: Option<std::sync::Arc<crate::voxrig_bridge::VoxrigBridge>>,
 }
@@ -374,6 +375,7 @@ impl BotBridge {
         Self {
             address: address.into(),
             timeout: Duration::from_secs(10),
+            contents: std::sync::Arc::default(),
             #[cfg(feature = "voxrig")]
             native: None,
         }
@@ -389,9 +391,11 @@ impl BotBridge {
     #[cfg(feature = "voxrig")]
     pub async fn connect_voxrig(config: voxrig::ConnectionConfig) -> Result<Self, BotBridgeError> {
         let native = crate::voxrig_bridge::VoxrigBridge::connect(config).await?;
+        let contents = native.contents.clone();
         Ok(Self {
             address: String::new(),
             timeout: Duration::from_secs(10),
+            contents,
             native: Some(std::sync::Arc::new(native)),
         })
     }
@@ -520,6 +524,26 @@ impl BotBridge {
             .snapshot)
     }
 
+    /// Shared live contents; a caller still needs a fresh capability to authorize writes.
+    pub(crate) async fn scan_region_shared(
+        &self,
+        min: Pos,
+        max: Pos,
+        dimension: &str,
+    ) -> Result<crate::snapshot_content::SharedSnapshot, BotBridgeError> {
+        Ok(self
+            .scan_region_fresh(min, max, dimension)
+            .await?
+            .into_shared_record()
+            .snapshot)
+    }
+    pub(crate) fn share_snapshot(
+        &self,
+        snapshot: MinecraftSnapshot,
+    ) -> Result<crate::snapshot_content::SharedSnapshot, String> {
+        self.contents.intern(snapshot)
+    }
+
     /// Observations retain their selected backend's evidence. Client records are
     /// not server-confirmed and cannot satisfy `scan_region_confirmed`.
     pub async fn scan_region_observed(
@@ -544,11 +568,14 @@ impl BotBridge {
         if self.native.is_some() {
             return crate::observation_evidence::FreshRegion::client(
                 self.scan_client_region(min, max, dimension).await?,
+                &self.contents,
             );
         }
-        Ok(crate::observation_evidence::FreshRegion::server(
+        crate::observation_evidence::FreshRegion::server(
             self.scan_region_validated(min, max, dimension).await?,
-        ))
+            &self.contents,
+        )
+        .map_err(BotBridgeError::Protocol)
     }
 
     pub async fn scan_region_confirmed(

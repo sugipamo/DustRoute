@@ -1,0 +1,1955 @@
+{
+  "context": {
+    "date": "2026-09-30",
+    "source_base_commit": "f55d565",
+    "branch": "codex/observation-performance",
+    "profile": "unoptimized debug with debuginfo",
+    "native_probe": "offline loaded world with exact air cells; 100 identical-region acquisitions in one generation; three samples per size",
+    "native_reference": "previous separate received and reconstruction decoding; retained test helper only",
+    "conversion_reference": "previous full coordinate validation and snapshot conversion; excludes old downstream owned snapshot copies",
+    "conversion_new": "includes one full conversion, content admission/hash, 99 reused conversions, 100 fresh receipt/observation records",
+    "handler_comparison": "same production handlers and mock JSON bridge fixture as the previous measurement; mocks do not expose native world/reconstruction generations",
+    "world_writes": 0,
+    "live_process_restarted": false,
+    "live_native_improvement_measured": false,
+    "cache_limits": {
+      "regions": 16,
+      "cells": 65536
+    },
+    "invalidation": "global received and reconstructed revisions; issue/recovery always invalidate",
+    "duration_semantics": "inclusive wall time; parent/child phase durations must not be added"
+  },
+  "native_materialization": [
+    {
+      "sample": 1,
+      "cells": 720,
+      "acquisitions": 100,
+      "previous_materialized_cells": 72000,
+      "shared_materialized_cells": 720,
+      "previous_ms": 120.584888,
+      "shared_ms": 0.764501
+    },
+    {
+      "sample": 2,
+      "cells": 720,
+      "acquisitions": 100,
+      "previous_materialized_cells": 72000,
+      "shared_materialized_cells": 720,
+      "previous_ms": 120.159654,
+      "shared_ms": 0.7559640000000001
+    },
+    {
+      "sample": 3,
+      "cells": 720,
+      "acquisitions": 100,
+      "previous_materialized_cells": 72000,
+      "shared_materialized_cells": 720,
+      "previous_ms": 123.62800899999999,
+      "shared_ms": 0.756926
+    },
+    {
+      "sample": 1,
+      "cells": 4096,
+      "acquisitions": 100,
+      "previous_materialized_cells": 409600,
+      "shared_materialized_cells": 4096,
+      "previous_ms": 700.413946,
+      "shared_ms": 3.977171
+    },
+    {
+      "sample": 2,
+      "cells": 4096,
+      "acquisitions": 100,
+      "previous_materialized_cells": 409600,
+      "shared_materialized_cells": 4096,
+      "previous_ms": 713.688318,
+      "shared_ms": 4.068698
+    },
+    {
+      "sample": 3,
+      "cells": 4096,
+      "acquisitions": 100,
+      "previous_materialized_cells": 409600,
+      "shared_materialized_cells": 4096,
+      "previous_ms": 696.608648,
+      "shared_ms": 3.9892749999999997
+    }
+  ],
+  "native_conversion_and_content_sharing": [
+    {
+      "acquisitions": 100,
+      "cache_hits": 99,
+      "cells": 720,
+      "first_shared_ms": 2.7758950000000002,
+      "previous_ms": 101.18828500000001,
+      "sample": 1,
+      "shared_materialized_cells": 720,
+      "shared_ms": 3.069834
+    },
+    {
+      "acquisitions": 100,
+      "cache_hits": 99,
+      "cells": 720,
+      "first_shared_ms": 2.6354130000000002,
+      "previous_ms": 100.972287,
+      "sample": 2,
+      "shared_materialized_cells": 720,
+      "shared_ms": 2.889344
+    },
+    {
+      "acquisitions": 100,
+      "cache_hits": 99,
+      "cells": 720,
+      "first_shared_ms": 2.4966939999999997,
+      "previous_ms": 100.780174,
+      "sample": 3,
+      "shared_materialized_cells": 720,
+      "shared_ms": 2.7488420000000002
+    },
+    {
+      "acquisitions": 100,
+      "cache_hits": 99,
+      "cells": 4096,
+      "first_shared_ms": 16.385436,
+      "previous_ms": 723.729284,
+      "sample": 1,
+      "shared_materialized_cells": 4096,
+      "shared_ms": 16.695166
+    },
+    {
+      "acquisitions": 100,
+      "cache_hits": 99,
+      "cells": 4096,
+      "first_shared_ms": 16.158437000000003,
+      "previous_ms": 681.855958,
+      "sample": 2,
+      "shared_materialized_cells": 4096,
+      "shared_ms": 16.447867000000002
+    },
+    {
+      "acquisitions": 100,
+      "cache_hits": 99,
+      "cells": 4096,
+      "first_shared_ms": 15.169332,
+      "previous_ms": 670.1878449999999,
+      "sample": 3,
+      "shared_materialized_cells": 4096,
+      "shared_ms": 15.408344
+    }
+  ],
+  "offline_handler_summary": [
+    {
+      "operation": "adaptive_interior",
+      "before_median_ms": 134.98962600000002,
+      "after_median_ms": 127.219478,
+      "after_content_intern_median_ms": 9.426542000000001,
+      "notes": "three samples; mock JSON transport/waits; native reuse is not exercised"
+    },
+    {
+      "operation": "adaptive_boundary",
+      "before_median_ms": 1068.007604,
+      "after_median_ms": 965.6583979999999,
+      "after_content_intern_median_ms": 74.43859900000001,
+      "notes": "three samples; mock JSON transport/waits; native reuse is not exercised"
+    },
+    {
+      "operation": "explicit_region",
+      "before_median_ms": 11.70565,
+      "after_median_ms": 11.116805000000001,
+      "after_content_intern_median_ms": 0.720374,
+      "notes": "three samples; mock JSON transport/waits; native reuse is not exercised"
+    },
+    {
+      "operation": "revision",
+      "before_median_ms": 17.8201965,
+      "after_median_ms": 15.947193,
+      "after_content_intern_median_ms": 0.0,
+      "notes": "warm samples only"
+    },
+    {
+      "operation": "plan",
+      "before_median_ms": 87.98355,
+      "after_median_ms": 81.97214799999999,
+      "after_content_intern_median_ms": 4.6125929999999995,
+      "notes": "three samples; mock JSON transport/waits; native reuse is not exercised"
+    },
+    {
+      "operation": "preview",
+      "before_median_ms": 46.73994,
+      "after_median_ms": 43.237037,
+      "after_content_intern_median_ms": 3.033694,
+      "notes": "three samples; mock JSON transport/waits; native reuse is not exercised"
+    },
+    {
+      "operation": "apply_mock_only",
+      "before_median_ms": 225.69978500000002,
+      "after_median_ms": 236.384477,
+      "after_content_intern_median_ms": 9.080102,
+      "notes": "three samples; mock JSON transport/waits; native reuse is not exercised"
+    }
+  ],
+  "offline_handler_samples": [
+    {
+      "schema": "dustroute.performance.v1",
+      "operation": "adaptive_interior_1",
+      "elapsed_ms": 141.939809,
+      "debug_assertions": true,
+      "phases": {
+        "content_intern": {
+          "calls": 2,
+          "elapsed_ms": 8.962373,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 4221,
+          "cache_hits": 0
+        },
+        "discovery_merge": {
+          "calls": 3,
+          "elapsed_ms": 6.068058000000001,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "discovery_neighbors": {
+          "calls": 4,
+          "elapsed_ms": 0.034417,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "gaze": {
+          "calls": 1,
+          "elapsed_ms": 0.605402,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "response_encode": {
+          "calls": 1,
+          "elapsed_ms": 0.16774499999999998,
+          "cells": 0,
+          "bytes": 2897,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "scan": {
+          "calls": 2,
+          "elapsed_ms": 133.898059,
+          "cells": 4221,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        }
+      }
+    },
+    {
+      "schema": "dustroute.performance.v1",
+      "operation": "adaptive_boundary_1",
+      "elapsed_ms": 965.6583979999999,
+      "debug_assertions": true,
+      "phases": {
+        "content_intern": {
+          "calls": 9,
+          "elapsed_ms": 74.43859900000001,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 32893,
+          "cache_hits": 0
+        },
+        "discovery_merge": {
+          "calls": 10,
+          "elapsed_ms": 49.813794,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "discovery_neighbors": {
+          "calls": 4,
+          "elapsed_ms": 0.032622,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "gaze": {
+          "calls": 1,
+          "elapsed_ms": 0.48555000000000004,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "response_encode": {
+          "calls": 1,
+          "elapsed_ms": 0.153007,
+          "cells": 0,
+          "bytes": 2871,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "scan": {
+          "calls": 9,
+          "elapsed_ms": 909.855098,
+          "cells": 32893,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        }
+      }
+    },
+    {
+      "schema": "dustroute.performance.v1",
+      "operation": "explicit_region_1",
+      "elapsed_ms": 10.198066,
+      "debug_assertions": true,
+      "phases": {
+        "content_intern": {
+          "calls": 1,
+          "elapsed_ms": 0.7034520000000001,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 336,
+          "cache_hits": 0
+        },
+        "gaze": {
+          "calls": 1,
+          "elapsed_ms": 0.501952,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "response_encode": {
+          "calls": 1,
+          "elapsed_ms": 0.18567,
+          "cells": 0,
+          "bytes": 3761,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "scan": {
+          "calls": 1,
+          "elapsed_ms": 8.688062,
+          "cells": 336,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        }
+      }
+    },
+    {
+      "schema": "dustroute.performance.v1",
+      "operation": "revision_1",
+      "elapsed_ms": 1309.514466,
+      "debug_assertions": true,
+      "phases": {
+        "file_rename": {
+          "calls": 1,
+          "elapsed_ms": 0.02069,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "file_write": {
+          "calls": 1,
+          "elapsed_ms": 0.041079,
+          "cells": 0,
+          "bytes": 34835,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "model_proof": {
+          "calls": 1,
+          "elapsed_ms": 1260.556552,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "response_encode": {
+          "calls": 1,
+          "elapsed_ms": 0.489968,
+          "cells": 0,
+          "bytes": 11317,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "static_validation": {
+          "calls": 2,
+          "elapsed_ms": 27.249721,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "store_encode": {
+          "calls": 1,
+          "elapsed_ms": 3.374464,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        }
+      }
+    },
+    {
+      "schema": "dustroute.performance.v1",
+      "operation": "plan_1",
+      "elapsed_ms": 79.019701,
+      "debug_assertions": true,
+      "phases": {
+        "content_intern": {
+          "calls": 3,
+          "elapsed_ms": 4.525062,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 2160,
+          "cache_hits": 0
+        },
+        "model_proof": {
+          "calls": 1,
+          "elapsed_ms": 8.133509,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "model_queue": {
+          "calls": 1,
+          "elapsed_ms": 0.248681,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "response_encode": {
+          "calls": 1,
+          "elapsed_ms": 0.55798,
+          "cells": 0,
+          "bytes": 12961,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "scan": {
+          "calls": 3,
+          "elapsed_ms": 58.14168600000001,
+          "cells": 2160,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "status": {
+          "calls": 4,
+          "elapsed_ms": 2.233425,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "store_read": {
+          "calls": 1,
+          "elapsed_ms": 3.565905,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "wait": {
+          "calls": 1,
+          "elapsed_ms": 0.551598,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 20,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        }
+      }
+    },
+    {
+      "schema": "dustroute.performance.v1",
+      "operation": "preview_1",
+      "elapsed_ms": 44.535661999999995,
+      "debug_assertions": true,
+      "phases": {
+        "content_intern": {
+          "calls": 2,
+          "elapsed_ms": 3.033694,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 1440,
+          "cache_hits": 0
+        },
+        "preview": {
+          "calls": 1,
+          "elapsed_ms": 0.5011,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "response_encode": {
+          "calls": 1,
+          "elapsed_ms": 0.5730999999999999,
+          "cells": 0,
+          "bytes": 13007,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "scan": {
+          "calls": 2,
+          "elapsed_ms": 39.776407,
+          "cells": 1440,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "status": {
+          "calls": 3,
+          "elapsed_ms": 1.348491,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "wait": {
+          "calls": 1,
+          "elapsed_ms": 0.471874,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 20,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        }
+      }
+    },
+    {
+      "schema": "dustroute.performance.v1",
+      "operation": "apply_mock_only_1",
+      "elapsed_ms": 236.384477,
+      "debug_assertions": true,
+      "phases": {
+        "checkpoint": {
+          "calls": 6,
+          "elapsed_ms": 61.770331,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "content_intern": {
+          "calls": 6,
+          "elapsed_ms": 9.241432,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 4320,
+          "cache_hits": 0
+        },
+        "directory_sync": {
+          "calls": 8,
+          "elapsed_ms": 57.17929399999999,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "file_rename": {
+          "calls": 8,
+          "elapsed_ms": 0.756917,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "file_sync": {
+          "calls": 8,
+          "elapsed_ms": 35.389784,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "file_write": {
+          "calls": 8,
+          "elapsed_ms": 0.21343399999999998,
+          "cells": 0,
+          "bytes": 35900,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "model_proof": {
+          "calls": 1,
+          "elapsed_ms": 3.7118770000000003,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "model_queue": {
+          "calls": 1,
+          "elapsed_ms": 0.04607,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "mutation_queue": {
+          "calls": 1,
+          "elapsed_ms": 0.0025849999999999996,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "response_encode": {
+          "calls": 1,
+          "elapsed_ms": 0.035148000000000006,
+          "cells": 0,
+          "bytes": 317,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "scan": {
+          "calls": 6,
+          "elapsed_ms": 119.193757,
+          "cells": 4320,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "status": {
+          "calls": 7,
+          "elapsed_ms": 4.21302,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "store_encode": {
+          "calls": 8,
+          "elapsed_ms": 2.261369,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "store_read": {
+          "calls": 9,
+          "elapsed_ms": 2.398255,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "wait": {
+          "calls": 3,
+          "elapsed_ms": 1.2723840000000002,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 28,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "write": {
+          "calls": 2,
+          "elapsed_ms": 2.931577,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 2,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        }
+      }
+    },
+    {
+      "schema": "dustroute.performance.v1",
+      "operation": "adaptive_interior_2",
+      "elapsed_ms": 125.82454600000001,
+      "debug_assertions": true,
+      "phases": {
+        "content_intern": {
+          "calls": 2,
+          "elapsed_ms": 9.426542000000001,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 4221,
+          "cache_hits": 0
+        },
+        "discovery_merge": {
+          "calls": 3,
+          "elapsed_ms": 5.868221999999999,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "discovery_neighbors": {
+          "calls": 4,
+          "elapsed_ms": 0.03098,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "gaze": {
+          "calls": 1,
+          "elapsed_ms": 0.531008,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "response_encode": {
+          "calls": 1,
+          "elapsed_ms": 0.152866,
+          "cells": 0,
+          "bytes": 2897,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "scan": {
+          "calls": 2,
+          "elapsed_ms": 118.181899,
+          "cells": 4221,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        }
+      }
+    },
+    {
+      "schema": "dustroute.performance.v1",
+      "operation": "adaptive_boundary_2",
+      "elapsed_ms": 960.046071,
+      "debug_assertions": true,
+      "phases": {
+        "content_intern": {
+          "calls": 9,
+          "elapsed_ms": 72.783496,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 32893,
+          "cache_hits": 0
+        },
+        "discovery_merge": {
+          "calls": 10,
+          "elapsed_ms": 50.4996,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "discovery_neighbors": {
+          "calls": 4,
+          "elapsed_ms": 0.036350999999999994,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "gaze": {
+          "calls": 1,
+          "elapsed_ms": 0.513143,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "response_encode": {
+          "calls": 1,
+          "elapsed_ms": 0.15494,
+          "cells": 0,
+          "bytes": 2871,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "scan": {
+          "calls": 9,
+          "elapsed_ms": 902.631011,
+          "cells": 32893,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        }
+      }
+    },
+    {
+      "schema": "dustroute.performance.v1",
+      "operation": "explicit_region_2",
+      "elapsed_ms": 11.276153,
+      "debug_assertions": true,
+      "phases": {
+        "content_intern": {
+          "calls": 1,
+          "elapsed_ms": 0.720374,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 336,
+          "cache_hits": 0
+        },
+        "gaze": {
+          "calls": 1,
+          "elapsed_ms": 0.5692619999999999,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "response_encode": {
+          "calls": 1,
+          "elapsed_ms": 0.187794,
+          "cells": 0,
+          "bytes": 3761,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "scan": {
+          "calls": 1,
+          "elapsed_ms": 9.687156,
+          "cells": 336,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        }
+      }
+    },
+    {
+      "schema": "dustroute.performance.v1",
+      "operation": "revision_2",
+      "elapsed_ms": 15.883555000000001,
+      "debug_assertions": true,
+      "phases": {
+        "file_rename": {
+          "calls": 1,
+          "elapsed_ms": 0.024596999999999997,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "file_write": {
+          "calls": 1,
+          "elapsed_ms": 0.060858,
+          "cells": 0,
+          "bytes": 34835,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "model_proof": {
+          "calls": 1,
+          "elapsed_ms": 5.680108,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "response_encode": {
+          "calls": 1,
+          "elapsed_ms": 0.5201370000000001,
+          "cells": 0,
+          "bytes": 11317,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "static_validation": {
+          "calls": 2,
+          "elapsed_ms": 2.4106680000000003,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "store_encode": {
+          "calls": 1,
+          "elapsed_ms": 3.745843,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        }
+      }
+    },
+    {
+      "schema": "dustroute.performance.v1",
+      "operation": "plan_2",
+      "elapsed_ms": 92.208518,
+      "debug_assertions": true,
+      "phases": {
+        "content_intern": {
+          "calls": 3,
+          "elapsed_ms": 4.883454,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 2160,
+          "cache_hits": 0
+        },
+        "model_proof": {
+          "calls": 1,
+          "elapsed_ms": 9.85422,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "model_queue": {
+          "calls": 1,
+          "elapsed_ms": 0.08140800000000001,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "response_encode": {
+          "calls": 1,
+          "elapsed_ms": 0.560836,
+          "cells": 0,
+          "bytes": 12961,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "scan": {
+          "calls": 3,
+          "elapsed_ms": 66.017766,
+          "cells": 2160,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "status": {
+          "calls": 4,
+          "elapsed_ms": 2.480823,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "store_read": {
+          "calls": 1,
+          "elapsed_ms": 5.895615,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "wait": {
+          "calls": 1,
+          "elapsed_ms": 0.46856699999999996,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 20,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        }
+      }
+    },
+    {
+      "schema": "dustroute.performance.v1",
+      "operation": "preview_2",
+      "elapsed_ms": 43.237037,
+      "debug_assertions": true,
+      "phases": {
+        "content_intern": {
+          "calls": 2,
+          "elapsed_ms": 3.094773,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 1440,
+          "cache_hits": 0
+        },
+        "preview": {
+          "calls": 1,
+          "elapsed_ms": 0.270123,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "response_encode": {
+          "calls": 1,
+          "elapsed_ms": 0.6019260000000001,
+          "cells": 0,
+          "bytes": 13007,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "scan": {
+          "calls": 2,
+          "elapsed_ms": 39.000865000000005,
+          "cells": 1440,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "status": {
+          "calls": 3,
+          "elapsed_ms": 1.173212,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "wait": {
+          "calls": 1,
+          "elapsed_ms": 0.474088,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 20,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        }
+      }
+    },
+    {
+      "schema": "dustroute.performance.v1",
+      "operation": "apply_mock_only_2",
+      "elapsed_ms": 210.178276,
+      "debug_assertions": true,
+      "phases": {
+        "checkpoint": {
+          "calls": 6,
+          "elapsed_ms": 51.988652,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "content_intern": {
+          "calls": 6,
+          "elapsed_ms": 8.864603,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 4320,
+          "cache_hits": 0
+        },
+        "directory_sync": {
+          "calls": 8,
+          "elapsed_ms": 41.079843000000004,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "file_rename": {
+          "calls": 8,
+          "elapsed_ms": 0.712149,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "file_sync": {
+          "calls": 8,
+          "elapsed_ms": 25.122033,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "file_write": {
+          "calls": 8,
+          "elapsed_ms": 0.22366400000000003,
+          "cells": 0,
+          "bytes": 35900,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "model_proof": {
+          "calls": 1,
+          "elapsed_ms": 4.455768,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "model_queue": {
+          "calls": 1,
+          "elapsed_ms": 0.06731000000000001,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "mutation_queue": {
+          "calls": 1,
+          "elapsed_ms": 0.003577,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "response_encode": {
+          "calls": 1,
+          "elapsed_ms": 0.041089,
+          "cells": 0,
+          "bytes": 317,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "scan": {
+          "calls": 6,
+          "elapsed_ms": 116.949452,
+          "cells": 4320,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "status": {
+          "calls": 7,
+          "elapsed_ms": 4.551371,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "store_encode": {
+          "calls": 8,
+          "elapsed_ms": 2.441859,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "store_read": {
+          "calls": 9,
+          "elapsed_ms": 2.557923,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "wait": {
+          "calls": 3,
+          "elapsed_ms": 1.334533,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 28,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "write": {
+          "calls": 2,
+          "elapsed_ms": 3.284179,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 2,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        }
+      }
+    },
+    {
+      "schema": "dustroute.performance.v1",
+      "operation": "adaptive_interior_3",
+      "elapsed_ms": 127.219478,
+      "debug_assertions": true,
+      "phases": {
+        "content_intern": {
+          "calls": 2,
+          "elapsed_ms": 9.859029999999999,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 4221,
+          "cache_hits": 0
+        },
+        "discovery_merge": {
+          "calls": 3,
+          "elapsed_ms": 5.956794,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "discovery_neighbors": {
+          "calls": 4,
+          "elapsed_ms": 0.033825,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "gaze": {
+          "calls": 1,
+          "elapsed_ms": 0.572779,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "response_encode": {
+          "calls": 1,
+          "elapsed_ms": 0.158136,
+          "cells": 0,
+          "bytes": 2897,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "scan": {
+          "calls": 2,
+          "elapsed_ms": 119.329911,
+          "cells": 4221,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        }
+      }
+    },
+    {
+      "schema": "dustroute.performance.v1",
+      "operation": "adaptive_boundary_3",
+      "elapsed_ms": 979.309289,
+      "debug_assertions": true,
+      "phases": {
+        "content_intern": {
+          "calls": 9,
+          "elapsed_ms": 75.952764,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 32893,
+          "cache_hits": 0
+        },
+        "discovery_merge": {
+          "calls": 10,
+          "elapsed_ms": 51.32168099999999,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "discovery_neighbors": {
+          "calls": 4,
+          "elapsed_ms": 0.03672,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "gaze": {
+          "calls": 1,
+          "elapsed_ms": 0.623297,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "response_encode": {
+          "calls": 1,
+          "elapsed_ms": 0.16518,
+          "cells": 0,
+          "bytes": 2871,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "scan": {
+          "calls": 9,
+          "elapsed_ms": 921.3561689999999,
+          "cells": 32893,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        }
+      }
+    },
+    {
+      "schema": "dustroute.performance.v1",
+      "operation": "explicit_region_3",
+      "elapsed_ms": 11.116805000000001,
+      "debug_assertions": true,
+      "phases": {
+        "content_intern": {
+          "calls": 1,
+          "elapsed_ms": 0.730745,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 336,
+          "cache_hits": 0
+        },
+        "gaze": {
+          "calls": 1,
+          "elapsed_ms": 0.565665,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "response_encode": {
+          "calls": 1,
+          "elapsed_ms": 0.202572,
+          "cells": 0,
+          "bytes": 3761,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "scan": {
+          "calls": 1,
+          "elapsed_ms": 9.410561,
+          "cells": 336,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        }
+      }
+    },
+    {
+      "schema": "dustroute.performance.v1",
+      "operation": "revision_3",
+      "elapsed_ms": 16.010831,
+      "debug_assertions": true,
+      "phases": {
+        "file_rename": {
+          "calls": 1,
+          "elapsed_ms": 0.022774,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "file_write": {
+          "calls": 1,
+          "elapsed_ms": 0.043435,
+          "cells": 0,
+          "bytes": 34835,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "model_proof": {
+          "calls": 1,
+          "elapsed_ms": 5.602448000000001,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "response_encode": {
+          "calls": 1,
+          "elapsed_ms": 0.49639099999999997,
+          "cells": 0,
+          "bytes": 11317,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "static_validation": {
+          "calls": 2,
+          "elapsed_ms": 2.558473,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "store_encode": {
+          "calls": 1,
+          "elapsed_ms": 3.663453,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        }
+      }
+    },
+    {
+      "schema": "dustroute.performance.v1",
+      "operation": "plan_3",
+      "elapsed_ms": 81.97214799999999,
+      "debug_assertions": true,
+      "phases": {
+        "content_intern": {
+          "calls": 3,
+          "elapsed_ms": 4.6125929999999995,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 2160,
+          "cache_hits": 0
+        },
+        "model_proof": {
+          "calls": 1,
+          "elapsed_ms": 8.137627,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "model_queue": {
+          "calls": 1,
+          "elapsed_ms": 0.08378200000000001,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "response_encode": {
+          "calls": 1,
+          "elapsed_ms": 0.5533410000000001,
+          "cells": 0,
+          "bytes": 12961,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "scan": {
+          "calls": 3,
+          "elapsed_ms": 60.965484,
+          "cells": 2160,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "status": {
+          "calls": 4,
+          "elapsed_ms": 2.304732,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "store_read": {
+          "calls": 1,
+          "elapsed_ms": 3.6979,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "wait": {
+          "calls": 1,
+          "elapsed_ms": 0.48966799999999994,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 20,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        }
+      }
+    },
+    {
+      "schema": "dustroute.performance.v1",
+      "operation": "preview_3",
+      "elapsed_ms": 43.028333,
+      "debug_assertions": true,
+      "phases": {
+        "content_intern": {
+          "calls": 2,
+          "elapsed_ms": 3.0088749999999997,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 1440,
+          "cache_hits": 0
+        },
+        "preview": {
+          "calls": 1,
+          "elapsed_ms": 0.276866,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "response_encode": {
+          "calls": 1,
+          "elapsed_ms": 0.576276,
+          "cells": 0,
+          "bytes": 13007,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "scan": {
+          "calls": 2,
+          "elapsed_ms": 38.670044000000004,
+          "cells": 1440,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "status": {
+          "calls": 3,
+          "elapsed_ms": 1.244128,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "wait": {
+          "calls": 1,
+          "elapsed_ms": 0.492744,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 20,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        }
+      }
+    },
+    {
+      "schema": "dustroute.performance.v1",
+      "operation": "apply_mock_only_3",
+      "elapsed_ms": 494.192165,
+      "debug_assertions": true,
+      "phases": {
+        "checkpoint": {
+          "calls": 6,
+          "elapsed_ms": 62.721534,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "content_intern": {
+          "calls": 6,
+          "elapsed_ms": 9.080102,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 4320,
+          "cache_hits": 0
+        },
+        "directory_sync": {
+          "calls": 8,
+          "elapsed_ms": 40.231757,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "file_rename": {
+          "calls": 8,
+          "elapsed_ms": 0.707731,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "file_sync": {
+          "calls": 8,
+          "elapsed_ms": 305.378227,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "file_write": {
+          "calls": 8,
+          "elapsed_ms": 0.228162,
+          "cells": 0,
+          "bytes": 35900,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "model_proof": {
+          "calls": 1,
+          "elapsed_ms": 4.294966,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "model_queue": {
+          "calls": 1,
+          "elapsed_ms": 0.074755,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "mutation_queue": {
+          "calls": 1,
+          "elapsed_ms": 0.002114,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "response_encode": {
+          "calls": 1,
+          "elapsed_ms": 0.058884,
+          "cells": 0,
+          "bytes": 317,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "scan": {
+          "calls": 6,
+          "elapsed_ms": 121.643773,
+          "cells": 4320,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "status": {
+          "calls": 7,
+          "elapsed_ms": 4.331026,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "store_encode": {
+          "calls": 8,
+          "elapsed_ms": 2.5305299999999997,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "store_read": {
+          "calls": 9,
+          "elapsed_ms": 2.4898990000000003,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "wait": {
+          "calls": 3,
+          "elapsed_ms": 1.5658729999999998,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 28,
+          "commands": 0,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        },
+        "write": {
+          "calls": 2,
+          "elapsed_ms": 3.212351,
+          "cells": 0,
+          "bytes": 0,
+          "requested_ticks": 0,
+          "commands": 2,
+          "materialized_cells": 0,
+          "cache_hits": 0
+        }
+      }
+    }
+  ],
+  "unchanged_native_wait_accounting": {
+    "ticks": 72,
+    "milliseconds": 3600,
+    "basis": "source-derived two-write workflow; not a live measurement"
+  },
+  "validation": {
+    "mcp_full_regression": {
+      "passed": 129,
+      "ignored": 3,
+      "seconds": 591.45,
+      "note": "before final hash encoding and key refinements; affected/new paths checked subsequently"
+    },
+    "mcp_new_tests_after_regression": 5,
+    "voxrig_full": {
+      "passed": 124,
+      "ignored": 1,
+      "seconds": 17.38
+    },
+    "native_mcp_clippy_all_targets": "passed",
+    "voxrig_clippy_lib_tests": "passed",
+    "mcp_targeted_content_cases": 6,
+    "mcp_targeted_native_conversion_cases": 6,
+    "mcp_targeted_owner_expiry_cases": 1,
+    "mcp_targeted_mixed_ir_workflow_cases": 1,
+    "default_mcp_check_all_targets": "passed"
+  },
+  "limits": [
+    "First admission has new hashing cost; warm repeat ratios do not predict one-shot latency.",
+    "Global unrelated updates invalidate reuse; no dirty-section optimization yet.",
+    "Different or overlapping bounds have different native region entries.",
+    "The legacy JSON transport needs fresh requests and hashing; no receive-generation reuse.",
+    "Model proof results are not cached; persisted passes remain non-authoritative.",
+    "Running MCP uses older code; no updated live-server timing exists."
+  ]
+}

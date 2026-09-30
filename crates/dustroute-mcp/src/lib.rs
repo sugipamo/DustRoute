@@ -17,6 +17,7 @@ pub mod policy;
 mod revision;
 pub mod selection;
 pub mod service;
+pub mod snapshot_content;
 mod source_identity;
 mod state;
 mod storage;

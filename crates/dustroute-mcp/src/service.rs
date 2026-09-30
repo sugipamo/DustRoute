@@ -1,7 +1,5 @@
 use crate::bridge_protocol::CommandWrite;
-use std::collections::hash_map::DefaultHasher;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
-use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 mod assembly_placement;
@@ -217,7 +215,7 @@ struct StoredCircuit {
     dimension: String,
     bounds: dustroute_translate::world_reverse::RegionBounds,
     target: Option<Pos>,
-    snapshot: dustroute_translate::snapshot::MinecraftSnapshot,
+    snapshot: crate::snapshot_content::SharedSnapshot,
     expansion: Value,
     complete: bool,
     expires_at: Instant,
@@ -1062,6 +1060,7 @@ impl DustRouteMcp {
         );
         let expansion = json!({"strategy":"explicit_work_region","limit_reached":false,
             "scope":"complete requested cuboid; circuit and movement may extend beyond it"});
+        let content_id = snapshot.id();
         let circuit_id = self
             .store_circuit(StoredCircuit {
                 player: player.into(),
@@ -1075,6 +1074,8 @@ impl DustRouteMcp {
             })
             .await;
         result["circuit_id"] = json!(circuit_id);
+        result["content_id"] = json!(content_id);
+        result["observation_id"] = json!(record.observation_id);
         result["circuit_expires_in_seconds"] = json!(CIRCUIT_SNAPSHOT_TTL.as_secs());
         result["player_observation"] = json!(observation);
         result["readback"] = json!(record.readback);
@@ -1149,7 +1150,7 @@ impl DustRouteMcp {
         let (bounds, dimension) = self.selected_region(player).await?;
         let snapshot = self
             .bridge
-            .scan_region(bounds.min, bounds.max, &dimension)
+            .scan_region_shared(bounds.min, bounds.max, &dimension)
             .await
             .map_err(|error| error.to_string())?;
         let complete = !discovery.expansion.limit_reached;
@@ -1703,6 +1704,7 @@ impl DustRouteMcp {
             "analysis_mode": "focused_fast",
             "mechanisms": mechanisms,
             "circuit_id": circuit_id,
+            "content_id": snapshot.id(),
             "circuit_expires_in_seconds": CIRCUIT_SNAPSHOT_TTL.as_secs(),
             "mutation_performed": false,
             "target": target,
@@ -1746,13 +1748,13 @@ impl DustRouteMcp {
         let bounds = circuit.bounds;
         let dimension = circuit.dimension;
         let snapshot = circuit.snapshot;
-        let snapshot_json = match serde_json::to_string(&snapshot) {
-            Ok(snapshot) => snapshot,
-            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
-        };
-        let mut analysis_hasher = DefaultHasher::new();
-        snapshot_json.hash(&mut analysis_hasher);
-        let analysis_id = format!("{:016x}", analysis_hasher.finish());
+        let context = dustroute_translate::world::execution_context::WorldExecutionContext::for_profile(
+            dustroute_translate::world::execution_context::WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V19,
+        );
+        let analysis_id = crate::snapshot_content::ValidationKey::new(
+            &[snapshot.id()], &context,
+            json!({"scope":"static_mixed_ir.v1","dimension":dimension,"bounds":bounds_json(bounds),"complete":circuit.complete}),
+        ).to_string();
         if params.node_id.is_some() && params.analysis_id.as_deref() != Some(analysis_id.as_str()) {
             return json_text(json!({
                 "ok": false,
@@ -1786,6 +1788,7 @@ impl DustRouteMcp {
             "ok": true,
             "analysis_mode": "mixed_ir",
             "circuit_id": circuit_id,
+            "content_id": snapshot.id(),
             "analysis_id": analysis_id,
             "mutation_performed": false,
             "target": target,
@@ -1865,11 +1868,11 @@ impl DustRouteMcp {
             let (base_observation_id,parents,dimension,target,complete,baseline,base_snapshot,parent_assembly)=match (params.circuit_id.as_deref(),params.revision_id.as_deref()) {
                 (Some(id),None)=>{
                     let (id,c)=self.load_circuit(id,&player).await?;
-                    (id,vec![],c.dimension,c.target,c.complete,c.snapshot.clone(),Some(c.snapshot),None)
+                    (id,vec![],c.dimension,c.target,c.complete,c.snapshot.clone(),Some(c.snapshot.to_owned_snapshot()),None)
                 },
                 (None,Some(id))=>{
                     let r=self.load_revision(id,&player)?;
-                    (r.base_observation_id,vec![r.revision_id],r.dimension,r.target,r.complete,r.snapshot,r.base_snapshot,r.assembly)
+                    (r.base_observation_id,vec![r.revision_id],r.dimension,r.target,r.complete,self.bridge.share_snapshot(r.snapshot)?,r.base_snapshot,r.assembly)
                 },
                 _=>return Err("provide exactly one of circuit_id or revision_id".into()),
             };
@@ -2725,7 +2728,7 @@ impl DustRouteMcp {
             Ok(preview) => {
                 let snapshot = match self
                     .bridge
-                    .scan_region(bounds.min, bounds.max, &dimension)
+                    .scan_region_shared(bounds.min, bounds.max, &dimension)
                     .await
                 {
                     Ok(snapshot) => snapshot,
@@ -2781,7 +2784,7 @@ impl DustRouteMcp {
         }
         let snapshot = match self
             .bridge
-            .scan_region(bounds.min, bounds.max, &dimension)
+            .scan_region_shared(bounds.min, bounds.max, &dimension)
             .await
         {
             Ok(snapshot) => snapshot,
@@ -6680,7 +6683,7 @@ mod tests {
                         snapshot.max,
                     ),
                     target: None,
-                    snapshot,
+                    snapshot: service.bridge.share_snapshot(snapshot).unwrap(),
                     expansion: json!({}),
                     complete: true,
                     expires_at: Instant::now() + Duration::from_secs(300),
@@ -6812,7 +6815,7 @@ mod tests {
                     snapshot.max,
                 ),
                 target: None,
-                snapshot: snapshot.clone(),
+                snapshot: service.bridge.share_snapshot(snapshot.clone()).unwrap(),
                 expansion: json!({}),
                 complete: true,
                 expires_at: Instant::now() + Duration::from_secs(300),
@@ -6881,7 +6884,8 @@ mod tests {
                 .await
                 .unwrap()
                 .1
-                .snapshot,
+                .snapshot
+                .to_owned_snapshot(),
             snapshot
         );
         assert!(service.plans.placements().lock().await.is_empty());
@@ -7355,7 +7359,7 @@ mod tests {
                     dimension: "minecraft:overworld".into(),
                     bounds,
                     target: None,
-                    snapshot,
+                    snapshot: service.bridge.share_snapshot(snapshot).unwrap(),
                     expansion: json!({}),
                     complete: true,
                     expires_at: Instant::now() + std::time::Duration::from_secs(300),

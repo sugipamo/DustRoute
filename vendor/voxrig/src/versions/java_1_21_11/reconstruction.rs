@@ -217,9 +217,9 @@ pub struct ClientBlock {
 }
 /// A client view and its independently retained received-packet snapshot.
 #[derive(Clone, Debug, serde::Serialize)]
-pub struct ClientObservation {
+pub struct ClientObservation<B = Vec<ClientBlock>, R = Observation> {
     /// Original cache; never overwritten by local calculations.
-    pub received: Observation,
+    pub received: R,
     /// Current dimension identity.
     pub dimension: String,
     /// Local simulation frame, not a server game tick.
@@ -227,12 +227,72 @@ pub struct ClientObservation {
     /// Local world-effects revision.
     pub client_revision: u64,
     /// Client states for the same region.
-    pub blocks: Vec<ClientBlock>,
+    pub blocks: B,
     /// First unresolved effect in this dimension.
     pub issue: Option<ReconstructionIssue>,
     /// Full chunk snapshots still required before invalidated local effects can recover.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub recovery_chunks: Vec<[i32; 2]>,
+}
+
+/// An observation whose cell arrays are immutable and shared. Metadata stays per observation.
+pub type SharedClientObservation = ClientObservation<
+    std::sync::Arc<[ClientBlock]>,
+    Observation<std::sync::Arc<[crate::ObservedBlock]>>,
+>;
+
+/// Acquisition work, separate from the serialized observation evidence.
+#[derive(Clone, Debug)]
+pub struct SharedClientRegion {
+    /// Fresh boundary with shared immutable cells.
+    pub observation: SharedClientObservation,
+    /// Cells decoded on this acquisition; zero means the generation was reused.
+    pub materialized_cells: usize,
+}
+
+impl SharedClientObservation {
+    /// Compatibility conversion for consumers requiring owned vectors.
+    pub fn into_owned(self) -> ClientObservation {
+        ClientObservation {
+            received: Observation {
+                version: self.received.version,
+                connection_id: self.received.connection_id,
+                revision: self.received.revision,
+                receive_sequence: self.received.receive_sequence,
+                captured_at: self.received.captured_at,
+                region: self.received.region,
+                blocks: self.received.blocks.as_ref().to_vec(),
+            },
+            dimension: self.dimension,
+            client_tick: self.client_tick,
+            client_revision: self.client_revision,
+            blocks: self.blocks.as_ref().to_vec(),
+            issue: self.issue,
+            recovery_chunks: self.recovery_chunks,
+        }
+    }
+}
+
+impl From<ClientObservation> for SharedClientObservation {
+    fn from(value: ClientObservation) -> Self {
+        ClientObservation {
+            received: Observation {
+                version: value.received.version,
+                connection_id: value.received.connection_id,
+                revision: value.received.revision,
+                receive_sequence: value.received.receive_sequence,
+                captured_at: value.received.captured_at,
+                region: value.received.region,
+                blocks: value.received.blocks.into(),
+            },
+            dimension: value.dimension,
+            client_tick: value.client_tick,
+            client_revision: value.client_revision,
+            blocks: value.blocks.into(),
+            issue: value.issue,
+            recovery_chunks: value.recovery_chunks,
+        }
+    }
 }
 
 #[derive(Clone, Default)]
@@ -250,6 +310,13 @@ pub(crate) struct Reconstruction {
 impl Reconstruction {
     pub fn cell(&self, world: &World, p: Pos) -> ClientBlock {
         let received = world.block(p).and_then(|id| super::native_state(id).ok());
+        self.cell_with_received(p, received)
+    }
+    pub(crate) fn cell_with_received(
+        &self,
+        p: Pos,
+        received: Option<NativeBlockState>,
+    ) -> ClientBlock {
         let unknown_carrier = self
             .overlay
             .get(&p)

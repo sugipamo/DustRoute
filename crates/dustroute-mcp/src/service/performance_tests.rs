@@ -15,6 +15,73 @@ fn emit(report: &crate::performance::Measurement) {
 }
 
 #[tokio::test]
+async fn shared_circuit_contents_keep_owner_and_expiry_authorization_separate() {
+    let service = DustRouteMcp::new("127.0.0.1:1");
+    let snapshot: dustroute_translate::snapshot::MinecraftSnapshot =
+        serde_json::from_value(super::electrical_edit_tests::machine()).unwrap();
+    let shared = service.bridge.share_snapshot(snapshot.clone()).unwrap();
+    let duplicate = service.bridge.share_snapshot(snapshot).unwrap();
+    assert!(shared.shares_storage_with(&duplicate));
+    let circuit = |player: &str, snapshot: crate::snapshot_content::SharedSnapshot, expires_at| {
+        StoredCircuit {
+            player: player.into(),
+            dimension: "minecraft:overworld".into(),
+            bounds: dustroute_translate::world_reverse::RegionBounds::new(
+                snapshot.min,
+                snapshot.max,
+            ),
+            target: None,
+            snapshot,
+            expansion: json!({}),
+            complete: true,
+            expires_at,
+        }
+    };
+    let alice = service
+        .store_circuit(circuit(
+            "Alice",
+            shared.clone(),
+            Instant::now() + Duration::from_secs(300),
+        ))
+        .await;
+    let bob = service
+        .store_circuit(circuit(
+            "Bob",
+            duplicate,
+            Instant::now() + Duration::from_secs(300),
+        ))
+        .await;
+    assert_ne!(alice, bob);
+    assert!(
+        service
+            .load_circuit(&alice.to_string(), "Bob")
+            .await
+            .is_err()
+    );
+    let alice = service
+        .load_circuit(&alice.to_string(), "Alice")
+        .await
+        .unwrap()
+        .1;
+    let bob = service
+        .load_circuit(&bob.to_string(), "Bob")
+        .await
+        .unwrap()
+        .1;
+    assert!(alice.snapshot.shares_storage_with(&bob.snapshot));
+    let expired = service
+        .store_circuit(circuit("Alice", shared, Instant::now()))
+        .await;
+    assert!(
+        service
+            .load_circuit(&expired.to_string(), "Alice")
+            .await
+            .is_err()
+    );
+    assert!(alice.snapshot.shares_storage_with(&bob.snapshot));
+}
+
+#[tokio::test]
 #[ignore = "run alone in a fresh process to separate cold Law compilation from warm execution"]
 async fn profile_law_initialization() {
     let initializers: [(&str, fn()); 6] = [

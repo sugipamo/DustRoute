@@ -93,7 +93,7 @@ pub struct ObservedBlock {
 
 /// Local state at one cache revision, bound to its version and connection.
 #[derive(Clone, Debug, serde::Serialize)]
-pub struct Observation {
+pub struct Observation<B = Vec<ObservedBlock>> {
     /// Exact version used to interpret registry IDs.
     pub version: MinecraftVersion,
     /// Process-local connection identity; revisions from different connections
@@ -109,7 +109,7 @@ pub struct Observation {
     /// Requested inclusive bounds.
     pub region: Region,
     /// Includes air and explicitly unavailable cells.
-    pub blocks: Vec<ObservedBlock>,
+    pub blocks: B,
 }
 
 #[derive(Clone)]
@@ -145,6 +145,20 @@ impl Client {
     ) -> Result<crate::versions::java_1_21_11::reconstruction::ClientObservation> {
         match &self.adapter {
             Adapter::Java1_21_11(bot) => bot.observe_client_region(region).await,
+            Adapter::Java1_16_1(_) => Err(Error::new(
+                ErrorKind::Unsupported,
+                anyhow::anyhow!("client piston reconstruction is not implemented for Java 1.16.1"),
+            )),
+        }
+    }
+    /// Shares immutable region cells within one receive/reconstruction generation.
+    /// Every call still captures a new receive boundary and local frame.
+    pub async fn observe_shared_client_region(
+        &self,
+        region: Region,
+    ) -> Result<crate::versions::java_1_21_11::reconstruction::SharedClientRegion> {
+        match &self.adapter {
+            Adapter::Java1_21_11(bot) => bot.observe_shared_client_region(region).await,
             Adapter::Java1_16_1(_) => Err(Error::new(
                 ErrorKind::Unsupported,
                 anyhow::anyhow!("client piston reconstruction is not implemented for Java 1.16.1"),

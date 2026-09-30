@@ -224,7 +224,11 @@ mod tests {
             .unwrap(),
             snapshot,
         };
-        FreshRegion::server(crate::bridge::ValidatedRegion::test_sample(record))
+        FreshRegion::server(
+            crate::bridge::ValidatedRegion::test_sample(record),
+            &crate::snapshot_content::SnapshotContents::default(),
+        )
+        .unwrap()
     }
     fn observation(outcome: ObservationOutcome) -> InstanceObservation {
         InstanceObservation {

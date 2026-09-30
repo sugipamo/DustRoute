@@ -13,6 +13,7 @@ pub(crate) enum Phase {
     Gaze,
     Status,
     Scan,
+    ContentIntern,
     #[cfg(feature = "voxrig")]
     NativeObserve,
     #[cfg(feature = "voxrig")]
@@ -44,6 +45,9 @@ pub struct PhaseMeasurement {
     pub bytes: u64,
     pub requested_ticks: u64,
     pub commands: u64,
+    /// Actual cell materialization/conversion, distinct from requested scan volume.
+    pub materialized_cells: u64,
+    pub cache_hits: u64,
 }
 
 #[derive(Serialize)]
@@ -139,6 +143,8 @@ pub(crate) struct Span {
     bytes: u64,
     ticks: u64,
     commands: u64,
+    materialized_cells: u64,
+    cache_hits: u64,
 }
 
 pub(crate) fn span(phase: Phase) -> Span {
@@ -152,10 +158,17 @@ pub(crate) fn span(phase: Phase) -> Span {
         bytes: 0,
         ticks: 0,
         commands: 0,
+        materialized_cells: 0,
+        cache_hits: 0,
     }
 }
 
 impl Span {
+    pub fn acquisition(mut self, cells: usize, reused: bool) -> Self {
+        self.materialized_cells = cells as u64;
+        self.cache_hits = u64::from(reused);
+        self
+    }
     pub fn cells(mut self, min: dustroute_physical::Pos, max: dustroute_physical::Pos) -> Self {
         self.cells = [(min.x, max.x), (min.y, max.y), (min.z, max.z)]
             .into_iter()
@@ -194,6 +207,8 @@ impl Drop for Span {
         value.bytes += self.bytes;
         value.requested_ticks += self.ticks;
         value.commands += self.commands;
+        value.materialized_cells += self.materialized_cells;
+        value.cache_hits += self.cache_hits;
     }
 }
 

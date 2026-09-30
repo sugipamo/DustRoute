@@ -91,6 +91,76 @@ schedule cold initialization. Reducing the independent stationary waits needs
 a separate review of their safety conditions. This pass changes neither wait
 durations, observation completeness, proof requirements nor storage durability.
 
+## Content and generation sharing
+
+The following implementation and offline comparison are recorded separately in
+[`measurements/observation-sharing-20260930.json`](measurements/observation-sharing-20260930.json).
+The architecture, identity boundaries and remaining work are described in
+[`observation-content-sharing.md`](observation-content-sharing.md). The running
+Minecraft/MCP processes were not restarted or changed for this comparison.
+
+Voxrig now shares received and reconstructed arrays for an identical region in
+the same received/reconstructed generation, advances moving carriers before
+reuse, and creates fresh acquisition metadata on every call. DustRoute shares
+canonical snapshot contents and converted native snapshots. Public circuit
+IDs retain their independent owner and expiry checks. Proofs, stationary
+intervals and durable saves keep their existing requirements.
+
+Three offline samples per size compared 100 successive acquisitions of a
+stationary loaded region in one generation, in the unoptimized debug profile:
+
+| measured work, 100 acquisitions | previous median | shared median |
+| --- | ---: | ---: |
+| native received/reconstructed materialization, 720 cells | 120.585 ms | 0.757 ms |
+| native received/reconstructed materialization, 4,096 cells | 700.414 ms | 3.989 ms |
+| conversion plus shared contents/fresh records, 720 cells | 100.972 ms | 2.889 ms |
+| conversion plus shared contents/fresh records, 4,096 cells | 681.856 ms | 16.448 ms |
+
+Actual cell materialization and conversion went from 100 region volumes to one
+volume: **99% fewer cells**, with 99 cache hits. The native reference retains
+the previous separate received and reconstructed decoding only in a test
+helper. The conversion reference performs the previous full coordinate
+validation and snapshot creation; it excludes downstream copies from the
+older owned observation flow. New conversion measurements include one full
+conversion/hash admission and 100 fresh evidence records, and verify that all
+records share storage. Received/local-frame boundaries are independently
+tested, including concurrent requests, update/unload/reset, missing cells,
+issues/recovery and movement without packets.
+
+These figures describe repeated stationary acquisitions, not complete tool
+speedups. The **first** shared conversion/admission took 2.635 ms for 720 cells
+and 16.158 ms for 4,096 cells. The previous repeated conversion average was
+about 1.010 and 6.819 ms per acquisition respectively, so first admission has
+additional hash/interner cost. Global unrelated block/chunk changes invalidate
+reuse; overlapping or different regions have separate entries. Each native
+and conversion cache is bounded to 16 regions / 65,536 cells. Large valid
+observations bypass retention. The hash uses a length-framed binary encoding
+instead of regenerating snapshot JSON, reducing that initial cost.
+
+The unchanged production handler fixture was also rerun. Its JSON bridge has
+no native receive/reconstruction generations, so it still performs every
+request and hashes fresh payloads. Median before/after times were
+134.990/127.219 ms for interior discovery, 1,068.008/965.658 ms across tile
+boundaries, and 11.706/11.117 ms for explicit bounds. Requested calls/volumes
+remain 2/4,221, 9/32,893 and 1/336. These differences include run-to-run noise
+and are not evidence of native cache reuse.
+
+Mock plan/preview/apply medians were 87.984/81.972, 46.740/43.237 and
+225.700/236.384 ms respectively. Application did **not** get uniformly faster.
+Wait counts, proof counts and eight file/directory syncs remain unchanged;
+the native two-write workflow still accounts for 3.6 seconds of explicit
+waits. No updated live-native end-to-end timing is available yet. The new
+trace counters make hit rates and actual materialization measurable on a
+normally scheduled start of the updated MCP.
+
+MCP's broad regression run passed 129 tests before final identity/hash
+refinements; affected/new paths were then checked with targeted tests,
+including five additional cases. Voxrig passed all 124 non-ignored unit tests,
+including retained real-packet replay. Native/default target checks,
+Clippy with warnings denied, and formatting checks validate the source
+configuration. Model validation results are still computed rather than
+cached; `ValidationKey` currently pins mixed-IR analysis identity.
+
 ## Opt-in request phase tracing
 
 Set `DUSTROUTE_PERFORMANCE_TRACE=1` on the **next normally scheduled MCP start**

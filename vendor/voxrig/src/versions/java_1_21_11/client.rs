@@ -1,4 +1,5 @@
 //! Ordered 1.21.11 receive loop. Local state is committed under one session lock.
+mod observations;
 /// Explicit Java 1.21.11 operation API and received player state.
 pub mod operations;
 pub mod players;
@@ -110,6 +111,7 @@ struct State {
     phase: Phase,
     world: World,
     reconstruction: Reconstruction,
+    observations: observations::RegionCache,
     dimensions: Vec<Dimension>,
     position: Option<[f64; 3]>,
     rotation: [f32; 2],
@@ -128,6 +130,7 @@ impl Default for State {
             phase: Phase::Configuration,
             world: World::default(),
             reconstruction: Reconstruction::default(),
+            observations: observations::RegionCache::default(),
             dimensions: Vec::new(),
             position: None,
             rotation: [0.0; 2],
@@ -440,41 +443,22 @@ impl Bot {
     }
 
     pub async fn observe_client_region(&self, region: Region) -> Result<ClientObservation> {
+        Ok(self
+            .observe_shared_client_region(region)
+            .await?
+            .observation
+            .into_owned())
+    }
+
+    /// Same-generation acquisitions share cell arrays under the session lock.
+    /// The lock also orders packet application and local moving-block advancement.
+    pub async fn observe_shared_client_region(
+        &self,
+        region: Region,
+    ) -> Result<super::reconstruction::SharedClientRegion> {
         let mut state = self.session.state.lock().await;
         self.session.check(&state)?;
-        let target = self.session.started.elapsed().as_millis() as u64 / 50;
-        let State {
-            world,
-            reconstruction,
-            ..
-        } = &mut *state;
-        reconstruction.advance(world, target);
-        let received = self.observation(&state, region)?;
-        let blocks = received
-            .blocks
-            .iter()
-            .map(|b| state.reconstruction.cell(&state.world, b.position))
-            .collect();
-        Ok(ClientObservation {
-            received,
-            dimension: state
-                .world
-                .dimension
-                .as_ref()
-                .expect("validated observation dimension")
-                .0
-                .clone(),
-            client_tick: state.reconstruction.tick,
-            client_revision: state.reconstruction.revision,
-            blocks,
-            issue: state.reconstruction.issue.clone(),
-            recovery_chunks: state
-                .reconstruction
-                .recovery_chunks
-                .iter()
-                .copied()
-                .collect(),
-        })
+        state.shared_observation(region, self.session.id, self.session.started.elapsed())
     }
 
     fn observation(&self, state: &State, region: Region) -> Result<Observation> {

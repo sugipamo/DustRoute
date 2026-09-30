@@ -3,6 +3,7 @@
 #[cfg(feature = "voxrig")]
 use crate::bridge::BotBridgeError;
 use crate::bridge::{ServerReadback, ValidatedRegion};
+use crate::snapshot_content::{ObservationId, SharedSnapshot, SnapshotContents};
 use dustroute_physical::Pos;
 use dustroute_translate::snapshot::MinecraftSnapshot;
 use serde::{Deserialize, Serialize};
@@ -54,22 +55,40 @@ pub struct ObservationRecord {
 /// Constructed only from a validated live transport result. No Deserialize.
 #[derive(Debug, Serialize)]
 #[serde(transparent)]
-pub(crate) struct FreshRegion(ObservationRecord);
+pub(crate) struct FreshRegion(SharedObservationRecord);
+
+/// Live shared data; saved owned records cannot construct this capability.
+#[derive(Debug, Serialize)]
+pub(crate) struct SharedObservationRecord {
+    #[serde(flatten)]
+    pub snapshot: SharedSnapshot,
+    pub readback: ObservationEvidence,
+    #[serde(skip)]
+    pub observation_id: ObservationId,
+}
 impl FreshRegion {
-    pub(crate) fn server(region: ValidatedRegion) -> Self {
+    pub(crate) fn server(
+        region: ValidatedRegion,
+        contents: &SnapshotContents,
+    ) -> Result<Self, String> {
         let record = region.into_record();
-        Self(ObservationRecord {
-            snapshot: record.snapshot,
+        Ok(Self(SharedObservationRecord {
+            snapshot: contents.intern(record.snapshot)?,
             readback: ObservationEvidence::ServerConfirmed(record.readback),
-        })
+            observation_id: ObservationId::new(),
+        }))
     }
     #[cfg(feature = "voxrig")]
     pub(crate) fn client(
         region: crate::voxrig_bridge::ClientRegion,
+        contents: &SnapshotContents,
     ) -> Result<Self, BotBridgeError> {
         let view = region.observation();
-        Ok(Self(ObservationRecord {
-            snapshot: region.snapshot().clone(),
+        Ok(Self(SharedObservationRecord {
+            snapshot: contents
+                .intern_arc(region.shared_snapshot())
+                .map_err(BotBridgeError::Protocol)?,
+            observation_id: ObservationId::new(),
             readback: ObservationEvidence::ClientReconstructed(ClientReadback {
                 schema_version: ClientReadbackSchema::V1,
                 kind: ClientReadbackKind::ClientReconstructed,
@@ -92,9 +111,15 @@ impl FreshRegion {
         }))
     }
     pub(crate) fn into_record(self) -> ObservationRecord {
+        ObservationRecord {
+            snapshot: self.0.snapshot.to_owned_snapshot(),
+            readback: self.0.readback,
+        }
+    }
+    pub(crate) fn into_shared_record(self) -> SharedObservationRecord {
         self.0
     }
-    pub(crate) fn into_stationary_record(self) -> Result<ObservationRecord, String> {
+    pub(crate) fn into_stationary_record(self) -> Result<SharedObservationRecord, String> {
         if self.0.readback.moving()
             || self
                 .0
@@ -190,17 +215,21 @@ mod tests {
         };
         r.moving = true;
         assert!(
-            FreshRegion(ObservationRecord {
-                snapshot: snapshot.clone(),
+            FreshRegion(SharedObservationRecord {
+                snapshot: SnapshotContents::default()
+                    .intern(snapshot.clone())
+                    .unwrap(),
                 readback: moving,
+                observation_id: ObservationId::new(),
             })
             .into_stationary_record()
             .is_err()
         );
         assert!(
-            FreshRegion(ObservationRecord {
-                snapshot,
+            FreshRegion(SharedObservationRecord {
+                snapshot: SnapshotContents::default().intern(snapshot).unwrap(),
                 readback: client(),
+                observation_id: ObservationId::new(),
             })
             .into_stationary_record()
             .is_ok()

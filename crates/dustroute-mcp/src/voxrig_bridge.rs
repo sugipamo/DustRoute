@@ -4,7 +4,8 @@ use crate::bridge::BotBridgeError;
 use dustroute_physical::Pos;
 use dustroute_translate::snapshot::{MinecraftSnapshot, MinecraftSnapshotBlock};
 use serde::Serialize;
-use voxrig::versions::java_1_21_11::reconstruction::ClientObservation;
+use std::sync::{Arc, Mutex, Weak};
+use voxrig::versions::java_1_21_11::reconstruction::SharedClientObservation;
 use voxrig::{Client, ConnectionConfig, MinecraftVersion, Region};
 mod operations;
 
@@ -14,6 +15,8 @@ pub struct VoxrigBridge {
     port: u16,
     username: String,
     mutations: tokio::sync::Mutex<()>,
+    snapshots: Mutex<ConvertedSnapshots>,
+    pub(crate) contents: Arc<crate::snapshot_content::SnapshotContents>,
 }
 impl std::fmt::Debug for VoxrigBridge {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -26,10 +29,12 @@ impl std::fmt::Debug for VoxrigBridge {
 pub struct ClientRegion {
     schema_version: &'static str,
     kind: ClientEvidenceKind,
-    snapshot: MinecraftSnapshot,
+    snapshot: Arc<MinecraftSnapshot>,
     /// Includes received cache, connection/sequence, client frame, moving states,
     /// per-cell origin and dimension. No field is presented as server game time.
-    observation: ClientObservation,
+    observation: SharedClientObservation,
+    #[serde(skip)]
+    moving: bool,
 }
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -43,24 +48,22 @@ impl ClientRegion {
         &self.snapshot
     }
     #[must_use]
-    pub fn observation(&self) -> &ClientObservation {
+    pub fn observation(&self) -> &SharedClientObservation {
         &self.observation
+    }
+    pub(crate) fn shared_snapshot(&self) -> Arc<MinecraftSnapshot> {
+        self.snapshot.clone()
     }
     #[must_use]
     pub fn is_moving(&self) -> bool {
-        self.observation.blocks.iter().any(|b| {
-            b.moving.is_some()
-                || b.state
-                    .as_ref()
-                    .is_some_and(|s| s.name == "minecraft:moving_piston")
-        })
+        self.moving
     }
     fn from_observation(
-        observation: ClientObservation,
+        observation: impl Into<SharedClientObservation>,
         region: Region,
         dimension: &str,
     ) -> Result<Self, BotBridgeError> {
-        let _measurement = crate::performance::span(crate::performance::Phase::NativeConvert);
+        let observation = observation.into();
         let fail = |s: &str| BotBridgeError::Protocol(s.into());
         let volume = region.volume().map_err(native_error)?;
         if observation.received.version != MinecraftVersion::Java1_21_11
@@ -84,7 +87,8 @@ impl ClientRegion {
         }
         let mut seen = std::collections::BTreeSet::new();
         let mut blocks = Vec::with_capacity(volume);
-        for b in &observation.blocks {
+        let mut moving = false;
+        for b in observation.blocks.iter() {
             let p = b.position;
             if (0..3).any(|axis| p[axis] < region.min[axis] || p[axis] > region.max[axis])
                 || !seen.insert(p)
@@ -97,6 +101,7 @@ impl ClientRegion {
                 .state
                 .as_ref()
                 .ok_or_else(|| fail("client observation contains unloaded cells"))?;
+            moving |= b.moving.is_some() || state.name == "minecraft:moving_piston";
             blocks.push(MinecraftSnapshotBlock {
                 pos: pos(p),
                 name: state.name.clone(),
@@ -106,12 +111,13 @@ impl ClientRegion {
         Ok(Self {
             schema_version: "dustroute.client-observation.v1",
             kind: ClientEvidenceKind::ClientReconstructed,
-            snapshot: MinecraftSnapshot {
+            snapshot: Arc::new(MinecraftSnapshot {
                 min: pos(region.min),
                 max: pos(region.max),
                 blocks,
-            },
+            }),
             observation,
+            moving,
         })
     }
 }
@@ -128,12 +134,18 @@ impl VoxrigBridge {
         let username = config.username.clone();
         let client = Client::connect(config).await.map_err(native_error)?;
         client.wait_until_ready().await.map_err(native_error)?;
+        let contents = Arc::default();
         Ok(Self {
             client,
             host,
             port,
             username,
             mutations: tokio::sync::Mutex::new(()),
+            snapshots: Mutex::new(ConvertedSnapshots {
+                contents: Arc::clone(&contents),
+                ..Default::default()
+            }),
+            contents,
         })
     }
     pub async fn observe_region(
@@ -146,14 +158,100 @@ impl VoxrigBridge {
             min: [min.x, min.y, min.z],
             max: [max.x, max.y, max.z],
         };
-        let observation = {
-            let _measurement = crate::performance::span(crate::performance::Phase::NativeObserve);
-            self.client
-                .observe_client_region(region)
+        let acquired = {
+            let measurement = crate::performance::span(crate::performance::Phase::NativeObserve);
+            let acquired = self
+                .client
+                .observe_shared_client_region(region)
                 .await
-                .map_err(native_error)?
+                .map_err(native_error)?;
+            let _measurement = measurement.acquisition(
+                acquired.materialized_cells,
+                acquired.materialized_cells == 0,
+            );
+            acquired
         };
-        ClientRegion::from_observation(observation, region, dimension)
+        self.snapshots
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .convert(acquired.observation, region, dimension)
+    }
+}
+
+#[derive(Default)]
+struct ConvertedSnapshots {
+    entries: std::collections::VecDeque<ConvertedSnapshot>,
+    cells: usize,
+    contents: Arc<crate::snapshot_content::SnapshotContents>,
+}
+struct ConvertedSnapshot {
+    source: Weak<[voxrig::versions::java_1_21_11::reconstruction::ClientBlock]>,
+    content: crate::snapshot_content::SharedSnapshot,
+    moving: bool,
+}
+impl ConvertedSnapshots {
+    fn convert(
+        &mut self,
+        observation: impl Into<SharedClientObservation>,
+        region: Region,
+        dimension: &str,
+    ) -> Result<ClientRegion, BotBridgeError> {
+        let observation = observation.into();
+        let measurement = crate::performance::span(crate::performance::Phase::NativeConvert);
+        // The key holds a weak source pointer, so allocator address reuse cannot alias cells.
+        // Only fully validated conversions enter the cache; evidence is checked anew.
+        if observation.received.version == MinecraftVersion::Java1_21_11
+            && observation.received.region == region
+            && observation.dimension == dimension
+            && observation.received.receive_sequence.is_some()
+            && observation.issue.is_none()
+            && observation.recovery_chunks.is_empty()
+            && let Some(entry) = self.entries.iter().find(|entry| {
+                entry
+                    .source
+                    .upgrade()
+                    .is_some_and(|cells| Arc::ptr_eq(&cells, &observation.blocks))
+            })
+            && entry.content.min == pos(region.min)
+            && entry.content.max == pos(region.max)
+            && observation.received.blocks.len() == observation.blocks.len()
+        {
+            let _measurement = measurement.acquisition(0, true);
+            return Ok(ClientRegion {
+                schema_version: "dustroute.client-observation.v1",
+                kind: ClientEvidenceKind::ClientReconstructed,
+                snapshot: entry.content.shared_allocation(),
+                observation,
+                moving: entry.moving,
+            });
+        }
+        let mut result = ClientRegion::from_observation(observation, region, dimension)?;
+        let content = self
+            .contents
+            .intern_arc(result.snapshot.clone())
+            .map_err(BotBridgeError::Protocol)?;
+        result.snapshot = content.shared_allocation();
+        let _measurement = measurement.acquisition(result.snapshot.blocks.len(), false);
+        self.entries.retain(|entry| entry.source.strong_count() > 0);
+        self.cells = self.entries.iter().map(|e| e.content.blocks.len()).sum();
+        let volume = result.snapshot.blocks.len();
+        if volume > 65_536 {
+            return Ok(result);
+        }
+        while self.entries.len() >= 16 || self.cells + volume > 65_536 {
+            if let Some(old) = self.entries.pop_front() {
+                self.cells -= old.content.blocks.len();
+            } else {
+                break;
+            }
+        }
+        self.entries.push_back(ConvertedSnapshot {
+            source: Arc::downgrade(&result.observation.blocks),
+            content,
+            moving: result.moving,
+        });
+        self.cells += volume;
+        Ok(result)
     }
 }
 fn pos(p: [i32; 3]) -> Pos {
@@ -167,7 +265,7 @@ fn native_error(error: voxrig::Error) -> BotBridgeError {
 mod tests {
     use super::*;
     use voxrig::versions::java_1_21_11::reconstruction::{
-        ClientBlock, ReconstructionIssue, StateOrigin,
+        ClientBlock, ClientObservation, ReconstructionIssue, StateOrigin,
     };
     use voxrig::{NativeBlockState, Observation, ObservedBlock};
     fn sample() -> ClientObservation {
@@ -240,6 +338,241 @@ mod tests {
                 _ => o.received.receive_sequence = None,
             }
             assert!(ClientRegion::from_observation(o, region, "minecraft:overworld").is_err());
+        }
+    }
+
+    #[test]
+    fn shared_conversion_keeps_fresh_evidence_and_checks_metadata_on_every_acquisition() {
+        let original: SharedClientObservation = sample().into();
+        let region = original.received.region;
+        let mut cache = ConvertedSnapshots::default();
+        let first = cache
+            .convert(original.clone(), region, "minecraft:overworld")
+            .unwrap();
+        let mut later = original.clone();
+        later.client_tick += 20;
+        later.received.receive_sequence = Some(100);
+        later.received.captured_at += std::time::Duration::from_secs(1);
+        let second = cache
+            .convert(later.clone(), region, "minecraft:overworld")
+            .unwrap();
+        assert!(Arc::ptr_eq(&first.snapshot, &second.snapshot));
+        let contents = crate::snapshot_content::SnapshotContents::default();
+        let first = crate::observation_evidence::FreshRegion::client(first, &contents)
+            .unwrap()
+            .into_shared_record();
+        let second = crate::observation_evidence::FreshRegion::client(second, &contents)
+            .unwrap()
+            .into_shared_record();
+        assert!(first.snapshot.shares_storage_with(&second.snapshot));
+        assert_ne!(
+            serde_json::to_value(first.observation_id).unwrap(),
+            serde_json::to_value(second.observation_id).unwrap()
+        );
+        assert_eq!(
+            second
+                .readback
+                .interval_since(&first.readback)
+                .unwrap()
+                .client_ticks,
+            Some(20)
+        );
+        for case in 0..6 {
+            let mut invalid = later.clone();
+            match case {
+                0 => invalid.issue = Some(ReconstructionIssue::Limit),
+                1 => invalid.recovery_chunks.push([0, 0]),
+                2 => invalid.dimension = "minecraft:the_nether".into(),
+                3 => invalid.received.version = MinecraftVersion::Java1_16_1,
+                4 => invalid.received.receive_sequence = None,
+                _ => invalid.received.region.max[0] += 1,
+            }
+            assert!(
+                cache
+                    .convert(invalid, region, "minecraft:overworld")
+                    .is_err()
+            );
+        }
+        let mut changed = later;
+        Arc::make_mut(&mut changed.blocks)[0]
+            .state
+            .as_mut()
+            .unwrap()
+            .properties
+            .insert("shape".into(), "straight".into());
+        let changed = cache
+            .convert(changed, region, "minecraft:overworld")
+            .unwrap();
+        assert_eq!(changed.snapshot.blocks[0].properties["shape"], "straight");
+        assert_ne!(
+            contents.intern_arc(changed.snapshot).unwrap().id(),
+            first.snapshot.id()
+        );
+    }
+
+    #[test]
+    fn conversion_cache_rejects_unavailable_replaced_cells_and_reclaims_dead_sources() {
+        let original: SharedClientObservation = sample().into();
+        let region = original.received.region;
+        let mut cache = ConvertedSnapshots::default();
+        cache
+            .convert(original.clone(), region, "minecraft:overworld")
+            .unwrap();
+        let mut invalid = original.clone();
+        Arc::make_mut(&mut invalid.blocks)[0].state = None;
+        assert!(
+            cache
+                .convert(invalid, region, "minecraft:overworld")
+                .is_err()
+        );
+        drop(original);
+        cache
+            .convert(sample(), region, "minecraft:overworld")
+            .unwrap();
+        assert_eq!(cache.entries.len(), 1);
+        assert_eq!(cache.cells, 1);
+    }
+
+    #[test]
+    fn equal_contents_with_new_origin_or_carrier_keep_the_new_evidence() {
+        use voxrig::versions::java_1_21_11::reconstruction::{
+            CarrierRole, Direction, MotionProgress, MovingBlock,
+        };
+        let original: SharedClientObservation = sample().into();
+        let region = original.received.region;
+        let mut cache = ConvertedSnapshots::default();
+        let first = cache
+            .convert(original.clone(), region, "minecraft:overworld")
+            .unwrap();
+        let mut changed_origin = original.clone();
+        Arc::make_mut(&mut changed_origin.blocks)[0].origin = StateOrigin::Received;
+        let changed_origin = cache
+            .convert(changed_origin, region, "minecraft:overworld")
+            .unwrap();
+        assert!(Arc::ptr_eq(&first.snapshot, &changed_origin.snapshot));
+        assert!(matches!(
+            changed_origin.observation.blocks[0].origin,
+            StateOrigin::Received
+        ));
+        let mut moving = original;
+        let cell = &mut Arc::make_mut(&mut moving.blocks)[0];
+        cell.moving = Some(MovingBlock {
+            position: cell.position,
+            carried: cell.state.clone().unwrap(),
+            direction: Direction::East,
+            extending: true,
+            role: CarrierRole::Payload,
+            progress: MotionProgress::Start,
+            last_progress: MotionProgress::Start,
+            completion_waits: 0,
+            action_sequence: Some(5),
+            chunk_sequence: None,
+        });
+        let moving = cache
+            .convert(moving, region, "minecraft:overworld")
+            .unwrap();
+        assert!(Arc::ptr_eq(&first.snapshot, &moving.snapshot));
+        assert!(moving.is_moving());
+        assert!(
+            crate::observation_evidence::FreshRegion::client(moving, &cache.contents)
+                .unwrap()
+                .into_stationary_record()
+                .is_err()
+        );
+    }
+
+    #[tokio::test]
+    #[ignore = "offline conversion and content-sharing comparison; no network or writes"]
+    async fn profile_shared_native_conversion() {
+        for volume in [720usize, 4096] {
+            for sample_number in 1..=3 {
+                let region = if volume == 720 {
+                    Region {
+                        min: [0, 80, 0],
+                        max: [11, 85, 9],
+                    }
+                } else {
+                    Region {
+                        min: [0, 80, 0],
+                        max: [15, 95, 15],
+                    }
+                };
+                let mut observation = sample();
+                observation.received.region = region;
+                observation.blocks.clear();
+                observation.received.blocks.clear();
+                for x in region.min[0]..=region.max[0] {
+                    for y in region.min[1]..=region.max[1] {
+                        for z in region.min[2]..=region.max[2] {
+                            let position = [x, y, z];
+                            let state = NativeBlockState {
+                                name: "minecraft:air".into(),
+                                properties: Default::default(),
+                            };
+                            observation.blocks.push(ClientBlock {
+                                position,
+                                state: Some(state.clone()),
+                                origin: StateOrigin::Received,
+                                moving: None,
+                            });
+                            observation.received.blocks.push(ObservedBlock {
+                                position,
+                                state: Some(state),
+                            });
+                        }
+                    }
+                }
+                let observation: SharedClientObservation = observation.into();
+                let started = std::time::Instant::now();
+                for _ in 0..100 {
+                    std::hint::black_box(
+                        ClientRegion::from_observation(
+                            observation.clone(),
+                            region,
+                            "minecraft:overworld",
+                        )
+                        .unwrap(),
+                    );
+                }
+                let previous_ms = started.elapsed().as_secs_f64() * 1000.0;
+                let mut cache = ConvertedSnapshots::default();
+                let contents = cache.contents.clone();
+                let mut first_ms = 0.0;
+                let (records, measurement) =
+                    crate::performance::measure("shared_conversion", async {
+                        let mut records = Vec::new();
+                        for n in 0..100 {
+                            let started = std::time::Instant::now();
+                            let mut fresh = observation.clone();
+                            fresh.client_tick += n;
+                            fresh.received.captured_at += std::time::Duration::from_millis(n * 50);
+                            let record =
+                                cache.convert(fresh, region, "minecraft:overworld").unwrap();
+                            records.push(
+                                crate::observation_evidence::FreshRegion::client(record, &contents)
+                                    .unwrap()
+                                    .into_shared_record(),
+                            );
+                            if n == 0 {
+                                first_ms = started.elapsed().as_secs_f64() * 1000.0;
+                            }
+                        }
+                        records
+                    })
+                    .await;
+                assert!(
+                    records
+                        .iter()
+                        .all(|r| r.snapshot.shares_storage_with(&records[0].snapshot))
+                );
+                let conversion = &measurement.phases["native_convert"];
+                assert_eq!(conversion.materialized_cells, volume as u64);
+                assert_eq!(conversion.cache_hits, 99);
+                println!(
+                    "CONVERSION_SHARING {}",
+                    serde_json::json!({"sample":sample_number,"cells":volume,"acquisitions":100,"previous_ms":previous_ms,"shared_ms":measurement.elapsed_ms,"first_shared_ms":first_ms,"shared_materialized_cells":conversion.materialized_cells,"cache_hits":conversion.cache_hits})
+                );
+            }
         }
     }
 }
