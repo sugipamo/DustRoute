@@ -21,6 +21,8 @@ use circuit_reports::{
 };
 #[cfg(test)]
 mod electrical_edit_tests;
+#[cfg(test)]
+mod performance_tests;
 mod requests;
 #[cfg(test)]
 mod test_support;
@@ -423,6 +425,7 @@ fn contract_assessment_json(assessment: &OptimizationContractAssessment) -> Valu
 }
 
 fn json_text(mut value: Value) -> String {
+    let measurement = crate::performance::span(crate::performance::Phase::ResponseEncode);
     if value.get("ok") == Some(&Value::Bool(false))
         && let Some(object) = value.as_object_mut()
     {
@@ -434,8 +437,10 @@ fn json_text(mut value: Value) -> String {
             .or_insert_with(|| Value::String("internal".to_owned()));
         object.entry("retryable").or_insert(Value::Bool(false));
     }
-    serde_json::to_string_pretty(&value)
-        .unwrap_or_else(|error| json!({ "ok": false, "error": error.to_string() }).to_string())
+    let text = serde_json::to_string_pretty(&value)
+        .unwrap_or_else(|error| json!({ "ok": false, "error": error.to_string() }).to_string());
+    drop(measurement.bytes(text.len()));
+    text
 }
 
 /// Convert an already decoded bridge snapshot directly into the simulator
@@ -5078,6 +5083,16 @@ impl DustRouteMcp {
 #[tool_handler(router = self.tool_router)]
 #[prompt_handler(router = self.prompt_router)]
 impl ServerHandler for DustRouteMcp {
+    async fn call_tool(
+        &self,
+        request: rmcp::model::CallToolRequestParams,
+        context: rmcp::service::RequestContext<rmcp::RoleServer>,
+    ) -> Result<rmcp::model::CallToolResponse, rmcp::ErrorData> {
+        let name = request.name.clone();
+        let call = rmcp::handler::server::tool::ToolCallContext::new(self, request, context);
+        crate::performance::tool(&name, self.tool_router.call(call)).await
+    }
+
     fn get_info(&self) -> ServerInfo {
         ServerInfo::new(
             ServerCapabilities::builder()

@@ -160,6 +160,7 @@ impl RegistryLock {
     }
 
     fn load(&self, id: Uuid) -> Result<Option<PlacedAssembly>, String> {
+        let _measurement = crate::performance::span(crate::performance::Phase::StoreRead);
         let file = match File::open(self.root.join(format!("{id}.json"))) {
             Ok(f) => f,
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
@@ -237,7 +238,10 @@ impl RegistryLock {
             .checked_add(1)
             .ok_or("record version exhausted")?;
         next.updated_at_unix_ms = now_ms()?;
-        let bytes = serde_json::to_vec(&next).map_err(|e| e.to_string())?;
+        let bytes = {
+            let _measurement = crate::performance::span(crate::performance::Phase::StoreEncode);
+            serde_json::to_vec(&next).map_err(|e| e.to_string())?
+        };
         if bytes.len() as u64 > MAX_BYTES {
             return Err("placed Assembly record exceeds 32 MiB".into());
         }

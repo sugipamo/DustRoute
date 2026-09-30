@@ -10,6 +10,7 @@ pub mod discovery;
 mod edit_registry;
 pub mod observation_evidence;
 pub mod operations;
+pub mod performance;
 mod piston_assembly;
 pub mod piston_door;
 pub mod policy;

@@ -3,6 +3,7 @@
 use super::*;
 use crate::assembly_registry::{TargetServer, now_ms};
 use crate::edit_registry::{EditAttempt, EditRecord, EditRegistry, EditState, SCHEMA};
+use crate::performance::{Phase, current, span};
 use crate::piston_assembly::ValidatedAssemblyPlacement;
 use dustroute_translate::piston_construction::ElectricalModification;
 use dustroute_translate::snapshot::MinecraftSnapshot;
@@ -76,8 +77,14 @@ impl DustRouteMcp {
         assembly_placement::server_contract(&status, &revision.dimension)?;
         let target = TargetServer::observed(&status, &revision.dimension)?;
         let baseline = before.clone();
+        let capture = current();
+        let queued_at = std::time::Instant::now();
         let proof = tokio::task::spawn_blocking(move || {
-            ElectricalModification::new(&before, &after, Default::default())
+            capture.record_queue(queued_at);
+            capture.in_blocking(|| {
+                let _measurement = span(Phase::ModelProof);
+                ElectricalModification::new(&before, &after, Default::default())
+            })
         })
         .await
         .map_err(|e| e.to_string())??;
@@ -241,7 +248,9 @@ impl DustRouteMcp {
         self.policy
             .authorize_mutation()
             .map_err(|e| e.to_string())?;
+        let queue_measurement = span(Phase::MutationQueue);
         let _guard = self.mutation_lock.lock().await;
+        drop(queue_measurement);
         let plan = self.owned_edit(id, None).await?;
         if (undo && plan.state != PistonPlacementState::Applied)
             || (!undo
@@ -255,8 +264,14 @@ impl DustRouteMcp {
         }
         let before = plan.proof.before().clone();
         let after = plan.proof.after().clone();
+        let capture = current();
+        let queued_at = std::time::Instant::now();
         let proof = tokio::task::spawn_blocking(move || {
-            ElectricalModification::new(&before, &after, Default::default())
+            capture.record_queue(queued_at);
+            capture.in_blocking(|| {
+                let _measurement = span(Phase::ModelProof);
+                ElectricalModification::new(&before, &after, Default::default())
+            })
         })
         .await
         .map_err(|e| e.to_string())??;

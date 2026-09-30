@@ -74,6 +74,7 @@ impl EditRegistry {
         Ok(Self { root, _lock: lock })
     }
     pub fn load(&self, id: Uuid, player: &str) -> Result<Option<EditRecord>, String> {
+        let _measurement = crate::performance::span(crate::performance::Phase::StoreRead);
         let file = match File::open(self.root.join(format!("{id}.json"))) {
             Ok(file) => file,
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
@@ -100,7 +101,10 @@ impl EditRegistry {
             return Err("invalid world edit schema".into());
         }
         self.load(record.operation_id, &record.player)?;
-        let bytes = serde_json::to_vec(record).map_err(|e| e.to_string())?;
+        let bytes = {
+            let _measurement = crate::performance::span(crate::performance::Phase::StoreEncode);
+            serde_json::to_vec(record).map_err(|e| e.to_string())?
+        };
         if bytes.len() as u64 > MAX_BYTES {
             return Err("world edit record exceeds 32 MiB".into());
         }

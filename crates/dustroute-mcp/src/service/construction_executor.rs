@@ -57,7 +57,10 @@ impl ConstructionExecutor<'_> {
                 .map_err(|e| e.to_string())?
                 .into_stationary_record()?;
             ValidatedAssemblyPlacement::matches(&before.snapshot, expected, &status.version)?;
-            checkpoint(StageProgress::Readback(Box::new(before.readback)))?;
+            {
+                let _measurement = crate::performance::span(crate::performance::Phase::Checkpoint);
+                checkpoint(StageProgress::Readback(Box::new(before.readback)))?;
+            }
             self.bridge
                 .write_blocks(
                     &[CommandWrite {
@@ -83,11 +86,17 @@ impl ConstructionExecutor<'_> {
                 .await
                 .map_err(|e| e.to_string())?
                 .into_stationary_record()?;
-            checkpoint(StageProgress::Readback(Box::new(after.readback)))?;
+            {
+                let _measurement = crate::performance::span(crate::performance::Phase::Checkpoint);
+                checkpoint(StageProgress::Readback(Box::new(after.readback)))?;
+            }
             let status = self.bridge.status().await.map_err(|e| e.to_string())?;
             self.target.check(&status)?;
             ValidatedAssemblyPlacement::matches(&after.snapshot, &step.expected, &status.version)?;
-            checkpoint(StageProgress::Verified(index + 1))?;
+            {
+                let _measurement = crate::performance::span(crate::performance::Phase::Checkpoint);
+                checkpoint(StageProgress::Verified(index + 1))?;
+            }
             expected = &step.expected;
         }
         Ok(())

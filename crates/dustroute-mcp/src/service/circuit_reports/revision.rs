@@ -81,6 +81,7 @@ pub(in super::super) fn revision_validation(
     complete: bool,
     ticks: usize,
 ) -> Value {
+    let _measurement = crate::performance::span(crate::performance::Phase::StaticValidation);
     let world = match dustroute_translate::snapshot::world_from_snapshot(snapshot) {
         Ok(world) => world,
         Err(error) => {
@@ -119,6 +120,7 @@ pub(in super::super) fn electrical_modification_validation(
     if !complete {
         return Some(json!({"status":"not_run","reason":"incomplete observation"}));
     }
+    let _measurement = crate::performance::span(crate::performance::Phase::ModelProof);
     Some(
         match dustroute_translate::piston_construction::ElectricalModification::new(
             before,

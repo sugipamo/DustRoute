@@ -8,6 +8,7 @@ use crate::bridge_protocol::{
     COMMAND_LIMIT, CommandSubmission, CommandWrite, MUTATION_PROTOCOL, MutationRequest,
     PHYSICAL_LIMIT, PhysicalChange, PhysicalSubmission,
 };
+use crate::performance::{Phase, span};
 use dustroute_ir::{EventCause, EventKind, EventSource, TransitionPhase};
 use dustroute_physical::Pos;
 use dustroute_translate::snapshot::MinecraftSnapshot;
@@ -456,6 +457,7 @@ impl BotBridge {
     }
 
     pub async fn status(&self) -> Result<BotStatus, BotBridgeError> {
+        let _measurement = span(Phase::Status);
         #[cfg(feature = "voxrig")]
         if let Some(native) = &self.native {
             return self.native_timeout(native.status()).await;
@@ -468,6 +470,7 @@ impl BotBridge {
         player: &str,
         max_distance: f64,
     ) -> Result<PlayerObservation, BotBridgeError> {
+        let _measurement = span(Phase::Gaze);
         if !is_valid_minecraft_username(player) {
             return Err(BotBridgeError::Protocol(format!(
                 "invalid Minecraft player name: {player}"
@@ -536,6 +539,7 @@ impl BotBridge {
         max: Pos,
         dimension: &str,
     ) -> Result<crate::observation_evidence::FreshRegion, BotBridgeError> {
+        let _measurement = span(Phase::Scan).cells(min, max);
         #[cfg(feature = "voxrig")]
         if self.native.is_some() {
             return crate::observation_evidence::FreshRegion::client(
@@ -658,6 +662,7 @@ impl BotBridge {
     }
 
     pub async fn wait_ticks(&self, ticks: u16, dimension: &str) -> Result<Value, BotBridgeError> {
+        let _measurement = span(Phase::Wait).ticks(ticks);
         #[cfg(feature = "voxrig")]
         if let Some(native) = &self.native {
             return self
@@ -724,6 +729,7 @@ impl BotBridge {
         max: Pos,
         dimension: &str,
     ) -> Result<Value, BotBridgeError> {
+        let _measurement = span(Phase::Preview);
         #[cfg(feature = "voxrig")]
         if let Some(native) = &self.native {
             return self
@@ -742,6 +748,7 @@ impl BotBridge {
         changes: &[CommandWrite],
         dimension: &str,
     ) -> Result<CommandSubmission, BotBridgeError> {
+        let _measurement = span(Phase::Write).commands(changes.len());
         #[cfg(feature = "voxrig")]
         if let Some(native) = &self.native {
             return self

@@ -26,12 +26,21 @@ pub(crate) fn replace(path: &Path, bytes: &[u8], durability: Durability) -> io::
             options.mode(0o600);
         }
         let mut file = options.open(&temporary)?;
-        file.write_all(bytes)?;
+        {
+            let _measurement =
+                crate::performance::span(crate::performance::Phase::FileWrite).bytes(bytes.len());
+            file.write_all(bytes)?;
+        }
         if matches!(durability, Durability::FileAndDirectory) {
+            let _measurement = crate::performance::span(crate::performance::Phase::FileSync);
             file.sync_all()?;
         }
-        fs::rename(&temporary, path)?;
+        {
+            let _measurement = crate::performance::span(crate::performance::Phase::FileRename);
+            fs::rename(&temporary, path)?;
+        }
         if matches!(durability, Durability::FileAndDirectory) {
+            let _measurement = crate::performance::span(crate::performance::Phase::DirectorySync);
             File::open(directory)?.sync_all()?;
         }
         Ok(())

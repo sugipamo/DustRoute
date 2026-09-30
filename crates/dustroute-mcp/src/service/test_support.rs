@@ -28,6 +28,8 @@ pub(super) struct Fake {
     pub(super) unverified_readback: bool,
     pub(super) gaze_target: Option<Value>,
     pub(super) resize_scan: bool,
+    /// Match native observation volume for offline profiling, including air.
+    pub(super) include_air: bool,
 }
 pub(super) async fn start_construction_bridge(
     durable_root: PathBuf,
@@ -70,6 +72,39 @@ pub(super) async fn start_construction_bridge(
                                         && p <= req["params"]["max"][axis].as_i64().unwrap()
                                 })
                             });
+                        }
+                        if state.include_air {
+                            let existing = snapshot["blocks"]
+                                .as_array()
+                                .unwrap()
+                                .iter()
+                                .map(|b| {
+                                    (
+                                        (
+                                            b["pos"]["x"].as_i64().unwrap(),
+                                            b["pos"]["y"].as_i64().unwrap(),
+                                            b["pos"]["z"].as_i64().unwrap(),
+                                        ),
+                                        b.clone(),
+                                    )
+                                })
+                                .collect::<std::collections::BTreeMap<_, _>>();
+                            let mut blocks = Vec::new();
+                            let p = &req["params"];
+                            for x in
+                                p["min"]["x"].as_i64().unwrap()..=p["max"]["x"].as_i64().unwrap()
+                            {
+                                for y in p["min"]["y"].as_i64().unwrap()
+                                    ..=p["max"]["y"].as_i64().unwrap()
+                                {
+                                    for z in p["min"]["z"].as_i64().unwrap()
+                                        ..=p["max"]["z"].as_i64().unwrap()
+                                    {
+                                        blocks.push(existing.get(&(x,y,z)).cloned().unwrap_or_else(|| json!({"pos":{"x":x,"y":y,"z":z},"name":"minecraft:air","properties":{}})));
+                                    }
+                                }
+                            }
+                            snapshot["blocks"] = json!(blocks);
                         }
                         if state.partial
                             || state.fail_after_write.is_some_and(|n| state.writes >= n)

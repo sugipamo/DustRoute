@@ -1,0 +1,269 @@
+//! Opt-in, request-local measurements. Never changes budgets or world behavior.
+//! Phase durations are inclusive: nested phases must not be added together.
+use serde::Serialize;
+use std::cell::RefCell;
+use std::collections::BTreeMap;
+use std::future::Future;
+use std::sync::{Arc, Mutex, OnceLock};
+use std::time::{Duration, Instant};
+
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub(crate) enum Phase {
+    Gaze,
+    Status,
+    Scan,
+    #[cfg(feature = "voxrig")]
+    NativeObserve,
+    #[cfg(feature = "voxrig")]
+    NativeConvert,
+    DiscoveryMerge,
+    DiscoveryNeighbors,
+    StaticValidation,
+    ResponseEncode,
+    ModelQueue,
+    ModelProof,
+    MutationQueue,
+    Wait,
+    Preview,
+    Write,
+    Checkpoint,
+    StoreRead,
+    StoreEncode,
+    FileWrite,
+    FileSync,
+    FileRename,
+    DirectorySync,
+}
+
+#[derive(Default, Serialize)]
+pub struct PhaseMeasurement {
+    pub calls: u64,
+    pub elapsed_ms: f64,
+    pub cells: u64,
+    pub bytes: u64,
+    pub requested_ticks: u64,
+    pub commands: u64,
+}
+
+#[derive(Serialize)]
+pub struct Measurement {
+    schema: &'static str,
+    pub operation: String,
+    pub elapsed_ms: f64,
+    pub debug_assertions: bool,
+    /// Inclusive wall time, including awaits; not CPU time or server ticks.
+    pub phases: BTreeMap<String, PhaseMeasurement>,
+}
+
+#[derive(Clone, Default)]
+pub(crate) struct Capture(Option<Arc<Mutex<BTreeMap<Phase, PhaseMeasurement>>>>);
+tokio::task_local! { static ASYNC_CAPTURE: Capture; }
+thread_local! { static SYNC_CAPTURE: RefCell<Capture> = RefCell::new(Capture::default()); }
+
+pub(crate) fn current() -> Capture {
+    ASYNC_CAPTURE
+        .try_with(Clone::clone)
+        .unwrap_or_else(|_| SYNC_CAPTURE.with(|c| c.borrow().clone()))
+}
+
+impl Capture {
+    /// Explicitly propagate the request into spawn_blocking, without leaking it
+    /// into another job that later reuses the worker thread.
+    pub fn in_blocking<T>(&self, work: impl FnOnce() -> T) -> T {
+        struct Restore(Capture);
+        impl Drop for Restore {
+            fn drop(&mut self) {
+                SYNC_CAPTURE.with(|c| *c.borrow_mut() = self.0.clone());
+            }
+        }
+        let _restore = Restore(SYNC_CAPTURE.with(|c| c.replace(self.clone())));
+        work()
+    }
+
+    pub fn record_queue(&self, started: Instant) {
+        if let Some(capture) = &self.0 {
+            let mut phases = capture.lock().unwrap_or_else(|e| e.into_inner());
+            let phase = phases.entry(Phase::ModelQueue).or_default();
+            phase.calls += 1;
+            phase.elapsed_ms += millis(started.elapsed());
+        }
+    }
+}
+
+/// Measure library calls without enabling process-wide logging. Independent
+/// captures, including concurrent requests, never share counters.
+pub async fn measure<T>(operation: &str, work: impl Future<Output = T>) -> (T, Measurement) {
+    let capture = Capture(Some(Arc::default()));
+    let started = Instant::now();
+    let result = ASYNC_CAPTURE.scope(capture.clone(), work).await;
+    let elapsed_ms = millis(started.elapsed());
+    let phases = std::mem::take(&mut *capture.0.unwrap().lock().unwrap_or_else(|e| e.into_inner()))
+        .into_iter()
+        .map(|(phase, value)| {
+            let name = serde_json::to_value(phase).expect("phase name is serializable");
+            (name.as_str().unwrap().to_owned(), value)
+        })
+        .collect();
+    (
+        result,
+        Measurement {
+            schema: "dustroute.performance.v1",
+            operation: operation.chars().take(64).collect(),
+            elapsed_ms,
+            debug_assertions: cfg!(debug_assertions),
+            phases,
+        },
+    )
+}
+
+pub(crate) async fn tool<T>(name: &str, work: impl Future<Output = T>) -> T {
+    static ENABLED: OnceLock<bool> = OnceLock::new();
+    if !ENABLED.get_or_init(|| std::env::var("DUSTROUTE_PERFORMANCE_TRACE").as_deref() == Ok("1")) {
+        return work.await;
+    }
+    let (result, measurement) = measure(name, work).await;
+    // stderr only: tool responses and the stdio MCP stream remain unchanged.
+    // No positions, player names, block states or request arguments are logged.
+    if let Ok(line) = serde_json::to_string(&measurement) {
+        eprintln!("{line}");
+    }
+    result
+}
+
+pub(crate) struct Span {
+    capture: Capture,
+    phase: Phase,
+    started: Option<Instant>,
+    cells: u64,
+    bytes: u64,
+    ticks: u64,
+    commands: u64,
+}
+
+pub(crate) fn span(phase: Phase) -> Span {
+    let capture = current();
+    let started = capture.0.as_ref().map(|_| Instant::now());
+    Span {
+        capture,
+        phase,
+        started,
+        cells: 0,
+        bytes: 0,
+        ticks: 0,
+        commands: 0,
+    }
+}
+
+impl Span {
+    pub fn cells(mut self, min: dustroute_physical::Pos, max: dustroute_physical::Pos) -> Self {
+        self.cells = [(min.x, max.x), (min.y, max.y), (min.z, max.z)]
+            .into_iter()
+            .try_fold(1u64, |v, (lo, hi)| {
+                let side = u64::try_from(i64::from(hi) - i64::from(lo) + 1).ok()?;
+                v.checked_mul(side)
+            })
+            .unwrap_or(0);
+        self
+    }
+    pub fn bytes(mut self, bytes: usize) -> Self {
+        self.bytes = bytes as u64;
+        self
+    }
+    pub fn ticks(mut self, ticks: u16) -> Self {
+        self.ticks = u64::from(ticks);
+        self
+    }
+    pub fn commands(mut self, commands: usize) -> Self {
+        self.commands = commands as u64;
+        self
+    }
+}
+
+impl Drop for Span {
+    fn drop(&mut self) {
+        let (Some(started), Some(capture)) = (self.started, &self.capture.0) else {
+            return;
+        };
+        let elapsed = started.elapsed();
+        let mut phases = capture.lock().unwrap_or_else(|e| e.into_inner());
+        let value = phases.entry(self.phase).or_default();
+        value.calls += 1;
+        value.elapsed_ms += millis(elapsed);
+        value.cells += self.cells;
+        value.bytes += self.bytes;
+        value.requested_ticks += self.ticks;
+        value.commands += self.commands;
+    }
+}
+
+fn millis(duration: Duration) -> f64 {
+    duration.as_secs_f64() * 1000.0
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn captures_are_isolated_and_blocking_workers_restore_their_context() {
+        let a = measure("a", async {
+            let _span = span(Phase::Wait).ticks(20);
+            let capture = current();
+            tokio::task::spawn_blocking(move || {
+                capture.in_blocking(|| {
+                    let _span = span(Phase::ModelProof);
+                });
+                assert!(
+                    current().0.is_none(),
+                    "the same worker must restore its capture"
+                );
+            })
+            .await
+            .unwrap();
+        });
+        let b = measure("b", async {
+            let _span = span(Phase::Status);
+        });
+        let ((_, a), (_, b)) = tokio::join!(a, b);
+        assert_eq!(a.phases["wait"].requested_ticks, 20);
+        assert_eq!(a.phases["model_proof"].calls, 1);
+        assert!(!a.phases.contains_key("status"));
+        assert_eq!(b.phases["status"].calls, 1);
+        assert!(!b.phases.contains_key("wait"));
+        assert!(current().0.is_none());
+        assert!(
+            tokio::task::spawn_blocking(|| current().0.is_none())
+                .await
+                .unwrap()
+        );
+    }
+
+    #[tokio::test]
+    async fn failed_work_keeps_completed_phases_and_disabled_spans_do_nothing() {
+        let (_, report) = measure("failure", async {
+            let _span = span(Phase::Scan).cells(
+                dustroute_physical::Pos::new(-2, -2, -2),
+                dustroute_physical::Pos::new(2, 2, 2),
+            );
+            Err::<(), _>("unloaded")
+        })
+        .await;
+        assert_eq!(report.phases["scan"].calls, 1);
+        assert_eq!(report.phases["scan"].cells, 125);
+        assert!(span(Phase::Scan).started.is_none());
+    }
+
+    #[test]
+    fn blocking_capture_is_restored_when_work_panics() {
+        let capture = Capture(Some(Arc::default()));
+        let outcome = std::panic::catch_unwind(|| {
+            capture.in_blocking(|| {
+                assert!(current().0.is_some());
+                panic!("simulated local computation failure");
+            });
+        });
+        assert!(outcome.is_err());
+        assert!(current().0.is_none());
+    }
+}

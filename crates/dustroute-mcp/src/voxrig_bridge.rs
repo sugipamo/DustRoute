@@ -60,6 +60,7 @@ impl ClientRegion {
         region: Region,
         dimension: &str,
     ) -> Result<Self, BotBridgeError> {
+        let _measurement = crate::performance::span(crate::performance::Phase::NativeConvert);
         let fail = |s: &str| BotBridgeError::Protocol(s.into());
         let volume = region.volume().map_err(native_error)?;
         if observation.received.version != MinecraftVersion::Java1_21_11
@@ -145,11 +146,13 @@ impl VoxrigBridge {
             min: [min.x, min.y, min.z],
             max: [max.x, max.y, max.z],
         };
-        let observation = self
-            .client
-            .observe_client_region(region)
-            .await
-            .map_err(native_error)?;
+        let observation = {
+            let _measurement = crate::performance::span(crate::performance::Phase::NativeObserve);
+            self.client
+                .observe_client_region(region)
+                .await
+                .map_err(native_error)?
+        };
         ClientRegion::from_observation(observation, region, dimension)
     }
 }

@@ -2,7 +2,7 @@
 use super::test_support::*;
 use serde_json::{Value, json};
 
-fn machine() -> Value {
+pub(super) fn machine() -> Value {
     json!({"min":{"x":99,"y":99,"z":102},"max":{"x":105,"y":104,"z":109},"blocks":[
         {"pos":{"x":101,"y":101,"z":104},"name":"minecraft:sticky_piston","properties":{"facing":"east","extended":"false"}},
         {"pos":{"x":101,"y":101,"z":105},"name":"minecraft:slime_block"},

@@ -75,11 +75,14 @@ impl PlanStateStore {
         fs::create_dir_all(&directory).map_err(|error| error.to_string())?;
         restrict_directory(&self.root)?;
         restrict_directory(&directory)?;
-        let envelope = serde_json::json!({
-            "saved_at_unix_seconds": unix_seconds()?,
-            "value": value,
-        });
-        let bytes = serde_json::to_vec(&envelope).map_err(|error| error.to_string())?;
+        let bytes = {
+            let _measurement = crate::performance::span(crate::performance::Phase::StoreEncode);
+            let envelope = serde_json::json!({
+                "saved_at_unix_seconds": unix_seconds()?,
+                "value": value,
+            });
+            serde_json::to_vec(&envelope).map_err(|error| error.to_string())?
+        };
         let destination = directory.join(format!("{id}.json"));
         crate::storage::replace(
             &destination,
@@ -94,6 +97,7 @@ impl PlanStateStore {
         kind: PlanRecordKind,
         id: uuid::Uuid,
     ) -> Result<Option<T>, String> {
+        let _measurement = crate::performance::span(crate::performance::Phase::StoreRead);
         let path = self.root.join(kind.directory()).join(format!("{id}.json"));
         let bytes = match fs::read(&path) {
             Ok(bytes) => bytes,

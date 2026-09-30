@@ -1,5 +1,6 @@
 //! Circuit discovery depends only on the bridge and read policy. It does not
 //! dispatch MCP tools or own selection, operation, or persistence state.
+use crate::performance::{Phase, span};
 use crate::{BotBridge, CircuitDiscovery, McpPolicy, discover_connected_region};
 use dustroute_physical::Pos;
 use serde::Serialize;
@@ -144,6 +145,7 @@ impl CircuitCapture<'_> {
                 "no redstone component was found within 2 blocks of the gaze target".to_owned()
             })?;
 
+        let merge_measurement = span(Phase::DiscoveryMerge);
         let mut blocks = seed_snapshot
             .blocks
             .into_iter()
@@ -154,6 +156,7 @@ impl CircuitCapture<'_> {
             .filter(|block| is_redstone_candidate_name(&block.name))
             .map(|block| block.pos)
             .collect::<BTreeSet<_>>();
+        drop(merge_measurement);
         let mut loaded_tiles = BTreeSet::<(i32, i32, i32)>::new();
         let mut queued = BTreeSet::from([seed]);
         let mut queue = VecDeque::from([seed]);
@@ -204,6 +207,7 @@ impl CircuitCapture<'_> {
                             .scan_region(min, max, dimension)
                             .await
                             .map_err(|error| error.to_string())?;
+                        let _measurement = span(Phase::DiscoveryMerge);
                         for block in snapshot.blocks {
                             if is_redstone_candidate_name(&block.name) {
                                 candidates.insert(block.pos);
@@ -214,6 +218,7 @@ impl CircuitCapture<'_> {
                 }
             }
 
+            let _measurement = span(Phase::DiscoveryNeighbors);
             for dx in -component_gap..=component_gap {
                 for dy in -component_gap..=component_gap {
                     for dz in -component_gap..=component_gap {
@@ -236,6 +241,7 @@ impl CircuitCapture<'_> {
             limit_reached = true;
         }
 
+        let _measurement = span(Phase::DiscoveryMerge);
         let mut min = target;
         let mut max = target;
         for pos in &connected {
