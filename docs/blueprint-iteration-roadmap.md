@@ -60,6 +60,12 @@ inferring ownership or upgrading placed source identities. Fresh ungrounded
 construction remains an empty-target operation. See
 [world edit scope](world-edit-scope.md) for the supported bounds and live limits.
 
+The subsequently authorized [live follow-up](blueprint-iteration-live-validation.md)
+passed the declared three-stage workflow cases with the default public MCP
+profile on Vanilla Java 1.21.11. It includes exact independent server predicates,
+protected-world drift refusals, apply/undo, public removal and a new MCP process
+reading saved history. It is separate from the offline verification scope below.
+
 Offline validation completed with serial offline/locked Cargo jobs and serial
 test threads:
 
