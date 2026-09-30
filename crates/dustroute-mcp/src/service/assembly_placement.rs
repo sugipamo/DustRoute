@@ -14,7 +14,8 @@ use crate::source_identity::SourceIdentity;
 use dustroute_library::blueprint::AssemblyRevisionId;
 use dustroute_translate::assembly_transform::AssemblyTransform;
 use rmcp::schemars;
-use validation::{proof_from_basis, server_contract};
+use validation::proof_from_basis;
+pub(super) use validation::server_contract;
 
 #[derive(Clone, Debug, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]

@@ -66,8 +66,16 @@ pub(super) fn next_build_index(
 }
 
 pub(super) fn next_removal_position(world: &World) -> Result<Pos, String> {
+    next_removal_position_matching(world, |_| true)
+}
+
+pub(super) fn next_removal_position_matching(
+    world: &World,
+    selected: impl Fn(Pos) -> bool,
+) -> Result<Pos, String> {
     world
         .iter()
+        .filter(|(pos, _)| selected(**pos))
         .filter(|(_, b)| for_kind(b.kind).removal.is_some())
         .filter(|(pos, _)| {
             !world.iter().any(|(other, block)| {

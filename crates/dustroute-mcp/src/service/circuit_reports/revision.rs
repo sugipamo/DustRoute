@@ -101,6 +101,44 @@ pub(in super::super) fn revision_validation(
     json!({"status":if !complete {"incomplete"} else if issues.is_empty() {"structurally_valid"} else {"invalid_or_unsupported"},"placement_issues":issues,"summary":summary,"simulation":simulation,"property_validation":"simulator-supported properties only; not an exhaustive Java block-state schema"})
 }
 
+pub(in super::super) fn electrical_modification_validation(
+    before: &dustroute_translate::snapshot::MinecraftSnapshot,
+    after: &dustroute_translate::snapshot::MinecraftSnapshot,
+    complete: bool,
+) -> Option<Value> {
+    if !before.blocks.iter().chain(&after.blocks).any(|b| {
+        matches!(
+            b.name.as_str(),
+            "minecraft:piston"
+                | "minecraft:sticky_piston"
+                | "minecraft:piston_head"
+                | "minecraft:moving_piston"
+        )
+    }) {
+        return None;
+    }
+    if !complete {
+        return Some(json!({"status":"not_run","reason":"incomplete observation"}));
+    }
+    Some(
+        match dustroute_translate::piston_construction::ElectricalModification::new(
+            before,
+            after,
+            Default::default(),
+        ) {
+            Ok(proof) => {
+                json!({"status":"passed","forward_steps":proof.steps(false).len(),"undo_steps":proof.steps(true).len(),
+            "execution_profile":dustroute_translate::world::time::piston_runtime::ELECTRICAL_PROFILE,
+            "scope":"last revision diff; common electrical command physics; no functional/live-world proof",
+            "model_initial_queue":"assumed_empty","runtime_history_reconstructed":false})
+            }
+            Err(error) => {
+                json!({"status":"failed_or_unsupported","error":error,"placement_authorized":false})
+            }
+        },
+    )
+}
+
 fn simulated_terminal_summary(
     world: &dustroute_translate::world::World,
     analysis: &dustroute_translate::world_reverse::RegionAnalysis,

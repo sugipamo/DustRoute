@@ -2,10 +2,12 @@
 //! This is not adoption authority, a live observation or a generic placement
 //! certificate. The MCP layer must independently establish those conditions.
 mod diagnostics;
+mod modification;
 mod order;
 pub mod policy;
 mod snapshot;
 
+pub use modification::ElectricalModification;
 pub use snapshot::electrical_snapshot;
 use snapshot::literal_world;
 use std::collections::{BTreeMap, BTreeSet};

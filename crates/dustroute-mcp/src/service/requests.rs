@@ -32,6 +32,10 @@ pub(super) struct InspectLookedAtWorldParams {
     /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
     #[schemars(skip)]
     pub(super) player: Option<String>,
+    /// Explicit work region including intended additions and surrounding air.
+    /// Must contain the current gaze target. Returns an immutable circuit_id.
+    /// Cannot be combined with component_gap or max_components.
+    pub(super) region: Option<RegionParam>,
     /// Maximum redstone components followed from the gaze target, from 1 through 32768. Defaults to 8192.
     pub(super) max_components: Option<usize>,
     /// Maximum Manhattan gap followed between nearby components, from 1 through 16. Defaults to 2 so a one-block break remains visible.
@@ -193,6 +197,24 @@ pub(super) struct CoordinateParam {
     pub(super) x: i32,
     pub(super) y: i32,
     pub(super) z: i32,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub(super) struct RegionParam {
+    pub(super) min: CoordinateParam,
+    pub(super) max: CoordinateParam,
+}
+impl RegionParam {
+    pub(super) fn bounds(self) -> Result<dustroute_translate::world_reverse::RegionBounds, String> {
+        if self.min.x > self.max.x || self.min.y > self.max.y || self.min.z > self.max.z {
+            return Err("work region has reversed bounds".into());
+        }
+        Ok(dustroute_translate::world_reverse::RegionBounds::new(
+            dustroute_physical::Pos::new(self.min.x, self.min.y, self.min.z),
+            dustroute_physical::Pos::new(self.max.x, self.max.y, self.max.z),
+        ))
+    }
 }
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]

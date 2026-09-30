@@ -1,0 +1,295 @@
+//! Public workflow coverage; the transport fixture is not a physics oracle.
+use super::test_support::*;
+use serde_json::{Value, json};
+
+fn machine() -> Value {
+    json!({"min":{"x":99,"y":99,"z":102},"max":{"x":105,"y":104,"z":109},"blocks":[
+        {"pos":{"x":101,"y":101,"z":104},"name":"minecraft:sticky_piston","properties":{"facing":"east","extended":"false"}},
+        {"pos":{"x":101,"y":101,"z":105},"name":"minecraft:slime_block"},
+        {"pos":{"x":101,"y":102,"z":105},"name":"minecraft:observer","properties":{"facing":"south","powered":"false"}},
+        {"pos":{"x":102,"y":101,"z":104},"name":"minecraft:slime_block"},
+        {"pos":{"x":102,"y":101,"z":105},"name":"minecraft:sticky_piston","properties":{"facing":"west","extended":"false"}},
+        {"pos":{"x":102,"y":102,"z":104},"name":"minecraft:observer","properties":{"facing":"north","powered":"false"}}
+    ]})
+}
+async fn propose(client: &Client) -> Value {
+    let snapshot = machine();
+    let capture = call(
+        client,
+        "get_world",
+        json!({"region":{"min":snapshot["min"],"max":snapshot["max"]},"include_block_list":true}),
+    )
+    .await;
+    assert_eq!(capture["ok"], true, "{capture}");
+    assert_eq!(capture["counts"]["non_air"], 6);
+    let revision = call(
+        client,
+        "test_circuit_change",
+        json!({"circuit_id":capture["circuit_id"],"changes":[
+            {"position":{"x":101,"y":101,"z":106},"block":"minecraft:slime_block"},
+            {"position":{"x":101,"y":101,"z":107},"block":"minecraft:glass"}
+        ]}),
+    )
+    .await;
+    assert_eq!(revision["ok"], true, "{revision}");
+    assert_eq!(
+        revision["validation"]["electrical_modification"]["status"],
+        "passed"
+    );
+    let plan = call(
+        client,
+        "new_placement",
+        json!({"revision_id":revision["revision_id"]}),
+    )
+    .await;
+    assert_eq!(plan["ok"], true, "{plan}");
+    assert_eq!(plan["kind"], "electrical_revision_modification");
+    assert_eq!(plan["steps"].as_array().unwrap().len(), 2);
+    plan
+}
+async fn fixture() -> (
+    std::path::PathBuf,
+    std::sync::Arc<std::sync::Mutex<Fake>>,
+    String,
+    tokio::task::JoinHandle<()>,
+) {
+    let root = temporary();
+    let (fake, address, bridge) = start_construction_bridge(root.join("world-edits")).await;
+    {
+        let mut state = fake.lock().unwrap();
+        state.snapshot = Some(machine());
+        state.gaze_target = Some(json!({"x":101,"y":101,"z":105}));
+        state.resize_scan = true;
+    }
+    (root, fake, address, bridge)
+}
+
+#[tokio::test]
+async fn electrical_edit_public_capture_preview_apply_undo_and_restart_history() {
+    let (root, fake, address, bridge) = fixture().await;
+    let (client, server) = connected(&root, &address).await;
+    let plan = propose(&client).await;
+    let operation = json!({"operation_id":plan["operation_id"],"confirm":true});
+    assert_eq!(
+        call(&client, "invoke_operation", operation.clone()).await["ok"],
+        false
+    );
+    assert_eq!(fake.lock().unwrap().writes, 0);
+    assert_eq!(
+        call(
+            &client,
+            "show_operation",
+            json!({"operation_id":plan["operation_id"]})
+        )
+        .await["ok"],
+        true
+    );
+    fake.lock().unwrap().steps = plan["steps"].as_array().unwrap().iter().cloned().collect();
+    let result = call(&client, "invoke_operation", operation.clone()).await;
+    assert_eq!(result["ok"], true, "{result}");
+    assert_eq!(result["verified_steps"], 2);
+    assert_eq!(
+        call(&client, "invoke_operation", operation.clone()).await["ok"],
+        false
+    );
+    // Undo also guards unchanged cells outside the original captured region.
+    fake.lock().unwrap().snapshot.as_mut().unwrap()["blocks"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!({"pos":{"x":98,"y":99,"z":102},"name":"minecraft:stone"}));
+    let drifted = call(&client, "undo_operation", operation.clone()).await;
+    assert_eq!(drifted["ok"], false, "{drifted}");
+    assert_eq!(fake.lock().unwrap().writes, 2);
+    fake.lock().unwrap().snapshot.as_mut().unwrap()["blocks"]
+        .as_array_mut()
+        .unwrap()
+        .pop();
+    fake.lock().unwrap().steps = plan["undo_steps"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .cloned()
+        .collect();
+    let result = call(&client, "undo_operation", operation.clone()).await;
+    assert_eq!(result["ok"], true, "{result}");
+    assert_eq!(result["verified_steps"], 2);
+    assert_eq!(fake.lock().unwrap().writes, 4);
+    stop(client, server).await;
+    let (client, server) = connected(&root, &address).await;
+    let history = call(
+        &client,
+        "get_operation",
+        json!({"operation_id":plan["operation_id"]}),
+    )
+    .await;
+    assert_eq!(history["ok"], true, "{history}");
+    assert_eq!(history["record"]["state"], "undone");
+    assert_eq!(history["record"]["attempts"].as_array().unwrap().len(), 2);
+    assert_eq!(history["executable_plan_restored"], false);
+    assert_eq!(
+        call(&client, "invoke_operation", operation).await["ok"],
+        false
+    );
+    stop(client, server).await;
+    bridge.abort();
+    std::fs::remove_dir_all(root).unwrap();
+}
+
+#[tokio::test]
+async fn electrical_edit_stops_after_unverified_write_and_retains_inspection_history() {
+    let (root, fake, address, bridge) = fixture().await;
+    let (client, server) = connected(&root, &address).await;
+    let plan = propose(&client).await;
+    assert_eq!(
+        call(
+            &client,
+            "show_operation",
+            json!({"operation_id":plan["operation_id"]})
+        )
+        .await["ok"],
+        true
+    );
+    {
+        let mut state = fake.lock().unwrap();
+        state.steps = plan["steps"].as_array().unwrap().iter().cloned().collect();
+        state.fail_after_write = Some(1);
+    }
+    let operation = json!({"operation_id":plan["operation_id"],"confirm":true});
+    let result = call(&client, "invoke_operation", operation.clone()).await;
+    assert_eq!(result["ok"], false);
+    assert_eq!(result["status"], "needs_inspection");
+    assert_eq!(result["verified_steps"], 0);
+    assert_eq!(fake.lock().unwrap().writes, 1);
+    assert_eq!(
+        call(&client, "invoke_operation", operation.clone()).await["ok"],
+        false
+    );
+    assert_eq!(
+        call(&client, "undo_operation", operation).await["ok"],
+        false
+    );
+    stop(client, server).await;
+    let (client, server) = connected(&root, &address).await;
+    let history = call(
+        &client,
+        "get_operation",
+        json!({"operation_id":plan["operation_id"]}),
+    )
+    .await;
+    assert_eq!(history["record"]["state"], "needs_inspection");
+    assert_eq!(history["record"]["attempts"][0]["verified_steps"], 0);
+    stop(client, server).await;
+    bridge.abort();
+    std::fs::remove_dir_all(root).unwrap();
+}
+
+#[tokio::test]
+async fn electrical_edit_rejects_guard_drift_and_invalid_workspace_before_writes() {
+    let (root, fake, address, bridge) = fixture().await;
+    let (client, server) = connected(&root, &address).await;
+    let invalid = call(
+        &client,
+        "get_world",
+        json!({"region":{"min":{"x":1,"y":0,"z":0},"max":{"x":0,"y":0,"z":0}}}),
+    )
+    .await;
+    assert_eq!(invalid["ok"], false);
+    let plan = propose(&client).await;
+    assert_eq!(
+        call(
+            &client,
+            "show_operation",
+            json!({"operation_id":plan["operation_id"]})
+        )
+        .await["ok"],
+        true
+    );
+    fake.lock().unwrap().snapshot.as_mut().unwrap()["blocks"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!({"pos":{"x":98,"y":99,"z":102},"name":"minecraft:stone"}));
+    let result = call(
+        &client,
+        "invoke_operation",
+        json!({"operation_id":plan["operation_id"],"confirm":true}),
+    )
+    .await;
+    assert_eq!(result["ok"], false);
+    assert_eq!(fake.lock().unwrap().writes, 0);
+    stop(client, server).await;
+    bridge.abort();
+    std::fs::remove_dir_all(root).unwrap();
+}
+
+#[tokio::test]
+async fn electrical_edit_refuses_changed_target_features_and_unverified_observation() {
+    for reason in ["target", "features", "readback"] {
+        let (root, fake, address, bridge) = fixture().await;
+        let (client, server) = connected(&root, &address).await;
+        let plan = propose(&client).await;
+        assert_eq!(
+            call(
+                &client,
+                "show_operation",
+                json!({"operation_id":plan["operation_id"]})
+            )
+            .await["ok"],
+            true
+        );
+        {
+            let mut state = fake.lock().unwrap();
+            match reason {
+                "target" => state.wrong_target = true,
+                "features" => state.unknown_features = true,
+                "readback" => state.unverified_readback = true,
+                _ => unreachable!(),
+            }
+        }
+        let result = call(
+            &client,
+            "invoke_operation",
+            json!({"operation_id":plan["operation_id"],"confirm":true}),
+        )
+        .await;
+        assert_eq!(result["ok"], false, "{reason}: {result}");
+        assert_eq!(fake.lock().unwrap().writes, 0);
+        stop(client, server).await;
+        bridge.abort();
+        std::fs::remove_dir_all(root).unwrap();
+    }
+}
+
+#[tokio::test]
+async fn electrical_edit_keeps_read_only_policy_and_requires_explicit_confirmation() {
+    let (root, fake, address, bridge) = fixture().await;
+    let mut service = super::DustRouteMcp::with_policy_and_player(
+        &address,
+        super::McpPolicy::default(),
+        "Tester",
+    );
+    service.state_store = super::PlanStateStore::new(root.clone(), 3600);
+    let (client, server) = serve(service).await;
+    let plan = propose(&client).await;
+    assert_eq!(
+        call(
+            &client,
+            "show_operation",
+            json!({"operation_id":plan["operation_id"]})
+        )
+        .await["ok"],
+        true
+    );
+    for confirm in [false, true] {
+        let result = call(
+            &client,
+            "invoke_operation",
+            json!({"operation_id":plan["operation_id"],"confirm":confirm}),
+        )
+        .await;
+        assert_eq!(result["ok"], false);
+    }
+    assert_eq!(fake.lock().unwrap().writes, 0);
+    stop(client, server).await;
+    bridge.abort();
+    std::fs::remove_dir_all(root).unwrap();
+}

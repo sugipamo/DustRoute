@@ -3,6 +3,7 @@
 use super::{
     StoredDoorPlan, StoredPistonPlacement, StoredTransitionPlan,
     assembly_placement::StoredAssemblyPlacement,
+    electrical_edit::ElectricalEditPlan,
     placement_registry::{PlacementEntry, PlacementTable},
 };
 use std::{collections::HashMap, marker::PhantomData, sync::Arc};
@@ -15,6 +16,7 @@ pub(super) enum StoredOperation {
     Door(Box<StoredDoorPlan>),
     Piston(Box<StoredPistonPlacement>),
     Assembly(Box<StoredAssemblyPlacement>),
+    ElectricalEdit(Box<ElectricalEditPlan>),
 }
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) enum PlanKind {
@@ -23,6 +25,7 @@ pub(super) enum PlanKind {
     Door,
     Piston,
     Assembly,
+    ElectricalEdit,
 }
 pub(super) trait PlanPayload: Sized {
     fn wrap(self) -> StoredOperation;
@@ -57,6 +60,7 @@ payload!(StoredTransitionPlan, Transition);
 payload!(StoredDoorPlan, Door);
 payload!(StoredPistonPlacement, Piston);
 payload!(StoredAssemblyPlacement, Assembly);
+payload!(ElectricalEditPlan, ElectricalEdit);
 
 #[derive(Clone, Default)]
 pub(super) struct OperationPlans {
@@ -79,6 +83,7 @@ impl OperationPlans {
             StoredOperation::Door(_) => PlanKind::Door,
             StoredOperation::Piston(_) => PlanKind::Piston,
             StoredOperation::Assembly(_) => PlanKind::Assembly,
+            StoredOperation::ElectricalEdit(_) => PlanKind::ElectricalEdit,
         })
     }
 }

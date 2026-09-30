@@ -73,6 +73,14 @@ explicit air cells. `counts.air` also includes air cells omitted by the backend.
 `resolve_looked_at_circuit` and
 `convert_from_circuit` use the same component-limited expansion.
 
+For an existing-machine modification, supply `get_world({region: {min, max}})`
+with the intended additions and surrounding air inside the work cuboid. The
+player must be looking at a block inside it. This alternative requires a
+complete stationary observation, returns an immutable `circuit_id`, and cannot
+be combined with `component_gap` or `max_components`. Listing truncation does
+not truncate the retained observation. Cuboid completeness does not establish
+that the entire circuit or flight corridor is contained in it.
+
 `convert_from_circuit` reports a physical-first hierarchy. Observed facts
 become a directed physical graph, recognized local cells, traceable logic
 expressions, and finally optional functional candidates. Every stage reports
@@ -240,6 +248,24 @@ confirmed plan can be written with `invoke_operation`; the server first
 checks that the preview baseline is still current and then verifies the live
 world after writing. `undo_operation` performs the same checks while
 restoring the captured blocks.
+
+`new_placement({revision_id: "..."})` can modify an observed supported
+stationary piston assembly at its existing coordinates. The cumulative diff
+is simulated through the same native construction callbacks as full Assembly
+construction; it is limited to 64 changed positions, 4096 non-air blocks and
+the configured policy bounds. Forward and undo steps must both settle to the
+complete declared states. Planning, showing and applying each require two
+matching complete observations separated by 20 client ticks. An empty initial
+event queue is a model assumption, not a fact proved by those observations.
+
+Each command is guarded by a complete fresh readback before and after it.
+Write intent and the verified prefix are persisted under `world-edits`;
+`get_operation` can read applied, undone or `needs_inspection` history after
+restart. Executable plans are not restored. Uncertain writes stop the attempt
+without automatic retry or rollback. Undo requires a verified application and
+an unchanged complete target region. These edits do not adopt a Blueprint,
+change child references, update a placed Assembly's expectations, or verify
+flight/harvest behavior. See the [existing-machine roadmap](../../docs/existing-machine-modification.md).
 
 ## Transition scenarios
 

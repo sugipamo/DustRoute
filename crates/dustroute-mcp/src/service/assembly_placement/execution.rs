@@ -88,37 +88,18 @@ impl AssemblyService<'_> {
             registry.save(&mut record)?;
             let mut completed = 0;
             let mut run: Result<(),String> = async {
-                let mut expected = baseline;
-                for step in &steps {
-                    let status = self.bridge.status().await.map_err(|e|e.to_string())?;
-                    server_contract(&status,&plan.dimension)?;
-                    plan.target.check(&status)?;
-                    let before_readback = self.bridge.scan_region_fresh(bounds.min,bounds.max,&plan.dimension).await.map_err(|e|e.to_string())?.into_stationary_record()?;
-                    let before = before_readback.snapshot;
-                    ValidatedAssemblyPlacement::matches(&before,&expected,&status.version)?;
-                    record.attempts.last_mut().ok_or("missing durable attempt")?.readbacks.push(before_readback.readback);
-                    registry.save(&mut record)?;
-                    self.bridge.write_blocks(&[CommandWrite { pos:step.position, state:step.state.parse()? }],&plan.dimension).await.map_err(|e|e.to_string())?;
-                    // The bridge accepts at most 200 ticks per request. A
-                    // modeled chain may need longer before whole-region readback.
-                    let mut remaining = step.wait_ticks;
-                    while remaining > 0 {
-                        let ticks = remaining.min(200) as u16;
-                        self.bridge.wait_ticks(ticks,&plan.dimension).await.map_err(|e|e.to_string())?;
-                        remaining -= u64::from(ticks);
+                super::super::construction_executor::ConstructionExecutor {
+                    bridge:self.bridge, policy:self.policy, target:&plan.target,
+                }.execute(&baseline,&steps,|progress| {
+                    let attempt = record.attempts.last_mut().ok_or("missing durable attempt")?;
+                    match progress {
+                        super::super::construction_executor::StageProgress::Readback(receipt) => attempt.readbacks.push(*receipt),
+                        super::super::construction_executor::StageProgress::Verified(count) => { completed=count; attempt.verified_steps=count; }
                     }
-                    let after_readback = self.bridge.scan_region_fresh(bounds.min,bounds.max,&plan.dimension).await.map_err(|e|e.to_string())?.into_stationary_record()?;
-                    let after = after_readback.snapshot;
-                    record.attempts.last_mut().ok_or("missing durable attempt")?.readbacks.push(after_readback.readback);
-                    let after_status = self.bridge.status().await.map_err(|e|e.to_string())?;
-                    plan.target.check(&after_status)?;
-                    ValidatedAssemblyPlacement::matches(&after,&step.expected,&after_status.version)?;
-                    expected = step.expected.clone();
-                    completed += 1;
-                    record.attempts.last_mut().ok_or("missing durable attempt")?.verified_steps = completed;
-                    registry.save(&mut record)?;
-                }
-                proof.validate_after(&expected,&status.version,removal)
+                    registry.save(&mut record)
+                }).await?;
+                let expected = steps.last().map_or(&baseline,|step| &step.expected);
+                proof.validate_after(expected,&status.version,removal)
             }.await;
             record.state = if run.is_ok() { if removal {InstanceState::Removed}else{InstanceState::Applied} } else {InstanceState::NeedsInspection};
             let attempt = record.attempts.last_mut().ok_or("missing durable attempt")?;

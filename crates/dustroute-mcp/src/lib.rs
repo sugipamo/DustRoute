@@ -7,6 +7,7 @@ pub mod bridge;
 pub mod bridge_protocol;
 pub mod config;
 pub mod discovery;
+mod edit_registry;
 pub mod observation_evidence;
 pub mod operations;
 mod piston_assembly;

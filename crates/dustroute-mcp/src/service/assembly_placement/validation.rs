@@ -1,7 +1,7 @@
 //! Fresh source/adoption identity and target execution checks.
 use super::*;
 
-pub(super) fn server_contract(
+pub(in crate::service) fn server_contract(
     status: &crate::bridge::BotStatus,
     dimension: &str,
 ) -> Result<(), String> {

@@ -162,8 +162,8 @@ surrounding overlay context or evidence of a completed Minecraft write.
 Planning rescans the entire original region and one block of surrounding
 context. Every observed block/property inside the original region must exactly
 match the retained base. Missing/partial scans and duplicate positions are
-rejected. Both the baseline and the proposed edits pass the existing shared
-placement validator; unsupported devices, invalid supports and unexportable or
+rejected. For ordinary circuit diffs, both the baseline and the proposed edits
+pass the existing shared placement validator; unsupported devices, invalid supports and unexportable or
 lossy block states are rejected. Changed blocks must provide complete properties
 that the existing Java exporter can reproduce exactly. This intentionally
 rejects some otherwise syntactically valid drafts, powered states the exporter
@@ -186,11 +186,27 @@ target context and then verifies restoration of the base context. Undo attempts
 are also consumed before writing. These in-memory placement/undo records do not
 survive MCP restart, independently of the persisted revision records.
 
+Supported stationary piston diffs use `ElectricalModification` instead of the
+ordinary placement validator. The original context is retained and only changed
+positions are written. Forward and undo sequences use the common electrical
+construction runtime and each command must settle to a complete expected state.
+The model assumes an empty initial queue; snapshots cannot reconstruct hidden
+pending events. Plans remain ephemeral, while write intents, verified prefixes
+and readback evidence survive restart as historical `get_operation` records.
+They do not restore executable authority or imply Blueprint adoption.
+
+`validation.electrical_modification` describes the last draft edit only. Static
+diagnostics and the older general validator can still report unsupported
+pistons. `new_placement` independently checks the cumulative diff and the entire
+fresh surrounding context; a passed stored check never grants placement
+permission. See the [workflow and limitations](existing-machine-modification.md).
+
 This proves modeled placement and the observed local result, not functional
 equivalence, all input transitions, or distant circuit effects beyond the
-captured one-block context. General piston placement remains unsupported; use
-the fixed built-in preset for the verified 1x2 mechanism. Merge remains outside
-this increment.
+captured one-block context. Stationary piston edits are limited to identities
+and states supported by the common physical runtime. Unknown devices and
+unmodeled crop/fluid behavior remain rejected. Merge remains outside this
+increment.
 
 Placement evidence (2026-09-07): 62 MCP tests passed and all-target Clippy
 passed. The real Java 1.21.11 MCP harness passed three independent trials of a

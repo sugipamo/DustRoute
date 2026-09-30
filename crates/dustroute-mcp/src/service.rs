@@ -7,6 +7,8 @@ use std::sync::Arc;
 mod assembly_placement;
 mod circuit_capture;
 mod circuit_reports;
+mod construction_executor;
+mod electrical_edit;
 mod optimization_workflow;
 mod placement_workflow;
 mod player_scope;
@@ -17,6 +19,8 @@ use circuit_reports::{
     focused_role_json, hierarchical_result_json, mixed_ir_json, raw_world_inspection,
     reverse_result_json, revision_json, revision_validation,
 };
+#[cfg(test)]
+mod electrical_edit_tests;
 mod requests;
 #[cfg(test)]
 mod test_support;
@@ -1001,6 +1005,79 @@ impl DustRouteMcp {
         circuit_id
     }
 
+    async fn capture_work_region(
+        &self,
+        player: &str,
+        region: requests::RegionParam,
+        params: &InspectLookedAtWorldParams,
+    ) -> Result<Value, String> {
+        if params.component_gap.is_some() || params.max_components.is_some() {
+            return Err("region cannot be combined with component_gap or max_components".into());
+        }
+        let bounds = region.bounds()?;
+        self.policy
+            .validate_region(bounds)
+            .map_err(|e| e.to_string())?;
+        let limit = params.max_listed_blocks.unwrap_or(256);
+        let distance = params.max_distance.unwrap_or(64.0);
+        if !(1..=2048).contains(&limit) || !(1.0..=256.0).contains(&distance) {
+            return Err("max_listed_blocks must be 1..2048 and max_distance 1..256".into());
+        }
+        let observation = self
+            .bridge
+            .observe_player(player, distance)
+            .await
+            .map_err(|e| e.to_string())?;
+        let target = observation
+            .targeted_block
+            .ok_or("look at a block in the work region")?;
+        if !bounds.contains(target) {
+            return Err("work region must contain the current gaze target".into());
+        }
+        self.policy
+            .authorize_dimension(&observation.dimension)
+            .map_err(|e| e.to_string())?;
+        let record = self
+            .bridge
+            .scan_region_fresh(bounds.min, bounds.max, &observation.dimension)
+            .await
+            .map_err(|e| e.to_string())?
+            .into_stationary_record()?;
+        let snapshot = record.snapshot;
+        if snapshot.min != bounds.min || snapshot.max != bounds.max {
+            return Err("complete exact work region required".into());
+        }
+        dustroute_translate::snapshot::index_literal_snapshot(&snapshot)?;
+        let mut result = raw_world_inspection(
+            &snapshot,
+            target,
+            &observation.dimension,
+            params.include_block_list.unwrap_or(false),
+            limit,
+        );
+        let expansion = json!({"strategy":"explicit_work_region","limit_reached":false,
+            "scope":"complete requested cuboid; circuit and movement may extend beyond it"});
+        let circuit_id = self
+            .store_circuit(StoredCircuit {
+                player: player.into(),
+                dimension: observation.dimension.clone(),
+                bounds,
+                target: Some(target),
+                snapshot,
+                expansion: expansion.clone(),
+                complete: true,
+                expires_at: Instant::now() + CIRCUIT_SNAPSHOT_TTL,
+            })
+            .await;
+        result["circuit_id"] = json!(circuit_id);
+        result["circuit_expires_in_seconds"] = json!(CIRCUIT_SNAPSHOT_TTL.as_secs());
+        result["player_observation"] = json!(observation);
+        result["readback"] = json!(record.readback);
+        result["expansion"] = expansion;
+        result["mutation_authorized"] = json!(false);
+        Ok(result)
+    }
+
     async fn load_circuit(
         &self,
         circuit_id: &str,
@@ -1357,7 +1434,7 @@ impl DustRouteMcp {
     }
 
     #[tool(
-        description = "Inspect raw Minecraft blocks by starting near the block a player is looking at and progressively following adjacent redstone components. Expansion stops naturally at the circuit edge or explicitly at max_components; no scan radius is required.",
+        description = "Inspect raw Minecraft blocks near player gaze, following adjacent redstone components until their edge or max_components. Alternatively provide region={min,max} including the gaze target to capture a complete stationary work cuboid, including air for intended additions. Explicit region cannot be combined with component_gap or max_components. Returns an immutable circuit_id; observation does not authorize mutation.",
         annotations(read_only_hint = true, destructive_hint = false)
     )]
     async fn get_world(
@@ -1370,6 +1447,15 @@ impl DustRouteMcp {
         };
         if let Some(error) = self.authorize_player(&player) {
             return error;
+        }
+        if let Some(region) = params.region {
+            return json_text(
+                self.capture_work_region(&player, region, &params)
+                    .await
+                    .unwrap_or_else(
+                        |error| json!({"ok":false,"error":error,"scan_complete":false}),
+                    ),
+            );
         }
         let max_components = params.max_components.unwrap_or(8192);
         let component_gap = params.component_gap.unwrap_or(2);
@@ -1789,11 +1875,15 @@ impl DustRouteMcp {
             let focus=target.unwrap_or(snapshot.min);
             let before=revision_validation(&baseline,&dimension,focus,complete,ticks);
             let after=revision_validation(&snapshot,&dimension,focus,complete,ticks);
+            let modification=circuit_reports::electrical_modification_validation(&baseline,&snapshot,complete);
             let mut revision=crate::revision::CircuitRevision{
                 schema_version:"dustroute.circuit-revision.v1".into(),revision_id:uuid::Uuid::new_v4(),parent_revision_ids:parents,base_observation_id,player,dimension,target,complete,snapshot,base_snapshot,changes,
                 validation:json!({"before":before,"after":after,"simulation_ticks":ticks,"scope":"initial_state_only; no functional equivalence or live-world guarantee"}),
                 assembly:None,
             };
+            if let Some(modification)=modification {
+                revision.validation["electrical_modification"]=modification;
+            }
             match revision.capture_assembly(parent_assembly.as_ref()) {
                 Ok(record)=>{
                     let checked=dustroute_translate::assembly::validate_assembly(dustroute_library::builtin_blueprints::builtin_blueprints(),&record.assembly);
@@ -2277,7 +2367,7 @@ impl DustRouteMcp {
     }
 
     #[tool(
-        description = "Plan a built-in circuit, a grounded revision at its original coordinates, or an adopted electrical Assembly at a new assembly_target (source_anchor, target_anchor, rotation). Custom construction freshly reviews the target and simulates ordered installation/removal with full readback after each step. Returns a previewable operation and conditional undo without changing the world"
+        description = "Plan a built-in circuit, a grounded revision at its original coordinates, or an adopted electrical Assembly at a new assembly_target (source_anchor, target_anchor, rotation). A grounded revision with supported stationary pistons uses the common physical runtime for differential construction and conditional undo; it does not imply verified flying/harvest behavior or adopt the revision. Custom construction freshly reviews the target and simulates ordered installation/removal with full readback after each step. Returns a previewable operation without changing the world"
     )]
     async fn new_placement(
         &self,
@@ -2559,6 +2649,13 @@ impl DustRouteMcp {
                 return error_text(McpErrorCode::InvalidArgument, error.to_string(), false);
             }
         };
+        if self.plans.kind(&operation_id).await == Some(PlanKind::ElectricalEdit) {
+            return json_text(
+                self.electrical_edit_view(operation_id)
+                    .await
+                    .unwrap_or_else(|error| json!({"ok":false,"error":error})),
+            );
+        }
         if self.plans.kind(&operation_id).await == Some(PlanKind::Assembly) {
             return json_text(
                 self.assembly_service()
@@ -3472,6 +3569,16 @@ impl DustRouteMcp {
         };
         let old = world_from_snapshot(&before).map_err(|e| e.to_string())?;
         let new = world_from_snapshot(&after).map_err(|e| e.to_string())?;
+        if old.iter().chain(new.iter()).any(|(_, block)| {
+            matches!(
+                block.kind,
+                BlockKind::Piston | BlockKind::PistonHead | BlockKind::MovingPiston
+            )
+        }) {
+            return self
+                .plan_electrical_edit(params, &revision, before, after, status, source)
+                .await;
+        }
         dustroute_translate::world::ValidatedWorld::try_from(old.clone())
             .map_err(|e| format!("baseline is invalid or unsupported: {e}"))?;
         let mut changes = Vec::new();
@@ -4605,6 +4712,12 @@ impl DustRouteMcp {
             }
         };
         let plan_kind = self.plans.kind(&operation_id).await;
+        if plan_kind == Some(PlanKind::ElectricalEdit) {
+            return json_text(
+                self.show_electrical_edit(operation_id, params.player.as_deref())
+                    .await,
+            );
+        }
         if plan_kind == Some(PlanKind::Assembly) {
             return json_text(
                 self.assembly_service()
@@ -4753,6 +4866,12 @@ impl DustRouteMcp {
                 .expect("explicit blueprint response");
         }
         let plan_kind = self.plans.kind(&operation_id).await;
+        if plan_kind == Some(PlanKind::ElectricalEdit) {
+            return json_text(
+                self.mutate_electrical_edit(operation_id, params.confirm, false)
+                    .await,
+            );
+        }
         if plan_kind == Some(PlanKind::Assembly) {
             return json_text(
                 self.assembly_service()
@@ -4831,6 +4950,12 @@ impl DustRouteMcp {
             }
         };
         let plan_kind = self.plans.kind(&operation_id).await;
+        if plan_kind == Some(PlanKind::ElectricalEdit) {
+            return json_text(
+                self.mutate_electrical_edit(operation_id, params.confirm, true)
+                    .await,
+            );
+        }
         if plan_kind == Some(PlanKind::Assembly) {
             return json_text(
                 self.assembly_service()
@@ -4881,7 +5006,7 @@ impl DustRouteMcp {
     }
 
     #[tool(
-        description = "Read operation status/results, including persisted Blueprint update requests and decision history. Saved validation events are historical diagnostics, never fresh proof.",
+        description = "Read operation status/results, including persisted Blueprint decisions and existing-machine edit history. Edit attempts retain verified steps and readback evidence after restart without restoring executable plans. Saved records are historical diagnostics, never fresh proof.",
         annotations(read_only_hint = true, destructive_hint = false)
     )]
     async fn get_operation(&self, Parameters(params): Parameters<OperationParams>) -> String {
@@ -4891,6 +5016,11 @@ impl DustRouteMcp {
                 return error_text(McpErrorCode::InvalidArgument, error.to_string(), false);
             }
         };
+        match self.electrical_edit_history(operation_id) {
+            Ok(Some(record)) => return json_text(record),
+            Ok(None) => {}
+            Err(error) => return json_text(json!({"ok":false,"error":error})),
+        }
         match self.operations.get(operation_id).await {
             Some(operation) => json_text(json!({ "ok": true, "operation": operation })),
             None => self

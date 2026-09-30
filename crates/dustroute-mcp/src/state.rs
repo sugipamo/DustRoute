@@ -35,6 +35,9 @@ impl PlanStateStore {
     pub(crate) fn assembly_instance_root(&self) -> PathBuf {
         self.root.join("assembly-instances")
     }
+    pub(crate) fn edit_record_root(&self) -> PathBuf {
+        self.root.join("world-edits")
+    }
 
     pub(crate) fn blueprint_root(&self, player: &str) -> PathBuf {
         let mut hasher = DefaultHasher::new();

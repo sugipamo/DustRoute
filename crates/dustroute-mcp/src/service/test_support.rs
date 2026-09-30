@@ -26,6 +26,8 @@ pub(super) struct Fake {
     pub(super) fail_after_write: Option<usize>,
     pub(super) lose_write_reply_at: Option<usize>,
     pub(super) unverified_readback: bool,
+    pub(super) gaze_target: Option<Value>,
+    pub(super) resize_scan: bool,
 }
 pub(super) async fn start_construction_bridge(
     durable_root: PathBuf,
@@ -54,10 +56,21 @@ pub(super) async fn start_construction_bridge(
                         json!({"connected":true,"username":"bot","host":if state.wrong_target {"other-server"}else{"localhost"},"port":25565,"version":"1.21.11","dimension":"minecraft:overworld","enabled_features":if state.unknown_features {Value::Null}else{json!(["minecraft:vanilla"])}})
                     }
                     "observe_player" => {
-                        json!({"player":"Tester","eye_position":{"x":0.0,"y":180.0,"z":0.0},"yaw":0.0,"pitch":0.0,"dimension":"minecraft:overworld"})
+                        json!({"player":"Tester","eye_position":{"x":0.0,"y":180.0,"z":0.0},"yaw":0.0,"pitch":0.0,"dimension":"minecraft:overworld","targeted_block":state.gaze_target})
                     }
                     "scan_region" => {
                         let mut snapshot = state.snapshot.clone().unwrap_or_else(|| json!({"min":req["params"]["min"],"max":req["params"]["max"],"blocks":[]}));
+                        if state.resize_scan {
+                            snapshot["min"] = req["params"]["min"].clone();
+                            snapshot["max"] = req["params"]["max"].clone();
+                            snapshot["blocks"].as_array_mut().unwrap().retain(|block| {
+                                ["x", "y", "z"].into_iter().all(|axis| {
+                                    let p = block["pos"][axis].as_i64().unwrap();
+                                    p >= req["params"]["min"][axis].as_i64().unwrap()
+                                        && p <= req["params"]["max"][axis].as_i64().unwrap()
+                                })
+                            });
+                        }
                         if state.partial
                             || state.fail_after_write.is_some_and(|n| state.writes >= n)
                         {
@@ -172,7 +185,7 @@ pub(super) async fn stop(client: Client, server: tokio::task::JoinHandle<()>) {
     server.await.unwrap();
 }
 
-async fn serve(service: DustRouteMcp) -> (Client, tokio::task::JoinHandle<()>) {
+pub(super) async fn serve(service: DustRouteMcp) -> (Client, tokio::task::JoinHandle<()>) {
     let (server_io, client_io) = tokio::io::duplex(1024 * 1024);
     let server = tokio::spawn(async move {
         service

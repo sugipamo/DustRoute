@@ -12,6 +12,7 @@ pub(super) use analysis::focused_role_json;
 pub(super) use analysis::hierarchical_result_json;
 pub(super) use analysis::mixed_ir_json;
 pub(super) use inspection::raw_world_inspection;
+pub(super) use revision::electrical_modification_validation;
 pub(super) use revision::revision_json;
 pub(super) use revision::revision_validation;
 pub(super) use truth_table::reverse_result_json;
