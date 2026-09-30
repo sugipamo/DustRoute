@@ -18,6 +18,7 @@ Git history; diagnostic fixtures have not been promoted into public capability.
 | [Circuit revisions](circuit-revisions.md) | Hypothetical editing, storage and live placement |
 | [Existing-machine modification](existing-machine-modification.md) | Differential piston construction and the roadmap for a sugar-cane prototype |
 | [Blueprint MCP workflow](blueprint-mcp.md) | Immutable source/state catalogs, proposal review, explicit decisions and durable history |
+| [Small building authoring](blueprint-building.md) | Typed enclosure generation, structural contracts, shared construction and restart diagnosis |
 | [Custom piston Assembly placement](custom-piston-assembly-placement.md) | Standard mixed-direction electrical context, adoption, new-target placement and conditional undo |
 | [Fixed 1×2 piston door](piston-door-mcp-v1.md) | Supported construction, recognition, open/close and undo |
 

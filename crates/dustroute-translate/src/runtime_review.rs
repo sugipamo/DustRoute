@@ -11,6 +11,7 @@ use dustroute_library::blueprint::{
 };
 use dustroute_library::execution_context::check_law_requirements;
 use dustroute_library::runtime_behavior::RuntimeBehaviorContext;
+use dustroute_minecraft::time::piston_runtime::ElectricalPistonRuntime;
 use dustroute_minecraft::time::runtime::RuntimeView;
 use dustroute_minecraft::{Block, BlockKind, Pos, RotationY};
 use serde::Serialize;
@@ -154,6 +155,42 @@ impl Monitor {
             });
             report.record(&r.path, evidence);
         }
+    }
+}
+
+/// With no external inputs there is one deterministic initialization path.
+/// Audit every committed state before certifying its quiescent terminal state.
+/// A running clock, pending work, failed runtime or exhausted budget cannot pass.
+fn review_uncontrolled_world(
+    run: &mut ElectricalPistonRuntime,
+    monitor: &mut Monitor,
+    budget: BehaviorBudget,
+    start: Instant,
+) -> Result<usize, String> {
+    let mut steps = 0;
+    if budget.max_states == 0 {
+        return Err("reachable-state budget exhausted during structural review".into());
+    }
+    loop {
+        if start.elapsed() >= budget.max_elapsed {
+            return Err("elapsed verification budget exhausted during structural review".into());
+        }
+        if run.pending_count() == 0 {
+            // Also checks for orphaned moving carriers and marks completion.
+            run.microstep().map_err(|e| e.to_string())?;
+            if !run.at_input_boundary() {
+                return Err("structural review did not reach an idle input boundary".into());
+            }
+            return Ok(steps);
+        }
+        if steps >= budget.max_steps || steps + 1 >= budget.max_states {
+            return Err(
+                "verification budget exhausted before structural runtime quiescence".into(),
+            );
+        }
+        run.microstep().map_err(|e| e.to_string())?;
+        monitor.runtime(run.view());
+        steps += 1;
     }
 }
 
@@ -468,7 +505,7 @@ pub fn review_assembly_in_runtime_context(
         },
         "initial Assembly",
     );
-    let runtime = fresh_runtime(catalog, assembly, context);
+    let mut runtime = fresh_runtime(catalog, assembly, context);
     match &runtime {
         Ok(run) => {
             monitor.runtime(run.view());
@@ -484,8 +521,34 @@ pub fn review_assembly_in_runtime_context(
             e.clone(),
         )),
     }
-    let monitor = RefCell::new(monitor);
     let mut closed = false;
+    let has_behavior = view.occurrences.values().any(|occurrence| {
+        !catalog
+            .revision(&occurrence.revision)
+            .expect("indexed source")
+            .behavior_bindings
+            .is_empty()
+    });
+    if !has_behavior && context.input_levers.is_empty() {
+        if let Ok(run) = &mut runtime {
+            match review_uncontrolled_world(run, &mut monitor, budget, start) {
+                Ok(steps) => {
+                    closed = true;
+                    report.arrangement.push(check(
+                        CheckKind::Behavior,
+                        CheckStatus::Passed,
+                        format!("closed the input-free physical path after {steps} committed microsteps; terminal runtime has no pending work"),
+                    ));
+                }
+                Err(error) => report.arrangement.push(check(
+                    CheckKind::Behavior,
+                    CheckStatus::Undetermined,
+                    error,
+                )),
+            }
+        }
+    }
+    let monitor = RefCell::new(monitor);
     let elapsed_limit = budget.max_elapsed;
     for (path, occurrence) in &view.occurrences {
         let source = catalog

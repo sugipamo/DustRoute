@@ -17,6 +17,7 @@ pub mod blueprint;
 pub mod blueprint_connection;
 pub mod blueprint_generation;
 pub mod blueprint_update;
+pub mod building;
 pub mod cell_generators;
 pub mod cell_library;
 pub mod cells;

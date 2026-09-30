@@ -1,5 +1,5 @@
 //! Turn declared geometry into immutable source revisions and a fresh proposal.
-use super::{FlyingMachineRecords, recipe::Recipe};
+use super::recipe::Recipe;
 use crate::blueprint_update::BlueprintUpdateRequest;
 use crate::snapshot::assembly_from_snapshot;
 use crate::{cells::RotationY, world::BlockKind, world::PistonState, world::Pos};
@@ -14,7 +14,7 @@ use std::collections::BTreeMap;
 pub(super) fn build(
     spec: &FlyingMachineRequest,
     recipe: &Recipe,
-) -> Result<(FlyingMachineRecords, BlueprintUpdateRequest), String> {
+) -> Result<(BlueprintRecords, BlueprintUpdateRequest), String> {
     let id = |suffix: &str| {
         BlueprintRevisionId::new(format!("{}.{suffix}", spec.namespace)).map_err(str::to_owned)
     };
@@ -200,8 +200,9 @@ pub(super) fn build(
     catalog
         .insert_assembly(base.clone())
         .map_err(|e| e.to_string())?;
-    let records = FlyingMachineRecords {
+    let records = BlueprintRecords {
         types: catalog.type_revisions().cloned().collect(),
+        classifications: catalog.classifications().cloned().collect(),
         revisions: catalog.revisions().cloned().collect(),
         assemblies: vec![base],
     };

@@ -99,18 +99,7 @@ pub(crate) enum BlueprintRead {
     Archive,
 }
 
-#[derive(Debug, Default, Deserialize, Serialize, schemars::JsonSchema)]
-#[serde(deny_unknown_fields)]
-pub(crate) struct BlueprintRecords {
-    #[serde(default)]
-    pub types: Vec<TypeRevision>,
-    #[serde(default)]
-    pub classifications: Vec<ClassificationRevision>,
-    #[serde(default)]
-    pub revisions: Vec<BlueprintRevision>,
-    #[serde(default)]
-    pub assemblies: Vec<AssemblyRevision>,
-}
+pub(crate) use dustroute_library::blueprint::BlueprintRecords;
 
 #[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -160,6 +149,11 @@ impl UpdateInput {
 #[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
 #[serde(tag = "action", rename_all = "snake_case", deny_unknown_fields)]
 pub(crate) enum BlueprintWrite {
+    /// Generate a bounded enclosure, its structural obligations and a proposal.
+    /// Does not import, adopt or write any Minecraft blocks.
+    GenerateBuilding {
+        request: Box<dustroute_library::building::BuildingRequest>,
+    },
     /// Generate one bounded single-launch flying-machine candidate. Returns
     /// unadopted records, a proposal and fresh model checks without publishing.
     GenerateFlyingMachine {
@@ -627,6 +621,18 @@ fn perform(
                 return Err("Blueprint request exceeds 4 MiB".into());
             }
             match write {
+                BlueprintWrite::GenerateBuilding { request } => {
+                    let generated = dustroute_translate::building::generate_building(*request)?;
+                    Ok((
+                        Some(
+                            json!({"ok":true,"schema_version":"dustroute.blueprint-mcp.v1",
+                        "result":generated,"writes_minecraft":false,"catalog_changed":false,
+                        "adoption_authorized":false,
+                        "next_step":"Import result.records; propose_update with result.request after removing its id; review and adopt; then new_placement with assembly_target. After interrupted placement, diagnose and create a fresh reconstruction plan."}),
+                        ),
+                        false,
+                    ))
+                }
                 BlueprintWrite::GenerateFlyingMachine { request } => {
                     let generated = dustroute_translate::flying_machine::generate_flying_machine(
                         *request,

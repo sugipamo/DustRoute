@@ -10,37 +10,10 @@ use crate::blueprint_update::{BlueprintUpdateRequest, BlueprintUpdates, Recorded
 use crate::piston_construction::ElectricalConstruction;
 use crate::promotion::CheckStatus;
 use crate::{snapshot::MinecraftSnapshot, world::Pos};
-use dustroute_library::assembly::AssemblyRevision;
-use dustroute_library::blueprint::{BlueprintCatalog, BlueprintRevision, TypeRevision};
+use dustroute_library::blueprint::BlueprintRecords;
 use dustroute_library::flying_machine::FlyingMachineRequest;
 use dustroute_library::runtime_behavior::RuntimeBehaviorContext;
 use serde::Serialize;
-
-#[derive(Clone, Debug, Serialize)]
-pub struct FlyingMachineRecords {
-    pub types: Vec<TypeRevision>,
-    pub revisions: Vec<BlueprintRevision>,
-    pub assemblies: Vec<AssemblyRevision>,
-}
-impl FlyingMachineRecords {
-    pub fn catalog(&self) -> Result<BlueprintCatalog, String> {
-        let mut catalog = BlueprintCatalog::default();
-        for definition in &self.types {
-            catalog
-                .insert_type(definition.clone())
-                .map_err(|e| e.to_string())?;
-        }
-        catalog
-            .insert_revisions(self.revisions.clone())
-            .map_err(|e| e.to_string())?;
-        for assembly in &self.assemblies {
-            catalog
-                .insert_assembly(assembly.clone())
-                .map_err(|e| e.to_string())?;
-        }
-        Ok(catalog)
-    }
-}
 
 #[derive(Clone, Debug, Serialize)]
 pub struct FlyingMachineVerification {
@@ -56,7 +29,7 @@ pub struct FlyingMachineVerification {
 pub struct GeneratedFlyingMachine {
     pub specification: FlyingMachineRequest,
     /// Import these unadopted records, then propose request through the normal API.
-    pub records: FlyingMachineRecords,
+    pub records: BlueprintRecords,
     pub request: BlueprintUpdateRequest,
     pub context: RuntimeBehaviorContext,
     pub initial: MinecraftSnapshot,
@@ -103,13 +76,14 @@ fn verify(
     candidate: &GeneratedFlyingMachine,
     budget: BehaviorBudget,
 ) -> Result<FlyingMachineVerification, String> {
-    let mut updates = BlueprintUpdates::new(candidate.records.catalog()?);
+    let mut updates =
+        BlueprintUpdates::new(candidate.records.catalog().map_err(|e| e.to_string())?);
     updates
         .create(candidate.request.clone())
         .map_err(|e| e.to_string())?;
     // Use the caller's bounded review directly. Adoption independently repeats
     // all requirements against the concrete candidate after import/proposal.
-    let mut catalog = candidate.records.catalog()?;
+    let mut catalog = candidate.records.catalog().map_err(|e| e.to_string())?;
     catalog
         .insert_revisions(candidate.request.revisions.clone())
         .map_err(|e| e.to_string())?;

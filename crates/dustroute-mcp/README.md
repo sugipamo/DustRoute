@@ -99,6 +99,13 @@ saving the plan; reads do not. Unreadable saved state returns an error.
 
 ## Review an offline Blueprint update
 
+For a small building, `test_circuit_change(blueprint.action="generate_building")`
+authors floor/wall/roof definitions, an opening and exact air-clearance contracts
+from typed dimensions and existing materials. Generation returns fresh structural
+and shared construction checks without publishing or writing blocks. Import the
+records and propose the returned request, then use the normal review/adoption and
+empty-site placement workflow. See [building parameters, scope and recovery](../../docs/blueprint-building.md).
+
 Start with `get_circuit_revision({"blueprint":{"kind":"catalog"}})` and read the
 relevant exact records. Use the tool schema to supply an explicit candidate via
 `test_circuit_change({"blueprint":{"action":"propose_update","request":{...}}})`.

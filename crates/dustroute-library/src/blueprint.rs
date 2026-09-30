@@ -31,3 +31,35 @@ pub struct BlueprintCatalog {
     revisions: BTreeMap<BlueprintRevisionId, BlueprintRevision>,
     assemblies: BTreeMap<AssemblyRevisionId, crate::assembly::AssemblyRevision>,
 }
+
+/// Authoring data shared by generators and public import. No saved pass is
+/// included, and creating a catalog never adopts or authorizes placement.
+#[derive(Clone, Debug, Default, serde::Deserialize, serde::Serialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct BlueprintRecords {
+    #[serde(default)]
+    pub types: Vec<TypeRevision>,
+    #[serde(default)]
+    pub classifications: Vec<ClassificationRevision>,
+    #[serde(default)]
+    pub revisions: Vec<BlueprintRevision>,
+    #[serde(default)]
+    pub assemblies: Vec<crate::assembly::AssemblyRevision>,
+}
+
+impl BlueprintRecords {
+    pub fn catalog(&self) -> Result<BlueprintCatalog, BlueprintError> {
+        let mut catalog = BlueprintCatalog::default();
+        for definition in &self.types {
+            catalog.insert_type(definition.clone())?;
+        }
+        for definition in &self.classifications {
+            catalog.insert_classification(definition.clone())?;
+        }
+        catalog.insert_revisions(self.revisions.clone())?;
+        for assembly in &self.assemblies {
+            catalog.insert_assembly(assembly.clone())?;
+        }
+        Ok(catalog)
+    }
+}

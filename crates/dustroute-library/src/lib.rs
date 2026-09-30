@@ -8,6 +8,7 @@ pub mod assembly;
 pub mod behavior_context;
 pub mod behavior_type;
 pub mod blueprint;
+pub mod building;
 mod builtin;
 pub mod builtin_blueprints;
 pub mod builtin_laws;

@@ -92,7 +92,7 @@ may still move the bot or render region previews.
 | `test_circuit` | Compact diagnosis and local interpretation |
 | `convert_from_circuit` | Physical/logical interpretation, capabilities and mechanisms |
 | `get_circuit_ir` | IR summary and analysis-scoped node expansion |
-| `test_circuit_change` | Save hypothetical edits, or import/capture Blueprint data, search for smaller typed candidates and create update proposals |
+| `test_circuit_change` | Save hypothetical edits, generate small buildings/flying machines, import/capture Blueprint data, search for smaller typed candidates and create update proposals |
 | `get_circuit_revision` | Read hypothetical revisions or the exact Blueprint/Assembly/type/classification catalog |
 | `new_placement` | Plan built-in construction, a cumulative revision diff, an adopted grounded Assembly reflection, or custom electrical Assembly construction at `assembly_target` |
 | `manage_assembly` | List/get durable custom piston instances, freshly observe/revalidate, diagnose differences or plan conditional removal/reconstruction |
@@ -210,6 +210,12 @@ fallback for its undo data.
   additionally checks declared `Periodic`, `FiniteBurst`, `RepeatedSettling`, `PistonDoor` or `SingleOperation` obligations,
   without a numerical-timing, restartability or live-world guarantee. Imported
   drafts remain unverified. Full [Blueprint workflow](blueprint-mcp.md).
+- Blueprint `generate_building` authors rectangular enclosures with floor/wall/roof
+  components, a passage and exact air-clearance requirements. Existing cube
+  materials, at most 256 blocks and a completely observed empty target volume are
+  supported. Generation, adoption, model-reviewed batched placement and durable
+  diagnosis/reconstruction share the ordinary Assembly path. Large multi-part
+  construction and terrain clearing are future work. See [building support](blueprint-building.md).
 - The [ordinary 3×3 door type](piston-door-type.md) verifies repeated open/close
   commands after modeled completion. The reference door passes fresh adoption,
   including after restart. This adds no live readiness sensor and does not extend
