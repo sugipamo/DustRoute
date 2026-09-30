@@ -67,7 +67,10 @@ Expansion ends when the component frontier is exhausted or `max_components`
 fragment. The result includes exact block-name and block-state-property counts,
 the targeted block, raw redstone states, truncation, and expansion completeness.
 Use `include_block_list=true` only when the non-air listing is needed; both raw
-lists are bounded by `max_listed_blocks`. `resolve_looked_at_circuit` and
+lists are bounded by `max_listed_blocks`. Air, cave air and void air are excluded
+from the non-air inventory and its list limit, even when the backend returns
+explicit air cells. `counts.air` also includes air cells omitted by the backend.
+`resolve_looked_at_circuit` and
 `convert_from_circuit` use the same component-limited expansion.
 
 `convert_from_circuit` reports a physical-first hierarchy. Observed facts
