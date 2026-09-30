@@ -92,9 +92,14 @@ source catalog. Unrelated immutable catalog additions are allowed; changing or
 removing captured definitions, adoption or context invalidates revalidation.
 
 `observe` freshly reviews the adopted source and the transformed target and takes
-two complete region samples separated by a 20-tick bridge wait. The bridge uses
-Mineflayer client physics ticks; `sample_interval_ticks` is not an authoritative
-server-tick interval. It returns:
+two complete region samples separated by a 20-tick client wait.
+`sample_interval_ticks: 20` and `sample_interval_clock: "client"` do not establish
+a server-tick interval. Mineflayer retains server-confirmed receipts and the
+measured `observed_server_tick_interval`. Voxrig retains client-reconstructed
+receipts and `observed_client_tick_interval`, with the server interval set to
+`null`. A changed source or native connection, or a reversed observation boundary,
+fails the comparison. See [observation backends](mcp-public-features.md#observation-backends)
+for permissions, completeness and motion checks. It returns:
 
 | Observation status | Meaning |
 | --- | --- |
@@ -137,8 +142,8 @@ valid histories can end differently; such layouts require explicit diagnosis.
 
 The preview includes `operating_removal.baseline` and modeled teardown steps.
 Execution rebuilds them, checks the record revision and full baseline again,
-then verifies each step through the existing server readback gates. A restart
-requires a new plan; current v4 instance records retain the reference and steps
+then verifies each step through the selected backend's fresh readback gates.
+A restart requires a new plan; current v4 instance records retain the reference and steps
 as history only. Retired v1–v3 records are rejected; see the
 [cutover guide](architecture-cutover.md).
 Default `removal_reference: "constructed"` retains the original baseline rule.

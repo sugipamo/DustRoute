@@ -18,8 +18,8 @@ MCP tool names follow a PowerShell-style Verb-Noun contract written as
 - `start`, `stop`, and `get` manage asynchronous operations.
 - `set` and `clear` manage the current region selection.
 
-`DUSTROUTE_MCP_TOOL_PROFILE=default` exposes the 21 tools intended for normal
-LLM collaboration. `debug` additionally exposes low-level gaze/discovery,
+`DUSTROUTE_MCP_TOOL_PROFILE=default` exposes the 22 tools intended for normal
+LLM collaboration. `debug` exposes 29 tools in total, adding low-level gaze/discovery,
 full placement-plan retrieval, asynchronous conversion control, and
 explicit component-removal planning. `get_operation` is available in the default
 profile. Debug tools remain implemented but cannot
@@ -30,8 +30,11 @@ High-level JSON response versions, compatible-change rules, stable error codes,
 and coordinate-state representations are documented in
 [`../../docs/mcp-api-v1.md`](../../docs/mcp-api-v1.md).
 
-Set `DUSTROUTE_BOT_BRIDGE` to override the local bridge address. Natural-language
-references such as “what is this?” use `convert_from_circuit`. One call
+Backend selection, targeting, source evidence and clocks follow the
+[observation backend guide](../../docs/mcp-public-features.md#observation-backends).
+Native builds use the pinned `vendor/voxrig` source and need no separate bridge
+process. `DUSTROUTE_BOT_BRIDGE` overrides only the Mineflayer bridge address.
+Natural-language references such as “what is this?” use `convert_from_circuit`. One call
 returns the focused physical component, mixed-IR summary, optional
 whole-circuit function candidates, observation completeness, and diagnostics.
 Repair and transition plans are separate: use `new_repair` or
@@ -237,8 +240,8 @@ restoring the captured blocks.
 
 ## Transition scenarios
 
-Live pulse observation uses the visible Mineflayer bot as an actuator and
-sensor; Rust remains responsible for scenario policy, interpretation, and
+Live pulse observation uses the selected backend's visible bot as an actuator
+and sensor; Rust remains responsible for scenario policy, interpretation, and
 restoration. The initial workflow supports one normal lever activation at a
 time:
 
@@ -253,14 +256,19 @@ test_circuit -> capture circuit_id
   -> undo_operation(confirm=true), if recovery is needed
 ```
 
-The bridge uses Mineflayer's normal block activation rather than changing a
-`powered` state with `/setblock`. The bot must be within 5.5 blocks of the
-lever. Observations record packet-visible block updates with sequence numbers,
-a Mineflayer physics-tick clock, and `sub_tick_order` within that clock tick.
-Conversion rounds these observations into the internal simulator's
-redstone-tick unit while retaining within-tick order as separate evidence.
-That order is a causal clue, not an exact vanilla scheduler trace. Runs are
-bounded to 200 game ticks and 65,536 events.
+Both backends use normal lever interaction rather than changing its `powered`
+state with `/setblock`. The bot must be within 5.5 blocks of the lever.
+Mineflayer records packet-visible block updates with sequence numbers, its
+physics-tick clock and `sub_tick_order`; conversion retains within-tick order
+alongside the compatibility redstone-tick buckets. Native recordings declare
+`clock=client_frame20_hz`, retain packet boundaries and use `client_tick` or
+`client_redstone_tick` in projected traces. Compatibility fields named
+`*_game_tick` in a native recording still refer to that declared client clock.
+They are not server timestamps. Native recordings exclude reconstructed piston
+frames; either backend's packet order does not reveal the vanilla scheduler.
+Cross-clock comparison reports `time_unit_mismatch`; a native client-frame trace
+cannot establish a pulse width specified in server game ticks. Runs are bounded
+to 200 ticks of the selected recording clock and 65,536 events.
 TNT, fire, water, and lava reject a scenario. Pistons, observers,
 containers with activation behavior, and unsupported sensors remain
 preview-only. Every run captures the original snapshot and reports failure
@@ -281,8 +289,10 @@ mismatches.
 Each trace event additionally carries `event_kind`, `cause`, `source`, and an
 optional `cause_sequence`. Live Mineflayer events use
 `cause=packet_observation` and `source=live_mineflayer`; they do not claim to
-know the vanilla scheduler cause. Event provenance is explanatory metadata and
-does not by itself make an otherwise matching live/simulated trace unequal.
+know the vanilla scheduler cause. Voxrig uses `source=live_voxrig` and retains
+`native_packet` connection/receive/cell-order evidence. Event provenance is
+explanatory metadata and does not by itself make an otherwise matching
+live/simulated trace unequal.
 
 ## Physical repair workflow
 
@@ -296,9 +306,9 @@ convergence, energized-position counts, and whether temporal validation is
 required. A liveness bridge may therefore find a directional break even when
 Union-Find reports one physical traversal group. The safe mutation sequence is:
 
-Repair application uses Mineflayer's normal player `placeBlock`/dig behavior
-rather than `/setblock`. The visible bot enters creative mode, moves above each
-target, places against the recorded support face so Minecraft computes neighbor
+Repair application uses the selected backend's normal player placement/dig
+interaction rather than `/setblock`. The visible bot enters creative mode,
+moves above each target, places against the recorded support face so Minecraft computes neighbor
 updates and block shape, then retreats 16 blocks above the repaired area and
 hovers. Post-write block-state and circuit verification still run normally.
 

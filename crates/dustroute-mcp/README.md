@@ -7,11 +7,20 @@ This is the tool-use guide. Server installation, credentials, permissions and tr
 The native Voxrig backend observes received packets and supported client
 reconstruction. Its `client_reconstructed` readbacks retain connection, receive
 sequence and client frame; they do not confirm server ticks or hidden queues.
-Mineflayer keeps its separate command-confirmed readback contract. Saved evidence
-from either source never authorizes writes without a fresh observation. Native
-gaze uses `block_collision`, not graphical outlines; use a selected region for
-non-collidable circuit decorations. Native recordings use client frames, so they
-cannot satisfy a pulse-width requirement stated in server game ticks.
+Mineflayer keeps its separate command-confirmed readback contract. Fresh native
+client observations support the shared workflows after their own validation;
+they never become server-confirmed evidence. Saved evidence from either source
+requires a fresh observation before a new world action.
+
+Native gaze uses `block_outline`, including supported thin parts such as dust,
+levers, repeaters and comparators. It uses received player pose and client world
+state. Fluids/entities are excluded; moving or unavailable geometry and
+unsupported context-dependent shapes make the query unavailable. Use a selected
+region when gaze geometry is unavailable; this does not bypass complete
+observation or simulator support checks. Native recordings use client frames,
+so they cannot satisfy a pulse-width requirement stated in server game ticks.
+Read the [backend comparison](../../docs/mcp-public-features.md#observation-backends)
+before interpreting evidence or requesting command permissions.
 
 Custom electrical Assembly construction returns a durable `instance_id`.
 After MCP restart, use `manage_assembly` (`list`, `get`, `observe`, `diagnose`, `plan_removal`, `plan_reconstruction`)

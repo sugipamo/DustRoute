@@ -10,6 +10,7 @@ Git history; diagnostic fixtures have not been promoted into public capability.
 | Document | Read it for |
 | --- | --- |
 | [Public features](mcp-public-features.md) | Tools, workflows, limits, ID lifetimes and recovery |
+| [Observation backends](mcp-public-features.md#observation-backends) | Voxrig/Mineflayer selection, gaze, evidence, clocks and command permissions |
 | [MCP setup](../crates/dustroute-mcp/SETUP.md) | Server, bot, transport and permissions |
 | [LLM tool guide](../crates/dustroute-mcp/README.md) | Tool selection and execution decisions |
 | [MCP subsystem reference](../crates/dustroute-mcp/REFERENCE.md) | Detailed examples |

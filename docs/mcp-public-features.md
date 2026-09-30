@@ -13,10 +13,48 @@ An offline Blueprint workflow also supports exact source/state records and
 reviewed update proposals. Adopting a proposal saves new revisions locally;
 it does not apply them to Minecraft.
 
-Current block reads use [server-confirmed readback](server-readback.md), shared
-with isolated trials. The bot needs command permissions, and complete confirmation
-is limited to 8,880 cells with all predicates in the same server game tick. Missing
-confirmation fails the observation; client-only data cannot authorize a write.
+Block reads use the selected backend's observation contract. Voxrig uses received
+packets and supported client reconstruction; Mineflayer uses command-confirmed
+server readback. Both require fresh complete observations for the applicable
+live checks. Their evidence and clocks remain distinct.
+
+## Observation backends
+
+| Concern | Native Voxrig | Mineflayer bridge |
+| --- | --- | --- |
+| Selection | Build with `--features voxrig`; this build defaults to `voxrig`. Set `DUSTROUTE_BOT_BACKEND=voxrig` explicitly if desired. | Builds without that feature default to `mineflayer`. Set `DUSTROUTE_BOT_BACKEND=mineflayer` to use it in either build. |
+| Setup | Pinned source is included in `vendor/voxrig`; no separate checkout or Node.js bridge. DustRoute currently accepts Java 1.21.11 and offline authentication. | Separate Node.js 22/npm bridge process. The documented and tested circuit environment is Java 1.21.11. |
+| Block observation | Received packets plus supported client state reconstruction, without per-cell confirmation commands. | Client-derived candidates checked against the server's block predicates, including all properties and air. |
+| Retained readback | `dustroute.client-readback.v1`, `kind=client_reconstructed`; connection, receive sequence, client frame, revisions and moving flag. | `dustroute.server-readback.v1`, `kind=server_confirmed`; request identity, bounds, checked cells and server game ticks. |
+| Gaze | `targeting_geometry=block_outline`; audited static outlines include dust, levers, repeaters and comparators. | Selects cached blocks with a non-empty bounding box along the tracked player's gaze. It does not use native outline shapes and can skip non-collidable circuit parts. |
+| Observation limits | Requires complete loaded cells and supported reconstruction. The scan policy defaults to 262,144 cells; tool-specific limits still apply. | The same scan policy applies, plus the command-confirmation cap of 8,880 cells, 192 commands per exchange and command-length limits. |
+| Command permissions | Normal block observation needs no confirmation commands. Region previews, teleport approach, creative-mode setup and command construction still need the corresponding permissions. | Readback itself needs `execute`, `time`, `data` and `tellraw` permission, including in read-only mode; previews and writes need their corresponding permissions too. |
+
+Native gaze skips fluids and entities. Moving geometry, missing chunks, unknown
+player pose, incomplete reconstruction and unsupported context-dependent shapes
+make it unavailable. Use an explicit region when gaze geometry is unavailable;
+the region still needs complete observation and the relevant model checks.
+Selection geometry coverage does not establish simulator support for a block.
+Gaze is based on received player pose and client world state, not an interpolated
+graphical camera frame.
+
+Fresh native client evidence can support the shared placement, diagnosis and
+recovery workflows after their own validation; it never becomes server-confirmed
+evidence. Unsupported backend settings or operations fail explicitly, without
+silently selecting another backend. A failed Mineflayer confirmation likewise
+does not fall back to an unconfirmed client snapshot.
+
+Client frames and waits are not server game ticks. Native recordings preserve
+received block-state packets, not every reconstructed piston frame or hidden
+scheduler event; a client-frame trace cannot establish a pulse width stated in
+server ticks. Saved readbacks from either backend are historical records and
+require fresh observation before a new world action. Neither matching samples
+nor server-confirmed readback proves empty event queues or prevents later edits.
+
+See [setup](../crates/dustroute-mcp/SETUP.md#native-rust-client-java-12111),
+[native evidence and limits](voxrig-rollout.md),
+[current targeting and recovery trials](native-client-usability.md), and
+[Mineflayer server readback](server-readback.md).
 
 ## Choose a workflow
 

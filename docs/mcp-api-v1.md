@@ -2,6 +2,42 @@
 
 For the public tool inventory and end-to-end usage, see the [public feature guide](mcp-public-features.md). This document records detailed response contracts.
 
+## Observation sources and clocks
+
+Fresh live scans retain the selected backend's source. The shared record
+`ObservationRecord` contains the literal snapshot and a `readback` with one of
+these contracts:
+
+| Source | Schema and kind | Evidence fields |
+| --- | --- | --- |
+| Mineflayer command confirmation | `dustroute.server-readback.v1`, `server_confirmed` | Fresh request ID, dimension, bounds, checked cells, `start_game_tick`, `end_game_tick`, nonce, snapshot digest and predicate/attempt details |
+| Voxrig client reconstruction | `dustroute.client-readback.v1`, `client_reconstructed` | `connection_id`, dimension, bounds, checked cells, `receive_sequence`, `client_tick`, `received_revision`, `client_revision`, `captured_at_millis`, `moving` |
+
+Native `client_tick` and capture time describe the client's local clock, not
+server game time. Native connection IDs are process-local counters; archived
+evidence must remain scoped to its owning process/capture. A reused counter
+after restart does not make an old observation fresh.
+
+The native bridge's lower-level `ClientRegion` additionally retains the original
+received cache, reconstructed cells and their origins under
+`dustroute.client-observation.v1`. Neither client schema can satisfy the explicit
+server-confirmed scan API. Shared workflows accept fresh native observations
+through their source-aware boundary and still enforce complete coverage,
+stationary-state checks where required, placement/model validation and the
+normal operation policy. Deserializing any saved record does not create a fresh
+observation capability. A command-submission receipt is not a block readback.
+
+Native player observations report `targeting_geometry: "block_outline"`,
+`connection_id` and `receive_sequence`. Thin static circuit parts are included;
+fluids/entities are excluded. Missing pose/chunks, moving or unsupported geometry
+and incomplete reconstruction reject the query. These optional targeting fields
+are absent from the Mineflayer response; do not interpret their absence as
+native outline evidence. Gaze describes received player pose and client world
+state, not a graphical camera-frame or server receipt.
+
+Backend selection, permissions, limits and current targeting evidence are in
+the [backend guide](mcp-public-features.md#observation-backends),
+[Mineflayer readback](server-readback.md) and [native rollout](voxrig-rollout.md).
 
 ## Physical interface evidence
 
@@ -410,11 +446,16 @@ lifecycle/progress record; it explicitly reports `fresh_observation: false`.
 Attempt records retain `readbacks` for the baseline and each verified step's
 before/after observations. Fresh observations retain both `readbacks`,
 `sample_interval_ticks: 20`, `sample_interval_clock: "client"`, and the measured
-`observed_server_tick_interval`. Receipts identify server-confirmed block states;
-they do not authorize reusing an old observation or reconstruct hidden events.
-See [server readback](server-readback.md) for permission, region and command-size
-limits. Older otherwise-compatible saved attempts default missing `readbacks`
-to an empty list; fresh bridge responses must always supply confirmation.
+interval for that source. Mineflayer supplies `observed_server_tick_interval`;
+Voxrig supplies `observed_client_tick_interval` and sets
+`observed_server_tick_interval` to `null`. Each receipt retains its schema and
+kind as described above. Receipts do not authorize reusing an old observation
+or reconstruct hidden events. A changed source or native connection, reversed
+observation boundary, motion or differing samples cannot establish a stable baseline.
+See [observation backends](mcp-public-features.md#observation-backends) for
+permissions and limits. Older otherwise-compatible saved attempts default
+missing `readbacks` to an empty list; fresh scans must always supply their
+selected source's evidence.
 
 `observe` returns `observation.status`, independent `revalidation.status`, and
 `removal_eligible`. Observation statuses are `matches`, `changed`,

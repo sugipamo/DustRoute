@@ -2,6 +2,20 @@
 
 This document is for the person configuring the Minecraft server, bot and MCP client. For tool use, see the [LLM guide](README.md).
 
+## Choose the backend
+
+| Build and setting | Backend and required process |
+| --- | --- |
+| `--features voxrig`, no `DUSTROUTE_BOT_BACKEND` | Voxrig inside the Rust MCP process; uses the included source snapshot |
+| `--features voxrig`, `DUSTROUTE_BOT_BACKEND=mineflayer` | Separate Node.js bridge plus Rust MCP process |
+| No `voxrig` feature, no setting or `DUSTROUTE_BOT_BACKEND=mineflayer` | Separate Node.js bridge plus Rust MCP process |
+| No `voxrig` feature, `DUSTROUTE_BOT_BACKEND=voxrig` | Startup error; rebuild with the feature |
+
+An unknown setting fails startup. The native adapter also rejects an explicit
+version other than `1.21.11` or authentication other than `offline`. There is no
+automatic backend fallback. See [observation backends](../../docs/mcp-public-features.md#observation-backends)
+for the different evidence, clock, permission and scan-limit contracts.
+
 ## Native Rust client (Java 1.21.11)
 
 The tested Voxrig source is pinned in `vendor/voxrig` with commit and file
@@ -47,16 +61,19 @@ For offline builds, prefetch the locked Cargo dependencies on the build machine,
 then add `--offline`; the pinned Voxrig source itself needs no network access.
 Maintainer update instructions are in [vendor/README.md](../../vendor/README.md).
 
-## Start the visible bot
+## Prepare the vanilla server
 
-The Mineflayer backend requires Node.js 22/npm, Java 21, and the official Minecraft
-Java Edition 1.21.11 server JAR. Keep the server and its generated world under
-an ignored directory such as `.local/minecraft-server-1.21.11`; do not copy the
-JAR, world, logs, operator lists, or authentication data into the repository.
+Both documented backend routes use a vanilla Minecraft Java Edition 1.21.11
+server. Hosting it requires Java 21 and the official server JAR. The separate
+Mineflayer bridge additionally requires Node.js 22/npm. Keep the server and its
+generated world under an ignored directory such as
+`.local/minecraft-server-1.21.11`; do not copy the JAR, world, logs, operator lists,
+or authentication data into the repository.
 
 Run the server once to generate its files, read the EULA, and set
-`eula=true` only after accepting it. The bundled Mineflayer workflow defaults
-to offline authentication, so a private test server must include at least:
+`eula=true` only after accepting it. The native backend requires offline
+authentication, and the bundled Mineflayer workflow defaults to it, so the
+documented private test server must include at least:
 
 ```properties
 server-port=25565
@@ -140,6 +157,11 @@ server's normal animal, monster, and NPC spawning, while the game rule covers
 natural spawning controlled by the world. Existing generated structures are
 not removed retroactively.
 
+## Start the Mineflayer bridge
+
+These steps apply to `DUSTROUTE_BOT_BACKEND=mineflayer`. Native users start the
+Rust process with the command in the native section instead.
+
 ```bash
 cd crates/dustroute-mcp/mineflayer
 npm ci
@@ -187,17 +209,22 @@ client when validating its 20 scenarios and 23 assertions.
 
 ## Start the MCP server
 
+The following commands select the Mineflayer bridge explicitly. Native users
+launch `target/debug/dustroute-mcp` with the feature-enabled build and native
+environment shown above; the transport and policy settings below apply to both.
+
 Configure an MCP client to launch:
 
 ```bash
 DUSTROUTE_SERVER_ADDRESS=127.0.0.1:25565 \
   DUSTROUTE_ASSIST_PLAYER=YourMinecraftName \
+  DUSTROUTE_BOT_BACKEND=mineflayer \
   cargo run -p dustroute-mcp
 ```
 
-`DUSTROUTE_SERVER_ADDRESS` and `DUSTROUTE_ASSIST_PLAYER` are required. The same
-server address must be supplied to the Mineflayer process. MCP tools use the
-configured player automatically; the default public tool schemas do not expose
+`DUSTROUTE_SERVER_ADDRESS` and `DUSTROUTE_ASSIST_PLAYER` are required. When using
+Mineflayer, supply the same server address to the separate bridge process. MCP
+tools use the configured player automatically; the default public tool schemas do not expose
 a `player` argument. Internal/debug calls that attempt to override the
 configured player with another name are rejected.
 If that player is online but outside the bot's entity-tracking range, gaze tools
@@ -211,6 +238,7 @@ stdio is the default transport. A local HTTP client can instead use `/mcp`:
 ```bash
 DUSTROUTE_SERVER_ADDRESS=127.0.0.1:25565 \
   DUSTROUTE_ASSIST_PLAYER=YourMinecraftName \
+  DUSTROUTE_BOT_BACKEND=mineflayer \
   DUSTROUTE_MCP_TRANSPORT=http \
   DUSTROUTE_MCP_HTTP_BIND=127.0.0.1:3000 \
   cargo run -p dustroute-mcp
@@ -241,19 +269,29 @@ DUSTROUTE_PLAN_TTL_SECONDS=3600
 
 Repair plans are persisted across HTTP/MCP sessions. They are scoped by the
 configured Minecraft server and assist player, written atomically with private
-directory/file permissions on Unix, and use the configured TTL on disk. A running process can still fall back to its repair-plan cache; this is not a strict execution deadline. The
-stored data contains physical patches and verification baselines, not API keys.
+directory/file permissions on Unix, and loaded from disk for each use. There is
+no in-memory fallback for expired, deleted or unreadable records. Preview and
+successful apply/undo save the plan again and renew its TTL; ordinary reads do
+not. The TTL checks admission when loading a plan, rather than cancelling an
+action already in progress. The stored data contains physical patches and
+verification baselines, not API keys.
 
-Block readback requires Java 1.21.11 command permission for `execute`, `time`,
-`data` and `tellraw`, including read-only operation. The bridge checks the whole
-requested region against the server in one game tick; its 192-command budget
+Mineflayer block readback requires Java 1.21.11 command permission for `execute`,
+`time`, `data` and `tellraw`, including read-only operation. That bridge checks
+the whole requested region against the server in one game tick; its 192-command budget
 currently permits at most 8,880 cells, even if `DUSTROUTE_MAX_SCAN_VOLUME` is
 larger. Select smaller regions when confirmation cannot complete. Missing
 permission, unloaded cells or repeated tick crossings fail the observation.
 Only a temporary random command-storage key is written; readback changes no
 world blocks. See [server readback](../../docs/server-readback.md) for the contract.
 
-The visible bot reconnects three seconds after disconnecting. Every scan and
+Native readback uses received packets and supported client reconstruction; it
+does not use this command budget or produce server-confirmed ticks. Missing
+cells or incomplete reconstruction fail observation. Region previews, teleport
+approach and world mutations still need their corresponding permissions. Neither
+backend's readback freezes the world or proves empty event queues.
+
+The Mineflayer bot reconnects three seconds after disconnecting. Every scan and
 preview carries the selected dimension, so moving between dimensions invalidates
 the operation instead of silently targeting a different world.
 
