@@ -45,6 +45,8 @@ async fn propose(client: &Client) -> Value {
     assert_eq!(plan["ok"], true, "{plan}");
     assert_eq!(plan["kind"], "electrical_revision_modification");
     assert_eq!(plan["steps"].as_array().unwrap().len(), 2);
+    assert_eq!(plan["execution_batches"].as_array().unwrap().len(), 1);
+    assert_eq!(plan["execution_batches"][0]["changed_blocks"], 2);
     plan
 }
 async fn fixture() -> (
@@ -88,6 +90,7 @@ async fn electrical_edit_public_capture_preview_apply_undo_and_restart_history()
     let result = call(&client, "invoke_operation", operation.clone()).await;
     assert_eq!(result["ok"], true, "{result}");
     assert_eq!(result["verified_steps"], 2);
+    assert_eq!(fake.lock().unwrap().write_batches, 1);
     assert_eq!(
         call(&client, "invoke_operation", operation.clone()).await["ok"],
         false
@@ -114,6 +117,7 @@ async fn electrical_edit_public_capture_preview_apply_undo_and_restart_history()
     assert_eq!(result["ok"], true, "{result}");
     assert_eq!(result["verified_steps"], 2);
     assert_eq!(fake.lock().unwrap().writes, 4);
+    assert_eq!(fake.lock().unwrap().write_batches, 2);
     stop(client, server).await;
     let (client, server) = connected(&root, &address).await;
     let history = call(
@@ -159,7 +163,13 @@ async fn electrical_edit_stops_after_unverified_write_and_retains_inspection_his
     assert_eq!(result["ok"], false);
     assert_eq!(result["status"], "needs_inspection");
     assert_eq!(result["verified_steps"], 0);
-    assert_eq!(fake.lock().unwrap().writes, 1);
+    assert_eq!(fake.lock().unwrap().writes, 2);
+    assert!(
+        result["error"]
+            .as_str()
+            .unwrap()
+            .contains("batch steps 1..2")
+    );
     assert_eq!(
         call(&client, "invoke_operation", operation.clone()).await["ok"],
         false
@@ -178,6 +188,60 @@ async fn electrical_edit_stops_after_unverified_write_and_retains_inspection_his
     .await;
     assert_eq!(history["record"]["state"], "needs_inspection");
     assert_eq!(history["record"]["attempts"][0]["verified_steps"], 0);
+    stop(client, server).await;
+    bridge.abort();
+    std::fs::remove_dir_all(root).unwrap();
+}
+
+#[tokio::test]
+async fn electrical_edit_partial_batch_submission_never_verifies_a_prefix_or_retries() {
+    let (root, fake, address, bridge) = fixture().await;
+    let (client, server) = connected(&root, &address).await;
+    let plan = propose(&client).await;
+    assert_eq!(
+        call(
+            &client,
+            "show_operation",
+            json!({"operation_id":plan["operation_id"]})
+        )
+        .await["ok"],
+        true
+    );
+    {
+        let mut state = fake.lock().unwrap();
+        state.steps = plan["steps"].as_array().unwrap().iter().cloned().collect();
+        state.lose_write_reply_at = Some(1);
+    }
+    let operation = json!({"operation_id":plan["operation_id"],"confirm":true});
+    let result = call(&client, "invoke_operation", operation.clone()).await;
+    assert_eq!(result["status"], "needs_inspection", "{result}");
+    assert_eq!(result["verified_steps"], 0);
+    assert_eq!(fake.lock().unwrap().writes, 1);
+    assert_eq!(fake.lock().unwrap().write_batches, 1);
+    assert_eq!(
+        call(&client, "invoke_operation", operation.clone()).await["ok"],
+        false
+    );
+    assert_eq!(
+        call(&client, "undo_operation", operation).await["ok"],
+        false
+    );
+    stop(client, server).await;
+    let (client, server) = connected(&root, &address).await;
+    let history = call(
+        &client,
+        "get_operation",
+        json!({"operation_id":plan["operation_id"]}),
+    )
+    .await;
+    assert_eq!(history["record"]["state"], "needs_inspection");
+    assert_eq!(history["record"]["attempts"][0]["verified_steps"], 0);
+    assert!(
+        history["record"]["attempts"][0]["error"]
+            .as_str()
+            .unwrap()
+            .contains("batch steps 1..2")
+    );
     stop(client, server).await;
     bridge.abort();
     std::fs::remove_dir_all(root).unwrap();

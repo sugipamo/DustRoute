@@ -99,11 +99,8 @@ fn steps(
             order::next_removal_position_matching(runtime.view().world(), |p| remove.contains(&p))?;
         let start = runtime.view().time().game_tick;
         runtime.remove_now(pos).map_err(|e| e.to_string())?;
-        runtime
-            .run_until_idle()
-            .map_err(|e| format!("modification removal at {pos:?}: {e}"))?;
         result.push(settled_step(
-            &runtime,
+            &mut runtime,
             region,
             pos,
             "minecraft:air".into(),
@@ -137,10 +134,7 @@ fn steps(
         let (block, state) = snapshot::initialization_request(block, requested);
         let start = runtime.view().time().game_tick;
         runtime.install_now(pos, block).map_err(|e| e.to_string())?;
-        runtime
-            .run_until_idle()
-            .map_err(|e| format!("modification insertion at {pos:?}: {e}"))?;
-        result.push(settled_step(&runtime, region, pos, state, start)?);
+        result.push(settled_step(&mut runtime, region, pos, state, start)?);
         installed.insert(pos);
     }
     if electrical_snapshot(runtime.view().world(), region)? != *after {

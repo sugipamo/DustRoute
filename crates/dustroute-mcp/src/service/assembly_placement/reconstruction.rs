@@ -42,6 +42,7 @@ impl AssemblyService<'_> {
             "bounds":bounds_json(proof.bounds()),"dimension":record.target.dimension,
             "read_only":self.policy.read_only,"differences":differences,
             "reconstruction":reconstruction,"reconstruction_conditions":conditions(),
+            "execution_batches":super::super::construction_executor::batch_summary(&reconstruction.steps),
             "fresh_target_review":proof.review(),"observation":report,
             "next_step":"show_operation; confirm all observed blocks may be removed and rebuilt, then invoke_operation(confirm=true)"});
         let mut plans = self

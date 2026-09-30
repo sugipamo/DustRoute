@@ -1,12 +1,14 @@
 //! Model-derived construction sequence for the expanded electrical profile.
 //! This is not adoption authority, a live observation or a generic placement
 //! certificate. The MCP layer must independently establish those conditions.
+mod batching;
 mod diagnostics;
 mod modification;
 mod order;
 pub mod policy;
 mod snapshot;
 
+pub use batching::{ElectricalConstructionBatch, construction_batches};
 pub use modification::ElectricalModification;
 pub use snapshot::electrical_snapshot;
 use snapshot::literal_world;
@@ -27,6 +29,10 @@ pub struct ElectricalConstructionStep {
     /// accepted without matching the full expected observation afterwards.
     pub wait_ticks: u64,
     pub expected: MinecraftSnapshot,
+    /// Fresh model result only. Saved or caller-provided steps cannot grant
+    /// permission to omit an intermediate live observation.
+    #[serde(skip)]
+    immediate_idle: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -69,10 +75,7 @@ impl ElectricalConstruction {
             let (block, state) = snapshot::initialization_request(block, requested);
             let start = runtime.view().time().game_tick;
             runtime.install_now(pos, block).map_err(|e| e.to_string())?;
-            runtime
-                .run_until_idle()
-                .map_err(|e| format!("construction at {pos:?}: {e}"))?;
-            build.push(settled_step(&runtime, region, pos, state, start)?);
+            build.push(settled_step(&mut runtime, region, pos, state, start)?);
             installed.insert(pos);
         }
         let constructed = electrical_snapshot(runtime.view().world(), region)?;
@@ -245,9 +248,6 @@ fn teardown(
         let pos = order::next_removal_position(runtime.view().world())?;
         let start = runtime.view().time().game_tick;
         runtime.remove_now(pos).map_err(|e| e.to_string())?;
-        runtime
-            .run_until_idle()
-            .map_err(|e| format!("teardown at {pos:?}: {e}"))?;
         remove.push(settled_step(
             runtime,
             region,
@@ -260,12 +260,27 @@ fn teardown(
 }
 
 fn settled_step(
-    runtime: &ElectricalPistonRuntime,
+    runtime: &mut ElectricalPistonRuntime,
     region: Region,
     position: Pos,
     state: String,
     start: u64,
 ) -> Result<ElectricalConstructionStep, String> {
+    // Finish the submitted command and all its synchronous callbacks first.
+    // Merely observing zero elapsed ticks after run_until_idle would hide
+    // scheduled block events at the same tick.
+    if !runtime
+        .step()
+        .map_err(|e| format!("construction command at {position:?}: {e}"))?
+    {
+        return Err("construction command was not executed".into());
+    }
+    let immediate_idle = runtime.pending_count() == 0
+        && runtime.at_input_boundary()
+        && runtime.view().time().game_tick == start;
+    runtime
+        .run_until_idle()
+        .map_err(|e| format!("construction settling at {position:?}: {e}"))?;
     let wait_ticks = runtime
         .view()
         .time()
@@ -281,5 +296,6 @@ fn settled_step(
         state,
         wait_ticks,
         expected: electrical_snapshot(runtime.view().world(), region)?,
+        immediate_idle,
     })
 }

@@ -20,6 +20,7 @@ pub(super) struct Fake {
     pub(super) snapshot: Option<Value>,
     pub(super) steps: VecDeque<Value>,
     pub(super) writes: usize,
+    pub(super) write_batches: usize,
     pub(super) partial: bool,
     pub(super) unknown_features: bool,
     pub(super) wrong_target: bool,
@@ -119,7 +120,6 @@ pub(super) async fn start_construction_bridge(
                     "submit_command_batch" => {
                         // Transport stub only: physical callback conformance is
                         // covered by independent server captures, not this mock.
-                        let expected = state.steps.pop_front().expect("unexpected write");
                         let active: Vec<Value> = fs::read_dir(&durable_root)
                             .unwrap()
                             .filter_map(|entry| {
@@ -140,17 +140,23 @@ pub(super) async fn start_construction_bridge(
                         let attempt = active[0]["attempts"].as_array().unwrap().last().unwrap();
                         assert_eq!(
                             attempt["verified_steps"].as_u64().unwrap() as usize,
-                            attempt["total_steps"].as_u64().unwrap() as usize
-                                - state.steps.len()
-                                - 1
+                            attempt["total_steps"].as_u64().unwrap() as usize - state.steps.len()
                         );
-                        assert_eq!(
-                            req["params"]["changes"],
-                            json!([{"pos":expected["position"],"state":expected["state"]}])
-                        );
-                        state.snapshot = Some(expected["expected"].clone());
-                        state.writes += 1;
-                        json!({"protocol":crate::bridge_protocol::MUTATION_PROTOCOL,"submitted_changes":1})
+                        let changes = req["params"]["changes"].as_array().unwrap();
+                        state.write_batches += 1;
+                        for change in changes {
+                            let expected = state.steps.pop_front().expect("unexpected write");
+                            assert_eq!(
+                                change,
+                                &json!({"pos":expected["position"],"state":expected["state"]})
+                            );
+                            state.snapshot = Some(expected["expected"].clone());
+                            state.writes += 1;
+                            if state.lose_write_reply_at == Some(state.writes) {
+                                break;
+                            }
+                        }
+                        json!({"protocol":crate::bridge_protocol::MUTATION_PROTOCOL,"submitted_changes":changes.len()})
                     }
                     method => panic!("unexpected transport method {method}"),
                 }

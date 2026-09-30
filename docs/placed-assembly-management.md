@@ -142,7 +142,8 @@ valid histories can end differently; such layouts require explicit diagnosis.
 
 The preview includes `operating_removal.baseline` and modeled teardown steps.
 Execution rebuilds them, checks the record revision and full baseline again,
-then verifies each step through the selected backend's fresh readback gates.
+then verifies each model-reviewed batch through the selected backend's fresh
+readback gates. The preview exposes the original step ranges for each batch.
 A restart requires a new plan; current v4 instance records retain the reference and steps
 as history only. Retired v1–v3 records are rejected; see the
 [cutover guide](architecture-cutover.md).
@@ -155,7 +156,10 @@ stages. Review it through `show_operation`, then use
 `invoke_operation({"operation_id":"<new operation UUID>","confirm":true})`.
 Invocation repeats source/target review and observation, checks the saved record
 version and freshly generated stages against the preview, then verifies the
-entire region before and after every write. Reobserving the record invalidates
+entire region before and after every model-reviewed batch. Each command is still
+simulated in order; only commands that immediately leave the model idle may
+share a live boundary. See [construction batching](construction-batching.md).
+Reobserving the record invalidates
 an older removal plan; create and preview a new one. MCP restart also requires a
 new removal plan. A saved `instance_id` alone is never an executable operation.
 

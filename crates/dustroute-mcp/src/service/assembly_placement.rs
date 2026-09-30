@@ -272,6 +272,7 @@ impl AssemblyService<'_> {
                 "record_revision":record.revision,"bounds":bounds_json(proof.bounds()),"dimension":record.target.dimension,
                 "read_only":self.policy.read_only,
                 "removal_steps":steps,"removal_reference":params.removal_reference,"operating_removal":operating_plan,
+                "execution_batches":super::construction_executor::batch_summary(steps),
                 "server_readiness_proven":false,"runtime_history_reconstructed":false,
                 "operator_requirement":"let prior operations finish and keep external inputs and edits out of the region during removal",
                 "fresh_target_review":proof.review(),"observation":report,
@@ -339,6 +340,8 @@ impl AssemblyService<'_> {
                 "adopted_by":basis.adopted_by, "bounds":bounds_json(bounds), "dimension":dimension,
                 "proposed_assembly":proof.assembly(), "execution_context":proof.context(), "fresh_target_review":proof.review(),
                 "construction_steps":proof.steps(false), "undo_steps":proof.steps(true), "live_world_verified":false,
+                "execution_batches":super::construction_executor::batch_summary(proof.steps(false)),
+                "undo_execution_batches":super::construction_executor::batch_summary(proof.steps(true)),
                 "read_only":self.policy.read_only, "next_step":"show_operation, then invoke_operation(confirm=true)",
                 "undo_requirement":"exact constructed settled state and unchanged entire observation region"});
             let mut plans = self.plans.table::<assembly_placement::StoredAssemblyPlacement>().lock().await;
@@ -381,6 +384,8 @@ impl AssemblyService<'_> {
             Ok(json!({"ok":true,"operation_id":id,"kind":plan.kind(),"assembly_revision_id":plan.assembly_id,
                 "bounds":bounds_json(plan.proof.bounds()), "proposed_assembly":plan.proof.assembly(),
                 "construction_steps":plan.proof.steps(false),"undo_steps":plan.proof.steps(true),
+                "execution_batches":super::construction_executor::batch_summary(plan.steps(false)),
+                "undo_execution_batches":super::construction_executor::batch_summary(plan.steps(true)),
                 "steps":plan.steps(false),"operating_removal":plan.operating_removal(),"reconstruction":plan.reconstruction(),"reconstruction_conditions":plan.reconstruction().map(|_|reconstruction::conditions()),
                 "previewed":plan.previewed,"state":format!("{:?}",plan.state),"stored_history_is_validation_proof":false}))
         }.await;
@@ -407,7 +412,7 @@ impl AssemblyService<'_> {
             self.policy.validate_region(bounds).map_err(|e|e.to_string())?;
             let preview = self.bridge.preview_region(&plan.player,bounds.min,bounds.max,&plan.dimension).await.map_err(|e|e.to_string())?;
             self.plans.table::<assembly_placement::StoredAssemblyPlacement>().lock().await.get_mut(&id).ok_or("construction missing")?.previewed = true;
-            Ok(json!({"ok":true,"operation_id":id,"preview":preview,"bounds":bounds_json(bounds),"kind":plan.kind(),"steps":plan.steps(false),"construction_steps":plan.proof.steps(false),"undo_steps":plan.proof.steps(true),"operating_removal":plan.operating_removal(),"reconstruction":plan.reconstruction(),"reconstruction_conditions":plan.reconstruction().map(|_|reconstruction::conditions())}))
+            Ok(json!({"ok":true,"operation_id":id,"preview":preview,"bounds":bounds_json(bounds),"kind":plan.kind(),"steps":plan.steps(false),"construction_steps":plan.proof.steps(false),"undo_steps":plan.proof.steps(true),"execution_batches":super::construction_executor::batch_summary(plan.steps(false)),"undo_execution_batches":super::construction_executor::batch_summary(plan.steps(true)),"operating_removal":plan.operating_removal(),"reconstruction":plan.reconstruction(),"reconstruction_conditions":plan.reconstruction().map(|_|reconstruction::conditions())}))
         }.await;
         result.unwrap_or_else(|e| json!({"ok":false,"error":e}))
     }

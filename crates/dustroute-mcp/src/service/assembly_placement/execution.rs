@@ -1,4 +1,4 @@
-//! Consume one reviewed attempt, verify each write and persist partial progress.
+//! Consume one reviewed attempt, verify model batches and persist partial progress.
 use super::*;
 
 impl AssemblyService<'_> {

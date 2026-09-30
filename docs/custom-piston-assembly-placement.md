@@ -101,8 +101,13 @@ defaults as a substitute for saved state.
 Use `show_operation`, inspect the proposed stages, then
 `invoke_operation(confirm=true)`. Application rechecks adoption, source data,
 server settings and the complete empty baseline. Every stage rechecks its
-expected predecessor, writes one block, waits for settling, and compares the
-entire region with the modeled result. Long modeled waits are split into
+expected predecessor, writes its commands in order, waits for settling, and compares the
+entire region with the modeled result. Freshly modeled commands whose synchronous
+roots leave no pending work may share a stage, up to 32 writes; queued work keeps
+a separate boundary. Removal and installation stages stay separate. Plans expose
+`execution_batches` and `undo_execution_batches`. A failed group verifies none
+of its intermediate writes. See [batch admission and measurement](construction-batching.md).
+Long modeled waits are split into
 bridge-supported requests before that readback. Failed transport, incomplete scans or
 state differences consume the attempt and stop further writes. There is no
 automatic retry or rollback after an uncertain result.

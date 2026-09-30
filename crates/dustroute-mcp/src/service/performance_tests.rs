@@ -259,9 +259,11 @@ async fn profile_observation_and_edit_phases() {
         .await;
         decoded(&text);
         assert_eq!(report.phases["model_proof"].calls, 1);
-        assert_eq!(report.phases["checkpoint"].calls, 6);
+        assert_eq!(report.phases["checkpoint"].calls, 3);
         assert_eq!(report.phases["write"].commands, 2);
-        assert_eq!(report.phases["scan"].calls, 6);
+        assert_eq!(report.phases["write"].calls, 1);
+        assert_eq!(report.phases["scan"].calls, 4);
+        assert_eq!(report.phases["wait"].requested_ticks, 24);
         emit(&report);
         assert_eq!(fake.lock().unwrap().writes, 2);
         bridge.abort();

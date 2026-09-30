@@ -61,10 +61,11 @@ use `OnceLock`; subsequent calls were below 0.005 ms. This supports separating
 first-use table compilation from the warm simulation, rather than treating
 every proof as a 1.35-second operation.
 
-For this two-write plan, the native path requests 20 stationary ticks at each of
-planning, preview and application, eight construction settling ticks, and two
-additional quiet ticks inside each native write batch. The current native
-`wait_ticks` uses 50 ms of wall time per tick: **72 ticks = 3.6 seconds of waits**
+At this measurement's source revision, the two-write native path requested 20
+stationary ticks at each of planning, preview and application, eight construction
+settling ticks, and two additional quiet ticks inside each native write batch.
+The native `wait_ticks` used 50 ms of wall time per tick:
+**72 ticks = 3.6 seconds of waits**
 over the complete workflow, before scan/proof/storage time. This is source and
 requested-count accounting, **not** a measured live application duration or
 evidence of server TPS. Preview/application retain independent freshness checks.
@@ -216,8 +217,9 @@ HTTP. Dense circuits, moving machines, unloaded chunks, remote transport and
 boundary-spanning automatic discovery require separate measurements. The
 earlier older-process median of 25.598 ms and this 9.643 ms repeat median
 indicate improved reuse, but different acquisition conditions prevent a
-controlled before/after speedup claim. No live plan/preview/apply timing was
-added, and construction waits retain their previous requirements.
+controlled before/after speedup claim. This read-only probe did not include
+plan/preview/apply; the separate construction measurements below cover the
+shared executor and offline public-handler costs.
 
 The reusable harness is
 [`../crates/dustroute-mcp/examples/observation_speed_probe.rs`](../crates/dustroute-mcp/examples/observation_speed_probe.rs).
@@ -237,6 +239,70 @@ The example passed its native build and Clippy with warnings denied. The
 live assertions verified complete scopes, no reacquisition, cache counters,
 unique IDs and advancing delayed receipts. Production read semantics were
 not changed for this measurement.
+
+## Model-reviewed construction batches
+
+The shared constructor now retains the existing command order and simulates
+every command, grouping up to 32 consecutive commands only if each leaves the
+model immediately idle. Pending events retain a separate settling boundary.
+Every group still requires a complete matching predecessor and result, durable
+intent/progress, and a fresh proof. A failed group is not atomic and does not
+verify its intermediate prefixes. Plans/previews expose the group ranges. See
+[construction batching](construction-batching.md) for the admission rule and
+history assumptions.
+
+[`measurements/construction-batching-live-20260930.json`](measurements/construction-batching-live-20260930.json)
+retains twelve live samples and their full-region readback receipts. A dedicated
+`dustroutetest` native actor applied independent stone blocks in an initially
+observed 896-cell empty region on Vanilla Java 1.21.11. The unoptimized debug
+test compared the same current shared executor and fresh command sequence with
+one readback boundary per command versus model-reviewed groups, three samples
+per schedule. The reference discards fresh batch metadata through serialization;
+it is not an older binary benchmark.
+
+| fixture | per-command median | batched median | scan calls before → after | submissions before → after |
+| --- | ---: | ---: | ---: | ---: |
+| two independent blocks | 619.458 ms | 309.782 ms | 4 → 2 | 2 → 1 |
+| sixteen independent blocks | 4,944.087 ms | 310.124 ms | 32 → 2 | 16 → 1 |
+
+The batched ranges were 308.668–309.897 ms and 308.909–311.315 ms respectively.
+The two-block sequence requested eight settling ticks before and four after;
+the sixteen-block sequence requested 64 before and four after. Native submission
+retains its additional two quiet wall-time ticks for each group. Write count and
+order are unchanged. Verified teardown ran between all samples; the final
+complete readback confirmed air throughout the scope, and the temporary actor
+disconnected. Existing server/MCP processes and circuits were left running.
+
+These live times include writes, waits and complete region readbacks, but exclude
+MCP dispatch, planning/preview, stationary prechecks and durable checkpoint
+callback writes. They do not establish timing limits or behavior for arbitrary
+active circuits. The updated source will take effect in the main MCP on its next
+normal rebuild/start.
+
+[`measurements/construction-batching-offline-20260930.json`](measurements/construction-batching-offline-20260930.json)
+reruns the unchanged public-handler fixture with real repository-filesystem
+persistence and mock JSON transport/waits. All three two-block edit samples
+asserted one submission, four scans / 2,880 cells, three checkpoints and five
+file/directory syncs. Previously these were two submissions, six scans / 4,320
+cells, six checkpoints and eight file/directory syncs. The apply median changed
+from 236.384 to 129.785 ms across separate runs; this mock result includes
+run-to-run noise and must not be read as live Minecraft application time.
+The combined file/directory sync duration was 28.812–45.040 ms in this run.
+
+Planning and preview retain their 20-tick stationary intervals, as does the
+application precheck. The two-write edit now requests 24 application ticks
+including the single four-tick construction margin, plus two quiet ticks inside
+the native submission: **1.3 seconds of apply waits**. Across plan/preview/apply,
+the accounting is **66 ticks = 3.3 seconds**, previously 72 ticks = 3.6 seconds.
+These are source-derived wall-time waits, not a full live workflow measurement
+or evidence of server TPS; add proof, scan, durable-save, transport and human
+review time as appropriate.
+
+Regression evidence covers preserved model prefixes and dynamic boundaries,
+construction/removal of observers in all six directions, sticky materials,
+flying machines, stairs, differential edits, conditional undo, partial
+submission with a lost reply, durable restart history and reconstruction.
+Transport stubs verify workflow/persistence rather than Minecraft physics.
 
 ## Opt-in request phase tracing
 

@@ -19,7 +19,8 @@ previewed operation with explicit confirmation, not a retry of an uncertain
 old command and not promotion of a historical attempt from snapshot agreement.
 
 Start with stopped construction/removal and the ordinary reference door damaged
-by premature input. Keep per-step readback, durable progress, source/target pins,
+by premature input. Keep full-region readback at each model-reviewed batch,
+durable progress, source/target pins,
 record revision checks and refusal of changing/moving/incomplete observations.
 Reject extra or different material. Matching material alone cannot establish
 ownership: the preview must expose all affected blocks, and the operator must
@@ -31,6 +32,11 @@ prove that assumption, rule out a late old command, identify a replaced world
 at the same endpoint, or make a check and write atomic. A mismatch stops further
 writes and retains the new attempt for inspection. This accepted operational
 limit must remain visible in the plan and documentation.
+
+The shared executor uses [construction batches](construction-batching.md) for
+consecutive commands that leave no pending modeled work. Original command
+order and modeled prefixes remain intact. A failed batch does not verify any
+of its intermediate prefixes; reconstruction begins with fresh observations.
 
 The shared device extension also has [position-owned torch history](shared-torch-runtime.md).
 Recent burnout history can survive removal at an otherwise empty coordinate;
@@ -47,7 +53,7 @@ not the current implementation plan or an outstanding request for approval.
 new previewed reconstruction operation. It retains the observed baseline,
 differences, proposed stages and conditions; invocation freshly reviews and
 resimulates, checks the saved record revision and current samples, then uses the
-shared per-step write/readback journal. The current v4 registry preserves previous
+shared batch write/readback journal. The current v4 registry preserves previous
 failed attempts. Retired v1–v3 records are rejected without changing lifecycle
 state or execution pins; see the [cutover guide](architecture-cutover.md) and
 [public contract](placed-assembly-management.md#reconstruction-after-damage-or-interrupted-work).

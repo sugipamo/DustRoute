@@ -26,12 +26,14 @@ impl ElectricalEditPlan {
             "bounds":{"min":self.proof.before().min,"max":self.proof.before().max},
             "before":self.proof.before(),"after":self.proof.after(),
             "steps":self.proof.steps(false),"undo_steps":self.proof.steps(true),
+            "execution_batches":construction_executor::batch_summary(self.proof.steps(false)),
+            "undo_execution_batches":construction_executor::batch_summary(self.proof.steps(true)),
             "conditions":{"stationary_observation_required":true,"model_initial_queue":"assumed_empty",
                 "runtime_history_reconstructed":false,"functional_behavior_verified":false,
                 "fixed_environment":"enclosed source water only; source or containment changes are unsupported",
                 "natural_growth":"not modeled; live state drift stops execution",
                 "operator_requirement":"finish prior motion and keep external inputs/edits out of the work region"},
-            "validation_scope":"complete declared state and per-command physics; no flying/harvest contract implied",
+            "validation_scope":"complete declared state and per-command physics; live readback at batch boundaries; no flying/harvest contract implied",
             "next_step":"show_operation then confirm invoke_operation; no automatic retry/rollback"})
     }
 }

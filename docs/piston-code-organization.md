@@ -50,7 +50,9 @@ feature was started.
 | [MCP planning](../crates/dustroute-mcp/src/service/assembly_placement.rs) | Public routing, plan ownership/preview and instance management |
 | [MCP validation](../crates/dustroute-mcp/src/service/assembly_placement/validation.rs) | Source/adoption identity, shared typed basis decoding and target contract |
 | [MCP observations](../crates/dustroute-mcp/src/service/assembly_placement/observation.rs) | Complete snapshot comparison and explicit observation/history limits |
-| [MCP execution](../crates/dustroute-mcp/src/service/assembly_placement/execution.rs) | Consume one attempt, verify every write and persist partial progress/final status |
+| [Model batches](../crates/dustroute-translate/src/piston_construction/batching.rs) | Group consecutive immediately idle commands while retaining ordered model prefixes |
+| [MCP execution](../crates/dustroute-mcp/src/service/assembly_placement/execution.rs) | Consume one attempt and persist verified batch progress/final status |
+| [Shared live executor](../crates/dustroute-mcp/src/service/construction_executor.rs) | Read back the complete region before and after each model-reviewed batch |
 
 `ValidatedAssemblyPlacement` remains the fresh model capability between review
 and orchestration. The registry remains the persisted attempt record. Neither a

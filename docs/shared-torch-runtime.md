@@ -61,7 +61,8 @@ assumptions inside `fresh_target_review.device_initial_conditions`, including
 whether an output starts at zero and whether unobserved position history is
 assumed empty. This keeps the accepted [observed-state recovery workflow](live-operation-readiness-and-recovery.md);
 it does not introduce a companion MOD requirement or an atomic readiness claim.
-Existing per-step observation and mismatch handling remain necessary, and a
+Full-region observation at each [model-reviewed construction batch](construction-batching.md)
+and mismatch handling remain necessary, and a
 matching block-state readback is not functional certification of hidden state.
 
 The shared exporter preserves standing/wall names, facing and LIT, including

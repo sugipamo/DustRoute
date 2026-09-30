@@ -257,7 +257,7 @@ async fn diagnosis_reports_human_damage_and_incomplete_evidence_without_writes()
             .as_array()
             .unwrap()
             .len(),
-        1 + 2 * planned["construction_steps"].as_array().unwrap().len()
+        1 + 2 * planned["execution_batches"].as_array().unwrap().len()
     );
     // An unrelated catalog append must not invalidate pinned definitions.
     let mut extra = get["pinned_source"]["record"].clone();
@@ -528,7 +528,7 @@ async fn removal_revalidates_pins_expectations_revision_and_live_baseline_after_
             .as_array()
             .unwrap()
             .len(),
-        1 + 2 * planned["construction_steps"].as_array().unwrap().len()
+        1 + 2 * planned["execution_batches"].as_array().unwrap().len()
     );
     let mut changed = settled.clone();
     changed["blocks"]
@@ -777,7 +777,14 @@ async fn interrupted_construction_and_reconstruction_preserve_attempts_across_re
         .cloned()
         .collect();
     let writes = fake.lock().unwrap().writes;
-    fake.lock().unwrap().fail_after_write = Some(writes + 2);
+    let first_batch_end = second["execution_batches"][0]["last_step"]
+        .as_u64()
+        .unwrap() as usize;
+    assert!(
+        first_batch_end > 1,
+        "fixture must exercise a shared observation boundary"
+    );
+    fake.lock().unwrap().fail_after_write = Some(writes + first_batch_end);
     let partial = call(
         &client,
         "invoke_operation",
@@ -785,7 +792,9 @@ async fn interrupted_construction_and_reconstruction_preserve_attempts_across_re
     )
     .await;
     assert_eq!(partial["status"], "needs_inspection", "{partial}");
-    assert_eq!(partial["verified_steps"], 1);
+    assert_eq!(partial["verified_steps"], 0);
+    let interrupted_writes = fake.lock().unwrap().writes;
+    assert_eq!(interrupted_writes, writes + first_batch_end);
     let interrupted_snapshot = fake.lock().unwrap().snapshot.clone().unwrap();
     stop(client, server).await;
     let (client, server) = connected(&root, &address).await;
@@ -801,7 +810,7 @@ async fn interrupted_construction_and_reconstruction_preserve_attempts_across_re
     assert_eq!(uncertain["instance"]["state"], "needs_inspection");
     assert_eq!(uncertain["observation"]["status"], "matches");
     assert_eq!(uncertain["ok"], false);
-    assert_eq!(fake.lock().unwrap().writes, writes + 2);
+    assert_eq!(fake.lock().unwrap().writes, interrupted_writes);
 
     // Reconstruction is a new, explicitly previewed operation. It preserves
     // the uncertain old attempt, starts from fresh observations, and can itself
@@ -905,7 +914,7 @@ async fn interrupted_construction_and_reconstruction_preserve_attempts_across_re
     );
     assert_eq!(
         fake.lock().unwrap().writes,
-        writes + 2,
+        interrupted_writes,
         "all guards must precede writes"
     );
     let repair = call(
@@ -923,7 +932,15 @@ async fn interrupted_construction_and_reconstruction_preserve_attempts_across_re
         .iter()
         .cloned()
         .collect();
-    fake.lock().unwrap().lose_write_reply_at = Some(writes + 4);
+    let verified_before_lost_reply = repair["execution_batches"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|batch| batch["last_step"].as_u64().unwrap())
+        .take_while(|&last| last < 2)
+        .last()
+        .unwrap_or(0);
+    fake.lock().unwrap().lose_write_reply_at = Some(interrupted_writes + 2);
     let partial_repair = call(
         &client,
         "invoke_operation",
@@ -934,7 +951,7 @@ async fn interrupted_construction_and_reconstruction_preserve_attempts_across_re
         partial_repair["status"], "needs_inspection",
         "{partial_repair}"
     );
-    assert_eq!(partial_repair["verified_steps"], 1);
+    assert_eq!(partial_repair["verified_steps"], verified_before_lost_reply);
     stop(client, server).await;
     let (client, server) = connected(&root, &address).await;
     fake.lock().unwrap().fail_after_write = None;
@@ -983,8 +1000,8 @@ async fn interrupted_construction_and_reconstruction_preserve_attempts_across_re
     assert_eq!(restored["observation"]["status"], "matches");
     let attempts = restored["instance"]["attempts"].as_array().unwrap();
     assert_eq!(attempts.len(), 3);
-    assert_eq!(attempts[0]["verified_steps"], 1);
-    assert_eq!(attempts[1]["verified_steps"], 1);
+    assert_eq!(attempts[0]["verified_steps"], 0);
+    assert_eq!(attempts[1]["verified_steps"], verified_before_lost_reply);
     assert!(attempts[0]["reconstruction"].is_null());
     assert_eq!(attempts[2]["reconstruction"], repair["reconstruction"]);
     assert_eq!(attempts[2]["verified_steps"], attempts[2]["total_steps"]);
