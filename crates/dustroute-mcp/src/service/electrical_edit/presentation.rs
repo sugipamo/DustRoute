@@ -1,8 +1,6 @@
-//! Bounded presentation and retention; executable proofs keep full states.
+//! Bounded presentation; executable proofs retain complete expected states.
 use super::*;
 
-pub(super) const MAX_RETAINED_BLOCK_RECORDS: usize = 1_048_576;
-pub(super) const MAX_RETAINED_MODEL_BYTES: usize = 128 * 1024 * 1024;
 const MAX_EXPANDED_BLOCK_RECORDS: usize = 8192;
 
 pub(crate) fn state_summary(snapshot: &MinecraftSnapshot) -> Value {
@@ -11,7 +9,7 @@ pub(crate) fn state_summary(snapshot: &MinecraftSnapshot) -> Value {
         "state_content_id":crate::snapshot_content::content_id(snapshot),
         "role":"model intention, not live-world evidence"})
 }
-pub(super) fn records(proof: &ElectricalModification) -> usize {
+fn expanded_records(proof: &ElectricalModification) -> usize {
     proof.before().blocks.len()
         + proof.after().blocks.len()
         + proof.requests().len()
@@ -19,39 +17,11 @@ pub(super) fn records(proof: &ElectricalModification) -> usize {
             .steps(false)
             .iter()
             .chain(proof.steps(true))
-            .map(|s| s.expected.blocks.len())
+            .map(|s| s.expected.len())
             .sum::<usize>()
-}
-pub(super) fn estimated_bytes(proof: &ElectricalModification) -> usize {
-    let snapshot = |s: &MinecraftSnapshot| {
-        s.blocks.capacity()
-            * std::mem::size_of::<dustroute_translate::snapshot::MinecraftSnapshotBlock>()
-            + s.blocks
-                .iter()
-                .map(|b| {
-                    b.name.capacity()
-                        // A small BTreeMap still allocates a whole node. Charge
-                        // its initial allocation as well as per-entry space.
-                        + usize::from(!b.properties.is_empty()) * 1024
-                        + b.properties
-                            .iter()
-                            .map(|(k, v)| 192 + k.capacity() + v.capacity())
-                            .sum::<usize>()
-                })
-                .sum::<usize>()
-    };
-    snapshot(proof.before())
-        + snapshot(proof.after())
-        + proof
-            .steps(false)
-            .iter()
-            .chain(proof.steps(true))
-            .map(|s| snapshot(&s.expected) + s.state.capacity() + 256)
-            .sum::<usize>()
-        + proof.requests().len() * 4096
 }
 pub(super) fn states(proof: &ElectricalModification) -> Value {
-    let expanded = records(proof) <= MAX_EXPANDED_BLOCK_RECORDS
+    let expanded = expanded_records(proof) <= MAX_EXPANDED_BLOCK_RECORDS
         && proof.before().blocks.len() + proof.after().blocks.len() <= 512;
     let steps = |undo| {
         if expanded {
@@ -62,7 +32,7 @@ pub(super) fn states(proof: &ElectricalModification) -> Value {
                     .steps(undo)
                     .iter()
                     .map(|s| json!({"position":s.position,"state":s.state,
-            "wait_ticks":s.wait_ticks,"expected_non_air_blocks":s.expected.blocks.len(),
+            "wait_ticks":s.wait_ticks,"expected_non_air_blocks":s.expected.len(),
             "complete_expected_state_retained_by_executor":true}))
                     .collect::<Vec<_>>()
             )

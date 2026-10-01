@@ -84,12 +84,18 @@ pub(crate) struct Attempt {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub(crate) struct ReconstructionAttempt {
     pub baseline: MinecraftSnapshot,
+    #[serde(
+        deserialize_with = "dustroute_translate::piston_construction::expected_state::deserialize_steps"
+    )]
     pub steps: Vec<dustroute_translate::piston_construction::ElectricalConstructionStep>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub(crate) struct OperatingRemoval {
     pub baseline: MinecraftSnapshot,
+    #[serde(
+        deserialize_with = "dustroute_translate::piston_construction::expected_state::deserialize_steps"
+    )]
     pub steps: Vec<dustroute_translate::piston_construction::ElectricalConstructionStep>,
 }
 

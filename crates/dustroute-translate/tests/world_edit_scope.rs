@@ -29,10 +29,12 @@ fn scope_refuses_a_transient_protected_observer_pulse_even_when_final_state_matc
     let error =
         ElectricalModification::new_scoped(&before, &after, scope, Default::default()).unwrap_err();
     assert!(
-        error.contains("protected state changed at Pos { x: 0, y: 1, z: 0 }"),
+        error
+            .to_string()
+            .contains("protected state changed at Pos { x: 0, y: 1, z: 0 }"),
         "{error}"
     );
-    assert!(error.contains("runtime"));
+    assert!(error.to_string().contains("runtime"));
 }
 
 #[test]
@@ -92,6 +94,6 @@ fn denied_writes_overlap_and_unknown_scope_are_refused_before_constructing_a_pla
     ] {
         let error = ElectricalModification::new_scoped(&before, &after, scope, Default::default())
             .unwrap_err();
-        assert!(error.contains(reason), "{error}");
+        assert!(error.to_string().contains(reason), "{error}");
     }
 }

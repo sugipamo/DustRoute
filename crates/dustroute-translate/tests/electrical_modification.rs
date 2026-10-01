@@ -39,7 +39,7 @@ fn adds_and_removes_bar_without_rebuilding_the_existing_engine() {
     for step in plan.steps(false).iter().chain(plan.steps(true)) {
         assert!([Pos::new(101, 101, 106), Pos::new(101, 101, 107)].contains(&step.position));
         for original in &before.blocks {
-            assert!(step.expected.blocks.contains(original));
+            assert!(step.expected.materialize().blocks.contains(original));
         }
     }
     assert_eq!(&plan.steps(false).last().unwrap().expected, plan.after());

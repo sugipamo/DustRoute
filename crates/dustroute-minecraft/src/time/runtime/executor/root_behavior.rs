@@ -87,7 +87,7 @@ where
         let old_tick = state.time.game_tick;
         // Expired entries never contribute to a later query. A representative
         // keeps every live age; exact checkpoints retain the original record.
-        state.histories.retain(|_, history| {
+        Arc::make_mut(&mut state.histories).retain(|_, history| {
             history
                 .times
                 .retain(|t| old_tick.saturating_sub(*t) <= u64::from(history.policy.window));
@@ -105,7 +105,7 @@ where
                 .unwrap_or(0)
                 + 1
         };
-        for history in state.histories.values_mut() {
+        for history in Arc::make_mut(&mut state.histories).values_mut() {
             for time in &mut history.times {
                 *time = old_tick
                     .checked_sub(*time)
@@ -288,7 +288,7 @@ mod tests {
             SynchronousWorldRuntime::<ElectricalPistonAdapter>::from_root_behavior_state(&a)
                 .unwrap();
         // This test is about the generic runtime record, independent of device admission.
-        changed.state.outputs.insert(INPUT, 7);
+        Arc::make_mut(&mut changed.state.outputs).insert(INPUT, 7);
         let b = changed.root_behavior_state().unwrap();
         assert_eq!(a.state.world, b.state.world);
         assert_eq!(a.state.pending, b.state.pending);

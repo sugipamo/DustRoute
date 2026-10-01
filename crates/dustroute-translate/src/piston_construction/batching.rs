@@ -4,7 +4,7 @@ use super::ElectricalConstructionStep;
 use crate::snapshot::MinecraftSnapshot;
 
 // A bounded submission also bounds the unverified prefix on transport failure.
-const MAX_BATCH_WRITES: usize = 32;
+use super::limits::MAX_BATCH_WRITES;
 
 pub struct ElectricalConstructionBatch<'a> {
     steps: &'a [ElectricalConstructionStep],
@@ -21,8 +21,12 @@ impl<'a> ElectricalConstructionBatch<'a> {
     pub fn last_step(&self) -> usize {
         self.first + self.steps.len()
     }
-    pub fn expected(&self) -> &'a MinecraftSnapshot {
-        &self.steps.last().expect("nonempty model batch").expected
+    pub fn expected(&self) -> MinecraftSnapshot {
+        self.steps
+            .last()
+            .expect("nonempty model batch")
+            .expected
+            .materialize()
     }
     pub fn wait_ticks(&self) -> u64 {
         self.steps.last().expect("nonempty model batch").wait_ticks
@@ -98,7 +102,7 @@ mod tests {
             }
             runtime.run_until_idle().unwrap();
             assert_eq!(
-                &electrical_snapshot(runtime.view().world(), region).unwrap(),
+                electrical_snapshot(runtime.view().world(), region).unwrap(),
                 batch.expected()
             );
         }

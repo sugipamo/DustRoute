@@ -130,7 +130,7 @@ fn verify(
             return Ok(false);
         }
         result.removal_steps = remove.len();
-        Ok(remove.last().is_some_and(|s| s.expected.blocks.is_empty()))
+        Ok(remove.last().is_some_and(|s| s.expected.is_empty()))
     })();
     match checked {
         Ok(true)=>result.detail="declared single-operation contract, exact native arrival, staged construction and arrival removal passed in the model; import/proposal/adoption and target revalidation are still required".into(),

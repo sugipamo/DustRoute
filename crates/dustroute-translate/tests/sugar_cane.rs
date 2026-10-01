@@ -43,7 +43,7 @@ fn differential_harvest_declares_the_cascade_and_can_restore_the_original_column
     assert!(plan.steps(false)[0].wait_ticks >= 1);
     assert_eq!(plan.steps(true).len(), 2);
     assert_eq!(
-        index_literal_snapshot(&plan.steps(true).last().unwrap().expected).unwrap(),
+        index_literal_snapshot(&plan.steps(true).last().unwrap().expected.materialize()).unwrap(),
         index_literal_snapshot(&before).unwrap()
     );
     let mut incomplete_target = before.clone();

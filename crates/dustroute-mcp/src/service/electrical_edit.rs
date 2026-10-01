@@ -1,6 +1,7 @@
 //! Existing-world modifications are fresh capabilities, separate from adoption
 //! and from durable historical records. All live steps use the shared executor.
 mod presentation;
+mod retention;
 use super::*;
 use crate::assembly_registry::{TargetServer, now_ms};
 use crate::construction_jobs::{JobAttempt, JobRegistry, JobStageBinding, JobState};
@@ -152,10 +153,10 @@ impl DustRouteMcp {
         }
         self.check_stationary_edit_baseline(&target, baseline)
             .await?;
-        let retained_records = presentation::records(&proof);
-        let retained_bytes = presentation::estimated_bytes(&proof);
-        if retained_records > presentation::MAX_RETAINED_BLOCK_RECORDS
-            || retained_bytes > presentation::MAX_RETAINED_MODEL_BYTES
+        let retained_records = retention::records(&proof);
+        let retained_bytes = retention::estimated_bytes(&proof);
+        if retained_records > retention::MAX_RETAINED_BLOCK_RECORDS
+            || retained_bytes > retention::MAX_RETAINED_MODEL_BYTES
         {
             return Err(
                 "current electrical proof exceeds its retention budget; use smaller work regions"
@@ -200,8 +201,8 @@ impl DustRouteMcp {
             .sum::<usize>();
         let other_plans = plans.iter().filter(|(_, p)| !same_job(p)).count();
         if other_plans >= 256
-            || retained + plan.retained_records > presentation::MAX_RETAINED_BLOCK_RECORDS
-            || retained_bytes + plan.retained_bytes > presentation::MAX_RETAINED_MODEL_BYTES
+            || retained + plan.retained_records > retention::MAX_RETAINED_BLOCK_RECORDS
+            || retained_bytes + plan.retained_bytes > retention::MAX_RETAINED_MODEL_BYTES
         {
             return Err("retained electrical proof budget exhausted; finish or cancel pending jobs before planning more work".into());
         }

@@ -98,8 +98,8 @@ impl AssemblyService<'_> {
                     }
                     registry.save(&mut record)
                 }).await?;
-                let expected = steps.last().map_or(&*baseline,|step| &step.expected);
-                proof.validate_after(expected,&status.version,removal)
+                let expected = steps.last().map_or_else(|| baseline.to_owned_snapshot(),|step| step.expected.materialize());
+                proof.validate_after(&expected,&status.version,removal)
             }.await;
             record.state = if run.is_ok() { if removal {InstanceState::Removed}else{InstanceState::Applied} } else {InstanceState::NeedsInspection};
             let attempt = record.attempts.last_mut().ok_or("missing durable attempt")?;

@@ -128,3 +128,7 @@ The [native trial record](evidence/runtime-state-sharing-20261001.json) identifi
 the exact tested source commit, binaries and trace. Its loaded 32,768-cell native
 capture took 362.2 ms; this separate observation measurement does not demonstrate
 a readback-speed change or represent the internal proof timings above.
+
+The subsequent [construction-state cleanup](construction-state-refactor.md)
+shares retained expectations and runtime metadata. Its measurements are a
+separate phase; the complete-snapshot counts above describe this earlier result.

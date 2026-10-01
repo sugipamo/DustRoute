@@ -140,7 +140,7 @@ fn verify_candidate(
         || !construction
             .remove_steps()
             .last()
-            .is_some_and(|s| s.expected.blocks.is_empty())
+            .is_some_and(|s| s.expected.is_empty())
     {
         return Err(BuildingDesignError::new(
             "construction_mismatch",

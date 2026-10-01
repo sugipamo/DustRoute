@@ -40,6 +40,7 @@ fn flight_course_uses_shared_construction_operating_reference_and_reconstruction
                 .last()
                 .unwrap()
                 .expected
+                .materialize()
                 .blocks
                 .is_empty()
         );
@@ -66,11 +67,11 @@ fn flight_course_uses_shared_construction_operating_reference_and_reconstruction
             .operating_removal(&[(context.input_levers[0], true)], context.root_limits)
             .unwrap();
         assert_eq!(baseline, arrived);
-        assert!(removal.last().unwrap().expected.blocks.is_empty());
+        assert!(removal.last().unwrap().expected.is_empty());
         let reconstruction = plan
             .reconstruction_steps(&arrived, context.root_limits)
             .unwrap();
-        assert!(reconstruction.iter().any(|s| s.expected.blocks.is_empty()));
+        assert!(reconstruction.iter().any(|s| s.expected.is_empty()));
         assert_eq!(&reconstruction.last().unwrap().expected, plan.settled());
     }
 }

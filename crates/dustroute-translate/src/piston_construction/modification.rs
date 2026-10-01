@@ -1,10 +1,13 @@
 //! Differential command construction against a declared stationary baseline.
 //! This models an empty queue; live snapshots cannot prove that assumption.
+use super::{ConstructionBudget, ConstructionError, limits};
 use super::{
-    ConstructionObserver, ElectricalConstructionStep, electrical_snapshot, observed_root, order,
-    settled_step_observed, snapshot,
+    ConstructionObserver, ElectricalConstructionStep, ExpectedObserver, electrical_snapshot,
+    observed_root, order, settled_step_observed, snapshot,
 };
-use crate::snapshot::{MinecraftSnapshot, MinecraftSnapshotBlock, index_literal_snapshot};
+use crate::snapshot::{
+    LiteralSnapshotIndex, MinecraftSnapshot, MinecraftSnapshotBlock, index_literal_snapshot,
+};
 use dustroute_library::world_edit::WorldEditScope;
 use dustroute_minecraft::time::piston_runtime::new_piston_runtime;
 use dustroute_minecraft::time::runtime::RuntimeLimits;
@@ -28,7 +31,7 @@ impl ElectricalModification {
         before: &MinecraftSnapshot,
         after: &MinecraftSnapshot,
         limits: RuntimeLimits,
-    ) -> Result<Self, String> {
+    ) -> Result<Self, ConstructionError> {
         Self::new_scoped(
             before,
             after,
@@ -41,27 +44,25 @@ impl ElectricalModification {
         after: &MinecraftSnapshot,
         scope: WorldEditScope,
         limits: RuntimeLimits,
-    ) -> Result<Self, String> {
+    ) -> Result<Self, ConstructionError> {
         if before.min != after.min || before.max != after.max {
             return Err("modification requires identical fully observed bounds".into());
         }
-        let old = index_literal_snapshot(before)?;
-        let new = index_literal_snapshot(after)?;
-        let changed = old
-            .keys()
-            .chain(new.keys())
-            .copied()
-            .filter(|p| old.get(p) != new.get(p))
-            .collect::<BTreeSet<_>>();
-        if changed.is_empty() || changed.len() > 64 {
+        let old = LiteralSnapshotIndex::new(before)?;
+        let new = LiteralSnapshotIndex::new(after)?;
+        let changed = old.changed_positions(&new)?;
+        if changed.is_empty() || changed.len() > limits::MAX_STAGE_CHANGES {
             return Err("modification requires 1..64 changed positions".into());
         }
         let requests = changed
             .iter()
-            .map(|p| new.get(p).cloned().unwrap_or_else(|| air(*p)))
+            .map(|p| new.get(*p).cloned().unwrap_or_else(|| air(*p)))
             .collect::<Vec<_>>();
-        let proof = Self::derive_scoped(before, requests, scope, limits)?;
-        if index_literal_snapshot(proof.after())? != new {
+        let proof = Self::derive_indexed(before, &old, requests, scope, limits)?;
+        if !LiteralSnapshotIndex::new(proof.after())?
+            .changed_positions(&new)?
+            .is_empty()
+        {
             return Err(
                 "modification callbacks do not produce the complete declared target state".into(),
             );
@@ -78,16 +79,31 @@ impl ElectricalModification {
         requests: Vec<MinecraftSnapshotBlock>,
         scope: WorldEditScope,
         limits: RuntimeLimits,
-    ) -> Result<Self, String> {
-        let old = index_literal_snapshot(before)?;
-        if old.len() > 4096 || requests.len() > 64 {
-            return Err(
-                "modification exceeds 4096 non-air blocks or 64 requested positions".into(),
-            );
-        }
+    ) -> Result<Self, ConstructionError> {
+        let old = LiteralSnapshotIndex::new(before)?;
+        Self::derive_indexed(before, &old, requests, scope, limits)
+    }
+
+    fn derive_indexed(
+        before: &MinecraftSnapshot,
+        old: &LiteralSnapshotIndex<'_>,
+        requests: Vec<MinecraftSnapshotBlock>,
+        scope: WorldEditScope,
+        limits: RuntimeLimits,
+    ) -> Result<Self, ConstructionError> {
+        check_budget(
+            ConstructionBudget::ContextBlocks,
+            old.len(),
+            limits::MAX_CONTEXT_BLOCKS,
+        )?;
+        check_budget(
+            ConstructionBudget::StageChanges,
+            requests.len(),
+            limits::MAX_STAGE_CHANGES,
+        )?;
         let region = Region::new(before.min, before.max);
         scope.validate(region)?;
-        let mut desired = old.clone();
+        let mut desired = old.to_owned_blocks();
         let mut seen = BTreeSet::new();
         let mut effective = vec![];
         for request in requests {
@@ -97,10 +113,10 @@ impl ElectricalModification {
                 );
             }
             if !scope.allows_change(request.pos) {
-                return Err(format!(
+                return Err(ConstructionError::InvalidInput(format!(
                     "declared write at {:?} is outside editable space or is protected",
                     request.pos
-                ));
+                )));
             }
             let is_air = request.name == "minecraft:air";
             if is_air && !request.properties.is_empty() {
@@ -117,9 +133,11 @@ impl ElectricalModification {
             }
             effective.push(request);
         }
-        if desired.len() > 4096 {
-            return Err("modification exceeds 4096 non-air blocks".into());
-        }
+        check_budget(
+            ConstructionBudget::ContextBlocks,
+            desired.len(),
+            limits::MAX_CONTEXT_BLOCKS,
+        )?;
         let changed = effective.iter().map(|b| b.pos).collect::<BTreeSet<_>>();
         let requested = MinecraftSnapshot {
             min: before.min,
@@ -129,16 +147,20 @@ impl ElectricalModification {
         let world = snapshot::literal_world(before)?;
         let request_world = snapshot::literal_world(&requested)?;
         let before = electrical_snapshot(&world, region)?;
-        if index_literal_snapshot(&before)? != old
+        if !LiteralSnapshotIndex::new(&before)?
+            .changed_positions(old)?
+            .is_empty()
             || index_literal_snapshot(&electrical_snapshot(&request_world, region)?)?
                 != index_literal_snapshot(&requested)?
         {
             return Err("modification needs lossless, complete native block states".into());
         }
         let (forward, after) = steps(&before, &requested, &changed, &scope, limits)?;
-        if after.blocks.len() > 4096 {
-            return Err("derived state exceeds 4096 non-air blocks".into());
-        }
+        check_budget(
+            ConstructionBudget::ContextBlocks,
+            after.blocks.len(),
+            limits::MAX_CONTEXT_BLOCKS,
+        )?;
         let (undo, restored) = steps(&after, &before, &changed, &scope, limits)?;
         if restored != before {
             return Err("derived region cannot restore the complete baseline; combine its dependent changes or author an explicit repair design".into());
@@ -155,7 +177,7 @@ impl ElectricalModification {
 
     /// Saved endpoint differences do not identify explicit writes. Reprove the
     /// same sealed requests, rather than treating automatic changes as commands.
-    pub fn reprove(&self, limits: RuntimeLimits) -> Result<Self, String> {
+    pub fn reprove(&self, limits: RuntimeLimits) -> Result<Self, ConstructionError> {
         let proof = Self::derive_scoped(
             &self.before,
             self.requests.clone(),
@@ -184,6 +206,22 @@ impl ElectricalModification {
     }
 }
 
+fn check_budget(
+    resource: ConstructionBudget,
+    actual: usize,
+    maximum: usize,
+) -> Result<(), ConstructionError> {
+    if actual > maximum {
+        Err(ConstructionError::Budget {
+            resource,
+            actual,
+            maximum,
+        })
+    } else {
+        Ok(())
+    }
+}
+
 fn steps(
     before: &MinecraftSnapshot,
     after: &MinecraftSnapshot,
@@ -196,11 +234,11 @@ fn steps(
     let desired = snapshot::literal_world(after)?;
     let baseline = world.clone();
     let mut runtime = new_piston_runtime(world, region, limits).map_err(|e| e.to_string())?;
-    let mut protect = ScopeGuard {
+    let mut protect = ExpectedObserver::new(ScopeGuard {
         before: &baseline,
         scope,
         known: region,
-    };
+    });
     protect.initial(runtime.view())?;
     while observed_root(&mut runtime, &mut protect)? {}
     if electrical_snapshot(runtime.view().world(), region)? != *before {
@@ -233,6 +271,7 @@ fn steps(
         )?);
         remove.remove(&pos);
     }
+    let requested_index = LiteralSnapshotIndex::new(after)?;
     let mut remaining = order::ordered_blocks(&desired);
     remaining.retain(|(pos, _)| changed.contains(pos));
     let predecessors = order::observer_predecessors(&remaining, &desired)?;
@@ -250,10 +289,8 @@ fn steps(
             runtime.view().world(),
         )?;
         let (pos, block) = remaining.remove(index);
-        let requested = after
-            .blocks
-            .iter()
-            .find(|b| b.pos == pos)
+        let requested = requested_index
+            .get(pos)
             .ok_or("missing modification state")?
             .clone();
         let (block, state) = snapshot::initialization_request(block, requested);
@@ -337,6 +374,45 @@ fn air(pos: Pos) -> MinecraftSnapshotBlock {
 mod tests {
     use super::*;
     use dustroute_minecraft::{Block, BlockKind};
+
+    #[test]
+    fn admission_errors_expose_budget_counts_and_literal_coordinates() {
+        let before = MinecraftSnapshot {
+            min: Pos::default(),
+            max: Pos::new(64, 0, 0),
+            blocks: vec![],
+        };
+        let requests = (0..65).map(|x| air(Pos::new(x, 0, 0))).collect();
+        assert!(matches!(
+            ElectricalModification::derive_scoped(
+                &before,
+                requests,
+                WorldEditScope::entire(Region::new(before.min, before.max)),
+                Default::default()
+            ),
+            Err(ConstructionError::Budget {
+                resource: ConstructionBudget::StageChanges,
+                actual: 65,
+                maximum: 64
+            })
+        ));
+        let mut bad = before.clone();
+        bad.blocks = vec![air(Pos::default()), air(Pos::default())];
+        assert!(matches!(
+            ElectricalModification::derive_scoped(
+                &bad,
+                vec![],
+                WorldEditScope::entire(Region::new(before.min, before.max)),
+                Default::default()
+            ),
+            Err(ConstructionError::Literal(
+                crate::snapshot::LiteralSnapshotError::InvalidCoordinate {
+                    duplicate: true,
+                    ..
+                }
+            ))
+        ));
+    }
 
     #[test]
     fn incremental_guard_matches_full_scan_until_first_violation_and_sees_air_changes() {

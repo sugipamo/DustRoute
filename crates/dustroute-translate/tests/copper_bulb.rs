@@ -79,6 +79,7 @@ fn powered_construction_and_teardown_use_exact_declared_bulb_properties() {
                 .last()
                 .unwrap()
                 .expected
+                .materialize()
                 .blocks
                 .is_empty()
         );

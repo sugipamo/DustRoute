@@ -33,6 +33,7 @@ fn mixed_custom_worlds_have_explicit_construction_and_complete_teardown_sequence
                 .last()
                 .unwrap()
                 .expected
+                .materialize()
                 .blocks
                 .is_empty()
         );
@@ -60,6 +61,7 @@ fn constant_sources_are_installed_after_mechanics_and_undo_tracks_the_moved_payl
             .last()
             .unwrap()
             .expected
+            .materialize()
             .blocks
             .is_empty()
     );
@@ -142,6 +144,7 @@ fn observer_chains_construct_without_placement_pulses_in_all_six_directions() {
                 .last()
                 .unwrap()
                 .expected
+                .materialize()
                 .blocks
                 .is_empty()
         );
@@ -174,6 +177,7 @@ fn observing_declared_air_does_not_require_a_synthetic_support_or_front_block() 
                 .last()
                 .unwrap()
                 .expected
+                .materialize()
                 .blocks
                 .is_empty()
         );

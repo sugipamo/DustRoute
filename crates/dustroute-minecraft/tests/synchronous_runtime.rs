@@ -21,6 +21,7 @@ enum Task {
     CompleteB,
     Noop,
     EmptyDelta,
+    Metadata(bool),
     Fail,
     ParentFailure,
     Recurse,
@@ -260,6 +261,22 @@ impl RuntimeAdapter for Adapter {
                     value,
                 });
             }
+            Task::Metadata(reject) => {
+                let block = Block::new(BlockKind::Solid);
+                out.delta = Some(delta(view, vec![(FLAG, block.clone())]));
+                out.outputs.push(OutputEffect {
+                    position: FLAG,
+                    block: BlockIdentity::of(&block),
+                    value: if reject { 13 } else { 7 },
+                });
+                out.histories.push(HistoryEffect::Record {
+                    rule: metadata_rule(),
+                    position: FLAG,
+                });
+                if reject {
+                    out.callbacks = vec![call(A, Task::Noop), call(B, Task::Noop)];
+                }
+            }
             Task::Noop => {}
             Task::EmptyDelta => out.delta = Some(delta(view, vec![])),
         }
@@ -321,6 +338,41 @@ fn checkpoints_share_read_only_worlds_and_detach_before_committed_writes() {
     assert_eq!(rt.pending_count(), same.pending_count());
     assert_eq!(rt.trace(), same.trace());
     assert_eq!(rt.view().carrier(A), same.view().carrier(A));
+}
+
+fn metadata_rule() -> HistoryRule {
+    HistoryRule {
+        key: "metadata-test".into(),
+        policy: HistoryPolicy {
+            window: 128,
+            threshold: 64,
+        },
+    }
+}
+#[test]
+fn shared_output_and_history_survive_read_only_events_and_late_rejection() {
+    let mut rt = runtime(RuntimeLimits {
+        max_pending: 1,
+        ..RuntimeLimits::default()
+    });
+    input(&mut rt, Task::Metadata(false));
+    let checkpoint = rt.checkpoint();
+    let original = SynchronousWorldRuntime::<Adapter>::from_checkpoint(&checkpoint).unwrap();
+    input(&mut rt, Task::Noop);
+    assert_eq!(rt.view().stored_output(FLAG).unwrap(), 7);
+    assert_eq!(rt.view().history_count(&metadata_rule(), FLAG).unwrap(), 1);
+    assert!(rt.trace().last().unwrap().output_changes.is_empty());
+    assert!(rt.trace().last().unwrap().history_changes.is_empty());
+    let trace = rt.trace().to_vec();
+    rt.input_now(call(A, Task::Metadata(true))).unwrap();
+    assert_eq!(rt.microstep(), Err(RuntimeError::Limit("pending work")));
+    assert_eq!(rt.trace(), trace);
+    assert_eq!(
+        rt.view().stored_output(FLAG).unwrap(),
+        original.view().stored_output(FLAG).unwrap()
+    );
+    assert_eq!(rt.view().history_count(&metadata_rule(), FLAG).unwrap(), 1);
+    assert!(std::ptr::eq(rt.view().world(), original.view().world()));
 }
 
 #[test]

@@ -52,6 +52,7 @@ fn passive_shape_construction_preserves_states_support_order_and_teardown() {
                 .last()
                 .unwrap()
                 .expected
+                .materialize()
                 .blocks
                 .is_empty()
         );

@@ -45,36 +45,107 @@ impl Display for SnapshotError {
 
 impl Error for SnapshotError {}
 
-/// Literal, bounds-checked indexing. Does not infer shapes or require supported
-/// physics. Callers retain observation-completeness and resource-budget checks.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum LiteralSnapshotError {
+    ReversedBounds,
+    InvalidCoordinate { position: Pos, duplicate: bool },
+    DifferentBounds,
+}
+impl Display for LiteralSnapshotError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::ReversedBounds => f.write_str("invalid snapshot bounds"),
+            Self::InvalidCoordinate { .. } => {
+                f.write_str("snapshot has out-of-bounds or duplicate coordinates")
+            }
+            Self::DifferentBounds => f.write_str("snapshot context bounds changed"),
+        }
+    }
+}
+impl Error for LiteralSnapshotError {}
+impl From<LiteralSnapshotError> for String {
+    fn from(e: LiteralSnapshotError) -> Self {
+        e.to_string()
+    }
+}
+
+/// An immutable, bounds-checked coordinate index for one literal input.
+/// This validates representation only, not physical support or live coverage.
+#[derive(Debug)]
+pub struct LiteralSnapshotIndex<'a> {
+    snapshot: &'a MinecraftSnapshot,
+    blocks: BTreeMap<Pos, &'a MinecraftSnapshotBlock>,
+}
+impl<'a> LiteralSnapshotIndex<'a> {
+    pub fn new(snapshot: &'a MinecraftSnapshot) -> Result<Self, LiteralSnapshotError> {
+        if snapshot.min.x > snapshot.max.x
+            || snapshot.min.y > snapshot.max.y
+            || snapshot.min.z > snapshot.max.z
+        {
+            return Err(LiteralSnapshotError::ReversedBounds);
+        }
+        let bounds = crate::world::Region::new(snapshot.min, snapshot.max);
+        let mut blocks = BTreeMap::new();
+        let mut seen = std::collections::BTreeSet::new();
+        for b in &snapshot.blocks {
+            let duplicate = !seen.insert(b.pos);
+            if !bounds.contains(b.pos) || duplicate {
+                return Err(LiteralSnapshotError::InvalidCoordinate {
+                    position: b.pos,
+                    duplicate,
+                });
+            }
+            if b.name != "minecraft:air" {
+                blocks.insert(b.pos, b);
+            }
+        }
+        Ok(Self { snapshot, blocks })
+    }
+    pub fn get(&self, position: Pos) -> Option<&'a MinecraftSnapshotBlock> {
+        self.blocks.get(&position).copied()
+    }
+    pub fn len(&self) -> usize {
+        self.blocks.len()
+    }
+    pub fn is_empty(&self) -> bool {
+        self.blocks.is_empty()
+    }
+    pub fn iter(&self) -> impl Iterator<Item = (Pos, &'a MinecraftSnapshotBlock)> + '_ {
+        self.blocks.iter().map(|(p, b)| (*p, *b))
+    }
+    pub fn to_owned_blocks(&self) -> BTreeMap<Pos, MinecraftSnapshotBlock> {
+        self.iter().map(|(p, b)| (p, b.clone())).collect()
+    }
+    pub fn canonical_snapshot(&self) -> MinecraftSnapshot {
+        MinecraftSnapshot {
+            min: self.snapshot.min,
+            max: self.snapshot.max,
+            blocks: self.blocks.values().map(|b| (*b).clone()).collect(),
+        }
+    }
+    pub fn changed_positions(
+        &self,
+        other: &Self,
+    ) -> Result<std::collections::BTreeSet<Pos>, LiteralSnapshotError> {
+        if self.snapshot.min != other.snapshot.min || self.snapshot.max != other.snapshot.max {
+            return Err(LiteralSnapshotError::DifferentBounds);
+        }
+        Ok(self
+            .blocks
+            .keys()
+            .chain(other.blocks.keys())
+            .copied()
+            .filter(|p| self.get(*p) != other.get(*p))
+            .collect())
+    }
+}
+
+/// Owned compatibility boundary. Internal consumers can retain a borrowed index
+/// instead of cloning records or rechecking the same immutable input.
 pub fn index_literal_snapshot(
     snapshot: &MinecraftSnapshot,
 ) -> Result<BTreeMap<Pos, MinecraftSnapshotBlock>, String> {
-    if snapshot.min.x > snapshot.max.x
-        || snapshot.min.y > snapshot.max.y
-        || snapshot.min.z > snapshot.max.z
-    {
-        return Err("invalid snapshot bounds".into());
-    }
-    let inside = |p: Pos| {
-        p.x >= snapshot.min.x
-            && p.x <= snapshot.max.x
-            && p.y >= snapshot.min.y
-            && p.y <= snapshot.max.y
-            && p.z >= snapshot.min.z
-            && p.z <= snapshot.max.z
-    };
-    let mut blocks = BTreeMap::new();
-    let mut seen = std::collections::BTreeSet::new();
-    for b in &snapshot.blocks {
-        if !inside(b.pos) || !seen.insert(b.pos) {
-            return Err("snapshot has out-of-bounds or duplicate coordinates".into());
-        }
-        if b.name != "minecraft:air" {
-            blocks.insert(b.pos, b.clone());
-        }
-    }
-    Ok(blocks)
+    Ok(LiteralSnapshotIndex::new(snapshot)?.to_owned_blocks())
 }
 
 pub fn world_from_snapshot_json(json: &str) -> Result<(MinecraftSnapshot, World), SnapshotError> {
@@ -345,6 +416,46 @@ mod tests {
     use dustroute_minecraft::CapabilityLevel;
 
     use super::*;
+
+    #[test]
+    fn literal_index_borrows_records_and_rejects_air_duplicates_and_outside_cells() {
+        let p = Pos::default();
+        let snapshot = MinecraftSnapshot {
+            min: p,
+            max: p,
+            blocks: vec![MinecraftSnapshotBlock {
+                pos: p,
+                name: "minecraft:stone".into(),
+                properties: BTreeMap::new(),
+            }],
+        };
+        let index = LiteralSnapshotIndex::new(&snapshot).unwrap();
+        assert!(std::ptr::eq(index.get(p).unwrap(), &snapshot.blocks[0]));
+        let mut duplicate = snapshot.clone();
+        duplicate.blocks.push(MinecraftSnapshotBlock {
+            pos: p,
+            name: "minecraft:air".into(),
+            properties: BTreeMap::new(),
+        });
+        assert!(
+            matches!(LiteralSnapshotIndex::new(&duplicate),Err(LiteralSnapshotError::InvalidCoordinate {position,duplicate:true}) if position==p)
+        );
+        let mut outside = snapshot.clone();
+        outside.blocks[0].pos.x = 1;
+        assert!(matches!(
+            LiteralSnapshotIndex::new(&outside),
+            Err(LiteralSnapshotError::InvalidCoordinate {
+                duplicate: false,
+                ..
+            })
+        ));
+        let mut other = snapshot.clone();
+        other.max.x = 1;
+        assert_eq!(
+            index.changed_positions(&LiteralSnapshotIndex::new(&other).unwrap()),
+            Err(LiteralSnapshotError::DifferentBounds)
+        );
+    }
 
     #[test]
     fn imports_java_repeater_direction_into_internal_direction() {

@@ -227,7 +227,6 @@ fn every_rotation_and_relocation_retains_parts_and_pattern_obligations() {
                 .last()
                 .unwrap()
                 .expected
-                .blocks
                 .is_empty()
         );
     }

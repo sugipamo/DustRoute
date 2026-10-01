@@ -24,20 +24,28 @@ fn main() {
         };
         let start = Instant::now();
         let proof = ElectricalModification::new(&before, &after, Default::default()).unwrap();
+        let usage = dustroute_translate::piston_construction::ExpectedState::retained_usage(
+            proof
+                .steps(false)
+                .iter()
+                .chain(proof.steps(true))
+                .map(|s| &s.expected),
+        );
         let elapsed_ms = start.elapsed().as_secs_f64() * 1000.0;
         let retained_records: usize = proof
             .steps(false)
             .iter()
             .chain(proof.steps(true))
-            .map(|s| s.expected.blocks.len())
+            .map(|s| s.expected.len())
             .sum();
         println!(
             "{}",
             serde_json::json!({
-                "schema":"dustroute.work-region-scaling.v1", "debug_assertions":cfg!(debug_assertions),
+                "schema":"dustroute.work-region-scaling.v2", "debug_assertions":cfg!(debug_assertions),
                 "non_air_context_blocks":total, "changed_positions":64, "proof_elapsed_ms":elapsed_ms,
                 "forward_commands":proof.steps(false).len(), "undo_commands":proof.steps(true).len(),
-                "retained_expected_block_records":retained_records,
+                "logical_expected_block_records":retained_records,
+                "retained_expected_block_records":usage.block_records,"estimated_expected_bytes":usage.estimated_bytes,
                 "scope":"one passive region, full-context forward/inverse proof; no live transport"
             })
         );

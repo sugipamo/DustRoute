@@ -77,6 +77,7 @@ fn command_construction_models_initial_relighting_and_removes_every_mount() {
                     .last()
                     .unwrap()
                     .expected
+                    .materialize()
                     .blocks
                     .is_empty()
             );

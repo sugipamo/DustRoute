@@ -74,6 +74,7 @@ fn stair_corner_construction_rotation_save_reload_and_removal_preserve_literal_s
                     .last()
                     .unwrap()
                     .expected
+                    .materialize()
                     .blocks
                     .is_empty()
             );

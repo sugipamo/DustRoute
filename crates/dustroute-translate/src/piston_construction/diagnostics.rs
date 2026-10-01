@@ -26,9 +26,7 @@ pub(super) fn verify_constructed(
                 // Completed placement snapshots already exist for readback.
                 // Attribute the last settled change, not a causal callback.
                 let last_change = build.iter().enumerate().rev().find(|(index, step)| {
-                    let at = |step: &ElectricalConstructionStep| {
-                        step.expected.blocks.iter().find(|b| b.pos == *pos).cloned()
-                    };
+                    let at = |step: &ElectricalConstructionStep| step.expected.get(*pos).cloned();
                     let previous = index.checked_sub(1).and_then(|i| at(&build[i]));
                     at(step) != previous
                 });

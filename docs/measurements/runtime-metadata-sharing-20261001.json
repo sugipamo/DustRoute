@@ -1,0 +1,1275 @@
+{
+  "schema": "dustroute.runtime-metadata-measurement.v1",
+  "baseline_runtime_commit": "abcff3c8efbdd96fffcc89212556f7961487cecf",
+  "probe_added_to_baseline_before_runtime_metadata_changes": true,
+  "profile": "debug, standalone, serial builds/runs; no Cargo or live server concurrent",
+  "fixture": "4096 static blocks; 128 read-only events with output registers, histories, or pending queue populated; setup excluded",
+  "source_sha256": {
+    "crates/dustroute-minecraft/examples/runtime_metadata_scaling.rs": "5cbfe280a240dddfc7e5f4b9bb5033dd1831894163ed343d0622e05c1795523e",
+    "crates/dustroute-minecraft/src/time/runtime/executor.rs": "63d32707432542784dd5c30d5c16eb2af312ee40ba93459033d9289feb88a2a1",
+    "crates/dustroute-minecraft/src/time/runtime/executor/root_behavior.rs": "14bd79d846e281d4e5abde98bb9594c965ea23abac056306e3266fbcad5ce81f"
+  },
+  "sweeps": [
+    {
+      "pair": 1,
+      "phase": "before",
+      "rows": [
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 0.937523,
+          "kind": "outputs",
+          "measured_events": 128,
+          "metadata_entries": 0,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 16.664586,
+          "kind": "outputs",
+          "measured_events": 128,
+          "metadata_entries": 64,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 45.038396,
+          "kind": "outputs",
+          "measured_events": 128,
+          "metadata_entries": 256,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 201.28263199999998,
+          "kind": "outputs",
+          "measured_events": 128,
+          "metadata_entries": 1024,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 911.859321,
+          "kind": "outputs",
+          "measured_events": 128,
+          "metadata_entries": 4096,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 0.6341260000000001,
+          "kind": "histories",
+          "measured_events": 128,
+          "metadata_entries": 0,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 31.139357999999998,
+          "kind": "histories",
+          "measured_events": 128,
+          "metadata_entries": 64,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 126.08529399999999,
+          "kind": "histories",
+          "measured_events": 128,
+          "metadata_entries": 256,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 551.993409,
+          "kind": "histories",
+          "measured_events": 128,
+          "metadata_entries": 1024,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 2222.3151909999997,
+          "kind": "histories",
+          "measured_events": 128,
+          "metadata_entries": 4096,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 1.438632,
+          "kind": "queue",
+          "measured_events": 128,
+          "metadata_entries": 0,
+          "queued_at_start": 128,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 1.407381,
+          "kind": "queue",
+          "measured_events": 128,
+          "metadata_entries": 64,
+          "queued_at_start": 128,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 2.976987,
+          "kind": "queue",
+          "measured_events": 128,
+          "metadata_entries": 256,
+          "queued_at_start": 256,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 12.712423000000001,
+          "kind": "queue",
+          "measured_events": 128,
+          "metadata_entries": 1024,
+          "queued_at_start": 1024,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 50.36203999999999,
+          "kind": "queue",
+          "measured_events": 128,
+          "metadata_entries": 4096,
+          "queued_at_start": 4096,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        }
+      ],
+      "binary_sha256": "8752dd5a55cc9baeee4265849b7c1741b54e0e3f0c69f6d4b898618f269d4b54",
+      "log": ".local/construction-refactor-metadata-1-before.jsonl",
+      "log_sha256": "a2e2193779802d50fda15b75b5ce91baa286a47a790da546054091ff43a65e11"
+    },
+    {
+      "pair": 1,
+      "phase": "after",
+      "rows": [
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 0.433939,
+          "kind": "outputs",
+          "measured_events": 128,
+          "metadata_entries": 0,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 0.39543500000000004,
+          "kind": "outputs",
+          "measured_events": 128,
+          "metadata_entries": 64,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 0.390516,
+          "kind": "outputs",
+          "measured_events": 128,
+          "metadata_entries": 256,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 0.420553,
+          "kind": "outputs",
+          "measured_events": 128,
+          "metadata_entries": 1024,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 0.426795,
+          "kind": "outputs",
+          "measured_events": 128,
+          "metadata_entries": 4096,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 0.425202,
+          "kind": "histories",
+          "measured_events": 128,
+          "metadata_entries": 0,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 0.417047,
+          "kind": "histories",
+          "measured_events": 128,
+          "metadata_entries": 64,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 0.40371,
+          "kind": "histories",
+          "measured_events": 128,
+          "metadata_entries": 256,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 0.458928,
+          "kind": "histories",
+          "measured_events": 128,
+          "metadata_entries": 1024,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 0.43429999999999996,
+          "kind": "histories",
+          "measured_events": 128,
+          "metadata_entries": 4096,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 1.253554,
+          "kind": "queue",
+          "measured_events": 128,
+          "metadata_entries": 0,
+          "queued_at_start": 128,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 1.263202,
+          "kind": "queue",
+          "measured_events": 128,
+          "metadata_entries": 64,
+          "queued_at_start": 128,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 2.799724,
+          "kind": "queue",
+          "measured_events": 128,
+          "metadata_entries": 256,
+          "queued_at_start": 256,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 12.245841,
+          "kind": "queue",
+          "measured_events": 128,
+          "metadata_entries": 1024,
+          "queued_at_start": 1024,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 46.900727,
+          "kind": "queue",
+          "measured_events": 128,
+          "metadata_entries": 4096,
+          "queued_at_start": 4096,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        }
+      ],
+      "binary_sha256": "b317a23b66de76a287ce78414be9a34b61c4eab304774e6462bfa3855ba652c8",
+      "log": ".local/construction-refactor-metadata-1-after.jsonl",
+      "log_sha256": "adf53aac07b7c7c75128098b594152d2d1484e9e32ae8fb3b339bedd7f75bb4a"
+    },
+    {
+      "pair": 2,
+      "phase": "after",
+      "rows": [
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 0.365607,
+          "kind": "outputs",
+          "measured_events": 128,
+          "metadata_entries": 0,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 0.341069,
+          "kind": "outputs",
+          "measured_events": 128,
+          "metadata_entries": 64,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 0.330209,
+          "kind": "outputs",
+          "measured_events": 128,
+          "metadata_entries": 256,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 0.358263,
+          "kind": "outputs",
+          "measured_events": 128,
+          "metadata_entries": 1024,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 0.355006,
+          "kind": "outputs",
+          "measured_events": 128,
+          "metadata_entries": 4096,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 0.33699100000000004,
+          "kind": "histories",
+          "measured_events": 128,
+          "metadata_entries": 0,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 0.351049,
+          "kind": "histories",
+          "measured_events": 128,
+          "metadata_entries": 64,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 0.35108900000000004,
+          "kind": "histories",
+          "measured_events": 128,
+          "metadata_entries": 256,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 0.38267,
+          "kind": "histories",
+          "measured_events": 128,
+          "metadata_entries": 1024,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 0.40443199999999996,
+          "kind": "histories",
+          "measured_events": 128,
+          "metadata_entries": 4096,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 1.165373,
+          "kind": "queue",
+          "measured_events": 128,
+          "metadata_entries": 0,
+          "queued_at_start": 128,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 1.1793500000000001,
+          "kind": "queue",
+          "measured_events": 128,
+          "metadata_entries": 64,
+          "queued_at_start": 128,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 2.6968650000000003,
+          "kind": "queue",
+          "measured_events": 128,
+          "metadata_entries": 256,
+          "queued_at_start": 256,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 13.317062,
+          "kind": "queue",
+          "measured_events": 128,
+          "metadata_entries": 1024,
+          "queued_at_start": 1024,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 48.117349,
+          "kind": "queue",
+          "measured_events": 128,
+          "metadata_entries": 4096,
+          "queued_at_start": 4096,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        }
+      ],
+      "binary_sha256": "b317a23b66de76a287ce78414be9a34b61c4eab304774e6462bfa3855ba652c8",
+      "log": ".local/construction-refactor-metadata-2-after.jsonl",
+      "log_sha256": "cd737b962ce512282b9ea4d3e5e24525392ab96fbf27620742041a403a367cee"
+    },
+    {
+      "pair": 2,
+      "phase": "before",
+      "rows": [
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 0.502522,
+          "kind": "outputs",
+          "measured_events": 128,
+          "metadata_entries": 0,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 8.595402,
+          "kind": "outputs",
+          "measured_events": 128,
+          "metadata_entries": 64,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 38.698876,
+          "kind": "outputs",
+          "measured_events": 128,
+          "metadata_entries": 256,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 171.90338899999998,
+          "kind": "outputs",
+          "measured_events": 128,
+          "metadata_entries": 1024,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 752.009583,
+          "kind": "outputs",
+          "measured_events": 128,
+          "metadata_entries": 4096,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 0.514144,
+          "kind": "histories",
+          "measured_events": 128,
+          "metadata_entries": 0,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 25.310636000000002,
+          "kind": "histories",
+          "measured_events": 128,
+          "metadata_entries": 64,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 104.673388,
+          "kind": "histories",
+          "measured_events": 128,
+          "metadata_entries": 256,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 442.409465,
+          "kind": "histories",
+          "measured_events": 128,
+          "metadata_entries": 1024,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 1996.0266419999998,
+          "kind": "histories",
+          "measured_events": 128,
+          "metadata_entries": 4096,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 1.387092,
+          "kind": "queue",
+          "measured_events": 128,
+          "metadata_entries": 0,
+          "queued_at_start": 128,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 1.431288,
+          "kind": "queue",
+          "measured_events": 128,
+          "metadata_entries": 64,
+          "queued_at_start": 128,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 3.0396490000000003,
+          "kind": "queue",
+          "measured_events": 128,
+          "metadata_entries": 256,
+          "queued_at_start": 256,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 13.043865,
+          "kind": "queue",
+          "measured_events": 128,
+          "metadata_entries": 1024,
+          "queued_at_start": 1024,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 53.256969,
+          "kind": "queue",
+          "measured_events": 128,
+          "metadata_entries": 4096,
+          "queued_at_start": 4096,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        }
+      ],
+      "binary_sha256": "8752dd5a55cc9baeee4265849b7c1741b54e0e3f0c69f6d4b898618f269d4b54",
+      "log": ".local/construction-refactor-metadata-2-before.jsonl",
+      "log_sha256": "69692ab56dc95dbc094a4e177af1c1ea24e6f702557f0d29d8e24f535451eb44"
+    },
+    {
+      "pair": 3,
+      "phase": "before",
+      "rows": [
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 0.48159199999999996,
+          "kind": "outputs",
+          "measured_events": 128,
+          "metadata_entries": 0,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 8.165891,
+          "kind": "outputs",
+          "measured_events": 128,
+          "metadata_entries": 64,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 35.72769,
+          "kind": "outputs",
+          "measured_events": 128,
+          "metadata_entries": 256,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 159.016427,
+          "kind": "outputs",
+          "measured_events": 128,
+          "metadata_entries": 1024,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 704.7998180000001,
+          "kind": "outputs",
+          "measured_events": 128,
+          "metadata_entries": 4096,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 0.46506,
+          "kind": "histories",
+          "measured_events": 128,
+          "metadata_entries": 0,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 25.148563,
+          "kind": "histories",
+          "measured_events": 128,
+          "metadata_entries": 64,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 103.76666499999999,
+          "kind": "histories",
+          "measured_events": 128,
+          "metadata_entries": 256,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 434.714685,
+          "kind": "histories",
+          "measured_events": 128,
+          "metadata_entries": 1024,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 1898.250892,
+          "kind": "histories",
+          "measured_events": 128,
+          "metadata_entries": 4096,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 1.3075789999999998,
+          "kind": "queue",
+          "measured_events": 128,
+          "metadata_entries": 0,
+          "queued_at_start": 128,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 1.319612,
+          "kind": "queue",
+          "measured_events": 128,
+          "metadata_entries": 64,
+          "queued_at_start": 128,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 2.786549,
+          "kind": "queue",
+          "measured_events": 128,
+          "metadata_entries": 256,
+          "queued_at_start": 256,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 12.466337,
+          "kind": "queue",
+          "measured_events": 128,
+          "metadata_entries": 1024,
+          "queued_at_start": 1024,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 49.453534,
+          "kind": "queue",
+          "measured_events": 128,
+          "metadata_entries": 4096,
+          "queued_at_start": 4096,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        }
+      ],
+      "binary_sha256": "8752dd5a55cc9baeee4265849b7c1741b54e0e3f0c69f6d4b898618f269d4b54",
+      "log": ".local/construction-refactor-metadata-3-before.jsonl",
+      "log_sha256": "bd1e94aa7b411757e2b5d9caddb609e869c2011e13be62341d2c399d8b32b6a0"
+    },
+    {
+      "pair": 3,
+      "phase": "after",
+      "rows": [
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 0.402068,
+          "kind": "outputs",
+          "measured_events": 128,
+          "metadata_entries": 0,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 0.355017,
+          "kind": "outputs",
+          "measured_events": 128,
+          "metadata_entries": 64,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 0.36197999999999997,
+          "kind": "outputs",
+          "measured_events": 128,
+          "metadata_entries": 256,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 0.394343,
+          "kind": "outputs",
+          "measured_events": 128,
+          "metadata_entries": 1024,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 0.430743,
+          "kind": "outputs",
+          "measured_events": 128,
+          "metadata_entries": 4096,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 0.381127,
+          "kind": "histories",
+          "measured_events": 128,
+          "metadata_entries": 0,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 0.39344,
+          "kind": "histories",
+          "measured_events": 128,
+          "metadata_entries": 64,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 0.391808,
+          "kind": "histories",
+          "measured_events": 128,
+          "metadata_entries": 256,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 0.43941,
+          "kind": "histories",
+          "measured_events": 128,
+          "metadata_entries": 1024,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 0.436074,
+          "kind": "histories",
+          "measured_events": 128,
+          "metadata_entries": 4096,
+          "queued_at_start": 0,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 1.217855,
+          "kind": "queue",
+          "measured_events": 128,
+          "metadata_entries": 0,
+          "queued_at_start": 128,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 1.307879,
+          "kind": "queue",
+          "measured_events": 128,
+          "metadata_entries": 64,
+          "queued_at_start": 128,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 2.795596,
+          "kind": "queue",
+          "measured_events": 128,
+          "metadata_entries": 256,
+          "queued_at_start": 256,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 12.199592,
+          "kind": "queue",
+          "measured_events": 128,
+          "metadata_entries": 1024,
+          "queued_at_start": 1024,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        },
+        {
+          "debug_assertions": true,
+          "elapsed_ms": 49.411493,
+          "kind": "queue",
+          "measured_events": 128,
+          "metadata_entries": 4096,
+          "queued_at_start": 4096,
+          "schema": "dustroute.runtime-metadata-scaling.v1",
+          "setup_included": false,
+          "world_blocks": 4096
+        }
+      ],
+      "binary_sha256": "b317a23b66de76a287ce78414be9a34b61c4eab304774e6462bfa3855ba652c8",
+      "log": ".local/construction-refactor-metadata-3-after.jsonl",
+      "log_sha256": "e4c3bebc3c75fc8317924a0c6a78d53e611df8b5e1b243a244589b81a8b2d26d"
+    }
+  ],
+  "summary": [
+    {
+      "kind": "outputs",
+      "metadata_entries": 0,
+      "before": {
+        "median_ms": 0.502522,
+        "min_ms": 0.48159199999999996,
+        "max_ms": 0.937523
+      },
+      "after": {
+        "median_ms": 0.402068,
+        "min_ms": 0.365607,
+        "max_ms": 0.433939
+      }
+    },
+    {
+      "kind": "outputs",
+      "metadata_entries": 64,
+      "before": {
+        "median_ms": 8.595402,
+        "min_ms": 8.165891,
+        "max_ms": 16.664586
+      },
+      "after": {
+        "median_ms": 0.355017,
+        "min_ms": 0.341069,
+        "max_ms": 0.39543500000000004
+      }
+    },
+    {
+      "kind": "outputs",
+      "metadata_entries": 256,
+      "before": {
+        "median_ms": 38.698876,
+        "min_ms": 35.72769,
+        "max_ms": 45.038396
+      },
+      "after": {
+        "median_ms": 0.36197999999999997,
+        "min_ms": 0.330209,
+        "max_ms": 0.390516
+      }
+    },
+    {
+      "kind": "outputs",
+      "metadata_entries": 1024,
+      "before": {
+        "median_ms": 171.90338899999998,
+        "min_ms": 159.016427,
+        "max_ms": 201.28263199999998
+      },
+      "after": {
+        "median_ms": 0.394343,
+        "min_ms": 0.358263,
+        "max_ms": 0.420553
+      }
+    },
+    {
+      "kind": "outputs",
+      "metadata_entries": 4096,
+      "before": {
+        "median_ms": 752.009583,
+        "min_ms": 704.7998180000001,
+        "max_ms": 911.859321
+      },
+      "after": {
+        "median_ms": 0.426795,
+        "min_ms": 0.355006,
+        "max_ms": 0.430743
+      }
+    },
+    {
+      "kind": "histories",
+      "metadata_entries": 0,
+      "before": {
+        "median_ms": 0.514144,
+        "min_ms": 0.46506,
+        "max_ms": 0.6341260000000001
+      },
+      "after": {
+        "median_ms": 0.381127,
+        "min_ms": 0.33699100000000004,
+        "max_ms": 0.425202
+      }
+    },
+    {
+      "kind": "histories",
+      "metadata_entries": 64,
+      "before": {
+        "median_ms": 25.310636000000002,
+        "min_ms": 25.148563,
+        "max_ms": 31.139357999999998
+      },
+      "after": {
+        "median_ms": 0.39344,
+        "min_ms": 0.351049,
+        "max_ms": 0.417047
+      }
+    },
+    {
+      "kind": "histories",
+      "metadata_entries": 256,
+      "before": {
+        "median_ms": 104.673388,
+        "min_ms": 103.76666499999999,
+        "max_ms": 126.08529399999999
+      },
+      "after": {
+        "median_ms": 0.391808,
+        "min_ms": 0.35108900000000004,
+        "max_ms": 0.40371
+      }
+    },
+    {
+      "kind": "histories",
+      "metadata_entries": 1024,
+      "before": {
+        "median_ms": 442.409465,
+        "min_ms": 434.714685,
+        "max_ms": 551.993409
+      },
+      "after": {
+        "median_ms": 0.43941,
+        "min_ms": 0.38267,
+        "max_ms": 0.458928
+      }
+    },
+    {
+      "kind": "histories",
+      "metadata_entries": 4096,
+      "before": {
+        "median_ms": 1996.0266419999998,
+        "min_ms": 1898.250892,
+        "max_ms": 2222.3151909999997
+      },
+      "after": {
+        "median_ms": 0.43429999999999996,
+        "min_ms": 0.40443199999999996,
+        "max_ms": 0.436074
+      }
+    },
+    {
+      "kind": "queue",
+      "metadata_entries": 0,
+      "before": {
+        "median_ms": 1.387092,
+        "min_ms": 1.3075789999999998,
+        "max_ms": 1.438632
+      },
+      "after": {
+        "median_ms": 1.217855,
+        "min_ms": 1.165373,
+        "max_ms": 1.253554
+      }
+    },
+    {
+      "kind": "queue",
+      "metadata_entries": 64,
+      "before": {
+        "median_ms": 1.407381,
+        "min_ms": 1.319612,
+        "max_ms": 1.431288
+      },
+      "after": {
+        "median_ms": 1.263202,
+        "min_ms": 1.1793500000000001,
+        "max_ms": 1.307879
+      }
+    },
+    {
+      "kind": "queue",
+      "metadata_entries": 256,
+      "before": {
+        "median_ms": 2.976987,
+        "min_ms": 2.786549,
+        "max_ms": 3.0396490000000003
+      },
+      "after": {
+        "median_ms": 2.795596,
+        "min_ms": 2.6968650000000003,
+        "max_ms": 2.799724
+      }
+    },
+    {
+      "kind": "queue",
+      "metadata_entries": 1024,
+      "before": {
+        "median_ms": 12.712423000000001,
+        "min_ms": 12.466337,
+        "max_ms": 13.043865
+      },
+      "after": {
+        "median_ms": 12.245841,
+        "min_ms": 12.199592,
+        "max_ms": 13.317062
+      }
+    },
+    {
+      "kind": "queue",
+      "metadata_entries": 4096,
+      "before": {
+        "median_ms": 50.36203999999999,
+        "min_ms": 49.453534,
+        "max_ms": 53.256969
+      },
+      "after": {
+        "median_ms": 48.117349,
+        "min_ms": 46.900727,
+        "max_ms": 49.411493
+      }
+    }
+  ],
+  "limits": [
+    "Synthetic core overhead, not a physics or live workload benchmark.",
+    "Sharing improves unchanged maps; changed histories still detach and retain validation.",
+    "Queue scenario runs 128 of the initial max(128,N) pending events; no queue implementation change."
+  ]
+}

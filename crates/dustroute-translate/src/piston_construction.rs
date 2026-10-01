@@ -3,6 +3,12 @@
 //! certificate. The MCP layer must independently establish those conditions.
 mod batching;
 mod diagnostics;
+mod error;
+pub mod expected_state;
+use expected_state::ExpectedStates;
+pub use expected_state::{ExpectedState, ExpectedStateUsage};
+pub mod limits;
+pub use error::{ConstructionBudget, ConstructionError};
 mod modification;
 mod order;
 pub mod policy;
@@ -22,11 +28,14 @@ use dustroute_minecraft::time::runtime::{RuntimeRecord, RuntimeView};
 use dustroute_minecraft::{Pos, Region, World};
 use serde::{Deserialize, Serialize};
 
-use crate::snapshot::MinecraftSnapshot;
+use crate::snapshot::{LiteralSnapshotIndex, MinecraftSnapshot};
 
 /// Observe each committed event before a later callback can hide its writes.
 /// Initial admission and incremental checks are deliberately separate.
 trait ConstructionObserver {
+    fn settled(&mut self, snapshot: MinecraftSnapshot) -> Result<ExpectedState, String> {
+        ExpectedStates::default().capture(snapshot)
+    }
     fn initial(&mut self, _view: RuntimeView<'_>) -> Result<(), String> {
         Ok(())
     }
@@ -46,6 +55,34 @@ impl ConstructionObserver for () {
     }
 }
 
+struct ExpectedObserver<O> {
+    observer: O,
+    states: ExpectedStates,
+}
+impl<O: ConstructionObserver> ExpectedObserver<O> {
+    fn new(observer: O) -> Self {
+        Self {
+            observer,
+            states: ExpectedStates::default(),
+        }
+    }
+}
+impl<O: ConstructionObserver> ConstructionObserver for ExpectedObserver<O> {
+    fn initial(&mut self, view: RuntimeView<'_>) -> Result<(), String> {
+        self.observer.initial(view)
+    }
+    fn committed<P>(
+        &mut self,
+        view: RuntimeView<'_>,
+        record: &RuntimeRecord<P>,
+    ) -> Result<(), String> {
+        self.observer.committed(view, record)
+    }
+    fn settled(&mut self, snapshot: MinecraftSnapshot) -> Result<ExpectedState, String> {
+        self.states.capture(snapshot)
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct ElectricalConstructionStep {
     pub position: Pos,
@@ -53,7 +90,7 @@ pub struct ElectricalConstructionStep {
     /// Settling margin after the modeled last pending root. No live result is
     /// accepted without matching the full expected observation afterwards.
     pub wait_ticks: u64,
-    pub expected: MinecraftSnapshot,
+    pub expected: ExpectedState,
     /// Fresh model result only. Saved or caller-provided steps cannot grant
     /// permission to omit an intermediate live observation.
     #[serde(skip)]
@@ -71,6 +108,7 @@ pub struct ElectricalConstruction {
 impl ElectricalConstruction {
     pub fn new(world: &World, region: Region, limits: RuntimeLimits) -> Result<Self, String> {
         let initial = electrical_snapshot(world, region)?;
+        let requested_index = LiteralSnapshotIndex::new(&initial)?;
         let literal = literal_world(&initial)?;
         let mut reference =
             new_piston_runtime(literal.clone(), region, limits).map_err(|e| e.to_string())?;
@@ -83,6 +121,7 @@ impl ElectricalConstruction {
         let observer_predecessors = order::observer_predecessors(&remaining, &literal)?;
         let mut installed = BTreeSet::new();
         let mut build = Vec::new();
+        let mut expectations = ExpectedObserver::new(());
         while !remaining.is_empty() {
             let index = order::next_build_index(
                 &remaining,
@@ -91,16 +130,18 @@ impl ElectricalConstruction {
                 runtime.view().world(),
             )?;
             let (pos, block) = remaining.remove(index);
-            let requested = initial
-                .blocks
-                .iter()
-                .find(|b| b.pos == pos)
-                .expect("literal block")
-                .clone();
+            let requested = requested_index.get(pos).expect("literal block").clone();
             let (block, state) = snapshot::initialization_request(block, requested);
             let start = runtime.view().time().game_tick;
             runtime.install_now(pos, block).map_err(|e| e.to_string())?;
-            build.push(settled_step(&mut runtime, region, pos, state, start)?);
+            build.push(settled_step(
+                &mut runtime,
+                region,
+                pos,
+                state,
+                start,
+                &mut expectations,
+            )?);
             installed.insert(pos);
         }
         let constructed = electrical_snapshot(runtime.view().world(), region)?;
@@ -269,6 +310,7 @@ fn teardown(
     region: Region,
 ) -> Result<Vec<ElectricalConstructionStep>, String> {
     let mut remove = Vec::new();
+    let mut expectations = ExpectedObserver::new(());
     while runtime.view().world().iter().next().is_some() {
         let pos = order::next_removal_position(runtime.view().world())?;
         let start = runtime.view().time().game_tick;
@@ -279,6 +321,7 @@ fn teardown(
             pos,
             "minecraft:air".into(),
             start,
+            &mut expectations,
         )?);
     }
     Ok(remove)
@@ -290,8 +333,9 @@ fn settled_step(
     position: Pos,
     state: String,
     start: u64,
+    observer: &mut impl ConstructionObserver,
 ) -> Result<ElectricalConstructionStep, String> {
-    settled_step_observed(runtime, region, position, state, start, &mut ())
+    settled_step_observed(runtime, region, position, state, start, observer)
 }
 
 fn settled_step_observed(
@@ -323,14 +367,14 @@ fn settled_step_observed(
         .checked_sub(start)
         .and_then(|n| n.checked_add(4))
         .ok_or("construction time overflow")?;
-    if wait_ticks > 1200 {
+    if wait_ticks > limits::MAX_STEP_WAIT_TICKS {
         return Err("construction settling exceeds the per-step live wait limit".into());
     }
     Ok(ElectricalConstructionStep {
         position,
         state,
         wait_ticks,
-        expected: electrical_snapshot(runtime.view().world(), region)?,
+        expected: observer.settled(electrical_snapshot(runtime.view().world(), region)?)?,
         immediate_idle,
     })
 }

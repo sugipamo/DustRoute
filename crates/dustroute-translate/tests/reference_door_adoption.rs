@@ -50,6 +50,7 @@ fn production_planner_builds_and_removes_the_exact_reference_door_after_relocati
                 .last()
                 .unwrap()
                 .expected
+                .materialize()
                 .blocks
                 .is_empty()
         );
@@ -231,7 +232,7 @@ fn reconstruction_covers_every_stopped_build_and_removal_and_short_input_damage(
         .build_steps()
         .iter()
         .chain(plan.remove_steps())
-        .map(|step| step.expected.clone())
+        .map(|step| step.expected.materialize())
         .collect::<Vec<_>>();
     let mut missing = new_piston_runtime(
         f.world.clone(),
@@ -268,7 +269,7 @@ fn reconstruction_covers_every_stopped_build_and_removal_and_short_input_damage(
         assert_eq!(&steps.last().unwrap().expected, plan.settled(), "case {i}");
         let clearing = steps.len() - plan.build_steps().len();
         if clearing > 0 {
-            assert!(steps[clearing - 1].expected.blocks.is_empty(), "case {i}");
+            assert!(steps[clearing - 1].expected.is_empty(), "case {i}");
         }
     }
     assert!(failures.is_empty(), "{}", failures.join("\n"));
@@ -375,7 +376,7 @@ fn every_settled_reconstruction_boundary_can_be_replanned_for_admitted_reference
             .unwrap();
         for (index, step) in reconstruction.iter().enumerate() {
             let replanned = plan
-                .reconstruction_steps(&step.expected, f.context.root_limits)
+                .reconstruction_steps(&step.expected.materialize(), f.context.root_limits)
                 .unwrap_or_else(|e| {
                     panic!("damage {case}, reconstruction step {}: {e}", index + 1)
                 });

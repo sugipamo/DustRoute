@@ -51,16 +51,17 @@ impl ConstructionExecutor<'_> {
         self.policy
             .validate_placement_size(steps.len())
             .map_err(|e| e.to_string())?;
-        let mut expected = baseline;
+        let mut expected = std::borrow::Cow::Borrowed(baseline);
         for batch in construction_batches(steps) {
+            let batch_expected = batch.expected();
             let result: Result<(), String> = async {
                 let writes = batch
                     .steps()
                     .iter()
                     .map(|step| {
                         if !bounds.contains(step.position)
-                            || step.expected.min != bounds.min
-                            || step.expected.max != bounds.max
+                            || step.expected.bounds().min != bounds.min
+                            || step.expected.bounds().max != bounds.max
                         {
                             return Err("construction step escapes the reviewed region".into());
                         }
@@ -79,7 +80,7 @@ impl ConstructionExecutor<'_> {
                     .await
                     .map_err(|e| e.to_string())?
                     .into_stationary_record()?;
-                ValidatedAssemblyPlacement::matches(&before.snapshot, expected, &status.version)?;
+                ValidatedAssemblyPlacement::matches(&before.snapshot, &expected, &status.version)?;
                 {
                     let _measurement =
                         crate::performance::span(crate::performance::Phase::Checkpoint);
@@ -113,7 +114,7 @@ impl ConstructionExecutor<'_> {
                 self.target.check(&status)?;
                 ValidatedAssemblyPlacement::matches(
                     &after.snapshot,
-                    batch.expected(),
+                    &batch_expected,
                     &status.version,
                 )?;
                 {
@@ -131,7 +132,7 @@ impl ConstructionExecutor<'_> {
                     batch.last_step()
                 )
             })?;
-            expected = batch.expected();
+            expected = std::borrow::Cow::Owned(batch_expected);
         }
         Ok(())
     }

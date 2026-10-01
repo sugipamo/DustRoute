@@ -57,6 +57,7 @@ fn construction_and_teardown_use_declared_modes_and_do_not_export_output_as_a_pr
                 .last()
                 .unwrap()
                 .expected
+                .materialize()
                 .blocks
                 .is_empty()
         );

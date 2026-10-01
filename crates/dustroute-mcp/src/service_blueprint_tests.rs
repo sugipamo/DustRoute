@@ -218,7 +218,7 @@ fn flight_placement_and_operating_removal_require_the_entire_reviewed_region() {
     assert!(proof.validate_before(&arrived, "1.21.11", true).is_err());
     let removal = proof.operating_removal(&arrived).unwrap();
     assert_eq!(removal.baseline, arrived);
-    assert!(removal.steps.last().unwrap().expected.blocks.is_empty());
+    assert!(removal.steps.last().unwrap().expected.is_empty());
     let mut damaged = arrived.clone();
     damaged.blocks.retain(|b| b.name != "minecraft:slime_block");
     assert!(proof.operating_removal(&damaged).is_err());

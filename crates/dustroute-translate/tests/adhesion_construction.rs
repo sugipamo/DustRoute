@@ -43,6 +43,7 @@ fn adhesion_materials_roundtrip_and_construct_in_every_horizontal_rotation() {
                 .last()
                 .unwrap()
                 .expected
+                .materialize()
                 .blocks
                 .is_empty()
         );
