@@ -40,19 +40,14 @@ fn valid_position(pos: Pos) -> Result<(), BotBridgeError> {
     Ok(())
 }
 impl VoxrigBridge {
-    pub async fn observe_player(
+    async fn acquire_player(
         &self,
         player: &str,
-        max_distance: f64,
-    ) -> Result<PlayerObservation, BotBridgeError> {
-        if !is_valid_minecraft_username(player)
-            || !max_distance.is_finite()
-            || !(0.0..=64.0).contains(&max_distance)
-            || max_distance == 0.0
-        {
-            return Err(fail("invalid player or target distance"));
+        operations: &Operations,
+    ) -> Result<bool, BotBridgeError> {
+        if !is_valid_minecraft_username(player) {
+            return Err(fail("invalid player"));
         }
-        let operations = self.operations()?;
         let mut reacquired = false;
         if !operations
             .visible_players()
@@ -94,6 +89,43 @@ impl VoxrigBridge {
             }
             reacquired = true;
         }
+        Ok(reacquired)
+    }
+    pub async fn observe_player_context(
+        &self,
+        player: &str,
+    ) -> Result<crate::bridge::PlayerContext, BotBridgeError> {
+        let operations = self.operations()?;
+        let reacquired = self.acquire_player(player, &operations).await?;
+        let state = operations.player_state().await.map_err(native_error)?;
+        let observed = operations.visible_players().await.map_err(native_error)?;
+        if state.connection_id != observed.connection_id
+            || state.dimension.as_deref() != Some(observed.dimension.as_str())
+            || !observed.players.iter().any(|p| p.name == player)
+        {
+            return Err(fail("player context changed or unavailable"));
+        }
+        Ok(crate::bridge::PlayerContext {
+            player: player.into(),
+            dimension: observed.dimension,
+            reacquired,
+        })
+    }
+
+    pub async fn observe_player(
+        &self,
+        player: &str,
+        max_distance: f64,
+    ) -> Result<PlayerObservation, BotBridgeError> {
+        if !is_valid_minecraft_username(player)
+            || !max_distance.is_finite()
+            || !(0.0..=64.0).contains(&max_distance)
+            || max_distance == 0.0
+        {
+            return Err(fail("invalid player or target distance"));
+        }
+        let operations = self.operations()?;
+        let reacquired = self.acquire_player(player, &operations).await?;
         let target = operations
             .observe_player_outline_target(player, max_distance)
             .await

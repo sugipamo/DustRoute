@@ -32,6 +32,8 @@ pub(crate) struct EditRecord {
     /// Missing on earlier historical records; never restored as a capability.
     #[serde(default)]
     pub edit_scope: Option<dustroute_library::world_edit::WorldEditScope>,
+    #[serde(default)]
+    pub job_stage: Option<crate::construction_jobs::JobStageBinding>,
     pub state: EditState,
     pub attempts: Vec<EditAttempt>,
 }

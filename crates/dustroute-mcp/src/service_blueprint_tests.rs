@@ -438,7 +438,7 @@ async fn runtime_blueprint_review_and_adoption_preserve_child_failures_after_res
         .unwrap();
         let (client, server) = start(&root).await;
         let tools = client.list_tools(None).await.unwrap();
-        assert_eq!(tools.tools.len(), 22);
+        assert_eq!(tools.tools.len(), 23);
         let schema = serde_json::to_string(
             &tools
                 .tools
@@ -828,7 +828,7 @@ async fn blueprint_mcp_round_trip_adopts_after_restart_without_minecraft() {
     let root = temporary();
     let (client, server) = start(&root).await;
     let tools = client.list_tools(None).await.unwrap();
-    assert_eq!(tools.tools.len(), 22);
+    assert_eq!(tools.tools.len(), 23);
     let schema = serde_json::to_string(
         &tools
             .tools

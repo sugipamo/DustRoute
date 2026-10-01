@@ -65,6 +65,103 @@ pub struct BotStatus {
     pub metrics: BotBridgeMetrics,
 }
 
+/// Read capabilities belong to the selected adapter, independently of policy.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ObservationBackend {
+    Mineflayer,
+    Voxrig,
+}
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+pub struct ObservationCapabilities {
+    pub backend: ObservationBackend,
+    pub max_region_cells: u64,
+    pub server_confirmed: bool,
+    pub requires_loaded_cells: bool,
+    pub max_gaze_distance_blocks: u16,
+}
+impl ObservationCapabilities {
+    pub fn validate_region(self, min: Pos, max: Pos) -> Result<(), BotBridgeError> {
+        let mut volume = 1_u64;
+        for (lo, hi) in [(min.x, max.x), (min.y, max.y), (min.z, max.z)] {
+            if lo > hi || lo < -30_000_000 || hi > 30_000_000 {
+                return Err(BotBridgeError::Protocol(
+                    "invalid observation bounds".into(),
+                ));
+            }
+            volume = volume
+                .checked_mul((i64::from(hi) - i64::from(lo) + 1) as u64)
+                .ok_or_else(|| BotBridgeError::Protocol("observation volume overflow".into()))?;
+        }
+        if volume > self.max_region_cells {
+            return Err(BotBridgeError::Protocol(format!(
+                "{:?} observation requires {volume} cells; adapter limit is {} (independent of MCP policy)",
+                self.backend, self.max_region_cells
+            )));
+        }
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod capability_tests {
+    use super::*;
+
+    #[test]
+    fn native_limits_do_not_inherit_command_predicate_limits() {
+        let legacy = BotBridge::new("127.0.0.1:1").observation_capabilities();
+        let native = ObservationCapabilities {
+            backend: ObservationBackend::Voxrig,
+            max_region_cells: 262_144,
+            max_gaze_distance_blocks: 64,
+            server_confirmed: false,
+            requires_loaded_cells: true,
+        };
+        let min = Pos::default();
+        let max = Pos::new(31, 31, 31);
+        assert!(
+            legacy
+                .validate_region(min, max)
+                .unwrap_err()
+                .to_string()
+                .contains("8880")
+        );
+        native.validate_region(min, max).unwrap();
+        native.validate_region(min, Pos::new(63, 63, 63)).unwrap();
+        assert!(native.validate_region(min, Pos::new(64, 63, 63)).is_err());
+        assert!(native.validate_region(max, min).is_err());
+        assert!(!native.server_confirmed);
+    }
+
+    #[cfg(feature = "voxrig")]
+    #[test]
+    fn capability_limit_matches_voxrig_region_contract() {
+        assert!(
+            voxrig::Region {
+                min: [0, 0, 0],
+                max: [63, 63, 63]
+            }
+            .volume()
+            .is_ok()
+        );
+        assert!(
+            voxrig::Region {
+                min: [0, 0, 0],
+                max: [64, 63, 63]
+            }
+            .volume()
+            .is_err()
+        );
+    }
+}
+/// Dimension/identity observation without requiring a raycast result.
+#[derive(Clone, Debug, Serialize)]
+pub struct PlayerContext {
+    pub player: String,
+    pub dimension: String,
+    pub reacquired: bool,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Vec3 {
     pub x: f64,
@@ -480,6 +577,12 @@ impl BotBridge {
                 "invalid Minecraft player name: {player}"
             )));
         }
+        let limit = self.observation_capabilities().max_gaze_distance_blocks;
+        if !max_distance.is_finite() || max_distance <= 0.0 || max_distance > f64::from(limit) {
+            return Err(BotBridgeError::Protocol(format!(
+                "gaze distance must be positive and at most {limit} blocks for this adapter"
+            )));
+        }
         let params = json!({ "player": player, "max_distance": max_distance });
         #[cfg(feature = "voxrig")]
         if let Some(native) = &self.native {
@@ -510,6 +613,46 @@ impl BotBridge {
             return self.native_timeout(native.visible_players()).await;
         }
         self.request("visible_players", json!({})).await
+    }
+
+    pub fn observation_capabilities(&self) -> ObservationCapabilities {
+        #[cfg(feature = "voxrig")]
+        if self.native.is_some() {
+            return ObservationCapabilities {
+                backend: ObservationBackend::Voxrig,
+                max_region_cells: 262_144,
+                max_gaze_distance_blocks: 64,
+                server_confirmed: false,
+                requires_loaded_cells: true,
+            };
+        }
+        ObservationCapabilities {
+            backend: ObservationBackend::Mineflayer,
+            max_region_cells: 8_880,
+            max_gaze_distance_blocks: 256,
+            server_confirmed: true,
+            requires_loaded_cells: true,
+        }
+    }
+
+    pub async fn observe_player_context(
+        &self,
+        player: &str,
+    ) -> Result<PlayerContext, BotBridgeError> {
+        #[cfg(feature = "voxrig")]
+        if let Some(native) = &self.native {
+            return self
+                .native_timeout(native.observe_player_context(player))
+                .await;
+        }
+        // Compatibility transport has no independent context RPC. Its raycast
+        // is incidental: no target is required or used by explicit capture.
+        let observed = self.observe_player(player, 64.0).await?;
+        Ok(PlayerContext {
+            player: observed.player,
+            dimension: observed.dimension,
+            reacquired: observed.reacquired,
+        })
     }
 
     pub async fn scan_region(
@@ -563,6 +706,7 @@ impl BotBridge {
         max: Pos,
         dimension: &str,
     ) -> Result<crate::observation_evidence::FreshRegion, BotBridgeError> {
+        self.observation_capabilities().validate_region(min, max)?;
         let _measurement = span(Phase::Scan).cells(min, max);
         #[cfg(feature = "voxrig")]
         if self.native.is_some() {

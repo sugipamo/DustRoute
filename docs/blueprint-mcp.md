@@ -9,8 +9,8 @@ compatibility only. Catalog membership is never proof of behavior or placement.
 This workflow needs a configured assist player but no running Minecraft bridge.
 All responses from its handlers use `dustroute.blueprint-mcp.v1` and
 `writes_minecraft: false`. It is available with the default world read-only
-policy. The default profile has 22 tools, including `manage_assembly` for durable
-live-placement records. Catalog operations use the existing Blueprint request
+policy. The default profile has 23 tools, including `manage_assembly` for durable
+live-placement records and `manage_construction_job` for region work intentions. Catalog operations use the existing Blueprint request
 forms. Use `tools/list` for complete input schemas, including block,
 interface, source requirement, inclusion and actual-state fields.
 `test_circuit_change` and `show_operation` advertise additive local writes in

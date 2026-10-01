@@ -104,10 +104,13 @@ pub fn apply(
     snapshot: &MinecraftSnapshot,
     edits: Vec<MinecraftSnapshotBlock>,
 ) -> Result<(MinecraftSnapshot, Vec<RevisionChange>), String> {
-    if edits.len() > 64 || snapshot.blocks.len() > MAX_BLOCKS {
-        return Err("revision limits: 64 edits and 4096 observed block records".into());
+    if edits.len() > MAX_BLOCKS {
+        return Err("revision limit: 4096 virtual edits".into());
     }
     let mut blocks = dustroute_translate::snapshot::index_literal_snapshot(snapshot)?;
+    if blocks.len() > MAX_BLOCKS {
+        return Err("revision exceeds 4096 non-air blocks".into());
+    }
     let inside = |p: Pos| {
         p.x >= snapshot.min.x
             && p.x <= snapshot.max.x
@@ -185,6 +188,12 @@ pub fn apply(
     Ok((result, changes))
 }
 
+/// Sparse model intention over the same fully known bounds. Observation
+/// receipts/content IDs retain their original transport representation.
+pub fn normalize(snapshot: &MinecraftSnapshot) -> Result<MinecraftSnapshot, String> {
+    apply(snapshot, vec![]).map(|(snapshot, _)| snapshot)
+}
+
 pub fn blocks(
     snapshot: &MinecraftSnapshot,
 ) -> Result<BTreeMap<Pos, MinecraftSnapshotBlock>, String> {
@@ -217,6 +226,36 @@ mod tests {
             name: name.into(),
             properties: BTreeMap::new(),
         }
+    }
+
+    #[test]
+    fn native_air_records_do_not_consume_non_air_budget_and_large_virtual_diffs_are_bounded() {
+        let source = MinecraftSnapshot {
+            min: Pos::default(),
+            max: Pos::new(8191, 0, 0),
+            blocks: (0..8192)
+                .map(|x| block(Pos::new(x, 0, 0), "minecraft:air"))
+                .collect(),
+        };
+        let normalized = normalize(&source).unwrap();
+        assert!(normalized.blocks.is_empty());
+        assert_eq!((normalized.min, normalized.max), (source.min, source.max));
+        let edits = (0..2048)
+            .map(|x| block(Pos::new(x, 0, 0), "minecraft:stone"))
+            .collect();
+        let (result, changes) = apply(&source, edits).unwrap();
+        assert_eq!(result.blocks.len(), 2048);
+        assert_eq!(changes.len(), 2048);
+        assert!(source.blocks.iter().all(|b| b.name == "minecraft:air"));
+        assert!(
+            apply(
+                &source,
+                (0..4097)
+                    .map(|x| block(Pos::new(x, 0, 0), "minecraft:stone"))
+                    .collect()
+            )
+            .is_err()
+        );
     }
 
     #[test]

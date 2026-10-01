@@ -102,7 +102,7 @@ input behavior, functional equivalence or physical-world correctness. Supported
 stationary piston/crop diffs additionally report common-runtime construction
 checks; they do not gain functional proof from static diagnostics.
 
-Limits are 64 edits per call, 4096 observed block records/non-air result blocks,
+Limits are 4,096 virtual edits per call and 4,096 non-Air source/result blocks,
 4 MiB per saved record and 1–256 simulation ticks (default 64), together with
 existing player/dimension/region policy. Arbitrary bounds expansion and entities
 are outside this API. Denied requests do not save partial edits.
@@ -161,10 +161,11 @@ state and use the placement origin. This is proposed circuit state, not the
 surrounding overlay context or evidence of a completed Minecraft write.
 
 Planning rescans the entire original region and one block of surrounding
-context. Every observed block/property inside the original region must exactly
+context within the selected adapter and policy limits. Every observed block/property inside the original region must exactly
 match the retained base. Missing/partial scans and duplicate positions are
-rejected. For ordinary circuit diffs, both the baseline and the proposed edits
-pass the existing shared placement validator; unsupported devices, invalid supports and unexportable or
+rejected. Native literal revisions, callback-dependent edits and explicitly
+scoped edits use the common electrical construction runtime. Ordinary unscoped
+compatibility diffs pass the shared placement validator; unsupported devices, invalid supports and unexportable or
 lossy block states are rejected. Changed blocks must provide complete properties
 that the existing Java exporter can reproduce exactly. This intentionally
 rejects some otherwise syntactically valid drafts, powered states the exporter
@@ -187,8 +188,9 @@ target context and then verifies restoration of the base context. Undo attempts
 are also consumed before writing. These in-memory placement/undo records do not
 survive MCP restart, independently of the persisted revision records.
 
-Supported stationary piston or cane/fixed-environment diffs use `ElectricalModification` instead of the
-ordinary placement validator. The original context is retained and only changed
+Native literal revisions (including passive geometry), supported stationary
+piston or cane/fixed-environment diffs, and scoped edits use
+`ElectricalModification`. The original context is retained and only changed
 positions are written. Forward and undo sequences use the common electrical
 construction runtime and each command must settle to a complete expected state.
 The model assumes an empty initial queue; snapshots cannot reconstruct hidden
@@ -218,3 +220,26 @@ parent repeater-property revision plus a child block-addition/deletion revision.
 The cumulative diff was applied and exactly undone through common placement
 tools. Both apply and undo rejected context drift. Cleanup was verified. The
 tracked `revision-placement-mcp-summary.json` includes the tested binary hash.
+
+## Region construction jobs
+
+`new_placement({revision_id,work_regions:[{min,max},...]})` creates durable
+work at the captured site, with at most 64 disjoint regions and 64 changed
+coordinates per region. The whole observed context, including its guard,
+permits at most 4,096 non-Air blocks. Support/watch precedence selects a
+candidate order; only the current stage receives fresh forward/inverse
+physical verification in that complete context. Later stages remain unverified.
+
+After each reviewed application, use
+`manage_construction_job({job_id,action:"plan_next"})`. After restart, `get`
+returns history and `observe` reports fresh coordinate differences; new
+`plan_next` or reverse `plan_undo` operations require new previews. An old
+operation is never restored. `cancel` permanently disables forward work while
+allowing fresh inverse cleanup of the verified prefix. Uncertain writes require
+inspection; explicit `plan_recovery` only accepts the unchanged original stage
+baseline. A partial prefix needs a separately authored repair revision.
+
+Jobs retain their own immutable sparse intention beyond the revision TTL. They
+do not adopt Blueprints, upgrade existing references or establish whole-circuit
+functional behavior. See [region migration](large-circuit-regions.md) for
+bounded scope, coupled-layout restrictions and evidence.

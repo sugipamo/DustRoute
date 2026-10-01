@@ -16,10 +16,11 @@ MCP tool names follow a PowerShell-style Verb-Noun contract written as
 - `invoke` performs a confirmed world mutation.
 - `undo` restores supported operations after checking their current state; it also routes transition-test restoration. There is no public `restore_*` tool.
 - `start`, `stop`, and `get` manage asynchronous operations.
+- `manage` inspects durable Assembly instances or plans fresh region-job stages.
 - `set` and `clear` manage the current region selection.
 
-`DUSTROUTE_MCP_TOOL_PROFILE=default` exposes the 22 tools intended for normal
-LLM collaboration. `debug` exposes 29 tools in total, adding low-level gaze/discovery,
+`DUSTROUTE_MCP_TOOL_PROFILE=default` exposes the 23 tools intended for normal
+LLM collaboration. `debug` exposes 30 tools in total, adding low-level gaze/discovery,
 full placement-plan retrieval, asynchronous conversion control, and
 explicit component-removal planning. `get_operation` is available in the default
 profile. Debug tools remain implemented but cannot

@@ -6,6 +6,7 @@ mod blueprint_mcp;
 pub mod bridge;
 pub mod bridge_protocol;
 pub mod config;
+mod construction_jobs;
 pub mod discovery;
 mod edit_registry;
 pub mod observation_evidence;

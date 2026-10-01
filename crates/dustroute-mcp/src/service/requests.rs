@@ -33,14 +33,14 @@ pub(super) struct InspectLookedAtWorldParams {
     #[schemars(skip)]
     pub(super) player: Option<String>,
     /// Explicit work region including intended additions and surrounding air.
-    /// Must contain the current gaze target. Returns an immutable circuit_id.
+    /// Independent of gaze. Returns an immutable circuit_id in the observed player dimension.
     /// Cannot be combined with component_gap or max_components.
     pub(super) region: Option<RegionParam>,
     /// Maximum redstone components followed from the gaze target, from 1 through 32768. Defaults to 8192.
     pub(super) max_components: Option<usize>,
     /// Maximum Manhattan gap followed between nearby components, from 1 through 16. Defaults to 2 so a one-block break remains visible.
     pub(super) component_gap: Option<u32>,
-    /// Ray-cast limit in blocks. Defaults to 64.
+    /// Ray-cast limit in blocks for gaze discovery only. Omit with region. Defaults to 64.
     pub(super) max_distance: Option<f64>,
     /// Include a raw non-air block list in addition to the redstone list. Defaults to false.
     pub(super) include_block_list: Option<bool>,
@@ -161,7 +161,8 @@ pub(super) struct TestCircuitChangeParams {
     /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
     #[schemars(skip)]
     pub(super) player: Option<String>,
-    /// Virtual full-state replacements (up to 64). Air deletes; empty creates an unchanged revision.
+    /// Virtual full-state replacements (up to 4096). Air deletes; empty creates an unchanged revision.
+    /// Large cumulative diffs require work_regions when planning live edits.
     #[serde(default)]
     pub(super) changes: Vec<VirtualBlockChangeParam>,
     /// Number of simulator ticks after applying the virtual changes. Defaults to 64, maximum 256.
@@ -217,7 +218,7 @@ impl RegionParam {
     }
 }
 
-#[derive(Debug, Deserialize, schemars::JsonSchema)]
+#[derive(Debug, Default, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub(super) struct PreviewPlacementParams {
     /// Optional override; normally omitted so DUSTROUTE_ASSIST_PLAYER is used.
@@ -238,6 +239,10 @@ pub(super) struct PreviewPlacementParams {
     /// editable regions is protected throughout modeled command callbacks.
     /// Does not change ownership, adoption or a placed instance's source.
     pub(super) edit_scope: Option<dustroute_library::world_edit::WorldEditScope>,
+    /// For a literal circuit revision at its captured site: disjoint work
+    /// regions covering every change (1..64 regions, at most 64 changes each).
+    /// Creates a durable job and freshly plans its first region in full context.
+    pub(super) work_regions: Option<Vec<dustroute_translate::world::Region>>,
     /// Maximum number of blocks allowed in one placement plan. Defaults to 32768.
     pub(super) max_blocks: Option<usize>,
     /// Run directional compression followed by global compaction before creating the placement plan.

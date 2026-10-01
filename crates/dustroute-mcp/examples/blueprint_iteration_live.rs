@@ -43,6 +43,9 @@ mod trial {
     const B: Pos = Pos::new(1292, 181, 1202);
     const OBSERVER: Pos = Pos::new(1303, 181, 1202);
 
+    fn region_jobs() -> bool {
+        std::env::var("DUSTROUTE_REGION_JOB_PROBE").as_deref() == Ok("1")
+    }
     fn record(file: &mut File, value: Value) -> anyhow::Result<()> {
         serde_json::to_writer(&mut *file, &value)?;
         writeln!(file)?;
@@ -83,8 +86,18 @@ mod trial {
             .env("DUSTROUTE_READ_ONLY", "false")
             .env("DUSTROUTE_PREVIEW_REQUIRED", "true")
             .env("DUSTROUTE_ALLOWED_PLAYERS", "dustroutetest")
-            .env("DUSTROUTE_ALLOWED_REGION", "1280,179,1200,1307,185,1207")
-            .env("DUSTROUTE_MAX_SCAN_VOLUME", "4096")
+            .env(
+                "DUSTROUTE_ALLOWED_REGION",
+                if region_jobs() {
+                    "1279,178,1199,1312,211,1232"
+                } else {
+                    "1280,179,1200,1307,185,1207"
+                },
+            )
+            .env(
+                "DUSTROUTE_MAX_SCAN_VOLUME",
+                if region_jobs() { "65536" } else { "4096" },
+            )
             .env("DUSTROUTE_MAX_PLACEMENT_BLOCKS", "256")
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
@@ -199,8 +212,17 @@ mod trial {
         Ok(request["candidate_state"]["id"].clone())
     }
     async fn checkpoint(actor: &BotBridge, file: &mut File, stage: &str) -> anyhow::Result<Value> {
+        checkpoint_region(actor, file, stage, MIN, MAX).await
+    }
+    async fn checkpoint_region(
+        actor: &BotBridge,
+        file: &mut File,
+        stage: &str,
+        min: Pos,
+        max: Pos,
+    ) -> anyhow::Result<Value> {
         actor.wait_ticks(20, DIM).await?;
-        let sample = actor.scan_region_observed(MIN, MAX, DIM).await?;
+        let sample = actor.scan_region_observed(min, max, DIM).await?;
         let snapshot = serde_json::to_value(sample.snapshot)?;
         let value = json!({"stage":stage,"snapshot":snapshot,"readback":sample.readback});
         record(file, value.clone())?;
@@ -318,6 +340,237 @@ mod trial {
         )
         .await
     }
+    async fn region_job_trial(
+        actor: &BotBridge,
+        client: &Client,
+        file: &mut File,
+    ) -> anyhow::Result<Value> {
+        let min = Pos::new(1280, 179, 1200);
+        let max = Pos::new(1311, 210, 1231);
+        let guard_min = Pos::new(1279, 178, 1199);
+        let guard_max = Pos::new(1312, 211, 1232);
+        let empty = checkpoint_region(
+            actor,
+            file,
+            "job_initial_full_context",
+            guard_min,
+            guard_max,
+        )
+        .await?;
+        anyhow::ensure!(
+            non_air(&empty) == 0,
+            "job fixture must be initially all air"
+        );
+        let capture = call(
+            client,
+            file,
+            "get_world",
+            json!({"region":{"min":min,"max":max}}),
+            true,
+        )
+        .await?;
+        anyhow::ensure!(
+            capture["target"].is_null()
+                && capture["scan"]["volume"] == 32768
+                && capture["observation_capabilities"]["backend"] == "voxrig",
+            "explicit native capture failed"
+        );
+        let changes = (181..183)
+            .flat_map(|y| {
+                (1282..1287).flat_map(move |x| {
+                    (1202..1210).map(move |z| {
+                        let block = if (x, y, z) == (1282, 182, 1202) {
+                            "minecraft:lever[face=floor,facing=north,powered=false]"
+                        } else {
+                            "minecraft:stone"
+                        };
+                        json!({"position":{"x":x,"y":y,"z":z},"block":block})
+                    })
+                })
+            })
+            .collect::<Vec<_>>();
+        let revision = call(
+            client,
+            file,
+            "test_circuit_change",
+            json!({"circuit_id":capture["circuit_id"],"changes":changes,"simulation_ticks":1}),
+            true,
+        )
+        .await?;
+        // Deliberately request the dependent region first. The work plan
+        // must place its floor support in the other region before the lever.
+        let regions = json!([
+            {"min":{"x":1282,"y":182,"z":1202},"max":{"x":1286,"y":182,"z":1209}},
+            {"min":{"x":1282,"y":181,"z":1202},"max":{"x":1286,"y":181,"z":1209}}]);
+        let first = call(
+            client,
+            file,
+            "new_placement",
+            json!({"revision_id":revision["revision_id"],"work_regions":regions}),
+            true,
+        )
+        .await?;
+        anyhow::ensure!(
+            first["job"]["regions"][0]["region"]["min"]["y"] == 181,
+            "cross-region support did not precede its dependent lever"
+        );
+        let job_id = first["job_id"].clone();
+        call(
+            client,
+            file,
+            "invoke_operation",
+            json!({"operation_id":first["operation_id"],"confirm":true}),
+            false,
+        )
+        .await?;
+        show_apply(client, file, &first["operation_id"]).await?;
+        let small_min = Pos::new(1280, 179, 1200);
+        let small_max = Pos::new(1293, 183, 1211);
+        let first_state =
+            checkpoint_region(actor, file, "job_first_region", small_min, small_max).await?;
+        anyhow::ensure!(non_air(&first_state) == 40, "first region state mismatch");
+        Ok(json!({"job_id":job_id,"revision_id":revision["revision_id"],"regions":regions}))
+    }
+    async fn finish_region_job_trial(
+        actor: &BotBridge,
+        session: &Client,
+        file: &mut File,
+        ids: &Value,
+    ) -> anyhow::Result<()> {
+        let job_id = &ids["job_id"];
+        let history = call(
+            session,
+            file,
+            "manage_construction_job",
+            json!({"job_id":job_id,"action":"get"}),
+            true,
+        )
+        .await?;
+        anyhow::ensure!(
+            history["job"]["completed_regions"] == 1
+                && history["executable_plan_restored"] == false,
+            "restart history mismatch"
+        );
+        let next = call(
+            session,
+            file,
+            "manage_construction_job",
+            json!({"job_id":job_id,"action":"plan_next"}),
+            true,
+        )
+        .await?;
+        call(
+            session,
+            file,
+            "show_operation",
+            json!({"operation_id":next["operation_id"]}),
+            true,
+        )
+        .await?;
+        let guard = Pos::new(1281, 181, 1201);
+        write(actor, file, guard, "minecraft:stone").await?;
+        call(
+            session,
+            file,
+            "invoke_operation",
+            json!({"operation_id":next["operation_id"],"confirm":true}),
+            false,
+        )
+        .await?;
+        let small_min = Pos::new(1280, 179, 1200);
+        let small_max = Pos::new(1293, 183, 1211);
+        let drift = checkpoint_region(
+            actor,
+            file,
+            "job_protected_drift_refusal",
+            small_min,
+            small_max,
+        )
+        .await?;
+        anyhow::ensure!(non_air(&drift) == 41, "refused stage wrote blocks");
+        write(actor, file, guard, "minecraft:air").await?;
+        show_apply(session, file, &next["operation_id"]).await?;
+        let full = checkpoint_region(actor, file, "job_both_regions", small_min, small_max).await?;
+        anyhow::ensure!(non_air(&full) == 80, "completed job state mismatch");
+        Ok(())
+    }
+    async fn undo_region_job_trial(
+        actor: &BotBridge,
+        session: &Client,
+        file: &mut File,
+        ids: &Value,
+    ) -> anyhow::Result<()> {
+        let job_id = &ids["job_id"];
+        for (index, count) in [(1, 40), (0, 0)] {
+            let undo = call(
+                session,
+                file,
+                "manage_construction_job",
+                json!({"job_id":job_id,"action":"plan_undo"}),
+                true,
+            )
+            .await?;
+            anyhow::ensure!(
+                undo["job_stage"]["region_index"] == index && undo["job_stage"]["undo"] == true,
+                "undo order mismatch"
+            );
+            show_apply(session, file, &undo["operation_id"]).await?;
+            let snapshot = checkpoint_region(
+                actor,
+                file,
+                &format!("job_undo_region_{index}"),
+                Pos::new(1280, 179, 1200),
+                Pos::new(1293, 183, 1211),
+            )
+            .await?;
+            anyhow::ensure!(non_air(&snapshot) == count, "job undo state mismatch");
+        }
+        let next = call(
+            session,
+            file,
+            "manage_construction_job",
+            json!({"job_id":job_id,"action":"plan_next"}),
+            true,
+        )
+        .await?;
+        call(
+            session,
+            file,
+            "show_operation",
+            json!({"operation_id":next["operation_id"]}),
+            true,
+        )
+        .await?;
+        call(
+            session,
+            file,
+            "manage_construction_job",
+            json!({"job_id":job_id,"action":"cancel"}),
+            true,
+        )
+        .await?;
+        call(
+            session,
+            file,
+            "invoke_operation",
+            json!({"operation_id":next["operation_id"],"confirm":true}),
+            false,
+        )
+        .await?;
+        let final_state = checkpoint_region(
+            actor,
+            file,
+            "job_final_full_context",
+            Pos::new(1279, 178, 1199),
+            Pos::new(1312, 211, 1232),
+        )
+        .await?;
+        anyhow::ensure!(
+            non_air(&final_state) == 0,
+            "job fixture not restored to air"
+        );
+        Ok(())
+    }
     pub async fn run() -> anyhow::Result<()> {
         anyhow::ensure!(
             std::env::var("DUSTROUTE_LIVE_BLUEPRINT_PROBE").as_deref() == Ok("1"),
@@ -341,6 +594,24 @@ mod trial {
         ))
         .await?;
         let session = start(port, &mut file).await?;
+        if region_jobs() {
+            let result = region_job_trial(&actor, &session.0, &mut file).await;
+            stop(session, &mut file).await?;
+            let ids = result?;
+            let session = start(port, &mut file).await?;
+            let result = finish_region_job_trial(&actor, &session.0, &mut file, &ids).await;
+            stop(session, &mut file).await?;
+            result?;
+            let session = start(port, &mut file).await?;
+            let result = undo_region_job_trial(&actor, &session.0, &mut file, &ids).await;
+            stop(session, &mut file).await?;
+            result?;
+            record(
+                &mut file,
+                json!({"stage":"complete","passed":true,"restored_to_air":true,"probe":"region_jobs","ids":ids}),
+            )?;
+            return Ok(());
+        }
         if let Some(recovery) = recovery {
             let ids: Vec<Value> = serde_json::from_str(&recovery)?;
             checkpoint(&actor, &mut file, "before_recovery_removal").await?;

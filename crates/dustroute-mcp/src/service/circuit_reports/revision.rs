@@ -120,6 +120,23 @@ pub(in super::super) fn electrical_modification_validation(
     if !complete {
         return Some(json!({"status":"not_run","reason":"incomplete observation"}));
     }
+    if let (Ok(old), Ok(new)) = (
+        crate::revision::blocks(before),
+        crate::revision::blocks(after),
+    ) {
+        let changed = old
+            .keys()
+            .chain(new.keys())
+            .copied()
+            .filter(|p| old.get(p) != new.get(p))
+            .collect::<std::collections::BTreeSet<_>>()
+            .len();
+        if changed > 64 {
+            return Some(
+                json!({"status":"not_run","reason":"large diff requires work_regions and per-region common-runtime verification", "changed_positions":changed,"placement_authorized":false}),
+            );
+        }
+    }
     let _measurement = crate::performance::span(crate::performance::Phase::ModelProof);
     Some(
         match dustroute_translate::piston_construction::ElectricalModification::new(

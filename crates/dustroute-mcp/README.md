@@ -2,7 +2,7 @@
 
 Use DustRoute to observe Minecraft redstone, explain evidence, create hypothetical revisions, review Blueprint updates, and propose verified world changes. Ground live-world tasks in the configured player's gaze or an explicitly selected region. Offline Blueprint tasks use exact catalog records and need no bridge connection. Keep observation, hypothesis and execution separate.
 
-This is the tool-use guide. Server installation, credentials, permissions and transport configuration belong in [SETUP.md](SETUP.md). Detailed subsystem examples are in [REFERENCE.md](REFERENCE.md); the complete 22-tool default inventory and 7 debug additions are in the [public feature guide](../../docs/mcp-public-features.md). Use the connected server's tool schemas for exact arguments.
+This is the tool-use guide. Server installation, credentials, permissions and transport configuration belong in [SETUP.md](SETUP.md). Detailed subsystem examples are in [REFERENCE.md](REFERENCE.md); the complete 23-tool default inventory and 7 debug additions are in the [public feature guide](../../docs/mcp-public-features.md). Use the connected server's tool schemas for exact arguments.
 
 The native Voxrig backend observes received packets and supported client
 reconstruction. Its `client_reconstructed` readbacks retain connection, receive
@@ -244,7 +244,7 @@ The coordinates above are illustrative: use positions from the actual snapshot a
 
 Inspect `validation.before` and `validation.after`. A stored draft can be invalid or unsupported; `ok: true` means the revision was saved, not that it is deployable. Create a child revision to fix it. Read the exact saved state with `get_circuit_revision({"revision_id":"…","include_snapshot":true})`.
 
-Limits: 64 edits per request, 4096 block records/result blocks, 4 MiB per saved record, and 1–256 simulation ticks (default 64). Simulation checks initial-state behavior only. Missing Java property coverage, incomplete observations or unsupported mechanics are not a successful verification. Do not claim functional equivalence or all-input correctness from `structurally_valid`.
+Limits: 4096 virtual edits per request, 4096 non-Air result blocks, 4 MiB per saved record, and 1–256 simulation ticks (default 64). Simulation checks initial-state behavior only. Missing Java property coverage, incomplete observations or unsupported mechanics are not a successful verification. Do not claim functional equivalence or all-input correctness from `structurally_valid`.
 
 ## Propose and execute a change
 
@@ -295,3 +295,36 @@ The operation/build contract is Java 1.21.11, fixed 1×2 layout, translation onl
 - [Detailed repair, transition and optimization reference](REFERENCE.md)
 - [Human setup and policy configuration](SETUP.md)
 - [Live integration procedures](mineflayer/e2e/README.md)
+
+### Work on larger circuits by region
+
+`get_world({region:{min,max}})` captures complete coordinates in the observed
+player dimension without requiring a gaze target. `get_bot_status` reports
+`observation_capabilities` separately from policy: Voxrig permits 262,144 loaded
+cells with client reconstruction evidence; Mineflayer permits 8,880 cells with
+command predicate evidence. Raising policy does not raise an adapter's limit.
+
+Create a literal revision using up to 4,096 virtual changes, then call
+`new_placement({revision_id,work_regions:[{min,max},...]})`. Every change must be
+covered by one of at most 64 disjoint regions, each containing at most 64 changed
+coordinates. The full context permits at most 4,096 non-Air blocks. Omitted edit_scope protects every cell outside work_regions; an
+explicit edit_scope controls permitted transient effects too. Support/watch
+precedence chooses a candidate region order. Only the current stage receives
+a fresh full-context forward/inverse common-runtime proof. Later stages may
+fail and need a different partition or explicit intermediate design.
+
+Preview and apply the returned operation normally, then call
+`manage_construction_job({job_id,action:"plan_next"})` for the next operation.
+`get` reads durable intention/history; `observe` compares a fresh sample with
+the last verified prefix. `plan_undo` plans the last verified region's inverse,
+with a new operation/preview, even after restart. Replanning invalidates the
+previous preview. `cancel` invalidates pending forward work and retains history;
+fresh inverse cleanup remains available without reenabling forward work.
+
+An ambiguous write records needs_inspection before any commands. No automatic
+retry or rollback follows. Explicit `plan_recovery` can create a new stage only
+if fresh full-context samples match the original stage baseline; a partial
+prefix requires diagnosis and a new explicit repair design. Stored targets
+and progress are never restored as executable proofs. Jobs do not adopt or
+upgrade Blueprint references or infer functional behavior. See
+[region migration](../../docs/large-circuit-regions.md) for remaining limits.

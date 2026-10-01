@@ -15,11 +15,13 @@ fn position_on_boundary(position: Pos, min: Pos, max: Pos) -> bool {
 
 pub(in super::super) fn raw_world_inspection(
     snapshot: &dustroute_translate::snapshot::MinecraftSnapshot,
-    target: Pos,
+    target: impl Into<Option<Pos>>,
     dimension: &str,
     include_block_list: bool,
     max_listed_blocks: usize,
 ) -> Value {
+    let target = target.into();
+    let list_origin = target.unwrap_or(snapshot.min);
     let size = Pos::new(
         snapshot.max.x - snapshot.min.x + 1,
         snapshot.max.y - snapshot.min.y + 1,
@@ -52,7 +54,7 @@ pub(in super::super) fn raw_world_inspection(
         for property in block.properties.keys() {
             *state_property_counts.entry(property.clone()).or_default() += 1;
         }
-        if block.pos == target {
+        if Some(block.pos) == target {
             target_block = Some(block);
         }
         if is_redstone_candidate_name(&block.name) {
@@ -67,9 +69,9 @@ pub(in super::super) fn raw_world_inspection(
     }
     redstone.sort_by_key(|block| {
         (
-            block.pos.x.abs_diff(target.x)
-                + block.pos.y.abs_diff(target.y)
-                + block.pos.z.abs_diff(target.z),
+            block.pos.x.abs_diff(list_origin.x)
+                + block.pos.y.abs_diff(list_origin.y)
+                + block.pos.z.abs_diff(list_origin.z),
             block.pos,
         )
     });
@@ -90,6 +92,7 @@ pub(in super::super) fn raw_world_inspection(
         "inference_applied": false,
         "dimension": dimension,
         "target": target,
+        "block_list_order_origin": list_origin,
         "target_block": target_block,
         "scan": {
             "requested_and_returned_bounds": { "min": snapshot.min, "max": snapshot.max },

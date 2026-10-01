@@ -61,11 +61,13 @@ See [setup](../crates/dustroute-mcp/SETUP.md#native-rust-client-java-12111),
 | Intent | Entry and continuation |
 | --- | --- |
 | Inspect the gaze target | `test_circuit`, then `convert_from_circuit` or `get_circuit_ir` using the returned ID |
+| Inspect explicit coordinates | `get_world(region)` without a gaze target; returns selected adapter capabilities |
 | Inspect a selected area | `set_region` twice, then `show_region` to capture current blocks |
 | Create or branch a hypothetical circuit | `test_circuit_change(circuit_id)` or `test_circuit_change(revision_id)`; read with `get_circuit_revision` |
 | Read sources, types, classifications or placed state | `get_circuit_revision(blueprint.kind)` |
 | Author/import Blueprint data or propose a child update | `test_circuit_change(blueprint.action)`; review with `show_operation`, explicitly adopt/reject with `invoke_operation(blueprint_decision)` |
 | Reflect a revision | `new_placement(revision_id)`; requires retained base evidence and fresh live validation |
+| Work on a larger literal revision | `new_placement(revision_id,work_regions)` then `manage_construction_job` for fresh next/reverse stages and observed differences, including after restart |
 | Construct an adopted custom piston Assembly | `new_placement(assembly_revision_id, assembly_target)`; fresh electrical review and construction simulation at a completely observed empty target |
 | Reflect an adopted grounded Assembly | `new_placement(assembly_revision_id)` without `assembly_target`; requires complete captured ancestry, fresh review and fresh live validation at the original location |
 | Install a built-in circuit | `new_placement(circuit)` |
@@ -80,7 +82,7 @@ Use `get_operation` for results and `undo_operation` only for supported recovery
 Creating a plan does not write blocks. Default policy is read-only; observations
 may still move the bot or render region previews.
 
-## Default tools (22)
+## Default tools (23)
 
 | API | Purpose |
 | --- | --- |
@@ -95,6 +97,7 @@ may still move the bot or render region previews.
 | `test_circuit_change` | Save hypothetical edits, generate small buildings/flying machines, import/capture Blueprint data, search for smaller typed candidates and create update proposals |
 | `get_circuit_revision` | Read hypothetical revisions or the exact Blueprint/Assembly/type/classification catalog |
 | `new_placement` | Plan built-in construction, a cumulative revision diff, an adopted grounded Assembly reflection, or custom electrical Assembly construction at `assembly_target` |
+| `manage_construction_job` | Read/observe durable region job history, freshly plan the next stage or reverse undo, explicitly recover an unchanged failed baseline, or cancel pending work |
 | `manage_assembly` | List/get durable custom piston instances, freshly observe/revalidate, diagnose differences or plan conditional removal/reconstruction |
 | `new_repair` | Rank repair proposals |
 | `get_repair_context` | Evidence and questions for ambiguous repair intent |
@@ -109,7 +112,7 @@ may still move the bot or render region previews.
 
 ## Additional debug tools (7)
 
-`DUSTROUTE_MCP_TOOL_PROFILE=debug` exposes 29 tools in total.
+`DUSTROUTE_MCP_TOOL_PROFILE=debug` exposes 30 tools in total.
 
 | API | Purpose |
 | --- | --- |
@@ -147,7 +150,7 @@ creates a separately checked operation.
 controls its default one-hour retention. Revision reads do not extend expiry.
 A child keeps its own snapshot even if a parent expires. This is working
 storage, not a permanent revision archive. The separate Blueprint catalog,
-its proposal histories and custom Assembly instance registry have no TTL;
+its proposal histories, region construction jobs and custom Assembly instance registry have no TTL;
 configure a durable state directory because
 the default is under the OS temporary directory. See [Blueprint storage and
 limits](blueprint-mcp.md#persistence-and-live-world-boundary).
@@ -158,6 +161,7 @@ limits](blueprint-mcp.md#persistence-and-live-world-boundary).
 | --- | --- |
 | General built-in placement | In-memory, no dedicated five-minute expiry; undo checks and restores captured blocks |
 | Revision placement | In-memory, five-minute pre-apply expiry; exact region/context checks before apply and undo; write attempts are consumed |
+| Region construction job | Durable immutable target and verified region progress; current-stage five-minute in-memory proof only; reobserve and replan_next/plan_undo after restart; uncertain writes never auto-retry |
 | Stationary electrical revision edit | Five-minute process-local plan; durable write intents, verified stages and operation history; after restart reobserve and replan |
 | Fixed 1×2 construction | In-memory, five-minute pre-apply expiry; removal requires the exact original open layout |
 | Custom electrical Assembly | Five-minute process-local construction/removal/reconstruction plans; durable instance records and stage progress; after restart use `manage_assembly` to reobserve and replan |
@@ -186,8 +190,8 @@ fallback for its undo data.
   blocks above the gaze target. Only translation is supported.
 - Mechanism recognition identifies the exact known 1×2 layout. Other piston
   structures remain unidentified. Arbitrary multi-mechanism segmentation is absent.
-- Revisions support addition, deletion and full property replacement: 64 edits,
-  4096 block records/result blocks, 4 MiB per saved record, 1–256 simulation ticks,
+- Revisions support addition, deletion and full property replacement: 4096 virtual edits,
+  4096 non-Air result blocks, 4 MiB per saved record, 1–256 simulation ticks,
   and no expansion beyond original observation bounds.
 - Invalid drafts remain editable. Structural checks and initial-state simulation
   do not prove all-input behavior or exhaustive Java property validity.
@@ -195,7 +199,18 @@ fallback for its undo data.
   legality and lossless export. Supported stationary piston/crop edits use the
   common callback runtime for each forward/undo stage and complete readback;
   they do not certify distant circuit effects or a flying/harvesting type.
+  Native Voxrig routes all literal revision edits through this callback runtime,
+  including passive blocks. The optional compatibility backend retains its
+  generic route for ordinary unscoped blocks.
   See [existing-machine modification](existing-machine-modification.md).
+- Literal revision jobs accept at most 64 disjoint work regions, 64 changed
+  coordinates per region and 4096 non-Air blocks in the complete context.
+  Each stage checks cross-region effects and exact settled prefixes in one
+  world/runtime. Protected cells are checked at every modeled microstep; every
+  live batch reads the whole context. Support/watch cycles or coupled effects
+  that invalidate a settled prefix require a different partition/intermediate
+  design. Future stages are unverified until planned, not automatically applied.
+  See [region work](large-circuit-regions.md).
 - Existing wire optimization is limited to a non-branching dust path with fixed
   endpoints; macro replacement requires a verified compatible candidate.
 - Blueprint `optimize` searches the supplied Assembly or an explicit component body under one explicit

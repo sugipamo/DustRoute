@@ -62,6 +62,7 @@ def confirm_snapshot(server, snapshot, number):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--region-jobs", action="store_true", help="run region job capture/apply/restart/undo cases")
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--server-dir", type=Path, required=True)
     parser.add_argument("--allow-owned-fixture-writes", action="store_true")
@@ -93,6 +94,9 @@ def main():
                         "DUSTROUTE_STATE_DIR": str(prefix.with_suffix(".state")),
                         "TRACE_OUTPUT": str(trace), "PROBE_IDS_OUTPUT": str(prefix.with_suffix(".ids.json")),
                         "MCP_PROCESS_BIN": str(ROOT / "target/debug/dustroute-mcp")}
+    if args.region_jobs:
+        assert not args.recover_run_id, "region jobs do not use Assembly recovery"
+        env["DUSTROUTE_REGION_JOB_PROBE"] = "1"
     if args.recover_run_id:
         assert re.fullmatch(r"[a-zA-Z0-9_-]+", args.recover_run_id)
         prior = prefix.parent / args.recover_run_id
@@ -106,7 +110,7 @@ def main():
                     if r.get("stage") == "external_fixture_write"}
         env["PROBE_RECOVERY_EXTERNAL_WRITES"] = json.dumps(list(external.values()))
         env["DUSTROUTE_STATE_DIR"] = str(prior.with_suffix(".state"))
-    manifest = {"schema_version": "dustroute.blueprint-iteration-live.v1", "run_id": args.run_id,
+    manifest = {"schema_version": "dustroute.blueprint-iteration-live.v1", "run_id": args.run_id, "probe": "region_jobs" if args.region_jobs else "blueprint_iteration",
                 "started_at_utc": datetime.now(timezone.utc).isoformat(),
                 "recovery_from_run": args.recover_run_id,
                 "source_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
@@ -116,7 +120,7 @@ def main():
                 "probe_binary_sha256": fingerprint(ROOT / "target/debug/examples/blueprint_iteration_live"),
                 "probe_source_sha256": fingerprint(ROOT / "crates/dustroute-mcp/examples/blueprint_iteration_live.rs"),
                 "runner_source_sha256": fingerprint(Path(__file__)),
-                "owned_region": {"min": {"x": 1280, "y": 179, "z": 1200}, "max": {"x": 1307, "y": 185, "z": 1207}},
+                "owned_region": {"min": {"x": 1279 if args.region_jobs else 1280, "y": 178 if args.region_jobs else 179, "z": 1199 if args.region_jobs else 1200}, "max": {"x": 1312 if args.region_jobs else 1307, "y": 211 if args.region_jobs else 185, "z": 1232 if args.region_jobs else 1207}},
                 "backend": "Voxrig native", "actors": sorted(actors), "checkpoints": [], "passed": False,
                 "limits": ["Finite declared cases, not an all-clear for arbitrary designs.",
                            "Runtime readbacks are client reconstructions; separate console predicates confirm stable checkpoints.",
@@ -135,7 +139,7 @@ def main():
                 log.write(line)
                 log.flush()
                 if line.startswith("POSITION_CLIENTS"):
-                    server.commands(["tp DustRouteBot 1290.5 184 1204.5", "tp dustroutetest 1290.5 184 1204.5"])
+                    server.commands(["tp DustRouteBot 1290.5 184 1204.5", "tp dustroutetest 1290.5 184 1204.5 0 -90" if args.region_jobs else "tp dustroutetest 1290.5 184 1204.5"])
                     probe.stdin.write("OK\n")
                     probe.stdin.flush()
                     print("POSITIONED test clients", flush=True)

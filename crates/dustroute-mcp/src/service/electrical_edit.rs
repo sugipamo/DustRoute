@@ -2,11 +2,18 @@
 //! and from durable historical records. All live steps use the shared executor.
 use super::*;
 use crate::assembly_registry::{TargetServer, now_ms};
+use crate::construction_jobs::{JobAttempt, JobRegistry, JobStageBinding, JobState};
 use crate::edit_registry::{EditAttempt, EditRecord, EditRegistry, EditState, SCHEMA};
 use crate::performance::{Phase, current, span};
 use crate::piston_assembly::ValidatedAssemblyPlacement;
 use dustroute_translate::piston_construction::ElectricalModification;
 use dustroute_translate::snapshot::MinecraftSnapshot;
+
+pub(super) struct EditOrigin {
+    pub revision_id: uuid::Uuid,
+    pub source: Value,
+    pub job: Option<JobStageBinding>,
+}
 
 #[derive(Clone, Debug)]
 pub(super) struct ElectricalEditPlan {
@@ -18,11 +25,12 @@ pub(super) struct ElectricalEditPlan {
     previewed: bool,
     state: PistonPlacementState,
     expires_at: Instant,
+    pub(super) job: Option<JobStageBinding>,
 }
 impl ElectricalEditPlan {
     fn preview(&self, id: uuid::Uuid, read_only: bool) -> Value {
         json!({"ok":true,"operation_id":id,"kind":"electrical_revision_modification",
-            "source":self.source,"revision_id":self.revision_id,"read_only":read_only,
+            "source":self.source,"revision_id":self.revision_id,"read_only":read_only,"job_stage":self.job,
             "bounds":{"min":self.proof.before().min,"max":self.proof.before().max},
             "before":self.proof.before(),"after":self.proof.after(),
             "edit_scope":self.proof.scope(),
@@ -73,14 +81,21 @@ impl DustRouteMcp {
     pub(super) async fn plan_electrical_edit(
         &self,
         params: &PreviewPlacementParams,
-        revision: &crate::revision::CircuitRevision,
         before: MinecraftSnapshot,
         after: MinecraftSnapshot,
         status: crate::bridge::BotStatus,
-        source: Value,
+        origin: EditOrigin,
     ) -> Result<Value, String> {
-        assembly_placement::server_contract(&status, &revision.dimension)?;
-        let target = TargetServer::observed(&status, &revision.dimension)?;
+        let player = self.resolve_player(params.player.as_deref())?;
+        self.policy
+            .authorize_player(&player)
+            .map_err(|e| e.to_string())?;
+        let dimension = status
+            .dimension
+            .as_deref()
+            .ok_or("server dimension unavailable")?;
+        assembly_placement::server_contract(&status, dimension)?;
+        let target = TargetServer::observed(&status, dimension)?;
         let baseline = before.clone();
         let scope = params.edit_scope.clone().unwrap_or_else(|| {
             dustroute_library::world_edit::WorldEditScope::entire(
@@ -108,14 +123,15 @@ impl DustRouteMcp {
         self.check_stationary_edit_baseline(&target, &baseline)
             .await?;
         let plan = ElectricalEditPlan {
-            player: revision.player.clone(),
-            revision_id: revision.revision_id,
-            source,
+            player,
+            revision_id: origin.revision_id,
+            source: origin.source,
             target,
             proof,
             previewed: false,
             state: PistonPlacementState::Planned,
             expires_at: Instant::now() + Duration::from_secs(300),
+            job: origin.job,
         };
         let id = uuid::Uuid::new_v4();
         let response = plan.preview(id, self.policy.read_only);
@@ -163,10 +179,18 @@ impl DustRouteMcp {
                 plan.proof.before().max,
             ))
             .map_err(|e| e.to_string())?;
+        if let Some(binding) = plan.job {
+            let registry = JobRegistry::acquire(&self.state_store)?;
+            let job = registry.load(binding.job_id, &player)?;
+            job.check_binding(id, binding)?;
+            if job.target != plan.target || job.source_revision_id != plan.revision_id {
+                return Err("job target/source changed".into());
+            }
+        }
         Ok(plan)
     }
 
-    async fn check_stationary_edit_baseline(
+    pub(super) async fn check_stationary_edit_baseline(
         &self,
         target: &TargetServer,
         expected: &MinecraftSnapshot,
@@ -262,6 +286,12 @@ impl DustRouteMcp {
         let _guard = self.mutation_lock.lock().await;
         drop(queue_measurement);
         let plan = self.owned_edit(id, None).await?;
+        if undo && plan.job.is_some() {
+            return Err(
+                "job undo requires manage_construction_job(action=plan_undo) and a fresh preview"
+                    .into(),
+            );
+        }
         if (undo && plan.state != PistonPlacementState::Applied)
             || (!undo
                 && (plan.state != PistonPlacementState::Planned
@@ -306,6 +336,7 @@ impl DustRouteMcp {
                 || record.before != *proof.before()
                 || record.after != *proof.after()
                 || record.edit_scope.as_ref() != Some(proof.scope())
+                || record.job_stage != plan.job
             {
                 return Err("edit record differs from the undo plan".into());
             }
@@ -324,6 +355,7 @@ impl DustRouteMcp {
                 before: proof.before().clone(),
                 after: proof.after().clone(),
                 edit_scope: Some(proof.scope().clone()),
+                job_stage: plan.job,
                 state: EditState::NeedsInspection,
                 attempts: vec![],
             }
@@ -335,6 +367,29 @@ impl DustRouteMcp {
         if !undo && plan.expires_at <= Instant::now() {
             return Err("edit expired during validation".into());
         }
+        // Journal uncertain intent before writes. Loading it restores history,
+        // never authority to replay a previous executable operation.
+        let job_registry = plan
+            .job
+            .map(|_| JobRegistry::acquire(&self.state_store))
+            .transpose()?;
+        let mut job_record =
+            if let (Some(binding), Some(registry)) = (plan.job, job_registry.as_ref()) {
+                let mut job = registry.load(binding.job_id, &plan.player)?;
+                self.check_job_stage(&job, id, binding, &proof)?;
+                job.state = JobState::NeedsInspection;
+                job.attempts.push(JobAttempt {
+                    operation_id: id,
+                    region_index: binding.region_index,
+                    undo: binding.undo,
+                    verified: false,
+                    error: None,
+                });
+                registry.save(&job)?;
+                Some(job)
+            } else {
+                None
+            };
         self.plans
             .table::<ElectricalEditPlan>()
             .lock()
@@ -388,7 +443,37 @@ impl DustRouteMcp {
         if let Err(error) = registry.save(&record) {
             run = Err(error);
         }
-        if run.is_ok() {
+        if let (Some(binding), Some(job), Some(registry)) =
+            (plan.job, job_record.as_mut(), job_registry.as_ref())
+        {
+            let attempt = job.attempts.last_mut().ok_or("missing job attempt")?;
+            attempt.verified = run.is_ok();
+            attempt.error = run.as_ref().err().cloned();
+            if run.is_ok() {
+                job.completed_regions = if binding.undo {
+                    binding.region_index
+                } else {
+                    binding.region_index + 1
+                };
+                job.active_operation_id = None;
+                job.state = if job.forward_cancelled {
+                    JobState::Cancelled
+                } else if job.completed_regions == job.regions.len() {
+                    JobState::Completed
+                } else {
+                    JobState::Ready
+                };
+            }
+            if let Err(error) = registry.save(job) {
+                run = Err(error);
+            }
+        }
+        if run.is_ok()
+            && let Some(binding) = plan.job
+        {
+            self.discard_job_stage_plans(binding.job_id, None).await;
+        }
+        if run.is_ok() && plan.job.is_none() {
             self.plans
                 .table::<ElectricalEditPlan>()
                 .lock()
@@ -401,7 +486,7 @@ impl DustRouteMcp {
                 PistonPlacementState::Applied
             };
         }
-        let response = json!({"ok":run.is_ok(),"operation_id":id,"kind":"electrical_revision_modification","undo":undo,
+        let response = json!({"ok":run.is_ok(),"operation_id":id,"kind":"electrical_revision_modification","undo":undo,"job_stage":plan.job,
             "status":if run.is_ok(){"verified"}else{"needs_inspection"},"verified_steps":completed,"total_steps":steps.len(),
             "error":run.err(),"retry_allowed":false,"automatic_rollback":false,"assembly_adoption_modified":false});
         self.operations
