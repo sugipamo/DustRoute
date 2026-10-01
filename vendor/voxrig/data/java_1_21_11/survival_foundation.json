@@ -1,0 +1,169 @@
+{
+  "standing_dimensions": [
+    0.6,
+    1.8,
+    1.62
+  ],
+  "dry_cubes": [
+    "minecraft:stone",
+    "minecraft:dirt",
+    "minecraft:grass_block",
+    "minecraft:cobblestone",
+    "minecraft:oak_planks",
+    "minecraft:spruce_planks",
+    "minecraft:quartz_block",
+    "minecraft:smooth_quartz",
+    "minecraft:white_concrete",
+    "minecraft:glass",
+    "minecraft:andesite",
+    "minecraft:granite"
+  ],
+  "attributes": [
+    {
+      "id": 25,
+      "name": "minecraft:scale",
+      "default": 1.0,
+      "min": 0.0625,
+      "max": 16.0
+    },
+    {
+      "id": 5,
+      "name": "minecraft:block_break_speed",
+      "default": 1.0,
+      "min": 0.0,
+      "max": 1024.0
+    },
+    {
+      "id": 20,
+      "name": "minecraft:mining_efficiency",
+      "default": 0.0,
+      "min": 0.0,
+      "max": 1024.0
+    },
+    {
+      "id": 29,
+      "name": "minecraft:submerged_mining_speed",
+      "default": 0.2,
+      "min": 0.0,
+      "max": 20.0
+    }
+  ],
+  "velocities": [
+    {
+      "hex": "00",
+      "decoded": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "hex": "2933a664eb82",
+      "decoded": [
+        0.09998168833546961,
+        -0.08002197399743638,
+        0.3000061038881767
+      ]
+    },
+    {
+      "hex": "fc3ffffcfffd02",
+      "decoded": [
+        -3.000183116645303,
+        0.0,
+        8.0
+      ]
+    },
+    {
+      "hex": "f4ff7ffe73638020",
+      "decoded": [
+        16384.0,
+        -8999.549288897028,
+        0.0
+      ]
+    }
+  ],
+  "looks": [
+    {
+      "ground": false,
+      "hex": "42340000c1a0000000"
+    },
+    {
+      "ground": true,
+      "hex": "42340000c1a0000001"
+    }
+  ],
+  "contacts": [
+    {
+      "position": [
+        0.5,
+        1.0,
+        0.5
+      ],
+      "clear": true,
+      "ground": true
+    },
+    {
+      "position": [
+        1.25,
+        1.0,
+        0.5
+      ],
+      "clear": true,
+      "ground": true
+    },
+    {
+      "position": [
+        1.5,
+        1.0,
+        0.5
+      ],
+      "clear": true,
+      "ground": false
+    },
+    {
+      "position": [
+        1.3,
+        1.0,
+        0.5
+      ],
+      "clear": true,
+      "ground": false
+    },
+    {
+      "position": [
+        1.29999999,
+        1.0,
+        0.5
+      ],
+      "clear": true,
+      "ground": false
+    },
+    {
+      "position": [
+        0.5,
+        1.001,
+        0.5
+      ],
+      "clear": true,
+      "ground": false
+    },
+    {
+      "position": [
+        0.5,
+        0.9,
+        0.5
+      ],
+      "clear": false,
+      "ground": false
+    },
+    {
+      "position": [
+        0.5,
+        1.00000001,
+        0.5
+      ],
+      "clear": true,
+      "ground": true
+    }
+  ]
+}

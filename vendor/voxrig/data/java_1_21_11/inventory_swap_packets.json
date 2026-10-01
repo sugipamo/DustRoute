@@ -1,0 +1,5 @@
+[
+  {"revision": 0, "main_slot": 9, "hotbar": 0, "payload_hex": "0000000900020000"},
+  {"revision": 128, "main_slot": 9, "hotbar": 0, "payload_hex": "008001000900020000"},
+  {"revision": 32767, "main_slot": 35, "hotbar": 8, "payload_hex": "00ffff01002308020000"}
+]

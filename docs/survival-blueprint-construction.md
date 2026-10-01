@@ -69,6 +69,7 @@ validated source commit, as described in [the vendor policy](../vendor/README.md
 | Order | Work | Acceptance before proceeding |
 | --- | --- | --- |
 | 1 | Native 1.21.11 survival state and inventory transactions | Ordinary stacks in main inventory can move to the hotbar and back. Received revisions, cursor, mode and connection changes are checked. No generated items or optimistic inventory counts. Unsupported components produce an explicit refusal |
+| 1b | Minimum native stationary posture, ground and mining-condition foundation | Preserve own entity identity, received health/velocity and attribute/pose evidence; derive bounded standing contact from reconstructed geometry. Compare native defaults/codecs/contacts and refuse unmodeled motion. Full walking remains step 3 |
 | 2 | Nearby survival placement and bounded timed mining | On a prepared, reachable site, ordinary interactions place exact admitted cubes and remove declared temporary cubes. Validate the hit and player occupancy; independently observe block changes and inventory consumption. Acknowledgement alone is insufficient. No mode switch, flight, teleport or block-write commands |
 | 3 | Native survival locomotion and bounded navigation | Walk, stop, jump and settle on admitted static geometry; honor corrections and missing chunks. Validate collision, ground support, reach and an escape path. Health/death or unsupported movement conditions stop work; adversarial entity simulation is not part of this milestone |
 | 4 | Site-aware Blueprint and temporary access planning | Revalidate the final design in its observed ground context, preserve all protected terrain and permanent air obligations, and plan support/place/access/remove dependencies. Include action order and last safe retreat. Material estimates distinguish permanent consumption, peak temporary inventory and resources dependent on later recovery |
@@ -89,22 +90,45 @@ Access-block removal does not imply recovered item drops: actual recovery needs
 its own received inventory evidence. If recovery is necessary to finish with the
 supplied inventory, the plan must establish it or stop before spending resources.
 
-## Current stopping point
+## Current progress and stopping point
 
-Branch consolidation and this audit/roadmap are complete. **No survival runtime
-changes or live trial have been performed.** No compiler or test process was
-started for this documentation-only change.
+The user approved the inventory prerequisite, then approved the minimum
+posture/ground/mining-condition foundation before nearby placement/mining.
+Voxrig changes are on `codex/survival-construction`, preserving the independent
+upstream contribution history. DustRoute imports the exact validated source
+through the vendor updater.
 
-The first substantial prerequisite is in Voxrig's 1.21.11 player/inventory
-implementation, rather than a table or a flag in DustRoute's existing placement
-executor. Locomotion, inventory transactions and timed mining affect the client
-receive/control lifecycle, and site-aware ground/access context also affects
-construction proofs. Together this is a medium-to-large change across the two
-projects, with native comparison work required before autonomous elevated builds.
+Implemented milestones (offline validation, not live building acceptance):
 
-Following the user's earlier instruction to stop and report a large blocking
-prerequisite, implementation is paused at this review point. The recommended
-next concrete milestone is steps 1 and 2: a supplied main-inventory stack becomes
-a verified nearby survival placement, with a verified temporary-block removal.
-Then add locomotion and the site/access planner in that order. Do not claim the
-existing creative building trials validate these new mechanisms.
+- Ordinary component-free main-inventory/hotbar swaps retain cursor/revision and
+  per-slot receive evidence. Pending intent survives timeout/cancellation, and
+  both received destination updates are required before confirmation. Native
+  SWAP codec comparison and real loopback transport cover the boundary.
+- Own-player identity, health, packed velocity, supported attributes and pose
+  updates are observed. Native initial defaults carry a different evidence kind
+  from received updates; parsing shares the remote-player mechanisms.
+- A finite standing context reads reconstructed dry full cubes and air, checks
+  body clearance and foot contact, and preserves world/receive provenance.
+  Survival look rechecks it and uses the derived ground bit. Unknown motion,
+  unsupported posture/fluid/geometry, missing chunks, reconstruction issues and
+  unmodeled impulse/vehicle contexts refuse stationary work.
+- Native 1.21.11 comparisons cover standing dimensions, all admitted cube
+  states, mining attribute IDs/defaults/limits, packed velocity/look codecs and
+  contact boundaries. Final source tests pass **136 tests, 1 ignored**, with
+  Clippy, documentation, formatting and package-input checks passing. The
+  [validation record](evidence/survival-foundation-20261002.json) separates these
+  observations from live-server evidence.
+
+Nearby validated survival placement, timed mining, walking/navigation, the
+site/temporary-access planner and the durable survival Blueprint executor are
+still unimplemented. No survival live build or world edit was performed by these
+milestones. Effect updates currently lack a complete-list/expiration projection;
+unknown effects must not become an exact mining-duration assumption.
+
+A new concern was found in native timed-mining cancellation: early finish can
+schedule a later break, and abort does not clear that native delayed operation.
+Following the user's concern stop condition, mining implementation is stopped.
+[The concrete proposal](survival-mining-cancellation.md) specifies unresolved
+mining intent, read-only result reconciliation, action exclusion and native
+recovery comparison before enabling timed removal. The overall building goal
+has not been completed; do not count existing creative trials toward acceptance.

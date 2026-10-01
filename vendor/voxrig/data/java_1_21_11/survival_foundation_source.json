@@ -1,0 +1,13 @@
+{
+  "generator": {
+    "scripts/VerifySurvivalFoundation.java": "bb33f8f7387ecc04955d4a0821baba22465dd85b2cc75fede4899f5321da135e"
+  },
+  "mappings": "Yarn 1.21.11+build.6 (official -> named)",
+  "mappings_sha256": "d2495bcc4b96ff81d985fa403a3a65a2891d4df31ad71f36a19338aa66daa89a",
+  "minecraft": "Java 1.21.11",
+  "minecraft_merged_sha256": "ad6ee2c9cee9c191b25bf5d0ffec5788c3335f3b3fcf77d6871a7b66b3b5046e",
+  "outputs": {
+    "data/java_1_21_11/survival_foundation.json": "3e4a7eb97acb3b6c50a11954261c7b70160d6b4e55f9dbc1c303c4e1ef6f96b4"
+  },
+  "transformation": "Package remap and access-flag widening only; native method bodies unchanged. Original tool invokes native attribute/default containers, standing dimensions, dry cube collision shapes, velocity/look codecs and stationary contact APIs. No server or world simulation."
+}

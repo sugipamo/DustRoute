@@ -66,7 +66,7 @@ pub enum PlayerPose {
     },
 }
 impl PlayerPose {
-    fn decode(id: i32) -> Self {
+    pub(super) fn decode(id: i32) -> Self {
         match id {
             0 => Self::Standing,
             1 => Self::Gliding,
@@ -294,7 +294,7 @@ impl PlayerTracker {
                         entity.rotation[0] = angle(&mut r)?;
                     }
                     p::ENTITY_METADATA => {
-                        if !metadata(&mut r, &mut entity)? {
+                        if !read_pose(&mut r, &mut entity.pose)?.supported {
                             // An unknown payload cannot be skipped safely. Preserve position,
                             // but invalidate the viewpoint until an explicit supported pose arrives.
                             entity.pose = None;
@@ -304,7 +304,9 @@ impl PlayerTracker {
                         }
                     }
                     p::ENTITY_UPDATE_ATTRIBUTES => {
-                        attributes(&mut r, &mut entity)?;
+                        if let Some(value) = read_attributes(&mut r)?.get(&ids::SCALE_ATTRIBUTE) {
+                            entity.scale = value.clamp(0.0625, 16.0) as f32;
+                        }
                     }
                     _ => unreachable!(),
                 }
@@ -328,12 +330,13 @@ fn position(r: &mut Reader<'_>) -> anyhow::Result<[f64; 3]> {
     }
     Ok(position)
 }
-fn attributes(r: &mut Reader<'_>, entity: &mut Entity) -> anyhow::Result<()> {
-    let mut seen = BTreeSet::new();
+/// Native modifier order, shared by own and remote player observations.
+pub(super) fn read_attributes(r: &mut Reader<'_>) -> anyhow::Result<BTreeMap<i32, f64>> {
+    let mut values = BTreeMap::new();
     for _ in 0..r.count(1024)? {
         let key = r.varint()?;
-        if !seen.insert(key) {
-            bail!("duplicate player attribute");
+        if key < 0 || values.contains_key(&key) {
+            bail!("invalid/duplicate player attribute");
         }
         let base = r.f64()?;
         let mut additions = 0.0;
@@ -352,29 +355,38 @@ fn attributes(r: &mut Reader<'_>, entity: &mut Entity) -> anyhow::Result<()> {
                 _ => bail!("unknown attribute operation"),
             }
         }
-        if key == ids::SCALE_ATTRIBUTE {
-            let adjusted = base + additions;
-            let mut value = adjusted;
-            for amount in base_factors {
-                value += adjusted * amount;
-            }
-            for amount in total_factors {
-                value *= 1.0 + amount;
-            }
-            if !value.is_finite() {
-                bail!("non-finite scale attribute");
-            }
-            entity.scale = value.clamp(0.0625, 16.0) as f32;
+        let adjusted = base + additions;
+        let mut value = adjusted;
+        for amount in base_factors {
+            value += adjusted * amount;
         }
+        for amount in total_factors {
+            value *= 1.0 + amount;
+        }
+        if !value.is_finite() {
+            bail!("non-finite player attribute");
+        }
+        values.insert(key, value);
     }
-    Ok(())
+    Ok(values)
 }
-fn metadata(r: &mut Reader<'_>, entity: &mut Entity) -> anyhow::Result<bool> {
+pub(super) struct PoseUpdate {
+    pub supported: bool,
+    pub received: bool,
+}
+pub(super) fn read_pose(
+    r: &mut Reader<'_>,
+    pose: &mut Option<PlayerPose>,
+) -> anyhow::Result<PoseUpdate> {
     let mut seen = BTreeSet::new();
+    let mut received = false;
     loop {
         let key = r.u8()?;
         if key == 255 {
-            return Ok(true);
+            return Ok(PoseUpdate {
+                supported: true,
+                received,
+            });
         }
         if !seen.insert(key) {
             bail!("duplicate player metadata index");
@@ -384,9 +396,13 @@ fn metadata(r: &mut Reader<'_>, entity: &mut Entity) -> anyhow::Result<bool> {
             if kind != 20 {
                 bail!("incorrect player pose serializer");
             }
-            entity.pose = Some(PlayerPose::decode(r.varint()?));
+            *pose = Some(PlayerPose::decode(r.varint()?));
+            received = true;
         } else if !skip_metadata(r, kind)? {
-            return Ok(false);
+            return Ok(PoseUpdate {
+                supported: false,
+                received,
+            });
         }
     }
 }

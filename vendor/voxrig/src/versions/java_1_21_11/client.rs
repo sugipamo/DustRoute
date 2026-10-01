@@ -717,7 +717,10 @@ fn apply_play(
     }
     match id {
         input::LOGIN => {
-            r.i32()?;
+            let entity_id = r.i32()?;
+            if entity_id < 0 {
+                bail!("invalid own entity identifier");
+            }
             r.bool()?;
             for _ in 0..r.count(1024)? {
                 r.string()?;
@@ -731,6 +734,7 @@ fn apply_play(
             spawn_info(state, &mut r)?;
             r.bool()?;
             r.end()?;
+            state.operations.local_player = operations::LocalPlayerState::spawned(entity_id);
         }
         input::RESPAWN => {
             spawn_info(state, &mut r)?;
@@ -750,7 +754,7 @@ fn apply_play(
         input::POSITION => {
             let teleport = r.varint()?;
             let mut position = [r.f64()?, r.f64()?, r.f64()?];
-            let _velocity = [r.f64()?, r.f64()?, r.f64()?];
+            let delta = [r.f64()?, r.f64()?, r.f64()?];
             let mut rotation = [r.f32()?, r.f32()?];
             let flags = r.u32()?;
             r.end()?;
@@ -776,6 +780,11 @@ fn apply_play(
             if rotation.iter().any(|v| !v.is_finite()) {
                 bail!("non-finite relative rotation");
             }
+            rotation[1] = rotation[1].clamp(-90.0, 90.0);
+            state
+                .operations
+                .local_player
+                .correct_velocity(delta, flags, state.sequence)?;
             state.position = Some(position);
             state.operations.position_from_server = true;
             state.rotation = rotation;

@@ -15,6 +15,21 @@ do not relicense Minecraft or Yarn; no game JAR, mapping or decompiled source is
 included. Exact source hashes, transformation and regeneration instructions are
 in `outline_source.json` and `docs/player-targeting.md`.
 
+`data/java_1_21_11/inventory_swap_packets.json` contains three factual native
+packet encodings checked by the original `scripts/VerifyInventoryClick.java`
+tool against `ClickSlotC2SPacket.CODEC`. The version is Java 1.21.11, with Yarn
+1.21.11+build.6 method names. The development oracle uses the same package remap
+and access-flag widening described by `outline_source.json`; native method bodies
+are unchanged. No Minecraft binary, mappings or decompiled source is included.
+The test source and validation scope are recorded in `docs/survival-inventory.md`.
+
+`data/java_1_21_11/survival_foundation*.json` contains factual native dimensions,
+attribute IDs/defaults/limits, cube admission, contact and packet observations.
+The original `scripts/VerifySurvivalFoundation.java` invokes Java 1.21.11 APIs
+using the same remap/access-only development oracle; no game method bodies are
+copied. Source/output hashes and validation scope are recorded in the manifest
+and `docs/survival-standing-context.md`.
+
 `docs/evidence/client-motion-*-20260929.json.gz` and their replay fixtures were
 recorded by this repository's `packet_trace_probe` against an isolated official
 Minecraft Java 1.21.11 server. The accompanying manifest identifies originals,

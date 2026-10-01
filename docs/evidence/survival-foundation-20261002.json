@@ -1,0 +1,95 @@
+{
+  "recorded_at_utc": "2026-10-01T23:32:57.478973+00:00",
+  "scope": "Offline native API, receive and loopback TCP validation only; no live server build, live mining, server restart or live world mutation.",
+  "voxrig_repository": "https://github.com/sugipamo/Voxrig",
+  "voxrig_branch": "codex/survival-construction",
+  "voxrig_revision": "ab55da095a0fa388bd1b10cb87e64f47829427bf",
+  "inventory_revision": "da5ad589b47e5ba70e4f579eab5a38f88daf2b75",
+  "vendor_files": 216,
+  "checks": [
+    {
+      "project": "Voxrig",
+      "command": "cargo test --offline --locked -j 1 --all-targets -- --test-threads=1",
+      "result": "136 passed; 1 ignored; 0 failed",
+      "local_log": ".local/survival-foundation-all-tests.log",
+      "log_sha256": "76f75a1b8503d048bf17cb6417bbd11c128a19660f656094124e5d1da1ee3393"
+    },
+    {
+      "project": "Voxrig",
+      "command": "cargo clippy --offline --locked -j 1 --all-targets -- -D warnings",
+      "result": "passed",
+      "local_log": ".local/survival-foundation-clippy.log",
+      "log_sha256": "9fbbdbac6a674d8136544a281fbc35e33b3db712da7305f9337d523b35a2b460"
+    },
+    {
+      "project": "Voxrig",
+      "command": "cargo test --offline --locked -j 1 --doc -- --test-threads=1",
+      "result": "1 passed; 0 failed",
+      "local_log": ".local/survival-foundation-doc.log",
+      "log_sha256": "c41289355ba6a9d3d0da41053d44c4993a0479062979f9c4223f2368e3027c98"
+    },
+    {
+      "project": "Voxrig",
+      "command": "cargo package --offline --locked --allow-dirty --list",
+      "result": "passed; fixture/manifest/native verification tool included",
+      "local_log": ".local/survival-foundation-package.log",
+      "log_sha256": "c46b84edfc6802571ff97daac4e15ab4b3b4904b4a90d1ad528cb2ca7c531944"
+    },
+    {
+      "project": "Voxrig",
+      "command": "javac VerifySurvivalFoundation.java, then java VerifySurvivalFoundation <fixture> against locally obtained remapped/access-widened Java 1.21.11 oracle",
+      "result": "passed; native dimensions, attributes, admitted cubes, velocity/look codecs, contact comparison",
+      "local_log": ".local/survival-foundation/oracle.log",
+      "log_sha256": "adf5304823492792883f9290094c6dd55146f7c945faafca4f50b397a23f5b7a"
+    },
+    {
+      "project": "DustRoute",
+      "command": "cargo check --offline --locked -j 1 -p dustroute-mcp --features voxrig --all-targets",
+      "result": "passed",
+      "local_log": ".local/survival-foundation-mcp-check.log",
+      "log_sha256": "b60826bac241c0618c1e27edcfdd90e7cca2e95f2480f20c860f55a9030fb8ca"
+    }
+  ],
+  "additional_checks": [
+    {
+      "command": "cargo fmt --all --check",
+      "project": "Voxrig",
+      "result": "passed"
+    },
+    {
+      "command": "git diff --check",
+      "project": "Voxrig",
+      "result": "passed"
+    },
+    {
+      "command": "python3 scripts/vendor_voxrig.py --check",
+      "project": "DustRoute",
+      "result": "passed; 216 files at recorded revision"
+    }
+  ],
+  "development_iterations": "Initial visibility and numeric test inference compiler errors were corrected before the final passing suite. An initial javap class-name lookup was corrected; no game server or live mining trial was run.",
+  "native_source_manifest": "vendor/voxrig/data/java_1_21_11/survival_foundation_source.json",
+  "mining_concern": {
+    "evidence_kind": "Native target code inspection; not live behavior reproduction",
+    "native_version": "Java 1.21.11; Yarn 1.21.11+build.6",
+    "class_name": "net.minecraft.server.network.ServerPlayerInteractionManager",
+    "local_inspection_file": "/root/Voxrig/.local/survival-foundation/mining.javap",
+    "local_inspection_sha256": "21844711c1dc3d6c98467f42dde0f7aeaef94f9807461644123aa206bc87e5a3",
+    "facts": [
+      "STOP for matching non-air target evaluates native breaking delta times elapsed server ticks plus one; threshold 0.7 completes immediately.",
+      "Below 0.7 STOP sets failedToMine, failedMiningPos and failedStartMiningTime.",
+      "update checks failedToMine, clears if target is air, or attempts tryBreakBlock at progress >= 1.0.",
+      "ABORT clears ordinary mining and breaking display but does not clear failedToMine.",
+      "START can immediately break a target with delta >= 1.0."
+    ],
+    "proposal": "docs/survival-mining-cancellation.md",
+    "status": "Mining implementation stopped for user review; inventory/standing foundations retained"
+  },
+  "not_validated": [
+    "Live survival inventory swap or standing/ground reception",
+    "Normal/early finish and abort reproduced on a live native server",
+    "Validated survival placement or timed mining",
+    "Survival walking/navigation and temporary access",
+    "Durable survival Blueprint executor and end-to-end non-OP roofed construction"
+  ]
+}
