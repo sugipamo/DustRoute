@@ -59,7 +59,7 @@ predicates match each of the four complete 770-cell snapshots. This covers the
 declared TCP interruption and graceful OS-process restarts, not host crashes.
 The native adapter tests, durable registry test and all-target MCP Clippy pass.
 
-Setup now uses an unmodified vendored Voxrig source snapshot at
+The 2026-09-29 setup validation used an unmodified vendored Voxrig source snapshot at
 `47a05029e126cb049ee8a7536e5df867f3851c12`. `scripts/vendor_voxrig.py --check`
 checks all 204 recorded files without requiring Voxrig's Git checkout. The
 source repository retains its independent contribution history. A separate
@@ -87,3 +87,11 @@ All three usability steps are complete for these declared cases.
 [Validation records](evidence/voxrig/native-usability-validation-20260929.json)
 retain build/test logs, scope and checksums. No upstream Voxrig PR has been
 submitted; its local source branch and commit ancestry are preserved.
+
+The current source pin is now `784c12dba126f5829cd7a8db8542360cc48434c9`, published
+on Voxrig's `codex/dustroute-integration` branch. On 2026-10-02 (Asia/Tokyo), the
+manifest was reconciled with all 205 included files after the shared observation
+implementation was exported to that source repository. No vendored source files
+needed changing. The [pin alignment verification](evidence/voxrig/source-pin-alignment-20261002.json)
+records the new standalone checks; the original live evidence above remains tied
+to the revisions actually used in those trials.

@@ -22,6 +22,10 @@ The tested Voxrig source is pinned in `vendor/voxrig` with commit and file
 checksums in `vendor/voxrig-source.json`. No separate checkout or Node.js process
 is needed. From the repository root, verify, build and start the native client:
 
+The current pin is `784c12dba126f5829cd7a8db8542360cc48434c9` (205 files).
+The [pin alignment checks](../../docs/evidence/voxrig/source-pin-alignment-20261002.json)
+verify this exact source independently of a sibling Voxrig checkout.
+
 This standalone checkout route was validated with Rust/Cargo 1.98.0 on Linux
 x86_64. Exact build and runtime evidence is linked from
 [native client usability](../../docs/native-client-usability.md).

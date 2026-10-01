@@ -3,7 +3,7 @@
     ".gitignore": "71870d96e32698e1f122e1a9c8b89367b1fd8f42446ef199c4be336490414414",
     "CONTRIBUTING.md": "ba13b69d43c173bec8743f862e487a1da0583312ab3b6be684a4e4b60422d448",
     "Cargo.lock": "a6f07b5589c1b526d54bb3c4f9b9f2f09d64ad80170bf3c7e73679047004690f",
-    "Cargo.toml": "caf0bb673568606496d8f37c25386951224cba819fb002d4387df98e7837268e",
+    "Cargo.toml": "58bcb87d3a0a7c667f2183d026c218085fb3f96dcc1e93c342f3c6579bd9ff17",
     "LICENSE": "b30ad0c791d4b036c6596a0222f23e439b495935ca4a945fdc7b4969caa93f5c",
     "README.md": "f42f983efbca228680e8c508e2b7fdaadd610cba2b9813a674cafd2b1ab5a642",
     "THIRD_PARTY_NOTICES.md": "0c075011274bffb548d29838966a4051e71ff8cf739e4cc35f34878fda467bde",
@@ -159,7 +159,7 @@
     "scripts/run_endurance.sh": "844db5a2c57893a7cb76a7deec0442915af77454332c7f3b1dc937a07404af4a",
     "scripts/run_natural_terrain.sh": "371203b6ed7476cfc94b08f0388af4b7908c0e04dbc6b6e4687c908baa070b5b",
     "src/block_state.rs": "8f1f169bbee43fe8fdf91931cfd433cae7e1a23752aad2c35555ee4af3cbd0e2",
-    "src/connection.rs": "fa994506d33a67b943c3258467d2705a4aba1f08fc84ae5e3feba9af3b39ac7c",
+    "src/connection.rs": "b71c85d82d9893175d9744b507664cd6a1382a8bbf6645052c3c527dea6ee400",
     "src/error.rs": "a41be9f8712766ceabe551677d8603423b9b667d4fc8f4d97154f9246a2fc7bf",
     "src/lib.rs": "84d2715d54e65a786142d40158b5ae9557c1dfc1ba603d03090b20bac178c999",
     "src/protocol.rs": "bc5c12d0ecc54e16da20abb504894d71817ede2ae0df9c17c87f7c7a3f9a97fc",
@@ -181,7 +181,8 @@
     "src/versions/java_1_16_1/ui.rs": "4ec80717a019f72b3b5676ec956cfb5b6b36364f3312755b9ee0e1ae74ca906e",
     "src/versions/java_1_16_1/unstable.rs": "7e2791ac9b9d48dbee335b07905ce111586f60c54966474395b4aee2b9e93570",
     "src/versions/java_1_16_1/world.rs": "19d112f4858871b952f238ed40188d54037c82800fc13ef3406d7e0eef465768",
-    "src/versions/java_1_21_11/client.rs": "48a6ce1b65cb586920937e0eeb25b00dcf68896f5abb01898b945418ac122f64",
+    "src/versions/java_1_21_11/client.rs": "5c2a033eff95f1b877b7a5aae53d357857cbf5f25fbb32ef83468687bc55671a",
+    "src/versions/java_1_21_11/client/observations.rs": "6b60093264c85be724b36a811ed2f22d14a678e43b02a584a5e23f82cd914f6c",
     "src/versions/java_1_21_11/client/operations.rs": "f740cf187c88ff5b5ebc145946300185468054d9549dd94f747c0ce0b5bb2672",
     "src/versions/java_1_21_11/client/operations/tests.rs": "62829152942d4f92c36809b7cf601f942ef21c32c92b5e11b6b0eda4d6cd2d57",
     "src/versions/java_1_21_11/client/players.rs": "933007e9c3f79ce6bc98b6151313c50dbdd64595efcc5354db76a17119a696ad",
@@ -194,7 +195,7 @@
     "src/versions/java_1_21_11/ids.rs": "55f81e9b0f7eb0f03e42111de7d7e8ffc19b420e3df53fa661643a24ef06d6e1",
     "src/versions/java_1_21_11/mod.rs": "a5d8bbf394f5402ffb2839c8c215fc9c752a455c156b9f323651430f4f56e2b3",
     "src/versions/java_1_21_11/piston_nbt.rs": "d40ebd94b8a8b3eeeb4cba5c5af94e06e34a2892d2285a50941a67483dd8f5ac",
-    "src/versions/java_1_21_11/reconstruction.rs": "dbcc1041bf72cc9f1328176dee51b89cb06ffc3a199616f98aedf600bb47e787",
+    "src/versions/java_1_21_11/reconstruction.rs": "b1462d8efb0c966c30187dc643d1269145a58758e88e5c59b26304dcbd39c15e",
     "src/versions/java_1_21_11/reconstruction/adhesion.rs": "6d25b703fc47566042dd6d8b78a7f60954263962c4860e8e4bc9c40f310be924",
     "src/versions/java_1_21_11/reconstruction/motion.rs": "67578f90f3d6f662c2fd0e9657279670c2dabfb36101c8bfc262c546d11b568b",
     "src/versions/java_1_21_11/reconstruction/rules.rs": "4c8eea74418e3d7af737a0f6d61123798e6d200bd9d547d840c11230b474536f",
@@ -221,5 +222,5 @@
     "scripts"
   ],
   "repository": "https://github.com/sugipamo/Voxrig",
-  "revision": "47a05029e126cb049ee8a7536e5df867f3851c12"
+  "revision": "784c12dba126f5829cd7a8db8542360cc48434c9"
 }

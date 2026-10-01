@@ -7,12 +7,16 @@ and 1.21.11 coexist in Voxrig; DustRoute's physical context remains 1.21.11.
 Entities in the circuit simulator remain deferred. A new large prerequisite
 outside this scope stops the task for a report.
 
-Voxrig keeps its separate development history on `codex/native-client-usability`
-for later upstream review; no upstream submission has been made. The Cargo
+Voxrig's separate development history is published on
+[`codex/dustroute-integration`](https://github.com/sugipamo/Voxrig/tree/codex/dustroute-integration).
+The Cargo
 `voxrig` feature now uses the unmodified `vendor/voxrig` snapshot pinned to
-`47a05029e126cb049ee8a7536e5df867f3851c12`. A clean DustRoute checkout needs no
+`784c12dba126f5829cd7a8db8542360cc48434c9`. A clean DustRoute checkout needs no
 sibling repository. [Vendor instructions](../vendor/README.md) describe checksum
 verification and deliberate updates from tested source commits.
+The [pin alignment verification](evidence/voxrig/source-pin-alignment-20261002.json)
+checks all 205 files and standalone builds. This pin includes the shared native
+observation changes previously held only in DustRoute's vendor copy.
 The original operation/recording evidence used `b98785e`; the subsequent
 [usability work](native-client-usability.md) adds static outline targeting,
 actual MCP process recovery trials and an independent-checkout runtime trial.

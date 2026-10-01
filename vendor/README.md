@@ -7,6 +7,13 @@ licenses are included so a DustRoute checkout builds without an unpublished
 sibling checkout. Cargo excludes this crate from the DustRoute workspace; it is
 an optional path dependency selected by `--features voxrig`.
 
+The current snapshot is Voxrig commit
+`784c12dba126f5829cd7a8db8542360cc48434c9`, published on
+[`codex/dustroute-integration`](https://github.com/sugipamo/Voxrig/tree/codex/dustroute-integration).
+All 205 included files match that immutable commit, including the shared native
+observation implementation. The [pin alignment verification](../docs/evidence/voxrig/source-pin-alignment-20261002.json)
+records the standalone build checks.
+
 Verify the recorded snapshot without network access:
 
 ```sh
