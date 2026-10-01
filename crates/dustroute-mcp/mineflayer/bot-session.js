@@ -134,20 +134,26 @@ function createBotSession (config, bridgeMetrics, {
     }
     const origin = bot.entity.position.clone()
     // Behind first, then either side. Ignore pitch and only occupy an air column.
-    // Never fall back to placing the bot on the player's body.
-    for (const [left, up, forward] of [[0, 2, -4], [4, 2, 0], [-4, 2, 0]]) {
-      bot.chat(`/execute at ${username} rotated as ${username} rotated ~ 0 positioned ^${left} ^${up} ^${forward} align xyz positioned ~0.5 ~ ~0.5 if block ~ ~ ~ minecraft:air if block ~ ~1 ~ minecraft:air run tp @s ~ ~ ~`)
+    // If all offsets are unavailable, overlap is allowed to prioritize work.
+    const candidates = [[0, 2, -4], [4, 2, 0], [-4, 2, 0]].map(([left, up, forward]) => ({
+      command: `/execute at ${username} rotated as ${username} rotated ~ 0 positioned ^${left} ^${up} ^${forward} align xyz positioned ~0.5 ~ ~0.5 if block ~ ~ ~ minecraft:air if block ~ ~1 ~ minecraft:air run tp @s ~ ~ ~`,
+      allowOverlap: false
+    }))
+    candidates.push({ command: `/tp @s ${username}`, allowOverlap: true })
+    for (const { command, allowOverlap } of candidates) {
+      bot.chat(command)
       // Give packet delivery and player tracking time to catch up before trying
       // another candidate, including when the conditional command does nothing.
-      for (let attempt = 0; attempt < 12; attempt++) {
+      for (let attempt = 0; attempt < (allowOverlap ? 12 : 8); attempt++) {
         await bot.waitForTicks(5)
         const entity = Object.values(bot.entities).find(entity => entity.username === username)
-        if (entity && !needsSpace(entity) &&
-            bot.entity.position.distanceTo(origin) > 0.01 &&
-            bot.entity.position.distanceTo(entity.position) <= 8) {
+        if (entity && (allowOverlap
+          ? bot.entity.position.distanceTo(entity.position) <= 1
+          : !needsSpace(entity) && bot.entity.position.distanceTo(origin) > 0.01 &&
+            bot.entity.position.distanceTo(entity.position) <= 8)) {
           return {
             player: username,
-            moved: true,
+            moved: bot.entity.position.distanceTo(origin) > 0.01,
             position: posJson(bot.entity.position),
             distance: bot.entity.position.distanceTo(entity.position),
             dimension: currentDimension()
@@ -155,7 +161,7 @@ function createBotSession (config, bridgeMetrics, {
         }
       }
     }
-    throw new Error(`no clear offset position received near player ${username}; player may be offline, space blocked or teleport permission unavailable`)
+    throw new Error(`player position could not be acquired even with overlap allowed: ${username}; player may be offline or teleport permission unavailable`)
   }
 
   function propertiesOf (block) {

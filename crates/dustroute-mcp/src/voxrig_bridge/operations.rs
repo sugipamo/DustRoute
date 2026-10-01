@@ -76,12 +76,18 @@ impl VoxrigBridge {
             .dimension
             .ok_or_else(|| fail("bot dimension unavailable"))?;
         operations.set_flying(true).await.map_err(native_error)?;
-        for command in player_approach_commands(player) {
+        let offsets = player_approach_commands(player).map(|command| (command, false));
+        // Prefer space, but allow overlap as the last resort so cramped builds
+        // do not prevent work. Keep all four attempts inside the bridge timeout.
+        for (command, allow_overlap) in offsets
+            .into_iter()
+            .chain(std::iter::once((format!("tp @s {player}"), true)))
+        {
             operations
                 .send_command(&command)
                 .await
                 .map_err(native_error)?;
-            let deadline = Instant::now() + Duration::from_secs(3);
+            let deadline = Instant::now() + Duration::from_secs(if allow_overlap { 3 } else { 2 });
             loop {
                 let after = self.require_dimension(&dimension).await?;
                 if after.receive_sequence > before.receive_sequence
@@ -95,9 +101,13 @@ impl VoxrigBridge {
                         .any(|p| {
                             p.name == player
                                 && after.position.is_some_and(|position| {
-                                    squared(position, origin) > 0.0001
-                                        && !needs_player_space(position, p.position)
-                                        && squared(position, p.position) <= 64.0
+                                    if allow_overlap {
+                                        squared(position, p.position) <= 1.0
+                                    } else {
+                                        squared(position, origin) > 0.0001
+                                            && !needs_player_space(position, p.position)
+                                            && squared(position, p.position) <= 64.0
+                                    }
                                 })
                         })
                 {
@@ -110,7 +120,7 @@ impl VoxrigBridge {
             }
         }
         Err(fail(format!(
-            "no clear offset position received near player {player}; player may be offline, space blocked or teleport permission unavailable"
+            "player position could not be acquired even with overlap allowed: {player}; player may be offline or teleport permission unavailable"
         )))
     }
     pub async fn observe_player_context(

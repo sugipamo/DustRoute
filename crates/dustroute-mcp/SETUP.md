@@ -236,8 +236,10 @@ The preferred destination is four blocks behind and two blocks above the player;
 left and right offsets are tried if it is blocked. The offset follows the player's
 horizontal facing, independently of pitch. Each candidate is centered in a block
 column and requires ordinary air at both feet and head before the teleport runs.
-No candidate falls back to the player's position. If none can be confirmed, the
-tool returns an error. Player names are validated before commands are issued;
+If all three offsets are unavailable, the bot tries the player's position as a
+last resort, allowing overlap to prioritize work in cramped spaces. Tracking and
+proximity must still be observed; if that fallback also fails, the tool returns
+an error. Player names are validated before commands are issued;
 an offline player remains an explicit error. These offsets apply to player
 acquisition; block interactions still use their own positions within reach.
 

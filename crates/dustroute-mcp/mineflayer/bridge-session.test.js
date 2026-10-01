@@ -12,10 +12,12 @@ const { createBridgeMetrics } = require('./metrics')
 const { PROTOCOL } = require('./mutation-protocol')
 const { Vec3 } = require('vec3')
 
-test('player acquisition uses clear offset positions and keeps the player viewpoint', async () => {
-  for (const mode of ['untracked', 'too_close', 'behind_blocked', 'already_clear', 'all_blocked']) {
+test('player acquisition prefers offsets but permits overlap as a last resort', async () => {
+  for (const mode of ['untracked', 'too_close', 'behind_blocked', 'already_clear', 'all_blocked', 'untracked_blocked', 'fallback_refused']) {
     let bot
     const commands = []
+    const untracked = ['untracked', 'untracked_blocked', 'fallback_refused'].includes(mode)
+    const blocked = ['all_blocked', 'untracked_blocked', 'fallback_refused'].includes(mode)
     const player = { username: 'Builder', position: new Vec3(0.5, 80, 0.5), yaw: 0, pitch: 0, height: 1.8 }
     const session = createBotSession(bridgeConfig({}), createBridgeMetrics(), {
       createBot: options => {
@@ -23,15 +25,22 @@ test('player acquisition uses clear offset positions and keeps the player viewpo
         Object.assign(bot, {
           _client: new EventEmitter(), username: options.username,
           game: { dimension: 'overworld' }, time: { age: 0 },
-          entities: mode === 'untracked' ? {} : { player },
-          entity: { position: mode === 'already_clear' ? new Vec3(5, 80, 0) : new Vec3(0.5, 80, 0.5) },
+          entities: untracked ? {} : { player },
+          entity: { position: untracked ? new Vec3(100, 80, 100) : mode === 'already_clear' ? new Vec3(5, 80, 0) : new Vec3(0.5, 80, 0.5) },
           waitForChunksToLoad: async () => {}, waitForTicks: async () => {}, quit: () => {},
           blockAt: () => null,
           chat: command => {
             commands.push(command)
+            if (command === '/tp @s Builder') {
+              assert.equal(commands.length, 4)
+              if (mode === 'fallback_refused') return
+              bot.entities = { player }
+              bot.entity.position = player.position.clone()
+              return
+            }
             assert.match(command, /^\/execute at Builder rotated as Builder rotated ~ 0 positioned \^/)
             assert.match(command, /if block ~ ~ ~ minecraft:air if block ~ ~1 ~ minecraft:air run tp @s ~ ~ ~$/)
-            if (mode === 'all_blocked' || (mode === 'behind_blocked' && commands.length === 1)) return
+            if (blocked || (mode === 'behind_blocked' && commands.length === 1)) return
             bot.entities = { player }
             bot.entity.position = mode === 'behind_blocked' ? new Vec3(4.5, 82, 0.5) : new Vec3(0.5, 82, -3.5)
           }
@@ -42,16 +51,17 @@ test('player acquisition uses clear offset positions and keeps the player viewpo
     session.connect()
     bot.emit('spawn')
     try {
-      if (mode === 'all_blocked') {
-        await assert.rejects(session.dispatch('approach_player', { player: 'Builder' }), /no clear offset position/)
-        assert.equal(commands.length, 3)
-        assert.deepEqual(bot.entity.position, player.position)
+      if (mode === 'fallback_refused') {
+        await assert.rejects(session.dispatch('approach_player', { player: 'Builder' }), /could not be acquired even with overlap allowed/)
+        assert.equal(commands.length, 4)
+        assert.deepEqual(bot.entity.position, new Vec3(100, 80, 100))
       } else {
         const observation = await session.dispatch('observe_player', { player: 'Builder', max_distance: 4 })
         assert.deepEqual(observation.eye_position, { x: 0.5, y: 81.62, z: 0.5 })
-        assert.equal(observation.reacquired, mode === 'untracked')
-        assert.equal(commands.length, mode === 'already_clear' ? 0 : mode === 'behind_blocked' ? 2 : 1)
-        assert.ok(bot.entity.position.distanceTo(player.position) >= 3)
+        assert.equal(observation.reacquired, untracked)
+        assert.equal(commands.length, mode === 'already_clear' ? 0 : blocked ? 4 : mode === 'behind_blocked' ? 2 : 1)
+        if (blocked) assert.deepEqual(bot.entity.position, player.position)
+        else assert.ok(bot.entity.position.distanceTo(player.position) >= 3)
         if (mode !== 'already_clear') assert.match(commands[0], /positioned \^0 \^2 \^-4 /)
         if (mode === 'behind_blocked') assert.match(commands[1], /positioned \^4 \^2 \^0 /)
       }
