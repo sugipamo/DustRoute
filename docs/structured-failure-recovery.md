@@ -23,7 +23,8 @@ Compiler, tests and private-server work are serialized. No new host changes or
 kernel fault trials are needed for this goal.
 
 Implementation branch: `codex/structured-failure-recovery`, based on develop
-`830c053`. The roadmap above is implemented; validation is summarized below.
+`830c053`. Implementation commit: `9a0a8a0`. The roadmap above is implemented;
+validation is summarized below.
 
 ## Public facts
 
