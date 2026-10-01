@@ -19,19 +19,50 @@ Migration order:
    drift, ambiguous writes, restart and superseded previews. Measure realistic
    workloads before raising remaining model or transport limits.
 
-The initial job path uses literal Circuit Revisions at their captured site:
-at most 4,096 non-Air blocks, 4,096 virtual changes, 64 disjoint work regions,
-and 64 changed coordinates per region. The full live context includes the original
-one-cell guard and must fit both policy and adapter limits. Regions cover every requested change;
-all other observed cells are protected unless explicitly admitted by edit_scope.
-Support/watch dependencies determine a candidate region order. A dependency
-cycle needs a different partition; ordering alone never proves construction.
-Each current region gets fresh forward and inverse common-runtime verification
-in the full context, including intermediate protected states. Later regions
-remain unverified until planned. A coupled circuit may require changing the
-partition or declared intermediate design; the tool does not guess such a design.
+The job path uses literal Circuit Revisions at their captured site: at most
+4,096 non-Air blocks, 4,096 virtual changes and 64 disjoint input work regions.
+Every changed coordinate must be covered. Oversized input regions are split
+along the longest changed-coordinate axis at a median distinct coordinate.
+Support/watch cycles are combined into a single stage if their total fits 64
+declared changes. The result must have at most 64 stages of 64 declared changes;
+an oversized cycle or excessive subdivision is refused with a partition hint.
+Merged stages retain their exact constituent parts: their display bounding box
+does not enlarge editable space. The full live context includes the original
+one-cell guard and must fit both policy and adapter limits. All other observed
+cells remain protected unless explicitly admitted by edit_scope.
+
+Support/watch dependencies select a candidate stage order. Independent ready
+stages use the same Rust construction policy as ordinary construction, favoring
+structure before wiring/control/power. Ordering is not a physical proof. Only
+the current stage receives fresh whole-context forward/inverse simulation,
+including protected states at every committed microstep. The simulator receives
+only that stage's explicit positions; natural changes elsewhere in editable
+space belong to its settled boundary, not to additional placement commands.
+
+If initializing with final output properties fails, there is one alternate:
+initialize eligible stateless device power booleans to false and wire power to
+zero, using existing device bindings. Devices with Use callbacks or history
+are excluded. Block identities, geometry, input settings, edit_scope and the
+immutable final target are unchanged. For example, a supporting lamp can be
+installed OFF, then light naturally when the next region installs its powered
+floor lever. This bounded initialization is not a search for arbitrary circuit
+intermediates. The last stage must match the complete immutable target exactly.
+Each inverse must restore the entire preceding verified boundary using only
+the current stage's positions. Later stages remain unverified until planned.
+
+A stage already satisfied by earlier natural updates has no block commands.
+It still needs fresh full-context stationary observations, a new preview and
+explicit confirmation before progress advances. Its inverse is also freshly
+verified; no-op stages never grant permission to skip these checks.
 
 Jobs are durable intentions/history, not restored validation capabilities.
+The `dustroute.construction-job.v2` format stores sparse verified boundary
+deltas, including natural updates. After restart it reconstructs the current
+literal boundary from these deltas, then freshly proves only the next stage.
+It never projects old progress from final properties or replays all preceding
+physical proofs. v1 job files are retained as history but cannot be resumed or
+converted automatically; explicitly recapture and create a v2 job. Ordinary
+electrical operation history remains readable through `get_operation`.
 Failed or uncertain attempts stop with needs_inspection. There is no automatic
 retry, rollback, chunk loading or world lock. Undo must proceed in reverse region
 order and receives a fresh reviewed operation, including after restart. A
@@ -65,6 +96,63 @@ partition or intermediate target, not evidence of a broken Minecraft circuit.
 An interrupted partial prefix is deliberately not reconstructed from its command
 count: examine the full observation and author a new explicit repair revision.
 
+## Cost and resource limits
+
+Let N be sparse non-Air context blocks, V observed cells, D requested positions
+in one stage, R stages, and E processed physical microsteps. These quantities
+are separate: a 64-position stage can naturally update more than 64 blocks.
+
+| Work | Cost and consequence |
+| --- | --- |
+| Partition selection | Deterministic spatial subdivision plus word-sized dependency closure, O(R²) for R ≤ 64. There is no permutation search or eager proof of every future stage. |
+| Support ordering during removal | Build the current support index once per settled command, then query it for candidates. This removes the previous repeated per-candidate whole-world scan; the index is rebuilt after physical updates. |
+| Physical proof | Runtime currently clones its full state at each microstep and checks protected states in the full context. World work scales with E and N; queue/history size adds further cost. This remains the dominant measured cost and is not bypassed. A stage has at most two initialization attempts. |
+| Retained proof | Per-command expected snapshots need O(DN) block records for forward/inverse checks. Arc sharing avoids copying the proof when looking up a plan. Only one executable proof per job is retained. Applying still creates a fresh proof, so this is not a total process-memory bound. |
+| Saved boundary | Sparse actual-state deltas, at worst O(RN), rather than all commands' full snapshots. Capacity for the next completed boundary is checked before writes. Restart materializes saved deltas without physical replay. |
+| Live readback | O(V) cells for each full-context sample. V obeys backend and policy limits independently of sparse model N. Loaded-client capture timing does not include planning, preview or application. |
+
+The electrical plan cache permits 256 entries, at most 1,048,576 retained block
+records and a conservative 128 MiB estimated retained heap. The heap estimate
+is not an RSS limit and excludes fresh proofs, runtime state, transport and other
+caches. A stage too large for retention is refused before writes and should use
+smaller regions. Existing plans for other jobs are not silently evicted. Durable
+jobs retain their existing 16 MiB and 256-attempt limits; the next boundary's
+storage budget is reserved before application.
+
+Large previews retain every command's position, state and wait, but summarize
+repeated expected worlds by count. Executors keep complete states. Settled
+differences and boundary summaries expose counts and explicit truncation flags.
+Small previews remain expanded. For large job history, use
+`manage_construction_job({job_id,action:"get",include_intention:true})` to
+explicitly request all saved intentions and deltas; this does not restore a plan.
+
+`cargo run --offline --locked -j 1 -p dustroute-translate --example
+work_region_scaling` measures one passive 64-position forward/inverse proof,
+with full-context snapshots. The example is a construction-cost probe, not a
+functional circuit test. Single debug-profile measurements were:
+
+| Non-Air context N | Before changes, seconds | Final measurement, seconds |
+| --- | ---: | ---: |
+| 64 | 1.34 | 1.26 |
+| 256 | 0.63 | 0.57 |
+| 1,024 | 2.83 | 2.41 |
+| 2,048 | 7.24 | 4.88 |
+| 4,096 | 13.59 | 9.99 |
+
+Separate-process peak RSS over each sweep was 68.2 MiB before and 69.8 MiB in
+the final measurement, excluding compilation. An intermediate development
+measurement at N=4,096 took 15.93 seconds. The final sample is faster, but these
+single-run measurements do **not** establish a reproducible speedup attributable
+to this change. Runtime clone/protection costs remain; host scheduling and cold
+registry initialization also affect individual runs. The first N=64 sample
+includes registry initialization, so it is not comparable with warm samples.
+At N=4,096, all runs retained 520,192 per-command expected block records. The
+bounded preview test keeps all 64 commands in less than 64 KiB for its 512-block
+fixture while retaining the complete executor states.
+The [measurement record](measurements/work-region-scaling-20261001.json) retains
+all three sweeps, fixture scope and source fingerprints. Planning and application
+each perform a fresh proof; these times are not end-to-end placement latency.
+
 ## Verification
 
 Offline tests cover cross-region support/watch precedence, protected power
@@ -74,25 +162,33 @@ explicit unchanged-baseline recovery, partial-write refusal, process restart and
 reverse undo. Large-model cases and isolated native trials are recorded separately
 from the transport fixture; the fixture does not serve as a Minecraft oracle.
 
-The large passive model test adds 2,048 stone blocks across all 32 regions of
+The large passive model test adds 2,048 stone blocks across all 32 stages of
 64 changes, generating and dropping each whole-context forward/inverse proof
-in sequence. All six partition tests passed in 116.08 seconds in the debug
+in sequence. All eight partition/intermediate tests passed in 115.85 seconds in the debug
 profile. This is construction evidence for a passive layout, not exhaustive
 functional verification of a 2,048-block active circuit.
 
-The six public job lifecycle tests also pass, including permanent forward
-cancellation with restart and inverse cleanup. Electrical edit, revision and
-bridge regressions pass. The full default MCP library regression run passed
+The nine public job lifecycle tests cover a temporary OFF lamp,
+later natural power changes, no-write checkpoints, permanent forward
+cancellation with restart, inverse cleanup and refusal to execute v1 history.
+Electrical edit, revision and bridge regressions pass. Before v2, the default
+MCP library regression run passed
 144 tests with two opt-in tests ignored; its two outdated tool-count assertions
 were updated and passed on individual reruns. Native MCP all-target Clippy and
 translate-library Clippy pass with warnings denied. The unrelated translate
-example's existing dead-code warnings are outside this migration.
+example's existing dead-code warnings are outside this migration. The v2
+regression also passes all nine construction integration cases covering pistons,
+adhesion, stairs and a flying-machine course, plus three electrical-modification
+cases and ten MCP edit/presentation tests.
 
 The opt-in `tools/verify_blueprint_iteration_live.py --region-jobs` trial uses
 a stopped, private Vanilla Java 1.21.11 server and two dummy native clients.
 Its declared owned fixture checks gaze-independent 32,768-cell capture, two
 40-change regions with a floor lever depending on support in the other region,
 MCP process restarts, protected drift refusal, reverse undo and cancellation.
+The updated trial also checks a temporary OFF support lamp that naturally lights
+after installing its powered lever, and separately a naturally satisfied region
+whose forward and inverse checkpoints issue no block writes.
 Console predicates independently confirm complete stable checkpoints and the
 final empty fixture. These sequential predicates are test evidence, not an
 atomic server observation or a production fallback from native reconstruction.

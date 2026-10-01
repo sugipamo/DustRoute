@@ -4,7 +4,7 @@ use super::{
     ElectricalConstructionStep, electrical_snapshot, observed_root, order, settled_step_observed,
     snapshot,
 };
-use crate::snapshot::{MinecraftSnapshot, index_literal_snapshot};
+use crate::snapshot::{MinecraftSnapshot, MinecraftSnapshotBlock, index_literal_snapshot};
 use dustroute_library::world_edit::WorldEditScope;
 use dustroute_minecraft::time::piston_runtime::new_piston_runtime;
 use dustroute_minecraft::time::runtime::RuntimeLimits;
@@ -18,6 +18,7 @@ pub struct ElectricalModification {
     forward: Vec<ElectricalConstructionStep>,
     undo: Vec<ElectricalConstructionStep>,
     scope: WorldEditScope,
+    requests: Vec<MinecraftSnapshotBlock>,
 }
 
 impl ElectricalModification {
@@ -46,9 +47,6 @@ impl ElectricalModification {
         }
         let old = index_literal_snapshot(before)?;
         let new = index_literal_snapshot(after)?;
-        if old.len() > 4096 || new.len() > 4096 {
-            return Err("modification exceeds 4096 non-air blocks".into());
-        }
         let changed = old
             .keys()
             .chain(new.keys())
@@ -58,29 +56,119 @@ impl ElectricalModification {
         if changed.is_empty() || changed.len() > 64 {
             return Err("modification requires 1..64 changed positions".into());
         }
+        let requests = changed
+            .iter()
+            .map(|p| new.get(p).cloned().unwrap_or_else(|| air(*p)))
+            .collect::<Vec<_>>();
+        let proof = Self::derive_scoped(before, requests, scope, limits)?;
+        if index_literal_snapshot(proof.after())? != new {
+            return Err(
+                "modification callbacks do not produce the complete declared target state".into(),
+            );
+        }
+        Ok(proof)
+    }
+
+    /// Submit only these explicitly requested coordinates. Physical callbacks
+    /// derive the complete settled target, including changes elsewhere inside
+    /// editable space. The same requested coordinates must also restore the
+    /// entire original baseline under fresh inverse simulation.
+    pub fn derive_scoped(
+        before: &MinecraftSnapshot,
+        requests: Vec<MinecraftSnapshotBlock>,
+        scope: WorldEditScope,
+        limits: RuntimeLimits,
+    ) -> Result<Self, String> {
+        let old = index_literal_snapshot(before)?;
+        if old.len() > 4096 || requests.len() > 64 {
+            return Err(
+                "modification exceeds 4096 non-air blocks or 64 requested positions".into(),
+            );
+        }
         let region = Region::new(before.min, before.max);
         scope.validate(region)?;
-        if let Some(position) = changed.iter().find(|p| !scope.allows_change(**p)) {
-            return Err(format!(
-                "declared write at {position:?} is outside editable space or is protected"
-            ));
+        let mut desired = old.clone();
+        let mut seen = BTreeSet::new();
+        let mut effective = vec![];
+        for request in requests {
+            if !region.contains(request.pos) || !seen.insert(request.pos) {
+                return Err(
+                    "requested positions must be distinct and inside the complete context".into(),
+                );
+            }
+            if !scope.allows_change(request.pos) {
+                return Err(format!(
+                    "declared write at {:?} is outside editable space or is protected",
+                    request.pos
+                ));
+            }
+            let is_air = request.name == "minecraft:air";
+            if is_air && !request.properties.is_empty() {
+                return Err("Air request cannot carry properties".into());
+            }
+            if (is_air && !desired.contains_key(&request.pos))
+                || desired.get(&request.pos) == Some(&request)
+            {
+                continue;
+            }
+            desired.remove(&request.pos);
+            if !is_air {
+                desired.insert(request.pos, request.clone());
+            }
+            effective.push(request);
         }
-        let old_world = snapshot::literal_world(before)?;
-        let new_world = snapshot::literal_world(after)?;
-        let before = electrical_snapshot(&old_world, region)?;
-        let after = electrical_snapshot(&new_world, region)?;
-        if index_literal_snapshot(&before)? != old || index_literal_snapshot(&after)? != new {
+        if desired.len() > 4096 {
+            return Err("modification exceeds 4096 non-air blocks".into());
+        }
+        let changed = effective.iter().map(|b| b.pos).collect::<BTreeSet<_>>();
+        let requested = MinecraftSnapshot {
+            min: before.min,
+            max: before.max,
+            blocks: desired.into_values().collect(),
+        };
+        let world = snapshot::literal_world(before)?;
+        let request_world = snapshot::literal_world(&requested)?;
+        let before = electrical_snapshot(&world, region)?;
+        if index_literal_snapshot(&before)? != old
+            || index_literal_snapshot(&electrical_snapshot(&request_world, region)?)?
+                != index_literal_snapshot(&requested)?
+        {
             return Err("modification needs lossless, complete native block states".into());
         }
-        let forward = steps(&before, &after, &changed, &scope, limits)?;
-        let undo = steps(&after, &before, &changed, &scope, limits)?;
+        let (forward, after) = steps(&before, &requested, &changed, &scope, limits)?;
+        if after.blocks.len() > 4096 {
+            return Err("derived state exceeds 4096 non-air blocks".into());
+        }
+        let (undo, restored) = steps(&after, &before, &changed, &scope, limits)?;
+        if restored != before {
+            return Err("derived region cannot restore the complete baseline; combine its dependent changes or author an explicit repair design".into());
+        }
         Ok(Self {
             before,
             after,
             forward,
             undo,
             scope,
+            requests: effective,
         })
+    }
+
+    /// Saved endpoint differences do not identify explicit writes. Reprove the
+    /// same sealed requests, rather than treating automatic changes as commands.
+    pub fn reprove(&self, limits: RuntimeLimits) -> Result<Self, String> {
+        let proof = Self::derive_scoped(
+            &self.before,
+            self.requests.clone(),
+            self.scope.clone(),
+            limits,
+        )?;
+        if proof.after != self.after {
+            return Err("fresh derived target differs from the preview".into());
+        }
+        Ok(proof)
+    }
+    pub fn requests(&self) -> &[MinecraftSnapshotBlock] {
+        &self.requests
     }
     pub fn before(&self) -> &MinecraftSnapshot {
         &self.before
@@ -102,7 +190,7 @@ fn steps(
     changed: &BTreeSet<Pos>,
     scope: &WorldEditScope,
     limits: RuntimeLimits,
-) -> Result<Vec<ElectricalConstructionStep>, String> {
+) -> Result<(Vec<ElectricalConstructionStep>, MinecraftSnapshot), String> {
     let region = Region::new(before.min, before.max);
     let world = snapshot::literal_world(before)?;
     let desired = snapshot::literal_world(after)?;
@@ -179,12 +267,7 @@ fn steps(
         )?);
         installed.insert(pos);
     }
-    if electrical_snapshot(runtime.view().world(), region)? != *after {
-        return Err(
-            "modification callbacks do not produce the complete declared target state".into(),
-        );
-    }
-    Ok(result)
+    Ok((result, electrical_snapshot(runtime.view().world(), region)?))
 }
 
 fn protect_state(
@@ -212,4 +295,12 @@ fn protect_state(
         }
     }
     Ok(())
+}
+
+fn air(pos: Pos) -> MinecraftSnapshotBlock {
+    MinecraftSnapshotBlock {
+        pos,
+        name: "minecraft:air".into(),
+        properties: Default::default(),
+    }
 }

@@ -240,8 +240,11 @@ pub(super) struct PreviewPlacementParams {
     /// Does not change ownership, adoption or a placed instance's source.
     pub(super) edit_scope: Option<dustroute_library::world_edit::WorldEditScope>,
     /// For a literal circuit revision at its captured site: disjoint work
-    /// regions covering every change (1..64 regions, at most 64 changes each).
-    /// Creates a durable job and freshly plans its first region in full context.
+    /// regions covering every change (1..64 regions). Oversized regions are
+    /// subdivided and bounded support/watch cycles are combined, producing at
+    /// most 64 stages with 64 declared changes each. Stage state is freshly
+    /// derived from physics in the full context, including temporary output
+    /// initialization; final target and edit_scope remain immutable.
     pub(super) work_regions: Option<Vec<dustroute_translate::world::Region>>,
     /// Maximum number of blocks allowed in one placement plan. Defaults to 32768.
     pub(super) max_blocks: Option<usize>,

@@ -78,6 +78,49 @@ async fn apply(
 }
 
 #[tokio::test]
+async fn legacy_projected_history_is_retained_and_cannot_authorize_writes() {
+    let (root, fake, address, bridge) = fixture().await;
+    let (client, server) = connected(&root, &address).await;
+    let first = propose(&client).await;
+    let path = root
+        .join("construction-jobs")
+        .join(format!("{}.json", first["job_id"].as_str().unwrap()));
+    let mut legacy: Value = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+    legacy["schema"] = json!("dustroute.construction-job.v1");
+    legacy.as_object_mut().unwrap().remove("boundaries");
+    for stage in legacy["regions"].as_array_mut().unwrap() {
+        stage.as_object_mut().unwrap().remove("parts");
+    }
+    let bytes = serde_json::to_vec(&legacy).unwrap();
+    std::fs::write(&path, &bytes).unwrap();
+    let history = call(
+        &client,
+        "manage_construction_job",
+        json!({"job_id":first["job_id"],"action":"get"}),
+    )
+    .await;
+    assert_eq!(history["ok"], false);
+    assert!(
+        history["error"]
+            .as_str()
+            .unwrap()
+            .contains("recapture a v2 job")
+    );
+    let old = call(
+        &client,
+        "invoke_operation",
+        json!({"operation_id":first["operation_id"],"confirm":true}),
+    )
+    .await;
+    assert_eq!(old["ok"], false);
+    assert_eq!(fake.lock().unwrap().writes, 0);
+    assert_eq!(std::fs::read(&path).unwrap(), bytes);
+    stop(client, server).await;
+    bridge.abort();
+    let _ = std::fs::remove_dir_all(root);
+}
+
+#[tokio::test]
 async fn job_resumes_with_fresh_operations_after_restart_and_undo_runs_in_reverse_order() {
     let (root, fake, address, bridge) = fixture().await;
     let (client, server) = connected(&root, &address).await;
@@ -471,6 +514,178 @@ async fn cancelled_partial_job_can_be_undone_after_restart_without_reenabling_fo
         false
     );
     assert_eq!(fake.lock().unwrap().writes, 80);
+    stop(client, server).await;
+    bridge.abort();
+    std::fs::remove_dir_all(root).unwrap();
+}
+
+async fn coupled_proposal(client: &Client, existing_lamp: bool) -> Value {
+    let capture = call(
+        client,
+        "get_world",
+        json!({"region":{"min":{"x":99,"y":99,"z":102},"max":{"x":110,"y":104,"z":113}}}),
+    )
+    .await;
+    assert_eq!(capture["ok"], true, "{capture}");
+    let (source, changes, regions) = if existing_lamp {
+        (
+            json!({"x":101,"y":101,"z":104}),
+            json!([{"position":{"x":101,"y":101,"z":104},"block":"minecraft:redstone_block"},
+             {"position":{"x":100,"y":101,"z":104},"block":"minecraft:redstone_lamp","properties":{"lit":"true"}}]),
+            json!([{ "min":{"x":101,"y":101,"z":104},"max":{"x":101,"y":101,"z":104}},
+             {"min":{"x":100,"y":101,"z":104},"max":{"x":100,"y":101,"z":104}}]),
+        )
+    } else {
+        (
+            json!({"x":100,"y":102,"z":104}),
+            json!([{"position":{"x":100,"y":101,"z":104},"block":"minecraft:redstone_lamp","properties":{"lit":"true"}},
+             {"position":{"x":100,"y":102,"z":104},"block":"minecraft:lever","properties":{"face":"floor","facing":"north","powered":"true"}}]),
+            json!([{ "min":{"x":100,"y":102,"z":104},"max":{"x":100,"y":102,"z":104}},
+             {"min":{"x":100,"y":101,"z":104},"max":{"x":100,"y":101,"z":104}}]),
+        )
+    };
+    let revised = call(
+        client,
+        "test_circuit_change",
+        json!({"circuit_id":capture["circuit_id"],"changes":changes,"simulation_ticks":1}),
+    )
+    .await;
+    assert_eq!(revised["ok"], true, "{revised}");
+    let planned = call(
+        client,
+        "new_placement",
+        json!({"revision_id":revised["revision_id"],"work_regions":regions}),
+    )
+    .await;
+    assert_eq!(planned["ok"], true, "{planned}");
+    assert!(
+        planned["job"]["regions"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|r| r["changed_positions"].as_array().unwrap().contains(&source))
+    );
+    planned
+}
+
+#[tokio::test]
+async fn temporary_output_and_natural_cross_region_state_survive_restart_and_reverse_undo() {
+    let (root, fake, address, bridge) = fixture().await;
+    let (client, server) = connected(&root, &address).await;
+    let first = coupled_proposal(&client, false).await;
+    assert_eq!(first["requested_changes"][0]["properties"]["lit"], "false");
+    let job_id = first["job_id"].clone();
+    assert_eq!(apply(&client, &fake, &first).await["ok"], true);
+    stop(client, server).await;
+    let (client, server) = connected(&root, &address).await;
+    let next = call(
+        &client,
+        "manage_construction_job",
+        json!({"job_id":job_id,"action":"plan_next"}),
+    )
+    .await;
+    assert_eq!(next["ok"], true, "{next}");
+    assert_eq!(next["requested_changes"].as_array().unwrap().len(), 1);
+    assert_eq!(
+        next["requested_changes"][0]["properties"]["powered"],
+        "true"
+    );
+    assert_eq!(apply(&client, &fake, &next).await["ok"], true);
+    let history = call(
+        &client,
+        "manage_construction_job",
+        json!({"job_id":job_id,"action":"get"}),
+    )
+    .await;
+    assert_eq!(history["job"]["state"], "completed");
+    assert_eq!(
+        history["job"]["boundaries"][1]["changes"]
+            .as_array()
+            .unwrap()
+            .len(),
+        2
+    );
+    stop(client, server).await;
+    let (client, server) = connected(&root, &address).await;
+    for index in [1, 0] {
+        let undo = call(
+            &client,
+            "manage_construction_job",
+            json!({"job_id":job_id,"action":"plan_undo"}),
+        )
+        .await;
+        assert_eq!(undo["ok"], true, "{undo}");
+        if index == 1 {
+            assert!(
+                undo["steps"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .all(|s| s["position"]["y"] == 102)
+            );
+        }
+        assert_eq!(apply(&client, &fake, &undo).await["ok"], true);
+    }
+    let history = call(
+        &client,
+        "manage_construction_job",
+        json!({"job_id":job_id,"action":"get"}),
+    )
+    .await;
+    assert_eq!(history["job"]["boundaries"], json!([]));
+    assert_eq!(history["job"]["completed_regions"], 0);
+    stop(client, server).await;
+    bridge.abort();
+    std::fs::remove_dir_all(root).unwrap();
+}
+
+#[tokio::test]
+async fn naturally_satisfied_region_requires_fresh_confirmation_and_writes_no_blocks() {
+    let (root, fake, address, bridge) = fixture().await;
+    fake.lock().unwrap().snapshot.as_mut().unwrap()["blocks"].as_array_mut().unwrap().push(json!({"pos":{"x":100,"y":101,"z":104},"name":"minecraft:redstone_lamp","properties":{"lit":"false"}}));
+    let (client, server) = connected(&root, &address).await;
+    let first = coupled_proposal(&client, true).await;
+    let job_id = first["job_id"].clone();
+    assert_eq!(apply(&client, &fake, &first).await["ok"], true);
+    let writes = fake.lock().unwrap().writes;
+    let next = call(
+        &client,
+        "manage_construction_job",
+        json!({"job_id":job_id,"action":"plan_next"}),
+    )
+    .await;
+    assert_eq!(next["ok"], true, "{next}");
+    assert_eq!(next["no_write_checkpoint"], true);
+    assert_eq!(
+        call(
+            &client,
+            "invoke_operation",
+            json!({"operation_id":next["operation_id"],"confirm":true})
+        )
+        .await["ok"],
+        false
+    );
+    assert_eq!(apply(&client, &fake, &next).await["ok"], true);
+    assert_eq!(fake.lock().unwrap().writes, writes);
+    let history = call(
+        &client,
+        "manage_construction_job",
+        json!({"job_id":job_id,"action":"get"}),
+    )
+    .await;
+    assert_eq!(history["job"]["completed_regions"], 2);
+    assert_eq!(history["job"]["boundaries"][1]["changes"], json!([]));
+    for _ in 0..2 {
+        let undo = call(
+            &client,
+            "manage_construction_job",
+            json!({"job_id":job_id,"action":"plan_undo"}),
+        )
+        .await;
+        assert_eq!(undo["ok"], true, "{undo}");
+        assert_eq!(apply(&client, &fake, &undo).await["ok"], true);
+    }
+    assert_eq!(fake.lock().unwrap().writes, writes + 1);
     stop(client, server).await;
     bridge.abort();
     std::fs::remove_dir_all(root).unwrap();

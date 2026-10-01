@@ -3,9 +3,10 @@ use crate::assembly_registry::TargetServer;
 use crate::state::PlanStateStore;
 use crate::storage::{Durability, replace};
 use dustroute_library::world_edit::WorldEditScope;
-use dustroute_translate::piston_construction::{ElectricalWorkPlan, ElectricalWorkRegion};
+use dustroute_translate::piston_construction::{
+    ElectricalBoundary, ElectricalWorkPlan, ElectricalWorkRegion,
+};
 use dustroute_translate::snapshot::MinecraftSnapshot;
-use dustroute_translate::world::Region;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::fs::{self, File, OpenOptions};
@@ -13,7 +14,7 @@ use std::io::Read;
 use std::path::PathBuf;
 use uuid::Uuid;
 
-pub(crate) const SCHEMA: &str = "dustroute.construction-job.v1";
+pub(crate) const SCHEMA: &str = "dustroute.construction-job.v2";
 const MAX_BYTES: u64 = 16 * 1024 * 1024;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -39,6 +40,7 @@ pub(crate) struct JobRecord {
     pub after: MinecraftSnapshot,
     pub scope: WorldEditScope,
     pub regions: Vec<ElectricalWorkRegion>,
+    pub boundaries: Vec<ElectricalBoundary>,
     pub completed_regions: usize,
     pub state: JobState,
     /// Cancelling forward work still permits fresh inverse cleanup plans.
@@ -63,19 +65,33 @@ pub(crate) struct JobStageBinding {
 }
 impl JobRecord {
     pub fn work_plan(&self) -> Result<ElectricalWorkPlan, String> {
-        let plan = ElectricalWorkPlan::new(
+        let plan = ElectricalWorkPlan::from_regions(
             &self.before,
             &self.after,
-            self.regions
-                .iter()
-                .map(|r| r.region)
-                .collect::<Vec<Region>>(),
+            &self.regions,
             self.scope.clone(),
         )?;
-        if plan.regions() != self.regions || self.completed_regions > self.regions.len() {
+        if self.boundaries.len() != self.completed_regions
+            || self.completed_regions > self.regions.len()
+        {
             return Err("saved job partition/progress differs from its intention".into());
         }
+        if self.completed_regions == self.regions.len()
+            && self.snapshot_at(self.completed_regions)? != self.after
+        {
+            return Err("verified final boundary differs from immutable job target".into());
+        }
         Ok(plan)
+    }
+    pub fn snapshot_at(&self, count: usize) -> Result<MinecraftSnapshot, String> {
+        if count > self.completed_regions || self.boundaries.len() != self.completed_regions {
+            return Err("invalid verified boundary count".into());
+        }
+        self.boundaries[..count]
+            .iter()
+            .try_fold(self.before.clone(), |state, delta| {
+                delta.apply(&state, &self.scope)
+            })
     }
     pub fn check_binding(&self, id: Uuid, binding: JobStageBinding) -> Result<(), String> {
         let expected = if binding.undo {
@@ -148,14 +164,22 @@ impl JobRegistry {
         if bytes.len() as u64 > MAX_BYTES {
             return Err("construction job exceeds 16 MiB".into());
         }
-        let record: JobRecord = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+        let envelope: serde_json::Value =
+            serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+        if envelope["schema"] != SCHEMA {
+            return Err("unsupported construction job format; retain its history and recapture a v2 job instead of projecting old checkpoints".into());
+        }
+        let record: JobRecord = serde_json::from_value(envelope).map_err(|e| e.to_string())?;
         if record.schema != SCHEMA || record.id != id || record.player != player {
             return Err("construction job identity/schema/owner mismatch".into());
         }
         Ok(record)
     }
     pub fn save(&self, record: &JobRecord) -> Result<(), String> {
-        if record.schema != SCHEMA || record.attempts.len() > 256 {
+        if record.schema != SCHEMA
+            || record.attempts.len() > 256
+            || record.boundaries.len() != record.completed_regions
+        {
             return Err("construction job schema/history limit exceeded".into());
         }
         let path = self.root.join(format!("{}.json", record.id));
@@ -163,6 +187,12 @@ impl JobRegistry {
             let old = self.load(record.id, &record.player)?;
             if old.forward_cancelled && !record.forward_cancelled {
                 return Err("forward cancellation is permanent; create a new job".into());
+            }
+            let common = old.boundaries.len().min(record.boundaries.len());
+            if old.boundaries[..common] != record.boundaries[..common]
+                || old.completed_regions.abs_diff(record.completed_regions) > 1
+            {
+                return Err("verified boundary history must keep its existing prefix".into());
             }
             if old.execution_profile != record.execution_profile
                 || old.source_revision_id != record.source_revision_id
@@ -181,5 +211,32 @@ impl JobRegistry {
             return Err("construction job exceeds 16 MiB".into());
         }
         replace(&path, &bytes, Durability::FileAndDirectory).map_err(|e| e.to_string())
+    }
+    /// Reserve the successful boundary before any world writes, so a growing
+    /// checkpoint log cannot discover its storage limit after construction.
+    pub fn ensure_completion_fits(
+        record: &JobRecord,
+        binding: JobStageBinding,
+        proof: &dustroute_translate::piston_construction::ElectricalModification,
+    ) -> Result<(), String> {
+        let mut candidate = record.clone();
+        if binding.undo {
+            candidate.boundaries.truncate(binding.region_index);
+        } else {
+            candidate
+                .boundaries
+                .push(ElectricalBoundary::between(proof.before(), proof.after())?);
+        }
+        if serde_json::to_vec(&candidate)
+            .map_err(|e| e.to_string())?
+            .len() as u64
+            > MAX_BYTES - 65536
+        {
+            return Err(
+                "construction boundary storage budget exhausted before writes; split the job"
+                    .into(),
+            );
+        }
+        Ok(())
     }
 }

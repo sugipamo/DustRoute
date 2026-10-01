@@ -306,16 +306,21 @@ command predicate evidence. Raising policy does not raise an adapter's limit.
 
 Create a literal revision using up to 4,096 virtual changes, then call
 `new_placement({revision_id,work_regions:[{min,max},...]})`. Every change must be
-covered by one of at most 64 disjoint regions, each containing at most 64 changed
-coordinates. The full context permits at most 4,096 non-Air blocks. Omitted edit_scope protects every cell outside work_regions; an
+covered by one of at most 64 disjoint input regions. Oversized regions are split
+and bounded support/watch cycles combined into at most 64 stages of 64 declared
+changes. The full context permits at most 4,096 non-Air blocks. Omitted edit_scope protects every cell outside work_regions; an
 explicit edit_scope controls permitted transient effects too. Support/watch
 precedence chooses a candidate region order. Only the current stage receives
-a fresh full-context forward/inverse common-runtime proof. Later stages may
+a fresh full-context forward/inverse common-runtime proof. The boundary includes
+natural updates; one temporary output initialization is allowed without changing
+input settings, geometry or the immutable final target. A naturally satisfied
+stage still needs a fresh preview and confirmation, with no writes. Later stages may
 fail and need a different partition or explicit intermediate design.
 
 Preview and apply the returned operation normally, then call
 `manage_construction_job({job_id,action:"plan_next"})` for the next operation.
-`get` reads durable intention/history; `observe` compares a fresh sample with
+`get` reads durable intention/history, with large states summarized; explicitly
+set `include_intention:true` to expand all saved data. `observe` compares a fresh sample with
 the last verified prefix. `plan_undo` plans the last verified region's inverse,
 with a new operation/preview, even after restart. Replanning invalidates the
 previous preview. `cancel` invalidates pending forward work and retains history;
@@ -325,6 +330,7 @@ An ambiguous write records needs_inspection before any commands. No automatic
 retry or rollback follows. Explicit `plan_recovery` can create a new stage only
 if fresh full-context samples match the original stage baseline; a partial
 prefix requires diagnosis and a new explicit repair design. Stored targets
-and progress are never restored as executable proofs. Jobs do not adopt or
+and sparse verified boundaries are never restored as executable proofs. v1 job
+history cannot be resumed; explicitly recapture a v2 job. Jobs do not adopt or
 upgrade Blueprint references or infer functional behavior. See
 [region migration](../../docs/large-circuit-regions.md) for remaining limits.

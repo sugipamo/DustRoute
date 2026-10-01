@@ -14,6 +14,9 @@ use rmcp::schemars;
 pub(super) struct ManageConstructionJobParams {
     job_id: String,
     action: JobAction,
+    #[serde(default)]
+    /// For action=get only: explicitly expand all saved intention/checkpoint data.
+    include_intention: bool,
 }
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -30,10 +33,39 @@ fn profile() -> &'static str {
     dustroute_translate::world::time::piston_runtime::ELECTRICAL_PROFILE
 }
 fn summary(record: &JobRecord) -> Value {
-    json!({"ok":true,"job":record,"executable_plan_restored":false,
+    let expanded = record.before.blocks.len()
+        + record.after.blocks.len()
+        + record
+            .boundaries
+            .iter()
+            .map(|b| b.changes.len())
+            .sum::<usize>()
+        <= 512;
+    let job = if expanded {
+        json!(record)
+    } else {
+        json!({"schema":record.schema,"execution_profile":record.execution_profile,
+            "id":record.id,"player":record.player,"source_revision_id":record.source_revision_id,
+            "source":record.source,"target":record.target,"scope":record.scope,
+            "regions":record.regions,"completed_regions":record.completed_regions,
+            "state":record.state,"forward_cancelled":record.forward_cancelled,
+            "active_operation_id":record.active_operation_id,"attempts":record.attempts,
+            "before":electrical_edit::state_summary(&record.before),
+            "after":electrical_edit::state_summary(&record.after),
+            "boundaries":record.boundaries.iter().map(|b|json!({"changed_positions":b.changes.len(),
+                "changes":b.changes.iter().take(64).collect::<Vec<_>>(),"truncated":b.changes.len()>64})).collect::<Vec<_>>()})
+    };
+    let mut result = json!({"ok":true,"job":job,"executable_plan_restored":false,
         "future_regions_verified":false,"functional_behavior_verified":false,
+        "intention_expanded":expanded,
         "history_scope":"durable intention and verified batch progress; not live-world evidence",
-        "next_step":"observe or plan_next/plan_undo; show and confirm each fresh operation"})
+        "next_step":"observe or plan_next/plan_undo; show and confirm each fresh operation"});
+    if !expanded {
+        result["read_full_intention"] = json!(
+            "manage_construction_job(action=get, include_intention=true); historical intention, not executable proof"
+        );
+    }
+    result
 }
 
 impl DustRouteMcp {
@@ -97,10 +129,11 @@ impl DustRouteMcp {
             source_revision_id: revision.revision_id,
             source,
             target,
-            before: plan.snapshot_at(0)?,
-            after: plan.snapshot_at(plan.regions().len())?,
+            before: plan.before().clone(),
+            after: plan.target().clone(),
             scope,
             regions: plan.regions().to_vec(),
+            boundaries: vec![],
             completed_regions: 0,
             state: JobState::Ready,
             forward_cancelled: false,
@@ -131,15 +164,37 @@ impl DustRouteMcp {
             return Err("job execution profile/scope differs from the freshly proved stage".into());
         }
         let plan = job.work_plan()?;
-        let lo = plan.snapshot_at(binding.region_index)?;
-        let hi = plan.snapshot_at(binding.region_index + 1)?;
-        let (before, after) = if binding.undo { (hi, lo) } else { (lo, hi) };
-        if crate::revision::blocks(&before)? != crate::revision::blocks(proof.before())?
-            || crate::revision::blocks(&after)? != crate::revision::blocks(proof.after())?
-            || before.min != proof.before().min
-            || before.max != proof.before().max
+        let before = job.snapshot_at(job.completed_regions)?;
+        let target = if binding.undo {
+            job.snapshot_at(binding.region_index)?
+        } else {
+            job.after.clone()
+        };
+        let old = crate::revision::blocks(&before)?;
+        let effective = |requests: Vec<dustroute_translate::snapshot::MinecraftSnapshotBlock>| {
+            requests
+                .into_iter()
+                .filter(|r| {
+                    if r.name == "minecraft:air" {
+                        old.contains_key(&r.pos)
+                    } else {
+                        old.get(&r.pos) != Some(r)
+                    }
+                })
+                .collect::<Vec<_>>()
+        };
+        let exact = effective(plan.requests(binding.region_index, &target)?);
+        let allowed = exact == proof.requests()
+            || (!binding.undo
+                && effective(plan.temporary_requests(binding.region_index)?) == proof.requests());
+        if before != *proof.before()
+            || !allowed
+            || ((binding.undo || binding.region_index + 1 == job.regions.len())
+                && target != *proof.after())
         {
-            return Err("job baseline/target differs from the freshly proved stage".into());
+            return Err(
+                "job baseline/command intention differs from the freshly proved stage".into(),
+            );
         }
         Ok(())
     }
@@ -171,9 +226,12 @@ impl DustRouteMcp {
         if index >= plan.regions().len() {
             return Err("all work regions are already completed".into());
         }
-        let lo = plan.snapshot_at(index)?;
-        let hi = plan.snapshot_at(index + 1)?;
-        let (before, after) = if undo { (hi, lo) } else { (lo, hi) };
+        let before = record.snapshot_at(record.completed_regions)?;
+        let inverse_target = if undo {
+            Some(record.snapshot_at(index)?)
+        } else {
+            None
+        };
         let bounds = dustroute_translate::world_reverse::RegionBounds::new(before.min, before.max);
         self.policy
             .validate_region(bounds)
@@ -190,11 +248,24 @@ impl DustRouteMcp {
             edit_scope: Some(record.scope.clone()),
             ..Default::default()
         };
+        let capture = crate::performance::current();
+        let queued_at = std::time::Instant::now();
+        let proof = tokio::task::spawn_blocking(move || {
+            capture.record_queue(queued_at);
+            capture.in_blocking(|| {
+                let _measurement = crate::performance::span(crate::performance::Phase::ModelProof);
+                if let Some(target) = inverse_target {
+                    plan.prove_undo(index, &before, &target, Default::default())
+                } else {
+                    plan.prove_region(index, &before, Default::default())
+                }
+            })
+        })
+        .await
+        .map_err(|e| e.to_string())??;
         let result = self
-            .plan_electrical_edit(
+            .register_electrical_edit(
                 &params,
-                before,
-                after,
                 status,
                 electrical_edit::EditOrigin {
                     revision_id: record.source_revision_id,
@@ -205,6 +276,7 @@ impl DustRouteMcp {
                         undo,
                     }),
                 },
+                proof,
             )
             .await?;
         let id = result["operation_id"]
@@ -225,6 +297,9 @@ impl DustRouteMcp {
         &self,
         params: ManageConstructionJobParams,
     ) -> Result<Value, String> {
+        if params.include_intention && !matches!(params.action, JobAction::Get) {
+            return Err("include_intention is only supported by action=get".into());
+        }
         let player = self.resolve_player(None)?;
         self.policy
             .authorize_player(&player)
@@ -241,7 +316,14 @@ impl DustRouteMcp {
             .authorize_dimension(&record.target.dimension)
             .map_err(|e| e.to_string())?;
         match params.action {
-            JobAction::Get => Ok(summary(&record)),
+            JobAction::Get => {
+                let mut result = summary(&record);
+                if params.include_intention {
+                    result["job"] = json!(record);
+                    result["intention_expanded"] = json!(true);
+                }
+                Ok(result)
+            }
             JobAction::Cancel => {
                 if record.state == JobState::NeedsInspection {
                     return Err("uncertain job needs inspection; cancellation cannot erase uncertain write intent".into());
@@ -254,8 +336,8 @@ impl DustRouteMcp {
                 Ok(summary(&record))
             }
             JobAction::Observe => {
-                let plan = record.work_plan()?;
-                let expected = plan.snapshot_at(record.completed_regions)?;
+                record.work_plan()?;
+                let expected = record.snapshot_at(record.completed_regions)?;
                 self.policy
                     .validate_region(dustroute_translate::world_reverse::RegionBounds::new(
                         expected.min,

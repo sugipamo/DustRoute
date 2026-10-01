@@ -224,11 +224,15 @@ tracked `revision-placement-mcp-summary.json` includes the tested binary hash.
 ## Region construction jobs
 
 `new_placement({revision_id,work_regions:[{min,max},...]})` creates durable
-work at the captured site, with at most 64 disjoint regions and 64 changed
-coordinates per region. The whole observed context, including its guard,
-permits at most 4,096 non-Air blocks. Support/watch precedence selects a
-candidate order; only the current stage receives fresh forward/inverse
-physical verification in that complete context. Later stages remain unverified.
+work at the captured site, with at most 64 disjoint input regions. Oversized
+regions are subdivided and bounded support/watch cycles combined, resulting in
+at most 64 stages of 64 declared changes. The whole observed context, including
+its guard, permits at most 4,096 non-Air blocks. Only the current stage receives
+fresh forward/inverse physics in that complete context. Its boundary includes
+natural updates, with one bounded temporary output initialization when needed;
+input settings and the immutable final target are unchanged. Later stages remain
+unverified. A naturally satisfied stage still requires a reviewed, confirmed
+checkpoint, with no block writes.
 
 After each reviewed application, use
 `manage_construction_job({job_id,action:"plan_next"})`. After restart, `get`
@@ -239,7 +243,10 @@ allowing fresh inverse cleanup of the verified prefix. Uncertain writes require
 inspection; explicit `plan_recovery` only accepts the unchanged original stage
 baseline. A partial prefix needs a separately authored repair revision.
 
-Jobs retain their own immutable sparse intention beyond the revision TTL. They
+v2 jobs retain immutable sparse intentions and verified boundary deltas beyond
+the revision TTL. v1 history cannot be resumed; recapture a new v2 job instead of
+projecting checkpoints from final properties. Large responses are summarized;
+`get` with `include_intention:true` explicitly expands saved history. Jobs
 do not adopt Blueprints, upgrade existing references or establish whole-circuit
 functional behavior. See [region migration](large-circuit-regions.md) for
 bounded scope, coupled-layout restrictions and evidence.

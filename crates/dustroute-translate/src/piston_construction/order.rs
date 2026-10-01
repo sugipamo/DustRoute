@@ -73,19 +73,25 @@ pub(super) fn next_removal_position_matching(
     world: &World,
     selected: impl Fn(Pos) -> bool,
 ) -> Result<Pos, String> {
+    // Rebuild from the current world after every settled command. Callbacks
+    // can change supports; a cached index across commands would be unsound.
+    let occupied_supports = world
+        .iter()
+        .filter_map(|(other, block)| {
+            let d = block.support_offset?;
+            other
+                .x
+                .checked_add(d.x)
+                .zip(other.y.checked_add(d.y))
+                .zip(other.z.checked_add(d.z))
+                .map(|((x, y), z)| Pos::new(x, y, z))
+        })
+        .collect::<BTreeSet<_>>();
     world
         .iter()
         .filter(|(pos, _)| selected(**pos))
         .filter(|(_, b)| for_kind(b.kind).removal.is_some())
-        .filter(|(pos, _)| {
-            !world.iter().any(|(other, block)| {
-                block.support_offset.is_some_and(|d| {
-                    other.x.checked_add(d.x) == Some(pos.x)
-                        && other.y.checked_add(d.y) == Some(pos.y)
-                        && other.z.checked_add(d.z) == Some(pos.z)
-                })
-            })
-        })
+        .filter(|(pos, _)| !occupied_supports.contains(pos))
         .min_by_key(|(p, b)| (for_kind(b.kind).removal, p.y, p.x, p.z))
         .map(|(p, _)| *p)
         .ok_or_else(|| "teardown has an orphan piston head".into())

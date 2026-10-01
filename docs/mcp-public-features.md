@@ -82,6 +82,16 @@ Use `get_operation` for results and `undo_operation` only for supported recovery
 Creating a plan does not write blocks. Default policy is read-only; observations
 may still move the bot or render region previews.
 
+Region jobs subdivide oversized regions and combine bounded support/watch cycles
+into at most 64 stages of 64 declared changes. Each current stage derives its
+settled boundary in the complete context, including natural updates and one
+eligible temporary output initialization. Input settings and the final target
+remain immutable. Naturally satisfied stages still require preview/confirmation
+with no writes. Saved v2 boundary deltas support fresh planning after restart;
+v1 history must be recaptured rather than resumed. Large job history can be
+expanded explicitly with `manage_construction_job(action=get,include_intention=true)`.
+See [region costs, limits and evidence](large-circuit-regions.md).
+
 ## Default tools (23)
 
 | API | Purpose |

@@ -14,7 +14,7 @@ pub use modification::ElectricalModification;
 pub use snapshot::electrical_snapshot;
 use snapshot::literal_world;
 use std::collections::{BTreeMap, BTreeSet};
-pub use work_regions::{ElectricalWorkPlan, ElectricalWorkRegion};
+pub use work_regions::{ElectricalBoundary, ElectricalWorkPlan, ElectricalWorkRegion};
 
 use dustroute_minecraft::time::piston_runtime::{ElectricalPistonRuntime, new_piston_runtime};
 use dustroute_minecraft::time::runtime::RuntimeLimits;

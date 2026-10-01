@@ -104,6 +104,11 @@ pub(super) struct PlanGuard<T> {
     kind: PhantomData<T>,
 }
 impl<T: PlanPayload> PlanGuard<T> {
+    pub fn iter(&self) -> impl Iterator<Item = (&Uuid, &T)> {
+        self.entries
+            .iter()
+            .filter_map(|(id, entry)| T::get(entry).map(|payload| (id, payload)))
+    }
     pub fn get(&self, id: &Uuid) -> Option<&T> {
         self.entries.get(id).and_then(T::get)
     }

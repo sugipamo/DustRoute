@@ -175,7 +175,7 @@ impl std::io::Write for HashWriter {
         Ok(())
     }
 }
-fn content_id(snapshot: &MinecraftSnapshot) -> ContentId {
+pub(crate) fn content_id(snapshot: &MinecraftSnapshot) -> ContentId {
     use std::io::Write;
     let mut writer = HashWriter(Sha256::new());
     writer.0.update(b"dustroute.exact-snapshot.v1\0");

@@ -381,7 +381,9 @@ mod trial {
                     (1202..1210).map(move |z| {
                         if (x, y, z) == (1282, 182, 1202) {
                             json!({"position":{"x":x,"y":y,"z":z},"block":"minecraft:lever",
-                                "properties":{"face":"floor","facing":"north","powered":"false"}})
+                                "properties":{"face":"floor","facing":"north","powered":"true"}})
+                        } else if (x,y,z)==(1282,181,1202) {
+                            json!({"position":{"x":x,"y":y,"z":z},"block":"minecraft:redstone_lamp","properties":{"lit":"true"}})
                         } else {
                             json!({"position":{"x":x,"y":y,"z":z},"block":"minecraft:stone"})
                         }
@@ -429,6 +431,16 @@ mod trial {
         let first_state =
             checkpoint_region(actor, file, "job_first_region", small_min, small_max).await?;
         anyhow::ensure!(non_air(&first_state) == 40, "first region state mismatch");
+        anyhow::ensure!(
+            first_state["blocks"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|b| b["pos"] == json!(Pos::new(1282, 181, 1202)))
+                .unwrap()["properties"]["lit"]
+                == "false",
+            "model-derived lamp intermediate was not OFF on the server"
+        );
         Ok(json!({"job_id":job_id,"revision_id":revision["revision_id"],"regions":regions}))
     }
     async fn finish_region_job_trial(
@@ -492,6 +504,119 @@ mod trial {
         show_apply(session, file, &next["operation_id"]).await?;
         let full = checkpoint_region(actor, file, "job_both_regions", small_min, small_max).await?;
         anyhow::ensure!(non_air(&full) == 80, "completed job state mismatch");
+        anyhow::ensure!(
+            full["blocks"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|b| b["pos"] == json!(Pos::new(1282, 181, 1202)))
+                .unwrap()["properties"]["lit"]
+                == "true",
+            "later region did not naturally light the prior region's lamp"
+        );
+        Ok(())
+    }
+    async fn native_no_write_boundary_trial(
+        actor: &BotBridge,
+        client: &Client,
+        file: &mut File,
+    ) -> anyhow::Result<()> {
+        let min = Pos::new(1280, 179, 1200);
+        let max = Pos::new(1293, 183, 1211);
+        let lamp = Pos::new(1282, 181, 1202);
+        let source = Pos::new(1283, 181, 1202);
+        let capture = call(
+            client,
+            file,
+            "get_world",
+            json!({"region":{"min":min,"max":max}}),
+            true,
+        )
+        .await?;
+        let revision=call(client,file,"test_circuit_change",json!({"circuit_id":capture["circuit_id"],"changes":[{"position":lamp,"block":"minecraft:redstone_lamp","properties":{"lit":"false"}}]}),true).await?;
+        let setup = call(
+            client,
+            file,
+            "new_placement",
+            json!({"revision_id":revision["revision_id"]}),
+            true,
+        )
+        .await?;
+        show_apply(client, file, &setup["operation_id"]).await?;
+        let initial = checkpoint_region(actor, file, "noop_initial_lamp", min, max).await?;
+        anyhow::ensure!(non_air(&initial) == 1, "no-write fixture setup mismatch");
+        let capture = call(
+            client,
+            file,
+            "get_world",
+            json!({"region":{"min":min,"max":max}}),
+            true,
+        )
+        .await?;
+        let revision = call(
+            client,
+            file,
+            "test_circuit_change",
+            json!({"circuit_id":capture["circuit_id"],"changes":[
+            {"position":source,"block":"minecraft:redstone_block"},
+            {"position":lamp,"block":"minecraft:redstone_lamp","properties":{"lit":"true"}}]}),
+            true,
+        )
+        .await?;
+        let job=call(client,file,"new_placement",json!({"revision_id":revision["revision_id"],"work_regions":[{"min":source,"max":source},{"min":lamp,"max":lamp}]}),true).await?;
+        let id = job["job_id"].clone();
+        show_apply(client, file, &job["operation_id"]).await?;
+        let powered = checkpoint_region(actor, file, "noop_naturally_powered", min, max).await?;
+        anyhow::ensure!(non_air(&powered) == 2, "no-write fixture power mismatch");
+        let next = call(
+            client,
+            file,
+            "manage_construction_job",
+            json!({"job_id":id,"action":"plan_next"}),
+            true,
+        )
+        .await?;
+        anyhow::ensure!(
+            next["no_write_checkpoint"] == true && next["steps"] == json!([]),
+            "satisfied region scheduled writes"
+        );
+        show_apply(client, file, &next["operation_id"]).await?;
+        let unchanged =
+            checkpoint_region(actor, file, "noop_confirmed_without_writes", min, max).await?;
+        anyhow::ensure!(
+            unchanged == powered,
+            "no-write checkpoint changed the world"
+        );
+        for index in [1, 0] {
+            let undo = call(
+                client,
+                file,
+                "manage_construction_job",
+                json!({"job_id":id,"action":"plan_undo"}),
+                true,
+            )
+            .await?;
+            if index == 1 {
+                anyhow::ensure!(
+                    undo["no_write_checkpoint"] == true,
+                    "no-op inverse scheduled writes"
+                );
+            }
+            show_apply(client, file, &undo["operation_id"]).await?;
+        }
+        let restored = checkpoint_region(actor, file, "noop_restored_lamp", min, max).await?;
+        anyhow::ensure!(
+            restored == initial,
+            "no-write trial did not restore baseline"
+        );
+        call(
+            client,
+            file,
+            "undo_operation",
+            json!({"operation_id":setup["operation_id"],"confirm":true}),
+            true,
+        )
+        .await?;
         Ok(())
     }
     async fn undo_region_job_trial(
@@ -557,6 +682,7 @@ mod trial {
             false,
         )
         .await?;
+        native_no_write_boundary_trial(actor, session, file).await?;
         let final_state = checkpoint_region(
             actor,
             file,

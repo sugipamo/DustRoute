@@ -1,5 +1,6 @@
 //! Existing-world modifications are fresh capabilities, separate from adoption
 //! and from durable historical records. All live steps use the shared executor.
+mod presentation;
 use super::*;
 use crate::assembly_registry::{TargetServer, now_ms};
 use crate::construction_jobs::{JobAttempt, JobRegistry, JobStageBinding, JobState};
@@ -8,6 +9,7 @@ use crate::performance::{Phase, current, span};
 use crate::piston_assembly::ValidatedAssemblyPlacement;
 use dustroute_translate::piston_construction::ElectricalModification;
 use dustroute_translate::snapshot::MinecraftSnapshot;
+pub(super) use presentation::state_summary;
 
 pub(super) struct EditOrigin {
     pub revision_id: uuid::Uuid,
@@ -21,20 +23,20 @@ pub(super) struct ElectricalEditPlan {
     revision_id: uuid::Uuid,
     source: Value,
     target: TargetServer,
-    proof: ElectricalModification,
+    proof: std::sync::Arc<ElectricalModification>,
     previewed: bool,
     state: PistonPlacementState,
     expires_at: Instant,
     pub(super) job: Option<JobStageBinding>,
+    retained_records: usize,
+    retained_bytes: usize,
 }
 impl ElectricalEditPlan {
     fn preview(&self, id: uuid::Uuid, read_only: bool) -> Value {
-        json!({"ok":true,"operation_id":id,"kind":"electrical_revision_modification",
+        let mut result = json!({"ok":true,"operation_id":id,"kind":"electrical_revision_modification",
             "source":self.source,"revision_id":self.revision_id,"read_only":read_only,"job_stage":self.job,
             "bounds":{"min":self.proof.before().min,"max":self.proof.before().max},
-            "before":self.proof.before(),"after":self.proof.after(),
             "edit_scope":self.proof.scope(),
-            "steps":self.proof.steps(false),"undo_steps":self.proof.steps(true),
             "execution_batches":construction_executor::batch_summary(self.proof.steps(false)),
             "undo_execution_batches":construction_executor::batch_summary(self.proof.steps(true)),
             "conditions":{"stationary_observation_required":true,"model_initial_queue":"assumed_empty",
@@ -45,7 +47,14 @@ impl ElectricalEditPlan {
                 "natural_growth":"not modeled; live state drift stops execution",
                 "operator_requirement":"finish prior motion and keep external inputs/edits out of the work region"},
             "validation_scope":"complete declared state and per-command physics; live readback at batch boundaries; no flying/harvest contract implied",
-            "next_step":"show_operation then confirm invoke_operation; no automatic retry/rollback"})
+            "next_step":"show_operation then confirm invoke_operation; no automatic retry/rollback"});
+        result.as_object_mut().expect("preview object").extend(
+            presentation::states(&self.proof)
+                .as_object()
+                .expect("state object")
+                .clone(),
+        );
+        result
     }
 }
 
@@ -95,8 +104,6 @@ impl DustRouteMcp {
             .as_deref()
             .ok_or("server dimension unavailable")?;
         assembly_placement::server_contract(&status, dimension)?;
-        let target = TargetServer::observed(&status, dimension)?;
-        let baseline = before.clone();
         let scope = params.edit_scope.clone().unwrap_or_else(|| {
             dustroute_library::world_edit::WorldEditScope::entire(
                 dustroute_translate::world::Region::new(before.min, before.max),
@@ -113,6 +120,28 @@ impl DustRouteMcp {
         })
         .await
         .map_err(|e| e.to_string())??;
+        self.register_electrical_edit(params, status, origin, proof)
+            .await
+    }
+
+    pub(super) async fn register_electrical_edit(
+        &self,
+        params: &PreviewPlacementParams,
+        status: crate::bridge::BotStatus,
+        origin: EditOrigin,
+        proof: ElectricalModification,
+    ) -> Result<Value, String> {
+        let player = self.resolve_player(params.player.as_deref())?;
+        self.policy
+            .authorize_player(&player)
+            .map_err(|e| e.to_string())?;
+        let dimension = status
+            .dimension
+            .as_deref()
+            .ok_or("server dimension unavailable")?;
+        assembly_placement::server_contract(&status, dimension)?;
+        let target = TargetServer::observed(&status, dimension)?;
+        let baseline = proof.before();
         let size = proof.steps(false).len().max(proof.steps(true).len());
         self.policy
             .validate_placement_size(size)
@@ -120,14 +149,26 @@ impl DustRouteMcp {
         if params.max_blocks.is_some_and(|n| size > n) {
             return Err("electrical edit exceeds max_blocks".into());
         }
-        self.check_stationary_edit_baseline(&target, &baseline)
+        self.check_stationary_edit_baseline(&target, baseline)
             .await?;
+        let retained_records = presentation::records(&proof);
+        let retained_bytes = presentation::estimated_bytes(&proof);
+        if retained_records > presentation::MAX_RETAINED_BLOCK_RECORDS
+            || retained_bytes > presentation::MAX_RETAINED_MODEL_BYTES
+        {
+            return Err(
+                "current electrical proof exceeds its retention budget; use smaller work regions"
+                    .into(),
+            );
+        }
         let plan = ElectricalEditPlan {
+            retained_records,
+            retained_bytes,
             player,
             revision_id: origin.revision_id,
             source: origin.source,
             target,
-            proof,
+            proof: std::sync::Arc::new(proof),
             previewed: false,
             state: PistonPlacementState::Planned,
             expires_at: Instant::now() + Duration::from_secs(300),
@@ -139,11 +180,41 @@ impl DustRouteMcp {
         plans.retain(|_, p| {
             p.state != PistonPlacementState::Planned || p.expires_at > Instant::now()
         });
-        if plans.len() >= 256 {
-            return Err("too many retained electrical edits".into());
+        let same_job = |p: &ElectricalEditPlan| {
+            origin
+                .job
+                .is_some_and(|binding| p.job.is_some_and(|old| old.job_id == binding.job_id))
+        };
+        let retained = plans
+            .iter()
+            .map(|(_, p)| p)
+            .filter(|p| !same_job(p))
+            .map(|p| p.retained_records)
+            .sum::<usize>();
+        let retained_bytes = plans
+            .iter()
+            .map(|(_, p)| p)
+            .filter(|p| !same_job(p))
+            .map(|p| p.retained_bytes)
+            .sum::<usize>();
+        let other_plans = plans.iter().filter(|(_, p)| !same_job(p)).count();
+        if other_plans >= 256
+            || retained + plan.retained_records > presentation::MAX_RETAINED_BLOCK_RECORDS
+            || retained_bytes + plan.retained_bytes > presentation::MAX_RETAINED_MODEL_BYTES
+        {
+            return Err("retained electrical proof budget exhausted; finish or cancel pending jobs before planning more work".into());
         }
+        let superseded = plans
+            .iter()
+            .filter_map(|(id, p)| same_job(p).then_some(*id))
+            .collect::<Vec<_>>();
+        plans.retain(|_, p| !same_job(p));
         plans.insert(id, plan);
         drop(plans);
+        for old in superseded {
+            self.operations.record_completed(old,OperationKind::PlacementPreview,
+                json!({"ok":false,"status":"job_stage_capability_discarded","next_step":"freshly plan the job stage"})).await;
+        }
         self.operations
             .record_completed(id, OperationKind::PlacementPreview, response.clone())
             .await;
@@ -302,16 +373,14 @@ impl DustRouteMcp {
                 "edit requires unused unexpired preview; undo requires verified application".into(),
             );
         }
-        let before = plan.proof.before().clone();
-        let after = plan.proof.after().clone();
-        let scope = plan.proof.scope().clone();
+        let saved_proof = plan.proof.clone();
         let capture = current();
         let queued_at = std::time::Instant::now();
         let proof = tokio::task::spawn_blocking(move || {
             capture.record_queue(queued_at);
             capture.in_blocking(|| {
                 let _measurement = span(Phase::ModelProof);
-                ElectricalModification::new_scoped(&before, &after, scope, Default::default())
+                saved_proof.reprove(Default::default())
             })
         })
         .await
@@ -385,6 +454,7 @@ impl DustRouteMcp {
                     verified: false,
                     error: None,
                 });
+                JobRegistry::ensure_completion_fits(&job, binding, &proof)?;
                 registry.save(&job)?;
                 Some(job)
             } else {
@@ -450,11 +520,18 @@ impl DustRouteMcp {
             attempt.verified = run.is_ok();
             attempt.error = run.as_ref().err().cloned();
             if run.is_ok() {
-                job.completed_regions = if binding.undo {
-                    binding.region_index
+                if binding.undo {
+                    job.boundaries.truncate(binding.region_index);
+                    job.completed_regions = binding.region_index;
                 } else {
-                    binding.region_index + 1
-                };
+                    job.boundaries.push(
+                        dustroute_translate::piston_construction::ElectricalBoundary::between(
+                            proof.before(),
+                            proof.after(),
+                        )?,
+                    );
+                    job.completed_regions = binding.region_index + 1;
+                }
                 job.active_operation_id = None;
                 job.state = if job.forward_cancelled {
                     JobState::Cancelled
