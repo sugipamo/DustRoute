@@ -113,3 +113,18 @@ that a subsequent restored endpoint cannot erase the earlier violation.
 
 Minecraft all-target, translate library/scaling-example and native MCP all-target
 Clippy passed with warnings denied; the three packages passed format checks.
+
+The isolated Vanilla Java 1.21.11 native region-job trial also passed: 42 public
+tool calls, three expected refusals, 164 verified public write steps, two MCP
+restarts, and 11 stable checkpoints independently confirmed by server console
+predicates (86,168 checked cells). The trial covers an OFF support lamp that
+later lights naturally, protected drift refusal, freshly confirmed no-write
+forward/inverse boundaries and reverse cleanup after restart. It confirms this
+declared workflow, not every supported circuit. The final 39,304-cell owned
+context was entirely Air; all three MCP processes and the private server exited
+normally. Console checks are sequential and do not observe hidden queues.
+
+The [native trial record](evidence/runtime-state-sharing-20261001.json) identifies
+the exact tested source commit, binaries and trace. Its loaded 32,768-cell native
+capture took 362.2 ms; this separate observation measurement does not demonstrate
+a readback-speed change or represent the internal proof timings above.

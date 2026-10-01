@@ -556,5 +556,7 @@
     "translate_library_and_scaling_example_clippy_warnings_denied": "passed",
     "native_mcp_all_targets_clippy_warnings_denied": "passed",
     "format_check": "passed"
-  }
+  },
+  "measured_source_commit": "61507c24e70c9376dddddccebfba46f09df98779",
+  "native_trial_evidence": "docs/evidence/runtime-state-sharing-20261001.json"
 }
