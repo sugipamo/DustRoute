@@ -1,0 +1,105 @@
+{
+  "schema": "dustroute.voxrig-source-pin-alignment.v1",
+  "date": "2026-10-02",
+  "time_zone": "Asia/Tokyo",
+  "base_dustroute_commit": "8a8852ca6d23c167a23796dbe9b2dec722a397d4",
+  "implementation_commit": "a5a35e7184287471ee1095bfcc570eee1c74a8ef",
+  "voxrig_repository": "https://github.com/sugipamo/Voxrig",
+  "published_source_branch": "codex/dustroute-integration",
+  "previous_voxrig_revision": "47a05029e126cb049ee8a7536e5df867f3851c12",
+  "voxrig_revision": "784c12dba126f5829cd7a8db8542360cc48434c9",
+  "included_file_count": 205,
+  "modified_hash_entries": [
+    "Cargo.toml",
+    "src/connection.rs",
+    "src/versions/java_1_21_11/client.rs",
+    "src/versions/java_1_21_11/reconstruction.rs"
+  ],
+  "added_hash_entries": [
+    "src/versions/java_1_21_11/client/observations.rs"
+  ],
+  "manifest_sha256": "e30befdffa0262ac9b9d353b8d209a87af2d7436a02abbbfce4a78cee58a13f9",
+  "all_vendor_bytes_matched_source_git_archive_before_manifest_write": true,
+  "vendored_source_files_changed": false,
+  "verifier_changed": false,
+  "historical_live_evidence_revisions_changed": false,
+  "standalone": {
+    "implementation_commit": "a5a35e7184287471ee1095bfcc570eee1c74a8ef",
+    "export_directory": "/root/DustRoute/.local/voxrig-pin-20261002-yeg3t5ma",
+    "source_archive_sha256": "f0de1f20a531228e7a26c105f34cf327df1c2c00d011c144631f897f71763995",
+    "cargo_target_directory": "/root/DustRoute/target",
+    "workspace_root": "/root/DustRoute/.local/voxrig-pin-20261002-yeg3t5ma",
+    "local_package_and_dependency_paths": [
+      "crates/dustroute-app",
+      "crates/dustroute-cli",
+      "crates/dustroute-ir",
+      "crates/dustroute-library",
+      "crates/dustroute-mcp",
+      "crates/dustroute-minecraft",
+      "crates/dustroute-optimize",
+      "crates/dustroute-physical",
+      "crates/dustroute-translate",
+      "vendor/voxrig"
+    ],
+    "outside_paths": 0,
+    "sibling_voxrig_required": false,
+    "cargo_dependency_and_build_caches_shared": true,
+    "minecraft_processes_started_or_restarted": false,
+    "live_trial_performed": false
+  },
+  "checks": [
+    {
+      "command": "python3 scripts/vendor_voxrig.py --check",
+      "location": "DustRoute worktree",
+      "exit_code": 0,
+      "verified_files": 205
+    },
+    {
+      "command": "python3 scripts/vendor_voxrig.py --check --source /root/Voxrig --revision 784c12dba126f5829cd7a8db8542360cc48434c9",
+      "location": "DustRoute worktree",
+      "exit_code": 0,
+      "verified_files": 205
+    },
+    {
+      "command": "python3 scripts/vendor_voxrig.py --check",
+      "location": "standalone archive",
+      "exit_code": 0,
+      "verified_files": 205,
+      "sibling_source_or_network_required": false
+    },
+    {
+      "command": "cargo metadata --offline --locked --features voxrig --format-version 1 --no-deps",
+      "location": "standalone archive",
+      "exit_code": 0,
+      "outside_local_package_or_dependency_paths": 0
+    },
+    {
+      "command": "env CARGO_TARGET_DIR=/root/DustRoute/target cargo build --offline --locked -j 1 -p dustroute-mcp --features voxrig",
+      "location": "standalone archive",
+      "exit_code": 0,
+      "log": "native-build"
+    },
+    {
+      "command": "env CARGO_TARGET_DIR=/root/DustRoute/target cargo check --offline --locked -j 1 --workspace --all-targets",
+      "location": "standalone archive",
+      "exit_code": 0,
+      "log": "default-check",
+      "existing_example_dead_code_warnings": 2
+    }
+  ],
+  "logs": {
+    "native-build": {
+      "file": "source-pin-native-build-20261002.log.gz",
+      "sha256": "95d5584149d9d3675c6f9f578ed42584ae84973aeb4b8396620359103380318c",
+      "uncompressed_sha256": "c8986c2d56f6d05ac3fbe7ddf23c89eb4e9baebe53990831fce24bb4c2ea08c8",
+      "finish_line": "    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2m 53s"
+    },
+    "default-check": {
+      "file": "source-pin-default-check-20261002.log.gz",
+      "sha256": "57ee0a9dd296431d3219f30094c3ad747e1636c7f655f7236ace1825d373c2f5",
+      "uncompressed_sha256": "b337c2e9ced20ff87604a980dcb0b634fc584e982eebc6b83111a336d1ce214d",
+      "finish_line": "    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 29s"
+    }
+  },
+  "scope": "Source identity, checksum verification and standalone locked offline compilation. No new Minecraft behavior or runtime trial."
+}

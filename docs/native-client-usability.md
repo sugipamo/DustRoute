@@ -9,7 +9,7 @@ stops the work for a report.
 Before implementation, DustRoute's previous work was fast-forwarded into develop
 at `89e0d1d` and pushed. The old feature branch was deleted after its commits were
 retained in develop. Voxrig's local develop retains `b98785e`, with upstream main
-unchanged. Both repositories now use `codex/native-client-usability`.
+unchanged. At that stage both repositories used `codex/native-client-usability`.
 
 1. **Player targeting.** Separate native outline selection from collision
    geometry, preserving an explicit source/geometry type and complete observation
@@ -85,8 +85,8 @@ grants were revoked and the isolated server stopped normally.
 
 All three usability steps are complete for these declared cases.
 [Validation records](evidence/voxrig/native-usability-validation-20260929.json)
-retain build/test logs, scope and checksums. No upstream Voxrig PR has been
-submitted; its local source branch and commit ancestry are preserved.
+retain build/test logs, scope and checksums. At the end of those trials, no
+upstream Voxrig PR had been submitted; its source commit ancestry was preserved.
 
 The current source pin is now `784c12dba126f5829cd7a8db8542360cc48434c9`, published
 on Voxrig's `codex/dustroute-integration` branch. On 2026-10-02 (Asia/Tokyo), the
