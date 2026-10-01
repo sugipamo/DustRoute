@@ -108,3 +108,21 @@ all-target Clippy passed with warnings denied. The three packages passed
 format checks, and the working diff passed whitespace checks. Compiler jobs
 and test execution were serialized; no benchmark or private server ran
 concurrently with Cargo.
+
+## Native isolated-world confirmation
+
+The Vanilla Java 1.21.11 region-job trial passed against implementation commit
+`be05ad132d667f016dd6f724241a3ee64b99c761`: 42 public tool calls, three expected
+refusals, 164 verified public write steps, two MCP restarts, and 11 stable
+checkpoints independently confirmed by server console predicates (86,168
+checked cells). Forward/inverse no-write boundaries and natural lamp changes
+remained subject to fresh full-context observations. The final 39,304-cell
+owned context was entirely Air. All three MCP processes and the private server
+exited normally.
+
+The [native trial record](evidence/construction-state-refactor-20261001.json)
+identifies tested source, binaries, trace and confirmation receipts. Its loaded
+32,768-cell native capture took 359.8 ms; this is a separate observation sample,
+not a demonstrated readback improvement or the construction benchmark.
+Console predicate batches span ticks and do not observe hidden queues. These
+finite cases confirm the declared workflow, not arbitrary circuits or designs.

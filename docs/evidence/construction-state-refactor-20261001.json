@@ -1,0 +1,799 @@
+{
+  "run_id": "construction-state-refactor-20261001-a",
+  "source_commit": "be05ad132d667f016dd6f724241a3ee64b99c761",
+  "started_at_utc": "2026-10-01T13:15:27.139381+00:00",
+  "finished_at_utc": "2026-10-01T13:19:01.141830+00:00",
+  "server": "Vanilla Java 1.21.11",
+  "endpoint": "127.0.0.1:25565",
+  "dimension": "minecraft:overworld",
+  "backend": "Voxrig native",
+  "actors": [
+    "DustRouteBot",
+    "dustroutetest"
+  ],
+  "owned_region": {
+    "min": {
+      "x": 1279,
+      "y": 178,
+      "z": 1199
+    },
+    "max": {
+      "x": 1312,
+      "y": 211,
+      "z": 1232
+    }
+  },
+  "passed": true,
+  "restored_to_air": true,
+  "server_stopped_normally": true,
+  "server_jar_sha256": "f83b8e093865806f931c7e34aae41b177d4c076335263dd124c75d6d65dd1726",
+  "mcp_binary_sha256": "aae949f6a31228acaf7f9f98d0de020208b5d4621cd451fb3337660a063c6811",
+  "probe_binary_sha256": "cd8b2074e779761091f81fef09b8efb9f6a6d7fc3655f2ec5dd5a617033c55c0",
+  "probe_source_sha256": "82f641848bcf4a4427e4c085b054a7dd3ff4dec0dd9af060320e8b5d829d2978",
+  "runner_source_sha256": "44714ad81453bc64f15acbd65ffcde9a5186904eb53dfb1d29476e9dc06fadab",
+  "trace_sha256": "bc76c49261a8adc1bed591dd9fa2c92ac4ed5471fef38623b852ed1abde2b9a7",
+  "limits": [
+    "Finite declared cases, not an all-clear for arbitrary designs.",
+    "Runtime readbacks are client reconstructions; separate console predicates confirm stable checkpoints.",
+    "Independent predicate batches can span ticks; no atomic or hidden-queue guarantee.",
+    "Transient observer protection is a model refusal; the live comparison checks settled states.",
+    "Existing placed instances are not automatically upgraded."
+  ],
+  "probe_exit_code": 0,
+  "schema": "dustroute.construction-state-refactor-live-evidence.v1",
+  "retained_manifest": ".local/e2e-artifacts/construction-state-refactor-20261001-a.manifest.json",
+  "manifest_sha256": "8ce33f2b71096d040d1d9c885c8b56bb31e9f0ea4cdc576a8ade2e5a8c61007d",
+  "checkpoints": [
+    {
+      "stage": "job_initial_full_context",
+      "native_readback": {
+        "captured_at_millis": 2092,
+        "checked_cells": 39304,
+        "client_revision": 117,
+        "client_tick": 41,
+        "connection_id": 1,
+        "dimension": "minecraft:overworld",
+        "kind": "client_reconstructed",
+        "max": {
+          "x": 1312,
+          "y": 211,
+          "z": 1232
+        },
+        "min": {
+          "x": 1279,
+          "y": 178,
+          "z": 1199
+        },
+        "moving": false,
+        "receive_sequence": 288,
+        "received_revision": 118,
+        "schema_version": "dustroute.client-readback.v1"
+      },
+      "non_air": 0,
+      "independent_confirmation": {
+        "kind": "independent_server_console_predicates",
+        "checked_cells": 39304,
+        "snapshot_sha256": "322f275b2c420c3dc908403951ab8a5da34e366bb61abcec31d6c87c7afe657e",
+        "atomic": false,
+        "hidden_runtime_observed": false,
+        "batch_count": 394,
+        "every_batch_passed": true,
+        "first_game_tick": 9896788,
+        "last_game_tick": 9897955
+      }
+    },
+    {
+      "stage": "job_first_region",
+      "native_readback": {
+        "captured_at_millis": 71902,
+        "checked_cells": 840,
+        "client_revision": 130,
+        "client_tick": 1438,
+        "connection_id": 1,
+        "dimension": "minecraft:overworld",
+        "kind": "client_reconstructed",
+        "max": {
+          "x": 1293,
+          "y": 183,
+          "z": 1211
+        },
+        "min": {
+          "x": 1280,
+          "y": 179,
+          "z": 1200
+        },
+        "moving": false,
+        "receive_sequence": 2642,
+        "received_revision": 168,
+        "schema_version": "dustroute.client-readback.v1"
+      },
+      "non_air": 40,
+      "independent_confirmation": {
+        "kind": "independent_server_console_predicates",
+        "checked_cells": 840,
+        "snapshot_sha256": "890863e3ef7c217a98b29faa562c264ef80fe4474bd768b79ef73e8507001b06",
+        "atomic": false,
+        "hidden_runtime_observed": false,
+        "batch_count": 9,
+        "every_batch_passed": true,
+        "first_game_tick": 9898131,
+        "last_game_tick": 9898157
+      }
+    },
+    {
+      "stage": "job_protected_drift_refusal",
+      "native_readback": {
+        "captured_at_millis": 81666,
+        "checked_cells": 840,
+        "client_revision": 133,
+        "client_tick": 1633,
+        "connection_id": 1,
+        "dimension": "minecraft:overworld",
+        "kind": "client_reconstructed",
+        "max": {
+          "x": 1293,
+          "y": 183,
+          "z": 1211
+        },
+        "min": {
+          "x": 1280,
+          "y": 179,
+          "z": 1200
+        },
+        "moving": false,
+        "receive_sequence": 2907,
+        "received_revision": 171,
+        "schema_version": "dustroute.client-readback.v1"
+      },
+      "non_air": 41,
+      "independent_confirmation": {
+        "kind": "independent_server_console_predicates",
+        "checked_cells": 840,
+        "snapshot_sha256": "ef522bb7a9bf4ababf8bfbe517ab7b7efbf390ce34065ad69f040da65b310921",
+        "atomic": false,
+        "hidden_runtime_observed": false,
+        "batch_count": 9,
+        "every_batch_passed": true,
+        "first_game_tick": 9898326,
+        "last_game_tick": 9898351
+      }
+    },
+    {
+      "stage": "job_both_regions",
+      "native_readback": {
+        "captured_at_millis": 89743,
+        "checked_cells": 840,
+        "client_revision": 136,
+        "client_tick": 1794,
+        "connection_id": 1,
+        "dimension": "minecraft:overworld",
+        "kind": "client_reconstructed",
+        "max": {
+          "x": 1293,
+          "y": 183,
+          "z": 1211
+        },
+        "min": {
+          "x": 1280,
+          "y": 179,
+          "z": 1200
+        },
+        "moving": false,
+        "receive_sequence": 3117,
+        "received_revision": 213,
+        "schema_version": "dustroute.client-readback.v1"
+      },
+      "non_air": 80,
+      "independent_confirmation": {
+        "kind": "independent_server_console_predicates",
+        "checked_cells": 840,
+        "snapshot_sha256": "84c1a492157abe3fe4ca938801f4acc65e97e069384b1eb6c877398727d2ce51",
+        "atomic": false,
+        "hidden_runtime_observed": false,
+        "batch_count": 9,
+        "every_batch_passed": true,
+        "first_game_tick": 9898488,
+        "last_game_tick": 9898514
+      }
+    },
+    {
+      "stage": "job_undo_region_1",
+      "native_readback": {
+        "captured_at_millis": 101837,
+        "checked_cells": 840,
+        "client_revision": 142,
+        "client_tick": 2036,
+        "connection_id": 1,
+        "dimension": "minecraft:overworld",
+        "kind": "client_reconstructed",
+        "max": {
+          "x": 1293,
+          "y": 183,
+          "z": 1211
+        },
+        "min": {
+          "x": 1280,
+          "y": 179,
+          "z": 1200
+        },
+        "moving": false,
+        "receive_sequence": 3404,
+        "received_revision": 256,
+        "schema_version": "dustroute.client-readback.v1"
+      },
+      "non_air": 40,
+      "independent_confirmation": {
+        "kind": "independent_server_console_predicates",
+        "checked_cells": 840,
+        "snapshot_sha256": "890863e3ef7c217a98b29faa562c264ef80fe4474bd768b79ef73e8507001b06",
+        "atomic": false,
+        "hidden_runtime_observed": false,
+        "batch_count": 9,
+        "every_batch_passed": true,
+        "first_game_tick": 9898730,
+        "last_game_tick": 9898755
+      }
+    },
+    {
+      "stage": "job_undo_region_0",
+      "native_readback": {
+        "captured_at_millis": 109629,
+        "checked_cells": 840,
+        "client_revision": 144,
+        "client_tick": 2192,
+        "connection_id": 1,
+        "dimension": "minecraft:overworld",
+        "kind": "client_reconstructed",
+        "max": {
+          "x": 1293,
+          "y": 183,
+          "z": 1211
+        },
+        "min": {
+          "x": 1280,
+          "y": 179,
+          "z": 1200
+        },
+        "moving": false,
+        "receive_sequence": 3627,
+        "received_revision": 296,
+        "schema_version": "dustroute.client-readback.v1"
+      },
+      "non_air": 0,
+      "independent_confirmation": {
+        "kind": "independent_server_console_predicates",
+        "checked_cells": 840,
+        "snapshot_sha256": "f1734a624e2b008555987677c38256ce85856b880c617eba219c692a79ad8d9e",
+        "atomic": false,
+        "hidden_runtime_observed": false,
+        "batch_count": 9,
+        "every_batch_passed": true,
+        "first_game_tick": 9898885,
+        "last_game_tick": 9898905
+      }
+    },
+    {
+      "stage": "noop_initial_lamp",
+      "native_readback": {
+        "captured_at_millis": 118298,
+        "checked_cells": 840,
+        "client_revision": 147,
+        "client_tick": 2365,
+        "connection_id": 1,
+        "dimension": "minecraft:overworld",
+        "kind": "client_reconstructed",
+        "max": {
+          "x": 1293,
+          "y": 183,
+          "z": 1211
+        },
+        "min": {
+          "x": 1280,
+          "y": 179,
+          "z": 1200
+        },
+        "moving": false,
+        "receive_sequence": 3836,
+        "received_revision": 299,
+        "schema_version": "dustroute.client-readback.v1"
+      },
+      "non_air": 1,
+      "independent_confirmation": {
+        "kind": "independent_server_console_predicates",
+        "checked_cells": 840,
+        "snapshot_sha256": "4822e4f77155444ee9223c060a6d2facf7764262d37be575d304de1d43f16489",
+        "atomic": false,
+        "hidden_runtime_observed": false,
+        "batch_count": 9,
+        "every_batch_passed": true,
+        "first_game_tick": 9899059,
+        "last_game_tick": 9899080
+      }
+    },
+    {
+      "stage": "noop_naturally_powered",
+      "native_readback": {
+        "captured_at_millis": 123949,
+        "checked_cells": 840,
+        "client_revision": 148,
+        "client_tick": 2478,
+        "connection_id": 1,
+        "dimension": "minecraft:overworld",
+        "kind": "client_reconstructed",
+        "max": {
+          "x": 1293,
+          "y": 183,
+          "z": 1211
+        },
+        "min": {
+          "x": 1280,
+          "y": 179,
+          "z": 1200
+        },
+        "moving": false,
+        "receive_sequence": 3987,
+        "received_revision": 301,
+        "schema_version": "dustroute.client-readback.v1"
+      },
+      "non_air": 2,
+      "independent_confirmation": {
+        "kind": "independent_server_console_predicates",
+        "checked_cells": 840,
+        "snapshot_sha256": "609200f504bf403e388971db64c5868ca9863f4d9239602f541a2df1b5f3c7f2",
+        "atomic": false,
+        "hidden_runtime_observed": false,
+        "batch_count": 9,
+        "every_batch_passed": true,
+        "first_game_tick": 9899172,
+        "last_game_tick": 9899194
+      }
+    },
+    {
+      "stage": "noop_confirmed_without_writes",
+      "native_readback": {
+        "captured_at_millis": 129246,
+        "checked_cells": 840,
+        "client_revision": 148,
+        "client_tick": 2584,
+        "connection_id": 1,
+        "dimension": "minecraft:overworld",
+        "kind": "client_reconstructed",
+        "max": {
+          "x": 1293,
+          "y": 183,
+          "z": 1211
+        },
+        "min": {
+          "x": 1280,
+          "y": 179,
+          "z": 1200
+        },
+        "moving": false,
+        "receive_sequence": 4094,
+        "received_revision": 301,
+        "schema_version": "dustroute.client-readback.v1"
+      },
+      "non_air": 2,
+      "independent_confirmation": {
+        "kind": "independent_server_console_predicates",
+        "checked_cells": 840,
+        "snapshot_sha256": "609200f504bf403e388971db64c5868ca9863f4d9239602f541a2df1b5f3c7f2",
+        "atomic": false,
+        "hidden_runtime_observed": false,
+        "batch_count": 9,
+        "every_batch_passed": true,
+        "first_game_tick": 9899277,
+        "last_game_tick": 9899303
+      }
+    },
+    {
+      "stage": "noop_restored_lamp",
+      "native_readback": {
+        "captured_at_millis": 138287,
+        "checked_cells": 840,
+        "client_revision": 151,
+        "client_tick": 2765,
+        "connection_id": 1,
+        "dimension": "minecraft:overworld",
+        "kind": "client_reconstructed",
+        "max": {
+          "x": 1293,
+          "y": 183,
+          "z": 1211
+        },
+        "min": {
+          "x": 1280,
+          "y": 179,
+          "z": 1200
+        },
+        "moving": false,
+        "receive_sequence": 4290,
+        "received_revision": 304,
+        "schema_version": "dustroute.client-readback.v1"
+      },
+      "non_air": 1,
+      "independent_confirmation": {
+        "kind": "independent_server_console_predicates",
+        "checked_cells": 840,
+        "snapshot_sha256": "4822e4f77155444ee9223c060a6d2facf7764262d37be575d304de1d43f16489",
+        "atomic": false,
+        "hidden_runtime_observed": false,
+        "batch_count": 9,
+        "every_batch_passed": true,
+        "first_game_tick": 9899458,
+        "last_game_tick": 9899484
+      }
+    },
+    {
+      "stage": "job_final_full_context",
+      "native_readback": {
+        "captured_at_millis": 142064,
+        "checked_cells": 39304,
+        "client_revision": 152,
+        "client_tick": 2841,
+        "connection_id": 1,
+        "dimension": "minecraft:overworld",
+        "kind": "client_reconstructed",
+        "max": {
+          "x": 1312,
+          "y": 211,
+          "z": 1232
+        },
+        "min": {
+          "x": 1279,
+          "y": 178,
+          "z": 1199
+        },
+        "moving": false,
+        "receive_sequence": 4382,
+        "received_revision": 305,
+        "schema_version": "dustroute.client-readback.v1"
+      },
+      "non_air": 0,
+      "independent_confirmation": {
+        "kind": "independent_server_console_predicates",
+        "checked_cells": 39304,
+        "snapshot_sha256": "322f275b2c420c3dc908403951ab8a5da34e366bb61abcec31d6c87c7afe657e",
+        "atomic": false,
+        "hidden_runtime_observed": false,
+        "batch_count": 394,
+        "every_batch_passed": true,
+        "first_game_tick": 9899583,
+        "last_game_tick": 9900758
+      }
+    }
+  ],
+  "tools": [
+    {
+      "name": "get_world",
+      "blueprint_action": null,
+      "ok": true,
+      "elapsed_ms": 359.802649
+    },
+    {
+      "name": "test_circuit_change",
+      "blueprint_action": null,
+      "ok": true,
+      "elapsed_ms": 207.718972
+    },
+    {
+      "name": "new_placement",
+      "blueprint_action": null,
+      "ok": true,
+      "elapsed_ms": 2947.5426310000003
+    },
+    {
+      "name": "invoke_operation",
+      "blueprint_action": null,
+      "ok": false,
+      "elapsed_ms": 2.8783429999999997
+    },
+    {
+      "name": "show_operation",
+      "blueprint_action": null,
+      "ok": true,
+      "elapsed_ms": 1157.5855370000002
+    },
+    {
+      "name": "invoke_operation",
+      "blueprint_action": null,
+      "ok": true,
+      "elapsed_ms": 2749.0287110000004
+    },
+    {
+      "name": "manage_construction_job",
+      "blueprint_action": null,
+      "ok": true,
+      "elapsed_ms": 14.562945000000001
+    },
+    {
+      "name": "manage_construction_job",
+      "blueprint_action": null,
+      "ok": true,
+      "elapsed_ms": 3406.0772840000004
+    },
+    {
+      "name": "show_operation",
+      "blueprint_action": null,
+      "ok": true,
+      "elapsed_ms": 1414.775119
+    },
+    {
+      "name": "invoke_operation",
+      "blueprint_action": null,
+      "ok": false,
+      "elapsed_ms": 406.620343
+    },
+    {
+      "name": "show_operation",
+      "blueprint_action": null,
+      "ok": true,
+      "elapsed_ms": 1692.8891820000001
+    },
+    {
+      "name": "invoke_operation",
+      "blueprint_action": null,
+      "ok": true,
+      "elapsed_ms": 2636.394481
+    },
+    {
+      "name": "manage_construction_job",
+      "blueprint_action": null,
+      "ok": true,
+      "elapsed_ms": 3449.95261
+    },
+    {
+      "name": "show_operation",
+      "blueprint_action": null,
+      "ok": true,
+      "elapsed_ms": 1403.018506
+    },
+    {
+      "name": "invoke_operation",
+      "blueprint_action": null,
+      "ok": true,
+      "elapsed_ms": 3859.6999269999997
+    },
+    {
+      "name": "manage_construction_job",
+      "blueprint_action": null,
+      "ok": true,
+      "elapsed_ms": 1306.572789
+    },
+    {
+      "name": "show_operation",
+      "blueprint_action": null,
+      "ok": true,
+      "elapsed_ms": 1223.572413
+    },
+    {
+      "name": "invoke_operation",
+      "blueprint_action": null,
+      "ok": true,
+      "elapsed_ms": 2657.7054909999997
+    },
+    {
+      "name": "manage_construction_job",
+      "blueprint_action": null,
+      "ok": true,
+      "elapsed_ms": 1330.379731
+    },
+    {
+      "name": "show_operation",
+      "blueprint_action": null,
+      "ok": true,
+      "elapsed_ms": 1494.2819410000002
+    },
+    {
+      "name": "manage_construction_job",
+      "blueprint_action": null,
+      "ok": true,
+      "elapsed_ms": 28.657111999999998
+    },
+    {
+      "name": "invoke_operation",
+      "blueprint_action": null,
+      "ok": false,
+      "elapsed_ms": 20.780764
+    },
+    {
+      "name": "get_world",
+      "blueprint_action": null,
+      "ok": true,
+      "elapsed_ms": 10.816752000000001
+    },
+    {
+      "name": "test_circuit_change",
+      "blueprint_action": null,
+      "ok": true,
+      "elapsed_ms": 28.098491
+    },
+    {
+      "name": "new_placement",
+      "blueprint_action": null,
+      "ok": true,
+      "elapsed_ms": 1041.282674
+    },
+    {
+      "name": "show_operation",
+      "blueprint_action": null,
+      "ok": true,
+      "elapsed_ms": 1008.894819
+    },
+    {
+      "name": "invoke_operation",
+      "blueprint_action": null,
+      "ok": true,
+      "elapsed_ms": 1383.688622
+    },
+    {
+      "name": "get_world",
+      "blueprint_action": null,
+      "ok": true,
+      "elapsed_ms": 9.887844
+    },
+    {
+      "name": "test_circuit_change",
+      "blueprint_action": null,
+      "ok": true,
+      "elapsed_ms": 24.179032
+    },
+    {
+      "name": "new_placement",
+      "blueprint_action": null,
+      "ok": true,
+      "elapsed_ms": 1042.32366
+    },
+    {
+      "name": "show_operation",
+      "blueprint_action": null,
+      "ok": true,
+      "elapsed_ms": 1010.0143459999999
+    },
+    {
+      "name": "invoke_operation",
+      "blueprint_action": null,
+      "ok": true,
+      "elapsed_ms": 1401.364274
+    },
+    {
+      "name": "manage_construction_job",
+      "blueprint_action": null,
+      "ok": true,
+      "elapsed_ms": 1040.218835
+    },
+    {
+      "name": "show_operation",
+      "blueprint_action": null,
+      "ok": true,
+      "elapsed_ms": 1009.171436
+    },
+    {
+      "name": "invoke_operation",
+      "blueprint_action": null,
+      "ok": true,
+      "elapsed_ms": 1040.954009
+    },
+    {
+      "name": "manage_construction_job",
+      "blueprint_action": null,
+      "ok": true,
+      "elapsed_ms": 1032.503697
+    },
+    {
+      "name": "show_operation",
+      "blueprint_action": null,
+      "ok": true,
+      "elapsed_ms": 1008.909447
+    },
+    {
+      "name": "invoke_operation",
+      "blueprint_action": null,
+      "ok": true,
+      "elapsed_ms": 1030.81665
+    },
+    {
+      "name": "manage_construction_job",
+      "blueprint_action": null,
+      "ok": true,
+      "elapsed_ms": 1020.7513939999999
+    },
+    {
+      "name": "show_operation",
+      "blueprint_action": null,
+      "ok": true,
+      "elapsed_ms": 1007.589722
+    },
+    {
+      "name": "invoke_operation",
+      "blueprint_action": null,
+      "ok": true,
+      "elapsed_ms": 1576.498068
+    },
+    {
+      "name": "undo_operation",
+      "blueprint_action": null,
+      "ok": true,
+      "elapsed_ms": 1407.701322
+    }
+  ],
+  "refusals": [
+    {
+      "name": "invoke_operation",
+      "error": "edit requires unused unexpired preview; undo requires verified application"
+    },
+    {
+      "name": "invoke_operation",
+      "error": "construction state or surrounding world differs from the verified plan; inspect before continuing"
+    },
+    {
+      "name": "invoke_operation",
+      "error": "operation not found"
+    }
+  ],
+  "external_fixture_writes": [
+    {
+      "position": {
+        "x": 1281,
+        "y": 181,
+        "z": 1201
+      },
+      "stage": "external_fixture_write",
+      "state": "minecraft:stone"
+    },
+    {
+      "position": {
+        "x": 1281,
+        "y": 181,
+        "z": 1201
+      },
+      "stage": "external_fixture_write",
+      "state": "minecraft:air"
+    }
+  ],
+  "mcp_stops": [
+    {
+      "clean_exit": true,
+      "stage": "mcp_stopped"
+    },
+    {
+      "clean_exit": true,
+      "stage": "mcp_stopped"
+    },
+    {
+      "clean_exit": true,
+      "stage": "mcp_stopped"
+    }
+  ],
+  "summary": {
+    "public_tool_calls": 42,
+    "expected_refusals": 3,
+    "checkpoints": 11,
+    "independently_checked_cells": 86168,
+    "verified_public_write_steps": 164,
+    "external_guard_fixture_writes": 2,
+    "mcp_restarts": 2,
+    "final_context_air_cells": 39304
+  },
+  "no_write_confirmations": [
+    {
+      "name": "invoke_operation",
+      "undo": false,
+      "total_steps": 0,
+      "verified_steps": 0
+    },
+    {
+      "name": "invoke_operation",
+      "undo": false,
+      "total_steps": 0,
+      "verified_steps": 0
+    }
+  ],
+  "native_loaded_capture_measurements": [
+    {
+      "cells": 32768,
+      "elapsed_ms": 359.802649,
+      "scope": "one loaded native debug fixture; not end-to-end placement"
+    }
+  ]
+}
