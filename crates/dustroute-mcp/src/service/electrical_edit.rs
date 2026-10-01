@@ -33,7 +33,8 @@ pub(super) struct ElectricalEditPlan {
 }
 impl ElectricalEditPlan {
     fn preview(&self, id: uuid::Uuid, read_only: bool) -> Value {
-        let mut result = json!({"ok":true,"operation_id":id,"kind":"electrical_revision_modification",
+        let mut result = json!({"schema_version":"dustroute.electrical-edit-preview.v2",
+            "ok":true,"operation_id":id,"kind":"electrical_revision_modification",
             "source":self.source,"revision_id":self.revision_id,"read_only":read_only,"job_stage":self.job,
             "bounds":{"min":self.proof.before().min,"max":self.proof.before().max},
             "edit_scope":self.proof.scope(),

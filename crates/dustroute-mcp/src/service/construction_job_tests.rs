@@ -58,6 +58,10 @@ async fn propose(client: &Client) -> Value {
     )
     .await;
     assert_eq!(plan["ok"], true, "{plan}");
+    assert_eq!(
+        plan["schema_version"],
+        "dustroute.electrical-edit-preview.v2"
+    );
     assert_eq!(plan["job"]["regions"].as_array().unwrap().len(), 2);
     assert_eq!(plan["future_regions_verified"], false);
     assert_eq!(plan["steps"].as_array().unwrap().len(), 40);
@@ -133,6 +137,10 @@ async fn job_resumes_with_fresh_operations_after_restart_and_undo_runs_in_revers
         json!({"job_id":job_id,"action":"get"}),
     )
     .await;
+    assert_eq!(
+        history["schema_version"],
+        "dustroute.construction-job-response.v2"
+    );
     assert_eq!(history["job"]["completed_regions"], 1);
     assert_eq!(history["job"]["state"], "ready");
     stop(client, server).await;

@@ -1,0 +1,272 @@
+{
+  "schema": "dustroute.work-region-scaling-measurement.v1",
+  "baseline_source_commit": "10c32d3d6af77ef9f6fb4646912cede2dd023179",
+  "final_source_commit": "458423173a6c4e81cc51034772d2104ec93379a2",
+  "source_sha256": {
+    "crates/dustroute-translate/examples/work_region_scaling.rs": "dd5883d406e2c77a308864233a607ead18afc10e133110b751c00a40937d9c2d",
+    "crates/dustroute-translate/src/piston_construction/modification.rs": "1e96aa6186a5ab2c3f3e9b11e4fb783f8e722405126e2cf8064eecae9035c6ef",
+    "crates/dustroute-translate/src/piston_construction/order.rs": "0485bd51b18170e7a5ec5ef2f17b01220ba7165a67b07f0ef39dca3e426dc468",
+    "crates/dustroute-minecraft/src/time/runtime/executor.rs": "f1c894234db7cf69284989079cab655917981f18ce7a8332db10cbf182670d0b"
+  },
+  "command": "/usr/bin/time -f \"peak_rss_kib=%M elapsed_seconds=%e\" target/debug/examples/work_region_scaling",
+  "profile": "debug, unoptimized; offline locked builds, one Cargo job at a time",
+  "fixture": "stone context; always 64 additions, full-context common-runtime forward and inverse; no live server",
+  "before": {
+    "rows": [
+      {
+        "changed_positions": 64,
+        "debug_assertions": true,
+        "forward_commands": 64,
+        "non_air_context_blocks": 64,
+        "proof_elapsed_ms": 1341.2258829999998,
+        "retained_expected_block_records": 4096,
+        "schema": "dustroute.work-region-scaling.v1",
+        "scope": "one passive region, full-context forward/inverse proof; no live transport",
+        "undo_commands": 64
+      },
+      {
+        "changed_positions": 64,
+        "debug_assertions": true,
+        "forward_commands": 64,
+        "non_air_context_blocks": 256,
+        "proof_elapsed_ms": 625.524282,
+        "retained_expected_block_records": 28672,
+        "schema": "dustroute.work-region-scaling.v1",
+        "scope": "one passive region, full-context forward/inverse proof; no live transport",
+        "undo_commands": 64
+      },
+      {
+        "changed_positions": 64,
+        "debug_assertions": true,
+        "forward_commands": 64,
+        "non_air_context_blocks": 1024,
+        "proof_elapsed_ms": 2827.150793,
+        "retained_expected_block_records": 126976,
+        "schema": "dustroute.work-region-scaling.v1",
+        "scope": "one passive region, full-context forward/inverse proof; no live transport",
+        "undo_commands": 64
+      },
+      {
+        "changed_positions": 64,
+        "debug_assertions": true,
+        "forward_commands": 64,
+        "non_air_context_blocks": 2048,
+        "proof_elapsed_ms": 7238.600208,
+        "retained_expected_block_records": 258048,
+        "schema": "dustroute.work-region-scaling.v1",
+        "scope": "one passive region, full-context forward/inverse proof; no live transport",
+        "undo_commands": 64
+      },
+      {
+        "changed_positions": 64,
+        "debug_assertions": true,
+        "forward_commands": 64,
+        "non_air_context_blocks": 4096,
+        "proof_elapsed_ms": 13587.527795,
+        "retained_expected_block_records": 520192,
+        "schema": "dustroute.work-region-scaling.v1",
+        "scope": "one passive region, full-context forward/inverse proof; no live transport",
+        "undo_commands": 64
+      }
+    ],
+    "peak_rss_kib": 69884,
+    "process_elapsed_seconds": 25.69,
+    "retained_log": ".local/work-region-scaling-before.jsonl",
+    "log_sha256": "6c284d014f8a329610c613719eb9cba7f4fb1c986599b022ebb1ab0171c23da0"
+  },
+  "development": {
+    "rows": [
+      {
+        "changed_positions": 64,
+        "debug_assertions": true,
+        "forward_commands": 64,
+        "non_air_context_blocks": 64,
+        "proof_elapsed_ms": 2936.92775,
+        "retained_expected_block_records": 4096,
+        "schema": "dustroute.work-region-scaling.v1",
+        "scope": "one passive region, full-context forward/inverse proof; no live transport",
+        "undo_commands": 64
+      },
+      {
+        "changed_positions": 64,
+        "debug_assertions": true,
+        "forward_commands": 64,
+        "non_air_context_blocks": 256,
+        "proof_elapsed_ms": 1316.178341,
+        "retained_expected_block_records": 28672,
+        "schema": "dustroute.work-region-scaling.v1",
+        "scope": "one passive region, full-context forward/inverse proof; no live transport",
+        "undo_commands": 64
+      },
+      {
+        "changed_positions": 64,
+        "debug_assertions": true,
+        "forward_commands": 64,
+        "non_air_context_blocks": 1024,
+        "proof_elapsed_ms": 4096.3389369999995,
+        "retained_expected_block_records": 126976,
+        "schema": "dustroute.work-region-scaling.v1",
+        "scope": "one passive region, full-context forward/inverse proof; no live transport",
+        "undo_commands": 64
+      },
+      {
+        "changed_positions": 64,
+        "debug_assertions": true,
+        "forward_commands": 64,
+        "non_air_context_blocks": 2048,
+        "proof_elapsed_ms": 7198.877302,
+        "retained_expected_block_records": 258048,
+        "schema": "dustroute.work-region-scaling.v1",
+        "scope": "one passive region, full-context forward/inverse proof; no live transport",
+        "undo_commands": 64
+      },
+      {
+        "changed_positions": 64,
+        "debug_assertions": true,
+        "forward_commands": 64,
+        "non_air_context_blocks": 4096,
+        "proof_elapsed_ms": 15933.964317999998,
+        "retained_expected_block_records": 520192,
+        "schema": "dustroute.work-region-scaling.v1",
+        "scope": "one passive region, full-context forward/inverse proof; no live transport",
+        "undo_commands": 64
+      }
+    ],
+    "peak_rss_kib": 71184,
+    "process_elapsed_seconds": 31.57,
+    "retained_log": ".local/work-region-scaling-after.jsonl",
+    "log_sha256": "0ffdfe0f61bb9b0e5522c6f34ca26b4f33d802a9a27133710bec31f1ac4fe9a1"
+  },
+  "final": {
+    "rows": [
+      {
+        "changed_positions": 64,
+        "debug_assertions": true,
+        "forward_commands": 64,
+        "non_air_context_blocks": 64,
+        "proof_elapsed_ms": 1260.085454,
+        "retained_expected_block_records": 4096,
+        "schema": "dustroute.work-region-scaling.v1",
+        "scope": "one passive region, full-context forward/inverse proof; no live transport",
+        "undo_commands": 64
+      },
+      {
+        "changed_positions": 64,
+        "debug_assertions": true,
+        "forward_commands": 64,
+        "non_air_context_blocks": 256,
+        "proof_elapsed_ms": 567.4321450000001,
+        "retained_expected_block_records": 28672,
+        "schema": "dustroute.work-region-scaling.v1",
+        "scope": "one passive region, full-context forward/inverse proof; no live transport",
+        "undo_commands": 64
+      },
+      {
+        "changed_positions": 64,
+        "debug_assertions": true,
+        "forward_commands": 64,
+        "non_air_context_blocks": 1024,
+        "proof_elapsed_ms": 2414.535806,
+        "retained_expected_block_records": 126976,
+        "schema": "dustroute.work-region-scaling.v1",
+        "scope": "one passive region, full-context forward/inverse proof; no live transport",
+        "undo_commands": 64
+      },
+      {
+        "changed_positions": 64,
+        "debug_assertions": true,
+        "forward_commands": 64,
+        "non_air_context_blocks": 2048,
+        "proof_elapsed_ms": 4876.921786999999,
+        "retained_expected_block_records": 258048,
+        "schema": "dustroute.work-region-scaling.v1",
+        "scope": "one passive region, full-context forward/inverse proof; no live transport",
+        "undo_commands": 64
+      },
+      {
+        "changed_positions": 64,
+        "debug_assertions": true,
+        "forward_commands": 64,
+        "non_air_context_blocks": 4096,
+        "proof_elapsed_ms": 9992.625743,
+        "retained_expected_block_records": 520192,
+        "schema": "dustroute.work-region-scaling.v1",
+        "scope": "one passive region, full-context forward/inverse proof; no live transport",
+        "undo_commands": 64
+      }
+    ],
+    "peak_rss_kib": 71488,
+    "process_elapsed_seconds": 19.17,
+    "retained_log": ".local/work-region-scaling-final.jsonl",
+    "log_sha256": "3e55c88624a14ed02bd6ce575e44f46a437451803ff0e7319dde9c8c62f49f00"
+  },
+  "conclusions": [
+    "Final single-run proof time at 4096 context blocks was 9.993 seconds, with 520192 retained per-command expected block records.",
+    "The final sweep peak was 71488 KiB RSS for the standalone measurement process, excluding the compiler.",
+    "A development sample took 15.934 seconds at the same 4096/64 fixture. These single runs do not establish a reproducible optimization gain.",
+    "The first 64-block sample includes cold registry initialization; warm rows are not directly comparable with it.",
+    "Full runtime-state clones per microstep and whole-context protection remain. Stage snapshot retention scales with requested positions times context size.",
+    "A stage proof is generated when planning and generated afresh during apply. This is not end-to-end placement timing.",
+    "Passive construction evidence does not certify a 4096-block active circuit, unloaded-world capture or total service RSS."
+  ],
+  "resource_limits": {
+    "non_air_context_blocks": 4096,
+    "declared_positions_per_stage": 64,
+    "stages_per_job": 64,
+    "retained_electrical_block_records": 1048576,
+    "estimated_retained_electrical_heap_bytes": 134217728,
+    "job_bytes": 16777216,
+    "attempts_per_job": 256,
+    "heap_limit_is_process_rss_limit": false,
+    "previews_keep_all_command_values_and_full_executor_states": true
+  },
+  "regression": {
+    "work_region_and_intermediate_tests": {
+      "passed": 8,
+      "elapsed_seconds": 115.85
+    },
+    "additional_oversized_dependency_cycle_case": "passed in targeted rerun",
+    "public_job_tests": {
+      "passed": 9,
+      "elapsed_seconds": 14.26
+    },
+    "electrical_edit_and_bounded_preview_tests": {
+      "passed": 10
+    },
+    "electrical_modification_integration_tests": {
+      "passed": 3
+    },
+    "piston_adhesion_stairs_flight_construction_integration_tests": {
+      "passed": 9
+    },
+    "native_mcp_all_targets_clippy_warnings_denied": "passed",
+    "translate_library_and_scaling_example_clippy_warnings_denied": "passed",
+    "format_check": "passed"
+  },
+  "baseline_probe_note": "The same newly authored cost probe was compiled against the baseline implementation before edits; the example is not in the baseline commit.",
+  "post_trial_api_and_retention_validation": {
+    "physical_runtime_and_translate_proof_changed": false,
+    "response_schemas": [
+      "dustroute.electrical-edit-preview.v2",
+      "dustroute.construction-job-response.v2"
+    ],
+    "property_map_initial_node_included_in_retained_heap_estimate": true,
+    "public_job_tests": {
+      "passed": 9,
+      "elapsed_seconds": 13.69
+    },
+    "electrical_edit_and_presentation_tests": {
+      "passed": 10,
+      "elapsed_seconds": 3.2
+    },
+    "native_mcp_all_targets_clippy_warnings_denied": "passed",
+    "format_check": "passed",
+    "native_binary_build": "passed",
+    "source_sha256": {
+      "crates/dustroute-mcp/src/service/electrical_edit.rs": "f55af1b51bf3f7583fa76cff175eb50944d438de123df453cd333ce89fa5c345",
+      "crates/dustroute-mcp/src/service/electrical_edit/presentation.rs": "9730fc32b7ba5f2fc6c01a6f0f83b57039314ebf0530985865aacd617d572600",
+      "crates/dustroute-mcp/src/service/construction_job.rs": "8bbadc037e7faed914ba17af0cc191af8559ac92be195469be116b9d693f9ea2",
+      "crates/dustroute-mcp/src/service/construction_job_tests.rs": "5a928636aa9158fc1f5c137b2daa568178fad63afa6dba9cbbc7d1a5542ef14d"
+    }
+  }
+}

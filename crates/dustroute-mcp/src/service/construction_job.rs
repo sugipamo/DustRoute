@@ -55,7 +55,8 @@ fn summary(record: &JobRecord) -> Value {
             "boundaries":record.boundaries.iter().map(|b|json!({"changed_positions":b.changes.len(),
                 "changes":b.changes.iter().take(64).collect::<Vec<_>>(),"truncated":b.changes.len()>64})).collect::<Vec<_>>()})
     };
-    let mut result = json!({"ok":true,"job":job,"executable_plan_restored":false,
+    let mut result = json!({"schema_version":"dustroute.construction-job-response.v2",
+        "ok":true,"job":job,"executable_plan_restored":false,
         "future_regions_verified":false,"functional_behavior_verified":false,
         "intention_expanded":expanded,
         "history_scope":"durable intention and verified batch progress; not live-world evidence",

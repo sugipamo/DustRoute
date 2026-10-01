@@ -30,6 +30,9 @@ pub(super) fn estimated_bytes(proof: &ElectricalModification) -> usize {
                 .iter()
                 .map(|b| {
                     b.name.capacity()
+                        // A small BTreeMap still allocates a whole node. Charge
+                        // its initial allocation as well as per-entry space.
+                        + usize::from(!b.properties.is_empty()) * 1024
                         + b.properties
                             .iter()
                             .map(|(k, v)| 192 + k.capacity() + v.capacity())

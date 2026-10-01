@@ -113,7 +113,9 @@ are separate: a 64-position stage can naturally update more than 64 blocks.
 
 The electrical plan cache permits 256 entries, at most 1,048,576 retained block
 records and a conservative 128 MiB estimated retained heap. The heap estimate
-is not an RSS limit and excludes fresh proofs, runtime state, transport and other
+charges the initial property-map allocation as well as per-entry/string space;
+a small property map still allocates a complete tree node. It is not an RSS
+limit and excludes fresh proofs, runtime state, transport and other
 caches. A stage too large for retention is refused before writes and should use
 smaller regions. Existing plans for other jobs are not silently evicted. Durable
 jobs retain their existing 16 MiB and 256-attempt limits; the next boundary's
@@ -122,6 +124,8 @@ storage budget is reserved before application.
 Large previews retain every command's position, state and wait, but summarize
 repeated expected worlds by count. Executors keep complete states. Settled
 differences and boundary summaries expose counts and explicit truncation flags.
+The changed presentation explicitly identifies electrical-edit-preview.v2 and
+construction-job-response.v2 rather than silently reusing an old shape.
 Small previews remain expanded. For large job history, use
 `manage_construction_job({job_id,action:"get",include_intention:true})` to
 explicitly request all saved intentions and deltas; this does not restore a plan.
@@ -193,7 +197,7 @@ Console predicates independently confirm complete stable checkpoints and the
 final empty fixture. These sequential predicates are test evidence, not an
 atomic server observation or a production fallback from native reconstruction.
 
-The [2026-10-01 native trial evidence](evidence/large-circuit-regions-20261001.json)
+The [initial 2026-10-01 native trial evidence](evidence/large-circuit-regions-20261001.json)
 records a successful 22-call public workflow with three expected refusals, two
 MCP restarts, 160 verified public write steps and two isolated guard-test writes.
 All seven checkpoints (82,808 independently checked cells) matched. The final
@@ -202,3 +206,17 @@ server exited normally. The 32,768-cell explicit capture took 314.2 ms in this
 single loaded debug fixture; this does not predict unloaded-world performance.
 The separate initial trial stopped before planning/writes because of an invalid
 fixture block-name encoding; its retained evidence identifies the corrected input.
+
+The [derived-state native trial](evidence/derived-region-states-20261001.json)
+passes 42 public calls with three expected refusals, two MCP restarts, 164
+verified public write steps and two owned guard-test writes. All 11 checkpoints
+(86,168 independently checked cells) agree. This trial places the support lamp
+OFF and later observes it ON without adding that lamp to the next stage's
+commands. It separately confirms zero-write forward and inverse checkpoints,
+then restores their baseline. The final 39,304-cell context is entirely Air;
+all MCP processes and the server exit normally. Its loaded 32,768-cell capture
+takes 323.9 ms. The evidence pins the physical implementation before the final
+addition of response schema identifiers and a more conservative property-map
+retention estimate. The response identifiers and public lifecycle are checked
+by the final public-tool regression. This finite trial does not certify arbitrary
+active circuits or hidden server queues.

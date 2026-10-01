@@ -162,6 +162,26 @@ Adding an optional field is compatible within v1. Removing a field, changing
 its meaning or type, or renaming an enum value requires a new schema version.
 Coordinates are always objects with signed integer `x`, `y`, and `z` fields.
 
+Electrical revision previews now explicitly identify
+`dustroute.electrical-edit-preview.v2`; job history summaries identify
+`dustroute.construction-job-response.v2`. Their earlier unversioned shapes
+always expanded model states. In v2, inspect `step_states_expanded`: when false,
+`before`/`after` contain bounds, non-Air counts and a model state content ID, and
+every step retains position/state/wait plus its expected block count. Complete
+expected worlds remain inside the executor. `requested_changes` records explicit
+positions separately from natural settled differences; those differences have
+count/truncation fields. `no_write_checkpoint` permits an empty command list,
+but still requires fresh observation, preview and confirmation.
+
+Job records use `dustroute.construction-job.v2` and retain sparse verified
+`boundaries`, including natural updates. `regions[].parts` defines exact stage
+membership; `region` is only its display bounding box. Large job summaries
+expose `intention_expanded:false`; `manage_construction_job(action=get,
+include_intention=true)` explicitly expands the complete historical record.
+v1 job files remain untouched but cannot authorize continuation; recapture a
+new v2 job. These schemas do not change the existing placement-mutation or
+readback families. See [region work](large-circuit-regions.md).
+
 The [Blueprint MCP contract](blueprint-mcp.md) describes the `blueprint`
 branches of `get_circuit_revision` and `test_circuit_change`, and the explicit
 `blueprint_decision` on `invoke_operation`. Their responses set
