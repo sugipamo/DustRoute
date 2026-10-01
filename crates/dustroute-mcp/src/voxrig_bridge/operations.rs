@@ -30,6 +30,19 @@ fn vector(p: [f64; 3]) -> Vec3 {
 fn squared(a: [f64; 3], b: [f64; 3]) -> f64 {
     a.into_iter().zip(b).map(|(x, y)| (x - y).powi(2)).sum()
 }
+fn needs_player_space(bot: [f64; 3], player: [f64; 3]) -> bool {
+    (bot[0] - player[0]).powi(2) + (bot[2] - player[2]).powi(2) < 9.0
+        && (bot[1] - player[1]).abs() < 3.0
+}
+fn player_approach_commands(player: &str) -> [String; 3] {
+    // Ignore pitch: looking up/down must not turn the horizontal offset vertical.
+    // Center the bot in an empty column so its body fits within the checked cells.
+    [[0, 2, -4], [4, 2, 0], [-4, 2, 0]].map(|[left, up, forward]| {
+        format!(
+            "execute at {player} rotated as {player} rotated ~ 0 positioned ^{left} ^{up} ^{forward} align xyz positioned ~0.5 ~ ~0.5 if block ~ ~ ~ minecraft:air if block ~ ~1 ~ minecraft:air run tp @s ~ ~ ~"
+        )
+    })
+}
 fn valid_position(pos: Pos) -> Result<(), BotBridgeError> {
     Region {
         min: array(pos),
@@ -45,26 +58,27 @@ impl VoxrigBridge {
         player: &str,
         operations: &Operations,
     ) -> Result<bool, BotBridgeError> {
-        if !is_valid_minecraft_username(player) {
+        if !is_valid_minecraft_username(player) || player == self.username {
             return Err(fail("invalid player"));
         }
-        let mut reacquired = false;
-        if !operations
-            .visible_players()
-            .await
-            .map_err(native_error)?
-            .players
-            .iter()
-            .any(|p| p.name == player)
-        {
-            let _guard = self.mutations.lock().await;
-            let before = operations.player_state().await.map_err(native_error)?;
-            let dimension = before
-                .dimension
-                .ok_or_else(|| fail("bot dimension unavailable"))?;
-            operations.set_flying(true).await.map_err(native_error)?;
+        let _guard = self.mutations.lock().await;
+        let before = operations.player_state().await.map_err(native_error)?;
+        let observed = operations.visible_players().await.map_err(native_error)?;
+        let existing = observed.players.iter().find(|p| p.name == player);
+        let origin = before
+            .position
+            .ok_or_else(|| fail("bot position unavailable"))?;
+        if existing.is_some_and(|p| !needs_player_space(origin, p.position)) {
+            return Ok(false);
+        }
+        let reacquired = existing.is_none();
+        let dimension = before
+            .dimension
+            .ok_or_else(|| fail("bot dimension unavailable"))?;
+        operations.set_flying(true).await.map_err(native_error)?;
+        for command in player_approach_commands(player) {
             operations
-                .send_command(&format!("tp @s {player}"))
+                .send_command(&command)
                 .await
                 .map_err(native_error)?;
             let deadline = Instant::now() + Duration::from_secs(3);
@@ -78,18 +92,26 @@ impl VoxrigBridge {
                         .map_err(native_error)?
                         .players
                         .iter()
-                        .any(|p| p.name == player)
+                        .any(|p| {
+                            p.name == player
+                                && after.position.is_some_and(|position| {
+                                    squared(position, origin) > 0.0001
+                                        && !needs_player_space(position, p.position)
+                                        && squared(position, p.position) <= 64.0
+                                })
+                        })
                 {
-                    break;
+                    return Ok(reacquired);
                 }
                 if Instant::now() >= deadline {
-                    return Err(fail(format!("player is not visible to the bot: {player}")));
+                    break;
                 }
                 tokio::time::sleep(Duration::from_millis(50)).await;
             }
-            reacquired = true;
         }
-        Ok(reacquired)
+        Err(fail(format!(
+            "no clear offset position received near player {player}; player may be offline, space blocked or teleport permission unavailable"
+        )))
     }
     pub async fn observe_player_context(
         &self,

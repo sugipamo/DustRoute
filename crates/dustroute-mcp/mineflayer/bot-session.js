@@ -117,8 +117,13 @@ function createBotSession (config, bridgeMetrics, {
       throw new Error(`invalid Minecraft player name: ${username}`)
     }
     if (username === bot.username) throw new Error('the assist player cannot be the bot itself')
+    const needsSpace = entity => {
+      const position = bot.entity.position
+      return (position.x - entity.position.x) ** 2 + (position.z - entity.position.z) ** 2 < 9 &&
+        Math.abs(position.y - entity.position.y) < 3
+    }
     const existing = Object.values(bot.entities).find(entity => entity.username === username)
-    if (existing) {
+    if (existing && !needsSpace(existing)) {
       return {
         player: username,
         moved: false,
@@ -127,19 +132,30 @@ function createBotSession (config, bridgeMetrics, {
         dimension: currentDimension()
       }
     }
-    // The dedicated test server grants the visible bot permission to join the
-    // configured player. Teleporting only the bot leaves the circuit untouched.
-    bot.chat(`/tp ${bot.username} ${username}`)
-    await bot.waitForTicks(5)
-    const entity = Object.values(bot.entities).find(entity => entity.username === username)
-    if (!entity) throw new Error(`player could not be reacquired after moving the bot: ${username}`)
-    return {
-      player: username,
-      moved: true,
-      position: posJson(bot.entity.position),
-      distance: bot.entity.position.distanceTo(entity.position),
-      dimension: currentDimension()
+    const origin = bot.entity.position.clone()
+    // Behind first, then either side. Ignore pitch and only occupy an air column.
+    // Never fall back to placing the bot on the player's body.
+    for (const [left, up, forward] of [[0, 2, -4], [4, 2, 0], [-4, 2, 0]]) {
+      bot.chat(`/execute at ${username} rotated as ${username} rotated ~ 0 positioned ^${left} ^${up} ^${forward} align xyz positioned ~0.5 ~ ~0.5 if block ~ ~ ~ minecraft:air if block ~ ~1 ~ minecraft:air run tp @s ~ ~ ~`)
+      // Give packet delivery and player tracking time to catch up before trying
+      // another candidate, including when the conditional command does nothing.
+      for (let attempt = 0; attempt < 12; attempt++) {
+        await bot.waitForTicks(5)
+        const entity = Object.values(bot.entities).find(entity => entity.username === username)
+        if (entity && !needsSpace(entity) &&
+            bot.entity.position.distanceTo(origin) > 0.01 &&
+            bot.entity.position.distanceTo(entity.position) <= 8) {
+          return {
+            player: username,
+            moved: true,
+            position: posJson(bot.entity.position),
+            distance: bot.entity.position.distanceTo(entity.position),
+            dimension: currentDimension()
+          }
+        }
+      }
     }
+    throw new Error(`no clear offset position received near player ${username}; player may be offline, space blocked or teleport permission unavailable`)
   }
 
   function propertiesOf (block) {
@@ -474,6 +490,8 @@ function createBotSession (config, bridgeMetrics, {
       return approachPlayer(params.player)
     }
     if (method === 'observe_player') {
+      const wasVisible = Object.values(bot.entities).some(entity => entity.username === params.player)
+      await approachPlayer(params.player)
       const target = targetFromPlayer(params.player, Number(params.max_distance || 64))
       return {
         player: params.player,
@@ -483,7 +501,8 @@ function createBotSession (config, bridgeMetrics, {
         targeted_block: target.block ? posJson(target.block.position) : null,
         targeted_face: null,
         distance: target.distance,
-        dimension: currentDimension()
+        dimension: currentDimension(),
+        reacquired: !wasVisible
       }
     }
     if (method === 'scan_region') {

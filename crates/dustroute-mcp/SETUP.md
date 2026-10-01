@@ -228,10 +228,18 @@ tools use the configured player automatically; the default public tool schemas d
 a `player` argument. Internal/debug calls that attempt to override the
 configured player with another name are rejected.
 If that player is online but outside the bot's entity-tracking range, gaze tools
-and debug-only `get_visible_player` move only `DustRouteBot` to the configured player,
-wait for tracking to resume, and retry once. The observation reports
-`reacquired=true` when this happens. Player names are validated before a
-teleport command is issued; an offline player remains an explicit error.
+and debug-only `get_visible_player` move only `DustRouteBot` near the configured
+player and wait for tracking to resume. The observation reports `reacquired=true`
+when tracking was missing. A bot already within three horizontal blocks and
+three vertical blocks also moves aside, without claiming tracking was reacquired.
+The preferred destination is four blocks behind and two blocks above the player;
+left and right offsets are tried if it is blocked. The offset follows the player's
+horizontal facing, independently of pitch. Each candidate is centered in a block
+column and requires ordinary air at both feet and head before the teleport runs.
+No candidate falls back to the player's position. If none can be confirmed, the
+tool returns an error. Player names are validated before commands are issued;
+an offline player remains an explicit error. These offsets apply to player
+acquisition; block interactions still use their own positions within reach.
 
 stdio is the default transport. A local HTTP client can instead use `/mcp`:
 
