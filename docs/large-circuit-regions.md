@@ -96,3 +96,13 @@ MCP process restarts, protected drift refusal, reverse undo and cancellation.
 Console predicates independently confirm complete stable checkpoints and the
 final empty fixture. These sequential predicates are test evidence, not an
 atomic server observation or a production fallback from native reconstruction.
+
+The [2026-10-01 native trial evidence](evidence/large-circuit-regions-20261001.json)
+records a successful 22-call public workflow with three expected refusals, two
+MCP restarts, 160 verified public write steps and two isolated guard-test writes.
+All seven checkpoints (82,808 independently checked cells) matched. The final
+39,304-cell owned context was completely Air and all three MCP processes and the
+server exited normally. The 32,768-cell explicit capture took 314.2 ms in this
+single loaded debug fixture; this does not predict unloaded-world performance.
+The separate initial trial stopped before planning/writes because of an invalid
+fixture block-name encoding; its retained evidence identifies the corrected input.

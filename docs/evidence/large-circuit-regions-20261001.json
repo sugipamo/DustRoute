@@ -1,0 +1,575 @@
+{
+  "run_id": "region-jobs-native-20261001-b",
+  "source_commit": "af0ebce18b8302cc2ef35d39c404f7c24be1debc",
+  "started_at_utc": "2026-10-01T08:49:41.991165+00:00",
+  "finished_at_utc": "2026-10-01T08:52:48.209904+00:00",
+  "server": "Vanilla Java 1.21.11",
+  "endpoint": "127.0.0.1:25565",
+  "dimension": "minecraft:overworld",
+  "backend": "Voxrig native",
+  "actors": [
+    "DustRouteBot",
+    "dustroutetest"
+  ],
+  "owned_region": {
+    "min": {
+      "x": 1279,
+      "y": 178,
+      "z": 1199
+    },
+    "max": {
+      "x": 1312,
+      "y": 211,
+      "z": 1232
+    }
+  },
+  "passed": true,
+  "restored_to_air": true,
+  "server_stopped_normally": true,
+  "server_jar_sha256": "f83b8e093865806f931c7e34aae41b177d4c076335263dd124c75d6d65dd1726",
+  "mcp_binary_sha256": "5971e4209d3a90accbb0eb8604f46574148df56ac13520fd2119698fb07d678d",
+  "probe_binary_sha256": "1484274cdff2ccbcaf2ae31eae583207cb7bbff3e1477fb547da0280ed169bfe",
+  "probe_source_sha256": "37b9234b37c69409fb2a3f1d4d3281a050a3a390275d7e830397fdf5b214bb5e",
+  "runner_source_sha256": "44714ad81453bc64f15acbd65ffcde9a5186904eb53dfb1d29476e9dc06fadab",
+  "trace_sha256": "b0557c4f14b140fc7ba4dadf6c5b079c75a4f80484dfe4c6059a24798343cc26",
+  "limits": [
+    "Finite declared cases, not an all-clear for arbitrary designs.",
+    "Runtime readbacks are client reconstructions; separate console predicates confirm stable checkpoints.",
+    "Independent predicate batches can span ticks; no atomic or hidden-queue guarantee.",
+    "Transient observer protection is a model refusal; the live comparison checks settled states.",
+    "Existing placed instances are not automatically upgraded."
+  ],
+  "schema": "dustroute.region-job-live-evidence.v1",
+  "manifest_sha256": "d06a319b24a9b78d994128c4cff08be52f5a73b2683a5a8bb515349712cd5b6d",
+  "retained_manifest": ".local/e2e-artifacts/region-jobs-native-20261001-b.manifest.json",
+  "checkpoints": [
+    {
+      "stage": "job_initial_full_context",
+      "non_air": 0,
+      "native_readback": {
+        "captured_at_millis": 2220,
+        "checked_cells": 39304,
+        "client_revision": 117,
+        "client_tick": 44,
+        "connection_id": 1,
+        "dimension": "minecraft:overworld",
+        "kind": "client_reconstructed",
+        "max": {
+          "x": 1312,
+          "y": 211,
+          "z": 1232
+        },
+        "min": {
+          "x": 1279,
+          "y": 178,
+          "z": 1199
+        },
+        "moving": false,
+        "receive_sequence": 260,
+        "received_revision": 118,
+        "schema_version": "dustroute.client-readback.v1"
+      },
+      "independent_confirmation": {
+        "kind": "independent_server_console_predicates",
+        "checked_cells": 39304,
+        "snapshot_sha256": "322f275b2c420c3dc908403951ab8a5da34e366bb61abcec31d6c87c7afe657e",
+        "atomic": false,
+        "hidden_runtime_observed": false,
+        "batch_count": 394,
+        "every_batch_passed": true,
+        "first_game_tick": 9885348,
+        "last_game_tick": 9886511
+      }
+    },
+    {
+      "stage": "job_first_region",
+      "non_air": 40,
+      "native_readback": {
+        "captured_at_millis": 71472,
+        "checked_cells": 840,
+        "client_revision": 126,
+        "client_tick": 1429,
+        "connection_id": 1,
+        "dimension": "minecraft:overworld",
+        "kind": "client_reconstructed",
+        "max": {
+          "x": 1293,
+          "y": 183,
+          "z": 1211
+        },
+        "min": {
+          "x": 1280,
+          "y": 179,
+          "z": 1200
+        },
+        "moving": false,
+        "receive_sequence": 3104,
+        "received_revision": 165,
+        "schema_version": "dustroute.client-readback.v1"
+      },
+      "independent_confirmation": {
+        "kind": "independent_server_console_predicates",
+        "checked_cells": 840,
+        "snapshot_sha256": "b7f64facd86378a1185d9c054c9d55d86c18c9a63c5a476c2a628eb08bc2a30a",
+        "atomic": false,
+        "hidden_runtime_observed": false,
+        "batch_count": 9,
+        "every_batch_passed": true,
+        "first_game_tick": 9886683,
+        "last_game_tick": 9886709
+      }
+    },
+    {
+      "stage": "job_protected_drift_refusal",
+      "non_air": 41,
+      "native_readback": {
+        "captured_at_millis": 81231,
+        "checked_cells": 840,
+        "client_revision": 127,
+        "client_tick": 1624,
+        "connection_id": 1,
+        "dimension": "minecraft:overworld",
+        "kind": "client_reconstructed",
+        "max": {
+          "x": 1293,
+          "y": 183,
+          "z": 1211
+        },
+        "min": {
+          "x": 1280,
+          "y": 179,
+          "z": 1200
+        },
+        "moving": false,
+        "receive_sequence": 3322,
+        "received_revision": 166,
+        "schema_version": "dustroute.client-readback.v1"
+      },
+      "independent_confirmation": {
+        "kind": "independent_server_console_predicates",
+        "checked_cells": 840,
+        "snapshot_sha256": "bee897064e44b4ac7cd1c15033dd0699b0a5e40240a66c6047bc75e69c158532",
+        "atomic": false,
+        "hidden_runtime_observed": false,
+        "batch_count": 9,
+        "every_batch_passed": true,
+        "first_game_tick": 9886879,
+        "last_game_tick": 9886905
+      }
+    },
+    {
+      "stage": "job_both_regions",
+      "non_air": 80,
+      "native_readback": {
+        "captured_at_millis": 90387,
+        "checked_cells": 840,
+        "client_revision": 131,
+        "client_tick": 1807,
+        "connection_id": 1,
+        "dimension": "minecraft:overworld",
+        "kind": "client_reconstructed",
+        "max": {
+          "x": 1293,
+          "y": 183,
+          "z": 1211
+        },
+        "min": {
+          "x": 1280,
+          "y": 179,
+          "z": 1200
+        },
+        "moving": false,
+        "receive_sequence": 3535,
+        "received_revision": 207,
+        "schema_version": "dustroute.client-readback.v1"
+      },
+      "independent_confirmation": {
+        "kind": "independent_server_console_predicates",
+        "checked_cells": 840,
+        "snapshot_sha256": "58590d21731b8716f105809dfae8bffe427221dc1135a1f2981c4a1fb966a63c",
+        "atomic": false,
+        "hidden_runtime_observed": false,
+        "batch_count": 9,
+        "every_batch_passed": true,
+        "first_game_tick": 9887063,
+        "last_game_tick": 9887085
+      }
+    },
+    {
+      "stage": "job_undo_region_1",
+      "non_air": 40,
+      "native_readback": {
+        "captured_at_millis": 102413,
+        "checked_cells": 840,
+        "client_revision": 137,
+        "client_tick": 2048,
+        "connection_id": 1,
+        "dimension": "minecraft:overworld",
+        "kind": "client_reconstructed",
+        "max": {
+          "x": 1293,
+          "y": 183,
+          "z": 1211
+        },
+        "min": {
+          "x": 1280,
+          "y": 179,
+          "z": 1200
+        },
+        "moving": false,
+        "receive_sequence": 3822,
+        "received_revision": 251,
+        "schema_version": "dustroute.client-readback.v1"
+      },
+      "independent_confirmation": {
+        "kind": "independent_server_console_predicates",
+        "checked_cells": 840,
+        "snapshot_sha256": "b7f64facd86378a1185d9c054c9d55d86c18c9a63c5a476c2a628eb08bc2a30a",
+        "atomic": false,
+        "hidden_runtime_observed": false,
+        "batch_count": 9,
+        "every_batch_passed": true,
+        "first_game_tick": 9887302,
+        "last_game_tick": 9887328
+      }
+    },
+    {
+      "stage": "job_undo_region_0",
+      "non_air": 0,
+      "native_readback": {
+        "captured_at_millis": 110472,
+        "checked_cells": 840,
+        "client_revision": 141,
+        "client_tick": 2209,
+        "connection_id": 1,
+        "dimension": "minecraft:overworld",
+        "kind": "client_reconstructed",
+        "max": {
+          "x": 1293,
+          "y": 183,
+          "z": 1211
+        },
+        "min": {
+          "x": 1280,
+          "y": 179,
+          "z": 1200
+        },
+        "moving": false,
+        "receive_sequence": 4048,
+        "received_revision": 293,
+        "schema_version": "dustroute.client-readback.v1"
+      },
+      "independent_confirmation": {
+        "kind": "independent_server_console_predicates",
+        "checked_cells": 840,
+        "snapshot_sha256": "f1734a624e2b008555987677c38256ce85856b880c617eba219c692a79ad8d9e",
+        "atomic": false,
+        "hidden_runtime_observed": false,
+        "batch_count": 9,
+        "every_batch_passed": true,
+        "first_game_tick": 9887463,
+        "last_game_tick": 9887488
+      }
+    },
+    {
+      "stage": "job_final_full_context",
+      "non_air": 0,
+      "native_readback": {
+        "captured_at_millis": 115608,
+        "checked_cells": 39304,
+        "client_revision": 141,
+        "client_tick": 2312,
+        "connection_id": 1,
+        "dimension": "minecraft:overworld",
+        "kind": "client_reconstructed",
+        "max": {
+          "x": 1312,
+          "y": 211,
+          "z": 1232
+        },
+        "min": {
+          "x": 1279,
+          "y": 178,
+          "z": 1199
+        },
+        "moving": false,
+        "receive_sequence": 4191,
+        "received_revision": 293,
+        "schema_version": "dustroute.client-readback.v1"
+      },
+      "independent_confirmation": {
+        "kind": "independent_server_console_predicates",
+        "checked_cells": 39304,
+        "snapshot_sha256": "322f275b2c420c3dc908403951ab8a5da34e366bb61abcec31d6c87c7afe657e",
+        "atomic": false,
+        "hidden_runtime_observed": false,
+        "batch_count": 394,
+        "every_batch_passed": true,
+        "first_game_tick": 9887634,
+        "last_game_tick": 9888780
+      }
+    }
+  ],
+  "checked_cells": 82808,
+  "tools": [
+    {
+      "name": "get_world",
+      "action": null,
+      "ok": true,
+      "elapsed_ms": 314.160365,
+      "verified_steps": null,
+      "error": null
+    },
+    {
+      "name": "test_circuit_change",
+      "action": null,
+      "ok": true,
+      "elapsed_ms": 209.745998,
+      "verified_steps": null,
+      "error": null
+    },
+    {
+      "name": "new_placement",
+      "action": null,
+      "ok": true,
+      "elapsed_ms": 3094.648468,
+      "verified_steps": null,
+      "error": null
+    },
+    {
+      "name": "invoke_operation",
+      "action": null,
+      "ok": false,
+      "elapsed_ms": 2.900516,
+      "verified_steps": null,
+      "error": "edit requires unused unexpired preview; undo requires verified application"
+    },
+    {
+      "name": "show_operation",
+      "action": null,
+      "ok": true,
+      "elapsed_ms": 1142.88167,
+      "verified_steps": null,
+      "error": null
+    },
+    {
+      "name": "invoke_operation",
+      "action": null,
+      "ok": true,
+      "elapsed_ms": 2463.683848,
+      "verified_steps": 40,
+      "error": null
+    },
+    {
+      "name": "manage_construction_job",
+      "action": "get",
+      "ok": true,
+      "elapsed_ms": 15.280867,
+      "verified_steps": null,
+      "error": null
+    },
+    {
+      "name": "manage_construction_job",
+      "action": "plan_next",
+      "ok": true,
+      "elapsed_ms": 3336.311795,
+      "verified_steps": null,
+      "error": null
+    },
+    {
+      "name": "show_operation",
+      "action": null,
+      "ok": true,
+      "elapsed_ms": 1361.288718,
+      "verified_steps": null,
+      "error": null
+    },
+    {
+      "name": "invoke_operation",
+      "action": null,
+      "ok": false,
+      "elapsed_ms": 525.249053,
+      "verified_steps": null,
+      "error": "construction state or surrounding world differs from the verified plan; inspect before continuing"
+    },
+    {
+      "name": "show_operation",
+      "action": null,
+      "ok": true,
+      "elapsed_ms": 1884.55363,
+      "verified_steps": null,
+      "error": null
+    },
+    {
+      "name": "invoke_operation",
+      "action": null,
+      "ok": true,
+      "elapsed_ms": 3299.587981,
+      "verified_steps": 40,
+      "error": null
+    },
+    {
+      "name": "manage_construction_job",
+      "action": "plan_undo",
+      "ok": true,
+      "elapsed_ms": 4317.056372,
+      "verified_steps": null,
+      "error": null
+    },
+    {
+      "name": "show_operation",
+      "action": null,
+      "ok": true,
+      "elapsed_ms": 1366.461524,
+      "verified_steps": null,
+      "error": null
+    },
+    {
+      "name": "invoke_operation",
+      "action": null,
+      "ok": true,
+      "elapsed_ms": 3068.915193,
+      "verified_steps": 40,
+      "error": null
+    },
+    {
+      "name": "manage_construction_job",
+      "action": "plan_undo",
+      "ok": true,
+      "elapsed_ms": 1591.2301960000002,
+      "verified_steps": null,
+      "error": null
+    },
+    {
+      "name": "show_operation",
+      "action": null,
+      "ok": true,
+      "elapsed_ms": 1203.373706,
+      "verified_steps": null,
+      "error": null
+    },
+    {
+      "name": "invoke_operation",
+      "action": null,
+      "ok": true,
+      "elapsed_ms": 2638.4180170000004,
+      "verified_steps": 40,
+      "error": null
+    },
+    {
+      "name": "manage_construction_job",
+      "action": "plan_next",
+      "ok": true,
+      "elapsed_ms": 1318.378641,
+      "verified_steps": null,
+      "error": null
+    },
+    {
+      "name": "show_operation",
+      "action": null,
+      "ok": true,
+      "elapsed_ms": 1198.293412,
+      "verified_steps": null,
+      "error": null
+    },
+    {
+      "name": "manage_construction_job",
+      "action": "cancel",
+      "ok": true,
+      "elapsed_ms": 23.822225999999997,
+      "verified_steps": null,
+      "error": null
+    },
+    {
+      "name": "invoke_operation",
+      "action": null,
+      "ok": false,
+      "elapsed_ms": 28.129475,
+      "verified_steps": null,
+      "error": "operation not found"
+    }
+  ],
+  "public_tool_calls": 22,
+  "expected_refusals": 3,
+  "verified_public_write_steps": 160,
+  "external_fixture_writes": [
+    {
+      "position": {
+        "x": 1281,
+        "y": 181,
+        "z": 1201
+      },
+      "stage": "external_fixture_write",
+      "state": "minecraft:stone"
+    },
+    {
+      "position": {
+        "x": 1281,
+        "y": 181,
+        "z": 1201
+      },
+      "stage": "external_fixture_write",
+      "state": "minecraft:air"
+    }
+  ],
+  "mcp_stops": [
+    {
+      "clean_exit": true,
+      "stage": "mcp_stopped"
+    },
+    {
+      "clean_exit": true,
+      "stage": "mcp_stopped"
+    },
+    {
+      "clean_exit": true,
+      "stage": "mcp_stopped"
+    }
+  ],
+  "partition": {
+    "changed_positions": 80,
+    "regions": 2,
+    "changes_per_region": 40,
+    "body": "79 stone blocks and one unpowered floor lever",
+    "cross_region_dependency": "lever floor support before dependent region, despite reverse requested order"
+  },
+  "measurements": {
+    "native_capture_cells": 32768,
+    "native_capture_elapsed_ms": 314.160365,
+    "scope": "single debug-profile, fully loaded fixture run; not a throughput guarantee"
+  },
+  "offline_checks": {
+    "work_region_model": {
+      "passed": 6,
+      "elapsed_seconds": 116.08,
+      "passive_stone_blocks": 2048,
+      "regions_proved_in_sequence": 32,
+      "changes_per_region": 64
+    },
+    "public_job_lifecycle": {
+      "passed": 6,
+      "elapsed_seconds": 10.14
+    },
+    "native_adapter_capabilities": {
+      "passed": 2
+    },
+    "other_checks": [
+      "electrical edit, revision and bridge regressions",
+      "two corrected default-tool-count Blueprint regressions",
+      "MCP native all-target Clippy with warnings denied",
+      "translate library Clippy with warnings denied",
+      "MCP/translate formatting"
+    ]
+  },
+  "prior_fixture_input_error": {
+    "run_id": "region-jobs-native-20261001-a",
+    "source_commit": "c95dea8c1c21cb3aada5b8f7c8e4c9fd679b6516",
+    "reason": "test fixture encoded lever properties in block name; corrected to existing typed properties field",
+    "public_tool_calls": 2,
+    "new_placement_started": false,
+    "external_fixture_writes": 0,
+    "initial_independent_checkpoint_non_air": 0,
+    "server_stopped_normally": true,
+    "retained_manifest": ".local/e2e-artifacts/region-jobs-native-20261001-a.manifest.json"
+  }
+}
