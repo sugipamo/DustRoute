@@ -18,10 +18,33 @@ pub use work_regions::{ElectricalBoundary, ElectricalWorkPlan, ElectricalWorkReg
 
 use dustroute_minecraft::time::piston_runtime::{ElectricalPistonRuntime, new_piston_runtime};
 use dustroute_minecraft::time::runtime::RuntimeLimits;
+use dustroute_minecraft::time::runtime::{RuntimeRecord, RuntimeView};
 use dustroute_minecraft::{Pos, Region, World};
 use serde::{Deserialize, Serialize};
 
 use crate::snapshot::MinecraftSnapshot;
+
+/// Observe each committed event before a later callback can hide its writes.
+/// Initial admission and incremental checks are deliberately separate.
+trait ConstructionObserver {
+    fn initial(&mut self, _view: RuntimeView<'_>) -> Result<(), String> {
+        Ok(())
+    }
+    fn committed<P>(
+        &mut self,
+        view: RuntimeView<'_>,
+        record: &RuntimeRecord<P>,
+    ) -> Result<(), String>;
+}
+impl ConstructionObserver for () {
+    fn committed<P>(
+        &mut self,
+        _view: RuntimeView<'_>,
+        _record: &RuntimeRecord<P>,
+    ) -> Result<(), String> {
+        Ok(())
+    }
+}
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct ElectricalConstructionStep {
@@ -268,7 +291,7 @@ fn settled_step(
     state: String,
     start: u64,
 ) -> Result<ElectricalConstructionStep, String> {
-    settled_step_observed(runtime, region, position, state, start, &mut |_| Ok(()))
+    settled_step_observed(runtime, region, position, state, start, &mut ())
 }
 
 fn settled_step_observed(
@@ -277,7 +300,7 @@ fn settled_step_observed(
     position: Pos,
     state: String,
     start: u64,
-    observer: &mut impl FnMut(dustroute_minecraft::time::runtime::RuntimeView<'_>) -> Result<(), String>,
+    observer: &mut impl ConstructionObserver,
 ) -> Result<ElectricalConstructionStep, String> {
     // Finish the submitted command and all its synchronous callbacks first.
     // Merely observing zero elapsed ticks after run_until_idle would hide
@@ -316,17 +339,17 @@ fn settled_step_observed(
 /// callback observed before the next mutation can obscure it.
 fn observed_root(
     runtime: &mut ElectricalPistonRuntime,
-    observer: &mut impl FnMut(dustroute_minecraft::time::runtime::RuntimeView<'_>) -> Result<(), String>,
+    observer: &mut impl ConstructionObserver,
 ) -> Result<bool, String> {
-    if runtime.microstep().map_err(|e| e.to_string())?.is_none() {
+    let Some(record) = runtime.microstep().map_err(|e| e.to_string())? else {
         return Ok(false);
-    }
-    observer(runtime.view())?;
+    };
+    observer.committed(runtime.view(), &record)?;
     while !runtime.at_input_boundary() {
-        if runtime.microstep().map_err(|e| e.to_string())?.is_none() {
+        let Some(record) = runtime.microstep().map_err(|e| e.to_string())? else {
             return Err("unfinished construction callback".into());
-        }
-        observer(runtime.view())?;
+        };
+        observer.committed(runtime.view(), &record)?;
     }
     Ok(true)
 }

@@ -1,0 +1,560 @@
+{
+  "schema": "dustroute.runtime-sharing-measurement.v1",
+  "baseline_source_commit": "50a797add1c7e7838b24eb88a85438c9992a33e5",
+  "source_sha256": {
+    "crates/dustroute-minecraft/src/delta.rs": "9302db6e57832a8c2f81b0c4c4c79ec5b2e8344bc83c2a849c5d3820b37f10de",
+    "crates/dustroute-minecraft/src/time/runtime/executor.rs": "466edf22883d0b8468b961a58c4e4f2882cafaa773d3e9e0dabd7b65bc2f7ff1",
+    "crates/dustroute-minecraft/src/time/runtime/mod.rs": "55e0afcb4cc3ea1285b9d8afb988da708d234f48394545d0dd0cd49457cdfe0c",
+    "crates/dustroute-translate/src/piston_construction.rs": "54a31a257277b41b4dfe7504434c1e0733430536e830bf3ff57113417a57d89f",
+    "crates/dustroute-translate/src/piston_construction/modification.rs": "b7bb80267cac68513b89494c6f6e7ab0117e5b3ace0d036803dbab9e2335f9dd",
+    "crates/dustroute-translate/examples/work_region_scaling.rs": "dd5883d406e2c77a308864233a607ead18afc10e133110b751c00a40937d9c2d"
+  },
+  "profile": "debug/unoptimized; offline locked builds; one compiler job; standalone runs with no Cargo or server concurrent",
+  "fixture": "passive stone context; 64 additions; full-context common-runtime forward/inverse proof with unchanged complete expected snapshots",
+  "ordering": [
+    [
+      "before",
+      "after"
+    ],
+    [
+      "after",
+      "before"
+    ],
+    [
+      "before",
+      "after"
+    ]
+  ],
+  "sweeps": [
+    {
+      "pair": 1,
+      "phase": "before",
+      "binary": ".local/runtime-sharing-baseline",
+      "binary_sha256": "3c4fc99ce3e6ccecc412ebd6055a967bb502583951554143acea6f32042635ff",
+      "rows": [
+        {
+          "changed_positions": 64,
+          "debug_assertions": true,
+          "forward_commands": 64,
+          "non_air_context_blocks": 64,
+          "proof_elapsed_ms": 2170.0903789999998,
+          "retained_expected_block_records": 4096,
+          "schema": "dustroute.work-region-scaling.v1",
+          "scope": "one passive region, full-context forward/inverse proof; no live transport",
+          "undo_commands": 64
+        },
+        {
+          "changed_positions": 64,
+          "debug_assertions": true,
+          "forward_commands": 64,
+          "non_air_context_blocks": 256,
+          "proof_elapsed_ms": 731.5532390000001,
+          "retained_expected_block_records": 28672,
+          "schema": "dustroute.work-region-scaling.v1",
+          "scope": "one passive region, full-context forward/inverse proof; no live transport",
+          "undo_commands": 64
+        },
+        {
+          "changed_positions": 64,
+          "debug_assertions": true,
+          "forward_commands": 64,
+          "non_air_context_blocks": 1024,
+          "proof_elapsed_ms": 3207.9113939999997,
+          "retained_expected_block_records": 126976,
+          "schema": "dustroute.work-region-scaling.v1",
+          "scope": "one passive region, full-context forward/inverse proof; no live transport",
+          "undo_commands": 64
+        },
+        {
+          "changed_positions": 64,
+          "debug_assertions": true,
+          "forward_commands": 64,
+          "non_air_context_blocks": 2048,
+          "proof_elapsed_ms": 6815.421399,
+          "retained_expected_block_records": 258048,
+          "schema": "dustroute.work-region-scaling.v1",
+          "scope": "one passive region, full-context forward/inverse proof; no live transport",
+          "undo_commands": 64
+        },
+        {
+          "changed_positions": 64,
+          "debug_assertions": true,
+          "forward_commands": 64,
+          "non_air_context_blocks": 4096,
+          "proof_elapsed_ms": 14699.861966,
+          "retained_expected_block_records": 520192,
+          "schema": "dustroute.work-region-scaling.v1",
+          "scope": "one passive region, full-context forward/inverse proof; no live transport",
+          "undo_commands": 64
+        }
+      ],
+      "peak_rss_kib": 71048,
+      "process_elapsed_seconds": 27.71,
+      "retained_log": ".local/runtime-sharing-scaling-1-before.jsonl",
+      "log_sha256": "393a56174fdd3cf6f87f8571231f5ea53c9b2dcaa11d48af35270f7dbe342ed7"
+    },
+    {
+      "pair": 1,
+      "phase": "after",
+      "binary": "target/debug/examples/work_region_scaling",
+      "binary_sha256": "ff9d15cff7515d1cee5b6029c29795e38edde64fc4c11d557262c5396fa399ae",
+      "rows": [
+        {
+          "changed_positions": 64,
+          "debug_assertions": true,
+          "forward_commands": 64,
+          "non_air_context_blocks": 64,
+          "proof_elapsed_ms": 1597.402775,
+          "retained_expected_block_records": 4096,
+          "schema": "dustroute.work-region-scaling.v1",
+          "scope": "one passive region, full-context forward/inverse proof; no live transport",
+          "undo_commands": 64
+        },
+        {
+          "changed_positions": 64,
+          "debug_assertions": true,
+          "forward_commands": 64,
+          "non_air_context_blocks": 256,
+          "proof_elapsed_ms": 338.327826,
+          "retained_expected_block_records": 28672,
+          "schema": "dustroute.work-region-scaling.v1",
+          "scope": "one passive region, full-context forward/inverse proof; no live transport",
+          "undo_commands": 64
+        },
+        {
+          "changed_positions": 64,
+          "debug_assertions": true,
+          "forward_commands": 64,
+          "non_air_context_blocks": 1024,
+          "proof_elapsed_ms": 1400.107557,
+          "retained_expected_block_records": 126976,
+          "schema": "dustroute.work-region-scaling.v1",
+          "scope": "one passive region, full-context forward/inverse proof; no live transport",
+          "undo_commands": 64
+        },
+        {
+          "changed_positions": 64,
+          "debug_assertions": true,
+          "forward_commands": 64,
+          "non_air_context_blocks": 2048,
+          "proof_elapsed_ms": 2813.1264319999996,
+          "retained_expected_block_records": 258048,
+          "schema": "dustroute.work-region-scaling.v1",
+          "scope": "one passive region, full-context forward/inverse proof; no live transport",
+          "undo_commands": 64
+        },
+        {
+          "changed_positions": 64,
+          "debug_assertions": true,
+          "forward_commands": 64,
+          "non_air_context_blocks": 4096,
+          "proof_elapsed_ms": 4981.728941,
+          "retained_expected_block_records": 520192,
+          "schema": "dustroute.work-region-scaling.v1",
+          "scope": "one passive region, full-context forward/inverse proof; no live transport",
+          "undo_commands": 64
+        }
+      ],
+      "peak_rss_kib": 69608,
+      "process_elapsed_seconds": 11.19,
+      "retained_log": ".local/runtime-sharing-scaling-1-after.jsonl",
+      "log_sha256": "6a95cffa1e11ee21d833c8f9b83a78c6c49b2f2ded6c977eb2265921f681c309"
+    },
+    {
+      "pair": 2,
+      "phase": "after",
+      "binary": "target/debug/examples/work_region_scaling",
+      "binary_sha256": "ff9d15cff7515d1cee5b6029c29795e38edde64fc4c11d557262c5396fa399ae",
+      "rows": [
+        {
+          "changed_positions": 64,
+          "debug_assertions": true,
+          "forward_commands": 64,
+          "non_air_context_blocks": 64,
+          "proof_elapsed_ms": 1211.051622,
+          "retained_expected_block_records": 4096,
+          "schema": "dustroute.work-region-scaling.v1",
+          "scope": "one passive region, full-context forward/inverse proof; no live transport",
+          "undo_commands": 64
+        },
+        {
+          "changed_positions": 64,
+          "debug_assertions": true,
+          "forward_commands": 64,
+          "non_air_context_blocks": 256,
+          "proof_elapsed_ms": 254.447959,
+          "retained_expected_block_records": 28672,
+          "schema": "dustroute.work-region-scaling.v1",
+          "scope": "one passive region, full-context forward/inverse proof; no live transport",
+          "undo_commands": 64
+        },
+        {
+          "changed_positions": 64,
+          "debug_assertions": true,
+          "forward_commands": 64,
+          "non_air_context_blocks": 1024,
+          "proof_elapsed_ms": 1057.513752,
+          "retained_expected_block_records": 126976,
+          "schema": "dustroute.work-region-scaling.v1",
+          "scope": "one passive region, full-context forward/inverse proof; no live transport",
+          "undo_commands": 64
+        },
+        {
+          "changed_positions": 64,
+          "debug_assertions": true,
+          "forward_commands": 64,
+          "non_air_context_blocks": 2048,
+          "proof_elapsed_ms": 2117.38587,
+          "retained_expected_block_records": 258048,
+          "schema": "dustroute.work-region-scaling.v1",
+          "scope": "one passive region, full-context forward/inverse proof; no live transport",
+          "undo_commands": 64
+        },
+        {
+          "changed_positions": 64,
+          "debug_assertions": true,
+          "forward_commands": 64,
+          "non_air_context_blocks": 4096,
+          "proof_elapsed_ms": 4281.15467,
+          "retained_expected_block_records": 520192,
+          "schema": "dustroute.work-region-scaling.v1",
+          "scope": "one passive region, full-context forward/inverse proof; no live transport",
+          "undo_commands": 64
+        }
+      ],
+      "peak_rss_kib": 69588,
+      "process_elapsed_seconds": 8.98,
+      "retained_log": ".local/runtime-sharing-scaling-2-after.jsonl",
+      "log_sha256": "0616077d0cd739f0fcf3886b9e6052d2f6eb8b37aca19906fb7909630a992e3b"
+    },
+    {
+      "pair": 2,
+      "phase": "before",
+      "binary": ".local/runtime-sharing-baseline",
+      "binary_sha256": "3c4fc99ce3e6ccecc412ebd6055a967bb502583951554143acea6f32042635ff",
+      "rows": [
+        {
+          "changed_positions": 64,
+          "debug_assertions": true,
+          "forward_commands": 64,
+          "non_air_context_blocks": 64,
+          "proof_elapsed_ms": 1286.407747,
+          "retained_expected_block_records": 4096,
+          "schema": "dustroute.work-region-scaling.v1",
+          "scope": "one passive region, full-context forward/inverse proof; no live transport",
+          "undo_commands": 64
+        },
+        {
+          "changed_positions": 64,
+          "debug_assertions": true,
+          "forward_commands": 64,
+          "non_air_context_blocks": 256,
+          "proof_elapsed_ms": 568.469548,
+          "retained_expected_block_records": 28672,
+          "schema": "dustroute.work-region-scaling.v1",
+          "scope": "one passive region, full-context forward/inverse proof; no live transport",
+          "undo_commands": 64
+        },
+        {
+          "changed_positions": 64,
+          "debug_assertions": true,
+          "forward_commands": 64,
+          "non_air_context_blocks": 1024,
+          "proof_elapsed_ms": 2460.613332,
+          "retained_expected_block_records": 126976,
+          "schema": "dustroute.work-region-scaling.v1",
+          "scope": "one passive region, full-context forward/inverse proof; no live transport",
+          "undo_commands": 64
+        },
+        {
+          "changed_positions": 64,
+          "debug_assertions": true,
+          "forward_commands": 64,
+          "non_air_context_blocks": 2048,
+          "proof_elapsed_ms": 5091.8329,
+          "retained_expected_block_records": 258048,
+          "schema": "dustroute.work-region-scaling.v1",
+          "scope": "one passive region, full-context forward/inverse proof; no live transport",
+          "undo_commands": 64
+        },
+        {
+          "changed_positions": 64,
+          "debug_assertions": true,
+          "forward_commands": 64,
+          "non_air_context_blocks": 4096,
+          "proof_elapsed_ms": 10229.427207,
+          "retained_expected_block_records": 520192,
+          "schema": "dustroute.work-region-scaling.v1",
+          "scope": "one passive region, full-context forward/inverse proof; no live transport",
+          "undo_commands": 64
+        }
+      ],
+      "peak_rss_kib": 71220,
+      "process_elapsed_seconds": 19.69,
+      "retained_log": ".local/runtime-sharing-scaling-2-before.jsonl",
+      "log_sha256": "1a0e335384bffab562f53a38618db7668052e35407c94f7e347c1e60490645fc"
+    },
+    {
+      "pair": 3,
+      "phase": "before",
+      "binary": ".local/runtime-sharing-baseline",
+      "binary_sha256": "3c4fc99ce3e6ccecc412ebd6055a967bb502583951554143acea6f32042635ff",
+      "rows": [
+        {
+          "changed_positions": 64,
+          "debug_assertions": true,
+          "forward_commands": 64,
+          "non_air_context_blocks": 64,
+          "proof_elapsed_ms": 1322.9404570000002,
+          "retained_expected_block_records": 4096,
+          "schema": "dustroute.work-region-scaling.v1",
+          "scope": "one passive region, full-context forward/inverse proof; no live transport",
+          "undo_commands": 64
+        },
+        {
+          "changed_positions": 64,
+          "debug_assertions": true,
+          "forward_commands": 64,
+          "non_air_context_blocks": 256,
+          "proof_elapsed_ms": 586.330177,
+          "retained_expected_block_records": 28672,
+          "schema": "dustroute.work-region-scaling.v1",
+          "scope": "one passive region, full-context forward/inverse proof; no live transport",
+          "undo_commands": 64
+        },
+        {
+          "changed_positions": 64,
+          "debug_assertions": true,
+          "forward_commands": 64,
+          "non_air_context_blocks": 1024,
+          "proof_elapsed_ms": 2530.6592060000003,
+          "retained_expected_block_records": 126976,
+          "schema": "dustroute.work-region-scaling.v1",
+          "scope": "one passive region, full-context forward/inverse proof; no live transport",
+          "undo_commands": 64
+        },
+        {
+          "changed_positions": 64,
+          "debug_assertions": true,
+          "forward_commands": 64,
+          "non_air_context_blocks": 2048,
+          "proof_elapsed_ms": 5211.491908,
+          "retained_expected_block_records": 258048,
+          "schema": "dustroute.work-region-scaling.v1",
+          "scope": "one passive region, full-context forward/inverse proof; no live transport",
+          "undo_commands": 64
+        },
+        {
+          "changed_positions": 64,
+          "debug_assertions": true,
+          "forward_commands": 64,
+          "non_air_context_blocks": 4096,
+          "proof_elapsed_ms": 10873.514736000001,
+          "retained_expected_block_records": 520192,
+          "schema": "dustroute.work-region-scaling.v1",
+          "scope": "one passive region, full-context forward/inverse proof; no live transport",
+          "undo_commands": 64
+        }
+      ],
+      "peak_rss_kib": 71352,
+      "process_elapsed_seconds": 20.59,
+      "retained_log": ".local/runtime-sharing-scaling-3-before.jsonl",
+      "log_sha256": "165c0a3054a9caab1f6a6732e5e12229a2aa5d96fed35911ca14cf63f543bb63"
+    },
+    {
+      "pair": 3,
+      "phase": "after",
+      "binary": "target/debug/examples/work_region_scaling",
+      "binary_sha256": "ff9d15cff7515d1cee5b6029c29795e38edde64fc4c11d557262c5396fa399ae",
+      "rows": [
+        {
+          "changed_positions": 64,
+          "debug_assertions": true,
+          "forward_commands": 64,
+          "non_air_context_blocks": 64,
+          "proof_elapsed_ms": 1305.870388,
+          "retained_expected_block_records": 4096,
+          "schema": "dustroute.work-region-scaling.v1",
+          "scope": "one passive region, full-context forward/inverse proof; no live transport",
+          "undo_commands": 64
+        },
+        {
+          "changed_positions": 64,
+          "debug_assertions": true,
+          "forward_commands": 64,
+          "non_air_context_blocks": 256,
+          "proof_elapsed_ms": 276.03705699999995,
+          "retained_expected_block_records": 28672,
+          "schema": "dustroute.work-region-scaling.v1",
+          "scope": "one passive region, full-context forward/inverse proof; no live transport",
+          "undo_commands": 64
+        },
+        {
+          "changed_positions": 64,
+          "debug_assertions": true,
+          "forward_commands": 64,
+          "non_air_context_blocks": 1024,
+          "proof_elapsed_ms": 1060.910889,
+          "retained_expected_block_records": 126976,
+          "schema": "dustroute.work-region-scaling.v1",
+          "scope": "one passive region, full-context forward/inverse proof; no live transport",
+          "undo_commands": 64
+        },
+        {
+          "changed_positions": 64,
+          "debug_assertions": true,
+          "forward_commands": 64,
+          "non_air_context_blocks": 2048,
+          "proof_elapsed_ms": 2051.850017,
+          "retained_expected_block_records": 258048,
+          "schema": "dustroute.work-region-scaling.v1",
+          "scope": "one passive region, full-context forward/inverse proof; no live transport",
+          "undo_commands": 64
+        },
+        {
+          "changed_positions": 64,
+          "debug_assertions": true,
+          "forward_commands": 64,
+          "non_air_context_blocks": 4096,
+          "proof_elapsed_ms": 4326.7738309999995,
+          "retained_expected_block_records": 520192,
+          "schema": "dustroute.work-region-scaling.v1",
+          "scope": "one passive region, full-context forward/inverse proof; no live transport",
+          "undo_commands": 64
+        }
+      ],
+      "peak_rss_kib": 69672,
+      "process_elapsed_seconds": 9.08,
+      "retained_log": ".local/runtime-sharing-scaling-3-after.jsonl",
+      "log_sha256": "52461ea4682cf4421d066c566958c6d34364fb899bf0a739ac1a8e2ece831ee7"
+    }
+  ],
+  "summary": [
+    {
+      "non_air_context_blocks": 64,
+      "before": {
+        "median_ms": 1322.9404570000002,
+        "min_ms": 1286.407747,
+        "max_ms": 2170.0903789999998
+      },
+      "retained_expected_block_records": 4096,
+      "after": {
+        "median_ms": 1305.870388,
+        "min_ms": 1211.051622,
+        "max_ms": 1597.402775
+      },
+      "median_reduction_percent": 1.2903127204008435
+    },
+    {
+      "non_air_context_blocks": 256,
+      "before": {
+        "median_ms": 586.330177,
+        "min_ms": 568.469548,
+        "max_ms": 731.5532390000001
+      },
+      "retained_expected_block_records": 28672,
+      "after": {
+        "median_ms": 276.03705699999995,
+        "min_ms": 254.447959,
+        "max_ms": 338.327826
+      },
+      "median_reduction_percent": 52.92122632807966
+    },
+    {
+      "non_air_context_blocks": 1024,
+      "before": {
+        "median_ms": 2530.6592060000003,
+        "min_ms": 2460.613332,
+        "max_ms": 3207.9113939999997
+      },
+      "retained_expected_block_records": 126976,
+      "after": {
+        "median_ms": 1060.910889,
+        "min_ms": 1057.513752,
+        "max_ms": 1400.107557
+      },
+      "median_reduction_percent": 58.077686379712404
+    },
+    {
+      "non_air_context_blocks": 2048,
+      "before": {
+        "median_ms": 5211.491908,
+        "min_ms": 5091.8329,
+        "max_ms": 6815.421399
+      },
+      "retained_expected_block_records": 258048,
+      "after": {
+        "median_ms": 2117.38587,
+        "min_ms": 2051.850017,
+        "max_ms": 2813.1264319999996
+      },
+      "median_reduction_percent": 59.37083070685255
+    },
+    {
+      "non_air_context_blocks": 4096,
+      "before": {
+        "median_ms": 10873.514736000001,
+        "min_ms": 10229.427207,
+        "max_ms": 14699.861966
+      },
+      "retained_expected_block_records": 520192,
+      "after": {
+        "median_ms": 4326.7738309999995,
+        "min_ms": 4281.15467,
+        "max_ms": 4981.728941
+      },
+      "median_reduction_percent": 60.20813935465661
+    }
+  ],
+  "limits": [
+    "Three paired sweeps on one host, not a universal performance guarantee.",
+    "First N=64 row includes cold registry initialization.",
+    "Not end-to-end live placement or functional evidence for arbitrary large active circuits.",
+    "Expected-state storage and process peak RSS are distinct; full expected snapshots remain."
+  ],
+  "regression": {
+    "minecraft_library_and_integration": {
+      "unique_passed": 317,
+      "suites": 30,
+      "failed": 0,
+      "log": ".local/runtime-sharing-minecraft-tests.log"
+    },
+    "runtime_transaction_checkpoint_sharing_and_late_rejection_rerun": {
+      "passed": 26,
+      "failed": 0,
+      "log": ".local/runtime-sharing-transaction-tests.log"
+    },
+    "construction_partition_and_batching_existing_cases": {
+      "passed": 12,
+      "log": ".local/runtime-sharing-construction-tests.log",
+      "note": "These 12 passed in the invocation containing a new guard fixture with an incorrect initialization procedure; the guard fixture was corrected and passed separately."
+    },
+    "incremental_guard_air_creation_deletion_and_transient_restoration": {
+      "passed": 1,
+      "failed": 0,
+      "log": ".local/runtime-sharing-guard-tests.log"
+    },
+    "translate_building_door_flying_machine_modification_and_construction_integration": {
+      "passed": 36,
+      "suites": 10,
+      "failed": 0,
+      "log": ".local/runtime-sharing-translate-integration.log"
+    },
+    "native_feature_public_construction_jobs": {
+      "passed": 9,
+      "failed": 0,
+      "log": ".local/runtime-sharing-mcp-jobs.log"
+    },
+    "native_feature_public_electrical_edit_and_presentation": {
+      "passed": 10,
+      "failed": 0,
+      "log": ".local/runtime-sharing-mcp-edits.log"
+    }
+  },
+  "checks": {
+    "minecraft_all_targets_clippy_warnings_denied": "passed",
+    "translate_library_and_scaling_example_clippy_warnings_denied": "passed",
+    "native_mcp_all_targets_clippy_warnings_denied": "passed",
+    "format_check": "passed"
+  }
+}

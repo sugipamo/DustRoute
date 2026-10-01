@@ -106,7 +106,7 @@ are separate: a 64-position stage can naturally update more than 64 blocks.
 | --- | --- |
 | Partition selection | Deterministic spatial subdivision plus word-sized dependency closure, O(R²) for R ≤ 64. There is no permutation search or eager proof of every future stage. |
 | Support ordering during removal | Build the current support index once per settled command, then query it for candidates. This removes the previous repeated per-candidate whole-world scan; the index is rebuilt after physical updates. |
-| Physical proof | Runtime currently clones its full state at each microstep and checks protected states in the full context. World work scales with E and N; queue/history size adds further cost. This remains the dominant measured cost and is not bypassed. A stage has at most two initialization attempts. |
+| Physical proof | Runtime stages queue/history/carrier state transactionally. Read-only events share the world; nonempty deltas detach it once. Initial protection admission inspects the full context, then each committed event checks its delta positions. Hashing, expected snapshots and metadata still add cost. See [runtime state sharing](runtime-state-sharing.md). A stage has at most two initialization attempts. |
 | Retained proof | Per-command expected snapshots need O(DN) block records for forward/inverse checks. Arc sharing avoids copying the proof when looking up a plan. Only one executable proof per job is retained. Applying still creates a fresh proof, so this is not a total process-memory bound. |
 | Saved boundary | Sparse actual-state deltas, at worst O(RN), rather than all commands' full snapshots. Capacity for the next completed boundary is checked before writes. Restart materializes saved deltas without physical replay. |
 | Live readback | O(V) cells for each full-context sample. V obeys backend and policy limits independently of sparse model N. Loaded-client capture timing does not include planning, preview or application. |
@@ -147,8 +147,9 @@ Separate-process peak RSS over each sweep was 68.2 MiB before and 69.8 MiB in
 the final measurement, excluding compilation. An intermediate development
 measurement at N=4,096 took 15.93 seconds. The final sample is faster, but these
 single-run measurements do **not** establish a reproducible speedup attributable
-to this change. Runtime clone/protection costs remain; host scheduling and cold
-registry initialization also affect individual runs. The first N=64 sample
+to this change. These samples precede the runtime sharing/incremental-check phase; its paired
+comparison is recorded separately in [runtime state sharing](runtime-state-sharing.md).
+Host scheduling and cold registry initialization also affect individual runs. The first N=64 sample
 includes registry initialization, so it is not comparable with warm samples.
 At N=4,096, all runs retained 520,192 per-command expected block records. The
 bounded preview test keeps all 64 commands in less than 64 KiB for its 512-block

@@ -1,6 +1,7 @@
 use std::any::TypeId;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::marker::PhantomData;
+use std::sync::Arc;
 
 use super::*;
 use crate::time::TraceStatus;
@@ -28,7 +29,9 @@ struct State<P> {
     profile: &'static str,
     adapter: &'static str,
     adapter_type: TypeId,
-    world: World,
+    // Read-only invocations and checkpoints share the complete world. A write
+    // detaches it while the outer staged State still owns queue/history/IDs.
+    world: Arc<World>,
     region: Region,
     time: RuntimeTime,
     pending: BTreeMap<RuntimeTime, VecDeque<Delivery<P>>>,
@@ -390,13 +393,31 @@ impl<P: Clone + Eq> State<P> {
         Ok(())
     }
 
-    fn validate_carriers(&self, before: &Self) -> Result<(), RuntimeError> {
-        for (position, block) in self.world.iter() {
+    fn validate_carriers(
+        &self,
+        before: &Self,
+        delta: Option<&WorldDelta>,
+    ) -> Result<(), RuntimeError> {
+        // The previous state was validated and only WorldDelta can write the
+        // world. Include removed metadata too: retiring a carrier without
+        // removing its moving block must still be rejected.
+        let positions = delta
+            .into_iter()
+            .flat_map(WorldDelta::changed_positions)
+            .chain(before.carriers.keys().copied())
+            .chain(self.carriers.keys().copied())
+            .chain(before.staged_carriers.keys().copied())
+            .chain(self.staged_carriers.keys().copied())
+            .collect::<BTreeSet<_>>();
+        for position in positions {
+            let Some(block) = self.world.get(position) else {
+                continue;
+            };
             if block.kind == BlockKind::MovingPiston
-                && (block.piston_entity.is_none() || !self.carriers.contains_key(position))
-                && !self.staged_carriers.contains_key(position)
+                && (block.piston_entity.is_none() || !self.carriers.contains_key(&position))
+                && !self.staged_carriers.contains_key(&position)
             {
-                return Err(RuntimeError::CarrierConflict(*position));
+                return Err(RuntimeError::CarrierConflict(position));
             }
         }
         for (position, planned) in &self.staged_carriers {
@@ -447,9 +468,7 @@ impl<P: Clone + Eq> State<P> {
                 .chain(delta.moves.iter().flat_map(|m| [m.from, m.to]))
                 .map(|pos| (pos, self.world.get(pos).map(BlockIdentity::of)))
                 .collect();
-            delta
-                .apply(&mut self.world)
-                .map_err(|e| RuntimeError::Invalid(e.to_string()))?;
+            self.apply_world_delta(&delta)?;
             for (pos, before) in identities {
                 if before != self.world.get(pos).map(BlockIdentity::of) {
                     self.outputs.remove(&pos);
@@ -521,6 +540,17 @@ impl<P: Clone + Eq> State<P> {
         self.stack.extend(calls.into_iter().rev());
         self.check_pending_limit()
     }
+
+    /// The sole world-write boundary in a staged invocation. An empty delta
+    /// still validates its shape/moves but needs no detached world allocation.
+    fn apply_world_delta(&mut self, delta: &WorldDelta) -> Result<(), RuntimeError> {
+        let result = if delta.changes.is_empty() {
+            delta.validate(&self.world)
+        } else {
+            delta.apply(Arc::make_mut(&mut self.world))
+        };
+        result.map_err(|e| RuntimeError::Invalid(e.to_string()))
+    }
 }
 
 impl<A: RuntimeAdapter> SynchronousWorldRuntime<A> {
@@ -556,7 +586,7 @@ impl<A: RuntimeAdapter> SynchronousWorldRuntime<A> {
                 profile: PROFILE,
                 adapter: A::REVISION,
                 adapter_type: TypeId::of::<A>(),
-                world,
+                world: Arc::new(world),
                 region,
                 time: RuntimeTime {
                     game_tick: 0,
@@ -727,7 +757,7 @@ impl<A: RuntimeAdapter> SynchronousWorldRuntime<A> {
         };
         let delta = outcome.delta.clone();
         staged.apply_outcome(&invocation, outcome)?;
-        staged.validate_carriers(&self.state)?;
+        staged.validate_carriers(&self.state, delta.as_ref())?;
         staged.processed += 1;
         let positions: BTreeSet<_> = self
             .state

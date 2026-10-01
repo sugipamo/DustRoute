@@ -350,6 +350,15 @@ pub struct RuntimeRecord<P> {
     pub carrier_changes: Vec<(Pos, Option<CarrierState>, Option<CarrierState>)>,
 }
 
+impl<P> RuntimeRecord<P> {
+    /// Coordinates written by this committed event. Metadata-only records
+    /// have no world changes. This is diagnostic/model evidence, not authority
+    /// to replay a deserialized or caller-constructed record.
+    pub fn world_changed_positions(&self) -> impl Iterator<Item = Pos> + '_ {
+        self.delta.iter().flat_map(WorldDelta::changed_positions)
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum RuntimeError {
     Invalid(String),

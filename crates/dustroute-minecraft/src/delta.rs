@@ -369,16 +369,14 @@ impl WorldDelta {
         Ok(())
     }
 
-    /// Applies all changes to a staged clone and commits only after every
-    /// validation and write succeeds.  This is the sole mutation primitive
-    /// used by the piston event handler.
+    /// Validates every change before any write. Once validation succeeds,
+    /// World::set is infallible; another full-world clone is unnecessary.
+    /// Runtime queue/history/carrier failures retain their outer transaction.
     pub fn apply(&self, world: &mut World) -> Result<(), WorldDeltaError> {
         self.validate(world)?;
-        let mut staged = world.clone();
         for change in &self.changes {
-            staged.set(change.position, change.after.clone());
+            world.set(change.position, change.after.clone());
         }
-        *world = staged;
         Ok(())
     }
 
@@ -666,16 +664,26 @@ mod tests {
     #[test]
     fn delta_application_is_atomic_on_before_mismatch() {
         let position = Pos::new(1, 2, 3);
+        let first = Pos::new(0, 2, 3);
         let mut world = World::new();
         world.set(position, Block::new(BlockKind::Solid));
+        world.set(first, Block::new(BlockKind::Solid));
         let delta = WorldDelta {
             parent_shape: world.shape_id(),
-            changes: vec![BlockChange {
-                position,
-                before: Block::new(BlockKind::Transparent),
-                after: Block::new(BlockKind::Air),
-                reason: ChangeReason::Unknown,
-            }],
+            changes: vec![
+                BlockChange {
+                    position: first,
+                    before: Block::new(BlockKind::Solid),
+                    after: Block::new(BlockKind::Air),
+                    reason: ChangeReason::Unknown,
+                },
+                BlockChange {
+                    position,
+                    before: Block::new(BlockKind::Transparent),
+                    after: Block::new(BlockKind::Air),
+                    reason: ChangeReason::Unknown,
+                },
+            ],
             moves: Vec::new(),
             dirty_region: RegionSet::around_positions([position], 1),
             cause: DeltaCause::External,

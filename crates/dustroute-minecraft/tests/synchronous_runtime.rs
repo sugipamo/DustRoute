@@ -20,6 +20,7 @@ enum Task {
     ResumeA,
     CompleteB,
     Noop,
+    EmptyDelta,
     Fail,
     ParentFailure,
     Recurse,
@@ -260,6 +261,7 @@ impl RuntimeAdapter for Adapter {
                 });
             }
             Task::Noop => {}
+            Task::EmptyDelta => out.delta = Some(delta(view, vec![])),
         }
         Ok(out)
     }
@@ -283,6 +285,42 @@ fn seeded() -> SynchronousWorldRuntime<Adapter> {
     let mut rt = runtime(RuntimeLimits::default());
     input(&mut rt, Task::Seed);
     rt
+}
+
+#[test]
+fn checkpoints_share_read_only_worlds_and_detach_before_committed_writes() {
+    let mut rt = seeded();
+    let checkpoint = rt.checkpoint();
+    let restored = SynchronousWorldRuntime::<Adapter>::from_checkpoint(&checkpoint).unwrap();
+    for task in [Task::Noop, Task::EmptyDelta, Task::ReplaceA] {
+        input(&mut rt, task);
+        assert!(std::ptr::eq(rt.view().world(), restored.view().world()));
+        assert_eq!(
+            rt.trace().last().unwrap().world_changed_positions().count(),
+            0
+        );
+    }
+    rt.input_now(call(A, Task::ParentFailure)).unwrap();
+    rt.microstep().unwrap().unwrap();
+    assert!(!std::ptr::eq(rt.view().world(), restored.view().world()));
+    assert_eq!(rt.view().block(FLAG).unwrap().kind, BlockKind::Solid);
+    assert_eq!(restored.view().block(FLAG).unwrap().kind, BlockKind::Air);
+    assert_eq!(
+        rt.trace()
+            .last()
+            .unwrap()
+            .world_changed_positions()
+            .collect::<Vec<_>>(),
+        [FLAG]
+    );
+    let committed = rt.checkpoint();
+    let same = SynchronousWorldRuntime::<Adapter>::from_checkpoint(&committed).unwrap();
+    assert!(rt.microstep().is_err());
+    assert!(std::ptr::eq(rt.view().world(), same.view().world()));
+    assert_eq!(rt.view().time(), same.view().time());
+    assert_eq!(rt.pending_count(), same.pending_count());
+    assert_eq!(rt.trace(), same.trace());
+    assert_eq!(rt.view().carrier(A), same.view().carrier(A));
 }
 
 #[test]
@@ -671,9 +709,12 @@ fn checkpoint_cannot_be_reinterpreted_under_a_different_adapter_revision() {
 fn invalid_history_rejects_the_whole_world_and_queue_update() {
     let mut rt = seeded();
     rt.input_now(call(A, Task::InvalidBundle)).unwrap();
+    let checkpoint = rt.checkpoint();
+    let shared = SynchronousWorldRuntime::<Adapter>::from_checkpoint(&checkpoint).unwrap();
     let world = rt.view().world().clone();
     let carrier = *rt.view().carrier(A).unwrap();
     assert!(matches!(rt.microstep(), Err(RuntimeError::Invalid(_))));
+    assert!(std::ptr::eq(rt.view().world(), shared.view().world()));
     assert_eq!(rt.view().world(), &world);
     assert_eq!(rt.view().carrier(A), Some(&carrier));
     assert_eq!(rt.pending_count(), 1); // original input, no speculative tick

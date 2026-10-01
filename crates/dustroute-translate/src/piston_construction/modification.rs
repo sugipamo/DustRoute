@@ -1,8 +1,8 @@
 //! Differential command construction against a declared stationary baseline.
 //! This models an empty queue; live snapshots cannot prove that assumption.
 use super::{
-    ElectricalConstructionStep, electrical_snapshot, observed_root, order, settled_step_observed,
-    snapshot,
+    ConstructionObserver, ElectricalConstructionStep, electrical_snapshot, observed_root, order,
+    settled_step_observed, snapshot,
 };
 use crate::snapshot::{MinecraftSnapshot, MinecraftSnapshotBlock, index_literal_snapshot};
 use dustroute_library::world_edit::WorldEditScope;
@@ -196,10 +196,12 @@ fn steps(
     let desired = snapshot::literal_world(after)?;
     let baseline = world.clone();
     let mut runtime = new_piston_runtime(world, region, limits).map_err(|e| e.to_string())?;
-    let mut protect = |view: dustroute_minecraft::time::runtime::RuntimeView<'_>| {
-        protect_state(&baseline, scope, region, view)
+    let mut protect = ScopeGuard {
+        before: &baseline,
+        scope,
+        known: region,
     };
-    protect(runtime.view())?;
+    protect.initial(runtime.view())?;
     while observed_root(&mut runtime, &mut protect)? {}
     if electrical_snapshot(runtime.view().world(), region)? != *before {
         return Err(
@@ -270,31 +272,57 @@ fn steps(
     Ok((result, electrical_snapshot(runtime.view().world(), region)?))
 }
 
-fn protect_state(
-    before: &World,
-    scope: &WorldEditScope,
+struct ScopeGuard<'a> {
+    before: &'a World,
+    scope: &'a WorldEditScope,
     known: Region,
-    view: dustroute_minecraft::time::runtime::RuntimeView<'_>,
-) -> Result<(), String> {
-    // Sparse worlds omit known Air. Checking both sets also detects an Air
-    // cell becoming occupied, without enumerating the whole observed volume.
-    let actual = view.world();
-    for (position, _) in before.iter().chain(actual.iter()) {
-        if !known.contains(*position) {
+}
+impl ScopeGuard<'_> {
+    fn check(
+        &self,
+        position: Pos,
+        view: dustroute_minecraft::time::runtime::RuntimeView<'_>,
+    ) -> Result<(), String> {
+        let actual = view.world();
+        if !self.known.contains(position) {
             return Err(format!(
                 "modeled state leaves observed space at {position:?}"
             ));
         }
-        if !scope.allows_change(*position) && before.get(*position) != actual.get(*position) {
+        if !self.scope.allows_change(position) && self.before.get(position) != actual.get(position)
+        {
             return Err(format!(
                 "protected state changed at {position:?}, runtime {:?}; expected {:?}, actual {:?}",
                 view.time(),
-                before.get(*position),
-                actual.get(*position)
+                self.before.get(position),
+                actual.get(position)
             ));
         }
+        Ok(())
     }
-    Ok(())
+}
+impl ConstructionObserver for ScopeGuard<'_> {
+    fn initial(
+        &mut self,
+        view: dustroute_minecraft::time::runtime::RuntimeView<'_>,
+    ) -> Result<(), String> {
+        for (position, _) in self.before.iter().chain(view.world().iter()) {
+            self.check(*position, view)?;
+        }
+        Ok(())
+    }
+    fn committed<P>(
+        &mut self,
+        view: dustroute_minecraft::time::runtime::RuntimeView<'_>,
+        record: &dustroute_minecraft::time::runtime::RuntimeRecord<P>,
+    ) -> Result<(), String> {
+        // Runtime handlers receive a read-only World. Every world mutation is
+        // a validated delta; include removals and formerly Air positions.
+        for position in record.world_changed_positions() {
+            self.check(position, view)?;
+        }
+        Ok(())
+    }
 }
 
 fn air(pos: Pos) -> MinecraftSnapshotBlock {
@@ -302,5 +330,68 @@ fn air(pos: Pos) -> MinecraftSnapshotBlock {
         pos,
         name: "minecraft:air".into(),
         properties: Default::default(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use dustroute_minecraft::{Block, BlockKind};
+
+    #[test]
+    fn incremental_guard_matches_full_scan_until_first_violation_and_sees_air_changes() {
+        let protected = Pos::new(0, 0, 0);
+        let known = Region::around(protected, 2);
+        let scope = WorldEditScope::entire(Region::around(Pos::new(2, 0, 0), 0));
+        for initially_present in [false, true] {
+            let mut baseline = World::new();
+            if initially_present {
+                baseline.set(protected, Block::new(BlockKind::Solid));
+            }
+            let mut runtime =
+                new_piston_runtime(baseline.clone(), known, Default::default()).unwrap();
+            runtime.run_until_idle().unwrap();
+            assert_eq!(runtime.view().world(), &baseline);
+            let mut guard = ScopeGuard {
+                before: &baseline,
+                scope: &scope,
+                known,
+            };
+            guard.initial(runtime.view()).unwrap();
+            if initially_present {
+                runtime.remove_now(protected).unwrap();
+            } else {
+                runtime
+                    .install_now(protected, Block::new(BlockKind::Solid))
+                    .unwrap();
+            }
+            let mut saw_violation = false;
+            while let Some(record) = runtime.microstep().unwrap() {
+                let incremental = guard.committed(runtime.view(), &record);
+                let full = guard.initial(runtime.view());
+                assert_eq!(incremental, full);
+                if full.is_err() {
+                    assert_eq!(
+                        record.world_changed_positions().collect::<Vec<_>>(),
+                        [protected]
+                    );
+                    saw_violation = true;
+                    break;
+                }
+            }
+            assert!(saw_violation);
+            // A later restoration must not conceal the earlier violation.
+            runtime.run_until_idle().unwrap();
+            if initially_present {
+                runtime
+                    .install_now(protected, Block::new(BlockKind::Solid))
+                    .unwrap();
+            } else {
+                runtime.remove_now(protected).unwrap();
+            }
+            runtime.run_until_idle().unwrap();
+            assert_eq!(runtime.view().world(), &baseline);
+            guard.initial(runtime.view()).unwrap();
+        }
     }
 }
