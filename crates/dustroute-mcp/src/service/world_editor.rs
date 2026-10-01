@@ -51,6 +51,7 @@ impl WorldEditor<'_> {
             .await
             .map_err(FailureCause::from)?;
         let world = world_from_snapshot_for_service(&snapshot)?;
+        let _verification = crate::performance::span(crate::performance::Phase::Verification);
         let mismatches = changes
             .iter()
             .filter(|change| {

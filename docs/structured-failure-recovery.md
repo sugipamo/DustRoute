@@ -101,6 +101,15 @@ For uninstrumented string-only failures, the MCP framing layer returns
 Explicit legacy error codes still supply a coarse category. Callers must not
 treat missing information as no effects, no consumed plan, or permission to retry.
 
+## Further common-boundary migration and live reporting
+
+The follow-up preserves typed causes in common player/selection/capture and
+snapshot paths, including numeric parameter constraints and coordinate details.
+Read-only errors with no execution facts use v2 with null progress. Live operation
+activity is separate from the saved failure result; it uses the existing request
+measurement context and publishes actual execution facts. See
+[scope, response fields and remaining String boundaries](operation-diagnostics-progress.md).
+
 ## Verification
 
 Regression coverage includes checkpoint failures before submission and after

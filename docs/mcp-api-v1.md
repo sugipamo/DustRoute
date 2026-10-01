@@ -250,7 +250,7 @@ Stable error codes are `invalid_argument`, `invalid_state`, `not_found`,
 means the identical request may reasonably succeed after transient external
 state changes; it never grants permission to repeat a mutation automatically.
 
-Instrumented mutation failures use `dustroute.error.v2` and additionally return
+Typed observation/admission failures and instrumented mutation failures use `dustroute.error.v2` and additionally return
 `failure.primary`, `failure.secondary`, `failure.progress` and `recovery`.
 The progress distinguishes locally submitted changes, independently verified
 steps and durably checkpointed verified steps. A missing count is JSON `null`,
@@ -265,6 +265,14 @@ facts from the human-readable message. See
 status and result to determine execution success. A recorded `ok: false` result
 is `failed`, even if the API call returned normally. Its progress percentage
 uses verified steps only, and does not count transport submissions as success.
+
+`get_operation` may additionally return `activity` (`dustroute.operation_activity.v1`)
+while invoke/undo or asynchronous region analysis runs. It reports measured phase
+and elapsed time, with nullable execution facts. Saved operation/history fields
+remain historical; `activity.active` describes the current tracked request.
+Submission, verification and durable checkpoints are separate. Activity is not
+persisted, grants no replay authority and adds no mutation cancellation guarantee.
+See [live progress and diagnostic scope](operation-diagnostics-progress.md).
 
 ## Coordinate-keyed state
 

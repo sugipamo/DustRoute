@@ -1,3 +1,6 @@
+#[path = "operation_activity.rs"]
+mod activity;
+pub(crate) use activity::{Activity, ActivityAction, ActivityGuard, ActivitySnapshot};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -59,6 +62,7 @@ struct OperationEntry {
 pub struct OperationRegistry {
     entries: Arc<Mutex<HashMap<Uuid, OperationEntry>>>,
     max_entries: usize,
+    activities: Arc<Mutex<HashMap<Uuid, Activity>>>,
 }
 
 impl Default for OperationRegistry {
@@ -79,7 +83,35 @@ impl OperationRegistry {
         Self {
             entries: Arc::new(Mutex::new(HashMap::new())),
             max_entries: max_entries.max(1),
+            activities: Arc::default(),
         }
+    }
+
+    pub(crate) async fn begin_activity(
+        &self,
+        id: Uuid,
+        action: ActivityAction,
+    ) -> Option<ActivityGuard> {
+        let mut activities = self.activities.lock().await;
+        if activities.get(&id).is_some_and(|a| a.snapshot().active) {
+            return None; // A concurrent refusal must not replace the running attempt.
+        }
+        if activities.len() >= self.max_entries {
+            activities.retain(|_, activity| activity.snapshot().active);
+        }
+        if activities.len() >= self.max_entries {
+            return None;
+        }
+        let activity = Activity::new(action);
+        activities.insert(id, activity.clone());
+        Some(ActivityGuard(activity))
+    }
+    pub(crate) async fn activity(&self, id: Uuid) -> Option<ActivitySnapshot> {
+        self.activities
+            .lock()
+            .await
+            .get(&id)
+            .map(Activity::snapshot)
     }
 
     pub async fn create(&self, kind: OperationKind, message: impl Into<String>) -> Uuid {
@@ -116,6 +148,9 @@ impl OperationRegistry {
         message: impl Into<String>,
     ) {
         if let Some(entry) = self.entries.lock().await.get_mut(&id) {
+            if entry.cancellation.is_cancelled() {
+                return;
+            }
             entry.record.status = status;
             entry.record.progress_percent = progress_percent.min(100);
             entry.record.message = message.into();
@@ -126,6 +161,9 @@ impl OperationRegistry {
     pub async fn complete(&self, id: Uuid, result: Value) {
         if let Some(entry) = self.entries.lock().await.get_mut(&id) {
             let now = now_unix_ms();
+            if entry.cancellation.is_cancelled() {
+                return;
+            }
             let failed = result.get("ok") == Some(&Value::Bool(false));
             entry.record.status = if failed {
                 OperationStatus::Failed
@@ -200,6 +238,9 @@ impl OperationRegistry {
     pub async fn fail(&self, id: Uuid, message: impl Into<String>) {
         if let Some(entry) = self.entries.lock().await.get_mut(&id) {
             let now = now_unix_ms();
+            if entry.cancellation.is_cancelled() {
+                return;
+            }
             entry.record.status = OperationStatus::Failed;
             entry.record.message = message.into();
             entry.record.updated_at_unix_ms = now;
@@ -212,6 +253,9 @@ impl OperationRegistry {
         let Some(entry) = entries.get_mut(&id) else {
             return false;
         };
+        if entry.record.kind != OperationKind::AnalyzeRegion {
+            return false;
+        }
         if matches!(
             entry.record.status,
             OperationStatus::Completed | OperationStatus::Failed | OperationStatus::Cancelled
@@ -221,7 +265,7 @@ impl OperationRegistry {
         entry.cancellation.cancel();
         let now = now_unix_ms();
         entry.record.status = OperationStatus::Cancelled;
-        entry.record.message = "cancelled by request".to_owned();
+        entry.record.message = "cancellation requested; in-flight work may finish".to_owned();
         entry.record.updated_at_unix_ms = now;
         entry.record.completed_at_unix_ms = Some(now);
         true

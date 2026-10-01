@@ -227,11 +227,11 @@ impl DustRouteMcp {
         &self,
         id: uuid::Uuid,
         player: Option<&str>,
-    ) -> Result<ElectricalEditPlan, String> {
+    ) -> Result<ElectricalEditPlan, FailureCause> {
         let player = self.resolve_player(player)?;
         self.policy
             .authorize_player(&player)
-            .map_err(|e| e.to_string())?;
+            .map_err(FailureCause::from)?;
         let plan = self
             .plans
             .table::<ElectricalEditPlan>()
@@ -239,19 +239,27 @@ impl DustRouteMcp {
             .await
             .get(&id)
             .cloned()
-            .ok_or("electrical edit plan unavailable; recapture/replan after restart")?;
+            .ok_or_else(|| {
+                FailureCause::new(
+                    CauseKind::NotFound,
+                    "electrical edit plan unavailable; recapture/replan after restart",
+                )
+            })?;
         if plan.player != player {
-            return Err("electrical edit belongs to another player".into());
+            return Err(FailureCause::new(
+                CauseKind::PermissionDenied,
+                "electrical edit belongs to another player",
+            ));
         }
         self.policy
             .authorize_dimension(&plan.target.dimension)
-            .map_err(|e| e.to_string())?;
+            .map_err(FailureCause::from)?;
         self.policy
             .validate_region(dustroute_translate::world_reverse::RegionBounds::new(
                 plan.proof.before().min,
                 plan.proof.before().max,
             ))
-            .map_err(|e| e.to_string())?;
+            .map_err(FailureCause::from)?;
         if let Some(binding) = plan.job {
             let registry = JobRegistry::acquire(&self.state_store)?;
             let job = registry.load(binding.job_id, &player)?;
@@ -298,10 +306,13 @@ impl DustRouteMcp {
     }
 
     pub(super) async fn show_electrical_edit(&self, id: uuid::Uuid, player: Option<&str>) -> Value {
-        let result: Result<Value, String> = async {
+        let result: Result<Value, FailureCause> = async {
             let plan = self.owned_edit(id, player).await?;
             if plan.state != PistonPlacementState::Planned || plan.expires_at <= Instant::now() {
-                return Err("electrical edit expired or consumed; inspect and replan".into());
+                return Err(FailureCause::new(
+                    CauseKind::InvalidState,
+                    "electrical edit expired or consumed; inspect and replan",
+                ));
             }
             self.check_stationary_edit_baseline(&plan.target, plan.proof.before())
                 .await?;
@@ -314,9 +325,12 @@ impl DustRouteMcp {
                     &plan.target.dimension,
                 )
                 .await
-                .map_err(|e| e.to_string())?;
+                .map_err(FailureCause::from)?;
             if plan.expires_at <= Instant::now() {
-                return Err("electrical edit expired during preview".into());
+                return Err(FailureCause::new(
+                    CauseKind::InvalidState,
+                    "electrical edit expired during preview",
+                ));
             }
             self.plans
                 .table::<ElectricalEditPlan>()
@@ -353,7 +367,10 @@ impl DustRouteMcp {
         progress: &mut ExecutionProgress,
     ) -> Result<Value, FailureCause> {
         if !confirm {
-            return Err("confirm=true is required".into());
+            return Err(FailureCause::new(
+                CauseKind::InvalidInput,
+                "confirm=true is required",
+            ));
         }
         self.policy
             .authorize_mutation()
@@ -379,6 +396,7 @@ impl DustRouteMcp {
             );
         }
         progress.phase = FailurePhase::ModelProof;
+        crate::performance::execution_progress(progress);
         let saved_proof = plan.proof.clone();
         let capture = current();
         let queued_at = std::time::Instant::now();
@@ -437,6 +455,7 @@ impl DustRouteMcp {
         };
         let baseline = if undo { proof.after() } else { proof.before() };
         progress.phase = FailurePhase::BeforeReadback;
+        crate::performance::execution_progress(progress);
         let readbacks = self
             .check_stationary_edit_baseline(&plan.target, baseline)
             .await?;
@@ -444,6 +463,7 @@ impl DustRouteMcp {
             return Err("edit expired during validation".into());
         }
         progress.phase = FailurePhase::IntentSave;
+        crate::performance::execution_progress(progress);
         // Journal uncertain intent before writes. Loading it restores history,
         // never authority to replay a previous executable operation.
         let job_registry = plan

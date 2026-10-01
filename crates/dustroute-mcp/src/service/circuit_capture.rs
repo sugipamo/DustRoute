@@ -1,5 +1,6 @@
 //! Circuit discovery depends only on the bridge and read policy. It does not
 //! dispatch MCP tools or own selection, operation, or persistence state.
+use crate::failure::{CauseKind, FailureCause};
 use crate::performance::{Phase, span};
 use crate::{BotBridge, CircuitDiscovery, McpPolicy, discover_connected_region};
 use dustroute_physical::Pos;
@@ -52,26 +53,27 @@ impl CircuitCapture<'_> {
         max_components: usize,
         padding: i32,
         fragment_gap: u32,
-    ) -> Result<DiscoveryObservation, String> {
-        if !(1..=32768).contains(&max_components)
-            || !(0..=8).contains(&padding)
-            || !(1..=16).contains(&fragment_gap)
-        {
-            return Err(
-                "max_components must be 1..32768, padding 0..8, and fragment_gap 1..16".into(),
-            );
+    ) -> Result<DiscoveryObservation, FailureCause> {
+        for (name, actual, min, max) in [
+            ("max_components", max_components as f64, 1.0, 32768.0),
+            ("padding", f64::from(padding), 0.0, 8.0),
+            ("fragment_gap", f64::from(fragment_gap), 1.0, 16.0),
+        ] {
+            if !(min..=max).contains(&actual) {
+                return Err(FailureCause::input_range(name, actual, min, max));
+            }
         }
         let observation = self
             .bridge
             .observe_player(player, 64.0)
             .await
-            .map_err(|e| e.to_string())?;
-        let target = observation
-            .targeted_block
-            .ok_or("the player is not looking at a block")?;
+            .map_err(FailureCause::from)?;
+        let target = observation.targeted_block.ok_or_else(|| {
+            FailureCause::new(CauseKind::NotFound, "the player is not looking at a block")
+        })?;
         self.policy
             .authorize_dimension(&observation.dimension)
-            .map_err(|e| e.to_string())?;
+            .map_err(FailureCause::from)?;
         let scan = self
             .scan_connected_components(
                 target,
@@ -85,11 +87,11 @@ impl CircuitCapture<'_> {
             scan.snapshot.max,
         );
         let world = dustroute_translate::snapshot::world_from_snapshot(&scan.snapshot)
-            .map_err(|e| e.to_string())?;
+            .map_err(FailureCause::from)?;
         let analysis = dustroute_translate::world_reverse::analyze_world_region(&world, bounds);
         let candidate =
             discover_connected_region(&analysis, target, 2, fragment_gap, padding, usize::MAX)
-                .map_err(|e| e.to_string())?;
+                .map_err(FailureCause::from)?;
         Ok(DiscoveryObservation {
             candidate,
             dimension: observation.dimension,
@@ -110,7 +112,7 @@ impl CircuitCapture<'_> {
         dimension: &str,
         max_components: usize,
         component_gap: i32,
-    ) -> Result<AdaptiveComponentScan, String> {
+    ) -> Result<AdaptiveComponentScan, FailureCause> {
         const TILE_SIZE: i32 = 16;
         const SEED_DISTANCE: i32 = 2;
 
@@ -128,12 +130,12 @@ impl CircuitCapture<'_> {
         );
         self.policy
             .validate_region(seed_bounds)
-            .map_err(|error| error.to_string())?;
+            .map_err(FailureCause::from)?;
         let seed_snapshot = self
             .bridge
             .scan_region(seed_bounds.min, seed_bounds.max, dimension)
             .await
-            .map_err(|error| error.to_string())?;
+            .map_err(FailureCause::from)?;
         let seed = seed_snapshot
             .blocks
             .iter()
@@ -142,7 +144,10 @@ impl CircuitCapture<'_> {
             .filter(|block| manhattan_pos(block.pos, target) <= SEED_DISTANCE)
             .map(|block| block.pos)
             .ok_or_else(|| {
-                "no redstone component was found within 2 blocks of the gaze target".to_owned()
+                FailureCause::new(
+                    CauseKind::NotFound,
+                    "no redstone component was found within 2 blocks of the gaze target",
+                )
             })?;
 
         let merge_measurement = span(Phase::DiscoveryMerge);
@@ -201,12 +206,12 @@ impl CircuitCapture<'_> {
                             dustroute_translate::world_reverse::RegionBounds::new(min, max);
                         self.policy
                             .validate_region(bounds)
-                            .map_err(|error| error.to_string())?;
+                            .map_err(FailureCause::from)?;
                         let snapshot = self
                             .bridge
                             .scan_region(min, max, dimension)
                             .await
-                            .map_err(|error| error.to_string())?;
+                            .map_err(FailureCause::from)?;
                         let _measurement = span(Phase::DiscoveryMerge);
                         for block in snapshot.blocks {
                             if is_redstone_candidate_name(&block.name) {

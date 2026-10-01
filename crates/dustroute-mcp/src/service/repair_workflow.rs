@@ -91,7 +91,9 @@ impl RepairWorkflow<'_> {
         if let Err(error) = self.policy.authorize_mutation() {
             return progress.cause(error).response();
         }
+        let queue = crate::performance::span(crate::performance::Phase::MutationQueue);
         let _mutation_guard = self.mutation_lock.lock().await;
+        drop(queue);
         let operation_id = match uuid::Uuid::parse_str(&params.operation_id) {
             Ok(id) => id,
             Err(error) => {
@@ -122,6 +124,7 @@ impl RepairWorkflow<'_> {
         };
         progress.total_changes = Some(patch.changes.len());
         progress.phase = FailurePhase::BeforeReadback;
+        crate::performance::execution_progress(progress);
         let validated = if undo {
             None
         } else {
@@ -145,6 +148,7 @@ impl RepairWorkflow<'_> {
             }
         };
         progress.phase = FailurePhase::IntentSave;
+        crate::performance::execution_progress(progress);
         progress.operation_consumed = true;
         if let Err(error) = self.store_repair_plan(operation_id, plan.clone()).await {
             progress.persistence = PersistenceOutcome::Uncertain;
@@ -156,6 +160,7 @@ impl RepairWorkflow<'_> {
         progress.persistence = PersistenceOutcome::IntentSaved;
         let previous_world = progress.world;
         progress.begin_submission();
+        crate::performance::execution_progress(progress);
         let bridge_result = if let Some(validated) = &validated {
             self.world_editor()
                 .write_validated_physical_changes(validated, &plan.dimension)
@@ -168,11 +173,13 @@ impl RepairWorkflow<'_> {
         let bridge = match bridge_result {
             Ok(result) => {
                 progress.submitted(result.placed_changes);
+                crate::performance::execution_progress(progress);
                 result
             }
             Err(error) => return progress.submission_error(error, previous_world).response(),
         };
         progress.phase = FailurePhase::AfterReadback;
+        crate::performance::execution_progress(progress);
         let (verified, mismatches) = match self
             .world_editor()
             .verify_physical_changes(&patch.changes, &plan.dimension)
@@ -190,6 +197,7 @@ impl RepairWorkflow<'_> {
             Err(error) => return progress.cause(error).response(),
         };
         progress.phase = FailurePhase::Verification;
+        crate::performance::execution_progress(progress);
         if !verified || !boundary_verified {
             let positions: Vec<_> = mismatches
                 .iter()
@@ -205,6 +213,7 @@ impl RepairWorkflow<'_> {
             if !undo {
                 let rollback = plan.patch.inverse();
                 progress.phase = FailurePhase::Restore;
+                crate::performance::execution_progress(progress);
                 match self
                     .world_editor()
                     .write_physical_change_batch(&rollback.changes, &plan.dimension)
@@ -213,6 +222,7 @@ impl RepairWorkflow<'_> {
                     Ok(receipt) => {
                         rollback_submitted = true;
                         progress.submitted(receipt.placed_changes);
+                        crate::performance::execution_progress(progress);
                     }
                     Err(error) => {
                         let failure = progress.submission_error(error, WorldOutcome::Unknown);
@@ -269,6 +279,7 @@ impl RepairWorkflow<'_> {
         let mut updated_plan = plan.clone();
         updated_plan.lifecycle.confirm(undo);
         progress.phase = FailurePhase::FinalSave;
+        crate::performance::execution_progress(progress);
         if let Err(error) = self.store_repair_plan(operation_id, updated_plan).await {
             progress.persistence = PersistenceOutcome::Uncertain;
             return progress
@@ -278,6 +289,7 @@ impl RepairWorkflow<'_> {
         progress.persistence = PersistenceOutcome::FinalSaved;
         progress.durable_verified_steps = Some(progress.verified_steps);
         progress.phase = FailurePhase::PostAnalysis;
+        crate::performance::execution_progress(progress);
         let snapshot = match self
             .bridge
             .scan_region(

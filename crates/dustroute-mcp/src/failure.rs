@@ -31,6 +31,8 @@ pub enum CauseKind {
 #[serde(rename_all = "snake_case")]
 pub enum FailurePhase {
     Admission,
+    Normalization,
+    Analysis,
     ModelProof,
     BeforeReadback,
     Submission,
@@ -48,6 +50,12 @@ pub enum FailurePhase {
 pub struct CauseDetails {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub position: Option<Pos>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub parameter: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub allowed_range: Option<[f64; 2]>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub supplied_number: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub resource: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -82,6 +90,27 @@ impl FailureCause {
             details: Default::default(),
             phase: None,
         }
+    }
+    /// Diagnostics without execution facts must not invent zero world changes.
+    pub fn response(&self) -> Value {
+        json!({"ok":false,"schema_version":"dustroute.error.v2",
+            "error":self.message,"error_code":self.error_code(),"retryable":false,
+            "failure":{"primary":self,"secondary":[],"progress":null},
+            "recovery":{"reobserve_required":match self.kind {
+                CauseKind::ObservationUnavailable | CauseKind::ObservationIncomplete |
+                CauseKind::MovingObservation | CauseKind::VerificationMismatch => Some(true),
+                _ => None },"replan_required":null,"inspect_saved_record":null,
+                "same_operation_replay_allowed":false}})
+    }
+    pub fn input_range(parameter: &str, actual: f64, min: f64, max: f64) -> Self {
+        let mut cause = Self::new(
+            CauseKind::InvalidInput,
+            format!("{parameter} must be {min}..{max}"),
+        );
+        cause.details.parameter = Some(parameter.into());
+        cause.details.allowed_range = Some([min, max]);
+        cause.details.supplied_number = actual.is_finite().then_some(actual);
+        cause.at(FailurePhase::Admission)
     }
     pub fn mismatch(message: impl Into<String>, positions: &[Pos]) -> Self {
         let mut cause = Self::new(CauseKind::VerificationMismatch, message);
@@ -138,10 +167,81 @@ impl From<FailureCause> for String {
         cause.message
     }
 }
+impl From<dustroute_translate::snapshot::SnapshotError> for FailureCause {
+    fn from(error: dustroute_translate::snapshot::SnapshotError) -> Self {
+        use dustroute_translate::snapshot::SnapshotError::*;
+        let mut cause = Self::new(CauseKind::ObservationIncomplete, error.to_string());
+        match error {
+            Json(_) => cause.kind = CauseKind::Serialization,
+            InvalidFacing { pos, .. } => cause.details.position = Some(pos),
+            InvalidSnapshot(_) => {}
+        }
+        cause
+    }
+}
+impl From<dustroute_translate::snapshot::LiteralSnapshotError> for FailureCause {
+    fn from(error: dustroute_translate::snapshot::LiteralSnapshotError) -> Self {
+        let mut cause = Self::new(CauseKind::ObservationIncomplete, error.to_string());
+        if let dustroute_translate::snapshot::LiteralSnapshotError::InvalidCoordinate {
+            position,
+            ..
+        } = error
+        {
+            cause.details.position = Some(position);
+        }
+        cause
+    }
+}
+impl From<crate::discovery::DiscoveryError> for FailureCause {
+    fn from(error: crate::discovery::DiscoveryError) -> Self {
+        let mut cause = Self::new(CauseKind::NotFound, error.to_string());
+        if let crate::discovery::DiscoveryError::NodeLimitExceeded { limit } = error {
+            cause.kind = CauseKind::ResourceLimit;
+            cause.details.resource = Some("discovery_nodes".into());
+            cause.details.maximum = Some(limit);
+        }
+        cause
+    }
+}
+impl From<crate::selection::SelectionError> for FailureCause {
+    fn from(error: crate::selection::SelectionError) -> Self {
+        Self::new(CauseKind::InvalidState, error.to_string())
+    }
+}
+impl From<serde_json::Error> for FailureCause {
+    fn from(error: serde_json::Error) -> Self {
+        Self::new(CauseKind::Serialization, error.to_string())
+    }
+}
+impl From<dustroute_app::PlanningError> for FailureCause {
+    fn from(error: dustroute_app::PlanningError) -> Self {
+        let mut cause = Self::new(CauseKind::InvalidInput, error.to_string());
+        match error {
+            dustroute_app::PlanningError::BlockLimitExceeded { limit, actual } => {
+                cause.kind = CauseKind::ResourceLimit;
+                cause.details.resource = Some("placement_blocks".into());
+                cause.details.actual = Some(actual);
+                cause.details.maximum = Some(limit);
+            }
+            dustroute_app::PlanningError::InvalidWorld(error) => {
+                cause.details.reconstruction_issue = serde_json::to_value(error).ok();
+            }
+        }
+        cause
+    }
+}
 impl From<crate::PolicyError> for FailureCause {
     fn from(error: crate::PolicyError) -> Self {
         use crate::PolicyError::*;
         let mut cause = Self::new(CauseKind::PermissionDenied, error.to_string());
+        cause.details.resource = Some(match &error {
+            ScanVolumeExceeded { .. } => "scan_blocks".into(),
+            PlacementLimitExceeded { .. } => "placement_blocks".into(),
+            PlayerDenied(player) => format!("player:{player}"),
+            DimensionDenied(dimension) => format!("dimension:{dimension}"),
+            OutsideAllowedRegion => "allowed_region".into(),
+            MutationDenied => "world_mutation".into(),
+        });
         match error {
             ScanVolumeExceeded { actual, limit } | PlacementLimitExceeded { actual, limit } => {
                 cause.kind = CauseKind::ResourceLimit;

@@ -10,6 +10,9 @@ use std::time::{Duration, Instant};
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum Phase {
+    Normalization,
+    Analysis,
+    Verification,
     Gaze,
     Status,
     Scan,
@@ -61,7 +64,10 @@ pub struct Measurement {
 }
 
 #[derive(Clone, Default)]
-pub(crate) struct Capture(Option<Arc<Mutex<BTreeMap<Phase, PhaseMeasurement>>>>);
+pub(crate) struct Capture {
+    metrics: Option<Arc<Mutex<BTreeMap<Phase, PhaseMeasurement>>>>,
+    activity: Option<crate::operations::Activity>,
+}
 tokio::task_local! { static ASYNC_CAPTURE: Capture; }
 thread_local! { static SYNC_CAPTURE: RefCell<Capture> = RefCell::new(Capture::default()); }
 
@@ -86,7 +92,7 @@ impl Capture {
     }
 
     pub fn record_queue(&self, started: Instant) {
-        if let Some(capture) = &self.0 {
+        if let Some(capture) = &self.metrics {
             let mut phases = capture.lock().unwrap_or_else(|e| e.into_inner());
             let phase = phases.entry(Phase::ModelQueue).or_default();
             phase.calls += 1;
@@ -95,20 +101,72 @@ impl Capture {
     }
 }
 
+/// Attach live reporting while retaining any opt-in performance counters.
+pub(crate) async fn with_activity<T>(
+    activity: Option<crate::operations::Activity>,
+    work: impl Future<Output = T>,
+) -> T {
+    let mut capture = current();
+    capture.activity = activity;
+    ASYNC_CAPTURE.scope(capture, work).await
+}
+pub(crate) fn execution_progress(progress: &crate::failure::ExecutionProgress) {
+    if let Some(activity) = current().activity {
+        activity.progress(progress);
+    }
+}
+
+pub(crate) fn tool_progress(response: &rmcp::model::CallToolResponse) {
+    if current().activity.is_none() {
+        return;
+    }
+    #[derive(serde::Deserialize)]
+    struct FailedFacts {
+        progress: Option<crate::failure::ExecutionProgress>,
+    }
+    #[derive(serde::Deserialize)]
+    struct Facts {
+        failure: Option<FailedFacts>,
+        execution_progress: Option<crate::failure::ExecutionProgress>,
+    }
+    if let rmcp::model::CallToolResponse::Complete(result) = response {
+        for content in &result.content {
+            if let rmcp::model::ContentBlock::Text(text) = content
+                && let Ok(facts) = serde_json::from_str::<Facts>(&text.text)
+                && let Some(progress) = facts
+                    .failure
+                    .and_then(|f| f.progress)
+                    .or(facts.execution_progress)
+            {
+                execution_progress(&progress);
+            }
+        }
+    }
+}
+
 /// Measure library calls without enabling process-wide logging. Independent
 /// captures, including concurrent requests, never share counters.
 pub async fn measure<T>(operation: &str, work: impl Future<Output = T>) -> (T, Measurement) {
-    let capture = Capture(Some(Arc::default()));
+    let capture = Capture {
+        metrics: Some(Arc::default()),
+        activity: current().activity,
+    };
     let started = Instant::now();
     let result = ASYNC_CAPTURE.scope(capture.clone(), work).await;
     let elapsed_ms = millis(started.elapsed());
-    let phases = std::mem::take(&mut *capture.0.unwrap().lock().unwrap_or_else(|e| e.into_inner()))
-        .into_iter()
-        .map(|(phase, value)| {
-            let name = serde_json::to_value(phase).expect("phase name is serializable");
-            (name.as_str().unwrap().to_owned(), value)
-        })
-        .collect();
+    let phases = std::mem::take(
+        &mut *capture
+            .metrics
+            .unwrap()
+            .lock()
+            .unwrap_or_else(|e| e.into_inner()),
+    )
+    .into_iter()
+    .map(|(phase, value)| {
+        let name = serde_json::to_value(phase).expect("phase name is serializable");
+        (name.as_str().unwrap().to_owned(), value)
+    })
+    .collect();
     (
         result,
         Measurement {
@@ -139,6 +197,7 @@ pub(crate) struct Span {
     capture: Capture,
     phase: Phase,
     started: Option<Instant>,
+    activity_span: Option<u64>,
     cells: u64,
     bytes: u64,
     ticks: u64,
@@ -149,10 +208,15 @@ pub(crate) struct Span {
 
 pub(crate) fn span(phase: Phase) -> Span {
     let capture = current();
-    let started = capture.0.as_ref().map(|_| Instant::now());
+    let activity_span = capture
+        .activity
+        .as_ref()
+        .map(|activity| activity.enter(phase));
+    let started = capture.metrics.as_ref().map(|_| Instant::now());
     Span {
         capture,
         phase,
+        activity_span,
         started,
         cells: 0,
         bytes: 0,
@@ -195,7 +259,10 @@ impl Span {
 
 impl Drop for Span {
     fn drop(&mut self) {
-        let (Some(started), Some(capture)) = (self.started, &self.capture.0) else {
+        if let (Some(activity), Some(id)) = (&self.capture.activity, self.activity_span) {
+            activity.leave(id);
+        }
+        let (Some(started), Some(capture)) = (self.started, &self.capture.metrics) else {
             return;
         };
         let elapsed = started.elapsed();
@@ -230,7 +297,7 @@ mod tests {
                     let _span = span(Phase::ModelProof);
                 });
                 assert!(
-                    current().0.is_none(),
+                    current().metrics.is_none(),
                     "the same worker must restore its capture"
                 );
             })
@@ -246,9 +313,9 @@ mod tests {
         assert!(!a.phases.contains_key("status"));
         assert_eq!(b.phases["status"].calls, 1);
         assert!(!b.phases.contains_key("wait"));
-        assert!(current().0.is_none());
+        assert!(current().metrics.is_none());
         assert!(
-            tokio::task::spawn_blocking(|| current().0.is_none())
+            tokio::task::spawn_blocking(|| current().metrics.is_none())
                 .await
                 .unwrap()
         );
@@ -271,14 +338,17 @@ mod tests {
 
     #[test]
     fn blocking_capture_is_restored_when_work_panics() {
-        let capture = Capture(Some(Arc::default()));
+        let capture = Capture {
+            metrics: Some(Arc::default()),
+            activity: current().activity,
+        };
         let outcome = std::panic::catch_unwind(|| {
             capture.in_blocking(|| {
-                assert!(current().0.is_some());
+                assert!(current().metrics.is_some());
                 panic!("simulated local computation failure");
             });
         });
         assert!(outcome.is_err());
-        assert!(current().0.is_none());
+        assert!(current().metrics.is_none());
     }
 }

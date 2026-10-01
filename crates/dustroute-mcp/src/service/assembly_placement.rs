@@ -196,7 +196,7 @@ impl AssemblyService<'_> {
     }
 
     pub(super) async fn manage_placed_assembly(&self, params: ManageAssemblyParams) -> Value {
-        let result: Result<Value,String> = async {
+        let result: Result<Value,FailureCause> = async {
             let player = self.player_scope.resolve(None)?;
             if let Some(error) = self.player_scope.authorize(&player).err() { return Err(error); }
             let registry = RegistryLock::acquire(self.state_store)?;
@@ -305,7 +305,7 @@ impl AssemblyService<'_> {
     }
 
     pub(super) async fn plan_assembly_construction(&self, params: PreviewPlacementParams) -> Value {
-        let result: Result<Value, String> = async {
+        let result: Result<Value, FailureCause> = async {
             if !params.circuit.is_empty() || params.revision_id.is_some() || params.optimize.unwrap_or(false) {
                 return Err("assembly_target requires only an adopted assembly_revision_id".into());
             }
@@ -359,7 +359,7 @@ impl AssemblyService<'_> {
         &self,
         id: uuid::Uuid,
         player: Option<&str>,
-    ) -> Result<StoredAssemblyPlacement, String> {
+    ) -> Result<StoredAssemblyPlacement, FailureCause> {
         let player = self.player_scope.resolve(player)?;
         if let Some(error) = self.player_scope.authorize(&player).err() {
             return Err(error);
@@ -371,15 +371,18 @@ impl AssemblyService<'_> {
             .await
             .get(&id)
             .cloned()
-            .ok_or("construction plan not found")?;
+            .ok_or_else(|| FailureCause::new(CauseKind::NotFound, "construction plan not found"))?;
         if plan.player != player {
-            return Err("construction belongs to another player".into());
+            return Err(FailureCause::new(
+                CauseKind::PermissionDenied,
+                "construction belongs to another player",
+            ));
         }
         Ok(plan)
     }
 
     pub(super) async fn get_assembly_construction(&self, id: uuid::Uuid) -> Value {
-        let result: Result<Value,String> = async {
+        let result: Result<Value,FailureCause> = async {
             let plan = self.owned_assembly_plan(id,None).await?;
             Ok(json!({"ok":true,"operation_id":id,"kind":plan.kind(),"assembly_revision_id":plan.assembly_id,
                 "bounds":bounds_json(plan.proof.bounds()), "proposed_assembly":plan.proof.assembly(),
@@ -397,7 +400,7 @@ impl AssemblyService<'_> {
         id: uuid::Uuid,
         player: Option<&str>,
     ) -> Value {
-        let result: Result<Value,String> = async {
+        let result: Result<Value,FailureCause> = async {
             let plan = self.owned_assembly_plan(id,player).await?;
             if plan.state != PistonPlacementState::Planned || plan.expires_at <= Instant::now() { return Err("construction preview is expired or consumed".into()); }
             let bounds = plan.proof.bounds();
@@ -408,9 +411,9 @@ impl AssemblyService<'_> {
                     return Err("placed Assembly record changed; reobserve and replan removal".into());
                 }
             }
-            self.policy.authorize_dimension(&plan.dimension).map_err(|e|e.to_string())?;
-            self.policy.validate_region(bounds).map_err(|e|e.to_string())?;
-            let preview = self.bridge.preview_region(&plan.player,bounds.min,bounds.max,&plan.dimension).await.map_err(|e|e.to_string())?;
+            self.policy.authorize_dimension(&plan.dimension).map_err(FailureCause::from)?;
+            self.policy.validate_region(bounds).map_err(FailureCause::from)?;
+            let preview = self.bridge.preview_region(&plan.player,bounds.min,bounds.max,&plan.dimension).await.map_err(FailureCause::from)?;
             self.plans.table::<assembly_placement::StoredAssemblyPlacement>().lock().await.get_mut(&id).ok_or("construction missing")?.previewed = true;
             Ok(json!({"ok":true,"operation_id":id,"preview":preview,"bounds":bounds_json(bounds),"kind":plan.kind(),"steps":plan.steps(false),"construction_steps":plan.proof.steps(false),"undo_steps":plan.proof.steps(true),"execution_batches":super::construction_executor::batch_summary(plan.steps(false)),"undo_execution_batches":super::construction_executor::batch_summary(plan.steps(true)),"operating_removal":plan.operating_removal(),"reconstruction":plan.reconstruction(),"reconstruction_conditions":plan.reconstruction().map(|_|reconstruction::conditions())}))
         }.await;

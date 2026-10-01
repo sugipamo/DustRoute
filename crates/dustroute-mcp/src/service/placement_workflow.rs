@@ -7,7 +7,7 @@ pub(super) struct PlacementWorkflow<'a> {
     pub plans: &'a OperationPlans,
     pub operations: &'a OperationRegistry,
     pub mutation_lock: &'a Mutex<()>,
-    pub actor: Result<String, String>,
+    pub actor: Result<String, FailureCause>,
 }
 impl PlacementWorkflow<'_> {
     fn world_editor(&self) -> world_editor::WorldEditor<'_> {
@@ -54,7 +54,9 @@ impl PlacementWorkflow<'_> {
         if let Err(error) = self.policy.authorize_mutation() {
             return progress.cause(error).response();
         }
+        let queue = crate::performance::span(crate::performance::Phase::MutationQueue);
         let _mutation_guard = self.mutation_lock.lock().await;
+        drop(queue);
         let operation_id = match uuid::Uuid::parse_str(&params.operation_id) {
             Ok(id) => id,
             Err(error) => {
@@ -141,6 +143,7 @@ impl PlacementWorkflow<'_> {
             return progress.cause(error).response();
         }
         progress.phase = FailurePhase::BeforeReadback;
+        crate::performance::execution_progress(progress);
         progress.total_changes = Some(source.len());
         let (baseline_matches, baseline_mismatches) = match self
             .world_editor()
@@ -244,14 +247,17 @@ impl PlacementWorkflow<'_> {
         progress.operation_consumed = true;
         let previous_world = progress.world;
         progress.begin_submission();
+        crate::performance::execution_progress(progress);
         let bridge_result = match self.bridge.write_blocks(&writes, &dimension).await {
             Ok(result) => {
                 progress.submitted(result.submitted_changes);
+                crate::performance::execution_progress(progress);
                 result
             }
             Err(error) => return progress.submission_error(error, previous_world).response(),
         };
         progress.phase = FailurePhase::AfterReadback;
+        crate::performance::execution_progress(progress);
         let (verified, verification_mismatches) = match self
             .world_editor()
             .verify_placement_changes_eventually(source, &dimension)
@@ -261,6 +267,7 @@ impl PlacementWorkflow<'_> {
             Err(error) => return progress.cause(error).response(),
         };
         progress.phase = FailurePhase::Verification;
+        crate::performance::execution_progress(progress);
         if !verified {
             let mut response = progress
                 .cause(FailureCause::mismatch(

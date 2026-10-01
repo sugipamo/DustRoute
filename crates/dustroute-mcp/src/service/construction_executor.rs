@@ -54,6 +54,7 @@ impl ConstructionExecutor<'_> {
             durable_verified_steps: Some(0),
             ..Default::default()
         };
+        crate::performance::execution_progress(&progress);
         let bounds = RegionBounds::new(baseline.min, baseline.max);
         self.policy
             .authorize_mutation()
@@ -91,6 +92,7 @@ impl ConstructionExecutor<'_> {
                     .collect::<Result<Vec<_>, String>>()
                     .map_err(|e| progress.cause(FailureCause::new(CauseKind::InvalidInput, e)))?;
                 progress.phase = FailurePhase::BeforeReadback;
+                crate::performance::execution_progress(&progress);
                 let status = self.bridge.status().await.map_err(|e| progress.cause(e))?;
                 super::assembly_placement::server_contract(&status, &self.target.dimension)
                     .map_err(|e| progress.cause(FailureCause::new(CauseKind::Unsupported, e)))?;
@@ -112,6 +114,7 @@ impl ConstructionExecutor<'_> {
                     let _measurement =
                         crate::performance::span(crate::performance::Phase::Checkpoint);
                     progress.phase = FailurePhase::CheckpointSave;
+                    crate::performance::execution_progress(&progress);
                     if let Err(cause) =
                         checkpoint(StageProgress::Readback(Box::new(before.readback)))
                     {
@@ -120,6 +123,7 @@ impl ConstructionExecutor<'_> {
                     }
                 }
                 progress.phase = FailurePhase::IntentSave;
+                crate::performance::execution_progress(&progress);
                 let mut intent = progress.clone();
                 intent.phase = FailurePhase::Submission;
                 intent.world = WorldOutcome::Unknown;
@@ -133,13 +137,16 @@ impl ConstructionExecutor<'_> {
                 }
                 let previous_world = progress.world;
                 progress.begin_submission();
+                crate::performance::execution_progress(&progress);
                 let receipt = self
                     .bridge
                     .write_blocks(&writes, &self.target.dimension)
                     .await
                     .map_err(|e| progress.submission_error(e, previous_world))?;
                 progress.submitted(receipt.submitted_changes);
+                crate::performance::execution_progress(&progress);
                 progress.phase = FailurePhase::Wait;
+                crate::performance::execution_progress(&progress);
                 let mut remaining = batch.wait_ticks();
                 while remaining > 0 {
                     let ticks = remaining.min(200) as u16;
@@ -150,6 +157,7 @@ impl ConstructionExecutor<'_> {
                     remaining -= u64::from(ticks);
                 }
                 progress.phase = FailurePhase::AfterReadback;
+                crate::performance::execution_progress(&progress);
                 let after = self
                     .bridge
                     .scan_region_fresh(bounds.min, bounds.max, &self.target.dimension)
@@ -161,6 +169,7 @@ impl ConstructionExecutor<'_> {
                     let _measurement =
                         crate::performance::span(crate::performance::Phase::Checkpoint);
                     progress.phase = FailurePhase::CheckpointSave;
+                    crate::performance::execution_progress(&progress);
                     if let Err(cause) =
                         checkpoint(StageProgress::Readback(Box::new(after.readback)))
                     {
@@ -168,7 +177,10 @@ impl ConstructionExecutor<'_> {
                         return Err(progress.cause(cause));
                     }
                 }
+                let verification =
+                    crate::performance::span(crate::performance::Phase::Verification);
                 progress.phase = FailurePhase::Verification;
+                crate::performance::execution_progress(&progress);
                 let status = self.bridge.status().await.map_err(|e| progress.cause(e))?;
                 self.target
                     .check(&status)
@@ -181,7 +193,9 @@ impl ConstructionExecutor<'_> {
                 .map_err(|e| {
                     progress.cause(FailureCause::new(CauseKind::VerificationMismatch, e))
                 })?;
+                drop(verification);
                 progress.verified_steps = batch.last_step();
+                crate::performance::execution_progress(&progress);
                 if progress.verified_steps == steps.len() {
                     progress.world = WorldOutcome::Verified;
                 }
@@ -189,12 +203,14 @@ impl ConstructionExecutor<'_> {
                     let _measurement =
                         crate::performance::span(crate::performance::Phase::Checkpoint);
                     progress.phase = FailurePhase::CheckpointSave;
+                    crate::performance::execution_progress(&progress);
                     if let Err(cause) = checkpoint(StageProgress::Verified(batch.last_step())) {
                         progress.persistence = PersistenceOutcome::Uncertain;
                         return Err(progress.cause(cause));
                     }
                     progress.durable_verified_steps = Some(batch.last_step());
                     progress.persistence = PersistenceOutcome::CheckpointSaved;
+                    crate::performance::execution_progress(&progress);
                 }
                 Ok(())
             }
@@ -213,6 +229,7 @@ impl ConstructionExecutor<'_> {
         if steps.is_empty() {
             progress.world = WorldOutcome::Verified;
         }
+        crate::performance::execution_progress(&progress);
         Ok(progress)
     }
 }

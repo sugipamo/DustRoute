@@ -1,0 +1,105 @@
+{
+  "schema_version": "dustroute.validation-summary.v1",
+  "date": "2026-10-01",
+  "branch": "codex/operation-diagnostics-progress",
+  "base": "02db7ea",
+  "scope": "Typed common observation/admission diagnostics and request-local live operation activity. Offline fixtures are not a Minecraft physics oracle.",
+  "minecraft_live_trial": false,
+  "host_changes": false,
+  "running_service_changes": false,
+  "checks": [
+    {
+      "command": "cargo test --offline --locked -j 1 -p dustroute-mcp --features voxrig --lib -- --test-threads=1",
+      "log": "operation-diagnostics-initial-native-20261001.log.gz",
+      "note": "Initial broad run: activity shadowed a persisted Blueprint result. Corrected and the failing case rechecked below.",
+      "status": "FAILED",
+      "passed": 176,
+      "failed": 1,
+      "ignored": 4,
+      "filtered": 0,
+      "duration_seconds": 906.29
+    },
+    {
+      "command": "cargo test --offline --locked -j 1 -p dustroute-mcp --features voxrig --lib -- --test-threads=1 --skip service::blueprint_tests --skip service::building_tests --skip service::construction_job_tests",
+      "log": "operation-diagnostics-final-native-20261001.log.gz",
+      "note": "After history lookup and normalization/analysis phase corrections; before the final visible-player refinement.",
+      "status": "ok",
+      "passed": 136,
+      "failed": 0,
+      "ignored": 4,
+      "filtered": 41,
+      "duration_seconds": 69.3
+    },
+    {
+      "command": "cargo test --offline --locked -j 1 -p dustroute-mcp --features voxrig --lib runtime_blueprint_review_and_adoption_preserve_child_failures_after_restart -- --test-threads=1",
+      "log": "operation-diagnostics-blueprint-recheck-20261001.log.gz",
+      "note": "Both successful adoption and broken-child refusal retain their saved Blueprint result with separate activity.",
+      "status": "ok",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "filtered": 180,
+      "duration_seconds": 13.96
+    },
+    {
+      "command": "cargo test --offline --locked -j 1 -p dustroute-mcp --lib -- --test-threads=1 --skip service::blueprint_tests --skip service::building_tests --skip service::construction_job_tests",
+      "log": "operation-diagnostics-compat-related-20261001.log.gz",
+      "note": "Compatibility configuration before the final visible-player refinement.",
+      "status": "ok",
+      "passed": 128,
+      "failed": 0,
+      "ignored": 2,
+      "filtered": 41,
+      "duration_seconds": 129.38
+    },
+    {
+      "command": "cargo test --offline --locked -j 1 -p dustroute-mcp --features voxrig --lib operation_diagnostics_tests -- --test-threads=1",
+      "log": "operation-diagnostics-final-five-native-20261001.log.gz",
+      "note": "Final source: numeric/identity/connection diagnostics, live mutation readback progress, saved-history preservation, analysis cancellation and coordinate diagnostics, visible-player acquisition/refresh failures.",
+      "status": "ok",
+      "passed": 5,
+      "failed": 0,
+      "ignored": 0,
+      "filtered": 177,
+      "duration_seconds": 0.13
+    },
+    {
+      "command": "cargo test --offline --locked -j 1 -p dustroute-mcp --lib operation_diagnostics_tests -- --test-threads=1",
+      "log": "operation-diagnostics-final-five-compat-20261001.log.gz",
+      "note": "Same final five MCP cases under the compatibility configuration.",
+      "status": "ok",
+      "passed": 5,
+      "failed": 0,
+      "ignored": 0,
+      "filtered": 167,
+      "duration_seconds": 0.13
+    },
+    {
+      "command": "cargo clippy --offline --locked -j 1 -p dustroute-mcp --features voxrig --all-targets -- -D warnings",
+      "log": "operation-diagnostics-native-clippy-20261001.log.gz",
+      "note": "Final source; passed.",
+      "status": "passed"
+    },
+    {
+      "command": "cargo clippy --offline --locked -j 1 -p dustroute-mcp --all-targets -- -D warnings",
+      "log": "operation-diagnostics-compat-clippy-20261001.log.gz",
+      "note": "Final source; passed.",
+      "status": "passed"
+    },
+    {
+      "command": "cargo fmt --package dustroute-mcp -- --check",
+      "status": "passed"
+    },
+    {
+      "command": "git diff --check",
+      "status": "passed"
+    }
+  ],
+  "coverage_note": "178 distinct native cases have successful runs across the broad/related/final runs. This is not a fresh full-suite pass after every refinement; 40 expensive Blueprint/building/job cases passed before the final response refinements and were not repeated. Four native opt-in measurements and two compatibility measurements remained ignored.",
+  "remaining": [
+    "Deep String-only proof/compiler/catalog and some legacy admission/planning boundaries still lose typed causes; no message heuristics replace them.",
+    "Synchronous reads/plans without an existing operation ID do not expose pollable activity.",
+    "Activity is bounded and request-local, is not persisted, gives no ETA or replay permission, and cannot cancel world mutations.",
+    "Analysis cancellation is cooperative; in-flight work may finish without reviving a cancelled result."
+  ]
+}
