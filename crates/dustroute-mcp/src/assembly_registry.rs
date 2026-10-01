@@ -79,6 +79,10 @@ pub(crate) struct Attempt {
     /// Historical readback receipts only; fresh observations are always required.
     #[serde(default)]
     pub readbacks: Vec<crate::observation_evidence::ObservationEvidence>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub failure: Option<crate::failure::FailureReport>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub progress: Option<crate::failure::ExecutionProgress>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

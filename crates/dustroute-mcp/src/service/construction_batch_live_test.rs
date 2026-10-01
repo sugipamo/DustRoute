@@ -109,6 +109,7 @@ async fn profile_native_construction_batches() -> anyhow::Result<()> {
                     "native_construction_apply",
                     executor.execute(&baseline, steps, |progress| {
                         match progress {
+                            construction_executor::StageProgress::WriteIntent(_) => {}
                             construction_executor::StageProgress::Verified(n) => verified = n,
                             construction_executor::StageProgress::Readback(r) => readbacks.push(*r),
                         }

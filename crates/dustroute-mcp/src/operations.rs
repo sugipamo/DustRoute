@@ -126,9 +126,19 @@ impl OperationRegistry {
     pub async fn complete(&self, id: Uuid, result: Value) {
         if let Some(entry) = self.entries.lock().await.get_mut(&id) {
             let now = now_unix_ms();
-            entry.record.status = OperationStatus::Completed;
-            entry.record.progress_percent = 100;
-            entry.record.message = "completed".to_owned();
+            let failed = result.get("ok") == Some(&Value::Bool(false));
+            entry.record.status = if failed {
+                OperationStatus::Failed
+            } else {
+                OperationStatus::Completed
+            };
+            entry.record.progress_percent = result_progress(&result);
+            entry.record.message = if failed {
+                "failed; inspect result before recovery"
+            } else {
+                "completed"
+            }
+            .to_owned();
             entry.record.result = Some(result);
             entry.record.updated_at_unix_ms = now;
             entry.record.completed_at_unix_ms = Some(now);
@@ -138,16 +148,45 @@ impl OperationRegistry {
     pub async fn record_completed(&self, id: Uuid, kind: OperationKind, result: Value) {
         let now = now_unix_ms();
         let mut entries = self.entries.lock().await;
+        // A refusal to replay is not a new world attempt. Keep the original
+        // mutation's facts under its ID rather than replacing them with an
+        // admission error that knows nothing about earlier effects.
+        let consumed = |value: &Value| {
+            value
+                .pointer("/failure/progress/operation_consumed")
+                .or_else(|| value.pointer("/execution_progress/operation_consumed"))
+                == Some(&Value::Bool(true))
+        };
+        if result.get("ok") == Some(&Value::Bool(false))
+            && !consumed(&result)
+            && entries
+                .get(&id)
+                .and_then(|entry| entry.record.result.as_ref())
+                .is_some_and(consumed)
+        {
+            return;
+        }
         prune_terminal_entries(&mut entries, self.max_entries.saturating_sub(1));
+        let failed = result.get("ok") == Some(&Value::Bool(false));
+        let progress_percent = result_progress(&result);
         entries.insert(
             id,
             OperationEntry {
                 record: OperationRecord {
                     id,
                     kind,
-                    status: OperationStatus::Completed,
-                    progress_percent: 100,
-                    message: "completed".to_owned(),
+                    status: if failed {
+                        OperationStatus::Failed
+                    } else {
+                        OperationStatus::Completed
+                    },
+                    progress_percent,
+                    message: if failed {
+                        "failed; inspect result before recovery"
+                    } else {
+                        "completed"
+                    }
+                    .to_owned(),
                     created_at_unix_ms: now,
                     updated_at_unix_ms: now,
                     completed_at_unix_ms: Some(now),
@@ -217,6 +256,27 @@ impl OperationRegistry {
     }
 }
 
+fn result_progress(result: &Value) -> u8 {
+    if result.get("ok") != Some(&Value::Bool(false)) {
+        return 100;
+    }
+    let progress = result.pointer("/failure/progress");
+    let verified = progress
+        .and_then(|p| p.get("verified_steps"))
+        .or_else(|| result.get("verified_steps"))
+        .and_then(Value::as_u64);
+    let total = progress
+        .and_then(|p| p.get("total_changes"))
+        .or_else(|| result.get("total_steps"))
+        .and_then(Value::as_u64);
+    verified
+        .zip(total)
+        .filter(|(_, total)| *total > 0)
+        .map_or(0, |(verified, total)| {
+            ((u128::from(verified) * 100 / u128::from(total)).min(100)) as u8
+        })
+}
+
 fn prune_terminal_entries(entries: &mut HashMap<Uuid, OperationEntry>, target_len: usize) {
     if entries.len() <= target_len {
         return;
@@ -241,6 +301,45 @@ fn prune_terminal_entries(entries: &mut HashMap<Uuid, OperationEntry>, target_le
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn replay_refusal_does_not_replace_original_consumed_attempt() {
+        let registry = OperationRegistry::default();
+        let id = Uuid::new_v4();
+        let original = serde_json::json!({"ok":false,"error":"reply lost","failure":{"progress":{"operation_consumed":true,"world":"unknown"}}});
+        registry
+            .record_completed(id, OperationKind::RepairApply, original.clone())
+            .await;
+        registry
+            .record_completed(
+                id,
+                OperationKind::RepairApply,
+                serde_json::json!({"ok":false,"error":"already consumed"}),
+            )
+            .await;
+        assert_eq!(registry.get(id).await.unwrap().result, Some(original));
+    }
+    #[tokio::test]
+    async fn completed_call_preserves_failure_and_only_verified_progress() {
+        let registry = OperationRegistry::default();
+        let result = serde_json::json!({"ok":false,"failure":{"progress":{"submitted_changes":10,"verified_steps":2,"total_changes":10}},"error":"after readback failed"});
+        let id = Uuid::new_v4();
+        registry
+            .record_completed(id, OperationKind::PlacementApply, result.clone())
+            .await;
+        let stored = registry.get(id).await.unwrap();
+        assert_eq!(stored.status, OperationStatus::Failed);
+        assert_eq!(stored.progress_percent, 20);
+        assert_eq!(stored.result, Some(result.clone()));
+        let task = registry
+            .create(OperationKind::AnalyzeRegion, "queued")
+            .await;
+        registry.complete(task, result).await;
+        assert_eq!(
+            registry.get(task).await.unwrap().status,
+            OperationStatus::Failed
+        );
+    }
 
     #[tokio::test]
     async fn records_progress_completion_and_cancellation() {

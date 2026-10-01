@@ -119,7 +119,9 @@ impl FreshRegion {
     pub(crate) fn into_shared_record(self) -> SharedObservationRecord {
         self.0
     }
-    pub(crate) fn into_stationary_record(self) -> Result<SharedObservationRecord, String> {
+    pub(crate) fn into_stationary_record(
+        self,
+    ) -> Result<SharedObservationRecord, crate::failure::FailureCause> {
         if self.0.readback.moving()
             || self
                 .0
@@ -128,7 +130,10 @@ impl FreshRegion {
                 .iter()
                 .any(|b| b.name == "minecraft:moving_piston")
         {
-            return Err("moving observation cannot authorize a construction step".into());
+            return Err(crate::failure::FailureCause::new(
+                crate::failure::CauseKind::MovingObservation,
+                "moving observation cannot authorize a construction step",
+            ));
         }
         Ok(self.0)
     }

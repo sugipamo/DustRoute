@@ -267,19 +267,20 @@ impl DustRouteMcp {
         &self,
         target: &TargetServer,
         expected: &MinecraftSnapshot,
-    ) -> Result<Vec<crate::observation_evidence::ObservationEvidence>, String> {
+    ) -> Result<Vec<crate::observation_evidence::ObservationEvidence>, FailureCause> {
         let mut receipts = Vec::new();
         for index in 0..2 {
-            let status = self.bridge.status().await.map_err(|e| e.to_string())?;
+            let status = self.bridge.status().await.map_err(FailureCause::from)?;
             assembly_placement::server_contract(&status, &target.dimension)?;
             target.check(&status)?;
             let observed = self
                 .bridge
                 .scan_region_fresh(expected.min, expected.max, &target.dimension)
                 .await
-                .map_err(|e| e.to_string())?
+                .map_err(FailureCause::from)?
                 .into_stationary_record()?;
-            ValidatedAssemblyPlacement::matches(&observed.snapshot, expected, &status.version)?;
+            ValidatedAssemblyPlacement::matches(&observed.snapshot, expected, &status.version)
+                .map_err(|e| FailureCause::new(CauseKind::VerificationMismatch, e))?;
             if let Some(first) = receipts.first() {
                 observed.readback.interval_since(first)?;
             }
@@ -288,10 +289,10 @@ impl DustRouteMcp {
                 self.bridge
                     .wait_ticks(20, &target.dimension)
                     .await
-                    .map_err(|e| e.to_string())?;
+                    .map_err(FailureCause::from)?;
             }
         }
-        let status = self.bridge.status().await.map_err(|e| e.to_string())?;
+        let status = self.bridge.status().await.map_err(FailureCause::from)?;
         target.check(&status)?;
         Ok(receipts)
     }
@@ -338,9 +339,10 @@ impl DustRouteMcp {
         confirm: bool,
         undo: bool,
     ) -> Value {
-        self.execute_electrical_edit(id, confirm, undo)
+        let mut progress = ExecutionProgress::default();
+        self.execute_electrical_edit(id, confirm, undo, &mut progress)
             .await
-            .unwrap_or_else(|error| json!({"ok":false,"error":error}))
+            .unwrap_or_else(|error| progress.cause(error).response())
     }
 
     async fn execute_electrical_edit(
@@ -348,13 +350,14 @@ impl DustRouteMcp {
         id: uuid::Uuid,
         confirm: bool,
         undo: bool,
-    ) -> Result<Value, String> {
+        progress: &mut ExecutionProgress,
+    ) -> Result<Value, FailureCause> {
         if !confirm {
             return Err("confirm=true is required".into());
         }
         self.policy
             .authorize_mutation()
-            .map_err(|e| e.to_string())?;
+            .map_err(FailureCause::from)?;
         let queue_measurement = span(Phase::MutationQueue);
         let _guard = self.mutation_lock.lock().await;
         drop(queue_measurement);
@@ -375,6 +378,7 @@ impl DustRouteMcp {
                 "edit requires unused unexpired preview; undo requires verified application".into(),
             );
         }
+        progress.phase = FailurePhase::ModelProof;
         let saved_proof = plan.proof.clone();
         let capture = current();
         let queued_at = std::time::Instant::now();
@@ -386,14 +390,14 @@ impl DustRouteMcp {
             })
         })
         .await
-        .map_err(|e| e.to_string())??;
+        .map_err(|e| FailureCause::new(CauseKind::Unknown, e.to_string()))??;
         if proof.steps(undo) != plan.proof.steps(undo) {
             return Err("fresh edit steps differ from the preview; replan".into());
         }
         let steps = proof.steps(undo);
         self.policy
             .validate_placement_size(steps.len())
-            .map_err(|e| e.to_string())?;
+            .map_err(FailureCause::from)?;
         let registry = EditRegistry::acquire(&self.state_store)?;
         let profile = dustroute_translate::world::time::piston_runtime::ELECTRICAL_PROFILE;
         let mut record = if undo {
@@ -432,12 +436,14 @@ impl DustRouteMcp {
             }
         };
         let baseline = if undo { proof.after() } else { proof.before() };
+        progress.phase = FailurePhase::BeforeReadback;
         let readbacks = self
             .check_stationary_edit_baseline(&plan.target, baseline)
             .await?;
         if !undo && plan.expires_at <= Instant::now() {
             return Err("edit expired during validation".into());
         }
+        progress.phase = FailurePhase::IntentSave;
         // Journal uncertain intent before writes. Loading it restores history,
         // never authority to replay a previous executable operation.
         let job_registry = plan
@@ -455,9 +461,13 @@ impl DustRouteMcp {
                     undo: binding.undo,
                     verified: false,
                     error: None,
+                    failure: None,
                 });
                 JobRegistry::ensure_completion_fits(&job, binding, &proof)?;
-                registry.save(&job)?;
+                registry.save(&job).map_err(|e| {
+                    progress.persistence = PersistenceOutcome::Uncertain;
+                    FailureCause::new(CauseKind::Persistence, e)
+                })?;
                 Some(job)
             } else {
                 None
@@ -469,6 +479,7 @@ impl DustRouteMcp {
             .get_mut(&id)
             .ok_or("edit unavailable")?
             .state = PistonPlacementState::NeedsInspection;
+        progress.operation_consumed = true;
         record.state = EditState::NeedsInspection;
         record.attempts.push(EditAttempt {
             undo,
@@ -478,8 +489,14 @@ impl DustRouteMcp {
             finished_at_unix_ms: None,
             error: None,
             readbacks,
+            failure: None,
+            progress: Some(progress.clone()),
         });
-        registry.save(&record)?;
+        registry.save(&record).map_err(|e| {
+            progress.persistence = PersistenceOutcome::Uncertain;
+            FailureCause::new(CauseKind::Persistence, e)
+        })?;
+        progress.persistence = PersistenceOutcome::IntentSaved;
         let mut completed = 0;
         let mut run = construction_executor::ConstructionExecutor {
             bridge: &self.bridge,
@@ -492,14 +509,23 @@ impl DustRouteMcp {
                 construction_executor::StageProgress::Readback(receipt) => {
                     attempt.readbacks.push(*receipt)
                 }
+                construction_executor::StageProgress::WriteIntent(intent) => {
+                    attempt.progress = Some(intent)
+                }
                 construction_executor::StageProgress::Verified(count) => {
                     completed = count;
                     attempt.verified_steps = count;
                 }
             }
-            registry.save(&record)
+            registry
+                .save(&record)
+                .map_err(|e| FailureCause::new(CauseKind::Persistence, e))
         })
         .await;
+        *progress = match &run {
+            Ok(p) => p.clone(),
+            Err(report) => (*report.progress).clone(),
+        };
         record.state = if run.is_ok() {
             if undo {
                 EditState::Undone
@@ -511,16 +537,19 @@ impl DustRouteMcp {
         };
         let attempt = record.attempts.last_mut().ok_or("missing edit attempt")?;
         attempt.finished_at_unix_ms = Some(now_ms()?);
-        attempt.error = run.as_ref().err().cloned();
+        attempt.error = run.as_ref().err().map(ToString::to_string);
+        attempt.failure = run.as_ref().err().cloned();
+        attempt.progress = Some(progress.clone());
         if let Err(error) = registry.save(&record) {
-            run = Err(error);
+            crate::failure::persistence_failed(&mut run, error);
         }
         if let (Some(binding), Some(job), Some(registry)) =
             (plan.job, job_record.as_mut(), job_registry.as_ref())
         {
             let attempt = job.attempts.last_mut().ok_or("missing job attempt")?;
             attempt.verified = run.is_ok();
-            attempt.error = run.as_ref().err().cloned();
+            attempt.error = run.as_ref().err().map(ToString::to_string);
+            attempt.failure = run.as_ref().err().cloned();
             if run.is_ok() {
                 if binding.undo {
                     job.boundaries.truncate(binding.region_index);
@@ -544,9 +573,17 @@ impl DustRouteMcp {
                 };
             }
             if let Err(error) = registry.save(job) {
-                run = Err(error);
+                crate::failure::persistence_failed(&mut run, error);
             }
         }
+        if let Ok(result) = &mut run {
+            result.phase = FailurePhase::FinalSave;
+            result.persistence = PersistenceOutcome::FinalSaved;
+        }
+        *progress = match &run {
+            Ok(p) => p.clone(),
+            Err(report) => (*report.progress).clone(),
+        };
         if run.is_ok()
             && let Some(binding) = plan.job
         {
@@ -565,9 +602,14 @@ impl DustRouteMcp {
                 PistonPlacementState::Applied
             };
         }
-        let response = json!({"ok":run.is_ok(),"operation_id":id,"kind":"electrical_revision_modification","undo":undo,"job_stage":plan.job,
+        let mut response = json!({"ok":run.is_ok(),"operation_id":id,"kind":"electrical_revision_modification","undo":undo,"job_stage":plan.job,
             "status":if run.is_ok(){"verified"}else{"needs_inspection"},"verified_steps":completed,"total_steps":steps.len(),
-            "error":run.err(),"retry_allowed":false,"automatic_rollback":false,"assembly_adoption_modified":false});
+            "error":run.as_ref().err().map(ToString::to_string),"retry_allowed":false,"automatic_rollback":false,"assembly_adoption_modified":false});
+        if let Err(report) = &run {
+            report.attach(&mut response);
+        } else {
+            response["execution_progress"] = json!(progress);
+        }
         self.operations
             .record_completed(
                 id,

@@ -265,6 +265,15 @@ impl VoxrigBridge {
         changes: &[CommandWrite],
         dimension: &str,
     ) -> Result<CommandSubmission, BotBridgeError> {
+        self.write_blocks_tracked(changes, dimension, &mut Default::default())
+            .await
+    }
+    pub(crate) async fn write_blocks_tracked(
+        &self,
+        changes: &[CommandWrite],
+        dimension: &str,
+        progress: &mut crate::failure::SubmissionProgress,
+    ) -> Result<CommandSubmission, BotBridgeError> {
         if changes.len() > COMMAND_LIMIT {
             return Err(fail("command write limit exceeded"));
         }
@@ -276,6 +285,7 @@ impl VoxrigBridge {
         let operations = self.operations()?;
         for (index, change) in changes.iter().enumerate() {
             self.require_dimension(dimension).await?;
+            progress.may_have_changed_world = true;
             operations
                 .send_command(&format!(
                     "setblock {} {} {} {} replace",
@@ -283,6 +293,7 @@ impl VoxrigBridge {
                 ))
                 .await
                 .map_err(native_error)?;
+            progress.submitted_changes = index + 1;
             if (index + 1) % 64 == 0 {
                 tokio::time::sleep(Duration::from_millis(50)).await;
             }

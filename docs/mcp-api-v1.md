@@ -156,7 +156,8 @@ families use these identifiers:
 | repair evidence context | `dustroute.repair-context.v1` |
 | transition plan, run, and restore | `dustroute.transition.v1` |
 | Blueprint catalog, update review and decisions | `dustroute.blueprint-mcp.v1` |
-| common error | `dustroute.error.v1` |
+| legacy common error | `dustroute.error.v1` |
+| instrumented execution failure | `dustroute.error.v2` |
 
 Adding an optional field is compatible within v1. Removing a field, changing
 its meaning or type, or renaming an enum value requires a new schema version.
@@ -244,9 +245,26 @@ the machine-readable fields for control flow:
 
 Stable error codes are `invalid_argument`, `invalid_state`, `not_found`,
 `permission_denied`, `observation_unavailable`, `bridge_unavailable`,
-`serialization_failed`, `verification_failed`, and `internal`. `retryable`
+`serialization_failed`, `verification_failed`, `unsupported`, `resource_limit`,
+`persistence_failed`, and `internal`. `retryable`
 means the identical request may reasonably succeed after transient external
 state changes; it never grants permission to repeat a mutation automatically.
+
+Instrumented mutation failures use `dustroute.error.v2` and additionally return
+`failure.primary`, `failure.secondary`, `failure.progress` and `recovery`.
+The progress distinguishes locally submitted changes, independently verified
+steps and durably checkpointed verified steps. A missing count is JSON `null`,
+not zero. A failed final save can coexist with a verified world result.
+
+Legacy string-only failures retain v1 and expose `failure.progress: null`, with
+unknown phase/cause where no explicit category survived. Never infer execution
+facts from the human-readable message. See
+[structured failure and recovery contracts](structured-failure-recovery.md).
+
+`get_operation.ok` means the query succeeded; inspect the nested operation
+status and result to determine execution success. A recorded `ok: false` result
+is `failed`, even if the API call returned normally. Its progress percentage
+uses verified steps only, and does not count transport submissions as success.
 
 ## Coordinate-keyed state
 

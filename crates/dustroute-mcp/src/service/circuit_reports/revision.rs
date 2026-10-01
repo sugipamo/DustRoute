@@ -1,5 +1,6 @@
 //! Revision reports and bounded hypothetical-state analysis.
 use super::analysis::circuit_identity_json;
+use crate::failure::FailureCause;
 use dustroute_physical::Pos;
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
@@ -151,7 +152,7 @@ pub(in super::super) fn electrical_modification_validation(
             "model_initial_queue":"assumed_empty","runtime_history_reconstructed":false})
             }
             Err(error) => {
-                json!({"status":"failed_or_unsupported","error":error.to_string(),"placement_authorized":false})
+                json!({"status":"failed_or_unsupported","error":error.to_string(),"cause":FailureCause::from(error),"placement_authorized":false})
             }
         },
     )

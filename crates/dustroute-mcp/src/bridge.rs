@@ -431,6 +431,8 @@ pub enum BotBridgeError {
     Protocol(String),
     Json(serde_json::Error),
     Timeout(Duration),
+    Detailed(crate::failure::FailureCause),
+    Submission(Box<crate::failure::SubmissionFailure>),
 }
 
 impl Display for BotBridgeError {
@@ -439,6 +441,8 @@ impl Display for BotBridgeError {
             Self::Io(error) => Display::fmt(error, f),
             Self::Protocol(message) => write!(f, "bot bridge protocol error: {message}"),
             Self::Json(error) => Display::fmt(error, f),
+            Self::Detailed(cause) => Display::fmt(cause, f),
+            Self::Submission(failure) => Display::fmt(&failure.cause, f),
             Self::Timeout(duration) => {
                 write!(
                     f,
@@ -451,6 +455,44 @@ impl Display for BotBridgeError {
 }
 
 impl Error for BotBridgeError {}
+
+impl BotBridgeError {
+    pub fn cause(&self) -> crate::failure::FailureCause {
+        use crate::failure::{CauseKind, FailureCause};
+        match self {
+            Self::Detailed(cause) => cause.clone(),
+            Self::Submission(failure) => failure.cause.clone(),
+            Self::Io(_) => FailureCause::new(CauseKind::Connection, self.to_string()),
+            Self::Json(_) => FailureCause::new(CauseKind::Serialization, self.to_string()),
+            Self::Timeout(_) => FailureCause::new(CauseKind::Timeout, self.to_string()),
+            Self::Protocol(_) => FailureCause::new(CauseKind::Protocol, self.to_string()),
+        }
+    }
+    pub fn with_submission(
+        self,
+        submitted: Option<usize>,
+        total: usize,
+        may_have_changed_world: bool,
+    ) -> Self {
+        if let Self::Submission(detail) = &self
+            && detail.total_changes == total
+            && detail.submitted_changes.is_none_or(|n| n <= total)
+        {
+            return self;
+        }
+        Self::Submission(Box::new(crate::failure::SubmissionFailure {
+            cause: self.cause(),
+            submitted_changes: submitted,
+            total_changes: total,
+            may_have_changed_world,
+        }))
+    }
+}
+impl From<BotBridgeError> for crate::failure::FailureCause {
+    fn from(error: BotBridgeError) -> Self {
+        error.cause()
+    }
+}
 
 impl From<std::io::Error> for BotBridgeError {
     fn from(value: std::io::Error) -> Self {
@@ -540,6 +582,15 @@ impl BotBridge {
             BufReader::new(stream).read_line(&mut response).await?;
             let response: Value = serde_json::from_str(&response)?;
             if let Some(error) = response.get("error") {
+                if response.get("failure_protocol").and_then(Value::as_str)
+                    == Some("dustroute.bridge-failure.v1")
+                    && let Some(detail) = response.get("submission_failure")
+                {
+                    let detail = serde_json::from_value::<crate::failure::SubmissionFailure>(
+                        detail.clone(),
+                    )?;
+                    return Err(BotBridgeError::Submission(Box::new(detail)));
+                }
                 return Err(BotBridgeError::Protocol(
                     error.as_str().unwrap_or("unknown bridge error").to_owned(),
                 ));
@@ -922,19 +973,31 @@ impl BotBridge {
         let _measurement = span(Phase::Write).commands(changes.len());
         #[cfg(feature = "voxrig")]
         if let Some(native) = &self.native {
-            return self
+            let mut progress = crate::failure::SubmissionProgress::default();
+            let result = self
                 .native_timeout_with_wait(
                     Duration::from_millis(
                         (changes.len().min(COMMAND_LIMIT) / 64) as u64 * 50 + 100,
                     ),
-                    native.write_blocks(changes, dimension),
+                    native.write_blocks_tracked(changes, dimension, &mut progress),
                 )
                 .await;
+            return result.map_err(|error| {
+                error.with_submission(
+                    Some(progress.submitted_changes),
+                    changes.len(),
+                    progress.may_have_changed_world,
+                )
+            });
         }
         if changes.len() > COMMAND_LIMIT {
-            return Err(BotBridgeError::Protocol(
-                "command write limit exceeded".into(),
-            ));
+            return Err(
+                BotBridgeError::Protocol("command write limit exceeded".into()).with_submission(
+                    Some(0),
+                    changes.len(),
+                    false,
+                ),
+            );
         }
         let result: CommandSubmission = self
             .request(
@@ -945,10 +1008,16 @@ impl BotBridge {
                     dimension,
                 })?,
             )
-            .await?;
+            .await
+            .map_err(|error| error.with_submission(None, changes.len(), true))?;
         if result.submitted_changes != changes.len() {
             return Err(BotBridgeError::Protocol(
                 "incomplete submission; inspect live state before retry".into(),
+            )
+            .with_submission(
+                (result.submitted_changes <= changes.len()).then_some(result.submitted_changes),
+                changes.len(),
+                true,
             ));
         }
         Ok(result)
@@ -961,19 +1030,31 @@ impl BotBridge {
     ) -> Result<PhysicalSubmission, BotBridgeError> {
         #[cfg(feature = "voxrig")]
         if let Some(native) = &self.native {
-            return self
+            let mut progress = crate::failure::SubmissionProgress::default();
+            let result = self
                 .native_timeout_with_wait(
                     // Per change: received teleport (3s), dig and place observations
                     // (1.5s each). Setup/retreat and transport use the base budget.
                     Duration::from_secs(changes.len().min(PHYSICAL_LIMIT) as u64 * 6),
-                    native.place_physical_blocks(changes, dimension),
+                    native.place_physical_blocks_tracked(changes, dimension, &mut progress),
                 )
                 .await;
+            return result.map_err(|error| {
+                error.with_submission(
+                    Some(progress.submitted_changes),
+                    changes.len(),
+                    progress.may_have_changed_world,
+                )
+            });
         }
         if changes.is_empty() || changes.len() > PHYSICAL_LIMIT {
-            return Err(BotBridgeError::Protocol(
-                "physical write limit exceeded".into(),
-            ));
+            return Err(
+                BotBridgeError::Protocol("physical write limit exceeded".into()).with_submission(
+                    Some(0),
+                    changes.len(),
+                    false,
+                ),
+            );
         }
         let result: PhysicalSubmission = self
             .request(
@@ -984,10 +1065,16 @@ impl BotBridge {
                     dimension,
                 })?,
             )
-            .await?;
+            .await
+            .map_err(|error| error.with_submission(None, changes.len(), true))?;
         if result.placed_changes != changes.len() {
             return Err(BotBridgeError::Protocol(
                 "incomplete placement submission; inspect live state before retry".into(),
+            )
+            .with_submission(
+                (result.placed_changes <= changes.len()).then_some(result.placed_changes),
+                changes.len(),
+                true,
             ));
         }
         Ok(result)
@@ -1336,5 +1423,49 @@ mod tests {
             .await
             .unwrap_err();
         assert!(matches!(error, BotBridgeError::Timeout(_)));
+    }
+
+    #[tokio::test]
+    async fn structured_compatibility_failure_preserves_prefix_but_invalid_counts_remain_unknown() {
+        for submitted in [1, 3] {
+            let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let address = listener.local_addr().unwrap().to_string();
+            let transport = tokio::spawn(async move {
+                let (mut stream, _) = listener.accept().await.unwrap();
+                let mut line = String::new();
+                BufReader::new(&mut stream)
+                    .read_line(&mut line)
+                    .await
+                    .unwrap();
+                let request: Value = serde_json::from_str(&line).unwrap();
+                let response = json!({"id":request["id"],"error":"opaque diagnostic","failure_protocol":"dustroute.bridge-failure.v1",
+                    "submission_failure":{"cause":{"kind":"disconnected","message":"opaque diagnostic","details":{},"phase":"submission"},"submitted_changes":submitted,"total_changes":2,"may_have_changed_world":true}});
+                stream
+                    .write_all(format!("{response}\n").as_bytes())
+                    .await
+                    .unwrap();
+            });
+            let changes: Vec<_> = (0..2)
+                .map(|x| CommandWrite {
+                    pos: Pos::new(x, 80, 0),
+                    state: "minecraft:stone".parse().unwrap(),
+                })
+                .collect();
+            let error = BotBridge::new(address)
+                .write_blocks(&changes, "minecraft:overworld")
+                .await
+                .unwrap_err();
+            let mut progress = crate::failure::ExecutionProgress::default();
+            progress.begin_submission();
+            let report =
+                progress.submission_error(error, crate::failure::WorldOutcome::NotAttempted);
+            assert_eq!(report.primary.kind, crate::failure::CauseKind::Disconnected);
+            assert_eq!(
+                report.progress.submitted_changes,
+                (submitted <= 2).then_some(submitted)
+            );
+            assert_eq!(report.progress.world, crate::failure::WorldOutcome::Unknown);
+            transport.await.unwrap();
+        }
     }
 }

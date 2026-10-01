@@ -86,7 +86,11 @@ impl AssemblyService<'_> {
     ) -> Value {
         let snapshot = match observation::stable_baseline(observation) {
             Ok(snapshot) => snapshot,
-            Err(reason) => return with_design(unavailable(&reason), record, proof),
+            Err(cause) => {
+                let mut report = with_design(unavailable(&cause.message), record, proof);
+                report["observation_failure"] = serde_json::json!(cause);
+                return report;
+            }
         };
         let saved = record.expected.clone();
         let state = record.state;

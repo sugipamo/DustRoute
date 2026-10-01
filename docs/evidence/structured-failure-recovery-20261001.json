@@ -1,0 +1,79 @@
+{
+  "schema_version": "dustroute.validation-summary.v1",
+  "date": "2026-10-01",
+  "branch": "codex/structured-failure-recovery",
+  "base": "830c053",
+  "scope": "Structured causes, execution progress, recovery information and MCP/operation error flags. Offline transport fixtures are not a Minecraft physics oracle.",
+  "minecraft_live_trial": false,
+  "host_changes": false,
+  "checks": [
+    {
+      "command": "cargo test --offline --locked -j 1 -p dustroute-mcp --features voxrig --lib -- --test-threads=1",
+      "passed": 166,
+      "failed": 1,
+      "ignored": 4,
+      "note": "An added failure assertion was inserted into a successful electrical edit case. Its placement was corrected; the entire electrical edit suite passed in the related final run."
+    },
+    {
+      "command": "cargo test --offline --locked -j 1 -p dustroute-mcp --features voxrig --lib -- --test-threads=1 --skip service::blueprint_tests --skip service::building_tests --skip service::construction_job_tests",
+      "passed": 131,
+      "failed": 0,
+      "ignored": 4,
+      "filtered": 41,
+      "note": "Includes the corrected public edit workflow, submitted/lost replies, regular repair/undo, piston actions, operation history, native causes, common checkpoints, and MCP envelope. Previously passing expensive Blueprint/building/job suites were not repeated for the final response refinements."
+    },
+    {
+      "command": "cargo test --offline --locked -j 1 -p dustroute-mcp --features voxrig --lib transition_failure_tests -- --test-threads=1",
+      "passed": 1,
+      "failed": 0,
+      "note": "Both initial activation/cleanup failure and recording/restoration-wait/block-read/region-read failures; uncertain operations cannot be replayed."
+    },
+    {
+      "command": "cargo test --offline --locked -j 1 -p dustroute-mcp --features voxrig --lib assembly_placement::observation -- --test-threads=1",
+      "passed": 3,
+      "failed": 0,
+      "note": "Rechecked final typed observation refusals and bounded refusal messages."
+    },
+    {
+      "command": "cargo test --offline --locked -j 1 -p dustroute-mcp --features voxrig --lib construction_executor::tests -- --test-threads=1",
+      "passed": 1,
+      "failed": 0,
+      "note": "Final checkpoint telemetry and no-write versus verified-unsaved-world outcomes."
+    },
+    {
+      "command": "cargo test --offline --locked -j 1 -p dustroute-mcp --lib bridge::tests -- --test-threads=1",
+      "passed": 10,
+      "failed": 0
+    },
+    {
+      "command": "cargo test --offline --locked -j 1 -p dustroute-mcp --lib failure::tests -- --test-threads=1",
+      "passed": 7,
+      "failed": 0
+    },
+    {
+      "command": "cargo clippy --offline --locked -j 1 -p dustroute-mcp --features voxrig --all-targets -- -D warnings",
+      "status": "passed"
+    },
+    {
+      "command": "cargo clippy --offline --locked -j 1 -p dustroute-mcp --all-targets -- -D warnings",
+      "status": "passed"
+    },
+    {
+      "command": "cargo fmt --package dustroute-mcp -- --check",
+      "status": "passed"
+    },
+    {
+      "command": "node --test crates/dustroute-mcp/mineflayer/bridge-session.test.js crates/dustroute-mcp/mineflayer/mutation-protocol.test.js crates/dustroute-mcp/mineflayer/readback.test.js crates/dustroute-mcp/mineflayer/metrics.test.js",
+      "passed": 15,
+      "failed": 0
+    }
+  ],
+  "distinct_rust_cases_passed": 173,
+  "distinct_rust_cases_note": "Union across the broad and related reruns; not a claim that the full suite was rerun after every final refinement.",
+  "remaining_limits": [
+    "Legacy string-only boundaries report unknown causes/phases and null progress.",
+    "Submitted counts are local complete-change lower bounds, not verified server applications.",
+    "Uncertain storage may have replaced a file before a failed directory sync; loading archives grants no execution rights.",
+    "No new Minecraft live verification was performed for this change."
+  ]
+}

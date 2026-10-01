@@ -46,6 +46,10 @@ pub(crate) struct EditAttempt {
     pub finished_at_unix_ms: Option<u64>,
     pub error: Option<String>,
     pub readbacks: Vec<ObservationEvidence>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub failure: Option<crate::failure::FailureReport>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub progress: Option<crate::failure::ExecutionProgress>,
 }
 pub(crate) const SCHEMA: &str = "dustroute.world-edit.v1";
 const MAX_BYTES: u64 = 32 * 1024 * 1024;

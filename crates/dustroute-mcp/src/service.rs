@@ -31,6 +31,8 @@ mod performance_tests;
 mod requests;
 #[cfg(test)]
 mod test_support;
+#[cfg(test)]
+mod transition_failure_tests;
 use requests::{
     AnalyzeLookedAtParams, ConfirmedOperationParams, CoordinateParam, DiagnoseLookedAtParams,
     DiscoverCircuitParams, GetCircuitRevisionParams, GetLookedAtCircuitIrParams,
@@ -87,6 +89,10 @@ use crate::McpConfig;
 use crate::api::{
     DIAGNOSTIC_SCHEMA_V1, ErrorResponse, McpErrorCode, OPTIMIZATION_SCHEMA_V1, PLACEMENT_SCHEMA_V1,
     REPAIR_CONTEXT_SCHEMA_V1, REPAIR_SCHEMA_V1, TRANSITION_SCHEMA_V1, TransitionTraceResponse,
+};
+use crate::failure::{
+    CauseKind, ExecutionProgress, FailureCause, FailurePhase, FailureReport, PersistenceOutcome,
+    WorldOutcome,
 };
 use crate::state::{PlanRecordKind, PlanStateStore};
 use crate::{
@@ -441,6 +447,29 @@ fn json_text(mut value: Value) -> String {
             .entry("error_code")
             .or_insert_with(|| Value::String("internal".to_owned()));
         object.entry("retryable").or_insert(Value::Bool(false));
+        // Legacy String-only boundaries have no trustworthy execution facts.
+        // Preserve that absence rather than manufacturing zero writes or a phase.
+        if !object.contains_key("failure") {
+            let kind = match object.get("error_code").and_then(Value::as_str) {
+                Some("invalid_argument") => CauseKind::InvalidInput,
+                Some("invalid_state") => CauseKind::InvalidState,
+                Some("not_found") => CauseKind::NotFound,
+                Some("permission_denied") => CauseKind::PermissionDenied,
+                Some("observation_unavailable") => CauseKind::ObservationUnavailable,
+                Some("verification_failed") => CauseKind::VerificationMismatch,
+                Some("serialization_failed") => CauseKind::Serialization,
+                Some("unsupported") => CauseKind::Unsupported,
+                Some("resource_limit") => CauseKind::ResourceLimit,
+                Some("persistence_failed") => CauseKind::Persistence,
+                _ => CauseKind::Unknown,
+            };
+            let message = object
+                .get("error")
+                .and_then(Value::as_str)
+                .unwrap_or("operation failed without a diagnostic");
+            object.insert("failure".into(),json!({"primary":FailureCause::new(kind,message).at(FailurePhase::Unknown),"secondary":[],"progress":null}));
+            object.insert("recovery".into(),json!({"reobserve_required":null,"replan_required":null,"inspect_saved_record":null,"same_operation_replay_allowed":false}));
+        }
     }
     let text = serde_json::to_string_pretty(&value)
         .unwrap_or_else(|error| json!({ "ok": false, "error": error.to_string() }).to_string());
@@ -3798,22 +3827,24 @@ impl DustRouteMcp {
     }
 
     async fn mutate_piston_placement(&self, id: uuid::Uuid, confirm: bool, undo: bool) -> String {
-        let result: Result<Value,String> = async {
+        let mut progress = ExecutionProgress::default();
+        let result: Result<Value,FailureCause> = async {
             if !confirm { return Err("confirm=true is required".into()); }
-            self.policy.authorize_mutation().map_err(|e|e.to_string())?;
+            self.policy.authorize_mutation().map_err(FailureCause::from)?;
             let player = self.resolve_player(None)?;
-            if let Some(error)=self.authorize_player(&player) { return Err(error); }
+            if let Some(error)=self.authorize_player(&player) { return Err(error.into()); }
             let _guard = self.mutation_lock.lock().await;
             let plan = self.plans.table::<StoredPistonPlacement>().lock().await.get(&id).cloned().ok_or("placement not found")?;
             if plan.player != player { return Err("placement belongs to another player".into()); }
             if (undo && plan.state != PistonPlacementState::Applied) || (!undo && (plan.state != PistonPlacementState::Planned || !plan.previewed || plan.expires_at <= Instant::now())) { return Err("placement requires an unused, unexpired preview; undo requires verified application".into()); }
             let bounds = plan.proof.bounds();
-            self.policy.authorize_dimension(&plan.dimension).map_err(|e|e.to_string())?;
-            self.policy.validate_region(bounds).map_err(|e|e.to_string())?;
-            self.policy.validate_placement_size(plan.proof.initial().blocks.len()).map_err(|e|e.to_string())?;
-            let status = self.bridge.status().await.map_err(|e|e.to_string())?;
+            self.policy.authorize_dimension(&plan.dimension).map_err(FailureCause::from)?;
+            self.policy.validate_region(bounds).map_err(FailureCause::from)?;
+            self.policy.validate_placement_size(plan.proof.initial().blocks.len()).map_err(FailureCause::from)?;
+            let status = self.bridge.status().await.map_err(FailureCause::from)?;
             if !status.connected || status.dimension.as_deref()!=Some(plan.dimension.as_str()) { return Err("bot disconnected or dimension changed".into()); }
-            let baseline = self.bridge.scan_region(bounds.min,bounds.max,&plan.dimension).await.map_err(|e|e.to_string())?;
+            progress.phase=FailurePhase::BeforeReadback;
+            let baseline = self.bridge.scan_region(bounds.min,bounds.max,&plan.dimension).await.map_err(FailureCause::from)?;
             if undo { plan.proof.validate_built(&baseline,&status.version)?; }
             else { plan.proof.validate_empty(&baseline,&status.version)?; }
             {
@@ -3823,18 +3854,36 @@ impl DustRouteMcp {
                 // Consume before writes, including undo: uncertain transport is never retried automatically.
                 stored.state = PistonPlacementState::NeedsInspection;
             }
+            progress.operation_consumed=true;
+            progress.total_changes=Some(plan.proof.writes(undo).len());
+            progress.begin_submission();
             let write = self.bridge.write_blocks(&plan.proof.writes(undo),&plan.dimension).await;
             let wait = self.bridge.wait_ticks(30,&plan.dimension).await;
             let observed = self.bridge.scan_region(bounds.min,bounds.max,&plan.dimension).await;
             let verification = observed.as_ref().map_err(|e|e.to_string()).and_then(|snapshot| if undo { plan.proof.validate_empty(snapshot,&status.version) } else { plan.proof.validate_built(snapshot,&status.version) });
             let ok = write.is_ok() && wait.is_ok() && verification.is_ok();
             if ok { self.plans.table::<StoredPistonPlacement>().lock().await.get_mut(&id).ok_or("placement not found")?.state = if undo { PistonPlacementState::Undone } else { PistonPlacementState::Applied }; }
-            let response = json!({"ok":ok,"operation_id":id,"verified":verification.is_ok(),"status":if ok {"verified"} else {"needs_inspection"},"undo":undo,"write_error":write.err().map(|e|e.to_string()),"wait_error":wait.err().map(|e|e.to_string()),"verification_error":verification.err(),"retry_allowed":false,"automatic_rollback":false,"bounds":bounds_json(bounds)});
+            let mut response = json!({"ok":ok,"operation_id":id,"verified":verification.is_ok(),"status":if ok {"verified"} else {"needs_inspection"},"undo":undo,"write_error":write.as_ref().err().map(|e|e.to_string()),"wait_error":wait.as_ref().err().map(|e|e.to_string()),"verification_error":verification.as_ref().err(),"retry_allowed":false,"automatic_rollback":false,"bounds":bounds_json(bounds)});
+            let mut failure=None;
+            match write {
+                Ok(receipt)=>progress.submitted(receipt.submitted_changes),
+                Err(error)=>{let report=progress.submission_error(error,WorldOutcome::NotAttempted);failure=Some(report);}
+            }
+            if let Err(error)=wait { FailureReport::append(&progress,&mut failure,error.cause().at(FailurePhase::Wait)); }
+            match observed {
+                Err(error)=>FailureReport::append(&progress,&mut failure,error.cause().at(FailurePhase::AfterReadback)),
+                Ok(_)=>if let Err(error)=verification {FailureReport::append(&progress,&mut failure,FailureCause::new(CauseKind::VerificationMismatch,error).at(FailurePhase::Verification));},
+            }
+            progress.phase=if response["verification_error"].is_null(){FailurePhase::Verification}else{FailurePhase::AfterReadback};
+            if response["verified"]==true {progress.world=WorldOutcome::Verified;progress.verified_steps=progress.total_changes.unwrap_or(0);}
+            if let Some(mut failure)=failure {*failure.progress=progress.clone();failure.attach(&mut response);}else{response["execution_progress"]=json!(progress);}
             self.operations.record_completed(id,if undo {OperationKind::PlacementUndo} else {OperationKind::PlacementApply},response.clone()).await;
             if !ok {self.operations.fail(id,"piston placement requires inspection").await;}
             Ok(response)
         }.await;
-        json_text(result.unwrap_or_else(|error| json!({"ok":false,"error":error})))
+        let mut response = result.unwrap_or_else(|error| progress.cause(error).response());
+        response["operation_id"] = json!(id);
+        json_text(response)
     }
 
     async fn observed_mechanisms(
@@ -3931,22 +3980,24 @@ impl DustRouteMcp {
     }
 
     async fn invoke_piston_door(&self, id: uuid::Uuid, confirm: bool) -> String {
-        let result:Result<Value,String>=async {
+        let mut progress = ExecutionProgress::default();
+        let result:Result<Value,FailureCause>=async {
             if !confirm { return Err("confirm=true is required".into()); }
-            self.policy.authorize_mutation().map_err(|e|e.to_string())?;
+            self.policy.authorize_mutation().map_err(FailureCause::from)?;
             let player=self.resolve_player(None)?;
-            if let Some(error)=self.authorize_player(&player) { return Err(error); }
+            if let Some(error)=self.authorize_player(&player) { return Err(error.into()); }
             let _guard=self.mutation_lock.lock().await;
             let plan=self.plans.table::<StoredDoorPlan>().lock().await.get(&id).cloned().ok_or("door plan not found")?;
             if plan.player!=player || !plan.lifecycle.is_previewed() || plan.lifecycle.attempted() || plan.expires_at<=Instant::now() { return Err("door plan requires preview, matching owner, unexpired and unused token".into()); }
-            let status=self.bridge.status().await.map_err(|e|e.to_string())?;
+            let status=self.bridge.status().await.map_err(FailureCause::from)?;
             if !status.connected || status.dimension.as_deref()!=Some(plan.dimension.as_str()) { return Err("bot is disconnected or in another dimension".into()); }
-            self.policy.authorize_dimension(&plan.dimension).map_err(|e|e.to_string())?;
+            self.policy.authorize_dimension(&plan.dimension).map_err(FailureCause::from)?;
             let bounds=plan.door.bounds();
-            self.policy.validate_region(bounds).map_err(|e|e.to_string())?;
+            self.policy.validate_region(bounds).map_err(FailureCause::from)?;
             // Approach first, then scan immediately before the lever write.
-            self.bridge.approach_lever(plan.door.lever(),&plan.dimension).await.map_err(|e|e.to_string())?;
-            let snapshot=self.bridge.scan_region(bounds.min,bounds.max,&plan.dimension).await.map_err(|e|e.to_string())?;
+            self.bridge.approach_lever(plan.door.lever(),&plan.dimension).await.map_err(FailureCause::from)?;
+            progress.phase=FailurePhase::BeforeReadback;
+            let snapshot=self.bridge.scan_region(bounds.min,bounds.max,&plan.dimension).await.map_err(FailureCause::from)?;
             let observation=crate::piston_door::inspect(&snapshot,&status.version,true,Some(&plan.door));
             let current=match crate::piston_door::verify(&snapshot,&status.version) {
                 Ok(door)=>door,
@@ -3963,12 +4014,16 @@ impl DustRouteMcp {
                 }
                 stored.lifecycle.begin(true)?;
             }
+            progress.operation_consumed=true;
+            progress.total_changes=Some(1);
             if current.state()==plan.target {
                 self.plans.table::<StoredDoorPlan>().lock().await.get_mut(&id).ok_or("door plan missing")?.lifecycle.confirm(true);
-                let result=json!({"ok":true,"operation_id":id,"state":plan.target,"observed_state":plan.target,"changed":false,"verified":true,"observation":observation});
+                progress.world=WorldOutcome::Verified;progress.total_changes=Some(0);
+                let result=json!({"execution_progress":progress,"ok":true,"operation_id":id,"state":plan.target,"observed_state":plan.target,"changed":false,"verified":true,"observation":observation});
                 self.operations.record_completed(id,OperationKind::PistonDoorRun,result.clone()).await;
                 return Ok(result);
             }
+            progress.begin_submission();
             let activation=self.bridge.activate_lever(plan.door.lever(),&plan.dimension).await;
             let wait=self.bridge.wait_ticks(30,&plan.dimension).await;
             let observed=self.bridge.scan_region(bounds.min,bounds.max,&plan.dimension).await;
@@ -3982,12 +4037,24 @@ impl DustRouteMcp {
             let matches=verified.as_ref().is_some_and(|d|d.lever()==plan.door.lever() && d.state()==plan.target);
             let ok=activation.is_ok() && wait.is_ok() && matches;
             self.plans.table::<StoredDoorPlan>().lock().await.get_mut(&id).ok_or("door plan missing")?.lifecycle.confirm(ok);
-            let result=json!({"ok":ok,"operation_id":id,"target":plan.target,"observed_state":verified.as_ref().map(|d|d.state()),"observation":observation,"verified":matches,"verification_error":verification.as_ref().err(),"activation_error":activation.err().map(|e|e.to_string()),"wait_error":wait.err().map(|e|e.to_string()),"scan_error":observed.err().map(|e|e.to_string()),"status":if ok {"verified"} else {"needs_inspection"},"retry_allowed":false,"automatic_rollback":false});
+            let mut result=json!({"ok":ok,"operation_id":id,"target":plan.target,"observed_state":verified.as_ref().map(|d|d.state()),"observation":observation,"verified":matches,"verification_error":verification.as_ref().err(),"activation_error":activation.as_ref().err().map(|e|e.to_string()),"wait_error":wait.as_ref().err().map(|e|e.to_string()),"scan_error":observed.as_ref().err().map(|e|e.to_string()),"status":if ok {"verified"} else {"needs_inspection"},"retry_allowed":false,"automatic_rollback":false});
+            let mut failure=None;
+            match activation {Ok(_)=>progress.submitted(1),Err(error)=>{progress.submitted_changes=None;FailureReport::append(&progress,&mut failure,error.cause().at(FailurePhase::Submission));}}
+            if let Err(error)=wait {FailureReport::append(&progress,&mut failure,error.cause().at(FailurePhase::Wait));}
+            match observed {
+                Err(error)=>FailureReport::append(&progress,&mut failure,error.cause().at(FailurePhase::AfterReadback)),
+                Ok(_)=>if !matches {FailureReport::append(&progress,&mut failure,FailureCause::new(CauseKind::VerificationMismatch,"door did not match requested state").at(FailurePhase::Verification));},
+            }
+            progress.phase=if result["scan_error"].is_null(){FailurePhase::Verification}else{FailurePhase::AfterReadback};
+            if matches {progress.world=WorldOutcome::Verified;progress.verified_steps=1;}
+            if let Some(mut failure)=failure {*failure.progress=progress.clone();failure.attach(&mut result);}else{result["execution_progress"]=json!(progress);}
             self.operations.record_completed(id,OperationKind::PistonDoorRun,result.clone()).await;
             if !ok { self.operations.fail(id, "door result requires fresh inspection").await; }
             Ok(result)
         }.await;
-        json_text(result.unwrap_or_else(|error| json!({"ok":false,"error":error})))
+        let mut response = result.unwrap_or_else(|error| progress.cause(error).response());
+        response["operation_id"] = json!(id);
+        json_text(response)
     }
     #[tool(
         description = "Discover single-lever transition scenarios in the supplied immutable circuit_id without changing the world",
@@ -4259,6 +4326,13 @@ impl DustRouteMcp {
                 return error_text(McpErrorCode::InvalidState, error, false);
             }
         }
+        let mut progress = ExecutionProgress {
+            operation_consumed: true,
+            total_changes: Some(2),
+            ..Default::default()
+        };
+        progress.begin_submission();
+        let mut failure = None;
         let mut activation = match self
             .bridge
             .activate_lever(plan.lever, &plan.dimension)
@@ -4266,35 +4340,78 @@ impl DustRouteMcp {
         {
             Ok(activation) => activation,
             Err(error) => {
-                let _ = self
+                progress.submitted_changes = None;
+                let mut report = progress.cause(error.cause());
+                if let Err(error) = self
                     .bridge
                     .stop_update_recording(&started.recording_id, &plan.dimension)
+                    .await
+                {
+                    report.secondary(error.cause().at(FailurePhase::AfterReadback));
+                }
+                let response = report.response();
+                self.operations
+                    .record_completed(operation_id, OperationKind::TransitionRun, response.clone())
                     .await;
-                return json_text(json!({ "ok": false, "error": error.to_string() }));
+                return json_text(response);
             }
         };
+        progress.submitted(1);
         activation.bot_approached |= approach.moved;
+        progress.phase = FailurePhase::Wait;
         let wait_error = self
             .bridge
             .wait_ticks(plan.observation_ticks, &plan.dimension)
             .await
             .err()
-            .map(|error| error.to_string());
+            .map(|error| {
+                let cause = error.cause().at(FailurePhase::Wait);
+                FailureReport::append(&progress, &mut failure, cause);
+                error.to_string()
+            });
+        progress.phase = FailurePhase::AfterReadback;
         let recording_result = self
             .bridge
             .stop_update_recording(&started.recording_id, &plan.dimension)
             .await;
+        if let Err(error) = &recording_result {
+            FailureReport::append(
+                &progress,
+                &mut failure,
+                error.cause().at(FailurePhase::AfterReadback),
+            );
+        }
 
+        progress.phase = FailurePhase::Restore;
         let restore_error = self
             .bridge
             .activate_lever(plan.lever, &plan.dimension)
             .await
             .err()
-            .map(|error| error.to_string());
-        let _ = self
+            .map(|error| {
+                progress.submitted_changes = None;
+                FailureReport::append(
+                    &progress,
+                    &mut failure,
+                    error.cause().at(FailurePhase::Restore),
+                );
+                error.to_string()
+            });
+        if restore_error.is_none() {
+            progress.submitted(1);
+        }
+        let restore_wait_error = self
             .bridge
             .wait_ticks(plan.observation_ticks, &plan.dimension)
-            .await;
+            .await
+            .err();
+        if let Some(error) = &restore_wait_error {
+            FailureReport::append(
+                &progress,
+                &mut failure,
+                error.cause().at(FailurePhase::Restore),
+            );
+        }
         let restored_block = self.bridge.get_block(plan.lever, &plan.dimension).await;
         let restored_snapshot = self
             .bridge
@@ -4312,7 +4429,42 @@ impl DustRouteMcp {
         let region_restored = restored_snapshot
             .as_ref()
             .is_ok_and(|snapshot| snapshot == &plan.initial_snapshot);
-        let restoration_verified = restore_error.is_none() && lever_restored && region_restored;
+        let restoration_verified = restore_error.is_none()
+            && restore_wait_error.is_none()
+            && lever_restored
+            && region_restored;
+        for error in [
+            restored_block.as_ref().err(),
+            restored_snapshot.as_ref().err(),
+        ]
+        .into_iter()
+        .flatten()
+        {
+            FailureReport::append(
+                &progress,
+                &mut failure,
+                error.cause().at(FailurePhase::Restore),
+            );
+        }
+        if restored_block.is_ok()
+            && restored_snapshot.is_ok()
+            && (!lever_restored || !region_restored)
+        {
+            FailureReport::append(
+                &progress,
+                &mut failure,
+                FailureCause::new(
+                    CauseKind::VerificationMismatch,
+                    "restored lever or region differs from initial state",
+                )
+                .at(FailurePhase::Restore),
+            );
+        }
+        if lever_restored && region_restored {
+            progress.world = WorldOutcome::Verified;
+            progress.verified_steps = 2;
+        }
+
         if let Some(stored) = self
             .plans
             .table::<StoredTransitionPlan>()
@@ -4324,15 +4476,18 @@ impl DustRouteMcp {
         }
         let recording = match recording_result {
             Ok(recording) => recording,
-            Err(error) => {
-                return json_text(json!({
-                    "ok": false,
-                    "error": error.to_string(),
-                    "restoration_verified": restoration_verified,
-                    "restore_error": restore_error
-                }));
+            Err(_) => {
+                let mut report = failure.expect("recording error inserted");
+                *report.progress = progress.clone();
+                let mut response = report.response();
+                response["restoration_verified"] = json!(restoration_verified);
+                self.operations
+                    .record_completed(operation_id, OperationKind::TransitionRun, response.clone())
+                    .await;
+                return json_text(response);
             }
         };
+        progress.phase = FailurePhase::PostAnalysis;
         let trace = behavior_trace_from_recording(
             &recording,
             &analysis.scene,
@@ -4386,12 +4541,17 @@ impl DustRouteMcp {
         let scenario = match serde_json::to_value(&scenario) {
             Ok(value) => value,
             Err(error) => {
-                return json_text(json!({
-                    "ok": false,
-                    "error": format!("failed to serialize transition scenario: {error}"),
-                    "restoration_verified": restoration_verified,
-                    "restore_error": restore_error,
-                }));
+                FailureReport::append(
+                    &progress,
+                    &mut failure,
+                    FailureCause::new(CauseKind::Serialization, error.to_string())
+                        .at(FailurePhase::PostAnalysis),
+                );
+                let response = failure.expect("serialization error inserted").response();
+                self.operations
+                    .record_completed(operation_id, OperationKind::TransitionRun, response.clone())
+                    .await;
+                return json_text(response);
             }
         };
         let simulated = match &simulated {
@@ -4399,7 +4559,18 @@ impl DustRouteMcp {
             Err(error) => json!({ "ok": false, "error": error }),
         };
         let live_scenario_trace = scenario_trace_json(&live_scenario_trace);
-        let result = json!({
+        if recording.truncated {
+            FailureReport::append(
+                &progress,
+                &mut failure,
+                FailureCause::new(
+                    CauseKind::ObservationIncomplete,
+                    "update recording truncated",
+                )
+                .at(FailurePhase::AfterReadback),
+            );
+        }
+        let mut result = json!({
             "schema_version": TRANSITION_SCHEMA_V1,
             "ok": restoration_verified && wait_error.is_none() && !recording.truncated,
             "operation_id": operation_id,
@@ -4428,10 +4599,19 @@ impl DustRouteMcp {
                 "region_restored": region_restored,
                 "verified": restoration_verified,
                 "activation_error": restore_error,
+                "wait_error":restore_wait_error.as_ref().map(ToString::to_string),
+                "block_read_error":restored_block.as_ref().err().map(ToString::to_string),
+                "region_read_error":restored_snapshot.as_ref().err().map(ToString::to_string),
             },
             "wait_error": wait_error,
             "guidance": "hazard_candidate is an observed pulse without registered intent; register a signal contract before calling it a confirmed hazard"
         });
+        if let Some(mut report) = failure {
+            *report.progress = progress.clone();
+            report.attach(&mut result);
+        } else {
+            result["execution_progress"] = json!(progress);
+        }
         self.operations
             .record_completed(operation_id, OperationKind::TransitionRun, result.clone())
             .await;
@@ -4492,36 +4672,76 @@ impl DustRouteMcp {
             .properties
             .get("powered")
             .and_then(|value| value.parse::<bool>().ok());
+        let mut progress = ExecutionProgress {
+            operation_consumed: true,
+            ..Default::default()
+        };
+        progress.phase = FailurePhase::Restore;
+        let mut failure = None;
         let activation_error = if powered != Some(plan.original_powered) {
-            self.bridge
+            progress.begin_submission();
+            match self
+                .bridge
                 .activate_lever(plan.lever, &plan.dimension)
                 .await
-                .err()
-                .map(|error| error.to_string())
+            {
+                Ok(_) => {
+                    progress.submitted(1);
+                    None
+                }
+                Err(error) => {
+                    progress.submitted_changes = None;
+                    FailureReport::append(
+                        &progress,
+                        &mut failure,
+                        error.cause().at(FailurePhase::Restore),
+                    );
+                    Some(error.to_string())
+                }
+            }
         } else {
             None
         };
-        let _ = self
+        progress.phase = FailurePhase::Restore;
+        if let Err(error) = self
             .bridge
             .wait_ticks(plan.observation_ticks, &plan.dimension)
-            .await;
+            .await
+        {
+            FailureReport::append(
+                &progress,
+                &mut failure,
+                error.cause().at(FailurePhase::Restore),
+            );
+        }
         let block = self.bridge.get_block(plan.lever, &plan.dimension).await;
         let snapshot = self
             .bridge
             .scan_region(plan.bounds.min, plan.bounds.max, &plan.dimension)
             .await;
-        let naturally_verified = activation_error.is_none()
-            && block.as_ref().ok().is_some_and(|block| {
-                block
+        let lever_restored = block.as_ref().is_ok_and(|block| {
+            block.state.name == "minecraft:lever"
+                && block
                     .state
                     .properties
                     .get("powered")
-                    .and_then(|value| value.parse::<bool>().ok())
+                    .and_then(|v| v.parse::<bool>().ok())
                     == Some(plan.original_powered)
-            })
-            && snapshot
-                .as_ref()
-                .is_ok_and(|snapshot| snapshot == &plan.initial_snapshot);
+        });
+        let region_restored = snapshot
+            .as_ref()
+            .is_ok_and(|snapshot| snapshot == &plan.initial_snapshot);
+        for error in [block.as_ref().err(), snapshot.as_ref().err()]
+            .into_iter()
+            .flatten()
+        {
+            FailureReport::append(
+                &progress,
+                &mut failure,
+                error.cause().at(FailurePhase::Restore),
+            );
+        }
+        let naturally_verified = activation_error.is_none() && lever_restored && region_restored;
         let mut forced_restore = None;
         let verified = if naturally_verified {
             true
@@ -4539,33 +4759,94 @@ impl DustRouteMcp {
                         })
                 })
                 .collect::<Result<Vec<_>, _>>();
-            forced_restore = Some(
-                match self
-                    .policy
-                    .validate_placement_size(plan.initial_snapshot.blocks.len())
-                {
-                    Ok(()) => match writes {
-                        Ok(writes) => self
-                            .bridge
-                            .write_blocks(&writes, &plan.dimension)
-                            .await
-                            .map_err(|error| error.to_string()),
-                        Err(error) => Err(error),
-                    },
-                    Err(error) => Err(error.to_string()),
+            let submission = match self
+                .policy
+                .validate_placement_size(plan.initial_snapshot.blocks.len())
+            {
+                Ok(()) => match writes {
+                    Ok(writes) => {
+                        let previous = progress.world;
+                        progress.begin_submission();
+                        match self.bridge.write_blocks(&writes, &plan.dimension).await {
+                            Ok(receipt) => {
+                                progress.submitted(receipt.submitted_changes);
+                                Ok(receipt)
+                            }
+                            Err(error) => {
+                                let report = progress.submission_error(error, previous);
+                                FailureReport::append(
+                                    &progress,
+                                    &mut failure,
+                                    report.primary.clone().at(FailurePhase::Restore),
+                                );
+                                Err(report.to_string())
+                            }
+                        }
+                    }
+                    Err(error) => {
+                        FailureReport::append(
+                            &progress,
+                            &mut failure,
+                            FailureCause::new(CauseKind::InvalidInput, error.clone())
+                                .at(FailurePhase::Restore),
+                        );
+                        Err(error)
+                    }
                 },
-            );
-            let _ = self
+                Err(error) => {
+                    let cause = FailureCause::from(error);
+                    let message = cause.to_string();
+                    FailureReport::append(&progress, &mut failure, cause.at(FailurePhase::Restore));
+                    Err(message)
+                }
+            };
+            forced_restore = Some(submission);
+            progress.phase = FailurePhase::Restore;
+            if let Err(error) = self
                 .bridge
                 .wait_ticks(plan.observation_ticks, &plan.dimension)
-                .await;
-            forced_restore.as_ref().is_some_and(Result::is_ok)
-                && self
-                    .bridge
-                    .scan_region(plan.bounds.min, plan.bounds.max, &plan.dimension)
-                    .await
-                    .is_ok_and(|snapshot| snapshot == plan.initial_snapshot)
+                .await
+            {
+                FailureReport::append(
+                    &progress,
+                    &mut failure,
+                    error.cause().at(FailurePhase::Restore),
+                );
+            }
+            match self
+                .bridge
+                .scan_region(plan.bounds.min, plan.bounds.max, &plan.dimension)
+                .await
+            {
+                Ok(snapshot) => {
+                    let matches = snapshot == plan.initial_snapshot;
+                    if !matches {
+                        FailureReport::append(
+                            &progress,
+                            &mut failure,
+                            FailureCause::new(
+                                CauseKind::VerificationMismatch,
+                                "snapshot restoration differs from original region",
+                            )
+                            .at(FailurePhase::Restore),
+                        );
+                    }
+                    matches
+                }
+                Err(error) => {
+                    FailureReport::append(
+                        &progress,
+                        &mut failure,
+                        error.cause().at(FailurePhase::Restore),
+                    );
+                    false
+                }
+            }
         };
+        if verified {
+            progress.world = WorldOutcome::Verified;
+            progress.verified_steps = 1;
+        }
         if let Some(stored) = self
             .plans
             .table::<StoredTransitionPlan>()
@@ -4575,7 +4856,7 @@ impl DustRouteMcp {
         {
             stored.lifecycle.confirm(verified);
         }
-        let result = json!({
+        let mut result = json!({
             "schema_version": TRANSITION_SCHEMA_V1,
             "ok": verified,
             "operation_id": operation_id,
@@ -4585,6 +4866,12 @@ impl DustRouteMcp {
             "snapshot_restore_attempted": forced_restore.is_some(),
             "snapshot_restore_error": forced_restore.and_then(Result::err),
         });
+        if let Some(mut report) = failure {
+            *report.progress = progress.clone();
+            report.attach(&mut result);
+        } else {
+            result["execution_progress"] = json!(progress);
+        }
         self.operations
             .record_completed(
                 operation_id,
@@ -5152,7 +5439,9 @@ impl ServerHandler for DustRouteMcp {
     ) -> Result<rmcp::model::CallToolResponse, rmcp::ErrorData> {
         let name = request.name.clone();
         let call = rmcp::handler::server::tool::ToolCallContext::new(self, request, context);
-        crate::performance::tool(&name, self.tool_router.call(call)).await
+        crate::performance::tool(&name, self.tool_router.call(call))
+            .await
+            .map(crate::failure::mark_tool_failure)
     }
 
     fn get_info(&self) -> ServerInfo {
@@ -5174,6 +5463,63 @@ impl ServerHandler for DustRouteMcp {
 
 #[cfg(test)]
 mod tests {
+    #[tokio::test]
+    async fn mcp_envelope_marks_mutation_refusal_but_keeps_failed_history_query_successful() {
+        let root = test_support::temporary();
+        let mut service =
+            DustRouteMcp::with_policy_and_player("127.0.0.1:9", McpPolicy::default(), "Tester");
+        service.state_store = PlanStateStore::new(root.clone(), 3600);
+        let id = uuid::Uuid::new_v4();
+        service
+            .operations
+            .record_completed(
+                id,
+                OperationKind::PlacementApply,
+                serde_json::json!({"ok":false,"error":"reply lost"}),
+            )
+            .await;
+        let (client, server) = test_support::serve(service).await;
+        let query = client
+            .call_tool(
+                rmcp::model::CallToolRequestParams::new("get_operation").with_arguments(
+                    serde_json::json!({"operation_id":id})
+                        .as_object()
+                        .unwrap()
+                        .clone(),
+                ),
+            )
+            .await
+            .unwrap();
+        assert_ne!(query.is_error, Some(true));
+        let refused = client
+            .call_tool(
+                rmcp::model::CallToolRequestParams::new("invoke_operation").with_arguments(
+                    serde_json::json!({"operation_id":uuid::Uuid::new_v4(),"confirm":true})
+                        .as_object()
+                        .unwrap()
+                        .clone(),
+                ),
+            )
+            .await
+            .unwrap();
+        assert_eq!(refused.is_error, Some(true));
+        test_support::stop(client, server).await;
+        if root.exists() {
+            std::fs::remove_dir_all(root).unwrap();
+        }
+    }
+    #[test]
+    fn legacy_error_information_remains_unknown_without_claiming_zero_writes() {
+        let response: serde_json::Value = serde_json::from_str(&super::json_text(
+            serde_json::json!({"ok":false,"error":"timeout resource limit"}),
+        ))
+        .unwrap();
+        assert_eq!(response["failure"]["primary"]["kind"], "unknown");
+        assert_eq!(response["failure"]["primary"]["phase"], "unknown");
+        assert!(response["failure"]["progress"].is_null());
+        assert!(response["recovery"]["reobserve_required"].is_null());
+        assert_eq!(response["recovery"]["same_operation_replay_allowed"], false);
+    }
     use super::requests::{LogicalContractParam, TimingContractParam};
     use rmcp::{
         ServiceExt,

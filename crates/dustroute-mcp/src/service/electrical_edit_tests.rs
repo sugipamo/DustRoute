@@ -240,6 +240,7 @@ async fn electrical_edit_public_capture_preview_apply_undo_and_restart_history()
     assert_eq!(result["ok"], true, "{result}");
     assert_eq!(result["verified_steps"], 2);
     assert_eq!(fake.lock().unwrap().write_batches, 1);
+
     assert_eq!(
         call(&client, "invoke_operation", operation.clone()).await["ok"],
         false
@@ -252,6 +253,7 @@ async fn electrical_edit_public_capture_preview_apply_undo_and_restart_history()
     let drifted = call(&client, "undo_operation", operation.clone()).await;
     assert_eq!(drifted["ok"], false, "{drifted}");
     assert_eq!(fake.lock().unwrap().writes, 2);
+
     fake.lock().unwrap().snapshot.as_mut().unwrap()["blocks"]
         .as_array_mut()
         .unwrap()
@@ -313,6 +315,11 @@ async fn electrical_edit_stops_after_unverified_write_and_retains_inspection_his
     assert_eq!(result["status"], "needs_inspection");
     assert_eq!(result["verified_steps"], 0);
     assert_eq!(fake.lock().unwrap().writes, 2);
+    assert_eq!(result["failure"]["primary"]["phase"], "after_readback");
+    assert_eq!(result["failure"]["progress"]["world"], "unknown");
+    assert_eq!(result["failure"]["progress"]["submitted_changes"], 2);
+    assert_eq!(result["recovery"]["reobserve_required"], true);
+    assert_eq!(result["recovery"]["replan_required"], true);
     assert!(
         result["error"]
             .as_str()
@@ -337,6 +344,11 @@ async fn electrical_edit_stops_after_unverified_write_and_retains_inspection_his
     .await;
     assert_eq!(history["record"]["state"], "needs_inspection");
     assert_eq!(history["record"]["attempts"][0]["verified_steps"], 0);
+    assert_eq!(
+        history["record"]["attempts"][0]["failure"]["progress"]["world"],
+        "unknown"
+    );
+
     stop(client, server).await;
     bridge.abort();
     std::fs::remove_dir_all(root).unwrap();
@@ -367,6 +379,9 @@ async fn electrical_edit_partial_batch_submission_never_verifies_a_prefix_or_ret
     assert_eq!(result["verified_steps"], 0);
     assert_eq!(fake.lock().unwrap().writes, 1);
     assert_eq!(fake.lock().unwrap().write_batches, 1);
+    assert_eq!(result["failure"]["primary"]["phase"], "submission");
+    assert!(result["failure"]["progress"]["submitted_changes"].is_null());
+    assert_eq!(result["failure"]["progress"]["verified_steps"], 0);
     assert_eq!(
         call(&client, "invoke_operation", operation.clone()).await["ok"],
         false
@@ -385,6 +400,11 @@ async fn electrical_edit_partial_batch_submission_never_verifies_a_prefix_or_ret
     .await;
     assert_eq!(history["record"]["state"], "needs_inspection");
     assert_eq!(history["record"]["attempts"][0]["verified_steps"], 0);
+    assert_eq!(
+        history["record"]["attempts"][0]["failure"]["progress"]["world"],
+        "unknown"
+    );
+
     assert!(
         history["record"]["attempts"][0]["error"]
             .as_str()

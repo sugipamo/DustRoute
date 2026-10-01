@@ -54,6 +54,7 @@ enum ObservationOutcome {
     },
     ObservationIncomplete {
         reason: String,
+        cause: FailureCause,
     },
 }
 
@@ -69,6 +70,22 @@ impl InstanceObservation {
     pub(super) fn matches_reference(&self) -> bool {
         matches!(self.outcome, ObservationOutcome::Matches { .. })
     }
+    pub(super) fn refusal(&self) -> Option<FailureCause> {
+        match &self.outcome {
+            ObservationOutcome::Matches { .. } => None,
+            ObservationOutcome::ObservationIncomplete { cause, .. } => Some(cause.clone()),
+            ObservationOutcome::TargetMismatch { reason } => {
+                Some(FailureCause::new(CauseKind::InvalidState, reason))
+            }
+            ObservationOutcome::Changed { reason, .. } => {
+                Some(FailureCause::new(CauseKind::VerificationMismatch, reason))
+            }
+            ObservationOutcome::HistoryUnavailable { reason, .. } => Some(FailureCause::new(
+                CauseKind::ObservationUnavailable,
+                *reason,
+            )),
+        }
+    }
 }
 impl std::fmt::Display for InstanceObservation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -82,12 +99,14 @@ impl std::fmt::Display for InstanceObservation {
 
 pub(super) fn stable_baseline(
     observation: &InstanceObservation,
-) -> Result<MinecraftSnapshot, String> {
+) -> Result<MinecraftSnapshot, FailureCause> {
     match &observation.outcome {
         ObservationOutcome::Matches { samples, .. }
         | ObservationOutcome::Changed { samples, .. } => Ok(samples.snapshot.clone()),
-        _ => Err(format!(
-            "operation needs complete, unchanged samples: {observation}"
+        ObservationOutcome::ObservationIncomplete { cause, .. } => Err(cause.clone()),
+        _ => Err(FailureCause::new(
+            CauseKind::ObservationUnavailable,
+            "operation needs complete, unchanged samples",
         )),
     }
 }
@@ -147,14 +166,14 @@ fn compare_samples(
 impl AssemblyService<'_> {
     pub(super) async fn observe_instance(&self, record: &PlacedAssembly) -> InstanceObservation {
         let bounds = RegionBounds::new(record.expected.min, record.expected.max);
-        let observed: Result<ObservationOutcome, String> = async {
+        let observed: Result<ObservationOutcome, FailureCause> = async {
             self.policy
                 .authorize_dimension(&record.target.dimension)
-                .map_err(|e| e.to_string())?;
+                .map_err(FailureCause::from)?;
             self.policy
                 .validate_region(bounds)
-                .map_err(|e| e.to_string())?;
-            let status = self.bridge.status().await.map_err(|e| e.to_string())?;
+                .map_err(FailureCause::from)?;
+            let status = self.bridge.status().await.map_err(FailureCause::from)?;
             if let Err(reason) = record
                 .target
                 .check(&status)
@@ -166,19 +185,19 @@ impl AssemblyService<'_> {
                 .bridge
                 .scan_region_fresh(bounds.min, bounds.max, &record.target.dimension)
                 .await
-                .map_err(|e| e.to_string())?;
+                .map_err(FailureCause::from)?;
             // Unchanged samples do not establish empty queues or hidden history.
             self.bridge
                 .wait_ticks(SAMPLE_INTERVAL, &record.target.dimension)
                 .await
-                .map_err(|e| e.to_string())?;
-            let status = self.bridge.status().await.map_err(|e| e.to_string())?;
+                .map_err(FailureCause::from)?;
+            let status = self.bridge.status().await.map_err(FailureCause::from)?;
             record.target.check(&status)?;
             let second = self
                 .bridge
                 .scan_region_fresh(bounds.min, bounds.max, &record.target.dimension)
                 .await
-                .map_err(|e| e.to_string())?;
+                .map_err(FailureCause::from)?;
             let expected = if record.state == InstanceState::Removed {
                 MinecraftSnapshot {
                     min: bounds.min,
@@ -189,11 +208,14 @@ impl AssemblyService<'_> {
                 record.expected.clone()
             };
             compare_samples(first, second, &expected, &status.version, bounds)
+                .map_err(|e| FailureCause::new(CauseKind::ObservationIncomplete, e))
         }
         .await;
         InstanceObservation {
-            outcome: observed
-                .unwrap_or_else(|reason| ObservationOutcome::ObservationIncomplete { reason }),
+            outcome: observed.unwrap_or_else(|cause| ObservationOutcome::ObservationIncomplete {
+                reason: cause.message.clone(),
+                cause,
+            }),
             observed_at_unix_ms: now_ms().ok(),
             runtime_history_reconstructed: false,
         }
@@ -304,10 +326,13 @@ mod tests {
             },
             ObservationOutcome::ObservationIncomplete {
                 reason: "missing receipt".into(),
+                cause: FailureCause::new(CauseKind::ObservationIncomplete, "missing receipt"),
             },
         ] {
             let result = observation(outcome);
             assert!(!result.matches_reference());
+            assert!(result.refusal().is_some());
+            assert!(!result.refusal().unwrap().message.contains("\"blocks\""));
             assert!(stable_baseline(&result).is_err());
             let saved = serde_json::to_value(result).unwrap();
             assert!(saved.get("snapshot").is_none());

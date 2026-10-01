@@ -56,6 +56,8 @@ pub(crate) struct JobAttempt {
     pub undo: bool,
     pub verified: bool,
     pub error: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub failure: Option<crate::failure::FailureReport>,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct JobStageBinding {

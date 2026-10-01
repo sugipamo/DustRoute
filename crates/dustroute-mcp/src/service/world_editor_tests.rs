@@ -32,7 +32,7 @@ async fn validate(
     changes: Vec<BlockChange>,
     policy: McpPolicy,
 ) -> (
-    Result<dustroute_app::ValidatedBlockChanges, String>,
+    Result<dustroute_app::ValidatedBlockChanges, FailureCause>,
     Vec<RegionBounds>,
 ) {
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -114,7 +114,7 @@ async fn observed_missing_support_is_still_rejected() {
         McpPolicy::default(),
     )
     .await;
-    assert!(result.unwrap_err().contains("InvalidSupport"));
+    assert!(result.unwrap_err().message.contains("InvalidSupport"));
     assert_eq!(scans.len(), 2);
 }
 
@@ -156,7 +156,7 @@ async fn removing_support_under_an_existing_wire_is_rejected() {
         McpPolicy::default(),
     )
     .await;
-    assert!(result.unwrap_err().contains("InvalidSupport"));
+    assert!(result.unwrap_err().message.contains("InvalidSupport"));
     assert_eq!(scans.len(), 1);
 }
 
@@ -186,7 +186,12 @@ async fn explicit_rise_at_scan_edge_requires_observed_upper_wire() {
         McpPolicy::default(),
     )
     .await;
-    assert!(result.unwrap_err().contains("InvalidWireConnection"));
+    assert!(
+        result
+            .unwrap_err()
+            .message
+            .contains("InvalidWireConnection")
+    );
 }
 
 #[tokio::test]
@@ -202,6 +207,6 @@ async fn an_extending_staircase_stops_at_the_scan_budget() {
         McpPolicy::default(),
     )
     .await;
-    assert!(result.unwrap_err().contains("8-scan limit"));
+    assert!(result.unwrap_err().message.contains("8-scan limit"));
     assert_eq!(scans.len(), 8);
 }

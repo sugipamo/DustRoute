@@ -24,6 +24,9 @@ pub enum McpErrorCode {
     SerializationFailed,
     VerificationFailed,
     Internal,
+    Unsupported,
+    ResourceLimit,
+    PersistenceFailed,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]

@@ -33,7 +33,7 @@ function createBridgeServer (dispatch, bridgeMetrics) {
           if (parseError) throw parseError
           return dispatch(request && request.method, (request && request.params) || {})
             .then(result => ({ id: request && request.id, result }))
-            .catch(error => ({ id: request && request.id, error: String(error.message || error) }))
+            .catch(error => ({ id: request && request.id, error: String(error.message || error), ...(error.submissionFailure ? { failure_protocol: 'dustroute.bridge-failure.v1', submission_failure: error.submissionFailure } : {}) }))
         })
         .then(response => {
           // Include the current request in the counters returned by status. Its

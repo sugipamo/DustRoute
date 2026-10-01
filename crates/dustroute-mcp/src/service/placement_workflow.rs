@@ -21,6 +21,30 @@ impl PlacementWorkflow<'_> {
         params: ConfirmedOperationParams,
         undo: bool,
     ) -> Value {
+        let mut progress = ExecutionProgress::default();
+        let mut response = self.execute_placement(&params, undo, &mut progress).await;
+        response["operation_id"] = json!(params.operation_id);
+        if let Ok(id) = uuid::Uuid::parse_str(&params.operation_id) {
+            self.operations
+                .record_completed(
+                    id,
+                    if undo {
+                        OperationKind::PlacementUndo
+                    } else {
+                        OperationKind::PlacementApply
+                    },
+                    response.clone(),
+                )
+                .await;
+        }
+        response
+    }
+    async fn execute_placement(
+        &self,
+        params: &ConfirmedOperationParams,
+        undo: bool,
+        progress: &mut ExecutionProgress,
+    ) -> Value {
         if !params.confirm {
             return json!({
                 "ok": false,
@@ -28,7 +52,7 @@ impl PlacementWorkflow<'_> {
             });
         }
         if let Err(error) = self.policy.authorize_mutation() {
-            return json!({ "ok": false, "error": error.to_string() });
+            return progress.cause(error).response();
         }
         let _mutation_guard = self.mutation_lock.lock().await;
         let operation_id = match uuid::Uuid::parse_str(&params.operation_id) {
@@ -77,7 +101,7 @@ impl PlacementWorkflow<'_> {
             }
         };
         if let Err(error) = self.policy.authorize_dimension(&dimension) {
-            return json!({ "ok": false, "error": error.to_string() });
+            return progress.cause(error).response();
         }
         let is_applied = self
             .plans
@@ -114,25 +138,30 @@ impl PlacementWorkflow<'_> {
             &plan.changes
         };
         if let Err(error) = self.policy.validate_placement_size(source.len()) {
-            return json!({ "ok": false, "error": error.to_string() });
+            return progress.cause(error).response();
         }
+        progress.phase = FailurePhase::BeforeReadback;
+        progress.total_changes = Some(source.len());
         let (baseline_matches, baseline_mismatches) = match self
             .world_editor()
             .verify_placement_changes(source, &dimension, false)
             .await
         {
             Ok(result) => result,
-            Err(error) => return json!({ "ok": false, "error": error }),
+            Err(error) => return progress.cause(error).response(),
         };
         if !baseline_matches {
             if let Some(stored) = self.plans.placements().lock().await.get_mut(&operation_id) {
                 stored.previewed = false;
             }
-            return json!({
-                "ok": false,
-                "error": "placement baseline is stale; preview again before changing the world",
-                "mismatches": baseline_mismatches
-            });
+            let mut response = progress
+                .cause(FailureCause::mismatch(
+                    "placement baseline is stale; preview again before changing the world",
+                    &baseline_mismatches,
+                ))
+                .response();
+            response["mismatches"] = json!(baseline_mismatches);
+            return response;
         }
         // Serialized plans carry no validation proof. Recheck the current
         // placement context before forward writes. Exact undo restores captured
@@ -146,7 +175,7 @@ impl PlacementWorkflow<'_> {
                 .await
             {
                 Ok(changes) => Some(changes),
-                Err(error) => return json!({ "ok": false, "error": error }),
+                Err(error) => return progress.cause(error).response(),
             }
         };
         let source = validated
@@ -192,8 +221,15 @@ impl PlacementWorkflow<'_> {
             .check_revision_placement(operation_id, undo, false, true)
             .await
         {
-            return json!({"ok":false,"error":error});
+            return progress.cause(error).response();
         }
+        progress.operation_consumed = self
+            .plans
+            .placements()
+            .lock()
+            .await
+            .revision(&operation_id)
+            .is_some();
         if let Err(error) = self
             .plans
             .placements()
@@ -201,34 +237,50 @@ impl PlacementWorkflow<'_> {
             .await
             .begin(&operation_id, undo)
         {
-            return workflow_error(McpErrorCode::InvalidState, error, false);
+            return progress
+                .cause(FailureCause::new(CauseKind::InvalidState, error))
+                .response();
         }
+        progress.operation_consumed = true;
+        let previous_world = progress.world;
+        progress.begin_submission();
         let bridge_result = match self.bridge.write_blocks(&writes, &dimension).await {
-            Ok(result) => result,
-            Err(error) => return json!({ "ok": false, "error": error.to_string() }),
+            Ok(result) => {
+                progress.submitted(result.submitted_changes);
+                result
+            }
+            Err(error) => return progress.submission_error(error, previous_world).response(),
         };
+        progress.phase = FailurePhase::AfterReadback;
         let (verified, verification_mismatches) = match self
             .world_editor()
             .verify_placement_changes_eventually(source, &dimension)
             .await
         {
             Ok(result) => result,
-            Err(error) => return json!({ "ok": false, "error": error }),
+            Err(error) => return progress.cause(error).response(),
         };
+        progress.phase = FailurePhase::Verification;
         if !verified {
-            return json!({
-                "ok": false,
-                "error": format!("placement write completed but live verification failed at {:?}", verification_mismatches),
-                "mismatches": verification_mismatches,
-                "bridge": bridge_result
-            });
+            let mut response = progress
+                .cause(FailureCause::mismatch(
+                    "placement verification failed",
+                    &verification_mismatches,
+                ))
+                .response();
+            response["mismatches"] = json!(verification_mismatches);
+            response["bridge"] = json!(bridge_result);
+            return response;
         }
+        // The full revision boundary must also match before declaring a verified target.
         if let Err(error) = self
             .check_revision_placement(operation_id, undo, true, false)
             .await
         {
-            return json!({"ok":false,"error":error,"status":"needs_inspection","retry_allowed":false});
+            return progress.cause(error).response();
         }
+        progress.world = WorldOutcome::Verified;
+        progress.verified_steps = source.len();
         self.plans
             .placements()
             .lock()
@@ -237,23 +289,9 @@ impl PlacementWorkflow<'_> {
         if let Some(stored) = self.plans.placements().lock().await.get_mut(&operation_id) {
             stored.previewed = false;
         }
-        self.operations
-            .record_completed(
-                uuid::Uuid::new_v4(),
-                if undo {
-                    OperationKind::PlacementUndo
-                } else {
-                    OperationKind::PlacementApply
-                },
-                json!({
-                    "source_operation_id": operation_id,
-                    "changed_blocks": source.len(),
-                    "dimension": dimension,
-                }),
-            )
-            .await;
         json!({
             "schema_version": PLACEMENT_SCHEMA_V1,
+            "execution_progress":progress,
             "ok": true,
             "operation_id": operation_id,
             "action": if undo { "undo" } else { "apply" },
@@ -270,14 +308,14 @@ impl PlacementWorkflow<'_> {
         undo: bool,
         after: bool,
         consume: bool,
-    ) -> Result<(), String> {
+    ) -> Result<(), FailureCause> {
         let Some(context) = self.plans.placements().lock().await.revision(&id).cloned() else {
             return Ok(());
         };
         let player = self.actor.clone()?;
         self.policy
             .authorize_player(&player)
-            .map_err(|e| e.to_string())?;
+            .map_err(FailureCause::from)?;
         if context.player != player {
             return Err("revision placement belongs to another player".into());
         }
@@ -299,8 +337,8 @@ impl PlacementWorkflow<'_> {
                 expected.min,
                 expected.max,
             ))
-            .map_err(|e| e.to_string())?;
-        let status = self.bridge.status().await.map_err(|e| e.to_string())?;
+            .map_err(FailureCause::from)?;
+        let status = self.bridge.status().await.map_err(FailureCause::from)?;
         if !status.connected
             || status.version != context.version
             || status.dimension.as_deref() != Some(context.dimension.as_str())
@@ -311,7 +349,7 @@ impl PlacementWorkflow<'_> {
             .bridge
             .scan_region(expected.min, expected.max, &context.dimension)
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(FailureCause::from)?;
         if actual.min != expected.min
             || actual.max != expected.max
             || crate::revision::blocks(&actual)? != crate::revision::blocks(expected)?

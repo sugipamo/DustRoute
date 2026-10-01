@@ -9,6 +9,48 @@ const { bridgeConfig } = require('./bridge-config')
 const { createBotSession } = require('./bot-session')
 const { createBridgeServer } = require('./bridge-rpc')
 const { createBridgeMetrics } = require('./metrics')
+const { PROTOCOL } = require('./mutation-protocol')
+
+test('mutation failures expose a submitted prefix while invalid batches report no block effects', async () => {
+  let bot
+  let commands = 0
+  const session = createBotSession(bridgeConfig({}), createBridgeMetrics(), {
+    createBot: options => {
+      bot = new EventEmitter()
+      Object.assign(bot, {
+        _client: new EventEmitter(), username: options.username,
+        game: { dimension: 'overworld' }, time: { age: 0 },
+        waitForChunksToLoad: async () => {}, waitForTicks: async () => {},
+        chat: () => { if (++commands === 2) throw new Error('opaque transport failure') },
+        quit: () => {}
+      })
+      return bot
+    }, log: () => {}
+  })
+  session.connect()
+  bot.emit('spawn')
+  const changes = [0, 1].map(x => ({ pos: { x, y: 80, z: 0 }, state: 'minecraft:stone' }))
+  try {
+    await assert.rejects(session.dispatch('submit_command_batch', {
+      protocol: PROTOCOL, dimension: 'minecraft:overworld', changes: [...changes, { bad: true }]
+    }), error => {
+      assert.equal(error.submissionFailure.cause.kind, 'invalid_input')
+      assert.equal(error.submissionFailure.submitted_changes, 0)
+      assert.equal(error.submissionFailure.may_have_changed_world, false)
+      return true
+    })
+    assert.equal(commands, 0)
+    await assert.rejects(session.dispatch('submit_command_batch', {
+      protocol: PROTOCOL, dimension: 'minecraft:overworld', changes
+    }), error => {
+      assert.equal(error.submissionFailure.submitted_changes, 1)
+      assert.equal(error.submissionFailure.total_changes, 2)
+      assert.equal(error.submissionFailure.may_have_changed_world, true)
+      assert.equal(error.submissionFailure.cause.kind, 'unknown')
+      return true
+    })
+  } finally { session.shutdown() }
+})
 
 test('importing the entry point neither reads configuration nor opens sockets', () => {
   const previous = process.env.DUSTROUTE_SERVER_ADDRESS
@@ -69,6 +111,11 @@ test('RPC framing preserves request IDs, errors and per-session metrics', async 
   const metrics = createBridgeMetrics()
   const server = createBridgeServer(async (method, params) => {
     if (method === 'status') return { connected: false, echo: params.value }
+    if (method === 'partial') {
+      const error = new Error('opaque partial failure')
+      error.submissionFailure = { submitted_changes: 1, total_changes: 2, may_have_changed_world: true }
+      throw error
+    }
     throw new Error('unsupported')
   }, metrics)
   server.listen(0, '127.0.0.1')
@@ -90,6 +137,10 @@ test('RPC framing preserves request IDs, errors and per-session metrics', async 
     assert.deepEqual(await call(JSON.stringify({ id: 8, method: 'missing' })), { id: 8, error: 'unsupported' })
     assert.equal(typeof (await call('{')).error, 'string')
     assert.equal(metrics.errors_total, 2)
+    const partial = await call(JSON.stringify({ id: 9, method: 'partial' }))
+    assert.equal(partial.failure_protocol, 'dustroute.bridge-failure.v1')
+    assert.equal(partial.submission_failure.submitted_changes, 1)
+    assert.equal(partial.error, 'opaque partial failure')
   } finally {
     server.close()
     await once(server, 'close')

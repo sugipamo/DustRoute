@@ -76,9 +76,21 @@ impl ClientRegion {
             ));
         }
         if observation.issue.is_some() || !observation.recovery_chunks.is_empty() {
-            return Err(fail(
+            let mut cause = crate::failure::FailureCause::new(
+                crate::failure::CauseKind::ObservationIncomplete,
                 "client reconstruction incomplete; fresh observation required",
-            ));
+            );
+            cause.details.reconstruction_issue = observation.issue.as_ref().map(|issue| {
+                serde_json::to_value(issue).expect("serializable reconstruction issue")
+            });
+            cause.details.recovery_chunks = observation
+                .recovery_chunks
+                .iter()
+                .take(64)
+                .copied()
+                .collect();
+            cause.details.recovery_chunks_truncated = observation.recovery_chunks.len() > 64;
+            return Err(BotBridgeError::Detailed(cause));
         }
         if observation.blocks.len() != volume || observation.received.blocks.len() != volume {
             return Err(fail(
@@ -97,10 +109,14 @@ impl ClientRegion {
                     "client observation has duplicate or out-of-bounds cells",
                 ));
             }
-            let state = b
-                .state
-                .as_ref()
-                .ok_or_else(|| fail("client observation contains unloaded cells"))?;
+            let state = b.state.as_ref().ok_or_else(|| {
+                let mut cause = crate::failure::FailureCause::new(
+                    crate::failure::CauseKind::ObservationIncomplete,
+                    "client observation contains unloaded cells",
+                );
+                cause.details.position = Some(pos(p));
+                BotBridgeError::Detailed(cause)
+            })?;
             moving |= b.moving.is_some() || state.name == "minecraft:moving_piston";
             blocks.push(MinecraftSnapshotBlock {
                 pos: pos(p),
@@ -258,7 +274,23 @@ fn pos(p: [i32; 3]) -> Pos {
     Pos::new(p[0], p[1], p[2])
 }
 fn native_error(error: voxrig::Error) -> BotBridgeError {
-    BotBridgeError::Protocol(format!("Voxrig: {error}"))
+    use crate::failure::CauseKind as C;
+    use voxrig::ErrorKind as E;
+    let kind = match error.kind() {
+        E::Unsupported => C::Unsupported,
+        E::InvalidInput => C::InvalidInput,
+        E::Connection => C::Connection,
+        E::Timeout => C::Timeout,
+        E::Disconnected => C::Disconnected,
+        E::Protocol => C::Protocol,
+        E::ResourceLimit => C::ResourceLimit,
+        E::Rejected => C::Rejected,
+        E::State => C::ObservationUnavailable,
+        _ => C::Unknown,
+    };
+    let mut cause = crate::failure::FailureCause::new(kind, format!("Voxrig: {error}"));
+    cause.details.native_error_kind = Some(format!("{:?}", error.kind()));
+    BotBridgeError::Detailed(cause)
 }
 
 #[cfg(test)]
@@ -308,6 +340,49 @@ mod tests {
             issue: None,
             recovery_chunks: vec![],
         }
+    }
+    #[test]
+    fn native_categories_and_incomplete_evidence_reach_public_reports() {
+        for (native, expected) in [
+            (
+                voxrig::ErrorKind::Timeout,
+                crate::failure::CauseKind::Timeout,
+            ),
+            (
+                voxrig::ErrorKind::Unsupported,
+                crate::failure::CauseKind::Unsupported,
+            ),
+            (
+                voxrig::ErrorKind::Disconnected,
+                crate::failure::CauseKind::Disconnected,
+            ),
+        ] {
+            let cause = native_error(voxrig::Error::new(
+                native,
+                anyhow::anyhow!("opaque diagnostic"),
+            ))
+            .cause();
+            assert_eq!(cause.kind, expected);
+            assert_eq!(cause.details.native_error_kind, Some(format!("{native:?}")));
+        }
+        let mut observation = sample();
+        let region = observation.received.region;
+        observation.issue = Some(ReconstructionIssue::Limit);
+        observation.recovery_chunks = (0..65).map(|n| [n, 0]).collect();
+        let error =
+            ClientRegion::from_observation(observation, region, "minecraft:overworld").unwrap_err();
+        let cause = error.cause();
+        assert_eq!(cause.kind, crate::failure::CauseKind::ObservationIncomplete);
+        assert!(cause.details.reconstruction_issue.is_some());
+        assert_eq!(cause.details.recovery_chunks.len(), 64);
+        assert!(cause.details.recovery_chunks_truncated);
+        let response = crate::failure::ExecutionProgress::default()
+            .cause(cause)
+            .response();
+        assert_eq!(
+            response["failure"]["primary"]["kind"],
+            "observation_incomplete"
+        );
     }
     #[test]
     fn preserves_native_properties_and_provenance_without_server_confirmation() {

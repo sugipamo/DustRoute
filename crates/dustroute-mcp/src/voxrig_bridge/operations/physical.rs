@@ -89,6 +89,15 @@ impl VoxrigBridge {
         changes: &[PhysicalChange],
         dimension: &str,
     ) -> Result<PhysicalSubmission, BotBridgeError> {
+        self.place_physical_blocks_tracked(changes, dimension, &mut Default::default())
+            .await
+    }
+    pub(crate) async fn place_physical_blocks_tracked(
+        &self,
+        changes: &[PhysicalChange],
+        dimension: &str,
+        progress: &mut crate::failure::SubmissionProgress,
+    ) -> Result<PhysicalSubmission, BotBridgeError> {
         validate(changes)?;
         let _guard = self.mutations.lock().await;
         let operations = self.operations()?;
@@ -110,7 +119,7 @@ impl VoxrigBridge {
         }
         let mut highest = i32::MIN;
         let mut total = [0.0; 2];
-        for change in changes {
+        for (index, change) in changes.iter().enumerate() {
             let pos = match change {
                 PhysicalChange::Dig { pos } | PhysicalChange::Place { pos, .. } => *pos,
             };
@@ -129,6 +138,7 @@ impl VoxrigBridge {
             )
             .await?;
             if !air(&self.block(pos, dimension).await?) {
+                progress.may_have_changed_world = true;
                 operations
                     .dig_creative(array(pos), BlockFace::Up)
                     .await
@@ -170,6 +180,7 @@ impl VoxrigBridge {
                 };
                 operations.look(rotation).await.map_err(native_error)?;
                 let (side, cursor) = face_vector(*face)?;
+                progress.may_have_changed_world = true;
                 operations
                     .use_on_block(array(*reference), side, cursor)
                     .await
@@ -185,6 +196,7 @@ impl VoxrigBridge {
                     ));
                 }
             }
+            progress.submitted_changes = index + 1;
         }
         let n = changes.len() as f64;
         let retreat = [

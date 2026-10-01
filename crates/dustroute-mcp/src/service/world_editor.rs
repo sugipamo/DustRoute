@@ -6,7 +6,8 @@ use super::{
     world_from_snapshot_for_service,
 };
 use crate::bridge_protocol::{PhysicalChange, PhysicalSubmission};
-use crate::{BlockChange, BotBridge, McpPolicy};
+use crate::failure::{CauseKind, FailureCause};
+use crate::{BlockChange, BotBridge, BotBridgeError, McpPolicy};
 use dustroute_physical::{BlockKind, PhysicalBlockChange, Pos};
 use dustroute_translate::minecraft_export::JavaExportConfig;
 use dustroute_translate::world_reverse::RegionBounds;
@@ -27,7 +28,7 @@ impl WorldEditor<'_> {
         changes: &[BlockChange],
         dimension: &str,
         verify_after: bool,
-    ) -> Result<(bool, Vec<Pos>), String> {
+    ) -> Result<(bool, Vec<Pos>), FailureCause> {
         let Some(first) = changes.first() else {
             return Ok((true, Vec::new()));
         };
@@ -48,7 +49,7 @@ impl WorldEditor<'_> {
             .bridge
             .scan_region(min, max, dimension)
             .await
-            .map_err(|error| error.to_string())?;
+            .map_err(FailureCause::from)?;
         let world = world_from_snapshot_for_service(&snapshot)?;
         let mismatches = changes
             .iter()
@@ -79,7 +80,7 @@ impl WorldEditor<'_> {
         &self,
         changes: &[BlockChange],
         dimension: &str,
-    ) -> Result<(bool, Vec<Pos>), String> {
+    ) -> Result<(bool, Vec<Pos>), FailureCause> {
         let mut last_mismatches = Vec::new();
         for attempt in 0..PLACEMENT_VERIFY_ATTEMPTS {
             let (verified, mismatches) = self
@@ -100,7 +101,7 @@ impl WorldEditor<'_> {
         &self,
         changes: &[BlockChange],
         dimension: &str,
-    ) -> Result<dustroute_app::ValidatedBlockChanges, String> {
+    ) -> Result<dustroute_app::ValidatedBlockChanges, FailureCause> {
         let mut region = dustroute_translate::world::World::new();
         for change in changes {
             region.set(
@@ -110,7 +111,7 @@ impl WorldEditor<'_> {
         }
         let Some((min, max)) = region.bounds() else {
             return dustroute_app::ValidatedBlockChanges::new(&region, Vec::new())
-                .map_err(|e| e.to_string());
+                .map_err(|e| FailureCause::new(CauseKind::InvalidInput, e.to_string()));
         };
         // Adjacent dependents can themselves need evidence outside this first
         // scan (e.g. the support below a lower wire beside an upward repair).
@@ -120,14 +121,14 @@ impl WorldEditor<'_> {
         for _ in 0..8 {
             self.policy
                 .validate_region(bounds)
-                .map_err(|e| e.to_string())?;
+                .map_err(FailureCause::from)?;
             let snapshot = self
                 .bridge
                 .scan_region(bounds.min, bounds.max, dimension)
                 .await
-                .map_err(|e| e.to_string())?;
+                .map_err(FailureCause::from)?;
             let baseline = dustroute_translate::snapshot::literal_world_from_snapshot(&snapshot)
-                .map_err(|error| error.to_string())?;
+                .map_err(|error| FailureCause::new(CauseKind::InvalidInput, error.to_string()))?;
             let mut candidate = baseline.clone();
             for change in changes {
                 candidate.set(change.pos, change.after.clone());
@@ -166,21 +167,26 @@ impl WorldEditor<'_> {
             }
             if expanded == bounds {
                 return dustroute_app::ValidatedBlockChanges::new(&baseline, changes.to_vec())
-                    .map_err(|error| format!("{}: {:?}", error, error.issues));
+                    .map_err(|error| {
+                        FailureCause::new(
+                            CauseKind::InvalidInput,
+                            format!("{}: {:?}", error, error.issues),
+                        )
+                    });
             }
             bounds = expanded;
         }
-        Err(
-            "placement validation needs context beyond the 8-scan limit; no changes submitted"
-                .into(),
-        )
+        Err(FailureCause::new(
+            CauseKind::ResourceLimit,
+            "placement validation needs context beyond the 8-scan limit; no changes submitted",
+        ))
     }
 
     pub(super) async fn write_validated_physical_changes(
         &self,
         changes: &dustroute_app::ValidatedBlockChanges,
         dimension: &str,
-    ) -> Result<PhysicalSubmission, String> {
+    ) -> Result<PhysicalSubmission, BotBridgeError> {
         let changes: Vec<_> = changes
             .changes()
             .iter()
@@ -199,10 +205,16 @@ impl WorldEditor<'_> {
         &self,
         changes: &[PhysicalBlockChange],
         dimension: &str,
-    ) -> Result<PhysicalSubmission, String> {
+    ) -> Result<PhysicalSubmission, BotBridgeError> {
         self.policy
             .validate_placement_size(changes.len())
-            .map_err(|error| error.to_string())?;
+            .map_err(|error| {
+                BotBridgeError::Detailed(FailureCause::from(error)).with_submission(
+                    Some(0),
+                    changes.len(),
+                    false,
+                )
+            })?;
         let mut changes = changes.iter().collect::<Vec<_>>();
         changes.sort_by_key(|change| {
             let priority = match change.after.kind {
@@ -216,13 +228,14 @@ impl WorldEditor<'_> {
             };
             (priority, change.pos.y, change.pos.x, change.pos.z)
         });
+        let total_changes = changes.len();
         let export = JavaExportConfig {
             relative: false,
             ..JavaExportConfig::default()
         };
         let actions = changes
             .into_iter()
-            .map(|change| -> Result<PhysicalChange, String> {
+            .map(|change| -> Result<PhysicalChange, BotBridgeError> {
                 if change.after.kind == BlockKind::Air {
                     return Ok(PhysicalChange::Dig { pos: change.pos });
                 }
@@ -231,7 +244,13 @@ impl WorldEditor<'_> {
                     &export,
                     dustroute_translate::minecraft_export::ExportPurpose::InitialPlacement,
                 )
-                .map_err(|error| error.to_string())?;
+                .map_err(|error| {
+                    BotBridgeError::Detailed(FailureCause::new(
+                        CauseKind::InvalidInput,
+                        error.to_string(),
+                    ))
+                    .with_submission(Some(0), total_changes, false)
+                })?;
                 let item = if change.after.kind == BlockKind::RedstoneWire {
                     "minecraft:redstone".to_owned()
                 } else {
@@ -251,17 +270,14 @@ impl WorldEditor<'_> {
                 })
             })
             .collect::<Result<Vec<_>, _>>()?;
-        self.bridge
-            .place_physical_blocks(&actions, dimension)
-            .await
-            .map_err(|error| error.to_string())
+        self.bridge.place_physical_blocks(&actions, dimension).await
     }
 
     pub(super) async fn verify_physical_changes(
         &self,
         changes: &[PhysicalBlockChange],
         dimension: &str,
-    ) -> Result<(bool, Vec<Pos>), String> {
+    ) -> Result<(bool, Vec<Pos>), FailureCause> {
         let Some(bounds) = bounds_for_changes(changes) else {
             return Ok((true, Vec::new()));
         };
@@ -269,7 +285,7 @@ impl WorldEditor<'_> {
             .bridge
             .scan_region(bounds.min, bounds.max, dimension)
             .await
-            .map_err(|error| error.to_string())?;
+            .map_err(FailureCause::from)?;
         let world = world_from_snapshot_for_service(&snapshot)?;
         let mismatches = changes
             .iter()
@@ -283,7 +299,7 @@ impl WorldEditor<'_> {
         &self,
         expected: &[BoundaryBlockRecord],
         dimension: &str,
-    ) -> Result<(bool, Vec<Pos>), String> {
+    ) -> Result<(bool, Vec<Pos>), FailureCause> {
         if expected.is_empty() {
             return Ok((true, Vec::new()));
         }
@@ -327,7 +343,7 @@ impl WorldEditor<'_> {
             .bridge
             .scan_region(bounds.min, bounds.max, dimension)
             .await
-            .map_err(|error| error.to_string())?;
+            .map_err(FailureCause::from)?;
         let actual = snapshot
             .blocks
             .iter()

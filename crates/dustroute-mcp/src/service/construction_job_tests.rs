@@ -360,6 +360,7 @@ async fn explicit_recovery_reproves_an_unchanged_baseline_and_discards_the_old_s
             undo: false,
             verified: false,
             error: None,
+            failure: None,
         });
         registry.save(&record).unwrap();
     }

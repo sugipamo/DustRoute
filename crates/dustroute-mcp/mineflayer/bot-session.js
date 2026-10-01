@@ -213,96 +213,114 @@ function createBotSession (config, bridgeMetrics, {
   }
 
   async function writeBlocks (changes) {
-    if (!Array.isArray(changes)) throw new Error('changes must be an array')
-    if (changes.length > 32768) throw new Error('write exceeds the 32768 block limit')
-    const statePattern = /^minecraft:[a-z0-9_]+(?:\[[a-z0-9_=,]+\])?$/
-    for (let index = 0; index < changes.length; index++) {
-      const change = changes[index]
-      const { x, y, z } = change.pos || {}
-      if (![x, y, z].every(Number.isInteger)) throw new Error('write position must use integers')
-      if (typeof change.state !== 'string' || !statePattern.test(change.state)) {
-        throw new Error(`invalid Minecraft block state at change ${index}`)
+    const progress = { submitted_changes: 0, total_changes: changes.length, may_have_changed_world: false }
+    try {
+      if (!Array.isArray(changes)) throw new Error('changes must be an array')
+      if (changes.length > 32768) throw new Error('write exceeds the 32768 block limit')
+      const statePattern = /^minecraft:[a-z0-9_]+(?:\[[a-z0-9_=,]+\])?$/
+      for (let index = 0; index < changes.length; index++) {
+        const change = changes[index]
+        const { x, y, z } = change.pos || {}
+        if (![x, y, z].every(Number.isInteger)) throw new Error('write position must use integers')
+        if (typeof change.state !== 'string' || !statePattern.test(change.state)) {
+          throw new Error(`invalid Minecraft block state at change ${index}`)
+        }
+        progress.may_have_changed_world = true
+        bot.chat(`/setblock ${x} ${y} ${z} ${change.state} replace`)
+        progress.submitted_changes = index + 1
+        if ((index + 1) % 1000 === 0) await bot.waitForTicks(1)
       }
-      bot.chat(`/setblock ${x} ${y} ${z} ${change.state} replace`)
-      if ((index + 1) % 1000 === 0) await bot.waitForTicks(1)
+      await bot.waitForTicks(2)
+      return { protocol: PROTOCOL, submitted_changes: changes.length }
+    } catch (error) {
+      error.submissionFailure = { cause: { kind: 'unknown', message: String(error.message || error), details: {}, phase: 'submission' }, ...progress }
+      throw error
     }
-    await bot.waitForTicks(2)
-    return { protocol: PROTOCOL, submitted_changes: changes.length }
   }
 
   async function placePhysicalBlocks (changes) {
-    if (!Array.isArray(changes) || changes.length === 0) throw new Error('physical changes must be a non-empty array')
-    if (changes.length > 128) throw new Error('normal player placement is limited to 128 changes')
-    const Item = require('prismarine-item')(config.version)
-    let highestY = -64
-    let centerX = 0
-    let centerZ = 0
-    bot.chat(`/gamemode creative ${bot.username}`)
-    await bot.waitForTicks(2)
-    for (const change of changes) {
-      const { x, y, z } = change.pos || {}
-      if (![x, y, z].every(Number.isInteger)) throw new Error('physical placement position must use integers')
-      highestY = Math.max(highestY, y)
-      centerX += x
-      centerZ += z
-      bot.chat(`/tp ${bot.username} ${x + 0.5} ${y + 3} ${z + 0.5}`)
-      await bot.waitForTicks(3)
-      bot.creative.startFlying()
-      const existing = bot.blockAt(new Vec3(x, y, z))
-      if (existing && !['air', 'cave_air', 'void_air'].includes(existing.name)) {
-        await bot.dig(existing, true)
-        await bot.waitForTicks(1)
-      }
-      if (change.action === 'dig') continue
-      if (change.action !== 'place') throw new Error(`unknown physical action: ${String(change.action)}`)
-      const itemName = String(change.item || '').replace(/^minecraft:/, '')
-      const itemDefinition = bot.registry.itemsByName[itemName]
-      if (!itemDefinition) throw new Error(`unknown placement item: ${itemName}`)
-      await bot.creative.setInventorySlot(36, new Item(itemDefinition.id, 1))
-      const held = bot.inventory.slots[36]
-      if (!held) throw new Error(`failed to prepare placement item: ${itemName}`)
-      await bot.equip(held, 'hand')
-      const referencePos = new Vec3(change.reference.x, change.reference.y, change.reference.z)
-      const reference = bot.blockAt(referencePos)
-      if (!reference || reference.boundingBox === 'empty') {
-        throw new Error(`placement support is unavailable at ${referencePos.x} ${referencePos.y} ${referencePos.z}`)
-      }
-      const facingMatch = String(change.state || '').match(/(?:\[|,)facing=([a-z]+)/)
-      const desiredFacing = facingMatch && facingMatch[1]
-      const approaches = desiredFacing
-        ? [[0, -2], [2, 0], [0, 2], [-2, 0]]
-        : [[0, 0]]
-      let placed = null
-      for (const [dx, dz] of approaches) {
-        if (dx !== 0 || dz !== 0) {
-          bot.chat(`/tp ${bot.username} ${x + dx + 0.5} ${y + 2} ${z + dz + 0.5}`)
-          await bot.waitForTicks(2)
-          bot.creative.startFlying()
-        }
-        await bot.placeBlock(reference, new Vec3(change.face.x, change.face.y, change.face.z))
-        await bot.waitForTicks(2)
-        placed = bot.blockAt(new Vec3(x, y, z))
-        if (!desiredFacing || (placed && propertiesOf(placed).facing === desiredFacing)) break
-        if (placed && !['air', 'cave_air', 'void_air'].includes(placed.name)) {
-          await bot.dig(placed, true)
+    const progress = { submitted_changes: 0, total_changes: changes.length, may_have_changed_world: false }
+    try {
+      if (!Array.isArray(changes) || changes.length === 0) throw new Error('physical changes must be a non-empty array')
+      if (changes.length > 128) throw new Error('normal player placement is limited to 128 changes')
+      const Item = require('prismarine-item')(config.version)
+      let highestY = -64
+      let centerX = 0
+      let centerZ = 0
+      bot.chat(`/gamemode creative ${bot.username}`)
+      await bot.waitForTicks(2)
+      for (const change of changes) {
+        const { x, y, z } = change.pos || {}
+        if (![x, y, z].every(Number.isInteger)) throw new Error('physical placement position must use integers')
+        highestY = Math.max(highestY, y)
+        centerX += x
+        centerZ += z
+        bot.chat(`/tp ${bot.username} ${x + 0.5} ${y + 3} ${z + 0.5}`)
+        await bot.waitForTicks(3)
+        bot.creative.startFlying()
+        const existing = bot.blockAt(new Vec3(x, y, z))
+        if (existing && !['air', 'cave_air', 'void_air'].includes(existing.name)) {
+          progress.may_have_changed_world = true
+          await bot.dig(existing, true)
           await bot.waitForTicks(1)
         }
-        placed = null
+        if (change.action === 'dig') { progress.submitted_changes += 1; continue }
+        if (change.action !== 'place') throw new Error(`unknown physical action: ${String(change.action)}`)
+        const itemName = String(change.item || '').replace(/^minecraft:/, '')
+        const itemDefinition = bot.registry.itemsByName[itemName]
+        if (!itemDefinition) throw new Error(`unknown placement item: ${itemName}`)
+        await bot.creative.setInventorySlot(36, new Item(itemDefinition.id, 1))
+        const held = bot.inventory.slots[36]
+        if (!held) throw new Error(`failed to prepare placement item: ${itemName}`)
+        await bot.equip(held, 'hand')
+        const referencePos = new Vec3(change.reference.x, change.reference.y, change.reference.z)
+        const reference = bot.blockAt(referencePos)
+        if (!reference || reference.boundingBox === 'empty') {
+          throw new Error(`placement support is unavailable at ${referencePos.x} ${referencePos.y} ${referencePos.z}`)
+        }
+        const facingMatch = String(change.state || '').match(/(?:\[|,)facing=([a-z]+)/)
+        const desiredFacing = facingMatch && facingMatch[1]
+        const approaches = desiredFacing
+          ? [[0, -2], [2, 0], [0, 2], [-2, 0]]
+          : [[0, 0]]
+        let placed = null
+        for (const [dx, dz] of approaches) {
+          if (dx !== 0 || dz !== 0) {
+            bot.chat(`/tp ${bot.username} ${x + dx + 0.5} ${y + 2} ${z + dz + 0.5}`)
+            await bot.waitForTicks(2)
+            bot.creative.startFlying()
+          }
+          progress.may_have_changed_world = true
+          await bot.placeBlock(reference, new Vec3(change.face.x, change.face.y, change.face.z))
+          await bot.waitForTicks(2)
+          placed = bot.blockAt(new Vec3(x, y, z))
+          if (!desiredFacing || (placed && propertiesOf(placed).facing === desiredFacing)) break
+          if (placed && !['air', 'cave_air', 'void_air'].includes(placed.name)) {
+            progress.may_have_changed_world = true
+            await bot.dig(placed, true)
+            await bot.waitForTicks(1)
+          }
+          placed = null
+        }
+        if (!placed || ['air', 'cave_air', 'void_air'].includes(placed.name)) {
+          throw new Error(`normal placement did not create a block at ${x} ${y} ${z}`)
+        }
+        if (desiredFacing && propertiesOf(placed).facing !== desiredFacing) {
+          throw new Error(`normal placement could not orient block at ${x} ${y} ${z} toward ${desiredFacing}`)
+        }
+        progress.submitted_changes += 1
       }
-      if (!placed || ['air', 'cave_air', 'void_air'].includes(placed.name)) {
-        throw new Error(`normal placement did not create a block at ${x} ${y} ${z}`)
-      }
-      if (desiredFacing && propertiesOf(placed).facing !== desiredFacing) {
-        throw new Error(`normal placement could not orient block at ${x} ${y} ${z} toward ${desiredFacing}`)
-      }
+      centerX = centerX / changes.length
+      centerZ = centerZ / changes.length
+      const retreat = new Vec3(Math.floor(centerX) + 0.5, highestY + 16, Math.floor(centerZ) + 0.5)
+      bot.chat(`/tp ${bot.username} ${retreat.x} ${retreat.y} ${retreat.z}`)
+      await bot.waitForTicks(3)
+      bot.creative.startFlying()
+      return { protocol: PROTOCOL, placed_changes: changes.length, placement_mode: 'mineflayer_player', retreat: posJson(retreat) }
+    } catch (error) {
+      error.submissionFailure = { cause: { kind: 'unknown', message: String(error.message || error), details: {}, phase: 'submission' }, ...progress }
+      throw error
     }
-    centerX = centerX / changes.length
-    centerZ = centerZ / changes.length
-    const retreat = new Vec3(Math.floor(centerX) + 0.5, highestY + 16, Math.floor(centerZ) + 0.5)
-    bot.chat(`/tp ${bot.username} ${retreat.x} ${retreat.y} ${retreat.z}`)
-    await bot.waitForTicks(3)
-    bot.creative.startFlying()
-    return { protocol: PROTOCOL, placed_changes: changes.length, placement_mode: 'mineflayer_player', retreat: posJson(retreat) }
   }
 
   async function getBlock (pos, dimension, requestId) {
@@ -504,12 +522,30 @@ function createBotSession (config, bridgeMetrics, {
       return previewRegion(params.player, params.min, params.max)
     }
     if (method === 'submit_command_batch') {
-      requireDimension(params.dimension)
-      return writeBlocks(validateMutation(method, params))
+      let changes
+      let admissionKind = 'invalid_state'
+      try {
+        requireDimension(params.dimension)
+        admissionKind = 'invalid_input'
+        changes = validateMutation(method, params)
+      } catch (error) {
+        error.submissionFailure = { cause: { kind: admissionKind, message: String(error.message || error), details: {}, phase: 'admission' }, submitted_changes: 0, total_changes: Array.isArray(params.changes) ? params.changes.length : 0, may_have_changed_world: false }
+        throw error
+      }
+      return writeBlocks(changes)
     }
     if (method === 'submit_physical_batch') {
-      requireDimension(params.dimension)
-      return placePhysicalBlocks(validateMutation(method, params))
+      let changes
+      let admissionKind = 'invalid_state'
+      try {
+        requireDimension(params.dimension)
+        admissionKind = 'invalid_input'
+        changes = validateMutation(method, params)
+      } catch (error) {
+        error.submissionFailure = { cause: { kind: admissionKind, message: String(error.message || error), details: {}, phase: 'admission' }, submitted_changes: 0, total_changes: Array.isArray(params.changes) ? params.changes.length : 0, may_have_changed_world: false }
+        throw error
+      }
+      return placePhysicalBlocks(changes)
     }
     throw new Error(`unknown method: ${method}`)
   }

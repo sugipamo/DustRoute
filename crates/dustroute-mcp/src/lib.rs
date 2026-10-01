@@ -9,6 +9,7 @@ pub mod config;
 mod construction_jobs;
 pub mod discovery;
 mod edit_registry;
+pub mod failure;
 pub mod observation_evidence;
 pub mod operations;
 pub mod performance;
