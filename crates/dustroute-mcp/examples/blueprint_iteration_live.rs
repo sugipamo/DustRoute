@@ -379,12 +379,12 @@ mod trial {
             .flat_map(|y| {
                 (1282..1287).flat_map(move |x| {
                     (1202..1210).map(move |z| {
-                        let block = if (x, y, z) == (1282, 182, 1202) {
-                            "minecraft:lever[face=floor,facing=north,powered=false]"
+                        if (x, y, z) == (1282, 182, 1202) {
+                            json!({"position":{"x":x,"y":y,"z":z},"block":"minecraft:lever",
+                                "properties":{"face":"floor","facing":"north","powered":"false"}})
                         } else {
-                            "minecraft:stone"
-                        };
-                        json!({"position":{"x":x,"y":y,"z":z},"block":block})
+                            json!({"position":{"x":x,"y":y,"z":z},"block":"minecraft:stone"})
+                        }
                     })
                 })
             })
