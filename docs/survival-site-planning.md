@@ -148,3 +148,56 @@ This verifies the declared access sequence, not automatic access-layout selectio
 or the complete adopted roofed build. Next are access/dependency/material planning,
 durable survival execution and full construction/cleanup acceptance. The broad
 survival construction goal remains active.
+
+## Candidate sequence validation foundation (2026-10-02 UTC)
+
+`survival_construction::ConstructionSite` binds the generated grounded baseline
+and exact final state to separately declared edit, temporary, body-travel and
+final-retreat bounds. It reuses `WorldEditScope` and `LiteralSnapshotIndex`.
+Existing ground is outside editable space. This first version refuses temporary
+regions overlapping permanent structure or named permanent air, rather than
+implicitly granting a temporary exemption. The full capture may extend beyond
+the Blueprint to include explicitly permitted access works and collision halos.
+
+`preview_construction_sequence` evaluates a supplied ordered candidate against
+one immutable native capture. It checks the complete Blueprint predecessor,
+then calls the shared native hypothetical movement, face/reach/placement and
+removal checks in order. A placement updates the next step's geometry; a missing
+support, blocked hit or unsafe motion cannot pass solely because the final block
+set is correct. Every permanent target must be placed once with its exact state.
+Only previously planned temporary cubes may be removed. All of them must be
+removed, the exact final Blueprint must match, and the bot must finish with safe
+standing in its declared retreat volume. Other cells cannot be changed by the
+admitted action types. Native 256-edit/4096-tick limits remain in force, with
+1..512 proposed actions, at most 64 permanent targets and bounded captured space.
+
+The result is a separate serializable hypothetical plan without deserialization
+or an execution method. Its source standing, baseline, final pattern, scope,
+ordered native predictions and resource accounting are retained for review.
+Errors carry a stable category, action index and cell when applicable. Material
+shortfalls also have a structured per-material map. The proposed supply budget
+is **not** a received inventory observation or reservation.
+
+Resource accounting separates permanent consumption, cumulative temporary
+placements without recovery, peak simultaneously placed temporary blocks and
+total supplied items needed. Reusing a temporary location does not credit drops:
+placing one dirt, removing it and placing another requires two supplied dirt,
+even though only one is ever present in the world.
+
+The contract/resource regression tests use the existing five-by-five roof at
+y=6, 49 permanent cobblestone and 49 protected ground cells. They check exact
+counts, under-supply on temporary reuse, incomplete cleanup, protected/foreign
+removal, duplicate/wrong placement and malformed bounds. These tests exercise
+the policy/resource layer; they do not counterfeit a native captured scene or
+claim that the complete roof's player-action sequence has passed geometry.
+
+Still pending: bounded automatic access-layout/action selection and its first
+complete roofed candidate through this checker, received inventory reconciliation,
+adoption/policy integration and durable survival execution, followed by the full
+isolated build and failure/continuation acceptance. The previously recorded actual
+temporary-access trial predates this caller checker and is not a live test of it.
+
+Validation: the MCP library suite with `voxrig` enabled passed 187 tests, with
+zero failures and six ignored tests (885.78 seconds, one test thread). This
+includes the six new contract/resource cases. MCP all-targets Clippy with
+`-D warnings` passed. No additional live world trial was run for this checker.

@@ -5,6 +5,20 @@ Started 2026-10-01 on `codex/survival-blueprint-construction`, from develop
 develop and pushed. Both merged topic branches were deleted locally and on
 origin. Main remains at `7f74b37`.
 
+## Latest status (2026-10-02 UTC)
+
+- Native inventory, placement/mining continuation, locomotion, bounded navigation
+  and shared hypothetical geometry have isolated non-OP evidence.
+- The declared real temporary platform placement/climb/retreat/removal trial
+  passed, including three mining retirement/recovery cycles.
+- Caller-side candidate sequence, edit-scope and material checks are implemented;
+  their roof contract/resource tests are distinct from player geometry acceptance.
+- Automatic access/action selection, durable survival jobs and the complete
+  adopted roofed build/cleanup acceptance remain unfinished. The goal is active.
+
+The sections below retain the earlier checkpoints and their original limitations.
+The latest detail is in [site planning](survival-site-planning.md).
+
 ## Intended result
 
 Given a Blueprint, all required building materials and temporary access blocks,
@@ -91,7 +105,7 @@ Access-block removal does not imply recovered item drops: actual recovery needs
 its own received inventory evidence. If recovery is necessary to finish with the
 supplied inventory, the plan must establish it or stop before spending resources.
 
-## Current progress and stopping point
+## Initial inventory and standing foundation checkpoint
 
 The user approved the inventory prerequisite, then approved the minimum
 posture/ground/mining-condition foundation before nearby placement/mining.
@@ -469,3 +483,17 @@ This verifies the declared access sequence, not automatic access-layout selectio
 or the complete adopted roofed build. Next are access/dependency/material planning,
 durable survival execution and full construction/cleanup acceptance. The broad
 survival construction goal remains active.
+
+## Candidate site/action/material checks (2026-10-02 UTC)
+
+A read-only caller layer now checks a proposed complete sequence using grounded
+Blueprint geometry, explicit edit/temporary scopes and the shared native future
+world predictor. It refuses protected/foreign removal and incomplete structure
+or cleanup, and requires a safe final retreat. Materials distinguish permanent
+use, cumulative temporary use without assumed recovery and peak temporary blocks
+in the world. Diagnostics include action/cell context and structured shortages.
+See [the contract and remaining work](survival-site-planning.md#candidate-sequence-validation-foundation-2026-10-02-utc).
+
+This is candidate validation, not automatic access-work selection, adoption or a
+durable executor. The full elevated roof's player sequence and live construction
+acceptance remain unfinished. The broad goal remains active.

@@ -24,6 +24,8 @@ mod source_identity;
 mod state;
 mod storage;
 #[cfg(feature = "voxrig")]
+pub mod survival_construction;
+#[cfg(feature = "voxrig")]
 pub mod survival_navigation;
 pub mod transition;
 #[cfg(feature = "voxrig")]

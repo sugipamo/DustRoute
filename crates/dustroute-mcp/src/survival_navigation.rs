@@ -241,7 +241,7 @@ fn same_initial(a: &SurvivalMovementPreview, b: &SurvivalMovementPreview) -> boo
         && a.initial.position == b.initial.position
         && a.initial.player == b.initial.player
 }
-fn validate(request: &RouteRequest) -> Result<(), RouteFailure> {
+pub(crate) fn validate(request: &RouteRequest) -> Result<(), RouteFailure> {
     let fail = |s: &str| RouteFailure::InvalidRequest { reason: s.into() };
     for b in [request.travel, request.goal] {
         if (0..3).any(|i| {
@@ -277,6 +277,12 @@ fn admissible(p: &impl Prediction, travel: TravelBounds) -> bool {
         && p.frames()
             .iter()
             .all(|f| within_scope(travel, f.position, p))
+}
+pub(crate) fn hypothetical_admissible(
+    prediction: &HypotheticalMovementPreview,
+    travel: TravelBounds,
+) -> bool {
+    admissible(prediction, travel)
 }
 /// Read-only route search on an immutable future-world branch. This uses the
 /// same search and native movement kernel as live routes but grants no action
