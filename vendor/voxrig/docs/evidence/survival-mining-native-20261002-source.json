@@ -1,0 +1,88 @@
+{
+  "version": "Java 1.21.11",
+  "evidence_kind": "Independent native server trial with mining/observer clients, received block snapshots and packet traces",
+  "endpoint": "127.0.0.1:25572",
+  "world": "Dedicated disposable survival-mining-server-20261002; no existing world reused",
+  "builder": "Non-OP NatMineBot, forced survival, initially empty hotbar",
+  "fixture_actor": "Dedicated server console, no builder operator commands",
+  "inputs": "Test-private native BLOCK_DIG; PLAYER_LOADED and grounded LOOK before each trace; direct mining sequences reused per case; results verified from received block changes rather than acknowledgements",
+  "cases": [
+    {
+      "name": "normal_finish",
+      "input_offsets_ms": [
+        0,
+        1101
+      ],
+      "actions": [
+        0,
+        2
+      ],
+      "final_offset_ms": 1204,
+      "final_received_block": {
+        "name": "minecraft:air",
+        "properties": {}
+      },
+      "viewer_entity_removed": false
+    },
+    {
+      "name": "early_finish_abort",
+      "input_offsets_ms": [
+        0,
+        50,
+        50
+      ],
+      "actions": [
+        0,
+        2,
+        1
+      ],
+      "final_offset_ms": 7517,
+      "final_received_block": {
+        "name": "minecraft:air",
+        "properties": {}
+      },
+      "viewer_entity_removed": false
+    },
+    {
+      "name": "early_finish_disconnect",
+      "input_offsets_ms": [
+        0,
+        50
+      ],
+      "actions": [
+        0,
+        2
+      ],
+      "final_offset_ms": 9306,
+      "final_received_block": {
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      "viewer_entity_removed": true
+    }
+  ],
+  "failed_attempts": [
+    {
+      "id": "20261002-a",
+      "outcome": "Fixture-control stdin exceeded 60-second bound before setup; no mining input submitted. Empty output retained locally, and server log records subsequent setup attempts with no connected trial players. Corrected run b supplied fixture control within the existing bound."
+    }
+  ],
+  "limitations": [
+    "Disconnect scenario is a bounded 9.3-second observation with viewer entity removal; client shutdown alone is not a universal safe-cancellation receipt.",
+    "No mining production API or autonomous construction executor was introduced.",
+    "No partial transport-write cancellation trial was run.",
+    "No arbitrary tool/effect/terrain mining or survival locomotion was tested."
+  ],
+  "outputs": {
+    "survival-mining-native-20261002-b.json.gz": "b1ab76e4564d23e75e1ed097da19df7448aaead32978fcb30612c629487aa6e2",
+    "survival-mining-server-20261002.log": "ffec796aa8207b448a45cc72ce489159d9e26104f3028f179868b72a5a85e342"
+  },
+  "original_local_json_sha256": "bb27f26134e1a8743e569525e315a02687335de25499ff1d1fdd4a183c4e5194",
+  "transformation": "gzip with mtime=0, native JSON contents unchanged; server log retained unchanged",
+  "non_op_evidence": {
+    "operator_entries_after_trial": [],
+    "operator_file_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "server_console_commands": "Retained dedicated server log; no op command",
+    "received_game_mode": "All three case baselines record survival"
+  }
+}

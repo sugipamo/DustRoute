@@ -20,10 +20,11 @@ must be fixed before testing; a successful single nearby placement is only an
 earlier milestone. Existing circuit analysis and adoption do not establish
 survival constructibility.
 
-The temporary-block question is still unanswered at this audit. The proposed
-first implementation uses ordinary, admitted solid blocks. Minecraft's dedicated
+The first bounded milestone uses ordinary, admitted solid temporary blocks, as
+specified in the approved goal. Minecraft's dedicated
 `scaffolding` block requires its own placement/support/climbing audit before it
-can be selected. This assumption has not authorized any live writes.
+can be selected. Native fixture mining below does not establish temporary-access
+construction or cleanup acceptance.
 
 ## Existing mechanisms and gaps
 
@@ -114,21 +115,34 @@ Implemented milestones (offline validation, not live building acceptance):
   unmodeled impulse/vehicle contexts refuse stationary work.
 - Native 1.21.11 comparisons cover standing dimensions, all admitted cube
   states, mining attribute IDs/defaults/limits, packed velocity/look codecs and
-  contact boundaries. Final source tests pass **136 tests, 1 ignored**, with
+  contact boundaries. Foundation source tests passed **136 tests, 1 ignored**, with
   Clippy, documentation, formatting and package-input checks passing. The
   [validation record](evidence/survival-foundation-20261002.json) separates these
   observations from live-server evidence.
 
 Nearby validated survival placement, timed mining, walking/navigation, the
 site/temporary-access planner and the durable survival Blueprint executor are
-still unimplemented. No survival live build or world edit was performed by these
-milestones. Effect updates currently lack a complete-list/expiration projection;
+still unimplemented. No survival live build was performed by these milestones.
+The subsequent test-private native mining comparison below is a separate finite
+world-edit trial. Effect updates currently lack a complete-list/expiration projection;
 unknown effects must not become an exact mining-duration assumption.
 
-A new concern was found in native timed-mining cancellation: early finish can
-schedule a later break, and abort does not clear that native delayed operation.
-Following the user's concern stop condition, mining implementation is stopped.
-[The concrete proposal](survival-mining-cancellation.md) specifies unresolved
-mining intent, read-only result reconciliation, action exclusion and native
-recovery comparison before enabling timed removal. The overall building goal
-has not been completed; do not count existing creative trials toward acceptance.
+The user approved [the mining intent/result proposal](survival-mining-cancellation.md)
+after native inspection found that early finish can schedule a later break which
+abort does not clear. A dedicated vanilla survival comparison then reproduced
+normal finish and the delayed break after early finish plus abort. Its disconnect
+case observed miner removal and retained stone for 9.3 seconds; it does not
+authorize reconnect/replay from shutdown alone. The test-private driver, raw
+evidence and fixture-control timeout are retained in the vendored
+[native comparison](../vendor/voxrig/docs/survival-mining-comparison.md).
+Source validation passes **136 tests, 2 ignored**; the native opt-in test passes
+separately. See [the integration record](evidence/survival-mining-comparison-20261002.json).
+
+A new prerequisite was found in the shared sender: cancellation/error during
+the separately awaited frame writes can leave the stream reusable for automatic
+responses. This is source inspection, not an injected partial-write reproduction.
+Following the user's concern stop condition, sender changes and production
+mining are unstarted and stopped for review of the
+[concrete sender proposal](survival-send-cancellation.md). The overall building
+goal has not been completed; do not count creative trials or the native mining
+comparison as survival construction acceptance.

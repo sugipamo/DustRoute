@@ -913,4 +913,6 @@ fn apply_play(
 }
 
 #[cfg(test)]
+mod mining_native_trials;
+#[cfg(test)]
 mod tests;

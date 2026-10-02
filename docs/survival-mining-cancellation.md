@@ -1,6 +1,6 @@
 # Survival mining: delayed completion and cancellation review
 
-## Newly identified concern
+## Initial concern and approved proposal
 
 During the approved stationary player foundation work, the next timed-mining
 stage was inspected against Minecraft Java 1.21.11. An early
@@ -10,10 +10,12 @@ native handler. Therefore a timeout followed by abort cannot be reported as
 "cancelled, no further block mutation". Starting the next construction action
 or replacing the target at that point would be unsafe.
 
-Mining implementation and live mining trials are stopped at this concern,
-following the user's explicit instruction to stop and report concerns. This
-review does not introduce a server mod or modify the live world. The implemented
-inventory/standing foundations are retained independently.
+Mining implementation and live trials initially stopped at this concern,
+following the user's explicit instruction to stop and report concerns. The user
+subsequently approved the proposal below. Native comparison has now completed
+on a separate disposable vanilla world; production mining remains unimplemented
+because a new shared-sender prerequisite was found, as recorded below. The
+implemented inventory/standing foundations are retained independently.
 
 ## Evidence and limits
 
@@ -40,8 +42,8 @@ Observed native control flow:
    but does not clear `failedToMine`. Neither an abort submission nor a transport
    acknowledgement proves that the delayed mutation disappeared.
 
-This is **native code inspection**, not a reproduced live early-stop/abort trial.
-No timing/lag fault injection or live world mutation has been performed. Client
+The initial review was **native code inspection**; the later native comparison
+is recorded separately below. No timing/lag fault injection was performed. Client
 wall-clock ticks, periodic time packets and displayed cracks are not a server
 progress fence. Received effects also do not provide a complete-list fence in
 the current projection, so an empty effect map cannot establish an exact duration.
@@ -85,3 +87,29 @@ expand the goal into tools, arbitrary effects, combat or general terrain mining.
 The recommendation is to adopt this result-based mining boundary and keep the
 overall survival construction goal. A fixed-delay dig followed by an unconditional
 "cancelled" return should not be the first implementation.
+
+## Approved comparison and current stop
+
+After approval, an ignored, test-private Voxrig driver exercised three cases on
+a dedicated vanilla Java 1.21.11 server with non-OP survival miner and observer
+accounts. A separate console actor prepared the fixture; no existing user world
+was reused. The normal dirt finish was observed as air at 1204 ms. An early
+stone finish and abort at 50 ms still produced air at 7517 ms. After an early
+finish and disconnect, the observer saw the miner removed and stone retained
+through 9306 ms. The last result is a bounded observation, not a general safe
+cancellation guarantee from client shutdown alone.
+
+The [native comparison](../vendor/voxrig/docs/survival-mining-comparison.md) and
+its linked raw observations, server log and provenance retain both the successful
+trial and an initial fixture-control timeout before any mining input. The
+[integration record](evidence/survival-mining-comparison-20261002.json) identifies
+the source pin and validation. The isolated server was cleanly stopped.
+
+Source inspection then found that an interrupted outbound frame can leave the
+connection reusable for automatic responses. That failure mode was **not**
+injected or reproduced. Pending mining intent cannot protect the shared framing
+boundary by itself. Following the user's concern stop condition, production
+mining and the sender modification are stopped for review of the concrete
+[1.21.11 sender prerequisite](survival-send-cancellation.md). The already approved
+mining intent/result proposal above remains the next mining step after that
+prerequisite is addressed.

@@ -30,6 +30,12 @@ using the same remap/access-only development oracle; no game method bodies are
 copied. Source/output hashes and validation scope are recorded in the manifest
 and `docs/survival-standing-context.md`.
 
+`docs/evidence/survival-mining-*20261002*` contains locally recorded packet,
+block/player observations and console diagnostics from an isolated official
+Java 1.21.11 server. The driver is original test-private code and invokes native
+player action packets; no Minecraft binary or decompiled code is redistributed.
+The manifest records raw data hashes, transformation, failed attempt and scope.
+
 `docs/evidence/client-motion-*-20260929.json.gz` and their replay fixtures were
 recorded by this repository's `packet_trace_probe` against an isolated official
 Minecraft Java 1.21.11 server. The accompanying manifest identifies originals,
