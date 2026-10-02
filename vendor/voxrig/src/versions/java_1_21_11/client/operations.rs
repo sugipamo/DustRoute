@@ -3,6 +3,7 @@
 //! Bounded survival mining observations do not authorize continued construction.
 mod inventory;
 mod mining;
+mod retirement;
 mod survival;
 #[cfg(test)]
 mod tests;
@@ -12,6 +13,11 @@ pub use mining::{
     MiningIntent, MiningRecord, MiningRemoval, MiningSend, MiningStatus, MiningTargetReceipt,
 };
 pub(super) use mining::{mining_chunk_changed, mining_received, mining_world_changed};
+pub(super) use retirement::retirement_received;
+pub use retirement::{
+    MiningRecovery, MiningRecoveryEvidence, MiningRetirementRecord, MiningRetirementStatus,
+    MiningRetirementWatch,
+};
 use serde::Serialize;
 pub use survival::{
     AttributeValue, LocalPlayerState, MotionInterruption, PlayerHealth, ReceivedEffect,
@@ -189,6 +195,11 @@ pub struct OperationHistory {
     pub pending_creative_slots: Vec<u8>,
     /// Last mining intent/result, pending or observed. Never replay from history.
     pub mining: Option<MiningRecord>,
+    /// Last independent retirement watch; history does not authorize recovery.
+    pub mining_retirement: Option<MiningRetirementRecord>,
+    /// Fresh mining recovery has observations, but native loading is unvalidated.
+    /// All user mutations stay blocked; history/read-only diagnostics remain usable.
+    pub recovery_loading_pending: bool,
     /// Last main-hand selection evidence, including incomplete send attempts.
     pub selected_hotbar: Option<HotbarSelection>,
 }
@@ -288,6 +299,8 @@ impl Operations {
             pending_inventory_swap: state.operations.inventory.pending_swap.clone(),
             pending_creative_slots: state.operations.inventory.pending_creative.clone(),
             mining: state.mining.clone(),
+            mining_retirement: state.retirement.clone(),
+            recovery_loading_pending: state.recovery_loading_pending,
             selected_hotbar: state.operations.selected_hotbar.clone(),
         }
     }
@@ -567,6 +580,14 @@ impl Operations {
     }
     pub(super) fn mutable(&self, state: &State) -> Result<()> {
         self.ready(state)?;
+        if state.recovery_loading_pending {
+            return Err(Error::new(
+                ErrorKind::State,
+                anyhow::anyhow!(
+                    "fresh mining recovery requires validated survival interaction loading before any mutation"
+                ),
+            ));
+        }
         if state.mining.is_some() {
             return Err(Error::new(
                 ErrorKind::State,

@@ -69,6 +69,9 @@ struct Fixture {
 }
 impl Fixture {
     async fn new() -> Self {
+        Self::new_id(42).await
+    }
+    async fn new_id(id: u64) -> Self {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let stream = TcpStream::connect(listener.local_addr().unwrap())
             .await
@@ -76,7 +79,7 @@ impl Fixture {
         let (peer, _) = listener.accept().await.unwrap();
         let (reader, writer) = stream.into_split();
         let session = Arc::new(Session {
-            id: 42,
+            id,
             started: Instant::now(),
             writer: Mutex::new(Writer {
                 stream: writer,
@@ -106,6 +109,11 @@ impl Fixture {
             peer,
             receiver,
         };
+        fixture.session.state.lock().await.identity = Some(LoginIdentity {
+            uuid: [id as u8; 16],
+            name: format!("Miner{id}"),
+            server: crate::Server::new("127.0.0.1", 25572),
+        });
         fixture.api.select_hotbar(0).await.unwrap();
         assert_eq!(
             read_packet(&mut fixture.peer, None).await.unwrap(),
@@ -158,6 +166,329 @@ impl Fixture {
             .unwrap()
             .unwrap();
     }
+    async fn receive(&mut self, id: i32, payload: &[u8]) {
+        let before = self.session.state.lock().await.sequence;
+        write_packet(&mut self.peer, None, id, payload)
+            .await
+            .unwrap();
+        timeout(Duration::from_secs(1), async {
+            loop {
+                if self.session.state.lock().await.sequence > before {
+                    break;
+                }
+                tokio::task::yield_now().await;
+            }
+        })
+        .await
+        .unwrap();
+    }
+    async fn profile(&mut self, owner: u8) {
+        let mut payload = vec![1, 1];
+        payload.extend([owner; 16]);
+        put_string(&mut payload, &format!("Miner{owner}"));
+        payload.push(0);
+        self.receive(ids::play_clientbound::PLAYER_INFO, &payload)
+            .await;
+    }
+    async fn remove_profile(&mut self, owner: u8) {
+        let mut payload = vec![1];
+        payload.extend([owner; 16]);
+        self.receive(ids::play_clientbound::PLAYER_REMOVE, &payload)
+            .await;
+    }
+}
+
+#[tokio::test]
+async fn retirement_requires_exact_post_watch_receipt_and_local_closure() {
+    let mut miner = Fixture::new().await;
+    let intent = miner.start().await;
+    let mut observer = Fixture::new_id(43).await;
+    assert!(
+        miner
+            .api
+            .prepare_survival_mining_retirement(&intent, &miner.api)
+            .await
+            .is_err()
+    );
+    assert!(
+        miner
+            .api
+            .prepare_survival_mining_retirement(&intent, &observer.api)
+            .await
+            .is_err()
+    );
+    // Old receipt plus subsequent profile baseline cannot substitute for a new removal.
+    observer.remove_profile(42).await;
+    observer.profile(42).await;
+    let watch = miner
+        .api
+        .prepare_survival_mining_retirement(&intent, &observer.api)
+        .await
+        .unwrap();
+    observer.remove_profile(99).await;
+    observer
+        .receive(ids::play_clientbound::ENTITY_DESTROY, &[1, 42])
+        .await;
+    assert!(matches!(
+        miner
+            .api
+            .wait_survival_mining_retirement(&watch, &observer.api, Duration::from_millis(10))
+            .await
+            .unwrap(),
+        MiningRetirementStatus::Pending {
+            source_closed: false,
+            ..
+        }
+    ));
+    observer.remove_profile(42).await;
+    assert!(matches!(
+        miner
+            .api
+            .observe_survival_mining_retirement(&watch, &observer.api)
+            .await
+            .unwrap(),
+        MiningRetirementStatus::Pending {
+            source_closed: false,
+            ..
+        }
+    ));
+    assert!(miner.api.select_hotbar(1).await.is_err());
+    miner.api.bot.disconnect().await.unwrap();
+    let retired = miner
+        .api
+        .wait_survival_mining_retirement(&watch, &observer.api, Duration::from_millis(10))
+        .await
+        .unwrap();
+    assert!(matches!(retired, MiningRetirementStatus::Retired { .. }));
+    assert!(miner.api.select_hotbar(1).await.is_err());
+    assert!(
+        miner
+            .api
+            .reconnect_survival_mining(
+                &watch,
+                &observer.api,
+                ConnectionConfig::offline(
+                    crate::Server::new("127.0.0.1", 1),
+                    "Miner42",
+                    MinecraftVersion::Java1_21_11
+                ),
+                native("stone")
+            )
+            .await
+            .is_err()
+    );
+    // Observer is also tied to its live context; a rejoin invalidates old authority.
+    observer.profile(42).await;
+    assert!(matches!(
+        miner
+            .api
+            .observe_survival_mining_retirement(&watch, &observer.api)
+            .await
+            .unwrap(),
+        MiningRetirementStatus::RequiresInspection { .. }
+    ));
+    observer.remove_profile(42).await;
+    assert!(matches!(
+        miner
+            .api
+            .observe_survival_mining_retirement(&watch, &observer.api)
+            .await
+            .unwrap(),
+        MiningRetirementStatus::RequiresInspection { .. }
+    ));
+    miner.stop().await;
+    observer.stop().await;
+}
+
+#[tokio::test]
+async fn retirement_closure_alone_and_changed_observer_context_never_authorize_recovery() {
+    let mut miner = Fixture::new().await;
+    let intent = miner.start().await;
+    let mut observer = Fixture::new_id(43).await;
+    observer.profile(42).await;
+    let watch = miner
+        .api
+        .prepare_survival_mining_retirement(&intent, &observer.api)
+        .await
+        .unwrap();
+    assert!(
+        miner
+            .api
+            .prepare_survival_mining_retirement(&intent, &observer.api)
+            .await
+            .is_err()
+    );
+    miner.api.bot.disconnect().await.unwrap();
+    assert!(matches!(
+        miner
+            .api
+            .wait_survival_mining_retirement(&watch, &observer.api, Duration::from_millis(10))
+            .await
+            .unwrap(),
+        MiningRetirementStatus::Pending {
+            source_closed: true,
+            ..
+        }
+    ));
+    {
+        let mut state = observer.session.state.lock().await;
+        super::mining_world_changed(&mut state, "observer changed world");
+    }
+    observer.remove_profile(42).await;
+    assert!(matches!(
+        miner
+            .api
+            .observe_survival_mining_retirement(&watch, &observer.api)
+            .await
+            .unwrap(),
+        MiningRetirementStatus::RequiresInspection { .. }
+    ));
+    observer.api.bot.disconnect().await.unwrap();
+    assert!(
+        miner
+            .api
+            .observe_survival_mining_retirement(&watch, &observer.api)
+            .await
+            .is_err()
+    );
+    let history = observer.api.operation_history().await;
+    assert!(
+        history
+            .mining_retirement
+            .unwrap()
+            .requires_inspection
+            .is_some()
+    );
+    miner.stop().await;
+    observer.stop().await;
+}
+
+#[tokio::test]
+async fn cancelled_recovery_login_retains_attempt_and_refuses_another_connection() {
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let endpoint = crate::Server::new("127.0.0.1", listener.local_addr().unwrap().port());
+    let mut miner = Fixture::new().await;
+    let mut observer = Fixture::new_id(43).await;
+    for f in [&miner, &observer] {
+        f.session
+            .state
+            .lock()
+            .await
+            .identity
+            .as_mut()
+            .unwrap()
+            .server = endpoint.clone();
+    }
+    let intent = miner.start().await;
+    observer.profile(42).await;
+    let watch = miner
+        .api
+        .prepare_survival_mining_retirement(&intent, &observer.api)
+        .await
+        .unwrap();
+    miner.api.bot.disconnect().await.unwrap();
+    observer.remove_profile(42).await;
+    let config = ConnectionConfig::offline(endpoint, "Miner42", MinecraftVersion::Java1_21_11);
+    let mut recovery = Box::pin(miner.api.reconnect_survival_mining(
+        &watch,
+        &observer.api,
+        config.clone(),
+        native("stone"),
+    ));
+    let (mut login, _) = timeout(Duration::from_secs(1), async {
+        tokio::select! {
+            accepted = listener.accept() => accepted.unwrap(),
+            _ = &mut recovery => panic!("recovery returned before login fixture accepted"),
+        }
+    })
+    .await
+    .unwrap();
+    let handshake = timeout(Duration::from_secs(1), async {
+        tokio::select! {
+            packet = read_packet(&mut login, None) => packet.unwrap(),
+            _ = &mut recovery => panic!("recovery returned before login handshake"),
+        }
+    })
+    .await
+    .unwrap();
+    assert_eq!(handshake.0, 0);
+    // Cancel an actual in-progress TCP login, not a pre-I/O argument check.
+    drop(recovery);
+    assert!(
+        observer
+            .api
+            .operation_history()
+            .await
+            .mining_retirement
+            .unwrap()
+            .recovery_started
+    );
+    assert_eq!(
+        miner
+            .api
+            .reconnect_survival_mining(&watch, &observer.api, config, native("stone"))
+            .await
+            .err()
+            .unwrap()
+            .kind(),
+        ErrorKind::State
+    );
+    assert!(
+        timeout(Duration::from_millis(10), listener.accept())
+            .await
+            .is_err()
+    );
+    assert!(miner.api.operation_history().await.connection_closed);
+    miner.stop().await;
+    observer.stop().await;
+}
+
+#[tokio::test]
+async fn fresh_recovery_observations_do_not_authorize_actions_before_native_loading() {
+    let mut fixture = Fixture::new().await;
+    fixture.session.state.lock().await.recovery_loading_pending = true;
+    assert!(fixture.api.player_state().await.is_ok());
+    assert!(fixture.api.standing_context().await.is_ok());
+    assert!(
+        fixture
+            .api
+            .operation_history()
+            .await
+            .recovery_loading_pending
+    );
+    assert!(fixture.api.select_hotbar(1).await.is_err());
+    assert!(fixture.api.look([-90.0, 3.0]).await.is_err());
+    assert!(fixture.api.swap_player_hotbar(9, 1).await.is_err());
+    assert!(
+        fixture
+            .api
+            .start_survival_mining(TARGET, crate::BlockFace::West)
+            .await
+            .is_err()
+    );
+    assert!(
+        fixture
+            .api
+            .use_on_block(TARGET, crate::BlockFace::West, [0.5; 3])
+            .await
+            .is_err()
+    );
+    assert!(
+        fixture
+            .api
+            .send_command("say should_not_send")
+            .await
+            .is_err()
+    );
+    assert!(
+        timeout(
+            Duration::from_millis(10),
+            read_packet(&mut fixture.peer, None)
+        )
+        .await
+        .is_err()
+    );
+    fixture.stop().await;
 }
 
 #[tokio::test]

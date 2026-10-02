@@ -1,0 +1,191 @@
+{
+  "minecraft_version": "Java 1.21.11",
+  "execution_revision": "eda7f09d032247f6e8eaf22a2d8614a285556319",
+  "scope": "Independent exact PLAYER_REMOVE retirement + explicit fresh connection/site validation. Four cases reached fresh-session hotbar selection. No full survival construction or world-interaction readiness acceptance.",
+  "endpoint": "127.0.0.1:25572",
+  "fixture": "Existing disposable survival-mining-server-20261002, whitelist NatMineBot and NatMineView only; no user-world writes",
+  "operator_entries_after_trial": [],
+  "command": "NATIVE_MINING_PORT=25572 NATIVE_MINING_OUTPUT=/root/Voxrig/.local/survival-continuation/native-recovery-20261002-a.json cargo test --offline --locked -j 1 --lib native_survival_mining_api_finish_abort_and_disconnect -- --ignored --test-threads=1 --nocapture",
+  "test_result": "1 passed; 0 failed; 152 filtered out; 140.47 seconds including fixture-control waits",
+  "cases": [
+    {
+      "name": "normal_finish",
+      "inputs": [
+        {
+          "action": 0,
+          "sequence": 1,
+          "elapsed_ms": 13
+        },
+        {
+          "action": 2,
+          "sequence": 2,
+          "elapsed_ms": 1114
+        }
+      ],
+      "last_observed_ms": 1217,
+      "last_target": {
+        "name": "minecraft:air",
+        "properties": {}
+      },
+      "final_mining_status": "observed_removed",
+      "external_input": null,
+      "retirement_receive_sequence": 206,
+      "old_connection_id": 1,
+      "new_connection_id": 3,
+      "fresh_target": {
+        "name": "minecraft:air",
+        "properties": {}
+      },
+      "old_connection_closed": true,
+      "next_send": "ordinary select_hotbar(0); not proof of server acceptance of a world interaction"
+    },
+    {
+      "name": "early_finish_abort",
+      "inputs": [
+        {
+          "action": 0,
+          "sequence": 1,
+          "elapsed_ms": 0
+        },
+        {
+          "action": 2,
+          "sequence": 2,
+          "elapsed_ms": 52
+        },
+        {
+          "action": 1,
+          "sequence": 3,
+          "elapsed_ms": 52
+        }
+      ],
+      "last_observed_ms": 7477,
+      "last_target": {
+        "name": "minecraft:air",
+        "properties": {}
+      },
+      "final_mining_status": "observed_removed",
+      "external_input": null,
+      "retirement_receive_sequence": 287,
+      "old_connection_id": 3,
+      "new_connection_id": 4,
+      "fresh_target": {
+        "name": "minecraft:air",
+        "properties": {}
+      },
+      "old_connection_closed": true,
+      "next_send": "ordinary select_hotbar(0); not proof of server acceptance of a world interaction"
+    },
+    {
+      "name": "early_finish_disconnect",
+      "inputs": [
+        {
+          "action": 0,
+          "sequence": 1,
+          "elapsed_ms": 0
+        },
+        {
+          "action": 2,
+          "sequence": 2,
+          "elapsed_ms": 51
+        }
+      ],
+      "last_observed_ms": 9325,
+      "last_target": {
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      "final_mining_status": "closed_history",
+      "external_input": null,
+      "retirement_receive_sequence": 345,
+      "old_connection_id": 4,
+      "new_connection_id": 5,
+      "fresh_target": {
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      "old_connection_closed": true,
+      "next_send": "ordinary select_hotbar(0); not proof of server acceptance of a world interaction"
+    },
+    {
+      "name": "external_air_immediate_replacement",
+      "inputs": [
+        {
+          "action": 0,
+          "sequence": 1,
+          "elapsed_ms": 0
+        },
+        {
+          "action": 2,
+          "sequence": 2,
+          "elapsed_ms": 52
+        },
+        {
+          "action": 1,
+          "sequence": 3,
+          "elapsed_ms": 52
+        }
+      ],
+      "last_observed_ms": 34963,
+      "last_target": {
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      "final_mining_status": "pending_after_finish",
+      "external_input": {
+        "console_completed_ms": 25671,
+        "operations": [
+          "setblock 2 -59 0 minecraft:air",
+          "setblock 2 -59 0 minecraft:stone"
+        ],
+        "requested_ms": 52,
+        "scope": "console-controlled external edits; exact commands/server log and received packet order retained; no claim that the bot necessarily receives intermediate air"
+      },
+      "retirement_receive_sequence": 476,
+      "old_connection_id": 5,
+      "new_connection_id": 6,
+      "fresh_target": {
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      "old_connection_closed": true,
+      "next_send": "ordinary select_hotbar(0); not proof of server acceptance of a world interaction"
+    }
+  ],
+  "original_json_sha256": "b0b9fcd870a2339e7215e7e93052a82b2ef837148193fcf53194006282ea3c75",
+  "outputs": {
+    "survival-mining-recovery-20261002-a.json.gz": "a2e12b24d51c643f3a0585c9c682ed7dd893f916697c73291db284877e39ff66",
+    "survival-mining-recovery-server-20261002-a.log": "96ae532c5ea41199606232f8ae94945a04a945b9adc631cab51ba4d31ddaef3a"
+  },
+  "native_control_flow_audit": {
+    "source": "Existing unchanged-body oracle; data/java_1_21_11/survival_foundation_source.json identifies native inputs",
+    "local_disassembly_sha256": {
+      "MinecraftServer.javap": "a431d0c10dbac780f4fb04b20ac0fbdbcf2375f7725c115affeb0f173d615d13",
+      "NetworkThreadUtils.javap": "bdf90ba75e57486f2a369004d90c47f16dec3aa7b626c4cad2fabd9bf89992b7",
+      "PacketApplyBatcher.javap": "acdd980467a22e221f98c6fd326830a2a44ffdf94c088dab4a0d5fc9d8d0329a",
+      "PacketApplyBatcherEntry.javap": "094c595f969e755369d89b4fc0c170cc6fc4e0b8c4e0c7dac8e90954ef8b653a",
+      "PacketListener.javap": "68a61fd47dfc229033a9411268f8a31430ea5d68c7032a9a4211249e64ac6493",
+      "PlayerManager.javap": "ed8035f2f17d67b93863c77b9846d9cba8877e5198a5b1c3cf182df6cf2b82a7",
+      "ServerCommonNetworkHandler.javap": "aeb7e7c29ed4c1b69f60cfda6e847e5e0743da748ed498d94b902b2776646e71",
+      "ServerPlayNetworkHandler.javap": "e705cd3f36856d4b47fcb2e6e141252605efe43c38b94cb4bb59bf77b17ff642",
+      "ServerPlayerEntity.javap": "9d63194c8dd9b0ab251b918aa92a580f15faf9896dfa65143b77468e14cc50ed",
+      "ServerWorld.javap": "a4525d1a9d69fac7471bb6fd447ba0ed75e0119a0a15f691b0a5bcc1dedf7994"
+    },
+    "facts": [
+      "World time sync is emitted before world tick; one received time sample is not an intervening miner-update fence.",
+      "PlayerManager.remove removes the player from its world/list before broadcasting exact UUID PlayerRemove.",
+      "PacketApplyBatcher.Entry checks accepts; default accepts calls isConnectionOpen; closed play connections reject queued application.",
+      "ServerPlayNetworkHandler.canInteractWithGame refuses game actions while remainingLoadingTicks > 0 or dead. markRespawned sets 60; tickLoading decrements per player update; onPlayerLoaded calls markLoaded to set zero."
+    ]
+  },
+  "limits": [
+    "External-air/replacement console input completed at 25671 ms; it was too late to test the pending delayed-miner window. This case is not accepted as reproduction of that race.",
+    "The exact removal receive ordinals are retained in typed retirement records; at this execution revision the viewer raw trace ends before retirement. Later driver change keeps that trace through recovery but has not been rerun.",
+    "The later before-I/O single-attempt reconnect guard and driver duplicate-call assertion were not included in this native execution; offline validation is recorded separately.",
+    "The harness sends test-private PLAYER_LOADED before original mining cases. Production ready does not yet establish this native loading transition. A fresh-session hotbar send is not proof of a subsequent game action.",
+    "After the loading-readiness concern, further native trials and loading implementation were stopped for user review.",
+    "No in-session release, item-drop recovery, survival placement, walking, temporary cleanup or Blueprint execution was validated.",
+    "The later final recovery_loading_pending gate also was not in this native run. Final new recovery sessions expose read-only diagnostics and refuse all user mutations pending common native loading implementation."
+  ],
+  "transformation": "gzip mtime=0; original JSON and native server log unchanged; no game bodies distributed",
+  "shutdown": "Server list showed 0 players, then console stop saved all dimensions and process exited 0"
+}

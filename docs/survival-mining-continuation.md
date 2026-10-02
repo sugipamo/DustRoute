@@ -1,5 +1,21 @@
 # Mining removal observation and continuation authority
 
+## Approved work and current review boundary
+
+The user approved this proposal. Independent exact vanilla player-info removal,
+closed original sender and explicit fresh-connection/site observation are now
+implemented in Voxrig. Both the original mining session and the new recovery
+session retain conservative mutation gates: **native interaction loading on the
+new connection is unvalidated**. See the [loading finding and concrete next
+change](survival-interaction-readiness.md). The sections below describe the prior
+review boundary and approved scope, not a claim that all continuation work passed.
+
+An immutable native run reached retirement and fresh hotbar sending in four
+cases; three exercised the intended normal/early-abort/disconnect conditions.
+The external-input case was too late to test delayed mining. Later single-attempt
+and loading restrictions have offline checks; their updated native driver has
+not been rerun. Evidence distinguishes those scopes.
+
 ## Completed before this stop
 
 The user approved the 1.21.11 sender prerequisite. The shared sender now marks

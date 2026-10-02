@@ -78,7 +78,7 @@ pub struct MiningRecord {
     /// Latched context/conflict reason. Later air cannot silently clear it.
     pub requires_inspection: Option<String>,
     /// Result established by a read-only observation. Even Some does not currently
-    /// authorize continuation; the separate release boundary remains unimplemented.
+    /// authorize in-session continuation; that release remains unimplemented.
     pub removal: Option<MiningRemoval>,
 }
 /// Explicit result states; a pending timeout is never a safe cancellation.
@@ -479,6 +479,11 @@ pub(in crate::versions::java_1_21_11::client) fn mining_world_changed(
     state: &mut State,
     reason: &str,
 ) {
+    if let Some(watch) = &mut state.retirement {
+        watch
+            .requires_inspection
+            .get_or_insert_with(|| reason.into());
+    }
     if let Some(record) = &mut state.mining
         && record.removal.is_none()
     {

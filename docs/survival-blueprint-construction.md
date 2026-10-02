@@ -177,3 +177,33 @@ separately. [The current validation record](evidence/survival-mining-implementat
 identifies the pin, integrated check and scope. The dedicated server was cleanly
 stopped. The overall building goal remains unfinished; none of these comparisons
 establishes roofed construction, temporary cleanup or safe mining continuation.
+
+## Mining retirement checkpoint and interaction-loading review
+
+The user approved the continuation proposal. Voxrig now registers an independent
+observer against the authenticated miner's exact UUID, requires a new vanilla
+PLAYER_REMOVE and closed original sender, and explicitly reconnects to read new
+site/player/inventory conditions. A cancelled reconnect retains its attempt and
+cannot open a second login from the same watch. History never imports authority.
+
+The immutable native comparison reached retirement and fresh-session hotbar
+sending for normal finish, early finish+abort, early disconnect and a later
+external replacement. That last input was delayed to 25.671 seconds, so it is
+not evidence of the delayed-miner replacement race. These results do not validate
+the final later restrictions or a subsequent world interaction.
+
+An additional native loading prerequisite was found: the server can discard
+game actions until PLAYER_LOADED or 60 player updates, whereas current local
+ready only establishes play/position. The new recovery session therefore also
+refuses user mutations (`interaction_ready: false`, `recovery_loading_pending`).
+The previous mining fixture's private loading notification is not production
+support. Following the user's concern stop condition, loading changes and more
+live trials are stopped. The [concrete next change](survival-interaction-readiness.md)
+keeps loading in the common version-specific connection/operation layer. Survival
+placement, navigation, temporary cleanup and the complete roofed build remain
+unfinished.
+
+The [retirement checkpoint validation](evidence/survival-mining-retirement-20261002.json)
+pins the final source, 152 passing offline tests (3 ignored), Clippy/doc checks
+and the integrated all-targets native-feature check. Its native execution pin
+and limitations are recorded separately from the final conservative gates.

@@ -50,10 +50,11 @@ a subsequent update reading that air. Those two causes cannot be distinguished
 from a single received air packet. Immediately permitting replacement at that
 cell can therefore leave the native delayed operation applicable to a new
 block. This is source inspection, **not** a reproduced replacement race.
-Continuation/recovery needs a separately audited boundary before the gate can
-be opened. Following the user's concern stop instruction, that work is stopped
-for review. This finite observation API is not autonomous temporary cleanup or
-complete survival construction.
+The user approved a separate continuation/recovery audit. The original connection
+is still never released from air alone. An [explicit retirement and fresh recovery
+path](survival-mining-retirement.md) now uses an independent exact player-info
+removal receipt, closed original sender and new site/player observations. This
+finite API is not autonomous temporary cleanup or complete survival construction.
 
 ## Evidence and limits
 

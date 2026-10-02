@@ -103,6 +103,9 @@ pub(super) struct PlayerTracker {
     entities: BTreeMap<i32, Entity>,
 }
 impl PlayerTracker {
+    pub(super) fn profile_name(&self, uuid: &[u8; 16]) -> Option<&str> {
+        self.profiles.get(uuid).map(String::as_str)
+    }
     pub fn reset_world(&mut self) {
         // Player-info entries survive dimension changes; world entities do not.
         self.entities.clear();

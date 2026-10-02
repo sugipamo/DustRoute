@@ -102,7 +102,11 @@ async fn comparison(native_api: bool) {
         ("normal_finish", 1100, false, false),
         ("early_finish_abort", 50, true, false),
         ("early_finish_disconnect", 50, false, true),
+        ("external_air_immediate_replacement", 50, true, false),
     ] {
+        if !native_api && name == "external_air_immediate_replacement" {
+            continue;
+        }
         phase(&format!("FIXTURE {name}: console prepares dry floor/air; target {target:?} {} ; tp NatMineBot 0.5 -60 0.5 -90 3; tp NatMineView 0.5 -60 4.5; clear NatMineBot; enter",if name=="normal_finish" {"dirt"} else {"stone"})).await;
         tokio::time::sleep(Duration::from_secs(1)).await;
         let ground = bot.operations().standing_context().await.unwrap();
@@ -145,6 +149,16 @@ async fn comparison(native_api: bool) {
             Some(intent)
         } else {
             action(&bot, target, 0, 1, start, &mut inputs).await;
+            None
+        };
+        let retirement_watch = if let Some(intent) = &intent {
+            Some(
+                bot.operations()
+                    .prepare_survival_mining_retirement(intent, &viewer.operations())
+                    .await
+                    .unwrap(),
+            )
+        } else {
             None
         };
         tokio::time::sleep(Duration::from_millis(delay_ms)).await;
@@ -196,6 +210,15 @@ async fn comparison(native_api: bool) {
         } else {
             None
         };
+        let external_input = if name == "external_air_immediate_replacement" {
+            let requested_ms = start.elapsed().as_millis();
+            phase("EXTERNAL_INPUT: console setblock 2 -59 0 minecraft:air then setblock 2 -59 0 minecraft:stone in one input batch; enter").await;
+            Some(
+                json!({"requested_ms":requested_ms,"console_completed_ms":start.elapsed().as_millis(),"operations":["setblock 2 -59 0 minecraft:air","setblock 2 -59 0 minecraft:stone"],"scope":"console-controlled external edits; exact commands/server log and received packet order retained; no claim that the bot necessarily receives intermediate air"}),
+            )
+        } else {
+            None
+        };
         if disconnect {
             bot.disconnect().await.unwrap();
         }
@@ -204,14 +227,14 @@ async fn comparison(native_api: bool) {
             let observed = sample(&viewer, target, start).await;
             let removed = air(&observed);
             observations.push(observed);
-            if removed && !disconnect {
+            if removed && !disconnect && external_input.is_none() {
                 break;
             }
         }
         let after = observations.last().unwrap();
         if disconnect {
             assert!(!air(after), "old disconnected miner still completed later");
-        } else {
+        } else if external_input.is_none() {
             assert!(
                 air(after),
                 "native mining did not complete within observation bound"
@@ -229,10 +252,13 @@ async fn comparison(native_api: bool) {
                     .wait_survival_mining(intent, Duration::from_secs(2))
                     .await
                     .unwrap();
-                assert!(matches!(
-                    result,
-                    operations::MiningStatus::ObservedRemoved { .. }
-                ));
+                if external_input.is_none() {
+                    assert!(matches!(
+                        result,
+                        operations::MiningStatus::ObservedRemoved { .. }
+                    ));
+                }
+                assert!(bot.operations().select_hotbar(1).await.is_err());
                 json!(result)
             }
         } else {
@@ -243,43 +269,98 @@ async fn comparison(native_api: bool) {
         } else {
             Some(bot.stop_packet_trace().await.unwrap())
         };
-        let viewer_trace = viewer.stop_packet_trace().await.unwrap();
         let players = viewer.operations().visible_players().await.unwrap();
         if disconnect {
             assert!(!players.players.iter().any(|p| p.name == "NatMineBot"));
         }
-        cases.push(json!({"name":name,"ground":ground,"before":before,"inputs":inputs,"immediately":immediately,"observations":observations,"miner_trace":bot_trace,"viewer_trace":viewer_trace,"visible_players_after":players,"pending_api_result":pending_api_result,"after_api_result":after_api_result}));
         println!(
             "CASE_VERIFIED {name}: removed={} elapsed_ms={}",
             air(after),
             after["elapsed_ms"]
         );
-        if native_api && !disconnect {
-            // Observation is not continuation authority. Each comparison case
-            // starts a separate connection after the observer saw the old miner
-            // removed, then the console explicitly prepares a fresh fixture.
-            bot.disconnect().await.unwrap();
-            timeout(Duration::from_secs(3), async {
-                loop {
-                    if !viewer
-                        .operations()
-                        .visible_players()
-                        .await
-                        .unwrap()
-                        .players
-                        .iter()
-                        .any(|p| p.name == "NatMineBot")
-                    {
-                        break;
-                    }
-                    tokio::time::sleep(Duration::from_millis(50)).await;
-                }
-            })
-            .await
-            .unwrap();
-            bot = connect("NatMineBot", port).await;
+        let recovery = if let Some(watch) = &retirement_watch {
+            if !disconnect {
+                bot.disconnect().await.unwrap();
+            }
+            let retired = bot
+                .operations()
+                .wait_survival_mining_retirement(
+                    watch,
+                    &viewer.operations(),
+                    Duration::from_secs(3),
+                )
+                .await
+                .unwrap();
+            assert!(matches!(
+                retired,
+                operations::MiningRetirementStatus::Retired { .. }
+            ));
+            let expected = after["received"]["blocks"][0]["state"].clone();
+            let expected: crate::NativeBlockState = serde_json::from_value(expected).unwrap();
+            let recovered = bot
+                .operations()
+                .reconnect_survival_mining(
+                    watch,
+                    &viewer.operations(),
+                    ConnectionConfig::offline(
+                        crate::Server::new("127.0.0.1", port),
+                        "NatMineBot",
+                        MinecraftVersion::Java1_21_11,
+                    ),
+                    expected,
+                )
+                .await
+                .unwrap();
+            assert!(recovered.evidence.old_history.connection_closed);
+            assert_ne!(
+                recovered.evidence.connection_id,
+                recovered.evidence.old_history.connection_id
+            );
+            if recovered.evidence.interaction_ready {
+                recovered.operations.select_hotbar(0).await.unwrap();
+            } else {
+                assert!(recovered.operations.select_hotbar(0).await.is_err());
+            }
+            assert!(
+                bot.operations()
+                    .reconnect_survival_mining(
+                        watch,
+                        &viewer.operations(),
+                        ConnectionConfig::offline(
+                            crate::Server::new("127.0.0.1", port),
+                            "NatMineBot",
+                            MinecraftVersion::Java1_21_11
+                        ),
+                        recovered.evidence.target.clone()
+                    )
+                    .await
+                    .is_err(),
+                "same retirement receipt authorized a second recovery login"
+            );
+            let evidence = json!({"retired":retired,"recovery":recovered.evidence,"new_mutation":"refused until native interaction loading is validated"});
+            bot = recovered.operations.bot.clone();
+            Some(evidence)
+        } else {
+            None
+        };
+        let viewer_trace = viewer.stop_packet_trace().await.unwrap();
+        cases.push(json!({"name":name,"ground":ground,"before":before,"inputs":inputs,"immediately":immediately,"observations":observations,"miner_trace":bot_trace,"viewer_trace":viewer_trace,"visible_players_after":players,"pending_api_result":pending_api_result,"after_api_result":after_api_result,"external_input":external_input,"recovery":recovery}));
+        if native_api
+            && bot
+                .operations()
+                .operation_history()
+                .await
+                .recovery_loading_pending
+        {
+            println!(
+                "CONTINUATION_BLOCKED: native interaction loading unvalidated; remaining cases not executed"
+            );
+            break;
         }
     }
+    if native_api {
+        bot.disconnect().await.unwrap();
+    }
     viewer.disconnect().await.unwrap();
-    serde_json::to_writer(file,&json!({"minecraft_version":"Java 1.21.11","scope":if native_api {"isolated non-OP survival; public intent/result mining API; console fixture setup only"} else {"isolated non-OP survival; test-private native action packets; console fixture setup only"},"cases":cases})).unwrap();
+    serde_json::to_writer(file,&json!({"minecraft_version":"Java 1.21.11","scope":if native_api {"isolated non-OP survival; public intent/result mining API; console fixture setup only"} else {"isolated non-OP survival; test-private native action packets; console fixture setup only"},"all_cases_executed":cases.len()==if native_api {4} else {3},"cases":cases})).unwrap();
 }

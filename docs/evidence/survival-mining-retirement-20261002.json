@@ -1,0 +1,97 @@
+{
+  "recorded_at_utc": "2026-10-02T03:11:14.700204+00:00",
+  "status": "Checkpoint complete; broader survival building goal paused at newly identified interaction-loading concern.",
+  "voxrig_repository": "https://github.com/sugipamo/Voxrig",
+  "voxrig_branch": "codex/survival-construction",
+  "voxrig_revision": "9a2a1e9a213145ad0c6e55ca5bf3f4ae796e59c2",
+  "vendor_files": 235,
+  "checks": [
+    {
+      "project": "Voxrig",
+      "command": "cargo test --offline --locked -j 1 --all-targets -- --test-threads=1",
+      "result": "152 passed; 0 failed; 3 ignored",
+      "local_log": "/root/Voxrig/.local/survival-continuation/all-tests.log",
+      "log_sha256": "d00763b0eeb908a88fffa67d4a4c3ce9174fa8486c8645c17aec40831bb4559f"
+    },
+    {
+      "project": "Voxrig",
+      "command": "cargo clippy --offline --locked -j 1 --all-targets -- -D warnings",
+      "result": "passed",
+      "local_log": "/root/Voxrig/.local/survival-continuation/clippy.log",
+      "log_sha256": "1a8d20bdc475a9a4598b3f17566ba90a3a74200f3734ee0f285f3db12c6ffd0f"
+    },
+    {
+      "project": "Voxrig",
+      "command": "cargo test --offline --locked -j 1 --doc -- --test-threads=1",
+      "result": "1 passed; 0 failed",
+      "local_log": "/root/Voxrig/.local/survival-continuation/doc.log",
+      "log_sha256": "d153fc2418f466ee126dfb6a7e2c6770840e85f56a30da303d2bf3bd2511f54e"
+    },
+    {
+      "project": "Voxrig",
+      "command": "cargo package --offline --locked --allow-dirty --list",
+      "result": "passed",
+      "local_log": "/root/Voxrig/.local/survival-continuation/package.log",
+      "log_sha256": "921cc039ad0b26c4f8b385c323d071ee4053bf67e47018c2ce3bca5ae4b20fe3"
+    },
+    {
+      "project": "DustRoute",
+      "command": "cargo check --offline --locked -j 1 -p dustroute-mcp --features voxrig --all-targets",
+      "result": "passed",
+      "local_log": ".local/survival-mining-retirement-check-20261002.log",
+      "log_sha256": "d0e2e83317d5f7aacd8d1687cd1b788a27d5f4432090c7faaf21c22b393432f4"
+    }
+  ],
+  "additional_checks": [
+    "cargo fmt --all --check: passed (Voxrig)",
+    "git diff --check: passed (both repositories)",
+    "python3 scripts/vendor_voxrig.py --check: verified 235 files at final pin"
+  ],
+  "implemented": [
+    "Authenticated login UUID/name and endpoint retained; independent observer watch requires exact profile baseline and a new PLAYER_REMOVE containing that UUID.",
+    "Original closed sender plus live observer removal receipt required; cached absence, entity destruction, unrelated UUIDs, timeout/ack/abort do not substitute. Observer context and pre-reconnect rejoin conflicts latch inspection.",
+    "Explicit new connection validates identity, survival dimension, healthy dry stationary geometry, supported inventory and exact expected target from new received baselines. No inherited old context or Blueprint authority.",
+    "Reconnect attempt is marked under observer lock before I/O; cancellation and parallel calls cannot start another login from the same watch. History retains attempt.",
+    "Final original and fresh-recovery user mutation gates remain closed: fresh recovery_loading_pending=true / interaction_ready=false until native loading is validated. Read-only new context and history are exposed."
+  ],
+  "offline_targeted_tests": [
+    "Exact post-watch receipt and local closure, stale/unrelated receipts, entity destruction, ownership and rejoin conflicts.",
+    "Closure alone, timeout, observer world context change/closure and retained history.",
+    "Actual bounded loopback login handshake cancellation, retained recovery attempt and refusal to open a second connection.",
+    "Usable new observation geometry/history does not allow command, mining, use, look, selection or inventory mutation while loading is pending."
+  ],
+  "native_run": {
+    "execution_revision": "eda7f09d032247f6e8eaf22a2d8614a285556319",
+    "result": "1 passed; 0 failed; 152 filtered out; 140.47 seconds including fixture control",
+    "manifest": "vendor/voxrig/docs/evidence/survival-mining-recovery-20261002-source.json",
+    "effective_cases": [
+      "normal_finish: air at 1217 ms; retirement receive sequence 206; source 1 -> new 3",
+      "early_finish_abort: air at 7477 ms despite abort; retirement sequence 287; source 3 -> new 4",
+      "early_finish_disconnect: stone through 9325 ms; retirement sequence 345; source 4 -> new 5"
+    ],
+    "limited_external_case": "Console input completed at 25671 ms, after the original delayed-mining window. Final stone, retirement 476, source 5 -> new 6. Not accepted as delayed-miner replacement race reproduction.",
+    "scope": "Retirement, fresh observations and ordinary hotbar send at the earlier execution revision; no acceptance of a new world interaction. Later single-attempt and loading gates are offline-validated only; the final native driver was not rerun.",
+    "non_op": "Both fixture bots survival/non-OP; ops.json []",
+    "server_shutdown": "Dedicated 127.0.0.1:25572 fixture showed zero players then clean stop saved all worlds and exited 0. Existing user/integration server unchanged."
+  },
+  "new_concern": {
+    "evidence_kind": "Native control-flow inspection, not a new fault trial",
+    "facts": [
+      "ServerPlayNetworkHandler constructor calls markRespawned, setting remainingLoadingTicks=60.",
+      "canInteractWithGame rejects game interactions while loading ticks remain or player is dead.",
+      "tickLoading decrements per native player update; onPlayerLoaded calls markLoaded to clear it.",
+      "Current production ready establishes local play/position, not this native loading stage; original mining driver used a test-private PLAYER_LOADED."
+    ],
+    "proposal": "docs/survival-interaction-readiness.md",
+    "action": "No loading-stage implementation or additional native trials after this concern; final gates stay closed for user review."
+  },
+  "not_completed": [
+    "Validated production survival interaction loading",
+    "Reopening original in-session mining or permitting fresh recovered game actions",
+    "Correctly timed externally caused air / immediate replacement comparison",
+    "Nearby survival placement/material accounting",
+    "Item-drop recovery, walking/navigation, access planning and durable Blueprint execution",
+    "Full non-OP roofed build, validation and temporary cleanup"
+  ],
+  "development_iterations": "Initial guard coercion/inventory naming/login UUID conversion and a test stream/API name were corrected before final passing checks. The initial native external-input timing was inadequate and recorded as such. No in-session continuation or game-action acceptance was inferred from that run."
+}

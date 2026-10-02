@@ -18,6 +18,7 @@
 - [Java 1.21.11の採掘完了・中断の実機比較](survival-mining-comparison.md)
 - [Java 1.21.11の送信中断と切断後の履歴](survival-outbound.md)
 - [Java 1.21.11の限定サバイバル採掘と継続境界](survival-mining.md)
+- [Java 1.21.11の採掘接続の退出確認と再接続](survival-mining-retirement.md)
 - [Headless client API拡張ロードマップ](headless-api-roadmap.md)
 - [API契約と所有権](api-contracts.md)
 - [状態・イベントの扱い](state-and-events.md)
