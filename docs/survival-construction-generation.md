@@ -151,3 +151,87 @@ owned-temporary cleanup, independent observation and ground retreat evidence.
 Stage 2 remains incomplete until that actual acceptance succeeds. Blueprint/MCP
 integration, reobserved continuation and whole-workflow failure tests remain
 subsequent milestones; the previously completed authored roof is separate proof.
+
+## JVM investigation (2026-10-02, read-only investigation authorized)
+
+The user authorized investigation after the stop. No Java process, server trial,
+compiler replay, JDK installation, package update or JVM flag change was performed
+in this investigation. No PVE host operation was performed. Source code and the
+native pin are unchanged.
+
+### Observations and limits of attribution
+
+- The preserved report still hashes to
+  `73b03af6c96d6c8621b50b4e226641aae8f02556010347c39f2f12145867ba26`.
+  It records a crash at `2026-10-02 15:25:02 UTC`, 15.386 seconds after VM start,
+  in `C2 CompilerThread0`, compiling `dwz::a` (506 bytecodes), compilation level 4.
+  The stack goes through C2 code generation/register allocation to
+  `PhaseChaitin::post_allocate_copy_removal()+0xa0b`. This identifies the failing
+  phase, not the precise defective source line or the root cause.
+- The server logged both clients joining and fixture preparation at 15:25:00.
+  Live C's final client history has no placement, mining, motion or pending
+  inventory swap. Its only recorded phase is successful detached plan generation;
+  fresh executor admission refused `unexpected end of file`. There is no evidence
+  that the generated construction sequence had begun dispatching.
+- `/usr/bin/java` resolves to the installed Ubuntu Java 21 binary. Both package
+  metadata and its release file agree with the crash: runtime
+  `21.0.12+8-1-26.04-Ubuntu`, package `21.0.12+8-1~26.04`, x86_64.
+  `dpkg --verify openjdk-21-jre-headless` exited 0 without discrepancies. This
+  checks installed files covered by package metadata; it does not prove the
+  distribution build correct, all dependencies intact, or runtime memory sound.
+- The saved crash report has about 480 MiB RSS, zero process swap and a 768 MiB
+  maximum Java heap. The terminal failure is SIGSEGV, not an out-of-memory
+  exception. These facts do not rule out system pressure or native corruption,
+  but provide no basis for prescribing a larger heap as the fix.
+- The report's replay file exists (2,514,408 bytes, SHA-256
+  `48449c913b343fc368d98f291f3804cb81b72ae0104263df63160cc7f6356ea3`).
+  It was not executed or uploaded. No core dump was produced. The full report and
+  replay stay local; inspect for sensitive data before any future upstream report.
+- Searches of public OpenJDK/Java issue material did not establish a matching
+  fixed bug. Ubuntu's Launchpad pages were inaccessible to the browsing tool.
+  Absence of a match is not proof that no matching bug exists. A JVM compiler
+  defect or build-specific problem is a reasonable first hypothesis; runtime
+  corruption or host issues remain unexcluded. Nothing here connects this user
+  process SIGSEGV to the older PVE kernel soft-lockup incident.
+
+Oracle describes compiler-thread crashes as a possible compiler bug and cautions
+that a workaround is not a fix. That supports the investigation direction but
+not attribution to a particular defect. [Oracle JDK 21 crash guide](https://docs.oracle.com/en/java/javase/21/troubleshoot/troubleshoot-system-crashes.html)
+
+### Concrete next proposal (not yet performed)
+
+1. Add an explicit Java executable option to the isolated trial controller, and
+   record its path/version, server JAR hash, flags and actual process return code.
+   Its current final `server stopped` message alone is not proof of normal exit
+   when the process has already crashed. Preserve all original failure evidence.
+2. Use a project-local, checksum-verified **Temurin 21.0.12.1+1** installation for
+   one fresh generated-roof acceptance trial, with normal tiered compilation.
+   Leave the system Java selection and packages alone. Retain the same Minecraft
+   JAR, native pin, construction plan requirements, heap/CPU limits and operation
+   admission gates. This is a recovery candidate, not a claimed known fix; both
+   update level and distribution would differ, so success cannot isolate which
+   difference mattered or prove the old crash resolved universally.
+3. Require the entire generated plan to complete, remove all owned temporary
+   blocks, retreat and pass independent final observation. Also check client
+   liveness through planning and actual server exit status. An idle server launch
+   or a completed preflight alone does not clear stage 2.
+4. If a compiler crash recurs, stop acceptance work again. A separate diagnostic
+   comparison with `-XX:TieredStopAtLevel=1` can bypass C2, but may reduce throughput
+   and is not proof that the original compiler defect is fixed. Do not silently
+   adopt C1-only results as normal-C2 performance evidence or loosen operation
+   deadlines. All-interpreter `-Xint` and compile replay are later diagnostic
+   options, not the first recovery attempt.
+
+Temurin's release announcement confirms 21.0.12.1+1 availability and describes it
+as a security-only update; it does not establish a fix for this compiler crash.
+The local, unrefreshed apt cache also advertises Ubuntu
+`21.0.12.1+1-1~26.04.4`; no package refresh or installation occurred.
+[Adoptium release announcement](https://adoptium.net/news/2026/09/eclipse-temurin-8u504-110321-170201-210121-25041-26021-available)
+
+`TieredStopAtLevel` bounds compilation level and can be used to confine compilation
+to C1 for diagnosis; disabling tiered compilation altogether is not the same
+thing as disabling C2. [Microsoft OpenJDK compiler explanation](https://devblogs.microsoft.com/java/how-tiered-compilation-works-in-openjdk/)
+
+The recovery proposal needs user authorization under the existing stop rule.
+The investigation itself is complete; generated-roof acceptance and later
+roadmap stages remain incomplete.
