@@ -46,6 +46,7 @@ pub struct ConstructionSearch {
     pub pruned: usize,
     pub frontier_peak: usize,
     pub complete_checks: usize,
+    pub action_limited_nodes: usize,
     pub best_remaining_permanent: usize,
     pub best_remaining_temporary: Vec<[i32; 3]>,
     /// Bounded progress samples for diagnosing policy starvation and cycles.
@@ -66,10 +67,32 @@ pub struct SearchProgress {
 #[derive(Clone, Debug, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum GenerationFailure {
-    InvalidInput { error: ConstructionPlanningError },
-    InitialSceneRefused { error: ConstructionPlanningError },
-    InsufficientMaterials { missing: BTreeMap<String, usize> },
-    NoCompletePlanWithinLimits { search: ConstructionSearch },
+    InvalidInput {
+        error: ConstructionPlanningError,
+    },
+    UnsupportedTarget {
+        position: [i32; 3],
+        state: NativeBlockState,
+        reason: String,
+    },
+    InitialSceneRefused {
+        error: ConstructionPlanningError,
+    },
+    InsufficientMaterials {
+        missing: BTreeMap<String, usize>,
+    },
+    NoCompletePlanWithinLimits {
+        reason: SearchStop,
+        search: Box<ConstructionSearch>,
+    },
+}
+
+#[derive(Clone, Copy, Debug, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SearchStop {
+    CandidateBudget,
+    ExpansionBudget,
+    CandidateFrontierExhausted,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -143,6 +166,13 @@ fn within(bounds: TravelBounds, p: [f64; 3]) -> bool {
 }
 
 impl<'a> Search<'a> {
+    fn retain(&mut self, nodes: &mut Vec<Node<'a>>, node: Node<'a>) {
+        nodes.push(node);
+        nodes.sort_by(|a, b| self.score(a).total_cmp(&self.score(b)));
+        self.stats.pruned += nodes.len().saturating_sub(self.limits.frontier);
+        nodes.truncate(self.limits.frontier);
+        self.stats.frontier_peak = self.stats.frontier_peak.max(nodes.len());
+    }
     fn exhausted(&self) -> bool {
         self.stats.candidate_checks >= self.limits.candidate_checks
     }
@@ -263,7 +293,16 @@ impl<'a> Search<'a> {
             ledger
                 .remaining
                 .keys()
-                .map(|t| distance(p, center(*t)))
+                .map(|t| {
+                    let work = [
+                        f64::from(t[0]) + 0.5,
+                        f64::from(t[1]) - 1.0,
+                        f64::from(t[2]) + 0.5,
+                    ];
+                    (p[0] - work[0]).powi(2)
+                        + (p[2] - work[2]).powi(2)
+                        + 16.0 * (p[1] - work[1]).min(0.0).powi(2)
+                })
                 .fold(f64::INFINITY, f64::min)
         } else if !ledger.temporary.is_empty() {
             ledger
@@ -364,9 +403,27 @@ impl<'a> Search<'a> {
                 std::array::from_fn(|i| (b.min[i] + b.max[i]) * 0.5)
             });
         targets.sort_by(|a, b| distance(*a, focus).total_cmp(&distance(*b, focus)));
-        // Explicit candidate pruning; no claim that the other surfaces are equal.
-        self.stats.pruned += targets.len().saturating_sub(24);
-        targets.truncate(24);
+        // Retain elevation alternatives separately: many samples on a nearby
+        // floor must not crowd every possible scaffold ascent out of the family.
+        let mut selected = Vec::new();
+        for (height_class, limit) in [(-1, 6), (1, 6), (0, 12)] {
+            let mut count = 0;
+            for &target in &targets {
+                let class = if target[1] < from[1] - 0.1 {
+                    -1
+                } else if target[1] > from[1] + 0.1 {
+                    1
+                } else {
+                    0
+                };
+                if class == height_class && count < limit {
+                    selected.push(target);
+                    count += 1;
+                }
+            }
+        }
+        self.stats.pruned += targets.len().saturating_sub(selected.len());
+        let targets = selected;
         for target in targets {
             let yaw = rotation(from, target)[0];
             let jump = target[1] > from[1] + 0.1;
@@ -419,7 +476,7 @@ impl<'a> Search<'a> {
                 }
             }
             if let Some((_, next)) = best {
-                successors.push(next);
+                self.retain(successors, next);
             }
             if self.exhausted() {
                 return;
@@ -448,6 +505,19 @@ pub fn generate_construction_plan(
             ),
         });
     }
+    // Native hypothetical placement currently synthesizes property-free cubes.
+    // Do not spend a search budget attempting an exact state it cannot produce.
+    if let Some((position, state)) = site
+        .structure
+        .iter()
+        .find(|(_, s)| !s.properties.is_empty())
+    {
+        return Err(GenerationFailure::UnsupportedTarget {
+            position: *position,
+            state: state.clone(),
+            reason: "native hypothetical cube placement produces property-free states".into(),
+        });
+    }
     let missing = missing_materials(&Ledger::new(site), supplied);
     if !missing.is_empty() {
         return Err(GenerationFailure::InsufficientMaterials { missing });
@@ -469,6 +539,7 @@ pub fn generate_construction_plan(
         temporary_cells,
         stats: ConstructionSearch {
             best_remaining_permanent: site.structure.len(),
+            frontier_peak: 1,
             ..Default::default()
         },
     };
@@ -497,6 +568,10 @@ pub fn generate_construction_plan(
                 search: search.stats,
             });
         }
+        if node.checked.steps.len() >= limits.actions {
+            search.stats.action_limited_nodes += 1;
+            continue;
+        }
         let mut successors = Vec::new();
         for &target in node.checked.ledger.temporary.keys() {
             for (face, delta) in FACES {
@@ -510,7 +585,7 @@ pub fn generate_construction_plan(
                         rotation: rotation(eye(&node), point),
                     },
                 ) {
-                    successors.push(next);
+                    search.retain(&mut successors, next);
                     break;
                 }
             }
@@ -529,7 +604,7 @@ pub fn generate_construction_plan(
                         search.temporary_material,
                         PlacementPurpose::Temporary,
                     ) {
-                        successors.push(next);
+                        search.retain(&mut successors, next);
                     }
                 }
                 if search.exhausted() {
@@ -538,14 +613,19 @@ pub fn generate_construction_plan(
             }
         }
         search.moves(&node, &mut successors);
-        frontier.extend(successors);
-        frontier.sort_by(|a, b| search.score(a).total_cmp(&search.score(b)));
-        search.stats.frontier_peak = search.stats.frontier_peak.max(frontier.len());
-        search.stats.pruned += frontier.len().saturating_sub(limits.frontier);
-        frontier.truncate(limits.frontier);
+        for next in successors {
+            search.retain(&mut frontier, next);
+        }
     }
     Err(GenerationFailure::NoCompletePlanWithinLimits {
-        search: search.stats,
+        reason: if search.exhausted() {
+            SearchStop::CandidateBudget
+        } else if search.stats.expanded >= limits.expanded {
+            SearchStop::ExpansionBudget
+        } else {
+            SearchStop::CandidateFrontierExhausted
+        },
+        search: Box::new(search.stats),
     })
 }
 

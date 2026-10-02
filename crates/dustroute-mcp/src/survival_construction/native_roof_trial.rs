@@ -453,6 +453,12 @@ async fn exercise(
         })
         .await
         .map_err(|e| e.to_string())?;
+    if std::env::var("DUSTROUTE_SURVIVAL_ROOF_PLANNER").as_deref() == Ok("smoke") {
+        if live {
+            return Err("generated smoke comparisons are read-only".into());
+        }
+        return generated_smoke(&scene, events);
+    }
     let plan = if std::env::var("DUSTROUTE_SURVIVAL_ROOF_PLANNER").as_deref() == Ok("generated") {
         let site =
             ConstructionSite::from_grounded(&design()?, scope()).map_err(|e| e.to_string())?;
@@ -522,5 +528,151 @@ async fn exercise(
         }
     }
     events.push(json!({"phase":"complete_roof","record":executor.record()}));
+    Ok(())
+}
+
+fn generated_smoke(
+    scene: &CapturedSurvivalScene,
+    events: &mut Vec<Value>,
+) -> std::result::Result<(), String> {
+    let cases = [
+        ("short-column", vec![(p(2, 0, 4), p(2, 1, 4))]),
+        (
+            "supported-beam",
+            vec![(p(2, 0, 4), p(2, 0, 4)), (p(1, 1, 4), p(3, 1, 4))],
+        ),
+        ("translated-column", vec![(p(3, 0, 4), p(3, 1, 4))]),
+    ];
+    for (name, regions) in cases {
+        let shapes: Vec<_> = regions
+            .into_iter()
+            .map(|(a, b)| json!({"kind":"fill","material":"cobblestone","region":r(a,b)}))
+            .collect();
+        let design = dustroute_translate::building::generate_grounded_building_design(serde_json::from_value(json!({
+            "ground_material":"stone","design":{
+                "namespace":"test.survival-generated","name":name,"known_region":r(p(-1,-1,-1),p(5,7,5)),
+                "parts":[{"name":"structure","shapes":shapes}],"spaces":[]
+            }
+        })).map_err(|e| format!("smoke specification: {e}"))?).map_err(|e| format!("smoke design: {e:?}"))?;
+        let mut scoped = scope();
+        scoped.retreat = TravelBounds {
+            min: [2.0, f64::from(FLOOR), 7.0],
+            max: [3.0, f64::from(FLOOR), 8.0],
+        };
+        let site = ConstructionSite::from_grounded(&design, scoped).map_err(|e| e.to_string())?;
+        let supplied = BTreeMap::from([
+            ("minecraft:cobblestone".into(), 49),
+            ("minecraft:dirt".into(), 32),
+        ]);
+        let result = generation::generate_construction_plan(
+            scene,
+            &site,
+            &supplied,
+            "minecraft:dirt",
+            generation::SearchLimits {
+                candidate_checks: 2000,
+                ..Default::default()
+            },
+        );
+        events.push(json!({"phase":"generated_smoke","case":name,"result":result}));
+        let generated = result.map_err(|e| format!("{name}: {e:?}"))?;
+        let face = |id| {
+            [
+                BlockFace::Down,
+                BlockFace::Up,
+                BlockFace::North,
+                BlockFace::South,
+                BlockFace::West,
+                BlockFace::East,
+            ]
+            .into_iter()
+            .find(|f| *f as u8 == id)
+            .unwrap()
+        };
+        let actions: Vec<_> = generated
+            .plan
+            .steps()
+            .iter()
+            .map(|s| match s {
+                HypotheticalConstructionStep::Move { prediction } => ConstructionAction::Move {
+                    controls: prediction.controls.clone(),
+                },
+                HypotheticalConstructionStep::Place { purpose, placement } => {
+                    ConstructionAction::Place {
+                        purpose: *purpose,
+                        support: placement.support,
+                        face: face(placement.face_id),
+                        rotation: placement.rotation,
+                        material: placement.edit.after.name.clone(),
+                    }
+                }
+                HypotheticalConstructionStep::RemoveTemporary {
+                    edit,
+                    face_id,
+                    rotation,
+                    ..
+                } => ConstructionAction::RemoveTemporary {
+                    target: edit.position,
+                    face: face(*face_id),
+                    rotation: *rotation,
+                },
+            })
+            .collect();
+        let replay = preview_construction_sequence(scene, &site, &actions, &supplied)
+            .map_err(|e| format!("{name} independent full replay: {e}"))?;
+        if json!(replay) != json!(generated.plan) {
+            return Err(format!("{name}: full replay differs"));
+        }
+        // Failed extensions must leave the prior branch usable, including its
+        // native geometry. A second full replay establishes that behavior too.
+        let prefix = CheckedPrefix::new(scene, &site).map_err(|e| e.to_string())?;
+        assert!(
+            prefix
+                .clone()
+                .after(&ConstructionAction::Move {
+                    controls: vec![
+                        SurvivalControl {
+                            yaw: f32::NAN,
+                            input: Default::default()
+                        };
+                        3
+                    ]
+                })
+                .is_err()
+        );
+        let mut extended = prefix;
+        for action in &actions {
+            extended = extended.after(action).map_err(|e| e.to_string())?;
+        }
+        assert_eq!(
+            json!(extended.finish(&supplied).map_err(|e| e.to_string())?),
+            json!(replay)
+        );
+        let shortage = generation::generate_construction_plan(
+            scene,
+            &site,
+            &BTreeMap::new(),
+            "minecraft:dirt",
+            Default::default(),
+        );
+        assert!(matches!(
+            shortage,
+            Err(generation::GenerationFailure::InsufficientMaterials { .. })
+        ));
+        let limited = generation::generate_construction_plan(
+            scene,
+            &site,
+            &supplied,
+            "minecraft:dirt",
+            generation::SearchLimits {
+                candidate_checks: 1,
+                ..Default::default()
+            },
+        );
+        assert!(
+            matches!(&limited,Err(generation::GenerationFailure::NoCompletePlanWithinLimits { reason: generation::SearchStop::CandidateBudget,search }) if search.candidate_checks == 1)
+        );
+        events.push(json!({"phase":"generated_smoke_checked","case":name,"full_replay_equal":true,"failed_branch_isolated":true,"shortage":shortage,"limited":limited}));
+    }
     Ok(())
 }
