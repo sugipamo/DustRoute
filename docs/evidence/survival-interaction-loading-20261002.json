@@ -43,7 +43,7 @@
   ],
   "additional_checks": [
     "cargo fmt --all --check passed (Voxrig)",
-    "git diff --check passed (both repositories)",
+    "Source/document diff whitespace checks passed excluding unchanged raw server-log bytes; the retained native list output has its original trailing space.",
     "vendor snapshot verified"
   ],
   "native_run": {
