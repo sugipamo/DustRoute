@@ -382,3 +382,24 @@ covered by TCP tests, not a separate live scenario. Next roadmap work remains
 bounded route/retreat selection in the caller, site/access planning, durable job
 integration and the complete roofed construction trial. The broad goal is active
 and unfinished.
+
+## Bounded route selection and return verified (2026-10-02 UTC)
+
+DustRoute now searches finite multi-heading native controls without duplicating
+player physics. Every successful candidate shares its initial observation;
+execution revalidates the selected prediction under the native intent lock.
+Body bounds, terminal clearance, explicit search limits and a predicted round
+trip constrain the result. The return is predicted again after world changes.
+
+The isolated non-OP wall-detour/ordinary-placement/return trial passed: 71
+candidate predictions in 167 ms, 56 outbound ticks, independent dirt observation,
+received inventory decrement and observed return to the starting area. See the
+[architecture and limits](survival-navigation.md) and
+[pinned evidence](evidence/survival-navigation-live-20261002.json).
+Root library tests: 181 passed, five ignored; the opt-in live test passed
+separately. Voxrig source: 180 passed, five ignored, one doc test; vendor pin
+`5149f340b0728fe1747afde29ff52124645b3134` (277 managed files).
+
+The route API is a Rust planning foundation, not a new public MCP construction
+command. Site-aware immutable design requirements, temporary access scheduling,
+durable survival execution and the roofed build/cleanup acceptance remain open.

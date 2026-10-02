@@ -55,3 +55,18 @@ The ignored `native_route_around_wall_place_and_return` test uses the isolated
 non-OP two-client fixture and separately records selected controls, predicted and
 observed endpoints, ordinary placement/material results, revalidated return and
 received packet traces. Its source alone is not evidence of a successful trial.
+
+The [2026-10-02 live record](evidence/survival-navigation-live-20261002.json)
+pins DustRoute `ce2110d` and Voxrig `5149f34`. In the isolated vanilla 1.21.11
+non-OP fixture, 71 predictions selected a 56-tick outbound route in 167 ms.
+The mover rounded the three-high wall, reached
+`[3.9670545263379964, -60, 2.2437405764746208]`, placed dirt through ordinary
+interaction with received inventory change `1 -> empty` and independent block
+observation, then revalidated and executed the return to
+`[0.41934856791328906, -60, 0.4191814284230608]`. Both runs reached `observed`.
+The server was stopped with exit 0; fixture commands precede the exercise.
+This is a finite route/placement/return test, not general route completeness,
+site permission, durable recovery or roofed Blueprint construction acceptance.
+Root library regression: 181 passed, five opt-in tests ignored. The live test
+passed separately. Raw receive traces, server log and regression log are linked
+and hashed in the record.
