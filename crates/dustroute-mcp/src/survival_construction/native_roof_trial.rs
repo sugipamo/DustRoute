@@ -60,7 +60,7 @@ fn scope() -> ConstructionScope {
         },
     }
 }
-fn design() -> GeneratedGroundedBuildingDesign {
+fn design() -> std::result::Result<GeneratedGroundedBuildingDesign, String> {
     let region = |a, b| json!(r(a, b));
     dustroute_translate::building::generate_grounded_building_design(serde_json::from_value(json!({
         "ground_material":"stone","design":{
@@ -74,7 +74,7 @@ fn design() -> GeneratedGroundedBuildingDesign {
                     {"kind":"fill","material":"cobblestone","region":region(p(4,0,4),p(4,5,4))}]}],
             "spaces":[{"name":"inside","region":region(p(1,0,1),p(3,5,3))}]
         }
-    })).unwrap()).unwrap()
+    })).map_err(|e| format!("roof specification: {e}"))?).map_err(|e| format!("roof Blueprint: {e:?}"))
 }
 struct Recipe<'a> {
     scenario: SurvivalScenario,
@@ -294,6 +294,7 @@ fn plan(
     scene: &CapturedSurvivalScene,
     evidence: &mut Vec<Value>,
 ) -> std::result::Result<HypotheticalConstructionPlan, String> {
+    let site = ConstructionSite::from_grounded(&design()?, scope()).map_err(|e| e.to_string())?;
     let mut recipe = Recipe {
         scenario: scene.scenario(),
         actions: Vec::new(),
@@ -358,7 +359,6 @@ fn plan(
     )?;
     recipe.remove(p(bridge_x, 5, -1))?;
     recipe.descend(-2, top, 6)?;
-    let site = ConstructionSite::from_grounded(&design(), scope()).map_err(|e| e.to_string())?;
     let result = preview_construction_sequence(
         scene,
         &site,

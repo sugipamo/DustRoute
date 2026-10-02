@@ -69,11 +69,30 @@ fn enclosure_parts_clearance_and_shared_construction_are_exact() {
         panic!("structural pattern required")
     };
     assert_eq!(blocks.len(), 7 * 6 * 7);
-    assert!(
-        blocks
-            .iter()
-            .any(|b| b.position == Pos::new(2, 1, 0) && b.block.kind == BlockKind::Air)
-    );
+    let body = generated
+        .request
+        .revisions
+        .iter()
+        .find(|r| {
+            r.static_type_bindings
+                .iter()
+                .any(|b| b.type_revision == pattern.id)
+        })
+        .unwrap();
+    let anchor = body
+        .ports
+        .iter()
+        .find(|p| p.name == "layout")
+        .unwrap()
+        .position;
+    assert!(blocks.iter().any(|b| {
+        Pos::new(
+            anchor.x + b.position.x,
+            anchor.y + b.position.y,
+            anchor.z + b.position.z,
+        ) == Pos::new(2, 1, 0)
+            && b.block.kind == BlockKind::Air
+    }));
     let saved: BlueprintRecords =
         serde_json::from_value(serde_json::to_value(&generated.records).unwrap()).unwrap();
     assert_eq!(

@@ -198,12 +198,23 @@ pub(super) fn build_layout(
             }
         }
     }
+    // A fixed terminal must be inside the declared known world. Keep the exact
+    // absolute obligation, but express its offsets from a non-reserved cell
+    // rather than assuming that world origin belongs to every building site.
+    let anchor = pattern.first().ok_or("block pattern is empty")?.position;
+    for block in &mut pattern {
+        block.position = Pos::new(
+            block.position.x - anchor.x,
+            block.position.y - anchor.y,
+            block.position.z - anchor.z,
+        );
+    }
     require_pattern(
         &mut catalog,
         &mut body,
         namespace,
         "clearance.pattern.v1",
-        Pos::default(),
+        anchor,
         pattern,
     )?;
     let mut next_parent = parent.clone();

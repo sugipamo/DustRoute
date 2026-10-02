@@ -183,3 +183,26 @@ This is a small-to-medium shared Blueprint correctness prerequisite. Under the
 user's stop-on-new-concern instruction, its implementation and dependent live
 construction are stopped pending approval. The continuous-ray native change is
 complete and separately committed; goal 1 and stages 2–5 remain unfinished.
+
+## Blueprint anchor prerequisite approved
+
+The user approved the shared source fix. The body clearance terminal now uses
+its first declared, non-reserved pattern cell as anchor; offsets are translated
+relative to it. Empty patterns remain invalid. No known region, protected-ground
+contract, permanent-air requirement or edit scope is enlarged. Existing saved
+records are not rewritten. Regression checks cover both source callers at
+positive and negative translated coordinates, exact absolute pattern coverage,
+adoption/reload, ground removal and intrusion into permanent air. The roof driver
+propagates Blueprint diagnostics through its evidence-saving error path and
+checks the site contract before searching the authored movement sequence.
+
+Full preflight and live acceptance are still required after these checks.
+
+Validation of the anchor change: 24 building/grounded/design/update/door tests
+and 19 Voxrig-enabled consumer survival tests passed (four live tests ignored).
+Existing tests that inspected body pattern offsets as absolute positions were
+updated to add the declared anchor; reservation/air assertions keep their exact
+world coordinates. Translation library/tests Clippy passed. The wider translation
+all-target invocation found two existing unused helper functions in the unchanged
+`flying_machine_assembly_fixture` example; that result is retained, not claimed
+as an all-target pass. No unrelated sample cleanup is included.

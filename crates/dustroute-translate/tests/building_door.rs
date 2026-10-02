@@ -68,12 +68,35 @@ fn reference_door_and_enclosure_share_physics_construction_and_restart_adoption(
         panic!("expected structure")
     };
     assert_eq!(blocks.len(), 924 - 70);
-    assert!(
-        blocks
-            .iter()
-            .all(|b| !door.reserved_space.contains(b.position))
-    );
-    assert!(blocks.iter().any(|b| b.position == Pos::new(4, 7, 0)));
+    let body = generated
+        .request
+        .revisions
+        .iter()
+        .find(|r| {
+            r.static_type_bindings
+                .iter()
+                .any(|b| b.type_revision == pattern.id)
+        })
+        .unwrap();
+    let anchor = body
+        .ports
+        .iter()
+        .find(|p| p.name == "layout")
+        .unwrap()
+        .position;
+    let positions: Vec<_> = blocks
+        .iter()
+        .map(|b| {
+            Pos::new(
+                anchor.x + b.position.x,
+                anchor.y + b.position.y,
+                anchor.z + b.position.z,
+            )
+        })
+        .collect();
+    assert!(!door.reserved_space.contains(anchor));
+    assert!(positions.iter().all(|&p| !door.reserved_space.contains(p)));
+    assert!(positions.contains(&Pos::new(4, 7, 0)));
     let mut updates = BlueprintUpdates::new(generated.records.catalog().unwrap());
     updates.create(generated.request.clone()).unwrap();
     let mut updates = BlueprintUpdates::from_json(&updates.to_json().unwrap()).unwrap();
