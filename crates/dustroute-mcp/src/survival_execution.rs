@@ -274,6 +274,7 @@ impl SurvivalExecutor {
                 edit,
                 face_id,
                 rotation,
+                ..
             } => {
                 if self.temporary.get(&edit.position) != Some(&edit.before) {
                     return Err(ExecutionError::new(

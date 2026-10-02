@@ -61,3 +61,24 @@ standing evidence and their unchanged target-corridor, lifetime and mutation
 checks. A missing or unsuitable observer result cannot be replaced by the future
 requirement. The [boundary roadmap](survival-library-boundary.md) declares the
 isolated edge comparison before its execution.
+
+## Expected reconnect boundary
+
+A detached branch can explicitly call `after_expected_reconnect` at a safe
+released stop. It keeps the same cells, feet, resource limits and conservative
+standing margin, but uses native new-connection model initialization. The return
+value includes a `HypotheticalReconnectBoundary` and its aim requirement is
+`ReceivedAfterReconnect`: a future obligation, never fabricated received pose
+provenance. Callers verify actual retirement separately, then compare a freshly
+captured scene using `validate_received_start` with the retired connection ID.
+Same-connection, wrong-dimension, changed-feet and non-received bases are refused.
+This is not durable job recovery, a world reset, a reconnect operation or a token
+that authorizes sending. Actual native gates and fresh preview checks still run.
+
+Both live and hypothetical movement previews expose their tick-zero
+`initial_frame`. Grounded rest carries native downward gravity velocity; a
+received new-connection initialization begins at zero. They can have identical
+positions but different first ground-contact flags and later horizontal paths.
+The recorded roof regression exercises exactly that difference and verifies that
+the explicit hypothetical reset matches a fresh native preview without sending
+packets or changing the live connection.

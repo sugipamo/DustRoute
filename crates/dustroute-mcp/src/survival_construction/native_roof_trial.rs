@@ -148,6 +148,7 @@ impl Recipe<'_> {
                     self.scenario = self
                         .scenario
                         .after_edits(&[edit])
+                        .and_then(|next| next.after_expected_reconnect().map(|(next, _)| next))
                         .map_err(|e| e.to_string())?;
                     self.actions.push(ConstructionAction::RemoveTemporary {
                         target,

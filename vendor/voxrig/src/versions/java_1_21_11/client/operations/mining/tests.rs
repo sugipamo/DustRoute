@@ -121,6 +121,112 @@ fn roof_diagonal_view_allows_off_ray_foot_support_but_refuses_occlusion() {
 }
 
 #[tokio::test]
+async fn hypothetical_reconnect_matches_fresh_native_model_without_fabricating_receipts() {
+    async fn roof_pose(f: &Fixture, position: [f64; 3]) {
+        let mut s = f.session.state.lock().await;
+        for x in -2..=5 {
+            for y in -62..=-50 {
+                for z in 3..=9 {
+                    let p = [x, y, z];
+                    let name = if y <= -61 {
+                        "stone"
+                    } else if [
+                        [1, -60, 6],
+                        [1, -59, 6],
+                        [2, -60, 6],
+                        [2, -59, 6],
+                        [2, -58, 6],
+                    ]
+                    .contains(&p)
+                    {
+                        "dirt"
+                    } else {
+                        "air"
+                    };
+                    s.world
+                        .seed_replay_cell(p, state_id(&native(name)).unwrap());
+                }
+            }
+        }
+        s.position = Some(position);
+        let generation = s.loading.generation;
+        let receive_sequence = s.sequence;
+        let rotation = s.rotation;
+        s.motion.receive(ReceivedPose {
+            generation,
+            receive_sequence,
+            position,
+            rotation,
+            velocity: Some([0.; 3]),
+        });
+    }
+    // Exact received pose/support and controls from the stopped roof's action 27.
+    let position = [2.436727277038884, -57., 6.5000687949723455];
+    let region = crate::Region {
+        min: [-2, -62, 3],
+        max: [5, -50, 9],
+    };
+    let mut old = Fixture::new_id(42).await;
+    let mut fresh = Fixture::new_id(84).await;
+    roof_pose(&old, position).await;
+    roof_pose(&fresh, position).await;
+    let captured = old.api.capture_survival_scene(region).await.unwrap();
+    let received = fresh.api.capture_survival_scene(region).await.unwrap();
+    let idle = [SurvivalControl {
+        yaw: 0.,
+        input: Default::default(),
+    }; 3];
+    let resting = captured.scenario().after_path(&idle).unwrap();
+    let controls: Vec<_> = (0..28)
+        .map(|t| SurvivalControl {
+            yaw: 90.00421,
+            input: SurvivalInput {
+                forward: i8::from(t < 4),
+                ..Default::default()
+            },
+        })
+        .collect();
+    let carried = resting.preview_path(&controls).unwrap();
+    let live = fresh.api.preview_survival_path(&controls).await.unwrap();
+    assert_eq!(carried.initial_position, live.initial.position);
+    assert_eq!(
+        carried.initial_frame.velocity,
+        [0., -0.0784000015258789, 0.]
+    );
+    assert_eq!(live.initial_frame.velocity, [0.; 3]);
+    assert!(carried.frames[0].on_ground);
+    assert!(!live.frames[0].on_ground);
+    assert_ne!(carried.frames[1].position, live.frames[1].position);
+    let (reset, obligation) = resting.after_expected_reconnect().unwrap();
+    assert!(matches!(
+        reset.aim_requirement(),
+        HypotheticalAimRequirement::ReceivedAfterReconnect
+    ));
+    let planned = reset.preview_path(&controls).unwrap();
+    assert_eq!(planned.initial_frame, live.initial_frame);
+    assert_eq!(planned.frames, live.frames);
+    assert_eq!(
+        planned.source.connection_id,
+        captured.source().connection_id
+    );
+    assert!(!planned.shares_origin(&carried));
+    assert!(obligation.validate_received_start(&captured, 42).is_err());
+    assert!(obligation.validate_received_start(&received, 84).is_err());
+    obligation.validate_received_start(&received, 42).unwrap();
+    roof_pose(&fresh, [position[0] + 0.01, position[1], position[2]]).await;
+    let moved = fresh.api.capture_survival_scene(region).await.unwrap();
+    assert!(obligation.validate_received_start(&moved, 42).is_err());
+    // No disconnect, input, position assignment or native operation is sent.
+    for peer in [&mut old.peer, &mut fresh.peer] {
+        assert!(
+            tokio::time::timeout(Duration::from_millis(30), read_packet(peer, None))
+                .await
+                .is_err()
+        );
+    }
+}
+
+#[tokio::test]
 async fn hypothetical_scene_shares_native_prediction_and_never_changes_live_state() {
     let mut f = Fixture::new().await;
     f.session

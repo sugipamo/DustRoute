@@ -16,6 +16,9 @@ pub enum HypotheticalAimRequirement {
         /// Per-axis uncertainty about the model's eye coordinates.
         horizontal_error: [f64; 3],
     },
+    /// A future new connection must supply a fresh received standing position.
+    /// This is a planning obligation, not a received pose or mutation authority.
+    ReceivedAfterReconnect,
     /// Future motion must satisfy the same independent observation contract as
     /// actual motion. This variant cannot stand in for that later observation.
     IndependentlyObservedEndpoint {
@@ -37,11 +40,44 @@ impl HypotheticalAimRequirement {
     }
     fn error(self) -> [f64; 3] {
         match self {
+            Self::ReceivedAfterReconnect => [0.0; 3],
             Self::CapturedPosition { horizontal_error }
             | Self::IndependentlyObservedEndpoint {
                 horizontal_error, ..
             } => horizontal_error,
         }
+    }
+}
+
+/// A future connection-reset obligation. No reconnect, receipt or action token
+/// is created by this value; callers still perform and verify their own lifecycle.
+#[derive(Clone, Debug, Serialize)]
+pub struct HypotheticalReconnectBoundary {
+    expected_position: [f64; 3],
+    dimension: String,
+}
+impl HypotheticalReconnectBoundary {
+    /// Compare an actually captured new-connection standing scene with the
+    /// planned reset. The caller supplies the actual retired connection identity
+    /// and separately proves retirement, world contents and capture freshness.
+    /// Success is a comparison only, never authority to start a native operation.
+    pub fn validate_received_start(
+        &self,
+        fresh: &CapturedSurvivalScene,
+        retired_connection_id: u64,
+    ) -> Result<()> {
+        let now = fresh.source();
+        if now.connection_id == retired_connection_id
+            || now.dimension != self.dimension
+            || now.position != self.expected_position
+            || !matches!(now.position_basis, StandingPositionBasis::Received { .. })
+        {
+            return Err(invalid(
+                "received reconnect start differs from hypothetical boundary",
+            ));
+        }
+        validate_initial(now)?;
+        Ok(())
     }
 }
 
@@ -88,6 +124,8 @@ pub struct HypotheticalMovementPreview {
     origin: Arc<()>,
     /// Original capture provenance, not the hypothetical player's current pose.
     pub source: StandingContext,
+    /// Initial model frame (tick zero), including the native velocity phase.
+    pub initial_frame: PredictedMotionFrame,
     /// Hypothetical starting feet; never a received StandingContext.
     pub initial_position: [f64; 3],
     /// Native standing bounds at the hypothetical start, including uncertainty.
@@ -337,10 +375,12 @@ impl SurvivalScenario {
             return Err(invalid("scenario exceeds 4096 motion ticks"));
         }
         let mut model = self.model.clone();
+        let initial_frame = model.initial_frame();
         let frames = predict(&self.scene, &mut model, controls)?;
         let result = HypotheticalMovementPreview {
             origin: self.origin.clone(),
             source: self.scene.initial.clone(),
+            initial_frame,
             initial_position: self.position(),
             initial_bounds: survival::standing_geometry(
                 &self.scene,
@@ -375,6 +415,26 @@ impl SurvivalScenario {
             aim_requirement: HypotheticalAimRequirement::after_observed_motion(),
             ..self.clone()
         })
+    }
+    /// Fork with the native model's new-connection initialization at these feet.
+    /// This explicitly plans a lifecycle boundary; it does not perform a reset,
+    /// establish received evidence or turn a future scene into live authority.
+    /// The returned obligation must be checked against an actual fresh capture.
+    pub fn after_expected_reconnect(&self) -> Result<(Self, HypotheticalReconnectBoundary)> {
+        terminal_clearance(&self.scene, &self.model.frame)?;
+        let boundary = HypotheticalReconnectBoundary {
+            expected_position: self.position(),
+            dimension: self.scene.initial.dimension.clone(),
+        };
+        let next = Self {
+            model: Model::new(self.position()),
+            origin: Arc::new(()),
+            aim_requirement: HypotheticalAimRequirement::ReceivedAfterReconnect,
+            // A future exact receipt is not permission to shrink standing margins.
+            clearance_error: [TERMINAL_MARGIN, 0.0, TERMINAL_MARGIN],
+            ..self.clone()
+        };
+        Ok((next, boundary))
     }
     /// Fork with explicit edits. A batch is atomic and cannot remove current foot
     /// support, intersect the player or change cells outside the captured scene.

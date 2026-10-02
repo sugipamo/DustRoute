@@ -269,3 +269,36 @@ This changes the shared prediction/execution boundary and is stopped under the
 user's new-correctness-concern instruction. The approved Blueprint fix is complete;
 the roof goal and subsequent goals are not complete. No runtime recovery change
 has been made in response to this new finding.
+
+## Reconnect prediction prerequisite approved
+
+The user approved the explicit lifecycle boundary. Native source `2b6e7bf` adds
+`SurvivalScenario::after_expected_reconnect` and a non-deserializable
+`HypotheticalReconnectBoundary`. It preserves feet, cells and conservative
+standing margins while initializing the shared native model as a received new
+connection. The future aim requirement stays explicitly hypothetical. Validation
+requires a different connection from the retired source, the same dimension and
+exact feet, and an actual received standing basis from a newly captured scene.
+It grants no operation authority and does not implement retirement or job policy.
+
+DustRoute's checked removal sequence now retains that obligation, and its common
+executor verifies it after actual retirement/reconnect and site reconciliation,
+before completing the removal. The authored roof candidate uses the same native
+transition. Physics remains in Voxrig. Live and detached previews expose a
+canonical tick-zero `initial_frame`; movement comparison retains exact frame
+checks and also compares the initial frame. A mismatch now saves both previews
+and the first divergent frame index before refusing dispatch.
+
+The recorded pose/support/control regression confirms the root cause: carrying
+rest gravity gives first-frame ground contact; received reset starts with zero
+velocity, has no first-frame downward contact and changes later horizontal motion.
+The explicit reset matches the fresh native preview exactly. The regression also
+refuses same-connection and changed-position receipts and confirms no packets
+are sent by hypothetical APIs. Native library: 195 passed, six live fixtures
+ignored; four doctests and all-target Clippy passed. Complete roof preflight and
+live acceptance still need to be repeated with this source.
+
+Voxrig-enabled consumer tests: 19 passed, four live fixtures ignored. Adding the
+native initial frame exposed one test-only navigation mock initializer; it now
+explicitly supplies its synthetic initial frame. The mock remains a search/budget
+test, not a Minecraft physics model or an execution path.

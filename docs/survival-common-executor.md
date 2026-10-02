@@ -139,3 +139,16 @@ The executor milestone is complete. Next: connect this kernel to the original
 roof/access sequence selection and caller-owned durable public workflow, then
 accept the full adopted roof/cleanup contract. Automatic route/access generation,
 public MCP orchestration and automatic restart recovery have not been claimed.
+
+## Explicit planned reconnect state
+
+Every checked temporary removal carries the native hypothetical reconnect
+obligation because this executor retires its mining connection before continuing.
+Planning cannot silently carry the previous gravity/rest phase across that reset.
+After recovery, exact site comparison and the native received-start boundary must
+both pass before the removal completes. A future obligation is neither a saved
+native token nor proof that retirement already happened. The fresh connection is
+still captured and checked on each subsequent action. Motion checks compare
+initial model state and all trajectory frames exactly; refusals retain both
+predictions before any input is sent. This does not implement stage-4 durable-job
+continuation: historical journals remain diagnosis-only.

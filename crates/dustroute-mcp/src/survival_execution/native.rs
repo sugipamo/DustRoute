@@ -217,7 +217,22 @@ impl SurvivalExecutor {
         let ops = self.bot.survival()?;
         let observer = self.observer.survival()?;
         let live = ops.preview_survival_path(&p.controls).await?;
-        if live.frames != p.frames {
+        if live.initial_frame != p.initial_frame || live.frames != p.frames {
+            let first = p
+                .frames
+                .iter()
+                .zip(&live.frames)
+                .position(|(a, b)| a != b)
+                .or_else(|| {
+                    (p.frames.len() != live.frames.len())
+                        .then_some(p.frames.len().min(live.frames.len()))
+                });
+            self.journal.event(
+                "movement_prediction_mismatch",
+                OperationOutcome::NotStarted,
+                Continuation::NeedsInspection,
+                json!({"first_differing_frame_index":first,"checked":p,"fresh":live}),
+            )?;
             return Err(ExecutionError::new(
                 "movement_plan_changed",
                 "fresh trajectory differs from checked plan",
@@ -421,6 +436,21 @@ impl SurvivalExecutor {
         )?;
         match decision {
             CleanupReconciliation::AlreadyAbsent => {
+                let HypotheticalConstructionStep::RemoveTemporary { reconnect, .. } =
+                    &self.plan.steps()[self.record().completed_steps]
+                else {
+                    return Err(ExecutionError::new(
+                        "recovery_plan_changed",
+                        "expected removal boundary",
+                    ));
+                };
+                reconnect.validate_received_start(&fresh, intent.connection_id)?;
+                self.journal.event(
+                    "reconnect_boundary_verified",
+                    OperationOutcome::Observed,
+                    Continuation::NeedsInspection,
+                    json!({"requirement":reconnect,"retired_connection_id":intent.connection_id,"received_start":fresh.source()}),
+                )?;
                 self.expected = expected_site;
                 self.temporary.remove(&edit.position);
                 self.complete_step()

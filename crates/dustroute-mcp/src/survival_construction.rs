@@ -11,7 +11,7 @@ use serde::Serialize;
 use std::collections::BTreeMap;
 use voxrig::checked_survival::{
     CapturedSurvivalScene, HypotheticalBlockEdit, HypotheticalMovementPreview,
-    HypotheticalPlacement, StandingContext, SurvivalControl,
+    HypotheticalPlacement, HypotheticalReconnectBoundary, StandingContext, SurvivalControl,
 };
 use voxrig::{BlockFace, NativeBlockState};
 
@@ -280,6 +280,8 @@ pub enum HypotheticalConstructionStep {
         edit: HypotheticalBlockEdit,
         face_id: u8,
         rotation: [f32; 2],
+        /// Common execution retires and reconnects after every mining attempt.
+        reconnect: HypotheticalReconnectBoundary,
     },
 }
 #[derive(Clone, Debug, Default, Serialize)]
@@ -539,7 +541,11 @@ pub fn preview_construction_sequence(
                     scenario = scenario
                         .after_edits(std::slice::from_ref(&edit))
                         .map_err(native_error)?;
+                    let (after_reconnect, reconnect) =
+                        scenario.after_expected_reconnect().map_err(native_error)?;
+                    scenario = after_reconnect;
                     HypotheticalConstructionStep::RemoveTemporary {
+                        reconnect,
                         edit,
                         face_id: *face as u8,
                         rotation: *rotation,

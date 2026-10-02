@@ -545,6 +545,14 @@ mod tests {
             })
             .collect();
         SurvivalMovementPreview {
+            initial_frame: PredictedMotionFrame {
+                tick: 0,
+                position: initial.position,
+                velocity: [0.; 3],
+                on_ground: true,
+                horizontal_collision: false,
+                resting: true,
+            },
             initial,
             generation,
             controls,

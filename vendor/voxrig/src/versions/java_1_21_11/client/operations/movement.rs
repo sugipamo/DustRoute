@@ -11,7 +11,8 @@ pub use control::{
 };
 pub use scenario::{
     CapturedSurvivalScene, HypotheticalAimRequirement, HypotheticalBlockEdit,
-    HypotheticalMovementPreview, HypotheticalPlacement, SurvivalScenario,
+    HypotheticalMovementPreview, HypotheticalPlacement, HypotheticalReconnectBoundary,
+    SurvivalScenario,
 };
 
 /// Digital walking input for one predicted native game tick, without sprint/sneak.
@@ -64,6 +65,8 @@ pub struct PredictedMotionFrame {
 pub struct SurvivalMovementPreview {
     /// Received starting posture, attributes and world revision.
     pub initial: StandingContext,
+    /// Initial model frame (tick zero), distinguishing received reset from rest.
+    pub initial_frame: PredictedMotionFrame,
     /// World generation of the starting context.
     pub generation: u64,
     /// Exact per-tick heading and input; no packets were sent.
@@ -144,9 +147,11 @@ fn preview(
     let initial = survival::context(state, connection_id, tick)?;
     validate_initial(&initial)?;
     let mut model = Model::from_context(&initial);
+    let initial_frame = model.initial_frame();
     let frames = predict(state, &mut model, controls)?;
     let terminal_clearance = clearance(state, frames.last().unwrap());
     Ok(SurvivalMovementPreview {
+        initial_frame,
         terminal_clearance,
         initial,
         generation: state.loading.generation,
@@ -375,6 +380,12 @@ struct Model {
     jump_cooldown: u8,
 }
 impl Model {
+    fn initial_frame(&self) -> PredictedMotionFrame {
+        PredictedMotionFrame {
+            tick: 0,
+            ..self.frame.clone()
+        }
+    }
     fn from_context(context: &StandingContext) -> Self {
         let mut model = Self::new(context.position);
         if let StandingPositionBasis::PredictedAndObserved { predicted, .. } =
