@@ -488,6 +488,36 @@ impl<'a> Search<'a> {
             ];
             if let Some(moved) = self.move_to(&next, feet, 0.23) {
                 self.retain(successors, moved);
+            } else {
+                // Placement reach is longer than a useful step-up. Approach a
+                // nearby ground/platform cell before trying to climb, checking
+                // both legs against the edited scenario. This is a candidate
+                // sequence, not an assumed route or a fixed access template.
+                let mut approaches: Vec<_> = [[1, 0], [-1, 0], [0, 1], [0, -1]]
+                    .into_iter()
+                    .map(|[dx, dz]| {
+                        [
+                            feet[0] + f64::from(dx),
+                            f64::from(top[1]),
+                            feet[2] + f64::from(dz),
+                        ]
+                    })
+                    .collect();
+                approaches.sort_by(|a, b| {
+                    distance(*a, next.checked.scenario.position())
+                        .total_cmp(&distance(*b, next.checked.scenario.position()))
+                });
+                for approach in approaches {
+                    if self.exhausted() {
+                        break;
+                    }
+                    if let Some(walked) = self.move_to(&next, approach, 0.23) {
+                        if let Some(climbed) = self.move_to(&walked, feet, 0.23) {
+                            self.retain(successors, climbed);
+                            break;
+                        }
+                    }
+                }
             }
             top[1] += 1;
             if top[1] > max_top
