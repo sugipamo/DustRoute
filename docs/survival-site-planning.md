@@ -124,3 +124,27 @@ The server was stopped with exit 0. Source, receive traces and check logs are
 pinned in the record. This comparison does **not** yet exercise building a real
 temporary platform, climbing it and retiring/recovering mining during cleanup;
 that declared access sequence is the next live milestone.
+
+## Actual temporary access verified (2026-10-02 UTC)
+
+The [declared finite access trial](survival-temporary-access-trial.md) passed on
+an isolated non-OP vanilla 1.21.11 server. Three ordinary dirt placements consumed
+3 -> 2 -> 1 -> empty. The bot climbed the platform, retreated to supported ground,
+removed all three cubes and completed three explicit mining retirement/recovery
+cycles. Each movement matched the earlier hypothetical frames before dispatch;
+independent observations confirmed placements, endpoints, removals and the final
+stone floor with exact air above it.
+
+The [pinned evidence](evidence/survival-access-live-20261002.json) retains complete
+received traces, connection changes, inventory outcomes and server/check logs.
+Tested DustRoute source is `94c975c`; Voxrig is
+`be55a64bc32da1ff0265ff0bdeb591f13d623137` (280 managed files). Native tests:
+183 passed, five ignored; native and MCP all-targets Clippy passed; root formatting
+passed. The opt-in live test passed in 47.31 seconds including the fixture gate.
+The dedicated server saved and stopped with exit 0. Item drops were not credited
+as resources and their collection is not part of this acceptance.
+
+This verifies the declared access sequence, not automatic access-layout selection
+or the complete adopted roofed build. Next are access/dependency/material planning,
+durable survival execution and full construction/cleanup acceptance. The broad
+survival construction goal remains active.

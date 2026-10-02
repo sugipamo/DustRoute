@@ -42,3 +42,13 @@ The opt-in test is
 Its presence/compilation alone is not evidence of success. Evidence must pin the
 tested source and preserve failures; no blind second placement/mining attempt is
 allowed after an ambiguous result.
+
+## Result (2026-10-02 UTC)
+
+Passed against DustRoute `94c975c` and Voxrig `be55a64`. See the
+[pinned result and compressed traces](evidence/survival-access-live-20261002.json).
+All three placements, both observed motions, all three removals and explicit
+retirement/recovery cycles succeeded. Final independent region observation
+matched stone ground and air above. No item recovery was assumed. The isolated
+server stopped cleanly. General scheduling, durable jobs and the adopted roofed
+construction acceptance remain open.
