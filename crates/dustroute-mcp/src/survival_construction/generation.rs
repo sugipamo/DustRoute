@@ -111,6 +111,18 @@ struct Node<'a> {
     cleaning: bool,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum PoseKind {
+    Center,
+    Edge,
+    Overhang,
+}
+#[derive(Clone, Copy)]
+struct WorkPose {
+    position: [f64; 3],
+    kind: PoseKind,
+}
+
 struct Search<'a> {
     limits: SearchLimits,
     supplied: &'a BTreeMap<String, usize>,
@@ -400,7 +412,7 @@ impl<'a> Search<'a> {
         }
     }
 
-    fn move_to(&mut self, node: &Node<'a>, target: [f64; 3]) -> Option<Node<'a>> {
+    fn move_to(&mut self, node: &Node<'a>, target: [f64; 3], goal_radius: f64) -> Option<Node<'a>> {
         let from = node.checked.scenario.position();
         let yaw = rotation(from, target)[0];
         let jump = target[1] > from[1] + 0.1;
@@ -438,7 +450,7 @@ impl<'a> Search<'a> {
                         _ => false,
                     });
                 if (end[1] - target[1]).abs() < 0.01
-                    && error < 0.23_f64.powi(2)
+                    && error < goal_radius.powi(2)
                     && !retraces
                     && best.as_ref().is_none_or(|(old, _)| error < *old)
                 {
@@ -446,7 +458,7 @@ impl<'a> Search<'a> {
                     // First sufficiently centered admitted endpoint. Exact
                     // native prediction is retained; optimal control duration
                     // is not needed for this candidate policy.
-                    if error <= 0.13_f64.powi(2) {
+                    if error <= goal_radius.min(0.13).powi(2) {
                         break;
                     }
                 }
@@ -474,7 +486,7 @@ impl<'a> Search<'a> {
                 f64::from(top[1]) + 1.0,
                 f64::from(top[2]) + 0.5,
             ];
-            if let Some(moved) = self.move_to(&next, feet) {
+            if let Some(moved) = self.move_to(&next, feet, 0.23) {
                 self.retain(successors, moved);
             }
             top[1] += 1;
@@ -522,26 +534,29 @@ impl<'a> Search<'a> {
                             .block([x, y + 2, z])
                             .is_ok_and(|s| s == air())
                     {
-                        for (dx, dz) in [
-                            (0.5, 0.5),
-                            (0.12, 0.5),
-                            (0.88, 0.5),
-                            (0.5, 0.12),
-                            (0.5, 0.88),
+                        for (kind, dx, dz) in [
+                            (PoseKind::Center, 0.5, 0.5),
+                            (PoseKind::Edge, 0.12, 0.5),
+                            (PoseKind::Edge, 0.88, 0.5),
+                            (PoseKind::Edge, 0.5, 0.12),
+                            (PoseKind::Edge, 0.5, 0.88),
                             // Feet can overhang a cube while the conservative
                             // native body/support envelope remains admitted.
                             // Useful for reaching its outward face; no support
                             // authority follows from this candidate coordinate.
-                            (-0.12, 0.5),
-                            (1.12, 0.5),
-                            (0.5, -0.12),
-                            (0.5, 1.12),
+                            (PoseKind::Overhang, -0.12, 0.5),
+                            (PoseKind::Overhang, 1.12, 0.5),
+                            (PoseKind::Overhang, 0.5, -0.12),
+                            (PoseKind::Overhang, 0.5, 1.12),
                         ] {
                             let target = [f64::from(x) + dx, f64::from(y + 1), f64::from(z) + dz];
                             if distance(from, target) > 0.04
                                 && within(node.checked.ledger.site.scope.travel, target)
                             {
-                                targets.push(target);
+                                targets.push(WorkPose {
+                                    position: target,
+                                    kind,
+                                });
                             }
                         }
                     }
@@ -552,36 +567,45 @@ impl<'a> Search<'a> {
         // directions. Distance to unfinished work is a heuristic, not admission.
         targets.sort_by(|a, b| {
             if node.cleaning {
-                a[1].total_cmp(&b[1]).then_with(|| {
-                    Self::cleanup_distance(node, *a).total_cmp(&Self::cleanup_distance(node, *b))
+                a.position[1].total_cmp(&b.position[1]).then_with(|| {
+                    Self::cleanup_distance(node, a.position)
+                        .total_cmp(&Self::cleanup_distance(node, b.position))
                 })
             } else {
-                Self::work_distance(node, *a).total_cmp(&Self::work_distance(node, *b))
+                Self::work_distance(node, a.position)
+                    .total_cmp(&Self::work_distance(node, b.position))
             }
         });
         // Retain elevation alternatives separately: many samples on a nearby
         // floor must not crowd every possible scaffold ascent out of the family.
         let mut selected = Vec::new();
-        for (height_class, limit) in [(-1, 6), (1, 6), (0, 12)] {
-            let mut count = 0;
-            for &target in &targets {
-                let class = if target[1] < from[1] - 0.1 {
-                    -1
-                } else if target[1] > from[1] + 0.1 {
-                    1
-                } else {
-                    0
-                };
-                if class == height_class && count < limit {
-                    selected.push(target);
-                    count += 1;
+        for (height_class, limit) in [(-1, 2), (1, 2), (0, 4)] {
+            for kind in [PoseKind::Center, PoseKind::Edge, PoseKind::Overhang] {
+                let mut count = 0;
+                for &target in &targets {
+                    let class = if target.position[1] < from[1] - 0.1 {
+                        -1
+                    } else if target.position[1] > from[1] + 0.1 {
+                        1
+                    } else {
+                        0
+                    };
+                    if class == height_class && target.kind == kind && count < limit {
+                        selected.push(target);
+                        count += 1;
+                    }
                 }
             }
         }
         self.stats.pruned += targets.len().saturating_sub(selected.len());
         let targets = selected;
         for target in targets {
-            if let Some(next) = self.move_to(node, target) {
+            let radius = if target.kind == PoseKind::Overhang {
+                0.10
+            } else {
+                0.23
+            };
+            if let Some(next) = self.move_to(node, target.position, radius) {
                 self.retain(successors, next);
             }
             if self.exhausted() {
