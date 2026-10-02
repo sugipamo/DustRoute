@@ -423,3 +423,25 @@ In accordance with the user's concern stop, that native extension is unimplement
 pending review of the [concrete proposal](survival-site-planning.md).
 No live trial was performed in this grounded-authoring checkpoint. The complete
 roofed construction goal remains unfinished.
+
+## Approved hypothetical geometry and shared search checkpoint (2026-10-02)
+
+The user approved the future-geometry prerequisite. Voxrig now captures bounded
+immutable static scenes, evaluates hypothetical edits using shared native player
+geometry, and keeps hypothetical predictions type-distinct from live movement
+previews. DustRoute shares one route-search kernel between these two prediction
+types; only live routes expose execution. The original concern is no longer
+waiting for approval. Details and remaining work are in
+[site planning](survival-site-planning.md#approved-implementation-in-progress).
+
+Native tests pass 183 cases plus two doc tests, including a compile-fail type
+boundary check. Root search tests and all-targets Clippy pass. The
+[isolated live comparison](evidence/survival-scenario-live-20261002.json) verifies
+identical captured/live route predictions, hypothetical obstruction invalidation
+without a live edit, and actual non-OP detour/place/return. Source is Voxrig
+`d2db52a9395fb9873b21da668041f74a6ee9ed0a` (280 managed files), live-tested in
+DustRoute `1ed4a13`.
+
+Next: declared actual temporary-access placement, climbing, retreat and mining
+cleanup comparison; then access/dependency/material planning, durable execution
+and full adopted roofed-structure acceptance. The whole goal remains active.

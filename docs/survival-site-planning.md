@@ -108,3 +108,19 @@ isolation/staleness checks, step-up/retreat/removal and foot-support refusal.
 These do not constitute live temporary-access acceptance. Access-work selection,
 placement/removal dependency scheduling, resource reservations, durable jobs and
 the complete roofed construction/cleanup remain unfinished.
+
+The [pinned live comparison](evidence/survival-scenario-live-20261002.json) passed
+on the isolated non-OP vanilla 1.21.11 fixture. Captured-world route search took
+191 ms including capture; the live search took 206 ms. Both selected the same
+56-tick outbound frames. Adding hypothetical dirt at `[1,-60,1]` changed the
+predicted frames and invalidated the original branch's route, while the live
+capture remained valid. The actual unchanged-world detour, ordinary dirt
+placement/material decrement, revalidated return and independent observations
+all passed. The hypothetical obstruction was never written to Minecraft.
+
+Validation: native 183 tests and two doc tests passed (five opt-in tests ignored);
+root navigation three tests passed; native and root all-targets Clippy passed.
+The server was stopped with exit 0. Source, receive traces and check logs are
+pinned in the record. This comparison does **not** yet exercise building a real
+temporary platform, climbing it and retiring/recovering mining during cleanup;
+that declared access sequence is the next live milestone.
