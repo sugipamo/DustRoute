@@ -3,7 +3,7 @@ use super::*;
 use dustroute_translate::building::generate_grounded_building_design;
 use serde_json::json;
 
-fn design() -> GeneratedGroundedBuildingDesign {
+pub(super) fn design() -> GeneratedGroundedBuildingDesign {
     generate_grounded_building_design(serde_json::from_value(json!({
         "ground_material":"stone", "design": {
             "namespace":"test.survival-plan", "name":"Elevated roof",
@@ -25,7 +25,7 @@ fn design() -> GeneratedGroundedBuildingDesign {
 fn region(a: [i32; 3], b: [i32; 3]) -> Region {
     Region::new(pos(a), pos(b))
 }
-fn scope() -> ConstructionScope {
+pub(super) fn scope() -> ConstructionScope {
     ConstructionScope {
         observed: region([-8, -2, -8], [12, 10, 12]),
         edits: WorldEditScope {

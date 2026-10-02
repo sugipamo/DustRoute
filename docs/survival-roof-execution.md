@@ -4,6 +4,9 @@ Approved 2026-10-02. Execute these as successive goals, preserving the original
 roofed construction objective. Stop and report genuine correctness concerns or
 necessary undeclared prerequisites; do not weaken physics, scope or evidence.
 
+See the [next-milestone roadmap](survival-construction-roadmap.md) for user-visible
+outcomes, stage dependencies, acceptance criteria and deferred scope.
+
 1. **Complete:** a complete authored roof sequence through the common executor,
    exact site and temporary cleanup verified on isolated non-OP vanilla.
 2. **Active:** generate access/action sequences from a bounded design and observed site.

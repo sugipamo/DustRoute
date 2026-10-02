@@ -12,6 +12,7 @@ use std::collections::BTreeMap;
 use voxrig::checked_survival::{
     CapturedSurvivalScene, HypotheticalBlockEdit, HypotheticalMovementPreview,
     HypotheticalPlacement, HypotheticalReconnectBoundary, StandingContext, SurvivalControl,
+    SurvivalScenario,
 };
 use voxrig::{BlockFace, NativeBlockState};
 
@@ -326,6 +327,7 @@ impl HypotheticalConstructionPlan {
     }
 }
 
+#[derive(Clone)]
 struct Ledger<'a> {
     site: &'a ConstructionSite,
     remaining: BTreeMap<[i32; 3], NativeBlockState>,
@@ -460,42 +462,77 @@ pub fn preview_construction_sequence(
             "requires 1..512 actions",
         ));
     }
-    if scene.region().min != xyz(site.scope.observed.min)
-        || scene.region().max != xyz(site.scope.observed.max)
-    {
-        return Err(ConstructionPlanningError::new(
-            "scene_scope_mismatch",
-            "capture and declared observation bounds differ",
-        ));
+    let mut prefix = CheckedPrefix::new(scene, site)?;
+    for action in actions {
+        prefix = prefix.after(action)?;
     }
-    let mut scenario = scene.scenario();
-    let baseline = LiteralSnapshotIndex::new(&site.baseline).expect("checked site baseline");
-    for p in cells(Region::new(site.baseline.min, site.baseline.max)) {
-        if scenario.block(xyz(p)).map_err(native_error)? != literal(&baseline, p) {
+    prefix.finish(supplied)
+}
+
+/// Private branchable checker shared by authored candidates and generated search.
+/// A failed extension cannot mutate its predecessor or grant execution authority.
+#[derive(Clone)]
+struct CheckedPrefix<'a> {
+    scene: &'a CapturedSurvivalScene,
+    ledger: Ledger<'a>,
+    scenario: SurvivalScenario,
+    steps: Vec<HypotheticalConstructionStep>,
+}
+impl<'a> CheckedPrefix<'a> {
+    fn new(scene: &'a CapturedSurvivalScene, site: &'a ConstructionSite) -> Result<Self> {
+        if scene.region().min != xyz(site.scope.observed.min)
+            || scene.region().max != xyz(site.scope.observed.max)
+        {
             return Err(ConstructionPlanningError::new(
-                "site_baseline_mismatch",
-                "observed cell differs from declared predecessor",
-            )
-            .at(xyz(p)));
+                "scene_scope_mismatch",
+                "capture and declared observation bounds differ",
+            ));
         }
+        let scenario = scene.scenario();
+        let baseline = LiteralSnapshotIndex::new(&site.baseline).expect("checked site baseline");
+        for p in cells(Region::new(site.baseline.min, site.baseline.max)) {
+            if scenario.block(xyz(p)).map_err(native_error)? != literal(&baseline, p) {
+                return Err(ConstructionPlanningError::new(
+                    "site_baseline_mismatch",
+                    "observed cell differs from declared predecessor",
+                )
+                .at(xyz(p)));
+            }
+        }
+        // Even a sequence without motion must start/end inside the declared body scope.
+        let idle = [SurvivalControl {
+            yaw: 0.0,
+            input: Default::default(),
+        }; 3];
+        let initial = scenario.preview_path(&idle).map_err(native_error)?;
+        if !survival_navigation::hypothetical_admissible(&initial, site.scope.travel) {
+            return Err(ConstructionPlanningError::new(
+                "travel_scope_mismatch",
+                "initial body is not safely within travel bounds",
+            ));
+        }
+        Ok(Self {
+            scene,
+            ledger: Ledger::new(site),
+            scenario,
+            steps: Vec::new(),
+        })
     }
-    // Even a sequence without motion must start/end inside the declared body scope.
-    let idle = [SurvivalControl {
-        yaw: 0.0,
-        input: Default::default(),
-    }; 3];
-    let initial = scenario.preview_path(&idle).map_err(native_error)?;
-    if !survival_navigation::hypothetical_admissible(&initial, site.scope.travel) {
-        return Err(ConstructionPlanningError::new(
-            "travel_scope_mismatch",
-            "initial body is not safely within travel bounds",
-        ));
-    }
-    let mut ledger = Ledger::new(site);
-    let mut steps = Vec::with_capacity(actions.len());
-    for (index, action) in actions.iter().enumerate() {
-        let step = (|| -> Result<_> {
-            Ok(match action {
+
+    fn after(self, action: &ConstructionAction) -> Result<Self> {
+        let index = self.steps.len();
+        (|| {
+            if index >= 512 {
+                return Err(ConstructionPlanningError::new(
+                    "invalid_sequence",
+                    "at most 512 actions",
+                ));
+            }
+            let mut next = self;
+            let site = next.ledger.site;
+            let ledger = &mut next.ledger;
+            let mut scenario = next.scenario;
+            let step = match action {
                 ConstructionAction::Move { controls } => {
                     let prediction = scenario.preview_path(controls).map_err(native_error)?;
                     if !survival_navigation::hypothetical_admissible(&prediction, site.scope.travel)
@@ -551,51 +588,74 @@ pub fn preview_construction_sequence(
                         rotation: *rotation,
                     }
                 }
-            })
+            };
+            next.scenario = scenario;
+            next.steps.push(step);
+            Ok(next)
         })()
-        .map_err(|mut e| {
-            e.action = Some(index);
-            e
-        })?;
-        steps.push(step);
+        .map_err(|mut error: ConstructionPlanningError| {
+            error.action = Some(index);
+            error
+        })
     }
-    let materials = ledger.finish(supplied)?;
-    let final_position = scenario.position();
-    if (0..3).any(|i| {
-        final_position[i] < site.scope.retreat.min[i]
-            || final_position[i] > site.scope.retreat.max[i]
-    }) {
-        return Err(ConstructionPlanningError::new(
-            "retreat_not_reached",
-            "sequence must end in the declared safe feet volume",
-        ));
-    }
-    let end = scenario.preview_path(&idle).map_err(native_error)?;
-    if !survival_navigation::hypothetical_admissible(&end, site.scope.travel) {
-        return Err(ConstructionPlanningError::new(
-            "unsafe_final_standing",
-            "cleanup must preserve safe standing clearance",
-        ));
-    }
-    let expected = LiteralSnapshotIndex::new(&site.expected).expect("checked expected snapshot");
-    for p in cells(Region::new(site.expected.min, site.expected.max)) {
-        if scenario.block(xyz(p)).map_err(native_error)? != literal(&expected, p) {
+
+    fn finish(self, supplied: &BTreeMap<String, usize>) -> Result<HypotheticalConstructionPlan> {
+        if self.steps.is_empty() {
             return Err(ConstructionPlanningError::new(
-                "final_geometry_mismatch",
-                "candidate does not reproduce exact final geometry",
-            )
-            .at(xyz(p)));
+                "invalid_sequence",
+                "requires at least one action",
+            ));
         }
+        let Self {
+            scene,
+            ledger,
+            scenario,
+            steps,
+        } = self;
+        let site = ledger.site;
+        let idle = [SurvivalControl {
+            yaw: 0.0,
+            input: Default::default(),
+        }; 3];
+        let materials = ledger.finish(supplied)?;
+        let final_position = scenario.position();
+        if (0..3).any(|i| {
+            final_position[i] < site.scope.retreat.min[i]
+                || final_position[i] > site.scope.retreat.max[i]
+        }) {
+            return Err(ConstructionPlanningError::new(
+                "retreat_not_reached",
+                "sequence must end in the declared safe feet volume",
+            ));
+        }
+        let end = scenario.preview_path(&idle).map_err(native_error)?;
+        if !survival_navigation::hypothetical_admissible(&end, site.scope.travel) {
+            return Err(ConstructionPlanningError::new(
+                "unsafe_final_standing",
+                "cleanup must preserve safe standing clearance",
+            ));
+        }
+        let expected =
+            LiteralSnapshotIndex::new(&site.expected).expect("checked expected snapshot");
+        for p in cells(Region::new(site.expected.min, site.expected.max)) {
+            if scenario.block(xyz(p)).map_err(native_error)? != literal(&expected, p) {
+                return Err(ConstructionPlanningError::new(
+                    "final_geometry_mismatch",
+                    "candidate does not reproduce exact final geometry",
+                )
+                .at(xyz(p)));
+            }
+        }
+        Ok(HypotheticalConstructionPlan {
+            source: scene.source().clone(),
+            scope: site.scope.clone(),
+            baseline: site.baseline.clone(),
+            expected: site.expected.clone(),
+            steps,
+            materials,
+            final_position,
+        })
     }
-    Ok(HypotheticalConstructionPlan {
-        source: scene.source().clone(),
-        scope: site.scope.clone(),
-        baseline: site.baseline.clone(),
-        expected: site.expected.clone(),
-        steps,
-        materials,
-        final_position,
-    })
 }
 
 #[cfg(test)]
@@ -605,3 +665,6 @@ mod tests;
 #[cfg(test)]
 #[path = "survival_construction/native_roof_trial.rs"]
 mod native_roof_trial;
+
+#[path = "survival_construction/generation.rs"]
+pub mod generation;

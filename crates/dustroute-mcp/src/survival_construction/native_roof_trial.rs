@@ -453,7 +453,30 @@ async fn exercise(
         })
         .await
         .map_err(|e| e.to_string())?;
-    let plan = plan(&scene, events)?;
+    let plan = if std::env::var("DUSTROUTE_SURVIVAL_ROOF_PLANNER").as_deref() == Ok("generated") {
+        let site =
+            ConstructionSite::from_grounded(&design()?, scope()).map_err(|e| e.to_string())?;
+        let mut limits = generation::SearchLimits::default();
+        if let Ok(value) = std::env::var("DUSTROUTE_SURVIVAL_ROOF_CHECKS") {
+            limits.candidate_checks = value.parse().map_err(|e| format!("search budget: {e}"))?;
+        }
+        let result = generation::generate_construction_plan(
+            &scene,
+            &site,
+            &BTreeMap::from([
+                ("minecraft:cobblestone".into(), 49),
+                ("minecraft:dirt".into(), 32),
+            ]),
+            "minecraft:dirt",
+            limits,
+        );
+        events.push(json!({"phase":"generated_plan_result","result":result,"limits":limits}));
+        result
+            .map_err(|e| format!("automatic construction: {e:?}"))?
+            .plan
+    } else {
+        plan(&scene, events)?
+    };
     if !live {
         return Ok(());
     }

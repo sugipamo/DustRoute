@@ -1,0 +1,578 @@
+//! Bounded caller policy over the common checked construction transitions.
+//! Candidate pruning is deliberately incomplete; it never establishes impossibility.
+use super::*;
+use std::collections::BTreeSet;
+use voxrig::checked_survival::SurvivalInput;
+
+#[derive(Clone, Copy, Debug, Serialize)]
+pub struct SearchLimits {
+    /// Includes refused extensions. One check may call multiple native guards.
+    pub candidate_checks: usize,
+    pub expanded: usize,
+    pub frontier: usize,
+    pub actions: usize,
+}
+impl Default for SearchLimits {
+    fn default() -> Self {
+        Self {
+            candidate_checks: 100_000,
+            expanded: 512,
+            frontier: 16,
+            actions: 256,
+        }
+    }
+}
+impl SearchLimits {
+    fn validate(self) -> Result<()> {
+        if !(1..=1_000_000).contains(&self.candidate_checks)
+            || !(1..=4096).contains(&self.expanded)
+            || !(1..=64).contains(&self.frontier)
+            || !(1..=512).contains(&self.actions)
+        {
+            return Err(ConstructionPlanningError::new(
+                "invalid_search_limits",
+                "require 1..1000000 candidate checks, 1..4096 expansions, 1..64 frontier, 1..512 actions",
+            ));
+        }
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct ConstructionSearch {
+    pub candidate_checks: usize,
+    pub expanded: usize,
+    pub rejected: usize,
+    pub pruned: usize,
+    pub frontier_peak: usize,
+    pub complete_checks: usize,
+    pub best_remaining_permanent: usize,
+    pub best_remaining_temporary: Vec<[i32; 3]>,
+    /// Bounded samples, not an exhaustive explanation or a proof of impossibility.
+    pub refusal_examples: Vec<ConstructionPlanningError>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum GenerationFailure {
+    InvalidInput { error: ConstructionPlanningError },
+    InitialSceneRefused { error: ConstructionPlanningError },
+    InsufficientMaterials { missing: BTreeMap<String, usize> },
+    NoCompletePlanWithinLimits { search: ConstructionSearch },
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct GeneratedConstructionPlan {
+    pub plan: HypotheticalConstructionPlan,
+    pub search: ConstructionSearch,
+}
+
+#[derive(Clone)]
+struct Node<'a> {
+    checked: CheckedPrefix<'a>,
+}
+
+struct Search<'a> {
+    limits: SearchLimits,
+    supplied: &'a BTreeMap<String, usize>,
+    temporary_material: &'a str,
+    temporary_cells: Vec<[i32; 3]>,
+    stats: ConstructionSearch,
+}
+
+fn missing_materials(
+    ledger: &Ledger<'_>,
+    supplied: &BTreeMap<String, usize>,
+) -> BTreeMap<String, usize> {
+    // Reserve unbuilt permanent targets, including when temporary and permanent
+    // materials coincide. Removing a temporary block never refunds consumption.
+    let mut required = ledger.materials.required_supplied.clone();
+    for state in ledger.remaining.values() {
+        *required.entry(state.name.clone()).or_default() += 1;
+    }
+    required
+        .into_iter()
+        .filter_map(|(name, count)| {
+            let missing = count.saturating_sub(supplied.get(&name).copied().unwrap_or(0));
+            (missing > 0).then_some((name, missing))
+        })
+        .collect()
+}
+
+const FACES: [(BlockFace, [i32; 3]); 6] = [
+    (BlockFace::Up, [0, 1, 0]),
+    (BlockFace::North, [0, 0, -1]),
+    (BlockFace::South, [0, 0, 1]),
+    (BlockFace::West, [-1, 0, 0]),
+    (BlockFace::East, [1, 0, 0]),
+    (BlockFace::Down, [0, -1, 0]),
+];
+
+fn rotation(eye: [f64; 3], point: [f64; 3]) -> [f32; 2] {
+    let d: [f64; 3] = std::array::from_fn(|i| point[i] - eye[i]);
+    [
+        (-d[0]).atan2(d[2]).to_degrees() as f32,
+        (-d[1]).atan2(d[0].hypot(d[2])).to_degrees() as f32,
+    ]
+}
+fn eye(node: &Node<'_>) -> [f64; 3] {
+    let source = node.checked.scene.source();
+    std::array::from_fn(|i| {
+        node.checked.scenario.position()[i] + source.eye_position[i] - source.position[i]
+    })
+}
+fn distance(a: [f64; 3], b: [f64; 3]) -> f64 {
+    (0..3).map(|i| (a[i] - b[i]).powi(2)).sum::<f64>()
+}
+fn center(p: [i32; 3]) -> [f64; 3] {
+    p.map(|n| f64::from(n) + 0.5)
+}
+fn within(bounds: TravelBounds, p: [f64; 3]) -> bool {
+    (0..3).all(|i| bounds.min[i] <= p[i] && p[i] <= bounds.max[i])
+}
+
+impl<'a> Search<'a> {
+    fn exhausted(&self) -> bool {
+        self.stats.candidate_checks >= self.limits.candidate_checks
+    }
+    fn reject(&mut self, error: ConstructionPlanningError) {
+        self.stats.rejected += 1;
+        if self.stats.refusal_examples.len() < 16
+            && !self
+                .stats
+                .refusal_examples
+                .iter()
+                .any(|e| e.code == error.code && e.detail == error.detail)
+        {
+            self.stats.refusal_examples.push(error);
+        }
+    }
+    fn extend(&mut self, node: &Node<'a>, action: ConstructionAction) -> Option<Node<'a>> {
+        if self.exhausted() || node.checked.steps.len() >= self.limits.actions {
+            return None;
+        }
+        self.stats.candidate_checks += 1;
+        match node.checked.clone().after(&action) {
+            Ok(checked) => {
+                let missing = missing_materials(&checked.ledger, self.supplied);
+                if !missing.is_empty() {
+                    let mut error = ConstructionPlanningError::new(
+                        "insufficient_supplied_materials",
+                        "candidate consumes reserved permanent or unavailable temporary materials",
+                    );
+                    error.missing_materials = missing;
+                    self.reject(error);
+                    None
+                } else {
+                    Some(Node { checked })
+                }
+            }
+            Err(error) => {
+                self.reject(error);
+                None
+            }
+        }
+    }
+
+    fn placement(
+        &mut self,
+        node: &Node<'a>,
+        target: [i32; 3],
+        material: &str,
+        purpose: PlacementPurpose,
+    ) -> Option<Node<'a>> {
+        // This is only candidate filtering. Native checks remain authoritative.
+        if distance(eye(node), center(target)) > 36.0 {
+            return None;
+        }
+        for (face, delta) in FACES {
+            let support = std::array::from_fn(|i| target[i] - delta[i]);
+            if node
+                .checked
+                .scenario
+                .block(support)
+                .is_ok_and(|s| s != air())
+            {
+                let point = std::array::from_fn(|i| {
+                    f64::from(support[i]) + 0.5 + f64::from(delta[i]) * 0.5
+                });
+                if let Some(next) = self.extend(
+                    node,
+                    ConstructionAction::Place {
+                        purpose,
+                        support,
+                        face,
+                        rotation: rotation(eye(node), point),
+                        material: material.into(),
+                    },
+                ) {
+                    return Some(next);
+                }
+            }
+        }
+        None
+    }
+
+    fn build_reachable(&mut self, mut node: Node<'a>) -> Node<'a> {
+        // Greedy closure is a candidate policy, not a dependency theorem. Other
+        // frontier branches can approach the same targets from different poses.
+        loop {
+            let mut targets: Vec<_> = node
+                .checked
+                .ledger
+                .remaining
+                .iter()
+                .map(|(p, s)| (*p, s.name.clone()))
+                .collect();
+            targets.sort_by(|a, b| {
+                a.0[1].cmp(&b.0[1]).then_with(|| {
+                    distance(center(a.0), eye(&node)).total_cmp(&distance(center(b.0), eye(&node)))
+                })
+            });
+            let mut changed = false;
+            for (p, name) in targets {
+                if let Some(next) = self.placement(&node, p, &name, PlacementPurpose::Permanent) {
+                    node = next;
+                    changed = true;
+                }
+                if self.exhausted() {
+                    return node;
+                }
+            }
+            if !changed {
+                return node;
+            }
+        }
+    }
+
+    fn score(&self, node: &Node<'_>) -> f64 {
+        let ledger = &node.checked.ledger;
+        let p = node.checked.scenario.position();
+        let target_distance = if !ledger.remaining.is_empty() {
+            ledger
+                .remaining
+                .keys()
+                .map(|t| distance(p, center(*t)))
+                .fold(f64::INFINITY, f64::min)
+        } else if !ledger.temporary.is_empty() {
+            ledger
+                .temporary
+                .keys()
+                .map(|t| distance(p, center(*t)))
+                .fold(f64::INFINITY, f64::min)
+        } else {
+            let b = ledger.site.scope.retreat;
+            distance(p, std::array::from_fn(|i| p[i].clamp(b.min[i], b.max[i])))
+        };
+        1000.0 * ledger.remaining.len() as f64
+            + 20.0 * ledger.temporary.len() as f64
+            + target_distance
+            + node.checked.steps.len() as f64 * 0.05
+    }
+
+    fn complete(&mut self, node: &Node<'a>) -> Option<HypotheticalConstructionPlan> {
+        if !node.checked.ledger.remaining.is_empty()
+            || !node.checked.ledger.temporary.is_empty()
+            || !within(
+                node.checked.ledger.site.scope.retreat,
+                node.checked.scenario.position(),
+            )
+        {
+            return None;
+        }
+        self.stats.complete_checks += 1;
+        match node.checked.clone().finish(self.supplied) {
+            Ok(plan) => Some(plan),
+            Err(error) => {
+                self.reject(error);
+                None
+            }
+        }
+    }
+
+    fn moves(&mut self, node: &Node<'a>, successors: &mut Vec<Node<'a>>) {
+        let from = node.checked.scenario.position();
+        let base = from.map(|v| v.floor() as i32);
+        let mut targets = Vec::new();
+        // Surface centers and edge approaches, derived from the current scene.
+        // Vertical offsets limit this candidate family to one-block transitions.
+        for x in base[0] - 3..=base[0] + 3 {
+            for z in base[2] - 3..=base[2] + 3 {
+                for y in base[1] - 2..=base[1] {
+                    if node
+                        .checked
+                        .scenario
+                        .block([x, y, z])
+                        .is_ok_and(|s| s != air())
+                        && node
+                            .checked
+                            .scenario
+                            .block([x, y + 1, z])
+                            .is_ok_and(|s| s == air())
+                        && node
+                            .checked
+                            .scenario
+                            .block([x, y + 2, z])
+                            .is_ok_and(|s| s == air())
+                    {
+                        for (dx, dz) in [
+                            (0.5, 0.5),
+                            (0.12, 0.5),
+                            (0.88, 0.5),
+                            (0.5, 0.12),
+                            (0.5, 0.88),
+                        ] {
+                            let target = [f64::from(x) + dx, f64::from(y + 1), f64::from(z) + dz];
+                            if distance(from, target) > 0.04
+                                && within(node.checked.ledger.site.scope.travel, target)
+                            {
+                                targets.push(target);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // Avoid a coordinate scan consuming the entire budget before useful
+        // directions. Distance to unfinished work is a heuristic, not admission.
+        let focus = node
+            .checked
+            .ledger
+            .remaining
+            .keys()
+            .chain(node.checked.ledger.temporary.keys())
+            .min_by(|a, b| distance(from, center(**a)).total_cmp(&distance(from, center(**b))))
+            .map(|p| center(*p))
+            .unwrap_or_else(|| {
+                let b = node.checked.ledger.site.scope.retreat;
+                std::array::from_fn(|i| (b.min[i] + b.max[i]) * 0.5)
+            });
+        targets.sort_by(|a, b| distance(*a, focus).total_cmp(&distance(*b, focus)));
+        // Explicit candidate pruning; no claim that the other surfaces are equal.
+        self.stats.pruned += targets.len().saturating_sub(24);
+        targets.truncate(24);
+        for target in targets {
+            let yaw = rotation(from, target)[0];
+            let jump = target[1] > from[1] + 0.1;
+            let mut best: Option<(f64, Node<'a>)> = None;
+            for active in 1..=32 {
+                if self.exhausted() {
+                    break;
+                }
+                let controls = (0..active + 24)
+                    .map(|t| SurvivalControl {
+                        yaw,
+                        input: SurvivalInput {
+                            forward: i8::from(t < active),
+                            strafe: 0,
+                            jump: jump && t == 0,
+                        },
+                    })
+                    .collect();
+                if let Some(next) = self.extend(node, ConstructionAction::Move { controls }) {
+                    let end = next.checked.scenario.position();
+                    let error = distance(target, end);
+                    if (end[1] - target[1]).abs() < 0.01
+                        && error < 0.23_f64.powi(2)
+                        && best.as_ref().is_none_or(|(old, _)| error < *old)
+                    {
+                        best = Some((error, next));
+                    }
+                }
+            }
+            if let Some((_, next)) = best {
+                successors.push(next);
+            }
+            if self.exhausted() {
+                return;
+            }
+        }
+    }
+}
+
+/// Produce a complete hypothetical plan or bounded-search diagnostics. This is
+/// read-only and grants no adoption, inventory receipt or execution authority.
+pub fn generate_construction_plan(
+    scene: &CapturedSurvivalScene,
+    site: &ConstructionSite,
+    supplied: &BTreeMap<String, usize>,
+    temporary_material: &str,
+    limits: SearchLimits,
+) -> std::result::Result<GeneratedConstructionPlan, GenerationFailure> {
+    limits
+        .validate()
+        .map_err(|error| GenerationFailure::InvalidInput { error })?;
+    if !temporary_material.starts_with("minecraft:") || temporary_material.len() > 128 {
+        return Err(GenerationFailure::InvalidInput {
+            error: ConstructionPlanningError::new(
+                "invalid_temporary_material",
+                "use a canonical minecraft material name",
+            ),
+        });
+    }
+    let missing = missing_materials(&Ledger::new(site), supplied);
+    if !missing.is_empty() {
+        return Err(GenerationFailure::InsufficientMaterials { missing });
+    }
+    let checked = CheckedPrefix::new(scene, site)
+        .map_err(|error| GenerationFailure::InitialSceneRefused { error })?;
+    let temporary_cells = site
+        .scope
+        .temporary
+        .iter()
+        .flat_map(|r| cells(*r).map(xyz))
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect();
+    let mut search = Search {
+        limits,
+        supplied,
+        temporary_material,
+        temporary_cells,
+        stats: ConstructionSearch {
+            best_remaining_permanent: site.structure.len(),
+            ..Default::default()
+        },
+    };
+    let mut frontier = vec![Node { checked }];
+    while !frontier.is_empty() && search.stats.expanded < limits.expanded && !search.exhausted() {
+        frontier.sort_by(|a, b| search.score(b).total_cmp(&search.score(a)));
+        let node = search.build_reachable(frontier.pop().unwrap());
+        search.stats.expanded += 1;
+        if node.checked.ledger.remaining.len() <= search.stats.best_remaining_permanent {
+            search.stats.best_remaining_permanent = node.checked.ledger.remaining.len();
+            search.stats.best_remaining_temporary =
+                node.checked.ledger.temporary.keys().copied().collect();
+        }
+        if let Some(plan) = search.complete(&node) {
+            return Ok(GeneratedConstructionPlan {
+                plan,
+                search: search.stats,
+            });
+        }
+        let mut successors = Vec::new();
+        for &target in node.checked.ledger.temporary.keys() {
+            for (face, delta) in FACES {
+                let point =
+                    std::array::from_fn(|i| f64::from(target[i]) + 0.5 + f64::from(delta[i]) * 0.5);
+                if let Some(next) = search.extend(
+                    &node,
+                    ConstructionAction::RemoveTemporary {
+                        target,
+                        face,
+                        rotation: rotation(eye(&node), point),
+                    },
+                ) {
+                    successors.push(next);
+                    break;
+                }
+            }
+        }
+        if !node.checked.ledger.remaining.is_empty() {
+            for target in search.temporary_cells.clone() {
+                if node
+                    .checked
+                    .scenario
+                    .block(target)
+                    .is_ok_and(|s| s == air())
+                {
+                    if let Some(next) = search.placement(
+                        &node,
+                        target,
+                        search.temporary_material,
+                        PlacementPurpose::Temporary,
+                    ) {
+                        successors.push(next);
+                    }
+                }
+                if search.exhausted() {
+                    break;
+                }
+            }
+        }
+        search.moves(&node, &mut successors);
+        frontier.extend(successors);
+        frontier.sort_by(|a, b| search.score(a).total_cmp(&search.score(b)));
+        search.stats.frontier_peak = search.stats.frontier_peak.max(frontier.len());
+        search.stats.pruned += frontier.len().saturating_sub(limits.frontier);
+        frontier.truncate(limits.frontier);
+    }
+    Err(GenerationFailure::NoCompletePlanWithinLimits {
+        search: search.stats,
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn temporary_consumption_reserves_unbuilt_permanent_materials_and_never_refunds() {
+        let site = ConstructionSite::from_grounded(
+            &super::super::tests::design(),
+            super::super::tests::scope(),
+        )
+        .unwrap();
+        let mut ledger = Ledger::new(&site);
+        let supplied = BTreeMap::from([("minecraft:cobblestone".into(), 49)]);
+        assert!(missing_materials(&ledger, &supplied).is_empty());
+        let edit = HypotheticalBlockEdit {
+            position: [-3, 0, 2],
+            before: air(),
+            after: NativeBlockState {
+                name: "minecraft:cobblestone".into(),
+                properties: Default::default(),
+            },
+        };
+        ledger.place(PlacementPurpose::Temporary, &edit).unwrap();
+        assert_eq!(
+            missing_materials(&ledger, &supplied)["minecraft:cobblestone"],
+            1
+        );
+        ledger
+            .remove(&HypotheticalBlockEdit {
+                position: edit.position,
+                before: edit.after,
+                after: air(),
+            })
+            .unwrap();
+        assert_eq!(
+            missing_materials(&ledger, &supplied)["minecraft:cobblestone"],
+            1
+        );
+        assert_eq!(ledger.remaining.len(), 49);
+    }
+
+    #[test]
+    fn extreme_search_budgets_refuse_before_candidate_generation() {
+        assert!(SearchLimits::default().validate().is_ok());
+        for limits in [
+            SearchLimits {
+                candidate_checks: 0,
+                ..Default::default()
+            },
+            SearchLimits {
+                candidate_checks: usize::MAX,
+                ..Default::default()
+            },
+            SearchLimits {
+                expanded: usize::MAX,
+                ..Default::default()
+            },
+            SearchLimits {
+                frontier: 0,
+                ..Default::default()
+            },
+            SearchLimits {
+                frontier: 65,
+                ..Default::default()
+            },
+            SearchLimits {
+                actions: 513,
+                ..Default::default()
+            },
+        ] {
+            assert_eq!(limits.validate().unwrap_err().code, "invalid_search_limits");
+        }
+    }
+}
