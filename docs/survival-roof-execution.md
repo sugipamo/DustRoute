@@ -4,9 +4,9 @@ Approved 2026-10-02. Execute these as successive goals, preserving the original
 roofed construction objective. Stop and report genuine correctness concerns or
 necessary undeclared prerequisites; do not weaken physics, scope or evidence.
 
-1. **Active:** a complete authored roof sequence through the common executor,
+1. **Complete:** a complete authored roof sequence through the common executor,
    exact site and temporary cleanup verified on isolated non-OP vanilla.
-2. Generate access/action sequences from a bounded design and observed site.
+2. **Next:** generate access/action sequences from a bounded design and observed site.
 3. Connect adopted Blueprint/policy and public MCP job orchestration.
 4. Reobserve a stopped site and create a new checked continuation; no replay of
    serialized native tokens or uncertain old actions.
@@ -310,3 +310,36 @@ The descent-only waypoint tolerance is now 0.23; candidates must still pass the
 same native terminal-clearance, support and travel checks, and execution still
 requires exact predicted frames and received reconnect position. This changes
 candidate selection, not native physical or execution tolerances.
+
+## Fixed reference completed (2026-10-02 UTC)
+
+Complete preflight `preflight-e` and actual execution `live-c` passed on consumer
+`be93ae54f17444310d15f9c5f6cfda04dd12c11f`, native
+`2b6e7bfc94e6270054eac5c7b14a74d4657a411c`. The common executor completed all
+119 steps: 49 permanent cobblestone placements, 19 temporary dirt placements,
+32 movements and 19 temporary removals. Each removal's actual fresh received
+start satisfied its planned reconnect boundary. All temporary ownership was
+cleared and the bot retreated to ground at
+`[1.436997156103756,-60,-1.4998972560732997]`.
+
+Final exact verification used an independent connection over all 3,120 observed
+cells. The expected permanent geometry is the full 25-block roof and four
+six-block columns; all 49 protected floor cells in the Blueprint also match.
+The persisted execution journal equals the record in the trial output, with
+`completed_steps=119`, `outcome=observed`, `continuation=completed`. All 21 retained
+receive-trace windows are complete. Reconnect windows start after setup; their
+received start contexts are retained in the journal. Final independent comparison
+is recorded as a count and successful pinned check, not a separate full snapshot.
+
+The isolated non-OP survival test passed in 215.57 seconds including fixture
+preparation and preflight; the dedicated server saved and stopped with exit 0.
+Fixture commands only supplied the initial environment, position and inventory.
+Construction, movement and cleanup used ordinary client actions. No drops were
+credited toward the required 49 cobblestone and 19 cumulative temporary dirt.
+See [pinned evidence and checksummed archives](evidence/survival-roof-complete-20261002.json)
+for the successful runs, the preceding preflight refusal, tests and journal.
+
+Stage 1 is complete. This is a checked authored sequence for the reference
+building. Automatic action/access selection, public Blueprint/MCP integration,
+new plans after interrupted jobs and whole-building failure coverage remain the
+separate stages above.

@@ -520,3 +520,18 @@ See [the contract and remaining work](survival-site-planning.md#candidate-sequen
 This is candidate validation, not automatic access-work selection, adoption or a
 durable executor. The full elevated roof's player sequence and live construction
 acceptance remain unfinished. The broad goal remains active.
+
+## Complete fixed roof acceptance (2026-10-02 UTC)
+
+The later [roof execution milestone](survival-roof-execution.md#fixed-reference-completed-2026-10-02-utc)
+now supersedes those earlier unfinished statuses. The common executor completed
+119 ordinary survival operations for the full 49-block roof/columns, removed all
+19 temporary dirt blocks and retreated to ground. An independent connection
+verified all 3,120 observed cells exactly. The durable journal, received traces,
+source pins and checks are saved in the
+[completion evidence](evidence/survival-roof-complete-20261002.json).
+
+This completes the fixed reference stage. The approved next goal is automatic
+bounded action/access/cleanup generation from design and observed scene, reusing
+the same native physics, typed lifecycle boundaries and common sequence checker.
+Public adoption/MCP integration and interrupted-job continuation are later stages.
