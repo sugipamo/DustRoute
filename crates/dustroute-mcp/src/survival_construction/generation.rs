@@ -286,10 +286,9 @@ impl<'a> Search<'a> {
         }
     }
 
-    fn score(&self, node: &Node<'_>) -> f64 {
+    fn work_distance(node: &Node<'_>, p: [f64; 3]) -> f64 {
         let ledger = &node.checked.ledger;
-        let p = node.checked.scenario.position();
-        let target_distance = if !ledger.remaining.is_empty() {
+        if !ledger.remaining.is_empty() {
             ledger
                 .remaining
                 .keys()
@@ -299,8 +298,7 @@ impl<'a> Search<'a> {
                         f64::from(t[1]) - 1.0,
                         f64::from(t[2]) + 0.5,
                     ];
-                    (p[0] - work[0]).powi(2)
-                        + (p[2] - work[2]).powi(2)
+                    ((p[0] - work[0]).hypot(p[2] - work[2]) - 2.0).powi(2)
                         + 16.0 * (p[1] - work[1]).min(0.0).powi(2)
                 })
                 .fold(f64::INFINITY, f64::min)
@@ -313,7 +311,12 @@ impl<'a> Search<'a> {
         } else {
             let b = ledger.site.scope.retreat;
             distance(p, std::array::from_fn(|i| p[i].clamp(b.min[i], b.max[i])))
-        };
+        }
+    }
+
+    fn score(&self, node: &Node<'_>) -> f64 {
+        let ledger = &node.checked.ledger;
+        let target_distance = Self::work_distance(node, node.checked.scenario.position());
         let temporary_cost = if ledger.remaining.is_empty() {
             20.0
         } else {
@@ -342,6 +345,103 @@ impl<'a> Search<'a> {
                 self.reject(error);
                 None
             }
+        }
+    }
+
+    fn move_to(&mut self, node: &Node<'a>, target: [f64; 3]) -> Option<Node<'a>> {
+        let from = node.checked.scenario.position();
+        let yaw = rotation(from, target)[0];
+        let jump = target[1] > from[1] + 0.1;
+        let mut best: Option<(f64, Node<'a>)> = None;
+        for active in 1..=32 {
+            if self.exhausted() {
+                break;
+            }
+            let controls = (0..active + 24)
+                .map(|t| SurvivalControl {
+                    yaw,
+                    input: SurvivalInput {
+                        forward: i8::from(t < active),
+                        strafe: 0,
+                        jump: jump && t == 0,
+                    },
+                })
+                .collect();
+            if let Some(next) = self.extend(node, ConstructionAction::Move { controls }) {
+                let end = next.checked.scenario.position();
+                let error = distance(target, end);
+                // Restrict this candidate family to non-retracing motion
+                // between edits. This prunes paths; it does not equate native
+                // states or claim that a pruned route is physically invalid.
+                let retraces = node
+                    .checked
+                    .steps
+                    .iter()
+                    .rev()
+                    .take_while(|s| matches!(s, HypotheticalConstructionStep::Move { .. }))
+                    .any(|s| match s {
+                        HypotheticalConstructionStep::Move { prediction } => {
+                            distance(end, prediction.initial_position) < 0.25_f64.powi(2)
+                        }
+                        _ => false,
+                    });
+                if (end[1] - target[1]).abs() < 0.01
+                    && error < 0.23_f64.powi(2)
+                    && !retraces
+                    && best.as_ref().is_none_or(|(old, _)| error < *old)
+                {
+                    best = Some((error, next));
+                    // First sufficiently centered admitted endpoint. Exact
+                    // native prediction is retained; optimal control duration
+                    // is not needed for this candidate policy.
+                    if error <= 0.13_f64.powi(2) {
+                        break;
+                    }
+                }
+            }
+        }
+        best.map(|(_, next)| next)
+    }
+
+    fn access_successors(
+        &mut self,
+        node: &Node<'a>,
+        target: [i32; 3],
+        mut next: Node<'a>,
+        successors: &mut Vec<Node<'a>>,
+    ) {
+        // A placement is useful access only together with a checked path onto it.
+        // Grow a bounded column up to one block above current feet, using only
+        // permitted cells and native placement transitions. This macro retains
+        // every ordinary action; it is neither a shape template nor a teleport.
+        let mut top = target;
+        let max_top = node.checked.scenario.position()[1].floor() as i32;
+        while top[1] <= max_top && !self.exhausted() {
+            let feet = [
+                f64::from(top[0]) + 0.5,
+                f64::from(top[1]) + 1.0,
+                f64::from(top[2]) + 0.5,
+            ];
+            if let Some(moved) = self.move_to(&next, feet) {
+                self.retain(successors, moved);
+            }
+            top[1] += 1;
+            if top[1] > max_top
+                || self.temporary_cells.binary_search(&top).is_err()
+                || !next.checked.scenario.block(top).is_ok_and(|s| s == air())
+            {
+                break;
+            }
+            let Some(higher) = self.placement(
+                &next,
+                top,
+                self.temporary_material,
+                PlacementPurpose::Temporary,
+            ) else {
+                break;
+            };
+            self.retain(successors, higher.clone());
+            next = higher;
         }
     }
 
@@ -390,19 +490,9 @@ impl<'a> Search<'a> {
         }
         // Avoid a coordinate scan consuming the entire budget before useful
         // directions. Distance to unfinished work is a heuristic, not admission.
-        let focus = node
-            .checked
-            .ledger
-            .remaining
-            .keys()
-            .chain(node.checked.ledger.temporary.keys())
-            .min_by(|a, b| distance(from, center(**a)).total_cmp(&distance(from, center(**b))))
-            .map(|p| center(*p))
-            .unwrap_or_else(|| {
-                let b = node.checked.ledger.site.scope.retreat;
-                std::array::from_fn(|i| (b.min[i] + b.max[i]) * 0.5)
-            });
-        targets.sort_by(|a, b| distance(*a, focus).total_cmp(&distance(*b, focus)));
+        targets.sort_by(|a, b| {
+            Self::work_distance(node, *a).total_cmp(&Self::work_distance(node, *b))
+        });
         // Retain elevation alternatives separately: many samples on a nearby
         // floor must not crowd every possible scaffold ascent out of the family.
         let mut selected = Vec::new();
@@ -425,57 +515,7 @@ impl<'a> Search<'a> {
         self.stats.pruned += targets.len().saturating_sub(selected.len());
         let targets = selected;
         for target in targets {
-            let yaw = rotation(from, target)[0];
-            let jump = target[1] > from[1] + 0.1;
-            let mut best: Option<(f64, Node<'a>)> = None;
-            for active in 1..=32 {
-                if self.exhausted() {
-                    break;
-                }
-                let controls = (0..active + 24)
-                    .map(|t| SurvivalControl {
-                        yaw,
-                        input: SurvivalInput {
-                            forward: i8::from(t < active),
-                            strafe: 0,
-                            jump: jump && t == 0,
-                        },
-                    })
-                    .collect();
-                if let Some(next) = self.extend(node, ConstructionAction::Move { controls }) {
-                    let end = next.checked.scenario.position();
-                    let error = distance(target, end);
-                    // Restrict this candidate family to non-retracing motion
-                    // between edits. This prunes paths; it does not equate native
-                    // states or claim that a pruned route is physically invalid.
-                    let retraces = node
-                        .checked
-                        .steps
-                        .iter()
-                        .rev()
-                        .take_while(|s| matches!(s, HypotheticalConstructionStep::Move { .. }))
-                        .any(|s| match s {
-                            HypotheticalConstructionStep::Move { prediction } => {
-                                distance(end, prediction.initial_position) < 0.25_f64.powi(2)
-                            }
-                            _ => false,
-                        });
-                    if (end[1] - target[1]).abs() < 0.01
-                        && error < 0.23_f64.powi(2)
-                        && !retraces
-                        && best.as_ref().is_none_or(|(old, _)| error < *old)
-                    {
-                        best = Some((error, next));
-                        // First sufficiently centered admitted endpoint. Exact
-                        // native prediction is retained; optimal control duration
-                        // is not needed for this candidate policy.
-                        if error <= 0.13_f64.powi(2) {
-                            break;
-                        }
-                    }
-                }
-            }
-            if let Some((_, next)) = best {
+            if let Some(next) = self.move_to(node, target) {
                 self.retain(successors, next);
             }
             if self.exhausted() {
@@ -604,7 +644,8 @@ pub fn generate_construction_plan(
                         search.temporary_material,
                         PlacementPurpose::Temporary,
                     ) {
-                        search.retain(&mut successors, next);
+                        search.retain(&mut successors, next.clone());
+                        search.access_successors(&node, target, next, &mut successors);
                     }
                 }
                 if search.exhausted() {
