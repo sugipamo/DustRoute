@@ -333,3 +333,27 @@ The correction-path review also identified a pre-existing legacy remote teleport
 layout. It now refuses explicitly; native relative correction support must be
 verified before the motion trial. Passing these checks is not live movement
 acceptance or completion of the shared prediction/standing layer.
+
+## Bounded native controls checkpoint (2026-10-02 UTC)
+
+The approved shared motion layer now implements the modern correction layout,
+dry-cube walk/jump prediction, connection-owned bounded input runs and explicit
+received versus predicted-and-observed standing. A run retains intent before I/O,
+keeps failures inspectable, and uses same-instance independent position evidence
+before shared look/placement/mining admission. This is a native-client foundation;
+MCP route/access/job integration and the roofed Blueprint milestone remain open.
+
+The non-OP isolated live trial succeeded at walk -> rest -> placement and jump ->
+land -> placement. Wall contact then exposed a conservative clearance limitation:
+quantized observer position expands the predicted touching body into the wall.
+The final run is retained as RequiresInspection; the full live test failed rather
+than authorizing construction. The user concern stop was honored, the server was
+shut down, and no clearance relaxation or retry was performed.
+
+See the [specific next proposal](survival-movement-evidence.md#concrete-next-work-for-approval)
+and [pinned live record](../vendor/voxrig/docs/evidence/survival-motion-live-20261002.json).
+Voxrig source is `7915c253ea075926b1576274881e5b426e85c088`; actual live code was
+`f204cd2879030648c355ba73619453faf9014c0c` (the later commit adds evidence only).
+Offline: 177 tests passed, five optional live tests ignored, one doc test passed,
+Clippy/all-targets and formatting passed. This checkpoint does not complete the
+overall survival construction goal.

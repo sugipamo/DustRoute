@@ -1,0 +1,159 @@
+{
+  "tested_voxrig_commit": "f204cd2879030648c355ba73619453faf9014c0c",
+  "minecraft": "Java 1.21.11",
+  "fixture": "127.0.0.1:25572; two whitelisted non-OP survival profiles; ops=[]",
+  "operator_actions": "bounded floor/air fixture reset, initial teleports, initial clear/material supply only; builder actions use native controls",
+  "server_shutdown": "exit 0; list showed zero connected players before stop",
+  "offline_checks": {
+    "all_targets": "177 passed, 5 ignored",
+    "doc": "1 passed",
+    "clippy": "all targets, -D warnings passed",
+    "fmt": "passed",
+    "package_list": "passed"
+  },
+  "live_trial_exit": 101,
+  "live_trial_status": "partial success; wall-contact construction admission refused; not a complete passing trial",
+  "cases": [
+    {
+      "phase": "walk",
+      "status": "observed",
+      "dispatched_ticks": 30,
+      "predicted": {
+        "horizontal_collision": false,
+        "on_ground": true,
+        "position": [
+          2.109088459339283,
+          -60.0,
+          0.5
+        ],
+        "resting": true,
+        "tick": 30,
+        "velocity": [
+          0.0,
+          -0.0784000015258789,
+          0.0
+        ]
+      },
+      "observed_position": [
+        2.109130859375,
+        -60.0,
+        0.5
+      ],
+      "position_error": [
+        0.000244140625,
+        0.000244140625,
+        0.000244140625
+      ],
+      "problem": null
+    },
+    {
+      "phase": "walk_placement",
+      "status": "observed_placed",
+      "target": [
+        4,
+        -60,
+        0
+      ],
+      "held_before": 3,
+      "held_after": 2,
+      "independent_block": {
+        "name": "minecraft:dirt",
+        "properties": {}
+      }
+    },
+    {
+      "phase": "jump",
+      "status": "observed",
+      "dispatched_ticks": 30,
+      "predicted": {
+        "horizontal_collision": false,
+        "on_ground": true,
+        "position": [
+          2.109088459339283,
+          -60.0,
+          0.5
+        ],
+        "resting": true,
+        "tick": 30,
+        "velocity": [
+          0.0,
+          -0.0784000015258789,
+          0.0
+        ]
+      },
+      "observed_position": [
+        2.109088459339283,
+        -60.0,
+        0.5
+      ],
+      "position_error": [
+        0.000244140625,
+        0.000244140625,
+        0.000244140625
+      ],
+      "problem": null
+    },
+    {
+      "phase": "jump_placement",
+      "status": "observed_placed",
+      "target": [
+        4,
+        -59,
+        0
+      ],
+      "held_before": 2,
+      "held_after": 1,
+      "independent_block": {
+        "name": "minecraft:dirt",
+        "properties": {}
+      }
+    },
+    {
+      "phase": "wall",
+      "status": "requires_inspection",
+      "dispatched_ticks": 40,
+      "predicted": {
+        "horizontal_collision": false,
+        "on_ground": true,
+        "position": [
+          3.699999988079071,
+          -60.0,
+          0.5
+        ],
+        "resting": true,
+        "tick": 40,
+        "velocity": [
+          0.0,
+          -0.0784000015258789,
+          0.0
+        ]
+      },
+      "observed_position": [
+        3.699951171875,
+        -60.0,
+        0.5
+      ],
+      "position_error": [
+        0.000244140625,
+        0.000244140625,
+        0.000244140625
+      ],
+      "problem": "standing body intersects solid geometry at [4, -60, 0]"
+    }
+  ],
+  "failure": "motion wall: Some(\"standing body intersects solid geometry at [4, -60, 0]\")",
+  "raw": {
+    "survival-motion-live-20261002.json.gz": {
+      "gzip_sha256": "5c386264bce100acedce139dfaaf717a6994c49d8c773a48487288dc410420e2",
+      "uncompressed_sha256": "4e361621182498512330b0efb6a125fee69231c98f1e8a3a04f8b6b5550466f4",
+      "uncompressed_bytes": 70344
+    },
+    "survival-motion-server-20261002.log.gz": {
+      "gzip_sha256": "1f5a48b363b39482d400ba77d7fb7ea87d35a128ed6c495789b5899a7fd9b269",
+      "uncompressed_sha256": "eb9d9e5c11366e41293ce41b61dd7a3543051a45ffbdddd21560031df093377e",
+      "uncompressed_bytes": 3371
+    }
+  },
+  "inventory_note": "Each placement has its own 3->2 and 2->1 held-stack decrement and target/ACK receipt. A later inventory receipt reports count 2. Its cause has not been diagnosed; no final net-consumption claim is made. Entity pickup simulation is outside this slice.",
+  "stop": "User concern stop honored after wall uncertainty rejection; no additional controls, retries or weakened admission. Dedicated server stopped."
+}

@@ -131,3 +131,44 @@ This approach does not require a MOD. The review point is the stated basis for
 continuing construction: predicted stability corroborated by observations,
 rather than an independent server stop acknowledgement that these packets do
 not provide.
+
+## Approved implementation and live stop (2026-10-02 UTC)
+
+The user approved the updated `PredictedAndObserved` contract. Native correction
+handling, bounded dry-cube prediction, retained finite control runs and shared
+standing admission are implemented in Voxrig. Packet velocity remains separate
+from prediction. The [implementation contract](../vendor/voxrig/docs/survival-motion-controls.md)
+and [live evidence](../vendor/voxrig/docs/evidence/survival-motion-live-20261002.json)
+supersede the earlier unimplemented checkpoint above.
+
+Non-OP live walking -> stopping -> placement and jumping -> landing -> placement
+succeeded. The wall test reached its predicted contact but failed post-motion
+standing admission. For the X=4 wall, predicted center X=3.699999988079071 plus
+native half-width reaches exactly X=4. The observed center X=3.699951171875 has
+relative quantization error 1/4096, so conservative body clearance cannot exclude
+intersection. The run remains `RequiresInspection`; the complete live test exited
+101. This is a demonstrated limitation, not a full passing trial.
+
+Implementation stopped under the user's concern condition. No further movement,
+retry or relaxed admission was performed. Both clients disconnected and the
+isolated server stopped normally. Offline verification and evidence packaging do
+not resolve this wall-contact continuation limitation.
+
+### Concrete next work for approval
+
+1. Preflight terminal clearance before sending controls. A plan should end at a
+   resting location with a margin from solids instead of discovering at the end
+   that quantized observation cannot support construction admission.
+2. Declare collision -> retreat -> rest as an entire bounded input plan when
+   testing wall contact. Predict and observe the retreat with the existing model;
+   do not append hidden recovery inputs after a failed run.
+3. Define explicit recovery for an already failed contact run. Keep observed
+   position uncertainty and current-world checks; do not reinterpret received
+   coordinates as exact or simply clear `RequiresInspection`.
+4. Re-run the declared wall/retreat case and the walk/jump placement regressions,
+   then continue bounded navigation and the roofed Blueprint goal.
+
+One additional retained observation needs diagnosis: the two placements each
+have target/ACK and held decrements (3 -> 2 and 2 -> 1), while a later inventory
+receipt reports 2. No cause or final net material accounting is asserted; the
+trace is retained. Entity simulation remains excluded.

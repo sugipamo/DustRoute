@@ -3,6 +3,7 @@ mod client;
 mod component_nbt;
 #[allow(dead_code)]
 mod ids;
+mod math;
 mod piston_nbt;
 pub mod reconstruction;
 #[cfg(test)]

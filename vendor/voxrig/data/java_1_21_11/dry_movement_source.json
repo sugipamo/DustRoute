@@ -1,0 +1,33 @@
+{
+  "minecraft": "Java 1.21.11",
+  "mappings": "Yarn 1.21.11+build.6 (official -> named)",
+  "mappings_sha256": "d2495bcc4b96ff81d985fa403a3a65a2891d4df31ad71f36a19338aa66daa89a",
+  "minecraft_merged_sha256": "ad6ee2c9cee9c191b25bf5d0ffec5788c3335f3b3fcf77d6871a7b66b3b5046e",
+  "transformation": "Original helpers invoke unchanged package-remapped/access-widened native methods/codecs. Observations only, not a complete world/client tick simulation. Source audit composes the admitted dry-cube tick.",
+  "generators": {
+    "scripts/VerifyPositionCorrection.java": "da07aecfd43bcf104adc8dc1cc8e7dec41d6f912193640cf4158b940831d2b30",
+    "scripts/VerifyDryMovement.java": "59968393b6a5efc7d3490d70eccac50bdf180ea73f0f9e6837a6f2df61a39167"
+  },
+  "outputs": {
+    "data/java_1_21_11/position_corrections.json": "0eabe98ed2f21cc593c8784fceca3e8a6ebc8f4f8c8c74c99541528e0f9621d1",
+    "data/java_1_21_11/dry_movement.json": "c11d2071a8cbb1d26a7aecf29986eca52b14e4749671b98094250c85659a0bb4"
+  },
+  "audits": {
+    "EntityPosition.javap": "01e90df1b2173872ac38c733d013f2b4af5339612484b0b13ab431d8172c13e4",
+    "EntityPositionS2CPacket.javap": "1bd532d4a829fa2382daded1bcf1ab0645bd8629894e54fe75317e99c24cba17",
+    "ClientPlayNetworkHandler.javap": "ecc3a23e0e8575e63c4913eb936e91ed36ee62328154be1d77dfcecd4bdc020d",
+    "OtherClientPlayerEntity.javap": "113448d8fdf305317f3cce98ce7e2a12cd1cdc0400f2b042066e79f6b6821275",
+    "KeyboardInput.javap": "c31bc7c719fa730e0e0d841973044ad7f65dc873461925e14c1ebf585c2942e1",
+    "Entity.javap": "98f58fa2846cc6099a32da5f685f06ccd36dcc293ada2df5cc300982c1396c5c",
+    "LivingEntity.javap": "93ff5dcb4bd53320fbb77dcc0a3a0ac0e567196a0b73d0aff4939bf0bc8aba97",
+    "ClientPlayerEntity.javap": "22f1c1386a60562f54ce839776e8d076fcb16c5a721298a23474a8768709bb4a"
+  },
+  "cases": {
+    "corrections": 1024,
+    "directional_input": 108,
+    "voxel_collision": 72,
+    "input_encoding": 18,
+    "position_encoding": 4,
+    "dry_materials": 12
+  }
+}

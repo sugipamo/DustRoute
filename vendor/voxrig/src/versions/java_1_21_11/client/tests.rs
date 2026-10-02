@@ -547,3 +547,70 @@ async fn modern_disconnect_and_reconnect_do_not_reuse_world_or_connection_identi
     .await
     .unwrap();
 }
+
+#[test]
+fn own_correction_resolves_native_rotation_velocity_and_keeps_submission_separate() {
+    let fixture: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../../data/java_1_21_11/position_corrections.json"
+    ))
+    .unwrap();
+    let mut s = play_state();
+    let before = &fixture[0]["before"];
+    let mut initial = vec![1];
+    for key in ["position", "velocity"] {
+        for v in before[key].as_array().unwrap() {
+            initial.extend(v.as_f64().unwrap().to_be_bytes());
+        }
+    }
+    for v in before["rotation"].as_array().unwrap() {
+        initial.extend((v.as_f64().unwrap() as f32).to_be_bytes());
+    }
+    initial.extend(0u32.to_be_bytes());
+    s.receive(ids::play_clientbound::POSITION, &initial, 0)
+        .unwrap();
+    let case = &fixture[0]["cases"][511];
+    let mut correction = hex::decode(case["hex"].as_str().unwrap()).unwrap();
+    correction.pop(); // Own correction has teleport ID instead of entity ID and no ground bit.
+    let responses = s
+        .receive(ids::play_clientbound::POSITION, &correction, 0)
+        .unwrap();
+    assert!(
+        responses
+            .iter()
+            .any(|(id, bytes)| *id == ids::play_serverbound::TELEPORT_CONFIRM && bytes == &[42])
+    );
+    assert_eq!(s.rotation, [210.0, 80.0]);
+    let v = s.operations.local_player.velocity.unwrap();
+    for axis in 0..3 {
+        assert!(
+            (v.value[axis] - case["expected"]["velocity"][axis].as_f64().unwrap()).abs() < 1e-10
+        );
+    }
+    assert_eq!(s.motion.received_pose.as_ref().unwrap().receive_sequence, 2);
+    s.motion
+        .begin(
+            s.loading.generation,
+            s.sequence,
+            s.position.unwrap(),
+            s.rotation,
+        )
+        .unwrap();
+    s.motion.dispatched();
+    s.receive(ids::play_clientbound::POSITION, &correction, 0)
+        .unwrap();
+    assert!(s.operations.local_player.velocity.is_none());
+    assert!(s.motion.received_pose.as_ref().unwrap().velocity.is_none());
+    assert_eq!(
+        s.motion.last_submission.as_ref().unwrap().superseded_at,
+        Some(3)
+    );
+    let prior = serde_json::to_value(&s.motion).unwrap();
+    let len = correction.len();
+    correction[len - 4..].copy_from_slice(&512u32.to_be_bytes());
+    assert!(
+        s.receive(ids::play_clientbound::POSITION, &correction, 0)
+            .is_err()
+    );
+    assert_eq!(serde_json::to_value(&s.motion).unwrap(), prior);
+    assert!(s.failure.is_some());
+}

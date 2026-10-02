@@ -3,9 +3,14 @@
 //! Bounded survival mining observations do not authorize continued construction.
 mod inventory;
 mod mining;
+mod movement;
 mod placement;
 mod retirement;
 mod survival;
+pub use movement::{
+    PredictedMotionFrame, StandingPositionBasis, SurvivalInput, SurvivalMotionRecord,
+    SurvivalMotionStatus, SurvivalMovementPreview,
+};
 #[cfg(test)]
 mod tests;
 pub use super::loading::{InteractionLoading, LoadingAttempt};
@@ -216,6 +221,8 @@ pub struct OperationHistory {
     pub selected_hotbar: Option<HotbarSelection>,
     /// Position receipt/submission history; never replayable authority.
     pub motion: OwnMotion,
+    /// Bounded survival control intent and observations; never replayable authority.
+    pub survival_motion: Option<SurvivalMotionRecord>,
 }
 /// A periodic native time packet bound to its receive sequence.
 #[derive(Clone, Debug, Serialize)]
@@ -305,6 +312,7 @@ impl Operations {
         let interrupted = self.bot.session.interrupted_packet.load(Ordering::Acquire);
         OperationHistory {
             motion: state.motion.clone(),
+            survival_motion: state.survival_motion.clone(),
             connection_id: self.bot.session.id,
             last_receive_sequence: state.sequence,
             connection_closed: closed || interrupted >= 0,
@@ -615,6 +623,15 @@ impl Operations {
                 anyhow::anyhow!(
                     "native interaction loading pending; await readiness or inspect retained loading attempt"
                 ),
+            ));
+        }
+        if state
+            .survival_motion
+            .as_ref()
+            .is_some_and(|r| r.status != SurvivalMotionStatus::Observed)
+        {
+            return Err(invalid(
+                "survival motion unresolved; inspect retained run before another mutation",
             ));
         }
         if state.motion.position_basis == PositionBasis::PendingSubmission {

@@ -277,7 +277,7 @@ fn motion_receipts_keep_position_ground_velocity_and_precision_independent() {
 }
 
 #[test]
-fn unaudited_remote_teleport_cannot_publish_a_legacy_pose_or_motion_receipt() {
+fn modern_remote_correction_refuses_legacy_layout_atomically() {
     let mut t = tracker();
     let before = serde_json::to_value(t.observations()).unwrap();
     let mut legacy = vec![42];
@@ -288,7 +288,46 @@ fn unaudited_remote_teleport_cannot_publish_a_legacy_pose_or_motion_receipt() {
     assert!(t.receive(p::ENTITY_TELEPORT, &legacy, 3).is_err());
     assert_eq!(serde_json::to_value(t.observations()).unwrap(), before);
     // Supported absolute sync has a separate packet ID and test. Neither a
-    // legacy body nor an unimplemented modern relative correction is guessed.
+    // legacy body nor an incomplete modern correction is guessed.
     assert!(t.receive(p::ENTITY_TELEPORT, &[42], 4).is_err());
+    assert_eq!(serde_json::to_value(t.observations()).unwrap(), before);
+}
+
+#[test]
+fn corrections_keep_native_delta_base_and_head_body_angles_separate() {
+    let mut t = tracker();
+    let scenarios: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../../../data/java_1_21_11/position_corrections.json"
+    ))
+    .unwrap();
+    let absolute = hex::decode(scenarios[0]["cases"][0]["hex"].as_str().unwrap()).unwrap();
+    let before = serde_json::to_value(t.observations()).unwrap();
+    for end in 0..absolute.len() {
+        assert!(t.receive(p::ENTITY_TELEPORT, &absolute[..end], 3).is_err());
+        assert_eq!(serde_json::to_value(t.observations()).unwrap(), before);
+    }
+    t.receive(p::ENTITY_TELEPORT, &absolute, 3).unwrap();
+    let m = t.observations().remove(0);
+    assert_eq!(m.position, [0.5, 2.0, -4.0]);
+    assert_eq!(m.rotation, [90.0, 90.0]); // Gaze yaw survives body correction.
+    assert_eq!(m.motion.velocity.unwrap().value, [0.01, 0.02, -0.03]);
+    assert_eq!(m.motion.position_receive_sequence, 3);
+    // A delta after the correction uses the original spawn TrackedPosition.
+    t.receive(p::REL_ENTITY_MOVE, &[42, 0, 1, 0, 0, 0, 0, 1], 4)
+        .unwrap();
+    assert_eq!(t.observations()[0].position, [1.0 / 4096.0, 80.123, 10.5]);
+    // Relative yaw is based on the body's 130 degrees, not gaze's 90 degrees.
+    let relative = hex::decode(scenarios[0]["cases"][255]["hex"].as_str().unwrap()).unwrap();
+    t.receive(p::ENTITY_TELEPORT, &relative, 5).unwrap();
+    assert_eq!(t.entities[&42].body_rotation, [260.0, 90.0]);
+    let m = t.observations().remove(0);
+    assert_eq!(m.position, [0.5 + 1.0 / 4096.0, 82.123, 6.5]);
+    assert_eq!(m.motion.position_error, [1.0 / 4096.0; 3]);
+    assert!(m.motion.velocity.is_none()); // Not derived from an older velocity receipt.
+    let before = serde_json::to_value(t.observations()).unwrap();
+    let mut unknown = absolute.clone();
+    let len = unknown.len();
+    unknown[len - 5..len - 1].copy_from_slice(&512u32.to_be_bytes());
+    assert!(t.receive(p::ENTITY_TELEPORT, &unknown, 6).is_err());
     assert_eq!(serde_json::to_value(t.observations()).unwrap(), before);
 }

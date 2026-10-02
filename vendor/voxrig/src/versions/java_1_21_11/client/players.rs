@@ -4,6 +4,7 @@ use super::operations::VelocitySample;
 use super::{Reader, ids};
 mod motion;
 use anyhow::{Context, bail};
+pub(super) use motion::evaluate as evaluate_motion;
 pub use motion::{PlayerMotionStatus, PlayerMotionWatch};
 use serde::Serialize;
 use std::collections::{BTreeMap, BTreeSet};
@@ -73,6 +74,8 @@ pub struct PlayerMotion {
     pub ground: Option<GroundReceipt>,
     /// Last supplied velocity. Its own receipt may precede the position receipt;
     /// it does not mean the entity is currently stopped.
+    /// A relative correction clears this if the native interpolated baseline
+    /// is unknown. It is never filled from a historical sample as current motion.
     pub velocity: Option<VelocitySample>,
 }
 
@@ -124,6 +127,9 @@ impl PlayerPose {
 struct Entity {
     uuid: [u8; 16],
     position: [f64; 3],
+    // Native TrackedPosition delta base is not reset by EntityPositionS2CPacket.
+    relative_base: [f64; 3],
+    body_rotation: [f32; 2],
     rotation: [f32; 2],
     pose: Option<PlayerPose>,
     scale: f32,
@@ -248,7 +254,7 @@ impl PlayerTracker {
                 let position = position(&mut r)?;
                 let motion_velocity = velocity(&mut r)?;
                 let pitch = angle(&mut r)?;
-                angle(&mut r)?; // Body yaw; gaze uses head yaw.
+                let body_yaw = angle(&mut r)?;
                 let yaw = angle(&mut r)?;
                 r.varint()?;
                 r.end()?;
@@ -260,6 +266,8 @@ impl PlayerTracker {
                     Entity {
                         uuid,
                         position,
+                        relative_base: position,
+                        body_rotation: [body_yaw, pitch],
                         rotation: [yaw, pitch],
                         pose: Some(PlayerPose::Standing),
                         scale: 1.0,
@@ -310,7 +318,7 @@ impl PlayerTracker {
                             // quantization bin. The decoder retaining a previous
                             // coordinate does not make that coordinate exact.
                             entity.motion.position_error = [1.0 / 4096.0; 3];
-                            for coordinate in &mut entity.position {
+                            for coordinate in &mut entity.relative_base {
                                 let delta = i16::from_be_bytes(r.take(2)?.try_into()?);
                                 if delta != 0 {
                                     // TrackedPosition.pack uses Java Math.round, including negative ties.
@@ -320,8 +328,12 @@ impl PlayerTracker {
                                 }
                             }
                         }
+                        if id != p::ENTITY_LOOK {
+                            entity.position = entity.relative_base;
+                        }
                         if id != p::REL_ENTITY_MOVE {
-                            entity.rotation = [angle(&mut r)?, angle(&mut r)?];
+                            entity.body_rotation = [angle(&mut r)?, angle(&mut r)?];
+                            entity.rotation[1] = entity.body_rotation[1];
                         }
                         entity.motion.ground = Some(GroundReceipt {
                             on_ground: r.bool()?,
@@ -329,21 +341,41 @@ impl PlayerTracker {
                         });
                     }
                     p::ENTITY_TELEPORT => {
-                        // 1.21.11 EntityPositionS2CPacket contains EntityPosition
-                        // and relative flags. The old XYZ/byte-angle layout must
-                        // not produce motion receipts. Await the audited native
-                        // correction decoder instead of publishing a guessed pose.
-                        bail!("remote EntityPositionS2CPacket relative correction is unsupported");
+                        let change = super::correction::Correction::read(&mut r)?;
+                        let on_ground = r.bool()?;
+                        // Native remote players interpolate velocity separately.
+                        // A retained packet sample is not that current baseline.
+                        let resolved =
+                            change.resolve(Some(entity.position), entity.body_rotation, None)?;
+                        entity.position = resolved.position;
+                        entity.body_rotation = resolved.rotation;
+                        entity.rotation[1] = resolved.rotation[1];
+                        entity.motion.position_receive_sequence = sequence;
+                        for axis in 0..3 {
+                            if change.flags & (1 << axis) == 0 {
+                                entity.motion.position_error[axis] = 0.0;
+                            }
+                        }
+                        entity.motion.velocity = resolved.velocity.map(|value| VelocitySample {
+                            value,
+                            receive_sequence: sequence,
+                        });
+                        entity.motion.ground = Some(GroundReceipt {
+                            on_ground,
+                            receive_sequence: sequence,
+                        });
                     }
                     p::SYNC_ENTITY_POSITION => {
                         entity.position = position(&mut r)?;
+                        entity.relative_base = entity.position;
                         entity.motion.position_receive_sequence = sequence;
                         entity.motion.position_error = [0.0; 3];
                         entity.motion.velocity = Some(VelocitySample {
                             value: [r.f64()?, r.f64()?, r.f64()?],
                             receive_sequence: sequence,
                         });
-                        entity.rotation = [r.f32()?, r.f32()?];
+                        entity.body_rotation = [r.f32()?, r.f32()?];
+                        entity.rotation[1] = entity.body_rotation[1];
                         entity.motion.ground = Some(GroundReceipt {
                             on_ground: r.bool()?,
                             receive_sequence: sequence,

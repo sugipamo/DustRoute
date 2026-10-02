@@ -1,0 +1,55 @@
+{
+  "minecraft": "Java 1.21.11",
+  "voxrig_revision": "7915c253ea075926b1576274881e5b426e85c088",
+  "managed_files": 273,
+  "live_code_revision": "f204cd2879030648c355ba73619453faf9014c0c",
+  "commands": [
+    {
+      "command": "cargo test --offline --locked -j 1 --all-targets -- --test-threads=1",
+      "cwd": "/root/Voxrig",
+      "exit": 0,
+      "result": "177 passed, 5 ignored"
+    },
+    {
+      "command": "cargo test --offline --locked -j 1 --doc",
+      "cwd": "/root/Voxrig",
+      "exit": 0,
+      "result": "1 passed"
+    },
+    {
+      "command": "cargo clippy --offline --locked -j 1 --all-targets -- -D warnings",
+      "cwd": "/root/Voxrig",
+      "exit": 0
+    },
+    {
+      "command": "cargo fmt --all -- --check",
+      "cwd": "/root/Voxrig",
+      "exit": 0
+    },
+    {
+      "command": "cargo package --offline --locked --allow-dirty --list",
+      "cwd": "/root/Voxrig",
+      "exit": 0
+    },
+    {
+      "command": "python3 scripts/vendor_voxrig.py --check",
+      "cwd": "/root/DustRoute",
+      "exit": 0
+    },
+    {
+      "command": "cargo check --offline --locked -j 1 -p dustroute-mcp --features voxrig --all-targets",
+      "cwd": "/root/DustRoute",
+      "exit": 0
+    }
+  ],
+  "validation_logs_sha256": {
+    "control-all-targets": "ad130a1c58611c9949681e535bb490f06eb8b243a5cecf3304814a76e100b466",
+    "control-doc": "f372b6a7b7e744c46c17c8ffc894cdf5538263eb7a240c17e59c06e5057f4982",
+    "control-clippy": "6d1d2fb8ba76d8f61a561005d4a8066726476151525aad7584cafd55f710b4dd",
+    "control-package": "a091af79fd17e63b95c87216c52c11b971a4b60d5dcbe2a1fdb857dc063b0750"
+  },
+  "dustroute_check_log_sha256": "68138409ad41ff9b200479630cadbe8ffb5deead24655b0643ea5f69fee05931",
+  "live_evidence": "vendor/voxrig/docs/evidence/survival-motion-live-20261002.json",
+  "live_status": "partial success; full trial exit 101 at wall-clearance admission; not a full pass",
+  "stop": "User concern stop honored. No recovery/relaxation implementation after discovery. Dedicated server exited 0. Navigation/access/job integration and complete roofed build remain unfinished."
+}

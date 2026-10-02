@@ -1,4 +1,5 @@
 //! Ordered 1.21.11 receive loop. Local state is committed under one session lock.
+mod correction;
 mod loading;
 mod motion;
 mod observations;
@@ -113,6 +114,7 @@ struct State {
     retirement: Option<operations::MiningRetirementRecord>,
     mining: Option<operations::MiningRecord>,
     placement: Option<operations::PlacementRecord>,
+    survival_motion: Option<operations::SurvivalMotionRecord>,
     recording: Option<recording::Capture>,
     recording_ordinal: u64,
     operations: operations::OperationState,
@@ -138,6 +140,7 @@ impl Default for State {
             retirement: None,
             mining: None,
             placement: None,
+            survival_motion: None,
             recording: None,
             recording_ordinal: 0,
             operations: operations::OperationState::default(),
@@ -795,38 +798,27 @@ fn apply_play(
         }
         input::POSITION => {
             let teleport = r.varint()?;
-            let mut position = [r.f64()?, r.f64()?, r.f64()?];
-            let delta = [r.f64()?, r.f64()?, r.f64()?];
-            let mut rotation = [r.f32()?, r.f32()?];
-            let flags = r.u32()?;
+            let correction = correction::Correction::read(&mut r)?;
             r.end()?;
-            if flags & !511 != 0 {
-                bail!("unknown position flags");
+            let resolved = correction.resolve(
+                state.position,
+                state.rotation,
+                if state.motion.position_basis == motion::PositionBasis::Received {
+                    state.operations.local_player.velocity.map(|v| v.value)
+                } else {
+                    None
+                },
+            )?;
+            let position = resolved.position;
+            let rotation = resolved.rotation;
+            if position.iter().any(|v| v.abs() > 30_000_000.0) {
+                bail!("position outside world bounds");
             }
-            for (axis, value) in position.iter_mut().enumerate() {
-                if flags & (1 << axis) != 0 {
-                    *value += state
-                        .position
-                        .context("relative position without baseline")?[axis];
-                }
-                if !value.is_finite() || value.abs() > 30_000_000.0 {
-                    bail!("position outside world bounds");
-                }
-            }
-            if flags & 8 != 0 {
-                rotation[0] += state.rotation[0];
-            }
-            if flags & 16 != 0 {
-                rotation[1] += state.rotation[1];
-            }
-            if rotation.iter().any(|v| !v.is_finite()) {
-                bail!("non-finite relative rotation");
-            }
-            rotation[1] = rotation[1].clamp(-90.0, 90.0);
-            state
-                .operations
-                .local_player
-                .correct_velocity(delta, flags, state.sequence)?;
+            state.operations.local_player.velocity =
+                resolved.velocity.map(|value| operations::VelocitySample {
+                    value,
+                    receive_sequence: state.sequence,
+                });
             state.position = Some(position);
             state.motion.receive(motion::ReceivedPose {
                 generation: state.loading.generation,
@@ -975,6 +967,8 @@ fn apply_play(
 
 #[cfg(test)]
 mod mining_native_trials;
+#[cfg(test)]
+mod movement_native_trials;
 #[cfg(test)]
 mod placement_native_trials;
 #[cfg(test)]

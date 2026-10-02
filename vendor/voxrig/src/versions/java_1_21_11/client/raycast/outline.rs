@@ -1,18 +1,13 @@
 //! Java 1.21.11 block outline selection, with no fluid or entity targets.
 //! Data and independent native oracle: scripts/ExportOutlineShapes.java.
 use super::{BlockHit, NativeBlockState};
+use crate::versions::java_1_21_11::math::trig;
 use crate::versions::java_1_21_11::{reconstruction::Direction, state_id};
 use serde::Deserialize;
 use std::sync::OnceLock;
 
 /// Entity.getRotationVector uses float angles and MathHelper's indexed sine table.
 pub(super) fn direction([yaw, pitch]: [f32; 2]) -> [f64; 3] {
-    fn trig(angle: f32, cosine: bool) -> f32 {
-        let index = ((f64::from(angle) * 10430.378350470453 + if cosine { 16384.0 } else { 0.0 })
-            as i64)
-            & 65535;
-        (index as f64 / 10430.378350470453).sin() as f32
-    }
     let pitch = pitch * (std::f32::consts::PI / 180.0);
     let yaw = -yaw * (std::f32::consts::PI / 180.0);
     [

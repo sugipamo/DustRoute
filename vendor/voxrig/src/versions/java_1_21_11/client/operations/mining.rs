@@ -181,6 +181,7 @@ fn prepared(
     empty_hand(state)?;
     let hit = super::super::raycast::stationary_outline_hit(state, standing.eye_position, 4.5)?
         .ok_or_else(|| unavailable("no available native outline hit for mining"))?;
+    survival::uncertain_target(state, &standing, &hit)?;
     if hit.position != target || hit.face.map(|f| f as u8) != Some(face) {
         return Err(unavailable(
             "target/face differs from the current first native outline hit",

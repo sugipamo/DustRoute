@@ -24,11 +24,10 @@ fn state() -> State {
     };
     state.operations.reset_world(0).unwrap();
     state.operations.local_player = LocalPlayerState::spawned(42);
-    state
-        .operations
-        .local_player
-        .correct_velocity([0.0; 3], 0, 10)
-        .unwrap();
+    state.operations.local_player.velocity = Some(VelocitySample {
+        value: [0.0; 3],
+        receive_sequence: 10,
+    });
     state.operations.local_player.health = Some(PlayerHealth {
         health: 20.0,
         food: 20,
@@ -811,4 +810,215 @@ async fn chunk_replacement_and_reconfiguration_preserve_pending_intent() {
         MiningStatus::RequiresInspection { .. }
     ));
     f.stop().await;
+}
+
+#[tokio::test]
+async fn dry_motion_preview_preserves_received_state_and_sends_no_player_actions() {
+    let mut f = Fixture::new().await;
+    let before = f.api.player_state().await.unwrap();
+    let mut inputs = vec![SurvivalInput::default(); 30];
+    inputs[0].jump = true;
+    let preview = f.api.preview_survival_motion(0.0, &inputs).await.unwrap();
+    assert_eq!(preview.initial.position, [0.5, 1.0, 0.5]);
+    assert!(preview.frames.iter().any(|f| f.position[1] > 2.2));
+    assert!(preview.frames.last().unwrap().resting);
+    assert_eq!(preview.frames.last().unwrap().position, [0.5, 1.0, 0.5]);
+    let after = f.api.player_state().await.unwrap();
+    assert_eq!(
+        serde_json::to_value(after).unwrap(),
+        serde_json::to_value(before).unwrap()
+    );
+    assert!(
+        timeout(Duration::from_millis(10), read_packet(&mut f.peer, None))
+            .await
+            .is_err()
+    );
+    let unsupported = SurvivalInput {
+        forward: 2,
+        ..Default::default()
+    };
+    assert!(
+        f.api
+            .preview_survival_motion(0.0, &[unsupported])
+            .await
+            .is_err()
+    );
+    f.session
+        .state
+        .lock()
+        .await
+        .world
+        .seed_replay_cell([0, 0, 0], state_id(&native("slime_block")).unwrap());
+    assert!(f.api.preview_survival_motion(0.0, &inputs).await.is_err());
+    f.stop().await;
+}
+
+impl Fixture {
+    async fn observe_mover(&mut self) {
+        self.profile(42).await;
+        let mut bytes = vec![42];
+        bytes.extend([42; 16]);
+        put_varint(&mut bytes, ids::PLAYER_ENTITY_TYPE);
+        for v in [0.5f64, 1.0, 0.5] {
+            bytes.extend(v.to_be_bytes());
+        }
+        bytes.extend([0, 0, 0, 0, 0]);
+        self.receive(ids::play_clientbound::SPAWN_ENTITY, &bytes)
+            .await;
+    }
+    async fn mover_position(&mut self, p: [f64; 3]) {
+        let mut bytes = vec![42];
+        for v in p.into_iter().chain([0.0; 3]) {
+            bytes.extend(v.to_be_bytes());
+        }
+        for v in [0f32; 2] {
+            bytes.extend(v.to_be_bytes());
+        }
+        bytes.push(1);
+        self.receive(ids::play_clientbound::SYNC_ENTITY_POSITION, &bytes)
+            .await;
+    }
+}
+#[tokio::test]
+async fn finite_motion_preserves_intent_and_needs_fresh_observer_before_shared_standing() {
+    let mut mover = Fixture::new().await;
+    let mut observer = Fixture::new_id(43).await;
+    observer.observe_mover().await;
+    let inputs = vec![SurvivalInput::default(); 3];
+    assert!(
+        mover
+            .api
+            .start_survival_motion(0.0, &inputs, &mover.api)
+            .await
+            .is_err()
+    );
+    let run = mover
+        .api
+        .start_survival_motion(0.0, &inputs, &observer.api)
+        .await
+        .unwrap();
+    assert_eq!(run.dispatched_ticks, 0);
+    assert!(mover.api.select_hotbar(1).await.is_err());
+    assert!(mover.api.standing_context().await.is_err());
+    assert!(
+        mover
+            .api
+            .start_survival_motion(0.0, &inputs, &observer.api)
+            .await
+            .is_err()
+    );
+    // No caller future drives the run after start; all six frames still arrive.
+    for _ in 0..3 {
+        assert_eq!(
+            read_packet(&mut mover.peer, None).await.unwrap(),
+            (ids::play_serverbound::PLAYER_INPUT, vec![0])
+        );
+        assert_eq!(
+            read_packet(&mut mover.peer, None).await.unwrap().0,
+            ids::play_serverbound::POSITION_LOOK
+        );
+    }
+    timeout(Duration::from_secs(1), async {
+        while mover.api.survival_motion().await.unwrap().status
+            != SurvivalMotionStatus::AwaitingObservation
+        {
+            tokio::task::yield_now().await;
+        }
+    })
+    .await
+    .unwrap();
+    // Cached matching spawn is not fresh. Rotation alone cannot finish the run.
+    observer
+        .receive(ids::play_clientbound::ENTITY_HEAD_ROTATION, &[42, 10])
+        .await;
+    assert!(mover.api.standing_context().await.is_err());
+    observer.mover_position([0.5, 1.0, 0.5]).await;
+    timeout(Duration::from_secs(1), async {
+        while mover.api.survival_motion().await.unwrap().status != SurvivalMotionStatus::Observed {
+            tokio::task::yield_now().await;
+        }
+    })
+    .await
+    .unwrap();
+    let standing = mover.api.standing_context().await.unwrap();
+    assert!(matches!(
+        standing.position_basis,
+        StandingPositionBasis::PredictedAndObserved { .. }
+    ));
+    assert!(!mover.api.player_state().await.unwrap().position_from_server);
+    assert_eq!(standing.player.velocity.unwrap().value, [0.0; 3]);
+    assert_eq!(
+        mover
+            .api
+            .survival_motion()
+            .await
+            .unwrap()
+            .preview
+            .frames
+            .last()
+            .unwrap()
+            .velocity[1],
+        -0.08 * f64::from(0.98f32)
+    );
+    mover.api.select_hotbar(1).await.unwrap();
+    observer.mover_position([0.6, 1.0, 0.5]).await;
+    assert!(mover.api.standing_context().await.is_err());
+    observer.mover_position([0.5, 1.0, 0.5]).await;
+    assert!(mover.api.standing_context().await.is_ok());
+    // Exact new receipt restores agreement; observer closure never does.
+    observer.session.stop();
+    assert!(mover.api.standing_context().await.is_err());
+    // Fresh unsupported impulse blocks shared standing even after observation.
+    mover
+        .session
+        .state
+        .lock()
+        .await
+        .operations
+        .local_player
+        .velocity = Some(VelocitySample {
+        value: [0.1, 0.0, 0.0],
+        receive_sequence: 999,
+    });
+    assert!(mover.api.standing_context().await.is_err());
+    observer.stop().await;
+    mover.stop().await;
+}
+#[tokio::test]
+async fn motion_waiting_on_writer_retains_attempt_and_close_never_releases_construction() {
+    let mover = Fixture::new().await;
+    let mut observer = Fixture::new_id(43).await;
+    observer.observe_mover().await;
+    let writer = mover.session.writer.lock().await;
+    let run = mover
+        .api
+        .start_survival_motion(0.0, &[SurvivalInput::default(); 3], &observer.api)
+        .await
+        .unwrap();
+    // The actor now owns a state lock while waiting on the writer. Releasing a
+    // stopped session cannot turn the retained attempt into a successful send.
+    tokio::time::sleep(Duration::from_millis(20)).await;
+    mover.session.stop();
+    drop(writer);
+    timeout(Duration::from_secs(1), async {
+        while mover.api.survival_motion().await.unwrap().status
+            != SurvivalMotionStatus::RequiresInspection
+        {
+            tokio::task::yield_now().await;
+        }
+    })
+    .await
+    .unwrap();
+    let history = mover.api.operation_history().await;
+    let record = history.survival_motion.unwrap();
+    assert_eq!(record.run_id, run.run_id);
+    assert_eq!(record.attempted_tick, 1);
+    assert_eq!(record.dispatched_ticks, 0);
+    assert_eq!(
+        history.motion.position_basis,
+        PositionBasis::PendingSubmission
+    );
+    assert!(mover.api.standing_context().await.is_err());
+    observer.stop().await;
+    mover.stop().await;
 }

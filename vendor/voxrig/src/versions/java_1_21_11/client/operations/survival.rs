@@ -145,40 +145,6 @@ impl LocalPlayerState {
     pub(super) fn reset_world(&self) -> Self {
         self.entity_id.map(Self::spawned).unwrap_or_default()
     }
-    pub(in crate::versions::java_1_21_11::client) fn correct_velocity(
-        &mut self,
-        delta: [f64; 3],
-        flags: u32,
-        sequence: u64,
-    ) -> anyhow::Result<()> {
-        if delta.iter().any(|v| !v.is_finite()) {
-            bail!("non-finite correction velocity");
-        }
-        let relative = flags & 224;
-        let previous = self.velocity.map(|v| v.value);
-        // ROTATE_DELTA requires native angle-table rotation of prior velocity.
-        // Retain explicit uncertainty instead of applying an approximate rotation.
-        let rotated_unknown = flags & 256 != 0 && relative != 0 && previous != Some([0.0; 3]);
-        let value = if rotated_unknown || (relative != 0 && previous.is_none()) {
-            None
-        } else {
-            let mut velocity = delta;
-            for (axis, value) in velocity.iter_mut().enumerate() {
-                if flags & (32 << axis) != 0 {
-                    *value += previous.expect("checked baseline")[axis];
-                }
-            }
-            if velocity.iter().any(|v| !v.is_finite()) {
-                bail!("non-finite resolved velocity");
-            }
-            Some(VelocitySample {
-                value: velocity,
-                receive_sequence: sequence,
-            })
-        };
-        self.velocity = value;
-        Ok(())
-    }
 }
 
 pub(super) fn receive(state: &mut State, id: i32, payload: &[u8]) -> anyhow::Result<bool> {
@@ -324,7 +290,9 @@ pub struct StandingContext {
     pub world_revision: u64,
     /// Current dimension.
     pub dimension: String,
-    /// Latest received feet position. Locally submitted flight is refused.
+    /// Explicit received or predicted-and-observed basis. Neither proves server rest.
+    pub position_basis: StandingPositionBasis,
+    /// Feet position with the basis above. Locally submitted flight is refused.
     pub position: [f64; 3],
     /// Native standing eye position, using float dimensions.
     pub eye_position: [f64; 3],
@@ -391,6 +359,7 @@ fn standing_region(position: [f64; 3]) -> StandingRegion {
     StandingRegion { bounds, min, max }
 }
 
+#[cfg(test)]
 pub(super) fn standing_intersects(position: [f64; 3], cell: [i32; 3]) -> bool {
     let bounds = standing_region(position).bounds;
     (0..3).all(|i| bounds[i] < f64::from(cell[i] + 1) && bounds[i + 3] > f64::from(cell[i]))
@@ -437,15 +406,7 @@ pub(super) fn context(state: &mut State, connection_id: u64, tick: u64) -> Resul
     if state.operations.requested_flying || state.operations.abilities.is_some_and(|a| a & 2 != 0) {
         return Err(unavailable("stationary context refuses active flight"));
     }
-    if !state
-        .motion
-        .received_position(state.loading.generation, state.position)
-        || player.velocity.map(|v| v.value) != Some([0.0; 3])
-    {
-        return Err(unavailable(
-            "stationary context requires a received position and zero resolved velocity",
-        ));
-    }
+    let position_basis = super::movement::standing_basis(state)?;
     if player.health.as_ref().is_some_and(|h| h.health <= 0.0) {
         return Err(unavailable("player is dead"));
     }
@@ -462,7 +423,16 @@ pub(super) fn context(state: &mut State, connection_id: u64, tick: u64) -> Resul
         .dimension
         .as_ref()
         .ok_or_else(|| unavailable("dimension unavailable"))?;
-    let StandingRegion { bounds, min, max } = standing_region(position);
+    let StandingRegion {
+        mut bounds,
+        min,
+        max,
+    } = standing_region(position);
+    let error = position_basis.horizontal_error();
+    for axis in [0, 2] {
+        bounds[axis] -= error[axis];
+        bounds[axis + 3] += error[axis];
+    }
     let mut support = Vec::new();
     for x in min[0]..=max[0] {
         for y in min[1]..=max[1] {
@@ -506,7 +476,14 @@ pub(super) fn context(state: &mut State, connection_id: u64, tick: u64) -> Resul
                             && bounds[3] - 1e-7 > cube[0]
                             && bounds[2] + 1e-7 < cube[5]
                             && bounds[5] - 1e-7 > cube[2];
-                        if probe_horizontal && (0.0..1e-7).contains(&gap) {
+                        if probe_horizontal
+                            && (0.0..1e-7).contains(&gap)
+                            && (error == [0.0; 3]
+                                || (bounds[0] + 2.0 * error[0] + 1e-7 < cube[3]
+                                    && bounds[3] - 2.0 * error[0] - 1e-7 > cube[0]
+                                    && bounds[2] + 2.0 * error[2] + 1e-7 < cube[5]
+                                    && bounds[5] - 2.0 * error[2] - 1e-7 > cube[2]))
+                        {
                             support.push(p);
                         }
                     }
@@ -530,6 +507,7 @@ pub(super) fn context(state: &mut State, connection_id: u64, tick: u64) -> Resul
         world_revision: state.world.revision,
         dimension: dimension.clone(),
         position,
+        position_basis,
         eye_position: [position[0], position[1] + f64::from(1.62f32), position[2]],
         bounds,
         on_ground: !support.is_empty(),
@@ -537,4 +515,69 @@ pub(super) fn context(state: &mut State, connection_id: u64, tick: u64) -> Resul
         submerged: false,
         player: player.clone(),
     })
+}
+
+// Conservative post-motion reach/occlusion check. For admitted full cubes the
+// swept ray is contained in this axis-aligned corridor. Refusing any intervening
+// solid in the corridor deliberately avoids treating corner samples as proof
+// that the continuum between them is unobstructed.
+pub(super) fn uncertain_target(
+    state: &State,
+    standing: &StandingContext,
+    hit: &super::super::raycast::BlockHit,
+) -> Result<()> {
+    let error = standing.position_basis.horizontal_error();
+    if error == [0.0; 3] {
+        return Ok(());
+    }
+    let cursor = super::super::raycast::stationary_hit_cursor(state, standing.eye_position, hit);
+    let endpoint: [f64; 3] =
+        std::array::from_fn(|i| f64::from(hit.position[i]) + f64::from(cursor[i]));
+    let min: [i32; 3] = std::array::from_fn(|i| {
+        (standing.eye_position[i].min(endpoint[i]) - error[i]).floor() as i32
+    });
+    let max: [i32; 3] = std::array::from_fn(|i| {
+        (standing.eye_position[i].max(endpoint[i]) + error[i]).floor() as i32
+    });
+    for x in min[0]..=max[0] {
+        for y in min[1]..=max[1] {
+            for z in min[2]..=max[2] {
+                let p = [x, y, z];
+                if p == hit.position {
+                    continue;
+                }
+                let cell = state.reconstruction.cell(&state.world, p);
+                if cell.moving.is_some()
+                    || !cell.state.is_some_and(|s| {
+                        matches!(
+                            s.name.as_str(),
+                            "minecraft:air" | "minecraft:cave_air" | "minecraft:void_air"
+                        )
+                    })
+                {
+                    return Err(unavailable(
+                        "uncertain eye corridor is not clear; use a less ambiguous standing/target geometry",
+                    ));
+                }
+            }
+        }
+    }
+    for dx in [-error[0], error[0]] {
+        for dz in [-error[2], error[2]] {
+            let eye = [
+                standing.eye_position[0] + dx,
+                standing.eye_position[1],
+                standing.eye_position[2] + dz,
+            ];
+            let observed = super::super::raycast::stationary_outline_hit(state, eye, 4.5)?;
+            if observed.is_none_or(|h| {
+                h.position != hit.position || h.face != hit.face || h.state != hit.state
+            }) {
+                return Err(unavailable(
+                    "target face/reach differs across observed position uncertainty",
+                ));
+            }
+        }
+    }
+    Ok(())
 }

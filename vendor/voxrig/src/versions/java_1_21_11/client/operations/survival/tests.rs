@@ -17,10 +17,10 @@ fn state() -> State {
     };
     s.operations.reset_world(0).unwrap();
     s.operations.local_player = LocalPlayerState::spawned(42);
-    s.operations
-        .local_player
-        .correct_velocity([0.0; 3], 0, 10)
-        .unwrap();
+    s.operations.local_player.velocity = Some(VelocitySample {
+        value: [0.0; 3],
+        receive_sequence: 10,
+    });
     s.motion.receive(ReceivedPose {
         generation: s.loading.generation,
         receive_sequence: s.sequence,
@@ -58,7 +58,7 @@ fn native_attribute_ids_defaults_and_packed_velocities_match_game_oracle() {
         oracle["dry_cubes"],
         serde_json::to_value(DRY_CUBES).unwrap()
     );
-    let mut local = LocalPlayerState::spawned(42);
+    let local = LocalPlayerState::spawned(42);
     assert_eq!(local.scale.unwrap().basis, ValueBasis::NativeReset);
     assert!(local.health.is_none());
     assert!(local.velocity.is_none());
@@ -75,19 +75,6 @@ fn native_attribute_ids_defaults_and_packed_velocities_match_game_oracle() {
             assert!(velocity(&mut Reader::new(&bytes[..end])).is_err());
         }
     }
-    local.correct_velocity([0.1, 0.2, 0.3], 0, 10).unwrap();
-    local
-        .correct_velocity([1.0, 2.0, 3.0], 32 | 128, 11)
-        .unwrap();
-    assert_eq!(local.velocity.unwrap().value, [1.1, 2.0, 3.3]);
-    local.correct_velocity([0.0; 3], 256 | 32, 12).unwrap();
-    assert!(local.velocity.is_none()); // Never approximate native float angle-table rotation.
-    local.correct_velocity([0.0; 3], 0, 13).unwrap();
-    local.correct_velocity([0.0; 3], 256 | 224, 14).unwrap();
-    assert_eq!(local.velocity.unwrap().value, [0.0; 3]);
-    let before = local.clone();
-    assert!(local.correct_velocity([f64::NAN, 0.0, 0.0], 0, 15).is_err());
-    assert_eq!(local, before);
 }
 
 #[test]
@@ -275,10 +262,10 @@ fn unsupported_posture_motion_fluid_and_reconstruction_never_become_ground_evide
     assert!(context(&mut s, 1, 0).is_err());
     s.operations.local_player.velocity = None;
     assert!(context(&mut s, 1, 0).is_err());
-    s.operations
-        .local_player
-        .correct_velocity([0.0; 3], 0, 11)
-        .unwrap();
+    s.operations.local_player.velocity = Some(VelocitySample {
+        value: [0.0; 3],
+        receive_sequence: 11,
+    });
     s.motion.invalidate(s.sequence, "test local movement");
     assert!(context(&mut s, 1, 0).is_err());
     s.motion.receive(ReceivedPose {
@@ -388,17 +375,17 @@ fn unsupported_impulses_and_own_vehicle_cannot_leave_stale_stationary_authority(
     apply(&mut s, p::SET_PASSENGERS, &[10, 1, 42]);
     assert!(context(&mut s, 1, 0).is_err());
     assert!(s.operations.local_player.velocity.is_none());
-    s.operations
-        .local_player
-        .correct_velocity([0.0; 3], 0, 13)
-        .unwrap();
+    s.operations.local_player.velocity = Some(VelocitySample {
+        value: [0.0; 3],
+        receive_sequence: 13,
+    });
     assert!(context(&mut s, 1, 0).is_err()); // Zero velocity alone cannot prove dismount.
     for id in [p::EXPLOSION, p::VEHICLE_MOVE] {
         s.operations.reset_world(0).unwrap();
-        s.operations
-            .local_player
-            .correct_velocity([0.0; 3], 0, 14)
-            .unwrap();
+        s.operations.local_player.velocity = Some(VelocitySample {
+            value: [0.0; 3],
+            receive_sequence: 14,
+        });
         s.motion.receive(ReceivedPose {
             generation: s.loading.generation,
             receive_sequence: s.sequence,

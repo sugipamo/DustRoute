@@ -24,11 +24,10 @@ fn fixture_state() -> State {
     };
     state.operations.reset_world(0).unwrap();
     state.operations.local_player = LocalPlayerState::spawned(42);
-    state
-        .operations
-        .local_player
-        .correct_velocity([0.0; 3], 0, 10)
-        .unwrap();
+    state.operations.local_player.velocity = Some(VelocitySample {
+        value: [0.0; 3],
+        receive_sequence: 10,
+    });
     state.operations.local_player.health = Some(PlayerHealth {
         health: 20.0,
         food: 20,

@@ -181,6 +181,7 @@ fn prepare(
         .ok_or_else(|| unavailable("held material receipt unavailable"))?;
     let hit = super::super::raycast::stationary_outline_hit(state, standing.eye_position, 4.5)?
         .ok_or_else(|| unavailable("no first native outline hit for placement"))?;
+    survival::uncertain_target(state, &standing, &hit)?;
     if hit.position != support
         || hit.face.map(|f| f as u8) != Some(face)
         || !survival::DRY_CUBES.contains(&hit.state.name.as_str())
@@ -197,7 +198,10 @@ fn prepare(
         .ok_or_else(|| unavailable("placement target is not received"))?;
     if !air(&before)
         || cell.moving.is_some()
-        || survival::standing_intersects(standing.position, target)
+        || (0..3).all(|i| {
+            standing.bounds[i] < f64::from(target[i] + 1)
+                && standing.bounds[i + 3] > f64::from(target[i])
+        })
     {
         return Err(unavailable(
             "placement requires known empty air outside the standing body",

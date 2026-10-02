@@ -74,7 +74,10 @@ impl Operations {
         Ok(evaluate(&state, watch))
     }
 }
-fn evaluate(state: &super::super::State, watch: &PlayerMotionWatch) -> PlayerMotionStatus {
+pub(in super::super) fn evaluate(
+    state: &super::super::State,
+    watch: &PlayerMotionWatch,
+) -> PlayerMotionStatus {
     if state.loading.generation != watch.generation {
         return PlayerMotionStatus::RequiresInspection {
             reason: "observer world generation changed".into(),

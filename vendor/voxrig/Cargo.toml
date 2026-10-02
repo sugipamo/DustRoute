@@ -23,6 +23,8 @@ include = [
     "/scripts/VerifySurvivalFoundation.java",
     "/scripts/VerifySurvivalPlacement.java",
     "/scripts/VerifySurvivalMovement.java",
+    "/scripts/VerifyPositionCorrection.java",
+    "/scripts/VerifyDryMovement.java",
     "/README.md",
     "/LICENSE",
     "/THIRD_PARTY_NOTICES.md",
