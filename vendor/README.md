@@ -7,21 +7,13 @@ licenses are included so a DustRoute checkout builds without an unpublished
 sibling checkout. Cargo excludes this crate from the DustRoute workspace; it is
 an optional path dependency selected by `--features voxrig`.
 
-The current snapshot is Voxrig commit
-`0d3c3793084f43044b134330f92c781ff5463251`, published on
+The authoritative current commit and file count are in
+[`voxrig-source.json`](voxrig-source.json), published on
 [`codex/survival-construction`](https://github.com/sugipamo/Voxrig/tree/codex/survival-construction).
-All 230 included files match that immutable commit, including native
-observation, survival inventory swaps, stationary context, guarded outbound
-frames, closed operation history and bounded mining observations. The
-[sender/mining implementation validation](../docs/evidence/survival-mining-implementation-20261002.json)
-records current source and integration checks, with continuation unvalidated.
-The earlier
-[mining comparison validation](../docs/evidence/survival-mining-comparison-20261002.json)
-records the preceding comparison-only pin. The
-[survival foundation validation](../docs/evidence/survival-foundation-20261002.json)
-and the earlier
-[pin alignment verification](../docs/evidence/voxrig/source-pin-alignment-20261002.json)
-remains historical evidence for the previous pin.
+The snapshot includes the [checked survival API](voxrig/docs/survival-api.md),
+version-selected capabilities, native operation history and explicit session
+retirement/recovery. Each evidence record retains the exact tested revision;
+older evidence is not relabeled when the current source pin advances.
 
 Verify the recorded snapshot without network access:
 

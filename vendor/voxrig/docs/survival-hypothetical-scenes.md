@@ -45,3 +45,19 @@ removal geometry and rejection of deleting foot support. These tests are not
 live-server access-work acceptance or the complete survival construction goal.
 Caller navigation, reviewed edit scope, material reservations, durable jobs and
 full construction/cleanup remain caller responsibilities.
+
+## Separate clearance and prospective aiming
+
+After hypothetical motion, conservative body/support checks retain the 1/16
+terminal margin. Target-ray uncertainty instead follows `HypotheticalAimRequirement`:
+the original captured position, or an explicitly required future independently
+observed endpoint. The latter derives its maximum eye uncertainty from the same
+packet-error and model-discrepancy limits used by actual endpoint admission.
+It is not a `StandingPositionBasis` and cannot manufacture a received pose.
+
+The requirement is available on a scenario, its movement preview and placement
+proposal, including after edits. Actual placement/mining still use current live
+standing evidence and their unchanged target-corridor, lifetime and mutation
+checks. A missing or unsuitable observer result cannot be replaced by the future
+requirement. The [boundary roadmap](survival-library-boundary.md) declares the
+isolated edge comparison before its execution.

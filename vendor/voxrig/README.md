@@ -2,7 +2,7 @@
 
 Minecraft Java Edition 向けのRust製headless clientライブラリです。
 既存の1.16.1（protocol 736）実装を維持し、版を選ぶ `Client` API に
-1.21.11（protocol 774）の観測用アダプタを追加しています。どちらもoffline-modeです。
+1.21.11（protocol 774）の観測・限定的な操作用アダプタを追加しています。どちらもoffline-modeです。
 
 外部のAI、planner、behavior treeなどに対する「身体」として、Minecraft protocol、状態同期、クライアント物理、構造化された観測、低レベル操作を提供します。経路探索、意味認識、行動計画、長期記憶といった頭脳は利用側へ委譲します。
 
@@ -54,7 +54,11 @@ async fn main() -> Result<()> {
 > 1.21.11のinventoryは、受信した単純スタックの観測と、survivalでの
 > [メイン所持品・ホットバー間の確認付き交換](docs/survival-inventory.md)に限定して対応します。
 > [静止した通常立位の接地判定と自身の受信状態](docs/survival-standing-context.md)も提供します。
-> 1.21.11のサバイバル歩行・採掘、両版のMicrosoft認証・online-mode暗号化は未対応です。
+> 1.21.11には[限定した通常歩行・ジャンプ](docs/survival-motion-controls.md)、
+> [通常設置](docs/survival-placement.md)、[土・石の採掘](docs/survival-mining.md)があります。
+> 移動後は独立観測、採掘後の継続は明示的な切断・復帰を要します。
+> 両版のMicrosoft認証・online-mode暗号化は未対応です。
+> [サバイバルAPIの境界整備](docs/survival-library-boundary.md)を進めています。
 > 対応範囲と失敗した試行は[バージョン別の検証記録](docs/version-adapter-validation.md)を参照してください。
 
 ## 開発時の確認

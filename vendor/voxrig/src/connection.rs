@@ -380,6 +380,8 @@ mod tests {
             max: [0, 0, 0],
         };
         let one = Client::connect(config.clone()).await.unwrap();
+        assert_eq!(one.survival_capabilities().checked_contract, None);
+        assert!(matches!(one.survival(), Err(e) if e.kind() == ErrorKind::Unsupported));
         let first = one.observe_region(region).await.unwrap();
         assert_eq!(first.blocks.len(), 4);
         assert!(first.blocks.iter().all(|b| b.state.is_none()));

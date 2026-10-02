@@ -503,9 +503,11 @@ fn matches_endpoint(run: &SurvivalMotionRecord, player: &ObservedPlayer) -> bool
     player.pose == Some(super::super::super::players::PlayerPose::Standing)
         && player.scale == 1.0
         && (0..3).all(|i| {
-            player.motion.position_error[i] <= 1.0 / 4096.0
-                && (end.position[i] - player.position[i]).abs()
-                    <= player.motion.position_error[i] + 1e-9
+            endpoint::axis_matches(
+                end.position[i],
+                player.position[i],
+                player.motion.position_error[i],
+            )
         })
 }
 fn input_bits(input: SurvivalInput) -> u8 {

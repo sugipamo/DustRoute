@@ -1,5 +1,7 @@
 //! Ordered 1.21.11 receive loop. Local state is committed under one session lock.
 mod correction;
+#[cfg(test)]
+mod edge_native_trials;
 mod loading;
 mod motion;
 mod observations;

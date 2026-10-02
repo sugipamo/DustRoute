@@ -9,10 +9,11 @@ mod placement;
 mod retirement;
 mod survival;
 pub use movement::{
-    CapturedSurvivalScene, HypotheticalBlockEdit, HypotheticalMovementPreview,
-    HypotheticalPlacement, MAX_SURVIVAL_CONTROL_TICKS, PredictedMotionFrame, StandingPositionBasis,
-    SurvivalControl, SurvivalInput, SurvivalMotionRecheck, SurvivalMotionRecord,
-    SurvivalMotionStatus, SurvivalMovementPreview, SurvivalScenario, TerminalClearance,
+    CapturedSurvivalScene, HypotheticalAimRequirement, HypotheticalBlockEdit,
+    HypotheticalMovementPreview, HypotheticalPlacement, MAX_SURVIVAL_CONTROL_TICKS,
+    PredictedMotionFrame, StandingPositionBasis, SurvivalControl, SurvivalInput,
+    SurvivalMotionRecheck, SurvivalMotionRecord, SurvivalMotionStatus, SurvivalMovementPreview,
+    SurvivalScenario, TerminalClearance,
 };
 #[cfg(test)]
 mod tests;

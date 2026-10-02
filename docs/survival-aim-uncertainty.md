@@ -1,6 +1,27 @@
 # Separate standing clearance from hypothetical aiming uncertainty
 
-## Finding (2026-10-02 UTC)
+## Current status (2026-10-02 UTC)
+
+The user approved implementation while consolidating Voxrig. The correction is
+implemented in native source `f19eb39`, with full-cube terminal clearance still
+1/16 and future aiming bound derived from the actual independent endpoint gate.
+`HypotheticalAimRequirement` distinguishes a captured pose from an observation
+that a future executor must establish. Actual placement/mining gates remain live.
+
+The adjusted isolated edge trial passed at source `f53aef9`: predicted movement
+frames matched execution, side-placement target and cursor agreed, independent
+observations confirmed position and one dirt placement, inventory consumed one,
+and retreat/final region matched. The initial x=0.5 fixture's integer-tick family
+had no safe candidate; rejection records are preserved. It was adjusted to x=0.6
+without weakening admission. Fixture wait/connection-start failures are also
+recorded. [Exact source and attempts](../vendor/voxrig/docs/evidence/survival-edge-20261002-source.json).
+
+The shared client API and mining recovery handle are available in the current
+vendor. [Library ownership and API](../vendor/voxrig/docs/survival-api.md).
+This resolves the specific aiming discrepancy, not full roofed construction.
+The remainder below preserves the original diagnostic checkpoint.
+
+## Historical finding (2026-10-02 UTC)
 
 The roofed construction objective remains the five-by-five roof at y=6 with four
 columns, protected flat ground and final interior air. No simpler target has
@@ -49,7 +70,7 @@ specific geometry. No unsupported inference is made about crouching, actual edge
 walking or complete roof construction. Planning should not silently lower the
 roof, weaken final air obligations or widen execution permissions to hide it.
 
-## Proposed next work for approval
+## Original proposal (subsequently approved and implemented)
 
 1. Name and share the existing endpoint observation limits in the native motion
    layer. Derive the prospective aiming bound from those exact limits; do not

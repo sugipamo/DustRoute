@@ -8,7 +8,7 @@
 //!
 //! The established `Bot` API targets Java 1.16.1 (736). [`Client`] also offers a
 //! limited Java 1.21.11 (774) adapter for native block observations, packet traces
-//! and use-on-block interactions. [`Client::observe_client_region`] additionally
+//! and checked bounded survival operations through [`Client::survival`]. [`Client::observe_client_region`] additionally
 //! reconstructs a bounded set of piston and neighbor effects, including independent
 //! moving carriers, while preserving the unchanged received-state view.
 //! Neither adapter's local cache is independent confirmation of server state.
@@ -45,6 +45,7 @@
 #![warn(missing_docs)]
 
 pub mod block_state;
+pub mod checked_survival;
 pub mod connection;
 mod error;
 mod protocol;

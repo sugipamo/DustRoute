@@ -5,9 +5,7 @@ use std::{
     io::Write,
     time::{Duration, Instant},
 };
-use voxrig::versions::java_1_21_11::operations::{
-    InventorySlot, PlacementStatus, SurvivalMotionStatus,
-};
+use voxrig::checked_survival::{InventorySlot, PlacementStatus, SurvivalMotionStatus};
 use voxrig::{BlockFace, Client, ConnectionConfig, MinecraftVersion, Region, Server};
 pub(super) async fn connect(name: &str) -> Client {
     let c = Client::connect(ConnectionConfig::offline(
@@ -50,8 +48,8 @@ async fn native_route_around_wall_place_and_return() {
         .unwrap();
     let bot = connect("NatMineBot").await;
     let viewer = connect("NatMineView").await;
-    let ops = bot.java_1_21_11_operations().unwrap();
-    let observer = viewer.java_1_21_11_operations().unwrap();
+    let ops = bot.survival().unwrap();
+    let observer = viewer.survival().unwrap();
     println!(
         "FIXTURE route: stone floor y=-61; air above; wall x=2,y=-60..-58,z=-1..0; bot 0.5 -60 0.5, viewer 0.5 -60 5.5; clear bot and inventory.0 dirt 1; enter"
     );
@@ -151,16 +149,14 @@ async fn exercise(
         properties: Default::default(),
     };
     let future = scenario
-        .after_edits(&[
-            voxrig::versions::java_1_21_11::operations::HypotheticalBlockEdit {
-                position: [1, -60, 1],
-                before: air.clone(),
-                after: voxrig::NativeBlockState {
-                    name: "minecraft:dirt".into(),
-                    properties: Default::default(),
-                },
+        .after_edits(&[voxrig::checked_survival::HypotheticalBlockEdit {
+            position: [1, -60, 1],
+            before: air.clone(),
+            after: voxrig::NativeBlockState {
+                name: "minecraft:dirt".into(),
+                properties: Default::default(),
             },
-        ])
+        }])
         .map_err(|e| e.to_string())?;
     let changed = future
         .preview_path(&hypothetical.outbound().controls)

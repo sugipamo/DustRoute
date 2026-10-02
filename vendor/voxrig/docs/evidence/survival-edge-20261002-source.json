@@ -1,0 +1,78 @@
+{
+  "scope": "Native non-OP edge motion, side placement and retreat; not full construction or cleanup",
+  "source_revision": "f53aef95e2122495160f95b797ea9547c84d1953",
+  "successful_run": "survival-edge-live-20261002-e.json.gz",
+  "checks": {
+    "move_preview_frames_match": true,
+    "placement_target_cursor_match": true,
+    "independent_endpoint_observation": true,
+    "independent_target_readback": true,
+    "dirt_consumed": 1,
+    "final_region_exact": true,
+    "server_stopped_exit_code": 0
+  },
+  "attempts": [
+    {
+      "id": "a",
+      "result": "fixture stdin gate timed out before trace/action phase; output file empty",
+      "exit_code": 101
+    },
+    {
+      "id": "b",
+      "result": "no candidate at initial x=0.5; no inventory or movement action",
+      "exit_code": 101,
+      "source_revision": "f19eb39"
+    },
+    {
+      "id": "c",
+      "result": "diagnostic candidate rejection evidence; no inventory or movement action",
+      "exit_code": 101,
+      "source": "f19eb39 plus rejection logging, subsequently committed in f53aef9"
+    },
+    {
+      "id": "d",
+      "result": "connection refused before server ready; no login/actions",
+      "exit_code": 101
+    },
+    {
+      "id": "e",
+      "result": "passed from initial x=0.6; 3 active outbound ticks plus 20 released ticks, ordinary side placement, retreat",
+      "exit_code": 0,
+      "test_seconds": 21.73
+    }
+  ],
+  "edge_position": [
+    1.1282627399737297,
+    -59,
+    0.5
+  ],
+  "files": [
+    {
+      "path": "survival-edge-live-20261002-b.json.gz",
+      "sha256": "c9c862a24c9868521def1bacc0b2bf889bc1cc7e5e0370e7242d345e40fa2d47"
+    },
+    {
+      "path": "survival-edge-live-20261002-c.json.gz",
+      "sha256": "cd3538d75c568dd2867b1b1830999cd39ddb22247d321ccc54b58171ed6e71dd"
+    },
+    {
+      "path": "survival-edge-live-20261002-e.json.gz",
+      "sha256": "72e7c7c00eb028291755bdb6d112a155ba2cbbc67b9cb765b4d03a34b0c70bf9"
+    },
+    {
+      "path": "survival-edge-server-20261002-abc.log.gz",
+      "sha256": "a0f7c297c78d3a8cc3a34e309990c5d6d008c47cb4546b418f392599f8d45e7f"
+    },
+    {
+      "path": "survival-edge-server-20261002-de.log.gz",
+      "sha256": "56c6153d78a24a4811697e0b584a8104697609bb4c9b30158d22be1b7d82d71b"
+    }
+  ],
+  "limits": [
+    "direct vanilla 1.21.11",
+    "non-OP with fixture console preparation before all actions",
+    "uses version-specific public API before common facade consolidation",
+    "one dirt remains intentionally; cleanup not tested",
+    "full roof/access planning and durable jobs remain caller work"
+  ]
+}

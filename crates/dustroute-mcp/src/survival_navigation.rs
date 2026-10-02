@@ -3,7 +3,7 @@
 use serde::Serialize;
 use std::cmp::Reverse;
 use std::collections::{BTreeMap, BinaryHeap, HashMap};
-use voxrig::versions::java_1_21_11::operations::{
+use voxrig::checked_survival::{
     HypotheticalMovementPreview, MAX_SURVIVAL_CONTROL_TICKS, Operations, PredictedMotionFrame,
     SurvivalControl, SurvivalInput, SurvivalMotionRecord, SurvivalMovementPreview,
     SurvivalScenario, TerminalClearance,
@@ -482,7 +482,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use voxrig::versions::java_1_21_11::operations::{
+    use voxrig::checked_survival::{
         LocalPlayerState, PredictedMotionFrame, StandingContext, StandingPositionBasis,
     };
     fn request() -> RouteRequest {

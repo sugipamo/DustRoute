@@ -215,3 +215,20 @@ user's concern-stop instruction, behavior changes are unimplemented pending revi
 of the [specific correction and validation proposal](survival-aim-uncertainty.md).
 This finding is not a proof that all alternate roof access layouts are impossible.
 The full-height roofed construction objective is unchanged.
+
+## Approved native boundary consolidation (2026-10-02 UTC)
+
+The user approved fixing the aiming discrepancy and organizing Voxrig first.
+The native bound is now separate from standing clearance, with a passed isolated
+edge movement/side-placement/retreat trial and retained rejection/failure evidence.
+See [current aiming status](survival-aim-uncertainty.md).
+
+Navigation and construction checks now import `voxrig::checked_survival` rather
+than the Java implementation module. `Client::survival()` selects the supported
+contract; unsupported versions refuse before I/O. Typed static capabilities do
+not imply current readiness. The native-access driver uses `MiningRetirement`
+to bind source/observer/watch and explicitly close, wait and reconnect once.
+Legacy version APIs coexist; native geometry/history/lifecycle checks are shared.
+Version-specific item-registry helpers remain only in the explicitly 1.21.11
+fixture setup. No route search, site permission, resource policy or durable job
+has moved into Voxrig. Full roof selection/execution remains unfinished.

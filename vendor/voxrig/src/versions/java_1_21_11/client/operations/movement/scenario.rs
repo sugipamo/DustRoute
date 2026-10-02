@@ -6,6 +6,45 @@ const MAX_CELLS: usize = 32768;
 const MAX_EDITS: usize = 256;
 const MAX_TICKS: usize = 4096;
 
+/// Required position evidence for a hypothetical interaction, not an actual
+/// receipt. Real interaction admission always reads its own fresh standing basis.
+#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum HypotheticalAimRequirement {
+    /// Error obtained from the original captured standing evidence.
+    CapturedPosition {
+        /// Per-axis uncertainty about the model's eye coordinates.
+        horizontal_error: [f64; 3],
+    },
+    /// Future motion must satisfy the same independent observation contract as
+    /// actual motion. This variant cannot stand in for that later observation.
+    IndependentlyObservedEndpoint {
+        /// Maximum per-axis error of the independent position packet.
+        max_packet_error: f64,
+        /// Maximum discrepancy between predicted and independently seen positions.
+        max_prediction_discrepancy: f64,
+        /// Sum of the two limits in horizontal axes; floor contact supplies Y.
+        horizontal_error: [f64; 3],
+    },
+}
+impl HypotheticalAimRequirement {
+    fn after_observed_motion() -> Self {
+        Self::IndependentlyObservedEndpoint {
+            max_packet_error: endpoint::MAX_PACKET_ERROR,
+            max_prediction_discrepancy: endpoint::MAX_DISCREPANCY,
+            horizontal_error: [endpoint::MAX_AIM_ERROR, 0.0, endpoint::MAX_AIM_ERROR],
+        }
+    }
+    fn error(self) -> [f64; 3] {
+        match self {
+            Self::CapturedPosition { horizontal_error }
+            | Self::IndependentlyObservedEndpoint {
+                horizontal_error, ..
+            } => horizontal_error,
+        }
+    }
+}
+
 /// Immutable complete native scene, captured atomically with standing parameters.
 /// This may seed hypothetical planning; it does not authorize future execution.
 #[derive(Clone, Debug)]
@@ -32,7 +71,8 @@ pub struct SurvivalScenario {
     model: Model,
     edits: usize,
     ticks: usize,
-    error: [f64; 3],
+    clearance_error: [f64; 3],
+    aim_requirement: HypotheticalAimRequirement,
     origin: Arc<()>,
 }
 /// Future geometry prediction, deliberately incompatible with live input APIs.
@@ -52,6 +92,8 @@ pub struct HypotheticalMovementPreview {
     pub initial_position: [f64; 3],
     /// Native standing bounds at the hypothetical start, including uncertainty.
     pub initial_bounds: [f64; 6],
+    /// Prospective evidence required at the start; never an actual new receipt.
+    pub initial_aim_requirement: HypotheticalAimRequirement,
     /// Number of preceding hypothetical cell edits.
     pub preceding_edits: usize,
     /// Exact inputs used by the shared native model.
@@ -80,6 +122,8 @@ pub struct HypotheticalPlacement {
     pub rotation: [f32; 2],
     /// Native face cursor.
     pub cursor: [f32; 3],
+    /// Required position evidence for this hypothetical target/face/cursor.
+    pub aim_requirement: HypotheticalAimRequirement,
 }
 impl GeometryView for CapturedSurvivalScene {
     fn block(&self, p: [i32; 3]) -> Result<crate::NativeBlockState> {
@@ -210,7 +254,10 @@ impl CapturedSurvivalScene {
             model: Model::from_context(&self.initial),
             edits: 0,
             ticks: 0,
-            error: self.initial.position_basis.horizontal_error(),
+            clearance_error: self.initial.position_basis.horizontal_error(),
+            aim_requirement: HypotheticalAimRequirement::CapturedPosition {
+                horizontal_error: self.initial.position_basis.horizontal_error(),
+            },
             origin: Arc::new(()),
         }
     }
@@ -232,7 +279,13 @@ impl SurvivalScenario {
             self.scene.block(p).map_err(anyhow::Error::from)
         })?
         .ok_or_else(|| invalid("hypothetical removal has no native target hit"))?;
-        survival::uncertain_target_in(&self.scene, eye, self.error, rotation, &hit)?;
+        survival::uncertain_target_in(
+            &self.scene,
+            eye,
+            self.aim_requirement.error(),
+            rotation,
+            &hit,
+        )?;
         if hit.position != target || hit.face.map(|f| f as u8) != Some(face as u8) {
             return Err(invalid(
                 "hypothetical removal differs from first native target face",
@@ -259,6 +312,11 @@ impl SurvivalScenario {
     pub fn position(&self) -> [f64; 3] {
         self.model.frame.position
     }
+    /// Read-only requirement for subsequent hypothetical placement or removal.
+    /// It is deliberately distinct from `StandingPositionBasis` observations.
+    pub fn aim_requirement(&self) -> HypotheticalAimRequirement {
+        self.aim_requirement
+    }
     /// Current hypothetical native state; missing geometry refuses.
     pub fn block(&self, p: [i32; 3]) -> Result<crate::NativeBlockState> {
         self.scene.block(p)
@@ -284,8 +342,13 @@ impl SurvivalScenario {
             origin: self.origin.clone(),
             source: self.scene.initial.clone(),
             initial_position: self.position(),
-            initial_bounds: survival::standing_geometry(&self.scene, self.position(), self.error)?
-                .bounds,
+            initial_bounds: survival::standing_geometry(
+                &self.scene,
+                self.position(),
+                self.clearance_error,
+            )?
+            .bounds,
+            initial_aim_requirement: self.aim_requirement,
             preceding_edits: self.edits,
             controls: controls.to_vec(),
             terminal_clearance: clearance(&self.scene, frames.last().unwrap()),
@@ -308,7 +371,8 @@ impl SurvivalScenario {
             origin: Arc::new(()),
             model,
             ticks: self.ticks + controls.len(),
-            error: [TERMINAL_MARGIN, 0.0, TERMINAL_MARGIN],
+            clearance_error: [TERMINAL_MARGIN, 0.0, TERMINAL_MARGIN],
+            aim_requirement: HypotheticalAimRequirement::after_observed_motion(),
             ..self.clone()
         })
     }
@@ -337,7 +401,8 @@ impl SurvivalScenario {
             }
             Arc::make_mut(&mut next.scene.blocks).insert(edit.position, edit.after.clone());
         }
-        let standing = survival::standing_geometry(&next.scene, self.position(), self.error)?;
+        let standing =
+            survival::standing_geometry(&next.scene, self.position(), self.clearance_error)?;
         if standing.support.is_empty() {
             return Err(invalid("hypothetical edit removes player support"));
         }
@@ -364,7 +429,8 @@ impl SurvivalScenario {
         {
             return Err(invalid("placement requires an admitted passive cube"));
         }
-        let standing = survival::standing_geometry(&self.scene, self.position(), self.error)?;
+        let standing =
+            survival::standing_geometry(&self.scene, self.position(), self.clearance_error)?;
         if standing.support.is_empty() {
             return Err(invalid("hypothetical placement requires standing support"));
         }
@@ -372,7 +438,7 @@ impl SurvivalScenario {
             &self.scene,
             self.position(),
             standing.bounds,
-            self.error,
+            self.aim_requirement.error(),
             rotation,
             support,
             face as u8,
@@ -387,6 +453,7 @@ impl SurvivalScenario {
             face_id: face as u8,
             rotation,
             cursor: g.cursor,
+            aim_requirement: self.aim_requirement,
         })
     }
 }

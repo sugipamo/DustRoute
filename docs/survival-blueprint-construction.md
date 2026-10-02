@@ -16,9 +16,12 @@ origin. Main remains at `7f74b37`.
 - Automatic access/action selection, durable survival jobs and the complete
   adopted roofed build/cleanup acceptance remain unfinished. The goal is active.
 
-Access/action selection has encountered a [native aiming uncertainty discrepancy](survival-aim-uncertainty.md).
-The characterization test is complete; the proposed behavior correction is
-unimplemented pending the user's concern-stop review.
+The user approved correcting the [native aiming uncertainty discrepancy](survival-aim-uncertainty.md)
+and consolidating Voxrig first. The correction and isolated edge comparison are
+complete. Version-selected checked operations and explicit mining retirement /
+fresh recovery now share a public client boundary; caller navigation/construction
+imports have migrated. Design, permissions, resource policy, route selection and
+durable jobs remain DustRoute responsibilities. The full roofed build is pending.
 
 The sections below retain the earlier checkpoints and their original limitations.
 The latest detail is in [site planning](survival-site-planning.md).

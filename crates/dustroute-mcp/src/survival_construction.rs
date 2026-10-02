@@ -9,7 +9,7 @@ use dustroute_translate::{
 };
 use serde::Serialize;
 use std::collections::BTreeMap;
-use voxrig::versions::java_1_21_11::operations::{
+use voxrig::checked_survival::{
     CapturedSurvivalScene, HypotheticalBlockEdit, HypotheticalMovementPreview,
     HypotheticalPlacement, StandingContext, SurvivalControl,
 };

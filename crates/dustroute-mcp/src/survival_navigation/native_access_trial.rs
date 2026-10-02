@@ -2,7 +2,7 @@
 use super::*;
 use serde_json::{Value, json};
 use std::{io::Write, time::Duration};
-use voxrig::versions::java_1_21_11::operations::{
+use voxrig::checked_survival::{
     HypotheticalBlockEdit, HypotheticalPlacement, InventorySlot, MiningRetirementStatus,
     MiningStatus, PlacementStatus,
 };
@@ -92,7 +92,7 @@ async fn native_temporary_access_place_climb_retreat_cleanup() {
     .unwrap()
     .unwrap()
     .unwrap();
-    let ops = bot.java_1_21_11_operations().unwrap();
+    let ops = bot.survival().unwrap();
     tokio::time::timeout(Duration::from_secs(5), async {
         loop {
             let p = ops.player_state().await.unwrap();
@@ -116,7 +116,7 @@ async fn native_temporary_access_place_climb_retreat_cleanup() {
     let mut events = vec![];
     let mut traces = vec![];
     let result = exercise(&mut bot, &viewer, &mut events, &mut traces).await;
-    let last = bot.java_1_21_11_operations().unwrap();
+    let last = bot.survival().unwrap();
     let after = last.player_state().await.ok();
     let history = last.operation_history().await;
     if let Ok(trace) = bot.stop_packet_trace().await {
@@ -135,10 +135,8 @@ async fn exercise(
     events: &mut Vec<Value>,
     traces: &mut Vec<Value>,
 ) -> Result<(), String> {
-    let ops = bot.java_1_21_11_operations().map_err(|e| e.to_string())?;
-    let observer = viewer
-        .java_1_21_11_operations()
-        .map_err(|e| e.to_string())?;
+    let ops = bot.survival().map_err(|e| e.to_string())?;
+    let observer = viewer.survival().map_err(|e| e.to_string())?;
     let capture = ops
         .capture_survival_scene(Region {
             min: [-5, -62, -5],
@@ -238,7 +236,7 @@ async fn exercise(
         events.push(json!({"phase":name,"motion":record}));
     }
     for x in 1..=3 {
-        let current = bot.java_1_21_11_operations().map_err(|e| e.to_string())?;
+        let current = bot.survival().map_err(|e| e.to_string())?;
         // Re-plan this removal from the current connection and observed terrain.
         let scene = current
             .capture_survival_scene(Region {
@@ -274,26 +272,24 @@ async fn exercise(
             return Err(format!("{status:?}"));
         };
         let seen = observe(viewer, edit.position, "minecraft:air").await?;
-        let watch = current
-            .prepare_survival_mining_retirement(&observation.intent, &observer)
+        let recovery = current
+            .prepare_mining_retirement(&observation.intent, &observer)
             .await
             .map_err(|e| e.to_string())?;
         events.push(json!({"phase":"removal","plan":edit,"observation":observation,"independent":seen,"history":current.operation_history().await}));
         traces.push(json!(
             bot.stop_packet_trace().await.map_err(|e| e.to_string())?
         ));
-        bot.disconnect().await.map_err(|e| e.to_string())?;
-        let retirement = current
-            .wait_survival_mining_retirement(&watch, &observer, Duration::from_secs(3))
+        recovery.close_source().await.map_err(|e| e.to_string())?;
+        let retirement = recovery
+            .wait(Duration::from_secs(3))
             .await
             .map_err(|e| e.to_string())?;
         if !matches!(retirement, MiningRetirementStatus::Retired { .. }) {
             return Err(format!("{retirement:?}"));
         }
-        let recovered = current
-            .reconnect_survival_mining(
-                &watch,
-                &observer,
+        let recovered = recovery
+            .reconnect(
                 ConnectionConfig::offline(
                     Server::new("127.0.0.1", 25572),
                     "NatMineBot",
@@ -303,12 +299,12 @@ async fn exercise(
             )
             .await
             .map_err(|e| e.to_string())?;
-        *bot = recovered.client();
+        *bot = recovered.client;
         bot.start_packet_trace(8_388_608)
             .await
             .map_err(|e| e.to_string())?;
         let exposed = bot
-            .java_1_21_11_operations()
+            .survival()
             .map_err(|e| e.to_string())?
             .operation_history()
             .await

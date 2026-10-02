@@ -2,6 +2,12 @@
 
 この文書は、外部controllerが利用する公開面を用途別に示します。正確な引数型と戻り値は`cargo doc --open`で生成されるrustdocを正とします。
 
+## 版選択と検査付きサバイバル
+
+`Client::survival_capabilities()` と `Client::survival()` が版選択の入口です。
+型は `voxrig::checked_survival` から参照でき、[操作・復旧契約](survival-api.md)を共有します。
+以下は従来の1.16.1 APIの一覧です。`voxrig::survival::SurvivalState` も従来のまま残ります。
+
 ## Import
 
 基本操作ではpreludeを利用できます。

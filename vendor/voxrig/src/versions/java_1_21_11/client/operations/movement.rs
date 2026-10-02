@@ -1,5 +1,6 @@
 //! Bounded dry-cube prediction and separately observed native controls.
 mod control;
+mod endpoint;
 mod scenario;
 use super::geometry::GeometryView;
 use super::*;
@@ -9,8 +10,8 @@ pub use control::{
     StandingPositionBasis, SurvivalMotionRecheck, SurvivalMotionRecord, SurvivalMotionStatus,
 };
 pub use scenario::{
-    CapturedSurvivalScene, HypotheticalBlockEdit, HypotheticalMovementPreview,
-    HypotheticalPlacement, SurvivalScenario,
+    CapturedSurvivalScene, HypotheticalAimRequirement, HypotheticalBlockEdit,
+    HypotheticalMovementPreview, HypotheticalPlacement, SurvivalScenario,
 };
 
 /// Digital walking input for one predicted native game tick, without sprint/sneak.

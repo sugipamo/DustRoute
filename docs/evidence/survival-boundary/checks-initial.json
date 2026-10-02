@@ -1,0 +1,33 @@
+{
+  "native_source": "fe8d1e88a1cbbb4c916eead62cea827a4c879132",
+  "native_tests": {
+    "passed": 185,
+    "ignored": 6,
+    "failed": 0
+  },
+  "doc_tests_passed": 4,
+  "clippy_passed": true,
+  "initial_consumer_compile": "missing read-only visible_players forwarding method; no runtime execution; corrected upstream before reimport",
+  "files": [
+    {
+      "path": "survival-boundary/survival-aim-fix-native-tests-20261002.log.gz",
+      "sha256": "587dc015b234c7d90898bb359a67878e87269907de7199fa233dde202666342e"
+    },
+    {
+      "path": "survival-boundary/survival-facade-native-tests-20261002-final.log.gz",
+      "sha256": "9188a56b3573d255486afd485042fb41e4da53ee9115bdce4aeb8e6f4bd51813"
+    },
+    {
+      "path": "survival-boundary/survival-facade-native-docs-20261002.log.gz",
+      "sha256": "c2a60b7718197c29f149bedf4b0e7dcd87eccd512cf0d835d27fbf2eaeafb3d1"
+    },
+    {
+      "path": "survival-boundary/survival-facade-native-clippy-20261002.log.gz",
+      "sha256": "8c07efa387d2b736ed83257b4f5741fa2bc85dae91cdb0a532e6d6fbd16505d8"
+    },
+    {
+      "path": "survival-boundary/survival-facade-integration-tests-20261002.log.gz",
+      "sha256": "93d3ef0f5d49af40ded2dc3915d89227d454be029b9c0da1b419c8f05e9402f6"
+    }
+  ]
+}
