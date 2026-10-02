@@ -302,3 +302,11 @@ Voxrig-enabled consumer tests: 19 passed, four live fixtures ignored. Adding the
 native initial frame exposed one test-only navigation mock initializer; it now
 explicitly supplies its synthetic initial frame. The mock remains a search/budget
 test, not a Minecraft physics model or an execution path.
+
+`preflight-d` with the explicit reset correctly refused a late descent's authored
+center preference: the nearest natively admitted landing was 0.2081 blocks from
+the waypoint, outside the recipe's 0.13 preference. No construction was sent.
+The descent-only waypoint tolerance is now 0.23; candidates must still pass the
+same native terminal-clearance, support and travel checks, and execution still
+requires exact predicted frames and received reconnect position. This changes
+candidate selection, not native physical or execution tolerances.

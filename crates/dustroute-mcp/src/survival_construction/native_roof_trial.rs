@@ -280,7 +280,9 @@ impl Recipe<'_> {
                     f64::from(FLOOR + h - 1),
                     f64::from(z) + 0.5,
                 ],
-                0.13,
+                // Whole-tick input can land off-center after a received reset.
+                // Native terminal clearance and travel bounds still admit it.
+                0.23,
                 false,
             )?;
             for y in ((h - 2).max(0)..h).rev() {
