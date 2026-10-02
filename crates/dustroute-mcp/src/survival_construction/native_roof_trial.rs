@@ -38,7 +38,7 @@ fn face_delta(face: &BlockFace) -> [i32; 3] {
         BlockFace::East => [1, 0, 0],
     }
 }
-fn scope() -> ConstructionScope {
+pub(crate) fn scope() -> ConstructionScope {
     ConstructionScope {
         observed: r(p(-5, -2, -5), p(9, 10, 10)),
         edits: WorldEditScope {
@@ -60,7 +60,7 @@ fn scope() -> ConstructionScope {
         },
     }
 }
-fn design() -> std::result::Result<GeneratedGroundedBuildingDesign, String> {
+pub(crate) fn design() -> std::result::Result<GeneratedGroundedBuildingDesign, String> {
     let region = |a, b| json!(r(a, b));
     dustroute_translate::building::generate_grounded_building_design(serde_json::from_value(json!({
         "ground_material":"stone","design":{

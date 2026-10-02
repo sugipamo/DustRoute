@@ -149,6 +149,10 @@ impl UpdateInput {
 #[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
 #[serde(tag = "action", rename_all = "snake_case", deny_unknown_fields)]
 pub(crate) enum BlueprintWrite {
+    /// Author passive survival geometry with existing protected ground; no adoption or live writes.
+    GenerateGroundedBuildingDesign {
+        request: Box<dustroute_library::building::GroundedBuildingDesignRequest>,
+    },
     /// Author explicit virtual geometry and permanent air spaces, optionally
     /// wrapping one uniquely adopted equipment Assembly. No world writes.
     GenerateBuildingDesign {
@@ -655,6 +659,11 @@ fn perform(
                 return Err("Blueprint request exceeds 4 MiB".into());
             }
             match write {
+                BlueprintWrite::GenerateGroundedBuildingDesign { request } => {
+                    let generated =
+                        dustroute_translate::building::generate_grounded_building_design(*request);
+                    Ok((Some(building_result_json(generated)), false))
+                }
                 BlueprintWrite::GenerateBuildingDesignUpdate { request } => {
                     let generated = (|| {
                         let base = construction_basis(updates, &request.base_assembly_revision_id)?;

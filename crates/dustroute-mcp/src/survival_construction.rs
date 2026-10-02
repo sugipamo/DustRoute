@@ -7,6 +7,7 @@ use dustroute_translate::{
     snapshot::{LiteralSnapshotIndex, MinecraftSnapshot},
     world::{Pos, Region},
 };
+use rmcp::schemars;
 use serde::Serialize;
 use std::collections::BTreeMap;
 use voxrig::checked_survival::{
@@ -17,7 +18,8 @@ use voxrig::checked_survival::{
 use voxrig::{BlockFace, NativeBlockState};
 
 /// Proposed execution footprint, separate from immutable final Blueprint geometry.
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, serde::Deserialize, rmcp::schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct ConstructionScope {
     pub observed: Region,
     pub edits: WorldEditScope,
@@ -104,6 +106,9 @@ pub struct ConstructionSite {
     scope: ConstructionScope,
 }
 impl ConstructionSite {
+    pub(crate) fn scope(&self) -> &ConstructionScope {
+        &self.scope
+    }
     /// Reuse grounded Blueprint geometry without asserting adoption/live readiness.
     pub fn from_grounded(
         design: &GeneratedGroundedBuildingDesign,
@@ -664,7 +669,7 @@ mod tests;
 
 #[cfg(test)]
 #[path = "survival_construction/native_roof_trial.rs"]
-mod native_roof_trial;
+pub(crate) mod native_roof_trial;
 
 #[path = "survival_construction/generation.rs"]
 pub mod generation;

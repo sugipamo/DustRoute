@@ -1,0 +1,47 @@
+{
+  "schema": "dustroute.survival-public-progress.v1",
+  "recorded_at_utc": "2026-10-02T16:03:51.983849+00:00",
+  "status": "draft_stopped_at_rustc_sigsegv",
+  "stage_3_complete": false,
+  "public_path_live_test_run": false,
+  "source_base": "95aad35",
+  "checks": {
+    "earlier_draft": "cargo check --offline --locked -j 1 -p dustroute-mcp --features voxrig --all-targets passed before final test/lease updates",
+    "current_draft": "cargo test --offline --locked -j 1 -p dustroute-mcp --features voxrig --lib service::survival::tests::public_grounded -- --test-threads=1 failed during compilation; test body did not run"
+  },
+  "failure": {
+    "process": "rustc",
+    "signal": "SIGSEGV",
+    "cargo_exit_code": 101,
+    "reported_stack": "rustc_mir_build::check_unsafety::UnsafetyVisitor / visit_expr / visit_block",
+    "compiler_suggestion": "RUST_MIN_STACK=16777216",
+    "root_cause": "undetermined; compiler suggestion is not a diagnosis"
+  },
+  "unverified": [
+    "Current draft test compilation, related regression suite, Clippy and no-voxrig build",
+    "Public grounded adoption and mismatch diagnostics tests",
+    "Exclusive bot ownership and replaced-connection handback under public job execution",
+    "Public generated-roof integration and restart diagnosis",
+    "Stale source/site/material/permission refusal coverage and cancellation/persistence cases"
+  ],
+  "limits": [
+    "No server/JVM was started for this stage. Prior Temurin reference success remains separate evidence.",
+    "No compiler-stack setting, toolchain replacement, cache deletion or host action performed after this failure.",
+    "No relationship to prior JVM or PVE failures has been established.",
+    "Draft implementation is not an accepted public workflow."
+  ],
+  "artifacts": [
+    {
+      "path": "survival-public/survival-public-check.log.gz",
+      "sha256": "d898b416a3943bffdb4f16f66611546d61559976db9650f6a51bd25b236918c0",
+      "gzip_sha256": "dd5de395829c03b2a91baffe8c291326a3577feb44fcdd1cc8865a51808e1bd3",
+      "bytes": 146
+    },
+    {
+      "path": "survival-public/survival-public-tests.log.gz",
+      "sha256": "8f9d2618a38d821443af96a96051acd92ddf558c70685f61f08457813b2a61e0",
+      "gzip_sha256": "89ab0b5e6a4b7d6a077aaa85432d31e1d62776caa9164d1e6a32b76258f70b28",
+      "bytes": 14591
+    }
+  ]
+}

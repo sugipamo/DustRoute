@@ -14,6 +14,8 @@ mod optimization_workflow;
 mod placement_workflow;
 mod player_scope;
 mod repair_workflow;
+#[cfg(feature = "voxrig")]
+mod survival;
 mod world_editor;
 use circuit_reports::{
     bounds_json, circuit_identity_json, focused_explanation_json, focused_hierarchy_role_json,
@@ -172,6 +174,10 @@ impl LocatedSelection {
 #[derive(Clone)]
 pub struct DustRouteMcp {
     bridge: BotBridge,
+    #[cfg(feature = "voxrig")]
+    survival: Arc<survival::Jobs>,
+    #[cfg(feature = "voxrig")]
+    survival_observer: Option<voxrig::Client>,
     selections: Arc<Mutex<HashMap<String, LocatedSelection>>>,
     circuits: Arc<Mutex<HashMap<uuid::Uuid, StoredCircuit>>>,
     tool_router: ToolRouter<Self>,
@@ -791,6 +797,10 @@ impl DustRouteMcp {
         }
         Self {
             bridge: BotBridge::new(bridge_address),
+            #[cfg(feature = "voxrig")]
+            survival: Arc::default(),
+            #[cfg(feature = "voxrig")]
+            survival_observer: None,
             selections: Arc::new(Mutex::new(HashMap::new())),
             circuits: Arc::new(Mutex::new(HashMap::new())),
             tool_router,
@@ -849,6 +859,9 @@ impl DustRouteMcp {
         let bridge = BotBridge::connect_voxrig(connection).await?;
         let mut service = Self::with_config(config, policy);
         service.bridge = bridge;
+        if let Ok(observer) = std::env::var("DUSTROUTE_SURVIVAL_OBSERVER_USERNAME") {
+            service = service.with_survival_observer(&observer).await?;
+        }
         Ok(service)
     }
 
@@ -1884,7 +1897,7 @@ impl DustRouteMcp {
     }
 
     #[tool(
-        description = "Use blueprint.action=generate_building_design with namespace, name, known_region, named parts (fill/shell/blocks shapes plus local cutouts), permanent air spaces and an optional pinned component Assembly to author explicit virtual building geometry. Identical materials are deduplicated; conflicting materials, occupied spaces and unsupported requests return structured errors with item/position. Review failures expose diagnostics with failed versus undetermined status, affected occurrence/type/coordinate, expected and actual state, available input/time evidence and verifier counterexamples. Components need unique adoption, source/target anchors, rotation and explicit source-frame reserved_space; optional exports alias exact terminals. Generation checks the combined world and shared construction without writes or adoption. Use blueprint.action=generate_building_design_update with base_assembly_revision_id, previous structured input and revised design under a new namespace to generate an immutable update against a uniquely adopted base. It checks all retained requirements, preserves unchanged child pins and returns the ordinary diff/proposal workflow; placed instances remain pinned. Use blueprint.action=generate_building with a namespace, width, depth, height, optional floor/wall/roof materials and entrance to author a bounded enclosure with exact structure and air-clearance contracts. It returns unadopted records and fresh shared-runtime construction checks; see result.next_step for import, proposal, adoption and placement. Use blueprint.action=generate_building_with_door with building and door requests to embed a uniquely adopted typed 3x3 door in the north wall; select its Assembly, instance, behavioral type, rotation and explicit source-frame motion space. The combined world is freshly checked and exports door_control and nine door_aperture ports. Or use blueprint.action=generate_flying_machine to author a bounded finite-flight candidate with typed engine, body, distance, rotation, reflection and attachments; generation returns unadopted records and fresh checks, never world writes. Or use blueprint.action to import unverified source/state records, capture_revision from a saved circuit revision, optimize the supplied Assembly or an explicit component body for fewer actual blocks preserving only an explicit behavioral type, enumerate_layouts for freshly checked torch/support placements, or propose_update with explicit new definitions and candidate state. Component scope separates body_positions from fixed external equipment and reports body/total counts. Device outputs can directly observe a torch. Blueprint optimize and enumerate_layouts return candidate data without publishing it; inspect moved ports and removed interpretations before proposing parent changes. Blueprint proposals continue through show_operation and invoke_operation. Otherwise create an immutable hypothetical circuit revision from exactly one circuit_id or revision_id. Apply up to 4096 full block-state edits (add, replace, or air to delete), save before/after diagnostics, bounded initial-state simulation and a separate modeled Assembly Revision when decodable. Blueprint source references stay pinned; observation alone does not infer them. Empty changes copies the source. Never changes Minecraft or authorizes placement.",
+        description = "Use blueprint.action=generate_grounded_building_design with design and ground_material to author a passive survival building on declared protected ground; the normal import/proposal/adoption flow applies. Use blueprint.action=generate_building_design with namespace, name, known_region, named parts (fill/shell/blocks shapes plus local cutouts), permanent air spaces and an optional pinned component Assembly to author explicit virtual building geometry. Identical materials are deduplicated; conflicting materials, occupied spaces and unsupported requests return structured errors with item/position. Review failures expose diagnostics with failed versus undetermined status, affected occurrence/type/coordinate, expected and actual state, available input/time evidence and verifier counterexamples. Components need unique adoption, source/target anchors, rotation and explicit source-frame reserved_space; optional exports alias exact terminals. Generation checks the combined world and shared construction without writes or adoption. Use blueprint.action=generate_building_design_update with base_assembly_revision_id, previous structured input and revised design under a new namespace to generate an immutable update against a uniquely adopted base. It checks all retained requirements, preserves unchanged child pins and returns the ordinary diff/proposal workflow; placed instances remain pinned. Use blueprint.action=generate_building with a namespace, width, depth, height, optional floor/wall/roof materials and entrance to author a bounded enclosure with exact structure and air-clearance contracts. It returns unadopted records and fresh shared-runtime construction checks; see result.next_step for import, proposal, adoption and placement. Use blueprint.action=generate_building_with_door with building and door requests to embed a uniquely adopted typed 3x3 door in the north wall; select its Assembly, instance, behavioral type, rotation and explicit source-frame motion space. The combined world is freshly checked and exports door_control and nine door_aperture ports. Or use blueprint.action=generate_flying_machine to author a bounded finite-flight candidate with typed engine, body, distance, rotation, reflection and attachments; generation returns unadopted records and fresh checks, never world writes. Or use blueprint.action to import unverified source/state records, capture_revision from a saved circuit revision, optimize the supplied Assembly or an explicit component body for fewer actual blocks preserving only an explicit behavioral type, enumerate_layouts for freshly checked torch/support placements, or propose_update with explicit new definitions and candidate state. Component scope separates body_positions from fixed external equipment and reports body/total counts. Device outputs can directly observe a torch. Blueprint optimize and enumerate_layouts return candidate data without publishing it; inspect moved ports and removed interpretations before proposing parent changes. Blueprint proposals continue through show_operation and invoke_operation. Otherwise create an immutable hypothetical circuit revision from exactly one circuit_id or revision_id. Apply up to 4096 full block-state edits (add, replace, or air to delete), save before/after diagnostics, bounded initial-state simulation and a separate modeled Assembly Revision when decodable. Blueprint source references stay pinned; observation alone does not infer them. Empty changes copies the source. Never changes Minecraft or authorizes placement.",
         annotations(read_only_hint = false, destructive_hint = false)
     )]
     async fn test_circuit_change(
@@ -2451,6 +2464,17 @@ impl DustRouteMcp {
             );
         }
         json_text(result)
+    }
+
+    #[cfg(feature = "voxrig")]
+    #[tool(
+        description = "Plan and run bounded non-OP survival construction from a uniquely adopted grounded Blueprint. Supply materials to the source bot. action=plan requires specification matching that exact Assembly, declared edit/temporary/travel/retreat scopes and material budget; returns a complete preview without world edits. action=start requires job_id and confirmed=true and freshly checks source/site/inventory; execution continues in background. action=get reports progress or durable diagnosis after restart; action=cancel stops at the next operation boundary, never undoing or replaying uncertain actions. Requires the configured independent survival observer. No resource collection, native-token restoration, command placement or automatic job resume."
+    )]
+    async fn survival_construction(
+        &self,
+        Parameters(params): Parameters<survival::Request>,
+    ) -> String {
+        json_text(self.survival_request(params).await)
     }
 
     #[tool(

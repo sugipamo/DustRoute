@@ -4,7 +4,8 @@ use super::*;
 use std::collections::BTreeSet;
 use voxrig::checked_survival::SurvivalInput;
 
-#[derive(Clone, Copy, Debug, Serialize)]
+#[derive(Clone, Copy, Debug, Serialize, serde::Deserialize, rmcp::schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct SearchLimits {
     /// Includes refused extensions. One check may call multiple native guards.
     pub candidate_checks: usize,

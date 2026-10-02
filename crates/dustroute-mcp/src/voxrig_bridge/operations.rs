@@ -53,15 +53,12 @@ fn valid_position(pos: Pos) -> Result<(), BotBridgeError> {
     Ok(())
 }
 impl VoxrigBridge {
-    async fn acquire_player(
-        &self,
-        player: &str,
-        operations: &Operations,
-    ) -> Result<bool, BotBridgeError> {
+    async fn acquire_player(&self, player: &str) -> Result<bool, BotBridgeError> {
         if !is_valid_minecraft_username(player) || player == self.username {
             return Err(fail("invalid player"));
         }
         let _guard = self.mutations.lock().await;
+        let operations = self.operations()?;
         let before = operations.player_state().await.map_err(native_error)?;
         let observed = operations.visible_players().await.map_err(native_error)?;
         let existing = observed.players.iter().find(|p| p.name == player);
@@ -127,8 +124,8 @@ impl VoxrigBridge {
         &self,
         player: &str,
     ) -> Result<crate::bridge::PlayerContext, BotBridgeError> {
+        let reacquired = self.acquire_player(player).await?;
         let operations = self.operations()?;
-        let reacquired = self.acquire_player(player, &operations).await?;
         let state = operations.player_state().await.map_err(native_error)?;
         let observed = operations.visible_players().await.map_err(native_error)?;
         if state.connection_id != observed.connection_id
@@ -156,8 +153,8 @@ impl VoxrigBridge {
         {
             return Err(fail("invalid player or target distance"));
         }
+        let reacquired = self.acquire_player(player).await?;
         let operations = self.operations()?;
-        let reacquired = self.acquire_player(player, &operations).await?;
         let target = operations
             .observe_player_outline_target(player, max_distance)
             .await
@@ -223,7 +220,9 @@ impl VoxrigBridge {
         Ok(json!({"min":min,"max":max,"particle_corners":8,"submission_only":true}))
     }
     fn operations(&self) -> Result<Operations, BotBridgeError> {
-        self.client.java_1_21_11_operations().map_err(native_error)
+        self.client()?
+            .java_1_21_11_operations()
+            .map_err(native_error)
     }
     async fn require_dimension(&self, dimension: &str) -> Result<PlayerState, BotBridgeError> {
         let state = self

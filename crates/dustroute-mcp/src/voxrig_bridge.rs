@@ -8,13 +8,16 @@ use std::sync::{Arc, Mutex, Weak};
 use voxrig::versions::java_1_21_11::reconstruction::SharedClientObservation;
 use voxrig::{Client, ConnectionConfig, MinecraftVersion, Region};
 mod operations;
+mod survival;
+pub(crate) use survival::SurvivalLease;
 
 pub struct VoxrigBridge {
-    client: Client,
+    client: Mutex<Option<Client>>,
+    reconnect: ConnectionConfig,
     host: String,
     port: u16,
     username: String,
-    mutations: tokio::sync::Mutex<()>,
+    mutations: Arc<tokio::sync::Mutex<()>>,
     snapshots: Mutex<ConvertedSnapshots>,
     pub(crate) contents: Arc<crate::snapshot_content::SnapshotContents>,
 }
@@ -148,15 +151,18 @@ impl VoxrigBridge {
         let host = config.server.host.clone();
         let port = config.server.port;
         let username = config.username.clone();
-        let client = Client::connect(config).await.map_err(native_error)?;
+        let client = Client::connect(config.clone())
+            .await
+            .map_err(native_error)?;
         client.wait_until_ready().await.map_err(native_error)?;
         let contents = Arc::default();
         Ok(Self {
-            client,
+            client: Mutex::new(Some(client)),
+            reconnect: config,
             host,
             port,
             username,
-            mutations: tokio::sync::Mutex::new(()),
+            mutations: Arc::new(tokio::sync::Mutex::new(())),
             snapshots: Mutex::new(ConvertedSnapshots {
                 contents: Arc::clone(&contents),
                 ..Default::default()
@@ -177,7 +183,7 @@ impl VoxrigBridge {
         let acquired = {
             let measurement = crate::performance::span(crate::performance::Phase::NativeObserve);
             let acquired = self
-                .client
+                .client()?
                 .observe_shared_client_region(region)
                 .await
                 .map_err(native_error)?;

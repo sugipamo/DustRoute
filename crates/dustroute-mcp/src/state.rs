@@ -32,6 +32,9 @@ pub(crate) struct PlanStateStore {
 }
 
 impl PlanStateStore {
+    pub(crate) fn survival_job_root(&self) -> PathBuf {
+        self.root.join("survival-jobs")
+    }
     pub(crate) fn construction_job_root(&self) -> PathBuf {
         self.root.join("construction-jobs")
     }

@@ -109,3 +109,48 @@ changing mining retirement policy are separate follow-up decisions. The earlier
 general simulator's capabilities do not automatically establish survival player
 placement support. Prioritize those expansions only after the bounded workflow
 above is usable and its limitations have been measured.
+
+## Stage 3 draft and compiler stop (2026-10-02)
+
+The public-path goal is active. The working branch contains a draft, **not an
+accepted or deployment-ready implementation**:
+
+- `blueprint.action=generate_grounded_building_design` exposes the existing
+  protected-ground authoring contract through the normal import/proposal/adoption
+  flow. The survival planner checks the regenerated specification against the
+  exact adopted Assembly, context and referenced definitions.
+- `survival_construction` exposes `plan`, `start`, `get`, and `cancel`. Only an
+  in-memory checked plan can start; persisted manifests/journals are diagnostic.
+  Background execution uses the existing common executor. An independent native
+  observer is explicit deployment configuration.
+- A native bridge lease excludes other mutations and replaces the source
+  connection after successful completion. Read-only planning cancellation returns
+  the unchanged source; an executing/uncertain job retains exclusive ownership.
+- A public MCP test for adoption/observer/mismatch gates and an opt-in full-roof
+  public integration fixture are added but have **not run successfully**.
+
+An earlier draft passed `cargo check --offline --locked -j 1 -p dustroute-mcp
+--features voxrig --all-targets`. After adding tests and refining cancellation,
+`cargo test --offline --locked -j 1 -p dustroute-mcp --features voxrig --lib
+service::survival::tests::public_grounded -- --test-threads=1` failed inside
+**rustc with SIGSEGV** during test compilation. The stack includes
+`rustc_mir_build::check_unsafety::UnsafetyVisitor`. The compiler suggested
+`RUST_MIN_STACK=16777216`; this is a troubleshooting hint, not an established
+stack-overflow diagnosis. Cargo exited 101; no test body or Minecraft server ran.
+[Preserved check/failure evidence](evidence/survival-public-progress-20261002.json)
+separates the earlier check from the unverified current draft.
+
+Per the prerequisite stop rule, compilation and dependent validation stopped.
+No compiler environment change, toolchain replacement, cache deletion, host
+operation or new reproduction was performed after the failure. No relationship
+to the earlier JVM or PVE incidents has been established.
+
+Proposed next scope: inspect the compiler failure and the added test/macro
+expansion, then perform at most one serial build with the compiler-suggested
+16-MiB thread-stack setting if appropriate. If that passes, continue the focused
+public tests, regression/Clippy/feature checks and non-OP Temurin live acceptance.
+If rustc still crashes, stop and report rather than repeatedly retrying or
+changing the toolchain. This investigation/retry needs user agreement under the
+existing stop rule. Source/site/material/permission refusal coverage, observer
+freshness, lease cancellation/handback and persistence handling still require
+review and validation before stage 3 can be declared complete.

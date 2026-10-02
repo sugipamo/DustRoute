@@ -528,6 +528,17 @@ impl BotBridge {
 
     /// Connect the Rust adapter explicitly. Its observations retain client provenance.
     #[cfg(feature = "voxrig")]
+    pub(crate) fn survival_bridge(
+        &self,
+    ) -> Result<std::sync::Arc<crate::voxrig_bridge::VoxrigBridge>, BotBridgeError> {
+        self.native.clone().ok_or_else(|| {
+            BotBridgeError::Protocol(
+                "survival construction requires the native Voxrig backend".into(),
+            )
+        })
+    }
+
+    #[cfg(feature = "voxrig")]
     pub async fn connect_voxrig(config: voxrig::ConnectionConfig) -> Result<Self, BotBridgeError> {
         let native = crate::voxrig_bridge::VoxrigBridge::connect(config).await?;
         let contents = native.contents.clone();
