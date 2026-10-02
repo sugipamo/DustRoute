@@ -48,8 +48,19 @@ pub struct ConstructionSearch {
     pub complete_checks: usize,
     pub best_remaining_permanent: usize,
     pub best_remaining_temporary: Vec<[i32; 3]>,
+    /// Bounded progress samples for diagnosing policy starvation and cycles.
+    pub progress: Vec<SearchProgress>,
     /// Bounded samples, not an exhaustive explanation or a proof of impossibility.
     pub refusal_examples: Vec<ConstructionPlanningError>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct SearchProgress {
+    pub candidate_checks: usize,
+    pub actions: usize,
+    pub position: [f64; 3],
+    pub remaining_permanent: usize,
+    pub remaining_temporary: usize,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -264,10 +275,15 @@ impl<'a> Search<'a> {
             let b = ledger.site.scope.retreat;
             distance(p, std::array::from_fn(|i| p[i].clamp(b.min[i], b.max[i])))
         };
+        let temporary_cost = if ledger.remaining.is_empty() {
+            20.0
+        } else {
+            0.2
+        };
         1000.0 * ledger.remaining.len() as f64
-            + 20.0 * ledger.temporary.len() as f64
+            + temporary_cost * ledger.temporary.len() as f64
             + target_distance
-            + node.checked.steps.len() as f64 * 0.05
+            + node.checked.steps.len() as f64 * 0.5
     }
 
     fn complete(&mut self, node: &Node<'a>) -> Option<HypotheticalConstructionPlan> {
@@ -372,11 +388,33 @@ impl<'a> Search<'a> {
                 if let Some(next) = self.extend(node, ConstructionAction::Move { controls }) {
                     let end = next.checked.scenario.position();
                     let error = distance(target, end);
+                    // Restrict this candidate family to non-retracing motion
+                    // between edits. This prunes paths; it does not equate native
+                    // states or claim that a pruned route is physically invalid.
+                    let retraces = node
+                        .checked
+                        .steps
+                        .iter()
+                        .rev()
+                        .take_while(|s| matches!(s, HypotheticalConstructionStep::Move { .. }))
+                        .any(|s| match s {
+                            HypotheticalConstructionStep::Move { prediction } => {
+                                distance(end, prediction.initial_position) < 0.25_f64.powi(2)
+                            }
+                            _ => false,
+                        });
                     if (end[1] - target[1]).abs() < 0.01
                         && error < 0.23_f64.powi(2)
+                        && !retraces
                         && best.as_ref().is_none_or(|(old, _)| error < *old)
                     {
                         best = Some((error, next));
+                        // First sufficiently centered admitted endpoint. Exact
+                        // native prediction is retained; optimal control duration
+                        // is not needed for this candidate policy.
+                        if error <= 0.13_f64.powi(2) {
+                            break;
+                        }
                     }
                 }
             }
@@ -439,6 +477,15 @@ pub fn generate_construction_plan(
         frontier.sort_by(|a, b| search.score(b).total_cmp(&search.score(a)));
         let node = search.build_reachable(frontier.pop().unwrap());
         search.stats.expanded += 1;
+        if search.stats.progress.len() < 64 {
+            search.stats.progress.push(SearchProgress {
+                candidate_checks: search.stats.candidate_checks,
+                actions: node.checked.steps.len(),
+                position: node.checked.scenario.position(),
+                remaining_permanent: node.checked.ledger.remaining.len(),
+                remaining_temporary: node.checked.ledger.temporary.len(),
+            });
+        }
         if node.checked.ledger.remaining.len() <= search.stats.best_remaining_permanent {
             search.stats.best_remaining_permanent = node.checked.ledger.remaining.len();
             search.stats.best_remaining_temporary =
