@@ -5,6 +5,227 @@ use tokio::{
     task::JoinHandle,
 };
 
+#[tokio::test]
+async fn hypothetical_scene_shares_native_prediction_and_never_changes_live_state() {
+    let mut f = Fixture::new().await;
+    f.session
+        .state
+        .lock()
+        .await
+        .world
+        .seed_replay_cell(TARGET, 0);
+    let scene = f
+        .api
+        .capture_survival_scene(crate::Region {
+            min: [-2, -1, -2],
+            max: [6, 7, 4],
+        })
+        .await
+        .unwrap();
+    let controls: Vec<_> = (0..16)
+        .map(|tick| SurvivalControl {
+            yaw: 0.0,
+            input: SurvivalInput {
+                forward: i8::from(tick < 4),
+                ..Default::default()
+            },
+        })
+        .collect();
+    let live = f.api.preview_survival_path(&controls).await.unwrap();
+    let scenario = scene.scenario();
+    let predicted = scenario.preview_path(&controls).unwrap();
+    assert_eq!(live.frames, predicted.frames);
+    assert_eq!(
+        serde_json::to_value(&live.terminal_clearance).unwrap(),
+        serde_json::to_value(&predicted.terminal_clearance).unwrap()
+    );
+    let edit = HypotheticalBlockEdit {
+        position: [1, 1, 0],
+        before: native("air"),
+        after: native("dirt"),
+    };
+    let next = scenario.after_edits(std::slice::from_ref(&edit)).unwrap();
+    assert_eq!(next.block(edit.position).unwrap(), native("dirt"));
+    assert_eq!(scenario.block(edit.position).unwrap(), native("air"));
+    {
+        let state = f.session.state.lock().await;
+        assert_eq!(
+            state.reconstruction.cell(&state.world, edit.position).state,
+            Some(native("air"))
+        );
+    }
+    f.api.validate_survival_scene(&scene).await.unwrap();
+    f.session.state.lock().await.operations.game_mode = Some(GameMode::Creative);
+    assert!(f.api.validate_survival_scene(&scene).await.is_err());
+    f.session.state.lock().await.operations.game_mode = Some(GameMode::Survival);
+    assert!(scenario.matches_preview(&predicted));
+    assert!(!next.matches_preview(&predicted));
+    assert!(
+        scenario
+            .preview_path(&vec![
+                SurvivalControl {
+                    yaw: 0.0,
+                    input: Default::default()
+                };
+                121
+            ])
+            .is_err()
+    );
+    assert!(
+        f.api
+            .capture_survival_scene(crate::Region {
+                min: [0, 0, 0],
+                max: [65, 1, 1]
+            })
+            .await
+            .is_err()
+    );
+    assert!(
+        scenario
+            .after_edits(&[HypotheticalBlockEdit {
+                position: [0, 0, 0],
+                before: native("stone"),
+                after: native("air")
+            }])
+            .is_err()
+    );
+    assert!(next.after_edits(std::slice::from_ref(&edit)).is_err());
+    assert!(scenario.after_edits(&[edit.clone(), edit.clone()]).is_err());
+    assert!(
+        scenario
+            .after_edits(&[HypotheticalBlockEdit {
+                position: [30, 1, 0],
+                ..edit.clone()
+            }])
+            .is_err()
+    );
+    assert!(
+        scenario
+            .after_edits(&[HypotheticalBlockEdit {
+                after: native("water"),
+                ..edit
+            }])
+            .is_err()
+    );
+    f.session
+        .state
+        .lock()
+        .await
+        .world
+        .seed_replay_cell([1, 1, 0], 1);
+    assert!(f.api.validate_survival_scene(&scene).await.is_err());
+    assert_eq!(scenario.block([1, 1, 0]).unwrap(), native("air"));
+    assert!(
+        tokio::time::timeout(Duration::from_millis(30), read_packet(&mut f.peer, None))
+            .await
+            .is_err()
+    );
+    f.stop().await;
+}
+
+#[tokio::test]
+async fn hypothetical_native_place_step_and_removal_require_safe_standing() {
+    let f = Fixture::new().await;
+    f.session
+        .state
+        .lock()
+        .await
+        .world
+        .seed_replay_cell(TARGET, 0);
+    let scene = f
+        .api
+        .capture_survival_scene(crate::Region {
+            min: [-2, -1, -2],
+            max: [6, 7, 4],
+        })
+        .await
+        .unwrap();
+    let scenario = scene.scenario();
+    let delta = [1.0f64, -f64::from(1.62f32), 0.0];
+    let rotation = [-90.0, (-delta[1]).atan2(delta[0]).to_degrees() as f32];
+    let placement = scenario
+        .preview_cube_placement([1, 0, 0], crate::BlockFace::Up, rotation, "dirt")
+        .unwrap();
+    assert_eq!(placement.edit.position, [1, 1, 0]);
+    assert!(
+        scenario
+            .preview_cube_placement([1, 0, 0], crate::BlockFace::Down, rotation, "dirt")
+            .is_err()
+    );
+    let mut edits = vec![placement.edit];
+    for x in 2..=3 {
+        edits.push(HypotheticalBlockEdit {
+            position: [x, 1, 0],
+            before: native("air"),
+            after: native("dirt"),
+        });
+    }
+    let platform = scenario.after_edits(&edits).unwrap();
+    let controls: Vec<_> = (0..28)
+        .map(|tick| SurvivalControl {
+            yaw: -90.0,
+            input: SurvivalInput {
+                forward: i8::from(tick < 8),
+                jump: tick == 0,
+                strafe: 0,
+            },
+        })
+        .collect();
+    let arrived = platform.after_path(&controls).unwrap();
+    assert_eq!(arrived.position()[1], 2.0);
+    let foot = [arrived.position()[0].floor() as i32, 1, 0];
+    assert!(
+        arrived
+            .after_edits(&[HypotheticalBlockEdit {
+                position: foot,
+                before: native("dirt"),
+                after: native("air")
+            }])
+            .is_err()
+    );
+    let return_controls: Vec<_> = (0..28)
+        .map(|tick| SurvivalControl {
+            yaw: 90.0,
+            input: SurvivalInput {
+                forward: i8::from(tick < 8),
+                ..Default::default()
+            },
+        })
+        .collect();
+    let returned = arrived.after_path(&return_controls).unwrap();
+    assert_eq!(returned.position()[1], 1.0);
+    let eye = [
+        returned.position()[0],
+        returned.position()[1] + f64::from(1.62f32),
+        returned.position()[2],
+    ];
+    let delta = [1.0 - eye[0], 1.5 - eye[1], 0.5 - eye[2]];
+    let rotation = [
+        (-delta[0]).atan2(delta[2]).to_degrees() as f32,
+        (-delta[1]).atan2(delta[0].hypot(delta[2])).to_degrees() as f32,
+    ];
+    let first_removal = returned
+        .preview_cube_removal([1, 1, 0], crate::BlockFace::West, rotation)
+        .unwrap();
+    assert_eq!(first_removal.before, native("dirt"));
+    assert!(
+        returned
+            .preview_cube_removal([1, 1, 0], crate::BlockFace::East, rotation)
+            .is_err()
+    );
+    let removals: Vec<_> = edits
+        .iter()
+        .map(|e| HypotheticalBlockEdit {
+            position: e.position,
+            before: e.after.clone(),
+            after: e.before.clone(),
+        })
+        .collect();
+    let cleared = returned.after_edits(&removals).unwrap();
+    assert_eq!(cleared.block([1, 1, 0]).unwrap(), native("air"));
+    f.stop().await;
+}
+
 const TARGET: [i32; 3] = [2, 2, 0];
 fn native(name: &str) -> crate::NativeBlockState {
     crate::NativeBlockState {

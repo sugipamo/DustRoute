@@ -6,6 +6,39 @@ use tokio::{
 };
 const SUPPORT: [i32; 3] = [2, 2, 0];
 const TARGET: [i32; 3] = [1, 2, 0];
+
+#[tokio::test]
+async fn captured_placement_uses_the_live_native_cursor_and_target_checks() {
+    let f = Fixture::new().await;
+    let scene = f
+        .api
+        .capture_survival_scene(crate::Region {
+            min: [-2, 0, -2],
+            max: [4, 6, 2],
+        })
+        .await
+        .unwrap();
+    let imagined = scene
+        .scenario()
+        .preview_cube_placement(SUPPORT, crate::BlockFace::West, [-90.0, 3.0], "dirt")
+        .unwrap();
+    let mut state = f.api.bot.session.state.lock().await;
+    let actual = prepare(
+        &mut state,
+        f.api.bot.session.id,
+        0,
+        SUPPORT,
+        crate::BlockFace::West as u8,
+    )
+    .unwrap();
+    assert_eq!(imagined.cursor, actual.cursor);
+    assert_eq!(imagined.edit.position, actual.target);
+    assert_eq!(imagined.edit.before, actual.before);
+    assert_eq!(imagined.edit.after, actual.expected);
+    assert_eq!(imagined.face_id, actual.face_id);
+    drop(state);
+    f.stop().await;
+}
 fn native(name: &str) -> crate::NativeBlockState {
     crate::NativeBlockState {
         name: format!("minecraft:{name}"),

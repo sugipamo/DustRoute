@@ -54,9 +54,7 @@ pub(super) fn stationary_outline_hit(
     eye: [f64; 3],
     distance: f64,
 ) -> Result<Option<BlockHit>> {
-    let direction = outline::direction(state.rotation);
-    let end = std::array::from_fn(|i| eye[i] + direction[i] * distance);
-    outline::cast(eye, end, |p| {
+    outline_hit_in(eye, state.rotation, distance, |p| {
         let cell = state.reconstruction.cell(&state.world, p);
         if cell.moving.is_some() {
             anyhow::bail!("moving own-player target geometry at {p:?}");
@@ -64,12 +62,21 @@ pub(super) fn stationary_outline_hit(
         cell.state
             .ok_or_else(|| anyhow::anyhow!("own-player target geometry unavailable at {p:?}"))
     })
-    .map_err(|error| Error::new(ErrorKind::State, error))
+}
+pub(super) fn outline_hit_in(
+    eye: [f64; 3],
+    rotation: [f32; 2],
+    distance: f64,
+    read: impl FnMut([i32; 3]) -> anyhow::Result<NativeBlockState>,
+) -> Result<Option<BlockHit>> {
+    let direction = outline::direction(rotation);
+    let end = std::array::from_fn(|i| eye[i] + direction[i] * distance);
+    outline::cast(eye, end, read).map_err(|error| Error::new(ErrorKind::State, error))
 }
 
 /// Local face cursor from the same native rotation vector and first hit.
-pub(super) fn stationary_hit_cursor(state: &State, eye: [f64; 3], hit: &BlockHit) -> [f32; 3] {
-    let direction = outline::direction(state.rotation);
+pub(super) fn hit_cursor_in(rotation: [f32; 2], eye: [f64; 3], hit: &BlockHit) -> [f32; 3] {
+    let direction = outline::direction(rotation);
     let norm = direction.iter().map(|v| v * v).sum::<f64>().sqrt();
     std::array::from_fn(|i| {
         ((eye[i] + direction[i] / norm * hit.distance - f64::from(hit.position[i])).clamp(0.0, 1.0))

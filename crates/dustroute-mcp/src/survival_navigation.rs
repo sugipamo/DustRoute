@@ -4,8 +4,9 @@ use serde::Serialize;
 use std::cmp::Reverse;
 use std::collections::{BTreeMap, BinaryHeap, HashMap};
 use voxrig::versions::java_1_21_11::operations::{
-    MAX_SURVIVAL_CONTROL_TICKS, Operations, StandingContext, SurvivalControl, SurvivalInput,
-    SurvivalMotionRecord, SurvivalMovementPreview, TerminalClearance,
+    HypotheticalMovementPreview, MAX_SURVIVAL_CONTROL_TICKS, Operations, PredictedMotionFrame,
+    SurvivalControl, SurvivalInput, SurvivalMotionRecord, SurvivalMovementPreview,
+    SurvivalScenario, TerminalClearance,
 };
 
 /// Reviewed spatial scope, inclusive bounds on the entire standing/jumping body.
@@ -42,27 +43,54 @@ pub enum RouteFailure {
 }
 /// Not Deserialize: serialized diagnostics cannot restore an executable route.
 #[derive(Clone, Debug, Serialize)]
-pub struct SurvivalRoute {
+pub struct SurvivalRoute<P = SurvivalMovementPreview> {
     request: RouteRequest,
-    outbound: SurvivalMovementPreview,
+    outbound: P,
     /// Full outbound + return prediction, against the original world snapshot.
     /// The return must be re-planned after any construction/world edit.
-    round_trip: SurvivalMovementPreview,
+    round_trip: P,
     return_starts_at_tick: usize,
     search: RouteSearch,
 }
-impl SurvivalRoute {
-    pub fn outbound(&self) -> &SurvivalMovementPreview {
+impl<P> SurvivalRoute<P> {
+    pub fn outbound(&self) -> &P {
         &self.outbound
     }
-    pub fn round_trip(&self) -> &SurvivalMovementPreview {
+    pub fn round_trip(&self) -> &P {
         &self.round_trip
-    }
-    pub fn return_controls(&self) -> &[SurvivalControl] {
-        &self.round_trip.controls[self.return_starts_at_tick..]
     }
     pub fn search(&self) -> &RouteSearch {
         &self.search
+    }
+}
+/// A future-world route. It deliberately has no live `start` method.
+pub type HypotheticalRoute = SurvivalRoute<HypotheticalMovementPreview>;
+impl HypotheticalRoute {
+    pub fn return_controls(&self) -> &[SurvivalControl] {
+        &self.round_trip.controls[self.return_starts_at_tick..]
+    }
+    /// Advance only the exact immutable scenario used for this route's search.
+    /// Any intervening hypothetical edit requires a new route search.
+    pub fn after_outbound(
+        &self,
+        scenario: &SurvivalScenario,
+    ) -> Result<SurvivalScenario, RouteFailure> {
+        if !scenario.matches_preview(&self.outbound) {
+            return Err(RouteFailure::ObservationChanged {
+                search: self.search.clone(),
+            });
+        }
+        scenario.after_path(&self.outbound.controls).map_err(|e| {
+            RouteFailure::ObservationUnavailable {
+                reason: e.to_string(),
+                search: self.search.clone(),
+            }
+        })
+    }
+}
+impl SurvivalRoute {
+    pub fn return_controls(&self) -> &[SurvivalControl] {
+        &self.round_trip.controls[self.return_starts_at_tick..]
     }
     /// Recompute the return after placement/world changes, requiring the exact
     /// outbound endpoint and same connection/generation. This sends no input.
@@ -147,11 +175,52 @@ struct Node {
 fn contains(b: TravelBounds, p: [f64; 3]) -> bool {
     (0..3).all(|i| p[i] >= b.min[i] && p[i] <= b.max[i])
 }
-fn within_scope(b: TravelBounds, p: [f64; 3], initial: &StandingContext) -> bool {
-    // Physics dimensions and observed uncertainty come from the native context;
-    // navigation does not maintain a second player geometry model.
-    let min = std::array::from_fn(|i| p[i] + initial.bounds[i] - initial.position[i]);
-    let max = std::array::from_fn(|i| p[i] + initial.bounds[i + 3] - initial.position[i]);
+// The search consumes native predictions without converting hypothetical
+// frames into received/live contexts or maintaining another physics model.
+trait Prediction {
+    fn origin(&self) -> [f64; 3];
+    fn bounds(&self) -> [f64; 6];
+    fn frames(&self) -> &[PredictedMotionFrame];
+    fn terminal(&self) -> &TerminalClearance;
+    fn same_origin(&self, other: &Self) -> bool;
+}
+impl Prediction for SurvivalMovementPreview {
+    fn origin(&self) -> [f64; 3] {
+        self.initial.position
+    }
+    fn bounds(&self) -> [f64; 6] {
+        self.initial.bounds
+    }
+    fn frames(&self) -> &[PredictedMotionFrame] {
+        &self.frames
+    }
+    fn terminal(&self) -> &TerminalClearance {
+        &self.terminal_clearance
+    }
+    fn same_origin(&self, other: &Self) -> bool {
+        same_initial(self, other)
+    }
+}
+impl Prediction for HypotheticalMovementPreview {
+    fn origin(&self) -> [f64; 3] {
+        self.initial_position
+    }
+    fn bounds(&self) -> [f64; 6] {
+        self.initial_bounds
+    }
+    fn frames(&self) -> &[PredictedMotionFrame] {
+        &self.frames
+    }
+    fn terminal(&self) -> &TerminalClearance {
+        &self.terminal_clearance
+    }
+    fn same_origin(&self, other: &Self) -> bool {
+        self.shares_origin(other)
+    }
+}
+fn within_scope(b: TravelBounds, p: [f64; 3], initial: &impl Prediction) -> bool {
+    let min = std::array::from_fn(|i| p[i] + initial.bounds()[i] - initial.origin()[i]);
+    let max = std::array::from_fn(|i| p[i] + initial.bounds()[i + 3] - initial.origin()[i]);
     contains(b, min) && contains(b, max)
 }
 
@@ -202,12 +271,24 @@ fn reject(search: &mut RouteSearch, reason: String) {
         *search.refusal_examples.entry(reason).or_default() += 1;
     }
 }
-fn admissible(p: &SurvivalMovementPreview, travel: TravelBounds) -> bool {
-    matches!(p.terminal_clearance, TerminalClearance::Admitted { .. })
-        && within_scope(travel, p.initial.position, &p.initial)
-        && p.frames
+fn admissible(p: &impl Prediction, travel: TravelBounds) -> bool {
+    matches!(p.terminal(), TerminalClearance::Admitted { .. })
+        && within_scope(travel, p.origin(), p)
+        && p.frames()
             .iter()
-            .all(|f| within_scope(travel, f.position, &p.initial))
+            .all(|f| within_scope(travel, f.position, p))
+}
+/// Read-only route search on an immutable future-world branch. This uses the
+/// same search and native movement kernel as live routes but grants no action
+/// authority. Re-plan after edits; original round-trip evidence then expires.
+pub async fn plan_hypothetical_route(
+    scenario: &SurvivalScenario,
+    request: RouteRequest,
+) -> Result<HypotheticalRoute, RouteFailure> {
+    search(request, |controls| {
+        std::future::ready(scenario.preview_path(&controls))
+    })
+    .await
 }
 /// Search finite turn/walk/jump primitives with native prediction and an explicit
 /// predicted return to the starting area. All candidates begin at the same live
@@ -223,13 +304,13 @@ pub async fn plan_survival_route(
     })
     .await
 }
-async fn search<F, Fut>(
+async fn search<F, Fut, P: Prediction>(
     request: RouteRequest,
     mut predict: F,
-) -> Result<SurvivalRoute, RouteFailure>
+) -> Result<SurvivalRoute<P>, RouteFailure>
 where
     F: FnMut(Vec<SurvivalControl>) -> Fut,
-    Fut: std::future::Future<Output = voxrig::Result<SurvivalMovementPreview>>,
+    Fut: std::future::Future<Output = voxrig::Result<P>>,
 {
     validate(&request)?;
     let mut stats = RouteSearch {
@@ -250,8 +331,8 @@ where
                 reason: e.to_string(),
                 search: stats.clone(),
             })?;
-    let origin = baseline.initial.position;
-    if !within_scope(request.travel, origin, &baseline.initial) {
+    let origin = baseline.origin();
+    if !within_scope(request.travel, origin, &baseline) {
         return Err(RouteFailure::InvalidRequest {
             reason: "initial body lies outside travel scope".into(),
         });
@@ -266,7 +347,7 @@ where
                     reason: e.to_string(),
                     search: stats.clone(),
                 })?;
-        if !same_initial(&baseline, &round_trip) {
+        if !baseline.same_origin(&round_trip) {
             return Err(RouteFailure::ObservationChanged { search: stats });
         }
         if admissible(&round_trip, request.travel) {
@@ -321,7 +402,7 @@ where
                         continue;
                     }
                 };
-                if !same_initial(&baseline, &outbound) {
+                if !baseline.same_origin(&outbound) {
                     return Err(RouteFailure::ObservationChanged { search: stats });
                 }
                 if !admissible(&outbound, request.travel) {
@@ -331,7 +412,7 @@ where
                     );
                     continue;
                 }
-                let position = outbound.frames.last().unwrap().position;
+                let position = outbound.frames().last().unwrap().position;
                 let mut path = primitives.clone();
                 path.push(primitive);
                 if contains(request.goal, position) && stats.previews < request.max_previews {
@@ -342,10 +423,10 @@ where
                     stats.previews += 1;
                     match predict(return_controls).await {
                         Ok(round_trip) => {
-                            if !same_initial(&baseline, &round_trip) {
+                            if !baseline.same_origin(&round_trip) {
                                 return Err(RouteFailure::ObservationChanged { search: stats });
                             }
-                            let end = round_trip.frames.last().unwrap().position;
+                            let end = round_trip.frames().last().unwrap().position;
                             if admissible(&round_trip, request.travel)
                                 && (end[1] - origin[1]).abs() < 0.125
                                 && (end[0] - origin[0]).hypot(end[2] - origin[2]) <= 0.35

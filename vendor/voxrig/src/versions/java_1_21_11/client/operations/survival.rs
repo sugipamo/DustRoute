@@ -1,6 +1,7 @@
 //! Own-player observation and a deliberately bounded stationary standing model.
 mod attributes;
 use super::super::super::wire::velocity;
+use super::geometry::GeometryView;
 use super::*;
 use crate::versions::java_1_21_11::client::players::{self, PlayerPose};
 use std::collections::BTreeMap;
@@ -449,16 +450,11 @@ pub(super) struct StandingGeometry {
 }
 // Pure geometry shared by prospective endpoints and actual standing admission.
 pub(super) fn standing_geometry(
-    state: &State,
+    state: &impl GeometryView,
     position: [f64; 3],
     error: [f64; 3],
 ) -> Result<StandingGeometry> {
     validate_pose(position, [0.0; 2])?;
-    let (_, height) = state
-        .world
-        .dimension
-        .as_ref()
-        .ok_or_else(|| unavailable("dimension unavailable"))?;
     let StandingRegion {
         mut bounds,
         min,
@@ -473,18 +469,7 @@ pub(super) fn standing_geometry(
         for y in min[1]..=max[1] {
             for z in min[2]..=max[2] {
                 let p = [x, y, z];
-                if y < height.min_y || y >= height.min_y + height.height {
-                    return Err(unavailable(
-                        "standing context crosses the observed dimension bounds",
-                    ));
-                }
-                let cell = state.reconstruction.cell(&state.world, p);
-                if cell.moving.is_some() {
-                    return Err(unavailable(format!("moving standing geometry at {p:?}")));
-                }
-                let block = cell.state.ok_or_else(|| {
-                    unavailable(format!("standing geometry unavailable at {p:?}"))
-                })?;
+                let block = state.block(p)?;
                 match block.name.as_str() {
                     "minecraft:air" | "minecraft:cave_air" | "minecraft:void_air" => {}
                     name if DRY_CUBES.contains(&name) => {
@@ -547,19 +532,31 @@ pub(super) fn uncertain_target(
     standing: &StandingContext,
     hit: &super::super::raycast::BlockHit,
 ) -> Result<()> {
-    let error = standing.position_basis.horizontal_error();
+    uncertain_target_in(
+        state,
+        standing.eye_position,
+        standing.position_basis.horizontal_error(),
+        state.rotation,
+        hit,
+    )
+}
+pub(super) fn uncertain_target_in(
+    state: &impl GeometryView,
+    eye_position: [f64; 3],
+    error: [f64; 3],
+    rotation: [f32; 2],
+    hit: &super::super::raycast::BlockHit,
+) -> Result<()> {
     if error == [0.0; 3] {
         return Ok(());
     }
-    let cursor = super::super::raycast::stationary_hit_cursor(state, standing.eye_position, hit);
+    let cursor = super::super::raycast::hit_cursor_in(rotation, eye_position, hit);
     let endpoint: [f64; 3] =
         std::array::from_fn(|i| f64::from(hit.position[i]) + f64::from(cursor[i]));
-    let min: [i32; 3] = std::array::from_fn(|i| {
-        (standing.eye_position[i].min(endpoint[i]) - error[i]).floor() as i32
-    });
-    let max: [i32; 3] = std::array::from_fn(|i| {
-        (standing.eye_position[i].max(endpoint[i]) + error[i]).floor() as i32
-    });
+    let min: [i32; 3] =
+        std::array::from_fn(|i| (eye_position[i].min(endpoint[i]) - error[i]).floor() as i32);
+    let max: [i32; 3] =
+        std::array::from_fn(|i| (eye_position[i].max(endpoint[i]) + error[i]).floor() as i32);
     for x in min[0]..=max[0] {
         for y in min[1]..=max[1] {
             for z in min[2]..=max[2] {
@@ -567,15 +564,11 @@ pub(super) fn uncertain_target(
                 if p == hit.position {
                     continue;
                 }
-                let cell = state.reconstruction.cell(&state.world, p);
-                if cell.moving.is_some()
-                    || !cell.state.is_some_and(|s| {
-                        matches!(
-                            s.name.as_str(),
-                            "minecraft:air" | "minecraft:cave_air" | "minecraft:void_air"
-                        )
-                    })
-                {
+                let cell = state.block(p)?;
+                if !matches!(
+                    cell.name.as_str(),
+                    "minecraft:air" | "minecraft:cave_air" | "minecraft:void_air"
+                ) {
                     return Err(unavailable(
                         "uncertain eye corridor is not clear; use a less ambiguous standing/target geometry",
                     ));
@@ -585,12 +578,10 @@ pub(super) fn uncertain_target(
     }
     for dx in [-error[0], error[0]] {
         for dz in [-error[2], error[2]] {
-            let eye = [
-                standing.eye_position[0] + dx,
-                standing.eye_position[1],
-                standing.eye_position[2] + dz,
-            ];
-            let observed = super::super::raycast::stationary_outline_hit(state, eye, 4.5)?;
+            let eye = [eye_position[0] + dx, eye_position[1], eye_position[2] + dz];
+            let observed = super::super::raycast::outline_hit_in(eye, rotation, 4.5, |p| {
+                state.block(p).map_err(anyhow::Error::from)
+            })?;
             if observed.is_none_or(|h| {
                 h.position != hit.position || h.face != hit.face || h.state != hit.state
             }) {

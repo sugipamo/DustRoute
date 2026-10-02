@@ -316,7 +316,7 @@ impl Operations {
         if !preview.frames.last().is_some_and(|f| f.resting) {
             return Err(invalid("motion inputs must end in predicted released rest"));
         }
-        terminal_clearance(&state, preview.frames.last().unwrap())?;
+        terminal_clearance(&*state, preview.frames.last().unwrap())?;
         let run_id = state
             .survival_motion
             .as_ref()
@@ -414,7 +414,7 @@ impl Operations {
                 return Err(invalid("motion reconstruction incomplete"));
             }
             let proposed = model.intent(input, control.yaw);
-            let boxes = geometry(&state, model.frame.position, proposed)?;
+            let boxes = geometry(&*state, model.frame.position, proposed)?;
             model.advance(input, proposed, &boxes);
             if model.frame.position != expected.position
                 || model.frame.velocity != expected.velocity

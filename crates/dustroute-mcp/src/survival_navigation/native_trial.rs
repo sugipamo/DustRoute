@@ -130,10 +130,60 @@ async fn exercise(
         },
         max_previews: 384,
     };
+    let hypothetical_start = Instant::now();
+    let captured = ops
+        .capture_survival_scene(Region {
+            min: [-5, -62, -5],
+            max: [11, -53, 9],
+        })
+        .await
+        .map_err(|e| e.to_string())?;
+    let scenario = captured.scenario();
+    let hypothetical = plan_hypothetical_route(&scenario, request.clone())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let hypothetical_arrival = hypothetical
+        .after_outbound(&scenario)
+        .map_err(|e| format!("{e:?}"))?;
+    evidence.push(json!({"phase":"hypothetical_route","plan":hypothetical,"arrival":hypothetical_arrival.position(),"capture_and_search_ms":hypothetical_start.elapsed().as_millis()}));
+    let air = voxrig::NativeBlockState {
+        name: "minecraft:air".into(),
+        properties: Default::default(),
+    };
+    let future = scenario
+        .after_edits(&[
+            voxrig::versions::java_1_21_11::operations::HypotheticalBlockEdit {
+                position: [1, -60, 1],
+                before: air.clone(),
+                after: voxrig::NativeBlockState {
+                    name: "minecraft:dirt".into(),
+                    properties: Default::default(),
+                },
+            },
+        ])
+        .map_err(|e| e.to_string())?;
+    let changed = future
+        .preview_path(&hypothetical.outbound().controls)
+        .map_err(|e| e.to_string())?;
+    if changed.frames == hypothetical.outbound().frames
+        || hypothetical.after_outbound(&future).is_ok()
+    {
+        return Err("future terrain did not invalidate the original hypothetical route".into());
+    }
+    ops.validate_survival_scene(&captured)
+        .await
+        .map_err(|e| e.to_string())?;
+    if scenario.block([1, -60, 1]).map_err(|e| e.to_string())? != air {
+        return Err("future edit leaked to original scene".into());
+    }
+    evidence.push(json!({"phase":"hypothetical_obstruction","prediction":changed,"old_route_refused":true,"live_capture_still_valid":true}));
     let start = Instant::now();
     let plan = plan_survival_route(ops, request)
         .await
         .map_err(|e| format!("{e:?}"))?;
+    if plan.outbound().frames != hypothetical.outbound().frames {
+        return Err("captured and live route predictions differ".into());
+    }
     evidence.push(json!({"phase":"plan","plan":plan,"elapsed_ms":start.elapsed().as_millis()}));
     println!(
         "ROUTE {} previews, {} outbound ticks, {} ms",

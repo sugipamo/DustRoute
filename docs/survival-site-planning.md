@@ -55,8 +55,9 @@ routes through blocks that construction will occupy. Building first and finding
 the exit afterward does not meet the roadmap's reviewed access/cleanup plan.
 
 Following the user's instruction to stop on concerns, the prerequisite below is
-**proposed, not implemented**. Completed grounded authoring remains reviewable;
-the live world has not been changed by this work.
+initially proposed without implementation. The user subsequently approved it;
+implementation progress is recorded below. Completed grounded authoring remains
+reviewable, independently of access planning.
 
 ## Concrete next prerequisite for approval
 
@@ -86,3 +87,24 @@ This is a medium native/client boundary change involving movement, standing and
 interaction geometry, followed by caller planning. It adds hypothetical planning
 only for already admitted passive blocks. Entity physics, new shapes, survival
 resource gathering and relaxing observed-action checks are outside this proposal.
+
+## Approved implementation in progress
+
+The user approved the prerequisite. Voxrig `d2db52a` now has a bounded immutable
+scene capture, detached hypothetical branches, shared native movement/standing/
+placement/removal geometry and a distinct hypothetical prediction type. Actual
+operation admission still reads current live state. A compile-fail test prevents
+direct use of hypothetical predictions as live movement previews. See the
+[native contract](../vendor/voxrig/docs/survival-hypothetical-scenes.md).
+
+DustRoute's `plan_hypothetical_route` now uses the same bounded search kernel as
+live route selection. Its result has no live `start` method; advancing a scenario
+requires the exact immutable branch used by the search. Edits invalidate that
+branch identity. No hypothetical prediction is converted to `StandingContext`
+or `SurvivalMovementPreview` to bypass the type boundary.
+
+Native TCP fixtures pass captured/live motion and placement comparisons,
+isolation/staleness checks, step-up/retreat/removal and foot-support refusal.
+These do not constitute live temporary-access acceptance. Access-work selection,
+placement/removal dependency scheduling, resource reservations, durable jobs and
+the complete roofed construction/cleanup remain unfinished.

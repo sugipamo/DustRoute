@@ -1,6 +1,7 @@
 //! Version-specific player construction controls. Sending is not server acceptance.
 //! Full player locomotion/pathfinding and complex item components are not inferred.
 //! Bounded survival mining observations do not authorize continued construction.
+mod geometry;
 mod inventory;
 mod mining;
 mod movement;
@@ -8,9 +9,10 @@ mod placement;
 mod retirement;
 mod survival;
 pub use movement::{
-    MAX_SURVIVAL_CONTROL_TICKS, PredictedMotionFrame, StandingPositionBasis, SurvivalControl,
-    SurvivalInput, SurvivalMotionRecheck, SurvivalMotionRecord, SurvivalMotionStatus,
-    SurvivalMovementPreview, TerminalClearance,
+    CapturedSurvivalScene, HypotheticalBlockEdit, HypotheticalMovementPreview,
+    HypotheticalPlacement, MAX_SURVIVAL_CONTROL_TICKS, PredictedMotionFrame, StandingPositionBasis,
+    SurvivalControl, SurvivalInput, SurvivalMotionRecheck, SurvivalMotionRecord,
+    SurvivalMotionStatus, SurvivalMovementPreview, SurvivalScenario, TerminalClearance,
 };
 #[cfg(test)]
 mod tests;

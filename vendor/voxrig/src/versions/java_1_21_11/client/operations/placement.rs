@@ -1,4 +1,5 @@
 //! One-shot ordinary passive-cube placement with independent world/material receipts.
+use super::geometry::GeometryView;
 use super::*;
 use std::time::Duration;
 
@@ -179,40 +180,26 @@ fn prepare(
     let held_before = item.clone();
     let held_receive_sequence = inventory.slot_sequences[slot]
         .ok_or_else(|| unavailable("held material receipt unavailable"))?;
-    let hit = super::super::raycast::stationary_outline_hit(state, standing.eye_position, 4.5)?
-        .ok_or_else(|| unavailable("no first native outline hit for placement"))?;
-    survival::uncertain_target(state, &standing, &hit)?;
-    if hit.position != support
-        || hit.face.map(|f| f as u8) != Some(face)
-        || !survival::DRY_CUBES.contains(&hit.state.name.as_str())
-    {
-        return Err(unavailable(
-            "placement support must be the first hit on an admitted passive cube face",
-        ));
-    }
-    let d = offset(face);
-    let target = std::array::from_fn(|i| support[i] + d[i]);
-    let cell = state.reconstruction.cell(&state.world, target);
-    let before = cell
-        .state
-        .ok_or_else(|| unavailable("placement target is not received"))?;
-    if !air(&before)
-        || cell.moving.is_some()
-        || (0..3).all(|i| {
-            standing.bounds[i] < f64::from(target[i] + 1)
-                && standing.bounds[i + 3] > f64::from(target[i])
-        })
-    {
-        return Err(unavailable(
-            "placement requires known empty air outside the standing body",
-        ));
-    }
+    let geometry = placement_geometry(
+        state,
+        standing.position,
+        standing.bounds,
+        standing.position_basis.horizontal_error(),
+        state.rotation,
+        support,
+        face,
+    )?;
+    let PlacementGeometry {
+        target,
+        before,
+        hit,
+        cursor,
+    } = geometry;
     let expected = crate::NativeBlockState {
         name: item.name.clone(),
         properties: Default::default(),
     };
     super::super::super::state_id(&expected)?;
-    let cursor = super::super::raycast::stationary_hit_cursor(state, standing.eye_position, &hit);
     Ok(PlacementIntent {
         connection_id,
         generation: state.loading.generation,
@@ -230,6 +217,59 @@ fn prepare(
         selection,
         held_before,
         held_receive_sequence,
+    })
+}
+pub(super) struct PlacementGeometry {
+    pub target: [i32; 3],
+    pub before: crate::NativeBlockState,
+    pub hit: super::super::raycast::BlockHit,
+    pub cursor: [f32; 3],
+}
+// Shared native targeting and uncertainty checks; no inventory or authority.
+pub(super) fn placement_geometry(
+    view: &impl GeometryView,
+    position: [f64; 3],
+    bounds: [f64; 6],
+    error: [f64; 3],
+    rotation: [f32; 2],
+    support: [i32; 3],
+    face: u8,
+) -> Result<PlacementGeometry> {
+    validate_pose(position, rotation)?;
+    if face > 5 {
+        return Err(invalid("invalid placement face"));
+    }
+    let eye = [position[0], position[1] + f64::from(1.62f32), position[2]];
+    let hit = super::super::raycast::outline_hit_in(eye, rotation, 4.5, |p| {
+        view.block(p).map_err(anyhow::Error::from)
+    })?
+    .ok_or_else(|| unavailable("no first native outline hit for placement"))?;
+    survival::uncertain_target_in(view, eye, error, rotation, &hit)?;
+    if hit.position != support
+        || hit.face.map(|f| f as u8) != Some(face)
+        || !survival::DRY_CUBES.contains(&hit.state.name.as_str())
+    {
+        return Err(unavailable(
+            "placement support must be the first hit on an admitted passive cube face",
+        ));
+    }
+    let d = offset(face);
+    let target = std::array::from_fn(|i| support[i] + d[i]);
+    let before = view.block(target)?;
+    if !air(&before)
+        || (0..3)
+            .all(|i| bounds[i] < f64::from(target[i] + 1) && bounds[i + 3] > f64::from(target[i]))
+    {
+        return Err(unavailable(
+            "placement requires known empty air outside the standing body",
+        ));
+    }
+    let cursor = super::super::raycast::hit_cursor_in(rotation, eye, &hit);
+    Ok(PlacementGeometry {
+        target,
+        before,
+        hit,
+        cursor,
     })
 }
 fn packet(intent: &PlacementIntent) -> Vec<u8> {

@@ -187,17 +187,20 @@ fn prepared(
             "target/face differs from the current first native outline hit",
         ));
     }
-    if !matches!(
-        hit.state.name.as_str(),
-        "minecraft:dirt" | "minecraft:stone"
-    ) || !hit.state.properties.is_empty()
+    admitted_material(&hit.state)?;
+    Ok((standing, hit.state))
+}
+// Shared material admission for real mining and hypothetical removal geometry.
+pub(super) fn admitted_material(state: &crate::NativeBlockState) -> Result<()> {
+    if !matches!(state.name.as_str(), "minecraft:dirt" | "minecraft:stone")
+        || !state.properties.is_empty()
     {
         return Err(Error::new(
             ErrorKind::Unsupported,
             anyhow::anyhow!("empty-hand mining currently admits dirt and stone only"),
         ));
     }
-    Ok((standing, hit.state))
+    Ok(())
 }
 fn packet(intent: &MiningIntent, action: u8, sequence: i32) -> Vec<u8> {
     let mut payload = vec![action];

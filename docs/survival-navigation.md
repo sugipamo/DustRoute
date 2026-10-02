@@ -45,6 +45,13 @@ owns site permissions, durable intent, Blueprint references, resource accounting
 placement sequencing and cleanup. No command/creative/teleport fallback exists
 in this module.
 
+`plan_hypothetical_route` uses the same search on Voxrig's detached future-world
+scenario. Its typed result contains hypothetical previews and has no live start
+method. `after_outbound` checks the scenario's private branch identity before
+advancing it; intervening hypothetical edits require replanning. Round-trip
+evidence covers that fixed branch only. It does not prove a return after an
+additional edit. See [future geometry planning](survival-site-planning.md).
+
 ## Validation scope
 
 Search tests use a deterministic obstacle model to check exploration, return
