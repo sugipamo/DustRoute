@@ -387,7 +387,7 @@ pub(super) fn look_flags(state: &mut State, tick: u64) -> Result<u8> {
 fn unavailable(message: impl std::fmt::Display) -> Error {
     Error::new(ErrorKind::State, anyhow::anyhow!("{message}"))
 }
-fn context(state: &mut State, connection_id: u64, tick: u64) -> Result<StandingContext> {
+pub(super) fn context(state: &mut State, connection_id: u64, tick: u64) -> Result<StandingContext> {
     let player = &state.operations.local_player;
     if let Some(interruption) = &player.motion_interruption {
         return Err(unavailable(format!(

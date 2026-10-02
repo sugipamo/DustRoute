@@ -303,6 +303,7 @@ async fn survival_look_sends_native_ground_bit_and_refusal_sends_nothing() {
         changed: Notify::new(),
         cancel: Notify::new(),
         stopped: AtomicBool::new(false),
+        interrupted_packet: AtomicI32::new(-1),
         limits: crate::ConnectionOptions::default(),
         interaction_sequence: AtomicI32::new(0),
     });

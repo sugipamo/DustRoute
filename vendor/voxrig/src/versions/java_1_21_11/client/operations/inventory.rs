@@ -151,7 +151,7 @@ impl Operations {
     /// an unresolved click, since a stale revision does not prevent its execution.
     pub async fn swap_player_hotbar(&self, main_slot: u8, hotbar: u8) -> Result<InventorySwap> {
         let mut state = self.bot.session.state.lock().await;
-        self.ready(&state)?;
+        self.mutable(&state)?;
         if state.operations.game_mode != Some(GameMode::Survival) {
             return Err(unavailable("swap requires received survival mode"));
         }

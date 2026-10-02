@@ -1,0 +1,106 @@
+{
+  "version": "Java 1.21.11",
+  "scope": "Dedicated non-OP survival miner/observer comparison of the new intent/result API; console fixture setup; not continuation or construction acceptance.",
+  "endpoint": "127.0.0.1:25572",
+  "world": "Existing disposable survival-mining-server-20261002 fixture restarted for this separate run; no user world reused",
+  "builder": "NatMineBot, received survival, non-OP, selected an empty main-hand hotbar slot via ordinary ordered selection",
+  "operator_entries_after_trial": [],
+  "cases": [
+    {
+      "name": "normal_finish",
+      "inputs": [
+        {
+          "action": 0,
+          "sequence": 1,
+          "elapsed_ms": 14
+        },
+        {
+          "action": 2,
+          "sequence": 2,
+          "elapsed_ms": 1115
+        }
+      ],
+      "last_observed_ms": 1218,
+      "last_observed_block": {
+        "name": "minecraft:air",
+        "properties": {}
+      },
+      "pending_api_result": "pending_after_finish",
+      "final_api_result": "observed_removed"
+    },
+    {
+      "name": "early_finish_abort",
+      "inputs": [
+        {
+          "action": 0,
+          "sequence": 3,
+          "elapsed_ms": 0
+        },
+        {
+          "action": 2,
+          "sequence": 4,
+          "elapsed_ms": 51
+        },
+        {
+          "action": 1,
+          "sequence": 5,
+          "elapsed_ms": 51
+        }
+      ],
+      "last_observed_ms": 7492,
+      "last_observed_block": {
+        "name": "minecraft:air",
+        "properties": {}
+      },
+      "pending_api_result": "pending_after_finish",
+      "final_api_result": "observed_removed"
+    },
+    {
+      "name": "early_finish_disconnect",
+      "inputs": [
+        {
+          "action": 0,
+          "sequence": 6,
+          "elapsed_ms": 0
+        },
+        {
+          "action": 2,
+          "sequence": 7,
+          "elapsed_ms": 52
+        }
+      ],
+      "last_observed_ms": 9334,
+      "last_observed_block": {
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      "pending_api_result": "pending_after_finish",
+      "final_api_result": "closed_history"
+    }
+  ],
+  "original_json_sha256": "287bc91064b4ab1ae38e1335f99a6dcabe52074dbd11aacdc231ad366101b4c9",
+  "outputs": {
+    "survival-mining-api-20261002-a.json.gz": "82ec78528268748036ff8fadd7ba7daa4bebeaaaec94f9081407d58a674ee72a",
+    "survival-mining-api-server-20261002.log": "0a1f25fa686738d93576cc312519760b739f0b6c4e0eb4af8288504022b44058"
+  },
+  "transformation": "gzip with mtime=0; original JSON and server log contents unchanged",
+  "native_trial_result": "1 passed; 0 failed; 150 filtered out; 97.32 seconds including fixture-control waits",
+  "limits": [
+    "The run preceded the conservative continuation gate: observation/status behavior was compared, but the run did not validate safe reuse of delayed mining state after externally caused air.",
+    "After identifying this concern, all later mutations remain blocked even after ObservedRemoved. Six offline tests verify the tightened boundary.",
+    "The opt-in API driver now isolates cases on separate connections after observer removal and explicit fresh console setup; this amended driver has not been rerun after stopping on the concern.",
+    "Disconnect case is bounded to 9.334 seconds with independent observer entity removal; client shutdown alone is not an unconditional recovery authorization.",
+    "No externally caused-air/replacement race, partial-write live-server fault, survival placement/navigation or whole Blueprint build was tested."
+  ],
+  "new_concern": {
+    "kind": "Native source inspection, not a reproduced replacement race",
+    "source": "ServerPlayerInteractionManager.update/processBlockBreakingAction in existing unchanged-body Java 1.21.11 development oracle",
+    "facts": [
+      "The delayed failedToMine branch clears its flag before its own successful break attempt.",
+      "If another actor supplies air, failedToMine is cleared when a later update reads that air.",
+      "Air alone does not distinguish those sources or authorize immediate replacement."
+    ],
+    "status": "Continuation gate unimplemented; observations retained but following mutations refused pending user review"
+  },
+  "server_shutdown": "Dedicated server cleanly saved and stopped with exit 0 after console target-retained check and list showed zero players"
+}

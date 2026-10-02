@@ -34,7 +34,9 @@ and `docs/survival-standing-context.md`.
 block/player observations and console diagnostics from an isolated official
 Java 1.21.11 server. The driver is original test-private code and invokes native
 player action packets; no Minecraft binary or decompiled code is redistributed.
-The manifest records raw data hashes, transformation, failed attempt and scope.
+The manifests record raw data hashes, transformation, failed attempt and scope,
+including the separate native intent/result API comparison and its unvalidated
+continuation boundary.
 
 `docs/evidence/client-motion-*-20260929.json.gz` and their replay fixtures were
 recorded by this repository's `packet_trace_probe` against an isolated official

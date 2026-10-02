@@ -109,7 +109,22 @@ Source inspection then found that an interrupted outbound frame can leave the
 connection reusable for automatic responses. That failure mode was **not**
 injected or reproduced. Pending mining intent cannot protect the shared framing
 boundary by itself. Following the user's concern stop condition, production
-mining and the sender modification are stopped for review of the concrete
+mining and the sender modification initially stopped for review of the concrete
 [1.21.11 sender prerequisite](survival-send-cancellation.md). The already approved
 mining intent/result proposal above remains the next mining step after that
 prerequisite is addressed.
+
+## Approved sender and implemented observations
+
+The user approved the sender prerequisite. Guarded frame dispatch and closed
+operation history are now implemented. The subsequent mining slice records
+START/FINISH/ABORT separately, keeps pending work on cancellation/timeout, and
+uses fresh target-specific receive evidence. Its prototype native comparison
+passed all three cases; see [the API scope](../vendor/voxrig/docs/survival-mining.md).
+
+An additional native control-flow distinction prevents enabling the next
+mutation: externally supplied air may precede the update which clears delayed
+mining. Air observation is therefore a result, not continuation authority.
+The current stricter gate blocks following mutations even after observed
+removal. Further release/recovery work is stopped for review of
+[the concrete continuation boundary](survival-mining-continuation.md).

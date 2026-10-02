@@ -8,13 +8,16 @@ sibling checkout. Cargo excludes this crate from the DustRoute workspace; it is
 an optional path dependency selected by `--features voxrig`.
 
 The current snapshot is Voxrig commit
-`ad08a46bbc8fe74a0d172dcff156e79bb79472a2`, published on
+`0d3c3793084f43044b134330f92c781ff5463251`, published on
 [`codex/survival-construction`](https://github.com/sugipamo/Voxrig/tree/codex/survival-construction).
-All 221 included files match that immutable commit, including native
-observation, survival inventory swaps, stationary player context and the
-test-private native mining comparison. The
+All 230 included files match that immutable commit, including native
+observation, survival inventory swaps, stationary context, guarded outbound
+frames, closed operation history and bounded mining observations. The
+[sender/mining implementation validation](../docs/evidence/survival-mining-implementation-20261002.json)
+records current source and integration checks, with continuation unvalidated.
+The earlier
 [mining comparison validation](../docs/evidence/survival-mining-comparison-20261002.json)
-records current source and integration checks. The
+records the preceding comparison-only pin. The
 [survival foundation validation](../docs/evidence/survival-foundation-20261002.json)
 and the earlier
 [pin alignment verification](../docs/evidence/voxrig/source-pin-alignment-20261002.json)

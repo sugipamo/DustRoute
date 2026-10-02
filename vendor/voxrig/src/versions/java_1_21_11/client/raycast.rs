@@ -48,6 +48,25 @@ pub enum TargetGeometry {
     BlockOutline,
 }
 
+/// Same pinned native outline traversal, for a prevalidated stationary own player.
+pub(super) fn stationary_outline_hit(
+    state: &State,
+    eye: [f64; 3],
+    distance: f64,
+) -> Result<Option<BlockHit>> {
+    let direction = outline::direction(state.rotation);
+    let end = std::array::from_fn(|i| eye[i] + direction[i] * distance);
+    outline::cast(eye, end, |p| {
+        let cell = state.reconstruction.cell(&state.world, p);
+        if cell.moving.is_some() {
+            anyhow::bail!("moving own-player target geometry at {p:?}");
+        }
+        cell.state
+            .ok_or_else(|| anyhow::anyhow!("own-player target geometry unavailable at {p:?}"))
+    })
+    .map_err(|error| Error::new(ErrorKind::State, error))
+}
+
 impl Operations {
     /// Query a remote player's static collision target, preserving player/world
     /// provenance. Missing chunks, unsupported pose or a moving carrier reject

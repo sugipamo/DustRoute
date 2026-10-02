@@ -70,5 +70,7 @@ the connection. The 1.16.1 sender and packet format need no simultaneous rewrite
 Validate completed sends, cancellation while waiting for the lock, a cancelled
 partial write, I/O errors, prohibition of following automatic responses, and
 retained uncertainty. Then implement the approved mining intent/result boundary
-and compare it against these retained native cases. Mining implementation is
-stopped here for user review of this additional prerequisite.
+and compare it against these retained native cases. The user subsequently
+approved this prerequisite. It is now implemented with bounded stream and
+loopback verification; see [outbound closure/history](survival-outbound.md).
+The comparison above remains the original native evidence.

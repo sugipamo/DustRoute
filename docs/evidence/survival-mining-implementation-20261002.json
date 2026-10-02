@@ -1,0 +1,194 @@
+{
+  "recorded_at_utc": "2026-10-02T01:08:08.511259+00:00",
+  "scope": "Implemented interrupted-frame closure/history and bounded mining observations. Safe continuation and full survival construction remain unimplemented; stopped on the newly identified continuation concern.",
+  "voxrig_repository": "https://github.com/sugipamo/Voxrig",
+  "voxrig_branch": "codex/survival-construction",
+  "voxrig_revision": "0d3c3793084f43044b134330f92c781ff5463251",
+  "sender_checkpoint_revision": "84ebf2c0a9d631fe4d26cb8d1f5f0918915af21b",
+  "vendor_files": 230,
+  "checks": [
+    {
+      "project": "Voxrig",
+      "command": "cargo test --offline --locked -j 1 --all-targets -- --test-threads=1",
+      "result": "148 passed; 0 failed; 3 ignored",
+      "local_log": ".local/survival-foundation/mining-all-tests-20261002.log",
+      "log_sha256": "7f284a737edcc173e9ba33d1c333bc4f14863dd024c805d267d4315538445a44"
+    },
+    {
+      "project": "Voxrig",
+      "command": "cargo clippy --offline --locked -j 1 --all-targets -- -D warnings",
+      "result": "passed",
+      "local_log": ".local/survival-foundation/mining-clippy-20261002.log",
+      "log_sha256": "ff2493b6a9d7b6a49c8281afc829040d5618176ac129f9d7299af693746f5f7e"
+    },
+    {
+      "project": "Voxrig",
+      "command": "cargo test --offline --locked -j 1 --doc -- --test-threads=1",
+      "result": "1 passed; 0 failed",
+      "local_log": ".local/survival-foundation/mining-doc-20261002.log",
+      "log_sha256": "35e785bffcf14f5da0b3678fd81749e9abe3bdb17f373352d1636fa48a792cf0"
+    },
+    {
+      "project": "Voxrig",
+      "command": "cargo package --offline --locked --allow-dirty --list",
+      "result": "passed; native evidence, docs and test-private driver included",
+      "local_log": ".local/survival-foundation/mining-package-20261002.log",
+      "log_sha256": "239054b9fdcb6192bfaeebedb0badff988aad842bdff7ec806e369d6998a173e"
+    },
+    {
+      "project": "DustRoute",
+      "command": "cargo check --offline --locked -j 1 -p dustroute-mcp --features voxrig --all-targets",
+      "result": "passed",
+      "local_log": ".local/survival-mining-implementation-check-20261002.log",
+      "log_sha256": "c2e4b9c5b375203f73afb22aabb85e25916290c859aa610909b3dcc7212961f7"
+    }
+  ],
+  "additional_checks": [
+    {
+      "project": "Voxrig",
+      "command": "cargo fmt --all --check",
+      "result": "passed"
+    },
+    {
+      "project": "Voxrig",
+      "command": "git diff --check",
+      "result": "passed"
+    },
+    {
+      "project": "DustRoute",
+      "command": "python3 scripts/vendor_voxrig.py --check",
+      "result": "passed; 230 files at recorded revision"
+    },
+    {
+      "project": "DustRoute",
+      "command": "git diff --check",
+      "result": "passed"
+    }
+  ],
+  "implemented": [
+    "Shared live 1.21.11 frame guard; writer-lock waiting harmless; interruption/error poisons before unlock and refuses following automatic/user frames; notified receive teardown shuts down TCP.",
+    "UncertainDispatch and read-only closed operation_history; inventory, held selection and mining intent before I/O; no retry or automatic reconnect.",
+    "Finite dry grounded stationary empty-hand dirt/stone start/finish/abort stages with monotonic interaction sequences and native outline hit.",
+    "Fresh target-specific block/section receipts; no ack/abort/cached/unrelated-air substitution; latched inspection after conflict/chunk/world change.",
+    "Observed removal is retained as result history; continuation_validated=false and every following user mutation remains blocked."
+  ],
+  "native_prototype_trial": {
+    "command": "NATIVE_MINING_PORT=25572 NATIVE_MINING_OUTPUT=/root/Voxrig/.local/survival-foundation/native-mining-api-20261002-a.json cargo test --offline --locked -j 1 --lib native_survival_mining_api_finish_abort_and_disconnect -- --ignored --test-threads=1 --nocapture",
+    "result": "1 passed; 0 failed; 150 filtered out; 97.32 seconds including fixture-control waits",
+    "execution_basis": "Uncommitted mining prototype after the recorded sender checkpoint; this run preceded the final conservative continuation restriction. No immutable final-code native acceptance is claimed.",
+    "cases": [
+      {
+        "name": "normal_finish",
+        "inputs": [
+          {
+            "action": 0,
+            "sequence": 1,
+            "elapsed_ms": 14
+          },
+          {
+            "action": 2,
+            "sequence": 2,
+            "elapsed_ms": 1115
+          }
+        ],
+        "last_observed_ms": 1218,
+        "last_observed_block": {
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        "pending_api_result": "pending_after_finish",
+        "final_api_result": "observed_removed"
+      },
+      {
+        "name": "early_finish_abort",
+        "inputs": [
+          {
+            "action": 0,
+            "sequence": 3,
+            "elapsed_ms": 0
+          },
+          {
+            "action": 2,
+            "sequence": 4,
+            "elapsed_ms": 51
+          },
+          {
+            "action": 1,
+            "sequence": 5,
+            "elapsed_ms": 51
+          }
+        ],
+        "last_observed_ms": 7492,
+        "last_observed_block": {
+          "name": "minecraft:air",
+          "properties": {}
+        },
+        "pending_api_result": "pending_after_finish",
+        "final_api_result": "observed_removed"
+      },
+      {
+        "name": "early_finish_disconnect",
+        "inputs": [
+          {
+            "action": 0,
+            "sequence": 6,
+            "elapsed_ms": 0
+          },
+          {
+            "action": 2,
+            "sequence": 7,
+            "elapsed_ms": 52
+          }
+        ],
+        "last_observed_ms": 9334,
+        "last_observed_block": {
+          "name": "minecraft:stone",
+          "properties": {}
+        },
+        "pending_api_result": "pending_after_finish",
+        "final_api_result": "closed_history"
+      }
+    ],
+    "non_op_evidence": {
+      "operator_entries_after_trial": [],
+      "builder": "NatMineBot, received survival, non-OP, selected an empty main-hand hotbar slot via ordinary ordered selection",
+      "console_log": "vendor/voxrig/docs/evidence/survival-mining-api-server-20261002.log"
+    },
+    "manifest": "vendor/voxrig/docs/evidence/survival-mining-api-20261002-source.json",
+    "raw_outputs": {
+      "vendor/voxrig/docs/evidence/survival-mining-api-20261002-a.json.gz": "82ec78528268748036ff8fadd7ba7daa4bebeaaaec94f9081407d58a674ee72a",
+      "vendor/voxrig/docs/evidence/survival-mining-api-server-20261002.log": "0a1f25fa686738d93576cc312519760b739f0b6c4e0eb4af8288504022b44058"
+    },
+    "limits": [
+      "The run preceded the conservative continuation gate: observation/status behavior was compared, but the run did not validate safe reuse of delayed mining state after externally caused air.",
+      "After identifying this concern, all later mutations remain blocked even after ObservedRemoved. Six offline tests verify the tightened boundary.",
+      "The opt-in API driver now isolates cases on separate connections after observer removal and explicit fresh console setup; this amended driver has not been rerun after stopping on the concern.",
+      "Disconnect case is bounded to 9.334 seconds with independent observer entity removal; client shutdown alone is not an unconditional recovery authorization.",
+      "No externally caused-air/replacement race, partial-write live-server fault, survival placement/navigation or whole Blueprint build was tested."
+    ],
+    "server_shutdown": "Dedicated server cleanly saved and stopped with exit 0 after console target-retained check and list showed zero players"
+  },
+  "new_concern": {
+    "evidence_kind": "Native source inspection; not an externally caused-air/replacement race reproduction",
+    "local_inspection": "/root/Voxrig/.local/survival-foundation/mining.javap",
+    "local_inspection_sha256": "21844711c1dc3d6c98467f42dde0f7aeaef94f9807461644123aa206bc87e5a3",
+    "native_source_manifest": "vendor/voxrig/data/java_1_21_11/survival_foundation_source.json",
+    "facts": [
+      "The delayed failedToMine branch clears its flag before its own successful break attempt.",
+      "If another actor supplies air, failedToMine is cleared when a later update reads that air.",
+      "Air alone does not distinguish those sources or authorize immediate replacement."
+    ],
+    "proposal": "docs/survival-mining-continuation.md",
+    "status": "Stopped for user review; continuation gate stays closed even on observed removal; no further live trials after the concern"
+  },
+  "development_iterations": "Initial module visibility/test fixture endpoint retention and documentation warnings were corrected before passing final validation. After the native prototype comparison, observed-result reuse was conservatively forbidden; the amended opt-in native driver has not been rerun.",
+  "not_completed": [
+    "Validated in-session mining continuation or autonomous recovery",
+    "Nearby validated survival placement and material accounting",
+    "Item-drop recovery",
+    "Survival walking/navigation",
+    "Site/temporary access planning",
+    "Durable survival Blueprint execution",
+    "End-to-end non-OP roofed build and cleanup"
+  ]
+}

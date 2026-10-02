@@ -21,9 +21,10 @@ An unresolved mining marker prevents intentional next construction actions,
 but cannot prevent automatic keepalive/teleport/etc. responses from continuing
 the stream. Thus retaining mining intent alone is an insufficient cancellation
 boundary. The shared sender should be addressed before production mining.
-Following the user's instruction to stop on concerns, this sender change and
-the mining implementation are **not started**. Completed comparison evidence
-and its test-private driver are retained.
+This initially stopped sender and mining work. The user subsequently approved
+the proposed sender prerequisite; it is now implemented and checked. The
+completed comparison evidence remains historical. Mining observations now
+exist, but the separate continuation boundary described below remains stopped.
 
 ## Concrete proposed change
 
@@ -60,3 +61,22 @@ unresolved work, read-only result waits, and no following world/material/tool
 mutation until the result is resolved or sufficient recovery evidence exists.
 Nearby validated placement, walking, access planning and the full survival
 Blueprint executor remain later parts of the active construction objective.
+
+## Implementation and new stop
+
+The live 1.21.11 sender implements the guard and common closure boundary without
+changing the 1.16.1 sender or packet format. Six bounded tests verify fragmented
+successful packets, harmless lock-wait cancellation, interrupted framing,
+write/flush errors, refusal of queued automatic/user responses, real TCP teardown
+and retained inventory history. `operation_history` works after closure;
+`UncertainDispatch` reports an interrupted attempt without asserting undo.
+The native mining intent/result API also records held-slot and mining attempts
+before I/O, and exposes pending/removed/inspection observations.
+
+Native comparison then exposed a separate distinction: received air does not
+prove that an externally affected delayed mining state has already cleared.
+Following the user's concern stop instruction, all next mutations remain
+blocked even after observed removal. The concrete
+[continuation proposal](survival-mining-continuation.md) and
+[validation record](evidence/survival-mining-implementation-20261002.json) identify
+what is implemented and what is still unvalidated.

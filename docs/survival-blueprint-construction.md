@@ -99,7 +99,7 @@ Voxrig changes are on `codex/survival-construction`, preserving the independent
 upstream contribution history. DustRoute imports the exact validated source
 through the vendor updater.
 
-Implemented milestones (offline validation, not live building acceptance):
+Implemented milestones (not live building acceptance):
 
 - Ordinary component-free main-inventory/hotbar swaps retain cursor/revision and
   per-slot receive evidence. Pending intent survives timeout/cancellation, and
@@ -120,9 +120,10 @@ Implemented milestones (offline validation, not live building acceptance):
   [validation record](evidence/survival-foundation-20261002.json) separates these
   observations from live-server evidence.
 
-Nearby validated survival placement, timed mining, walking/navigation, the
-site/temporary-access planner and the durable survival Blueprint executor are
-still unimplemented. No survival live build was performed by these milestones.
+Nearby validated survival placement, safe mining continuation, walking/navigation,
+the site/temporary-access planner and durable survival Blueprint executor remain
+unimplemented. A bounded mining observation API exists as recorded below. No
+survival live build was performed by these milestones.
 The subsequent test-private native mining comparison below is a separate finite
 world-edit trial. Effect updates currently lack a complete-list/expiration projection;
 unknown effects must not become an exact mining-duration assumption.
@@ -141,8 +142,38 @@ separately. See [the integration record](evidence/survival-mining-comparison-202
 A new prerequisite was found in the shared sender: cancellation/error during
 the separately awaited frame writes can leave the stream reusable for automatic
 responses. This is source inspection, not an injected partial-write reproduction.
-Following the user's concern stop condition, sender changes and production
-mining are unstarted and stopped for review of the
-[concrete sender proposal](survival-send-cancellation.md). The overall building
-goal has not been completed; do not count creative trials or the native mining
-comparison as survival construction acceptance.
+This initially stopped sender/mining work. The user approved the
+[sender proposal](survival-send-cancellation.md), and the following changes are
+now implemented:
+
+- The live 1.21.11 sender closes interrupted frames to all further queued user
+  and automatic writes. It wakes teardown, shuts down the stream and exposes
+  `UncertainDispatch` without claiming undo. Six bounded stream/TCP tests cover
+  successful fragmentation/compression, lock-wait cancellation, partial write,
+  write/flush errors, queued responses, teardown and historical pending intent.
+- Held-hotbar selection distinguishes receive from ordered submission, with
+  intent before I/O. Stationary empty-hand dirt/stone mining stores START,
+  FINISH and ABORT separately with monotonic sequences. Its read-only result
+  boundary requires a fresh target-specific received block/section update;
+  abort/acknowledgement, cached air and unrelated updates do not substitute.
+  Conflict/chunk/world changes retain inspection, and closure retains history.
+- A prototype native API comparison passed all three existing cases. Its
+  original traces and limits are retained separately from final offline checks:
+  it preceded the conservative continuation restriction. The amended ignored
+  driver has not been rerun after stopping on the new concern.
+
+Native control flow reveals another distinction: externally supplied air may
+precede the update that clears delayed mining. A received air result therefore
+does not prove safe immediate replacement. The current gate blocks all following
+mutations even after observed removal (`continuation_validated: false`). This
+is source inspection, not a reproduced replacement race. Following the user's
+concern stop condition, the release/recovery implementation and additional live
+trials are stopped for review of the
+[concrete continuation proposal](survival-mining-continuation.md).
+
+Final source validation passes **148 tests, 3 ignored**, Clippy, documentation,
+formatting and package-input checks. The native API prototype test passed
+separately. [The current validation record](evidence/survival-mining-implementation-20261002.json)
+identifies the pin, integrated check and scope. The dedicated server was cleanly
+stopped. The overall building goal remains unfinished; none of these comparisons
+establishes roofed construction, temporary cleanup or safe mining continuation.

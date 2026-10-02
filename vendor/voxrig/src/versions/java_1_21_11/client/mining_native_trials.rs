@@ -73,6 +73,16 @@ async fn action(
 #[tokio::test]
 #[ignore = "requires dedicated native 1.21.11 localhost server, fixture console and explicit environment"]
 async fn native_survival_mining_finish_abort_and_disconnect() {
+    comparison(false).await;
+}
+
+#[tokio::test]
+#[ignore = "requires dedicated native 1.21.11 localhost server, fixture console and explicit environment"]
+async fn native_survival_mining_api_finish_abort_and_disconnect() {
+    comparison(true).await;
+}
+
+async fn comparison(native_api: bool) {
     let port: u16 = std::env::var("NATIVE_MINING_PORT")
         .unwrap()
         .parse()
@@ -84,7 +94,7 @@ async fn native_survival_mining_finish_abort_and_disconnect() {
         .create_new(true)
         .open(output)
         .unwrap();
-    let bot = connect("NatMineBot", port).await;
+    let mut bot = connect("NatMineBot", port).await;
     let viewer = connect("NatMineView", port).await;
     let target = [2, -59, 0];
     let mut cases = Vec::new();
@@ -116,17 +126,51 @@ async fn native_survival_mining_finish_abort_and_disconnect() {
             .await
             .unwrap();
         bot.operations().look([-90.0, 3.0]).await.unwrap();
+        if native_api {
+            bot.operations().select_hotbar(0).await.unwrap();
+        }
         bot.start_packet_trace(8_388_608).await.unwrap();
         viewer.start_packet_trace(8_388_608).await.unwrap();
         let start = Instant::now();
         let before = sample(&bot, target, start).await;
         let mut inputs = Vec::new();
         let mut observations = Vec::new();
-        action(&bot, target, 0, 1, start, &mut inputs).await;
+        let intent = if native_api {
+            let intent = bot
+                .operations()
+                .start_survival_mining(target, crate::BlockFace::West)
+                .await
+                .unwrap();
+            inputs.push(json!({"action":0,"sequence":intent.start_sequence,"elapsed_ms":start.elapsed().as_millis(),"intent":intent}));
+            Some(intent)
+        } else {
+            action(&bot, target, 0, 1, start, &mut inputs).await;
+            None
+        };
         tokio::time::sleep(Duration::from_millis(delay_ms)).await;
-        action(&bot, target, 2, 2, start, &mut inputs).await;
+        if let Some(intent) = &intent {
+            let sequence = bot
+                .operations()
+                .finish_survival_mining(intent)
+                .await
+                .unwrap();
+            inputs.push(
+                json!({"action":2,"sequence":sequence,"elapsed_ms":start.elapsed().as_millis()}),
+            );
+        } else {
+            action(&bot, target, 2, 2, start, &mut inputs).await;
+        }
         if abort {
-            action(&bot, target, 1, 3, start, &mut inputs).await;
+            if let Some(intent) = &intent {
+                let sequence = bot
+                    .operations()
+                    .abort_survival_mining(intent)
+                    .await
+                    .unwrap();
+                inputs.push(json!({"action":1,"sequence":sequence,"elapsed_ms":start.elapsed().as_millis()}));
+            } else {
+                action(&bot, target, 1, 3, start, &mut inputs).await;
+            }
         }
         let immediately = sample(&bot, target, start).await;
         if name != "normal_finish" {
@@ -135,6 +179,23 @@ async fn native_survival_mining_finish_abort_and_disconnect() {
                 "trial completed before late-result observation"
             );
         }
+        let pending_api_result = if let Some(intent) = &intent {
+            let pending = bot
+                .operations()
+                .observe_survival_mining(intent)
+                .await
+                .unwrap();
+            if name != "normal_finish" {
+                assert!(matches!(
+                    pending,
+                    operations::MiningStatus::PendingAfterFinish { .. }
+                ));
+                assert!(bot.operations().select_hotbar(1).await.is_err());
+            }
+            Some(pending)
+        } else {
+            None
+        };
         if disconnect {
             bot.disconnect().await.unwrap();
         }
@@ -156,6 +217,27 @@ async fn native_survival_mining_finish_abort_and_disconnect() {
                 "native mining did not complete within observation bound"
             );
         }
+        let after_api_result = if let Some(intent) = &intent {
+            if disconnect {
+                let history = bot.operations().operation_history().await;
+                assert!(history.connection_closed);
+                assert!(history.mining.as_ref().unwrap().removal.is_none());
+                json!({"closed_history":history})
+            } else {
+                let result = bot
+                    .operations()
+                    .wait_survival_mining(intent, Duration::from_secs(2))
+                    .await
+                    .unwrap();
+                assert!(matches!(
+                    result,
+                    operations::MiningStatus::ObservedRemoved { .. }
+                ));
+                json!(result)
+            }
+        } else {
+            Value::Null
+        };
         let bot_trace = if disconnect {
             None
         } else {
@@ -166,13 +248,38 @@ async fn native_survival_mining_finish_abort_and_disconnect() {
         if disconnect {
             assert!(!players.players.iter().any(|p| p.name == "NatMineBot"));
         }
-        cases.push(json!({"name":name,"ground":ground,"before":before,"inputs":inputs,"immediately":immediately,"observations":observations,"miner_trace":bot_trace,"viewer_trace":viewer_trace,"visible_players_after":players}));
+        cases.push(json!({"name":name,"ground":ground,"before":before,"inputs":inputs,"immediately":immediately,"observations":observations,"miner_trace":bot_trace,"viewer_trace":viewer_trace,"visible_players_after":players,"pending_api_result":pending_api_result,"after_api_result":after_api_result}));
         println!(
             "CASE_VERIFIED {name}: removed={} elapsed_ms={}",
             air(after),
             after["elapsed_ms"]
         );
+        if native_api && !disconnect {
+            // Observation is not continuation authority. Each comparison case
+            // starts a separate connection after the observer saw the old miner
+            // removed, then the console explicitly prepares a fresh fixture.
+            bot.disconnect().await.unwrap();
+            timeout(Duration::from_secs(3), async {
+                loop {
+                    if !viewer
+                        .operations()
+                        .visible_players()
+                        .await
+                        .unwrap()
+                        .players
+                        .iter()
+                        .any(|p| p.name == "NatMineBot")
+                    {
+                        break;
+                    }
+                    tokio::time::sleep(Duration::from_millis(50)).await;
+                }
+            })
+            .await
+            .unwrap();
+            bot = connect("NatMineBot", port).await;
+        }
     }
     viewer.disconnect().await.unwrap();
-    serde_json::to_writer(file,&json!({"minecraft_version":"Java 1.21.11","scope":"isolated non-OP survival; test-private native action packets; console fixture setup only","cases":cases})).unwrap();
+    serde_json::to_writer(file,&json!({"minecraft_version":"Java 1.21.11","scope":if native_api {"isolated non-OP survival; public intent/result mining API; console fixture setup only"} else {"isolated non-OP survival; test-private native action packets; console fixture setup only"},"cases":cases})).unwrap();
 }

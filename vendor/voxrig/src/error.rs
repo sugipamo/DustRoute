@@ -10,6 +10,9 @@ pub enum ErrorKind {
     InvalidInput,
     /// Establishing or using the network connection failed.
     Connection,
+    /// A frame write was interrupted; the connection is closed and server effects
+    /// of the attempted packet are unknown. Never automatically retry a mutation.
+    UncertainDispatch,
     /// An operation did not complete before its configured deadline.
     Timeout,
     /// The peer closed the connection or sent a disconnect packet.
