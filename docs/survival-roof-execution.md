@@ -6,7 +6,7 @@ necessary undeclared prerequisites; do not weaken physics, scope or evidence.
 
 1. **Complete:** a complete authored roof sequence through the common executor,
    exact site and temporary cleanup verified on isolated non-OP vanilla.
-2. **Next:** generate access/action sequences from a bounded design and observed site.
+2. **Active:** generate access/action sequences from a bounded design and observed site.
 3. Connect adopted Blueprint/policy and public MCP job orchestration.
 4. Reobserve a stopped site and create a new checked continuation; no replay of
    serialized native tokens or uncertain old actions.
@@ -343,3 +343,42 @@ Stage 1 is complete. This is a checked authored sequence for the reference
 building. Automatic action/access selection, public Blueprint/MCP integration,
 new plans after interrupted jobs and whole-building failure coverage remain the
 separate stages above.
+
+## Stage 2: automatic sequence generation
+
+The next goal is created. Existing `ConstructionSite` supplies exact baseline,
+target cells and explicit permissions. `preview_construction_sequence` is the
+final authority for a complete hypothetical candidate. `plan_hypothetical_route`
+already searches native predictions, but its round trip is against one unchanged
+scene; it is not evidence of cleanup or escape after future edits. The generator
+must check the actual subsequent edits and retreat as part of the whole sequence.
+
+Implement in this order:
+
+1. Define bounded caller search inputs, counters and structured failures around
+   the existing site and supplied-material budget. Distinguish invalid input,
+   unsupported contract, shortage and no complete plan within search limits.
+   Preserve geometry refusal examples and unfinished targets for diagnosis.
+2. Generate placement/support/standing candidates from target and observed cells
+   within the declared scopes. Rank dependency and access candidates, but let
+   native geometry decide placement, reach, body clearance and movement validity.
+   Neither a topological order nor distance alone proves a player sequence.
+3. Search temporary access, placement order, removal and retreat together. Carry
+   exact native scenarios, ownership and cumulative material use per branch.
+   Apply the explicit native reconnect transition after each hypothetical removal.
+   Bound attempts including rejected previews; do not merge states solely by
+   rounded position when native velocity, geometry or lifecycle state differs.
+4. Pass complete candidates through the common checker. Test the original roof,
+   translated geometry and genuinely different dimensions/layouts, plus budget,
+   material and scope refusals. Replaying the authored coordinates or receiving
+   caller-authored operation lists does not satisfy automatic generation.
+5. Run a generated original-roof plan through the same non-OP live executor and
+   retain exact independent final-site/cleanup/retreat evidence. Keep the authored
+   reference as a regression baseline rather than a fallback success claim.
+
+Initial coverage remains the already admitted passive dry cubes and current
+bounded site/native edit/tick budgets. Search is not required to prove physical
+impossibility or to find every possible construction sequence. No public MCP,
+adoption authority, interrupted-job replay, new native physics or resource
+collection is added in this stage. A newly required correctness prerequisite
+must be reported before dependent implementation proceeds.
