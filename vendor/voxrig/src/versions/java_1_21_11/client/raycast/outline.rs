@@ -1,5 +1,6 @@
 //! Java 1.21.11 block outline selection, with no fluid or entity targets.
 //! Data and independent native oracle: scripts/ExportOutlineShapes.java.
+pub(super) mod uncertainty;
 use super::{BlockHit, NativeBlockState};
 use crate::versions::java_1_21_11::math::trig;
 use crate::versions::java_1_21_11::{reconstruction::Direction, state_id};

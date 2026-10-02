@@ -153,7 +153,7 @@
     "docs/survival-mining-comparison.md": "b63c1371c62353acc9dc959f397f6b44d615c0fa5e1c5d2a9cd51466fc704c15",
     "docs/survival-mining-retirement.md": "31fb7a51a591e4bad68ee301bcfcf1e888f5edf30fa4e0b51eddcd0e52c7798d",
     "docs/survival-mining.md": "9013073f9074d283f8276c62c54230b7a00d8bd3d5ba774bc682bd0e972c20ab",
-    "docs/survival-motion-controls.md": "1b6551f707146fb0b32e83d64ebb6cd3371232b97f5655519d3879c2acdface2",
+    "docs/survival-motion-controls.md": "e96b33724478988e11a5647e9af11ac3f3385c486768db2e9b350b0332cefe97",
     "docs/survival-movement-foundation.md": "ec00fea854ddd760ee2e60e613e9e8c2192cfb4cc0380e0a62dbfe0fe43f1976",
     "docs/survival-outbound.md": "5f926827b4f51a3cc7008f067d9d18976f1768ab0116f7680de0edc6ea3ee30a",
     "docs/survival-placement.md": "0c3ee6532eb6ab401b97bdfc99c03e415714078713a2541d8ba8cfb546d72085",
@@ -256,7 +256,7 @@
     "src/versions/java_1_21_11/client/operations/inventory/tests.rs": "290a076fa0f2b93841049bee213d4127205ebd270df94d79ca0ec00fef53f86f",
     "src/versions/java_1_21_11/client/operations/mining.rs": "6dc60dfdbc84674bd0442b98d5d3b0adefb61ec58760182e502f320fe1b204a3",
     "src/versions/java_1_21_11/client/operations/mining/inventory_tests.rs": "30fff8aadadf8ba4e6b1d6851e763bc61bb9a399de5f938ce2f7a197568a061e",
-    "src/versions/java_1_21_11/client/operations/mining/tests.rs": "82a767c65b7b0b53ca97eb0944f5844f5fea4e76efe39113f3a884f75a3e0717",
+    "src/versions/java_1_21_11/client/operations/mining/tests.rs": "7a77110d8459cd792e63c6d1bba9eee55dfc33cdce53c2ffe9b06690063d2647",
     "src/versions/java_1_21_11/client/operations/movement.rs": "3af888970e875e91a7246b904a52f4734c0c917aee0620cfb7974c7f148393c4",
     "src/versions/java_1_21_11/client/operations/movement/control.rs": "d097cf70b2d42b5670c803b57a600d5b293954997c5725e489022a282d828a68",
     "src/versions/java_1_21_11/client/operations/movement/endpoint.rs": "f3f81df0d01d4bacb97cf456a183cabcd485db672c70e4aed4502964eeff70b1",
@@ -264,7 +264,7 @@
     "src/versions/java_1_21_11/client/operations/placement.rs": "eab390740248669b61b2d6b11de333cda5d551a9d5eb98ba0384b64bf32d58a9",
     "src/versions/java_1_21_11/client/operations/placement/tests.rs": "8ff593bbfe219830a0ff3448a4d61aa02a25ebfe2d3064b41a7aca283c306fc4",
     "src/versions/java_1_21_11/client/operations/retirement.rs": "cf368b39d1e7ad2fd65aa0060e816b7453a939812ba5a742c7d97da02f4f2ccf",
-    "src/versions/java_1_21_11/client/operations/survival.rs": "556cd9131fa009494ca64c6d710f357927e9b667092e8e6a45dba516ab9fbfcc",
+    "src/versions/java_1_21_11/client/operations/survival.rs": "c3bee169e63a6d46b6308ba4957498d8f906357193dfd89a0e00f9fba5388277",
     "src/versions/java_1_21_11/client/operations/survival/attributes.rs": "3c24ac65afc7cb35096726231c1f3bd5e9044bd7934a38629c87149ba311c156",
     "src/versions/java_1_21_11/client/operations/survival/tests.rs": "f6db944b4105b9ac1739c5d04b5b5b268a35468306c70d9ed6137d9d01f96924",
     "src/versions/java_1_21_11/client/operations/tests.rs": "62829152942d4f92c36809b7cf601f942ef21c32c92b5e11b6b0eda4d6cd2d57",
@@ -274,8 +274,9 @@
     "src/versions/java_1_21_11/client/players.rs": "1b78ebc0010b50a2dc7a3d1e8ff2fcdbf213f0e2241c8dd61baacb9f7483f895",
     "src/versions/java_1_21_11/client/players/motion.rs": "48ae0e823b43ca2a129ef2bf712a09025fcaf8f3e81723a0ce70564ed41b04f6",
     "src/versions/java_1_21_11/client/players/tests.rs": "34f7283a900c94ee492cd9c051742a46c3f94fdea936151147ab821712c0fc9f",
-    "src/versions/java_1_21_11/client/raycast.rs": "c6aa6663778d76e49c4ff006b4c660fa1ad96ae04e99b8fa601bd84f0d70b806",
-    "src/versions/java_1_21_11/client/raycast/outline.rs": "2099862c8b2342df69a3e92686931b7a4c7b384d8f5cd910edc19b6ddbf882e4",
+    "src/versions/java_1_21_11/client/raycast.rs": "97e95b79b4e0a26a0e442cb60ea81eaa97ebb66adf45ef3dc50e9e4d4440c7c6",
+    "src/versions/java_1_21_11/client/raycast/outline.rs": "497b3e4d798c8ffad90beaa433b46ca9021416068c25de19172588c4ebad80ff",
+    "src/versions/java_1_21_11/client/raycast/outline/uncertainty.rs": "438ee23c2a6a131d7f3d61956eae5aceba657cd17f9e07daeca7ec1b9a104958",
     "src/versions/java_1_21_11/client/recording.rs": "de3c6ad62e7229218ec041f66c33e2902bbb9d397296b52d6ab1d2315d37a426",
     "src/versions/java_1_21_11/client/tests.rs": "f2ec421e67737ffbee1bb156b9a49b14bf95f18398d310a7ba8fbf33d9f9b622",
     "src/versions/java_1_21_11/component_nbt.rs": "bce1b6920f3d9fd958c102d2a93818c36fad4b604783b4baa71e219fe52f83ab",
@@ -310,5 +311,5 @@
     "scripts"
   ],
   "repository": "https://github.com/sugipamo/Voxrig",
-  "revision": "1a8f258eeda876b0e3837f8a246b990c3cffb052"
+  "revision": "1877209da48a78443dd7d30e7db6720bd6775416"
 }

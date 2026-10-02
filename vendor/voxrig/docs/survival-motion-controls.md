@@ -41,9 +41,15 @@ causes a read-before-action refusal, not a blocking reciprocal session lock.
 Standing clearance uses horizontal uncertainty expanded about the prediction.
 A supporting cube must intersect every possible horizontal footprint; floor
 height comes from the predicted contact with freshly received full cubes. Target
-checks conservatively require a clear eye-to-target bounding corridor and the
-same in-reach face from its uncertainty extremes. This can refuse usable views
-near unrelated solids; it intentionally does not guess an unobstructed view.
+checks cover a continuous swept ray volume with the full observed eye-error box.
+For admitted full cubes, affine plane-intersection bounds require every possible
+eye to enter the same face strictly inside its edges and native reach. A segment
+versus expanded-cell test covers every cell that native outline DDA can visit
+before that face, including traversal/clipping tolerances. Any non-air or unknown
+cell there is refused; cells outside the beam do not obstruct it. This remains
+conservative for partial/protruding outlines because native selection only reads
+shapes of visited cells. Native extreme rays additionally check consistency, but
+are not the continuous occlusion proof. Grazing/edge/reach ambiguity is refused.
 Placement still requires the independent existing target/material/interaction
 result checks. Existing mining-retirement requirements are unchanged.
 
@@ -147,3 +153,18 @@ player context or predicted frames reject before I/O. Saved or caller-modified
 previews are constraints, not authority: current mode, geometry, terminal margin,
 observer and mutation gates still apply. TCP coverage exercises turning around
 an obstacle and rejects stale previews without emitting controls.
+
+## Roof preflight regression (2026-10-02 UTC)
+
+`roof_diagonal_view_allows_off_ray_foot_support_but_refuses_occlusion` preserves
+the exact pose from the first refused roof candidate. At predicted feet
+`[2.5,-59,6.544924947876652]`, placement towards the upper ground face at
+`[0,-61,4]` now admits the dirt supporting the player at `[2,-60,6]` outside the
+continuous ray volume. Inserting a real ray obstacle still refuses placement.
+Standing support/body checks and the admitted pose-error bounds are unchanged.
+
+Focused coverage also exercises all six target faces, vertical and horizontal
+origin error, face/corner boundaries, reach endpoints, unknown cells, conservative
+partial-shape refusal and closed segment contact. Existing native outline oracle
+fixtures remain the reference for direction/traversal. This describes geometry
+validation; complete live roof execution is separately evidenced by DustRoute.

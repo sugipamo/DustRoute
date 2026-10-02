@@ -74,6 +74,18 @@ pub(super) fn outline_hit_in(
     outline::cast(eye, end, read).map_err(|error| Error::new(ErrorKind::State, error))
 }
 
+/// Continuous origin-error check for an already selected, admitted full cube.
+pub(super) fn uncertain_cube_hit_in(
+    eye: [f64; 3],
+    error: [f64; 3],
+    rotation: [f32; 2],
+    hit: &BlockHit,
+    read: impl FnMut([i32; 3]) -> anyhow::Result<NativeBlockState>,
+) -> Result<()> {
+    outline::uncertainty::check(eye, error, rotation, hit, read)
+        .map_err(|error| Error::new(ErrorKind::State, error))
+}
+
 /// Local face cursor from the same native rotation vector and first hit.
 pub(super) fn hit_cursor_in(rotation: [f32; 2], eye: [f64; 3], hit: &BlockHit) -> [f32; 3] {
     let direction = outline::direction(rotation);

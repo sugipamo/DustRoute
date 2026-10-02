@@ -65,17 +65,16 @@ A **test-only native characterization** now uses this exact pose and scene:
 - Native center ray and 25 sampled rays across the admitted horizontal error
   `2/4096 + 1e-9` all hit the intended ground block's upper face within reach.
 - Placement geometry with zero aiming error admits the requested cube.
-- The current uncertainty guard refuses when the off-ray foot support is present.
+- The prior uncertainty guard refused when the off-ray foot support is present.
 - A diagnostic counterfactual omitting only that support leaves the native target
   unchanged and makes the uncertainty guard pass. This is NOT a permissible
   standing state or an instruction to remove the support.
 - Adding a real obstacle at `[1,-59,5]` changes the native first hit to that obstacle.
 
 The sampled rays characterize this refusal; finite samples alone do not prove
-clearance for every possible eye position. No production native guard or vendor
-snapshot has been changed. Stage 1 is incomplete; stages 2–5 have not started.
+clearance for every possible eye position. This characterization did not change any production guard or vendor snapshot. Stage 1 is incomplete; stages 2–5 have not started.
 
-## Concrete prerequisite proposed for approval
+## Approved prerequisite: continuous ray uncertainty
 
 Refine the native uncertainty/occlusion check before further roof work. Keep
 Voxrig responsible for geometry, and keep DustRoute's permission/resource/sequence
@@ -106,8 +105,8 @@ Estimated scope: a localized-to-medium native geometry change plus focused
 regression/live checks. Changing build order may avoid this one refusal, but
 would not remove the same conservative limitation from general scaffold/roof
 work. The recommendation is to fix the shared admission mechanism first rather
-than committing to an unverified workaround sequence. Approval is pending under
-the user's instruction to stop when an undeclared prerequisite is preferable.
+than committing to an unverified workaround sequence. The user approved this
+prerequisite explicitly; implementation and validation are now in progress.
 
 ## Retained validation
 
@@ -120,3 +119,23 @@ Native and consumer all-targets Clippy and formatting passed. Initial consumer
 Clippy found two redundant test-only `BlockFace` clones, which were removed; the
 initial check log is retained. The roof preflight itself remains a refusal, with
 zero executed construction actions. Its isolated server stopped normally.
+
+## Approved implementation progress
+
+The native implementation now bounds the face-plane intersection over the whole
+three-axis eye-error box. It checks a continuous center segment against cells
+expanded by that error, retaining native DDA/clip tolerances. Only cells the beam
+can visit are read; all intervening non-air/unknown cells still refuse. This does
+not approximate partial shapes as full outlines: it conservatively refuses their
+owning cells whenever native DDA might visit them. Extreme native rays remain an
+additional consistency check, not the occlusion proof. Both actual and detached
+placement/mining call this shared implementation. Body/support checks are unchanged.
+
+Native source `1877209da48a78443dd7d30e7db6720bd6775416` is imported with 294
+verified managed files. Native library validation: 194 passed, six explicitly
+ignored live fixtures; all-target Clippy passed. DustRoute's Voxrig-enabled
+survival tests: 19 passed, four ignored live fixtures. An earlier consumer test
+invocation omitted the feature and selected zero tests; it is not validation of
+this path.
+Complete roof preflight and live construction remain required. The historical
+preflight refusal and its original source pins are retained unchanged.

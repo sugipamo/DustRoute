@@ -550,46 +550,12 @@ pub(super) fn uncertain_target_in(
     if error == [0.0; 3] {
         return Ok(());
     }
-    let cursor = super::super::raycast::hit_cursor_in(rotation, eye_position, hit);
-    let endpoint: [f64; 3] =
-        std::array::from_fn(|i| f64::from(hit.position[i]) + f64::from(cursor[i]));
-    let min: [i32; 3] =
-        std::array::from_fn(|i| (eye_position[i].min(endpoint[i]) - error[i]).floor() as i32);
-    let max: [i32; 3] =
-        std::array::from_fn(|i| (eye_position[i].max(endpoint[i]) + error[i]).floor() as i32);
-    for x in min[0]..=max[0] {
-        for y in min[1]..=max[1] {
-            for z in min[2]..=max[2] {
-                let p = [x, y, z];
-                if p == hit.position {
-                    continue;
-                }
-                let cell = state.block(p)?;
-                if !matches!(
-                    cell.name.as_str(),
-                    "minecraft:air" | "minecraft:cave_air" | "minecraft:void_air"
-                ) {
-                    return Err(unavailable(
-                        "uncertain eye corridor is not clear; use a less ambiguous standing/target geometry",
-                    ));
-                }
-            }
-        }
+    if !DRY_CUBES.contains(&hit.state.name.as_str()) {
+        return Err(unavailable(
+            "uncertain target requires an admitted full cube",
+        ));
     }
-    for dx in [-error[0], error[0]] {
-        for dz in [-error[2], error[2]] {
-            let eye = [eye_position[0] + dx, eye_position[1], eye_position[2] + dz];
-            let observed = super::super::raycast::outline_hit_in(eye, rotation, 4.5, |p| {
-                state.block(p).map_err(anyhow::Error::from)
-            })?;
-            if observed.is_none_or(|h| {
-                h.position != hit.position || h.face != hit.face || h.state != hit.state
-            }) {
-                return Err(unavailable(
-                    "target face/reach differs across observed position uncertainty",
-                ));
-            }
-        }
-    }
-    Ok(())
+    super::super::raycast::uncertain_cube_hit_in(eye_position, error, rotation, hit, |p| {
+        state.block(p).map_err(anyhow::Error::from)
+    })
 }

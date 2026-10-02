@@ -5,6 +5,121 @@ use tokio::{
     task::JoinHandle,
 };
 
+// Regression from a detached roof preflight; no network or world edits.
+#[test]
+fn roof_diagonal_view_allows_off_ray_foot_support_but_refuses_occlusion() {
+    use super::super::geometry::GeometryView;
+    struct RoofView {
+        foot_support: bool,
+        obstacle: bool,
+    }
+    impl GeometryView for RoofView {
+        fn block(&self, p: [i32; 3]) -> Result<crate::NativeBlockState> {
+            if (0..3).any(|i| p[i] < [-5, -62, -5][i] || p[i] > [9, -50, 10][i]) {
+                return Err(invalid("outside declared characterization scene"));
+            }
+            Ok(if p[1] <= -61 || (self.obstacle && p == [1, -59, 5]) {
+                native("stone")
+            } else if self.foot_support && p == [2, -60, 6] {
+                native("dirt")
+            } else {
+                native("air")
+            })
+        }
+    }
+    let view = RoofView {
+        foot_support: true,
+        obstacle: false,
+    };
+    // Exact detached endpoint from DustRoute's first roof preflight refusal.
+    let position = [2.5, -59.0, 6.544924947876652];
+    let eye = [position[0], position[1] + f64::from(1.62f32), position[2]];
+    let point = [0.5, -60.0, 4.5];
+    let d: [f64; 3] = std::array::from_fn(|i| point[i] - eye[i]);
+    let rotation = [
+        (-d[0]).atan2(d[2]).to_degrees() as f32,
+        (-d[1]).atan2(d[0].hypot(d[2])).to_degrees() as f32,
+    ];
+    let ray = |v: &RoofView, eye| {
+        super::super::super::raycast::outline_hit_in(eye, rotation, 4.5, |p| {
+            v.block(p).map_err(anyhow::Error::from)
+        })
+        .unwrap()
+        .unwrap()
+    };
+    let hit = ray(&view, eye);
+    assert_eq!(hit.position, [0, -61, 4]);
+    assert_eq!(hit.face.map(|f| f as u8), Some(crate::BlockFace::Up as u8));
+    let margin = 2.0 / 4096.0 + 1e-9;
+    // Samples diagnose the refusal; they do NOT prove a continuous uncertainty
+    // volume and must not replace the conservative guard in production.
+    for dx in [-margin, -margin / 2.0, 0.0, margin / 2.0, margin] {
+        for dz in [-margin, -margin / 2.0, 0.0, margin / 2.0, margin] {
+            let h = ray(&view, [eye[0] + dx, eye[1], eye[2] + dz]);
+            assert_eq!(h.position, hit.position);
+            assert_eq!(h.face, hit.face);
+        }
+    }
+    let bounds = super::super::survival::standing_geometry(&view, position, [0.0625, 0.0, 0.0625])
+        .unwrap()
+        .bounds;
+    let exact = super::super::placement::placement_geometry(
+        &view,
+        position,
+        bounds,
+        [0.0; 3],
+        rotation,
+        [0, -61, 4],
+        crate::BlockFace::Up as u8,
+    )
+    .unwrap();
+    assert_eq!(exact.target, [0, -60, 4]);
+    let uncertain = super::super::placement::placement_geometry(
+        &view,
+        position,
+        bounds,
+        [margin, 0.0, margin],
+        rotation,
+        [0, -61, 4],
+        crate::BlockFace::Up as u8,
+    )
+    .unwrap();
+    assert_eq!(uncertain.target, exact.target);
+    assert_eq!(uncertain.cursor, exact.cursor);
+    // Counterfactual visibility only: removing a foot support is not a safe
+    // construction action, nor a replacement standing context.
+    let without_support = RoofView {
+        foot_support: false,
+        obstacle: false,
+    };
+    assert_eq!(ray(&without_support, eye).position, hit.position);
+    super::super::survival::uncertain_target_in(
+        &without_support,
+        eye,
+        [margin, 0.0, margin],
+        rotation,
+        &hit,
+    )
+    .unwrap();
+    let obstructed = RoofView {
+        foot_support: true,
+        obstacle: true,
+    };
+    assert_eq!(ray(&obstructed, eye).position, [1, -59, 5]);
+    assert!(
+        super::super::survival::uncertain_target_in(
+            &obstructed,
+            eye,
+            [margin, 0.0, margin],
+            rotation,
+            &hit,
+        )
+        .unwrap_err()
+        .to_string()
+        .contains("corridor is not clear")
+    );
+}
+
 #[tokio::test]
 async fn hypothetical_scene_shares_native_prediction_and_never_changes_live_state() {
     let mut f = Fixture::new().await;
