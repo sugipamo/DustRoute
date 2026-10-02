@@ -83,7 +83,8 @@ packet traces. Both dedicated server processes stopped normally (exit 0).
   console waits. This is a deterministic prerequisite-change test, not evidence
   about pickup timing.
 
-The prior concern is resolved for this bounded policy. The native mechanism and
-read-only caller reconciliation are reusable; their action loop currently lives
-in the isolated acceptance driver. Durable jobs, public survival execution and
-full adopted roof construction still need the remaining roadmap integration.
+The prior concern is resolved for this bounded policy. The subsequent
+[common executor milestone](survival-common-executor.md) moves the action loop out
+of the isolated driver and adds durable diagnosis plus explicit retry improvements.
+Public survival job orchestration and full adopted roof construction still need
+the remaining roadmap integration.

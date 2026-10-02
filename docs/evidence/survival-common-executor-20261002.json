@@ -1,0 +1,604 @@
+{
+  "schema": "dustroute.survival-common-executor-evidence.v1",
+  "recorded_at_utc": "2026-10-02T11:30:24.445699+00:00",
+  "live_source": "3dcaadc2d6d4a56cf531bc27d0ca42fa0c6abe78",
+  "reopen_check_and_destination_metadata_source": "e1e3e4b4758aba02b78e0f973b1a3f3e4d1e131d",
+  "voxrig_source": "1a8f258eeda876b0e3837f8a246b990c3cffb052",
+  "server_version": "1.21.11",
+  "server_endpoint": "127.0.0.1:25572",
+  "server_ops": [],
+  "validation": {
+    "related_tests_passed": 19,
+    "related_tests_ignored": 3,
+    "clippy": "all targets, voxrig feature, -D warnings passed",
+    "format": "passed",
+    "live_completed_runs": 3,
+    "live_expected_stop_runs": 3,
+    "fresh_process_read_only_checks": 6
+  },
+  "scope": "Non-OP checked temporary-only fixed sequence: 3 placements, climb, retreat, 3 owned removals. Caller-authorized scope, no Blueprint adoption/full roof claim.",
+  "limits": [
+    "Reopening is diagnosis-only, not automatic restart recovery.",
+    "Cancellation stops dispatch, not native retirement.",
+    "Native single-action retirement and supported geometry limits remain.",
+    "Completed traces cover each explicitly started trace interval; fresh-session loading is additionally represented by native recovery evidence.",
+    "Public MCP jobs, automatic roof/access generation and full adopted roof acceptance are subsequent milestones."
+  ],
+  "preflight_note": "A relative server.properties path failed before the first trial; the old isolated level booted without any test player or trial command, was normally stopped, and no execution trial used it. All six declared comparisons used fresh worlds.",
+  "preflight_log": {
+    "path": "docs/evidence/survival-executor/common-executor-20261002-preflight-server.log.gz",
+    "bytes": 2394,
+    "sha256": "a66b62654223e9065590c170ed083d289e36c7fc1f2ca9808ade200fbd527393",
+    "gzip_sha256": "62c85157c46bfce194ac3b2662ae36a96956077a849faa123d4a0e20e9323a9b"
+  },
+  "boundary_fixture_controller": {
+    "path": "docs/evidence/survival-executor/run-common-executor-boundaries.py.gz",
+    "bytes": 3721,
+    "sha256": "2c01fcc394d8c09f22356a81e731be331179a1dcf6a6601542317d3c0f86ed3e",
+    "gzip_sha256": "2ba882a180f5fb3bf01388919052dafbefd63edd249ee44b6cff80bf53ba0501"
+  },
+  "runs": [
+    {
+      "case": "natural-a",
+      "verdict": "completed",
+      "test_duration_seconds_including_fixture_wait": 37.73,
+      "execution_id": "84c52ba1-4036-4dc4-b473-c39dfd0cd16c",
+      "completed_steps": 8,
+      "total_steps": 8,
+      "validated_reconnects": 3,
+      "retry_improvements": [],
+      "inventory_interruptions": [],
+      "stopped_errors": [],
+      "remaining_observed_blocks": [],
+      "independently_verified_final_cells": 2550,
+      "trace_connections": [
+        {
+          "connection_id": 1,
+          "records": 60,
+          "complete": true
+        },
+        {
+          "connection_id": 3,
+          "records": 115,
+          "complete": true
+        },
+        {
+          "connection_id": 4,
+          "records": 122,
+          "complete": true
+        },
+        {
+          "connection_id": 5,
+          "records": 0,
+          "complete": true
+        },
+        {
+          "connection_id": 2,
+          "records": 213,
+          "complete": true
+        }
+      ],
+      "fresh_process_reopen": "diagnosis_only_record_unchanged",
+      "server_exit_code": 0,
+      "artifacts": [
+        {
+          "path": "docs/evidence/survival-executor/common-executor-20261002-natural-a.json.gz",
+          "bytes": 3873066,
+          "sha256": "bd805ee5cdfb854ce22b63c8ca4a7047b030d18c584b276a6408725edf7a4b96",
+          "gzip_sha256": "c4b4c74dd905afb86153cad0159badb4fcfc7f18681cc8e317c1f9c4ccf5af44"
+        },
+        {
+          "path": "docs/evidence/survival-executor/common-executor-20261002-natural-a-server.log.gz",
+          "bytes": 4525,
+          "sha256": "10051cc59d4aa128b51a249a2f0ec605a7741de6f954230f9fcde2741e741df8",
+          "gzip_sha256": "1872faaadeb0ee7afe50dbe10fe3b8f80412354aaa4f3b79b413e70a7150a54a"
+        },
+        {
+          "path": "docs/evidence/survival-executor/common-executor-20261002-natural-a-reopen.log.gz",
+          "bytes": 351,
+          "sha256": "66611c23e521ad40e8bf56e097003bb3590a4f347d9b03219f2c396b5b280205",
+          "gzip_sha256": "b2e212ae8bf62dc057e9210e97a2beec4620aef102e7ca7e3d2519375aff7c45"
+        },
+        {
+          "path": "docs/evidence/survival-executor/common-executor-20261002-natural-a-journal.json.gz",
+          "bytes": 189570,
+          "sha256": "1a3b773d53fc3265fe1b8bd745d340431d2a86f291591c689bb9a007319ccb73"
+        }
+      ]
+    },
+    {
+      "case": "injected-a",
+      "verdict": "completed",
+      "test_duration_seconds_including_fixture_wait": 63.79,
+      "execution_id": "1b33b5dc-e4ed-4898-9f20-5449db16d779",
+      "completed_steps": 8,
+      "total_steps": 8,
+      "validated_reconnects": 4,
+      "retry_improvements": [
+        {
+          "attempt": 2,
+          "inventory_sequence": 50,
+          "next_hotbar": 1,
+          "owned_target": {
+            "after": {
+              "name": "minecraft:air",
+              "properties": {}
+            },
+            "before": {
+              "name": "minecraft:dirt",
+              "properties": {}
+            },
+            "position": [
+              1,
+              -60,
+              0
+            ]
+          },
+          "previous_hotbar": 0,
+          "reason": "different_received_empty_hotbar_after_retirement"
+        }
+      ],
+      "inventory_interruptions": [
+        {
+          "target": [
+            1,
+            -60,
+            0
+          ],
+          "change": {
+            "cursor": {
+              "kind": "empty"
+            },
+            "hand_receive_sequence": 285,
+            "kind": "selected_hand_changed",
+            "original_hand": {
+              "item": {
+                "count": 1,
+                "item_id": 28,
+                "name": "minecraft:dirt"
+              },
+              "kind": "item"
+            },
+            "receive_sequence": 285,
+            "selection": {
+              "dispatched": true,
+              "from_server": false,
+              "sequence": 249,
+              "slot": 0
+            },
+            "sole_cause": true,
+            "unsupported_components": false,
+            "window_id": 0
+          },
+          "finish": null,
+          "intent_receive_boundary": 249
+        }
+      ],
+      "stopped_errors": [],
+      "remaining_observed_blocks": [],
+      "independently_verified_final_cells": 2550,
+      "trace_connections": [
+        {
+          "connection_id": 1,
+          "records": 84,
+          "complete": true
+        },
+        {
+          "connection_id": 3,
+          "records": 106,
+          "complete": true
+        },
+        {
+          "connection_id": 4,
+          "records": 108,
+          "complete": true
+        },
+        {
+          "connection_id": 5,
+          "records": 114,
+          "complete": true
+        },
+        {
+          "connection_id": 6,
+          "records": 0,
+          "complete": true
+        },
+        {
+          "connection_id": 2,
+          "records": 568,
+          "complete": true
+        }
+      ],
+      "fresh_process_reopen": "diagnosis_only_record_unchanged",
+      "server_exit_code": 0,
+      "artifacts": [
+        {
+          "path": "docs/evidence/survival-executor/common-executor-20261002-injected-a.json.gz",
+          "bytes": 5593450,
+          "sha256": "3ecc52db3f8e223be34c8bbb957b552c960fe88961d09186473c330d8be2ea14",
+          "gzip_sha256": "d0695267172ce4918b2f22cf94d67fadb9824189fe08de80b0fd13fe6e455075"
+        },
+        {
+          "path": "docs/evidence/survival-executor/common-executor-20261002-injected-a-server.log.gz",
+          "bytes": 4922,
+          "sha256": "01d06fb009b799a3166107ef01366a87572fd882ea0ec668a0e6d246582bf5ce",
+          "gzip_sha256": "81aea00149b7390555b9d8ca992c9bc8209350f1a405689196551d86ef5861bd"
+        },
+        {
+          "path": "docs/evidence/survival-executor/common-executor-20261002-injected-a-reopen.log.gz",
+          "bytes": 351,
+          "sha256": "653f76ee91222adb276876a474bb1d86f8e5536000abbef5f95ab591d94838ac",
+          "gzip_sha256": "1ea53c8f3ecb1afeff0088f6d78b2f377bd8e5d204083959e512116fb1b4c185"
+        },
+        {
+          "path": "docs/evidence/survival-executor/common-executor-20261002-injected-a-journal.json.gz",
+          "bytes": 202047,
+          "sha256": "13311f11378855959a6f7df59cb57e0c7ca6cc355dc21ec8da82801f9aa93218"
+        }
+      ]
+    },
+    {
+      "case": "cancel-a",
+      "verdict": "expected_inspection_stop",
+      "test_duration_seconds_including_fixture_wait": 12.18,
+      "execution_id": "5bc0c1ee-3ab1-4ca8-aa20-c88f5707722c",
+      "completed_steps": 5,
+      "total_steps": 8,
+      "validated_reconnects": 0,
+      "retry_improvements": [],
+      "inventory_interruptions": [],
+      "stopped_errors": [],
+      "remaining_observed_blocks": [
+        {
+          "position": [
+            1,
+            -60,
+            0
+          ],
+          "state": {
+            "name": "minecraft:dirt",
+            "properties": {}
+          }
+        },
+        {
+          "position": [
+            2,
+            -60,
+            0
+          ],
+          "state": {
+            "name": "minecraft:dirt",
+            "properties": {}
+          }
+        },
+        {
+          "position": [
+            3,
+            -60,
+            0
+          ],
+          "state": {
+            "name": "minecraft:dirt",
+            "properties": {}
+          }
+        }
+      ],
+      "independently_verified_final_cells": 3,
+      "trace_connections": [
+        {
+          "connection_id": 1,
+          "records": 51,
+          "complete": true
+        },
+        {
+          "connection_id": 2,
+          "records": 97,
+          "complete": true
+        }
+      ],
+      "fresh_process_reopen": "diagnosis_only_record_unchanged",
+      "server_exit_code": 0,
+      "artifacts": [
+        {
+          "path": "docs/evidence/survival-executor/common-executor-20261002-cancel-a.json.gz",
+          "bytes": 1338329,
+          "sha256": "47754282b89da75e01c5104fffa7f3de21ae9e796b7850015e5f304b3b68b86d",
+          "gzip_sha256": "34635a036149cb9b479c5ca9461578b2b1f902484d0934999f89cc3fe79fa504"
+        },
+        {
+          "path": "docs/evidence/survival-executor/common-executor-20261002-cancel-a-server.log.gz",
+          "bytes": 3564,
+          "sha256": "62a74ffd5e412968c6d6365da66dae7483b408b77d234549290391160dff8f1d",
+          "gzip_sha256": "65103b06b309563aad5b3116cad9e2803c7204506c220ccf4ba620d8392c5f81"
+        },
+        {
+          "path": "docs/evidence/survival-executor/common-executor-20261002-cancel-a-reopen.log.gz",
+          "bytes": 351,
+          "sha256": "e2bd00c6acad8273ab959cb71a01a1bba8413ec1047e97024abc9f542af42c91",
+          "gzip_sha256": "6505708a60b32bd48f02eb4c7d79d3618fd8362d619b3e0978b677cd70eaf77e"
+        },
+        {
+          "path": "docs/evidence/survival-executor/common-executor-20261002-cancel-a-journal.json.gz",
+          "bytes": 131344,
+          "sha256": "fb86c4c3c9dec816652a86387b4fcfc17029b5c80cb74ea08b0c8ce2d852f309"
+        },
+        {
+          "path": "docs/evidence/survival-executor/common-executor-20261002-cancel-a-test.log.gz",
+          "bytes": 358,
+          "sha256": "d2861ca446ce160c7408e4cf21adb72d7047c6283b273c9ae661123dc001c653",
+          "gzip_sha256": "049990af6eae0743aea09b96f50b25580b896acf62e9dd2aaaad9e25a97c119b"
+        }
+      ]
+    },
+    {
+      "case": "disconnect-a",
+      "verdict": "expected_inspection_stop",
+      "test_duration_seconds_including_fixture_wait": 12.3,
+      "execution_id": "564b48b6-20a5-45d6-8278-9b729f56805e",
+      "completed_steps": 5,
+      "total_steps": 8,
+      "validated_reconnects": 0,
+      "retry_improvements": [],
+      "inventory_interruptions": [],
+      "stopped_errors": [
+        {
+          "code": "native_refused",
+          "detail": "connection closed"
+        }
+      ],
+      "remaining_observed_blocks": [
+        {
+          "position": [
+            1,
+            -60,
+            0
+          ],
+          "state": {
+            "name": "minecraft:dirt",
+            "properties": {}
+          }
+        },
+        {
+          "position": [
+            2,
+            -60,
+            0
+          ],
+          "state": {
+            "name": "minecraft:dirt",
+            "properties": {}
+          }
+        },
+        {
+          "position": [
+            3,
+            -60,
+            0
+          ],
+          "state": {
+            "name": "minecraft:dirt",
+            "properties": {}
+          }
+        }
+      ],
+      "independently_verified_final_cells": 3,
+      "trace_connections": [
+        {
+          "connection_id": 1,
+          "records": 50,
+          "complete": true
+        },
+        {
+          "connection_id": 2,
+          "records": 124,
+          "complete": true
+        }
+      ],
+      "fresh_process_reopen": "diagnosis_only_record_unchanged",
+      "server_exit_code": 0,
+      "artifacts": [
+        {
+          "path": "docs/evidence/survival-executor/common-executor-20261002-disconnect-a.json.gz",
+          "bytes": 1747340,
+          "sha256": "c6e2a9849fabfd87b6815cd48e4f044c051fdaf7cbced535a562b7dce7774e78",
+          "gzip_sha256": "dc6c92b5f7995f59653e3f2951f14d4ce098ac34c54a0a43db1246b7150f4169"
+        },
+        {
+          "path": "docs/evidence/survival-executor/common-executor-20261002-disconnect-a-server.log.gz",
+          "bytes": 3585,
+          "sha256": "76c11002477471ca93caf92277c174a562ce22a3b016153b021c5736d04ffdb6",
+          "gzip_sha256": "38826940ec7434729e0da5d2f0f972b382bee0f31c17a9e2e5bd76f78ac61f06"
+        },
+        {
+          "path": "docs/evidence/survival-executor/common-executor-20261002-disconnect-a-reopen.log.gz",
+          "bytes": 351,
+          "sha256": "9578b2aa90802747e33df2bd38a2e2ff18c11a24e692a0a9ad2124f879cc6e2f",
+          "gzip_sha256": "0e7e317b200d5dbcb18d918106ad89ea1063fbea71335b86e8ea1e8dfdb97772"
+        },
+        {
+          "path": "docs/evidence/survival-executor/common-executor-20261002-disconnect-a-journal.json.gz",
+          "bytes": 131570,
+          "sha256": "3041ec8fa5b8489f69865b97f9ad3820905c794a8844462eca1fd1ef67bd6121"
+        },
+        {
+          "path": "docs/evidence/survival-executor/common-executor-20261002-disconnect-a-test.log.gz",
+          "bytes": 358,
+          "sha256": "1303b098a76802ca18ac756585ff4f5655455df1bb4b608fa371e4a743747203",
+          "gzip_sha256": "6bcffaf929b94ce3508f2bced1cb3843630f33232a3ec2ce6d6db109a9d70591"
+        }
+      ]
+    },
+    {
+      "case": "target-a",
+      "verdict": "expected_inspection_stop",
+      "test_duration_seconds_including_fixture_wait": 12.4,
+      "execution_id": "611fe177-4c3e-4fcb-8080-e9093f2587b6",
+      "completed_steps": 5,
+      "total_steps": 8,
+      "validated_reconnects": 0,
+      "retry_improvements": [],
+      "inventory_interruptions": [],
+      "stopped_errors": [
+        {
+          "code": "mining_needs_inspection",
+          "detail": "only a received held-item change with no other conflict can enter this recovery policy"
+        }
+      ],
+      "remaining_observed_blocks": [
+        {
+          "position": [
+            1,
+            -60,
+            0
+          ],
+          "state": {
+            "name": "minecraft:stone",
+            "properties": {}
+          }
+        },
+        {
+          "position": [
+            2,
+            -60,
+            0
+          ],
+          "state": {
+            "name": "minecraft:dirt",
+            "properties": {}
+          }
+        },
+        {
+          "position": [
+            3,
+            -60,
+            0
+          ],
+          "state": {
+            "name": "minecraft:dirt",
+            "properties": {}
+          }
+        }
+      ],
+      "independently_verified_final_cells": 3,
+      "trace_connections": [
+        {
+          "connection_id": 1,
+          "records": 53,
+          "complete": true
+        },
+        {
+          "connection_id": 2,
+          "records": 100,
+          "complete": true
+        }
+      ],
+      "fresh_process_reopen": "diagnosis_only_record_unchanged",
+      "server_exit_code": 0,
+      "artifacts": [
+        {
+          "path": "docs/evidence/survival-executor/common-executor-20261002-target-a.json.gz",
+          "bytes": 1316987,
+          "sha256": "26a4d6f8d885ef6d298f260a4712b0ed5b8aa66d2d52080c533c84acc5e8b315",
+          "gzip_sha256": "a9eb33d1f576336e01599bc9f94d5c6093c0b186a0299748d844b2d417d91ac6"
+        },
+        {
+          "path": "docs/evidence/survival-executor/common-executor-20261002-target-a-server.log.gz",
+          "bytes": 3628,
+          "sha256": "e0d956b895f6f053f939023f9c472f7dd558cf7542efdc86263a38b5f2ce2051",
+          "gzip_sha256": "6353edb42fae7f78aeadb1d5f5115357b1be046ffab1ae83bb8a25e129d00c7f"
+        },
+        {
+          "path": "docs/evidence/survival-executor/common-executor-20261002-target-a-reopen.log.gz",
+          "bytes": 351,
+          "sha256": "b3f46530e6589fee68a60106d60186538b2e2a940dae1201f215420960449d41",
+          "gzip_sha256": "aeec66f4600f2e47058523b3ea756613f596f296f50d08677c9606da29cd5957"
+        },
+        {
+          "path": "docs/evidence/survival-executor/common-executor-20261002-target-a-journal.json.gz",
+          "bytes": 131640,
+          "sha256": "b5a681eb3eea0aac4e3c524c58b54930d26fd1b6dc11887d1d470dcac1a2f81d"
+        },
+        {
+          "path": "docs/evidence/survival-executor/common-executor-20261002-target-a-test.log.gz",
+          "bytes": 430,
+          "sha256": "f946dab5cf0db3af83de8d649de07b438c921d2a5a39413ca8454e5755204e59",
+          "gzip_sha256": "8b14f87dfe4ab37902074a57a9bc52e1f51b954ac3e14c5c3313d57f0f7da42e"
+        }
+      ]
+    },
+    {
+      "case": "natural-b",
+      "verdict": "completed",
+      "test_duration_seconds_including_fixture_wait": 20.73,
+      "execution_id": "55a263f3-5a62-4583-b085-76e13cc52bed",
+      "completed_steps": 8,
+      "total_steps": 8,
+      "validated_reconnects": 3,
+      "retry_improvements": [],
+      "inventory_interruptions": [],
+      "stopped_errors": [],
+      "remaining_observed_blocks": [],
+      "independently_verified_final_cells": 2550,
+      "trace_connections": [
+        {
+          "connection_id": 1,
+          "records": 85,
+          "complete": true
+        },
+        {
+          "connection_id": 3,
+          "records": 113,
+          "complete": true
+        },
+        {
+          "connection_id": 4,
+          "records": 123,
+          "complete": true
+        },
+        {
+          "connection_id": 5,
+          "records": 0,
+          "complete": true
+        },
+        {
+          "connection_id": 2,
+          "records": 249,
+          "complete": true
+        }
+      ],
+      "fresh_process_reopen": "diagnosis_only_record_unchanged",
+      "server_exit_code": 0,
+      "artifacts": [
+        {
+          "path": "docs/evidence/survival-executor/common-executor-20261002-natural-b.json.gz",
+          "bytes": 4991201,
+          "sha256": "f917c52d25aa28ef32edacca56f8230a0d67d52462068172037a0ad655777317",
+          "gzip_sha256": "34855d90933d4f3d11118465d207443430a8e0b2c991c9bfd60c2d86f3dcb24d"
+        },
+        {
+          "path": "docs/evidence/survival-executor/common-executor-20261002-natural-b-server.log.gz",
+          "bytes": 4527,
+          "sha256": "62326cd757f92b2616bc4d5d352ed3154de412228b10b53b0117d4d2213e2f39",
+          "gzip_sha256": "846fe65f67d264269ae90910a54f6ea1842bf466e4b7fb6d3930e21e06f3bb3c"
+        },
+        {
+          "path": "docs/evidence/survival-executor/common-executor-20261002-natural-b-reopen.log.gz",
+          "bytes": 351,
+          "sha256": "583d4f32e6b9ca3a5b9f598df390f4871dc9a37989cfbebf2a77daf0b871ff38",
+          "gzip_sha256": "afa5e37b6abc5dde29317c2de550da17dc84c07936f27c9975d77b6916876b30"
+        },
+        {
+          "path": "docs/evidence/survival-executor/common-executor-20261002-natural-b-journal.json.gz",
+          "bytes": 189540,
+          "sha256": "0cd1631a10dce1e050e51507c926761e62238a90f9e41310beccccd8ec4bcab7"
+        },
+        {
+          "path": "docs/evidence/survival-executor/common-executor-20261002-natural-b-test.log.gz",
+          "bytes": 358,
+          "sha256": "ef930484dccb8a0605b97554777b369d3aec90b351e9f1bbc412435686941ffd",
+          "gzip_sha256": "1c94de876253e450f8080ee3f061a608d48c72659de716888ce407f1b235f5c1"
+        }
+      ]
+    }
+  ]
+}

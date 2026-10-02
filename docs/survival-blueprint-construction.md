@@ -7,31 +7,33 @@ origin. Main remains at `7f74b37`.
 
 ## Latest status (2026-10-02 UTC)
 
-The user approved [inventory-interruption diagnosis and recovery](survival-inventory-recovery.md).
-Native receive-time typed diagnosis and caller-side target reconciliation are
-implemented and verified. Both natural and explicitly injected hand-change
-comparisons recovered and completed all three temporary removals, each with four
-retirement/fresh-recovery cycles. The prior concern is resolved for this bounded
-policy. The full roofed build and durable jobs are still unfinished.
+The [common survival executor milestone](survival-common-executor.md) is complete.
+DustRoute now runs checked fixed sequences through a reusable executor, with
+separate operation/continuation states, durable pre-dispatch intents, explicit
+retry improvements and diagnosis-only reopening. Voxrig retains checked native
+single-action and retirement/recovery contracts.
 
-- Native inventory, placement/mining continuation, locomotion, bounded navigation
-  and shared hypothetical geometry have isolated non-OP evidence.
-- The declared real temporary platform placement/climb/retreat/removal trial
-  passed, including three mining retirement/recovery cycles.
-- Caller-side candidate sequence, edit-scope and material checks are implemented;
-  their roof contract/resource tests are distinct from player geometry acceptance.
-- Automatic access/action selection, durable survival jobs and the complete
-  adopted roofed build/cleanup acceptance remain unfinished. The goal is active.
+- Three isolated non-OP runs (two natural, one received hand-change injection)
+  completed placement/climb/retreat and all three temporary removals. Exact
+  2550-cell final observations found no remnants. The injected run used four
+  validated reconnects and recorded a new empty slot; each natural run used three.
+- Dropped execution futures, source disconnection and foreign-target replacement
+  stopped without FINISH/retry. Their remaining blocks and histories were retained.
+- Six fresh test processes reopened the saved journals without creating a native
+  client, changing the records or restoring execution authority.
+- Related tests: 19 passed; all-targets Clippy/formatting passed. See the
+  [source-pinned comparison records](evidence/survival-common-executor-20261002.json).
 
-The user approved correcting the [native aiming uncertainty discrepancy](survival-aim-uncertainty.md)
-and consolidating Voxrig first. The correction and isolated edge comparison are
-complete. Version-selected checked operations and explicit mining retirement /
-fresh recovery now share a public client boundary; caller navigation/construction
-imports have migrated. Design, permissions, resource policy, route selection and
-durable jobs remain DustRoute responsibilities. The full roofed build is pending.
+Automatic roof/access action selection, caller-owned public MCP job orchestration,
+automatic restart recovery and the complete adopted roofed build/cleanup acceptance
+remain unfinished. The original construction objective is retained; completing the
+execution-kernel milestone does not complete that larger objective.
 
-The sections below retain the earlier checkpoints and their original limitations.
-The latest detail is in [site planning](survival-site-planning.md).
+[Inventory interruption/recovery](survival-inventory-recovery.md) and the
+[native aiming correction](survival-aim-uncertainty.md) are verified prerequisites.
+Native version adapters/physics/received state stay in Voxrig; design, permissions,
+resource policy, route selection and durable orchestration stay in DustRoute.
+The sections below retain earlier checkpoints and their original limitations.
 
 ## Intended result
 
