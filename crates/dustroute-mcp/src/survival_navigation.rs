@@ -612,3 +612,7 @@ mod tests {
 #[cfg(test)]
 #[path = "survival_navigation/native_trial.rs"]
 mod native_trial;
+
+#[cfg(test)]
+#[path = "survival_navigation/native_access_trial.rs"]
+mod native_access_trial;

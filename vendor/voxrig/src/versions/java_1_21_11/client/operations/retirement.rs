@@ -75,6 +75,14 @@ pub struct MiningRecovery {
     /// Evidence for diagnosis and a new plan; not permission to replay an old job.
     pub evidence: MiningRecoveryEvidence,
 }
+impl MiningRecovery {
+    /// Handle to this already validated connection for observation, tracing and
+    /// explicit disconnection. Cloning the handle does not reconnect or release
+    /// any operation guard; it uses the same version adapter and session.
+    pub fn client(&self) -> crate::Client {
+        crate::Client::from_java_1_21_11(self.operations.bot.clone())
+    }
+}
 
 fn unavailable(message: &str) -> Error {
     Error::new(ErrorKind::State, anyhow::anyhow!("{message}"))

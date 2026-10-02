@@ -209,7 +209,7 @@
     "scripts/run_endurance.sh": "844db5a2c57893a7cb76a7deec0442915af77454332c7f3b1dc937a07404af4a",
     "scripts/run_natural_terrain.sh": "371203b6ed7476cfc94b08f0388af4b7908c0e04dbc6b6e4687c908baa070b5b",
     "src/block_state.rs": "8f1f169bbee43fe8fdf91931cfd433cae7e1a23752aad2c35555ee4af3cbd0e2",
-    "src/connection.rs": "b71c85d82d9893175d9744b507664cd6a1382a8bbf6645052c3c527dea6ee400",
+    "src/connection.rs": "01118b655ec92191b7816673c16df95d1aefdfa360973c34c72cbd25f9621e8d",
     "src/error.rs": "5aeddea2a14b06c628c8097572c9907f38c5547120ea4e2f2a93294ff112ed00",
     "src/lib.rs": "84d2715d54e65a786142d40158b5ae9557c1dfc1ba603d03090b20bac178c999",
     "src/protocol.rs": "bc5c12d0ecc54e16da20abb504894d71817ede2ae0df9c17c87f7c7a3f9a97fc",
@@ -250,7 +250,7 @@
     "src/versions/java_1_21_11/client/operations/movement/scenario.rs": "2048afd4c3b91b5ef7271a00a4f66c0d6786295413a62749d650867bb2ac6d6b",
     "src/versions/java_1_21_11/client/operations/placement.rs": "eab390740248669b61b2d6b11de333cda5d551a9d5eb98ba0384b64bf32d58a9",
     "src/versions/java_1_21_11/client/operations/placement/tests.rs": "8ff593bbfe219830a0ff3448a4d61aa02a25ebfe2d3064b41a7aca283c306fc4",
-    "src/versions/java_1_21_11/client/operations/retirement.rs": "f64b3a83d56990283ea1245dd97e40f0facf12ffcb8fe7f6c7f44f6b90f239b6",
+    "src/versions/java_1_21_11/client/operations/retirement.rs": "cf368b39d1e7ad2fd65aa0060e816b7453a939812ba5a742c7d97da02f4f2ccf",
     "src/versions/java_1_21_11/client/operations/survival.rs": "556cd9131fa009494ca64c6d710f357927e9b667092e8e6a45dba516ab9fbfcc",
     "src/versions/java_1_21_11/client/operations/survival/attributes.rs": "3c24ac65afc7cb35096726231c1f3bd5e9044bd7934a38629c87149ba311c156",
     "src/versions/java_1_21_11/client/operations/survival/tests.rs": "f6db944b4105b9ac1739c5d04b5b5b268a35468306c70d9ed6137d9d01f96924",
@@ -297,5 +297,5 @@
     "scripts"
   ],
   "repository": "https://github.com/sugipamo/Voxrig",
-  "revision": "d2db52a9395fb9873b21da668041f74a6ee9ed0a"
+  "revision": "be55a64bc32da1ff0265ff0bdeb591f13d623137"
 }

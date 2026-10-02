@@ -125,6 +125,11 @@ pub struct Client {
 }
 
 impl Client {
+    pub(crate) fn from_java_1_21_11(bot: crate::versions::java_1_21_11::Bot) -> Self {
+        Self {
+            adapter: Adapter::Java1_21_11(bot),
+        }
+    }
     /// Version-specific modern controls. The established 1.16.1 Bot API coexists.
     pub fn java_1_21_11_operations(
         &self,

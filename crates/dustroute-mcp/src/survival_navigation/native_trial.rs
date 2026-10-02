@@ -9,7 +9,7 @@ use voxrig::versions::java_1_21_11::operations::{
     InventorySlot, PlacementStatus, SurvivalMotionStatus,
 };
 use voxrig::{BlockFace, Client, ConnectionConfig, MinecraftVersion, Region, Server};
-async fn connect(name: &str) -> Client {
+pub(super) async fn connect(name: &str) -> Client {
     let c = Client::connect(ConnectionConfig::offline(
         Server::new("127.0.0.1", 25572),
         name,
@@ -20,7 +20,7 @@ async fn connect(name: &str) -> Client {
     c.wait_until_ready().await.unwrap();
     c
 }
-async fn finish(ops: &Operations) -> Result<SurvivalMotionRecord, String> {
+pub(super) async fn finish(ops: &Operations) -> Result<SurvivalMotionRecord, String> {
     tokio::time::timeout(Duration::from_secs(40), async {
         loop {
             let r = ops.survival_motion().await.ok_or("missing movement run")?;
