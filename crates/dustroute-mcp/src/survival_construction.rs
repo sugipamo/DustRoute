@@ -595,3 +595,7 @@ pub fn preview_construction_sequence(
 #[cfg(test)]
 #[path = "survival_construction/tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "survival_construction/native_roof_trial.rs"]
+mod native_roof_trial;
