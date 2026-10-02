@@ -1,5 +1,9 @@
 # Java 1.21.11 mining retirement and fresh recovery
 
+Fresh recovery uses the [common interaction-loading layer](survival-interaction-loading.md)
+and new site/player/inventory observations. The original connection is never
+reopened by an air result or by recovery.
+
 Air is a result observation, not authority to reuse a delayed miner. All user
 mutations on the original mining connection remain blocked. This slice instead
 provides an explicit retirement/reconnect path for **direct, unmodified vanilla
@@ -24,7 +28,7 @@ to the disposable comparison fixture.
    name and version, with a declared expected target (air or the original dirt/
    stone state). It checks retirement again, opens a new connection and waits
    within its ordinary readiness timeout for new health, inventory and target
-   baselines. It exposes read-only operations after validating the authenticated UUID,
+   baselines. It exposes fresh operations after validating the authenticated UUID,
    survival mode, original dimension, healthy dry grounded stationary geometry,
    supported inventory, unmodified known mining conditions and exact expected
    target. Missing or conflicting observations refuse recovery. No retry or
@@ -33,15 +37,16 @@ to the disposable comparison fixture.
    same watch. Cancellation drops the unexposed new
    connection; the original mining history remains.
 
-The result contains read-only operations and `MiningRecoveryEvidence`: old closed
+The result contains fresh operations and `MiningRecoveryEvidence`: old closed
 history, independent removal receipt, new connection ID, stationary context,
 target and receive boundary. A caller must create a new permission-checked plan.
 It cannot replay a Blueprint job from the retired operation's JSON. The old
 `continuation_validated` flag remains false because that connection is not reused.
-`interaction_ready` is false. The new session's shared mutation gate also stays
-closed (`recovery_loading_pending` in history), until the separate loading stage
-is implemented and verified. This is not yet autonomous temporary cleanup,
-walking or Blueprint execution.
+`interaction_ready` records completion of the common loading notification; it is
+not acknowledgement of a later game action. Required standing geometry includes
+the one-cell halo, so recovery waits for neighboring chunks as well as its own
+chunk. Unsupported received geometry still refuses admission. This is not yet
+autonomous temporary cleanup, walking or Blueprint execution.
 
 ## Native control-flow audit
 
@@ -74,7 +79,7 @@ finish+abort, early disconnect and console-controlled air/immediate replacement,
 then exact retirement and fresh-connection operation. Live acceptance is recorded
 separately; availability of that ignored test is not evidence of its result.
 
-## Recorded comparison and new stop boundary
+## Historical comparison and the loading prerequisite
 
 The [native run](evidence/survival-mining-recovery-20261002-a.json.gz),
 [server log](evidence/survival-mining-recovery-server-20261002-a.log) and
@@ -86,16 +91,16 @@ new connection. The external-input case also recovered, but input arrived after
 25.671 seconds; it is **not** proof of the delayed-miner replacement race.
 The later single-attempt guard, conservative fresh-session loading gate and
 extended lifecycle trace driver are covered by offline checks, not by that older
-native run. The final driver stops before further cases when that gate is pending
-and reports `all_cases_executed: false`; it must not be treated as full acceptance.
+native run. That checkpoint driver stopped before further cases when its gate was pending
+and reported `all_cases_executed: false`; that older run is not full acceptance.
 
 Additional source inspection found that native `canInteractWithGame` rejects
 game actions while `remainingLoadingTicks > 0`. The native loading stage starts
-at 60 player updates and is cleared by `PlayerLoadedC2SPacket`; the current
-client's `ready` flag does not establish it. The original-mining fixture sent a
+at 60 player updates and is cleared by `PlayerLoadedC2SPacket`; that checkpoint
+client's `ready` flag did not establish it. The original-mining fixture sent a
 test-private PLAYER_LOADED, whereas recovery compared only a hotbar send. That
 send is not acceptance of a world interaction. Accordingly, production survival
 interaction readiness and a following mining/placement are **not validated**.
-Following the user's concern stop condition, loading-stage changes and more live
-trials are stopped for review. A fixed three-second sleep is not the proposed fix;
-loading must be a common version-specific state/notification stage before actions.
+The user subsequently approved the shared loading stage. Its implementation and
+new comparison evidence are described in [interaction loading](survival-interaction-loading.md);
+the historical limitations above do not claim the current fresh-session gate is closed.

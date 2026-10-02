@@ -101,8 +101,8 @@ async fn comparison(native_api: bool) {
     for (name, delay_ms, abort, disconnect) in [
         ("normal_finish", 1100, false, false),
         ("early_finish_abort", 50, true, false),
-        ("early_finish_disconnect", 50, false, true),
         ("external_air_immediate_replacement", 50, true, false),
+        ("early_finish_disconnect", 50, false, true),
     ] {
         if !native_api && name == "external_air_immediate_replacement" {
             continue;
@@ -125,10 +125,14 @@ async fn comparison(native_api: bool) {
                 .iter()
                 .all(|v| *v == operations::InventorySlot::Empty)
         );
-        bot.session
-            .send(ids::play_serverbound::PLAYER_LOADED, &[])
-            .await
-            .unwrap();
+        assert!(
+            bot.operations()
+                .player_state()
+                .await
+                .unwrap()
+                .interaction_loading
+                .notification_dispatched()
+        );
         bot.operations().look([-90.0, 3.0]).await.unwrap();
         if native_api {
             bot.operations().select_hotbar(0).await.unwrap();
@@ -213,6 +217,10 @@ async fn comparison(native_api: bool) {
         let external_input = if name == "external_air_immediate_replacement" {
             let requested_ms = start.elapsed().as_millis();
             phase("EXTERNAL_INPUT: console setblock 2 -59 0 minecraft:air then setblock 2 -59 0 minecraft:stone in one input batch; enter").await;
+            assert!(
+                start.elapsed() < Duration::from_secs(3),
+                "external input was too late for the declared delayed-miner comparison"
+            );
             Some(
                 json!({"requested_ms":requested_ms,"console_completed_ms":start.elapsed().as_millis(),"operations":["setblock 2 -59 0 minecraft:air","setblock 2 -59 0 minecraft:stone"],"scope":"console-controlled external edits; exact commands/server log and received packet order retained; no claim that the bot necessarily receives intermediate air"}),
             )
@@ -316,11 +324,8 @@ async fn comparison(native_api: bool) {
                 recovered.evidence.connection_id,
                 recovered.evidence.old_history.connection_id
             );
-            if recovered.evidence.interaction_ready {
-                recovered.operations.select_hotbar(0).await.unwrap();
-            } else {
-                assert!(recovered.operations.select_hotbar(0).await.is_err());
-            }
+            assert!(recovered.evidence.interaction_ready);
+            recovered.operations.select_hotbar(0).await.unwrap();
             assert!(
                 bot.operations()
                     .reconnect_survival_mining(
@@ -337,7 +342,58 @@ async fn comparison(native_api: bool) {
                     .is_err(),
                 "same retirement receipt authorized a second recovery login"
             );
-            let evidence = json!({"retired":retired,"recovery":recovered.evidence,"new_mutation":"refused until native interaction loading is validated"});
+            let followup = if disconnect {
+                // No test-private PLAYER_LOADED, console edit or fixed login
+                // sleep. Mine the retained stone through the fresh public API.
+                let fresh = recovered.operations.bot.clone();
+                fresh.start_packet_trace(8_388_608).await.unwrap();
+                let begin = Instant::now();
+                let loading = recovered
+                    .operations
+                    .player_state()
+                    .await
+                    .unwrap()
+                    .interaction_loading;
+                let connected_ms = fresh.session.started.elapsed().as_millis();
+                recovered.operations.look([-90.0, 3.0]).await.unwrap();
+                let new_intent = recovered
+                    .operations
+                    .start_survival_mining(target, crate::BlockFace::West)
+                    .await
+                    .unwrap();
+                tokio::time::sleep(Duration::from_millis(new_intent.estimated_wait_ms)).await;
+                recovered
+                    .operations
+                    .finish_survival_mining(&new_intent)
+                    .await
+                    .unwrap();
+                let result = recovered
+                    .operations
+                    .wait_survival_mining(&new_intent, Duration::from_secs(2))
+                    .await
+                    .unwrap();
+                assert!(matches!(
+                    result,
+                    operations::MiningStatus::ObservedRemoved { .. }
+                ));
+                let observed = timeout(Duration::from_secs(2), async {
+                    loop {
+                        let observed = sample(&viewer, target, begin).await;
+                        if air(&observed) {
+                            break observed;
+                        }
+                        tokio::time::sleep(Duration::from_millis(25)).await;
+                    }
+                })
+                .await
+                .unwrap();
+                Some(
+                    json!({"start_after_connection_ms":connected_ms,"loading":loading,"intent":new_intent,"result":result,"observer":observed,"trace":fresh.stop_packet_trace().await.unwrap(),"elapsed_ms":begin.elapsed().as_millis()}),
+                )
+            } else {
+                None
+            };
+            let evidence = json!({"retired":retired,"recovery":recovered.evidence,"new_mutation":"ordinary selection after common loading; final disconnect case also mines the retained stone", "followup_mining":followup});
             bot = recovered.operations.bot.clone();
             Some(evidence)
         } else {
@@ -345,18 +401,6 @@ async fn comparison(native_api: bool) {
         };
         let viewer_trace = viewer.stop_packet_trace().await.unwrap();
         cases.push(json!({"name":name,"ground":ground,"before":before,"inputs":inputs,"immediately":immediately,"observations":observations,"miner_trace":bot_trace,"viewer_trace":viewer_trace,"visible_players_after":players,"pending_api_result":pending_api_result,"after_api_result":after_api_result,"external_input":external_input,"recovery":recovery}));
-        if native_api
-            && bot
-                .operations()
-                .operation_history()
-                .await
-                .recovery_loading_pending
-        {
-            println!(
-                "CONTINUATION_BLOCKED: native interaction loading unvalidated; remaining cases not executed"
-            );
-            break;
-        }
     }
     if native_api {
         bot.disconnect().await.unwrap();

@@ -1,61 +1,71 @@
-# Survival interaction readiness: review boundary
+# Survival interaction readiness
 
-## Finding and why work stopped
+## Implemented and compared
 
-The user approved mining continuation/retirement work, with the standing
-instruction to stop and report concerns. The native retirement path has now been
-implemented, but an additional prerequisite was found while auditing the fresh
-connection: **play/position readiness is not native game-interaction readiness**.
-Loading-stage implementation and further native trials are stopped for review.
+The user approved the shared loading prerequisite. Java 1.21.11 now records
+loading separately from local play/position readiness and sends PLAYER_LOADED
+through the guarded connection sender. The generation is reset on login,
+respawn and reconfiguration. Required inputs are INITIAL_CHUNKS_COMING, a player
+position and the received own chunk. Ordinary teleport responses precede the
+notification; dispatch is recorded separately from any later action result.
 
-The existing unchanged-body Java 1.21.11 oracle is identified by
-`vendor/voxrig/data/java_1_21_11/survival_foundation_source.json`. Source inspection
-of `ServerPlayNetworkHandler` establishes:
+Notification attempts are retained before I/O. Missing data, cancellation and
+world changes cannot authorize blind replay or a fixed-time bypass. The common
+stage gates ordinary mutations and explicit fresh mining recovery. Read-only
+history remains available. Recovery additionally waits for every cell in the
+stationary geometry halo, including neighboring chunks, before checking player,
+inventory and target conditions. Its region calculation is shared with validation.
 
-- Its constructor calls `markRespawned`, which initializes a loading count of 60.
-- `tickLoading` decreases that count once per player update. Client elapsed time
-  is not an equivalent fence when the server is stalled, slow or reconfigured.
-- `onPlayerLoaded` handles the ordinary serverbound notification and calls
-  `markLoaded`, clearing the count.
-- `canInteractWithGame` refuses interactions while that count is positive or the
-  player is dead. `onPlayerAction` checks this before applying mining.
+The old mining connection remains closed to further mutations, even after an air
+result. Continuation uses a new exact-UUID removal receipt on an independent
+observer, closed old sender, one explicit reconnect and new validated site data.
+Each fresh action still requires its own result; old job JSON grants no authority.
 
-Voxrig's ordinary `ready` establishes local play/position availability. It has
-not yet integrated the native loading transition as an operation stage. The
-comparison driver sent test-private PLAYER_LOADED for original mining cases;
-the new connection was tested only with an ordinary hotbar send, which is **not
-proof that the server accepts its next mining/placement**.
+## Native evidence
 
-The final code conservatively leaves both old mining and fresh recovery mutation
-gates closed. Fresh recovery exposes new read-only site/player observations and
-history with `recovery_loading_pending: true` / `interaction_ready: false`.
-There is no bypass, fixed-sleep proof or public history-import capability.
+The [source implementation and comparison](../vendor/voxrig/docs/survival-interaction-loading.md)
+and [integration record](evidence/survival-interaction-loading-20261002.json)
+identify the source pin, raw traces, server log and checks. On the dedicated
+non-OP vanilla 1.21.11 fixture:
 
-## Concrete proposed change
+| Case | Observed result |
+| --- | --- |
+| Normal dirt mining | Air at 1,218 ms |
+| Early finish plus abort | Stone still removed at 7,562 ms |
+| External air and immediate stone replacement | Console input completed at 1,454 ms; replacement later became air at 7,459 ms |
+| Early finish then disconnect | Stone remained through 9,300 ms; independent retirement and fresh recovery succeeded |
+| Actual mining after final recovery | Started about 250 ms after connection; both miner and observer confirmed removal in 8,573 ms |
 
-Keep this in the shared Java 1.21.11 connection/operation layer, rather than
-adding a special sleep or hidden packet in each construction/mining helper.
+No test-private loading notification or fixed login sleep is used. The 8,500 ms
+stone mining estimate is action timing, not readiness evidence. External edits
+were controlled console fixture inputs; the brief intermediate air is not claimed
+to have reached the bot. Its later removal supports retaining the old-session gate.
 
-1. Audit the native client's loading conditions and packet order. Define separate
-   local play readiness, complete required observation baselines and the loading
-   notification stage, scoped to the current login/respawn/world generation.
-2. Implement the ordinary PLAYER_LOADED transition using the guarded sender.
-   Record its attempt before I/O and complete dispatch separately. Do not call
-   dispatch a server acceptance acknowledgement. Interruption/cancellation and
-   world changes must retain the right stage and refuse blind replay.
-3. Connect ordinary mining/placement admission and explicit fresh mining recovery
-   to that shared stage. Old observed air or retired job JSON must still not
-   authorize an old connection or replay a construction plan.
-4. Test ordered receive/send behavior, resets, cancelled sends, delayed baseline
-   arrival and duplicate attempts with bounded offline loopback fixtures.
-5. On the dedicated non-OP vanilla fixture, demonstrate an actual subsequent
-   mining/placement on the fresh session without a test-private loading packet.
-   Rerun the timed external-air/immediate-replacement case: the previous input
-   was delivered too late and is not accepted as delayed-miner race evidence.
+All four comparison cases completed. Development run A timed out waiting for
+fixture input. Run B exposed incomplete neighbor terrain during final recovery;
+run C passed after the shared halo wait and regression test were added. The
+fixture server was stopped cleanly, without changing the user's server.
 
-No new material/tool/terrain admission, walking, or Blueprint mutation is needed
-for this prerequisite. If the native client audit reveals a larger dependency,
-report it before implementation under the same stop condition.
+## Native basis and limits
 
-After this boundary passes, return to nearby survival placement/material
-accounting, walking/access works, durable planning and the declared roofed build.
+The existing unchanged-body oracle is identified by
+`vendor/voxrig/data/java_1_21_11/survival_foundation_source.json`.
+The native client waits for INITIAL_CHUNKS_COMING and local rendering readiness,
+then sends PlayerLoaded once. The headless implementation requires actually
+received local terrain. It does not use the graphical client's timeout,
+spectator/dead or out-of-height exceptions as construction authority.
+
+The native server initializes a 60-update loading count; onPlayerLoaded clears
+it, and canInteractWithGame checks it before mining. Client elapsed time is not
+equivalent to this transition. Complete notification dispatch is still not a
+server acknowledgement that an arbitrary later world action succeeded.
+
+Tests cover delayed chunks, response order, repeated notifications, cancelled
+waits/sends, reset generations and neighboring geometry. The native comparison
+accepts bounded stationary empty-hand dirt/stone mining and explicit recovery on
+direct unmodified vanilla. It does not validate proxies/plugins or in-session
+mining reuse, survival placement/material accounting, walking, drop collection,
+autonomous temporary cleanup or the complete roofed Blueprint build.
+
+Next in the declared roadmap is nearby survival placement with received material
+accounting, then walking/access planning and durable Blueprint execution.

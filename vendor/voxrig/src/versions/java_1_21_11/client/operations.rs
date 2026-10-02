@@ -7,6 +7,7 @@ mod retirement;
 mod survival;
 #[cfg(test)]
 mod tests;
+pub use super::loading::{InteractionLoading, LoadingAttempt};
 use super::*;
 pub use inventory::{InventorySwap, InventorySwapObservation};
 pub use mining::{
@@ -143,6 +144,8 @@ impl Default for Inventory {
 /// A session-bound player/inventory observation; position may include submitted movement.
 #[derive(Clone, Debug, Serialize)]
 pub struct PlayerState {
+    /// Native loading stage; complete dispatch is not an operation acknowledgement.
+    pub interaction_loading: InteractionLoading,
     /// Session identity, not reusable across connections.
     pub connection_id: u64,
     /// Last applied receive sequence.
@@ -197,9 +200,8 @@ pub struct OperationHistory {
     pub mining: Option<MiningRecord>,
     /// Last independent retirement watch; history does not authorize recovery.
     pub mining_retirement: Option<MiningRetirementRecord>,
-    /// Fresh mining recovery has observations, but native loading is unvalidated.
-    /// All user mutations stay blocked; history/read-only diagnostics remain usable.
-    pub recovery_loading_pending: bool,
+    /// Native loading attempts survive failure and remain available as history.
+    pub interaction_loading: InteractionLoading,
     /// Last main-hand selection evidence, including incomplete send attempts.
     pub selected_hotbar: Option<HotbarSelection>,
 }
@@ -300,7 +302,7 @@ impl Operations {
             pending_creative_slots: state.operations.inventory.pending_creative.clone(),
             mining: state.mining.clone(),
             mining_retirement: state.retirement.clone(),
-            recovery_loading_pending: state.recovery_loading_pending,
+            interaction_loading: state.loading.clone(),
             selected_hotbar: state.operations.selected_hotbar.clone(),
         }
     }
@@ -326,6 +328,7 @@ impl Operations {
         let state = self.bot.session.state.lock().await;
         self.bot.session.check(&state)?;
         Ok(PlayerState {
+            interaction_loading: state.loading.clone(),
             connection_id: self.bot.session.id,
             receive_sequence: state.sequence,
             dimension: state.world.dimension.as_ref().map(|d| d.0.clone()),
@@ -580,11 +583,11 @@ impl Operations {
     }
     pub(super) fn mutable(&self, state: &State) -> Result<()> {
         self.ready(state)?;
-        if state.recovery_loading_pending {
+        if !state.loading.notification_dispatched() {
             return Err(Error::new(
                 ErrorKind::State,
                 anyhow::anyhow!(
-                    "fresh mining recovery requires validated survival interaction loading before any mutation"
+                    "native interaction loading pending; await readiness or inspect retained loading attempt"
                 ),
             ));
         }
@@ -783,6 +786,12 @@ pub(super) fn receive(state: &mut State, id: i32, payload: &[u8]) -> anyhow::Res
             let reason = r.u8()?;
             let value = r.f32()?;
             r.end()?;
+            if reason == 13 {
+                state
+                    .loading
+                    .initial_chunks_sequence
+                    .get_or_insert(state.sequence);
+            }
             if reason == 3 {
                 if !(0.0..=3.0).contains(&value) || value.fract() != 0.0 {
                     bail!("invalid game mode");

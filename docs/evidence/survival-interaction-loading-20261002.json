@@ -1,0 +1,75 @@
+{
+  "recorded_at_utc": "2026-10-02T04:38:37.509944+00:00",
+  "status": "Approved common interaction-loading prerequisite complete; broader survival Blueprint construction remains unfinished.",
+  "voxrig_repository": "https://github.com/sugipamo/Voxrig",
+  "voxrig_revision": "69572673644570b64ec7a43a381bf523ca57a56b",
+  "vendor_files": 241,
+  "checks": [
+    {
+      "project": "Voxrig",
+      "command": "cargo test --offline --locked -j 1 --all-targets -- --test-threads=1",
+      "result": "155 passed; 0 failed; 3 ignored",
+      "local_log": "/root/Voxrig/.local/survival-continuation/loading-tests.log",
+      "log_sha256": "fa771346add4c1ce6d9aa89f03644e12ef53336d12bb0c5929baa82adbbd09af"
+    },
+    {
+      "project": "Voxrig",
+      "command": "cargo clippy --offline --locked -j 1 --all-targets -- -D warnings",
+      "result": "passed",
+      "local_log": "/root/Voxrig/.local/survival-continuation/loading-clippy.log",
+      "log_sha256": "58c76dca200fa1e6335bcd15cf52c254555ae7171b9d218e745bfafe71955cd4"
+    },
+    {
+      "project": "Voxrig",
+      "command": "cargo test --offline --locked -j 1 --doc -- --test-threads=1",
+      "result": "1 passed; 0 failed",
+      "local_log": "/root/Voxrig/.local/survival-continuation/loading-doc.log",
+      "log_sha256": "2cf4095a2c745bf7cb75946c2d67af6fb4ebce69761026e6087ed659bd3d54a5"
+    },
+    {
+      "project": "Voxrig",
+      "command": "cargo package --offline --locked --allow-dirty --list",
+      "result": "passed",
+      "local_log": "/root/Voxrig/.local/survival-continuation/loading-package.log",
+      "log_sha256": "3be176b65c72cb230afa7f8eed08d7350d5caf7ae8ddbee288554203bb1ff493"
+    },
+    {
+      "project": "DustRoute",
+      "command": "cargo check --offline --locked -j 1 -p dustroute-mcp --features voxrig --all-targets",
+      "result": "passed",
+      "local_log": "/root/DustRoute/.local/survival-interaction-loading-check-20261002.log",
+      "log_sha256": "c099f2772d812406acae65e16f6e58b563b883622e0d165c753cff4415148e2a"
+    }
+  ],
+  "additional_checks": [
+    "cargo fmt --all --check passed (Voxrig)",
+    "git diff --check passed (both repositories)",
+    "vendor snapshot verified"
+  ],
+  "native_run": {
+    "execution_revision": "0e6afd4d8431a71a0226c5b5fdecbb89e871363e",
+    "result": "1 passed; 0 failed; 157 filtered out; 95.83 seconds including console fixture waits",
+    "manifest": "vendor/voxrig/docs/evidence/survival-interaction-loading-20261002-source.json",
+    "all_cases_executed": true,
+    "scope": "Shared production loading; exact retirement/fresh recovery in four cases; actual public-API mining after final recovery.",
+    "operator_entries": [],
+    "shutdown": "Zero players confirmed, console stop saved all worlds and exited 0"
+  },
+  "implemented": [
+    "Common typed per-world loading stage, observed initial chunks/position/own terrain, guarded one-time notification ordered after teleport responses.",
+    "Attempt retained before I/O; resets invalidate current authority while keeping diagnostic history; all ordinary mutations gated; no timeout bypass.",
+    "Fresh recovery shares loading and waits for complete stationary halo before validating inventory/site/player; exact retirement and at-most-once explicit reconnect preserved.",
+    "Native external replacement within delayed-mining interval and actual new mining after final recovery, without private loading packet."
+  ],
+  "development_iterations": [
+    "Run a at 78abee3: fixture input timeout before external case; not full acceptance.",
+    "Run b at 78abee3: final recovery refused missing neighbor terrain [-1,-61,-1]. Fixed complete standing-halo wait and added chunk-edge regression test before execution revision.",
+    "Run c passed all cases after fix; no source code edited during immutable trial."
+  ],
+  "not_completed": [
+    "Reusing the original mining connection or automatically replaying a plan",
+    "Survival placement and received material accounting",
+    "Walking, access planning, item-drop collection and temporary cleanup",
+    "Durable Blueprint construction job and full roofed build acceptance"
+  ]
+}

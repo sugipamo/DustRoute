@@ -238,6 +238,7 @@ async fn explicit_disconnect_interrupts_a_blocked_frame_and_retains_inventory_hi
         let mut state = session.state.lock().await;
         state.ready = true;
         state.sequence = 3;
+        state.loading = loading::InteractionLoading::completed_fixture();
         state.operations.reset_world(0).unwrap();
         let mut full = vec![0, 1, 46];
         for slot in 0..46 {
@@ -315,6 +316,7 @@ async fn creative_intent_is_retained_when_submission_is_cancelled_before_writer_
         let mut state = session.state.lock().await;
         state.ready = true;
         state.operations.reset_world(1).unwrap();
+        state.loading = loading::InteractionLoading::completed_fixture();
     }
     let locked = session.writer.lock().await;
     let mut attempt = Box::pin(api.set_creative_hotbar(0, Some(("stone", 1))));

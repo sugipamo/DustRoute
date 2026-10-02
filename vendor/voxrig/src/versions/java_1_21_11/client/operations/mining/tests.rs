@@ -19,6 +19,7 @@ fn state() -> State {
         position: Some([0.5, 1.0, 0.5]),
         rotation: [-90.0, 3.0],
         sequence: 10,
+        loading: loading::InteractionLoading::completed_fixture(),
         ..State::default()
     };
     state.operations.reset_world(0).unwrap();
@@ -446,15 +447,16 @@ async fn cancelled_recovery_login_retains_attempt_and_refuses_another_connection
 #[tokio::test]
 async fn fresh_recovery_observations_do_not_authorize_actions_before_native_loading() {
     let mut fixture = Fixture::new().await;
-    fixture.session.state.lock().await.recovery_loading_pending = true;
+    fixture.session.state.lock().await.loading.reset(11);
     assert!(fixture.api.player_state().await.is_ok());
     assert!(fixture.api.standing_context().await.is_ok());
     assert!(
-        fixture
+        !fixture
             .api
             .operation_history()
             .await
-            .recovery_loading_pending
+            .interaction_loading
+            .notification_dispatched()
     );
     assert!(fixture.api.select_hotbar(1).await.is_err());
     assert!(fixture.api.look([-90.0, 3.0]).await.is_err());

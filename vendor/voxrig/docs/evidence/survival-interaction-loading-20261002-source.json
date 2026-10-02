@@ -1,0 +1,657 @@
+{
+  "minecraft_version": "Java 1.21.11",
+  "execution_revision": "0e6afd4d8431a71a0226c5b5fdecbb89e871363e",
+  "scope": "Shared production loading; exact retirement/fresh recovery in four cases; actual public-API mining after final recovery.",
+  "endpoint": "127.0.0.1:25572",
+  "fixture": "Disposable flat survival fixture; only NatMineBot and NatMineView; no user-world changes",
+  "operator_entries_after_trial": [],
+  "command": "NATIVE_MINING_PORT=25572 NATIVE_MINING_OUTPUT=/root/Voxrig/.local/survival-continuation/native-loading-20261002-c.json cargo test --offline --locked -j 1 --lib native_survival_mining_api_finish_abort_and_disconnect -- --ignored --test-threads=1 --nocapture",
+  "test_result": "1 passed; 0 failed; 157 filtered out; 95.83 seconds including console fixture waits",
+  "all_cases_executed": true,
+  "cases": [
+    {
+      "name": "normal_finish",
+      "inputs": [
+        {
+          "action": 0,
+          "elapsed_ms": 14,
+          "intent": {
+            "after_sequence": 186,
+            "baseline": {
+              "name": "minecraft:dirt",
+              "properties": {}
+            },
+            "connection_id": 1,
+            "dimension": "minecraft:overworld",
+            "estimated_wait_ms": 1100,
+            "face_id": 4,
+            "held_receive_sequence": 49,
+            "position": [
+              0.5,
+              -60.0,
+              0.5
+            ],
+            "selection": {
+              "dispatched": true,
+              "from_server": false,
+              "sequence": 186,
+              "slot": 0
+            },
+            "start_sequence": 1,
+            "target": [
+              2,
+              -59,
+              0
+            ]
+          },
+          "sequence": 1
+        },
+        {
+          "action": 2,
+          "elapsed_ms": 1116,
+          "sequence": 2
+        }
+      ],
+      "external_input": null,
+      "first_air_ms": 1218,
+      "last_observed_ms": 1218,
+      "last_target": {
+        "name": "minecraft:air",
+        "properties": {}
+      },
+      "retirement_receive_sequence": 209,
+      "old_connection_id": 1,
+      "new_connection_id": 3,
+      "old_connection_closed": true,
+      "interaction_ready": true,
+      "followup_mining": null
+    },
+    {
+      "name": "early_finish_abort",
+      "inputs": [
+        {
+          "action": 0,
+          "elapsed_ms": 0,
+          "intent": {
+            "after_sequence": 197,
+            "baseline": {
+              "name": "minecraft:stone",
+              "properties": {}
+            },
+            "connection_id": 3,
+            "dimension": "minecraft:overworld",
+            "estimated_wait_ms": 8500,
+            "face_id": 4,
+            "held_receive_sequence": 50,
+            "position": [
+              0.5,
+              -60.0,
+              0.5
+            ],
+            "selection": {
+              "dispatched": true,
+              "from_server": false,
+              "sequence": 197,
+              "slot": 0
+            },
+            "start_sequence": 1,
+            "target": [
+              2,
+              -59,
+              0
+            ]
+          },
+          "sequence": 1
+        },
+        {
+          "action": 2,
+          "elapsed_ms": 52,
+          "sequence": 2
+        },
+        {
+          "action": 1,
+          "elapsed_ms": 52,
+          "sequence": 3
+        }
+      ],
+      "external_input": null,
+      "first_air_ms": 7562,
+      "last_observed_ms": 7562,
+      "last_target": {
+        "name": "minecraft:air",
+        "properties": {}
+      },
+      "retirement_receive_sequence": 342,
+      "old_connection_id": 3,
+      "new_connection_id": 4,
+      "old_connection_closed": true,
+      "interaction_ready": true,
+      "followup_mining": null
+    },
+    {
+      "name": "external_air_immediate_replacement",
+      "inputs": [
+        {
+          "action": 0,
+          "elapsed_ms": 0,
+          "intent": {
+            "after_sequence": 190,
+            "baseline": {
+              "name": "minecraft:stone",
+              "properties": {}
+            },
+            "connection_id": 4,
+            "dimension": "minecraft:overworld",
+            "estimated_wait_ms": 8500,
+            "face_id": 4,
+            "held_receive_sequence": 50,
+            "position": [
+              0.5,
+              -60.0,
+              0.5
+            ],
+            "selection": {
+              "dispatched": true,
+              "from_server": false,
+              "sequence": 190,
+              "slot": 0
+            },
+            "start_sequence": 1,
+            "target": [
+              2,
+              -59,
+              0
+            ]
+          },
+          "sequence": 1
+        },
+        {
+          "action": 2,
+          "elapsed_ms": 51,
+          "sequence": 2
+        },
+        {
+          "action": 1,
+          "elapsed_ms": 51,
+          "sequence": 3
+        }
+      ],
+      "external_input": {
+        "console_completed_ms": 1454,
+        "operations": [
+          "setblock 2 -59 0 minecraft:air",
+          "setblock 2 -59 0 minecraft:stone"
+        ],
+        "requested_ms": 51,
+        "scope": "console-controlled external edits; exact commands/server log and received packet order retained; no claim that the bot necessarily receives intermediate air"
+      },
+      "first_air_ms": 7459,
+      "last_observed_ms": 10702,
+      "last_target": {
+        "name": "minecraft:air",
+        "properties": {}
+      },
+      "retirement_receive_sequence": 474,
+      "old_connection_id": 4,
+      "new_connection_id": 5,
+      "old_connection_closed": true,
+      "interaction_ready": true,
+      "followup_mining": null
+    },
+    {
+      "name": "early_finish_disconnect",
+      "inputs": [
+        {
+          "action": 0,
+          "elapsed_ms": 0,
+          "intent": {
+            "after_sequence": 186,
+            "baseline": {
+              "name": "minecraft:stone",
+              "properties": {}
+            },
+            "connection_id": 5,
+            "dimension": "minecraft:overworld",
+            "estimated_wait_ms": 8500,
+            "face_id": 4,
+            "held_receive_sequence": 50,
+            "position": [
+              0.5,
+              -60.0,
+              0.5
+            ],
+            "selection": {
+              "dispatched": true,
+              "from_server": false,
+              "sequence": 186,
+              "slot": 0
+            },
+            "start_sequence": 1,
+            "target": [
+              2,
+              -59,
+              0
+            ]
+          },
+          "sequence": 1
+        },
+        {
+          "action": 2,
+          "elapsed_ms": 52,
+          "sequence": 2
+        }
+      ],
+      "external_input": null,
+      "first_air_ms": null,
+      "last_observed_ms": 9300,
+      "last_target": {
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      "retirement_receive_sequence": 532,
+      "old_connection_id": 5,
+      "new_connection_id": 6,
+      "old_connection_closed": true,
+      "interaction_ready": true,
+      "followup_mining": {
+        "elapsed_ms": 8573,
+        "intent": {
+          "after_sequence": 66,
+          "baseline": {
+            "name": "minecraft:stone",
+            "properties": {}
+          },
+          "connection_id": 6,
+          "dimension": "minecraft:overworld",
+          "estimated_wait_ms": 8500,
+          "face_id": 4,
+          "held_receive_sequence": 50,
+          "position": [
+            0.5,
+            -60.0,
+            0.5
+          ],
+          "selection": {
+            "dispatched": true,
+            "from_server": false,
+            "sequence": 66,
+            "slot": 0
+          },
+          "start_sequence": 1,
+          "target": [
+            2,
+            -59,
+            0
+          ]
+        },
+        "loading": {
+          "attempt": {
+            "after_sequence": 57,
+            "dispatched": true,
+            "generation": 29
+          },
+          "generation": 29,
+          "initial_chunks_sequence": 45,
+          "previous_attempt": null
+        },
+        "observer": {
+          "elapsed_ms": 8549,
+          "player": {
+            "acknowledged_interaction": null,
+            "connection_id": 2,
+            "dimension": "minecraft:overworld",
+            "enabled_features": [
+              "minecraft:vanilla"
+            ],
+            "game_mode": "survival",
+            "interaction_loading": {
+              "attempt": {
+                "after_sequence": 57,
+                "dispatched": true,
+                "generation": 29
+              },
+              "generation": 29,
+              "initial_chunks_sequence": 45,
+              "previous_attempt": null
+            },
+            "inventory": {
+              "cursor": {
+                "kind": "empty"
+              },
+              "pending_creative": [],
+              "pending_swap": null,
+              "receive_sequence": 50,
+              "screen_revision": 1,
+              "slots": [
+                {
+                  "kind": "empty"
+                },
+                {
+                  "kind": "empty"
+                },
+                {
+                  "kind": "empty"
+                },
+                {
+                  "kind": "empty"
+                },
+                {
+                  "kind": "empty"
+                },
+                {
+                  "kind": "empty"
+                },
+                {
+                  "kind": "empty"
+                },
+                {
+                  "kind": "empty"
+                },
+                {
+                  "kind": "empty"
+                },
+                {
+                  "kind": "empty"
+                },
+                {
+                  "kind": "empty"
+                },
+                {
+                  "kind": "empty"
+                },
+                {
+                  "kind": "empty"
+                },
+                {
+                  "kind": "empty"
+                },
+                {
+                  "kind": "empty"
+                },
+                {
+                  "kind": "empty"
+                },
+                {
+                  "kind": "empty"
+                },
+                {
+                  "kind": "empty"
+                },
+                {
+                  "kind": "empty"
+                },
+                {
+                  "kind": "empty"
+                },
+                {
+                  "kind": "empty"
+                },
+                {
+                  "kind": "empty"
+                },
+                {
+                  "kind": "empty"
+                },
+                {
+                  "kind": "empty"
+                },
+                {
+                  "kind": "empty"
+                },
+                {
+                  "kind": "empty"
+                },
+                {
+                  "kind": "empty"
+                },
+                {
+                  "kind": "empty"
+                },
+                {
+                  "kind": "empty"
+                },
+                {
+                  "kind": "empty"
+                },
+                {
+                  "kind": "empty"
+                },
+                {
+                  "kind": "empty"
+                },
+                {
+                  "kind": "empty"
+                },
+                {
+                  "kind": "empty"
+                },
+                {
+                  "kind": "empty"
+                },
+                {
+                  "kind": "empty"
+                },
+                {
+                  "kind": "empty"
+                },
+                {
+                  "kind": "empty"
+                },
+                {
+                  "kind": "empty"
+                },
+                {
+                  "kind": "empty"
+                },
+                {
+                  "kind": "empty"
+                },
+                {
+                  "kind": "empty"
+                },
+                {
+                  "kind": "empty"
+                },
+                {
+                  "kind": "empty"
+                },
+                {
+                  "kind": "empty"
+                },
+                {
+                  "kind": "empty"
+                }
+              ],
+              "unsupported_components": false,
+              "window_id": 0
+            },
+            "local_player": {
+              "block_break_speed": {
+                "basis": {
+                  "kind": "native_reset"
+                },
+                "value": 1.0
+              },
+              "effect_updates": {},
+              "effects_complete": false,
+              "entity_id": 2,
+              "health": {
+                "food": 20,
+                "health": 20.0,
+                "receive_sequence": 54,
+                "saturation": 20.0
+              },
+              "mining_efficiency": {
+                "basis": {
+                  "kind": "native_reset"
+                },
+                "value": 0.0
+              },
+              "motion_interruption": null,
+              "pose": {
+                "kind": "standing"
+              },
+              "pose_basis": {
+                "kind": "native_reset"
+              },
+              "scale": {
+                "basis": {
+                  "kind": "native_reset"
+                },
+                "value": 1.0
+              },
+              "submerged_mining_speed": {
+                "basis": {
+                  "kind": "native_reset"
+                },
+                "value": 0.2
+              },
+              "velocity": {
+                "receive_sequence": 515,
+                "value": [
+                  0.0,
+                  0.0,
+                  0.0
+                ]
+              }
+            },
+            "may_fly": false,
+            "position": [
+              0.5,
+              -60.0,
+              4.5
+            ],
+            "position_from_server": true,
+            "receive_sequence": 625,
+            "requested_flying": false,
+            "rotation": [
+              0.0,
+              0.0
+            ],
+            "selected_hotbar": {
+              "dispatched": true,
+              "from_server": true,
+              "sequence": 32,
+              "slot": 0
+            },
+            "server_time": {
+              "day_time": 34444,
+              "game_age": 34444,
+              "receive_sequence": 620
+            }
+          },
+          "received": {
+            "blocks": [
+              {
+                "position": [
+                  2,
+                  -59,
+                  0
+                ],
+                "state": {
+                  "name": "minecraft:air",
+                  "properties": {}
+                }
+              }
+            ],
+            "captured_at": {
+              "nanos": 197107763,
+              "secs": 93
+            },
+            "connection_id": 2,
+            "receive_sequence": 625,
+            "region": {
+              "max": [
+                2,
+                -59,
+                0
+              ],
+              "min": [
+                2,
+                -59,
+                0
+              ]
+            },
+            "revision": 91,
+            "version": "Java1_21_11"
+          }
+        },
+        "result": {
+          "observation": {
+            "continuation_validated": false,
+            "intent": {
+              "after_sequence": 66,
+              "baseline": {
+                "name": "minecraft:stone",
+                "properties": {}
+              },
+              "connection_id": 6,
+              "dimension": "minecraft:overworld",
+              "estimated_wait_ms": 8500,
+              "face_id": 4,
+              "held_receive_sequence": 50,
+              "position": [
+                0.5,
+                -60.0,
+                0.5
+              ],
+              "selection": {
+                "dispatched": true,
+                "from_server": false,
+                "sequence": 66,
+                "slot": 0
+              },
+              "start_sequence": 1,
+              "target": [
+                2,
+                -59,
+                0
+              ]
+            },
+            "target_receipt": {
+              "receive_sequence": 198,
+              "state": {
+                "name": "minecraft:air",
+                "properties": {}
+              }
+            }
+          },
+          "status": "observed_removed"
+        },
+        "start_after_connection_ms": 250
+      }
+    }
+  ],
+  "original_json_sha256": "aca184e81c3670cc3af540d1941309d70e7feafbb61a6c5e3e9958278ee2b2e8",
+  "outputs": {
+    "survival-interaction-loading-20261002-c.json.gz": "9ae0b45d3d16aefb6428e0ba45d0f00968e0e82ce5ede34465921e6454e55461",
+    "survival-interaction-loading-server-20261002-c.log": "dc7aef117ad12f3599318619ced0724e70e38b58b6b05fa1c6d20d7bba74709a"
+  },
+  "native_control_flow_audit": {
+    "source": "Existing unchanged-body oracle: data/java_1_21_11/survival_foundation_source.json",
+    "local_disassembly_sha256": {
+      "ClientPlayerEntity.javap": "22f1c1386a60562f54ce839776e8d076fcb16c5a721298a23474a8768709bb4a",
+      "ClientPlayNetworkHandler.javap": "ecc3a23e0e8575e63c4913eb936e91ed36ee62328154be1d77dfcecd4bdc020d",
+      "LevelLoadingScreen.javap": "7b723db87d8333c39eaee21a276a5fdee78905212efb95cff81855867b43c30c",
+      "ClientChunkLoadProgress.javap": "434541fd3cb13fd7885d3a91b12a1dcf5e81e40d9830eb10d9d1f67fea0e104e"
+    },
+    "facts": [
+      "Native client waits for INITIAL_CHUNKS_COMING then rendering readiness and sends PlayerLoaded once; headless implementation requires received own chunk instead.",
+      "Native server onPlayerLoaded clears loading count; game actions are refused while count remains. No fixed-time bypass used."
+    ]
+  },
+  "development_iterations": [
+    "Run a at 78abee3: fixture input timeout before external case; not full acceptance.",
+    "Run b at 78abee3: final recovery refused missing neighbor terrain [-1,-61,-1]. Fixed complete standing-halo wait and added chunk-edge regression test before execution revision.",
+    "Run c passed all cases after fix; no source code edited during immutable trial."
+  ],
+  "limits": [
+    "External commands completed at 1454 ms; receipt samples show replacement stone until air at 7459 ms. This demonstrates later removal after immediate replacement, not guaranteed observation of the transient intermediate air.",
+    "Common loading dispatch is not a server acknowledgement of a later action. The final fresh mining result is separately observed.",
+    "Original mining connection remains non-reusable even after air; no automatic reconnect/replay or imported historical capability.",
+    "Direct unmodified vanilla only; no proxy/plugin removal-equivalence claim.",
+    "No survival placement, walking, collection of drops, temporary cleanup or full Blueprint execution acceptance."
+  ],
+  "transformation": "gzip mtime=0; raw JSON/server log unchanged; no decompiled game bodies",
+  "shutdown": "Zero players confirmed, console stop saved all worlds and exited 0"
+}

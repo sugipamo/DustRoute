@@ -207,3 +207,29 @@ The [retirement checkpoint validation](evidence/survival-mining-retirement-20261
 pins the final source, 152 passing offline tests (3 ignored), Clippy/doc checks
 and the integrated all-targets native-feature check. Its native execution pin
 and limitations are recorded separately from the final conservative gates.
+
+
+## Common loading and fresh mining acceptance
+
+The user approved the loading prerequisite. The 1.21.11 connection now sends one
+guarded PLAYER_LOADED per received world generation after initial-chunks,
+position and own-chunk baselines. All ordinary mutations and fresh mining
+recovery share the stage, with retained before-I/O attempts and no elapsed-time
+bypass. Recovery also waits for the complete standing halo across chunk edges.
+
+All four native comparison cases pass at the immutable execution revision.
+External air/immediate replacement completed at 1,454 ms and the replacement was
+later removed at 7,459 ms. Old-session mining reuse therefore remains blocked.
+After exact independent retirement, a new connection began public-API mining at
+about 250 ms and removed the retained stone, confirmed by a separate observer.
+There was no test-private loading notification or fixed login sleep.
+
+The [current integration record](evidence/survival-interaction-loading-20261002.json)
+identifies 155 passing offline tests (3 ignored), the separately passing native
+test, Clippy/documentation/package checks and DustRoute native-feature integration.
+Earlier fixture timeout and the fixed neighbor-baseline failure are retained in
+the evidence limitations. The dedicated fixture is stopped.
+
+This completes the approved loading/recovery prerequisite, not the full building
+goal. Next is nearby survival placement/material accounting, followed by walking,
+access planning, durable jobs and the roofed non-OP construction acceptance.

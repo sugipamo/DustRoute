@@ -10,6 +10,7 @@ fn fixture() -> serde_json::Value {
 fn state() -> State {
     let mut s = State {
         ready: true,
+        loading: loading::InteractionLoading::completed_fixture(),
         position: Some([0.5, 1.0, 0.5]),
         sequence: 10,
         ..State::default()
@@ -389,4 +390,19 @@ fn unsupported_impulses_and_own_vehicle_cannot_leave_stale_stationary_authority(
         assert_eq!(issue.receive_sequence, s.sequence);
         assert!(context(&mut s, 1, 0).is_err());
     }
+}
+
+#[test]
+fn recovery_waits_for_standing_halo_across_chunk_edges() {
+    let mut s = state();
+    assert!(standing_baselines_received(&s).unwrap());
+    s.position = Some([15.5, 1.0, 0.5]);
+    assert!(s.world.block([15, 1, 0]).is_some());
+    assert!(!standing_baselines_received(&s).unwrap());
+    s.world.seed_replay_cell([16, 0, 0], 1);
+    assert!(!standing_baselines_received(&s).unwrap()); // Negative-z neighbor still missing.
+    s.world.seed_replay_cell([16, 0, -1], 1);
+    assert!(standing_baselines_received(&s).unwrap());
+    s.position = Some([15.5, -64.0, 0.5]);
+    assert!(standing_baselines_received(&s).is_err()); // Never wait for impossible terrain.
 }

@@ -37,6 +37,7 @@ fn baseline() -> State {
     let mut state = State {
         sequence: 10,
         ready: true,
+        loading: loading::InteractionLoading::completed_fixture(),
         ..State::default()
     };
     state.operations.game_mode = Some(GameMode::Survival);

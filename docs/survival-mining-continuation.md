@@ -1,20 +1,22 @@
 # Mining removal observation and continuation authority
 
-## Approved work and current review boundary
+## Current status
 
-The user approved this proposal. Independent exact vanilla player-info removal,
-closed original sender and explicit fresh-connection/site observation are now
-implemented in Voxrig. Both the original mining session and the new recovery
-session retain conservative mutation gates: **native interaction loading on the
-new connection is unvalidated**. See the [loading finding and concrete next
-change](survival-interaction-readiness.md). The sections below describe the prior
-review boundary and approved scope, not a claim that all continuation work passed.
+The user approved continuation/retirement and the subsequent shared loading
+prerequisite. Independent exact vanilla player removal, closed original sender,
+explicit fresh recovery and common native loading are implemented. The latest
+comparison validates all four cases and actual mining on the fresh connection;
+see [interaction readiness](survival-interaction-readiness.md).
 
-An immutable native run reached retirement and fresh hotbar sending in four
-cases; three exercised the intended normal/early-abort/disconnect conditions.
-The external-input case was too late to test delayed mining. Later single-attempt
-and loading restrictions have offline checks; their updated native driver has
-not been rerun. Evidence distinguishes those scopes.
+The old mining connection remains non-reusable. Timely external air/immediate
+replacement now reproduces later removal of the replacement, reinforcing that
+an air result alone cannot authorize continuation. Fresh recovery validates new
+site/player/inventory baselines, including the standing geometry halo, and does
+not import historical Blueprint authority.
+
+The sections below retain the original concern and approved scope. Their stop
+statements and earlier comparison limits describe historical checkpoints,
+not the current fresh-session loading state.
 
 ## Completed before this stop
 

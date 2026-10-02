@@ -387,6 +387,57 @@ pub(super) fn look_flags(state: &mut State, tick: u64) -> Result<u8> {
 fn unavailable(message: impl std::fmt::Display) -> Error {
     Error::new(ErrorKind::State, anyhow::anyhow!("{message}"))
 }
+struct StandingRegion {
+    bounds: [f64; 6],
+    min: [i32; 3],
+    max: [i32; 3],
+}
+fn standing_region(position: [f64; 3]) -> StandingRegion {
+    let half = f64::from(0.6f32) / 2.0;
+    let bounds = [
+        position[0] - half,
+        position[1],
+        position[2] - half,
+        position[0] + half,
+        position[1] + f64::from(1.8f32),
+        position[2] + half,
+    ];
+    // One-cell halo also refuses unsupported protruding/context-dependent neighbors.
+    let min = [
+        bounds[0].floor() as i32 - 1,
+        bounds[1].floor() as i32 - 1,
+        bounds[2].floor() as i32 - 1,
+    ];
+    let max = [
+        bounds[3].floor() as i32 + 1,
+        bounds[4].floor() as i32 + 1,
+        bounds[5].floor() as i32 + 1,
+    ];
+    StandingRegion { bounds, min, max }
+}
+
+// Readiness covers every cell that context() will inspect, including neighbor
+// chunks at chunk edges. Unknown cells wait; unsupported received cells still
+// fail the subsequent context validation. No timeout infers missing geometry.
+pub(super) fn standing_baselines_received(state: &State) -> Result<bool> {
+    let Some(position) = state.position else {
+        return Ok(false);
+    };
+    validate_pose(position, state.rotation)?;
+    let Some((_, height)) = &state.world.dimension else {
+        return Ok(false);
+    };
+    let StandingRegion { min, max, .. } = standing_region(position);
+    if min[1] < height.min_y || max[1] >= height.min_y + height.height {
+        return Err(unavailable(
+            "standing context crosses the observed dimension bounds",
+        ));
+    }
+    Ok((min[0]..=max[0]).all(|x| {
+        (min[1]..=max[1]).all(|y| (min[2]..=max[2]).all(|z| state.world.block([x, y, z]).is_some()))
+    }))
+}
+
 pub(super) fn context(state: &mut State, connection_id: u64, tick: u64) -> Result<StandingContext> {
     let player = &state.operations.local_player;
     if let Some(interruption) = &player.motion_interruption {
@@ -428,27 +479,8 @@ pub(super) fn context(state: &mut State, connection_id: u64, tick: u64) -> Resul
         .dimension
         .as_ref()
         .ok_or_else(|| unavailable("dimension unavailable"))?;
-    let half = f64::from(0.6f32) / 2.0;
-    let bounds = [
-        position[0] - half,
-        position[1],
-        position[2] - half,
-        position[0] + half,
-        position[1] + f64::from(1.8f32),
-        position[2] + half,
-    ];
+    let StandingRegion { bounds, min, max } = standing_region(position);
     let mut support = Vec::new();
-    // One-cell halo also refuses unsupported protruding/context-dependent neighbors.
-    let min = [
-        bounds[0].floor() as i32 - 1,
-        bounds[1].floor() as i32 - 1,
-        bounds[2].floor() as i32 - 1,
-    ];
-    let max = [
-        bounds[3].floor() as i32 + 1,
-        bounds[4].floor() as i32 + 1,
-        bounds[5].floor() as i32 + 1,
-    ];
     for x in min[0]..=max[0] {
         for y in min[1]..=max[1] {
             for z in min[2]..=max[2] {

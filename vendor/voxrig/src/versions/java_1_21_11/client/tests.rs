@@ -480,6 +480,14 @@ async fn modern_disconnect_and_reconnect_do_not_reuse_world_or_connection_identi
             write_packet(&mut stream, None, ids::play_clientbound::LOGIN, &join)
                 .await
                 .unwrap();
+            write_packet(
+                &mut stream,
+                None,
+                ids::play_clientbound::GAME_STATE_CHANGE,
+                &[13, 0, 0, 0, 0],
+            )
+            .await
+            .unwrap();
             let mut chunk = vec![0; 9]; // coordinates and empty heightmaps
             let mut sections = Vec::new();
             for _ in 0..24 {

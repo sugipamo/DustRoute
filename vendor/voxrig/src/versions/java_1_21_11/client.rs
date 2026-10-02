@@ -1,4 +1,5 @@
 //! Ordered 1.21.11 receive loop. Local state is committed under one session lock.
+mod loading;
 mod observations;
 /// Explicit Java 1.21.11 operation API and received player state.
 pub mod operations;
@@ -105,7 +106,7 @@ impl TraceCapture {
 }
 
 struct State {
-    recovery_loading_pending: bool,
+    loading: loading::InteractionLoading,
     identity: Option<LoginIdentity>,
     retirement: Option<operations::MiningRetirementRecord>,
     mining: Option<operations::MiningRecord>,
@@ -128,7 +129,7 @@ struct State {
 impl Default for State {
     fn default() -> Self {
         Self {
-            recovery_loading_pending: false,
+            loading: loading::InteractionLoading::default(),
             identity: None,
             retirement: None,
             mining: None,
@@ -436,10 +437,12 @@ impl Bot {
         timeout(self.session.limits.ready_timeout, async {
             loop {
                 let notified = self.session.changed.notified();
+                tokio::pin!(notified);
+                notified.as_mut().enable();
                 {
                     let state = self.session.state.lock().await;
                     self.session.check(&state)?;
-                    if state.ready {
+                    if state.ready && state.loading.notification_dispatched() {
                         return Ok(());
                     }
                 }
@@ -573,6 +576,10 @@ impl Session {
             };
             for (id, payload) in responses {
                 self.send(id, &payload).await?;
+            }
+            {
+                let mut state = self.state.lock().await;
+                self.complete_loading(&mut state).await?;
             }
             self.changed.notify_waiters();
         }
@@ -710,6 +717,7 @@ fn spawn_info(state: &mut State, r: &mut Reader<'_>) -> anyhow::Result<()> {
         .get(id)
         .context("unknown dimension registry ID")?;
     state.world.select_dimension(name, dimension);
+    state.loading.reset(state.sequence);
     operations::mining_world_changed(state, "world login/respawn changed mining context");
     if let Some(capture) = &mut state.recording {
         capture.invalidate(recording::RecordingIssue::WorldChanged);
@@ -907,6 +915,7 @@ fn apply_play(
         }
         input::START_CONFIGURATION => {
             r.end()?;
+            state.loading.reset(state.sequence);
             operations::mining_world_changed(state, "configuration changed mining context");
             state.phase = Phase::Configuration;
             state.ready = false;
