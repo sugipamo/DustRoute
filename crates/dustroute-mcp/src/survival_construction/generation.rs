@@ -71,6 +71,9 @@ pub struct SearchProgress {
 #[derive(Clone, Debug, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum GenerationFailure {
+    PlanningTaskFailed {
+        reason: String,
+    },
     InvalidInput {
         error: ConstructionPlanningError,
     },
@@ -89,6 +92,29 @@ pub enum GenerationFailure {
         reason: SearchStop,
         search: Box<ConstructionSearch>,
     },
+}
+
+/// Async-client entry point. Only owned detached data enters the CPU worker;
+/// live client I/O and action authority remain on their existing executor.
+/// Dropping the awaiter discards the result, but an already started bounded
+/// search continues read-only until its limits are reached.
+pub async fn generate_construction_plan_async(
+    scene: CapturedSurvivalScene,
+    site: ConstructionSite,
+    supplied: BTreeMap<String, usize>,
+    temporary_material: String,
+    limits: SearchLimits,
+) -> std::result::Result<GeneratedConstructionPlan, GenerationFailure> {
+    limits
+        .validate()
+        .map_err(|error| GenerationFailure::InvalidInput { error })?;
+    tokio::task::spawn_blocking(move || {
+        generate_construction_plan(&scene, &site, &supplied, &temporary_material, limits)
+    })
+    .await
+    .map_err(|error| GenerationFailure::PlanningTaskFailed {
+        reason: error.to_string(),
+    })?
 }
 
 #[derive(Clone, Copy, Debug, Serialize)]
@@ -710,6 +736,8 @@ impl<'a> Search<'a> {
 
 /// Produce a complete hypothetical plan or bounded-search diagnostics. This is
 /// read-only and grants no adoption, inventory receipt or execution authority.
+/// This function is CPU-bound. Async clients must use the off-thread entry point
+/// above so planning cannot starve keepalive and observation tasks.
 pub fn generate_construction_plan(
     scene: &CapturedSurvivalScene,
     site: &ConstructionSite,

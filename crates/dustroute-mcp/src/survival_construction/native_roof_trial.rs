@@ -457,7 +457,15 @@ async fn exercise(
         if live {
             return Err("generated smoke comparisons are read-only".into());
         }
-        return generated_smoke(&scene, events);
+        let (result, evidence) = tokio::task::spawn_blocking(move || {
+            let mut evidence = Vec::new();
+            let result = generated_smoke(&scene, &mut evidence);
+            (result, evidence)
+        })
+        .await
+        .map_err(|e| format!("smoke planning worker: {e}"))?;
+        events.extend(evidence);
+        return result;
     }
     let plan = if std::env::var("DUSTROUTE_SURVIVAL_ROOF_PLANNER").as_deref() == Ok("generated") {
         let site =
@@ -466,22 +474,31 @@ async fn exercise(
         if let Ok(value) = std::env::var("DUSTROUTE_SURVIVAL_ROOF_CHECKS") {
             limits.candidate_checks = value.parse().map_err(|e| format!("search budget: {e}"))?;
         }
-        let result = generation::generate_construction_plan(
-            &scene,
-            &site,
-            &BTreeMap::from([
+        let result = generation::generate_construction_plan_async(
+            scene,
+            site,
+            BTreeMap::from([
                 ("minecraft:cobblestone".into(), 49),
                 ("minecraft:dirt".into(), 32),
             ]),
-            "minecraft:dirt",
+            "minecraft:dirt".into(),
             limits,
-        );
+        )
+        .await;
         events.push(json!({"phase":"generated_plan_result","result":result,"limits":limits}));
         result
             .map_err(|e| format!("automatic construction: {e:?}"))?
             .plan
     } else {
-        plan(&scene, events)?
+        let (result, evidence) = tokio::task::spawn_blocking(move || {
+            let mut evidence = Vec::new();
+            let result = plan(&scene, &mut evidence);
+            (result, evidence)
+        })
+        .await
+        .map_err(|e| format!("authored planning worker: {e}"))?;
+        events.extend(evidence);
+        result?
     };
     if !live {
         return Ok(());
