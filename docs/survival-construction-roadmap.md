@@ -24,11 +24,14 @@ not a reason to silently raise it or claim that construction is impossible.
 
 ## Current stage status (2026-10-02)
 
-Stage 2 now generates a completely checked 115-action roof plan, including all
-temporary cleanup and retreat. Generated live acceptance is unfinished: the
-isolated server JVM crashed during the fresh trial, and dependent work stopped
-under the prerequisite rule. See [implementation and evidence](survival-construction-generation.md)
-for the separate preflight successes, failed live attempts and proposed next step.
+Stage 2 is complete for its declared bounded acceptance cases. A generated
+115-action roof plan completed on the isolated non-OP server using project-local
+Temurin 21, including all 18 temporary removals, retreat and 3,120 independently
+checked cells. The JVM crash did not recur; the user requested no further
+root-cause investigation in that case. Source and complete execution evidence
+are in [implementation and evidence](survival-construction-generation.md).
+Stage 3 (Blueprint adoption/public MCP) is next; stages 3-5 remain unimplemented
+as end-to-end survival workflows.
 
 ## Ordered milestones
 

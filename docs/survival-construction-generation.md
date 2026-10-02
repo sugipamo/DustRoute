@@ -1,9 +1,37 @@
 # Automatic survival construction: implementation progress
 
-Stage 2 of the [approved roadmap](survival-construction-roadmap.md). This is an
-bounded planner with complete hypothetical roof generation. Actual generated-roof
-acceptance remains unfinished: dependent work stopped on a new JVM crash in the
-isolated server. The public MCP survival workflow is not yet implemented.
+Stage 2 of the [approved roadmap](survival-construction-roadmap.md) is complete
+for its declared bounded acceptance cases. On 2026-10-02 the automatically
+generated roof completed all 115 actions on the isolated non-OP server, removed
+all 18 temporary blocks, retreated and matched 3,120 independently observed
+cells. Public MCP integration and interrupted-job continuation remain later work.
+
+## Generated live acceptance (Temurin recovery)
+
+[Acceptance evidence](evidence/survival-generation-acceptance-20261002.json)
+retains the generated plan, final journal, complete received trace windows,
+server/test logs, runtime metadata, controller and hash-checking archiver.
+
+- Source: `2c37c00` (executable code unchanged since `da9bdd0`); native source
+  remains `2b6e7bfc94e6270054eac5c7b14a74d4657a411c`.
+- Java: project-local Temurin `21.0.12.1+1`, archive SHA-256 checked against both
+  official GitHub asset metadata and the published checksum. System Java unchanged.
+  Normal tiered compilation, no C2 bypass; unchanged one-CPU/768-MiB heap limits.
+- Actions: 49 permanent placements, 18 temporary placements, 30 moves and
+  18 temporary removals. All 18 removal/reconnect boundaries verified.
+- Result: journal `completed`/`observed`, zero temporary blocks, exact planned
+  retreat position and independent final check of all 3,120 cells.
+- Test: 236.30 seconds including fixture synchronization and planning. Entire
+  controller run including server start/stop: 248.17 seconds. First-to-last
+  completed actions: 161.52 seconds; this interval excludes the first action and
+  final verification, so it is not total construction or pure placement time.
+- Test and server both exited 0. No recurrence of the JVM crash in this trial;
+  long planning and the full sequence also completed without keepalive timeout.
+
+The user authorized this recovery trial and asked not to investigate further
+if the crash did not recur. JVM root-cause investigation is therefore closed
+without attribution. One successful run is not proof that every JDK/environment
+issue is fixed. The earlier failure records below remain historical evidence.
 
 ## Shared checker and library boundary
 
@@ -140,7 +168,7 @@ No JDK replacement, JVM flag workaround or additional crash reproduction was
 attempted. Long-running transport liveness after the async correction still
 needs successful live validation.
 
-## Remaining acceptance
+## Acceptance that remained at the JVM stop (historical)
 
 First agree on a narrowly scoped environment investigation: identify a supported
 server JDK/build and decide whether replacement or a diagnostic JVM configuration
@@ -232,6 +260,7 @@ The local, unrefreshed apt cache also advertises Ubuntu
 to C1 for diagnosis; disabling tiered compilation altogether is not the same
 thing as disabling C2. [Microsoft OpenJDK compiler explanation](https://devblogs.microsoft.com/java/how-tiered-compilation-works-in-openjdk/)
 
-The recovery proposal needs user authorization under the existing stop rule.
-The investigation itself is complete; generated-roof acceptance and later
-roadmap stages remain incomplete.
+The proposal above was subsequently authorized and its Temurin recovery trial
+passed, as recorded at the top of this document. No C1-only or replay trial was
+needed. The original JVM root cause remains undetermined; later roadmap stages
+remain incomplete.

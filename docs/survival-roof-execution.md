@@ -388,3 +388,12 @@ impossibility or to find every possible construction sequence. No public MCP,
 adoption authority, interrupted-job replay, new native physics or resource
 collection is added in this stage. A newly required correctness prerequisite
 must be reported before dependent implementation proceeds.
+
+
+## Generated reference completed (2026-10-02 UTC)
+
+The next-stage generator has now passed its separate acceptance: 115 generated
+actions, 49 permanent blocks, 18 temporary placements and removals, safe retreat
+and 3,120 independently checked cells. This supersedes the active-stage status
+above, without relabeling the earlier 119-action authored evidence. See
+[generator acceptance](survival-construction-generation.md#generated-live-acceptance-temurin-recovery).

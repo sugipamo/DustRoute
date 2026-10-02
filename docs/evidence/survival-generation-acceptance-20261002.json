@@ -1,0 +1,963 @@
+{
+  "schema": "dustroute.survival-generation-acceptance.v1",
+  "recorded_at_utc": "2026-10-02T15:43:02.950284+00:00",
+  "status": "generated_roof_live_acceptance_passed",
+  "stage_2_complete": true,
+  "later_roadmap_stages_complete": false,
+  "source": "2c37c00b8bd356e5409c0024d3610ebbb4908744",
+  "native_source": "2b6e7bfc94e6270054eac5c7b14a74d4657a411c",
+  "case": "survival-roof-20261002-generated-live-temurin-a",
+  "runtime": {
+    "java": "/root/DustRoute/.local/jdks/jdk-21.0.12.1+1/bin/java",
+    "java_version": "openjdk version \"21.0.12.1\" 2026-08-18 LTS\nOpenJDK Runtime Environment Temurin-21.0.12.1+1 (build 21.0.12.1+1-LTS)\nOpenJDK 64-Bit Server VM Temurin-21.0.12.1+1 (build 21.0.12.1+1-LTS, mixed mode, sharing)\n",
+    "removed_java_option_environment_names": [],
+    "source": "2c37c00b8bd356e5409c0024d3610ebbb4908744",
+    "java_sha256": "2a207f5e7d075afa01d97f8048389a64432a44c4a5af0f5e77d6e286ec5f401d",
+    "server_jar_sha256": "f83b8e093865806f931c7e34aae41b177d4c076335263dd124c75d6d65dd1726",
+    "test_executable_sha256": "48bb1ed55b057e094c09be4b4a3b4b6793778b39a2ecb6c15e9bcaccaf428031",
+    "flags": [
+      "-XX:ActiveProcessorCount=1",
+      "-Xms256m",
+      "-Xmx768M"
+    ],
+    "case": "generated-live-temurin-a",
+    "execute": true,
+    "planner": "generated",
+    "candidate_checks": "12000",
+    "progress": [
+      {
+        "elapsed_seconds": 53.69365288299741,
+        "message": "PROGRESS 1 StepCompleted { completed: 1 }"
+      },
+      {
+        "elapsed_seconds": 53.97265060301288,
+        "message": "PROGRESS 2 StepCompleted { completed: 2 }"
+      },
+      {
+        "elapsed_seconds": 54.202099821995944,
+        "message": "PROGRESS 3 StepCompleted { completed: 3 }"
+      },
+      {
+        "elapsed_seconds": 54.47148628599825,
+        "message": "PROGRESS 4 StepCompleted { completed: 4 }"
+      },
+      {
+        "elapsed_seconds": 56.71951166400686,
+        "message": "PROGRESS 5 StepCompleted { completed: 5 }"
+      },
+      {
+        "elapsed_seconds": 56.95159764800337,
+        "message": "PROGRESS 6 StepCompleted { completed: 6 }"
+      },
+      {
+        "elapsed_seconds": 57.145690720994025,
+        "message": "PROGRESS 7 StepCompleted { completed: 7 }"
+      },
+      {
+        "elapsed_seconds": 57.370253531000344,
+        "message": "PROGRESS 8 StepCompleted { completed: 8 }"
+      },
+      {
+        "elapsed_seconds": 57.65097369501018,
+        "message": "PROGRESS 9 StepCompleted { completed: 9 }"
+      },
+      {
+        "elapsed_seconds": 58.00056349398801,
+        "message": "PROGRESS 10 StepCompleted { completed: 10 }"
+      },
+      {
+        "elapsed_seconds": 59.73595392500283,
+        "message": "PROGRESS 11 StepCompleted { completed: 11 }"
+      },
+      {
+        "elapsed_seconds": 62.72632546699606,
+        "message": "PROGRESS 12 StepCompleted { completed: 12 }"
+      },
+      {
+        "elapsed_seconds": 62.953452540998114,
+        "message": "PROGRESS 13 StepCompleted { completed: 13 }"
+      },
+      {
+        "elapsed_seconds": 63.205880964989774,
+        "message": "PROGRESS 14 StepCompleted { completed: 14 }"
+      },
+      {
+        "elapsed_seconds": 63.48264678398846,
+        "message": "PROGRESS 15 StepCompleted { completed: 15 }"
+      },
+      {
+        "elapsed_seconds": 63.731421506003244,
+        "message": "PROGRESS 16 StepCompleted { completed: 16 }"
+      },
+      {
+        "elapsed_seconds": 65.75092155300081,
+        "message": "PROGRESS 17 StepCompleted { completed: 17 }"
+      },
+      {
+        "elapsed_seconds": 66.02666356999543,
+        "message": "PROGRESS 18 StepCompleted { completed: 18 }"
+      },
+      {
+        "elapsed_seconds": 66.30363992700586,
+        "message": "PROGRESS 19 StepCompleted { completed: 19 }"
+      },
+      {
+        "elapsed_seconds": 66.55969135600026,
+        "message": "PROGRESS 20 StepCompleted { completed: 20 }"
+      },
+      {
+        "elapsed_seconds": 66.82407725899247,
+        "message": "PROGRESS 21 StepCompleted { completed: 21 }"
+      },
+      {
+        "elapsed_seconds": 68.73350158100948,
+        "message": "PROGRESS 22 StepCompleted { completed: 22 }"
+      },
+      {
+        "elapsed_seconds": 68.95498329598922,
+        "message": "PROGRESS 23 StepCompleted { completed: 23 }"
+      },
+      {
+        "elapsed_seconds": 69.24726663500769,
+        "message": "PROGRESS 24 StepCompleted { completed: 24 }"
+      },
+      {
+        "elapsed_seconds": 69.52632661600364,
+        "message": "PROGRESS 25 StepCompleted { completed: 25 }"
+      },
+      {
+        "elapsed_seconds": 69.82084228700842,
+        "message": "PROGRESS 26 StepCompleted { completed: 26 }"
+      },
+      {
+        "elapsed_seconds": 71.7510152469913,
+        "message": "PROGRESS 27 StepCompleted { completed: 27 }"
+      },
+      {
+        "elapsed_seconds": 72.06857305500307,
+        "message": "PROGRESS 28 StepCompleted { completed: 28 }"
+      },
+      {
+        "elapsed_seconds": 72.31647907401202,
+        "message": "PROGRESS 29 StepCompleted { completed: 29 }"
+      },
+      {
+        "elapsed_seconds": 74.75961804200779,
+        "message": "PROGRESS 30 StepCompleted { completed: 30 }"
+      },
+      {
+        "elapsed_seconds": 74.96418091398664,
+        "message": "PROGRESS 30 MiningStarted { target: [2, -57, 6], selected_hotbar: 2, attempt: 1 }"
+      },
+      {
+        "elapsed_seconds": 76.85975435198634,
+        "message": "PROGRESS 31 StepCompleted { completed: 31 }"
+      },
+      {
+        "elapsed_seconds": 77.05923819201416,
+        "message": "PROGRESS 31 MiningStarted { target: [2, -58, 6], selected_hotbar: 2, attempt: 1 }"
+      },
+      {
+        "elapsed_seconds": 78.92910412300262,
+        "message": "PROGRESS 32 StepCompleted { completed: 32 }"
+      },
+      {
+        "elapsed_seconds": 81.82400949200382,
+        "message": "PROGRESS 33 StepCompleted { completed: 33 }"
+      },
+      {
+        "elapsed_seconds": 82.01895426498959,
+        "message": "PROGRESS 33 MiningStarted { target: [1, -58, 6], selected_hotbar: 2, attempt: 1 }"
+      },
+      {
+        "elapsed_seconds": 83.89476581598865,
+        "message": "PROGRESS 34 StepCompleted { completed: 34 }"
+      },
+      {
+        "elapsed_seconds": 84.10904722299892,
+        "message": "PROGRESS 34 MiningStarted { target: [1, -59, 6], selected_hotbar: 2, attempt: 1 }"
+      },
+      {
+        "elapsed_seconds": 86.01309267198667,
+        "message": "PROGRESS 35 StepCompleted { completed: 35 }"
+      },
+      {
+        "elapsed_seconds": 88.91986365200137,
+        "message": "PROGRESS 36 StepCompleted { completed: 36 }"
+      },
+      {
+        "elapsed_seconds": 89.14502165399608,
+        "message": "PROGRESS 36 MiningStarted { target: [2, -59, 6], selected_hotbar: 2, attempt: 1 }"
+      },
+      {
+        "elapsed_seconds": 91.09976130200084,
+        "message": "PROGRESS 37 StepCompleted { completed: 37 }"
+      },
+      {
+        "elapsed_seconds": 91.34097659899271,
+        "message": "PROGRESS 37 MiningStarted { target: [2, -60, 6], selected_hotbar: 2, attempt: 1 }"
+      },
+      {
+        "elapsed_seconds": 93.25889947399264,
+        "message": "PROGRESS 38 StepCompleted { completed: 38 }"
+      },
+      {
+        "elapsed_seconds": 96.15169687199523,
+        "message": "PROGRESS 39 StepCompleted { completed: 39 }"
+      },
+      {
+        "elapsed_seconds": 96.41371942000114,
+        "message": "PROGRESS 39 MiningStarted { target: [1, -60, 6], selected_hotbar: 2, attempt: 1 }"
+      },
+      {
+        "elapsed_seconds": 98.35591714800103,
+        "message": "PROGRESS 40 StepCompleted { completed: 40 }"
+      },
+      {
+        "elapsed_seconds": 101.24783682700945,
+        "message": "PROGRESS 41 StepCompleted { completed: 41 }"
+      },
+      {
+        "elapsed_seconds": 104.23081379299401,
+        "message": "PROGRESS 42 StepCompleted { completed: 42 }"
+      },
+      {
+        "elapsed_seconds": 104.64573798299534,
+        "message": "PROGRESS 43 StepCompleted { completed: 43 }"
+      },
+      {
+        "elapsed_seconds": 107.24561684200307,
+        "message": "PROGRESS 44 StepCompleted { completed: 44 }"
+      },
+      {
+        "elapsed_seconds": 110.23766167199938,
+        "message": "PROGRESS 45 StepCompleted { completed: 45 }"
+      },
+      {
+        "elapsed_seconds": 110.60782522000954,
+        "message": "PROGRESS 46 StepCompleted { completed: 46 }"
+      },
+      {
+        "elapsed_seconds": 110.95232522499282,
+        "message": "PROGRESS 47 StepCompleted { completed: 47 }"
+      },
+      {
+        "elapsed_seconds": 111.3223038839933,
+        "message": "PROGRESS 48 StepCompleted { completed: 48 }"
+      },
+      {
+        "elapsed_seconds": 111.72322195899324,
+        "message": "PROGRESS 49 StepCompleted { completed: 49 }"
+      },
+      {
+        "elapsed_seconds": 116.25394320400665,
+        "message": "PROGRESS 50 StepCompleted { completed: 50 }"
+      },
+      {
+        "elapsed_seconds": 116.60852693000925,
+        "message": "PROGRESS 51 StepCompleted { completed: 51 }"
+      },
+      {
+        "elapsed_seconds": 117.01357288600411,
+        "message": "PROGRESS 52 StepCompleted { completed: 52 }"
+      },
+      {
+        "elapsed_seconds": 117.41352042200742,
+        "message": "PROGRESS 53 StepCompleted { completed: 53 }"
+      },
+      {
+        "elapsed_seconds": 117.80885093999677,
+        "message": "PROGRESS 54 StepCompleted { completed: 54 }"
+      },
+      {
+        "elapsed_seconds": 122.23680360498838,
+        "message": "PROGRESS 55 StepCompleted { completed: 55 }"
+      },
+      {
+        "elapsed_seconds": 122.60667603899492,
+        "message": "PROGRESS 56 StepCompleted { completed: 56 }"
+      },
+      {
+        "elapsed_seconds": 122.99698583700228,
+        "message": "PROGRESS 57 StepCompleted { completed: 57 }"
+      },
+      {
+        "elapsed_seconds": 123.42458803000045,
+        "message": "PROGRESS 58 StepCompleted { completed: 58 }"
+      },
+      {
+        "elapsed_seconds": 123.8247859099938,
+        "message": "PROGRESS 59 StepCompleted { completed: 59 }"
+      },
+      {
+        "elapsed_seconds": 128.22361168899806,
+        "message": "PROGRESS 60 StepCompleted { completed: 60 }"
+      },
+      {
+        "elapsed_seconds": 128.62068570198608,
+        "message": "PROGRESS 61 StepCompleted { completed: 61 }"
+      },
+      {
+        "elapsed_seconds": 129.01553214300657,
+        "message": "PROGRESS 62 StepCompleted { completed: 62 }"
+      },
+      {
+        "elapsed_seconds": 129.40870272900793,
+        "message": "PROGRESS 63 StepCompleted { completed: 63 }"
+      },
+      {
+        "elapsed_seconds": 129.82358710101107,
+        "message": "PROGRESS 64 StepCompleted { completed: 64 }"
+      },
+      {
+        "elapsed_seconds": 134.246307066991,
+        "message": "PROGRESS 65 StepCompleted { completed: 65 }"
+      },
+      {
+        "elapsed_seconds": 134.6762287199963,
+        "message": "PROGRESS 66 StepCompleted { completed: 66 }"
+      },
+      {
+        "elapsed_seconds": 135.0963648580073,
+        "message": "PROGRESS 67 StepCompleted { completed: 67 }"
+      },
+      {
+        "elapsed_seconds": 135.46610591799254,
+        "message": "PROGRESS 68 StepCompleted { completed: 68 }"
+      },
+      {
+        "elapsed_seconds": 135.91821197699755,
+        "message": "PROGRESS 69 StepCompleted { completed: 69 }"
+      },
+      {
+        "elapsed_seconds": 136.3176351680013,
+        "message": "PROGRESS 70 StepCompleted { completed: 70 }"
+      },
+      {
+        "elapsed_seconds": 136.71522889699554,
+        "message": "PROGRESS 71 StepCompleted { completed: 71 }"
+      },
+      {
+        "elapsed_seconds": 137.11781101400265,
+        "message": "PROGRESS 72 StepCompleted { completed: 72 }"
+      },
+      {
+        "elapsed_seconds": 140.25231159300893,
+        "message": "PROGRESS 73 StepCompleted { completed: 73 }"
+      },
+      {
+        "elapsed_seconds": 143.23471572098788,
+        "message": "PROGRESS 74 StepCompleted { completed: 74 }"
+      },
+      {
+        "elapsed_seconds": 146.26847434500814,
+        "message": "PROGRESS 75 StepCompleted { completed: 75 }"
+      },
+      {
+        "elapsed_seconds": 146.67876616600552,
+        "message": "PROGRESS 76 StepCompleted { completed: 76 }"
+      },
+      {
+        "elapsed_seconds": 147.1430758899951,
+        "message": "PROGRESS 77 StepCompleted { completed: 77 }"
+      },
+      {
+        "elapsed_seconds": 147.57771137901,
+        "message": "PROGRESS 78 StepCompleted { completed: 78 }"
+      },
+      {
+        "elapsed_seconds": 148.06204588900437,
+        "message": "PROGRESS 79 StepCompleted { completed: 79 }"
+      },
+      {
+        "elapsed_seconds": 148.47696656099288,
+        "message": "PROGRESS 80 StepCompleted { completed: 80 }"
+      },
+      {
+        "elapsed_seconds": 148.8873076380114,
+        "message": "PROGRESS 81 StepCompleted { completed: 81 }"
+      },
+      {
+        "elapsed_seconds": 152.31757235599798,
+        "message": "PROGRESS 82 StepCompleted { completed: 82 }"
+      },
+      {
+        "elapsed_seconds": 152.7925586090132,
+        "message": "PROGRESS 83 StepCompleted { completed: 83 }"
+      },
+      {
+        "elapsed_seconds": 153.25220962401363,
+        "message": "PROGRESS 84 StepCompleted { completed: 84 }"
+      },
+      {
+        "elapsed_seconds": 153.81537983199814,
+        "message": "PROGRESS 85 StepCompleted { completed: 85 }"
+      },
+      {
+        "elapsed_seconds": 154.29258953899262,
+        "message": "PROGRESS 86 StepCompleted { completed: 86 }"
+      },
+      {
+        "elapsed_seconds": 154.75030297299963,
+        "message": "PROGRESS 87 StepCompleted { completed: 87 }"
+      },
+      {
+        "elapsed_seconds": 155.20002064900473,
+        "message": "PROGRESS 88 StepCompleted { completed: 88 }"
+      },
+      {
+        "elapsed_seconds": 155.70986434200313,
+        "message": "PROGRESS 89 StepCompleted { completed: 89 }"
+      },
+      {
+        "elapsed_seconds": 156.20472516000154,
+        "message": "PROGRESS 90 StepCompleted { completed: 90 }"
+      },
+      {
+        "elapsed_seconds": 161.26969423200353,
+        "message": "PROGRESS 91 StepCompleted { completed: 91 }"
+      },
+      {
+        "elapsed_seconds": 161.7496493239887,
+        "message": "PROGRESS 92 StepCompleted { completed: 92 }"
+      },
+      {
+        "elapsed_seconds": 162.20424284800538,
+        "message": "PROGRESS 93 StepCompleted { completed: 93 }"
+      },
+      {
+        "elapsed_seconds": 162.6989571530139,
+        "message": "PROGRESS 94 StepCompleted { completed: 94 }"
+      },
+      {
+        "elapsed_seconds": 163.21456313101226,
+        "message": "PROGRESS 95 StepCompleted { completed: 95 }"
+      },
+      {
+        "elapsed_seconds": 163.71172824001405,
+        "message": "PROGRESS 96 StepCompleted { completed: 96 }"
+      },
+      {
+        "elapsed_seconds": 164.21811384899775,
+        "message": "PROGRESS 97 StepCompleted { completed: 97 }"
+      },
+      {
+        "elapsed_seconds": 167.26469257101417,
+        "message": "PROGRESS 98 StepCompleted { completed: 98 }"
+      },
+      {
+        "elapsed_seconds": 170.30501092399936,
+        "message": "PROGRESS 99 StepCompleted { completed: 99 }"
+      },
+      {
+        "elapsed_seconds": 170.8826382390107,
+        "message": "PROGRESS 99 MiningStarted { target: [2, -55, -2], selected_hotbar: 0, attempt: 1 }"
+      },
+      {
+        "elapsed_seconds": 173.03254000100424,
+        "message": "PROGRESS 100 StepCompleted { completed: 100 }"
+      },
+      {
+        "elapsed_seconds": 173.42059998298646,
+        "message": "PROGRESS 100 MiningStarted { target: [2, -56, -2], selected_hotbar: 0, attempt: 1 }"
+      },
+      {
+        "elapsed_seconds": 175.62098246999085,
+        "message": "PROGRESS 101 StepCompleted { completed: 101 }"
+      },
+      {
+        "elapsed_seconds": 178.44891216099495,
+        "message": "PROGRESS 102 StepCompleted { completed: 102 }"
+      },
+      {
+        "elapsed_seconds": 178.8541101209994,
+        "message": "PROGRESS 102 MiningStarted { target: [1, -56, -2], selected_hotbar: 0, attempt: 1 }"
+      },
+      {
+        "elapsed_seconds": 181.07838648400502,
+        "message": "PROGRESS 103 StepCompleted { completed: 103 }"
+      },
+      {
+        "elapsed_seconds": 181.47646053301287,
+        "message": "PROGRESS 103 MiningStarted { target: [1, -57, -2], selected_hotbar: 0, attempt: 1 }"
+      },
+      {
+        "elapsed_seconds": 183.71984086898738,
+        "message": "PROGRESS 104 StepCompleted { completed: 104 }"
+      },
+      {
+        "elapsed_seconds": 186.52993263799,
+        "message": "PROGRESS 105 StepCompleted { completed: 105 }"
+      },
+      {
+        "elapsed_seconds": 186.9218013040081,
+        "message": "PROGRESS 105 MiningStarted { target: [2, -57, -2], selected_hotbar: 0, attempt: 1 }"
+      },
+      {
+        "elapsed_seconds": 189.1511190359888,
+        "message": "PROGRESS 106 StepCompleted { completed: 106 }"
+      },
+      {
+        "elapsed_seconds": 189.57438267901307,
+        "message": "PROGRESS 106 MiningStarted { target: [2, -58, -2], selected_hotbar: 0, attempt: 1 }"
+      },
+      {
+        "elapsed_seconds": 191.80399766701157,
+        "message": "PROGRESS 107 StepCompleted { completed: 107 }"
+      },
+      {
+        "elapsed_seconds": 194.61430450199987,
+        "message": "PROGRESS 108 StepCompleted { completed: 108 }"
+      },
+      {
+        "elapsed_seconds": 195.10880681598792,
+        "message": "PROGRESS 108 MiningStarted { target: [1, -58, -2], selected_hotbar: 0, attempt: 1 }"
+      },
+      {
+        "elapsed_seconds": 197.46042498899624,
+        "message": "PROGRESS 109 StepCompleted { completed: 109 }"
+      },
+      {
+        "elapsed_seconds": 197.95100048099994,
+        "message": "PROGRESS 109 MiningStarted { target: [1, -59, -2], selected_hotbar: 0, attempt: 1 }"
+      },
+      {
+        "elapsed_seconds": 200.24923676199978,
+        "message": "PROGRESS 110 StepCompleted { completed: 110 }"
+      },
+      {
+        "elapsed_seconds": 203.0266630940023,
+        "message": "PROGRESS 111 StepCompleted { completed: 111 }"
+      },
+      {
+        "elapsed_seconds": 203.5250966780004,
+        "message": "PROGRESS 111 MiningStarted { target: [2, -59, -2], selected_hotbar: 0, attempt: 1 }"
+      },
+      {
+        "elapsed_seconds": 206.05511489399942,
+        "message": "PROGRESS 112 StepCompleted { completed: 112 }"
+      },
+      {
+        "elapsed_seconds": 206.56780417601112,
+        "message": "PROGRESS 112 MiningStarted { target: [2, -60, -2], selected_hotbar: 0, attempt: 1 }"
+      },
+      {
+        "elapsed_seconds": 209.06416141800582,
+        "message": "PROGRESS 113 StepCompleted { completed: 113 }"
+      },
+      {
+        "elapsed_seconds": 211.89578926900867,
+        "message": "PROGRESS 114 StepCompleted { completed: 114 }"
+      },
+      {
+        "elapsed_seconds": 212.42849437901168,
+        "message": "PROGRESS 114 MiningStarted { target: [1, -60, -2], selected_hotbar: 0, attempt: 1 }"
+      },
+      {
+        "elapsed_seconds": 215.21809434800525,
+        "message": "PROGRESS 115 StepCompleted { completed: 115 }"
+      },
+      {
+        "elapsed_seconds": 215.3996261440043,
+        "message": "PROGRESS 115 Completed"
+      }
+    ],
+    "server_ready_seconds": 10.268864951009164,
+    "test_exit_code": 0,
+    "server_exit_code": 0,
+    "total_seconds": 248.16792053799145
+  },
+  "jdk_archive": {
+    "release": "jdk-21.0.12.1+1",
+    "url": "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.12.1%2B1/OpenJDK21U-jdk_x64_linux_hotspot_21.0.12.1_1.tar.gz",
+    "sha256": "ce79869e1307ed8ee1e2baa86a412b1eb5b75d10a01006d788a6f968bcfaee94",
+    "verified_against": "GitHub release asset digest and upstream checksum file"
+  },
+  "fixture": {
+    "ops": [],
+    "properties": {
+      "gamemode": "survival",
+      "force-gamemode": "true",
+      "difficulty": "peaceful",
+      "enable-command-block": "false",
+      "server-ip": "127.0.0.1",
+      "server-port": "25572",
+      "level-name": "survival-roof-20261002-generated-live-temurin-a"
+    },
+    "console_usage": "initial flat ground/air, player teleport and supplied inventory only; all construction through native non-OP survival actions"
+  },
+  "generated_actions": {
+    "place": 67,
+    "move": 30,
+    "remove_temporary": 18
+  },
+  "permanent_placements": 49,
+  "temporary_placements_and_removals": 18,
+  "materials": {
+    "peak_temporary_in_world": {
+      "minecraft:dirt": 11
+    },
+    "permanent": {
+      "minecraft:cobblestone": 49
+    },
+    "required_supplied": {
+      "minecraft:cobblestone": 49,
+      "minecraft:dirt": 18
+    },
+    "temporary_without_recovery": {
+      "minecraft:dirt": 18
+    }
+  },
+  "search": {
+    "action_limited_nodes": 0,
+    "best_remaining_permanent": 0,
+    "best_remaining_targets": [],
+    "best_remaining_temporary": [],
+    "candidate_checks": 9963,
+    "cleanup_searches": 2,
+    "complete_checks": 1,
+    "completed_access_cleanups": 2,
+    "expanded": 50,
+    "frontier_peak": 16,
+    "highest_hypothetical_feet": -53.0,
+    "progress": [
+      {
+        "actions": 4,
+        "candidate_checks": 8,
+        "position": [
+          2.5,
+          -60.0,
+          7.5
+        ],
+        "remaining_permanent": 45,
+        "remaining_temporary": 0
+      },
+      {
+        "actions": 9,
+        "candidate_checks": 248,
+        "position": [
+          2.5,
+          -60.0,
+          4.164081984952873
+        ],
+        "remaining_permanent": 41,
+        "remaining_temporary": 0
+      },
+      {
+        "actions": 14,
+        "candidate_checks": 599,
+        "position": [
+          1.50323024702261,
+          -59.0,
+          6.580477116699382
+        ],
+        "remaining_permanent": 39,
+        "remaining_temporary": 1
+      },
+      {
+        "actions": 19,
+        "candidate_checks": 818,
+        "position": [
+          2.4552097846035377,
+          -58.0,
+          6.503644226460976
+        ],
+        "remaining_permanent": 37,
+        "remaining_temporary": 3
+      },
+      {
+        "actions": 24,
+        "candidate_checks": 947,
+        "position": [
+          1.4190159410563048,
+          -57.0,
+          6.499710358126912
+        ],
+        "remaining_permanent": 35,
+        "remaining_temporary": 5
+      },
+      {
+        "actions": 29,
+        "candidate_checks": 1147,
+        "position": [
+          2.3740909362527423,
+          -56.0,
+          6.499893491479627
+        ],
+        "remaining_permanent": 33,
+        "remaining_temporary": 7
+      },
+      {
+        "actions": 40,
+        "candidate_checks": 3299,
+        "position": [
+          0.6130651930091022,
+          -60.0,
+          6.500075413761685
+        ],
+        "remaining_permanent": 33,
+        "remaining_temporary": 0
+      },
+      {
+        "actions": 41,
+        "candidate_checks": 3752,
+        "position": [
+          -1.6809759516116771,
+          -60.0,
+          3.538351113476686
+        ],
+        "remaining_permanent": 33,
+        "remaining_temporary": 0
+      },
+      {
+        "actions": 42,
+        "candidate_checks": 3923,
+        "position": [
+          -1.5013813219520324,
+          -60.0,
+          0.525426746581208
+        ],
+        "remaining_permanent": 33,
+        "remaining_temporary": 0
+      },
+      {
+        "actions": 47,
+        "candidate_checks": 4097,
+        "position": [
+          1.4230249725500632,
+          -59.0,
+          -1.4975859741421609
+        ],
+        "remaining_permanent": 31,
+        "remaining_temporary": 1
+      },
+      {
+        "actions": 52,
+        "candidate_checks": 4282,
+        "position": [
+          2.3780976906701325,
+          -58.0,
+          -1.4996920058290726
+        ],
+        "remaining_permanent": 29,
+        "remaining_temporary": 3
+      },
+      {
+        "actions": 57,
+        "candidate_checks": 4457,
+        "position": [
+          1.4190098497676835,
+          -57.0,
+          -1.4999792217440517
+        ],
+        "remaining_permanent": 27,
+        "remaining_temporary": 5
+      },
+      {
+        "actions": 62,
+        "candidate_checks": 4658,
+        "position": [
+          2.374084901891031,
+          -56.0,
+          -1.4999792217440517
+        ],
+        "remaining_permanent": 25,
+        "remaining_temporary": 7
+      },
+      {
+        "actions": 70,
+        "candidate_checks": 4879,
+        "position": [
+          1.419009797256575,
+          -55.0,
+          -1.4999792217440517
+        ],
+        "remaining_permanent": 20,
+        "remaining_temporary": 9
+      },
+      {
+        "actions": 73,
+        "candidate_checks": 5118,
+        "position": [
+          2.3740848493799223,
+          -54.0,
+          -1.4999792217440517
+        ],
+        "remaining_permanent": 20,
+        "remaining_temporary": 11
+      },
+      {
+        "actions": 74,
+        "candidate_checks": 5555,
+        "position": [
+          2.501770903506142,
+          -54.0,
+          -0.8710021704948893
+        ],
+        "remaining_permanent": 20,
+        "remaining_temporary": 11
+      },
+      {
+        "actions": 81,
+        "candidate_checks": 6106,
+        "position": [
+          0.5288988134775593,
+          -53.0,
+          1.0913060504312488
+        ],
+        "remaining_permanent": 14,
+        "remaining_temporary": 11
+      },
+      {
+        "actions": 90,
+        "candidate_checks": 6626,
+        "position": [
+          1.1180637879478572,
+          -53.0,
+          4.490560580493994
+        ],
+        "remaining_permanent": 6,
+        "remaining_temporary": 11
+      },
+      {
+        "actions": 115,
+        "candidate_checks": 9963,
+        "position": [
+          0.5416359241007589,
+          -60.0,
+          -1.499938053592504
+        ],
+        "remaining_permanent": 0,
+        "remaining_temporary": 0
+      }
+    ],
+    "pruned": 6465,
+    "refusal_examples": [
+      {
+        "action": 4,
+        "code": "native_geometry_refused",
+        "detail": "placement support must be the first hit on an admitted passive cube face",
+        "position": null
+      },
+      {
+        "action": 4,
+        "code": "native_geometry_refused",
+        "detail": "geometry lies outside the complete captured scene",
+        "position": null
+      },
+      {
+        "action": 5,
+        "code": "native_geometry_refused",
+        "detail": "no first native outline hit for placement",
+        "position": null
+      },
+      {
+        "action": 10,
+        "code": "unsafe_planned_motion",
+        "detail": "body leaves travel bounds or cannot stop safely",
+        "position": null
+      },
+      {
+        "action": 14,
+        "code": "native_geometry_refused",
+        "detail": "placement requires known empty air outside the standing body",
+        "position": null
+      },
+      {
+        "action": 29,
+        "code": "native_geometry_refused",
+        "detail": "preview falls outside bounded construction height",
+        "position": null
+      },
+      {
+        "action": 29,
+        "code": "native_geometry_refused",
+        "detail": "hypothetical edit removes player support",
+        "position": null
+      },
+      {
+        "action": 29,
+        "code": "native_geometry_refused",
+        "detail": "hypothetical removal differs from first native target face",
+        "position": null
+      }
+    ],
+    "rejected": 4877
+  },
+  "completed_steps": 115,
+  "verified_reconnect_boundaries": 18,
+  "final_evidence": {
+    "independently_checked_cells": 3120,
+    "position": [
+      0.5416359241007589,
+      -60.0,
+      -1.499938053592504
+    ],
+    "remaining_owned_temporary": []
+  },
+  "all_retained_receive_windows_complete": true,
+  "timing": {
+    "test_seconds_including_fixture_and_planning": 236.3,
+    "controller_seconds_including_server_start_stop": 248.16792053799145,
+    "controller_seconds_until_first_completed_action": 53.69365288299741,
+    "seconds_between_first_and_last_completed_actions": 161.52444146500784
+  },
+  "limits": [
+    "One complete generated reference roof passed; this is not a claim of arbitrary-building completeness or public MCP survival integration.",
+    "Full normal-tiered JDK21 execution passed without recurrence; the prior JVM root cause remains undetermined. No C1-only workaround or additional root-cause experiments were used.",
+    "Per user instruction investigation stops after this non-recurrence and successful acceptance.",
+    "Installed JDK distribution and patch level both differ; this is recovery evidence, not proof of a particular upstream fix.",
+    "Authored 119-action baseline and previous failures remain separate retained evidence.",
+    "Short-design geometry/translation/checker-replay evidence is recorded separately in survival-generation-stop-20261002.json (generated-smoke-c)."
+  ],
+  "artifacts": [
+    {
+      "path": "survival-generation/survival-roof-20261002-generated-live-temurin-a.json.gz",
+      "bytes": 32495806,
+      "sha256": "b343b162b0aab2b47cd7bb91e6f33b3f4abd5b7aa1d455677b322f741fcb3c78",
+      "gzip_sha256": "c6a6984d3b8335fc7590e82cc2b59dcf164968b1b5b7aa400f07ea910e963cfe"
+    },
+    {
+      "path": "survival-generation/survival-roof-20261002-generated-live-temurin-a-runtime.json.gz",
+      "bytes": 17871,
+      "sha256": "3de9ea9c7fdbbdecece958219db7ff33eddb501876c30b4caa086c539debbbd8",
+      "gzip_sha256": "5205b420122f62e1186e64d92bffc51bcd2d672731e20dd5b96032aaab762130"
+    },
+    {
+      "path": "survival-generation/survival-roof-20261002-generated-live-temurin-a-test.log.gz",
+      "bytes": 6928,
+      "sha256": "b25d0ad8cd50063ec64fbed92b7ffc9e58e5a088fc3180100e021efefe233bbb",
+      "gzip_sha256": "408fc6e4c6aac3b1a05f8554f28fa756dab69cd8a5f086f593ab1fd6be42f7c9"
+    },
+    {
+      "path": "survival-generation/survival-roof-20261002-generated-live-temurin-a-server-console.log.gz",
+      "bytes": 9825,
+      "sha256": "183bde8fe6501e2f6e974071bcd6c1b72e810de1dc6343fb740ecdca67e47711",
+      "gzip_sha256": "7cffc6880a4c6ee7e2b64fa9052dabb1fa071be3e28660840ca9e2ff322afb14"
+    },
+    {
+      "path": "survival-generation/survival-roof-20261002-generated-live-temurin-a-server.log.gz",
+      "bytes": 9790,
+      "sha256": "bbd600ef2c6ffc5a0916d62c8bda3951c289c6708afd27471959e8715f886f09",
+      "gzip_sha256": "0638475d5124c7a743a8845b043562812b24cd8c7e133a084a8b90ccd1df27c3"
+    },
+    {
+      "path": "survival-generation/survival-roof-20261002-generated-live-temurin-a-journal.json.gz",
+      "bytes": 1525310,
+      "sha256": "28abf1bacfec445e87c5b4d40c8bf3cc3c2bba73185baf0f98eef3b1bf41e341",
+      "gzip_sha256": "22367a6098fab3570a8409c92c8808d5194ecef6063275e06d3353bab6006ce4"
+    },
+    {
+      "path": "survival-generation/generation-trial-controller-temurin.py.gz",
+      "bytes": 4727,
+      "sha256": "0ce88f20a929c88238d816d225b522c1927421fbaca2ca4ae5f979f2cf3ee750",
+      "gzip_sha256": "58ff9531486d9c0b9dc604f855effdedfd528e1e503c17e308d132330eb0294d"
+    },
+    {
+      "path": "survival-generation/generation-acceptance-archiver.py.gz",
+      "bytes": 5882,
+      "sha256": "5eb45d972bb368ee30fff931cea5bf5c9cc78ecebd170fad2f7cb36c9849fad5",
+      "gzip_sha256": "02abeecd3a885bbc33f93dc260524b463134174c8f45ae51d47614b2cb3d4d7f"
+    }
+  ]
+}
