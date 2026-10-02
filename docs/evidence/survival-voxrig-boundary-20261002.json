@@ -1,0 +1,78 @@
+{
+  "dustroute_source": "bd4d43908446c347ea00c95ce843ae1cf9e16272",
+  "voxrig_source": "f81c17bafdec54ee7c3de9e3fd4964c90e5654d0",
+  "status": "stopped_for_inventory_change_concern",
+  "native_validation": {
+    "full_suite_at_parent_fe8d1e8": {
+      "passed": 185,
+      "ignored": 6,
+      "failed": 0
+    },
+    "doc_tests_at_parent_passed": 4,
+    "final_read_only_forwarder_change_retirement_tests_passed": 2,
+    "final_all_targets_clippy": "passed",
+    "formatting": "passed"
+  },
+  "consumer_validation": {
+    "targeted_survival_tests": {
+      "passed": 9,
+      "ignored": 2,
+      "failed": 0
+    },
+    "formatting": "passed",
+    "vendor_manifest": "291 files verified",
+    "all_targets_clippy": "not rerun in this checkpoint; stopped after live concern"
+  },
+  "live_trial": {
+    "exit_code": 101,
+    "seconds_including_fixture_wait": 27.2,
+    "placements_observed": 3,
+    "climb_observed": true,
+    "retreat_observed": true,
+    "removals_observed": 1,
+    "recoveries_observed": 1,
+    "second_mining_start_dispatched": true,
+    "second_mining_target": [
+      2,
+      -60,
+      0
+    ],
+    "second_mining_outcome": "not confirmed",
+    "error": "mining requires a received empty selected hand and supported player screen",
+    "mining_intent_after_receive_sequence": 66,
+    "selected_slot_update_receive_sequence": 67,
+    "selected_slot": 36,
+    "received_item": {
+      "name": "minecraft:dirt",
+      "count": 1
+    },
+    "pickup_origin": "automatic collection of first removed dirt is plausible; not independently established by an item-entity lifecycle audit",
+    "disconnect_error": null,
+    "server_stopped_exit_code": 0,
+    "automatic_retry": false,
+    "cleanup_complete": false,
+    "full_roofed_construction": false
+  },
+  "files": [
+    {
+      "path": "survival-boundary/survival-facade-access-live-20261002-a.json.gz",
+      "sha256": "3cb25520629695b4ebc7d0d03ae8c6a0d9b8b0187f32b2dfe68df4a2e2028c13"
+    },
+    {
+      "path": "survival-boundary/survival-facade-integration-tests-20261002-final.log.gz",
+      "sha256": "69a9384fd7287f97a3c040295d022b248231b0c97ff0b6072464bd7cf5ce961d"
+    },
+    {
+      "path": "survival-boundary/survival-facade-native-retirement-20261002.log.gz",
+      "sha256": "ca5ea6fddcb92996099beae92a4a748d21add1acb4c52bfa3de6d155bd2520f9"
+    },
+    {
+      "path": "survival-boundary/survival-facade-native-clippy-final-20261002.log.gz",
+      "sha256": "9cdd76071ca5fca1192bbc7930e537d56c19d73bfd2433190b520de68554e2c2"
+    },
+    {
+      "path": "survival-boundary/survival-facade-access-server-20261002-a.log.gz",
+      "sha256": "8a790007dc467406df9d664a76331b56d5e1644ead3b3626a73905366177e926"
+    }
+  ]
+}

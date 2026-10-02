@@ -232,3 +232,9 @@ Legacy version APIs coexist; native geometry/history/lifecycle checks are shared
 Version-specific item-registry helpers remain only in the explicitly 1.21.11
 fixture setup. No route search, site permission, resource policy or durable job
 has moved into Voxrig. Full roof selection/execution remains unfinished.
+
+The façade consumer live comparison has now stopped on a selected-hand inventory
+change during the second removal, after one successful removal/recovery. See
+[the concern record](survival-voxrig-boundary.md#validation-and-concern-stop).
+Its three-removal cleanup is not a pass; no corrective implementation or repeat
+is undertaken pending review under the user's stop condition.
