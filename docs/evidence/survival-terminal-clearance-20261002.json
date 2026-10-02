@@ -1,0 +1,27 @@
+{
+  "voxrig_revision": "30afe28534e8b611ad5da8b77d8c20ecab35b861",
+  "managed_files": 277,
+  "live_code_revision": "bc2c13cb6a6927992049cfe0812b248dafcba285",
+  "validation": {
+    "voxrig_all_targets": "179 passed, 5 ignored; offline locked -j 1, test threads 1",
+    "voxrig_doc": "1 passed",
+    "voxrig_clippy": "all targets -D warnings exit 0",
+    "voxrig_fmt": "exit 0",
+    "voxrig_package_list": "exit 0",
+    "vendor_check": "277 files verified",
+    "dustroute_command": "cargo check --offline --locked -j 1 -p dustroute-mcp --features voxrig --all-targets",
+    "dustroute_exit": 0,
+    "live_trial_exit": 0
+  },
+  "logs_sha256": {
+    "terminal-all-targets": "cbe1939af2d14ba92d97daaea094c87ccdbc74cc0b7851c6b4a197c1770dd912",
+    "terminal-clippy": "11d6e9ed3106510a2917192fcf4867896ac9ce817bebd0ce37728045b015355a",
+    "terminal-doc": "dcad90dc79ecbf478e0ed283801480a056b66407c20fe9aa998827e314f642a8",
+    "terminal-package": "6f3f935d6893473ff8d6b2e86dce8bda8daaf3b3eca1b1cfc1448b4894803025",
+    "terminal-build-trial": "02559695c9d9bf9871cb99e2aa1d631e1e143f04ce6f4ec69e28a20a9ce91c30"
+  },
+  "dustroute_log_sha256": "9696fd9e217d3812b7dc1360b3ac09ca2f517a76219f62f6496a1c5e36b7712a",
+  "live_evidence": "vendor/voxrig/docs/evidence/survival-terminal-live-20261002.json",
+  "inventory_diagnosis": "vendor/voxrig/docs/evidence/survival-motion-pickup-diagnosis-20261002.json",
+  "scope": "Terminal endpoint preflight, deliberate planned retreat, observation-only recheck API and tests. Recheck tested with TCP fixtures, not a separate live recovery scenario. Native live walk/jump/wall-retreat placements passed. Route planning and complete roofed Blueprint goal remain unfinished."
+}

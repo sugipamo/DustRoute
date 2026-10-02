@@ -172,3 +172,38 @@ One additional retained observation needs diagnosis: the two placements each
 have target/ACK and held decrements (3 -> 2 and 2 -> 1), while a later inventory
 receipt reports 2. No cause or final net material accounting is asserted; the
 trace is retained. Entity simulation remains excluded.
+
+## Terminal-clearance recommendation implemented (2026-10-02 UTC)
+
+The user approved the recommendation above. Prospective terminal standing now
+uses the same geometry scan as actual standing, with a 1/16-block horizontal
+margin. Preview returns a structured admitted/replan result; starting a plan
+refuses an unsuitable endpoint before recording or sending controls. Retreat is
+explicitly part of the caller's complete input sequence, never hidden recovery.
+
+`prepare_survival_motion_recheck` / `observe_survival_motion_recheck` provide
+explicit observation-only reassessment of fully dispatched, predicted-rest failed
+runs. They require a fresh same-instance position, current conservative standing
+geometry and unchanged own context. Partial dispatch, corrections, foreign or
+superseded tokens, stale observations and unsuitable geometry remain refused.
+Original failure history remains after successful reassessment; no input is
+resent and historical JSON cannot authorize a fresh connection. This is
+reassessment when evidence/geometry permits it, not an automatic escape from an
+obstructed position.
+
+The [new non-OP live record](../vendor/voxrig/docs/evidence/survival-terminal-live-20261002.json)
+passed walking/place, jumping/place, pre-send wall-touch refusal, and declared
+wall contact -> retreat -> rest -> place. The three independently observed
+placements consumed the supplied dirt 3 -> 2 -> 1 -> empty. The dedicated server
+stopped normally. Recovery has TCP fixture coverage; it was not separately
+exercised live. Snapshot checks cannot reserve future world geometry.
+
+The previous inventory increase is explained by [retained pickup evidence](../vendor/voxrig/docs/evidence/survival-motion-pickup-diagnosis-20261002.json):
+COLLECT receipt 247 identifies the bot as collecting one item; the following
+SET_SLOT receipt 248 changes dirt count 1 -> 2. This is distinct from placement
+consumption. The item's original drop/source is not established, and no entity
+simulation feature was added.
+
+The wall-clearance recommendation is complete within this admitted scope.
+Bounded route search, access works, durable construction jobs and the full roofed
+Blueprint trial remain roadmap work; the overall goal is not complete.

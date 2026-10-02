@@ -1022,3 +1022,224 @@ async fn motion_waiting_on_writer_retains_attempt_and_close_never_releases_const
     observer.stop().await;
     mover.stop().await;
 }
+
+#[tokio::test]
+async fn terminal_wall_clearance_refuses_before_io_and_retreat_plan_is_admitted() {
+    let mut mover = Fixture::new().await;
+    let mut observer = Fixture::new_id(43).await;
+    observer.observe_mover().await;
+    mover
+        .session
+        .state
+        .lock()
+        .await
+        .world
+        .seed_replay_cell([2, 1, 0], 1);
+    let mut inputs = vec![SurvivalInput::default(); 60];
+    for input in inputs.iter_mut().take(20) {
+        input.forward = 1;
+    }
+    let preview = mover
+        .api
+        .preview_survival_motion(-90.0, &inputs)
+        .await
+        .unwrap();
+    assert!(preview.frames.iter().any(|f| f.horizontal_collision));
+    assert!(matches!(
+        preview.terminal_clearance,
+        TerminalClearance::RequiresReplan { .. }
+    ));
+    assert!(
+        mover
+            .api
+            .start_survival_motion(-90.0, &inputs, &observer.api)
+            .await
+            .is_err()
+    );
+    assert!(mover.api.survival_motion().await.is_none());
+    assert!(
+        timeout(
+            Duration::from_millis(20),
+            read_packet(&mut mover.peer, None)
+        )
+        .await
+        .is_err()
+    );
+    for input in inputs.iter_mut().skip(30).take(4) {
+        input.forward = -1;
+    }
+    let retreat = mover
+        .api
+        .preview_survival_motion(-90.0, &inputs)
+        .await
+        .unwrap();
+    assert!(matches!(
+        retreat.terminal_clearance,
+        TerminalClearance::Admitted { .. }
+    ));
+    assert!(retreat.frames.last().unwrap().position[0] < 1.7 - 1.0 / 16.0);
+    observer.stop().await;
+    mover.stop().await;
+}
+#[tokio::test]
+async fn terminal_recheck_requires_new_receipt_current_geometry_and_exact_run_without_sends() {
+    let mut mover = Fixture::new().await;
+    let mut observer = Fixture::new_id(43).await;
+    observer.observe_mover().await;
+    let run = mover
+        .api
+        .start_survival_motion(0.0, &[SurvivalInput::default(); 3], &observer.api)
+        .await
+        .unwrap();
+    for _ in 0..6 {
+        read_packet(&mut mover.peer, None).await.unwrap();
+    }
+    timeout(Duration::from_secs(1), async {
+        while mover.api.survival_motion().await.unwrap().status
+            != SurvivalMotionStatus::AwaitingObservation
+        {
+            tokio::task::yield_now().await;
+        }
+    })
+    .await
+    .unwrap();
+    // A world edit after dispatch makes terminal admission fail; the old intent
+    // remains complete but cannot authorize a placement or a replay.
+    mover
+        .session
+        .state
+        .lock()
+        .await
+        .world
+        .seed_replay_cell([0, 1, 0], 1);
+    observer.mover_position([0.5, 1.0, 0.5]).await;
+    timeout(Duration::from_secs(1), async {
+        while mover.api.survival_motion().await.unwrap().status
+            != SurvivalMotionStatus::RequiresInspection
+        {
+            tokio::task::yield_now().await;
+        }
+    })
+    .await
+    .unwrap();
+    let original = mover.api.survival_motion().await.unwrap().problem;
+    {
+        let mut state = mover.session.state.lock().await;
+        state.survival_motion.as_mut().unwrap().dispatched_ticks = 2;
+    }
+    assert!(
+        mover
+            .api
+            .prepare_survival_motion_recheck(run.run_id, &observer.api)
+            .await
+            .is_err()
+    );
+    mover
+        .session
+        .state
+        .lock()
+        .await
+        .survival_motion
+        .as_mut()
+        .unwrap()
+        .dispatched_ticks = 3;
+    let old_motion = {
+        let mut state = mover.session.state.lock().await;
+        let old = state.motion.clone();
+        let mut correction = old.received_pose.clone().unwrap();
+        correction.receive_sequence += 100;
+        state.motion.receive(correction);
+        old
+    };
+    assert!(
+        mover
+            .api
+            .prepare_survival_motion_recheck(run.run_id, &observer.api)
+            .await
+            .is_err()
+    );
+    mover.session.state.lock().await.motion = old_motion;
+
+    assert!(
+        mover
+            .api
+            .prepare_survival_motion_recheck(run.run_id + 1, &observer.api)
+            .await
+            .is_err()
+    );
+    let token = mover
+        .api
+        .prepare_survival_motion_recheck(run.run_id, &observer.api)
+        .await
+        .unwrap();
+    assert!(
+        mover
+            .api
+            .observe_survival_motion_recheck(&token)
+            .await
+            .is_err()
+    ); // stale position
+    observer.mover_position([0.5, 1.0, 0.5]).await;
+    assert!(
+        mover
+            .api
+            .observe_survival_motion_recheck(&token)
+            .await
+            .is_err()
+    ); // still obstructed
+    assert!(mover.api.select_hotbar(1).await.is_err());
+    mover
+        .session
+        .state
+        .lock()
+        .await
+        .world
+        .seed_replay_cell([0, 1, 0], 0);
+    let superseding = mover
+        .api
+        .prepare_survival_motion_recheck(run.run_id, &observer.api)
+        .await
+        .unwrap();
+    assert!(
+        mover
+            .api
+            .observe_survival_motion_recheck(&token)
+            .await
+            .is_err()
+    );
+    assert!(
+        mover
+            .api
+            .observe_survival_motion_recheck(&superseding)
+            .await
+            .is_err()
+    );
+    observer.mover_position([0.5, 1.0, 0.5]).await;
+    assert!(
+        mover
+            .api
+            .observe_survival_motion_recheck(&superseding)
+            .await
+            .unwrap()
+            .on_ground
+    );
+    assert_eq!(mover.api.survival_motion().await.unwrap().problem, original);
+    assert!(!mover.api.player_state().await.unwrap().position_from_server);
+    assert!(
+        timeout(
+            Duration::from_millis(20),
+            read_packet(&mut mover.peer, None)
+        )
+        .await
+        .is_err()
+    );
+    assert!(
+        mover
+            .api
+            .observe_survival_motion_recheck(&superseding)
+            .await
+            .is_err()
+    ); // no reuse
+    observer.stop().await;
+    mover.stop().await;
+}

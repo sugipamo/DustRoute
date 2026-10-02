@@ -1,0 +1,208 @@
+{
+  "tested_voxrig_commit": "bc2c13cb6a6927992049cfe0812b248dafcba285",
+  "minecraft": "Java 1.21.11",
+  "fixture": "127.0.0.1:25572, two whitelisted non-OP survival profiles, ops=[]",
+  "operator_actions": "bounded floor/air setup, initial teleports, initial clear and 3 dirt supplied; no commands after release",
+  "live_exit": 0,
+  "live_test": "native_survival_walk_jump_collision_and_place",
+  "cases": [
+    {
+      "phase": "walk",
+      "status": "observed",
+      "ticks": 30,
+      "predicted": {
+        "horizontal_collision": false,
+        "on_ground": true,
+        "position": [
+          2.109088459339283,
+          -60.0,
+          0.5
+        ],
+        "resting": true,
+        "tick": 30,
+        "velocity": [
+          0.0,
+          -0.0784000015258789,
+          0.0
+        ]
+      },
+      "observed_position": [
+        2.109130859375,
+        -60.0,
+        0.5
+      ],
+      "terminal_clearance": {
+        "horizontal_margin": 0.0625,
+        "status": "admitted"
+      },
+      "collision_frames": 0
+    },
+    {
+      "phase": "walk_placement",
+      "status": "observed_placed",
+      "target": [
+        4,
+        -60,
+        0
+      ],
+      "held_before": {
+        "count": 3,
+        "item_id": 28,
+        "name": "minecraft:dirt"
+      },
+      "held_after": {
+        "item": {
+          "count": 2,
+          "item_id": 28,
+          "name": "minecraft:dirt"
+        },
+        "kind": "item"
+      },
+      "independent_block": {
+        "name": "minecraft:dirt",
+        "properties": {}
+      }
+    },
+    {
+      "phase": "jump",
+      "status": "observed",
+      "ticks": 30,
+      "predicted": {
+        "horizontal_collision": false,
+        "on_ground": true,
+        "position": [
+          2.109088459339283,
+          -60.0,
+          0.5
+        ],
+        "resting": true,
+        "tick": 30,
+        "velocity": [
+          0.0,
+          -0.0784000015258789,
+          0.0
+        ]
+      },
+      "observed_position": [
+        2.109088459339283,
+        -60.0,
+        0.5
+      ],
+      "terminal_clearance": {
+        "horizontal_margin": 0.0625,
+        "status": "admitted"
+      },
+      "collision_frames": 0
+    },
+    {
+      "phase": "jump_placement",
+      "status": "observed_placed",
+      "target": [
+        4,
+        -59,
+        0
+      ],
+      "held_before": {
+        "count": 2,
+        "item_id": 28,
+        "name": "minecraft:dirt"
+      },
+      "held_after": {
+        "item": {
+          "count": 1,
+          "item_id": 28,
+          "name": "minecraft:dirt"
+        },
+        "kind": "item"
+      },
+      "independent_block": {
+        "name": "minecraft:dirt",
+        "properties": {}
+      }
+    },
+    {
+      "phase": "wall_endpoint_refused_before_io",
+      "terminal_clearance": {
+        "reason": "standing body intersects solid geometry at [4, -60, 0]",
+        "status": "requires_replan"
+      },
+      "assertion": "start refused and retained operation history unchanged; fixture TCP regression additionally asserts no control packet"
+    },
+    {
+      "phase": "wall",
+      "status": "observed",
+      "ticks": 60,
+      "predicted": {
+        "horizontal_collision": false,
+        "on_ground": true,
+        "position": [
+          2.8428304617655695,
+          -60.0,
+          0.5
+        ],
+        "resting": true,
+        "tick": 60,
+        "velocity": [
+          0.0,
+          -0.0784000015258789,
+          0.0
+        ]
+      },
+      "observed_position": [
+        2.8427734375,
+        -60.0,
+        0.5
+      ],
+      "terminal_clearance": {
+        "horizontal_margin": 0.0625,
+        "status": "admitted"
+      },
+      "collision_frames": 12
+    },
+    {
+      "phase": "wall_placement",
+      "status": "observed_placed",
+      "target": [
+        2,
+        -60,
+        2
+      ],
+      "held_before": {
+        "count": 1,
+        "item_id": 28,
+        "name": "minecraft:dirt"
+      },
+      "held_after": {
+        "kind": "empty"
+      },
+      "independent_block": {
+        "name": "minecraft:dirt",
+        "properties": {}
+      }
+    }
+  ],
+  "final_hotbar": {
+    "kind": "empty"
+  },
+  "traces_complete": true,
+  "raw": {
+    "survival-terminal-live-20261002.json.gz": {
+      "sha256": "6ce2b51f636c6c30daf9ccae9452c5e6271fe094b26774ec9f597c307655744b",
+      "raw_sha256": "122d37e3da4683b7acad5832b09d10e0026e3422293f99187009cd1c01a15ff5"
+    },
+    "survival-terminal-server-20261002.log.gz": {
+      "sha256": "f48a3d6d2bc0d325902a792cb5573756af22b8ea090c983d0bed6b16207f2704",
+      "raw_sha256": "50abeb73f5e93c46cba7d23fba06099840350130d9da9798d7ab4dd8fa432c67"
+    }
+  },
+  "server_shutdown": "exit 0; zero players before stop",
+  "offline_checks": {
+    "all_targets": "179 passed, 5 ignored",
+    "doc": "1 passed",
+    "clippy": "all targets -D warnings passed",
+    "fmt": "passed",
+    "package_list": "passed"
+  },
+  "recovery_validation": "TCP fixture tests: explicit fresh-fence reassessment, stale/superseded tokens, remaining geometry obstruction, interrupted dispatch, own correction and no additional outbound packet. Recovery itself was not separately exercised live.",
+  "limits": "Terminal clearance is a prospective snapshot check, not a world reservation or guaranteed safe future. Geometry may change; failures remain inspectable. Route search, access works and full roofed Blueprint construction remain unfinished."
+}

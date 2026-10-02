@@ -357,3 +357,28 @@ Voxrig source is `7915c253ea075926b1576274881e5b426e85c088`; actual live code wa
 Offline: 177 tests passed, five optional live tests ignored, one doc test passed,
 Clippy/all-targets and formatting passed. This checkpoint does not complete the
 overall survival construction goal.
+
+## Terminal clearance and deliberate retreat verified (2026-10-02 UTC)
+
+The approved follow-up prevents known unsuitable stopping positions before I/O,
+exposes terminal replanning diagnostics, and supports explicit fresh-observation
+reassessment of eligible fully dispatched failures. Actual and prospective
+standing share the same conservative geometry implementation. No stopped
+acknowledgement, automatic retry, hidden retreat or historic-state import is
+introduced.
+
+The non-OP trial now passes: walk/place, jump/place, rejection of a wall-touch
+endpoint before input, then planned contact/retreat/rest/place. Three independent
+block observations and material decrements 3 -> 2 -> 1 -> empty are retained.
+The old unexplained count increase has a matching pickup receipt. See the
+[implementation and scope](survival-movement-evidence.md#terminal-clearance-recommendation-implemented-2026-10-02-utc)
+and [pinned live result](../vendor/voxrig/docs/evidence/survival-terminal-live-20261002.json).
+
+Voxrig is pinned to `30afe28534e8b611ad5da8b77d8c20ecab35b861` (277 files);
+actual live code was `bc2c13cb6a6927992049cfe0812b248dafcba285`, followed by
+an evidence-only commit. Offline: 179 passing tests, five opt-in trials ignored,
+one doc test, clean Clippy/format/package list. Observation-only recovery is
+covered by TCP tests, not a separate live scenario. Next roadmap work remains
+bounded route/retreat selection in the caller, site/access planning, durable job
+integration and the complete roofed construction trial. The broad goal is active
+and unfinished.

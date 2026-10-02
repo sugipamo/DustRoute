@@ -388,6 +388,15 @@ pub(super) fn standing_baselines_received(state: &State) -> Result<bool> {
 }
 
 pub(super) fn context(state: &mut State, connection_id: u64, tick: u64) -> Result<StandingContext> {
+    let basis = super::movement::standing_basis(state)?;
+    context_with_basis(state, connection_id, tick, basis)
+}
+pub(super) fn context_with_basis(
+    state: &mut State,
+    connection_id: u64,
+    tick: u64,
+    position_basis: StandingPositionBasis,
+) -> Result<StandingContext> {
     let player = &state.operations.local_player;
     if let Some(interruption) = &player.motion_interruption {
         return Err(unavailable(format!(
@@ -406,7 +415,6 @@ pub(super) fn context(state: &mut State, connection_id: u64, tick: u64) -> Resul
     if state.operations.requested_flying || state.operations.abilities.is_some_and(|a| a & 2 != 0) {
         return Err(unavailable("stationary context refuses active flight"));
     }
-    let position_basis = super::movement::standing_basis(state)?;
     if player.health.as_ref().is_some_and(|h| h.health <= 0.0) {
         return Err(unavailable("player is dead"));
     }
@@ -418,7 +426,35 @@ pub(super) fn context(state: &mut State, connection_id: u64, tick: u64) -> Resul
     if state.reconstruction.issue.is_some() || !state.reconstruction.recovery_chunks.is_empty() {
         return Err(unavailable("client reconstruction incomplete"));
     }
-    let (dimension, height) = state
+    let geometry = standing_geometry(state, position, position_basis.horizontal_error())?;
+    Ok(StandingContext {
+        connection_id,
+        receive_sequence: state.sequence,
+        client_tick: state.reconstruction.tick,
+        world_revision: state.world.revision,
+        dimension: state.world.dimension.as_ref().unwrap().0.clone(),
+        position,
+        position_basis,
+        eye_position: [position[0], position[1] + f64::from(1.62f32), position[2]],
+        bounds: geometry.bounds,
+        on_ground: !geometry.support.is_empty(),
+        support: geometry.support,
+        submerged: false,
+        player: player.clone(),
+    })
+}
+pub(super) struct StandingGeometry {
+    pub bounds: [f64; 6],
+    pub support: Vec<[i32; 3]>,
+}
+// Pure geometry shared by prospective endpoints and actual standing admission.
+pub(super) fn standing_geometry(
+    state: &State,
+    position: [f64; 3],
+    error: [f64; 3],
+) -> Result<StandingGeometry> {
+    validate_pose(position, [0.0; 2])?;
+    let (_, height) = state
         .world
         .dimension
         .as_ref()
@@ -428,7 +464,6 @@ pub(super) fn context(state: &mut State, connection_id: u64, tick: u64) -> Resul
         min,
         max,
     } = standing_region(position);
-    let error = position_basis.horizontal_error();
     for axis in [0, 2] {
         bounds[axis] -= error[axis];
         bounds[axis + 3] += error[axis];
@@ -500,21 +535,7 @@ pub(super) fn context(state: &mut State, connection_id: u64, tick: u64) -> Resul
             }
         }
     }
-    Ok(StandingContext {
-        connection_id,
-        receive_sequence: state.sequence,
-        client_tick: state.reconstruction.tick,
-        world_revision: state.world.revision,
-        dimension: dimension.clone(),
-        position,
-        position_basis,
-        eye_position: [position[0], position[1] + f64::from(1.62f32), position[2]],
-        bounds,
-        on_ground: !support.is_empty(),
-        support,
-        submerged: false,
-        player: player.clone(),
-    })
+    Ok(StandingGeometry { bounds, support })
 }
 
 // Conservative post-motion reach/occlusion check. For admitted full cubes the

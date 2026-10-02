@@ -3,7 +3,9 @@ mod control;
 use super::*;
 use crate::versions::java_1_21_11::math::trig;
 pub(super) use control::standing_basis;
-pub use control::{StandingPositionBasis, SurvivalMotionRecord, SurvivalMotionStatus};
+pub use control::{
+    StandingPositionBasis, SurvivalMotionRecheck, SurvivalMotionRecord, SurvivalMotionStatus,
+};
 
 /// Digital walking input for one predicted native game tick, without sprint/sneak.
 #[derive(Clone, Copy, Debug, Default, Serialize)]
@@ -40,6 +42,38 @@ pub struct SurvivalMovementPreview {
     pub yaw: f32,
     /// Predicted frames. The world itself is not advanced into the future.
     pub frames: Vec<PredictedMotionFrame>,
+    /// Prospective terminal clearance; does not authorize later sends.
+    pub terminal_clearance: TerminalClearance,
+}
+/// Why a predicted endpoint can or cannot be used as a construction stop.
+#[derive(Clone, Debug, Serialize)]
+#[serde(tag = "status", rename_all = "snake_case")]
+pub enum TerminalClearance {
+    /// Resting with conservative support and a margin from solid walls.
+    Admitted {
+        /// Per-axis horizontal margin; exceeds worst admitted relative error.
+        horizontal_margin: f64,
+    },
+    /// Input planning must change before any movement packet is sent.
+    RequiresReplan {
+        /// Specific rest/support/geometry issue.
+        reason: String,
+    },
+}
+const TERMINAL_MARGIN: f64 = 1.0 / 16.0;
+fn terminal_clearance(state: &State, frame: &PredictedMotionFrame) -> Result<()> {
+    if !frame.resting {
+        return Err(invalid("terminal motion must be released and resting"));
+    }
+    let geometry = survival::standing_geometry(
+        state,
+        frame.position,
+        [TERMINAL_MARGIN, 0.0, TERMINAL_MARGIN],
+    )?;
+    if geometry.support.is_empty() {
+        return Err(invalid("terminal motion lacks conservative floor support"));
+    }
+    Ok(())
 }
 impl Operations {
     /// Preview at most 120 dry-cube walking/jump ticks. Uses native default motion
@@ -108,7 +142,16 @@ fn preview(
         }
         frames.push(model.frame.clone());
     }
+    let terminal_clearance = match terminal_clearance(state, frames.last().unwrap()) {
+        Ok(()) => TerminalClearance::Admitted {
+            horizontal_margin: TERMINAL_MARGIN,
+        },
+        Err(error) => TerminalClearance::RequiresReplan {
+            reason: error.to_string(),
+        },
+    };
     Ok(SurvivalMovementPreview {
+        terminal_clearance,
         initial,
         yaw,
         frames,

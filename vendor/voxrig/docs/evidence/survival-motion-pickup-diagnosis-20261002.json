@@ -1,0 +1,35 @@
+{
+  "prior_trial": "survival-motion-live-20261002.json",
+  "scope": "Read-only diagnosis of retained packets; no entity physics or new live action",
+  "own_entity_id": 2,
+  "receipts": [
+    {
+      "sequence": 247,
+      "packet_id": "0x7a COLLECT",
+      "payload": [
+        1,
+        2,
+        1
+      ],
+      "decoded": {
+        "picked_entity": 1,
+        "collector_entity": 2,
+        "count": 1
+      }
+    },
+    {
+      "sequence": 248,
+      "packet_id": "0x14 SET_SLOT",
+      "decoded": {
+        "window": 0,
+        "revision": 8,
+        "slot": 36,
+        "item": "minecraft:dirt",
+        "count": 2
+      }
+    }
+  ],
+  "evidence": "Pickup notification for one item collected by the bot immediately precedes slot 36 increasing from dirt 1 to dirt 2. This explains the post-placement increase separately from the verified 3->2 and 2->1 placement decrements. Item creation/drop provenance is not established by this trace.",
+  "native_decoder_audit_sha256": "c7d07901b7bfcbb0a014ae01cc03fa08507f4ede6d0b2350d35c5c45aa2732f8",
+  "native_method": "ItemPickupAnimationS2CPacket(PacketByteBuf): readVarInt entityId, collectorEntityId, stackAmount; same pinned unchanged-body 1.21.11 oracle as dry_movement_source.json"
+}

@@ -4,7 +4,7 @@ use super::*;
 use crate::{Error, ErrorKind, Result};
 
 /// One live observer/world/entity instance; cannot be restored from JSON.
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct PlayerMotionWatch {
     observer_connection_id: u64,
     generation: u64,

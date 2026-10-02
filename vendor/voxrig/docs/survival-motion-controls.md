@@ -93,3 +93,42 @@ before its terminal rest; this must be declared in the plan and observed, not
 silently appended after failure. Define separate explicit recovery for an already
 failed contact run before allowing further inputs. Do not label quantized
 position as exact or relax the existing clearance check merely to pass the test.
+
+## Approved terminal clearance and explicit reassessment
+
+`preview_survival_motion` now reports `terminal_clearance` independently of its
+frames. `start_survival_motion` uses the same pure geometry scan as standing to
+require a resting endpoint with a 1/16-block horizontal margin and conservative
+support, before retaining/sending any input. This margin exceeds the admitted
+observer quantization envelope (at most 2/4096 plus numeric tolerance about the
+prediction). A touching endpoint is rejected as requiring replanning. Preview
+remains useful for explaining the refusal. Callers declare the entire retreat
+in their inputs; the client does not append controls or choose a hidden route.
+
+An already failed run can be explicitly reassessed with
+`prepare_survival_motion_recheck` and `observe_survival_motion_recheck`.
+Preparation registers a fresh exact-run observer fence and leaves failure intact.
+Only fully dispatched, predicted-rest runs with unchanged own generation, pose,
+velocity/attributes and original observer lifetime are eligible. Observation
+requires a new matching position and current conservative standing geometry.
+Interrupted/corrected runs cannot be cleared by this API. Tokens cannot be
+imported, reused after success, or used after another preparation supersedes them.
+No method sends controls, automatically reconnects, or replays old input. The
+original problem remains in history after successful reassessment. A still
+obstructed or uncertain contact stays refused; it is not an escape maneuver.
+
+The updated live driver first demonstrates the old wall-touch plan's pre-I/O
+refusal, then explicitly declares contact -> released ticks -> backward input ->
+rest, and places a third block after the resulting standing admission. This
+section describes implementation; the separately pinned trial record establishes
+whether execution passed.
+
+The [terminal-clearance live result](evidence/survival-terminal-live-20261002.json)
+pins `bc2c13cb6a6927992049cfe0812b248dafcba285`: walk/place, jump/place,
+wall-touch preflight refusal, and planned wall-contact/retreat/place all passed.
+Three independently observed dirt placements consumed the supplied stack 3 -> 2
+-> 1 -> empty. The dedicated server shut down normally. Observation-only recovery
+has TCP fixture coverage (including interruption/correction refusal); no separate
+live recovery scenario is claimed. Route search and complete Blueprint building
+remain separate roadmap work. The prior inventory increase is explained by the
+[retained pickup receipts](evidence/survival-motion-pickup-diagnosis-20261002.json).

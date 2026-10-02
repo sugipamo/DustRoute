@@ -71,41 +71,8 @@ async fn native_survival_walk_jump_collision_and_place() {
     let before = api.player_state().await.unwrap();
     assert_eq!(before.game_mode, Some(operations::GameMode::Survival));
     let mut cases = Vec::new();
-    let result: Result<()> = async {
-        let swap=api.swap_player_hotbar(9,0).await?;api.wait_inventory_swap(&swap,Duration::from_secs(3)).await?;api.select_hotbar(0).await?;
-        for name in ["walk", "jump", "wall"] {
-            let mut inputs=vec![SurvivalInput::default();if name=="wall" {40} else {30}];
-            if name=="jump" { inputs[0].jump=true; } else { for i in inputs.iter_mut().take(if name=="wall" {20} else {8}) { i.forward=1; } }
-            let start=api.start_survival_motion(-90.0,&inputs,&observer).await?;
-            println!("MOTION {name} started run {}",start.run_id);std::io::stdout().flush().unwrap();
-            let run=timeout(Duration::from_secs(40),async {
-                loop { let r=api.survival_motion().await.unwrap();if matches!(r.status,SurvivalMotionStatus::Observed|SurvivalMotionStatus::RequiresInspection) {break r;} tokio::time::sleep(Duration::from_millis(20)).await; }
-            }).await.context("motion result timeout")?;
-            cases.push(json!({"phase":name,"motion":run}));
-            if run.status!=SurvivalMotionStatus::Observed { return Err(Error::new(ErrorKind::State,anyhow::anyhow!("motion {name}: {:?}",run.problem))); }
-            let standing=api.standing_context().await?;
-            if name=="wall" {
-                if !run.preview.frames.iter().any(|f| f.horizontal_collision) { return Err(Error::new(ErrorKind::State,anyhow::anyhow!("wall did not collide"))); }
-                continue;
-            }
-            let x=standing.position[0].floor() as i32+2;
-            let support=[x,if name=="walk" {-61} else {-60},0];
-            let point=[f64::from(x)+0.5,f64::from(support[1]+1),0.5];
-            let d:[f64;3]=std::array::from_fn(|i| point[i]-standing.eye_position[i]);
-            api.look([(-d[0]).atan2(d[2]).to_degrees() as f32,(-d[1]).atan2(d[0].hypot(d[2])).to_degrees() as f32]).await?;
-            let intent=api.place_survival_cube(support,crate::BlockFace::Up).await?;
-            let placement=api.wait_survival_placement(&intent,Duration::from_secs(3)).await?;
-            if !matches!(placement,PlacementStatus::ObservedPlaced {..}) {return Err(Error::new(ErrorKind::State,anyhow::anyhow!("placement {placement:?}")));}
-            let independent=timeout(Duration::from_secs(3),async {loop {
-                let observation=viewer.observe_region(Region {min:intent.target,max:intent.target}).await?;
-                if observation.blocks[0].state.as_ref().is_some_and(|s|s.name=="minecraft:dirt") {break Ok::<_,Error>(observation);}
-                tokio::time::sleep(Duration::from_millis(20)).await;
-            }}).await.context("independent placement timeout")??;
-            cases.push(json!({"phase":format!("{name}_placement"),"standing":standing,"intent":intent,"placement":placement,"independent":independent}));
-            println!("PLACED after {name}");std::io::stdout().flush().unwrap();
-        }
-        Ok(())
-    }.await;
+    let result = run_cases(&api, &observer, &viewer, &mut cases).await;
+
     let after = api.player_state().await;
     let history = api.operation_history().await;
     let trace = bot.stop_packet_trace().await.unwrap();
@@ -114,4 +81,147 @@ async fn native_survival_walk_jump_collision_and_place() {
     viewer.disconnect().await.unwrap();
     serde_json::to_writer(file,&json!({"minecraft":"Java 1.21.11","scope":"isolated non-OP native dry walking, jump/landing, wall collision and ordinary placement; no stop acknowledgement claim","before":before,"cases":cases,"after":after.as_ref().ok(),"history":history,"error":result.as_ref().err().map(ToString::to_string),"trace":trace,"observer_trace":observer_trace})).unwrap();
     result.unwrap();
+}
+
+async fn run_cases(
+    api: &operations::Operations,
+    observer: &operations::Operations,
+    viewer: &Bot,
+    cases: &mut Vec<serde_json::Value>,
+) -> Result<()> {
+    use std::io::Write;
+
+    let swap = api.swap_player_hotbar(9, 0).await?;
+    api.wait_inventory_swap(&swap, Duration::from_secs(3))
+        .await?;
+    api.select_hotbar(0).await?;
+    for name in ["walk", "jump", "wall"] {
+        let mut inputs = vec![SurvivalInput::default(); if name == "wall" { 40 } else { 30 }];
+        if name == "jump" {
+            inputs[0].jump = true;
+        } else {
+            for i in inputs.iter_mut().take(if name == "wall" { 20 } else { 8 }) {
+                i.forward = 1;
+            }
+        }
+        if name == "wall" {
+            let refused = api.preview_survival_motion(-90.0, &inputs).await?;
+            if !matches!(
+                refused.terminal_clearance,
+                operations::TerminalClearance::RequiresReplan { .. }
+            ) {
+                return Err(Error::new(
+                    ErrorKind::State,
+                    anyhow::anyhow!("wall-touch endpoint admitted"),
+                ));
+            }
+            let history = serde_json::to_value(api.operation_history().await).unwrap();
+            if api
+                .start_survival_motion(-90.0, &inputs, observer)
+                .await
+                .is_ok()
+            {
+                return Err(Error::new(
+                    ErrorKind::State,
+                    anyhow::anyhow!("wall-touch input was sent"),
+                ));
+            }
+            assert_eq!(
+                history,
+                serde_json::to_value(api.operation_history().await).unwrap()
+            );
+            cases.push(json!({"phase":"wall_endpoint_refused_before_io","preview":refused}));
+            inputs = vec![SurvivalInput::default(); 60];
+            for i in inputs.iter_mut().take(20) {
+                i.forward = 1;
+            }
+            for i in inputs.iter_mut().skip(30).take(4) {
+                i.forward = -1;
+            }
+        }
+        let start = api.start_survival_motion(-90.0, &inputs, observer).await?;
+        println!("MOTION {name} started run {}", start.run_id);
+        std::io::stdout().flush().unwrap();
+        let run = timeout(Duration::from_secs(40), async {
+            loop {
+                let r = api.survival_motion().await.unwrap();
+                if matches!(
+                    r.status,
+                    SurvivalMotionStatus::Observed | SurvivalMotionStatus::RequiresInspection
+                ) {
+                    break r;
+                }
+                tokio::time::sleep(Duration::from_millis(20)).await;
+            }
+        })
+        .await
+        .context("motion result timeout")?;
+        cases.push(json!({"phase":name,"motion":run}));
+        if run.status != SurvivalMotionStatus::Observed {
+            return Err(Error::new(
+                ErrorKind::State,
+                anyhow::anyhow!("motion {name}: {:?}", run.problem),
+            ));
+        }
+        let standing = api.standing_context().await?;
+        if name == "wall" && !run.preview.frames.iter().any(|f| f.horizontal_collision) {
+            return Err(Error::new(
+                ErrorKind::State,
+                anyhow::anyhow!("wall did not collide"),
+            ));
+        }
+        let x = standing.position[0].floor() as i32 + 2;
+        let support = if name == "wall" {
+            [standing.position[0].floor() as i32, -61, 2]
+        } else {
+            [x, if name == "walk" { -61 } else { -60 }, 0]
+        };
+        let point = [
+            f64::from(support[0]) + 0.5,
+            f64::from(support[1] + 1),
+            f64::from(support[2]) + 0.5,
+        ];
+        let d: [f64; 3] = std::array::from_fn(|i| point[i] - standing.eye_position[i]);
+        api.look([
+            (-d[0]).atan2(d[2]).to_degrees() as f32,
+            (-d[1]).atan2(d[0].hypot(d[2])).to_degrees() as f32,
+        ])
+        .await?;
+        let intent = api
+            .place_survival_cube(support, crate::BlockFace::Up)
+            .await?;
+        let placement = api
+            .wait_survival_placement(&intent, Duration::from_secs(3))
+            .await?;
+        if !matches!(placement, PlacementStatus::ObservedPlaced { .. }) {
+            return Err(Error::new(
+                ErrorKind::State,
+                anyhow::anyhow!("placement {placement:?}"),
+            ));
+        }
+        let independent = timeout(Duration::from_secs(3), async {
+            loop {
+                let observation = viewer
+                    .observe_region(Region {
+                        min: intent.target,
+                        max: intent.target,
+                    })
+                    .await?;
+                if observation.blocks[0]
+                    .state
+                    .as_ref()
+                    .is_some_and(|s| s.name == "minecraft:dirt")
+                {
+                    break Ok::<_, Error>(observation);
+                }
+                tokio::time::sleep(Duration::from_millis(20)).await;
+            }
+        })
+        .await
+        .context("independent placement timeout")??;
+        cases.push(json!({"phase":format!("{name}_placement"),"standing":standing,"intent":intent,"placement":placement,"independent":independent}));
+        println!("PLACED after {name}");
+        std::io::stdout().flush().unwrap();
+    }
+    Ok(())
 }
