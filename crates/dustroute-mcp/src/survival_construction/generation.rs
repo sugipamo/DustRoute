@@ -48,6 +48,8 @@ pub struct ConstructionSearch {
     pub complete_checks: usize,
     pub action_limited_nodes: usize,
     pub best_remaining_permanent: usize,
+    pub best_remaining_targets: Vec<[i32; 3]>,
+    pub highest_hypothetical_feet: f64,
     pub best_remaining_temporary: Vec<[i32; 3]>,
     /// Bounded progress samples for diagnosing policy starvation and cycles.
     pub progress: Vec<SearchProgress>,
@@ -205,6 +207,10 @@ impl<'a> Search<'a> {
                     self.reject(error);
                     None
                 } else {
+                    self.stats.highest_hypothetical_feet = self
+                        .stats
+                        .highest_hypothetical_feet
+                        .max(checked.scenario.position()[1]);
                     Some(Node { checked })
                 }
             }
@@ -289,28 +295,28 @@ impl<'a> Search<'a> {
     fn work_distance(node: &Node<'_>, p: [f64; 3]) -> f64 {
         let ledger = &node.checked.ledger;
         if !ledger.remaining.is_empty() {
-            ledger
+            // Pick the nearby pending work first, then rank approaches to it.
+            // Taking the minimum across every target's work-distance can switch
+            // to far-away low work whenever a nearby roof requires ascent.
+            let from = node.checked.scenario.position();
+            let t = ledger
                 .remaining
                 .keys()
-                .map(|t| {
-                    // Elevated horizontal extensions often need a view from
-                    // above. This ranks work poses only; native face/body tests
-                    // still decide placement and may admit lower alternatives.
-                    let unsupported_elevated = t[1] >= ledger.site.baseline.min.y + 3
-                        && node
-                            .checked
-                            .scenario
-                            .block([t[0], t[1] - 1, t[2]])
-                            .is_ok_and(|s| s == air());
-                    let work = [
-                        f64::from(t[0]) + 0.5,
-                        f64::from(t[1]) + if unsupported_elevated { 1.0 } else { -1.0 },
-                        f64::from(t[2]) + 0.5,
-                    ];
-                    ((p[0] - work[0]).hypot(p[2] - work[2]) - 2.0).powi(2)
-                        + 16.0 * (p[1] - work[1]).min(0.0).powi(2)
-                })
-                .fold(f64::INFINITY, f64::min)
+                .min_by(|a, b| distance(from, center(**a)).total_cmp(&distance(from, center(**b))))
+                .expect("nonempty remaining targets");
+            let unsupported_elevated = t[1] >= ledger.site.baseline.min.y + 3
+                && node
+                    .checked
+                    .scenario
+                    .block([t[0], t[1] - 1, t[2]])
+                    .is_ok_and(|s| s == air());
+            let work = [
+                f64::from(t[0]) + 0.5,
+                f64::from(t[1]) + if unsupported_elevated { 1.0 } else { -1.0 },
+                f64::from(t[2]) + 0.5,
+            ];
+            ((p[0] - work[0]).hypot(p[2] - work[2]) - 2.0).powi(2)
+                + 16.0 * (p[1] - work[1]).min(0.0).powi(2)
         } else if !ledger.temporary.is_empty() {
             ledger
                 .temporary
@@ -596,6 +602,8 @@ pub fn generate_construction_plan(
         temporary_cells,
         stats: ConstructionSearch {
             best_remaining_permanent: site.structure.len(),
+            best_remaining_targets: site.structure.keys().copied().collect(),
+            highest_hypothetical_feet: scene.source().position[1],
             frontier_peak: 1,
             ..Default::default()
         },
@@ -616,6 +624,8 @@ pub fn generate_construction_plan(
         }
         if node.checked.ledger.remaining.len() <= search.stats.best_remaining_permanent {
             search.stats.best_remaining_permanent = node.checked.ledger.remaining.len();
+            search.stats.best_remaining_targets =
+                node.checked.ledger.remaining.keys().copied().collect();
             search.stats.best_remaining_temporary =
                 node.checked.ledger.temporary.keys().copied().collect();
         }
