@@ -1,0 +1,31 @@
+{
+  "date_utc": "2026-10-02",
+  "tested_dustroute_commit": "88adf23eaa9bf165e6efbd8092a2425cc24ac1d9",
+  "voxrig_commit": "be55a64bc32da1ff0265ff0bdeb591f13d623137",
+  "scope": "Read-only construction candidate checker; site scopes, ordered native hypothetical geometry, cleanup and conservative material budgets. No action generation or execution authority.",
+  "root_library_tests": {
+    "passed": 187,
+    "failed": 0,
+    "ignored": 6,
+    "seconds": 885.78,
+    "new_contract_resource_tests": 6
+  },
+  "commands": [
+    "cargo test --offline --locked -j 1 -p dustroute-mcp --features voxrig --lib -- --test-threads=1",
+    "cargo clippy --offline --locked -j 1 -p dustroute-mcp --features voxrig --all-targets -- -D warnings",
+    "cargo fmt --all -- --check"
+  ],
+  "clippy": "passed",
+  "format": "passed",
+  "artifact": {
+    "path": "survival-construction-contract-checks-20261002.gz",
+    "sha256": "f5de918d2802c93296ec6138c0230d0f971e19f5fa911daffae4bbc826fe3620",
+    "uncompressed_bytes": 20191
+  },
+  "limitations": [
+    "New tests exercise site policy and resource accounting; no synthetic native capture or fake physics is claimed.",
+    "The previously pinned actual temporary-access trial predates this checker and is not its live acceptance.",
+    "Automatic roofed candidate generation and complete native geometric acceptance remain pending.",
+    "Proposed supply counts are not received inventory reservations. Adoption, durable jobs and full live construction/cleanup remain pending."
+  ]
+}

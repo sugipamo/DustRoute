@@ -201,3 +201,6 @@ Validation: the MCP library suite with `voxrig` enabled passed 187 tests, with
 zero failures and six ignored tests (885.78 seconds, one test thread). This
 includes the six new contract/resource cases. MCP all-targets Clippy with
 `-D warnings` passed. No additional live world trial was run for this checker.
+
+The [pinned contract-check record](evidence/survival-construction-contract-20261002.json)
+links the exact tested source and compressed check logs. Root formatting passed.
