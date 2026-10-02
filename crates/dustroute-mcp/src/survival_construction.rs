@@ -108,6 +108,36 @@ impl ConstructionSite {
         design: &GeneratedGroundedBuildingDesign,
         scope: ConstructionScope,
     ) -> Result<Self> {
+        Self::from_parts(
+            &design.baseline,
+            &design.expected,
+            scope,
+            &design
+                .specification
+                .design
+                .spaces
+                .iter()
+                .map(|s| s.region)
+                .collect::<Vec<_>>(),
+            Some(design.protected_ground),
+            false,
+        )
+    }
+
+    /// Bounded temporary work with exact restoration of the declared initial site.
+    /// This supplies no Blueprint adoption and permits no permanent placement.
+    pub fn temporary_work(baseline: &MinecraftSnapshot, scope: ConstructionScope) -> Result<Self> {
+        Self::from_parts(baseline, baseline, scope, &[], None, true)
+    }
+
+    fn from_parts(
+        before: &MinecraftSnapshot,
+        after: &MinecraftSnapshot,
+        scope: ConstructionScope,
+        spaces: &[Region],
+        protected_ground: Option<Region>,
+        temporary_only: bool,
+    ) -> Result<Self> {
         let bad = |e: &str| ConstructionPlanningError::new("invalid_site_contract", e);
         let known = scope.observed;
         let mut volume = 1i64;
@@ -136,31 +166,31 @@ impl ConstructionSite {
         }) {
             return Err(bad("travel lies outside observed geometry"));
         }
-        let baseline =
-            LiteralSnapshotIndex::new(&design.baseline).map_err(|e| bad(&e.to_string()))?;
-        let expected =
-            LiteralSnapshotIndex::new(&design.expected).map_err(|e| bad(&e.to_string()))?;
+        let baseline = LiteralSnapshotIndex::new(before).map_err(|e| bad(&e.to_string()))?;
+        let expected = LiteralSnapshotIndex::new(after).map_err(|e| bad(&e.to_string()))?;
         let changed = baseline
             .changed_positions(&expected)
             .map_err(|e| bad(&e.to_string()))?;
-        let blueprint = Region::new(design.baseline.min, design.baseline.max);
+        let blueprint = Region::new(before.min, before.max);
         if !known.contains(blueprint.min) || !known.contains(blueprint.max) {
             return Err(bad(
                 "observations must contain the complete Blueprint region",
             ));
         }
-        if design.protected_ground
-            != Region::new(
-                blueprint.min,
-                Pos::new(blueprint.max.x, blueprint.min.y, blueprint.max.z),
-            )
-        {
-            return Err(bad(
-                "protected ground must be the bounded Blueprint bottom plane",
-            ));
-        }
-        if cells(design.protected_ground).any(|p| scope.edits.allows_change(p)) {
-            return Err(bad("existing ground must remain outside editable space"));
+        if let Some(protected_ground) = protected_ground {
+            if protected_ground
+                != Region::new(
+                    blueprint.min,
+                    Pos::new(blueprint.max.x, blueprint.min.y, blueprint.max.z),
+                )
+            {
+                return Err(bad(
+                    "protected ground must be the bounded Blueprint bottom plane",
+                ));
+            }
+            if cells(protected_ground).any(|p| scope.edits.allows_change(p)) {
+                return Err(bad("existing ground must remain outside editable space"));
+            }
         }
         // Validate public generated data rather than trusting cached material counts.
         let mut structure = BTreeMap::new();
@@ -173,7 +203,7 @@ impl ConstructionSite {
             }
             structure.insert(xyz(p), after);
         }
-        if structure.is_empty() || structure.len() > 64 {
+        if (!temporary_only && structure.is_empty()) || structure.len() > 64 {
             return Err(bad("requires 1..64 permanent placements"));
         }
         if scope.temporary.len() > 64 {
@@ -188,13 +218,7 @@ impl ConstructionSite {
             {
                 return Err(bad("temporary region is unordered or outside observations"));
             }
-            if design
-                .specification
-                .design
-                .spaces
-                .iter()
-                .any(|s| intersects(*r, s.region))
-            {
+            if spaces.iter().any(|s| intersects(*r, *s)) {
                 return Err(bad("temporary region overlaps declared permanent air"));
             }
             if cells(*r).any(|p| {
@@ -208,8 +232,8 @@ impl ConstructionSite {
             }
         }
         Ok(Self {
-            baseline: design.baseline.clone(),
-            expected: design.expected.clone(),
+            baseline: before.clone(),
+            expected: after.clone(),
             structure,
             scope,
         })
@@ -279,6 +303,18 @@ pub struct HypotheticalConstructionPlan {
     final_position: [f64; 3],
 }
 impl HypotheticalConstructionPlan {
+    pub(crate) fn source(&self) -> &StandingContext {
+        &self.source
+    }
+    pub(crate) fn scope(&self) -> &ConstructionScope {
+        &self.scope
+    }
+    pub(crate) fn baseline(&self) -> &MinecraftSnapshot {
+        &self.baseline
+    }
+    pub(crate) fn expected(&self) -> &MinecraftSnapshot {
+        &self.expected
+    }
     pub fn steps(&self) -> &[HypotheticalConstructionStep] {
         &self.steps
     }

@@ -2,10 +2,7 @@
 use super::*;
 use serde_json::{Value, json};
 use std::{io::Write, time::Duration};
-use voxrig::checked_survival::{
-    HypotheticalBlockEdit, HypotheticalPlacement, InventorySlot, MiningRetirementStatus,
-    MiningStatus, PlacementStatus,
-};
+use voxrig::checked_survival::InventorySlot;
 use voxrig::{
     BlockFace, Client, ConnectionConfig, MinecraftVersion, NativeBlockState, Region, Server,
 };
@@ -39,30 +36,6 @@ fn block(name: &str) -> NativeBlockState {
         properties: Default::default(),
     }
 }
-async fn observe(viewer: &Client, target: [i32; 3], expected: &str) -> Result<Value, String> {
-    tokio::time::timeout(Duration::from_secs(3), async {
-        loop {
-            let r = viewer
-                .observe_region(Region {
-                    min: target,
-                    max: target,
-                })
-                .await
-                .map_err(|e| e.to_string())?;
-            if r.blocks[0]
-                .state
-                .as_ref()
-                .is_some_and(|b| b.name == expected)
-            {
-                return Ok(json!(r));
-            }
-            tokio::time::sleep(Duration::from_millis(20)).await;
-        }
-    })
-    .await
-    .map_err(|_| format!("independent observation timeout at {target:?}"))?
-}
-
 #[tokio::test]
 #[ignore = "dedicated non-OP 1.21.11 fixture with console preparation and explicit environment"]
 async fn native_temporary_access_place_climb_retreat_cleanup() {
@@ -125,7 +98,7 @@ async fn native_temporary_access_place_climb_retreat_cleanup() {
     let observer_trace = viewer.stop_packet_trace().await.unwrap();
     let disconnect = bot.disconnect().await.map_err(|e| e.to_string());
     viewer.disconnect().await.unwrap();
-    serde_json::to_writer(file,&json!({"scope":"isolated non-OP temporary dirt access; preplanned placement/climb/retreat/removal geometry; explicit mining retirement and fresh recovery; not adopted roofed construction", "before":before,"events":events,"after":after,"history":history,"traces":traces,"observer_trace":observer_trace,"error":result.as_ref().err(),"disconnect_error":disconnect.err()})).unwrap();
+    serde_json::to_writer(file,&json!({"scope":"isolated non-OP common durable executor; checked temporary-only plan; not adopted roofed construction", "before":before,"events":events,"after":after,"history":history,"traces":traces,"observer_trace":observer_trace,"error":result.as_ref().err(),"disconnect_error":disconnect.err()})).unwrap();
     result.unwrap();
 }
 
@@ -135,8 +108,17 @@ async fn exercise(
     events: &mut Vec<Value>,
     traces: &mut Vec<Value>,
 ) -> Result<(), String> {
+    use crate::survival_construction::{
+        ConstructionAction, ConstructionScope, ConstructionSite, PlacementPurpose,
+        preview_construction_sequence,
+    };
+    use crate::survival_execution::{ExecutionProgress, SurvivalExecutor};
+    use dustroute_library::world_edit::WorldEditScope;
+    use dustroute_translate::{
+        snapshot::{MinecraftSnapshot, MinecraftSnapshotBlock},
+        world::{Pos, Region as SiteRegion},
+    };
     let ops = bot.survival().map_err(|e| e.to_string())?;
-    let observer = viewer.survival().map_err(|e| e.to_string())?;
     let capture = ops
         .capture_survival_scene(Region {
             min: [-5, -62, -5],
@@ -145,8 +127,7 @@ async fn exercise(
         .await
         .map_err(|e| e.to_string())?;
     let mut scenario = capture.scenario();
-    let mut placements: Vec<HypotheticalPlacement> = vec![];
-    // Far-to-near support clicks preserve visibility while building this platform.
+    let mut actions = Vec::new();
     for x in [3, 2, 1] {
         let r = rotation(
             hypothetical_eye(&scenario),
@@ -155,135 +136,197 @@ async fn exercise(
         let p = scenario
             .preview_cube_placement([x, -61, 0], BlockFace::Up, r, "dirt")
             .map_err(|e| e.to_string())?;
-        scenario = scenario
-            .after_edits(std::slice::from_ref(&p.edit))
-            .map_err(|e| e.to_string())?;
-        placements.push(p);
+        actions.push(ConstructionAction::Place {
+            purpose: PlacementPurpose::Temporary,
+            support: p.support,
+            face: BlockFace::Up,
+            rotation: r,
+            material: "dirt".into(),
+        });
+        scenario = scenario.after_edits(&[p.edit]).map_err(|e| e.to_string())?;
     }
-    let up = controls(-90.0, true);
-    let down = controls(90.0, false);
-    let climb = scenario.preview_path(&up).map_err(|e| e.to_string())?;
-    let elevated = scenario.after_path(&up).map_err(|e| e.to_string())?;
-    if elevated.position()[1] != -59.0 {
-        return Err("planned climb did not reach platform".into());
+    for (yaw, jump) in [(-90.0, true), (90.0, false)] {
+        let input = controls(yaw, jump);
+        scenario = scenario.after_path(&input).map_err(|e| e.to_string())?;
+        actions.push(ConstructionAction::Move { controls: input });
     }
-    let retreat = elevated.preview_path(&down).map_err(|e| e.to_string())?;
-    let mut returned = elevated.after_path(&down).map_err(|e| e.to_string())?;
-    if returned.position()[1] != -60.0 {
-        return Err("planned retreat did not reach ground".into());
-    }
-    let mut removals: Vec<HypotheticalBlockEdit> = vec![];
     for x in 1..=3 {
-        let r = rotation(hypothetical_eye(&returned), [f64::from(x), -59.5, 0.5]);
-        let edit = returned
+        let r = rotation(hypothetical_eye(&scenario), [f64::from(x), -59.5, 0.5]);
+        let edit = scenario
             .preview_cube_removal([x, -60, 0], BlockFace::West, r)
             .map_err(|e| e.to_string())?;
-        returned = returned
-            .after_edits(std::slice::from_ref(&edit))
-            .map_err(|e| e.to_string())?;
-        removals.push(edit);
+        scenario = scenario.after_edits(&[edit]).map_err(|e| e.to_string())?;
+        actions.push(ConstructionAction::RemoveTemporary {
+            target: [x, -60, 0],
+            face: BlockFace::West,
+            rotation: r,
+        });
     }
-    events.push(json!({"phase":"complete_geometric_plan","placements":placements,"climb":climb,"retreat":retreat,"removals":removals,"temporary_items_required_without_recovery":3}));
-    ops.validate_survival_scene(&capture)
-        .await
-        .map_err(|e| e.to_string())?;
-    let swap = ops
-        .swap_player_hotbar(9, 0)
-        .await
-        .map_err(|e| e.to_string())?;
-    ops.wait_inventory_swap(&swap, Duration::from_secs(3))
-        .await
-        .map_err(|e| e.to_string())?;
-    ops.select_hotbar(0).await.map_err(|e| e.to_string())?;
-    for p in &placements {
-        ops.look(p.rotation).await.map_err(|e| e.to_string())?;
-        let intent = ops
-            .place_survival_cube(p.support, BlockFace::Up)
-            .await
-            .map_err(|e| e.to_string())?;
-        if intent.target != p.edit.position
-            || intent.before != p.edit.before
-            || intent.expected != p.edit.after
-            || intent.cursor != p.cursor
-        {
-            return Err("real placement differs from hypothetical target/cursor".into());
-        }
-        let status = ops
-            .wait_survival_placement(&intent, Duration::from_secs(3))
-            .await
-            .map_err(|e| e.to_string())?;
-        if !matches!(status, PlacementStatus::ObservedPlaced { .. }) {
-            return Err(format!("{status:?}"));
-        }
-        let seen = observe(viewer, intent.target, "minecraft:dirt").await?;
-        events
-            .push(json!({"phase":"placement","intent":intent,"status":status,"independent":seen}));
-    }
-    for (name, input, hypothetical) in [("climb", &up, &climb), ("retreat", &down, &retreat)] {
-        let preview = ops
-            .preview_survival_path(input)
-            .await
-            .map_err(|e| e.to_string())?;
-        if preview.frames != hypothetical.frames {
-            return Err(format!(
-                "{name} live preview differs from hypothetical frames"
-            ));
-        }
-        ops.start_previewed_survival_motion(&preview, &observer)
-            .await
-            .map_err(|e| e.to_string())?;
-        let record = super::native_trial::finish(&ops).await?;
-        events.push(json!({"phase":name,"motion":record}));
-    }
-    for x in 1..=3 {
-        let mut complete = false;
-        for attempt in 1..=3 {
-            use crate::survival_cleanup::{
-                CleanupReconciliation, CleanupRecoveryPlan, choose_empty_hand,
-            };
-            let current = bot.survival().map_err(|e| e.to_string())?;
-            // Each bounded attempt reselects geometry and inventory on a new session.
-            let scene = current
-                .capture_survival_scene(Region {
-                    min: [-5, -62, -5],
-                    max: [11, -53, 9],
-                })
-                .await
-                .map_err(|e| e.to_string())?;
-            let future = scene.scenario();
-            let r = rotation(hypothetical_eye(&future), [f64::from(x), -59.5, 0.5]);
-            let edit = future
-                .preview_cube_removal([x, -60, 0], BlockFace::West, r)
-                .map_err(|e| e.to_string())?;
-            let owned = &removals[(x - 1) as usize];
-            if edit.position != owned.position
-                || edit.before != owned.before
-                || edit.after != owned.after
-            {
-                return Err(
-                    "fresh removal differs from the originally owned temporary block".into(),
-                );
+    let r = capture.region();
+    let region = |a: [i32; 3], b: [i32; 3]| {
+        SiteRegion::new(Pos::new(a[0], a[1], a[2]), Pos::new(b[0], b[1], b[2]))
+    };
+    let mut baseline = MinecraftSnapshot {
+        min: Pos::new(r.min[0], r.min[1], r.min[2]),
+        max: Pos::new(r.max[0], r.max[1], r.max[2]),
+        blocks: Vec::new(),
+    };
+    let initial_scenario = capture.scenario();
+    for x in r.min[0]..=r.max[0] {
+        for y in r.min[1]..=r.max[1] {
+            for z in r.min[2]..=r.max[2] {
+                let b = initial_scenario
+                    .block([x, y, z])
+                    .map_err(|e| e.to_string())?;
+                if b != block("air") {
+                    baseline.blocks.push(MinecraftSnapshotBlock {
+                        pos: Pos::new(x, y, z),
+                        name: b.name,
+                        properties: b.properties,
+                    });
+                }
             }
-            let player = current.player_state().await.map_err(|e| e.to_string())?;
-            let empty = choose_empty_hand(&player).map_err(|e| format!("{e:?}"))?;
-            current
-                .select_hotbar(empty)
+        }
+    }
+    let temporary = region([1, -60, 0], [3, -60, 0]);
+    let scope = ConstructionScope {
+        observed: region(r.min, r.max),
+        edits: WorldEditScope {
+            editable: vec![temporary],
+            protected: vec![],
+        },
+        temporary: vec![temporary],
+        travel: TravelBounds {
+            min: [-4.0, -60.0, -4.0],
+            max: [10.0, -54.0, 8.0],
+        },
+        retreat: TravelBounds {
+            min: [-1.0, -60.0, -1.0],
+            max: [1.0, -60.0, 1.0],
+        },
+    };
+    let site = ConstructionSite::temporary_work(&baseline, scope).map_err(|e| e.to_string())?;
+    let plan = preview_construction_sequence(
+        &capture,
+        &site,
+        &actions,
+        &std::collections::BTreeMap::from([("minecraft:dirt".into(), 3)]),
+    )
+    .map_err(|e| e.to_string())?;
+    events.push(json!({"phase":"common_checked_plan","plan":plan}));
+    let directory = std::path::PathBuf::from(format!(
+        "{}.journal",
+        std::env::var("DUSTROUTE_SURVIVAL_ACCESS_OUTPUT").unwrap()
+    ));
+    let config = ConnectionConfig::offline(
+        Server::new("127.0.0.1", 25572),
+        "NatMineBot",
+        MinecraftVersion::Java1_21_11,
+    );
+    let mut executor =
+        SurvivalExecutor::create(bot.clone(), viewer.clone(), config, plan, &directory)
+            .await
+            .map_err(|e| e.to_string())?;
+    let mut reconnects = 0;
+    loop {
+        let result = executor.advance().await;
+        if executor.record().reconnects != reconnects {
+            if let Ok(trace) = bot.stop_packet_trace().await {
+                traces.push(json!(trace));
+            }
+            *bot = executor.client().clone();
+            bot.start_packet_trace(8_388_608)
                 .await
                 .map_err(|e| e.to_string())?;
-            current.look(r).await.map_err(|e| e.to_string())?;
-            let intent = current
-                .start_survival_mining(edit.position, BlockFace::West)
-                .await
-                .map_err(|e| e.to_string())?;
-            events.push(json!({"phase":"removal_start","target":edit.position,"attempt":attempt,"intent":intent,"selected_from":player}));
-            // Optional declared external-input trial, strictly after START. It
-            // supplies one item; it does not remove/restore blocks or clear guards.
-            if x == 1
-                && attempt == 1
-                && std::env::var("DUSTROUTE_SURVIVAL_ACCESS_INJECT_HAND").as_deref() == Ok("1")
-            {
+            reconnects = executor.record().reconnects;
+        }
+        let progress = match result {
+            Ok(p) => p,
+            Err(e) => {
+                events.push(json!({"phase":"common_executor_stopped","record":executor.record()}));
+                return Err(e.to_string());
+            }
+        };
+        events.push(json!({"phase":"common_executor_progress","progress":progress}));
+        if let ExecutionProgress::MiningStarted {
+            target: [1, -60, 0],
+            selected_hotbar,
+            attempt: 1,
+        } = progress
+        {
+            let boundary = std::env::var("DUSTROUTE_SURVIVAL_ACCESS_BOUNDARY").unwrap_or_default();
+            if boundary == "cancel" || boundary == "disconnect" || boundary == "target" {
+                if boundary == "cancel" {
+                    // Drop the actual common executor future while it is waiting
+                    // on the START result, then prove it cannot dispatch again.
+                    assert!(
+                        tokio::time::timeout(Duration::from_millis(1), executor.advance())
+                            .await
+                            .is_err()
+                    );
+                } else if boundary == "disconnect" {
+                    executor
+                        .client()
+                        .disconnect()
+                        .await
+                        .map_err(|e| e.to_string())?;
+                    assert!(executor.advance().await.is_err());
+                } else {
+                    println!(
+                        "FIXTURE target: START retained; setblock 1 -60 0 minecraft:stone; enter"
+                    );
+                    std::io::stdout().flush().unwrap();
+                    tokio::time::timeout(
+                        Duration::from_secs(60),
+                        tokio::task::spawn_blocking(|| {
+                            let mut s = String::new();
+                            std::io::stdin().read_line(&mut s)
+                        }),
+                    )
+                    .await
+                    .map_err(|e| e.to_string())?
+                    .map_err(|e| e.to_string())?
+                    .map_err(|e| e.to_string())?;
+                    assert!(executor.advance().await.is_err());
+                }
+                let refusal = executor.advance().await.unwrap_err();
+                assert_eq!(refusal.code, "execution_needs_inspection");
+                let history = executor
+                    .client()
+                    .survival()
+                    .unwrap()
+                    .operation_history()
+                    .await;
+                assert!(history.mining.as_ref().unwrap().finish.is_none());
+                executor.cancel().map_err(|e| e.to_string())?;
+                let record = executor.record().clone();
+                drop(executor);
+                let diagnosis =
+                    crate::survival_execution::diagnose(&directory).map_err(|e| e.to_string())?;
+                assert_eq!(
+                    diagnosis.continuation,
+                    crate::survival_execution::Continuation::NeedsInspection
+                );
+                let remaining = viewer
+                    .observe_region(Region {
+                        min: [1, -60, 0],
+                        max: [3, -60, 0],
+                    })
+                    .await
+                    .map_err(|e| e.to_string())?;
+                assert_eq!(remaining.blocks.len(), 3);
+                assert!(
+                    remaining
+                        .blocks
+                        .iter()
+                        .all(|b| b.state.as_ref().is_some_and(|s| s.name != "minecraft:air"))
+                );
+                events.push(json!({"phase":"expected_boundary_stop","boundary":boundary,"record":record,"diagnosis":diagnosis,"refusal":refusal,"history":history,"remaining":remaining}));
+                return Ok(());
+            }
+            if std::env::var("DUSTROUTE_SURVIVAL_ACCESS_INJECT_HAND").as_deref() == Ok("1") {
                 println!(
-                    "FIXTURE interrupt: START retained; replace NatMineBot hotbar.{empty} with dirt 1; enter"
+                    "FIXTURE interrupt: START retained; replace NatMineBot hotbar.{selected_hotbar} with dirt 1; enter"
                 );
                 std::io::stdout().flush().unwrap();
                 tokio::time::timeout(
@@ -297,124 +340,12 @@ async fn exercise(
                 .map_err(|e| e.to_string())?
                 .map_err(|e| e.to_string())?
                 .map_err(|e| e.to_string())?;
-                let interrupted = current
-                    .wait_survival_mining(&intent, Duration::from_secs(3))
-                    .await
-                    .map_err(|e| e.to_string())?;
-                if !matches!(interrupted, MiningStatus::RequiresInspection { .. }) {
-                    return Err("declared inventory interruption was not observed".into());
-                }
-            } else {
-                // Scheduling estimate only. A received interruption bypasses FINISH.
-                let status = current
-                    .wait_survival_mining(&intent, Duration::from_millis(intent.estimated_wait_ms))
-                    .await
-                    .map_err(|e| e.to_string())?;
-                if matches!(status, MiningStatus::Mining { .. }) {
-                    if let Err(error) = current.finish_survival_mining(&intent).await {
-                        if !matches!(
-                            current.observe_survival_mining(&intent).await,
-                            Ok(MiningStatus::RequiresInspection { .. })
-                        ) {
-                            return Err(error.to_string());
-                        }
-                    }
-                    current
-                        .wait_survival_mining(&intent, Duration::from_secs(5))
-                        .await
-                        .map_err(|e| e.to_string())?;
-                }
-            }
-            let status = current
-                .observe_survival_mining(&intent)
-                .await
-                .map_err(|e| e.to_string())?;
-            let history = current.operation_history().await;
-            let record = history
-                .mining
-                .as_ref()
-                .ok_or("mining history unavailable")?;
-            let plan =
-                CleanupRecoveryPlan::for_record(&edit, record).map_err(|e| format!("{e:?}"))?;
-            let recovery = current
-                .prepare_mining_retirement(&intent, &observer)
-                .await
-                .map_err(|e| e.to_string())?;
-            events.push(json!({"phase":"removal_outcome","attempt":attempt,"plan":plan,"status":status,"history":history}));
-            traces.push(json!(
-                bot.stop_packet_trace().await.map_err(|e| e.to_string())?
-            ));
-            recovery.close_source().await.map_err(|e| e.to_string())?;
-            let retirement = recovery
-                .wait(Duration::from_secs(3))
-                .await
-                .map_err(|e| e.to_string())?;
-            if !matches!(retirement, MiningRetirementStatus::Retired { .. }) {
-                return Err(format!("{retirement:?}"));
-            }
-            let target = viewer
-                .observe_region(Region {
-                    min: edit.position,
-                    max: edit.position,
-                })
-                .await
-                .map_err(|e| e.to_string())?;
-            let expected = plan
-                .target_for_reconnect(target.blocks[0].state.as_ref())
-                .map_err(|e| format!("{e:?}"))?;
-            let recovered = recovery
-                .reconnect(
-                    ConnectionConfig::offline(
-                        Server::new("127.0.0.1", 25572),
-                        "NatMineBot",
-                        MinecraftVersion::Java1_21_11,
-                    ),
-                    expected,
-                )
-                .await
-                .map_err(|e| e.to_string())?;
-            *bot = recovered.client;
-            bot.start_packet_trace(8_388_608)
-                .await
-                .map_err(|e| e.to_string())?;
-            let fresh = recovered
-                .operations
-                .capture_survival_scene(scene.region())
-                .await
-                .map_err(|e| e.to_string())?;
-            let decision = plan
-                .reconcile_fresh(&recovered.evidence, &fresh)
-                .map_err(|e| format!("{e:?}"))?;
-            events.push(json!({"phase":"recovery","target":target,"attempt":attempt,"retirement":retirement,
-                "evidence":recovered.evidence,"decision":decision,"fresh_inventory":recovered.operations.player_state().await.map_err(|e|e.to_string())?}));
-            if decision == CleanupReconciliation::AlreadyAbsent {
-                complete = true;
-                break;
             }
         }
-        if !complete {
-            return Err(format!(
-                "bounded cleanup attempts exhausted at x={x}; no further retry"
-            ));
+        if matches!(progress, ExecutionProgress::Completed) {
+            break;
         }
     }
-    let final_region = viewer
-        .observe_region(Region {
-            min: [-1, -61, -1],
-            max: [4, -59, 1],
-        })
-        .await
-        .map_err(|e| e.to_string())?;
-    for cell in &final_region.blocks {
-        let expected = if cell.position[1] == -61 {
-            "stone"
-        } else {
-            "air"
-        };
-        if cell.state.as_ref() != Some(&block(expected)) {
-            return Err(format!("final site differs at {:?}", cell.position));
-        }
-    }
-    events.push(json!({"phase":"complete_cleanup","independent":final_region}));
+    events.push(json!({"phase":"common_executor_complete","record":executor.record()}));
     Ok(())
 }

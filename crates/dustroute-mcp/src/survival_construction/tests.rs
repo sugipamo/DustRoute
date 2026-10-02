@@ -123,6 +123,35 @@ fn temporary_reuse_never_credits_unobserved_item_recovery() {
 }
 
 #[test]
+fn temporary_only_site_requires_owned_cleanup_and_exact_initial_restoration() {
+    let g = design();
+    let site = ConstructionSite::temporary_work(&g.baseline, scope()).unwrap();
+    assert!(site.structure.is_empty());
+    let mut ledger = Ledger::new(&site);
+    let put = edit([-3, 0, 2], air(), block("dirt"));
+    assert!(ledger.place(PlacementPurpose::Permanent, &put).is_err());
+    let remove = edit(put.position, put.after.clone(), air());
+    assert!(ledger.remove(&remove).is_err());
+    ledger.place(PlacementPurpose::Temporary, &put).unwrap();
+    assert!(
+        ledger
+            .finish(&BTreeMap::from([("minecraft:dirt".into(), 1)]))
+            .is_err()
+    );
+    let mut ledger = Ledger::new(&site);
+    ledger.place(PlacementPurpose::Temporary, &put).unwrap();
+    ledger.remove(&remove).unwrap();
+    assert!(
+        ledger
+            .finish(&BTreeMap::from([("minecraft:dirt".into(), 1)]))
+            .is_ok()
+    );
+    let mut s = scope();
+    s.temporary = vec![region([0, -1, 0], [0, -1, 0])];
+    assert!(ConstructionSite::temporary_work(&g.baseline, s).is_err());
+}
+
+#[test]
 fn temporary_scope_cannot_expand_into_air_obligations_structure_or_ground() {
     let g = design();
     for forbidden in [[2, 1, 2], [0, 6, 0], [2, -1, 2]] {
