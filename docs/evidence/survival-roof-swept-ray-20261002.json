@@ -1,0 +1,96 @@
+{
+  "schema": "dustroute.survival-roof-preflight.v1",
+  "recorded_at_utc": "2026-10-02T12:26:19.250839+00:00",
+  "status": "concern_stop_before_shared_blueprint_anchor_change",
+  "consumer_preflight_source": "648e923d95e39db4996fb2aea00c1ce060066599",
+  "native_runtime_and_vendor_source": "1877209da48a78443dd7d30e7db6720bd6775416",
+  "validation": {
+    "native_library_passed": 194,
+    "native_library_ignored": 6,
+    "native_all_targets_clippy": "passed",
+    "consumer_voxrig_survival_tests_passed": 19,
+    "consumer_voxrig_survival_tests_ignored": 4,
+    "consumer_voxrig_all_targets_clippy": "passed",
+    "vendor_managed_files": 294,
+    "featureless_consumer_test": "zero selected tests; NOT evidence for survival implementation"
+  },
+  "preflight": {
+    "passed": false,
+    "execute": false,
+    "test_exit_code": 101,
+    "server_exit_code": 0,
+    "reached": "Blueprint generation at end of authored detached sequence; full construction checker not reached",
+    "error": "grounded whole-Assembly review failed: building.layout at [0,0,0] has unknown initial coordinate outside known region [-1,-61,-1]..[5,-53,5]",
+    "native_build_or_motion_actions": "not dispatched: execute=false, failure in plan() before executor creation",
+    "observation_limit": "test driver unwrap panicked before JSON/history/packet traces were written; no complete received-trace proof retained for this attempt",
+    "result_json_bytes": 0,
+    "fixture_console_mutations": "initial floor/air, positions and supplied inventory only; distinct from building actions"
+  },
+  "cause": {
+    "file": "crates/dustroute-translate/src/building/sources.rs",
+    "line": 206,
+    "detail": "body clearance pattern uses world-coordinate offsets from a fixed Pos::default() layout anchor; fixed terminal validation requires known origin even when whole design is elsewhere"
+  },
+  "next_proposal": [
+    "Choose a declared non-reserved known anchor for body clearance and make every pattern offset relative to it, preserving the same absolute target cells.",
+    "Test positive and negative translated designs and existing grounded/component/clearance behavior without enlarging observations or edit permissions.",
+    "Propagate design errors from the roof trial as Result so received traces and planned prefix are saved on refusal.",
+    "Repeat complete preflight, then live non-OP roof construction only after all checks pass."
+  ],
+  "artifacts": [
+    {
+      "path": "survival-roof/voxrig-swept-ray-tests.log.gz",
+      "uncompressed_bytes": 24662,
+      "sha256": "bdc0fe6c0c5cea8451b03e0048da977e946234502a4a94d1b95128250ec62b13",
+      "gzip_sha256": "5d4cc47c17c8fa466600802e4347f087ac7a33e92e3000487044f0774ada1712"
+    },
+    {
+      "path": "survival-roof/voxrig-swept-ray-clippy.log.gz",
+      "uncompressed_bytes": 114,
+      "sha256": "cca101ca4cc5e5c614a4c4c40906eaefba64e39539fda93ec5fef76910dd57ba",
+      "gzip_sha256": "0253df7400bce43f4b758fd0fdfe57ec1b5f5f39b46454030faab2d570693a4b"
+    },
+    {
+      "path": "survival-roof/roof-swept-ray-consumer-tests.log.gz",
+      "uncompressed_bytes": 588,
+      "sha256": "9060d3e4638bf319e974040b5806ae2e90489d59a310a8a55fbc5055e499298f",
+      "gzip_sha256": "3fd4b9bcdbc0aa2e3de3ae535a0360858d81868412f6c4dd239f0cb5b405de70"
+    },
+    {
+      "path": "survival-roof/roof-swept-ray-consumer-clippy.log.gz",
+      "uncompressed_bytes": 387,
+      "sha256": "4509922b6d5104942c55bc302cee8257d9e0a2ac84031dd33e24c3d6f29f9e96",
+      "gzip_sha256": "909b04b1322b4cf1f044ed0ba4c76bcd6aad8257965b6959eef9751c6a475a95"
+    },
+    {
+      "path": "survival-roof/roof-swept-ray-consumer-voxrig-tests.log.gz",
+      "uncompressed_bytes": 3213,
+      "sha256": "b0be9d6be8fe23fd1892add9416abcf19c43d4477dbde4c5eb8cef21bca34976",
+      "gzip_sha256": "d71075492a070b6c43e65553413a3cfbfa9442683e43c688676bc6f936a9d212"
+    },
+    {
+      "path": "survival-roof/roof-swept-ray-consumer-voxrig-clippy.log.gz",
+      "uncompressed_bytes": 205,
+      "sha256": "43827fa99167681cd239de1317878f6b2e9e691e1d81bba0435604815cd1eaa3",
+      "gzip_sha256": "ab586f5b7a8bb771f55a7c88ad520bcc564efa67c170448e7daaef977d8a5354"
+    },
+    {
+      "path": "survival-roof/survival-roof-20261002-preflight-b-test.log.gz",
+      "uncompressed_bytes": 1911,
+      "sha256": "893a2f45f8a5fcab29311a90995fd1c257156e67be3b8cf4964a28f1d63aa3b0",
+      "gzip_sha256": "48f662083693f82253eeec0dd84c744613c6dc071d1238b6d92ac8a90d60a038"
+    },
+    {
+      "path": "survival-roof/survival-roof-20261002-preflight-b-server-console.log.gz",
+      "uncompressed_bytes": 3769,
+      "sha256": "eb3ad29fdfc4fd620295e3bbd513a9b206bb90a5ecf4cb1dbe8b4873ddf63635",
+      "gzip_sha256": "31c0a3f28bb68ecb287b79286d92e9688a2ad8e21cf677a6e2bea391eaabfdd8"
+    },
+    {
+      "path": "survival-roof/survival-roof-20261002-preflight-b-server.log.gz",
+      "uncompressed_bytes": 3734,
+      "sha256": "3978c6307293d0acd744d7f8d53cef3cd591b24458fcde9a73928b2b69c63002",
+      "gzip_sha256": "f6a47a69b6c79a4caafd40973f82a1b7ec63574c8ec1cc23f36f7e12bdbb1dfc"
+    }
+  ]
+}

@@ -139,3 +139,47 @@ invocation omitted the feature and selected zero tests; it is not validation of
 this path.
 Complete roof preflight and live construction remain required. The historical
 preflight refusal and its original source pins are retained unchanged.
+
+## Second preflight: shared Blueprint anchor concern (2026-10-02 UTC)
+
+The approved native fix and Voxrig-enabled consumer checks passed. The new
+`execute=false` preflight at DustRoute `648e923` / Voxrig `1877209` advanced past
+the previous sight refusal and reached `design()` after the final hypothetical
+scaffold removal. It failed while generating the grounded Blueprint, BEFORE
+`preview_construction_sequence` and BEFORE creating the real executor. This is
+not a complete checked plan and not live building acceptance.
+
+The body clearance `layout` port in `building/sources.rs` is always anchored at
+`Pos::default()` (world origin), while its pattern contains world-coordinate
+offsets. The roof's known region is `[-1,-61,-1]..[5,-53,5]`; origin is outside it.
+The reviewer therefore reports an undetermined fixed terminal at `[0,0,0]` with
+`unknown initial coordinate`. Individual part/space anchors already use positions
+inside their geometry. This issue is in the common building source generator,
+not Voxrig visibility, Minecraft observation, or a placement failure.
+
+The trial's `design()` used `unwrap`, so this error panicked before its usual
+JSON/history/trace save; the output JSON is empty. Retained server/test logs plus
+the pinned `execute=false` source establish where the attempt stopped, but do not
+supply a complete received-trace record. Do not present this as an observed
+complete planning pass. Server shutdown finished normally (exit 0), test exit
+101. Only fixture setup commands modified this isolated world; no construction
+or movement controls were dispatched. See [the new evidence record](evidence/survival-roof-swept-ray-20261002.json).
+
+### Concrete next prerequisite, not implemented
+
+1. In the common building source generator, select a known, non-reserved anchor
+   from the clearance pattern and express each pattern position relative to it.
+   Preserve the exact absolute cells, typed obligations, declared region and
+   edit permissions. Do not expand the known region just to include world origin.
+2. Verify translated positive/negative designs and existing grounded, composed
+   and permanent-air contracts. Pattern anchors affect more than this test, so
+   prove equivalent absolute targets and preserve rejection of real violations.
+3. Return roof design failures through the driver's ordinary error path so its
+   evidence survives refusal; this is test-driver error handling, not recovery
+   authority or a change to production execution gates.
+4. Repeat the full preflight and, only on success, the live roof acceptance.
+
+This is a small-to-medium shared Blueprint correctness prerequisite. Under the
+user's stop-on-new-concern instruction, its implementation and dependent live
+construction are stopped pending approval. The continuous-ray native change is
+complete and separately committed; goal 1 and stages 2–5 remain unfinished.
