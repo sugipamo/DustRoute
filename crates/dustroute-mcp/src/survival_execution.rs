@@ -129,7 +129,9 @@ impl SurvivalExecutor {
         let expected = native::scene_blocks(&scene)?;
         let journal = Journal::create(
             directory,
-            json!({"plan":plan,"capabilities":ops.capabilities()}),
+            json!({"plan":plan,"capabilities":ops.capabilities(),
+                "declared_reconnect":{"host":reconnect.server.host,"port":reconnect.server.port,
+                    "username":reconnect.username,"version":reconnect.version}}),
         )?;
         Ok(Self {
             bot,
@@ -153,6 +155,8 @@ impl SurvivalExecutor {
     pub fn client(&self) -> &Client {
         &self.bot
     }
+    /// Stop further dispatch. This is not a native abort/retirement receipt:
+    /// an outstanding operation still requires inspection and explicit retirement.
     pub fn cancel(&mut self) -> Result<()> {
         self.call_active = true;
         self.journal.event("cancelled", self.journal.record.outcome.clone(), Continuation::Cancelled,

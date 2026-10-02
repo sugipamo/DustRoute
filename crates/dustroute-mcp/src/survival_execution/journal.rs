@@ -208,6 +208,23 @@ mod tests {
         }
     }
     #[test]
+    #[ignore = "read-only fresh-process check of an explicitly selected retained live journal"]
+    fn retained_live_record_is_diagnosis_only_in_a_fresh_process() {
+        let directory = PathBuf::from(std::env::var("DUSTROUTE_SURVIVAL_REOPEN_JOURNAL").unwrap());
+        let before = fs::read(directory.join("record.json")).unwrap();
+        let diagnosis = diagnose(&directory).unwrap();
+        assert!(!diagnosis.record.events.is_empty());
+        assert_eq!(diagnosis.continuation, Continuation::NeedsInspection);
+        assert!(
+            matches!(Journal::create(&directory,serde_json::json!({})),Err(e) if e.code == "execution_exists")
+        );
+        assert_eq!(fs::read(directory.join("record.json")).unwrap(), before);
+        println!(
+            "reopened {}: historical {:?}, effective diagnosis {:?}; no native client created",
+            diagnosis.record.id, diagnosis.record.continuation, diagnosis.continuation
+        );
+    }
+    #[test]
     fn restart_retains_uncertain_intent_without_replaying_or_replacing_it() {
         let d = Directory::new();
         let mut j = Journal::create(&d.0, json!({"diagnostic_plan":1})).unwrap();

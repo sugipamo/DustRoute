@@ -291,7 +291,8 @@ pub struct ConstructionMaterials {
     pub peak_temporary_in_world: BTreeMap<String, usize>,
     pub required_supplied: BTreeMap<String, usize>,
 }
-/// Geometric/order/material evidence only. Never executable or deserializable.
+/// Geometric/order/material evidence, not adoption or standalone action authority.
+/// The caller-authorized executor must revalidate it; it is not deserializable.
 #[derive(Clone, Debug, Serialize)]
 pub struct HypotheticalConstructionPlan {
     source: StandingContext,
