@@ -9,6 +9,7 @@ mod survival;
 #[cfg(test)]
 mod tests;
 pub use super::loading::{InteractionLoading, LoadingAttempt};
+pub use super::motion::{OwnMotion, PositionBasis, PositionSubmission, ReceivedPose};
 use super::*;
 pub use inventory::{InventorySwap, InventorySwapObservation};
 pub use mining::{
@@ -161,6 +162,8 @@ pub struct PlayerState {
     pub position: Option<[f64; 3]>,
     /// False after local movement until a server position packet replaces it.
     pub position_from_server: bool,
+    /// Separate position receipts and local submissions, with retained provenance.
+    pub motion: OwnMotion,
     /// Yaw and pitch in native degrees.
     pub rotation: [f32; 2],
     /// Latest received game mode.
@@ -211,6 +214,8 @@ pub struct OperationHistory {
     pub interaction_loading: InteractionLoading,
     /// Last main-hand selection evidence, including incomplete send attempts.
     pub selected_hotbar: Option<HotbarSelection>,
+    /// Position receipt/submission history; never replayable authority.
+    pub motion: OwnMotion,
 }
 /// A periodic native time packet bound to its receive sequence.
 #[derive(Clone, Debug, Serialize)]
@@ -257,7 +262,6 @@ pub(super) struct OperationState {
     game_mode: Option<GameMode>,
     abilities: Option<u8>,
     requested_flying: bool,
-    pub position_from_server: bool,
     ack: Option<i32>,
     inventory: Inventory,
     selected_hotbar: Option<HotbarSelection>,
@@ -300,6 +304,7 @@ impl Operations {
         let closed = self.bot.session.stopped.load(Ordering::Acquire);
         let interrupted = self.bot.session.interrupted_packet.load(Ordering::Acquire);
         OperationHistory {
+            motion: state.motion.clone(),
             connection_id: self.bot.session.id,
             last_receive_sequence: state.sequence,
             connection_closed: closed || interrupted >= 0,
@@ -341,7 +346,10 @@ impl Operations {
             receive_sequence: state.sequence,
             dimension: state.world.dimension.as_ref().map(|d| d.0.clone()),
             position: state.position,
-            position_from_server: state.operations.position_from_server,
+            position_from_server: state
+                .motion
+                .received_position(state.loading.generation, state.position),
+            motion: state.motion.clone(),
             rotation: state.rotation,
             game_mode: state.operations.game_mode,
             may_fly: state.operations.abilities.is_some_and(|a| a & 4 != 0),
@@ -439,13 +447,18 @@ impl Operations {
             payload.extend(v.to_be_bytes());
         }
         payload.push(0);
+        let generation = state.loading.generation;
+        let sequence = state.sequence;
+        state
+            .motion
+            .begin(generation, sequence, position, rotation)?;
         self.bot
             .session
             .send(ids::play_serverbound::POSITION_LOOK, &payload)
             .await?;
         state.position = Some(position);
         state.rotation = rotation;
-        state.operations.position_from_server = false;
+        state.motion.dispatched();
         Ok(())
     }
     /// Submit a view direction in native degrees, without changing position.
@@ -602,6 +615,12 @@ impl Operations {
                 anyhow::anyhow!(
                     "native interaction loading pending; await readiness or inspect retained loading attempt"
                 ),
+            ));
+        }
+        if state.motion.position_basis == PositionBasis::PendingSubmission {
+            return Err(Error::new(
+                ErrorKind::State,
+                anyhow::anyhow!("position submission unresolved; inspect motion history"),
             ));
         }
         if state

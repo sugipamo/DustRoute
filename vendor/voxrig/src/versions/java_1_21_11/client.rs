@@ -1,5 +1,6 @@
 //! Ordered 1.21.11 receive loop. Local state is committed under one session lock.
 mod loading;
+mod motion;
 mod observations;
 /// Explicit Java 1.21.11 operation API and received player state.
 pub mod operations;
@@ -107,6 +108,7 @@ impl TraceCapture {
 
 struct State {
     loading: loading::InteractionLoading,
+    motion: motion::OwnMotion,
     identity: Option<LoginIdentity>,
     retirement: Option<operations::MiningRetirementRecord>,
     mining: Option<operations::MiningRecord>,
@@ -131,6 +133,7 @@ impl Default for State {
     fn default() -> Self {
         Self {
             loading: loading::InteractionLoading::default(),
+            motion: motion::OwnMotion::default(),
             identity: None,
             retirement: None,
             mining: None,
@@ -723,6 +726,9 @@ fn spawn_info(state: &mut State, r: &mut Reader<'_>) -> anyhow::Result<()> {
         .context("unknown dimension registry ID")?;
     state.world.select_dimension(name, dimension);
     state.loading.reset(state.sequence);
+    state
+        .motion
+        .invalidate(state.sequence, "world generation changed");
     operations::mining_world_changed(state, "world login/respawn changed mining context");
     if let Some(capture) = &mut state.recording {
         capture.invalidate(recording::RecordingIssue::WorldChanged);
@@ -822,7 +828,13 @@ fn apply_play(
                 .local_player
                 .correct_velocity(delta, flags, state.sequence)?;
             state.position = Some(position);
-            state.operations.position_from_server = true;
+            state.motion.receive(motion::ReceivedPose {
+                generation: state.loading.generation,
+                receive_sequence: state.sequence,
+                position,
+                rotation,
+                velocity: state.operations.local_player.velocity.map(|v| v.value),
+            });
             state.rotation = rotation;
             state.ready = true;
             let mut confirm = Vec::new();
@@ -925,6 +937,9 @@ fn apply_play(
         input::START_CONFIGURATION => {
             r.end()?;
             state.loading.reset(state.sequence);
+            state
+                .motion
+                .invalidate(state.sequence, "world generation changed");
             operations::mining_world_changed(state, "configuration changed mining context");
             state.phase = Phase::Configuration;
             state.ready = false;

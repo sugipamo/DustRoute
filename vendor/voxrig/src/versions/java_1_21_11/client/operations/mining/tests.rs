@@ -35,7 +35,13 @@ fn state() -> State {
         saturation: 5.0,
         receive_sequence: 10,
     });
-    state.operations.position_from_server = true;
+    state.motion.receive(ReceivedPose {
+        generation: state.loading.generation,
+        receive_sequence: state.sequence,
+        position: state.position.unwrap(),
+        rotation: state.rotation,
+        velocity: Some([0.0; 3]),
+    });
     state.world.select_dimension(
         "minecraft:overworld".into(),
         Dimension::new(-64, 384).unwrap(),
@@ -447,7 +453,18 @@ async fn cancelled_recovery_login_retains_attempt_and_refuses_another_connection
 #[tokio::test]
 async fn fresh_recovery_observations_do_not_authorize_actions_before_native_loading() {
     let mut fixture = Fixture::new().await;
-    fixture.session.state.lock().await.loading.reset(11);
+    {
+        let mut state = fixture.session.state.lock().await;
+        state.loading.reset(11);
+        let pose = ReceivedPose {
+            generation: state.loading.generation,
+            receive_sequence: 12,
+            position: state.position.unwrap(),
+            rotation: state.rotation,
+            velocity: Some([0.0; 3]),
+        };
+        state.motion.receive(pose); // Fresh position, still no PLAYER_LOADED dispatch.
+    }
     assert!(fixture.api.player_state().await.is_ok());
     assert!(fixture.api.standing_context().await.is_ok());
     assert!(

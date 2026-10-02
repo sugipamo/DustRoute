@@ -35,7 +35,13 @@ fn fixture_state() -> State {
         saturation: 5.0,
         receive_sequence: 10,
     });
-    state.operations.position_from_server = true;
+    state.motion.receive(ReceivedPose {
+        generation: state.loading.generation,
+        receive_sequence: state.sequence,
+        position: state.position.unwrap(),
+        rotation: state.rotation,
+        velocity: Some([0.0; 3]),
+    });
     state.world.select_dimension(
         "minecraft:overworld".into(),
         Dimension::new(-64, 384).unwrap(),

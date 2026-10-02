@@ -300,3 +300,36 @@ were run, and no server MOD requirement was introduced. Existing stationary
 placement/mining remain unchanged. The attribute prerequisite is validated in
 the [checkpoint record](evidence/survival-movement-foundation-20261002.json).
 The full roofed Blueprint goal remains unfinished.
+
+
+## Motion evidence checkpoint after approval
+
+The approved shared-layer work now separates own position receipts from local
+send attempts, keeps interrupted attempts inspectable, and prevents a pending
+send from authorizing another mutation. Remote player observations retain
+position-only freshness, exact spawn lifetime, per-axis quantization bounds and
+separate ground/velocity receipts. Read-only watches reject stale viewpoints and
+changed world/player instances.
+
+The native audit also traced the remote ground flag back to the moving client's
+incoming ground bit on the server's normal movement path. A later observer
+position/ground packet therefore cannot be promoted to an independent stopped
+acknowledgement. Following the user's concern stop, physics prediction, survival
+locomotion and post-walk building release are still unimplemented. No new server
+or live movement trial was run.
+
+The [updated proposal](survival-movement-evidence.md#concrete-next-contract-for-review)
+specifies a predicted-and-observed standing contract, conservative geometry
+revalidation and unchanged action-result checks. This is an explicit operational
+confidence level, not a server-confirmed-rest claim. The shared-layer prerequisite
+is a partial checkpoint; the overall construction goal remains unfinished.
+
+
+Validation: [motion evidence record](evidence/survival-motion-evidence-20261002.json)
+records 168 passing Voxrig tests (4 intentionally ignored native trials), one
+passing doc test, clean Clippy and the DustRoute MCP/Voxrig all-targets check.
+Voxrig is pinned to `a5028a367b9968da03211d419c35db77e5be6e49` (259 managed files).
+The correction-path review also identified a pre-existing legacy remote teleport
+layout. It now refuses explicitly; native relative correction support must be
+verified before the motion trial. Passing these checks is not live movement
+acceptance or completion of the shared prediction/standing layer.

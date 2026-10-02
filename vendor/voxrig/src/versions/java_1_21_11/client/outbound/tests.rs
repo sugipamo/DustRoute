@@ -329,3 +329,91 @@ async fn creative_intent_is_retained_when_submission_is_cancelled_before_writer_
     assert_eq!(history.interrupted_packet_id, None);
     assert_eq!(history.pending_creative_slots, vec![0]);
 }
+
+#[tokio::test]
+async fn position_attempt_retains_receipt_and_cancelled_dispatch_blocks_next_mutation() {
+    use operations::{PositionBasis, ReceivedPose};
+    let (session, _, mut peer) = fixture().await;
+    let api = operations(&session);
+    {
+        let mut s = session.state.lock().await;
+        s.phase = Phase::Play;
+        s.ready = true;
+        s.loading = loading::InteractionLoading::completed_fixture();
+        s.position = Some([0.5, 1.0, 0.5]);
+        s.operations.reset_world(1).unwrap();
+        let mut abilities = vec![4];
+        abilities.extend(0.05f32.to_be_bytes());
+        abilities.extend(0.1f32.to_be_bytes());
+        operations::receive(&mut s, ids::play_clientbound::ABILITIES, &abilities).unwrap();
+        let generation = s.loading.generation;
+        s.motion.receive(ReceivedPose {
+            generation,
+            receive_sequence: 5,
+            position: [0.5, 1.0, 0.5],
+            rotation: [0.0; 2],
+            velocity: Some([0.0; 3]),
+        });
+    }
+    api.set_flying(true).await.unwrap();
+    assert_eq!(
+        read_packet(&mut peer, None).await.unwrap().0,
+        ids::play_serverbound::ABILITIES
+    );
+    api.move_flying([1.5, 1.0, 0.5], [0.0; 2]).await.unwrap();
+    assert_eq!(
+        read_packet(&mut peer, None).await.unwrap().0,
+        ids::play_serverbound::POSITION_LOOK
+    );
+    let sent = api.player_state().await.unwrap();
+    assert!(!sent.position_from_server);
+    assert_eq!(sent.motion.position_basis, PositionBasis::Submitted);
+    assert_eq!(sent.motion.received_pose.unwrap().position, [0.5, 1.0, 0.5]);
+    assert!(sent.motion.last_submission.unwrap().dispatched);
+    let locked = session.writer.lock().await;
+    let mut request = Box::pin(api.move_flying([2.5, 1.0, 0.5], [0.0; 2]));
+    pending(request.as_mut()).await;
+    drop(request);
+    drop(locked);
+    let history = api.operation_history().await;
+    assert_eq!(
+        history.motion.position_basis,
+        PositionBasis::PendingSubmission
+    );
+    assert!(!history.motion.last_submission.as_ref().unwrap().dispatched);
+    assert_eq!(history.motion.last_submission.unwrap().attempt_id, 2);
+    assert!(api.select_hotbar(1).await.is_err());
+    assert!(api.move_flying([2.5, 1.0, 0.5], [0.0; 2]).await.is_err());
+    assert!(
+        timeout(Duration::from_millis(10), read_packet(&mut peer, None))
+            .await
+            .is_err()
+    );
+    {
+        let mut s = session.state.lock().await;
+        let generation = s.loading.generation;
+        s.position = Some([0.5, 1.0, 0.5]);
+        s.motion.receive(ReceivedPose {
+            generation,
+            receive_sequence: 9,
+            position: [0.5, 1.0, 0.5],
+            rotation: [0.0; 2],
+            velocity: Some([0.0; 3]),
+        });
+    }
+    let restored = api.player_state().await.unwrap();
+    assert!(restored.position_from_server);
+    assert_eq!(
+        restored.motion.last_submission.unwrap().superseded_at,
+        Some(9)
+    );
+    {
+        let mut s = session.state.lock().await;
+        s.loading.reset(10);
+        s.motion.invalidate(10, "world generation changed");
+    }
+    let reset = api.player_state().await.unwrap();
+    assert!(!reset.position_from_server);
+    assert_eq!(reset.motion.received_pose.unwrap().receive_sequence, 9);
+    assert_eq!(reset.motion.position_basis, PositionBasis::Unavailable);
+}

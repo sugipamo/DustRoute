@@ -50,3 +50,83 @@ local motion prediction and independent arrival evidence as explicit types,
 then connect bounded walk/stop/jump/collision and standing admission through those
 types. The current stationary gate remains intact. No MOD, operator command,
 teleport fallback or broad entity simulation has been selected as a requirement.
+
+
+## Approved evidence-layer checkpoint
+
+The user approved the shared-layer proposal. Own position provenance now uses
+`OwnMotion`: the last actual `ReceivedPose`, a local `PositionSubmission` retained
+before I/O, and an explicit current basis. A complete write is a submission, not
+a server receipt or a physics prediction. Interrupted writer acquisition remains
+pending and blocks another user mutation. Corrections and generation changes
+invalidate the appropriate current basis while preserving diagnostic history.
+`PlayerState.position_from_server` is a derived compatibility view, not a writable
+internal authority flag. Stationary admission checks the receipt generation and
+exact current coordinates. Serialized diagnostics cannot restore permission.
+
+Remote `ObservedPlayer.motion` now separates spawn lifetime, position-specific
+receipt, quantization bounds, ground receipt and velocity receipt. Head rotation,
+pose, attributes and a velocity-only packet do not refresh position. Ground and
+velocity keep their own ordinals; neither is silently copied into a newer
+position receipt. Every relative axis has a conservative 1/4096 bound, including
+zero encoded deltas; an unchanged decoded coordinate can hide sub-bin motion.
+Absolute position packets reset those bounds. Both own and remote velocity use
+the same native packed-vector decoder.
+
+`watch_player_motion` / `observe_player_motion` are read-only. A watch belongs to
+one observer connection, world generation and exact UUID/entity/spawn instance.
+It distinguishes pending, a later position packet and an instance requiring
+inspection. Registration is a receive boundary, not a server-time or cross-client
+causality fence. The result never authorizes placement or certifies stopped motion.
+
+Tests cover cancellation before writer acquisition through the actual flight API,
+retained receipts and attempts, mutation refusal, reset/correction history, remote
+receipt separation, zero-delta uncertainty, atomic truncated sync packets, watch
+freshness/lifetime, and replay of all original fields in the retained native
+player trace. These are offline tests; no new server or live movement trial ran.
+
+## Additional native finding: ground receipt is not an independent stop proof
+
+Further unchanged-body bytecode inspection traced this path in 1.21.11:
+
+1. `ServerPlayNetworkHandler.onPlayerMove` passes the incoming player's
+   `isOnGround()` and `horizontalCollision()` into `ServerPlayerEntity.setMovement`.
+2. `Entity.setMovement(boolean, boolean, Vec3d)` assigns that ground flag to its
+   `onGround` field before updating the supporting block information.
+3. `EntityTrackerEntry` constructs relative movement packets with the entity's
+   `isOnGround()` value. It separately schedules velocity updates.
+
+The normal path performs collision/movement validation, but this flag is not an
+independent measurement of zero velocity or a per-step stop acknowledgement.
+A position packet plus this ground bit and a previously received zero velocity
+cannot by themselves certify that a submitted walk has finished. Two connections'
+receive ordinals cannot be compared as a common server clock. Silence or an
+arbitrary wait does not fix this distinction. The exact local audit input hashes
+are retained in `docs/evidence/survival-motion-evidence-source.json`.
+
+Following the requested concern stop, the motion simulator, survival movement
+sender and post-walk standing release have not been implemented. Existing
+stationary gates remain; this is a partial evidence-layer checkpoint, not the
+completion of the approved walk/jump/place slice.
+
+The proposed next contract is explicitly **predicted and observed**, rather than
+an assertion of server-confirmed rest: native-audited local ticks predict stable
+contact; a fresh same-instance independent position agrees within its quantization
+bounds; fresh geometry validates conservative clearance/support/reach; actual
+placement still requires its block/material/sequence results. Expose these bases
+separately. Reject changed contexts, inconsistent evidence and incomplete sends,
+and retain intent for diagnosis. Review that operational guarantee before enabling
+construction after motion. It does not require choosing a MOD or claiming immunity
+to concurrent world edits. Native walk/stop/place and jump/land/place trials remain
+mandatory before navigation or Blueprint construction.
+
+
+The final correction-path review also found a pre-existing legacy XYZ/byte-angle
+layout in the remote `ENTITY_TELEPORT` branch. Native `EntityPositionS2CPacket`
+contains an `EntityPosition` change and relative flags instead. The new evidence
+layer therefore refuses this unimplemented tracked-player correction explicitly,
+without publishing a pose or receipt; the session's existing packet-failure path
+prevents subsequent operations. Correct support for that packet is a prerequisite
+to the next correction/movement trial. This does not disable the separately
+supported `SYNC_ENTITY_POSITION` absolute pose/velocity/ground packet or the own
+player `POSITION` handler. No guessed correction or teleport fallback was added.

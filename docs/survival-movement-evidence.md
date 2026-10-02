@@ -68,6 +68,66 @@ and shared standing admission. It does not add a server MOD or general entity
 simulation. If the native audit cannot establish the proposed observation boundary,
 report that result before weakening the construction contract.
 
-The user requested stopping when concerns arise. This slice is documented for
-review but has not been implemented; only the completed attribute prerequisite
-was validated and saved. The overall construction goal remains unfinished.
+The user approved this slice. The received-position/local-submission separation
+and read-only independent observer receipts have been implemented and tested.
+The physics prediction model, survival movement sender and post-walk construction
+release remain unimplemented. This is a partial checkpoint, not completion of
+steps 1–5 or of the overall construction goal.
+
+## Further finding and explicit stop
+
+Native source inspection found that the ordinary server movement path takes the
+moving client's ground flag into `Entity.setMovement`, and remote tracking
+packets carry the resulting `isOnGround()` value. Thus an observer's ground receipt
+is not an independent server measurement of stopped motion. Relative coordinates
+also have quantization bounds, even for encoded zero deltas; a previous velocity
+sample and another connection's receive ordering cannot close this proof gap.
+
+The [audited path and input hashes](../vendor/voxrig/docs/evidence/survival-motion-evidence-source.json)
+record the evidence. This was source inspection and offline validation; no live
+server or new movement trial was used. Following the user's concern stop,
+construction admission after walking has not been weakened or enabled.
+
+The correction-path review additionally found a pre-existing remote
+`ENTITY_TELEPORT` parser using the old XYZ/byte-angle layout. Native 1.21.11
+`EntityPositionS2CPacket` carries an `EntityPosition` change and relative flags.
+This unimplemented tracked-player packet now refuses explicitly without publishing
+new position evidence. Proper native decoding must be validated before the
+movement/correction trial. The separate absolute sync and own-position handlers
+remain supported; current offline tests do not establish complete correction
+coverage.
+
+## Concrete next contract for review
+
+Recommend an explicit `PredictedAndObserved` standing basis, with separate
+fields for predicted tick/pose/velocity/contact, independent observer connection,
+world and exact player lifetime, position/ground/velocity receipt ordinals and
+quantization bounds, and the geometry revision used for clearance/support/reach.
+These records are evidence, not importable authority. They must not be labelled
+server-confirmed rest or copied into `position_from_server`.
+
+The implementation sequence would be:
+
+1. Implement and verify the native remote relative-correction packet first.
+   Audit and compare the dry-cube tick model against native input, collision,
+   braking, jump and landing cases. Keep simulated velocity separate from packet
+   velocity, including the downward gravity term while resting on a floor.
+2. Retain each local movement intent before I/O. Require a locally settled model
+   and a fresh same-instance observer position consistent with its error bounds.
+   Observation registration is not a server-time fence; do not claim causality
+   or infer acknowledgement from silence, rotation or elapsed time.
+3. Recheck current conservative geometry over the position uncertainty range.
+   Reject changed generation, corrections requiring replanning, unsupported
+   conditions, incompatible observations or interrupted submissions. Do not
+   reconstruct authority from saved diagnostic records.
+4. Use the shared standing basis in placement/mining. Preserve fresh target,
+   inventory and interaction results; mismatches stop for diagnosis rather than
+   blind retry. This offers bounded operational confidence, not protection
+   against arbitrary concurrent player/world edits.
+5. Demonstrate walk -> stop -> place and jump -> land -> place on the non-OP
+   isolated fixture before navigation, access works and the final roofed build.
+
+This approach does not require a MOD. The review point is the stated basis for
+continuing construction: predicted stability corroborated by observations,
+rather than an independent server stop acknowledgement that these packets do
+not provide.

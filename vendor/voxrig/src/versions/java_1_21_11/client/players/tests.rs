@@ -2,7 +2,7 @@ use super::*;
 use crate::protocol::{put_string, put_varint};
 use ids::play_clientbound as p;
 
-const UUID: [u8; 16] = [7; 16];
+pub(super) const UUID: [u8; 16] = [7; 16];
 fn profile() -> Vec<u8> {
     let mut bytes = vec![255, 1];
     bytes.extend(UUID);
@@ -14,7 +14,7 @@ fn profile() -> Vec<u8> {
     bytes.push(1);
     bytes
 }
-fn spawn() -> Vec<u8> {
+pub(super) fn spawn() -> Vec<u8> {
     let mut bytes = vec![42];
     bytes.extend(UUID);
     put_varint(&mut bytes, ids::PLAYER_ENTITY_TYPE);
@@ -24,7 +24,7 @@ fn spawn() -> Vec<u8> {
     bytes.extend([0, 32, 0, 64, 0]); // Zero velocity, pitch, body yaw, head yaw, data.
     bytes
 }
-fn tracker() -> PlayerTracker {
+pub(super) fn tracker() -> PlayerTracker {
     let mut tracker = PlayerTracker::default();
     tracker.receive(p::PLAYER_INFO, &profile(), 1).unwrap();
     tracker.receive(p::SPAWN_ENTITY, &spawn(), 2).unwrap();
@@ -208,10 +208,87 @@ fn retained_native_two_client_trace_replays_every_reported_observation() {
             // Compare through the same JSON decoding boundary as the saved
             // evidence (serde_json's default float parser is not round-trip mode).
             let encoded = serde_json::to_vec(&tracker.observations()).unwrap();
-            let decoded: serde_json::Value = serde_json::from_slice(&encoded).unwrap();
+            let mut decoded: serde_json::Value = serde_json::from_slice(&encoded).unwrap();
+            // The retained evidence predates motion receipts. Compare all its
+            // original fields unchanged; exercise the new receipts separately.
+            for player in decoded.as_array_mut().unwrap() {
+                player.as_object_mut().unwrap().remove("motion");
+            }
             assert_eq!(&decoded, *players);
             compared += 1;
         }
     }
     assert_eq!(compared, 5);
+}
+
+#[test]
+fn motion_receipts_keep_position_ground_velocity_and_precision_independent() {
+    let mut t = tracker();
+    let initial = t.observations().remove(0);
+    assert_eq!(initial.motion.position_error, [0.0; 3]);
+    assert!(initial.motion.ground.is_none());
+    assert_eq!(initial.motion.velocity.unwrap().receive_sequence, 2);
+    t.receive(p::REL_ENTITY_MOVE, &[42, 0, 1, 0, 0, 0, 0, 1], 3)
+        .unwrap();
+    let m = t.observations().remove(0);
+    assert_eq!(m.motion.position_error, [1.0 / 4096.0; 3]);
+    assert_eq!(m.motion.position_receive_sequence, 3);
+    assert_eq!(m.motion.ground.unwrap().receive_sequence, 3);
+    assert_eq!(m.motion.velocity.unwrap().receive_sequence, 2);
+    t.receive(p::ENTITY_LOOK, &[42, 0, 0, 0], 4).unwrap();
+    t.receive(p::ENTITY_HEAD_ROTATION, &[42, 64], 5).unwrap();
+    t.receive(p::ENTITY_METADATA, &[42, 6, 20, 5, 255], 6)
+        .unwrap();
+    t.receive(p::ENTITY_VELOCITY, &[42, 0], 7).unwrap();
+    let m = t.observations().remove(0);
+    assert_eq!(m.receive_sequence, 7);
+    assert_eq!(m.motion.position_receive_sequence, 3);
+    assert!(!m.motion.ground.unwrap().on_ground);
+    assert_eq!(m.motion.ground.unwrap().receive_sequence, 4);
+    assert_eq!(m.motion.velocity.unwrap().receive_sequence, 7);
+    t.receive(p::REL_ENTITY_MOVE, &[42, 0, 0, 0, 0, 0, 0, 1], 8)
+        .unwrap();
+    let m = t.observations().remove(0);
+    assert_eq!(m.motion.position_receive_sequence, 8);
+    assert_eq!(m.motion.position_error, [1.0 / 4096.0; 3]);
+    let mut absolute = vec![42];
+    for n in [1.25f64, 80.125, 10.5, 0.1, -0.2, 0.3] {
+        absolute.extend(n.to_be_bytes());
+    }
+    absolute.extend(90f32.to_be_bytes());
+    absolute.extend(0f32.to_be_bytes());
+    absolute.push(1);
+    let before = serde_json::to_value(t.observations()).unwrap();
+    for size in 0..absolute.len() {
+        assert!(
+            t.receive(p::SYNC_ENTITY_POSITION, &absolute[..size], 9)
+                .is_err()
+        );
+        assert_eq!(serde_json::to_value(t.observations()).unwrap(), before);
+    }
+    t.receive(p::SYNC_ENTITY_POSITION, &absolute, 9).unwrap();
+    let m = t.observations().remove(0);
+    assert_eq!(m.position, [1.25, 80.125, 10.5]);
+    assert_eq!(m.motion.position_error, [0.0; 3]);
+    assert_eq!(m.motion.position_receive_sequence, 9);
+    assert_eq!(m.motion.velocity.unwrap().value, [0.1, -0.2, 0.3]);
+    assert_eq!(m.motion.velocity.unwrap().receive_sequence, 9);
+    assert_eq!(m.motion.ground.unwrap().receive_sequence, 9);
+}
+
+#[test]
+fn unaudited_remote_teleport_cannot_publish_a_legacy_pose_or_motion_receipt() {
+    let mut t = tracker();
+    let before = serde_json::to_value(t.observations()).unwrap();
+    let mut legacy = vec![42];
+    for x in [1.0f64, 80.0, 10.0] {
+        legacy.extend(x.to_be_bytes());
+    }
+    legacy.extend([0, 0, 1]);
+    assert!(t.receive(p::ENTITY_TELEPORT, &legacy, 3).is_err());
+    assert_eq!(serde_json::to_value(t.observations()).unwrap(), before);
+    // Supported absolute sync has a separate packet ID and test. Neither a
+    // legacy body nor an unimplemented modern relative correction is guessed.
+    assert!(t.receive(p::ENTITY_TELEPORT, &[42], 4).is_err());
+    assert_eq!(serde_json::to_value(t.observations()).unwrap(), before);
 }

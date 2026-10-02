@@ -21,7 +21,13 @@ fn state() -> State {
         .local_player
         .correct_velocity([0.0; 3], 0, 10)
         .unwrap();
-    s.operations.position_from_server = true;
+    s.motion.receive(ReceivedPose {
+        generation: s.loading.generation,
+        receive_sequence: s.sequence,
+        position: s.position.unwrap(),
+        rotation: s.rotation,
+        velocity: Some([0.0; 3]),
+    });
     s.world.select_dimension(
         "minecraft:overworld".into(),
         Dimension::new(-64, 384).unwrap(),
@@ -207,6 +213,13 @@ fn standing_body_contacts_match_native_and_support_is_rechecked_after_world_edit
         s.position = Some(std::array::from_fn(|axis| {
             case["position"][axis].as_f64().unwrap()
         }));
+        s.motion.receive(ReceivedPose {
+            generation: s.loading.generation,
+            receive_sequence: s.sequence,
+            position: s.position.unwrap(),
+            rotation: s.rotation,
+            velocity: Some([0.0; 3]),
+        });
         let observed = context(&mut s, 77, 0);
         if case["clear"].as_bool().unwrap() {
             let observed = observed.unwrap();
@@ -232,9 +245,23 @@ fn standing_body_contacts_match_native_and_support_is_rechecked_after_world_edit
     assert_eq!(after.world_revision, s.world.revision);
     // Negative positions and chunk boundaries must not read the wrong section.
     s.position = Some([-0.5, 1.0, -0.5]);
+    s.motion.receive(ReceivedPose {
+        generation: s.loading.generation,
+        receive_sequence: s.sequence,
+        position: s.position.unwrap(),
+        rotation: s.rotation,
+        velocity: Some([0.0; 3]),
+    });
     s.world.seed_replay_cell([-1, 0, -1], 1);
     assert!(context(&mut s, 77, 0).unwrap().on_ground);
     s.position = Some([16.0, 1.0, 0.5]);
+    s.motion.receive(ReceivedPose {
+        generation: s.loading.generation,
+        receive_sequence: s.sequence,
+        position: s.position.unwrap(),
+        rotation: s.rotation,
+        velocity: Some([0.0; 3]),
+    });
     assert!(context(&mut s, 77, 0).is_err()); // Adjacent chunk is not loaded.
 }
 
@@ -252,9 +279,15 @@ fn unsupported_posture_motion_fluid_and_reconstruction_never_become_ground_evide
         .local_player
         .correct_velocity([0.0; 3], 0, 11)
         .unwrap();
-    s.operations.position_from_server = false;
+    s.motion.invalidate(s.sequence, "test local movement");
     assert!(context(&mut s, 1, 0).is_err());
-    s.operations.position_from_server = true;
+    s.motion.receive(ReceivedPose {
+        generation: s.loading.generation,
+        receive_sequence: s.sequence,
+        position: s.position.unwrap(),
+        rotation: s.rotation,
+        velocity: Some([0.0; 3]),
+    });
     s.operations.requested_flying = true;
     assert!(context(&mut s, 1, 0).is_err());
     s.operations.requested_flying = false;
@@ -366,7 +399,13 @@ fn unsupported_impulses_and_own_vehicle_cannot_leave_stale_stationary_authority(
             .local_player
             .correct_velocity([0.0; 3], 0, 14)
             .unwrap();
-        s.operations.position_from_server = true;
+        s.motion.receive(ReceivedPose {
+            generation: s.loading.generation,
+            receive_sequence: s.sequence,
+            position: s.position.unwrap(),
+            rotation: s.rotation,
+            velocity: Some([0.0; 3]),
+        });
         assert!(context(&mut s, 1, 0).unwrap().on_ground);
         apply(&mut s, id, &[]); // Even undecoded/malformed unsupported payload cannot grant permission.
         let issue = s

@@ -1,0 +1,71 @@
+{
+  "recorded_at_utc": "2026-10-02T05:33:24.244772+00:00",
+  "status": "Partial shared motion evidence checkpoint saved after user approval; further survival motion and construction admission stopped for the newly audited concerns.",
+  "voxrig_revision": "a5028a367b9968da03211d419c35db77e5be6e49",
+  "vendor_files": 259,
+  "checks": [
+    {
+      "project": "Voxrig",
+      "command": "cargo test --offline --locked -j 1 --all-targets -- --test-threads=1",
+      "result": "168 passed; 0 failed; 4 ignored; example targets passed",
+      "local_log": "/root/Voxrig/.local/survival-continuation/motion-evidence-all-targets.log",
+      "log_sha256": "17d2b9aa82af87e0dd84e13681a2743f82df8e2f8f5bfb8c9376cef493d5ecba"
+    },
+    {
+      "project": "Voxrig",
+      "command": "cargo clippy --offline --locked -j 1 --all-targets -- -D warnings",
+      "result": "passed",
+      "local_log": "/root/Voxrig/.local/survival-continuation/motion-evidence-clippy.log",
+      "log_sha256": "acd33e4dbbcf921a5ac757eca91f39ba3114eee81eea93bc80578f907ce4a57b"
+    },
+    {
+      "project": "Voxrig",
+      "command": "cargo test --offline --locked -j 1 --doc -- --test-threads=1",
+      "result": "1 passed; 0 failed",
+      "local_log": "/root/Voxrig/.local/survival-continuation/motion-evidence-doc.log",
+      "log_sha256": "1ffe545ea62b20d6723fc8cbe958293049aabaa651da2477379c2856790eef72"
+    },
+    {
+      "project": "Voxrig",
+      "command": "cargo package --offline --locked --allow-dirty --list",
+      "result": "passed",
+      "local_log": "/root/Voxrig/.local/survival-continuation/motion-evidence-package.log",
+      "log_sha256": "b2604d4aec4e62c3ed933043ea6298713f21d694adc6f76240af623c49f96c5d"
+    },
+    {
+      "project": "DustRoute",
+      "command": "cargo check --offline --locked -j 1 -p dustroute-mcp --features voxrig --all-targets",
+      "result": "passed",
+      "local_log": "/root/DustRoute/.local/survival-motion-evidence-check-20261002.log",
+      "log_sha256": "694eee54783ec2bfe89664322a13d43a89be5885b884d21868f17f21b8e2cee0"
+    }
+  ],
+  "additional_checks": [
+    "Voxrig cargo fmt --all -- --check passed",
+    "git diff --check passed",
+    "vendor snapshot verified"
+  ],
+  "implemented": [
+    "Typed received own pose and before-I/O local position submission, current basis and retained historical invalidation. No physics prediction is relabelled as receipt.",
+    "Cancelled flight writer acquisition retains a pending attempt and blocks another mutation. Receipt generation and exact current coordinates gate the existing stationary context.",
+    "Remote position-specific freshness, spawn lifetime, ground/velocity receipt ordinals and conservative per-axis relative quantization bounds including zero deltas.",
+    "Read-only same-connection/world/UUID/entity/spawn motion watches. Viewpoint-only updates cannot satisfy fresh position; watches do not authorize construction.",
+    "Shared native packed-velocity decoding for own and remote observations.",
+    "Pre-existing legacy-format remote ENTITY_TELEPORT decoding explicitly refused instead of publishing unaudited modern correction evidence."
+  ],
+  "audit": "vendor/voxrig/docs/evidence/survival-motion-evidence-source.json",
+  "concerns": [
+    "Native normal movement handling stores the incoming client ground flag; observer ground receipt is not independent stopped-motion confirmation. A new position and stale zero velocity cannot by themselves establish rest.",
+    "Native remote EntityPositionS2CPacket contains EntityPosition change and relative flags. Proper support remains to be implemented and verified before movement/correction acceptance."
+  ],
+  "proposed_next_contract": "docs/survival-movement-evidence.md#concrete-next-contract-for-review",
+  "not_completed": [
+    "Physics prediction and native survival walk/stop/jump/collision control",
+    "Proper remote relative-correction decoder",
+    "Predicted-and-observed standing admission after movement",
+    "New non-OP walk/stop/place or jump/land/place trials",
+    "Navigation, access works, durable survival Blueprint build and cleanup"
+  ],
+  "server_activity": "No server started, movement trial or live world mutation in this checkpoint. All tests were offline/local fixtures; retained older native traces were replayed.",
+  "goal_status_note": "Overall goal remains active and unfinished; concern stop reported without marking completion."
+}

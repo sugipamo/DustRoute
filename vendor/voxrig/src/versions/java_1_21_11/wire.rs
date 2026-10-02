@@ -203,6 +203,24 @@ pub(crate) fn unpack_position(p: u64) -> [i32; 3] {
     ]
 }
 
+// Native packed vector codec. No old 1.16.1 i16 velocity interpretation.
+pub(crate) fn velocity(r: &mut Reader<'_>) -> anyhow::Result<[f64; 3]> {
+    let first = r.u8()?;
+    if first == 0 {
+        return Ok([0.0; 3]);
+    }
+    let second = r.u8()?;
+    let packed = (u64::from(r.u32()?) << 16) | (u64::from(second) << 8) | u64::from(first);
+    let mut scale = u64::from(first & 3);
+    if first & 4 != 0 {
+        scale |= u64::from(r.varint()? as u32) << 2;
+    }
+    Ok(std::array::from_fn(|axis| {
+        let bits = ((packed >> (3 + axis * 15)) & 32767).min(32766);
+        (bits as f64 * 2.0 / 32766.0 - 1.0) * scale as f64
+    }))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

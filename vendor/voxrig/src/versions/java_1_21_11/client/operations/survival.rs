@@ -1,5 +1,6 @@
 //! Own-player observation and a deliberately bounded stationary standing model.
 mod attributes;
+use super::super::super::wire::velocity;
 use super::*;
 use crate::versions::java_1_21_11::client::players::{self, PlayerPose};
 use std::collections::BTreeMap;
@@ -300,29 +301,14 @@ pub(super) fn receive(state: &mut State, id: i32, payload: &[u8]) -> anyhow::Res
 }
 
 fn interrupt(state: &mut State, packet_id: i32) {
+    state
+        .motion
+        .invalidate(state.sequence, "unmodeled player motion");
     state.operations.local_player.velocity = None;
     state.operations.local_player.motion_interruption = Some(MotionInterruption {
         packet_id,
         receive_sequence: state.sequence,
     });
-}
-
-// Native packed vector codec. No old 1.16.1 i16 velocity interpretation.
-fn velocity(r: &mut Reader<'_>) -> anyhow::Result<[f64; 3]> {
-    let first = r.u8()?;
-    if first == 0 {
-        return Ok([0.0; 3]);
-    }
-    let second = r.u8()?;
-    let packed = (u64::from(r.u32()?) << 16) | (u64::from(second) << 8) | u64::from(first);
-    let mut scale = u64::from(first & 3);
-    if first & 4 != 0 {
-        scale |= u64::from(r.varint()? as u32) << 2;
-    }
-    Ok(std::array::from_fn(|axis| {
-        let bits = ((packed >> (3 + axis * 15)) & 32767).min(32766);
-        (bits as f64 * 2.0 / 32766.0 - 1.0) * scale as f64
-    }))
 }
 
 /// A derived stationary standing context; never a server ground acknowledgement.
@@ -451,7 +437,10 @@ pub(super) fn context(state: &mut State, connection_id: u64, tick: u64) -> Resul
     if state.operations.requested_flying || state.operations.abilities.is_some_and(|a| a & 2 != 0) {
         return Err(unavailable("stationary context refuses active flight"));
     }
-    if !state.operations.position_from_server || player.velocity.map(|v| v.value) != Some([0.0; 3])
+    if !state
+        .motion
+        .received_position(state.loading.generation, state.position)
+        || player.velocity.map(|v| v.value) != Some([0.0; 3])
     {
         return Err(unavailable(
             "stationary context requires a received position and zero resolved velocity",

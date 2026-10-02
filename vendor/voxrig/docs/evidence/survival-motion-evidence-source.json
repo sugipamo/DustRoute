@@ -1,0 +1,41 @@
+{
+  "minecraft": "Java 1.21.11",
+  "mappings": "Yarn 1.21.11+build.6 (official -> named)",
+  "mappings_sha256": "d2495bcc4b96ff81d985fa403a3a65a2891d4df31ad71f36a19338aa66daa89a",
+  "minecraft_merged_sha256": "ad6ee2c9cee9c191b25bf5d0ffec5788c3335f3b3fcf77d6871a7b66b3b5046e",
+  "kind": "Native unchanged-body bytecode audit, not a live movement trial or a physics implementation",
+  "inputs": {
+    "ServerPlayNetworkHandler.javap": "e705cd3f36856d4b47fcb2e6e141252605efe43c38b94cb4bb59bf77b17ff642",
+    "Entity.javap": "98f58fa2846cc6099a32da5f685f06ccd36dcc293ada2df5cc300982c1396c5c",
+    "EntityTrackerEntry.javap": "18d08794adaa6a4726f7435a3690b6aa4822d4c73f7159d1e83856684b90bb7d",
+    "ClientPlayerEntity.javap": "22f1c1386a60562f54ce839776e8d076fcb16c5a721298a23474a8768709bb4a",
+    "LivingEntity.javap": "93ff5dcb4bd53320fbb77dcc0a3a0ac0e567196a0b73d0aff4939bf0bc8aba97",
+    "EntityPositionS2CPacket-signatures.javap": "1710e50a7086ce8c229a4565166367e6bf7ea14df0688b15a12b432d2cab6069"
+  },
+  "facts": [
+    {
+      "method": "ServerPlayNetworkHandler.onPlayerMove",
+      "bytecode_offsets": "1146..1160",
+      "observation": "Passes incoming isOnGround and horizontalCollision to player.setMovement."
+    },
+    {
+      "method": "Entity.setMovement(boolean, boolean, Vec3d)",
+      "bytecode_offsets": "0..13",
+      "observation": "Stores argument in onGround, then updates supporting block position."
+    },
+    {
+      "method": "EntityTrackerEntry.tick",
+      "bytecode_offsets": "757..787",
+      "observation": "MoveRelative constructor receives entity.isOnGround; this is not a distinct stopped acknowledgement."
+    },
+    {
+      "method": "ClientPlayerEntity.applyDirectionalMovementSpeedFactors",
+      "observation": "Directional input is normalized, multiplied by a directional factor and capped at one; old donor algorithm cannot be assumed equivalent."
+    },
+    {
+      "method": "EntityPositionS2CPacket native record signature versus PlayerTracker ENTITY_TELEPORT branch",
+      "observation": "Native record includes EntityPosition change and relative flags; pre-existing XYZ/byte-angle parser was not a correct implementation. Tracked-player packet now explicitly refuses without publishing motion evidence; proper correction decoding remains unimplemented."
+    }
+  ],
+  "scope": "Own received pose/local submission and read-only remote receipt separation are implemented. Predicted movement, a survival sender and post-walk construction release remain unimplemented pending contract review. No server started."
+}
