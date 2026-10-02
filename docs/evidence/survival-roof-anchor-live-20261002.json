@@ -1,0 +1,305 @@
+{
+  "schema": "dustroute.survival-roof-anchor-live.v1",
+  "recorded_at_utc": "2026-10-02T12:57:23.171337+00:00",
+  "status": "concern_stop_before_native_reconnect_prediction_boundary_change",
+  "consumer_source": "4fdba7f378ec321cd31f17a368b20ca8b94a1f02",
+  "native_vendor_source": "1877209da48a78443dd7d30e7db6720bd6775416",
+  "validation": {
+    "building_related_tests_passed": 24,
+    "consumer_survival_tests_passed": 19,
+    "consumer_live_tests_ignored": 4,
+    "translate_library_tests_clippy": "passed",
+    "mcp_voxrig_all_targets_clippy": "passed",
+    "translate_all_targets_clippy": "failed: unchanged flying_machine_assembly_fixture example includes two unused cane helpers",
+    "first_door_test_failure": "old test compared type offsets directly to world coordinates; assertions now add the declared anchor and preserve the same absolute reservations"
+  },
+  "preflight": {
+    "case": "preflight-c",
+    "execute": false,
+    "passed": true,
+    "steps": 119,
+    "permanent_placements": 49,
+    "temporary_placements": 19,
+    "temporary_removals": 19,
+    "moves": 32,
+    "peak_temporary": 12,
+    "planned_final_position": [
+      1.4345243952333269,
+      -60.0,
+      -1.4999008496360369
+    ],
+    "test_exit": 0,
+    "server_exit": 0
+  },
+  "accidental_extra_preflight": {
+    "case": "live-a",
+    "execute": false,
+    "passed": true,
+    "explanation": "live flag omitted; filename does not signify execution; no building controls sent",
+    "test_exit": 0,
+    "server_exit": 0
+  },
+  "actual_execution": {
+    "case": "live-b",
+    "execute": true,
+    "passed": false,
+    "test_exit": 101,
+    "server_exit": 0,
+    "fixture": "fresh localhost:25572 vanilla 1.21.11 world; forced survival, ops empty, command blocks disabled; fixture console only prepares terrain/pose/inventory",
+    "completed_steps": 26,
+    "completed_step_kinds": {
+      "place": 19,
+      "move": 5,
+      "remove_temporary": 2
+    },
+    "permanent_placements": 12,
+    "temporary_placements": 7,
+    "temporary_removals": 2,
+    "reconnects": 2,
+    "remaining_owned_temporary": [
+      [
+        1,
+        -60,
+        6
+      ],
+      [
+        1,
+        -59,
+        6
+      ],
+      [
+        2,
+        -60,
+        6
+      ],
+      [
+        2,
+        -59,
+        6
+      ],
+      [
+        2,
+        -58,
+        6
+      ]
+    ],
+    "stopped_before_step_27_dispatch": true,
+    "error": "movement_plan_changed: fresh trajectory differs from checked plan",
+    "continuation": "needs_inspection",
+    "durable_record_matches_trial_output": true,
+    "safe_retreat_completed": false,
+    "final_whole_build_independent_check": false,
+    "retained_trace_windows_complete": true,
+    "trace_limit": "reconnect trace windows begin after connection setup; recovery standing receipts are in the journal",
+    "disconnect_error": null
+  },
+  "diagnosis": {
+    "planned_initial_position": [
+      2.436727277038884,
+      -57.0,
+      6.5000687949723455
+    ],
+    "received_initial_position": [
+      2.436727277038884,
+      -57.0,
+      6.5000687949723455
+    ],
+    "position_delta": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "preceding_checked_terminal_frame": {
+      "horizontal_collision": false,
+      "on_ground": true,
+      "position": [
+        2.436727277038884,
+        -57.0,
+        6.5000687949723455
+      ],
+      "resting": true,
+      "tick": 28,
+      "velocity": [
+        0.0,
+        -0.0784000015258789,
+        0.0
+      ]
+    },
+    "received_pose_velocity": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "checked_next_first_two_frames": [
+      {
+        "horizontal_collision": false,
+        "on_ground": true,
+        "position": [
+          2.3387272736712217,
+          -57.0,
+          6.5000687949723455
+        ],
+        "resting": false,
+        "tick": 1,
+        "velocity": [
+          -0.053508008053839436,
+          -0.0784000015258789,
+          6.552841365123628e-18
+        ]
+      },
+      {
+        "horizontal_collision": false,
+        "on_ground": true,
+        "position": [
+          2.18721926224972,
+          -57.0,
+          6.5000687949723455
+        ],
+        "resting": false,
+        "tick": 2,
+        "velocity": [
+          -0.08272338384467842,
+          -0.0784000015258789,
+          1.0130693166058017e-17
+        ]
+      }
+    ],
+    "source_analysis": "Model::from_context retains predicted velocity only for PredictedAndObserved; fresh Received uses zero velocity. The detached scenario carries the previous grounded -0.0784000015258789 Y velocity across edits and has no reconnect transition. Zero vertical intent does not set on_ground in the first step, which can change subsequent ground/air acceleration.",
+    "limit": "fresh refused trajectory was not persisted; exact differing frames are not claimed as independently compared yet"
+  },
+  "proposed_prerequisite": [
+    "Persist checked/fresh movement mismatch context before dispatch, including first divergent frame and initial model basis.",
+    "Add a native read-only regression for predicted-rest versus received-after-reconnect, using recorded pose and geometry.",
+    "Define a typed hypothetical native connection-reset boundary; keep future receipt requirements distinct from already observed authority. DustRoute schedules that boundary around its mandatory mining retirement/reconnect.",
+    "Revalidate all following steps from the modeled post-recovery state; preserve exact native gates, geometry, materials and world scopes. Do not simply widen floating tolerance or skip early frames.",
+    "Repeat full preflight and then live roof acceptance in a fresh isolated world."
+  ],
+  "artifacts": [
+    {
+      "path": "survival-roof/roof-anchor-building-tests.log.gz",
+      "bytes": 2804,
+      "sha256": "c8acc84c44f1e9d125e48209ac9913690422dbb8384775a836c35f503c3a4028",
+      "gzip_sha256": "fce7856005d1c60aa5c10c2ee5a2386aa5bc5c81e788fd04cc3b53754320e07a"
+    },
+    {
+      "path": "survival-roof/roof-anchor-building-tests-complete.log.gz",
+      "bytes": 1521,
+      "sha256": "b161c4306ad1d774b3cbcf396d4dee452a00d9c2ce797ed8307efe0e8c389270",
+      "gzip_sha256": "223cdda7606c48eafafb734cf72a47ee55266e69847c50a47a8bc63975b6c218"
+    },
+    {
+      "path": "survival-roof/roof-anchor-building-world-coordinates-tests.log.gz",
+      "bytes": 1054,
+      "sha256": "94f9e67497b6727c461de741d5abb661b2d14b7c1864ae268d3a1d4c5ff20b2f",
+      "gzip_sha256": "95ee4df7bf5b19d59ae0a4a54ca5db682b29822f8d9a4de548ca978c4b1669e3"
+    },
+    {
+      "path": "survival-roof/roof-anchor-consumer-tests.log.gz",
+      "bytes": 3341,
+      "sha256": "7923b5174bbb09d7840be1f507be7db01ba7454abaa3c0b776f2268421cfc49d",
+      "gzip_sha256": "80da59424364aae9a943bd0b2fb7497c3a7b21215e894a19082b75a17d895d19"
+    },
+    {
+      "path": "survival-roof/roof-anchor-clippy.log.gz",
+      "bytes": 1066,
+      "sha256": "6b6255e7e8ecf41c922fb1bdfa135d4a5d453a21dcab6907a854d5e4dcb6c97b",
+      "gzip_sha256": "a0e8580cebee33f0e8ff5a2d6884dd86ff3aa2469554ac0d732b9a63c323ce23"
+    },
+    {
+      "path": "survival-roof/roof-anchor-translate-clippy.log.gz",
+      "bytes": 478,
+      "sha256": "d09b61320ce313f43c4ed7cd2bbdca7ed1f64f1c4dbdd105ba2642a64fee7307",
+      "gzip_sha256": "68e046abc54df116cdbce6dbbb69c3f70780c71f33d48307727df2a6b758975a"
+    },
+    {
+      "path": "survival-roof/roof-anchor-mcp-clippy.log.gz",
+      "bytes": 72,
+      "sha256": "0b53209db424367e80c52cd8cde8b75e37af110438a0efde777104a1463956de",
+      "gzip_sha256": "7e115869a65542852f416c3350ef893acc3a8e0dcb56787f3e998ff1075a39c3"
+    },
+    {
+      "path": "survival-roof/survival-roof-20261002-preflight-c.json.gz",
+      "bytes": 388948,
+      "sha256": "046c3ca1ffc585c6fc866b1908898262e0978b780632b2aefb1d3f5f7deccf26",
+      "gzip_sha256": "2881df9c48ff894f78232861e53f97869af3e17a8b9e18f2ac0881fc201ee1c6"
+    },
+    {
+      "path": "survival-roof/survival-roof-20261002-preflight-c-test.log.gz",
+      "bytes": 332,
+      "sha256": "e1324e884895418d040dd7efc7fdd0f74f9da01ee1ba84d364d22c36184877bb",
+      "gzip_sha256": "903f7caf40aa25762d0ac7553e2c0518202d4fade70ea6ce1e73e4825ad0e299"
+    },
+    {
+      "path": "survival-roof/survival-roof-20261002-preflight-c-server-console.log.gz",
+      "bytes": 3769,
+      "sha256": "55471965ddb0bc4c32474b3c84a877ed95c8b2b34d17b82938106cef343f0daf",
+      "gzip_sha256": "71f7bf021134db574e9499fef9221212b330132a182b2ab47fd0564066f061e6"
+    },
+    {
+      "path": "survival-roof/survival-roof-20261002-preflight-c-server.log.gz",
+      "bytes": 3734,
+      "sha256": "74d9dce9d03b8dc7601a5592b6073f98d3dda77908b6f5f8bd1bf8b8eace9c1b",
+      "gzip_sha256": "2b72f2ea3010e9a3e81586dca14eca894c530c4b649fe90ad7b15716c45ee6b9"
+    },
+    {
+      "path": "survival-roof/survival-roof-20261002-live-a.json.gz",
+      "bytes": 388981,
+      "sha256": "f683804a8333eda3940d00999c5a50be6e544bbef7b23b6f6bfebc3f4f7b6b07",
+      "gzip_sha256": "81bbe424d3965855b891c58255993a072b8603bbe898e732ad9411302b0be144"
+    },
+    {
+      "path": "survival-roof/survival-roof-20261002-live-a-test.log.gz",
+      "bytes": 332,
+      "sha256": "757e848e0ab0d1d929940b2150afe4d1a480a866b4be2caa75ba58d112e22a86",
+      "gzip_sha256": "3f29acaf7784969766acf2fb3d0f5b9358dbd37dd44ee5e355ef621cc68f0aae"
+    },
+    {
+      "path": "survival-roof/survival-roof-20261002-live-a-server-console.log.gz",
+      "bytes": 3745,
+      "sha256": "49a96cacb8ced8a70454dce3102b4938b790edd613ab4c9c0156de251674c19e",
+      "gzip_sha256": "dc01ff5aec767b2bd08def886b68a5e818b06b2e2067a533ec1daa1412c6b95f"
+    },
+    {
+      "path": "survival-roof/survival-roof-20261002-live-a-server.log.gz",
+      "bytes": 3710,
+      "sha256": "a9c1038263839e12e187bfe780813f6235399478ff81d8c875d97da7f001a82e",
+      "gzip_sha256": "5157edb1aa17131e52aa52b67a70055cc10f9daad9c6ce31a927ee3af51828d2"
+    },
+    {
+      "path": "survival-roof/survival-roof-20261002-live-b.json.gz",
+      "bytes": 3032558,
+      "sha256": "8d4e90a862e60a67e485b7b3125b24c926766f007faf473b22e25734254b005d",
+      "gzip_sha256": "ffa3c2248f3e3b192dbde561cc0b35dac72a5a3838d0246e2b09a6d2093a6fb8"
+    },
+    {
+      "path": "survival-roof/survival-roof-20261002-live-b-test.log.gz",
+      "bytes": 2075,
+      "sha256": "aa0bbea4805a2ca6fcab13e4bcd3950db2fea9db6d943246be4834b7f6471381",
+      "gzip_sha256": "88180678427d67214c5f2b5c4173f904b57f7cc19503663ed24b6dccb6059da0"
+    },
+    {
+      "path": "survival-roof/survival-roof-20261002-live-b-server-console.log.gz",
+      "bytes": 4406,
+      "sha256": "199a6418f305b97bb7fcfb5ef0956c22cf2bc7b18fffe6ac6592682751edf700",
+      "gzip_sha256": "42d93f2436d085fb87453a4e14fe5742edb9da3b8455c8e333e1454c4c8fc3fa"
+    },
+    {
+      "path": "survival-roof/survival-roof-20261002-live-b-server.log.gz",
+      "bytes": 4371,
+      "sha256": "f8d4f50f80cde762b007c130f9a4b5ec5a063ba7744ec288f41d192dfc420f45",
+      "gzip_sha256": "175cd7b07da3869f77f9be1585e5f0adfed9ce18b348dcf53302f835f05b85ad"
+    },
+    {
+      "path": "survival-roof/survival-roof-20261002-live-b-journal.json.gz",
+      "bytes": 552868,
+      "sha256": "98d5e3d88622df6f4b7b3c5846ee673a64af3429710b0e31b5c0e233a6763c87",
+      "gzip_sha256": "475df01358c95acf77637101087929eee416d3675404c5515ab8d02c1144017e"
+    },
+    {
+      "path": "survival-roof/roof-anchor-trial-controller.py.gz",
+      "bytes": 3051,
+      "sha256": "e71981842962c0ccd6c6e5d80814db61c46e1bc88b2b58df0477f311db7c7688",
+      "gzip_sha256": "3682faf7d11b887625cc2d9a66a43e5d06c5612cc8b489c47ceb83770565ab77"
+    }
+  ]
+}

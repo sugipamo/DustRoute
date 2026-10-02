@@ -206,3 +206,66 @@ world coordinates. Translation library/tests Clippy passed. The wider translatio
 all-target invocation found two existing unused helper functions in the unchanged
 `flying_machine_assembly_fixture` example; that result is retained, not claimed
 as an all-target pass. No unrelated sample cleanup is included.
+
+## Complete preflight and first live roof attempt (2026-10-02 UTC)
+
+At `4fdba7f` with native `1877209`, `preflight-c` passed the complete shared
+construction checker: 49 permanent placements, 19 temporary placements, 19
+removals and 32 movements (119 actions). The supplied-material proof needs 49
+cobblestone and 19 dirt without crediting drops; peak temporary occupancy is 12.
+The checked final position is `[1.4345243952333269,-60,-1.4999008496360369]`,
+inside the declared ground retreat. `live-a` accidentally omitted `--execute`:
+it is another passing preflight only, despite its filename. Both were read-only
+after fixture preparation, and their servers stopped normally.
+
+`live-b --execute` then used a new isolated vanilla survival world with no OPs.
+The common executor completed 26 actions: 12 permanent cobblestone, seven dirt,
+five moves and two temporary removals with two confirmed retirement/reconnect
+cycles. All 19 placements and five motions have their normal independent native
+receipts. The next movement was refused BEFORE dispatch with
+`movement_plan_changed`. The five recorded remaining owned dirt cubes are
+`[1,-60,6]`, `[1,-59,6]`, `[2,-60,6]`, `[2,-59,6]`, `[2,-58,6]`.
+The partial site is saved in the isolated world; no automatic cleanup, new motion
+or terminal retreat was attempted after refusal. Roof completion and final whole
+site independent verification have not happened. Test exit 101, server exit 0.
+The persistent journal matches the stopped record in the trial output.
+See [source pins, checks and retained evidence](evidence/survival-roof-anchor-live-20261002.json).
+
+### New concern: reconnect changes the prediction initial state
+
+The planned and received starting position for action 27 agree exactly:
+`[2.436727277038884,-57,6.5000687949723455]`. Thus this evidence does not indicate
+position drift or support enlarging position tolerance. The preceding checked
+and independently completed movement ended with model Y velocity
+`-0.0784000015258789`. The detached scenario carries that velocity through block
+edits. After mining retirement, the fresh connection receives zero velocity and
+its `Received` context starts `Model::new` with zero velocity. Only the
+`PredictedAndObserved` branch preserves the previous predicted velocity.
+
+Source inspection shows why the phase matters: the first zero-Y intent does not
+set `on_ground` in `Model::advance`; the next intent may then use air acceleration
+instead of ground acceleration. The executor correctly refuses differing frames.
+However, it currently stores only the refusal message, not the fresh refused
+trajectory. The exact complete frame delta therefore remains to be characterized;
+these are retained initial-state facts and source analysis, not a claimed
+comparison of a missing trajectory.
+
+### Concrete next prerequisite, awaiting approval
+
+1. Retain initial model provenance and checked/fresh mismatch evidence before
+   any send; add a focused native read-only regression using this pose/support.
+2. Represent expected connection-reset/recovery as a typed boundary in native
+   hypothetical prediction. A future required receipt must not become fabricated
+   already-received position authority. Keep native physics in Voxrig.
+3. Have DustRoute's checked removal/retirement sequence use that boundary and
+   revalidate the remaining complete plan, matching its actual reconnect policy.
+   Do not relax frame equality, omit early frames or assume a small positional
+   difference is the only possible effect.
+4. Re-run complete preflight and live roof/cleanup/retreat acceptance. The broader
+   stopped-job/new-plan facility remains stage 4; this prerequisite concerns the
+   normal executor's existing mandatory recovery inside one construction plan.
+
+This changes the shared prediction/execution boundary and is stopped under the
+user's new-correctness-concern instruction. The approved Blueprint fix is complete;
+the roof goal and subsequent goals are not complete. No runtime recovery change
+has been made in response to this new finding.
