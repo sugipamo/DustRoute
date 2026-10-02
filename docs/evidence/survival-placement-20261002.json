@@ -1,0 +1,97 @@
+{
+  "recorded_at_utc": "2026-10-02T04:58:51.749535+00:00",
+  "status": "Nearby survival placement/material milestone validated; full survival Blueprint construction remains active and unfinished.",
+  "voxrig_revision": "f2959b3d113d83f413745c0d34787dca0edcf5e6",
+  "vendor_files": 251,
+  "checks": [
+    {
+      "project": "Voxrig",
+      "command": "cargo test --offline --locked -j 1 --all-targets -- --test-threads=1",
+      "result": "161 passed; 0 failed; 4 ignored",
+      "local_log": "/root/Voxrig/.local/survival-continuation/placement-all-tests.log",
+      "log_sha256": "fd80e3ed51b7e04d5763e2465f08c58beb66b36da2f803128f7ff6584375e442"
+    },
+    {
+      "project": "Voxrig",
+      "command": "cargo clippy --offline --locked -j 1 --all-targets -- -D warnings",
+      "result": "passed",
+      "local_log": "/root/Voxrig/.local/survival-continuation/placement-clippy.log",
+      "log_sha256": "86735f15cd7b9c34e02dd1e56bb8918d0eb0736576ce4eabba7eae2722560c47"
+    },
+    {
+      "project": "Voxrig",
+      "command": "cargo test --offline --locked -j 1 --doc -- --test-threads=1",
+      "result": "1 passed; 0 failed",
+      "local_log": "/root/Voxrig/.local/survival-continuation/placement-doc.log",
+      "log_sha256": "c2d1b4004289867c2aa200abcd6afe1ddbf39c3c5b65b62ff42ea515f96881b8"
+    },
+    {
+      "project": "Voxrig",
+      "command": "cargo package --offline --locked --allow-dirty --list",
+      "result": "passed",
+      "local_log": "/root/Voxrig/.local/survival-continuation/placement-package.log",
+      "log_sha256": "0dcebc13df86470225ae34d3d2fa382918f39597b45e7a7ef5a818d22be8a515"
+    },
+    {
+      "project": "DustRoute",
+      "command": "cargo check --offline --locked -j 1 -p dustroute-mcp --features voxrig --all-targets",
+      "result": "passed",
+      "local_log": "/root/DustRoute/.local/survival-placement-check-20261002.log",
+      "log_sha256": "0713e49336218e23c83096909a7165fa29ae680d73784f3dce79cdeb961b6863"
+    }
+  ],
+  "additional_checks": [
+    "Voxrig cargo fmt --all --check passed",
+    "Code/document whitespace checks passed; original native server-log whitespace preserved",
+    "Vendor snapshot verified"
+  ],
+  "native_oracle": {
+    "source": "vendor/voxrig/data/java_1_21_11/survival_placement_source.json",
+    "result": "11 passive BlockItem identities and inherited placement methods; six native face packet round trips verified"
+  },
+  "native_run": {
+    "execution_revision": "c230027c02ed1e7b5deae3ddd05b7fce642f3906",
+    "result": "1 passed; 0 failed; 164 filtered out; 13.92 seconds including fixture wait",
+    "manifest": "vendor/voxrig/docs/evidence/survival-placement-20261002-source.json",
+    "non_op": true,
+    "ordinary_inventory_swap": true,
+    "placement_count": 3,
+    "received_held_counts": [
+      3,
+      2,
+      1,
+      0
+    ],
+    "per_placement_ms": [
+      81,
+      80,
+      100
+    ],
+    "shutdown": "Zero players; console stop saved all worlds and exited 0"
+  },
+  "implemented": [
+    "Retained before-I/O ordinary survival placement intent; no predicted blocks/counts or blind retry.",
+    "Shared stationary geometry and native outline targeting, actual selected plain stack, adjacent observed air and own-body clearance.",
+    "Exact fresh target plus one-item consumption plus processed sequence required before next mutation.",
+    "Intermediate conflicts and context/chunk changes latch inspection; cancellation/closure preserves history.",
+    "Raw survival use_on_block refuses in favor of the validated path; creative contract unchanged."
+  ],
+  "limits": [
+    "Three chained dirt placements: two top-face and one west-face. Other admitted materials and all six face encodings were checked by the independent native oracle, not a live all-material matrix.",
+    "81/80/100 ms observations are a tiny localhost fixture sample, not a general construction throughput estimate.",
+    "Only the console fixture operator cleared/prepared the site, teleported bots and supplied materials before release. Builder used public ordinary swap, look, selection and placement APIs.",
+    "Results establish received matching world/material outcomes, not attribution under arbitrary concurrent external edits.",
+    "No walking, temporary cleanup, durable Blueprint job or roofed structure acceptance."
+  ],
+  "development_iterations": [
+    "Compiler found disjoint mutable state borrows and optional observer block-state access; corrected before passing tests.",
+    "Existing inventory test detected changed pending-swap error precedence; preserved its existing State error before survival raw-use refusal.",
+    "The immutable native placement trial passed on its first run."
+  ],
+  "not_completed": [
+    "Native survival walking, jumping, collision/correction handling and escape navigation",
+    "Site-specific temporary access planning and resource reservations",
+    "Durable survival Blueprint jobs and uncertain-operation diagnosis/replanning",
+    "Adopted roofed non-OP build, exact completion and temporary cleanup"
+  ]
+}

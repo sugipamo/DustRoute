@@ -3,6 +3,7 @@
 //! Bounded survival mining observations do not authorize continued construction.
 mod inventory;
 mod mining;
+mod placement;
 mod retirement;
 mod survival;
 #[cfg(test)]
@@ -14,6 +15,10 @@ pub use mining::{
     MiningIntent, MiningRecord, MiningRemoval, MiningSend, MiningStatus, MiningTargetReceipt,
 };
 pub(super) use mining::{mining_chunk_changed, mining_received, mining_world_changed};
+pub use placement::{PlacementIntent, PlacementObservation, PlacementRecord, PlacementStatus};
+pub(super) use placement::{
+    placement_chunk_changed, placement_context_received, placement_received,
+};
 pub(super) use retirement::retirement_received;
 pub use retirement::{
     MiningRecovery, MiningRecoveryEvidence, MiningRetirementRecord, MiningRetirementStatus,
@@ -198,6 +203,8 @@ pub struct OperationHistory {
     pub pending_creative_slots: Vec<u8>,
     /// Last mining intent/result, pending or observed. Never replay from history.
     pub mining: Option<MiningRecord>,
+    /// Last ordinary placement, including unresolved sends and observed consumption.
+    pub placement: Option<PlacementRecord>,
     /// Last independent retirement watch; history does not authorize recovery.
     pub mining_retirement: Option<MiningRetirementRecord>,
     /// Native loading attempts survive failure and remain available as history.
@@ -301,6 +308,7 @@ impl Operations {
             pending_inventory_swap: state.operations.inventory.pending_swap.clone(),
             pending_creative_slots: state.operations.inventory.pending_creative.clone(),
             mining: state.mining.clone(),
+            placement: state.placement.clone(),
             mining_retirement: state.retirement.clone(),
             interaction_loading: state.loading.clone(),
             selected_hotbar: state.operations.selected_hotbar.clone(),
@@ -558,6 +566,11 @@ impl Operations {
                 anyhow::anyhow!("inventory swap needs inspection"),
             ));
         }
+        if state.operations.game_mode == Some(GameMode::Survival) {
+            return Err(invalid(
+                "survival placement requires place_survival_cube and received material accounting",
+            ));
+        }
         check_reach(&state, position)?;
         let seq = self.next_sequence()?;
         let mut payload = vec![0];
@@ -588,6 +601,18 @@ impl Operations {
                 ErrorKind::State,
                 anyhow::anyhow!(
                     "native interaction loading pending; await readiness or inspect retained loading attempt"
+                ),
+            ));
+        }
+        if state
+            .placement
+            .as_ref()
+            .is_some_and(|p| p.observation.is_none())
+        {
+            return Err(Error::new(
+                ErrorKind::State,
+                anyhow::anyhow!(
+                    "survival placement needs target and material observations; inspect the retained intent"
                 ),
             ));
         }

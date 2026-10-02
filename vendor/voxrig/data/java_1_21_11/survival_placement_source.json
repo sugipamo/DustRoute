@@ -1,0 +1,19 @@
+{
+  "generator": {
+    "scripts/VerifySurvivalPlacement.java": "94985dc55176a6edfb8579a69ab3e84be165f536cbd62bfdf5101486aa6f93f1"
+  },
+  "mappings": "Yarn 1.21.11+build.6 (official -> named)",
+  "mappings_sha256": "d2495bcc4b96ff81d985fa403a3a65a2891d4df31ad71f36a19338aa66daa89a",
+  "minecraft": "Java 1.21.11",
+  "minecraft_merged_sha256": "ad6ee2c9cee9c191b25bf5d0ffec5788c3335f3b3fcf77d6871a7b66b3b5046e",
+  "outputs": {
+    "data/java_1_21_11/survival_placement.json": "42205603305e85e94a6f5044f5f7600168faa8118664f7d2bb65256a39644269"
+  },
+  "transformation": "Same existing package-remapped/access-widened native oracle; method bodies unchanged. Original caller verifies passive material identities/default methods and six placement packet codecs.",
+  "control_flow_audit_sha256": {
+    "BlockItem.javap": "c73097b58f6b348495bab9bef517507a8b66a6a56ccf009f770e43f4458ba43d",
+    "ItemPlacementContext.javap": "f5438584b6d5064f8016b04055d3e670ef777f55c8cfbd378cf26cc898b26775",
+    "ServerPlayerInteractionManager.javap": "21844711c1dc3d6c98467f42dde0f7aeaef94f9807461644123aa206bc87e5a3",
+    "ServerPlayNetworkHandler.javap": "e705cd3f36856d4b47fcb2e6e141252605efe43c38b94cb4bb59bf77b17ff642"
+  }
+}

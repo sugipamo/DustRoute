@@ -1,0 +1,295 @@
+{
+  "minecraft_version": "Java 1.21.11",
+  "execution_revision": "c230027c02ed1e7b5deae3ddd05b7fce642f3906",
+  "endpoint": "127.0.0.1:25572",
+  "fixture": "Dedicated flat survival fixture, whitelist NatMineBot and NatMineView; no user-world operations",
+  "operator_entries_after_trial": [],
+  "command": "NATIVE_PLACEMENT_PORT=25572 NATIVE_PLACEMENT_OUTPUT=/root/Voxrig/.local/survival-continuation/native-placement-20261002-a.json cargo test --offline --locked -j 1 --lib native_survival_placement_and_material_consumption -- --ignored --test-threads=1 --nocapture",
+  "result": "1 passed; 0 failed; 164 filtered out; 13.92 seconds including fixture wait",
+  "inventory_swap": {
+    "hotbar_sequence": 196,
+    "main_sequence": 195,
+    "receive_sequence": 196,
+    "submission": {
+      "after_sequence": 194,
+      "connection_id": 1,
+      "hotbar": 0,
+      "hotbar_before": {
+        "kind": "empty"
+      },
+      "main_before": {
+        "item": {
+          "count": 3,
+          "item_id": 28,
+          "name": "minecraft:dirt"
+        },
+        "kind": "item"
+      },
+      "main_slot": 9,
+      "screen_revision": 3
+    }
+  },
+  "cases": [
+    {
+      "target": [
+        2,
+        -60,
+        0
+      ],
+      "support": [
+        2,
+        -61,
+        0
+      ],
+      "face": 1,
+      "elapsed_ms": 81,
+      "result": {
+        "observation": {
+          "acknowledged_sequence": 1,
+          "held_after": {
+            "item": {
+              "count": 2,
+              "item_id": 28,
+              "name": "minecraft:dirt"
+            },
+            "kind": "item"
+          },
+          "intent": {
+            "after_sequence": 196,
+            "before": {
+              "name": "minecraft:air",
+              "properties": {}
+            },
+            "connection_id": 1,
+            "cursor": [
+              0.5000367760658264,
+              1.0,
+              0.5
+            ],
+            "dimension": "minecraft:overworld",
+            "expected": {
+              "name": "minecraft:dirt",
+              "properties": {}
+            },
+            "face_id": 1,
+            "generation": 29,
+            "held_before": {
+              "count": 3,
+              "item_id": 28,
+              "name": "minecraft:dirt"
+            },
+            "held_receive_sequence": 196,
+            "position": [
+              0.5,
+              -60.0,
+              0.5
+            ],
+            "selection": {
+              "dispatched": true,
+              "from_server": false,
+              "sequence": 196,
+              "slot": 0
+            },
+            "sequence": 1,
+            "support": [
+              2,
+              -61,
+              0
+            ],
+            "support_state": {
+              "name": "minecraft:stone",
+              "properties": {}
+            },
+            "target": [
+              2,
+              -60,
+              0
+            ]
+          },
+          "inventory_receive_sequence": 200,
+          "target_receive_sequence": 199
+        },
+        "status": "observed_placed"
+      }
+    },
+    {
+      "target": [
+        2,
+        -59,
+        0
+      ],
+      "support": [
+        2,
+        -60,
+        0
+      ],
+      "face": 1,
+      "elapsed_ms": 80,
+      "result": {
+        "observation": {
+          "acknowledged_sequence": 2,
+          "held_after": {
+            "item": {
+              "count": 1,
+              "item_id": 28,
+              "name": "minecraft:dirt"
+            },
+            "kind": "item"
+          },
+          "intent": {
+            "after_sequence": 201,
+            "before": {
+              "name": "minecraft:air",
+              "properties": {}
+            },
+            "connection_id": 1,
+            "cursor": [
+              0.500292181968689,
+              1.0,
+              0.5
+            ],
+            "dimension": "minecraft:overworld",
+            "expected": {
+              "name": "minecraft:dirt",
+              "properties": {}
+            },
+            "face_id": 1,
+            "generation": 29,
+            "held_before": {
+              "count": 2,
+              "item_id": 28,
+              "name": "minecraft:dirt"
+            },
+            "held_receive_sequence": 200,
+            "position": [
+              0.5,
+              -60.0,
+              0.5
+            ],
+            "selection": {
+              "dispatched": true,
+              "from_server": false,
+              "sequence": 196,
+              "slot": 0
+            },
+            "sequence": 2,
+            "support": [
+              2,
+              -60,
+              0
+            ],
+            "support_state": {
+              "name": "minecraft:dirt",
+              "properties": {}
+            },
+            "target": [
+              2,
+              -59,
+              0
+            ]
+          },
+          "inventory_receive_sequence": 205,
+          "target_receive_sequence": 204
+        },
+        "status": "observed_placed"
+      }
+    },
+    {
+      "target": [
+        1,
+        -59,
+        0
+      ],
+      "support": [
+        2,
+        -59,
+        0
+      ],
+      "face": 4,
+      "elapsed_ms": 100,
+      "result": {
+        "observation": {
+          "acknowledged_sequence": 3,
+          "held_after": {
+            "kind": "empty"
+          },
+          "intent": {
+            "after_sequence": 206,
+            "before": {
+              "name": "minecraft:air",
+              "properties": {}
+            },
+            "connection_id": 1,
+            "cursor": [
+              0.0,
+              0.5000950694084167,
+              0.5
+            ],
+            "dimension": "minecraft:overworld",
+            "expected": {
+              "name": "minecraft:dirt",
+              "properties": {}
+            },
+            "face_id": 4,
+            "generation": 29,
+            "held_before": {
+              "count": 1,
+              "item_id": 28,
+              "name": "minecraft:dirt"
+            },
+            "held_receive_sequence": 205,
+            "position": [
+              0.5,
+              -60.0,
+              0.5
+            ],
+            "selection": {
+              "dispatched": true,
+              "from_server": false,
+              "sequence": 196,
+              "slot": 0
+            },
+            "sequence": 3,
+            "support": [
+              2,
+              -59,
+              0
+            ],
+            "support_state": {
+              "name": "minecraft:dirt",
+              "properties": {}
+            },
+            "target": [
+              1,
+              -59,
+              0
+            ]
+          },
+          "inventory_receive_sequence": 210,
+          "target_receive_sequence": 209
+        },
+        "status": "observed_placed"
+      }
+    }
+  ],
+  "final_main_slot": {
+    "kind": "empty"
+  },
+  "final_hotbar": {
+    "kind": "empty"
+  },
+  "original_json_sha256": "582c0fd83fc6042147fd363eaed10470d075d40d6a11e2024422aa1880468652",
+  "outputs": {
+    "survival-placement-20261002-a.json.gz": "a6aaf4436717797dd64763e45f538ce5b80d3b43655ad6f6432dd8a07df5ca02",
+    "survival-placement-server-20261002-a.log": "956350929b46a8078b7a68751c3153ec688a1af751b54145f5a553c1ab5c8412"
+  },
+  "limits": [
+    "Three chained dirt placements: two top-face and one west-face. Other admitted materials and all six face encodings were checked by the independent native oracle, not a live all-material matrix.",
+    "81/80/100 ms observations are a tiny localhost fixture sample, not a general construction throughput estimate.",
+    "Only the console fixture operator cleared/prepared the site, teleported bots and supplied materials before release. Builder used public ordinary swap, look, selection and placement APIs.",
+    "Results establish received matching world/material outcomes, not attribution under arbitrary concurrent external edits.",
+    "No walking, temporary cleanup, durable Blueprint job or roofed structure acceptance."
+  ],
+  "transformation": "Original JSON and server log unchanged; gzip mtime=0; raw server log retains native whitespace.",
+  "shutdown": "Zero players; console stop saved all worlds and exited 0"
+}

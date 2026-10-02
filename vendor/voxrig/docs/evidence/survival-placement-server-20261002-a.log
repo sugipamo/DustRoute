@@ -1,0 +1,43 @@
+[04:55:52] [ServerMain/INFO]: Environment: Environment[sessionHost=https://sessionserver.mojang.com, servicesHost=https://api.minecraftservices.com, profilesHost=https://api.mojang.com, name=PROD]
+[04:55:53] [ServerMain/INFO]: Loaded 1470 recipes
+[04:55:53] [ServerMain/INFO]: Loaded 1584 advancements
+[04:55:54] [Server thread/INFO]: Starting minecraft server version 1.21.11
+[04:55:54] [Server thread/INFO]: Loading properties
+[04:55:54] [Server thread/INFO]: Default game type: SURVIVAL
+[04:55:54] [Server thread/INFO]: Generating keypair
+[04:55:54] [Server thread/INFO]: Starting Minecraft server on 127.0.0.1:25572
+[04:55:54] [Server thread/WARN]: **** SERVER IS RUNNING IN OFFLINE/INSECURE MODE!
+[04:55:54] [Server thread/WARN]: The server will make no attempt to authenticate usernames. Beware.
+[04:55:54] [Server thread/WARN]: While this makes the game possible to play without internet access, it also opens up the ability for hackers to connect with any username they choose.
+[04:55:54] [Server thread/WARN]: To change this, set "online-mode" to "true" in the server.properties file.
+[04:55:54] [Server thread/INFO]: Preparing level "world"
+[04:55:54] [Server thread/INFO]: Loading 49 persistent chunks...
+[04:55:54] [Server thread/INFO]: Preparing spawn area: 16%
+[04:55:54] [Server thread/INFO]: Time elapsed: 210 ms
+[04:55:54] [Server thread/INFO]: Done (0.405s)! For help, type "help"
+[04:56:08] [Server thread/INFO]: NatMineBot[/127.0.0.1:34430] logged in with entity id 2 at (0.5, -60.0, 0.5)
+[04:56:08] [Server thread/INFO]: NatMineBot joined the game
+[04:56:08] [Server thread/INFO]: NatMineView[/127.0.0.1:43922] logged in with entity id 3 at (0.5, -60.0, 4.5)
+[04:56:08] [Server thread/INFO]: NatMineView joined the game
+[04:56:20] [Server thread/INFO]: No blocks were filled
+[04:56:20] [Server thread/INFO]: No blocks were filled
+[04:56:20] [Server thread/INFO]: Teleported NatMineBot to 0.500000, -60.000000, 0.500000
+[04:56:20] [Server thread/INFO]: Teleported NatMineView to 0.500000, -60.000000, 4.500000
+[04:56:20] [Server thread/INFO]: No items were found on player NatMineBot
+[04:56:20] [Server thread/INFO]: Replaced a slot on NatMineBot with [Dirt]
+[04:56:21] [Server thread/INFO]: NatMineBot lost connection: Disconnected
+[04:56:21] [Server thread/INFO]: NatMineBot left the game
+[04:56:21] [Server thread/INFO]: NatMineView lost connection: Disconnected
+[04:56:21] [Server thread/INFO]: NatMineView left the game
+[04:56:35] [Server thread/INFO]: There are 0 of a max of 2 players online: 
+[04:56:35] [Server thread/INFO]: Stopping the server
+[04:56:35] [Server thread/INFO]: Stopping server
+[04:56:35] [Server thread/INFO]: Saving players
+[04:56:35] [Server thread/INFO]: Saving worlds
+[04:56:35] [Server thread/INFO]: Saving chunks for level 'ServerLevel[world]'/minecraft:overworld
+[04:56:35] [Server thread/INFO]: Saving chunks for level 'ServerLevel[world]'/minecraft:the_end
+[04:56:35] [Server thread/INFO]: Saving chunks for level 'ServerLevel[world]'/minecraft:the_nether
+[04:56:35] [Server thread/INFO]: ThreadedAnvilChunkStorage (world): All chunks are saved
+[04:56:35] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM1): All chunks are saved
+[04:56:35] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM-1): All chunks are saved
+[04:56:35] [Server thread/INFO]: ThreadedAnvilChunkStorage: All dimensions are saved

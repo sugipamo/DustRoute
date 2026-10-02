@@ -43,3 +43,5 @@
 - [物理実装完了報告](history/physics-completion-report.md)
 - [サバイバルロードマップ](history/survival-roadmap.md)
 - [サバイバル実装完了報告](history/survival-completion-report.md)
+
+- [Ordinary survival placement and material receipts](survival-placement.md)

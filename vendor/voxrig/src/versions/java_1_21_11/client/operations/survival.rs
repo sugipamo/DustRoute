@@ -99,7 +99,7 @@ pub struct LocalPlayerState {
 }
 
 // Audited against the game's native registry/default attribute container.
-const DRY_CUBES: &[&str] = &[
+pub(super) const DRY_CUBES: &[&str] = &[
     "minecraft:stone",
     "minecraft:dirt",
     "minecraft:grass_block",
@@ -414,6 +414,11 @@ fn standing_region(position: [f64; 3]) -> StandingRegion {
         bounds[5].floor() as i32 + 1,
     ];
     StandingRegion { bounds, min, max }
+}
+
+pub(super) fn standing_intersects(position: [f64; 3], cell: [i32; 3]) -> bool {
+    let bounds = standing_region(position).bounds;
+    (0..3).all(|i| bounds[i] < f64::from(cell[i] + 1) && bounds[i + 3] > f64::from(cell[i]))
 }
 
 // Readiness covers every cell that context() will inspect, including neighbor

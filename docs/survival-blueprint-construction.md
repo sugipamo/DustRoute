@@ -233,3 +233,42 @@ the evidence limitations. The dedicated fixture is stopped.
 This completes the approved loading/recovery prerequisite, not the full building
 goal. Next is nearby survival placement/material accounting, followed by walking,
 access planning, durable jobs and the roofed non-OP construction acceptance.
+
+## Nearby survival placement and received materials
+
+Voxrig now provides `place_survival_cube`, `observe_survival_placement` and
+`wait_survival_placement`. The native operation validates healthy stationary
+contact, selected plain material, first outline face hit, received adjacent air
+and body clearance. Eleven audited passive cube materials are admitted. Raw
+survival block-use callers are directed to this checked API; creative behavior
+retains its existing packet-submission contract.
+
+The intent is retained before sending. All further user mutations wait for an
+exact target-specific block receipt, a fresh selected-slot receipt showing one
+consumed material and the processed one-shot interaction sequence. None alone
+establishes completion. Unexpected intermediate block/material/context changes
+latch inspection even if later updates match; timeout and cancellation do not
+resend or erase the attempt. Historical results are not restorable job authority.
+
+The dedicated non-OP vanilla comparison passed: an ordinary main-inventory to
+hotbar swap supplied three dirt, followed by two top-face and one side-face
+placements on the same connection. An independent observer saw each placed
+block, and received counts progressed 3 -> 2 -> 1 -> empty. Completion took
+81/80/100 ms in this tiny localhost sample, not a general throughput benchmark.
+No builder commands, creative inventory writes, teleport or flight were used.
+Console commands only prepared the isolated fixture before release; the fixture
+has been stopped cleanly. Empty-hand placement was refused.
+
+[Placement details](../vendor/voxrig/docs/survival-placement.md) and the
+[integration record](evidence/survival-placement-20261002.json) identify the native
+execution pin, raw traces, 161 passing offline tests (4 ignored), independent
+material/packet oracle and integration checks. Live acceptance used dirt; all
+11 material definitions and 6 packet faces were checked against the native
+oracle, not by an all-material live placement matrix.
+
+Step 2 now has nearby placement/material receipts and bounded mining with explicit
+retirement/recovery. The overall goal remains active and incomplete. Next is
+step 3: native survival walk/stop/jump/settle on admitted static geometry, including
+collision and correction handling. Site/access planning, persistent jobs and
+the adopted roofed Blueprint build/temporary cleanup still follow. This milestone
+does not turn the existing command construction executor into a survival executor.

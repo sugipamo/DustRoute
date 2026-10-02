@@ -1,0 +1,184 @@
+{
+  "materials": [
+    {
+      "name": "minecraft:stone",
+      "item_id": 1,
+      "state_id": 1,
+      "method_owners": {
+        "getPlacementState": "net.minecraft.block.Block",
+        "onPlaced": "net.minecraft.block.Block",
+        "onUse": "net.minecraft.block.AbstractBlock",
+        "onUseWithItem": "net.minecraft.block.AbstractBlock",
+        "getStateForNeighborUpdate": "net.minecraft.block.AbstractBlock",
+        "canPlaceAt": "net.minecraft.block.AbstractBlock",
+        "canReplace": "net.minecraft.block.AbstractBlock"
+      }
+    },
+    {
+      "name": "minecraft:dirt",
+      "item_id": 28,
+      "state_id": 10,
+      "method_owners": {
+        "getPlacementState": "net.minecraft.block.Block",
+        "onPlaced": "net.minecraft.block.Block",
+        "onUse": "net.minecraft.block.AbstractBlock",
+        "onUseWithItem": "net.minecraft.block.AbstractBlock",
+        "getStateForNeighborUpdate": "net.minecraft.block.AbstractBlock",
+        "canPlaceAt": "net.minecraft.block.AbstractBlock",
+        "canReplace": "net.minecraft.block.AbstractBlock"
+      }
+    },
+    {
+      "name": "minecraft:cobblestone",
+      "item_id": 35,
+      "state_id": 14,
+      "method_owners": {
+        "getPlacementState": "net.minecraft.block.Block",
+        "onPlaced": "net.minecraft.block.Block",
+        "onUse": "net.minecraft.block.AbstractBlock",
+        "onUseWithItem": "net.minecraft.block.AbstractBlock",
+        "getStateForNeighborUpdate": "net.minecraft.block.AbstractBlock",
+        "canPlaceAt": "net.minecraft.block.AbstractBlock",
+        "canReplace": "net.minecraft.block.AbstractBlock"
+      }
+    },
+    {
+      "name": "minecraft:oak_planks",
+      "item_id": 36,
+      "state_id": 15,
+      "method_owners": {
+        "getPlacementState": "net.minecraft.block.Block",
+        "onPlaced": "net.minecraft.block.Block",
+        "onUse": "net.minecraft.block.AbstractBlock",
+        "onUseWithItem": "net.minecraft.block.AbstractBlock",
+        "getStateForNeighborUpdate": "net.minecraft.block.AbstractBlock",
+        "canPlaceAt": "net.minecraft.block.AbstractBlock",
+        "canReplace": "net.minecraft.block.AbstractBlock"
+      }
+    },
+    {
+      "name": "minecraft:spruce_planks",
+      "item_id": 37,
+      "state_id": 16,
+      "method_owners": {
+        "getPlacementState": "net.minecraft.block.Block",
+        "onPlaced": "net.minecraft.block.Block",
+        "onUse": "net.minecraft.block.AbstractBlock",
+        "onUseWithItem": "net.minecraft.block.AbstractBlock",
+        "getStateForNeighborUpdate": "net.minecraft.block.AbstractBlock",
+        "canPlaceAt": "net.minecraft.block.AbstractBlock",
+        "canReplace": "net.minecraft.block.AbstractBlock"
+      }
+    },
+    {
+      "name": "minecraft:quartz_block",
+      "item_id": 482,
+      "state_id": 11121,
+      "method_owners": {
+        "getPlacementState": "net.minecraft.block.Block",
+        "onPlaced": "net.minecraft.block.Block",
+        "onUse": "net.minecraft.block.AbstractBlock",
+        "onUseWithItem": "net.minecraft.block.AbstractBlock",
+        "getStateForNeighborUpdate": "net.minecraft.block.AbstractBlock",
+        "canPlaceAt": "net.minecraft.block.AbstractBlock",
+        "canReplace": "net.minecraft.block.AbstractBlock"
+      }
+    },
+    {
+      "name": "minecraft:smooth_quartz",
+      "item_id": 300,
+      "state_id": 13280,
+      "method_owners": {
+        "getPlacementState": "net.minecraft.block.Block",
+        "onPlaced": "net.minecraft.block.Block",
+        "onUse": "net.minecraft.block.AbstractBlock",
+        "onUseWithItem": "net.minecraft.block.AbstractBlock",
+        "getStateForNeighborUpdate": "net.minecraft.block.AbstractBlock",
+        "canPlaceAt": "net.minecraft.block.AbstractBlock",
+        "canReplace": "net.minecraft.block.AbstractBlock"
+      }
+    },
+    {
+      "name": "minecraft:white_concrete",
+      "item_id": 614,
+      "state_id": 14828,
+      "method_owners": {
+        "getPlacementState": "net.minecraft.block.Block",
+        "onPlaced": "net.minecraft.block.Block",
+        "onUse": "net.minecraft.block.AbstractBlock",
+        "onUseWithItem": "net.minecraft.block.AbstractBlock",
+        "getStateForNeighborUpdate": "net.minecraft.block.AbstractBlock",
+        "canPlaceAt": "net.minecraft.block.AbstractBlock",
+        "canReplace": "net.minecraft.block.AbstractBlock"
+      }
+    },
+    {
+      "name": "minecraft:glass",
+      "item_id": 195,
+      "state_id": 562,
+      "method_owners": {
+        "getPlacementState": "net.minecraft.block.Block",
+        "onPlaced": "net.minecraft.block.Block",
+        "onUse": "net.minecraft.block.AbstractBlock",
+        "onUseWithItem": "net.minecraft.block.AbstractBlock",
+        "getStateForNeighborUpdate": "net.minecraft.block.AbstractBlock",
+        "canPlaceAt": "net.minecraft.block.AbstractBlock",
+        "canReplace": "net.minecraft.block.AbstractBlock"
+      }
+    },
+    {
+      "name": "minecraft:andesite",
+      "item_id": 6,
+      "state_id": 6,
+      "method_owners": {
+        "getPlacementState": "net.minecraft.block.Block",
+        "onPlaced": "net.minecraft.block.Block",
+        "onUse": "net.minecraft.block.AbstractBlock",
+        "onUseWithItem": "net.minecraft.block.AbstractBlock",
+        "getStateForNeighborUpdate": "net.minecraft.block.AbstractBlock",
+        "canPlaceAt": "net.minecraft.block.AbstractBlock",
+        "canReplace": "net.minecraft.block.AbstractBlock"
+      }
+    },
+    {
+      "name": "minecraft:granite",
+      "item_id": 2,
+      "state_id": 2,
+      "method_owners": {
+        "getPlacementState": "net.minecraft.block.Block",
+        "onPlaced": "net.minecraft.block.Block",
+        "onUse": "net.minecraft.block.AbstractBlock",
+        "onUseWithItem": "net.minecraft.block.AbstractBlock",
+        "getStateForNeighborUpdate": "net.minecraft.block.AbstractBlock",
+        "canPlaceAt": "net.minecraft.block.AbstractBlock",
+        "canReplace": "net.minecraft.block.AbstractBlock"
+      }
+    }
+  ],
+  "packets": [
+    {
+      "face": 0,
+      "hex": "00ffffff8000003fc3003f000000000000003f000000000011"
+    },
+    {
+      "face": 1,
+      "hex": "00ffffff8000003fc3013f0000003f8000003f000000000011"
+    },
+    {
+      "face": 2,
+      "hex": "00ffffff8000003fc3023f0000003f00000000000000000011"
+    },
+    {
+      "face": 3,
+      "hex": "00ffffff8000003fc3033f0000003f0000003f800000000011"
+    },
+    {
+      "face": 4,
+      "hex": "00ffffff8000003fc304000000003f0000003f000000000011"
+    },
+    {
+      "face": 5,
+      "hex": "00ffffff8000003fc3053f8000003f0000003f000000000011"
+    }
+  ]
+}

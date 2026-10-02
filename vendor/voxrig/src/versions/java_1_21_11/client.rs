@@ -110,6 +110,7 @@ struct State {
     identity: Option<LoginIdentity>,
     retirement: Option<operations::MiningRetirementRecord>,
     mining: Option<operations::MiningRecord>,
+    placement: Option<operations::PlacementRecord>,
     recording: Option<recording::Capture>,
     recording_ordinal: u64,
     operations: operations::OperationState,
@@ -133,6 +134,7 @@ impl Default for State {
             identity: None,
             retirement: None,
             mining: None,
+            placement: None,
             recording: None,
             recording_ordinal: 0,
             operations: operations::OperationState::default(),
@@ -171,6 +173,9 @@ impl State {
             Phase::Configuration => apply_configuration(self, id, payload),
             Phase::Play => apply_play(self, id, payload, max_chunks),
         };
+        if result.is_ok() {
+            operations::placement_context_received(self);
+        }
         if let Err(error) = &result {
             self.failure = Some(Error::new(
                 ErrorKind::Protocol,
@@ -837,6 +842,7 @@ fn apply_play(
             let chunk = [r.i32()?, r.i32()?];
             let pistons = state.world.load(payload, max_chunks)?;
             operations::mining_chunk_changed(state, chunk);
+            operations::placement_chunk_changed(state, chunk);
             if let Some(capture) = &mut state.recording {
                 capture.chunk_changed(chunk);
             }
@@ -851,6 +857,7 @@ fn apply_play(
             }
             state.reconstruction.received(&changes);
             operations::mining_received(state, &changes)?;
+            operations::placement_received(state, &changes)?;
         }
         input::MULTI_BLOCK_CHANGE => {
             let changes = state.world.section_changes(payload)?;
@@ -859,6 +866,7 @@ fn apply_play(
             }
             state.reconstruction.received(&changes);
             operations::mining_received(state, &changes)?;
+            operations::placement_received(state, &changes)?;
         }
         input::UNLOAD_CHUNK => {
             let z = r.i32()?;
@@ -869,6 +877,7 @@ fn apply_play(
             }
             state.reconstruction.chunk_replaced([x, z]);
             operations::mining_chunk_changed(state, [x, z]);
+            operations::placement_chunk_changed(state, [x, z]);
         }
         input::BLOCK_ACTION => {
             let p = super::wire::unpack_position(r.u64()?);
@@ -951,5 +960,7 @@ fn apply_play(
 
 #[cfg(test)]
 mod mining_native_trials;
+#[cfg(test)]
+mod placement_native_trials;
 #[cfg(test)]
 mod tests;
