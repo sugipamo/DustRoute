@@ -101,7 +101,7 @@ impl Recipe<'_> {
         let material = if temporary { "dirt" } else { "cobblestone" };
         let placement = self
             .scenario
-            .preview_cube_placement(support, face.clone(), aim, material)
+            .preview_cube_placement(support, face, aim, material)
             .map_err(|e| {
                 format!(
                     "place {target:?} via {support:?}/{face:?} from {:?}: {e}",
@@ -143,10 +143,7 @@ impl Recipe<'_> {
             let point =
                 std::array::from_fn(|i| f64::from(target[i]) + 0.5 + f64::from(delta[i]) * 0.5);
             let aim = rotation(self.eye(), point);
-            match self
-                .scenario
-                .preview_cube_removal(target, face.clone(), aim)
-            {
+            match self.scenario.preview_cube_removal(target, face, aim) {
                 Ok(edit) => {
                     self.scenario = self
                         .scenario

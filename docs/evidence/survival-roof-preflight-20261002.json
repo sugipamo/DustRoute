@@ -1,0 +1,141 @@
+{
+  "schema": "dustroute.survival-roof-preflight.v1",
+  "recorded_at_utc": "2026-10-02T12:00:34.840392+00:00",
+  "status": "concern_stop_before_native_behavior_change",
+  "consumer_preflight_source": "4b1f1ebbdc78a8173ce809b2ad5f59b3bdc393b7",
+  "native_runtime_and_vendor_source": "1a8f258eeda876b0e3837f8a246b990c3cffb052",
+  "native_test_only_source": "6b47f26d6a3f56ccfddd8f40460f38f2254d8cae",
+  "preflight": {
+    "passed": false,
+    "execute": false,
+    "error": "place [0, -60, 4] via [0, -61, 4]/Up from [2.5, -59.0, 6.544924947876652]: uncertain eye corridor is not clear; use a less ambiguous standing/target geometry",
+    "planned_events": [
+      {
+        "phase": "planned_place",
+        "target": [
+          2,
+          -60,
+          6
+        ],
+        "temporary": true
+      },
+      {
+        "end": [
+          2.5,
+          -59.0,
+          6.544924947876652
+        ],
+        "from": [
+          2.5,
+          -60.0,
+          7.5
+        ],
+        "jump": true,
+        "phase": "planned_move",
+        "target": [
+          2.5,
+          -59.0,
+          6.5
+        ],
+        "ticks": 29
+      }
+    ],
+    "sent_building_or_movement_actions": false,
+    "test_exit_code": 101,
+    "server_exit_code": 0,
+    "complete_receive_traces": true
+  },
+  "characterization": {
+    "test": "roof_diagonal_view_is_refused_by_off_ray_foot_support",
+    "passed": true,
+    "first_native_hit": [
+      0,
+      -61,
+      4
+    ],
+    "face": "up",
+    "off_ray_foot_support": [
+      2,
+      -60,
+      6
+    ],
+    "aim_error_horizontal": 0.00048828225,
+    "same_face_samples": 25,
+    "counterfactual_without_support": "guard accepts; visibility diagnosis only, not valid standing",
+    "real_obstacle": [
+      1,
+      -59,
+      5
+    ],
+    "continuous_volume_proved_by_samples": false
+  },
+  "validation": {
+    "related_tests_passed": 19,
+    "related_tests_ignored": 4,
+    "native_characterization_passed": 1,
+    "native_and_consumer_all_target_clippy": "passed",
+    "initial_consumer_clippy": "clone_on_copy in test driver; two redundant clones removed",
+    "format": "passed"
+  },
+  "work_remaining": [
+    "Approve native swept-ray uncertainty refinement or select a different authored layout under existing limits.",
+    "Complete roof preflight and actual construction/cleanup.",
+    "Then goals 2 through 5: automatic sequences, public MCP/adoption, newly planned continuation, whole-building failure cases."
+  ],
+  "artifacts": [
+    {
+      "path": "docs/evidence/survival-roof/survival-roof-20261002-preflight-a.json.gz",
+      "sha256": "efb0fd3abed50acb5cacb64bbff9cb5022fdb3efa8a518a1c36c281b5e48dd12",
+      "gzip_sha256": "6be08e1f0dc612bdf8dafc7a7ce86d0554f6cbedb8c3e59127b8289ff7c7396d",
+      "bytes": 4537
+    },
+    {
+      "path": "docs/evidence/survival-roof/survival-roof-20261002-preflight-a-server.log.gz",
+      "sha256": "b8a8f61faa5be6632790f50189be1f620a76c3bc1764f34fd3215d9c1e33d55b",
+      "gzip_sha256": "dd7355e40d07981d119f28ba440f88c2143531a804b613c9b9e891a92ada7741",
+      "bytes": 3735
+    },
+    {
+      "path": "docs/evidence/survival-roof/survival-roof-20261002-preflight-a-test.log.gz",
+      "sha256": "3320941f7ad5f4be6f70a14b3c6b93cf88a93b156321dd6d8eafb923161c982e",
+      "gzip_sha256": "35d5e316b39dc75d22e21ff86fe5d0d9caf539d64659f4caa68f505e20216d51",
+      "bytes": 876
+    },
+    {
+      "path": "docs/evidence/survival-roof/survival-roof-corridor-native-characterization-20261002.log.gz",
+      "sha256": "a2cedb94890091e11361eefa80f95a9a8dcc1ad9004e9888bbe25f93f4a80228",
+      "gzip_sha256": "d0b369cc6a68170e891fd9af47228bb08f8811a1c7d30135cd4dee7c4f3f1b54",
+      "bytes": 433
+    },
+    {
+      "path": "docs/evidence/survival-roof/survival-roof-corridor-native-clippy-20261002.log.gz",
+      "sha256": "81ff335c3e6ffcc80f87447c340a78575a85d06b538ff12e26429f0126c73304",
+      "gzip_sha256": "f8942ae4d4b3976a029841d0bc2a3e2e994114af1411cc0fee0c6deca2da2da8",
+      "bytes": 114
+    },
+    {
+      "path": "docs/evidence/survival-roof/survival-roof-preflight-consumer-clippy-initial-20261002.log.gz",
+      "sha256": "b34f84bec73f7e4c110e3dfda1b82c85bb8da9a6bff750596542d6945ae71d29",
+      "gzip_sha256": "4b194ab891700e90dcaa666fde5b6193ef83c4044469d50ea94a40d31ce69683",
+      "bytes": 1236
+    },
+    {
+      "path": "docs/evidence/survival-roof/survival-roof-preflight-consumer-clippy-20261002.log.gz",
+      "sha256": "2bcc91ddb5e2854fa8b86ed74ce5af2c338f1c389ff7b995482eed507ab22ef7",
+      "gzip_sha256": "6575089fd00a82945a8527d798202a22e1b0a579c34733098f252cfa08e53e41",
+      "bytes": 145
+    },
+    {
+      "path": "docs/evidence/survival-roof/survival-roof-preflight-consumer-tests-20261002.log.gz",
+      "sha256": "def02a689bf208fadaaef8a927223cbd1b1e1a3d6fc118eff818b0f33813aa56",
+      "gzip_sha256": "24ec5d09ed09043d9097f4ab3c410dc349f52c0ae2c948e4ce73eef24d679db1",
+      "bytes": 3100
+    },
+    {
+      "path": "docs/evidence/survival-roof/run-roof-trial.py.gz",
+      "sha256": "e71981842962c0ccd6c6e5d80814db61c46e1bc88b2b58df0477f311db7c7688",
+      "gzip_sha256": "3682faf7d11b887625cc2d9a66a43e5d06c5612cc8b489c47ceb83770565ab77",
+      "bytes": 3051
+    }
+  ]
+}

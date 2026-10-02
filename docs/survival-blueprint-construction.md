@@ -7,6 +7,13 @@ origin. Main remains at `7f74b37`.
 
 ## Latest status (2026-10-02 UTC)
 
+The next [fixed-roof goal](survival-roof-execution.md) has started and is stopped
+for prerequisite review after its first read-only preflight. The documented
+native bounding-corridor restriction rejects a ground-face view because of an
+off-ray foot support. A test-only characterization isolates that cause; no
+building actions or production native correction have been performed. The
+proposed native precision change requires review before continuing this goal.
+
 The [common survival executor milestone](survival-common-executor.md) is complete.
 DustRoute now runs checked fixed sequences through a reusable executor, with
 separate operation/continuation states, durable pre-dispatch intents, explicit
