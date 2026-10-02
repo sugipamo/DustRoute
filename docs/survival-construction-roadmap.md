@@ -1,6 +1,6 @@
 # Survival construction: next milestones
 
-Updated 2026-10-02. This roadmap refines the agreed stages after fixed-reference
+Updated 2026-10-03 JST. This roadmap refines the agreed stages after fixed-reference
 acceptance. It does not claim implementation of the remaining stages.
 
 ## Product objective and baseline
@@ -30,8 +30,10 @@ Temurin 21, including all 18 temporary removals, retreat and 3,120 independently
 checked cells. The JVM crash did not recur; the user requested no further
 root-cause investigation in that case. Source and complete execution evidence
 are in [implementation and evidence](survival-construction-generation.md).
-Stage 3 (Blueprint adoption/public MCP) is next; stages 3-5 remain unimplemented
-as end-to-end survival workflows.
+Stage 3 (Blueprint adoption/public MCP) is undergoing validation after the user
+increased guest memory and authorized a retry. The compiler stop below is
+historical: serial compilation now succeeds without changing the toolchain or
+thread-stack setting. Stages 4-5 remain future work.
 
 ## Ordered milestones
 
@@ -111,6 +113,8 @@ placement support. Prioritize those expansions only after the bounded workflow
 above is usable and its limitations have been measured.
 
 ## Stage 3 draft and compiler stop (2026-10-02)
+
+Historical record; the 2026-10-03 JST memory-increase retry supersedes this stop.
 
 The public-path goal is active. The working branch contains a draft, **not an
 accepted or deployment-ready implementation**:

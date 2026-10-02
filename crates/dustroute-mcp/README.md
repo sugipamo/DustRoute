@@ -2,7 +2,7 @@
 
 Use DustRoute to observe Minecraft redstone, explain evidence, create hypothetical revisions, review Blueprint updates, and propose verified world changes. Ground live-world tasks in the configured player's gaze or an explicitly selected region. Offline Blueprint tasks use exact catalog records and need no bridge connection. Keep observation, hypothesis and execution separate.
 
-This is the tool-use guide. Server installation, credentials, permissions and transport configuration belong in [SETUP.md](SETUP.md). Detailed subsystem examples are in [REFERENCE.md](REFERENCE.md); the complete 23-tool default inventory and 7 debug additions are in the [public feature guide](../../docs/mcp-public-features.md). Use the connected server's tool schemas for exact arguments.
+This is the tool-use guide. Server installation, credentials, permissions and transport configuration belong in [SETUP.md](SETUP.md). Detailed subsystem examples are in [REFERENCE.md](REFERENCE.md); the 23 base tools, one native survival addition and 7 debug additions are in the [public feature guide](../../docs/mcp-public-features.md). Use the connected server's tool schemas for exact arguments.
 
 The native Voxrig backend observes received packets and supported client
 reconstruction. Its `client_reconstructed` readbacks retain connection, receive
@@ -263,7 +263,7 @@ ancestor must retain a complete literal base snapshot. Candidate interpretation
 remains separate from that observation. Arbitrary relocation and new construction
 from an Assembly ID are outside this workflow.
 
-Do not switch a failed revision proposal to raw writes, a different gaze target, or another operation family to bypass its validation. Placement is currently command-based and uses the configured bot's privileges; it is not survival inventory construction.
+Do not switch a failed revision proposal to raw writes, a different gaze target, or another operation family to bypass its validation. This revision-placement path is command-based and uses the configured bot's privileges. The separate native-only [`survival_construction` workflow](../../docs/survival-public-construction.md) accepts bounded grounded passive-building designs, checks adoption and inventory, and reports background progress and persisted diagnosis. Circuit placement does not inherit survival support.
 
 ## Handle failures according to operation kind
 

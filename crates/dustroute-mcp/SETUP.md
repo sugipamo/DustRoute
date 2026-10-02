@@ -65,6 +65,14 @@ For offline builds, prefetch the locked Cargo dependencies on the build machine,
 then add `--offline`; the pinned Voxrig source itself needs no network access.
 Maintainer update instructions are in [vendor/README.md](../../vendor/README.md).
 
+For the bounded survival building workflow, also configure
+`DUSTROUTE_SURVIVAL_OBSERVER_USERNAME` with a distinct admitted account and keep
+both clients in the work dimension with the complete work region loaded. The
+observer is read-only and is not automatically teleported. Supply the builder's
+inventory and enable the ordinary mutation/region/player policy explicitly.
+This path uses non-OP survival actions; the command-based tools above retain
+their own permission requirements. See [public survival construction](../../docs/survival-public-construction.md).
+
 ## Prepare the vanilla server
 
 Both documented backend routes use a vanilla Minecraft Java Edition 1.21.11

@@ -15,8 +15,14 @@ use std::{
 };
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub(super) struct Request {
+    #[serde(flatten)]
+    action: Action,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
 #[serde(tag = "action", rename_all = "snake_case", deny_unknown_fields)]
-pub(super) enum Request {
+enum Action {
     Plan {
         player: Option<String>,
         assembly_revision_id: AssemblyRevisionId,
@@ -57,6 +63,22 @@ struct Entry {
     cancel: Arc<AtomicBool>,
     // Keep uncertain native operations and exclusive ownership inspectable.
     stopped: Option<(SurvivalLease, SurvivalExecutor)>,
+}
+struct PlanningInput {
+    source: SourceIdentity,
+    site: ConstructionSite,
+    supplied: BTreeMap<String, usize>,
+    temporary_material: String,
+    limits: SearchLimits,
+}
+struct ExecutionInput {
+    id: uuid::Uuid,
+    owner: String,
+    source: SourceIdentity,
+    plan: HypotheticalConstructionPlan,
+    lease: SurvivalLease,
+    observer: voxrig::Client,
+    cancel: Arc<AtomicBool>,
 }
 fn failure(code: &str, detail: impl std::fmt::Display) -> Value {
     json!({"ok":false,"schema_version":"dustroute.survival-job.v1",
@@ -150,8 +172,8 @@ impl DustRouteMcp {
     }
 
     pub(super) async fn survival_request(&self, request: Request) -> Value {
-        match request {
-            Request::Plan {
+        match request.action {
+            Action::Plan {
                 player,
                 assembly_revision_id,
                 specification,
@@ -240,11 +262,13 @@ impl DustRouteMcp {
                 let result = self
                     .plan_survival(
                         &owner,
-                        source,
-                        site,
-                        supplied,
-                        temporary_material,
-                        limits,
+                        PlanningInput {
+                            source,
+                            site,
+                            supplied,
+                            temporary_material,
+                            limits,
+                        },
                         &bot,
                     )
                     .await;
@@ -252,12 +276,12 @@ impl DustRouteMcp {
                 lease.release(bot);
                 result
             }
-            Request::Get {
+            Action::Get {
                 job_id,
                 include_record,
             } => self.get_survival(job_id, include_record).await,
-            Request::Start { job_id, confirmed } => self.start_survival(job_id, confirmed).await,
-            Request::Cancel { job_id } => {
+            Action::Start { job_id, confirmed } => self.start_survival(job_id, confirmed).await,
+            Action::Cancel { job_id } => {
                 let mut jobs = self.survival.entries.lock().await;
                 let Some(entry) = jobs.get_mut(&job_id) else {
                     return failure(
@@ -290,13 +314,16 @@ impl DustRouteMcp {
     async fn plan_survival(
         &self,
         owner: &str,
-        source: SourceIdentity,
-        site: ConstructionSite,
-        supplied: BTreeMap<String, usize>,
-        temporary_material: String,
-        limits: SearchLimits,
+        input: PlanningInput,
         bot: &voxrig::Client,
     ) -> Value {
+        let PlanningInput {
+            source,
+            site,
+            supplied,
+            temporary_material,
+            limits,
+        } = input;
         let scope = site.scope().clone();
         if let Err(e) =
             self.policy
@@ -362,20 +389,77 @@ impl DustRouteMcp {
     }
 
     async fn get_survival(&self, id: uuid::Uuid, include_record: bool) -> Value {
+        // Progress polling must not repeatedly deserialize the entire plan and
+        // journal or hold the registry mutex across filesystem I/O.
+        let live = self
+            .survival
+            .entries
+            .lock()
+            .await
+            .get(&id)
+            .map(|e| (e.owner.clone(), e.status.clone()));
+        if let Some((owner, status)) = &live {
+            if let Err(e) = self.policy.authorize_player(owner) {
+                return failure("permission_denied", e);
+            }
+            if !include_record {
+                return json!({"ok":true,"schema_version":"dustroute.survival-job.v1","job_id":id,"owner":owner,
+                    "process_local_job_present":true,"historical_only":false,"execution_authority_restored":false,
+                    "completed_steps":status["completed_steps"],"status":status,
+                    "next_step":"inspect status; stopped jobs never automatically replay"});
+            }
+        }
+        let service = self.clone();
+        match tokio::task::spawn_blocking(move || {
+            service.read_survival_record(id, include_record, live)
+        })
+        .await
+        {
+            Ok(result) => result,
+            Err(e) => failure("journal_unavailable", e),
+        }
+    }
+
+    fn read_survival_record(
+        &self,
+        id: uuid::Uuid,
+        include_record: bool,
+        live: Option<(String, Value)>,
+    ) -> Value {
         let path = self.state_store.survival_job_root().join(id.to_string());
         let manifest = match load(&path.join("manifest.json")) {
             Ok(m) => m,
             Err(e) => return failure("job_unavailable", e),
         };
+        if manifest["schema"] != "dustroute.survival-job.v1"
+            || manifest["job_id"] != json!(id)
+            || manifest["execution_authority_restorable"] != false
+        {
+            return failure(
+                "invalid_record",
+                "unknown schema or mismatched job identity",
+            );
+        }
         let Some(owner) = manifest["owner"].as_str() else {
             return failure("invalid_record", "missing job owner");
         };
         if let Err(e) = self.policy.authorize_player(owner) {
             return failure("permission_denied", e);
         }
-        let jobs = self.survival.entries.lock().await;
-        let entry = jobs.get(&id);
-        let historical_status = load(&path.join("status.json")).ok();
+        if live
+            .as_ref()
+            .is_some_and(|(live_owner, _)| live_owner != owner)
+        {
+            return failure("invalid_record", "saved owner differs from live job");
+        }
+        let historical_status = if path.join("status.json").exists() {
+            match load(&path.join("status.json")) {
+                Ok(v) => Some(v),
+                Err(e) => return failure("invalid_record", e),
+            }
+        } else {
+            None
+        };
         let directory = path.join("execution");
         let diagnosis = if directory.join("record.json").exists() {
             match crate::survival_execution::diagnose(&directory) {
@@ -387,10 +471,10 @@ impl DustRouteMcp {
         };
         let record = diagnosis.as_ref().map(|d| &d.record);
         let mut response = json!({"ok":true,"schema_version":"dustroute.survival-job.v1","job_id":id,"owner":owner,
-            "process_local_job_present":entry.is_some(),"status":entry.map(|e|&e.status).or(historical_status.as_ref()),
-            "historical_only":entry.is_none(),"execution_authority_restored":false,
+            "process_local_job_present":live.is_some(),"status":live.as_ref().map(|(_,s)|s).or(historical_status.as_ref()),
+            "historical_only":live.is_none(),"execution_authority_restored":false,
             "completed_steps":record.map(|r|r.completed_steps),"recorded_continuation":record.map(|r|&r.continuation),
-            "next_step":if entry.is_none(){"historical diagnosis only; reobserve and resolve outstanding operations before any new plan"}else{"inspect status; stopped jobs never automatically replay"}});
+            "next_step":if live.is_none(){"historical diagnosis only; reobserve and resolve outstanding operations before any new plan"}else{"inspect status; stopped jobs never automatically replay"}});
         if include_record {
             response["manifest"] = manifest;
             response["diagnosis"] = json!(diagnosis);
@@ -420,6 +504,18 @@ impl DustRouteMcp {
         }
         if entry.cancel.load(Ordering::SeqCst) || Instant::now() > entry.expires {
             entry.plan = None;
+            entry.status =
+                json!({"state":"plan_expired_or_cancelled","construction_dispatched":false});
+            if let Err(e) = save(
+                &self
+                    .state_store
+                    .survival_job_root()
+                    .join(id.to_string())
+                    .join("status.json"),
+                &entry.status,
+            ) {
+                return failure("journal_io", e);
+            }
             return failure("plan_expired_or_cancelled", "generate a fresh plan");
         }
         if entry.plan.is_none() {
@@ -451,28 +547,43 @@ impl DustRouteMcp {
         ) {
             let original = lease.source();
             lease.release(original);
+            entry.status = json!({"state":"admission_refused","failure":failure("journal_io", &e),"construction_dispatched":false});
             return failure("journal_io", e);
         }
         drop(jobs);
         let service = self.clone();
-        tokio::spawn(async move {
+        let worker = tokio::spawn(async move {
             service
-                .run_survival(id, owner, source, plan, lease, observer, cancel)
+                .run_survival(ExecutionInput {
+                    id,
+                    owner,
+                    source,
+                    plan,
+                    lease,
+                    observer,
+                    cancel,
+                })
                 .await;
+        });
+        let service = self.clone();
+        tokio::spawn(async move {
+            if let Err(error) = worker.await {
+                service.set_survival_status(id, json!({"state":"needs_inspection", "failure":failure("execution_task_failed", error)})).await;
+            }
         });
         json!({"ok":true,"job_id":id,"state":"admitting","completed":false,"next_step":"action=get; admission can still refuse before any edits"})
     }
 
-    async fn run_survival(
-        &self,
-        id: uuid::Uuid,
-        owner: String,
-        source: SourceIdentity,
-        plan: HypotheticalConstructionPlan,
-        mut lease: SurvivalLease,
-        observer: voxrig::Client,
-        cancel: Arc<AtomicBool>,
-    ) {
+    async fn run_survival(&self, input: ExecutionInput) {
+        let ExecutionInput {
+            id,
+            owner,
+            source,
+            plan,
+            mut lease,
+            observer,
+            cancel,
+        } = input;
         let bot = lease.source();
         let path = self.state_store.survival_job_root().join(id.to_string());
         let admission = async {
@@ -502,6 +613,12 @@ impl DustRouteMcp {
                 .observe_region(region(plan.scope().observed))
                 .await
                 .map_err(|e| failure("observer_unavailable", e))?;
+            let observer_after = observer
+                .java_1_21_11_operations()
+                .map_err(|e| failure("observer_unavailable", e))?
+                .player_state()
+                .await
+                .map_err(|e| failure("observer_unavailable", e))?;
             let scene = bot
                 .survival()
                 .map_err(|e| failure("native_refused", e))?
@@ -510,9 +627,12 @@ impl DustRouteMcp {
                 .map_err(|e| failure("observation_unavailable", e))?;
             let scenario = scene.scenario();
             if observer_state.dimension.as_deref() != Some(plan.source().dimension.as_str())
+                || observer_after.dimension != observer_state.dimension
+                || observer_after.connection_id != observer_state.connection_id
                 || observed.connection_id == scene.source().connection_id
                 || observed.connection_id != observer_state.connection_id
                 || observed.version != voxrig::MinecraftVersion::Java1_21_11
+                || observed.region != scene.region()
                 || observed.blocks.len()
                     != scene
                         .region()
@@ -521,7 +641,14 @@ impl DustRouteMcp {
                 || observed
                     .blocks
                     .iter()
-                    .any(|b| scenario.block(b.position).ok().as_ref() != b.state.as_ref())
+                    .map(|b| b.position)
+                    .collect::<std::collections::BTreeSet<_>>()
+                    .len()
+                    != observed.blocks.len()
+                || observed.blocks.iter().any(|b| {
+                    b.state.is_none()
+                        || scenario.block(b.position).ok().as_ref() != b.state.as_ref()
+                })
             {
                 return Err(failure(
                     "observer_mismatch",
@@ -604,3 +731,13 @@ impl DustRouteMcp {
 
 #[cfg(test)]
 mod tests;
+
+#[tool_router(router = survival_tool_router, vis = "pub(super)")]
+impl DustRouteMcp {
+    #[tool(
+        description = "Plan and run bounded non-OP survival construction from a uniquely adopted grounded Blueprint. Supply materials to the source bot. action=plan requires specification matching that exact Assembly, declared edit/temporary/travel/retreat scopes and material budget; returns a complete preview without world edits. action=start requires job_id and confirmed=true and freshly checks source/site/inventory; execution continues in background. action=get reports progress or durable diagnosis after restart; action=cancel stops at the next operation boundary, never undoing or replaying uncertain actions. Requires the configured independent survival observer. No resource collection, native-token restoration, command placement or automatic job resume."
+    )]
+    async fn survival_construction(&self, Parameters(params): Parameters<Request>) -> String {
+        json_text(self.survival_request(params).await)
+    }
+}

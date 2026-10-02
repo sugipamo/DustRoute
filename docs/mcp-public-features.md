@@ -13,6 +13,13 @@ An offline Blueprint workflow also supports exact source/state records and
 reviewed update proposals. Adopting a proposal saves new revisions locally;
 it does not apply them to Minecraft.
 
+With the `voxrig` feature, an additional `survival_construction` tool connects
+adopted grounded passive-building designs to bounded planning, non-OP inventory
+construction, progress and historical diagnosis. Its independent observer,
+material/scope checks and limits are documented in
+[public survival construction](survival-public-construction.md). This is a
+separate contract from command-based circuit placement.
+
 Block reads use the selected backend's observation contract. Voxrig uses received
 packets and supported client reconstruction; Mineflayer uses command-confirmed
 server readback. Both require fresh complete observations for the applicable
@@ -93,6 +100,10 @@ expanded explicitly with `manage_construction_job(action=get,include_intention=t
 See [region costs, limits and evidence](large-circuit-regions.md).
 
 ## Default tools (23)
+
+Builds with `--features voxrig` additionally expose `survival_construction`
+(`plan`, `start`, `get`, `cancel`), for 24 default tools. It requires the native
+backend and explicit independent observer configuration.
 
 | API | Purpose |
 | --- | --- |

@@ -790,6 +790,8 @@ impl DustRouteMcp {
         profile: ToolProfile,
     ) -> Self {
         let mut tool_router = Self::tool_router();
+        #[cfg(feature = "voxrig")]
+        tool_router.merge(Self::survival_tool_router());
         if profile == ToolProfile::Default {
             for tool in DEBUG_ONLY_TOOLS {
                 tool_router.disable_route(tool.to_owned());
@@ -2464,17 +2466,6 @@ impl DustRouteMcp {
             );
         }
         json_text(result)
-    }
-
-    #[cfg(feature = "voxrig")]
-    #[tool(
-        description = "Plan and run bounded non-OP survival construction from a uniquely adopted grounded Blueprint. Supply materials to the source bot. action=plan requires specification matching that exact Assembly, declared edit/temporary/travel/retreat scopes and material budget; returns a complete preview without world edits. action=start requires job_id and confirmed=true and freshly checks source/site/inventory; execution continues in background. action=get reports progress or durable diagnosis after restart; action=cancel stops at the next operation boundary, never undoing or replaying uncertain actions. Requires the configured independent survival observer. No resource collection, native-token restoration, command placement or automatic job resume."
-    )]
-    async fn survival_construction(
-        &self,
-        Parameters(params): Parameters<survival::Request>,
-    ) -> String {
-        json_text(self.survival_request(params).await)
     }
 
     #[tool(
@@ -6182,12 +6173,17 @@ mod tests {
             .map(|tool| tool.name.to_string())
             .collect::<BTreeSet<_>>();
 
-        assert_eq!(default_names.len(), 23);
+        let native_tools = usize::from(cfg!(feature = "voxrig"));
+        assert_eq!(default_names.len(), 23 + native_tools);
+        assert_eq!(
+            default_names.contains("survival_construction"),
+            cfg!(feature = "voxrig")
+        );
         assert!(default_names.contains("manage_construction_job"));
         assert!(default_names.contains("manage_assembly"));
         assert!(!default_names.contains("get_piston_door_state"));
         assert!(!debug_names.contains("get_piston_door_state"));
-        assert_eq!(debug_names.len(), 30);
+        assert_eq!(debug_names.len(), 30 + native_tools);
         assert!(default_names.contains("test_circuit"));
         assert!(default_names.contains("get_circuit_ir"));
         assert!(default_names.contains("test_circuit_change"));

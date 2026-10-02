@@ -32,6 +32,7 @@ pub(crate) struct PlanStateStore {
 }
 
 impl PlanStateStore {
+    #[cfg(feature = "voxrig")]
     pub(crate) fn survival_job_root(&self) -> PathBuf {
         self.root.join("survival-jobs")
     }
