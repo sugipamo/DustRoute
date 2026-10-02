@@ -108,6 +108,17 @@ pub struct BuildingDesignRequest {
     pub component: Option<BuildingDesignComponent>,
 }
 
+/// A distinct immutable design with a declared flat existing ground layer.
+/// This is an assumed site, not a live observation or permission to edit it.
+/// The bottom plane of `design.known_region` is protected ground; every other
+/// clearance/space obligation retains the ordinary design semantics.
+#[derive(Clone, Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct GroundedBuildingDesignRequest {
+    pub design: BuildingDesignRequest,
+    pub ground_material: BuildingMaterial,
+}
+
 /// An immutable update, not an instruction to modify a placed building.
 /// The previous structured input is checked against the selected Assembly and
 /// every retained occurrence/obligation, rather than trusted as provenance.

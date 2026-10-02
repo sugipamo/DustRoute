@@ -403,3 +403,23 @@ separately. Voxrig source: 180 passed, five ignored, one doc test; vendor pin
 The route API is a Rust planning foundation, not a new public MCP construction
 command. Site-aware immutable design requirements, temporary access scheduling,
 durable survival execution and the roofed build/cleanup acceptance remain open.
+
+## Grounded design foundation and access-planning concern (2026-10-02 UTC)
+
+`generate_grounded_building_design` now authors a separate ground-aware immutable
+contract through the shared building/Blueprint machinery. The baseline already
+contains the flat ground. Ground remains protected during modeled construction
+and removal; material counts include only new structure. Shared differential
+physics proves restoration to that baseline. Named permanent air cannot be
+overridden by ground. Adoption, serialization/restart, missing ground and blocked
+interior are tested, together with unchanged ordinary building design/update
+paths (20 passing targeted tests).
+
+The new API does not establish live observation or player constructibility and
+is not yet a public MCP entry. Future access geometry is the next prerequisite:
+current native movement previews read only the live received world, so they
+cannot establish a route on not-yet-placed scaffolds or after planned removals.
+In accordance with the user's concern stop, that native extension is unimplemented
+pending review of the [concrete proposal](survival-site-planning.md).
+No live trial was performed in this grounded-authoring checkpoint. The complete
+roofed construction goal remains unfinished.

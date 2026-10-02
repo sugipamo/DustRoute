@@ -1,0 +1,50 @@
+{
+  "date_utc": "2026-10-02",
+  "scope": "Grounded immutable authoring; no live trial or player access proof",
+  "base_commit": "b18ab0b0c01d85194786f6f7a2cb2f966da6efd9",
+  "tested_source_sha256": {
+    "crates/dustroute-library/src/building.rs": "f454d660f203200556da555ca30e63b097222e9f2e28469420a624c41c0a6807",
+    "crates/dustroute-translate/src/building/mod.rs": "38043ac73f6a6e884aa1f399f80ea8758e60d44f82ec2f5cc37c4c2d557d8d4b",
+    "crates/dustroute-translate/src/building/grounded.rs": "89c20d2a46efca01dce2980844a82d667ef1192e034715e4f8ab57daae508f56",
+    "crates/dustroute-translate/tests/grounded_building.rs": "a93fed2be2bc5ced8e844849f659c8b3e187cece2b4f13a55c7f03e9a7bda69b"
+  },
+  "tests": {
+    "command": "cargo test --offline --locked -j 1 -p dustroute-translate --test building_design --test building --test building_update --test grounded_building -- --test-threads=1",
+    "passed": 20,
+    "failed": 0
+  },
+  "clippy": {
+    "all_targets": "failed: unchanged flying_machine_assembly_fixture example includes unused observed_cane_fixture and observed_cane_initial functions",
+    "lib_and_tests": "passed for dustroute-translate and dustroute-mcp with voxrig and -D warnings"
+  },
+  "fmt_all": "passed",
+  "fixture": {
+    "existing_stone": 49,
+    "new_cobblestone": 49,
+    "roof_y": 6,
+    "columns_y": [
+      0,
+      5
+    ],
+    "ground_y": -1,
+    "player_construction_verified": false,
+    "live_world_verified": false,
+    "adoption_and_restart_test": true,
+    "ground_and_air_damage_rejected": true
+  },
+  "concern": "Native prediction reads current received terrain only; hypothetical stage prediction needed before temporary-access planning. Proposal not implemented, awaiting user review.",
+  "logs": [
+    {
+      "path": "survival-grounded-tests-20261002.gz",
+      "sha256": "3ea6413aacef3c5cdafc8ac96fcfe95d686816752af085fd3e911a3ba94c0064"
+    },
+    {
+      "path": "survival-grounded-clippy-20261002.gz",
+      "sha256": "031a403e3f7e4c5031cac6339d8676deee74a2dfa5ac5f3ecffb49d480c62e03"
+    },
+    {
+      "path": "survival-grounded-clippy-tests-20261002.gz",
+      "sha256": "edd1c54df15fc0c5e23aaa7acbe5bfb2cbe625f9985151180f07da1edacfd55a"
+    }
+  ]
+}
