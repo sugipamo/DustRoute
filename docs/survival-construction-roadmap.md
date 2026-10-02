@@ -22,7 +22,7 @@ Current limits include 64 permanent changes, 512 proposed actions and native
 256-edit/4,096-motion-tick scenario budgets. Reaching a limit is a diagnostic,
 not a reason to silently raise it or claim that construction is impossible.
 
-## Current stage status (2026-10-02)
+## Current stage status (2026-10-03 JST)
 
 Stage 2 is complete for its declared bounded acceptance cases. A generated
 115-action roof plan completed on the isolated non-OP server using project-local
@@ -30,10 +30,16 @@ Temurin 21, including all 18 temporary removals, retreat and 3,120 independently
 checked cells. The JVM crash did not recur; the user requested no further
 root-cause investigation in that case. Source and complete execution evidence
 are in [implementation and evidence](survival-construction-generation.md).
-Stage 3 (Blueprint adoption/public MCP) is undergoing validation after the user
-increased guest memory and authorized a retry. The compiler stop below is
-historical: serial compilation now succeeds without changing the toolchain or
-thread-stack setting. Stages 4-5 remain future work.
+Stage 3 is now complete for its declared bounded acceptance cases. Public MCP
+authoring, adoption, planning, start and progress produced a completed 115-action
+roof, independent verification and historical diagnosis from a new service.
+Separate non-OP cases refused actual inventory shortage and a changed site before
+construction, preserving all 3,120 observed cells. See the
+[public workflow](survival-public-construction.md) and
+[hashed acceptance evidence](evidence/survival-public-acceptance-20261003.json).
+Stages 4-5 remain future work. The compiler stop below is historical: after the
+user increased guest memory, serial compilation succeeded without changing the
+toolchain or thread-stack setting. The original crash cause is undetermined.
 
 ## Ordered milestones
 
@@ -158,3 +164,49 @@ changing the toolchain. This investigation/retry needs user agreement under the
 existing stop rule. Source/site/material/permission refusal coverage, observer
 freshness, lease cancellation/handback and persistence handling still require
 review and validation before stage 3 can be declared complete.
+
+## Stage 3 acceptance after memory retry (2026-10-03 JST)
+
+The user increased guest memory to 8 GiB and authorized revalidation. The first
+unchanged serial compilation completed in 95 seconds; rustc SIGSEGV did not
+recur. Ordinary integration failures were then corrected: MCP root-object schema,
+test adoption arguments, obsolete tool-count assertions and feature-gated tool
+registration. No compiler stack override, toolchain replacement or cache deletion
+was used. Retry success is not a diagnosis of the earlier compiler failure.
+
+The final implementation also keeps progress polling off full journal reads,
+checks persisted manifest identity/ownership, reports failed execution tasks,
+persists expired-plan refusal and validates complete independent admission
+observations. Source bridge ownership is returned only after read-only admission
+refusal or verified completion; uncertain executors retain their lease.
+
+Validation on source `3221cacf25d9b2430b53f76476a4b583f92c71b8`, with unchanged
+Voxrig pin `2b6e7bfc94e6270054eac5c7b14a74d4657a411c`:
+
+- Broad native-feature regression: 198 passed, three obsolete count assertions
+  failed, nine explicitly ignored. After fixes, all three failures and the two
+  public survival offline tests passed (five passed, one native test ignored).
+  The broad suite was not repeated after the focused fixes.
+- Clippy `--all-targets -- -D warnings` passed with and without `voxrig`.
+- Public live roof: 49 permanent cobblestone blocks, 18 temporary placements and
+  removals, 30 moves, 18 checked reconnects, no remaining temporary blocks and
+  ground retreat. Independent final verification covered 3,120 cells.
+- Public admission with 48 of the required 49 cobblestones returned
+  `supplied_materials_missing`; a dirt block introduced after preview returned
+  `snapshot_mismatch`. Both dispatched no construction, left the independently
+  observed 3,120 cells unchanged, and refused replay of the consumed job.
+- Lifecycle gates used forks of the already checked process-local preview to
+  verify cancellation/expiry before dispatch. Reopened diagnosis used a new MCP
+  service instance with a dead bridge, not an OS reboot or crash injection.
+- All three isolated Temurin tests and servers exited normally. The normal test
+  took 221.15 seconds including setup synchronization, authoring, planning,
+  execution and diagnosis; controller startup/shutdown included took 246.48
+  seconds. First-to-last completed-step polls span 167.25 seconds; this narrower
+  interval is not total construction time.
+
+No operating-system faults were injected or JVM failure investigation resumed.
+Full logs, generated plan, journal, manifests, runtime identities and checksums
+are retained in the [acceptance index](evidence/survival-public-acceptance-20261003.json).
+Next is stage 4: freshly diagnose a stopped site and create a new checked
+continuation plan without restoring or replaying old native authority. That
+capability is not implied by successful historical diagnosis.

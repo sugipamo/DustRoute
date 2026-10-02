@@ -87,6 +87,11 @@ observe before a new plan. Automatic recovery/replanning is a later milestone.
 
 ## Verification
 
-Stage 3 acceptance and exact test artifacts are tracked in the
-[roadmap](survival-construction-roadmap.md). A successful compilation alone does
-not establish live acceptance.
+Stage 3 passed its bounded acceptance on 2026-10-03 JST: public MCP authoring and
+adoption led to a completed 115-action roof, all 18 temporary removals, retreat
+and 3,120 independently checked cells. Separate inventory-shortage and changed-site
+cases refused before construction and preserved the observed world. New-service
+diagnosis retained evidence without restoring native authority. See the
+[roadmap](survival-construction-roadmap.md) and
+[exact test artifacts](evidence/survival-public-acceptance-20261003.json).
+This does not establish interrupted-job recovery or unrestricted construction.

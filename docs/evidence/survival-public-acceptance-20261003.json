@@ -1,0 +1,679 @@
+{
+  "schema": "dustroute.survival-public-acceptance.v1",
+  "recorded_at_utc": "2026-10-02T16:52:07.409172+00:00",
+  "status": "public_survival_acceptance_passed",
+  "stage_3_complete": true,
+  "later_roadmap_stages_complete": false,
+  "source": "3221cacf25d9b2430b53f76476a4b583f92c71b8",
+  "native_source": "2b6e7bfc94e6270054eac5c7b14a74d4657a411c",
+  "memory_retry": {
+    "guest_memory_bytes": 8589934592,
+    "rustc_sigsegv_recurred": false,
+    "RUST_MIN_STACK_set": false,
+    "toolchain_changed": false,
+    "compiler_failure_root_cause": "undetermined; retry success does not establish memory exhaustion",
+    "first_retry": "Compilation completed in 95 seconds; an ordinary root-object MCP schema assertion then failed. Fixed schema, test adoption arguments, feature-gated registration and obsolete tool-count assertions."
+  },
+  "checks": {
+    "broad_regression_before_final_fixes": {
+      "passed": 198,
+      "failed": 3,
+      "ignored": 9,
+      "seconds": 994.34,
+      "failure_reason": "All three expected 23 tools; native feature now exposes 24."
+    },
+    "focused_after_final_fixes": {
+      "passed": 5,
+      "failed": 0,
+      "ignored": 1,
+      "filtered_out": 204,
+      "seconds": 19.34,
+      "includes": "All three prior failures plus both public survival offline tests. The ignored native test is executed separately below."
+    },
+    "clippy_voxrig_all_targets": "passed with -D warnings",
+    "clippy_without_voxrig_all_targets": "passed with -D warnings",
+    "execution": "offline locked builds, one build job; serial test threads; no full-suite repetition after focused fixes"
+  },
+  "live_fixture": {
+    "version": "Java 1.21.11",
+    "bind": "127.0.0.1:25572",
+    "operator_count": 0,
+    "force_survival": true,
+    "java": "project-local Temurin 21.0.12.1+1",
+    "server_heap_max_mib": 768,
+    "setup_only_commands": "flat stone/air region, initial player teleports and inventory supply; refusal cases alter one inventory stack or target block before admission",
+    "construction": "real public MCP authoring/adoption/planning/start/get; native survival operations; no placement commands",
+    "jvm_crash_recurred": false
+  },
+  "cases": [
+    {
+      "case": "live",
+      "source": "3221cacf25d9b2430b53f76476a4b583f92c71b8",
+      "test_exit_code": 0,
+      "server_exit_code": 0,
+      "total_controller_seconds": 246.48313041601796,
+      "status": {
+        "completed_steps": 115,
+        "final_evidence": {
+          "continuation": "completed",
+          "evidence": {
+            "independently_checked_cells": 3120,
+            "position": [
+              0.5416359241007589,
+              -60.0,
+              -1.499938053592504
+            ],
+            "remaining_owned_temporary": []
+          },
+          "outcome": "observed",
+          "phase": "completed",
+          "step": 115
+        },
+        "state": "completed"
+      },
+      "lifecycle_checks": [
+        {
+          "case": "cancelled_preview",
+          "result": {
+            "automatic_replay": false,
+            "error": {
+              "code": "plan_expired_or_cancelled",
+              "detail": "generate a fresh plan"
+            },
+            "error_code": "internal",
+            "failure": {
+              "primary": {
+                "details": {
+                  "mismatches_truncated": false,
+                  "recovery_chunks_truncated": false
+                },
+                "kind": "unknown",
+                "message": "operation failed without a diagnostic",
+                "phase": "unknown"
+              },
+              "progress": null,
+              "secondary": []
+            },
+            "ok": false,
+            "recovery": {
+              "inspect_saved_record": null,
+              "reobserve_required": null,
+              "replan_required": null,
+              "same_operation_replay_allowed": false
+            },
+            "retryable": false,
+            "schema_version": "dustroute.survival-job.v1"
+          },
+          "status": {
+            "completed_steps": null,
+            "execution_authority_restored": false,
+            "historical_only": false,
+            "job_id": "b3d972de-5589-42e8-8b17-dfd16b593203",
+            "next_step": "inspect status; stopped jobs never automatically replay",
+            "ok": true,
+            "owner": "Tester",
+            "process_local_job_present": true,
+            "schema_version": "dustroute.survival-job.v1",
+            "status": {
+              "construction_dispatched": false,
+              "state": "plan_expired_or_cancelled"
+            }
+          }
+        },
+        {
+          "case": "expired_preview",
+          "result": {
+            "automatic_replay": false,
+            "error": {
+              "code": "plan_expired_or_cancelled",
+              "detail": "generate a fresh plan"
+            },
+            "error_code": "internal",
+            "failure": {
+              "primary": {
+                "details": {
+                  "mismatches_truncated": false,
+                  "recovery_chunks_truncated": false
+                },
+                "kind": "unknown",
+                "message": "operation failed without a diagnostic",
+                "phase": "unknown"
+              },
+              "progress": null,
+              "secondary": []
+            },
+            "ok": false,
+            "recovery": {
+              "inspect_saved_record": null,
+              "reobserve_required": null,
+              "replan_required": null,
+              "same_operation_replay_allowed": false
+            },
+            "retryable": false,
+            "schema_version": "dustroute.survival-job.v1"
+          },
+          "status": {
+            "completed_steps": null,
+            "execution_authority_restored": false,
+            "historical_only": false,
+            "job_id": "288e939d-d776-438e-9354-06e8eb216b5e",
+            "next_step": "inspect status; stopped jobs never automatically replay",
+            "ok": true,
+            "owner": "Tester",
+            "process_local_job_present": true,
+            "schema_version": "dustroute.survival-job.v1",
+            "status": {
+              "construction_dispatched": false,
+              "state": "plan_expired_or_cancelled"
+            }
+          }
+        }
+      ],
+      "completed_steps": 115,
+      "reconnects": 18,
+      "materials": {
+        "peak_temporary_in_world": {
+          "minecraft:dirt": 11
+        },
+        "permanent": {
+          "minecraft:cobblestone": 49
+        },
+        "required_supplied": {
+          "minecraft:cobblestone": 49,
+          "minecraft:dirt": 18
+        },
+        "temporary_without_recovery": {
+          "minecraft:dirt": 18
+        }
+      },
+      "step_counts": {
+        "move": 30,
+        "place": 67,
+        "remove_temporary": 18
+      },
+      "final_evidence": {
+        "independently_checked_cells": 3120,
+        "position": [
+          0.5416359241007589,
+          -60.0,
+          -1.499938053592504
+        ],
+        "remaining_owned_temporary": []
+      },
+      "new_service_diagnosis_historical_only": true,
+      "native_authority_restored": false,
+      "test_seconds": 221.15,
+      "first_to_last_completed_step_poll_seconds": 167.25079808203736
+    },
+    {
+      "case": "materials",
+      "source": "3221cacf25d9b2430b53f76476a4b583f92c71b8",
+      "test_exit_code": 0,
+      "server_exit_code": 0,
+      "total_controller_seconds": 72.63467633799883,
+      "status": {
+        "construction_dispatched": false,
+        "failure": {
+          "error": {
+            "code": "supplied_materials_missing",
+            "detail": "minecraft:cobblestone: need 49, received 48"
+          },
+          "ok": false
+        },
+        "state": "admission_refused"
+      },
+      "lifecycle_checks": [
+        {
+          "case": "cancelled_preview",
+          "result": {
+            "automatic_replay": false,
+            "error": {
+              "code": "plan_expired_or_cancelled",
+              "detail": "generate a fresh plan"
+            },
+            "error_code": "internal",
+            "failure": {
+              "primary": {
+                "details": {
+                  "mismatches_truncated": false,
+                  "recovery_chunks_truncated": false
+                },
+                "kind": "unknown",
+                "message": "operation failed without a diagnostic",
+                "phase": "unknown"
+              },
+              "progress": null,
+              "secondary": []
+            },
+            "ok": false,
+            "recovery": {
+              "inspect_saved_record": null,
+              "reobserve_required": null,
+              "replan_required": null,
+              "same_operation_replay_allowed": false
+            },
+            "retryable": false,
+            "schema_version": "dustroute.survival-job.v1"
+          },
+          "status": {
+            "completed_steps": null,
+            "execution_authority_restored": false,
+            "historical_only": false,
+            "job_id": "551b2969-6dad-4b6c-8f07-04cf35c58db5",
+            "next_step": "inspect status; stopped jobs never automatically replay",
+            "ok": true,
+            "owner": "Tester",
+            "process_local_job_present": true,
+            "schema_version": "dustroute.survival-job.v1",
+            "status": {
+              "construction_dispatched": false,
+              "state": "plan_expired_or_cancelled"
+            }
+          }
+        },
+        {
+          "case": "expired_preview",
+          "result": {
+            "automatic_replay": false,
+            "error": {
+              "code": "plan_expired_or_cancelled",
+              "detail": "generate a fresh plan"
+            },
+            "error_code": "internal",
+            "failure": {
+              "primary": {
+                "details": {
+                  "mismatches_truncated": false,
+                  "recovery_chunks_truncated": false
+                },
+                "kind": "unknown",
+                "message": "operation failed without a diagnostic",
+                "phase": "unknown"
+              },
+              "progress": null,
+              "secondary": []
+            },
+            "ok": false,
+            "recovery": {
+              "inspect_saved_record": null,
+              "reobserve_required": null,
+              "replan_required": null,
+              "same_operation_replay_allowed": false
+            },
+            "retryable": false,
+            "schema_version": "dustroute.survival-job.v1"
+          },
+          "status": {
+            "completed_steps": null,
+            "execution_authority_restored": false,
+            "historical_only": false,
+            "job_id": "09d48c7b-a9ef-4a6c-aea2-8efdf1a9e6a5",
+            "next_step": "inspect status; stopped jobs never automatically replay",
+            "ok": true,
+            "owner": "Tester",
+            "process_local_job_present": true,
+            "schema_version": "dustroute.survival-job.v1",
+            "status": {
+              "construction_dispatched": false,
+              "state": "plan_expired_or_cancelled"
+            }
+          }
+        }
+      ],
+      "expected_refusal_verified": true,
+      "independently_unchanged_cells": 3120,
+      "same_job_replay_refused": true
+    },
+    {
+      "case": "site",
+      "source": "3221cacf25d9b2430b53f76476a4b583f92c71b8",
+      "test_exit_code": 0,
+      "server_exit_code": 0,
+      "total_controller_seconds": 67.51339707401348,
+      "status": {
+        "construction_dispatched": false,
+        "failure": {
+          "error": {
+            "code": "snapshot_mismatch",
+            "detail": "declared site differs at [4, -54, 4]"
+          },
+          "ok": false
+        },
+        "state": "admission_refused"
+      },
+      "lifecycle_checks": [
+        {
+          "case": "cancelled_preview",
+          "result": {
+            "automatic_replay": false,
+            "error": {
+              "code": "plan_expired_or_cancelled",
+              "detail": "generate a fresh plan"
+            },
+            "error_code": "internal",
+            "failure": {
+              "primary": {
+                "details": {
+                  "mismatches_truncated": false,
+                  "recovery_chunks_truncated": false
+                },
+                "kind": "unknown",
+                "message": "operation failed without a diagnostic",
+                "phase": "unknown"
+              },
+              "progress": null,
+              "secondary": []
+            },
+            "ok": false,
+            "recovery": {
+              "inspect_saved_record": null,
+              "reobserve_required": null,
+              "replan_required": null,
+              "same_operation_replay_allowed": false
+            },
+            "retryable": false,
+            "schema_version": "dustroute.survival-job.v1"
+          },
+          "status": {
+            "completed_steps": null,
+            "execution_authority_restored": false,
+            "historical_only": false,
+            "job_id": "e0fbc9f4-fe8c-4dea-baea-efecc4347037",
+            "next_step": "inspect status; stopped jobs never automatically replay",
+            "ok": true,
+            "owner": "Tester",
+            "process_local_job_present": true,
+            "schema_version": "dustroute.survival-job.v1",
+            "status": {
+              "construction_dispatched": false,
+              "state": "plan_expired_or_cancelled"
+            }
+          }
+        },
+        {
+          "case": "expired_preview",
+          "result": {
+            "automatic_replay": false,
+            "error": {
+              "code": "plan_expired_or_cancelled",
+              "detail": "generate a fresh plan"
+            },
+            "error_code": "internal",
+            "failure": {
+              "primary": {
+                "details": {
+                  "mismatches_truncated": false,
+                  "recovery_chunks_truncated": false
+                },
+                "kind": "unknown",
+                "message": "operation failed without a diagnostic",
+                "phase": "unknown"
+              },
+              "progress": null,
+              "secondary": []
+            },
+            "ok": false,
+            "recovery": {
+              "inspect_saved_record": null,
+              "reobserve_required": null,
+              "replan_required": null,
+              "same_operation_replay_allowed": false
+            },
+            "retryable": false,
+            "schema_version": "dustroute.survival-job.v1"
+          },
+          "status": {
+            "completed_steps": null,
+            "execution_authority_restored": false,
+            "historical_only": false,
+            "job_id": "b43c1f9a-f11b-4005-901e-3b9c268fa4da",
+            "next_step": "inspect status; stopped jobs never automatically replay",
+            "ok": true,
+            "owner": "Tester",
+            "process_local_job_present": true,
+            "schema_version": "dustroute.survival-job.v1",
+            "status": {
+              "construction_dispatched": false,
+              "state": "plan_expired_or_cancelled"
+            }
+          }
+        }
+      ],
+      "expected_refusal_verified": true,
+      "independently_unchanged_cells": 3120,
+      "same_job_replay_refused": true
+    }
+  ],
+  "limits": [
+    "Bounded dry passive cubes, exact adopted grounded specification, supplied inventory and explicit scopes only.",
+    "Independent loaded observer is deployment configuration; observations are client evidence, not an atomic server world lock.",
+    "Cancellation/expiry fixtures fork the already checked in-memory preview; no plan is deserialized into action authority.",
+    "Restart diagnosis is a new MCP service instance reading persisted files with no live bridge; this is not an OS crash/reboot test.",
+    "Interrupted execution recovery, automatic replanning and broader failure trials remain roadmap stages 4 and 5.",
+    "Older compiler/JVM/PVE failures have not been causally linked to this retry."
+  ],
+  "artifacts": [
+    {
+      "path": "survival-public/20261003/survival-public-retest-memory-20261003.log.gz",
+      "sha256": "f7f0f8166c71fc44c114060f0f4c0f6962199875696daf2a71cfa12de97aeb28",
+      "gzip_sha256": "54c9071d0ea2a44702d1965f31633049aea3549ccc41532cdc31cbbd4a00d545",
+      "bytes": 1200
+    },
+    {
+      "path": "survival-public/20261003/survival-public-schema-tests-20261003.log.gz",
+      "sha256": "2546f513192d05f1a696d92fadeb99471d7bbe5ad8f9b8800b0a3866ee2d2814",
+      "gzip_sha256": "49e3c3c407ebe1ce7646fc45a427d9e002737756ab2f1cfa4cab381ce9628f40",
+      "bytes": 1118
+    },
+    {
+      "path": "survival-public/20261003/survival-public-schema-tests-20261003-b.log.gz",
+      "sha256": "1d2d39f289859a3fd7237fd1a0fd0937b3050442587614249e159c4698bc6ad9",
+      "gzip_sha256": "9c25782cc8d80ba3ac1dbdb6762ead694908b89637602ea463abdf176d3282f9",
+      "bytes": 1661
+    },
+    {
+      "path": "survival-public/20261003/survival-public-schema-tests-20261003-c.log.gz",
+      "sha256": "c173caa7afe995b9b608125e2a59d55439525fec03acc7f72ddddbdcb7e56a21",
+      "gzip_sha256": "c0e2d54140deea54eec26e2d60174f90cc630bbe7438c5c4efd34656fa7be330",
+      "bytes": 446
+    },
+    {
+      "path": "survival-public/20261003/survival-public-regression-20261003.log.gz",
+      "sha256": "743cdcece751fffc008c00b14eb13c9c61e22f0d3e6eac674708e92274efeb29",
+      "gzip_sha256": "6f284a42366c661e95096f001876d71e636097de46385af4e4b7bba0e350c1ab",
+      "bytes": 23459
+    },
+    {
+      "path": "survival-public/20261003/survival-public-focused-20261003.log.gz",
+      "sha256": "91ede23dd85ce0bd15b4dc4b7bcffbcee4d43c9594caa1e32d48d64cff6c28a2",
+      "gzip_sha256": "34f544f7d6ecf48b1dd1dcfbb64067752d7b3815b497ff2e529262454fd73c70",
+      "bytes": 1008
+    },
+    {
+      "path": "survival-public/20261003/survival-public-no-voxrig-20261003.log.gz",
+      "sha256": "1d5c811ec28264774ec13a93659d634ed9d4b86ae981dcd33eddf7e78b26982d",
+      "gzip_sha256": "c268ec0119e2f480574f4f4b7b95ba826af04d39935047f23a348fded6a2cd2a",
+      "bytes": 2932
+    },
+    {
+      "path": "survival-public/20261003/survival-public-no-voxrig-fixed-20261003.log.gz",
+      "sha256": "b609abb3ffa3e21ee2ca29cb5dcfbb5ab07bf0871f4b7450404acaaa871b10b0",
+      "gzip_sha256": "dac1af57e82013de34c09d2b3129e1d8474ad32c393498b66e05aba1b217b9ef",
+      "bytes": 146
+    },
+    {
+      "path": "survival-public/20261003/survival-public-router-clippy-20261003.log.gz",
+      "sha256": "a5bcb6f4857bb1c63d04dd678664e48732a2d0e91ad1d1575688bfdea4be8966",
+      "gzip_sha256": "1da30c32b0128f57aea6463cdc7dd819796530d8c5fabcbdcc862a9fdc193f71",
+      "bytes": 146
+    },
+    {
+      "path": "survival-public/20261003/survival-public-router-tests-20261003.log.gz",
+      "sha256": "d486164c1008b7aadb4040648972c54ff9da4300515efd6b24e686e3fa7296e0",
+      "gzip_sha256": "524d4e0b502e19d5492111eb1abfa723ec9d5e52007c3f0ed27f1a64172669bd",
+      "bytes": 1008
+    },
+    {
+      "path": "survival-public/20261003/survival-public-memory-20261003.json.gz",
+      "sha256": "b36e9a733cc8741432ed32f35765d2ae528a1fbbc385df835d1bc42d7c7db13f",
+      "gzip_sha256": "490a215f4b47abe156941653f35d07a22fb4fffb44d67de7ff551abf5a465cf4",
+      "bytes": 415
+    },
+    {
+      "path": "survival-public/20261003/run-public-roof-trial.py.gz",
+      "sha256": "fd978def32e7434d6dafba9c91b7f2f13553f5baa4fda2e03e55ceec23102ddb",
+      "gzip_sha256": "6ae35ee4cbd12a6bf289a7e889b8424e9cb06006e0db370d8153a0027c5eb770",
+      "bytes": 5168
+    },
+    {
+      "path": "survival-public/20261003/survival-roof-20261002-public-live-memory-a.json.gz",
+      "sha256": "c3f51cae84415c30f1a5684dc6fb0fa1489f2a74a80f93fc53f0ca41beb2860f",
+      "gzip_sha256": "bd280b54d49d0293cda323a5ec995ffdc73677040fa98f2d6fe75ede4158f51d",
+      "bytes": 17527435
+    },
+    {
+      "path": "survival-public/20261003/survival-roof-20261002-public-live-memory-a-runtime.json.gz",
+      "sha256": "d04540c4aa53f6dc193c6ec35a89ed66b99a1c78389ed80891b85596117d7625",
+      "gzip_sha256": "6c2ec7d236cdb51a911c92896db625b17e24b338b4bf9517154ee6598e128bd1",
+      "bytes": 12528
+    },
+    {
+      "path": "survival-public/20261003/survival-roof-20261002-public-live-memory-a-test.log.gz",
+      "sha256": "1a527629c1767f1097d7205952e54137f57e7e8f2973d0ae5555d0f457babc8a",
+      "gzip_sha256": "8a1b160f590d4a23b33fcbc0ca6afa7ab5ac6625a01ed4f75edd4b77f41a6412",
+      "bytes": 2971
+    },
+    {
+      "path": "survival-public/20261003/survival-roof-20261002-public-live-memory-a-server-console.log.gz",
+      "sha256": "0408d1c33fd90743ff3c6a8ae93d9f21602671ceee4a480b68d83b0f76570b7e",
+      "gzip_sha256": "8dcd99626be76bbb7d80ff9bb1956517f84148770e965a5c1bacdeffe95b1d85",
+      "bytes": 9805
+    },
+    {
+      "path": "survival-public/20261003/survival-roof-20261002-public-live-memory-a-server.log.gz",
+      "sha256": "37233b9f73a428a9a463df31aaef310ce2bb0ccb32aac8a849313370cdf5b682",
+      "gzip_sha256": "68062cd116784cc0287db3c790020810aadd8b040c65e37f44adcdead7023f2e",
+      "bytes": 9770
+    },
+    {
+      "path": "survival-public/20261003/survival-public-live-controller-20261003.log.gz",
+      "sha256": "aa1d12cf5bd8f3371202b6b704549131a2c1673bbad2c1efa6bf3acaf74fef0a",
+      "gzip_sha256": "d455d57fbc30a893c01f920c5d781469c612643ea11d5ec75794bf7b28cc2b79",
+      "bytes": 2901
+    },
+    {
+      "path": "survival-public/20261003/survival-roof-20261002-public-live-memory-a-manifest.json.gz",
+      "sha256": "11bbb4f700107e0a78f90d636d59a84a9856073d8881c1f680019d05e178d2b1",
+      "gzip_sha256": "0e76ba5b92e082fbd0651ddcc14105f9622f83ac555e57b57dbfea57e195f016",
+      "bytes": 2354092
+    },
+    {
+      "path": "survival-public/20261003/survival-roof-20261002-public-live-memory-a-status.json.gz",
+      "sha256": "7dcb90a70a90ee13e593be8ec6aa0c905aad4e24498efa039efb4138068f9d80",
+      "gzip_sha256": "a502b948483f5b61bbbe6dadbdbff8f049589543a885362fcd8cea53f1a86889",
+      "bytes": 386
+    },
+    {
+      "path": "survival-public/20261003/survival-roof-20261002-public-live-memory-a-execution-record.json.gz",
+      "sha256": "a939fbc642ef3ab000450dcc9e05adcb4b2efac0592229ce5b814911346bdfa1",
+      "gzip_sha256": "2c7530698c99f6a8c62882f8190ba9ef6ecdf6b70b3490a6cb35dd7278e96811",
+      "bytes": 1525481
+    },
+    {
+      "path": "survival-public/20261003/survival-roof-20261002-public-materials-memory-a.json.gz",
+      "sha256": "c4d9b4335bf759e6a2124df39760f6b6c3bff4d817cb452b56669cf2219b499c",
+      "gzip_sha256": "c9468c5d74b5eb6751a30792e45c441c996e47177e4cfc866e76e2ed34abd6c0",
+      "bytes": 4165515
+    },
+    {
+      "path": "survival-public/20261003/survival-roof-20261002-public-materials-memory-a-runtime.json.gz",
+      "sha256": "ab0822783a7acb46f723bb6e83535af61d35e8c12765c47f567cadd562857e06",
+      "gzip_sha256": "05eea8c948a95564c6114d6a344416e43c9caa12cb49b0e83358a0985fe4585c",
+      "bytes": 1098
+    },
+    {
+      "path": "survival-public/20261003/survival-roof-20261002-public-materials-memory-a-test.log.gz",
+      "sha256": "129cf2cb489ff88ce4a631ebfb52f6f27873af5d3395e64c51077d6af291e3e4",
+      "gzip_sha256": "7aabf5382cae662c8e3ed809284975d02667c60c9a287e8ee196f0e9f2f0a929",
+      "bytes": 343
+    },
+    {
+      "path": "survival-public/20261003/survival-roof-20261002-public-materials-memory-a-server-console.log.gz",
+      "sha256": "6084ae98becea6ec60a28b758de04c33ace981af04e69b07248a78257374f7cf",
+      "gzip_sha256": "a0fad739aace9ad1f465e8e61caaed9d2abfae3255d3f3bf269ee168f15cf349",
+      "bytes": 3923
+    },
+    {
+      "path": "survival-public/20261003/survival-roof-20261002-public-materials-memory-a-server.log.gz",
+      "sha256": "fd53e93b6248ea3234bb3037486a480f29260910b60d56471676237c73826052",
+      "gzip_sha256": "c1bd92497b13d7b6af2400692f7bba975d8934283b107ea4094fd0c033b1653b",
+      "bytes": 3888
+    },
+    {
+      "path": "survival-public/20261003/survival-public-materials-controller-20261003.log.gz",
+      "sha256": "ac41e930f12ce84043da254dce8992e31e2e94281a7d60e9bb049c533fddab4d",
+      "gzip_sha256": "fb5ac1fe98864d685d6314a86dd81e26e81e55821358d3d5f7b5820b115c5f77",
+      "bytes": 235
+    },
+    {
+      "path": "survival-public/20261003/survival-roof-20261002-public-materials-memory-a-manifest.json.gz",
+      "sha256": "5e543a651d21818f35c20e93e6fd9bfa6b2cff05a2d221df90868c9642ee5133",
+      "gzip_sha256": "2de317d74c99b29afcaabb414f69983f39fc508ff1aecebddcc066d93796a706",
+      "bytes": 2354092
+    },
+    {
+      "path": "survival-public/20261003/survival-roof-20261002-public-materials-memory-a-status.json.gz",
+      "sha256": "6ef231db042f102ca31476d8094b4662b85b3514d1d4caf35db297f42d73f3e1",
+      "gzip_sha256": "c1ec8822e148996814bc4f69ec6a64456c98694773111fe27a937155d0930f5b",
+      "bytes": 234
+    },
+    {
+      "path": "survival-public/20261003/survival-roof-20261002-public-site-memory-a.json.gz",
+      "sha256": "57fb5b365646cbd4a04365e8d666e02d55c64c008ededbe6003a13ffc79f2f5d",
+      "gzip_sha256": "9215a83e0937b91c21e7015a1d7124c0cf77a66e084ba05838c3abcd5df911ee",
+      "bytes": 4165432
+    },
+    {
+      "path": "survival-public/20261003/survival-roof-20261002-public-site-memory-a-runtime.json.gz",
+      "sha256": "4e4f8793e92098b96da2a77a8cf04eddb443cabc65c6e01300d3a7fe81c57a3c",
+      "gzip_sha256": "b2efa07c784a29dbe73f867bde5cd560e6ed68df930c0f8cb2ae1a84d580c0fa",
+      "bytes": 1087
+    },
+    {
+      "path": "survival-public/20261003/survival-roof-20261002-public-site-memory-a-test.log.gz",
+      "sha256": "72b21d7c31cb4a41625ea66d704e5477fa4d4f381810ba484c698bd401f9a012",
+      "gzip_sha256": "51de2d090fdec2d158ede3e0a079b44000d3c45f30155fb47903cf153af2550e",
+      "bytes": 338
+    },
+    {
+      "path": "survival-public/20261003/survival-roof-20261002-public-site-memory-a-server-console.log.gz",
+      "sha256": "e7866e5c8f558966567a39faef08a9565037193197350f34e4f63923bfea55a5",
+      "gzip_sha256": "a03f26c51e51ef57e56d228ec077fb4acaab74ee61137fc96f45957e45f89957",
+      "bytes": 3876
+    },
+    {
+      "path": "survival-public/20261003/survival-roof-20261002-public-site-memory-a-server.log.gz",
+      "sha256": "a3ac852dc5125a3f1df95fdf8218bb289121ec9fc131051361c0e51b89446d85",
+      "gzip_sha256": "c5f5533d00b8461df0cafbe3905e728c54fed3dc5574a42aed789ba95cc46e84",
+      "bytes": 3841
+    },
+    {
+      "path": "survival-public/20261003/survival-public-site-controller-20261003.log.gz",
+      "sha256": "7db3ea19b39e2a3f34e9f0aae840aa5351c12d1c492a412fc4eee878e9b3acd8",
+      "gzip_sha256": "db16bb7a1c67ff74f2b83d234c3fdb230f9933f511c43c4fae3e66e0dc4d7a79",
+      "bytes": 235
+    },
+    {
+      "path": "survival-public/20261003/survival-roof-20261002-public-site-memory-a-manifest.json.gz",
+      "sha256": "cd9f0ba18117f3e7dc8959a7d300317038e841ca5bf889a7324015a4d28fac0a",
+      "gzip_sha256": "34651326e128fd03d73e3bfa025fd23f315bcf1a92a1917e097b859472b76428",
+      "bytes": 2354061
+    },
+    {
+      "path": "survival-public/20261003/survival-roof-20261002-public-site-memory-a-status.json.gz",
+      "sha256": "5a13361f111b0ccb3ea7a3132aa5dda6e5070c769c0f1afc1f75bc792d089cc8",
+      "gzip_sha256": "3b30c697d01ea3126447a8569d3614339fce574cf70d9daa70e305e319c02682",
+      "bytes": 218
+    }
+  ]
+}
