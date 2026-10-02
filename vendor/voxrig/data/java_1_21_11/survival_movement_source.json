@@ -1,0 +1,17 @@
+{
+  "generator": {
+    "scripts/VerifySurvivalMovement.java": "ae5520b366adfee8ef5be83f150d98e0377674238271e0b2d9dfaeb08a3f57b1"
+  },
+  "mappings": "Yarn 1.21.11+build.6 (official -> named)",
+  "mappings_sha256": "d2495bcc4b96ff81d985fa403a3a65a2891d4df31ad71f36a19338aa66daa89a",
+  "minecraft": "Java 1.21.11",
+  "minecraft_merged_sha256": "ad6ee2c9cee9c191b25bf5d0ffec5788c3335f3b3fcf77d6871a7b66b3b5046e",
+  "outputs": {
+    "data/java_1_21_11/survival_movement.json": "3fa48dea890294c551a70f618e4e0bca9f79d2b4285c2621328a65ae7bd2087e"
+  },
+  "transformation": "Existing package-remapped/access-widened oracle, native method bodies unchanged. Original caller invokes native player attribute defaults, limits and tracked flags; no movement or world simulation.",
+  "control_flow_audit_sha256": {
+    "ClientPlayerEntity.javap": "22f1c1386a60562f54ce839776e8d076fcb16c5a721298a23474a8768709bb4a",
+    "ServerPlayNetworkHandler.javap": "e705cd3f36856d4b47fcb2e6e141252605efe43c38b94cb4bb59bf77b17ff642"
+  }
+}

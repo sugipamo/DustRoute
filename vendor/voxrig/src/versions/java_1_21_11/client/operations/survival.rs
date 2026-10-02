@@ -1,4 +1,5 @@
 //! Own-player observation and a deliberately bounded stationary standing model.
+mod attributes;
 use super::*;
 use crate::versions::java_1_21_11::client::players::{self, PlayerPose};
 use std::collections::BTreeMap;
@@ -85,6 +86,22 @@ pub struct LocalPlayerState {
     pub mining_efficiency: Option<AttributeValue>,
     /// Native submerged-mining-speed attribute, not evidence of submersion.
     pub submerged_mining_speed: Option<AttributeValue>,
+    /// Native movement-speed attribute, including received modifiers.
+    pub movement_speed: Option<AttributeValue>,
+    /// Native gravity; negative values are preserved, not silently made normal.
+    pub gravity: Option<AttributeValue>,
+    /// Native jump-strength attribute; not an assertion that jumping is allowed.
+    pub jump_strength: Option<AttributeValue>,
+    /// Maximum native stepping height, before geometric checks.
+    pub step_height: Option<AttributeValue>,
+    /// Native movement-efficiency attribute.
+    pub movement_efficiency: Option<AttributeValue>,
+    /// Native sneaking-speed attribute.
+    pub sneaking_speed: Option<AttributeValue>,
+    /// Native safe-fall distance; does not establish a safe path.
+    pub safe_fall_distance: Option<AttributeValue>,
+    /// Native fall-damage multiplier; no damage prediction is implied.
+    pub fall_damage_multiplier: Option<AttributeValue>,
     /// Last resolved velocity; None for unsupported rotated relative updates.
     pub velocity: Option<VelocitySample>,
     /// Unsupported impulse/vehicle context; requires a fresh world baseline.
@@ -113,30 +130,16 @@ pub(super) const DRY_CUBES: &[&str] = &[
     "minecraft:andesite",
     "minecraft:granite",
 ];
-const ATTRIBUTES: [(i32, f64, f64, f64); 4] = [
-    (ids::SCALE_ATTRIBUTE, 1.0, 0.0625, 16.0),
-    (5, 1.0, 0.0, 1024.0),
-    (20, 0.0, 0.0, 1024.0),
-    (29, 0.2, 0.0, 20.0),
-];
 impl LocalPlayerState {
     pub(in crate::versions::java_1_21_11::client) fn spawned(entity_id: i32) -> Self {
-        let value = |index: usize| {
-            Some(AttributeValue {
-                value: ATTRIBUTES[index].1,
-                basis: ValueBasis::NativeReset,
-            })
-        };
-        Self {
+        let mut player = Self {
             entity_id: Some(entity_id),
             pose: Some(PlayerPose::Standing),
             pose_basis: Some(ValueBasis::NativeReset),
-            scale: value(0),
-            block_break_speed: value(1),
-            mining_efficiency: value(2),
-            submerged_mining_speed: value(3),
             ..Self::default()
-        }
+        };
+        attributes::initialize(&mut player);
+        player
     }
     pub(super) fn reset_world(&self) -> Self {
         self.entity_id.map(Self::spawned).unwrap_or_default()
@@ -257,21 +260,7 @@ pub(super) fn receive(state: &mut State, id: i32, payload: &[u8]) -> anyhow::Res
         }
         input::ENTITY_UPDATE_ATTRIBUTES => {
             let values = players::read_attributes(&mut r)?;
-            for (index, (key, _, min, max)) in ATTRIBUTES.iter().enumerate() {
-                if let Some(value) = values.get(key) {
-                    let sample = Some(AttributeValue {
-                        value: value.clamp(*min, *max),
-                        basis: ValueBasis::Received { sequence },
-                    });
-                    match index {
-                        0 => next.scale = sample,
-                        1 => next.block_break_speed = sample,
-                        2 => next.mining_efficiency = sample,
-                        3 => next.submerged_mining_speed = sample,
-                        _ => unreachable!(),
-                    }
-                }
-            }
+            attributes::received(&mut next, &values, sequence);
         }
         input::ENTITY_EFFECT | input::REMOVE_ENTITY_EFFECT => {
             let effect_id = r.varint()?;

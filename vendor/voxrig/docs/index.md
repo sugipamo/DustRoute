@@ -45,3 +45,5 @@
 - [サバイバル実装完了報告](history/survival-completion-report.md)
 
 - [Ordinary survival placement and material receipts](survival-placement.md)
+
+- [Survival movement attributes and position evidence](survival-movement-foundation.md)

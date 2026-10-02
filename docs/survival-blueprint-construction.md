@@ -272,3 +272,31 @@ step 3: native survival walk/stop/jump/settle on admitted static geometry, inclu
 collision and correction handling. Site/access planning, persistent jobs and
 the adopted roofed Blueprint build/temporary cleanup still follow. This milestone
 does not turn the existing command construction executor into a survival executor.
+
+## Movement attributes checkpoint and post-walk standing review
+
+The next-step audit retained eight native movement attributes in own-player state:
+movement speed, gravity, jump strength, step height, movement efficiency, sneaking
+speed, safe-fall distance and fall-damage multiplier. Native defaults and received
+updates remain distinct. A typed Rust definition table handles these and the
+four existing stationary/mining attributes. The unchanged-body 1.21.11 oracle
+checks defaults, bounds and tracked flags; tests cover field routing, modifiers,
+truncated batches, other-player isolation and reset behavior. This is state
+projection only; it does not establish walking or permit construction after a
+locally submitted movement.
+
+A common continuation concern was found before live locomotion: current standing
+admission requires a received own position and zero received velocity. Normal
+native movement acceptance does not echo an own-position receipt for each step.
+Waiting for that receipt can leave construction permanently blocked, while
+relabelling prediction as receipt would invalidate existing evidence semantics.
+The independent viewpoint tracker also lacks position-specific receipt/ground
+and velocity provenance needed for an arrival contract.
+
+Following the user's concern stop condition, movement control and post-walk
+construction release are stopped for review of the [concrete evidence-layer
+proposal](survival-movement-evidence.md). No movement packets or new live trial
+were run, and no server MOD requirement was introduced. Existing stationary
+placement/mining remain unchanged. The attribute prerequisite is validated in
+the [checkpoint record](evidence/survival-movement-foundation-20261002.json).
+The full roofed Blueprint goal remains unfinished.

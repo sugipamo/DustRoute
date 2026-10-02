@@ -1,0 +1,77 @@
+{
+  "recorded_at_utc": "2026-10-02T05:08:53.587893+00:00",
+  "status": "Movement attribute projection complete; movement control and post-walk standing admission stopped for user review of the discovered evidence boundary.",
+  "voxrig_revision": "fe607e44d26f0b388e943e4736f0cbacfae9ec2d",
+  "vendor_files": 256,
+  "checks": [
+    {
+      "project": "Voxrig",
+      "command": "cargo test --offline --locked -j 1 --all-targets -- --test-threads=1",
+      "result": "164 passed; 0 failed; 4 ignored",
+      "local_log": "/root/Voxrig/.local/survival-continuation/movement-foundation-all-tests.log",
+      "log_sha256": "d203a0f8b01f8c797e1b648524104de573cd53c4138b137d13bb0b94a0329c22"
+    },
+    {
+      "project": "Voxrig",
+      "command": "cargo clippy --offline --locked -j 1 --all-targets -- -D warnings",
+      "result": "passed",
+      "local_log": "/root/Voxrig/.local/survival-continuation/movement-foundation-clippy.log",
+      "log_sha256": "36a8076f62dfac636a8b0e35bd3f06ba9b3fea55516dbbadc983a3742eb4c691"
+    },
+    {
+      "project": "Voxrig",
+      "command": "cargo test --offline --locked -j 1 --doc -- --test-threads=1",
+      "result": "1 passed; 0 failed",
+      "local_log": "/root/Voxrig/.local/survival-continuation/movement-foundation-doc.log",
+      "log_sha256": "d621b65b898cef3d35a3f4654e47abb52985a04d55b898e9926b0d073323177b"
+    },
+    {
+      "project": "Voxrig",
+      "command": "cargo package --offline --locked --allow-dirty --list",
+      "result": "passed",
+      "local_log": "/root/Voxrig/.local/survival-continuation/movement-foundation-package.log",
+      "log_sha256": "be2235c6da02e6510dd78f1e33cb5e7a44ecc626b3b5e1fc0ed3c951e8bbd644"
+    },
+    {
+      "project": "DustRoute",
+      "command": "cargo check --offline --locked -j 1 -p dustroute-mcp --features voxrig --all-targets",
+      "result": "passed",
+      "local_log": "/root/DustRoute/.local/survival-movement-foundation-check-20261002.log",
+      "log_sha256": "20116312aa20b770d0608d4a6146fe229a12abd3f6a85b298f0610b3e924af19"
+    }
+  ],
+  "additional_checks": [
+    "cargo fmt --all --check passed (Voxrig)",
+    "git diff --check passed",
+    "vendor snapshot verified"
+  ],
+  "native_oracle": {
+    "source": "vendor/voxrig/data/java_1_21_11/survival_movement_source.json",
+    "result": "8 native player attribute defaults, bounds and tracked flags exported; all match typed Rust field definitions",
+    "kind": "Original helper invokes unchanged-body registry/default methods, no world simulation"
+  },
+  "implemented": [
+    "Own-player native movement speed, gravity, jump strength, step height, movement efficiency, sneaking speed, safe-fall distance and fall-damage multiplier with initial/received provenance.",
+    "Typed Rust table replaces numeric-index dispatch for all 12 supported attributes.",
+    "Atomic received batches, native modifier evaluation/limits, different-player isolation and world/configuration resets tested."
+  ],
+  "new_concern": {
+    "kind": "Native control-flow and current source inspection; no live movement claim",
+    "facts": [
+      "Current shared stationary context requires received own position and zero received velocity.",
+      "Native ordinary movement success updates the player/tracker without an own-position receipt for every accepted step; correction paths can teleport instead.",
+      "Current independent viewpoint tracker uses one sequence for spatial/rotation/metadata updates, quantizes relative motion and discards received ground/sync velocity fields.",
+      "Neither waiting for a normal position echo nor falsely setting position_from_server solves post-walk construction admission."
+    ],
+    "proposal": "docs/survival-movement-evidence.md",
+    "action": "No movement sender, post-walk construction release or native movement trial implemented after identifying the concern."
+  },
+  "not_completed": [
+    "Bounded native input/collision/gravity/jump locomotion",
+    "Separate prediction/observation and validated post-walk standing contract",
+    "Independent movement acceptance comparison",
+    "Site/access planner, durable survival Blueprint jobs and complete roofed build/cleanup"
+  ],
+  "server_activity": "No server started and no live trial/world mutation in this checkpoint.",
+  "goal_status_note": "Overall goal is unfinished and remains active; user-requested concern stop is reported without marking the full goal complete."
+}
