@@ -16,6 +16,10 @@ origin. Main remains at `7f74b37`.
 - Automatic access/action selection, durable survival jobs and the complete
   adopted roofed build/cleanup acceptance remain unfinished. The goal is active.
 
+Access/action selection has encountered a [native aiming uncertainty discrepancy](survival-aim-uncertainty.md).
+The characterization test is complete; the proposed behavior correction is
+unimplemented pending the user's concern-stop review.
+
 The sections below retain the earlier checkpoints and their original limitations.
 The latest detail is in [site planning](survival-site-planning.md).
 

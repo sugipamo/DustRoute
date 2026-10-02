@@ -204,3 +204,14 @@ includes the six new contract/resource cases. MCP all-targets Clippy with
 
 The [pinned contract-check record](evidence/survival-construction-contract-20261002.json)
 links the exact tested source and compressed check logs. Root formatting passed.
+
+## Concern before roof action selection (2026-10-02 UTC)
+
+A native characterization test demonstrates that hypothetical post-motion aiming
+uses the terminal standing margin as eye-position uncertainty, causing an edge
+side-placement refusal even at an unchanged position. Actual endpoint admission
+has a substantially tighter, independently observed error bound. Following the
+user's concern-stop instruction, behavior changes are unimplemented pending review
+of the [specific correction and validation proposal](survival-aim-uncertainty.md).
+This finding is not a proof that all alternate roof access layouts are impossible.
+The full-height roofed construction objective is unchanged.

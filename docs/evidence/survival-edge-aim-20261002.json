@@ -1,0 +1,58 @@
+{
+  "date_utc": "2026-10-02",
+  "voxrig_tested_commit": "2d9ed5a02d2bea6656e36b5a8f47035d6a98a491",
+  "production_base_commit": "be55a64bc32da1ff0265ff0bdeb591f13d623137",
+  "source_change": "One characterization test only; no production behavior change or vendor update.",
+  "test": "hypothetical_edge_placement_exposes_post_motion_aim_margin",
+  "result": {
+    "passed": 1,
+    "failed": 0,
+    "filtered_out": 188,
+    "seconds": 0.07
+  },
+  "checks": {
+    "clippy_all_targets": "passed -D warnings",
+    "format": "passed"
+  },
+  "fixture": {
+    "kind": "native loopback fixture, no Minecraft server",
+    "feet": [
+      1.2,
+      1,
+      0.5
+    ],
+    "support": [
+      0,
+      0,
+      0
+    ],
+    "target": [
+      1,
+      0,
+      0
+    ],
+    "rotation": [
+      90,
+      84.61069
+    ],
+    "hypothetical_released_ticks": 3,
+    "changed_position": false,
+    "action_packets_sent": false
+  },
+  "finding": {
+    "received_capture_placement": "admitted",
+    "after_path_placement": "target face/reach differs across observed position uncertainty",
+    "post_path_aim_error": 0.0625,
+    "maximum_current_endpoint_horizontal_error": 0.00048828225,
+    "shared_target_check_with_endpoint_bound": "admitted"
+  },
+  "artifact": {
+    "path": "survival-edge-aim-checks-20261002.gz",
+    "sha256": "c1b5044dcf24d6fc4b7619eebaf5dadacaf9f41cec126a5a4245f11d40422686"
+  },
+  "limitations": [
+    "This is not live edge movement or placement acceptance.",
+    "This does not prove every alternative roof schedule impossible.",
+    "Behavior correction is proposed but unimplemented under the user concern-stop instruction."
+  ]
+}
