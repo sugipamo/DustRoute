@@ -132,3 +132,18 @@ has TCP fixture coverage (including interruption/correction refusal); no separat
 live recovery scenario is claimed. Route search and complete Blueprint building
 remain separate roadmap work. The prior inventory increase is explained by the
 [retained pickup receipts](evidence/survival-motion-pickup-diagnosis-20261002.json).
+
+## Multi-heading prediction for caller-owned route planning
+
+`SurvivalControl` carries a heading and digital input for each tick.
+`preview_survival_path` / `start_survival_path` use the same bounded physics and
+finite sender as the fixed-heading convenience methods. Preview/history now
+retain the exact controls and starting generation. The 120-tick bound is shared
+as `MAX_SURVIVAL_CONTROL_TICKS`; the client does not search for a route.
+
+`start_previewed_survival_motion` recomputes a supplied preview while holding the
+send-intent lock. Different connection/world generation, world revision, position,
+player context or predicted frames reject before I/O. Saved or caller-modified
+previews are constraints, not authority: current mode, geometry, terminal margin,
+observer and mutation gates still apply. TCP coverage exercises turning around
+an obstacle and rejects stale previews without emitting controls.

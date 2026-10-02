@@ -1243,3 +1243,93 @@ async fn terminal_recheck_requires_new_receipt_current_geometry_and_exact_run_wi
     observer.stop().await;
     mover.stop().await;
 }
+
+#[tokio::test]
+async fn planned_multi_heading_path_preserves_turns_and_refuses_stale_preview_before_io() {
+    let mut mover = Fixture::new().await;
+    let mut observer = Fixture::new_id(43).await;
+    observer.observe_mover().await;
+    let mut controls = Vec::new();
+    for yaw in [0.0, -90.0] {
+        for tick in 0..20 {
+            controls.push(SurvivalControl {
+                yaw,
+                input: SurvivalInput {
+                    forward: if tick < 8 { 1 } else { 0 },
+                    ..Default::default()
+                },
+            });
+        }
+    }
+    let preview = mover.api.preview_survival_path(&controls).await.unwrap();
+    let end = preview.frames.last().unwrap().position;
+    assert!(end[0] > 2.0 && end[2] > 2.0);
+    assert!(matches!(
+        preview.terminal_clearance,
+        TerminalClearance::Admitted { .. }
+    ));
+    let mut stale = preview.clone();
+    stale.generation += 1;
+    assert!(
+        mover
+            .api
+            .start_previewed_survival_motion(&stale, &observer.api)
+            .await
+            .is_err()
+    );
+    let mut stale = preview.clone();
+    stale.initial.world_revision += 1;
+    assert!(
+        mover
+            .api
+            .start_previewed_survival_motion(&stale, &observer.api)
+            .await
+            .is_err()
+    );
+    assert!(mover.api.survival_motion().await.is_none());
+    assert!(
+        timeout(
+            Duration::from_millis(20),
+            read_packet(&mut mover.peer, None)
+        )
+        .await
+        .is_err()
+    );
+    mover
+        .api
+        .start_previewed_survival_motion(&preview, &observer.api)
+        .await
+        .unwrap();
+    for c in controls {
+        assert_eq!(
+            read_packet(&mut mover.peer, None).await.unwrap().0,
+            ids::play_serverbound::PLAYER_INPUT
+        );
+        let (id, payload) = read_packet(&mut mover.peer, None).await.unwrap();
+        assert_eq!(id, ids::play_serverbound::POSITION_LOOK);
+        assert_eq!(
+            f32::from_be_bytes(payload[24..28].try_into().unwrap()),
+            c.yaw
+        );
+    }
+    timeout(Duration::from_secs(1), async {
+        while mover.api.survival_motion().await.unwrap().status
+            != SurvivalMotionStatus::AwaitingObservation
+        {
+            tokio::task::yield_now().await;
+        }
+    })
+    .await
+    .unwrap();
+    observer.mover_position(end).await;
+    timeout(Duration::from_secs(1), async {
+        while mover.api.survival_motion().await.unwrap().status != SurvivalMotionStatus::Observed {
+            tokio::task::yield_now().await;
+        }
+    })
+    .await
+    .unwrap();
+    assert_eq!(mover.api.standing_context().await.unwrap().position, end);
+    observer.stop().await;
+    mover.stop().await;
+}

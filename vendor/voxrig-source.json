@@ -143,7 +143,7 @@
     "docs/survival-mining-comparison.md": "b63c1371c62353acc9dc959f397f6b44d615c0fa5e1c5d2a9cd51466fc704c15",
     "docs/survival-mining-retirement.md": "31fb7a51a591e4bad68ee301bcfcf1e888f5edf30fa4e0b51eddcd0e52c7798d",
     "docs/survival-mining.md": "9013073f9074d283f8276c62c54230b7a00d8bd3d5ba774bc682bd0e972c20ab",
-    "docs/survival-motion-controls.md": "38732d965bd98f388821ab9b3ad58f168f2ef7e6531e570cc47a5dde749cfc9b",
+    "docs/survival-motion-controls.md": "1b6551f707146fb0b32e83d64ebb6cd3371232b97f5655519d3879c2acdface2",
     "docs/survival-movement-foundation.md": "ec00fea854ddd760ee2e60e613e9e8c2192cfb4cc0380e0a62dbfe0fe43f1976",
     "docs/survival-outbound.md": "5f926827b4f51a3cc7008f067d9d18976f1768ab0116f7680de0edc6ea3ee30a",
     "docs/survival-placement.md": "0c3ee6532eb6ab401b97bdfc99c03e415714078713a2541d8ba8cfb546d72085",
@@ -238,13 +238,13 @@
     "src/versions/java_1_21_11/client/motion.rs": "312eb801d83b976d3b63bbe2e298ced1f56c13aa899b945dfcee98cfee723e98",
     "src/versions/java_1_21_11/client/movement_native_trials.rs": "77a23733869e4f890fdb8a57c5241ef7c33a86120f5eb967e11d707bdffd711a",
     "src/versions/java_1_21_11/client/observations.rs": "6b60093264c85be724b36a811ed2f22d14a678e43b02a584a5e23f82cd914f6c",
-    "src/versions/java_1_21_11/client/operations.rs": "d455253d61891609ebf502fed9ffe335f89560398fb2e50c7d2a027745be663a",
+    "src/versions/java_1_21_11/client/operations.rs": "fb501c0b1e21bcc5f343945b173adbb474ba1d00327e3737e788b38423eeb4f8",
     "src/versions/java_1_21_11/client/operations/inventory.rs": "1ed492d1c0c3099f046585a92cf93796d7966fe55519f5aa6b6ad9fbfdc29558",
     "src/versions/java_1_21_11/client/operations/inventory/tests.rs": "290a076fa0f2b93841049bee213d4127205ebd270df94d79ca0ec00fef53f86f",
     "src/versions/java_1_21_11/client/operations/mining.rs": "f01ff7ed7e5d67b2f499cdff0e46955d93ecd950705d293bf02b6e2beb5b5fc5",
-    "src/versions/java_1_21_11/client/operations/mining/tests.rs": "24416bfdbd50f51ba25f71d4437d721cab9db6918ddc1dfc16c3ba47dc608c47",
-    "src/versions/java_1_21_11/client/operations/movement.rs": "0826460c8188c127b1e5df6e0fdf602f787ed06cc063f768e3fb651f11dcee7e",
-    "src/versions/java_1_21_11/client/operations/movement/control.rs": "607ccffb51a39a9c1dbf36eefecfa3051e1f8e4ca3e57084a96b4f3681a3f97c",
+    "src/versions/java_1_21_11/client/operations/mining/tests.rs": "362cd2f3dce7d9f50a68d5afaa4b7cb18a2bbc528b95c52a2cc44609c010f824",
+    "src/versions/java_1_21_11/client/operations/movement.rs": "975a018e711a5555e99232841b4e35760ff2db9ff5ac2c6c2e9c780e5141b784",
+    "src/versions/java_1_21_11/client/operations/movement/control.rs": "33dd847ac890197139186d33fe1a294a4818c6ac9055cdd210abb472e1aca405",
     "src/versions/java_1_21_11/client/operations/placement.rs": "6bc5744772b7f67191c98a67d11cffeacf0cb4b46e73826c6114dbd55d19e04f",
     "src/versions/java_1_21_11/client/operations/placement/tests.rs": "3d06d010c7ae5820fca493b47d6865a930dc8a2511efe637c8650d86a2556337",
     "src/versions/java_1_21_11/client/operations/retirement.rs": "f64b3a83d56990283ea1245dd97e40f0facf12ffcb8fe7f6c7f44f6b90f239b6",
@@ -294,5 +294,5 @@
     "scripts"
   ],
   "repository": "https://github.com/sugipamo/Voxrig",
-  "revision": "30afe28534e8b611ad5da8b77d8c20ecab35b861"
+  "revision": "5149f340b0728fe1747afde29ff52124645b3134"
 }

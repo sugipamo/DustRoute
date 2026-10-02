@@ -23,6 +23,8 @@ pub mod snapshot_content;
 mod source_identity;
 mod state;
 mod storage;
+#[cfg(feature = "voxrig")]
+pub mod survival_navigation;
 pub mod transition;
 #[cfg(feature = "voxrig")]
 pub mod voxrig_bridge;
