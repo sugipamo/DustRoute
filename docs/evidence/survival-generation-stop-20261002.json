@@ -1,0 +1,761 @@
+{
+  "schema": "dustroute.survival-generation-stop.v1",
+  "recorded_at_utc": "2026-10-02T15:26:51.850031+00:00",
+  "status": "stopped_at_new_environment_prerequisite",
+  "stage_2_complete": false,
+  "generated_roof_live_execution_completed": false,
+  "native_vendor_source": "2b6e7bfc94e6270054eac5c7b14a74d4657a411c",
+  "cases": [
+    {
+      "case": "generated-smoke-c",
+      "source": "c67410a99efccad509e25f9f1fe25962f23b9999",
+      "execute": false,
+      "error": null,
+      "phases": [
+        "generated_smoke",
+        "generated_smoke_checked",
+        "generated_smoke",
+        "generated_smoke_checked",
+        "generated_smoke",
+        "generated_smoke_checked"
+      ],
+      "retained_receive_windows_complete": true,
+      "placement_mining_motion_dispatch_absent_in_history": true,
+      "inventory_swap_uncertain": false,
+      "test_seconds_including_fixture": 7.62
+    },
+    {
+      "case": "generated-live-a",
+      "source": "c67410a99efccad509e25f9f1fe25962f23b9999",
+      "execute": true,
+      "error": "native_refused: connection closed after uncertain frame write; server effects unknown",
+      "phases": [
+        "generated_plan_result",
+        "execution_stopped"
+      ],
+      "retained_receive_windows_complete": true,
+      "placement_mining_motion_dispatch_absent_in_history": true,
+      "inventory_swap_uncertain": true,
+      "generation_passed": true,
+      "generated_steps": 115,
+      "search": {
+        "action_limited_nodes": 0,
+        "best_remaining_permanent": 0,
+        "best_remaining_targets": [],
+        "best_remaining_temporary": [],
+        "candidate_checks": 9963,
+        "cleanup_searches": 2,
+        "complete_checks": 1,
+        "completed_access_cleanups": 2,
+        "expanded": 50,
+        "frontier_peak": 16,
+        "highest_hypothetical_feet": -53.0,
+        "progress": [
+          {
+            "actions": 4,
+            "candidate_checks": 8,
+            "position": [
+              2.5,
+              -60.0,
+              7.5
+            ],
+            "remaining_permanent": 45,
+            "remaining_temporary": 0
+          },
+          {
+            "actions": 9,
+            "candidate_checks": 248,
+            "position": [
+              2.5,
+              -60.0,
+              4.164081984952873
+            ],
+            "remaining_permanent": 41,
+            "remaining_temporary": 0
+          },
+          {
+            "actions": 14,
+            "candidate_checks": 599,
+            "position": [
+              1.50323024702261,
+              -59.0,
+              6.580477116699382
+            ],
+            "remaining_permanent": 39,
+            "remaining_temporary": 1
+          },
+          {
+            "actions": 19,
+            "candidate_checks": 818,
+            "position": [
+              2.4552097846035377,
+              -58.0,
+              6.503644226460976
+            ],
+            "remaining_permanent": 37,
+            "remaining_temporary": 3
+          },
+          {
+            "actions": 24,
+            "candidate_checks": 947,
+            "position": [
+              1.4190159410563048,
+              -57.0,
+              6.499710358126912
+            ],
+            "remaining_permanent": 35,
+            "remaining_temporary": 5
+          },
+          {
+            "actions": 29,
+            "candidate_checks": 1147,
+            "position": [
+              2.3740909362527423,
+              -56.0,
+              6.499893491479627
+            ],
+            "remaining_permanent": 33,
+            "remaining_temporary": 7
+          },
+          {
+            "actions": 40,
+            "candidate_checks": 3299,
+            "position": [
+              0.6130651930091022,
+              -60.0,
+              6.500075413761685
+            ],
+            "remaining_permanent": 33,
+            "remaining_temporary": 0
+          },
+          {
+            "actions": 41,
+            "candidate_checks": 3752,
+            "position": [
+              -1.6809759516116771,
+              -60.0,
+              3.538351113476686
+            ],
+            "remaining_permanent": 33,
+            "remaining_temporary": 0
+          },
+          {
+            "actions": 42,
+            "candidate_checks": 3923,
+            "position": [
+              -1.5013813219520324,
+              -60.0,
+              0.525426746581208
+            ],
+            "remaining_permanent": 33,
+            "remaining_temporary": 0
+          },
+          {
+            "actions": 47,
+            "candidate_checks": 4097,
+            "position": [
+              1.4230249725500632,
+              -59.0,
+              -1.4975859741421609
+            ],
+            "remaining_permanent": 31,
+            "remaining_temporary": 1
+          },
+          {
+            "actions": 52,
+            "candidate_checks": 4282,
+            "position": [
+              2.3780976906701325,
+              -58.0,
+              -1.4996920058290726
+            ],
+            "remaining_permanent": 29,
+            "remaining_temporary": 3
+          },
+          {
+            "actions": 57,
+            "candidate_checks": 4457,
+            "position": [
+              1.4190098497676835,
+              -57.0,
+              -1.4999792217440517
+            ],
+            "remaining_permanent": 27,
+            "remaining_temporary": 5
+          },
+          {
+            "actions": 62,
+            "candidate_checks": 4658,
+            "position": [
+              2.374084901891031,
+              -56.0,
+              -1.4999792217440517
+            ],
+            "remaining_permanent": 25,
+            "remaining_temporary": 7
+          },
+          {
+            "actions": 70,
+            "candidate_checks": 4879,
+            "position": [
+              1.419009797256575,
+              -55.0,
+              -1.4999792217440517
+            ],
+            "remaining_permanent": 20,
+            "remaining_temporary": 9
+          },
+          {
+            "actions": 73,
+            "candidate_checks": 5118,
+            "position": [
+              2.3740848493799223,
+              -54.0,
+              -1.4999792217440517
+            ],
+            "remaining_permanent": 20,
+            "remaining_temporary": 11
+          },
+          {
+            "actions": 74,
+            "candidate_checks": 5555,
+            "position": [
+              2.501770903506142,
+              -54.0,
+              -0.8710021704948893
+            ],
+            "remaining_permanent": 20,
+            "remaining_temporary": 11
+          },
+          {
+            "actions": 81,
+            "candidate_checks": 6106,
+            "position": [
+              0.5288988134775593,
+              -53.0,
+              1.0913060504312488
+            ],
+            "remaining_permanent": 14,
+            "remaining_temporary": 11
+          },
+          {
+            "actions": 90,
+            "candidate_checks": 6626,
+            "position": [
+              1.1180637879478572,
+              -53.0,
+              4.490560580493994
+            ],
+            "remaining_permanent": 6,
+            "remaining_temporary": 11
+          },
+          {
+            "actions": 115,
+            "candidate_checks": 9963,
+            "position": [
+              0.5416359241007589,
+              -60.0,
+              -1.499938053592504
+            ],
+            "remaining_permanent": 0,
+            "remaining_temporary": 0
+          }
+        ],
+        "pruned": 6465,
+        "refusal_examples": [
+          {
+            "action": 4,
+            "code": "native_geometry_refused",
+            "detail": "placement support must be the first hit on an admitted passive cube face",
+            "position": null
+          },
+          {
+            "action": 4,
+            "code": "native_geometry_refused",
+            "detail": "geometry lies outside the complete captured scene",
+            "position": null
+          },
+          {
+            "action": 5,
+            "code": "native_geometry_refused",
+            "detail": "no first native outline hit for placement",
+            "position": null
+          },
+          {
+            "action": 10,
+            "code": "unsafe_planned_motion",
+            "detail": "body leaves travel bounds or cannot stop safely",
+            "position": null
+          },
+          {
+            "action": 14,
+            "code": "native_geometry_refused",
+            "detail": "placement requires known empty air outside the standing body",
+            "position": null
+          },
+          {
+            "action": 29,
+            "code": "native_geometry_refused",
+            "detail": "preview falls outside bounded construction height",
+            "position": null
+          },
+          {
+            "action": 29,
+            "code": "native_geometry_refused",
+            "detail": "hypothetical edit removes player support",
+            "position": null
+          },
+          {
+            "action": 29,
+            "code": "native_geometry_refused",
+            "detail": "hypothetical removal differs from first native target face",
+            "position": null
+          }
+        ],
+        "rejected": 4877
+      },
+      "test_seconds_including_fixture": 43.19,
+      "completed_steps": 0,
+      "continuation": "needs_inspection",
+      "outcome": "uncertain"
+    },
+    {
+      "case": "generated-live-b",
+      "source": "da9bdd030bfb311e30b411cb2972211fb02a695b",
+      "execute": false,
+      "test_started": false,
+      "error": "fixture readiness exceeded 60 seconds; server later became ready and stopped normally"
+    },
+    {
+      "case": "generated-live-c",
+      "source": "da9bdd030bfb311e30b411cb2972211fb02a695b",
+      "execute": true,
+      "error": "native_refused: unexpected end of file",
+      "phases": [
+        "generated_plan_result"
+      ],
+      "retained_receive_windows_complete": true,
+      "placement_mining_motion_dispatch_absent_in_history": true,
+      "inventory_swap_uncertain": false,
+      "generation_passed": true,
+      "generated_steps": 115,
+      "search": {
+        "action_limited_nodes": 0,
+        "best_remaining_permanent": 0,
+        "best_remaining_targets": [],
+        "best_remaining_temporary": [],
+        "candidate_checks": 9963,
+        "cleanup_searches": 2,
+        "complete_checks": 1,
+        "completed_access_cleanups": 2,
+        "expanded": 50,
+        "frontier_peak": 16,
+        "highest_hypothetical_feet": -53.0,
+        "progress": [
+          {
+            "actions": 4,
+            "candidate_checks": 8,
+            "position": [
+              2.5,
+              -60.0,
+              7.5
+            ],
+            "remaining_permanent": 45,
+            "remaining_temporary": 0
+          },
+          {
+            "actions": 9,
+            "candidate_checks": 248,
+            "position": [
+              2.5,
+              -60.0,
+              4.164081984952873
+            ],
+            "remaining_permanent": 41,
+            "remaining_temporary": 0
+          },
+          {
+            "actions": 14,
+            "candidate_checks": 599,
+            "position": [
+              1.50323024702261,
+              -59.0,
+              6.580477116699382
+            ],
+            "remaining_permanent": 39,
+            "remaining_temporary": 1
+          },
+          {
+            "actions": 19,
+            "candidate_checks": 818,
+            "position": [
+              2.4552097846035377,
+              -58.0,
+              6.503644226460976
+            ],
+            "remaining_permanent": 37,
+            "remaining_temporary": 3
+          },
+          {
+            "actions": 24,
+            "candidate_checks": 947,
+            "position": [
+              1.4190159410563048,
+              -57.0,
+              6.499710358126912
+            ],
+            "remaining_permanent": 35,
+            "remaining_temporary": 5
+          },
+          {
+            "actions": 29,
+            "candidate_checks": 1147,
+            "position": [
+              2.3740909362527423,
+              -56.0,
+              6.499893491479627
+            ],
+            "remaining_permanent": 33,
+            "remaining_temporary": 7
+          },
+          {
+            "actions": 40,
+            "candidate_checks": 3299,
+            "position": [
+              0.6130651930091022,
+              -60.0,
+              6.500075413761685
+            ],
+            "remaining_permanent": 33,
+            "remaining_temporary": 0
+          },
+          {
+            "actions": 41,
+            "candidate_checks": 3752,
+            "position": [
+              -1.6809759516116771,
+              -60.0,
+              3.538351113476686
+            ],
+            "remaining_permanent": 33,
+            "remaining_temporary": 0
+          },
+          {
+            "actions": 42,
+            "candidate_checks": 3923,
+            "position": [
+              -1.5013813219520324,
+              -60.0,
+              0.525426746581208
+            ],
+            "remaining_permanent": 33,
+            "remaining_temporary": 0
+          },
+          {
+            "actions": 47,
+            "candidate_checks": 4097,
+            "position": [
+              1.4230249725500632,
+              -59.0,
+              -1.4975859741421609
+            ],
+            "remaining_permanent": 31,
+            "remaining_temporary": 1
+          },
+          {
+            "actions": 52,
+            "candidate_checks": 4282,
+            "position": [
+              2.3780976906701325,
+              -58.0,
+              -1.4996920058290726
+            ],
+            "remaining_permanent": 29,
+            "remaining_temporary": 3
+          },
+          {
+            "actions": 57,
+            "candidate_checks": 4457,
+            "position": [
+              1.4190098497676835,
+              -57.0,
+              -1.4999792217440517
+            ],
+            "remaining_permanent": 27,
+            "remaining_temporary": 5
+          },
+          {
+            "actions": 62,
+            "candidate_checks": 4658,
+            "position": [
+              2.374084901891031,
+              -56.0,
+              -1.4999792217440517
+            ],
+            "remaining_permanent": 25,
+            "remaining_temporary": 7
+          },
+          {
+            "actions": 70,
+            "candidate_checks": 4879,
+            "position": [
+              1.419009797256575,
+              -55.0,
+              -1.4999792217440517
+            ],
+            "remaining_permanent": 20,
+            "remaining_temporary": 9
+          },
+          {
+            "actions": 73,
+            "candidate_checks": 5118,
+            "position": [
+              2.3740848493799223,
+              -54.0,
+              -1.4999792217440517
+            ],
+            "remaining_permanent": 20,
+            "remaining_temporary": 11
+          },
+          {
+            "actions": 74,
+            "candidate_checks": 5555,
+            "position": [
+              2.501770903506142,
+              -54.0,
+              -0.8710021704948893
+            ],
+            "remaining_permanent": 20,
+            "remaining_temporary": 11
+          },
+          {
+            "actions": 81,
+            "candidate_checks": 6106,
+            "position": [
+              0.5288988134775593,
+              -53.0,
+              1.0913060504312488
+            ],
+            "remaining_permanent": 14,
+            "remaining_temporary": 11
+          },
+          {
+            "actions": 90,
+            "candidate_checks": 6626,
+            "position": [
+              1.1180637879478572,
+              -53.0,
+              4.490560580493994
+            ],
+            "remaining_permanent": 6,
+            "remaining_temporary": 11
+          },
+          {
+            "actions": 115,
+            "candidate_checks": 9963,
+            "position": [
+              0.5416359241007589,
+              -60.0,
+              -1.499938053592504
+            ],
+            "remaining_permanent": 0,
+            "remaining_temporary": 0
+          }
+        ],
+        "pruned": 6465,
+        "refusal_examples": [
+          {
+            "action": 4,
+            "code": "native_geometry_refused",
+            "detail": "placement support must be the first hit on an admitted passive cube face",
+            "position": null
+          },
+          {
+            "action": 4,
+            "code": "native_geometry_refused",
+            "detail": "geometry lies outside the complete captured scene",
+            "position": null
+          },
+          {
+            "action": 5,
+            "code": "native_geometry_refused",
+            "detail": "no first native outline hit for placement",
+            "position": null
+          },
+          {
+            "action": 10,
+            "code": "unsafe_planned_motion",
+            "detail": "body leaves travel bounds or cannot stop safely",
+            "position": null
+          },
+          {
+            "action": 14,
+            "code": "native_geometry_refused",
+            "detail": "placement requires known empty air outside the standing body",
+            "position": null
+          },
+          {
+            "action": 29,
+            "code": "native_geometry_refused",
+            "detail": "preview falls outside bounded construction height",
+            "position": null
+          },
+          {
+            "action": 29,
+            "code": "native_geometry_refused",
+            "detail": "hypothetical edit removes player support",
+            "position": null
+          },
+          {
+            "action": 29,
+            "code": "native_geometry_refused",
+            "detail": "hypothetical removal differs from first native target face",
+            "position": null
+          }
+        ],
+        "rejected": 4877
+      },
+      "test_seconds_including_fixture": 37.39
+    }
+  ],
+  "crash": {
+    "process": "isolated vanilla Java server",
+    "signal": "SIGSEGV",
+    "thread": "C2 CompilerThread0",
+    "frame": "PhaseChaitin::post_allocate_copy_removal()+0xa0b",
+    "java": "OpenJDK 21.0.12+8-1-26.04-Ubuntu",
+    "full_report_local": "/root/DustRoute/.local/survival-mining-server-20261002/hs_err_pid160498.log",
+    "full_report_sha256": "73b03af6c96d6c8621b50b4e226641aae8f02556010347c39f2f12145867ba26",
+    "root_cause": "undetermined"
+  },
+  "limits": [
+    "The complete 115-action generated plan passes hypothetical admission, but no generated roof has completed actual execution.",
+    "Live A timed out while synchronous planning blocked client I/O; its attempted inventory swap remains uncertain and was not replayed.",
+    "Off-thread planning was added and unit tests/Clippy passed. Live C crashed in the JVM before fresh executor admission; this does not establish transport liveness through a successful long execution.",
+    "Live B did not start the Rust test; startup exceeded fixture readiness timeout. Live C used 180-second startup timeout; operation deadlines and physics contracts were unchanged.",
+    "All dependent live validation and roadmap stages stopped; no JDK changes or repeated crash experiments performed.",
+    "Original authored roof acceptance remains separate evidence."
+  ],
+  "artifacts": [
+    {
+      "path": "survival-generation/survival-roof-20261002-generated-smoke-c.json.gz",
+      "bytes": 70709,
+      "sha256": "348ff3de0d4288967f5c8d5f7da8f6f018fc7af32786edda5e3f722a76bf2b69",
+      "gzip_sha256": "18c61ad67994250e84e77450049c3d789930589fef9d8d97e0bcf0cf84a17760"
+    },
+    {
+      "path": "survival-generation/survival-roof-20261002-generated-smoke-c-test.log.gz",
+      "bytes": 332,
+      "sha256": "bbbe2bf21098ee960dc55a43f806a0efe75df66f23d34ccff3952e26f04cd433",
+      "gzip_sha256": "4d793de4af6c7b7fc970e48277bce20745a17530d25e42db3b0d2019d55abbf3"
+    },
+    {
+      "path": "survival-generation/survival-roof-20261002-generated-smoke-c-server-console.log.gz",
+      "bytes": 3799,
+      "sha256": "cb75caf704f60389158932ece88ce3b9c83e714e22818a0e345ec1df7a4b7206",
+      "gzip_sha256": "985b3a7b9f8b0734cf3fab1818d613f0533fdf666e3041d3561cefd09a733c2a"
+    },
+    {
+      "path": "survival-generation/survival-roof-20261002-generated-smoke-c-server.log.gz",
+      "bytes": 3764,
+      "sha256": "51b40521f01da9556b2b1032234670ff722cf78522b14f1378a0443a592c4e79",
+      "gzip_sha256": "beba1366963a4184589158fee687b1f34c4522d63ee67658d061f6b04194b9c1"
+    },
+    {
+      "path": "survival-generation/survival-roof-20261002-generated-live-a-journal.json.gz",
+      "bytes": 374222,
+      "sha256": "371aece0ef9ed98347daf5dd507cb0206cb4d82ab68cca0fe0004388bf06caf9",
+      "gzip_sha256": "8896c38eaffd5bc0ba96435402bc8700dc9d6f4717152cae5f4d0429c07153ab"
+    },
+    {
+      "path": "survival-generation/survival-roof-20261002-generated-live-a.json.gz",
+      "bytes": 756365,
+      "sha256": "aca3f8eec8ce2927d554d8782019f2352db9f31a765bef0d8b25767fdde04f8a",
+      "gzip_sha256": "5a5f8ee7436cbc75b2429495198c8c6c44e801a48d147ab76db29a4f89c74532"
+    },
+    {
+      "path": "survival-generation/survival-roof-20261002-generated-live-a-test.log.gz",
+      "bytes": 805,
+      "sha256": "3f03b4b48787b25157d32df7e73893f2016833510172243dbdd0711ee3f27c3a",
+      "gzip_sha256": "0245a625728fa2d427f593908f2f6a8f91d109ef23f47e470a231a2f8b7dea72"
+    },
+    {
+      "path": "survival-generation/survival-roof-20261002-generated-live-a-server-console.log.gz",
+      "bytes": 3790,
+      "sha256": "31d628b32f9083ac39920079d3611b53ca3352c3afbb1507a708748dd3a5009a",
+      "gzip_sha256": "ab2c40d76c37107d3fef7a952a08d840c80c37bc7d1b3d146595f8f60038c75e"
+    },
+    {
+      "path": "survival-generation/survival-roof-20261002-generated-live-a-server.log.gz",
+      "bytes": 3755,
+      "sha256": "73bbe7a18a9f8325cad7d19f1dbf5e64a57b7d462d1b1153c93e2c758e3c33b9",
+      "gzip_sha256": "6443b481e9902f2575e48eb1a7a3f9b99b0121d76b5a4b12284b5769e508d219"
+    },
+    {
+      "path": "survival-generation/survival-roof-20261002-generated-live-b-server-console.log.gz",
+      "bytes": 2586,
+      "sha256": "bab1b59be3efd12034b25c4f57f239ccb36d9a495aa4c9f3e6d79697613a3425",
+      "gzip_sha256": "3cd4f26efce2bbbbdfdbfd2c64646d1314cbba27945bfbbba71fc76777050365"
+    },
+    {
+      "path": "survival-generation/survival-roof-20261002-generated-live-b-server.log.gz",
+      "bytes": 2551,
+      "sha256": "9369cee3f83422a9391df46ca0dbcefa7386a23e1071553b33a0fbf5ea68a2c3",
+      "gzip_sha256": "500b0f80a2c05d188b2d064e9fb0e24c45893b110fdbad6c10a9ebdd07af9aac"
+    },
+    {
+      "path": "survival-generation/survival-roof-20261002-generated-live-c.json.gz",
+      "bytes": 747547,
+      "sha256": "421283f8414c8766921cac7a26b3b07e7daa0af68f4cda7e34448a25dcd9f547",
+      "gzip_sha256": "21d817994c738338187c54a6071dcc5ace856e85b478234342d8601b9897ccb6"
+    },
+    {
+      "path": "survival-generation/survival-roof-20261002-generated-live-c-test.log.gz",
+      "bytes": 758,
+      "sha256": "10936395784a64cb014eb010c46e4a0d4cf45b29d42f820c62b38463c982126c",
+      "gzip_sha256": "52550a339116313ad3f0c583a3391232c1c7cfde5fceb6709b11f19b9dd2f32c"
+    },
+    {
+      "path": "survival-generation/survival-roof-20261002-generated-live-c-server-console.log.gz",
+      "bytes": 3547,
+      "sha256": "770a51be85c5fb8ec1b1f10ca4111860452bfccd8fbc258a67e84afb3626c920",
+      "gzip_sha256": "4374567add07fd88db67f7247a9decff1d7432c68b2507e7caae9217ea6d8240"
+    },
+    {
+      "path": "survival-generation/survival-roof-20261002-generated-live-c-server.log.gz",
+      "bytes": 2517,
+      "sha256": "59046f488ce6b6331a2b6910d4b514d3b1e07dcb957c6b07f6c3c95214dec4b5",
+      "gzip_sha256": "2cc7fd03e2d1aed4647e84ae05d65dc7beffe1679de5702a7e1119564c460bf7"
+    },
+    {
+      "path": "survival-generation/survival-generator-async-tests.log.gz",
+      "bytes": 3343,
+      "sha256": "6641c8afcff4a0c24c72070f5e84b14d0e7e72e879ca2ebce8c2d5d11be550a7",
+      "gzip_sha256": "d8c9e95eb174e26d2245416c7cc4b7fa5f5121ab9a1ea00271565afbf345681a"
+    },
+    {
+      "path": "survival-generation/survival-generator-async-clippy.log.gz",
+      "bytes": 146,
+      "sha256": "a027105cedabfad82e8f484fc573f20f16c90b8d2b176a3126b374e67ac96998",
+      "gzip_sha256": "b063a9b4ea8d9f9d1db2e224cb48811cabf089c7b9d78b6742b7c9e1c1019919"
+    },
+    {
+      "path": "survival-generation/generation-trial-controller-startup180.py.gz",
+      "bytes": 3052,
+      "sha256": "9837fee68b397856990cff78aef830b0838f2e0542418cb63811ff66f05976ab",
+      "gzip_sha256": "e8604bf865b69bc35dbdd65af5720248c3f9e5cca9026cc73a77b89040837c52"
+    },
+    {
+      "path": "survival-generation/survival-generation-jvm-crash-summary.txt.gz",
+      "bytes": 2844,
+      "sha256": "01d2effb95dcf7dc9c434e11993cb8ed6d9b00e832c13cc41aaf1e80c326432f",
+      "gzip_sha256": "37e9a941a43b0d0c2b20c52b414da8fcbe3dc442c0dee8ee2d528f3480e72cc0"
+    },
+    {
+      "path": "survival-generation/generation-stop-archiver.py.gz",
+      "bytes": 4865,
+      "sha256": "fd0b358043feb80cba52ef9caa92d01cd86e48e9f5e4b9ea1f49dbb6aea6013a",
+      "gzip_sha256": "c9a71178b671c8baff5ff57153a0b4bd8141043d161b24a8b4f01f16a71314e4"
+    }
+  ]
+}

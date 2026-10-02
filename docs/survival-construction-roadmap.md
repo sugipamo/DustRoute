@@ -22,6 +22,14 @@ Current limits include 64 permanent changes, 512 proposed actions and native
 256-edit/4,096-motion-tick scenario budgets. Reaching a limit is a diagnostic,
 not a reason to silently raise it or claim that construction is impossible.
 
+## Current stage status (2026-10-02)
+
+Stage 2 now generates a completely checked 115-action roof plan, including all
+temporary cleanup and retreat. Generated live acceptance is unfinished: the
+isolated server JVM crashed during the fresh trial, and dependent work stopped
+under the prerequisite rule. See [implementation and evidence](survival-construction-generation.md)
+for the separate preflight successes, failed live attempts and proposed next step.
+
 ## Ordered milestones
 
 | Stage | Player-visible outcome | Completion evidence |

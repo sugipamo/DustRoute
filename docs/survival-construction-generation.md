@@ -1,8 +1,9 @@
 # Automatic survival construction: implementation progress
 
 Stage 2 of the [approved roadmap](survival-construction-roadmap.md). This is an
-in-progress bounded planner, not completion of the generated-roof acceptance or
-the public MCP survival workflow.
+bounded planner with complete hypothetical roof generation. Actual generated-roof
+acceptance remains unfinished: dependent work stopped on a new JVM crash in the
+isolated server. The public MCP survival workflow is not yet implemented.
 
 ## Shared checker and library boundary
 
@@ -28,6 +29,11 @@ as a proof of escape after future edits.
 
 `generation::generate_construction_plan` takes a captured scene, checked site,
 proposed supplied-material budget, temporary material and explicit search limits.
+Async clients use `generate_construction_plan_async`, which moves detached owned
+data into a bounded CPU worker so native receive/keepalive tasks can continue.
+Dropping its awaiter discards the result but does not abort a started read-only
+worker. Neither entry point owns a live action handle.
+
 It returns a complete hypothetical plan with counters, or structured invalid
 input, unsupported target state, initial-scene refusal, material shortage or
 bounded-search failure. The material budget is not an inventory receipt.
@@ -74,12 +80,12 @@ The related Rust suite has 21 passing tests and four opt-in live fixtures.
 MCP all-target Clippy passes with Voxrig enabled. Contract tests include reserving
 permanent materials against temporary use, no drop refunds and invalid budgets.
 
-On source `24952f3`, isolated vanilla captured-scene comparisons passed for:
+On source `c67410a`, isolated vanilla captured-scene comparisons passed for:
 
 | Design | Generated actions | Candidate checks |
 | --- | ---: | ---: |
 | Two-block column | 2 | 2 |
-| Supported four-block beam | 7, including movement and retreat | 538 |
+| Supported four-block beam | 7, including movement and retreat | 548 |
 | Translated two-block column | 2 | 2 |
 
 Each plan matched a fresh complete replay through the public sequence checker.
@@ -88,11 +94,60 @@ one-check exhaustion also returned their declared diagnostics. These were
 read-only comparisons against actual received geometry: no generated building
 actions were sent, and they do not substitute for full-roof live acceptance.
 
+## Full generated roof preflight
+
+On `c67410a`, the original roof passed complete hypothetical generation without
+an authored operation list: **115 actions, 49 permanent placements, 18 temporary
+placements, 30 moves and 18 removals**. Required supplied materials are 49
+cobblestone and 18 dirt (no future drop credits). Two access cleanup phases
+complete, no temporary blocks remain, and the final feet are approximately
+`[0.541636, -60, -1.499938]` inside the ground retreat scope.
+
+The search used 9,963 candidate checks, 50 expansions and a peak frontier of 16
+under a 12,000-check limit. This remains an incomplete bounded heuristic, not a
+guarantee for arbitrary roofs. The unchanged native checks admit all actions.
+[Progress evidence](evidence/survival-generation-progress-20261002.json) includes
+all prior failures and the complete preflight, with source pins and hashed logs.
+
+## Live attempts and stop condition
+
+[Live-attempt evidence](evidence/survival-generation-stop-20261002.json) preserves
+these distinct outcomes rather than replacing them with the successful preflight:
+
+- **Live A (`c67410a`):** both clients timed out during synchronous planning on
+  the fixture's current-thread Tokio runtime. At step zero, an inventory swap
+  returned an uncertain write; the executor recorded `needs_inspection` and did
+  not replay it. No placement/mining/motion dispatch appears in native history.
+- **Async correction (`da9bdd0`):** the generator's async entry point and fixture
+  planning use `spawn_blocking`. Related tests: 21 passed, four opt-in tests
+  ignored; all-target MCP Clippy passed. No Voxrig change was needed. Earlier
+  long read-only preflights do not demonstrate connection liveness.
+- **Live B:** fresh world startup exceeded the fixture's 60-second readiness
+  timeout. The server subsequently became ready and stopped normally; no Rust
+  test or building operations started. The fixture startup timeout alone was
+  increased to 180 seconds for the next attempt.
+- **Live C (`da9bdd0`):** the isolated Java server crashed with SIGSEGV on
+  `C2 CompilerThread0`, in `PhaseChaitin::post_allocate_copy_removal()`. The JVM
+  identifies itself as OpenJDK `21.0.12+8-1-26.04-Ubuntu`. Detached planning still
+  produced the same 115-action result; fresh executor creation refused EOF.
+  No executor journal was created and native history contains no construction
+  dispatch. A bounded crash-summary excerpt is retained; the full report stays
+  local because it includes environment data.
+
+The JVM crash is an observed process failure, not a determination of its root
+cause. All dependent live work stopped under the user's prerequisite stop rule.
+No JDK replacement, JVM flag workaround or additional crash reproduction was
+attempted. Long-running transport liveness after the async correction still
+needs successful live validation.
+
 ## Remaining acceptance
 
-Complete generated planning for the original 49-block roof, including transfers
-between access areas, removal of all owned temporary works and final retreat.
-Retain unsuccessful attempts as failures and compare progress under explicit
-budgets. Then execute a completely checked generated roof plan in a fresh isolated
-non-OP fixture, retaining independent final-site/cleanup evidence. Only after
-that acceptance is stage 2 complete; adoption/MCP integration follows separately.
+First agree on a narrowly scoped environment investigation: identify a supported
+server JDK/build and decide whether replacement or a diagnostic JVM configuration
+is appropriate. Then use a fresh isolated fixture to execute the generated roof
+through the unchanged common executor, retaining exact final geometry, all
+owned-temporary cleanup, independent observation and ground retreat evidence.
+
+Stage 2 remains incomplete until that actual acceptance succeeds. Blueprint/MCP
+integration, reobserved continuation and whole-workflow failure tests remain
+subsequent milestones; the previously completed authored roof is separate proof.
