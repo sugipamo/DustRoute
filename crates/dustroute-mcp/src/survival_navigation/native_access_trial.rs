@@ -236,87 +236,167 @@ async fn exercise(
         events.push(json!({"phase":name,"motion":record}));
     }
     for x in 1..=3 {
-        let current = bot.survival().map_err(|e| e.to_string())?;
-        // Re-plan this removal from the current connection and observed terrain.
-        let scene = current
-            .capture_survival_scene(Region {
-                min: [-5, -62, -5],
-                max: [11, -53, 9],
-            })
-            .await
-            .map_err(|e| e.to_string())?;
-        let future = scene.scenario();
-        let r = rotation(hypothetical_eye(&future), [f64::from(x), -59.5, 0.5]);
-        let edit = future
-            .preview_cube_removal([x, -60, 0], BlockFace::West, r)
-            .map_err(|e| e.to_string())?;
-        let inventory = current
-            .player_state()
-            .await
-            .map_err(|e| e.to_string())?
-            .inventory;
-        let empty = inventory.slots[36..45]
-            .iter()
-            .position(|s| *s == InventorySlot::Empty)
-            .ok_or("empty mining hand unavailable")?;
-        current
-            .select_hotbar(empty as u8)
-            .await
-            .map_err(|e| e.to_string())?;
-        current.look(r).await.map_err(|e| e.to_string())?;
-        let status = current
-            .dig_survival_cube(edit.position, BlockFace::West, Duration::from_secs(5))
-            .await
-            .map_err(|e| e.to_string())?;
-        let MiningStatus::ObservedRemoved { observation } = status else {
-            return Err(format!("{status:?}"));
-        };
-        let seen = observe(viewer, edit.position, "minecraft:air").await?;
-        let recovery = current
-            .prepare_mining_retirement(&observation.intent, &observer)
-            .await
-            .map_err(|e| e.to_string())?;
-        events.push(json!({"phase":"removal","plan":edit,"observation":observation,"independent":seen,"history":current.operation_history().await}));
-        traces.push(json!(
-            bot.stop_packet_trace().await.map_err(|e| e.to_string())?
-        ));
-        recovery.close_source().await.map_err(|e| e.to_string())?;
-        let retirement = recovery
-            .wait(Duration::from_secs(3))
-            .await
-            .map_err(|e| e.to_string())?;
-        if !matches!(retirement, MiningRetirementStatus::Retired { .. }) {
-            return Err(format!("{retirement:?}"));
+        let mut complete = false;
+        for attempt in 1..=3 {
+            use crate::survival_cleanup::{
+                CleanupReconciliation, CleanupRecoveryPlan, choose_empty_hand,
+            };
+            let current = bot.survival().map_err(|e| e.to_string())?;
+            // Each bounded attempt reselects geometry and inventory on a new session.
+            let scene = current
+                .capture_survival_scene(Region {
+                    min: [-5, -62, -5],
+                    max: [11, -53, 9],
+                })
+                .await
+                .map_err(|e| e.to_string())?;
+            let future = scene.scenario();
+            let r = rotation(hypothetical_eye(&future), [f64::from(x), -59.5, 0.5]);
+            let edit = future
+                .preview_cube_removal([x, -60, 0], BlockFace::West, r)
+                .map_err(|e| e.to_string())?;
+            let owned = &removals[(x - 1) as usize];
+            if edit.position != owned.position
+                || edit.before != owned.before
+                || edit.after != owned.after
+            {
+                return Err(
+                    "fresh removal differs from the originally owned temporary block".into(),
+                );
+            }
+            let player = current.player_state().await.map_err(|e| e.to_string())?;
+            let empty = choose_empty_hand(&player).map_err(|e| format!("{e:?}"))?;
+            current
+                .select_hotbar(empty)
+                .await
+                .map_err(|e| e.to_string())?;
+            current.look(r).await.map_err(|e| e.to_string())?;
+            let intent = current
+                .start_survival_mining(edit.position, BlockFace::West)
+                .await
+                .map_err(|e| e.to_string())?;
+            events.push(json!({"phase":"removal_start","target":edit.position,"attempt":attempt,"intent":intent,"selected_from":player}));
+            // Optional declared external-input trial, strictly after START. It
+            // supplies one item; it does not remove/restore blocks or clear guards.
+            if x == 1
+                && attempt == 1
+                && std::env::var("DUSTROUTE_SURVIVAL_ACCESS_INJECT_HAND").as_deref() == Ok("1")
+            {
+                println!(
+                    "FIXTURE interrupt: START retained; replace NatMineBot hotbar.{empty} with dirt 1; enter"
+                );
+                std::io::stdout().flush().unwrap();
+                tokio::time::timeout(
+                    Duration::from_secs(60),
+                    tokio::task::spawn_blocking(|| {
+                        let mut s = String::new();
+                        std::io::stdin().read_line(&mut s)
+                    }),
+                )
+                .await
+                .map_err(|e| e.to_string())?
+                .map_err(|e| e.to_string())?
+                .map_err(|e| e.to_string())?;
+                let interrupted = current
+                    .wait_survival_mining(&intent, Duration::from_secs(3))
+                    .await
+                    .map_err(|e| e.to_string())?;
+                if !matches!(interrupted, MiningStatus::RequiresInspection { .. }) {
+                    return Err("declared inventory interruption was not observed".into());
+                }
+            } else {
+                // Scheduling estimate only. A received interruption bypasses FINISH.
+                let status = current
+                    .wait_survival_mining(&intent, Duration::from_millis(intent.estimated_wait_ms))
+                    .await
+                    .map_err(|e| e.to_string())?;
+                if matches!(status, MiningStatus::Mining { .. }) {
+                    if let Err(error) = current.finish_survival_mining(&intent).await {
+                        if !matches!(
+                            current.observe_survival_mining(&intent).await,
+                            Ok(MiningStatus::RequiresInspection { .. })
+                        ) {
+                            return Err(error.to_string());
+                        }
+                    }
+                    current
+                        .wait_survival_mining(&intent, Duration::from_secs(5))
+                        .await
+                        .map_err(|e| e.to_string())?;
+                }
+            }
+            let status = current
+                .observe_survival_mining(&intent)
+                .await
+                .map_err(|e| e.to_string())?;
+            let history = current.operation_history().await;
+            let record = history
+                .mining
+                .as_ref()
+                .ok_or("mining history unavailable")?;
+            let plan =
+                CleanupRecoveryPlan::for_record(&edit, record).map_err(|e| format!("{e:?}"))?;
+            let recovery = current
+                .prepare_mining_retirement(&intent, &observer)
+                .await
+                .map_err(|e| e.to_string())?;
+            events.push(json!({"phase":"removal_outcome","attempt":attempt,"plan":plan,"status":status,"history":history}));
+            traces.push(json!(
+                bot.stop_packet_trace().await.map_err(|e| e.to_string())?
+            ));
+            recovery.close_source().await.map_err(|e| e.to_string())?;
+            let retirement = recovery
+                .wait(Duration::from_secs(3))
+                .await
+                .map_err(|e| e.to_string())?;
+            if !matches!(retirement, MiningRetirementStatus::Retired { .. }) {
+                return Err(format!("{retirement:?}"));
+            }
+            let target = viewer
+                .observe_region(Region {
+                    min: edit.position,
+                    max: edit.position,
+                })
+                .await
+                .map_err(|e| e.to_string())?;
+            let expected = plan
+                .target_for_reconnect(target.blocks[0].state.as_ref())
+                .map_err(|e| format!("{e:?}"))?;
+            let recovered = recovery
+                .reconnect(
+                    ConnectionConfig::offline(
+                        Server::new("127.0.0.1", 25572),
+                        "NatMineBot",
+                        MinecraftVersion::Java1_21_11,
+                    ),
+                    expected,
+                )
+                .await
+                .map_err(|e| e.to_string())?;
+            *bot = recovered.client;
+            bot.start_packet_trace(8_388_608)
+                .await
+                .map_err(|e| e.to_string())?;
+            let fresh = recovered
+                .operations
+                .capture_survival_scene(scene.region())
+                .await
+                .map_err(|e| e.to_string())?;
+            let decision = plan
+                .reconcile_fresh(&recovered.evidence, &fresh)
+                .map_err(|e| format!("{e:?}"))?;
+            events.push(json!({"phase":"recovery","target":target,"attempt":attempt,"retirement":retirement,
+                "evidence":recovered.evidence,"decision":decision,"fresh_inventory":recovered.operations.player_state().await.map_err(|e|e.to_string())?}));
+            if decision == CleanupReconciliation::AlreadyAbsent {
+                complete = true;
+                break;
+            }
         }
-        let recovered = recovery
-            .reconnect(
-                ConnectionConfig::offline(
-                    Server::new("127.0.0.1", 25572),
-                    "NatMineBot",
-                    MinecraftVersion::Java1_21_11,
-                ),
-                block("air"),
-            )
-            .await
-            .map_err(|e| e.to_string())?;
-        *bot = recovered.client;
-        bot.start_packet_trace(8_388_608)
-            .await
-            .map_err(|e| e.to_string())?;
-        let exposed = bot
-            .survival()
-            .map_err(|e| e.to_string())?
-            .operation_history()
-            .await
-            .connection_id;
-        if exposed != recovered.evidence.connection_id
-            || exposed == recovered.evidence.old_history.connection_id
-        {
-            return Err("recovery client does not own the new connection".into());
+        if !complete {
+            return Err(format!(
+                "bounded cleanup attempts exhausted at x={x}; no further retry"
+            ));
         }
-        events.push(
-            json!({"phase":"recovery","retirement":retirement,"evidence":recovered.evidence}),
-        );
     }
     let final_region = viewer
         .observe_region(Region {

@@ -7,13 +7,11 @@ origin. Main remains at `7f74b37`.
 
 ## Latest status (2026-10-02 UTC)
 
-Voxrig boundary consolidation is implemented and imported. The new façade's
-live temporary-access trial stopped after one successful removal/recovery when
-a received dirt stack changed the selected empty hand during the next mining
-attempt. [Evidence and proposed next work](survival-voxrig-boundary.md#validation-and-concern-stop).
-Per the user's concern-stop instruction, correction and further live execution
-are stopped pending review. The goal remains unfinished; older complete trials
-below retain their original source/scope and do not override this new result.
+The user approved [inventory-interruption diagnosis and recovery](survival-inventory-recovery.md).
+Native receive-time typed diagnosis and caller-side target reconciliation are
+implemented. Validation now repeats natural cleanup and an explicitly injected
+hand-change comparison. The older concern evidence remains historical; the full
+roofed build and durable jobs are still unfinished.
 
 - Native inventory, placement/mining continuation, locomotion, bounded navigation
   and shared hypothetical geometry have isolated non-OP evidence.

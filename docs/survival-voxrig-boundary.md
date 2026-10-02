@@ -73,3 +73,10 @@ old mining guard, silently credit recovered materials, or assume unchanged hand
 contents because recovery just succeeded. This does not require adding entity
 physics or gathering policy to Voxrig. The complete three-removal comparison and
 full roofed construction remain unvalidated at this checkpoint.
+
+## Inventory recovery approved (2026-10-02 UTC)
+
+The user approved the follow-up. Receive-time native diagnosis, caller-side
+reconciliation and bounded fresh plans are implemented; the earlier stop above
+is historical. Current scope and live comparison declaration are recorded in
+[inventory recovery](survival-inventory-recovery.md). Library ownership is unchanged.

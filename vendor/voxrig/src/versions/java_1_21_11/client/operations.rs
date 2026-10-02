@@ -22,7 +22,8 @@ pub use super::motion::{OwnMotion, PositionBasis, PositionSubmission, ReceivedPo
 use super::*;
 pub use inventory::{InventorySwap, InventorySwapObservation};
 pub use mining::{
-    MiningIntent, MiningRecord, MiningRemoval, MiningSend, MiningStatus, MiningTargetReceipt,
+    MiningIntent, MiningInventoryChange, MiningInventoryChangeKind, MiningRecord, MiningRemoval,
+    MiningSend, MiningStatus, MiningTargetReceipt,
 };
 pub(super) use mining::{mining_chunk_changed, mining_received, mining_world_changed};
 pub use placement::{PlacementIntent, PlacementObservation, PlacementRecord, PlacementStatus};
@@ -883,5 +884,6 @@ pub(super) fn receive(state: &mut State, id: i32, payload: &[u8]) -> anyhow::Res
         _ => return Ok(false),
     }
     state.operations = next;
+    mining::mining_inventory_received(state);
     Ok(true)
 }

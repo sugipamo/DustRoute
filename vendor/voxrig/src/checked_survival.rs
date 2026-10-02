@@ -32,11 +32,11 @@ pub use native::{
     CapturedSurvivalScene, HypotheticalAimRequirement, HypotheticalBlockEdit,
     HypotheticalMovementPreview, HypotheticalPlacement, InventorySlot, InventorySwap,
     InventorySwapObservation, LocalPlayerState, MAX_SURVIVAL_CONTROL_TICKS, MiningIntent,
-    MiningRecoveryEvidence, MiningRetirementStatus, MiningStatus, OperationHistory,
-    PlacementIntent, PlacementStatus, PlayerState, PredictedMotionFrame, StandingContext,
-    StandingPositionBasis, SurvivalControl, SurvivalInput, SurvivalMotionRecheck,
-    SurvivalMotionRecord, SurvivalMotionStatus, SurvivalMovementPreview, SurvivalScenario,
-    TerminalClearance,
+    MiningInventoryChange, MiningInventoryChangeKind, MiningRecord, MiningRecoveryEvidence,
+    MiningRetirementStatus, MiningStatus, OperationHistory, PlacementIntent, PlacementStatus,
+    PlayerState, PredictedMotionFrame, StandingContext, StandingPositionBasis, SurvivalControl,
+    SurvivalInput, SurvivalMotionRecheck, SurvivalMotionRecord, SurvivalMotionStatus,
+    SurvivalMovementPreview, SurvivalScenario, TerminalClearance,
 };
 
 /// Versioned semantics, separate from a wire protocol number.

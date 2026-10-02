@@ -238,3 +238,10 @@ change during the second removal, after one successful removal/recovery. See
 [the concern record](survival-voxrig-boundary.md#validation-and-concern-stop).
 Its three-removal cleanup is not a pass; no corrective implementation or repeat
 is undertaken pending review under the user's stop condition.
+
+## Inventory recovery approved (2026-10-02 UTC)
+
+The user approved the follow-up. Receive-time native diagnosis, caller-side
+reconciliation and bounded fresh plans are implemented; the earlier stop above
+is historical. Current scope and live comparison declaration are recorded in
+[inventory recovery](survival-inventory-recovery.md). Library ownership is unchanged.

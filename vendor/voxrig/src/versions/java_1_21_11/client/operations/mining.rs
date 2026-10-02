@@ -62,6 +62,45 @@ pub struct MiningRemoval {
     /// cleared. No next mutation is authorized on this connection yet.
     pub continuation_validated: bool,
 }
+/// Received inventory prerequisite that interrupted pending empty-hand mining.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum MiningInventoryChangeKind {
+    /// The original selected hotbar slot is no longer selected with its provenance.
+    SelectionChanged,
+    /// The player screen/cursor is unavailable or no longer suitable.
+    PlayerScreenChanged,
+    /// Components or an unresolved inventory operation invalidate the projection.
+    InventoryUnavailable,
+    /// The selected slot is occupied or unavailable, rather than received empty.
+    SelectedHandChanged,
+}
+/// First incompatible received inventory state. Diagnostic evidence only; does
+/// not attribute an item to pickup, gathering, a player or a server command.
+#[derive(Clone, Debug, Serialize)]
+pub struct MiningInventoryChange {
+    /// Which prerequisite changed first.
+    pub kind: MiningInventoryChangeKind,
+    /// Receive ordinal at which the incompatible state was applied.
+    pub receive_sequence: u64,
+    /// Selection at that boundary, retaining send/receive provenance.
+    pub selection: Option<HotbarSelection>,
+    /// Contents of the original intent's selected player slot.
+    pub original_hand: InventorySlot,
+    /// Slot-specific receive boundary, if available.
+    pub hand_receive_sequence: Option<u64>,
+    /// Received active container (zero is the player screen).
+    pub window_id: Option<i32>,
+    /// Received cursor at that boundary.
+    pub cursor: InventorySlot,
+    /// Whether the inventory projection contains unsupported components.
+    pub unsupported_components: bool,
+    /// True only while no other inspection cause has been recorded.
+    /// Earlier or later conflicts are never recategorized as inventory-only.
+    pub sole_cause: bool,
+}
+
+const INVENTORY_CHANGED: &str = "received inventory prerequisites changed during mining";
 /// Last mining attempt, retained on errors, timeouts, context changes and closure.
 #[derive(Clone, Debug, Serialize)]
 pub struct MiningRecord {
@@ -77,6 +116,8 @@ pub struct MiningRecord {
     pub target_receipt: Option<MiningTargetReceipt>,
     /// Latched context/conflict reason. Later air cannot silently clear it.
     pub requires_inspection: Option<String>,
+    /// First received inventory interruption, never cleared by a later empty hand.
+    pub inventory_change: Option<MiningInventoryChange>,
     /// Result established by a read-only observation. Even Some does not currently
     /// authorize in-session continuation; that release remains unimplemented.
     pub removal: Option<MiningRemoval>,
@@ -250,6 +291,7 @@ impl Operations {
             abort: None,
             target_receipt: None,
             requires_inspection: None,
+            inventory_change: None,
             removal: None,
         });
         self.bot
@@ -416,9 +458,69 @@ impl Operations {
         ) {
             return Ok(observed);
         }
-        self.finish_survival_mining(&intent).await?;
+        if let Err(error) = self.finish_survival_mining(&intent).await {
+            // A receive can invalidate prerequisites between observation and
+            // FINISH admission. Return its evidence, never retry or hide I/O errors.
+            if let Ok(MiningStatus::RequiresInspection { record }) =
+                self.observe_survival_mining(&intent).await
+                && record.finish.is_none()
+                && error.kind() == ErrorKind::State
+            {
+                return Ok(MiningStatus::RequiresInspection { record });
+            }
+            return Err(error);
+        }
         self.wait_survival_mining(&intent, maximum_wait).await
     }
+}
+
+/// Called after atomic inventory/selection packet application, not just on poll.
+pub(super) fn mining_inventory_received(state: &mut State) {
+    let Some(record) = state.mining.as_mut() else {
+        return;
+    };
+    if record.removal.is_some() || record.inventory_change.is_some() {
+        return;
+    }
+    let inventory = &state.operations.inventory;
+    let original_slot = 36 + usize::from(record.intent.selection.slot);
+    let kind = if state.operations.selected_hotbar.as_ref() != Some(&record.intent.selection) {
+        MiningInventoryChangeKind::SelectionChanged
+    } else if inventory.window_id != Some(0) || inventory.cursor != InventorySlot::Empty {
+        MiningInventoryChangeKind::PlayerScreenChanged
+    } else if inventory.unsupported_components
+        || inventory.pending_swap.is_some()
+        || !inventory.pending_creative.is_empty()
+    {
+        MiningInventoryChangeKind::InventoryUnavailable
+    } else if inventory.slots[original_slot] != InventorySlot::Empty {
+        MiningInventoryChangeKind::SelectedHandChanged
+    } else {
+        return;
+    };
+    record.inventory_change = Some(MiningInventoryChange {
+        kind,
+        receive_sequence: state.sequence,
+        selection: state.operations.selected_hotbar.clone(),
+        original_hand: inventory.slots[original_slot].clone(),
+        hand_receive_sequence: inventory.slot_sequences[original_slot],
+        window_id: inventory.window_id,
+        cursor: inventory.cursor.clone(),
+        unsupported_components: inventory.unsupported_components,
+        sole_cause: record.requires_inspection.is_none(),
+    });
+    record
+        .requires_inspection
+        .get_or_insert_with(|| INVENTORY_CHANGED.into());
+}
+
+fn inspect_other(record: &mut MiningRecord, reason: &str) {
+    if let Some(change) = &mut record.inventory_change {
+        change.sole_cause = false;
+    }
+    record
+        .requires_inspection
+        .get_or_insert_with(|| reason.into());
 }
 
 fn status(state: &mut State) -> MiningStatus {
@@ -431,9 +533,7 @@ fn status(state: &mut State) -> MiningStatus {
     if state.world.dimension.as_ref().map(|d| &d.0) != Some(&record.intent.dimension)
         || !state.ready
     {
-        record
-            .requires_inspection
-            .get_or_insert_with(|| "mining world context unavailable or changed".into());
+        inspect_other(record, "mining world context unavailable or changed");
     }
     let cell = state
         .reconstruction
@@ -443,9 +543,7 @@ fn status(state: &mut State) -> MiningStatus {
         || state.reconstruction.issue.is_some()
         || !state.reconstruction.recovery_chunks.is_empty()
     {
-        record
-            .requires_inspection
-            .get_or_insert_with(|| "mining target reconstruction unavailable or moving".into());
+        inspect_other(record, "mining target reconstruction unavailable or moving");
     }
     if record.requires_inspection.is_some() {
         return MiningStatus::RequiresInspection {
@@ -491,9 +589,7 @@ pub(in crate::versions::java_1_21_11::client) fn mining_world_changed(
     if let Some(record) = &mut state.mining
         && record.removal.is_none()
     {
-        record
-            .requires_inspection
-            .get_or_insert_with(|| reason.into());
+        inspect_other(record, reason);
     }
 }
 pub(in crate::versions::java_1_21_11::client) fn mining_chunk_changed(
@@ -529,9 +625,7 @@ pub(in crate::versions::java_1_21_11::client) fn mining_received(
         }
         let block = super::super::super::native_state(*id)?;
         if state.world.block(*position) != Some(*id) {
-            record
-                .requires_inspection
-                .get_or_insert_with(|| "target update without loaded baseline".into());
+            inspect_other(record, "target update without loaded baseline");
             continue;
         }
         if block != record.intent.baseline
@@ -540,9 +634,7 @@ pub(in crate::versions::java_1_21_11::client) fn mining_received(
                 "minecraft:air" | "minecraft:cave_air" | "minecraft:void_air"
             )
         {
-            record
-                .requires_inspection
-                .get_or_insert_with(|| "target changed to an unexpected non-air state".into());
+            inspect_other(record, "target changed to an unexpected non-air state");
         }
         record.target_receipt = Some(MiningTargetReceipt {
             state: block,

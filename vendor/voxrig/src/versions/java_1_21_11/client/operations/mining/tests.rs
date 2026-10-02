@@ -1657,3 +1657,6 @@ async fn planned_multi_heading_path_preserves_turns_and_refuses_stale_preview_be
     observer.stop().await;
     mover.stop().await;
 }
+
+#[path = "inventory_tests.rs"]
+mod inventory_tests;
