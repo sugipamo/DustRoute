@@ -1,0 +1,209 @@
+{
+  "date_utc": "2026-10-02",
+  "dustroute_source": "c10b27db84dbb51e1f47a15ad3c9ea9ca6cc3b86",
+  "voxrig_source": "1a8f258eeda876b0e3837f8a246b990c3cffb052",
+  "checks": {
+    "native_tests": {
+      "passed": 189,
+      "ignored": 6,
+      "failed": 0
+    },
+    "native_doc_tests_passed": 4,
+    "consumer_related_tests": {
+      "passed": 12,
+      "ignored": 2,
+      "failed": 0
+    },
+    "native_all_target_clippy": "passed",
+    "consumer_all_target_clippy": "passed",
+    "formatting": "passed",
+    "vendor_files_verified": 293
+  },
+  "live_cases": [
+    {
+      "case": "natural",
+      "exit_code": 0,
+      "test_seconds_including_fixture_wait": 34.8,
+      "placements_observed": 3,
+      "climb_and_retreat_observed": true,
+      "removals_observed": 3,
+      "recovery_cycles": 4,
+      "interrupted_target": [
+        2,
+        -60,
+        0
+      ],
+      "inventory_change": {
+        "cursor": {
+          "kind": "empty"
+        },
+        "hand_receive_sequence": 78,
+        "kind": "selected_hand_changed",
+        "original_hand": {
+          "item": {
+            "count": 1,
+            "item_id": 28,
+            "name": "minecraft:dirt"
+          },
+          "kind": "item"
+        },
+        "receive_sequence": 78,
+        "selection": {
+          "dispatched": true,
+          "from_server": false,
+          "sequence": 70,
+          "slot": 0
+        },
+        "sole_cause": true,
+        "unsupported_components": false,
+        "window_id": 0
+      },
+      "interrupted_attempt_finish": null,
+      "reconciliations": [
+        "already_absent",
+        "needs_new_plan",
+        "already_absent",
+        "already_absent"
+      ],
+      "connection_ids": [
+        [
+          1,
+          3
+        ],
+        [
+          3,
+          4
+        ],
+        [
+          4,
+          5
+        ],
+        [
+          5,
+          6
+        ]
+      ],
+      "final_region_exact": true,
+      "all_traces_complete": true,
+      "server_stopped_exit_code": 0
+    },
+    {
+      "case": "injected",
+      "exit_code": 0,
+      "test_seconds_including_fixture_wait": 52.87,
+      "placements_observed": 3,
+      "climb_and_retreat_observed": true,
+      "removals_observed": 3,
+      "recovery_cycles": 4,
+      "interrupted_target": [
+        1,
+        -60,
+        0
+      ],
+      "inventory_change": {
+        "cursor": {
+          "kind": "empty"
+        },
+        "hand_receive_sequence": 313,
+        "kind": "selected_hand_changed",
+        "original_hand": {
+          "item": {
+            "count": 1,
+            "item_id": 28,
+            "name": "minecraft:dirt"
+          },
+          "kind": "item"
+        },
+        "receive_sequence": 313,
+        "selection": {
+          "dispatched": true,
+          "from_server": false,
+          "sequence": 290,
+          "slot": 0
+        },
+        "sole_cause": true,
+        "unsupported_components": false,
+        "window_id": 0
+      },
+      "interrupted_attempt_finish": null,
+      "reconciliations": [
+        "needs_new_plan",
+        "already_absent",
+        "already_absent",
+        "already_absent"
+      ],
+      "connection_ids": [
+        [
+          1,
+          3
+        ],
+        [
+          3,
+          4
+        ],
+        [
+          4,
+          5
+        ],
+        [
+          5,
+          6
+        ]
+      ],
+      "final_region_exact": true,
+      "all_traces_complete": true,
+      "server_stopped_exit_code": 0
+    }
+  ],
+  "limits": [
+    "Direct vanilla 1.21.11, dedicated isolated non-OP fixtures",
+    "Natural received hand change reproduced; exact item-entity origin is not claimed",
+    "Injected case has exactly one declared post-START console inventory edit; not a block/action completion command",
+    "At most three new attempts per owned temporary target, each after exact retirement and fresh geometry/inventory",
+    "No recovered materials credited to construction supply",
+    "Read-only caller recovery policy and isolated driver; not yet a durable public survival construction executor",
+    "Full adopted roofed construction remains unfinished"
+  ],
+  "files": [
+    {
+      "path": "survival-inventory/survival-inventory-native-focused-20261002.log.gz",
+      "sha256": "243b8eede03bc102241c8b2eaae621f2cb4401afb04c22f54d4eb6b8af765666"
+    },
+    {
+      "path": "survival-inventory/survival-inventory-native-tests-20261002.log.gz",
+      "sha256": "7033510bfcbe4497e251dcdea17ba475784f2406fd5ac4331b8ecbdef3f52d04"
+    },
+    {
+      "path": "survival-inventory/survival-inventory-native-docs-20261002.log.gz",
+      "sha256": "cfe40db691ccb99f14f0308dd5c2df587b93464c96ec7c5464b64d3209565766"
+    },
+    {
+      "path": "survival-inventory/survival-inventory-native-clippy-20261002.log.gz",
+      "sha256": "6e20cd553f209db5fb7ac97d0f03a3d4b6bba088afe124aa7234c3a5e2f27b7f"
+    },
+    {
+      "path": "survival-inventory/survival-inventory-consumer-tests-20261002.log.gz",
+      "sha256": "8151c9fb0aaf43fd48c7f10a38e8bb21c3f7a575eb6b8adb207f811854feab21"
+    },
+    {
+      "path": "survival-inventory/survival-inventory-consumer-clippy-20261002.log.gz",
+      "sha256": "df3b424e673305a86dddeebe2ebb971cfd616a1714f63ab91a6dbcdad4d1ae7f"
+    },
+    {
+      "path": "survival-inventory/survival-inventory-natural-20261002-a.json.gz",
+      "sha256": "4ea15d1f98fdc8d46eb0c50573d67550eec0f233658a80a8d08394d934bab2af"
+    },
+    {
+      "path": "survival-inventory/survival-inventory-natural-server-20261002-a.log.gz",
+      "sha256": "534ae2103792057d11f7a888a6dfdd8c584a0468ffc37522bdbb42f18c9eba36"
+    },
+    {
+      "path": "survival-inventory/survival-inventory-injected-20261002-a.json.gz",
+      "sha256": "b4e86ebe4b8fa0a6aa945842ee437015b9d5edb7fe23a5bd2b5c962eac35a299"
+    },
+    {
+      "path": "survival-inventory/survival-inventory-injected-server-20261002-a.log.gz",
+      "sha256": "fe305f1f802ac1d0eb53c87a67bd482adb56fa13064aee05133ee10e3f2a3b32"
+    }
+  ]
+}

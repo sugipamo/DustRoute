@@ -80,3 +80,9 @@ The user approved the follow-up. Receive-time native diagnosis, caller-side
 reconciliation and bounded fresh plans are implemented; the earlier stop above
 is historical. Current scope and live comparison declaration are recorded in
 [inventory recovery](survival-inventory-recovery.md). Library ownership is unchanged.
+
+The follow-up is now verified: both natural hand-change and declared external-input
+comparisons recovered and completed the three-block cleanup, with four exact
+retirement/fresh-recovery cycles each. [Results and scope](survival-inventory-recovery.md#verified-checkpoint)
+resolve the recorded concern for this bounded caller policy. Full adopted roof
+construction and durable execution remain future roadmap work.
