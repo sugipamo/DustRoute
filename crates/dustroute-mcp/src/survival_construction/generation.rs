@@ -47,6 +47,8 @@ pub struct ConstructionSearch {
     pub frontier_peak: usize,
     pub complete_checks: usize,
     pub action_limited_nodes: usize,
+    pub cleanup_searches: usize,
+    pub completed_access_cleanups: usize,
     pub best_remaining_permanent: usize,
     pub best_remaining_targets: Vec<[i32; 3]>,
     pub highest_hypothetical_feet: f64,
@@ -106,6 +108,7 @@ pub struct GeneratedConstructionPlan {
 #[derive(Clone)]
 struct Node<'a> {
     checked: CheckedPrefix<'a>,
+    cleaning: bool,
 }
 
 struct Search<'a> {
@@ -168,6 +171,17 @@ fn within(bounds: TravelBounds, p: [f64; 3]) -> bool {
 }
 
 impl<'a> Search<'a> {
+    fn note_best(&mut self, node: &Node<'_>) {
+        let ledger = &node.checked.ledger;
+        if ledger.remaining.len() < self.stats.best_remaining_permanent
+            || (ledger.remaining.len() == self.stats.best_remaining_permanent
+                && ledger.temporary.len() < self.stats.best_remaining_temporary.len())
+        {
+            self.stats.best_remaining_permanent = ledger.remaining.len();
+            self.stats.best_remaining_targets = ledger.remaining.keys().copied().collect();
+            self.stats.best_remaining_temporary = ledger.temporary.keys().copied().collect();
+        }
+    }
     fn retain(&mut self, nodes: &mut Vec<Node<'a>>, node: Node<'a>) {
         nodes.push(node);
         nodes.sort_by(|a, b| self.score(a).total_cmp(&self.score(b)));
@@ -211,7 +225,12 @@ impl<'a> Search<'a> {
                         .stats
                         .highest_hypothetical_feet
                         .max(checked.scenario.position()[1]);
-                    Some(Node { checked })
+                    let next = Node {
+                        checked,
+                        cleaning: node.cleaning,
+                    };
+                    self.note_best(&next);
+                    Some(next)
                 }
             }
             Err(error) => {
@@ -331,6 +350,14 @@ impl<'a> Search<'a> {
 
     fn score(&self, node: &Node<'_>) -> f64 {
         let ledger = &node.checked.ledger;
+        if node.cleaning {
+            let height =
+                node.checked.scenario.position()[1] - f64::from(ledger.site.baseline.min.y + 1);
+            return 20.0 * ledger.temporary.len() as f64
+                + 0.75 * height.max(0.0).powi(2)
+                + 0.1 * Self::cleanup_distance(node, node.checked.scenario.position())
+                + node.checked.steps.len() as f64 * 0.5;
+        }
         let target_distance = Self::work_distance(node, node.checked.scenario.position());
         let temporary_cost = if ledger.remaining.is_empty() {
             20.0
@@ -341,6 +368,16 @@ impl<'a> Search<'a> {
             + temporary_cost * ledger.temporary.len() as f64
             + target_distance
             + node.checked.steps.len() as f64 * 0.5
+    }
+
+    fn cleanup_distance(node: &Node<'_>, p: [f64; 3]) -> f64 {
+        node.checked
+            .ledger
+            .temporary
+            .keys()
+            .map(|t| distance(p, center(*t)))
+            .reduce(f64::min)
+            .unwrap_or(0.0)
     }
 
     fn complete(&mut self, node: &Node<'a>) -> Option<HypotheticalConstructionPlan> {
@@ -514,7 +551,13 @@ impl<'a> Search<'a> {
         // Avoid a coordinate scan consuming the entire budget before useful
         // directions. Distance to unfinished work is a heuristic, not admission.
         targets.sort_by(|a, b| {
-            Self::work_distance(node, *a).total_cmp(&Self::work_distance(node, *b))
+            if node.cleaning {
+                a[1].total_cmp(&b[1]).then_with(|| {
+                    Self::cleanup_distance(node, *a).total_cmp(&Self::cleanup_distance(node, *b))
+                })
+            } else {
+                Self::work_distance(node, *a).total_cmp(&Self::work_distance(node, *b))
+            }
         });
         // Retain elevation alternatives separately: many samples on a nearby
         // floor must not crowd every possible scaffold ascent out of the family.
@@ -545,6 +588,69 @@ impl<'a> Search<'a> {
                 return;
             }
         }
+    }
+
+    fn removal_successors(&mut self, node: &Node<'a>, successors: &mut Vec<Node<'a>>) {
+        for &target in node.checked.ledger.temporary.keys() {
+            // Retain lower tiers until descent. The common/native checks still
+            // establish ownership, current support and the final escape path.
+            if f64::from(target[1]) < node.checked.scenario.position()[1].floor() - 1.0 {
+                self.stats.pruned += 1;
+                continue;
+            }
+            for (face, delta) in FACES {
+                let point =
+                    std::array::from_fn(|i| f64::from(target[i]) + 0.5 + f64::from(delta[i]) * 0.5);
+                if let Some(next) = self.extend(
+                    node,
+                    ConstructionAction::RemoveTemporary {
+                        target,
+                        face,
+                        rotation: rotation(eye(node), point),
+                    },
+                ) {
+                    self.retain(successors, next);
+                    break;
+                }
+            }
+        }
+    }
+
+    fn clear_access(&mut self, mut start: Node<'a>) -> Option<Node<'a>> {
+        self.stats.cleanup_searches += 1;
+        start.cleaning = true;
+        let mut frontier = vec![start];
+        // Separate bounded subgoal: no new temporary placement while clearing.
+        // All actual transitions remain in the same checked sequence, and all
+        // attempts consume the global budgets. A failed cleanup is only a failed
+        // candidate; no partial plan is dispatched or treated as a safe escape.
+        for _ in 0..128 {
+            if frontier.is_empty()
+                || self.exhausted()
+                || self.stats.expanded >= self.limits.expanded
+            {
+                break;
+            }
+            frontier.sort_by(|a, b| self.score(b).total_cmp(&self.score(a)));
+            let mut node = frontier.pop().unwrap();
+            self.stats.expanded += 1;
+            if node.checked.ledger.temporary.is_empty() {
+                node.cleaning = false;
+                self.stats.completed_access_cleanups += 1;
+                return Some(node);
+            }
+            if node.checked.steps.len() >= self.limits.actions {
+                self.stats.action_limited_nodes += 1;
+                continue;
+            }
+            let mut next = Vec::new();
+            self.removal_successors(&node, &mut next);
+            self.moves(&node, &mut next);
+            for successor in next {
+                self.retain(&mut frontier, successor);
+            }
+        }
+        None
     }
 }
 
@@ -608,11 +714,23 @@ pub fn generate_construction_plan(
             ..Default::default()
         },
     };
-    let mut frontier = vec![Node { checked }];
+    let mut frontier = vec![Node {
+        checked,
+        cleaning: false,
+    }];
     while !frontier.is_empty() && search.stats.expanded < limits.expanded && !search.exhausted() {
         frontier.sort_by(|a, b| search.score(b).total_cmp(&search.score(a)));
-        let node = search.build_reachable(frontier.pop().unwrap());
+        let initial = frontier.pop().unwrap();
+        let before = initial.checked.ledger.remaining.len();
+        let mut node = search.build_reachable(initial);
+        let made_progress = node.checked.ledger.remaining.len() < before;
         search.stats.expanded += 1;
+        if node.checked.ledger.remaining.is_empty() && !node.checked.ledger.temporary.is_empty() {
+            let Some(cleaned) = search.clear_access(node) else {
+                continue;
+            };
+            node = cleaned;
+        }
         if search.stats.progress.len() < 64 {
             search.stats.progress.push(SearchProgress {
                 candidate_checks: search.stats.candidate_checks,
@@ -622,13 +740,7 @@ pub fn generate_construction_plan(
                 remaining_temporary: node.checked.ledger.temporary.len(),
             });
         }
-        if node.checked.ledger.remaining.len() <= search.stats.best_remaining_permanent {
-            search.stats.best_remaining_permanent = node.checked.ledger.remaining.len();
-            search.stats.best_remaining_targets =
-                node.checked.ledger.remaining.keys().copied().collect();
-            search.stats.best_remaining_temporary =
-                node.checked.ledger.temporary.keys().copied().collect();
-        }
+        search.note_best(&node);
         if let Some(plan) = search.complete(&node) {
             return Ok(GeneratedConstructionPlan {
                 plan,
@@ -640,32 +752,6 @@ pub fn generate_construction_plan(
             continue;
         }
         let mut successors = Vec::new();
-        for &target in node.checked.ledger.temporary.keys() {
-            // Prefer top-down cleanup, retaining lower tiers until the player
-            // has descended. Removing every reachable lower cube first strands
-            // otherwise viable access candidates. This is search pruning only;
-            // ownership, current support and final retreat remain native/common
-            // checks, and no escape proof is inferred from this inequality.
-            if f64::from(target[1]) < node.checked.scenario.position()[1].floor() - 1.0 {
-                search.stats.pruned += 1;
-                continue;
-            }
-            for (face, delta) in FACES {
-                let point =
-                    std::array::from_fn(|i| f64::from(target[i]) + 0.5 + f64::from(delta[i]) * 0.5);
-                if let Some(next) = search.extend(
-                    &node,
-                    ConstructionAction::RemoveTemporary {
-                        target,
-                        face,
-                        rotation: rotation(eye(&node), point),
-                    },
-                ) {
-                    search.retain(&mut successors, next);
-                    break;
-                }
-            }
-        }
         if !node.checked.ledger.remaining.is_empty() {
             for target in search.temporary_cells.clone() {
                 if node
@@ -690,7 +776,30 @@ pub fn generate_construction_plan(
             }
         }
         search.moves(&node, &mut successors);
+        let mut evaluated = Vec::new();
         for next in successors {
+            let next = search.build_reachable(next);
+            if let Some(plan) = search.complete(&next) {
+                return Ok(GeneratedConstructionPlan {
+                    plan,
+                    search: search.stats,
+                });
+            }
+            search.retain(&mut evaluated, next);
+        }
+        let stalled = !made_progress
+            && !node.checked.ledger.temporary.is_empty()
+            && evaluated.iter().all(|next| {
+                next.checked.ledger.remaining.len() >= node.checked.ledger.remaining.len()
+                    && Search::work_distance(next, next.checked.scenario.position())
+                        >= Search::work_distance(&node, node.checked.scenario.position()) - 0.1
+            });
+        if stalled {
+            if let Some(cleaned) = search.clear_access(node) {
+                search.retain(&mut frontier, cleaned);
+            }
+        }
+        for next in evaluated {
             search.retain(&mut frontier, next);
         }
     }

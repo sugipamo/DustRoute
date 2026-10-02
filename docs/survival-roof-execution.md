@@ -349,6 +349,9 @@ separate stages above.
 
 ## Stage 2: automatic sequence generation
 
+The [implementation and validation record](survival-construction-generation.md)
+tracks the bounded generator separately from the completed authored reference.
+
 The next goal is created. Existing `ConstructionSite` supplies exact baseline,
 target cells and explicit permissions. `preview_construction_sequence` is the
 final authority for a complete hypothetical candidate. `plan_hypothetical_route`
