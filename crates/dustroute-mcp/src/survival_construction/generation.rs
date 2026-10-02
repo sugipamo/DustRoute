@@ -293,9 +293,18 @@ impl<'a> Search<'a> {
                 .remaining
                 .keys()
                 .map(|t| {
+                    // Elevated horizontal extensions often need a view from
+                    // above. This ranks work poses only; native face/body tests
+                    // still decide placement and may admit lower alternatives.
+                    let unsupported_elevated = t[1] >= ledger.site.baseline.min.y + 3
+                        && node
+                            .checked
+                            .scenario
+                            .block([t[0], t[1] - 1, t[2]])
+                            .is_ok_and(|s| s == air());
                     let work = [
                         f64::from(t[0]) + 0.5,
-                        f64::from(t[1]) - 1.0,
+                        f64::from(t[1]) + if unsupported_elevated { 1.0 } else { -1.0 },
                         f64::from(t[2]) + 0.5,
                     ];
                     ((p[0] - work[0]).hypot(p[2] - work[2]) - 2.0).powi(2)
@@ -476,6 +485,14 @@ impl<'a> Search<'a> {
                             (0.88, 0.5),
                             (0.5, 0.12),
                             (0.5, 0.88),
+                            // Feet can overhang a cube while the conservative
+                            // native body/support envelope remains admitted.
+                            // Useful for reaching its outward face; no support
+                            // authority follows from this candidate coordinate.
+                            (-0.12, 0.5),
+                            (1.12, 0.5),
+                            (0.5, -0.12),
+                            (0.5, 1.12),
                         ] {
                             let target = [f64::from(x) + dx, f64::from(y + 1), f64::from(z) + dz];
                             if distance(from, target) > 0.04
@@ -614,6 +631,15 @@ pub fn generate_construction_plan(
         }
         let mut successors = Vec::new();
         for &target in node.checked.ledger.temporary.keys() {
+            // Prefer top-down cleanup, retaining lower tiers until the player
+            // has descended. Removing every reachable lower cube first strands
+            // otherwise viable access candidates. This is search pruning only;
+            // ownership, current support and final retreat remain native/common
+            // checks, and no escape proof is inferred from this inequality.
+            if f64::from(target[1]) < node.checked.scenario.position()[1].floor() - 1.0 {
+                search.stats.pruned += 1;
+                continue;
+            }
             for (face, delta) in FACES {
                 let point =
                     std::array::from_fn(|i| f64::from(target[i]) + 0.5 + f64::from(delta[i]) * 0.5);
