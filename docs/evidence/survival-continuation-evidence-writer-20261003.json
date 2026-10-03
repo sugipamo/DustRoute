@@ -1,0 +1,37 @@
+{
+  "recorded_at_utc": "2026-10-03T07:02:41.890364+00:00",
+  "consumer_base_revision": "6ede15d",
+  "changed_test_source": "crates/dustroute-mcp/src/service/survival/tests/continuation.rs",
+  "changed_test_source_sha256": "9b8f0668416834f516f1cb7aeef9facbf7997137118f9a6b92e2b992b74a8ef9",
+  "scope": "Test-only continuation aggregate storage. Production single-job and execution journal storage remain unchanged at 16 MiB. No native or runtime admission contract changed.",
+  "trial_limit_bytes": 67108864,
+  "checks": [
+    {
+      "command": "cargo test --offline --locked -j 1 -p dustroute-mcp --features voxrig --lib survival_continuation_evidence -- --test-threads=1",
+      "result": "2 passed, 0 failed",
+      "artifact": "single-client-evidence-writer-tests-20261003-final.log",
+      "sha256": "c5d41eec40c65fd70ddd27aacd95c98f05c6d780100a93fdcb0802113a1ca761"
+    },
+    {
+      "command": "cargo clippy --offline --locked -j 1 -p dustroute-mcp --features voxrig --all-targets -- -D warnings",
+      "result": "passed",
+      "artifact": "single-client-evidence-writer-clippy-20261003.log",
+      "sha256": "f61e5c507df97f75b74a93c842f2e0ec7e5b4b07ad9e821973badfd95f384e52"
+    },
+    {
+      "command": "cargo fmt --all --check",
+      "result": "passed"
+    },
+    {
+      "command": "git diff --check",
+      "result": "passed"
+    }
+  ],
+  "initial_attempt": "The two new regressions initially failed because the test root directory was not created. Explicit directory creation was added; both final tests passed.",
+  "limits": [
+    "No new Minecraft trial. No claim of live continuation completion.",
+    "Movement/standing contract choice remains pending.",
+    "The aggregate is still bounded; arbitrary traces are not guaranteed to fit.",
+    "Full regression suite not rerun; targeted storage regressions and native all-target compilation/lint verified."
+  ]
+}

@@ -2,6 +2,68 @@
 use super::*;
 use std::path::PathBuf;
 
+// This test aggregates two processes' previews, diagnoses and final records.
+// It is not a persisted production job and never restores native authority.
+const MAX_TRIAL_EVIDENCE_BYTES: usize = 64 * 1024 * 1024;
+
+fn save_trial_evidence(path: &Path, value: &Value) -> Result<(), String> {
+    let bytes = serde_json::to_vec_pretty(value).map_err(|e| e.to_string())?;
+    if bytes.len() > MAX_TRIAL_EVIDENCE_BYTES {
+        return Err("continuation trial evidence exceeds bound".into());
+    }
+    crate::storage::replace(path, &bytes, crate::storage::Durability::FileAndDirectory)
+        .map_err(|e| e.to_string())
+}
+
+fn load_trial_evidence(path: &Path) -> Result<Value, String> {
+    use std::io::Read;
+    let mut bytes = Vec::new();
+    std::fs::File::open(path)
+        .map_err(|e| e.to_string())?
+        .take((MAX_TRIAL_EVIDENCE_BYTES + 1) as u64)
+        .read_to_end(&mut bytes)
+        .map_err(|e| e.to_string())?;
+    if bytes.len() > MAX_TRIAL_EVIDENCE_BYTES {
+        return Err("continuation trial evidence exceeds bound".into());
+    }
+    serde_json::from_slice(&bytes).map_err(|e| e.to_string())
+}
+
+#[test]
+fn survival_continuation_evidence_exceeds_job_bound_without_changing_job_storage() {
+    let root = temporary();
+    std::fs::create_dir_all(&root).unwrap();
+    let output = root.join("trial.json");
+    let value = json!({"continuation_final":{"status":"needs_inspection",
+        "diagnostic":"x".repeat(16 * 1024 * 1024)}});
+    assert_eq!(
+        save(&output, &value).unwrap_err(),
+        "survival job record exceeds bound"
+    );
+    save_trial_evidence(&output, &value).unwrap();
+    assert_eq!(load_trial_evidence(&output).unwrap(), value);
+    assert_eq!(
+        load(&output).unwrap_err(),
+        "survival job record exceeds bound"
+    );
+    std::fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn survival_continuation_evidence_still_bounds_input() {
+    let root = temporary();
+    std::fs::create_dir_all(&root).unwrap();
+    let output = root.join("trial.json");
+    let file = std::fs::File::create(&output).unwrap();
+    file.set_len((MAX_TRIAL_EVIDENCE_BYTES + 1) as u64).unwrap();
+    assert_eq!(
+        load_trial_evidence(&output).unwrap_err(),
+        "continuation trial evidence exceeds bound"
+    );
+    drop(file);
+    std::fs::remove_dir_all(root).unwrap();
+}
+
 async fn console(marker: &str) {
     println!("{marker}");
     std::io::stdout().flush().unwrap();
@@ -60,7 +122,7 @@ async fn native_public_idle_continuation() {
     let started = Instant::now();
     let mut events = Vec::new();
     let mut evidence = if phase == "continue" {
-        load(&output).unwrap()
+        load_trial_evidence(&output).unwrap()
     } else {
         json!({"checkpoint_pid":std::process::id(),"boundary":stop_at})
     };
@@ -203,7 +265,7 @@ async fn native_public_idle_continuation() {
         let plan = call(&client, "survival_construction", request.clone()).await;
         // Save failures before assertion to preserve search diagnostics.
         evidence["continuation_preview"] = plan.clone();
-        save(&output, &evidence).unwrap();
+        save_trial_evidence(&output, &evidence).unwrap();
         assert_eq!(plan["ok"], true, "{plan}");
         assert!(
             !plan["diagnosis"]["completed_targets"]
@@ -264,7 +326,7 @@ async fn native_public_idle_continuation() {
         };
         events.push(json!({"phase":"continuation_final","result":final_result}));
         evidence["continuation_events"] = json!(events);
-        save(&output, &evidence).unwrap();
+        save_trial_evidence(&output, &evidence).unwrap();
         assert_eq!(
             final_result["status"]["state"], "completed",
             "{}",
@@ -285,7 +347,7 @@ async fn native_public_idle_continuation() {
     }
     evidence[format!("{phase}_elapsed_seconds")] = json!(started.elapsed().as_secs_f64());
     evidence["error"] = Value::Null;
-    save(&output, &evidence).unwrap();
+    save_trial_evidence(&output, &evidence).unwrap();
     let lease = native.lease_survival().unwrap();
     let current = lease.source();
     lease.release(current.clone());

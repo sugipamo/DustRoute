@@ -145,8 +145,19 @@ goal. Native recovery interpretation must not be reimplemented in DustRoute.
 The old [observer-readiness blocker](survival-observer-readiness-prerequisite.md)
 remains undiagnosed. One-bot production would remove that dependency, not prove
 the tracking issue fixed; independent verification fixtures still need readiness.
-The earlier continuation evidence writer's aggregation-size problem also remains
-a test concern to fix before repeating that acceptance.
+
+The continuation trial now uses its own bounded aggregate writer/reader instead
+of the production single-job helpers. The trial-only limit is 64 MiB, providing a
+separate budget for multiple job records and previews in this fixed fixture; it
+is not a production job size or a guarantee for arbitrary traces. It keeps the
+existing atomic durable replacement and saves the final failure before checking
+completion. Production job/journal limits remain 16 MiB. Offline regressions cover
+round-tripping aggregate evidence above 16 MiB while both production helpers
+continue to refuse it, and refusing trial input above 64 MiB. This prepares the
+test infrastructure; the failed continuation trial has not been repeated or
+reclassified as accepted. The two offline regressions and native all-target
+Clippy passed; formatting passed. See the
+[verification record](evidence/survival-continuation-evidence-writer-20261003.json).
 
 See the [preliminary investigation](survival-single-client-investigation.md) for
 the initial evidence inventory. Current code references:

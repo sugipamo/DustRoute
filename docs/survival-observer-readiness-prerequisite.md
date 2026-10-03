@@ -111,3 +111,16 @@ remain untested. No forced process crash, unresolved-mining process-loss trial o
 Voxrig modification was performed. Exact sources, PIDs, exit codes, separate job
 records, controller and hashed compressed artifacts are in
 [investigation evidence](evidence/survival-continuation-investigation-20261003.json).
+
+## Following test-infrastructure correction
+
+On the `codex/survival-single-client` branch the continuation test's aggregate
+evidence now has a separate bounded writer/reader with a 64 MiB test-only limit
+and the same atomic durable replacement. The production 16 MiB job and journal
+limits are unchanged. The final diagnosis is still saved before the completion
+assertion. Offline regression cases exercise aggregation beyond the production
+bound, unchanged production rejection, and the trial input bound. This resolves
+item 4 for the fixed fixture's test infrastructure; it does not resolve initial
+observer readiness or prove successful live continuation. No new server trial
+was performed for this correction. See the current
+[single-client plan](survival-single-client-plan.md).

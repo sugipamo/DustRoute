@@ -1,0 +1,10 @@
+   Compiling dustroute-mcp v0.2.0 (/root/DustRoute/crates/dustroute-mcp)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 25.74s
+     Running unittests src/lib.rs (target/debug/deps/dustroute_mcp-c5f303da5dd46b65)
+
+running 2 tests
+test service::survival::tests::continuation::survival_continuation_evidence_exceeds_job_bound_without_changing_job_storage ... ok
+test service::survival::tests::continuation::survival_continuation_evidence_still_bounds_input ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 217 filtered out; finished in 2.42s
+
