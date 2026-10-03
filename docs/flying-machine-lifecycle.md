@@ -1,5 +1,11 @@
 # 有限飛行の型・採用・配置・撤去
 
+> Historical capture instructions: Mineflayer and its executable harnesses were
+> removed on 2026-10-03. Commands below describe the retained trials and are no
+> longer runnable in this checkout. Source is retained in Git at `9b62dcf`.
+> Use [native setup](../crates/dustroute-mcp/SETUP.md) for the current backend.
+
+
 指定した空き領域への配置と、有限距離の飛行後の管理を同じ作業範囲で扱う。
 空き場所の自動探索は別段階。既存の固定領域観測と物理runtime v17を使う。
 

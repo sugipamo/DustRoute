@@ -17,6 +17,7 @@ from pathlib import Path
 
 sys.dont_write_bytecode = True
 from observe_torch_burnout import Server
+from read_clock_block_ticks import read_ticks
 
 JAR_SHA1 = '64bb6d763bed0a9f1d632ec347938594144943ed'
 DIRECTIONS = ('north', 'east', 'south', 'west')
@@ -75,10 +76,7 @@ def capture(server, report, x, duration, directory, diagnose_recovery, checkpoin
 
     def queue_checkpoint(relative, stage):
         server.commands(['save-all flush'])
-        queue_data = json.loads(subprocess.check_output([
-            'node', str(Path(__file__).with_name('read_clock_block_ticks.cjs')),
-            str(directory), str(x + 1), str(y), str(z), str(origin + relative),
-        ], text=True))
+        queue_data = read_ticks(directory, x + 1, y, z, origin + relative)
         assert server.clock() == origin + relative, 'queue inspection advanced time'
         record = {'game_tick': relative, 'stage': stage, **queue_data}
         report.setdefault('queue_checkpoints', []).append(record)
@@ -192,7 +190,7 @@ def main():
         report['diagnostic'] = 'saved_block_ticks_and_one_post_burnout_neighbor_notification'
     if checkpoints:
         report['saved_queue_checkpoint_ticks'] = sorted(checkpoints)
-        report['queue_reader_sha256'] = hashlib.sha256(Path(__file__).with_name('read_clock_block_ticks.cjs').read_bytes()).hexdigest()
+        report['queue_reader_sha256'] = hashlib.sha256(Path(__file__).with_name('read_clock_block_ticks.py').read_bytes()).hexdigest()
     server = None
     props.write_bytes(re.sub(rb'^pause-when-empty-seconds=.*$', b'pause-when-empty-seconds=0', original, flags=re.M))
     try:

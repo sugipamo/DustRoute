@@ -2,8 +2,12 @@
 //! records remain readable facts; they cannot construct a fresh capability.
 #[cfg(feature = "voxrig")]
 use crate::bridge::BotBridgeError;
-use crate::bridge::{ServerReadback, ValidatedRegion};
-use crate::snapshot_content::{ObservationId, SharedSnapshot, SnapshotContents};
+use crate::bridge::ServerReadback;
+#[cfg(test)]
+use crate::bridge::ValidatedRegion;
+#[cfg(any(test, feature = "voxrig"))]
+use crate::snapshot_content::SnapshotContents;
+use crate::snapshot_content::{ObservationId, SharedSnapshot};
 use dustroute_physical::Pos;
 use dustroute_translate::snapshot::MinecraftSnapshot;
 use serde::{Deserialize, Serialize};
@@ -67,6 +71,7 @@ pub(crate) struct SharedObservationRecord {
     pub observation_id: ObservationId,
 }
 impl FreshRegion {
+    #[cfg(test)]
     pub(crate) fn server(
         region: ValidatedRegion,
         contents: &SnapshotContents,

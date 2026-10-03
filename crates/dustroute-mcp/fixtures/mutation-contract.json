@@ -13,6 +13,6 @@
     ]
   },
   "command_receipt": {"protocol":"dustroute.bridge-mutation.v1","submitted_changes":1},
-  "physical_receipt": {"protocol":"dustroute.bridge-mutation.v1","placed_changes":2,"placement_mode":"mineflayer_player","retreat":{"x":1.5,"y":80.0,"z":-1.5}},
+  "physical_receipt": {"protocol":"dustroute.bridge-mutation.v1","placed_changes":2,"placement_mode":"test_player","retreat":{"x":1.5,"y":80.0,"z":-1.5}},
   "invalid_states": ["minecraft:stone\n/say bad", "minecraft:piston[facing=up,facing=down]", "minecraft:stone[]", "stone", "minecraft:piston[facing=up=down]"]
 }

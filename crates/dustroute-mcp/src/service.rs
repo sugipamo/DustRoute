@@ -742,6 +742,12 @@ fn reverse_request_for_truth_table(
         ))
 }
 
+impl Default for DustRouteMcp {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DustRouteMcp {
     async fn blueprint_command(
         &self,
@@ -774,21 +780,17 @@ impl DustRouteMcp {
     }
 
     #[must_use]
-    pub fn new(bridge_address: impl Into<String>) -> Self {
-        Self::with_policy(bridge_address, McpPolicy::default())
+    pub fn new() -> Self {
+        Self::with_policy(McpPolicy::default())
     }
 
     #[must_use]
-    pub fn with_policy(bridge_address: impl Into<String>, policy: McpPolicy) -> Self {
-        Self::with_policy_and_profile(bridge_address, policy, ToolProfile::from_environment())
+    pub fn with_policy(policy: McpPolicy) -> Self {
+        Self::with_policy_and_profile(policy, ToolProfile::from_environment())
     }
 
     #[must_use]
-    pub fn with_policy_and_profile(
-        bridge_address: impl Into<String>,
-        policy: McpPolicy,
-        profile: ToolProfile,
-    ) -> Self {
+    pub fn with_policy_and_profile(policy: McpPolicy, profile: ToolProfile) -> Self {
         let mut tool_router = Self::tool_router();
         #[cfg(feature = "voxrig")]
         tool_router.merge(Self::survival_tool_router());
@@ -798,7 +800,7 @@ impl DustRouteMcp {
             }
         }
         Self {
-            bridge: BotBridge::new(bridge_address),
+            bridge: BotBridge::disconnected(),
             #[cfg(feature = "voxrig")]
             survival: Arc::default(),
             #[cfg(feature = "voxrig")]
@@ -819,12 +821,8 @@ impl DustRouteMcp {
     }
 
     #[must_use]
-    pub fn with_policy_and_player(
-        bridge_address: impl Into<String>,
-        policy: McpPolicy,
-        assist_player: impl Into<String>,
-    ) -> Self {
-        let mut service = Self::with_policy(bridge_address, policy);
+    pub fn with_policy_and_player(policy: McpPolicy, assist_player: impl Into<String>) -> Self {
+        let mut service = Self::with_policy(policy);
         service.assist_player = Some(assist_player.into());
         service
     }
@@ -832,10 +830,39 @@ impl DustRouteMcp {
     #[must_use]
     pub fn with_config(config: McpConfig, policy: McpPolicy) -> Self {
         let state_scope = format!("{}\n{}", config.server_address, config.assist_player);
-        let mut service =
-            Self::with_policy_and_player(config.bridge_address, policy, config.assist_player);
+        let mut service = Self::with_policy_and_player(policy, config.assist_player);
         service.server_address = Some(config.server_address);
         service.state_store = PlanStateStore::from_environment(&state_scope);
+        service
+    }
+
+    // Explicit workflow-fixture injection; no production TCP/JSON backend.
+    #[cfg(test)]
+    fn with_test_transport(address: impl Into<String>) -> Self {
+        Self::with_test_transport_and_policy(address, McpPolicy::default())
+    }
+    #[cfg(test)]
+    fn with_test_transport_and_policy(address: impl Into<String>, policy: McpPolicy) -> Self {
+        Self::with_test_transport_and_profile(address, policy, ToolProfile::from_environment())
+    }
+    #[cfg(test)]
+    fn with_test_transport_and_profile(
+        address: impl Into<String>,
+        policy: McpPolicy,
+        profile: ToolProfile,
+    ) -> Self {
+        let mut service = Self::with_policy_and_profile(policy, profile);
+        service.bridge = BotBridge::with_test_transport(address);
+        service
+    }
+    #[cfg(test)]
+    fn with_test_transport_and_player(
+        address: impl Into<String>,
+        policy: McpPolicy,
+        player: impl Into<String>,
+    ) -> Self {
+        let mut service = Self::with_test_transport_and_policy(address, policy);
+        service.assist_player = Some(player.into());
         service
     }
 
@@ -5634,8 +5661,11 @@ mod tests {
     #[tokio::test]
     async fn mcp_envelope_marks_mutation_refusal_but_keeps_failed_history_query_successful() {
         let root = test_support::temporary();
-        let mut service =
-            DustRouteMcp::with_policy_and_player("127.0.0.1:9", McpPolicy::default(), "Tester");
+        let mut service = DustRouteMcp::with_test_transport_and_player(
+            "127.0.0.1:9",
+            McpPolicy::default(),
+            "Tester",
+        );
         service.state_store = PlanStateStore::new(root.clone(), 3600);
         let id = uuid::Uuid::new_v4();
         service
@@ -5934,7 +5964,7 @@ mod tests {
 
     #[tokio::test]
     async fn unified_operation_tools_reject_invalid_ids_with_argument_error() {
-        let service = DustRouteMcp::new("127.0.0.1:1");
+        let service = DustRouteMcp::with_test_transport("127.0.0.1:1");
         let result: Value = serde_json::from_str(
             &service
                 .invoke_operation(Parameters(InvokeOperationParams {
@@ -6020,7 +6050,7 @@ mod tests {
                     .unwrap();
             }
         });
-        let service = DustRouteMcp::with_policy(
+        let service = DustRouteMcp::with_test_transport_and_policy(
             address,
             McpPolicy {
                 read_only: false,
@@ -6070,7 +6100,7 @@ mod tests {
             preview_required: true,
             ..McpPolicy::default()
         };
-        let service = DustRouteMcp::with_policy("127.0.0.1:1", policy);
+        let service = DustRouteMcp::with_test_transport_and_policy("127.0.0.1:1", policy);
         let plan = plan_world_overlay(
             &dustroute_physical::World::new(),
             &dustroute_translate::world::ValidatedWorld::try_from(dustroute_physical::World::new())
@@ -6133,7 +6163,7 @@ mod tests {
 
     #[tokio::test]
     async fn collaboration_prompt_requires_gaze_grounding_and_preview() {
-        let prompt = DustRouteMcp::new("127.0.0.1:1")
+        let prompt = DustRouteMcp::with_test_transport("127.0.0.1:1")
             .collaboration_prompt()
             .await;
         let ContentBlock::Text(text) = &prompt.messages[0].content else {
@@ -6150,12 +6180,12 @@ mod tests {
 
     #[test]
     fn tool_profiles_keep_low_level_operations_out_of_the_default_surface() {
-        let default = DustRouteMcp::with_policy_and_profile(
+        let default = DustRouteMcp::with_test_transport_and_profile(
             "127.0.0.1:1",
             McpPolicy::default(),
             ToolProfile::Default,
         );
-        let debug = DustRouteMcp::with_policy_and_profile(
+        let debug = DustRouteMcp::with_test_transport_and_profile(
             "127.0.0.1:1",
             McpPolicy::default(),
             ToolProfile::Debug,
@@ -6230,7 +6260,7 @@ mod tests {
 
         let (server_transport, client_transport) = tokio::io::duplex(16 * 1024);
         let server = tokio::spawn(async move {
-            DustRouteMcp::new(address)
+            DustRouteMcp::with_test_transport(address)
                 .serve(server_transport)
                 .await
                 .unwrap()
@@ -6324,7 +6354,7 @@ mod tests {
 
         let (server_transport, client_transport) = tokio::io::duplex(64 * 1024);
         let server = tokio::spawn(async move {
-            DustRouteMcp::with_policy_and_player(address, McpPolicy::default(), "builder")
+            DustRouteMcp::with_test_transport_and_player(address, McpPolicy::default(), "builder")
                 .serve(server_transport)
                 .await
                 .unwrap()
@@ -6395,8 +6425,11 @@ mod tests {
 
     #[tokio::test]
     async fn rejects_an_override_of_the_configured_assist_player() {
-        let service =
-            DustRouteMcp::with_policy_and_player("127.0.0.1:1", McpPolicy::default(), "builder");
+        let service = DustRouteMcp::with_test_transport_and_player(
+            "127.0.0.1:1",
+            McpPolicy::default(),
+            "builder",
+        );
         let result = service
             .get_player_gaze(Parameters(ObserveParams {
                 player: Some("someone_else".to_owned()),
@@ -6454,7 +6487,7 @@ mod tests {
             }
         });
         let service =
-            DustRouteMcp::with_policy_and_player(address, McpPolicy::default(), "builder");
+            DustRouteMcp::with_test_transport_and_player(address, McpPolicy::default(), "builder");
         let result = service
             .convert_from_circuit(Parameters(AnalyzeLookedAtParams {
                 player: None,
@@ -6589,7 +6622,7 @@ mod tests {
             }
         });
         let service =
-            DustRouteMcp::with_policy_and_player(address, McpPolicy::default(), "builder");
+            DustRouteMcp::with_test_transport_and_player(address, McpPolicy::default(), "builder");
         let result = service
             .test_circuit(Parameters(DiagnoseLookedAtParams {
                 player: None,
@@ -6644,7 +6677,7 @@ mod tests {
                         repaired = request["params"]["changes"][0]["action"] == "place";
                         json!({
                             "protocol": crate::bridge_protocol::MUTATION_PROTOCOL, "placed_changes": 1,
-                            "placement_mode": "mineflayer_player",
+                            "placement_mode": "test_player",
                             "retreat": { "x": 2.5, "y": 18.0, "z": 0.5 }
                         })
                     }
@@ -6667,8 +6700,11 @@ mod tests {
             uuid::Uuid::new_v4()
         ));
         let make_service = || {
-            let mut service =
-                DustRouteMcp::with_policy_and_player(address.clone(), policy.clone(), "builder");
+            let mut service = DustRouteMcp::with_test_transport_and_player(
+                address.clone(),
+                policy.clone(),
+                "builder",
+            );
             service.state_store = PlanStateStore::new(root.clone(), 3600);
             service
         };
@@ -6798,7 +6834,7 @@ mod tests {
                     uuid::Uuid::new_v4()
                 ));
                 let make_service = || {
-                    let mut service = DustRouteMcp::with_policy_and_player(
+                    let mut service = DustRouteMcp::with_test_transport_and_player(
                         address.clone(),
                         McpPolicy {
                             read_only: false,
@@ -7063,7 +7099,7 @@ mod tests {
             uuid::Uuid::new_v4()
         ));
         let mut service =
-            DustRouteMcp::with_policy_and_player(address, McpPolicy::default(), "builder");
+            DustRouteMcp::with_test_transport_and_player(address, McpPolicy::default(), "builder");
         service.state_store = PlanStateStore::new(root.clone(), 3600);
         let imported: Value = serde_json::from_str(
             &service
@@ -7243,7 +7279,7 @@ mod tests {
                 "dustroute-revision-placement-{}",
                 uuid::Uuid::new_v4()
             ));
-            let mut service = DustRouteMcp::with_policy_and_player(
+            let mut service = DustRouteMcp::with_test_transport_and_player(
                 address,
                 McpPolicy {
                     read_only: mode == "read_only",
@@ -7377,8 +7413,11 @@ mod tests {
     async fn revisions_branch_persist_validate_and_never_become_live_circuits() {
         let root =
             std::env::temp_dir().join(format!("dustroute-revisions-{}", uuid::Uuid::new_v4()));
-        let mut service =
-            DustRouteMcp::with_policy_and_player("127.0.0.1:1", McpPolicy::default(), "builder");
+        let mut service = DustRouteMcp::with_test_transport_and_player(
+            "127.0.0.1:1",
+            McpPolicy::default(),
+            "builder",
+        );
         service.state_store = PlanStateStore::new(root.clone(), 3600);
         let snapshot:dustroute_translate::snapshot::MinecraftSnapshot=serde_json::from_value(json!({
             "min":{"x":-1,"y":-1,"z":-1},"max":{"x":3,"y":3,"z":3},
@@ -7485,8 +7524,11 @@ mod tests {
                 .is_empty()
         );
         // A fresh service can read/edit revisions without the original observation or bridge.
-        let mut restarted =
-            DustRouteMcp::with_policy_and_player("127.0.0.1:1", McpPolicy::default(), "builder");
+        let mut restarted = DustRouteMcp::with_test_transport_and_player(
+            "127.0.0.1:1",
+            McpPolicy::default(),
+            "builder",
+        );
         restarted.state_store = PlanStateStore::new(root.clone(), 3600);
         let persisted: Value = serde_json::from_str(
             &restarted
@@ -7606,7 +7648,7 @@ mod tests {
             }
         });
         let service =
-            DustRouteMcp::with_policy_and_player(address, McpPolicy::default(), "builder");
+            DustRouteMcp::with_test_transport_and_player(address, McpPolicy::default(), "builder");
         for optimize in [false, true] {
             let proposed: Value = serde_json::from_str(
                 &service
@@ -7746,7 +7788,7 @@ mod tests {
                         .unwrap();
                 }
             });
-            let service = DustRouteMcp::with_policy_and_player(
+            let service = DustRouteMcp::with_test_transport_and_player(
                 address,
                 McpPolicy {
                     read_only: mode == "read_only",
@@ -7923,7 +7965,7 @@ mod tests {
                         .unwrap();
                 }
             });
-            let service = DustRouteMcp::with_policy_and_player(
+            let service = DustRouteMcp::with_test_transport_and_player(
                 address,
                 McpPolicy {
                     read_only: mode == "read_only",

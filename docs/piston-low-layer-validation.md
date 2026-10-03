@@ -76,7 +76,7 @@ lever attachment and piston/head metadata.
 
 ## Reproduction and evidence
 
-Use [E2E instructions](../crates/dustroute-mcp/mineflayer/e2e/README.md) for the
+Use [E2E instructions](evidence/legacy-mineflayer/README.md) for the
 private Java server and live harnesses. Offline replay:
 
 ```bash
@@ -85,12 +85,12 @@ cargo run -p dustroute-translate --example piston_low_layer_replay -- crates/dus
 
 Retained evidence includes:
 
-- [Completion isolation](../crates/dustroute-mcp/mineflayer/e2e/fixtures/piston-completion-isolation-summary.json).
-- [Budget diagnosis](../crates/dustroute-mcp/mineflayer/e2e/fixtures/piston-event-budget-summary.json).
-- [Single-input success](../crates/dustroute-mcp/mineflayer/e2e/fixtures/piston-single-input-success.json).
+- [Completion isolation](evidence/legacy-mineflayer/piston-completion-isolation-summary.json).
+- [Budget diagnosis](evidence/legacy-mineflayer/piston-event-budget-summary.json).
+- [Single-input success](evidence/legacy-mineflayer/piston-single-input-success.json).
 - [Normalized stable observations](../crates/dustroute-translate/tests/fixtures/piston-low-layer-single-input-observation.json).
-- [MCP observation/open-close](../crates/dustroute-mcp/mineflayer/e2e/fixtures/piston-door-mcp-summary.json).
-- [MCP placement and undo](../crates/dustroute-mcp/mineflayer/e2e/fixtures/piston-placement-mcp-summary.json).
+- [MCP observation/open-close](evidence/legacy-mineflayer/piston-door-mcp-summary.json).
+- [MCP placement and undo](evidence/legacy-mineflayer/piston-placement-mcp-summary.json).
 
 Earlier failure JSON files remain regression evidence; their historical status
 is not the current product status. Full transient client recordings belong in

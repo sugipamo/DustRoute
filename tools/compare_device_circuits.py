@@ -7,7 +7,7 @@ block-tick order. Hidden torch history/comparator registers are not observed.
 """
 from observation_records import AIR, inside, key, parse_state, pos, state, world_rows
 from compare_piston_transients import OBSERVED, compare, live_trace, model_trace, model_state, model_writes
-from observe_mixed_pistons import require_post_world_inputs, snapshot
+from observation_fixture import require_post_world_inputs, snapshot
 
 DEVICE_OBSERVED = OBSERVED | {
     'minecraft:stone_button', 'minecraft:comparator', 'minecraft:observer',

@@ -8,7 +8,7 @@ import tempfile
 from pathlib import Path
 
 from compare_piston_transients import compare, live_trace, model_trace
-from observe_mixed_pistons import snapshot
+from observation_fixture import snapshot
 
 
 def sha256(path):

@@ -1384,7 +1384,7 @@ async fn blueprint_mcp_unknown_clearance_blocks_adoption() {
 async fn blueprint_mcp_captures_saved_assembly_and_rejects_mixed_operations() {
     let root = temporary();
     let mut service =
-        DustRouteMcp::with_policy_and_player("127.0.0.1:1", McpPolicy::default(), "Tester");
+        DustRouteMcp::with_test_transport_and_player("127.0.0.1:1", McpPolicy::default(), "Tester");
     service.state_store = PlanStateStore::new(root.clone(), 3600);
     let snapshot = serde_json::from_value(json!({"min":{"x":0,"y":0,"z":0},"max":{"x":1,"y":1,"z":1},"blocks":[{"pos":{"x":0,"y":0,"z":0},"name":"minecraft:stone","properties":{}}]})).unwrap();
     let observed = service

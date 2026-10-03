@@ -1,5 +1,11 @@
 # Piston diagnostic fixtures
 
+> Historical capture instructions: Mineflayer and its executable harnesses were
+> removed on 2026-10-03. Commands below describe the retained trials and are no
+> longer runnable in this checkout. Source is retained in Git at `9b62dcf`.
+> Use [native setup](../crates/dustroute-mcp/SETUP.md) for the current backend.
+
+
 The supported public door is the [fixed 1×2 MCP contract](piston-door-mcp-v1.md).
 The retained 3×3 shuttle fixtures are diagnostic models and regression evidence,
 not installable lever-controlled circuits. This distinction also applies to
@@ -27,7 +33,7 @@ dependencies and rebuild their deltas against the current world. The global
 
 ## Why the 3×3 scenario is not deployable
 
-The retained [live diagnostic](../crates/dustroute-mcp/mineflayer/e2e/fixtures/piston-door-live-diagnostic.json)
+The retained [live diagnostic](evidence/legacy-mineflayer/piston-door-live-diagnostic.json)
 records three successful mechanical open/close cycles with command-injected
 power. It also records literal-placement failure: all 162 repeaters and 68 of
 72 dust blocks disappeared; normal lever activation did not open the panel.

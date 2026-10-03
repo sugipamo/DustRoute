@@ -2,19 +2,14 @@
 
 This document is for the person configuring the Minecraft server, bot and MCP client. For tool use, see the [LLM guide](README.md).
 
-## Choose the backend
+## Runtime
 
-| Build and setting | Backend and required process |
-| --- | --- |
-| `--features voxrig`, no `DUSTROUTE_BOT_BACKEND` | Voxrig inside the Rust MCP process; uses the included source snapshot |
-| `--features voxrig`, `DUSTROUTE_BOT_BACKEND=mineflayer` | Separate Node.js bridge plus Rust MCP process |
-| No `voxrig` feature, no setting or `DUSTROUTE_BOT_BACKEND=mineflayer` | Separate Node.js bridge plus Rust MCP process |
-| No `voxrig` feature, `DUSTROUTE_BOT_BACKEND=voxrig` | Startup error; rebuild with the feature |
-
-An unknown setting fails startup. The native adapter also rejects an explicit
-version other than `1.21.11` or authentication other than `offline`. There is no
-automatic backend fallback. See [observation backends](../../docs/mcp-public-features.md#observation-backends)
-for the different evidence, clock, permission and scan-limit contracts.
+Voxrig is the only live backend and is enabled in the default build. No Node.js
+bridge, bridge port or `DUSTROUTE_BOT_BRIDGE` configuration is used. An explicit
+`DUSTROUTE_BOT_BACKEND` must be `voxrig`; retired settings fail startup. Builds
+with `--no-default-features` support offline library work but cannot start a live
+MCP client without the `voxrig` feature. The native adapter accepts Java 1.21.11
+and offline authentication.
 
 ## Native Rust client (Java 1.21.11)
 
@@ -22,9 +17,8 @@ The tested Voxrig source is pinned in `vendor/voxrig` with commit and file
 checksums in `vendor/voxrig-source.json`. No separate checkout or Node.js process
 is needed. From the repository root, verify, build and start the native client:
 
-The current pin is `784c12dba126f5829cd7a8db8542360cc48434c9` (205 files).
-The [pin alignment checks](../../docs/evidence/voxrig/source-pin-alignment-20261002.json)
-verify this exact source independently of a sibling Voxrig checkout.
+The current pin is `5bace7be7cd941e1340ad94052e922db23c4f892` (313 files).
+Run the source verification command below for the current snapshot.
 
 This standalone checkout route was validated with Rust/Cargo 1.98.0 on Linux
 x86_64. Exact build and runtime evidence is linked from
@@ -42,7 +36,7 @@ DUSTROUTE_SERVER_ADDRESS=127.0.0.1:25565 \
   target/debug/dustroute-mcp
 ```
 
-A build with `--features voxrig` defaults to this backend. There is no Node.js
+The default build enables Voxrig. There is no Node.js
 bridge process for this selection. Start the vanilla server and register the bot
 as described below; the same mutation policy and player/region restrictions
 apply. World writes remain disabled by default. Previews, teleport approach and
@@ -52,12 +46,10 @@ it explicitly reports client evidence, never server-confirmed evidence. No serve
 MOD is required. The backend currently requires offline authentication and
 Java 1.21.11; unsupported explicit settings fail instead of changing adapters.
 
-`DUSTROUTE_BOT_BACKEND=mineflayer` explicitly selects the existing bridge, which
-remains the default in builds without the native feature. Follow the Node.js
-steps below only for that backend. Details, live evidence and limits are in
-[the native rollout](../../docs/voxrig-rollout.md). Native gaze uses audited static
-outline shapes, including dust, switches and gates. Fluids/entities are excluded;
-unsupported context-dependent shapes and moving geometry report unavailable.
+Current live evidence and limits are in [the native rollout](../../docs/voxrig-rollout.md).
+Native gaze uses audited static outline shapes, including dust, switches and
+gates. Fluids/entities are excluded; unsupported context-dependent shapes and
+moving geometry report unavailable.
 An explicit region remains available when gaze geometry cannot be determined.
 This is client observation, not a graphical camera-frame receipt.
 
@@ -65,27 +57,24 @@ For offline builds, prefetch the locked Cargo dependencies on the build machine,
 then add `--offline`; the pinned Voxrig source itself needs no network access.
 Maintainer update instructions are in [vendor/README.md](../../vendor/README.md).
 
-For the bounded survival building workflow, also configure
-`DUSTROUTE_SURVIVAL_OBSERVER_USERNAME` with a distinct admitted account and keep
-both clients in the work dimension with the complete work region loaded. The
-observer is read-only and is not automatically teleported. Supply the builder's
-inventory and enable the ordinary mutation/region/player policy explicitly.
-This path uses non-OP survival actions; the command-based tools above retain
-their own permission requirements. See [public survival construction](../../docs/survival-public-construction.md).
+For bounded survival building, supply the builder's inventory and enable the
+ordinary mutation/region/player policy explicitly. The same client observes and
+builds. A distinct `DUSTROUTE_SURVIVAL_OBSERVER_USERNAME` is optional for independent
+validation; it is read-only and is not automatically teleported. This path uses
+non-OP survival actions. Command-based tools retain their own permission
+requirements. See [public survival construction](../../docs/survival-public-construction.md).
 
 ## Prepare the vanilla server
 
-Both documented backend routes use a vanilla Minecraft Java Edition 1.21.11
-server. Hosting it requires Java 21 and the official server JAR. The separate
-Mineflayer bridge additionally requires Node.js 22/npm. Keep the server and its
+The live backend uses a vanilla Minecraft Java Edition 1.21.11 server. Hosting
+it requires Java 21 and the official server JAR. Keep the server and its
 generated world under an ignored directory such as
 `.local/minecraft-server-1.21.11`; do not copy the JAR, world, logs, operator lists,
 or authentication data into the repository.
 
 Run the server once to generate its files, read the EULA, and set
 `eula=true` only after accepting it. The native backend requires offline
-authentication, and the bundled Mineflayer workflow defaults to it, so the
-documented private test server must include at least:
+authentication, so the documented private test server must include at least:
 
 ```properties
 server-port=25565
@@ -169,74 +158,20 @@ server's normal animal, monster, and NPC spawning, while the game rule covers
 natural spawning controlled by the world. Existing generated structures are
 not removed retroactively.
 
-## Start the Mineflayer bridge
-
-These steps apply to `DUSTROUTE_BOT_BACKEND=mineflayer`. Native users start the
-Rust process with the command in the native section instead.
-
-```bash
-cd crates/dustroute-mcp/mineflayer
-npm ci
-DUSTROUTE_SERVER_ADDRESS=127.0.0.1:25565 \
-  DUSTROUTE_MC_VERSION=1.21.11 \
-  DUSTROUTE_MC_AUTH=offline \
-  DUSTROUTE_BOT_NAME=DustRouteBot \
-  npm start
-```
-
-`DUSTROUTE_MC_AUTH` defaults to `offline`, and `DUSTROUTE_BOT_NAME` defaults to
-`DustRouteBot`. Grant the bot operator permission on the dedicated test server
-if region previews, teleport-based safe approach, and chat messages are needed.
-The bridge listens only on `127.0.0.1:25580`.
-
-`get_bot_status` also returns cumulative bridge metrics under `bot.metrics`.
-They count serialized JSON payload bytes (excluding the line delimiter), total
-and maximum request duration in microseconds, errors, per-method request
-counts, and scan volume/non-air block counts. These counters are intentionally
-bounded to a fixed method set and reset when the Mineflayer bridge process is
-restarted. Use them to distinguish Rust-side analysis cost from repeated
-Mineflayer scans before considering a transport or client replacement.
-
-Before starting MCP, verify the dedicated stack from a local shell:
-
-```bash
-# Minecraft should be listening on 25565; the bridge should be loopback-only.
-ss -ltn | grep -E '(:25565|127\.0\.0\.1:25580)'
-```
-
-The server console should show both `DustRouteBot` and the intended actor
-joining successfully. A human can then connect as `YourMinecraftName` to port
-25565. Keep the server JAR, `server.properties`, player lists, logs, and the
-entire generated world below `.local/`; all are runtime state rather than
-repository fixtures.
-
-Automated live testing with a second Mineflayer player is documented in
-[`mineflayer/e2e/README.md`](mineflayer/e2e/README.md). It controls player gaze
-and exercises observation, diagnostics, component limits, repair application,
-verification, and undo without requiring a human to enter the world.
-
-The exported semantic Data Pack reports assertion results to player chat, not
-the dedicated-server console. Join as a player or capture chat through a test
-client when validating its 20 scenarios and 23 assertions.
-
 ## Start the MCP server
 
-The following commands select the Mineflayer bridge explicitly. Native users
-launch `target/debug/dustroute-mcp` with the feature-enabled build and native
-environment shown above; the transport and policy settings below apply to both.
+The Rust process connects directly; transport and policy settings below apply.
 
 Configure an MCP client to launch:
 
 ```bash
 DUSTROUTE_SERVER_ADDRESS=127.0.0.1:25565 \
   DUSTROUTE_ASSIST_PLAYER=YourMinecraftName \
-  DUSTROUTE_BOT_BACKEND=mineflayer \
+  DUSTROUTE_BOT_BACKEND=voxrig \
   cargo run -p dustroute-mcp
 ```
 
-`DUSTROUTE_SERVER_ADDRESS` and `DUSTROUTE_ASSIST_PLAYER` are required. When using
-Mineflayer, supply the same server address to the separate bridge process. MCP
-tools use the configured player automatically; the default public tool schemas do not expose
+`DUSTROUTE_SERVER_ADDRESS` and `DUSTROUTE_ASSIST_PLAYER` are required. MCP tools use the configured player automatically; the default public tool schemas do not expose
 a `player` argument. Internal/debug calls that attempt to override the
 configured player with another name are rejected.
 If that player is online but outside the bot's entity-tracking range, gaze tools
@@ -260,7 +195,7 @@ stdio is the default transport. A local HTTP client can instead use `/mcp`:
 ```bash
 DUSTROUTE_SERVER_ADDRESS=127.0.0.1:25565 \
   DUSTROUTE_ASSIST_PLAYER=YourMinecraftName \
-  DUSTROUTE_BOT_BACKEND=mineflayer \
+  DUSTROUTE_BOT_BACKEND=voxrig \
   DUSTROUTE_MCP_TRANSPORT=http \
   DUSTROUTE_MCP_HTTP_BIND=127.0.0.1:3000 \
   cargo run -p dustroute-mcp
@@ -298,23 +233,13 @@ not. The TTL checks admission when loading a plan, rather than cancelling an
 action already in progress. The stored data contains physical patches and
 verification baselines, not API keys.
 
-Mineflayer block readback requires Java 1.21.11 command permission for `execute`,
-`time`, `data` and `tellraw`, including read-only operation. That bridge checks
-the whole requested region against the server in one game tick; its 192-command budget
-currently permits at most 8,880 cells, even if `DUSTROUTE_MAX_SCAN_VOLUME` is
-larger. Select smaller regions when confirmation cannot complete. Missing
-permission, unloaded cells or repeated tick crossings fail the observation.
-Only a temporary random command-storage key is written; readback changes no
-world blocks. See [server readback](../../docs/server-readback.md) for the contract.
-
 Native readback uses received packets and supported client reconstruction; it
-does not use this command budget or produce server-confirmed ticks. Missing
+uses no per-cell confirmation commands and produces no server-confirmed ticks. Missing
 cells or incomplete reconstruction fail observation. Region previews, teleport
-approach and world mutations still need their corresponding permissions. Neither
-backend's readback freezes the world or proves empty event queues.
+approach and world mutations still need their corresponding permissions.
+Client readback does not freeze the world or prove empty event queues.
 
-The Mineflayer bot reconnects three seconds after disconnecting. Every scan and
-preview carries the selected dimension, so moving between dimensions invalidates
+Every scan and preview carries the selected dimension, so moving between dimensions invalidates
 the operation instead of silently targeting a different world.
 
 Region selection and reverse translation remain read-only. World mutations

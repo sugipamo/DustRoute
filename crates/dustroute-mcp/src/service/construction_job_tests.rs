@@ -33,7 +33,7 @@ async fn propose(client: &Client) -> Value {
     assert!(captured["target"].is_null());
     assert_eq!(
         captured["observation_capabilities"]["backend"],
-        "mineflayer"
+        "test_transport"
     );
     let changes = (100..110)
         .flat_map(|x| {
@@ -404,7 +404,8 @@ async fn job_history_is_owned_and_read_only_policy_does_not_consume_write_intent
     let (client, server) = connected(&root, &address).await;
     let first = propose(&client).await;
     stop(client, server).await;
-    let mut other = DustRouteMcp::with_policy_and_player(&address, McpPolicy::default(), "Other");
+    let mut other =
+        DustRouteMcp::with_test_transport_and_player(&address, McpPolicy::default(), "Other");
     other.state_store = PlanStateStore::new(root.clone(), 3600);
     let (client, server) = serve(other).await;
     let refused = call(
@@ -417,7 +418,7 @@ async fn job_history_is_owned_and_read_only_policy_does_not_consume_write_intent
     assert!(refused["error"].as_str().unwrap().contains("owner"));
     stop(client, server).await;
     let mut readonly =
-        DustRouteMcp::with_policy_and_player(&address, McpPolicy::default(), "Tester");
+        DustRouteMcp::with_test_transport_and_player(&address, McpPolicy::default(), "Tester");
     readonly.state_store = PlanStateStore::new(root.clone(), 3600);
     let (client, server) = serve(readonly).await;
     let fresh = call(

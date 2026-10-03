@@ -340,7 +340,7 @@ impl DustRouteMcp {
                 .ok_or("edit unavailable")?
                 .previewed = true;
             let mut response = plan.preview(id, self.policy.read_only);
-            response["preview"] = preview;
+            response["preview"] = json!(preview);
             Ok(response)
         }
         .await;

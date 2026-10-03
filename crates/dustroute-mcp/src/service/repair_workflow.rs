@@ -441,7 +441,7 @@ mod tests {
                     .unwrap();
             }
         });
-        let mut service = DustRouteMcp::with_policy_and_player(
+        let mut service = DustRouteMcp::with_test_transport_and_player(
             address.clone(),
             McpPolicy {
                 read_only: false,
@@ -474,7 +474,7 @@ mod tests {
             1,
             "the test must reach transport: {result}"
         );
-        let mut restarted = DustRouteMcp::with_policy_and_player(
+        let mut restarted = DustRouteMcp::with_test_transport_and_player(
             address,
             McpPolicy {
                 read_only: false,

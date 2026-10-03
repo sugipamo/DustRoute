@@ -169,7 +169,7 @@ async fn public_grounded_adoption_is_required_and_prediction_contract_is_explici
 #[tokio::test]
 async fn public_saved_jobs_are_diagnostic_and_corrupt_identity_is_refused() {
     let root = temporary();
-    let mut service = DustRouteMcp::with_policy_and_player(
+    let mut service = DustRouteMcp::with_test_transport_and_player(
         "127.0.0.1:1",
         McpPolicy {
             read_only: false,
@@ -257,7 +257,7 @@ async fn native_public_roof() {
     let root = std::path::PathBuf::from(format!("{output}.state"));
     assert!(!root.exists());
     let mut service = DustRouteMcp::connect_voxrig(
-        McpConfig::new("127.0.0.1:25572", "Tester", "127.0.0.1:1").unwrap(),
+        McpConfig::new("127.0.0.1:25572", "Tester").unwrap(),
         McpPolicy {
             read_only: false,
             ..Default::default()
@@ -309,21 +309,7 @@ async fn native_public_roof() {
         let original_id: uuid::Uuid = serde_json::from_value(id.clone()).unwrap();
         let mut jobs = service.survival.entries.lock().await;
         let original = jobs.get(&original_id).unwrap();
-        let fork = Entry {
-            owner: original.owner.clone(),
-            source: original.source.clone(),
-            plan: original.plan.clone(),
-            expires: if expired {
-                Instant::now() - Duration::from_secs(1)
-            } else {
-                original.expires
-            },
-            status: JobStatus::Planned,
-            cancel: Arc::new(AtomicBool::new(false)),
-            checkpoint: Arc::new(AtomicBool::new(false)),
-            parent: None,
-            stopped: None,
-        };
+        let fork = original.fork_preview(expired.then(|| Instant::now() - Duration::from_secs(1)));
         jobs.insert(fork_id, fork);
         drop(jobs);
         let directory = service
@@ -358,7 +344,7 @@ async fn native_public_roof() {
         )
         .await;
         assert_eq!(status["status"]["construction_dispatched"], false);
-        assert!(
+        assert_eq!(
             service
                 .survival
                 .entries
@@ -366,8 +352,8 @@ async fn native_public_roof() {
                 .await
                 .get(&fork_id)
                 .unwrap()
-                .plan
-                .is_none()
+                .start_readiness(),
+            StartReadiness::ExpiredOrCancelled,
         );
         lifecycle.push(json!({"case":if expired {"expired_preview"} else {"cancelled_preview"},"result":refused,"status":status}));
     }

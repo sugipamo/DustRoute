@@ -31,7 +31,7 @@ async fn checkpoint_failures_distinguish_no_submission_from_verified_unsaved_wor
             });
         let proof = ElectricalModification::new(&before, &after, Default::default()).unwrap();
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let bridge = BotBridge::new(listener.local_addr().unwrap().to_string());
+        let bridge = BotBridge::with_test_transport(listener.local_addr().unwrap().to_string());
         let writes = Arc::new(AtomicUsize::new(0));
         let count = writes.clone();
         let initial = before.clone();

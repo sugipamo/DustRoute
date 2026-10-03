@@ -1,5 +1,11 @@
 # エンジン定義の一般化
 
+> Historical capture instructions: Mineflayer and its executable harnesses were
+> removed on 2026-10-03. Commands below describe the retained trials and are no
+> longer runnable in this checkout. Source is retained in Git at `9b62dcf`.
+> Use [native setup](../crates/dustroute-mcp/SETUP.md) for the current backend.
+
+
 状態: 下記範囲で完了（2026-09-29）。基点 `a374ad9`、ブランチ `codex/piston-adhesion`。
 目標は、新しいエンジンをRustの
 型付き定義として追加し、専用の実行処理を増やさず、共通の生成・検証・採用・配置・

@@ -1,5 +1,11 @@
 # エンティティを除くフライングマシンの実用化
 
+> Historical capture instructions: Mineflayer and its executable harnesses were
+> removed on 2026-10-03. Commands below describe the retained trials and are no
+> longer runnable in this checkout. Source is retained in Git at `9b62dcf`.
+> Use [native setup](../crates/dustroute-mcp/SETUP.md) for the current backend.
+
+
 基点 `9c12c96`。対象はブロック運搬、農場のブロック処理、サバイバル建築。
 プレイヤーやアイテムの運動・輸送・回収は、安定後の別作業とする。
 

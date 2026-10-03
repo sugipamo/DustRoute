@@ -9,7 +9,7 @@ import json
 from pathlib import Path
 
 from observation_records import digest, save
-from observe_mixed_pistons import snapshot
+from observation_fixture import snapshot
 
 
 def main():

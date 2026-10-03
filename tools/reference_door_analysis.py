@@ -1,24 +1,7 @@
-#!/usr/bin/env python3
-"""Record the supplied door's live reference without claiming model conformance.
-
-Strict placement initializes saved block states without construction callbacks.
-Ordinary player interactions then drive the unmodified Java mechanism. Palette
-commits and contiguous world heartbeats reconstruct every retained tick end.
-The explicit interrupted mode records a single ON/OFF pulse without requiring
-the aperture to recover; negative circuit outcomes still require complete data.
-"""
-import argparse
+"""Analyze retained door measurements without a live client."""
 from collections import Counter
-import json
-import os
-from pathlib import Path
-import subprocess
-import time
-
-from observation_records import AIR, digest, inside, key, parse_state, pos, save, state, world_rows
-from instrumented_server import InstrumentedServer, ensure_private_server
-from observe_mixed_pistons import ACTOR, ROOT, applied_inputs, require_post_world_inputs, snapshot
-
+from observation_records import AIR, inside, key, parse_state, pos, state, world_rows
+from observation_fixture import applied_inputs, require_post_world_inputs, snapshot
 
 def analyze(raw, client, fixture, *, interrupted=False):
     assert client['complete'] and client['placement_mode'] == 'strict'
@@ -106,65 +89,3 @@ def analyze(raw, client, fixture, *, interrupted=False):
     }
 
 
-def main():
-    capture_tool_sha256 = digest(Path(__file__))
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--fixture', type=Path, required=True)
-    parser.add_argument('--run-id', required=True)
-    parser.add_argument('--x', type=int, required=True)
-    parser.add_argument('--interrupted', action='store_true',
-                        help='record a single ON/OFF pulse, including incorrect settled aperture; never an adoption pass')
-    args = parser.parse_args()
-    assert args.run_id.replace('-', '').replace('_', '').isalnum()
-    fixture = json.loads(args.fixture.read_text())
-    assert fixture['schema_version'] == 'dustroute.mixed-piston-fixture.v1'
-    assert fixture['placement_mode'] == 'strict' and fixture['warmup_ticks'] == 100
-    assert 100 <= fixture['settling_ticks'] <= 200 and fixture['sample_full_region'] is True
-    if args.interrupted:
-        assert [s['powered'] for s in fixture['steps']] == [True, False]
-        assert fixture['steps'][0]['wait_ticks'] == 0
-        assert 1 <= fixture['steps'][1]['wait_ticks'] <= 200
-    directory = Path('/root/DustRoute-minecraft-instrumentation')
-    output = ROOT / '.local/e2e-artifacts'
-    output.mkdir(parents=True, exist_ok=True)
-    prefix = output / args.run_id
-    paths = {s:prefix.with_suffix(s) for s in ('.raw.ndjson','.server.log','.client.json','.reference.json','.summary.json')}
-    assert not any(p.exists() for p in paths.values())
-    ensure_private_server(directory)
-    origin = {'x':args.x,'y':180,'z':1000}
-    bounds = [fixture['initial'][e][a] + origin[a] for e in ('min','max') for a in ('x','y','z')]
-    print('Starting isolated target-version reference capture', flush=True)
-    capture_ticks = sum(s['wait_ticks'] for s in fixture['steps']) + 120 if args.interrupted else 600
-    assert 120 <= capture_ticks <= 600
-    server = InstrumentedServer(directory, paths['.raw.ndjson'], paths['.server.log'], capture_ticks, bounds)
-    try:
-        env = {**os.environ, 'DUSTROUTE_MIXED_FIXTURE':str(args.fixture.resolve()),
-               'DUSTROUTE_MIXED_OUTPUT':str(paths['.client.json']), 'DUSTROUTE_MIXED_X':str(args.x)}
-        actor = subprocess.run(['node', str(ACTOR)], cwd=ROOT, env=env, capture_output=True, text=True, timeout=190)
-        print(actor.stdout, end='', flush=True)
-        if actor.returncode:
-            raise RuntimeError(actor.stderr or 'reference actor failed; inspect client artifact')
-        time.sleep(8 if args.interrupted else 32)
-    finally:
-        server.close()
-    raw = [json.loads(line) for line in paths['.raw.ndjson'].read_text().splitlines()]
-    client = json.loads(paths['.client.json'].read_text())
-    reference = analyze(raw, client, fixture, interrupted=args.interrupted)
-    save(paths['.reference.json'], reference)
-    summary = {'classification':'live_reference_recorded_not_model_verified',
-               'fixture_sha256':digest(args.fixture), 'actor_sha256':digest(ACTOR),
-               'capture_tool_sha256':capture_tool_sha256,
-               'inputs':reference['inputs'],'outcomes':reference['outcomes'],
-               'tick_end_states':len(reference['tick_end_states']),
-               'state_commits':len(reference['state_commits']),
-               'carrier_events':len(reference['carrier_events']),
-               'committed_names':dict(Counter(c['after'][0] for c in reference['state_commits'])),
-               'cleanup':client['cleanup'], 'raw_capture_end':raw[-1],
-               'artifacts':{s:str(p) for s,p in paths.items()},
-               'sha256':{s:digest(p) for s,p in paths.items() if p.exists()}}
-    save(paths['.summary.json'], summary)
-    print(json.dumps({k:v for k,v in summary.items() if k not in ('artifacts','sha256','raw_capture_end')}), flush=True)
-
-
-if __name__ == '__main__':
-    main()

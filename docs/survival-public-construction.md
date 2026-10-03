@@ -180,6 +180,12 @@ available to business logic. Saved data still cannot become a live checked plan
 or native operation token. `DiagnosticOnly` represents only false for authority
 restoration and automatic replay; true is rejected when decoding.
 
+Process-local [job ownership](../crates/dustroute-mcp/src/service/survival/jobs.rs)
+now couples each lifecycle state to its checked preview or quarantined executor
+and source lease. `JobStatus` is a display/storage projection. An already-started
+job cannot be reclassified as an expired preview by another `start` request or a
+cancel flag. No saved status can construct that process-local state.
+
 Unknown status/phase and malformed checkpoint data refuse before continuation.
 This strengthens decoding; it does not convert older checkpoint schemas or grant
 authority from historical evidence. Adoption, live scene/inventory checks,

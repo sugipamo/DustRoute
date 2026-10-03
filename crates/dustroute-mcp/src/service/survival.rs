@@ -65,18 +65,6 @@ enum Action {
 pub(super) struct Jobs {
     entries: Mutex<HashMap<uuid::Uuid, Entry>>,
 }
-struct Entry {
-    owner: String,
-    source: SourceIdentity,
-    plan: Option<HypotheticalConstructionPlan>,
-    expires: Instant,
-    status: JobStatus,
-    cancel: Arc<AtomicBool>,
-    checkpoint: Arc<AtomicBool>,
-    parent: Option<ContinuationParent>,
-    // Keep uncertain native operations and exclusive ownership inspectable.
-    stopped: Option<(SurvivalLease, SurvivalExecutor)>,
-}
 struct PlanningInput {
     source: SourceIdentity,
     site: ConstructionSite,
@@ -283,7 +271,7 @@ impl DustRouteMcp {
                 if let Err(e) = self.policy.authorize_player(&entry.owner) {
                     return failure("permission_denied", e);
                 }
-                if !entry.status.allows_checkpoint() {
+                if !entry.allows_checkpoint() {
                     return failure(
                         "checkpoint_not_running",
                         "no running executor; inspect the saved record",
@@ -303,18 +291,14 @@ impl DustRouteMcp {
                 if let Err(e) = self.policy.authorize_player(&entry.owner) {
                     return failure("permission_denied", e);
                 }
-                entry.cancel.store(true, Ordering::SeqCst);
-                if entry.plan.take().is_some() {
-                    entry.status = JobStatus::CancelledBeforeStart {
-                        world_writes: false,
-                    };
+                if entry.request_cancel() {
                     if let Err(e) = save(
                         &self
                             .state_store
                             .survival_job_root()
                             .join(job_id.to_string())
                             .join("status.json"),
-                        &entry.status,
+                        &entry.status(),
                     ) {
                         return failure("journal_io", e);
                     }
@@ -327,6 +311,9 @@ impl DustRouteMcp {
 
 #[cfg(test)]
 mod tests;
+
+mod jobs;
+use jobs::{Entry, StartReadiness};
 
 mod model;
 use model::{ConstructionSpecification, InspectionReason, JobManifest, JobSchema, JobStatus};

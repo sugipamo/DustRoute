@@ -257,6 +257,7 @@ impl ValidationKey {
 #[serde(transparent)]
 pub struct ObservationId(uuid::Uuid);
 impl ObservationId {
+    #[cfg(any(test, feature = "voxrig"))]
     pub(crate) fn new() -> Self {
         Self(uuid::Uuid::new_v4())
     }

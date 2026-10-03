@@ -7,8 +7,7 @@ This is the tool-use guide. Server installation, credentials, permissions and tr
 The native Voxrig backend observes received packets and supported client
 reconstruction. Its `client_reconstructed` readbacks retain connection, receive
 sequence and client frame; they do not confirm server ticks or hidden queues.
-Mineflayer keeps its separate command-confirmed readback contract. Fresh native
-client observations support the shared workflows after their own validation;
+The former Mineflayer bridge has been removed. Fresh native client observations support the shared workflows after their own validation;
 they never become server-confirmed evidence. Saved evidence from either source
 requires a fresh observation before a new world action.
 
@@ -43,7 +42,7 @@ Assembly ID and declared Blueprint occurrences; read those with
 prove a fault or authorize an update.
 
 The [architecture cutover guide](../../docs/architecture-cutover.md) lists the
-retired catalog/update/store/instance/repair formats and coordinated Rust/JS Bridge update.
+retired catalog/update/store/instance/repair formats. The current live adapter is Rust-only.
 Legacy mutation RPC names and untyped acknowledgements are no longer accepted.
 Every update archive uses v5; the player-scoped Blueprint store uses v2 with an
 explicit grounding map. Old stores are refused without rewriting their files.
@@ -294,7 +293,7 @@ The operation/build contract is Java 1.21.11, fixed 1×2 layout, translation onl
 - [Response schemas and compatibility](../../docs/mcp-api-v1.md)
 - [Detailed repair, transition and optimization reference](REFERENCE.md)
 - [Human setup and policy configuration](SETUP.md)
-- [Live integration procedures](mineflayer/e2e/README.md)
+- [Live integration procedures](../../docs/evidence/legacy-mineflayer/README.md)
 
 ### Work on larger circuits by region
 

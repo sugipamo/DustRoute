@@ -22,25 +22,25 @@ impl DustRouteMcp {
         if let Err(e) = self.policy.authorize_player(&entry.owner) {
             return failure("permission_denied", e);
         }
-        if entry.cancel.load(Ordering::SeqCst) || Instant::now() > entry.expires {
-            entry.plan = None;
-            entry.status = JobStatus::PlanExpiredOrCancelled {
-                construction_dispatched: false,
-            };
-            if let Err(e) = save(
-                &self
-                    .state_store
-                    .survival_job_root()
-                    .join(id.to_string())
-                    .join("status.json"),
-                &entry.status,
-            ) {
-                return failure("journal_io", e);
+        match entry.start_readiness() {
+            StartReadiness::ExpiredOrCancelled => {
+                entry.expire_preview();
+                if let Err(e) = save(
+                    &self
+                        .state_store
+                        .survival_job_root()
+                        .join(id.to_string())
+                        .join("status.json"),
+                    &entry.status(),
+                ) {
+                    return failure("journal_io", e);
+                }
+                return failure("plan_expired_or_cancelled", "generate a fresh plan");
             }
-            return failure("plan_expired_or_cancelled", "generate a fresh plan");
-        }
-        if entry.plan.is_none() {
-            return failure("job_already_started", "use get; no automatic replay");
+            StartReadiness::AlreadyStarted => {
+                return failure("job_already_started", "use get; no automatic replay");
+            }
+            StartReadiness::Ready => {}
         }
         let native = match self.bridge.survival_bridge() {
             Ok(n) => n,
@@ -50,27 +50,25 @@ impl DustRouteMcp {
             Ok(l) => l,
             Err(e) => return failure("source_busy", e),
         };
-        let plan = entry.plan.take().expect("checked plan");
+        let (plan, parent) = entry.take_preview().expect("checked live preview");
         let source = entry.source.clone();
         let owner = entry.owner.clone();
         let cancel = entry.cancel.clone();
         let checkpoint = entry.checkpoint.clone();
-        let parent = entry.parent.clone();
-        entry.status = JobStatus::Admitting;
         if let Err(e) = save(
             &self
                 .state_store
                 .survival_job_root()
                 .join(id.to_string())
                 .join("status.json"),
-            &entry.status,
+            &entry.status(),
         ) {
             let original = lease.source();
             lease.release(original);
-            entry.status = JobStatus::AdmissionRefused {
+            entry.publish(JobStatus::AdmissionRefused {
                 failure: failure("journal_io", &e).into(),
                 construction_dispatched: false,
-            };
+            });
             return failure("journal_io", e);
         }
         drop(jobs);
@@ -285,7 +283,7 @@ impl DustRouteMcp {
             }
         }
         if let Some(entry) = self.survival.entries.lock().await.get_mut(&id) {
-            entry.stopped = Some((lease, executor));
+            entry.retain(lease, executor);
         }
     }
     async fn set_survival_status(&self, id: uuid::Uuid, status: JobStatus) -> bool {
@@ -308,7 +306,7 @@ impl DustRouteMcp {
             },
         };
         if let Some(entry) = self.survival.entries.lock().await.get_mut(&id) {
-            entry.status = status;
+            entry.publish(status);
         }
         persisted
     }

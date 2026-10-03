@@ -41,7 +41,7 @@ async fn main() -> anyhow::Result<()> {
     let dummy_ready_ms = started.elapsed().as_secs_f64() * 1000.0;
     let started = Instant::now();
     let service = DustRouteMcp::connect_voxrig(
-        McpConfig::new(format!("127.0.0.1:{port}"), &dummy_name, "127.0.0.1:1")?,
+        McpConfig::new(format!("127.0.0.1:{port}"), &dummy_name)?,
         McpPolicy {
             read_only: true,
             allowed_players: [dummy_name.clone()].into(),

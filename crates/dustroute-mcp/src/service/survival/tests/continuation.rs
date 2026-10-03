@@ -100,7 +100,7 @@ async fn native_public_idle_continuation() {
     assert!(matches!(stop_at.as_str(), "placement" | "mining"));
     let root = output.with_extension("state");
     let mut service = DustRouteMcp::connect_voxrig(
-        McpConfig::new("127.0.0.1:25572", "Tester", "127.0.0.1:1").unwrap(),
+        McpConfig::new("127.0.0.1:25572", "Tester").unwrap(),
         McpPolicy {
             read_only: false,
             allowed_players: std::collections::BTreeSet::from(["Tester".into()]),

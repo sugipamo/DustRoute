@@ -10,7 +10,7 @@ import unittest
 
 from compare_piston_transients import compare as compare_events, model_trace, model_writes
 from compare_reference_door import compare
-from observe_reference_door import analyze
+from reference_door_analysis import analyze
 
 ROOT = Path(__file__).resolve().parents[1]
 

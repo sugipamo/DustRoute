@@ -108,7 +108,7 @@ Git history; diagnostic fixtures have not been promoted into public capability.
 | [Live piston interruption conformance](piston-live-interruption-conformance.md) | Isolated Java 1.21.11 ON/OFF trials, server-applied timing and model comparison |
 | [Piston diagnostics](piston-diagnostics.md) | Retained 3×3/single-cell models that are not deployable |
 | [Observed 3×3 recognition](observed-3x3-piston-door.md) | Read-only geometry/evidence recognition |
-| [Live harnesses](../crates/dustroute-mcp/mineflayer/e2e/README.md) | Private-server test procedures |
+| [Live harnesses](evidence/legacy-mineflayer/README.md) | Private-server test procedures |
 
 GitHub Actions configuration was removed intentionally. Run the local checks in
 [development](development.md) before integrating code; this repository no longer

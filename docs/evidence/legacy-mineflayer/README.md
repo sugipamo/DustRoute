@@ -1,3 +1,12 @@
+# Historical Mineflayer observations
+
+The bridge and its executable harnesses were removed on 2026-10-03. These files
+are archived measurements, not runnable integrations or current feature claims.
+Their source and the former harness recipe remain in commit
+`9b62dcf` under `crates/dustroute-mcp/mineflayer/e2e/`.
+Current runtime uses Voxrig; see [setup](../../../crates/dustroute-mcp/SETUP.md)
+and [native rollout](../../voxrig-rollout.md).
+
 # Mineflayer MCP E2E
 
 The custom mixed-piston construction trial is also available through

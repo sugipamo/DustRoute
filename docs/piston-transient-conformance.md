@@ -1,5 +1,11 @@
 # Piston transient conformance
 
+> Historical capture instructions: Mineflayer and its executable harnesses were
+> removed on 2026-10-03. Commands below describe the retained trials and are no
+> longer runnable in this checkout. Source is retained in Git at `9b62dcf`.
+> Use [native setup](../crates/dustroute-mcp/SETUP.md) for the current backend.
+
+
 Work started 2026-09-26. Target: the existing isolated Java 1.21.11 server,
 Yarn 1.21.11+build.6, redstone experiments disabled. The reference is actual
 server behavior, not historical model output. This work extends measurement

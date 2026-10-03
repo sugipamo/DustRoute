@@ -60,9 +60,6 @@ pub(super) enum InspectionReason {
     },
 }
 impl JobStatus {
-    pub(super) fn allows_checkpoint(&self) -> bool {
-        matches!(self, Self::Admitting | Self::Running { .. })
-    }
     pub(super) fn completed_steps(&self) -> Option<usize> {
         match self {
             Self::Running {
@@ -160,7 +157,7 @@ mod tests {
         assert_eq!(wire["state"], "needs_inspection");
         assert_eq!(wire["last_status"]["completed_steps"], 12);
         let reread: JobStatus = serde_json::from_value(wire.clone()).unwrap();
-        assert!(!reread.allows_checkpoint());
+        assert!(matches!(reread, JobStatus::NeedsInspection { .. }));
         assert_eq!(reread.completed_steps(), None);
         assert_eq!(json!(reread), wire);
     }

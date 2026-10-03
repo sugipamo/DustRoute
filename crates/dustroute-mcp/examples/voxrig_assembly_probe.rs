@@ -69,7 +69,7 @@ mod trial {
             ..McpPolicy::default()
         };
         let service = DustRouteMcp::connect_voxrig(
-            McpConfig::new(format!("127.0.0.1:{port}"), "McpProbe", "127.0.0.1:1")?,
+            McpConfig::new(format!("127.0.0.1:{port}"), "McpProbe")?,
             policy,
             "DustRouteBot",
         )

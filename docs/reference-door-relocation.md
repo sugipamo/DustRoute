@@ -1,5 +1,11 @@
 # Reference door: relocation and horizontal rotation
 
+> Historical capture instructions: Mineflayer and its executable harnesses were
+> removed on 2026-10-03. Commands below describe the retained trials and are no
+> longer runnable in this checkout. Source is retained in Git at `9b62dcf`.
+> Use [native setup](../crates/dustroute-mcp/SETUP.md) for the current backend.
+
+
 Status: **all eight isolated Java 1.21.11 trials passed**.
 
 ## Goal and matrix

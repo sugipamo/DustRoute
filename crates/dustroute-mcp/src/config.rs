@@ -8,14 +8,12 @@ use std::net::{IpAddr, SocketAddr};
 pub struct McpConfig {
     pub server_address: String,
     pub assist_player: String,
-    pub bridge_address: String,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum McpConfigError {
     Missing(&'static str),
     InvalidServerAddress(String),
-    InvalidBridgeAddress(String),
     InvalidPlayerName,
 }
 
@@ -33,12 +31,6 @@ impl Display for McpConfigError {
                 write!(
                     f,
                     "invalid DUSTROUTE_SERVER_ADDRESS {value:?}; expected host:port"
-                )
-            }
-            Self::InvalidBridgeAddress(value) => {
-                write!(
-                    f,
-                    "invalid DUSTROUTE_BOT_BRIDGE {value:?}; expected host:port"
                 )
             }
             Self::InvalidPlayerName => f.write_str(
@@ -87,24 +79,17 @@ impl McpConfig {
             .map_err(|_| McpConfigError::Missing("DUSTROUTE_SERVER_ADDRESS"))?;
         let assist_player = std::env::var("DUSTROUTE_ASSIST_PLAYER")
             .map_err(|_| McpConfigError::Missing("DUSTROUTE_ASSIST_PLAYER"))?;
-        let bridge_address =
-            std::env::var("DUSTROUTE_BOT_BRIDGE").unwrap_or_else(|_| "127.0.0.1:25580".to_owned());
-        Self::new(server_address, assist_player, bridge_address)
+        Self::new(server_address, assist_player)
     }
 
     pub fn new(
         server_address: impl Into<String>,
         assist_player: impl Into<String>,
-        bridge_address: impl Into<String>,
     ) -> Result<Self, McpConfigError> {
         let server_address = server_address.into();
         let assist_player = assist_player.into();
-        let bridge_address = bridge_address.into();
         if !valid_host_port(&server_address) {
             return Err(McpConfigError::InvalidServerAddress(server_address));
-        }
-        if !valid_host_port(&bridge_address) {
-            return Err(McpConfigError::InvalidBridgeAddress(bridge_address));
         }
         if assist_player.is_empty()
             || assist_player.len() > 16
@@ -117,7 +102,6 @@ impl McpConfig {
         Ok(Self {
             server_address,
             assist_player,
-            bridge_address,
         })
     }
 }
@@ -137,11 +121,11 @@ mod tests {
 
     #[test]
     fn validates_required_connection_settings() {
-        let config = McpConfig::new("mc.example:25565", "Builder", "127.0.0.1:25580").unwrap();
+        let config = McpConfig::new("mc.example:25565", "Builder").unwrap();
         assert_eq!(config.server_address, "mc.example:25565");
         assert_eq!(config.assist_player, "Builder");
-        assert!(McpConfig::new("mc.example", "Builder", "127.0.0.1:25580").is_err());
-        assert!(McpConfig::new("mc.example:25565", "", "127.0.0.1:25580").is_err());
+        assert!(McpConfig::new("mc.example", "Builder").is_err());
+        assert!(McpConfig::new("mc.example:25565", "").is_err());
     }
 
     #[test]

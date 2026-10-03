@@ -91,7 +91,7 @@ async fn transition_retains_original_failure_and_cleanup_errors_without_replay()
                     .unwrap();
             }
         });
-        let service = DustRouteMcp::with_policy_and_player(
+        let service = DustRouteMcp::with_test_transport_and_player(
             address,
             McpPolicy {
                 read_only: false,

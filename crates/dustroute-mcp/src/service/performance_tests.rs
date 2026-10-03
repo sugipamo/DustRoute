@@ -16,7 +16,7 @@ fn emit(report: &crate::performance::Measurement) {
 
 #[tokio::test]
 async fn shared_circuit_contents_keep_owner_and_expiry_authorization_separate() {
-    let service = DustRouteMcp::new("127.0.0.1:1");
+    let service = DustRouteMcp::with_test_transport("127.0.0.1:1");
     let snapshot: dustroute_translate::snapshot::MinecraftSnapshot =
         serde_json::from_value(super::electrical_edit_tests::machine()).unwrap();
     let shared = service.bridge.share_snapshot(snapshot.clone()).unwrap();
@@ -136,7 +136,7 @@ async fn profile_observation_and_edit_phases() {
             state.resize_scan = true;
             state.include_air = true;
         }
-        let mut service = DustRouteMcp::with_policy_and_player(
+        let mut service = DustRouteMcp::with_test_transport_and_player(
             &address,
             McpPolicy {
                 read_only: false,

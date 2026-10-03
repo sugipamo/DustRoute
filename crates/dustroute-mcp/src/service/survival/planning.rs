@@ -105,17 +105,13 @@ impl DustRouteMcp {
             "expires_after_seconds":900,"next_step":"review plan, then action=start with confirmed=true; current inventory/site/source will be rechecked"});
         self.survival.entries.lock().await.insert(
             id,
-            Entry {
-                owner: owner.into(),
+            Entry::planned(
+                owner.into(),
                 source,
-                plan: Some(generated.plan),
-                expires: Instant::now() + Duration::from_secs(900),
-                status: JobStatus::Planned,
-                cancel: Arc::new(AtomicBool::new(false)),
-                checkpoint: Arc::new(AtomicBool::new(false)),
+                generated.plan,
+                Instant::now() + Duration::from_secs(900),
                 parent,
-                stopped: None,
-            },
+            ),
         );
         response
     }

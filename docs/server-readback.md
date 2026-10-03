@@ -1,12 +1,13 @@
 # Server-confirmed block readback
 
-This document describes the **Mineflayer backend**. The native Voxrig backend
+This document records the **retired Mineflayer backend** (removed 2026-10-03). The native Voxrig backend
 has a separate [client-observation contract](voxrig-rollout.md): its normal scans
 do not issue confirmation commands and cannot return `ServerReadback` or satisfy
 the explicit `scan_region_confirmed` API. Shared workflows retain the selected
 source in their durable evidence and do not silently change backend on failure.
 
-The Mineflayer bridge and isolated device trials share `mineflayer/readback.js`.
+The former bridge and device trials shared `mineflayer/readback.js` at `9b62dcf`.
+Their [retained measurements](evidence/legacy-mineflayer/README.md) remain historical facts.
 It confirms a client-derived candidate with Java 1.21.11 block predicates before
 returning it as a current world observation. It does not take expected states
 from construction plans or simulator output.

@@ -87,7 +87,7 @@ repair and automatic functional certification remain outside this work.
 
 ## Findings from current code
 
-- [`scanRegion`](../crates/dustroute-mcp/mineflayer/bridge.js) reads the client's
+- [`scanRegion`](https://github.com/sugipamo/DustRoute/blob/9b62dcf/crates/dustroute-mcp/mineflayer/bridge.js) reads the client's
   block cache. `writeBlocks` separately sends ordinary `/setblock ... replace`
   chat commands and returns a submitted count after two client ticks. It has
   no authoritative per-command receipt or conditional server-side write.

@@ -11,7 +11,7 @@ impl DustRouteMcp {
             .lock()
             .await
             .get(&id)
-            .map(|e| (e.owner.clone(), e.status.clone()));
+            .map(|e| (e.owner.clone(), e.status()));
         if let Some((owner, status)) = &live {
             if let Err(e) = self.policy.authorize_player(owner) {
                 return failure("permission_denied", e);

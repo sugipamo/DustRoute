@@ -27,15 +27,21 @@ live checks. Their evidence and clocks remain distinct.
 
 ## Observation backends
 
-| Concern | Native Voxrig | Mineflayer bridge |
-| --- | --- | --- |
-| Selection | Build with `--features voxrig`; this build defaults to `voxrig`. Set `DUSTROUTE_BOT_BACKEND=voxrig` explicitly if desired. | Builds without that feature default to `mineflayer`. Set `DUSTROUTE_BOT_BACKEND=mineflayer` to use it in either build. |
-| Setup | Pinned source is included in `vendor/voxrig`; no separate checkout or Node.js bridge. DustRoute currently accepts Java 1.21.11 and offline authentication. | Separate Node.js 22/npm bridge process. The documented and tested circuit environment is Java 1.21.11. |
-| Block observation | Received packets plus supported client state reconstruction, without per-cell confirmation commands. | Client-derived candidates checked against the server's block predicates, including all properties and air. |
-| Retained readback | `dustroute.client-readback.v1`, `kind=client_reconstructed`; connection, receive sequence, client frame, revisions and moving flag. | `dustroute.server-readback.v1`, `kind=server_confirmed`; request identity, bounds, checked cells and server game ticks. |
-| Gaze | `targeting_geometry=block_outline`; audited static outlines include dust, levers, repeaters and comparators. | Selects cached blocks with a non-empty bounding box along the tracked player's gaze. It does not use native outline shapes and can skip non-collidable circuit parts. |
-| Observation limits | Requires complete loaded cells and supported reconstruction. The scan policy defaults to 262,144 cells; tool-specific limits still apply. | The same scan policy applies, plus the command-confirmation cap of 8,880 cells, 192 commands per exchange and command-length limits. |
-| Command permissions | Normal block observation needs no confirmation commands. Region previews, teleport approach, creative-mode setup and command construction still need the corresponding permissions. | Readback itself needs `execute`, `time`, `data` and `tellraw` permission, including in read-only mode; previews and writes need their corresponding permissions too. |
+Voxrig is the sole live backend, enabled by default. The pinned Rust source is
+included in `vendor/voxrig`; no Node.js bridge is needed. An explicit backend
+setting must be `voxrig`. Java 1.21.11 and offline authentication are required.
+
+Observations use received packets plus supported client reconstruction. Readbacks
+retain `dustroute.client-readback.v1`, connection, receive sequence, frame,
+revisions and moving flag; they never confirm server ticks or hidden queues.
+Complete loaded cells and supported reconstruction are required, with a 262,144
+cell adapter limit and separate tool/policy limits. Normal reads need no block
+confirmation commands. Previews, teleport approach and command construction
+still require their corresponding permissions.
+
+The retired Mineflayer bridge's saved server-confirmed observations remain
+[historical evidence](evidence/legacy-mineflayer/README.md). Their provenance and
+clock must not be interpreted as a property of the current client.
 
 Native gaze skips fluids and entities. Moving geometry, missing chunks, unknown
 player pose, incomplete reconstruction and unsupported context-dependent shapes

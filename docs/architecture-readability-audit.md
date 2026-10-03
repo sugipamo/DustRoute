@@ -7,6 +7,26 @@
 この文書は調査時点の記録。以後の実装済み範囲・保留理由・検証結果は
 [初回移行](architecture-migration.md)と[互換経路廃止を含む移行](architecture-cutover.md)を参照。以下の行番号と規模は調査基点に対応する。
 
+## Mineflayer実行経路の廃止とジョブ所有権（2026-10-03 UTC）
+
+現行運用に不要なMineflayerを削除した。Voxrigが既定かつ唯一の実機backendとなり、
+旧backend選択は起動時に拒否する。Nodeブリッジ、npm依存、旧実機actorを除去し、
+bridge endpointをRustの設定・constructorから除去した。JSON/TCPによる業務テストの
+疑似応答は`cfg(test)`専用であり、公開実行経路には組み込まれない。
+保存済みの旧実機証拠は[evidence](evidence/legacy-mineflayer/README.md)へ移した。
+その解析関数は実機actorと分離した。保存chunkの予約tick読取はPython標準ライブラリへ
+移し、Node/Mineflayer依存をなくした。古いchunkを現在のqueueとは扱わない。
+
+プレビュー・待機の結果と旧readbackの補正・試行履歴はRust型となった。
+サバイバルジョブは状態別enumで計画または停止済みexecutorとleaseを所有し、公開・保存状態は
+その射影とした。開始済みのジョブへ再びstartを送っても、期限やcancel flagで
+未開始扱いへ変更できない。native操作の退役・位置確認・再観測の契約は維持する。
+
+内部JSONの撤去全体は未完了。保存codec、Lawのruntime読込、探索比較キー、
+診断payload、Voxrigのregistry/outline/component表現は引き続き移行対象である。
+Mineflayer RPCを理由とする例外は不要になった。Voxrigの別version adapterは維持し、
+外部protocolが要求する形式と内部表現を区別して調べる。必要な例外が判明した場合は相談する。
+
 ## サバイバル統合後の追補（2026-10-03 UTC）
 
 基点は `fea85f5`（`codex/survival-single-client`）。今回の建築・観測統合に
@@ -306,8 +326,8 @@ method名、payload、返却field、待機上限は両言語で対応を維持�
 load時に接続を開始する。
 
 根拠: [Rustの書込み入口](../crates/dustroute-mcp/src/bridge.rs#L522)、
-[bot状態と接続](../crates/dustroute-mcp/mineflayer/bridge.js#L43)、
-[RPC振分け](../crates/dustroute-mcp/mineflayer/bridge.js#L459)。
+[bot状態と接続](https://github.com/sugipamo/DustRoute/blob/9b62dcf/crates/dustroute-mcp/mineflayer/bridge.js#L43)、
+[RPC振分け](https://github.com/sugipamo/DustRoute/blob/9b62dcf/crates/dustroute-mcp/mineflayer/bridge.js#L459)。
 
 整理案: Rust要求・応答を型付きにし、共通の契約fixtureでJSとの対応を確認する。
 JSは起動入口、bot接続、操作、RPCを分け、明示的に生成した接続状態を渡す。

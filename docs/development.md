@@ -114,15 +114,13 @@ cargo test -p dustroute-translate --test periodic --test physical_periodic
 
 The workspace manifest declares Rust edition 2024 and `rust-version = "1.85"`.
 Use a current stable toolchain for the existing formatting/lint/test workflow.
-Live integration additionally uses Node.js 22/npm and Java 21 with the pinned
+Live integration additionally uses Java 21 with the pinned
 Minecraft Java 1.21.11 environment. Rust-only tests do not need Minecraft.
 
 ```bash
 cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
-npm --prefix crates/dustroute-mcp/mineflayer ci
-npm --prefix crates/dustroute-mcp/mineflayer test
 ```
 
 The GitHub Actions workflow has been removed. These are local integration
@@ -176,15 +174,15 @@ when changing those definitions. Runtime lookup must not call their generators.
 
 Sanitized regression observations are tracked under
 `crates/dustroute-translate/tests/fixtures` and
-`crates/dustroute-mcp/mineflayer/e2e/fixtures`. Runtime recordings, server JARs,
+`docs/evidence/legacy-mineflayer`. Runtime recordings, server JARs,
 worlds, logs and player lists remain in ignored `.local/` directories.
 Historical failure fixtures are retained deliberately; they are not current
 feature status or a request to reimplement obsolete goals.
 
 Use [differential testing](physics-differential-testing.md),
 [server instrumentation](vanilla-instrumentation.md), and the
-[live harness guide](../crates/dustroute-mcp/mineflayer/e2e/README.md) for evidence
-capture. Timing claims must preserve the distinction between client packet
+[native rollout](voxrig-rollout.md) for current evidence capture. The former
+[harness guide](evidence/legacy-mineflayer/README.md) is historical context. Timing claims must preserve the distinction between client packet
 order and observed server internals.
 
 Use [performance observation](performance-observation.md) for reproducible

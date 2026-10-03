@@ -184,7 +184,7 @@ pub(super) async fn start_construction_bridge(
 }
 
 pub(super) async fn connected(root: &Path, address: &str) -> (Client, tokio::task::JoinHandle<()>) {
-    let mut service = DustRouteMcp::with_policy_and_player(
+    let mut service = DustRouteMcp::with_test_transport_and_player(
         address,
         McpPolicy {
             read_only: false,
@@ -200,7 +200,7 @@ pub(super) type Client = rmcp::service::RunningService<rmcp::RoleClient, ClientI
 pub(super) async fn start(root: &Path) -> (Client, tokio::task::JoinHandle<()>) {
     // A dead bridge endpoint proves these are local catalog operations, even with read-only world policy.
     let mut service =
-        DustRouteMcp::with_policy_and_player("127.0.0.1:1", McpPolicy::default(), "Tester");
+        DustRouteMcp::with_test_transport_and_player("127.0.0.1:1", McpPolicy::default(), "Tester");
     service.state_store = PlanStateStore::new(root.to_path_buf(), 3600);
     serve(service).await
 }

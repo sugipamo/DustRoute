@@ -8,7 +8,7 @@ import argparse
 import json
 from pathlib import Path
 
-from observe_mixed_pistons import applied_inputs
+from observation_fixture import applied_inputs
 from observation_records import digest, save
 
 

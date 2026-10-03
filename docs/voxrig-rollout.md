@@ -46,19 +46,23 @@ visible block name looks stationary. Two-sample instance observation also reject
 motion, changed states, reversed clocks and changed connections. Neither quiet
 samples nor a successful step proves empty server queues or excludes a later edit.
 
-Existing Mineflayer RPC remains selected by `BotBridge::new`; unsupported native
-operations reject explicitly. Native status, player/target observation, client
-waits, lever approach/activation, command batches, creative physical placement/
-removal, particle previews and ordered block recordings use typed Rust calls.
+As of 2026-10-03, Voxrig is the sole live backend and the default Cargo feature.
+Status, player/target observation, client waits, lever approach/activation,
+command batches, creative physical placement/removal, particle previews and
+ordered block recordings use typed Rust calls. Particle and wait results are
+Rust records; the MCP facade serializes them for public responses.
 
-Build with `--features voxrig` and select `DUSTROUTE_BOT_BACKEND=voxrig` to connect
-the MCP process directly. `DUSTROUTE_SERVER_ADDRESS`, `DUSTROUTE_BOT_NAME`,
-`DUSTROUTE_ASSIST_PLAYER` and the existing policy configuration still apply.
-The native adapter requires offline authentication and Java 1.21.11; it rejects
-other explicit auth/version settings. A feature-enabled build defaults to Voxrig;
-`DUSTROUTE_BOT_BACKEND=mineflayer` keeps the separate bridge available. Builds
-without that feature still default to Mineflayer and reject a native selection.
-No bridge JavaScript process is required by the native selection.
+`DUSTROUTE_SERVER_ADDRESS`, `DUSTROUTE_BOT_NAME`, `DUSTROUTE_ASSIST_PLAYER` and
+policy configuration still apply. Offline authentication and Java 1.21.11 are
+required. An explicit `DUSTROUTE_BOT_BACKEND` other than `voxrig` fails startup;
+there is no legacy fallback. `DUSTROUTE_BOT_BRIDGE` is removed. Builds without the
+native feature can perform offline library work but cannot start the live client.
+
+Former JSON/TCP workflow stubs compile only under `cfg(test)` and identify
+`backend=test_transport`. Synthetic server receipts in those tests do not validate
+native confirmation. The Node bridge, npm dependencies and executable live actors
+are removed. [Old measurements](evidence/legacy-mineflayer/README.md) retain their
+original facts and clock. Offline observation parsers remain separately usable.
 
 Native player targets now carry `targeting_geometry=block_outline`, connection and
 receive sequence. Audited native static outlines include dust, switches and

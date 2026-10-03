@@ -16,40 +16,12 @@ async fn main() -> anyhow::Result<()> {
     let config = McpConfig::from_environment()?;
     let policy = McpPolicy::from_environment().map_err(anyhow::Error::msg)?;
     let transport = McpTransport::from_environment().map_err(anyhow::Error::msg)?;
-    let handler = match std::env::var("DUSTROUTE_BOT_BACKEND")
-        .unwrap_or_else(|_| {
-            if cfg!(feature = "voxrig") {
-                "voxrig"
-            } else {
-                "mineflayer"
-            }
-            .into()
-        })
-        .as_str()
-    {
-        "mineflayer" => DustRouteMcp::with_config(config, policy),
-        #[cfg(feature = "voxrig")]
-        "voxrig" => {
-            anyhow::ensure!(
-                std::env::var("DUSTROUTE_MC_AUTH").unwrap_or_else(|_| "offline".into())
-                    == "offline",
-                "Voxrig currently requires offline authentication"
-            );
-            anyhow::ensure!(
-                std::env::var("DUSTROUTE_MC_VERSION").unwrap_or_else(|_| "1.21.11".into())
-                    == "1.21.11",
-                "DustRoute native client requires Java 1.21.11"
-            );
-            let username =
-                std::env::var("DUSTROUTE_BOT_NAME").unwrap_or_else(|_| "DustRouteBot".into());
-            DustRouteMcp::connect_voxrig(config, policy, &username).await?
-        }
-        #[cfg(not(feature = "voxrig"))]
-        "voxrig" => anyhow::bail!("Voxrig backend requires compilation with --features voxrig"),
-        value => {
-            anyhow::bail!("unknown DUSTROUTE_BOT_BACKEND {value:?}; expected mineflayer or voxrig")
-        }
-    };
+    let backend = std::env::var("DUSTROUTE_BOT_BACKEND").unwrap_or_else(|_| "voxrig".into());
+    anyhow::ensure!(
+        backend == "voxrig",
+        "unknown DUSTROUTE_BOT_BACKEND {backend:?}; only voxrig is supported; the Mineflayer backend has been removed"
+    );
+    let handler = connect_handler(config, policy).await?;
     match transport {
         McpTransport::Stdio => {
             handler.serve(stdio()).await?.waiting().await?;
@@ -57,6 +29,25 @@ async fn main() -> anyhow::Result<()> {
         McpTransport::Http(address) => serve_http(handler, address).await?,
     }
     Ok(())
+}
+
+#[cfg(feature = "voxrig")]
+async fn connect_handler(config: McpConfig, policy: McpPolicy) -> anyhow::Result<DustRouteMcp> {
+    anyhow::ensure!(
+        std::env::var("DUSTROUTE_MC_AUTH").unwrap_or_else(|_| "offline".into()) == "offline",
+        "Voxrig currently requires offline authentication"
+    );
+    anyhow::ensure!(
+        std::env::var("DUSTROUTE_MC_VERSION").unwrap_or_else(|_| "1.21.11".into()) == "1.21.11",
+        "DustRoute native client requires Java 1.21.11"
+    );
+    let username = std::env::var("DUSTROUTE_BOT_NAME").unwrap_or_else(|_| "DustRouteBot".into());
+    Ok(DustRouteMcp::connect_voxrig(config, policy, &username).await?)
+}
+
+#[cfg(not(feature = "voxrig"))]
+async fn connect_handler(_config: McpConfig, _policy: McpPolicy) -> anyhow::Result<DustRouteMcp> {
+    anyhow::bail!("live MCP requires compilation with the voxrig feature (enabled by default)")
 }
 
 async fn serve_http(handler: DustRouteMcp, address: std::net::SocketAddr) -> anyhow::Result<()> {

@@ -495,7 +495,7 @@ async fn electrical_edit_refuses_changed_target_features_and_unverified_observat
 #[tokio::test]
 async fn electrical_edit_keeps_read_only_policy_and_requires_explicit_confirmation() {
     let (root, fake, address, bridge) = fixture().await;
-    let mut service = super::DustRouteMcp::with_policy_and_player(
+    let mut service = super::DustRouteMcp::with_test_transport_and_player(
         &address,
         super::McpPolicy::default(),
         "Tester",

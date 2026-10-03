@@ -9,7 +9,7 @@ import argparse
 import json
 from pathlib import Path
 from observation_records import AIR, inside, key, parse_state, pos, state, world_rows
-from observe_mixed_pistons import applied_inputs, require_post_world_inputs, snapshot
+from observation_fixture import applied_inputs, require_post_world_inputs, snapshot
 
 OBSERVED = {'minecraft:piston', 'minecraft:sticky_piston', 'minecraft:piston_head',
             'minecraft:moving_piston', 'minecraft:redstone_wire', 'minecraft:repeater'}

@@ -1,25 +1,28 @@
 use std::collections::BTreeMap;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
-use crate::bridge_protocol::{
-    COMMAND_LIMIT, CommandSubmission, CommandWrite, MUTATION_PROTOCOL, MutationRequest,
-    PHYSICAL_LIMIT, PhysicalChange, PhysicalSubmission,
-};
+#[cfg(any(test, feature = "voxrig"))]
+use crate::bridge_protocol::{COMMAND_LIMIT, PHYSICAL_LIMIT};
+use crate::bridge_protocol::{CommandSubmission, CommandWrite, PhysicalChange, PhysicalSubmission};
+#[cfg(test)]
+use crate::bridge_protocol::{MUTATION_PROTOCOL, MutationRequest};
 use crate::performance::{Phase, span};
 use dustroute_ir::{EventCause, EventKind, EventSource, TransitionPhase};
 use dustroute_physical::Pos;
 use dustroute_translate::snapshot::MinecraftSnapshot;
 use serde::{Deserialize, Serialize};
+#[cfg(test)]
 use serde_json::{Value, json};
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-use tokio::net::TcpStream;
+
+#[cfg(test)]
+mod test_transport;
 
 #[derive(Clone, Debug)]
 pub struct BotBridge {
-    address: String,
+    #[cfg(test)]
+    test_transport: Option<test_transport::TestTransport>,
     timeout: Duration,
     contents: std::sync::Arc<crate::snapshot_content::SnapshotContents>,
     #[cfg(feature = "voxrig")]
@@ -69,7 +72,8 @@ pub struct BotStatus {
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ObservationBackend {
-    Mineflayer,
+    #[cfg(test)]
+    TestTransport,
     Voxrig,
 }
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
@@ -109,7 +113,7 @@ mod capability_tests {
 
     #[test]
     fn native_limits_do_not_inherit_command_predicate_limits() {
-        let legacy = BotBridge::new("127.0.0.1:1").observation_capabilities();
+        let legacy = BotBridge::with_test_transport("127.0.0.1:1").observation_capabilities();
         let native = ObservationCapabilities {
             backend: ObservationBackend::Voxrig,
             max_region_cells: 262_144,
@@ -154,6 +158,37 @@ mod capability_tests {
         );
     }
 }
+/// Receipt of local waiting, not confirmation of elapsed server ticks.
+#[derive(Clone, Debug, Serialize)]
+pub struct WaitReceipt {
+    pub waited_ticks: u16,
+    pub clock: WaitClock,
+    pub receive_sequence: u64,
+    pub server_time_sample: Option<ServerTimeSample>,
+}
+#[derive(Clone, Copy, Debug, Serialize)]
+pub enum WaitClock {
+    #[serde(rename = "client_wall_time_20hz")]
+    ClientWallTime20Hz,
+    #[cfg(test)]
+    #[serde(rename = "fixture")]
+    Fixture,
+}
+#[derive(Clone, Debug, Serialize)]
+pub struct ServerTimeSample {
+    pub game_age: i64,
+    pub day_time: i64,
+    pub receive_sequence: u64,
+}
+/// Particle commands were submitted; this does not acknowledge rendered particles.
+#[derive(Clone, Debug, Serialize)]
+pub struct PreviewSubmission {
+    pub min: Pos,
+    pub max: Pos,
+    pub particle_corners: u8,
+    pub submission_only: bool,
+}
+
 /// Dimension/identity observation without requiring a raycast result.
 #[derive(Clone, Debug, Serialize)]
 pub struct PlayerContext {
@@ -220,6 +255,23 @@ pub struct ObservedBlock {
     pub state: ObservedBlockState,
 }
 
+/// Historical records from the retired command-confirmation adapter.
+/// These are facts for inspection; no constructor can turn them into live authority.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct ArchivedShapeCorrection {
+    pub pos: Pos,
+    pub client: ObservedBlock,
+    pub confirmed_shape: String,
+}
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct ArchivedReadbackAttempt {
+    pub start_game_tick: Option<u64>,
+    pub end_game_tick: Option<u64>,
+    pub matched_batches: usize,
+    pub batch_count: usize,
+    pub unconfirmed_batches: Vec<usize>,
+}
+
 /// Evidence of command checks in one server game tick, not a world lock or a
 /// claim that scheduled work is exhausted. Saved receipts never authorize reuse.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -235,13 +287,13 @@ pub struct ServerReadback {
     pub end_game_tick: u64,
     pub nonce: String,
     pub snapshot_sha256: String,
-    pub corrections: Vec<Value>,
+    pub corrections: Vec<ArchivedShapeCorrection>,
     #[serde(default)]
     pub predicate_ticks: Vec<u64>,
     #[serde(default)]
     pub predicate_batch_cells: Option<u64>,
     #[serde(default)]
-    pub attempts: Vec<Value>,
+    pub attempts: Vec<ArchivedReadbackAttempt>,
     pub hidden_runtime_observed: bool,
 }
 
@@ -254,10 +306,12 @@ pub struct ConfirmedRegion {
 
 /// Process-local validation result. Public `ConfirmedRegion` remains a wire /
 /// archive DTO; deserializing it does not produce this observation capability.
+#[cfg(test)]
 #[derive(Debug, Serialize)]
 #[serde(transparent)]
 pub(crate) struct ValidatedRegion(ConfirmedRegion);
 
+#[cfg(test)]
 impl ValidatedRegion {
     pub(crate) fn into_record(self) -> ConfirmedRegion {
         self.0
@@ -277,6 +331,7 @@ impl ValidatedRegion {
     }
 }
 
+#[cfg(test)]
 impl ConfirmedRegion {
     fn validate(
         &self,
@@ -429,6 +484,7 @@ pub struct UpdateRecording {
 pub enum BotBridgeError {
     Io(std::io::Error),
     Protocol(String),
+    #[cfg(test)]
     Json(serde_json::Error),
     Timeout(Duration),
     Detailed(crate::failure::FailureCause),
@@ -440,6 +496,7 @@ impl Display for BotBridgeError {
         match self {
             Self::Io(error) => Display::fmt(error, f),
             Self::Protocol(message) => write!(f, "bot bridge protocol error: {message}"),
+            #[cfg(test)]
             Self::Json(error) => Display::fmt(error, f),
             Self::Detailed(cause) => Display::fmt(cause, f),
             Self::Submission(failure) => Display::fmt(&failure.cause, f),
@@ -463,6 +520,7 @@ impl BotBridgeError {
             Self::Detailed(cause) => cause.clone(),
             Self::Submission(failure) => failure.cause.clone(),
             Self::Io(_) => FailureCause::new(CauseKind::Connection, self.to_string()),
+            #[cfg(test)]
             Self::Json(_) => FailureCause::new(CauseKind::Serialization, self.to_string()),
             Self::Timeout(_) => FailureCause::new(CauseKind::Timeout, self.to_string()),
             Self::Protocol(_) => FailureCause::new(CauseKind::Protocol, self.to_string()),
@@ -500,19 +558,20 @@ impl From<std::io::Error> for BotBridgeError {
     }
 }
 
+#[cfg(test)]
 impl From<serde_json::Error> for BotBridgeError {
     fn from(value: serde_json::Error) -> Self {
         Self::Json(value)
     }
 }
 
-static NEXT_ID: AtomicU64 = AtomicU64::new(1);
-
+#[cfg_attr(not(any(test, feature = "voxrig")), allow(unused_variables))]
 impl BotBridge {
     #[must_use]
-    pub fn new(address: impl Into<String>) -> Self {
+    pub fn disconnected() -> Self {
         Self {
-            address: address.into(),
+            #[cfg(test)]
+            test_transport: None,
             timeout: Duration::from_secs(10),
             contents: std::sync::Arc::default(),
             #[cfg(feature = "voxrig")]
@@ -520,9 +579,28 @@ impl BotBridge {
         }
     }
 
+    /// A test seam, never an executable legacy backend.
+    #[cfg(test)]
+    pub(crate) fn with_test_transport(address: impl Into<String>) -> Self {
+        let mut bridge = Self::disconnected();
+        bridge.test_transport = Some(test_transport::TestTransport {
+            address: address.into(),
+            timeout: bridge.timeout,
+        });
+        bridge
+    }
+
+    fn disconnected_error() -> BotBridgeError {
+        BotBridgeError::Protocol("no Voxrig client is connected".into())
+    }
+
     #[must_use]
-    pub const fn with_timeout(mut self, timeout: Duration) -> Self {
+    pub fn with_timeout(mut self, timeout: Duration) -> Self {
         self.timeout = timeout;
+        #[cfg(test)]
+        if let Some(transport) = &mut self.test_transport {
+            transport.timeout = timeout;
+        }
         self
     }
 
@@ -543,7 +621,8 @@ impl BotBridge {
         let native = crate::voxrig_bridge::VoxrigBridge::connect(config).await?;
         let contents = native.contents.clone();
         Ok(Self {
-            address: String::new(),
+            #[cfg(test)]
+            test_transport: None,
             timeout: Duration::from_secs(10),
             contents,
             native: Some(std::sync::Arc::new(native)),
@@ -566,57 +645,17 @@ impl BotBridge {
             .map_err(|_| BotBridgeError::Timeout(self.timeout))?
     }
 
+    #[cfg(test)]
     async fn request<T: for<'de> Deserialize<'de>>(
         &self,
         method: &str,
         params: Value,
     ) -> Result<T, BotBridgeError> {
-        #[cfg(feature = "voxrig")]
-        if self.native.is_some() {
-            return Err(BotBridgeError::Protocol(format!(
-                "Voxrig operation is not implemented: {method}"
-            )));
-        }
-        let timeout = self.timeout;
-        let operation = async {
-            let mut stream = TcpStream::connect(&self.address).await?;
-            let request = json!({
-                "id": NEXT_ID.fetch_add(1, Ordering::Relaxed),
-                "method": method,
-                "params": params,
-            });
-            stream
-                .write_all(serde_json::to_string(&request)?.as_bytes())
-                .await?;
-            stream.write_all(b"\n").await?;
-            let mut response = String::new();
-            BufReader::new(stream).read_line(&mut response).await?;
-            let response: Value = serde_json::from_str(&response)?;
-            if let Some(error) = response.get("error") {
-                if response.get("failure_protocol").and_then(Value::as_str)
-                    == Some("dustroute.bridge-failure.v1")
-                    && let Some(detail) = response.get("submission_failure")
-                {
-                    let detail = serde_json::from_value::<crate::failure::SubmissionFailure>(
-                        detail.clone(),
-                    )?;
-                    return Err(BotBridgeError::Submission(Box::new(detail)));
-                }
-                return Err(BotBridgeError::Protocol(
-                    error.as_str().unwrap_or("unknown bridge error").to_owned(),
-                ));
-            }
-            serde_json::from_value(
-                response
-                    .get("result")
-                    .cloned()
-                    .ok_or_else(|| BotBridgeError::Protocol("response has no result".to_owned()))?,
-            )
-            .map_err(Into::into)
-        };
-        tokio::time::timeout(timeout, operation)
-            .await
-            .map_err(|_| BotBridgeError::Timeout(timeout))?
+        let transport = self
+            .test_transport
+            .as_ref()
+            .ok_or_else(Self::disconnected_error)?;
+        transport.request(method, params).await
     }
 
     pub async fn status(&self) -> Result<BotStatus, BotBridgeError> {
@@ -625,7 +664,14 @@ impl BotBridge {
         if let Some(native) = &self.native {
             return self.native_timeout(native.status()).await;
         }
-        self.request("status", json!({})).await
+        #[cfg(test)]
+        {
+            self.request("status", json!({})).await
+        }
+        #[cfg(not(test))]
+        {
+            Err(Self::disconnected_error())
+        }
     }
 
     pub async fn observe_player(
@@ -645,6 +691,7 @@ impl BotBridge {
                 "gaze distance must be positive and at most {limit} blocks for this adapter"
             )));
         }
+        #[cfg(test)]
         let params = json!({ "player": player, "max_distance": max_distance });
         #[cfg(feature = "voxrig")]
         if let Some(native) = &self.native {
@@ -652,20 +699,27 @@ impl BotBridge {
                 .native_timeout(native.observe_player(player, max_distance))
                 .await;
         }
-        match self.request("observe_player", params.clone()).await {
-            Ok(observation) => Ok(observation),
-            Err(BotBridgeError::Protocol(message))
-                if message.starts_with("player is not visible to the bot:") =>
-            {
-                let _: Value = self
-                    .request("approach_player", json!({ "player": player }))
-                    .await?;
-                let mut observation: PlayerObservation =
-                    self.request("observe_player", params).await?;
-                observation.reacquired = true;
-                Ok(observation)
+        #[cfg(test)]
+        {
+            match self.request("observe_player", params.clone()).await {
+                Ok(observation) => Ok(observation),
+                Err(BotBridgeError::Protocol(message))
+                    if message.starts_with("player is not visible to the bot:") =>
+                {
+                    let _: Value = self
+                        .request("approach_player", json!({ "player": player }))
+                        .await?;
+                    let mut observation: PlayerObservation =
+                        self.request("observe_player", params).await?;
+                    observation.reacquired = true;
+                    Ok(observation)
+                }
+                Err(error) => Err(error),
             }
-            Err(error) => Err(error),
+        }
+        #[cfg(not(test))]
+        {
+            Err(Self::disconnected_error())
         }
     }
 
@@ -674,25 +728,32 @@ impl BotBridge {
         if let Some(native) = &self.native {
             return self.native_timeout(native.visible_players()).await;
         }
-        self.request("visible_players", json!({})).await
+        #[cfg(test)]
+        {
+            self.request("visible_players", json!({})).await
+        }
+        #[cfg(not(test))]
+        {
+            Err(Self::disconnected_error())
+        }
     }
 
     pub fn observation_capabilities(&self) -> ObservationCapabilities {
-        #[cfg(feature = "voxrig")]
-        if self.native.is_some() {
+        #[cfg(test)]
+        if self.test_transport.is_some() {
             return ObservationCapabilities {
-                backend: ObservationBackend::Voxrig,
-                max_region_cells: 262_144,
-                max_gaze_distance_blocks: 64,
-                server_confirmed: false,
+                backend: ObservationBackend::TestTransport,
+                max_region_cells: 8_880,
+                max_gaze_distance_blocks: 256,
+                server_confirmed: true,
                 requires_loaded_cells: true,
             };
         }
         ObservationCapabilities {
-            backend: ObservationBackend::Mineflayer,
-            max_region_cells: 8_880,
-            max_gaze_distance_blocks: 256,
-            server_confirmed: true,
+            backend: ObservationBackend::Voxrig,
+            max_region_cells: 262_144,
+            max_gaze_distance_blocks: 64,
+            server_confirmed: false,
             requires_loaded_cells: true,
         }
     }
@@ -707,14 +768,21 @@ impl BotBridge {
                 .native_timeout(native.observe_player_context(player))
                 .await;
         }
-        // Compatibility transport has no independent context RPC. Its raycast
-        // is incidental: no target is required or used by explicit capture.
-        let observed = self.observe_player(player, 64.0).await?;
-        Ok(PlayerContext {
-            player: observed.player,
-            dimension: observed.dimension,
-            reacquired: observed.reacquired,
-        })
+        #[cfg(test)]
+        {
+            // Compatibility transport has no independent context RPC. Its raycast
+            // is incidental: no target is required or used by explicit capture.
+            let observed = self.observe_player(player, 64.0).await?;
+            Ok(PlayerContext {
+                player: observed.player,
+                dimension: observed.dimension,
+                reacquired: observed.reacquired,
+            })
+        }
+        #[cfg(not(test))]
+        {
+            Err(Self::disconnected_error())
+        }
     }
 
     pub async fn scan_region(
@@ -777,26 +845,42 @@ impl BotBridge {
                 &self.contents,
             );
         }
-        crate::observation_evidence::FreshRegion::server(
-            self.scan_region_validated(min, max, dimension).await?,
-            &self.contents,
-        )
-        .map_err(BotBridgeError::Protocol)
+        #[cfg(test)]
+        {
+            crate::observation_evidence::FreshRegion::server(
+                self.scan_region_validated(min, max, dimension).await?,
+                &self.contents,
+            )
+            .map_err(BotBridgeError::Protocol)
+        }
+        #[cfg(not(test))]
+        {
+            Err(Self::disconnected_error())
+        }
     }
 
+    /// Native client observations never become live server-confirmed evidence.
     pub async fn scan_region_confirmed(
         &self,
         min: Pos,
         max: Pos,
         dimension: &str,
     ) -> Result<ConfirmedRegion, BotBridgeError> {
-        Ok(self
-            .scan_region_validated(min, max, dimension)
-            .await?
-            .into_record())
+        #[cfg(test)]
+        if self.test_transport.is_some() {
+            return Ok(self
+                .scan_region_validated(min, max, dimension)
+                .await?
+                .into_record());
+        }
+        let _ = (min, max, dimension);
+        Err(BotBridgeError::Protocol(
+            "Voxrig observations cannot provide server-confirmed readback".into(),
+        ))
     }
 
-    pub(crate) async fn scan_region_validated(
+    #[cfg(test)]
+    async fn scan_region_validated(
         &self,
         min: Pos,
         max: Pos,
@@ -804,10 +888,8 @@ impl BotBridge {
     ) -> Result<ValidatedRegion, BotBridgeError> {
         let request = uuid::Uuid::new_v4().to_string();
         let region: ConfirmedRegion = self.request(
-            "scan_region",
-            json!({ "min": min, "max": max, "dimension": dimension, "readback_request_id": request }),
-        )
-        .await?;
+            "scan_region", json!({ "min": min, "max": max, "dimension": dimension, "readback_request_id": request }),
+        ).await?;
         region.validate(min, max, dimension, &request)?;
         Ok(ValidatedRegion(region))
     }
@@ -829,33 +911,40 @@ impl BotBridge {
                 },
             });
         }
-        #[derive(Deserialize)]
-        struct ConfirmedBlock {
-            #[serde(flatten)]
-            block: ObservedBlock,
-            readback: ServerReadback,
+        #[cfg(test)]
+        {
+            #[derive(Deserialize)]
+            struct ConfirmedBlock {
+                #[serde(flatten)]
+                block: ObservedBlock,
+                readback: ServerReadback,
+            }
+            let request = uuid::Uuid::new_v4().to_string();
+            let result: ConfirmedBlock = self
+                .request(
+                    "get_block",
+                    json!({ "pos": pos, "dimension": dimension, "readback_request_id": request }),
+                )
+                .await?;
+            let region = ConfirmedRegion {
+                snapshot: MinecraftSnapshot {
+                    min: pos,
+                    max: pos,
+                    blocks: vec![dustroute_translate::snapshot::MinecraftSnapshotBlock {
+                        pos: result.block.pos,
+                        name: result.block.state.name.clone(),
+                        properties: result.block.state.properties.clone(),
+                    }],
+                },
+                readback: result.readback,
+            };
+            region.validate(pos, pos, dimension, &request)?;
+            Ok(result.block)
         }
-        let request = uuid::Uuid::new_v4().to_string();
-        let result: ConfirmedBlock = self
-            .request(
-                "get_block",
-                json!({ "pos": pos, "dimension": dimension, "readback_request_id": request }),
-            )
-            .await?;
-        let region = ConfirmedRegion {
-            snapshot: MinecraftSnapshot {
-                min: pos,
-                max: pos,
-                blocks: vec![dustroute_translate::snapshot::MinecraftSnapshotBlock {
-                    pos: result.block.pos,
-                    name: result.block.state.name.clone(),
-                    properties: result.block.state.properties.clone(),
-                }],
-            },
-            readback: result.readback,
-        };
-        region.validate(pos, pos, dimension, &request)?;
-        Ok(result.block)
+        #[cfg(not(test))]
+        {
+            Err(Self::disconnected_error())
+        }
     }
 
     pub async fn activate_lever(
@@ -869,11 +958,18 @@ impl BotBridge {
                 .native_timeout(native.activate_lever(pos, dimension))
                 .await;
         }
-        self.request(
-            "activate_lever",
-            json!({ "pos": pos, "dimension": dimension }),
-        )
-        .await
+        #[cfg(test)]
+        {
+            self.request(
+                "activate_lever",
+                json!({ "pos": pos, "dimension": dimension }),
+            )
+            .await
+        }
+        #[cfg(not(test))]
+        {
+            Err(Self::disconnected_error())
+        }
     }
 
     pub async fn approach_lever(
@@ -887,14 +983,25 @@ impl BotBridge {
                 .native_timeout(native.approach_lever(pos, dimension))
                 .await;
         }
-        self.request(
-            "approach_lever",
-            json!({ "pos": pos, "dimension": dimension }),
-        )
-        .await
+        #[cfg(test)]
+        {
+            self.request(
+                "approach_lever",
+                json!({ "pos": pos, "dimension": dimension }),
+            )
+            .await
+        }
+        #[cfg(not(test))]
+        {
+            Err(Self::disconnected_error())
+        }
     }
 
-    pub async fn wait_ticks(&self, ticks: u16, dimension: &str) -> Result<Value, BotBridgeError> {
+    pub async fn wait_ticks(
+        &self,
+        ticks: u16,
+        dimension: &str,
+    ) -> Result<WaitReceipt, BotBridgeError> {
         let _measurement = span(Phase::Wait).ticks(ticks);
         #[cfg(feature = "voxrig")]
         if let Some(native) = &self.native {
@@ -905,11 +1012,25 @@ impl BotBridge {
                 )
                 .await;
         }
-        self.request(
-            "wait_ticks",
-            json!({ "ticks": ticks, "dimension": dimension }),
-        )
-        .await
+        #[cfg(test)]
+        {
+            let _: Value = self
+                .request(
+                    "wait_ticks",
+                    json!({ "ticks": ticks, "dimension": dimension }),
+                )
+                .await?;
+            Ok(WaitReceipt {
+                waited_ticks: ticks,
+                clock: WaitClock::Fixture,
+                receive_sequence: 0,
+                server_time_sample: None,
+            })
+        }
+        #[cfg(not(test))]
+        {
+            Err(Self::disconnected_error())
+        }
     }
 
     pub async fn start_update_recording(
@@ -925,16 +1046,23 @@ impl BotBridge {
                 .native_timeout(native.start_update_recording(min, max, dimension, max_events))
                 .await;
         }
-        self.request(
-            "start_update_recording",
-            json!({
-                "min": min,
-                "max": max,
-                "dimension": dimension,
-                "max_events": max_events
-            }),
-        )
-        .await
+        #[cfg(test)]
+        {
+            self.request(
+                "start_update_recording",
+                json!({
+                    "min": min,
+                    "max": max,
+                    "dimension": dimension,
+                    "max_events": max_events
+                }),
+            )
+            .await
+        }
+        #[cfg(not(test))]
+        {
+            Err(Self::disconnected_error())
+        }
     }
 
     pub async fn stop_update_recording(
@@ -948,11 +1076,18 @@ impl BotBridge {
                 .native_timeout(native.stop_update_recording(recording_id, dimension))
                 .await;
         }
-        self.request(
-            "stop_update_recording",
-            json!({ "recording_id": recording_id, "dimension": dimension }),
-        )
-        .await
+        #[cfg(test)]
+        {
+            self.request(
+                "stop_update_recording",
+                json!({ "recording_id": recording_id, "dimension": dimension }),
+            )
+            .await
+        }
+        #[cfg(not(test))]
+        {
+            Err(Self::disconnected_error())
+        }
     }
 
     pub async fn preview_region(
@@ -961,7 +1096,7 @@ impl BotBridge {
         min: Pos,
         max: Pos,
         dimension: &str,
-    ) -> Result<Value, BotBridgeError> {
+    ) -> Result<PreviewSubmission, BotBridgeError> {
         let _measurement = span(Phase::Preview);
         #[cfg(feature = "voxrig")]
         if let Some(native) = &self.native {
@@ -969,11 +1104,28 @@ impl BotBridge {
                 .native_timeout(native.preview_region(player, min, max, dimension))
                 .await;
         }
-        self.request(
-            "preview_region",
-            json!({ "player": player, "min": min, "max": max, "dimension": dimension }),
-        )
-        .await
+        #[cfg(test)]
+        {
+            let result: Value = self
+                .request(
+                    "preview_region",
+                    json!({ "player": player, "min": min, "max": max, "dimension": dimension }),
+                )
+                .await?;
+            Ok(PreviewSubmission {
+                min,
+                max,
+                particle_corners: result
+                    .get("particle_corners")
+                    .and_then(Value::as_u64)
+                    .unwrap_or(0) as u8,
+                submission_only: true,
+            })
+        }
+        #[cfg(not(test))]
+        {
+            Err(Self::disconnected_error())
+        }
     }
 
     pub async fn write_blocks(
@@ -1001,37 +1153,41 @@ impl BotBridge {
                 )
             });
         }
-        if changes.len() > COMMAND_LIMIT {
-            return Err(
-                BotBridgeError::Protocol("command write limit exceeded".into()).with_submission(
-                    Some(0),
+        #[cfg(test)]
+        {
+            if changes.len() > COMMAND_LIMIT {
+                return Err(
+                    BotBridgeError::Protocol("command write limit exceeded".into())
+                        .with_submission(Some(0), changes.len(), false),
+                );
+            }
+            let result: CommandSubmission = self
+                .request(
+                    "submit_command_batch",
+                    serde_json::to_value(MutationRequest {
+                        protocol: MUTATION_PROTOCOL,
+                        changes,
+                        dimension,
+                    })?,
+                )
+                .await
+                .map_err(|error| error.with_submission(None, changes.len(), true))?;
+            if result.submitted_changes != changes.len() {
+                return Err(BotBridgeError::Protocol(
+                    "incomplete submission; inspect live state before retry".into(),
+                )
+                .with_submission(
+                    (result.submitted_changes <= changes.len()).then_some(result.submitted_changes),
                     changes.len(),
-                    false,
-                ),
-            );
+                    true,
+                ));
+            }
+            Ok(result)
         }
-        let result: CommandSubmission = self
-            .request(
-                "submit_command_batch",
-                serde_json::to_value(MutationRequest {
-                    protocol: MUTATION_PROTOCOL,
-                    changes,
-                    dimension,
-                })?,
-            )
-            .await
-            .map_err(|error| error.with_submission(None, changes.len(), true))?;
-        if result.submitted_changes != changes.len() {
-            return Err(BotBridgeError::Protocol(
-                "incomplete submission; inspect live state before retry".into(),
-            )
-            .with_submission(
-                (result.submitted_changes <= changes.len()).then_some(result.submitted_changes),
-                changes.len(),
-                true,
-            ));
+        #[cfg(not(test))]
+        {
+            Err(Self::disconnected_error())
         }
-        Ok(result)
     }
 
     pub async fn place_physical_blocks(
@@ -1058,37 +1214,41 @@ impl BotBridge {
                 )
             });
         }
-        if changes.is_empty() || changes.len() > PHYSICAL_LIMIT {
-            return Err(
-                BotBridgeError::Protocol("physical write limit exceeded".into()).with_submission(
-                    Some(0),
+        #[cfg(test)]
+        {
+            if changes.is_empty() || changes.len() > PHYSICAL_LIMIT {
+                return Err(
+                    BotBridgeError::Protocol("physical write limit exceeded".into())
+                        .with_submission(Some(0), changes.len(), false),
+                );
+            }
+            let result: PhysicalSubmission = self
+                .request(
+                    "submit_physical_batch",
+                    serde_json::to_value(MutationRequest {
+                        protocol: MUTATION_PROTOCOL,
+                        changes,
+                        dimension,
+                    })?,
+                )
+                .await
+                .map_err(|error| error.with_submission(None, changes.len(), true))?;
+            if result.placed_changes != changes.len() {
+                return Err(BotBridgeError::Protocol(
+                    "incomplete placement submission; inspect live state before retry".into(),
+                )
+                .with_submission(
+                    (result.placed_changes <= changes.len()).then_some(result.placed_changes),
                     changes.len(),
-                    false,
-                ),
-            );
+                    true,
+                ));
+            }
+            Ok(result)
         }
-        let result: PhysicalSubmission = self
-            .request(
-                "submit_physical_batch",
-                serde_json::to_value(MutationRequest {
-                    protocol: MUTATION_PROTOCOL,
-                    changes,
-                    dimension,
-                })?,
-            )
-            .await
-            .map_err(|error| error.with_submission(None, changes.len(), true))?;
-        if result.placed_changes != changes.len() {
-            return Err(BotBridgeError::Protocol(
-                "incomplete placement submission; inspect live state before retry".into(),
-            )
-            .with_submission(
-                (result.placed_changes <= changes.len()).then_some(result.placed_changes),
-                changes.len(),
-                true,
-            ));
+        #[cfg(not(test))]
+        {
+            Err(Self::disconnected_error())
         }
-        Ok(result)
     }
 
     #[cfg(feature = "voxrig")]
@@ -1123,7 +1283,7 @@ pub(crate) fn is_valid_minecraft_username(player: &str) -> bool {
 }
 
 /// Transport stubs explicitly provide a receipt. This does not simulate native
-/// confirmation; that behavior is covered by the JS and isolated live trials.
+/// confirmation; native behavior is covered by isolated live trials.
 #[cfg(test)]
 pub(crate) fn test_scan_world(request: &Value, mut world: Value) -> Value {
     if request["method"] == "scan_region" {
@@ -1250,7 +1410,10 @@ mod tests {
             "dimension": "minecraft:overworld"
         }))
         .await;
-        let status = BotBridge::new(address).status().await.unwrap();
+        let status = BotBridge::with_test_transport(address)
+            .status()
+            .await
+            .unwrap();
         assert!(status.connected);
         assert_eq!(status.username, "DustRouteBot");
         assert_eq!(status.version, "1.21.11");
@@ -1280,7 +1443,10 @@ mod tests {
             }
         }))
         .await;
-        let status = BotBridge::new(address).status().await.unwrap();
+        let status = BotBridge::with_test_transport(address)
+            .status()
+            .await
+            .unwrap();
         assert_eq!(status.metrics.requests_total, 12);
         assert_eq!(status.metrics.scan_volume_blocks, 4096);
         assert_eq!(status.metrics.requests_by_method["scan_region"], 3);
@@ -1299,7 +1465,7 @@ mod tests {
             "dimension": "minecraft:overworld"
         }))
         .await;
-        let observation = BotBridge::new(address)
+        let observation = BotBridge::with_test_transport(address)
             .observe_player("builder", 64.0)
             .await
             .unwrap();
@@ -1353,7 +1519,7 @@ mod tests {
                     .unwrap();
             }
         });
-        let observation = BotBridge::new(address)
+        let observation = BotBridge::with_test_transport(address)
             .observe_player("builder", 64.0)
             .await
             .unwrap();
@@ -1363,7 +1529,7 @@ mod tests {
 
     #[tokio::test]
     async fn rejects_a_player_name_before_sending_a_command() {
-        let error = BotBridge::new("127.0.0.1:1")
+        let error = BotBridge::with_test_transport("127.0.0.1:1")
             .observe_player("builder /kill", 64.0)
             .await
             .unwrap_err();
@@ -1393,7 +1559,7 @@ mod tests {
                     .unwrap();
             }
         });
-        let error = BotBridge::new(address)
+        let error = BotBridge::with_test_transport(address)
             .observe_player("builder", 64.0)
             .await
             .unwrap_err();
@@ -1416,7 +1582,10 @@ mod tests {
                 .await
                 .unwrap();
         });
-        let error = BotBridge::new(address).status().await.unwrap_err();
+        let error = BotBridge::with_test_transport(address)
+            .status()
+            .await
+            .unwrap_err();
         assert!(error.to_string().contains("chunk unavailable"));
     }
 
@@ -1428,7 +1597,7 @@ mod tests {
             let (_stream, _) = listener.accept().await.unwrap();
             tokio::time::sleep(Duration::from_secs(1)).await;
         });
-        let error = BotBridge::new(address)
+        let error = BotBridge::with_test_transport(address)
             .with_timeout(Duration::from_millis(10))
             .status()
             .await
@@ -1462,7 +1631,7 @@ mod tests {
                     state: "minecraft:stone".parse().unwrap(),
                 })
                 .collect();
-            let error = BotBridge::new(address)
+            let error = BotBridge::with_test_transport(address)
                 .write_blocks(&changes, "minecraft:overworld")
                 .await
                 .unwrap_err();

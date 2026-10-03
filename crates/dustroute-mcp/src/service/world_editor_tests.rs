@@ -36,7 +36,7 @@ async fn validate(
     Vec<RegionBounds>,
 ) {
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let bridge = BotBridge::new(listener.local_addr().unwrap().to_string());
+    let bridge = BotBridge::with_test_transport(listener.local_addr().unwrap().to_string());
     let scans = Arc::new(Mutex::new(Vec::new()));
     let observed = scans.clone();
     let transport = tokio::spawn(async move {

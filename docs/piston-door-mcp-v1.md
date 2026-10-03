@@ -97,13 +97,13 @@ undo record.
 
 - [Low-layer evidence](piston-low-layer-validation.md) establishes the bounded
   mechanical and single-input fixture progression.
-- [MCP operation summary](../crates/dustroute-mcp/mineflayer/e2e/fixtures/piston-door-mcp-summary.json)
+- [MCP operation summary](evidence/legacy-mineflayer/piston-door-mcp-summary.json)
   records three close/open/close trials, fresh recognition, preview and stale-world gates.
-- [MCP construction summary](../crates/dustroute-mcp/mineflayer/e2e/fixtures/piston-placement-mcp-summary.json)
+- [MCP construction summary](evidence/legacy-mineflayer/piston-placement-mcp-summary.json)
   records three construction/recognition/operation/removal trials and cleanup.
 - Synthetic tests cover incomplete/mixed/moving-marker snapshots, single-use
   plans, uncertain responses, read-only policy, version and exact-state checks.
 
 Stable live state matches are not proof of exact tick equivalence, all pulse
 widths, distant effects, entities, survival building or endurance behavior.
-Reproduction procedures are in the [E2E guide](../crates/dustroute-mcp/mineflayer/e2e/README.md).
+Reproduction procedures are in the [E2E guide](evidence/legacy-mineflayer/README.md).

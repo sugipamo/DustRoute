@@ -31,13 +31,13 @@ DustRouteは、Minecraft内のbotとMCP対応のAIクライアントをつない
 
 Rust製クライアントのVoxrig経路では、受信パケットとクライアント側の状態再現から観測します。サーバーMODや観測用の常時コマンド照合は不要です。視線選択はダストやレバーを含む対応済みの静的な輪郭形状を使います。
 
-検証済みのVoxrigソースを同梱しているため、別のチェックアウトは不要です。`--features voxrig`でビルドし、offline認証で接続します。既存のMineflayer経路も明示的に選べます。詳しくは[ネイティブ接続の設定](crates/dustroute-mcp/SETUP.md#native-rust-client-java-12111)と[観測方式の違い](docs/mcp-public-features.md#observation-backends)を参照してください。
+検証済みのVoxrigソースを同梱しているため、別のチェックアウトは不要です。既定ビルドでVoxrigを有効にし、offline認証で接続します。詳しくは[ネイティブ接続の設定](crates/dustroute-mcp/SETUP.md#native-rust-client-java-12111)と[観測方式の違い](docs/mcp-public-features.md#observation-backends)を参照してください。
 
 1. [セットアップ手順](crates/dustroute-mcp/SETUP.md)に沿って、Minecraftサーバーとbotを準備します。
 2. 同じ手順でMCPサーバーを起動し、AIクライアントに接続します。
 3. Minecraftに入り、まず接続確認と回路の観測から試します。
 
-現状はソースから起動する開発中のツールです。Rustを使い、サーバーを立てる場合はJava 21も必要です。Node.js 22/npmはMineflayer経路で使います。回路の配置はコマンド書き込みを使うため、試験用のワールドから始めてください。設定の詳細や必要な権限はセットアップ手順にまとめています。
+現状はソースから起動する開発中のツールです。Rustを使い、サーバーを立てる場合はJava 21も必要です。Node.jsブリッジは不要です。回路の配置はコマンド書き込みを使うため、試験用のワールドから始めてください。設定の詳細や必要な権限はセットアップ手順にまとめています。
 
 ## 今の対応範囲
 

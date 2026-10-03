@@ -1,5 +1,11 @@
 # フライングマシンの生成
 
+> Historical capture instructions: Mineflayer and its executable harnesses were
+> removed on 2026-10-03. Commands below describe the retained trials and are no
+> longer runnable in this checkout. Source is retained in Git at `9b62dcf`.
+> Use [native setup](../crates/dustroute-mcp/SETUP.md) for the current backend.
+
+
 共通の物理runtime・SingleOperation型・Blueprint採用・Assembly配置を使い、
 有限距離の一方向機を生成する。機体の構成はRustの型付き定数で定義し、生成処理は
 ブロックの動きを特別扱いしない。`engine` で駆動部を、`body` で機体の追加部品を選ぶ。

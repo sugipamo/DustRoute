@@ -13,7 +13,7 @@ from compare_device_circuits import compare_model, observe
 from make_device_circuit_fixtures import locking_circuit, torch_feedback
 from fixture_geometry import rotate
 from make_passive_shape_fixtures import cases as shape_cases
-from observe_device_circuit import compare_capture
+from device_capture_comparison import compare_capture
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / 'crates/dustroute-translate/tests/fixtures/device-circuits'
@@ -304,7 +304,7 @@ class DeviceCircuitEvidence(unittest.TestCase):
                 if kind != 'missing':
                     paths['.raw.ndjson'].write_text(''.join(json.dumps(r) + '\n' for r in record['raw_interval']))
                     paths['.client.json'].write_text(json.dumps(record['client']))
-                with patch('observe_device_circuit.subprocess.run', return_value=
+                with patch('device_capture_comparison.subprocess.run', return_value=
                            subprocess.CompletedProcess([], 1, stdout='', stderr='explicit rejection')) as run:
                     outcome, _ = compare_capture(paths, record['fixture'])
                 self.assertEqual(outcome['classification'], expected)

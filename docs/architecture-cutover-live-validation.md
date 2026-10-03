@@ -1,5 +1,11 @@
 # Live operation checks after the architecture cutover
 
+> Historical capture instructions: Mineflayer and its executable harnesses were
+> removed on 2026-10-03. Commands below describe the retained trials and are no
+> longer runnable in this checkout. Source is retained in Git at `9b62dcf`.
+> Use [native setup](../crates/dustroute-mcp/SETUP.md) for the current backend.
+
+
 This follows the [offline cutover verification](architecture-cutover-validation.md).
 Use the existing private Java 1.21.11 test server, fresh MCP state directories,
 and new isolated coordinates. Both MCP and the JavaScript bridge use the current
@@ -115,7 +121,7 @@ for this source-frame door fixture or R90 for the flight fixture:
 python3 tools/observe_assembly_construction.py --run-id NEW_ID --x NEW_X --fixture .local/new-door.fixture.json --rotation r0 --persistence --capture-construction
 ```
 
-For basic circuits, follow the [E2E setup](../crates/dustroute-mcp/mineflayer/e2e/README.md),
+For basic circuits, follow the [E2E setup](evidence/legacy-mineflayer/README.md),
 start the current bridge on the private server and use a fresh `DUSTROUTE_STATE_DIR`
 and unused `DUSTROUTE_E2E_RUN_SLOT`. Run:
 

@@ -12,7 +12,8 @@ async fn diagnostics_preserve_input_constraints_identity_and_connection_causes()
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let address = listener.local_addr().unwrap().to_string();
     drop(listener); // A deterministic disconnected transport, no Minecraft process.
-    let mut service = DustRouteMcp::with_policy_and_player(address, McpPolicy::default(), "Tester");
+    let mut service =
+        DustRouteMcp::with_test_transport_and_player(address, McpPolicy::default(), "Tester");
     service.state_store = PlanStateStore::new(root.clone(), 3600);
     let (client, server) = serve(service).await;
     let limit = call(&client, "get_world", json!({"max_components":0})).await;
@@ -70,7 +71,7 @@ async fn polling_observes_inflight_scan_and_keeps_typed_failure_or_cancellation(
         });
         let root = temporary();
         let mut service =
-            DustRouteMcp::with_policy_and_player(address, McpPolicy::default(), "Tester");
+            DustRouteMcp::with_test_transport_and_player(address, McpPolicy::default(), "Tester");
         service.state_store = PlanStateStore::new(root.clone(), 3600);
         service.tool_router = DustRouteMcp::tool_router();
         service.selections.lock().await.insert(
@@ -153,7 +154,7 @@ async fn polling_observes_inflight_scan_and_keeps_typed_failure_or_cancellation(
 async fn live_activity_does_not_replace_consumed_history_or_claim_mutation_cancellation() {
     let root = temporary();
     let mut service =
-        DustRouteMcp::with_policy_and_player("127.0.0.1:1", McpPolicy::default(), "Tester");
+        DustRouteMcp::with_test_transport_and_player("127.0.0.1:1", McpPolicy::default(), "Tester");
     service.state_store = PlanStateStore::new(root.clone(), 3600);
     service.tool_router = DustRouteMcp::tool_router();
     let registry = service.operations.clone();
@@ -264,7 +265,7 @@ async fn invoke_reports_submitted_but_unverified_changes_while_readback_is_pendi
         }
     });
     let root = temporary();
-    let mut service = DustRouteMcp::with_policy_and_profile(
+    let mut service = DustRouteMcp::with_test_transport_and_profile(
         address,
         McpPolicy {
             read_only: false,
@@ -375,7 +376,7 @@ async fn visible_player_reacquisition_and_refresh_failures_keep_their_cause() {
             }
         });
         let root = temporary();
-        let mut service = DustRouteMcp::with_policy_and_profile(
+        let mut service = DustRouteMcp::with_test_transport_and_profile(
             address,
             McpPolicy::default(),
             ToolProfile::Debug,

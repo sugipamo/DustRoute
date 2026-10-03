@@ -4,6 +4,7 @@ use dustroute_physical::Pos;
 use dustroute_translate::native_state::NativeBlockState;
 use serde::{Deserialize, Serialize};
 
+#[cfg(test)]
 pub const MUTATION_PROTOCOL: &str = "dustroute.bridge-mutation.v1";
 pub const COMMAND_LIMIT: usize = 32_768;
 pub const PHYSICAL_LIMIT: usize = 128;
@@ -36,6 +37,7 @@ pub enum PhysicalChange {
     },
 }
 
+#[cfg(test)]
 #[derive(Debug, Serialize)]
 pub(crate) struct MutationRequest<'a, T> {
     pub protocol: &'static str,
@@ -52,7 +54,8 @@ pub struct CommandSubmission {
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum PhysicalPlacementMode {
-    MineflayerPlayer,
+    #[cfg(test)]
+    TestPlayer,
     VoxrigCreativePlayer,
 }
 
@@ -68,7 +71,7 @@ pub struct PhysicalSubmission {
 mod tests {
     use super::*;
     #[test]
-    fn mutation_contract_is_shared_with_javascript_and_rejects_retired_receipts() {
+    fn mutation_contract_rejects_retired_receipts() {
         let fixture: serde_json::Value =
             serde_json::from_str(include_str!("../fixtures/mutation-contract.json")).unwrap();
         let command: Vec<CommandWrite> =

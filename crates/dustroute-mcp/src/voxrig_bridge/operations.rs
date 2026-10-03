@@ -5,11 +5,11 @@ mod recording;
 use super::{VoxrigBridge, native_error};
 use crate::bridge::{
     BotBridgeError, BotStatus, LeverActivation, LeverApproach, PlayerObservation,
-    TargetingGeometry, Vec3, VisiblePlayer, is_valid_minecraft_username,
+    PreviewSubmission, ServerTimeSample, TargetingGeometry, Vec3, VisiblePlayer, WaitClock,
+    WaitReceipt, is_valid_minecraft_username,
 };
 use crate::bridge_protocol::{COMMAND_LIMIT, CommandSubmission, CommandWrite, MutationProtocol};
 use dustroute_physical::Pos;
-use serde_json::{Value, json};
 use std::time::{Duration, Instant};
 use voxrig::versions::java_1_21_11::operations::{Operations, PlayerState};
 use voxrig::{BlockFace, NativeBlockState, Region};
@@ -197,7 +197,7 @@ impl VoxrigBridge {
         min: Pos,
         max: Pos,
         dimension: &str,
-    ) -> Result<Value, BotBridgeError> {
+    ) -> Result<PreviewSubmission, BotBridgeError> {
         if !is_valid_minecraft_username(player) {
             return Err(fail("invalid preview player"));
         }
@@ -217,7 +217,12 @@ impl VoxrigBridge {
                 }
             }
         }
-        Ok(json!({"min":min,"max":max,"particle_corners":8,"submission_only":true}))
+        Ok(PreviewSubmission {
+            min,
+            max,
+            particle_corners: 8,
+            submission_only: true,
+        })
     }
     fn operations(&self) -> Result<Operations, BotBridgeError> {
         self.client()?
@@ -277,7 +282,11 @@ impl VoxrigBridge {
             })
             .collect())
     }
-    pub async fn wait_ticks(&self, ticks: u16, dimension: &str) -> Result<Value, BotBridgeError> {
+    pub async fn wait_ticks(
+        &self,
+        ticks: u16,
+        dimension: &str,
+    ) -> Result<WaitReceipt, BotBridgeError> {
         if !(1..=200).contains(&ticks) {
             return Err(fail("ticks must be 1..200"));
         }
@@ -287,9 +296,16 @@ impl VoxrigBridge {
         if before.connection_id != after.connection_id {
             return Err(fail("connection changed during wait"));
         }
-        Ok(
-            json!({"waited_ticks":ticks,"clock":"client_wall_time_20hz","receive_sequence":after.receive_sequence,"server_time_sample":after.server_time}),
-        )
+        Ok(WaitReceipt {
+            waited_ticks: ticks,
+            clock: WaitClock::ClientWallTime20Hz,
+            receive_sequence: after.receive_sequence,
+            server_time_sample: after.server_time.map(|time| ServerTimeSample {
+                game_age: time.game_age,
+                day_time: time.day_time,
+                receive_sequence: time.receive_sequence,
+            }),
+        })
     }
     pub async fn write_blocks(
         &self,

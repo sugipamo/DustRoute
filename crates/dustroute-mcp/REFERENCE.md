@@ -34,7 +34,7 @@ and coordinate-state representations are documented in
 Backend selection, targeting, source evidence and clocks follow the
 [observation backend guide](../../docs/mcp-public-features.md#observation-backends).
 Native builds use the pinned `vendor/voxrig` source and need no separate bridge
-process. `DUSTROUTE_BOT_BRIDGE` overrides only the Mineflayer bridge address.
+process. The retired bridge address setting is no longer used.
 Natural-language references such as “what is this?” use `convert_from_circuit`. One call
 returns the focused physical component, mixed-IR summary, optional
 whole-circuit function candidates, observation completeness, and diagnostics.
@@ -286,16 +286,16 @@ test_circuit -> capture circuit_id
   -> undo_operation(confirm=true), if recovery is needed
 ```
 
-Both backends use normal lever interaction rather than changing its `powered`
+The native backend uses normal lever interaction rather than changing its `powered`
 state with `/setblock`. The bot must be within 5.5 blocks of the lever.
-Mineflayer records packet-visible block updates with sequence numbers, its
+Archived Mineflayer recordings contain packet-visible block updates with sequence numbers, their
 physics-tick clock and `sub_tick_order`; conversion retains within-tick order
 alongside the compatibility redstone-tick buckets. Native recordings declare
 `clock=client_frame20_hz`, retain packet boundaries and use `client_tick` or
 `client_redstone_tick` in projected traces. Compatibility fields named
 `*_game_tick` in a native recording still refer to that declared client clock.
 They are not server timestamps. Native recordings exclude reconstructed piston
-frames; either backend's packet order does not reveal the vanilla scheduler.
+frames; packet order does not reveal the vanilla scheduler.
 Cross-clock comparison reports `time_unit_mismatch`; a native client-frame trace
 cannot establish a pulse width specified in server game ticks. Runs are bounded
 to 200 ticks of the selected recording clock and 65,536 events.
@@ -317,7 +317,7 @@ ID, before/after signal values when available, and elapsed ordering. A
 ordering differences are retained rather than silently treated as electrical
 mismatches.
 Each trace event additionally carries `event_kind`, `cause`, `source`, and an
-optional `cause_sequence`. Live Mineflayer events use
+optional `cause_sequence`. Archived Mineflayer events use
 `cause=packet_observation` and `source=live_mineflayer`; they do not claim to
 know the vanilla scheduler cause. Voxrig uses `source=live_voxrig` and retains
 `native_packet` connection/receive/cell-order evidence. Event provenance is
