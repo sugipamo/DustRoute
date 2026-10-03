@@ -1,0 +1,46 @@
+{
+  "recorded_at_utc": "2026-10-03T06:53:09.228672+00:00",
+  "consumer_base_revision": "8278491",
+  "tested_consumer_change": "Initialize the new diagnostic MiningRecord.recovery_attempt field in the existing cleanup fixture. No caller movement/recovery/observer policy switched.",
+  "consumer_fixture_sha256": "82a1941a370c0091564762255a0cc9a405366c83ccb58c8b523e8d7130588e97",
+  "previous_vendor_revision": "2b6e7bfc94e6270054eac5c7b14a74d4657a411c",
+  "vendor_revision": "4b46c66cd031eacc72bdf82736eaa60c57ccb9ab",
+  "vendor_files": 305,
+  "native_live_revision": "bed0465a5e3294862511e49d9d2fe57768c7201f",
+  "implementation_equivalence": "git diff of src,data,scripts,examples,Cargo.toml,Cargo.lock between native live revision and imported revision is empty. Later upstream commit adds only acceptance docs/evidence.",
+  "checks": [
+    {
+      "command": "cargo test --offline --locked -j 1 -p dustroute-mcp --features voxrig --lib survival -- --test-threads=1",
+      "result": "29 passed, 6 ignored",
+      "artifact": "single-client-integration-survival-20261003.log",
+      "sha256": "96894dcf106e2f11ae8b281a2e3e40be0521b4f460ab12e44f2455cd72536b0e"
+    },
+    {
+      "command": "cargo clippy --offline --locked -j 1 -p dustroute-mcp --features voxrig --all-targets -- -D warnings",
+      "result": "passed; warnings denied",
+      "artifact": "single-client-integration-clippy-native-20261003.log",
+      "sha256": "25c675f4b89f8784071ab7cf1bd613d663306255e77a676368da5b1057070f48"
+    },
+    {
+      "command": "cargo clippy --offline --locked -j 1 -p dustroute-mcp --all-targets -- -D warnings",
+      "result": "passed; warnings denied",
+      "artifact": "single-client-integration-clippy-default-20261003.log",
+      "sha256": "a41051563a4cb5fc1b1bcdd9aa0ba28ca80f7736d629d90cc138218756e8e3a9"
+    },
+    {
+      "command": "python3 scripts/vendor_voxrig.py --check",
+      "result": "305 managed source files verified"
+    },
+    {
+      "command": "cargo fmt --all --check",
+      "result": "passed"
+    }
+  ],
+  "runtime_policy": "The executor still uses independent mining retirement and independent movement observation. Public MCP still refuses an unconfigured survival observer.",
+  "limits": [
+    "No new Minecraft trial in this consumer integration step.",
+    "Full MCP regression suite not rerun; focused survival tests and both all-target compile/lint configurations verified.",
+    "Observer-free movement and construction remain unimplemented pending the movement contract choice.",
+    "Native contract interpretation remains in Voxrig; the immutable snapshot is updated through the maintainer script."
+  ]
+}

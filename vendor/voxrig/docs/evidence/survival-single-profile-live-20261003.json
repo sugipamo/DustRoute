@@ -1,0 +1,117 @@
+{
+  "recorded_date_utc": "2026-10-03",
+  "minecraft": "Java 1.21.11",
+  "source_revision": "bed0465a5e3294862511e49d9d2fe57768c7201f",
+  "scope": "Direct unmodified vanilla, isolated non-OP fixture. One mining/recovery profile; independent test-only viewer. No movement, job continuation or whole Blueprint acceptance.",
+  "runtime": {
+    "java_version": "openjdk version \"21.0.12.1\" 2026-08-18 LTS\nOpenJDK Runtime Environment Temurin-21.0.12.1+1 (build 21.0.12.1+1-LTS)\nOpenJDK 64-Bit Server VM Temurin-21.0.12.1+1 (build 21.0.12.1+1-LTS, mixed mode, sharing)\n",
+    "java_sha256": "2a207f5e7d075afa01d97f8048389a64432a44c4a5af0f5e77d6e286ec5f401d",
+    "server_jar_sha256": "f83b8e093865806f931c7e34aae41b177d4c076335263dd124c75d6d65dd1726",
+    "test_executable_sha256": "d41e964454471d553a471b54504297651910cc6f8852f93485d13ba1d6af8e0b",
+    "flags": [
+      "-XX:ActiveProcessorCount=1",
+      "-Xms256m",
+      "-Xmx768M"
+    ],
+    "test_exit_code": 0,
+    "server_exit_code": 0,
+    "total_seconds": 119.155698830029
+  },
+  "command": "target/debug/deps/voxrig-e098a154f734a32a --exact versions::java_1_21_11::client::mining_native_trials::native_survival_same_profile_mining_recovery --ignored --test-threads=1 --nocapture",
+  "cases": [
+    {
+      "name": "normal_finish",
+      "source_closed_ms": 1209,
+      "fresh_admitted_ms": 1553,
+      "external_completed_ms": null,
+      "initial_target": {
+        "name": "minecraft:air",
+        "properties": {}
+      },
+      "retained_target_samples": 0,
+      "followup_mining": false,
+      "replacement": {
+        "name": "minecraft:cobblestone",
+        "properties": {}
+      },
+      "replacement_samples": 174,
+      "replacement_observation_ms": 8978
+    },
+    {
+      "name": "early_finish_abort",
+      "source_closed_ms": 51,
+      "fresh_admitted_ms": 342,
+      "external_completed_ms": null,
+      "initial_target": {
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      "retained_target_samples": 174,
+      "followup_mining": true,
+      "replacement": {
+        "name": "minecraft:cobblestone",
+        "properties": {}
+      },
+      "replacement_samples": 174,
+      "replacement_observation_ms": 8973
+    },
+    {
+      "name": "external_air_immediate_replacement",
+      "source_closed_ms": 203,
+      "fresh_admitted_ms": 478,
+      "external_completed_ms": 203,
+      "initial_target": {
+        "name": "minecraft:stone",
+        "properties": {}
+      },
+      "retained_target_samples": 174,
+      "followup_mining": true,
+      "replacement": {
+        "name": "minecraft:cobblestone",
+        "properties": {}
+      },
+      "replacement_samples": 174,
+      "replacement_observation_ms": 8981
+    }
+  ],
+  "artifacts": {
+    "survival-single-profile-20261003-a.json.gz": {
+      "sha256": "8195ea11314a3fef584de7b2c567531e429d69ee9cb2176ed9bccaa97ae32a52",
+      "decoded_sha256": "8b9f6e23c45c4d446b26d98c32d46e43bfc5f297daee9508d3c43c5dc187286f",
+      "bytes": 10884518
+    },
+    "survival-single-profile-20261003-a-runtime.json.gz": {
+      "sha256": "b4589f57938af8c210c8ed8d8a48bdd250b7e1c4e3a9d247d02e58d97fcda10d",
+      "decoded_sha256": "af237f85e23516130636e8fc1d48174c3921d774ca00019a374fa958b1321229",
+      "bytes": 2588
+    },
+    "survival-single-profile-20261003-a-test.log.gz": {
+      "sha256": "49fc241255ff6f06d947dc4cbf326a06a269a93a8283b9d21584831a917f7371",
+      "decoded_sha256": "42cb430fbb5dff8577eb94d92a94502ca9e1b6ade74f240db0dea8e970f86153",
+      "bytes": 910
+    },
+    "survival-single-profile-20261003-a-server-console.log.gz": {
+      "sha256": "69c2ec1f4c50190994f6a4f102b7418c83b5510d0cf48d70c6229070cbce5d76",
+      "decoded_sha256": "e3f48a2cd253ee4e4e473dfd0004cb62a9764ef9f3cee5eb3176b81534d581f9",
+      "bytes": 14550
+    },
+    "survival-single-profile-20261003-a-controller.py.gz": {
+      "sha256": "c4a3aa57d9231607cb9396d7931053893d5ac23af52e6d95196780a5b663d3a1",
+      "decoded_sha256": "e7008f33b46409249fda356b1df93268e576ba8296c79f236db47c0d837c0ffa",
+      "bytes": 6036
+    }
+  },
+  "offline_verification": {
+    "library_before_module_extraction": "198 passed, 7 ignored",
+    "mining_regressions_after_module_extraction": "28 passed",
+    "documentation_tests": "2 passed",
+    "all_targets_clippy": "passed, warnings denied"
+  },
+  "limits": [
+    "Observer is used only after native recovery for independent comparison, not a retirement watch/admission condition.",
+    "Nine-second retained target and replacement comparisons are bounded evidence, not a universal future-effects guarantee.",
+    "Continuous reuse of the original mining connection is not implemented.",
+    "Observer-free movement and DustRoute production switching are not implemented in this revision.",
+    "Same-profile semantics are limited to direct unmodified vanilla 1.21.11 and exclusive profile ownership."
+  ]
+}

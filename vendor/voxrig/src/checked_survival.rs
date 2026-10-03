@@ -33,9 +33,10 @@ pub use native::{
     HypotheticalMovementPreview, HypotheticalPlacement, HypotheticalReconnectBoundary,
     InventorySlot, InventorySwap, InventorySwapObservation, LocalPlayerState,
     MAX_SURVIVAL_CONTROL_TICKS, MiningIntent, MiningInventoryChange, MiningInventoryChangeKind,
-    MiningRecord, MiningRecoveryEvidence, MiningRetirementStatus, MiningStatus, OperationHistory,
-    PlacementIntent, PlacementStatus, PlayerState, PredictedMotionFrame, StandingContext,
-    StandingPositionBasis, SurvivalControl, SurvivalInput, SurvivalMotionRecheck,
+    MiningRecord, MiningRecoveryAttempt, MiningRecoveryBoundary, MiningRecoveryEvidence,
+    MiningRecoveryMethod, MiningRecoveryTarget, MiningRetirementStatus, MiningStatus,
+    OperationHistory, PlacementIntent, PlacementStatus, PlayerState, PredictedMotionFrame,
+    StandingContext, StandingPositionBasis, SurvivalControl, SurvivalInput, SurvivalMotionRecheck,
     SurvivalMotionRecord, SurvivalMotionStatus, SurvivalMovementPreview, SurvivalScenario,
     TerminalClearance,
 };
@@ -59,6 +60,9 @@ pub struct SurvivalCapabilities {
     /// None means this checked contract is unavailable, not that all legacy
     /// player controls are unavailable.
     pub checked_contract: Option<SurvivalContract>,
+    /// Audited direct vanilla same-profile fresh mining recovery. This does not
+    /// imply observer-free movement or permission to reuse the old connection.
+    pub same_profile_mining_recovery: bool,
 }
 impl SurvivalCapabilities {
     /// Discover implementation support without opening a connection.
@@ -69,6 +73,7 @@ impl SurvivalCapabilities {
                 MinecraftVersion::Java1_16_1 => None,
                 MinecraftVersion::Java1_21_11 => Some(SurvivalContract::ObservedDryCubeV1),
             },
+            same_profile_mining_recovery: matches!(version, MinecraftVersion::Java1_21_11),
         }
     }
 }
@@ -293,6 +298,59 @@ impl Operations {
             source: self.clone(),
             observer: observer.clone(),
             watch,
+        })
+    }
+    /// Explicit one-profile recovery for the audited direct vanilla endpoint.
+    /// No observer, world edits or reconnect are performed by preparation.
+    pub async fn prepare_mining_profile_recovery(
+        &self,
+        intent: &MiningIntent,
+    ) -> Result<MiningProfileRecovery> {
+        let watch = self
+            .native
+            .prepare_survival_mining_profile_recovery(intent)
+            .await?;
+        Ok(MiningProfileRecovery {
+            source: self.clone(),
+            watch,
+        })
+    }
+}
+
+/// Original native miner binding; history cannot reconstruct this coordinator.
+/// Clones and independent-retirement handles share one before-I/O login claim.
+#[derive(Clone)]
+pub struct MiningProfileRecovery {
+    source: Operations,
+    watch: native::MiningProfileRecoveryWatch,
+}
+impl MiningProfileRecovery {
+    /// Close before reconnecting. This call alone does not establish retirement.
+    pub async fn close_source(&self) -> Result<()> {
+        self.source.client.disconnect().await
+    }
+    /// Retained source history, including a cancelled or failed recovery claim.
+    pub async fn source_history(&self) -> OperationHistory {
+        self.source.operation_history().await
+    }
+    /// Explicit once-only login using the original endpoint/profile/version.
+    /// New same-profile login and fresh admission establish the recovery boundary.
+    /// No Blueprint, permission or old native operation is transferred.
+    pub async fn reconnect(
+        &self,
+        config: ConnectionConfig,
+        target: MiningRecoveryTarget,
+    ) -> Result<RecoveredSurvivalClient> {
+        let recovered = self
+            .source
+            .native
+            .reconnect_survival_mining_profile(&self.watch, config, target)
+            .await?;
+        let client = recovered.client();
+        Ok(RecoveredSurvivalClient {
+            operations: client.survival()?,
+            client,
+            evidence: recovered.evidence,
         })
     }
 }

@@ -1,4 +1,5 @@
 //! Explicit vanilla player-retirement recovery. Air never releases the old miner.
+use super::recovery::{connect_fresh_miner, identity};
 use super::*;
 use std::time::Duration;
 
@@ -48,50 +49,8 @@ pub enum MiningRetirementStatus {
         record: MiningRetirementRecord,
     },
 }
-/// Fresh connection and stationary target observation after validated retirement.
-#[derive(Clone, Debug, Serialize)]
-pub struct MiningRecoveryEvidence {
-    /// Current-generation PLAYER_LOADED dispatched before exposing new operations.
-    /// This is not server acceptance of a subsequent game action.
-    pub interaction_ready: bool,
-    /// Old mining state is retained; it is never imported into the new session.
-    pub old_history: OperationHistory,
-    /// Independent retirement receipt checked immediately before connecting.
-    pub retirement: MiningRetirementRecord,
-    /// New, live connection identity.
-    pub connection_id: u64,
-    /// Entire new stationary context; contains no inherited position/health data.
-    pub standing: StandingContext,
-    /// Newly loaded exact target contents matching the caller's declared condition.
-    pub target: crate::NativeBlockState,
-    /// New connection's receive boundary; incomparable to the old ordinal.
-    pub receive_sequence: u64,
-}
-/// Explicit recovery result. The original connection remains closed and blocked.
-pub struct MiningRecovery {
-    /// Operations on the fresh connection after loading notification and new
-    /// site/player validation. Original mining authority is never imported.
-    pub operations: Operations,
-    /// Evidence for diagnosis and a new plan; not permission to replay an old job.
-    pub evidence: MiningRecoveryEvidence,
-}
-impl MiningRecovery {
-    /// Handle to this already validated connection for observation, tracing and
-    /// explicit disconnection. Cloning the handle does not reconnect or release
-    /// any operation guard; it uses the same version adapter and session.
-    pub fn client(&self) -> crate::Client {
-        crate::Client::from_java_1_21_11(self.operations.bot.clone())
-    }
-}
-
 fn unavailable(message: &str) -> Error {
     Error::new(ErrorKind::State, anyhow::anyhow!("{message}"))
-}
-fn identity(state: &State) -> Result<LoginIdentity> {
-    state
-        .identity
-        .clone()
-        .ok_or_else(|| unavailable("authenticated login identity unavailable"))
 }
 fn owns(state: &State, watch: &MiningRetirementWatch, owner: u64) -> Result<()> {
     if owner != watch.intent.connection_id
@@ -296,16 +255,8 @@ impl Operations {
                 ));
             }
         };
-        if expected_target != watch.intent.baseline
-            && !matches!(
-                expected_target.name.as_str(),
-                "minecraft:air" | "minecraft:cave_air" | "minecraft:void_air"
-            )
-        {
-            return Err(invalid(
-                "recovery requires air or the original supported target baseline",
-            ));
-        }
+        let target = MiningRecoveryTarget::Exact(expected_target);
+        target.validate(&watch.intent)?;
         // Consume the reconnect stage under the observer lock. Parallel or
         // cancelled callers cannot start a second login from the same receipt.
         let retirement = {
@@ -324,87 +275,22 @@ impl Operations {
             current.recovery_started = true;
             current.clone()
         };
+        self.claim_mining_recovery(
+            &watch.intent,
+            &miner,
+            MiningRecoveryMethod::IndependentRemoval,
+            target.clone(),
+        )
+        .await?;
         let old_history = self.operation_history().await;
-        let bot = Bot::connect(config).await?;
-        bot.wait_until_ready().await?;
-        let operations = bot.operations();
-        // Common loading covers the own chunk, not all inventory/health/site cells.
-        // Wait for those received baselines; the timeout never certifies them.
-        timeout(bot.session.limits.ready_timeout, async {
-            loop {
-                let notified = bot.session.changed.notified();
-                tokio::pin!(notified);
-                notified.as_mut().enable();
-                let state = bot.session.state.lock().await;
-                operations.ready(&state)?;
-                if state.operations.local_player.health.is_some()
-                    && !state
-                        .operations
-                        .inventory
-                        .slots
-                        .contains(&InventorySlot::Unavailable)
-                    && state.world.block(watch.intent.target).is_some()
-                    && survival::standing_baselines_received(&state)?
-                {
-                    return Ok::<(), Error>(());
-                }
-                drop(state);
-                notified.await;
-            }
-        })
-        .await
-        .context("fresh recovery baselines timed out")??;
-        let mut state = bot.session.state.lock().await;
-        operations.ready(&state)?;
-        operations.mutable(&state)?;
-        if identity(&state)?.uuid != watch.miner_uuid
-            || state.operations.game_mode != Some(GameMode::Survival)
-            || state.world.dimension.as_ref().map(|d| &d.0) != Some(&watch.intent.dimension)
-        {
-            return Err(unavailable(
-                "fresh miner identity, mode or dimension differs",
-            ));
-        }
-        let tick = bot.session.started.elapsed().as_millis() as u64 / 50;
-        let standing = survival::context(&mut state, bot.session.id, tick)?;
-        let cell = state.reconstruction.cell(&state.world, watch.intent.target);
-        if !standing.on_ground
-            || standing.submerged
-            || !standing
-                .player
-                .health
-                .as_ref()
-                .is_some_and(|h| h.health > 0.0)
-            || standing.player.block_break_speed.map(|v| v.value) != Some(1.0)
-            || standing.player.mining_efficiency.map(|v| v.value) != Some(0.0)
-            || !standing.player.effect_updates.is_empty()
-            || cell.moving.is_some()
-            || cell.state.as_ref() != Some(&expected_target)
-            || state.reconstruction.issue.is_some()
-            || !state.reconstruction.recovery_chunks.is_empty()
-            || state.operations.inventory.window_id != Some(0)
-            || state.operations.inventory.cursor != InventorySlot::Empty
-            || state.operations.inventory.unsupported_components
-            || state
-                .operations
-                .inventory
-                .slots
-                .contains(&InventorySlot::Unavailable)
-        {
-            return Err(unavailable(
-                "fresh survival site/player/inventory needs inspection and a new plan",
-            ));
-        }
-        let evidence = MiningRecoveryEvidence {
-            interaction_ready: state.loading.notification_dispatched(),
+        let fresh = connect_fresh_miner(config, &miner, &watch.intent, &target).await?;
+        let evidence = fresh.evidence(
             old_history,
-            retirement,
-            connection_id: bot.session.id,
-            standing,
-            target: expected_target,
-            receive_sequence: state.sequence,
-        };
-        drop(state);
+            MiningRecoveryBoundary::IndependentRemoval {
+                receipt: Box::new(retirement),
+            },
+        );
+        let operations = fresh.operations;
         {
             let state = observer.bot.session.state.lock().await;
             observer.ready(&state)?;

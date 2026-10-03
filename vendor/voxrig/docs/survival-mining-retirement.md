@@ -12,6 +12,13 @@ Proxies, tab-list plugins and arbitrary server implementations are not admitted
 as equivalent removal semantics. No bot becomes OP; console writes belong only
 to the disposable comparison fixture.
 
+A separately audited [same-profile recovery](survival-single-profile-recovery.md)
+now permits explicit sequential connections without an observer retirement watch.
+Both methods share fresh-miner admission and an original-source once-only login
+claim. `MiningRecoveryEvidence.boundary` identifies the method; callers formerly
+reading its `retirement` field must now match the boundary variant. These are
+different evidence contracts, and neither reopens the original mining sender.
+
 1. `prepare_survival_mining_retirement(intent, observer)` registers an in-process
    watch while the observer knows the miner's exact login UUID and name. It does
    not disconnect, resend mining or mutate the world. An absent entity, player

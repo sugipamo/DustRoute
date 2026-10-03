@@ -1881,3 +1881,6 @@ async fn planned_multi_heading_path_preserves_turns_and_refuses_stale_preview_be
 
 #[path = "inventory_tests.rs"]
 mod inventory_tests;
+
+#[path = "profile_tests.rs"]
+mod profile_tests;

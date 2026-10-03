@@ -6,6 +6,8 @@ mod inventory;
 mod mining;
 mod movement;
 mod placement;
+mod profile_recovery;
+mod recovery;
 mod retirement;
 mod survival;
 pub use movement::{
@@ -30,11 +32,13 @@ pub use placement::{PlacementIntent, PlacementObservation, PlacementRecord, Plac
 pub(super) use placement::{
     placement_chunk_changed, placement_context_received, placement_received,
 };
-pub(super) use retirement::retirement_received;
-pub use retirement::{
-    MiningRecovery, MiningRecoveryEvidence, MiningRetirementRecord, MiningRetirementStatus,
-    MiningRetirementWatch,
+pub use profile_recovery::MiningProfileRecoveryWatch;
+pub use recovery::{
+    MiningRecovery, MiningRecoveryAttempt, MiningRecoveryBoundary, MiningRecoveryEvidence,
+    MiningRecoveryMethod, MiningRecoveryTarget,
 };
+pub(super) use retirement::retirement_received;
+pub use retirement::{MiningRetirementRecord, MiningRetirementStatus, MiningRetirementWatch};
 use serde::Serialize;
 pub use survival::{
     AttributeValue, LocalPlayerState, MotionInterruption, PlayerHealth, ReceivedEffect,

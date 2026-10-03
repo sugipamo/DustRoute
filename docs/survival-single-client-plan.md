@@ -3,8 +3,11 @@
 Recorded 2026-10-03 UTC after the user requested the investigation's stages as a
 goal. DustRoute work branch: `codex/survival-single-client`, based on `0bfbd57`.
 Voxrig has a separate branch with the same name. Its source is edited separately;
-the immutable production vendor snapshot remains
-`2b6e7bfc94e6270054eac5c7b14a74d4657a411c`.
+the immutable vendor snapshot was initially
+`2b6e7bfc94e6270054eac5c7b14a74d4657a411c`. After native acceptance it was updated
+through the checksum-managed vendor script to
+`4b46c66cd031eacc72bdf82736eaa60c57ccb9ab`, whose implementation is unchanged from
+the live-tested `bed0465` source; only acceptance documentation/evidence was added.
 
 Normal operation is intended to use one builder/account, with an independent
 observer used in verification fixtures. The overall goal is unfinished. Movement
@@ -20,6 +23,17 @@ and report concerns before continuing dependent work.
 | 2. Movement and shared standing | Define the basis for one-bot walk/rest/jump/land and subsequent look/place/mine checks; compare against independent test evidence | Contract review pending; no motion or standing gate has been weakened |
 | 3. DustRoute execution | Use the chosen native contract for admission, placements, cleanup, final checks and durable checkpoints; expose actual evidence in MCP | Pending stage 2; production observer requirement unchanged |
 | 4. Construction continuation acceptance | Complete a roofed build and separate-process continuation through cleanup/retreat, including checkpoint requested during mining | Pending; prior continuation failures remain recorded, not relabelled as passes |
+
+The shared dependency update is independent of the movement policy choice. It
+does not switch DustRoute's executor to the new recovery method, remove its
+observer requirement or authorize prediction-only standing. The consumer's
+diagnostic mining test fixture now initializes the new retained recovery-attempt
+field. [Integration verification](evidence/survival-single-client-integration-20261003.json)
+passed 29 focused survival tests (six opt-in live tests ignored), all-target Clippy
+with and without the native feature, formatting and verification of all 305
+managed snapshot files. This accepts the dependency integration, not observer-free
+runtime construction. No new Minecraft trial or full MCP regression run was made
+for this consumer update.
 
 ## Completed native mining slice
 

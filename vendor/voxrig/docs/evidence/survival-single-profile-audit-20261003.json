@@ -1,0 +1,67 @@
+{
+  "recorded_date_utc": "2026-10-03",
+  "minecraft": "Java 1.21.11",
+  "mappings": "Yarn 1.21.11+build.6",
+  "kind": "Native unchanged-body bytecode control-flow audit; not a live trial",
+  "oracle_jar_sha256": "ff698033028a245f0271c2ee5063831089483a2c2ef680a4ff4fdbb8a1b1b693",
+  "baseline_revision": "2b6e7bfc94e6270054eac5c7b14a74d4657a411c",
+  "inputs": {
+    "PlayerManager.javap": "ed8035f2f17d67b93863c77b9846d9cba8877e5198a5b1c3cf182df6cf2b82a7",
+    "ServerLoginNetworkHandler.javap": "46b8194a223bcfa801ceda0223da02794c8d0edd8546be186e09fda50ada0f52",
+    "ServerConfigurationNetworkHandler.javap": "0090b88daa23d21a6255f11f6eabeda1003d4195a563afc73c53ab1c806b4e09",
+    "PrepareSpawnTask.javap": "9d751f6de846c4be3a2d2e291920aae546b07a46488377389ca1a5ace2d2f437",
+    "ServerNetworkIo.javap": "f496cf81ce9e99c3ee64bb83b707b2374f3add86a0d89146b63a7d1c3f7f133f",
+    "TickManager.javap": "850979e91ef78b4237e004a69f1fe87f8008e40f7ff79c40be11fed8e6f454cb",
+    "ServerTickManager.javap": "b1c832a06cb8bf4fa087f6af5b26d64fd504e7b09b8d3b0fa7d7caf1ad8fcc54",
+    "ServerPlayNetworkHandler.javap": "e705cd3f36856d4b47fcb2e6e141252605efe43c38b94cb4bb59bf77b17ff642",
+    "ServerWorld.javap": "a4525d1a9d69fac7471bb6fd447ba0ed75e0119a0a15f691b0a5bcc1dedf7994",
+    "ServerPlayerEntity.javap": "9d63194c8dd9b0ab251b918aa92a580f15faf9896dfa65143b77468e14cc50ed",
+    "PacketApplyBatcherEntry.javap": "094c595f969e755369d89b4fc0c170cc6fc4e0b8c4e0c7dac8e90954ef8b653a",
+    "ServerPlayerInteractionManager.javap": "21844711c1dc3d6c98467f42dde0f7aeaef94f9807461644123aa206bc87e5a3"
+  },
+  "facts": [
+    {
+      "method": "ServerLoginNetworkHandler.tickVerify",
+      "offsets": "90..120",
+      "fact": "Calls UUID duplicate disconnect and waits when duplicates exist; otherwise sends login success."
+    },
+    {
+      "method": "ServerLoginNetworkHandler.tick",
+      "offsets": "24..59",
+      "fact": "Waiting duplicate login sends success only after hasPlayerWithId is false."
+    },
+    {
+      "method": "ServerLoginNetworkHandler.hasPlayerWithId",
+      "offsets": "0..22",
+      "fact": "Looks up exact profile UUID through PlayerManager.getPlayer."
+    },
+    {
+      "method": "ServerConfigurationNetworkHandler.onReady",
+      "offsets": "0..12,44..73",
+      "fact": "Main-thread admission refuses a remaining registered same-UUID player before completing spawn."
+    },
+    {
+      "method": "PlayerManager.remove",
+      "offsets": "110..183",
+      "fact": "Removes old world player and list entry before removing matching UUID map entry."
+    },
+    {
+      "method": "ServerWorld.removePlayer / method_31420",
+      "offsets": "0..5 / 0..8",
+      "fact": "Marks player removed; world entity tick loop skips removed entities."
+    },
+    {
+      "method": "ServerNetworkIo.tick",
+      "offsets": "46..54,145..152",
+      "fact": "Ticks open connections; closed connections are removed and their disconnection is handled."
+    }
+  ],
+  "interpretation": "For direct unmodified vanilla 1.21.11 and exclusive profile ownership, a fresh authenticated same-profile login after original local closure excludes the old registered player. New loading/site/player/inventory admission is still required. This is not safe old-session reuse.",
+  "limits": [
+    "No proxy/plugin/other-server equivalence.",
+    "No new live trial in this audit.",
+    "No same-session mining continuation fence established.",
+    "No observer-free movement contract introduced.",
+    "Game method bodies are not redistributed."
+  ]
+}

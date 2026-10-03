@@ -248,6 +248,7 @@ mod tests {
                 sole_cause: true,
             }),
             removal: None,
+            recovery_attempt: None,
         };
         (edit, record)
     }

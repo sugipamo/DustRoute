@@ -82,6 +82,231 @@ async fn native_survival_mining_api_finish_abort_and_disconnect() {
     comparison(true).await;
 }
 
+#[tokio::test]
+#[ignore = "requires isolated vanilla 1.21.11 non-OP fixture and explicit console controller"]
+async fn native_survival_same_profile_mining_recovery() {
+    use crate::checked_survival::{
+        MiningRecoveryBoundary, MiningRecoveryTarget, MiningStatus, PlacementStatus,
+    };
+    use std::io::{Seek, Write};
+    let port: u16 = std::env::var("NATIVE_MINING_PORT")
+        .unwrap()
+        .parse()
+        .unwrap();
+    assert_eq!(port, 25572);
+    let mut file = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(std::env::var("NATIVE_MINING_OUTPUT").unwrap())
+        .unwrap();
+    let mut bot = connect("NatMineBot", port).await;
+    let viewer = connect("NatMineView", port).await;
+    let target = [2, -59, 0];
+    let config = ConnectionConfig::offline(
+        crate::Server::new("127.0.0.1", port),
+        "NatMineBot",
+        MinecraftVersion::Java1_21_11,
+    );
+    let mut cases = Vec::new();
+    for (name, wait_ms) in [
+        ("normal_finish", 1100),
+        ("early_finish_abort", 50),
+        ("external_air_immediate_replacement", 50),
+    ] {
+        phase(&format!("PROFILE_FIXTURE {name}: prepare dry floor, support [2,-60,0], target [2,-59,0], one supplied cobblestone in hotbar 0, empty hand 1; enter")).await;
+        // Fixture writes precede the case, not a production readiness/retirement fence.
+        tokio::time::sleep(Duration::from_millis(500)).await;
+        let source = crate::Client::from_java_1_21_11(bot.clone())
+            .survival()
+            .unwrap();
+        source.select_hotbar(1).await.unwrap();
+        source.look([-90.0, 3.0]).await.unwrap();
+        bot.start_packet_trace(8_388_608).await.unwrap();
+        viewer.start_packet_trace(8_388_608).await.unwrap();
+        let start = Instant::now();
+        let intent = source
+            .start_survival_mining(target, crate::BlockFace::West)
+            .await
+            .unwrap();
+        let recovery = source
+            .prepare_mining_profile_recovery(&intent)
+            .await
+            .unwrap();
+        tokio::time::sleep(Duration::from_millis(wait_ms)).await;
+        source.finish_survival_mining(&intent).await.unwrap();
+        if name != "normal_finish" {
+            source.abort_survival_mining(&intent).await.unwrap();
+        }
+        let external = if name == "external_air_immediate_replacement" {
+            phase("PROFILE_EXTERNAL: console supplies air then immediate original stone at [2,-59,0]; enter").await;
+            assert!(start.elapsed() < Duration::from_secs(3));
+            Some(start.elapsed().as_millis())
+        } else {
+            None
+        };
+        if name == "normal_finish" {
+            assert!(matches!(
+                source
+                    .wait_survival_mining(&intent, Duration::from_secs(3))
+                    .await
+                    .unwrap(),
+                MiningStatus::ObservedRemoved { .. }
+            ));
+        }
+        let old_trace = bot.stop_packet_trace().await.unwrap();
+        // No viewer watch, profile removal wait or world read participates here.
+        recovery.close_source().await.unwrap();
+        let closed_ms = start.elapsed().as_millis();
+        let mut fresh = recovery
+            .reconnect(config.clone(), MiningRecoveryTarget::OriginalOrAir)
+            .await
+            .unwrap();
+        let connected_ms = start.elapsed().as_millis();
+        assert!(matches!(
+            fresh.evidence.boundary,
+            MiningRecoveryBoundary::SameProfileLogin { .. }
+        ));
+        assert_ne!(fresh.evidence.connection_id, intent.connection_id);
+        assert!(fresh.evidence.old_history.connection_closed && fresh.evidence.interaction_ready);
+        assert!(
+            recovery
+                .clone()
+                .reconnect(config.clone(), MiningRecoveryTarget::OriginalOrAir)
+                .await
+                .is_err()
+        );
+        let initial_recovery = json!(fresh.evidence);
+        let mut retained_target_samples = Vec::new();
+        if fresh.evidence.target.name != "minecraft:air" {
+            let begin = Instant::now();
+            // Observe without any new mining: another miner's result could otherwise
+            // hide the old delayed effect. Neither these reads nor their duration
+            // authorize recovery; that admission has already completed natively.
+            while begin.elapsed() < Duration::from_secs(9) {
+                let observed = sample(&viewer, target, begin).await;
+                let own = fresh
+                    .client
+                    .observe_region(Region {
+                        min: target,
+                        max: target,
+                    })
+                    .await
+                    .unwrap();
+                assert_eq!(own.blocks[0].state.as_ref(), Some(&fresh.evidence.target));
+                assert_eq!(
+                    observed["received"]["blocks"][0]["state"],
+                    json!(fresh.evidence.target)
+                );
+                retained_target_samples.push(json!({"observer":observed,"own":own}));
+                tokio::time::sleep(Duration::from_millis(50)).await;
+            }
+        }
+        let followup = if fresh.evidence.target.name != "minecraft:air" {
+            fresh.operations.select_hotbar(1).await.unwrap();
+            fresh.operations.look([-90.0, 3.0]).await.unwrap();
+            let mine = fresh
+                .operations
+                .start_survival_mining(target, crate::BlockFace::West)
+                .await
+                .unwrap();
+            tokio::time::sleep(Duration::from_millis(mine.estimated_wait_ms)).await;
+            let result = fresh
+                .operations
+                .observe_survival_mining(&mine)
+                .await
+                .unwrap();
+            if matches!(result, MiningStatus::Mining { .. }) {
+                fresh
+                    .operations
+                    .finish_survival_mining(&mine)
+                    .await
+                    .unwrap();
+            }
+            let removed = fresh
+                .operations
+                .wait_survival_mining(&mine, Duration::from_secs(3))
+                .await
+                .unwrap();
+            assert!(matches!(removed, MiningStatus::ObservedRemoved { .. }));
+            let second = fresh
+                .operations
+                .prepare_mining_profile_recovery(&mine)
+                .await
+                .unwrap();
+            second.close_source().await.unwrap();
+            fresh = second
+                .reconnect(
+                    config.clone(),
+                    MiningRecoveryTarget::Exact(crate::NativeBlockState {
+                        name: "minecraft:air".into(),
+                        properties: Default::default(),
+                    }),
+                )
+                .await
+                .unwrap();
+            Some(json!({"intent":mine,"result":removed,"recovery":fresh.evidence}))
+        } else {
+            None
+        };
+        fresh.client.start_packet_trace(8_388_608).await.unwrap();
+        fresh.operations.select_hotbar(0).await.unwrap();
+        let standing = fresh.operations.standing_context().await.unwrap();
+        let eye = standing.eye_position;
+        let hit = [2.5, -59.0, 0.5];
+        let delta: [f64; 3] = std::array::from_fn(|i| hit[i] - eye[i]);
+        let aim = [
+            (-delta[0]).atan2(delta[2]).to_degrees() as f32,
+            (-delta[1]).atan2(delta[0].hypot(delta[2])).to_degrees() as f32,
+        ];
+        fresh.operations.look(aim).await.unwrap();
+        let placement = fresh
+            .operations
+            .place_survival_cube([2, -60, 0], crate::BlockFace::Up)
+            .await
+            .unwrap();
+        assert_eq!(placement.target, target);
+        let placed = fresh
+            .operations
+            .wait_survival_placement(&placement, Duration::from_secs(3))
+            .await
+            .unwrap();
+        assert!(matches!(placed, PlacementStatus::ObservedPlaced { .. }));
+        timeout(Duration::from_secs(3), async {
+            loop {
+                if sample(&viewer, target, start).await["received"]["blocks"][0]["state"]["name"]
+                    == "minecraft:cobblestone"
+                {
+                    break;
+                }
+                tokio::time::sleep(Duration::from_millis(25)).await;
+            }
+        })
+        .await
+        .unwrap();
+        let begin = Instant::now();
+        let mut samples = Vec::new();
+        // Bounded independent post-placement comparison; never retirement authority.
+        while begin.elapsed() < Duration::from_secs(9) {
+            let observed = sample(&viewer, target, begin).await;
+            assert_eq!(
+                observed["received"]["blocks"][0]["state"]["name"],
+                "minecraft:cobblestone"
+            );
+            samples.push(observed);
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+        cases.push(json!({"name":name,"intent":intent,"external_completed_ms":external,"closed_ms":closed_ms,"fresh_admitted_ms":connected_ms,"old_trace":old_trace,"initial_recovery":initial_recovery,"retained_target_samples":retained_target_samples,"followup_mining":followup,"placement":placement,"placement_result":placed,"samples":samples,"fresh_trace":fresh.client.stop_packet_trace().await.unwrap(),"viewer_trace":viewer.stop_packet_trace().await.unwrap()}));
+        file.set_len(0).unwrap();
+        file.rewind().unwrap();
+        serde_json::to_writer(&mut file,&json!({"minecraft_version":"Java 1.21.11","all_cases_executed":cases.len()==3,"observer_role":"independent test comparison only; no production retirement watch","cases":cases})).unwrap();
+        file.flush().unwrap();
+        println!("PROFILE_CASE_VERIFIED {name}");
+        bot = fresh.client.java_1_21_11_operations().unwrap().bot.clone();
+    }
+    bot.disconnect().await.unwrap();
+    viewer.disconnect().await.unwrap();
+}
+
 async fn comparison(native_api: bool) {
     let port: u16 = std::env::var("NATIVE_MINING_PORT")
         .unwrap()

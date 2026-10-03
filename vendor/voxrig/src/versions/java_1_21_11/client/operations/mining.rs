@@ -121,6 +121,9 @@ pub struct MiningRecord {
     /// Result established by a read-only observation. Even Some does not currently
     /// authorize in-session continuation; that release remains unimplemented.
     pub removal: Option<MiningRemoval>,
+    /// Once-only fresh login attempt, recorded before I/O. Shared by all recovery
+    /// methods; cancellation never permits a different method to open another login.
+    pub recovery_attempt: Option<MiningRecoveryAttempt>,
 }
 /// Explicit result states; a pending timeout is never a safe cancellation.
 #[derive(Clone, Debug, Serialize)]
@@ -293,6 +296,7 @@ impl Operations {
             requires_inspection: None,
             inventory_change: None,
             removal: None,
+            recovery_attempt: None,
         });
         self.bot
             .session
