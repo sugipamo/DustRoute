@@ -1,5 +1,6 @@
 //! Durable work intentions and progress. No executable model proof is saved.
 use crate::assembly_registry::TargetServer;
+use crate::placement_source::PlacementSource;
 use crate::state::PlanStateStore;
 use crate::storage::{Durability, replace};
 use dustroute_library::world_edit::WorldEditScope;
@@ -8,7 +9,6 @@ use dustroute_translate::piston_construction::{
 };
 use dustroute_translate::snapshot::MinecraftSnapshot;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use std::fs::{self, File, OpenOptions};
 use std::io::Read;
 use std::path::PathBuf;
@@ -34,7 +34,7 @@ pub(crate) struct JobRecord {
     pub id: Uuid,
     pub player: String,
     pub source_revision_id: Uuid,
-    pub source: Value,
+    pub source: PlacementSource,
     pub target: TargetServer,
     pub before: MinecraftSnapshot,
     pub after: MinecraftSnapshot,

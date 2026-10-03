@@ -352,122 +352,13 @@ pub(in super::super) fn circuit_identity_json(
     analysis_complete: bool,
     repair_count: usize,
 ) -> Value {
-    const MAX_CANDIDATE_SAMPLES: usize = 8;
-    const MAX_GATE_SAMPLES: usize = 12;
-    let mut local_gate_counts = BTreeMap::<String, usize>::new();
-    for gate in &hierarchy.cell_graph.value.cells.gates {
-        *local_gate_counts
-            .entry(format!("{:?}", gate.kind).to_lowercase())
-            .or_default() += 1;
-    }
-    let mut candidates = hierarchy
-        .functional_graph
-        .value
-        .functions
-        .candidates
-        .iter()
-        .collect::<Vec<_>>();
-    candidates.sort_by_key(|candidate| {
-        let status = match candidate.status {
-            dustroute_ir::RecognitionStatus::Complete => 3_u8,
-            dustroute_ir::RecognitionStatus::Partial => 2,
-            dustroute_ir::RecognitionStatus::BoundaryLimited => 1,
-            dustroute_ir::RecognitionStatus::Conflicting => 0,
-        };
-        (
-            std::cmp::Reverse(candidate.confidence),
-            std::cmp::Reverse(status),
-        )
-    });
-    let truth_table_candidate = logical_role.filter(|role| {
-        !matches!(
-            role.classification,
-            dustroute_translate::analysis::FunctionalClassification::Unknown
-                | dustroute_translate::analysis::FunctionalClassification::Unclassified
-        )
-    });
-    let primary = truth_table_candidate
-        .map(|role| {
-            json!({
-                "kind": role.classification,
-                "confidence": "certain",
-                "status": "complete",
-                "basis": role.basis,
-                "input_count": role.input_count,
-                "output_count": role.output_count,
-                "output_functions": role.output_functions
-            })
-        })
-        .or_else(|| candidates.first().map(|candidate| json!(candidate)));
-    let classification_level = if primary.is_some() {
-        "higher_function"
-    } else if !local_gate_counts.is_empty() {
-        "local_gate_network"
-    } else {
-        "physical_only"
-    };
-    let mut uncertainty_reasons = Vec::new();
-    if !analysis_complete {
-        uncertainty_reasons.push("component_limit_reached");
-    }
-    if !hierarchy.physical_graph.unresolved.is_empty() {
-        uncertainty_reasons.push("unresolved_physical_connections");
-    }
-    if !hierarchy.cell_graph.unresolved.is_empty() {
-        uncertainty_reasons.push("unresolved_local_components");
-    }
-    if primary.is_none() {
-        uncertainty_reasons.push("no_registered_higher_level_pattern_matched");
-    }
-    let candidate_count = candidates.len();
-    let candidate_samples = candidates
-        .iter()
-        .take(MAX_CANDIDATE_SAMPLES)
-        .map(|candidate| {
-            json!({
-                "kind": candidate.kind,
-                "confidence": candidate.confidence,
-                "status": candidate.status,
-                "covered_gate_count": candidate.covered_gates.len(),
-                "missing_features": candidate.missing_features,
-                "conflicts": candidate.conflicts,
-            })
-        })
-        .collect::<Vec<_>>();
-    let local_gates = &hierarchy.cell_graph.value.cells.gates;
-    let local_gate_samples = local_gates
-        .iter()
-        .take(MAX_GATE_SAMPLES)
-        .map(|gate| {
-            json!({
-                "id": gate.id,
-                "kind": gate.kind,
-                "status": gate.status,
-                "confidence": gate.confidence,
-                "input_count": gate.inputs.len(),
-                "output_count": gate.outputs.len(),
-                "physical_component_count": gate.physical_components.len(),
-                "physical_components": gate.physical_components,
-            })
-        })
-        .collect::<Vec<_>>();
-    json!({
-        "classification_level": classification_level,
-        "primary_candidate": primary,
-        "higher_level_candidate_count": candidate_count,
-        "higher_level_candidate_samples": candidate_samples,
-        "higher_level_candidates_truncated": candidate_count > MAX_CANDIDATE_SAMPLES,
-        "local_gate_counts": local_gate_counts,
-        "local_gate_count": local_gates.len(),
-        "local_gate_samples": local_gate_samples,
-        "local_gates_truncated": local_gates.len() > MAX_GATE_SAMPLES,
-        "analysis_complete": analysis_complete,
-        "uncertainty_reasons": uncertainty_reasons,
-        "repair_candidate_count": repair_count,
-        "repair_available": repair_count > 0,
-        "temporal_validity": hierarchy.temporal.timing,
-        "interpretation": "primary_candidate is a ranked registered pattern; sampled local gates and mixed_ir node references provide bounded drill-down evidence"
-    })
+    serde_json::to_value(crate::recorded_analysis::circuit_identity(
+        hierarchy,
+        logical_role,
+        analysis_complete,
+        repair_count,
+    ))
+    .expect("serializable circuit identity")
 }
 
 pub(in super::super) fn mixed_ir_json(

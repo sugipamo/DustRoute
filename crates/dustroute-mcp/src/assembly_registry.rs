@@ -121,7 +121,7 @@ pub(crate) struct PlacedAssembly {
     pub attempts: Vec<Attempt>,
     /// Archived presentation only. Fresh operation baselines come from the
     /// typed live observation path, never by decoding this saved report.
-    pub last_observation: Option<Value>,
+    pub last_observation: Option<crate::recorded_instance::RecordedInstanceReport>,
     pub updated_at_unix_ms: u64,
 }
 

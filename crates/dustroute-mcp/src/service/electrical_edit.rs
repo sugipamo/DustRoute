@@ -14,7 +14,7 @@ pub(super) use presentation::state_summary;
 
 pub(super) struct EditOrigin {
     pub revision_id: uuid::Uuid,
-    pub source: Value,
+    pub source: crate::placement_source::PlacementSource,
     pub job: Option<JobStageBinding>,
 }
 
@@ -22,7 +22,7 @@ pub(super) struct EditOrigin {
 pub(super) struct ElectricalEditPlan {
     player: String,
     revision_id: uuid::Uuid,
-    source: Value,
+    source: crate::placement_source::PlacementSource,
     target: TargetServer,
     proof: std::sync::Arc<ElectricalModification>,
     previewed: bool,

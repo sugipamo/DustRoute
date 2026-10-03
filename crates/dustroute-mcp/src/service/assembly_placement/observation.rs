@@ -1,5 +1,5 @@
 //! Fresh observation outcomes. Only complete, unchanged samples expose a
-//! baseline; saved JSON is presentation/history, never a live capability.
+//! baseline; saved records are history, never a live capability.
 use super::*;
 use crate::observation_evidence::{FreshRegion, ObservationEvidence};
 use dustroute_translate::{snapshot::MinecraftSnapshot, world_reverse::RegionBounds};
@@ -67,6 +67,49 @@ pub(super) struct InstanceObservation {
     runtime_history_reconstructed: bool,
 }
 impl InstanceObservation {
+    pub(super) fn recorded(&self) -> crate::recorded_instance::RecordedInstanceObservation {
+        use crate::recorded_instance::{
+            RecordedInstanceObservation, RecordedObservationOutcome as Recorded,
+        };
+        let InstanceObservation {
+            outcome,
+            observed_at_unix_ms,
+            runtime_history_reconstructed,
+        } = self;
+        let outcome = match outcome {
+            ObservationOutcome::Matches { reason, samples } => Recorded::Matches {
+                reason: reason.clone(),
+                samples: record_samples(samples),
+            },
+            ObservationOutcome::Changed { reason, samples } => Recorded::Changed {
+                reason: reason.clone(),
+                samples: record_samples(samples),
+            },
+            ObservationOutcome::HistoryUnavailable {
+                reason,
+                samples,
+                evidence,
+            } => Recorded::HistoryUnavailable {
+                reason: (*reason).into(),
+                samples: samples.clone(),
+                evidence: record_evidence(evidence),
+            },
+            ObservationOutcome::TargetMismatch { reason } => Recorded::TargetMismatch {
+                reason: reason.clone(),
+            },
+            ObservationOutcome::ObservationIncomplete { reason, cause } => {
+                Recorded::ObservationIncomplete {
+                    reason: reason.clone(),
+                    cause: cause.clone(),
+                }
+            }
+        };
+        RecordedInstanceObservation {
+            outcome,
+            observed_at_unix_ms: *observed_at_unix_ms,
+            runtime_history_reconstructed: *runtime_history_reconstructed,
+        }
+    }
     pub(super) fn matches_reference(&self) -> bool {
         matches!(self.outcome, ObservationOutcome::Matches { .. })
     }
@@ -85,6 +128,37 @@ impl InstanceObservation {
                 *reason,
             )),
         }
+    }
+}
+
+fn record_samples(samples: &StableSamples) -> crate::recorded_instance::RecordedStableSamples {
+    let StableSamples {
+        snapshot,
+        evidence,
+        matching_samples,
+    } = samples;
+    crate::recorded_instance::RecordedStableSamples {
+        snapshot: snapshot.clone(),
+        evidence: record_evidence(evidence),
+        matching_samples: *matching_samples,
+    }
+}
+fn record_evidence(evidence: &SampleEvidence) -> crate::recorded_instance::RecordedSampleEvidence {
+    let SampleEvidence {
+        readbacks,
+        sample_interval_ticks,
+        sample_interval_clock,
+        observed_server_tick_interval,
+        observed_client_tick_interval,
+    } = evidence;
+    crate::recorded_instance::RecordedSampleEvidence {
+        readbacks: readbacks.clone(),
+        sample_interval_ticks: *sample_interval_ticks,
+        sample_interval_clock: match sample_interval_clock {
+            SampleClock::Client => crate::recorded_instance::SampleClock::Client,
+        },
+        observed_server_tick_interval: *observed_server_tick_interval,
+        observed_client_tick_interval: *observed_client_tick_interval,
     }
 }
 impl std::fmt::Display for InstanceObservation {
@@ -276,6 +350,31 @@ mod tests {
                 observation(compare_samples(first, second, &expected, "1.21.11", bounds).unwrap());
             assert_eq!(result.matches_reference(), reason.is_none());
             assert_eq!(stable_baseline(&result).unwrap(), actual);
+            let record = result.recorded();
+            let bytes = dustroute_codec::storage::encode("instance.observation.v1", &record, 65536)
+                .unwrap();
+            let reopened: crate::recorded_instance::RecordedInstanceObservation =
+                dustroute_codec::storage::decode("instance.observation.v1", &bytes, 65536).unwrap();
+            assert_eq!(
+                serde_json::to_value(&reopened).unwrap(),
+                serde_json::to_value(&result).unwrap()
+            );
+            let report = crate::recorded_instance::RecordedInstanceReport {
+                observation: record,
+                revalidation: crate::recorded_instance::RecordedRevalidation::Failed {
+                    reason: "target context was not revalidated".into(),
+                },
+                removal_eligible: false,
+                diagnosis: None,
+            };
+            let bytes =
+                dustroute_codec::storage::encode("instance.report.v1", &report, 65536).unwrap();
+            let reopened: crate::recorded_instance::RecordedInstanceReport =
+                dustroute_codec::storage::decode("instance.report.v1", &bytes, 65536).unwrap();
+            let public = serde_json::to_value(reopened).unwrap();
+            assert_eq!(public["revalidation"]["status"], "failed");
+            assert_eq!(public["removal_eligible"], false);
+            assert!(public.get("diagnosis").is_none());
             // Pin the existing public shape, including null reason and the
             // distinction between client wait and measured server interval.
             assert_eq!(
@@ -334,6 +433,15 @@ mod tests {
             assert!(result.refusal().is_some());
             assert!(!result.refusal().unwrap().message.contains("\"blocks\""));
             assert!(stable_baseline(&result).is_err());
+            let record = result.recorded();
+            let bytes = dustroute_codec::storage::encode("instance.observation.v1", &record, 65536)
+                .unwrap();
+            let reopened: crate::recorded_instance::RecordedInstanceObservation =
+                dustroute_codec::storage::decode("instance.observation.v1", &bytes, 65536).unwrap();
+            assert_eq!(
+                serde_json::to_value(&reopened).unwrap(),
+                serde_json::to_value(&result).unwrap()
+            );
             let saved = serde_json::to_value(result).unwrap();
             assert!(saved.get("snapshot").is_none());
             assert_eq!(saved["runtime_history_reconstructed"], false);
@@ -366,5 +474,21 @@ mod tests {
             )
             .is_err()
         );
+    }
+
+    #[test]
+    fn live_observation_cannot_deserialize_or_restore_from_a_record() {
+        // Inference becomes ambiguous, failing compilation, if either inverse
+        // trait is added. No extra compile-test dependency is required.
+        trait AmbiguousIfRestorable<A> {
+            fn marker() {}
+        }
+        impl<T> AmbiguousIfRestorable<()> for T {}
+        impl<T: serde::Deserialize<'static>> AmbiguousIfRestorable<u8> for T {}
+        impl<T: From<crate::recorded_instance::RecordedInstanceObservation>>
+            AmbiguousIfRestorable<u16> for T
+        {
+        }
+        let _ = <InstanceObservation as AmbiguousIfRestorable<_>>::marker;
     }
 }

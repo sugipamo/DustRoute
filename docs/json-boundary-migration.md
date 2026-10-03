@@ -253,3 +253,48 @@ scope/player保存先のversion変更と全storeのschema/拡張子変更は第5
 codec/translate/MCPのall-target Clippy（`-D warnings`）、MCP no-default-featuresの
 all-target Clippyが成功した。最初の設計図試験指定はmodule名の違いで0件だったため、
 件数は修正後の25件を使う。サーバー起動・実機接続・ワールド変更は行っていない。
+
+## 承認された第7a段階: 履歴専用型とreport/source接続
+
+3つの保存fieldを、用途を限定したRust型へ接続した。
+汎用JSON treeや文字列によるvariant判定は追加していない。
+
+| field | 記録型と作成経路 | 保存後の用途 |
+| --- | --- | --- |
+| `CircuitRevision.validation` | `recorded_revision::RevisionValidation`。仮想状態・simulation・電気的改造・Assembly検証はtyped builderから作る。階層summaryは`recorded_analysis::CircuitIdentity`を共有する | 検証時の診断表示。現在の接続・観測や操作許可を表さない |
+| `JobRecord.source`と計画のsource | `placement_source::PlacementSource`の回路Revision/採用Assembly variant。採用時のreviewは`RecordedReviewResponse`へ一方向に写す | 出典と不変の作業意図。保存されたreviewを再採用・再送の権限にしない |
+| `PlacedAssembly.last_observation` | `recorded_instance::RecordedInstanceReport`。freshな`InstanceObservation`と`PlacementReview`を明示的に射影し、pureな診断を含める | 観測・再検証・撤去可否の履歴。live baselineへ戻す変換はない |
+
+`ReviewResponse`、`PlacementReview`、`ValidatedAssemblyPlacement`、
+`InstanceObservation`にはDeserializeを追加していない。
+これらにDeserializeまたは記録型からのFromが追加されると型推論が曖昧になり、
+コンパイルが失敗する回帰テストを置いた。
+reviewと観測の変換ではfieldを列挙し、fresh側のfieldやvariantの追加を見逃さない。
+Voxrigのlive scene/plan/tokenと保存診断の境界は変更していない。
+
+公開MCPのfield名・status・null/省略の区別、分類の順位、候補8件・gate12件のsample上限、
+診断のcountと位置、読戻し時計の区別、64箇所を超える電気的差分の拒否を維持する。
+既存fieldの`fresh`は型内部で`fresh_at_recording`とし、記録時の意味を明記した。
+`fresh_review`、`fresh_target_review`、`removal_eligible`も記録時の結果だけを示す。
+再開時の判断は現在の観測、新しいmodel proofとtarget reviewから行う。
+sourceの比較はenum/owned field全体のEqとなり、意図の不変条件を維持する。
+
+この段階で保存されるpayloadは型付きだが、第5b段階のstoreはまだJSON byte codecを使う。
+保存schemaと拡張子、scope/player識別、durable journal/checkpointのcodec移行は未実施。
+実機接続、サーバー起動、ワールド変更、Voxrigへの変更は行っていない。
+
+第7a段階の回帰では、MCP libraryの全体実行が224件成功・2件失敗・10件ignoredだった。
+追加した大差分試験はfixtureにcallback対象のピストンがなく検証が対象外となっていたため、
+fixtureを修正し、Revision記録の2件が成功した。
+ドア付き建築の既存試験は生成時に`verification_not_established`/未確定となったが、
+単独で再実行すると配置・診断・撤去まで成功した（323.64秒）。
+この経路には既存の30秒のreview計算予算があり、並行実行時の負荷は原因の候補である。
+再現の原因を確定したとは扱わず、予算・物理法則・合格条件は変更していない。
+全体で失敗した2caseもそれぞれ再検証で成功し、実機依存10件を除く226caseの成功を確認した。
+最終の履歴型・観測・診断workflow・Revision記録の関連11件も成功した（118.27秒）。
+Clippyの指摘に従い、履歴revalidationの大きいreviewをBoxで保持した。
+保存/公開fieldは変わらず、reviewと観測のlive側structをfieldごとに分解することで、
+追加fieldを射影から落とした場合もコンパイルで検出する。
+最終形のMCP all-target Clippyとno-default-features all-target Clippyは
+いずれも`-D warnings`で成功した。formatting、差分検査とVoxrigの315ファイル一致も確認した。
+第7a先行段階は完了。次は第5b段階の残る保存codecと保存先識別の移行へ戻る。

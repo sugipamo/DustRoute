@@ -1994,26 +1994,27 @@ impl DustRouteMcp {
             let modification=circuit_reports::electrical_modification_validation(&baseline,&snapshot,complete);
             let mut revision=crate::revision::CircuitRevision{
                 schema_version:"dustroute.circuit-revision.v1".into(),revision_id:uuid::Uuid::new_v4(),parent_revision_ids:parents,base_observation_id,player,dimension,target,complete,snapshot,base_snapshot,changes,
-                validation:json!({"before":before,"after":after,"simulation_ticks":ticks,"scope":"initial_state_only; no functional equivalence or live-world guarantee"}),
+                validation:crate::recorded_revision::RevisionValidation::StateReview(Box::new(crate::recorded_revision::StateRevisionReview {
+                    before, after, simulation_ticks:ticks, scope:"initial_state_only; no functional equivalence or live-world guarantee".into(), electrical_modification:None, assembly:None })),
                 assembly:None,
             };
             if let Some(modification)=modification {
-                revision.validation["electrical_modification"]=modification;
+                revision.validation.state_mut().ok_or("state review missing")?.electrical_modification=Some(modification);
             }
             match revision.capture_assembly(parent_assembly.as_ref()) {
                 Ok(record)=>{
                     let checked=dustroute_translate::assembly::validate_assembly(dustroute_library::builtin_blueprints::builtin_blueprints(),&record.assembly);
-                    revision.validation["assembly"]=match checked {
-                        Ok(_)=>json!({"status":"placement_and_declared_connections_valid","scope":"modeled state only; no behavioral or live-world proof"}),
-                        Err(error)=>json!({"status":"invalid_or_unsupported","error":error.to_string()}),
-                    };
+                    revision.validation.state_mut().ok_or("state review missing")?.assembly=Some(match checked {
+                        Ok(_)=>crate::recorded_revision::AssemblyValidation::PlacementAndDeclaredConnectionsValid { scope:"modeled state only; no behavioral or live-world proof".into() },
+                        Err(error)=>crate::recorded_revision::AssemblyValidation::InvalidOrUnsupported { error:error.to_string() },
+                    });
                     revision.assembly=Some(record);
                 },
                 Err(error)=>{
                     if parent_assembly.as_ref().is_some_and(|parent| !parent.assembly.instances.is_empty()) {
                         return Err(format!("cannot retain pinned blueprint interpretations for this state: {error}"));
                     }
-                    revision.validation["assembly"]=json!({"status":"unavailable","error":error});
+                    revision.validation.state_mut().ok_or("state review missing")?.assembly=Some(crate::recorded_revision::AssemblyValidation::Unavailable { error });
                 },
             }
             if serde_json::to_vec(&revision).map_err(|e|e.to_string())?.len()>crate::revision::MAX_BYTES {return Err("revision record exceeds 4 MiB".into());}
@@ -3570,7 +3571,7 @@ impl DustRouteMcp {
                 &params,
                 player,
                 revision.clone(),
-                json!({"kind":"circuit_revision","revision_id":revision.revision_id}),
+                crate::placement_source::PlacementSource::CircuitRevision { revision_id:revision.revision_id },
             ).await
         }.await;
         json_text(result.unwrap_or_else(|error| json!({"ok":false,"error":error})))
@@ -3619,22 +3620,21 @@ impl DustRouteMcp {
                 snapshot: target,
                 base_snapshot: Some(grounding.base_snapshot),
                 changes: vec![],
-                validation: json!({"source":"fresh adopted Assembly review"}),
+                validation: crate::recorded_revision::RevisionValidation::AdoptedReview { source:crate::recorded_revision::AdoptedReviewSource::FreshAdoptedAssemblyReview },
                 assembly: Some(record.clone()),
             };
             self.plan_grounded_revision_placement(
                 &params,
                 player,
                 revision,
-                json!({
-                    "kind":"adopted_assembly_revision",
-                    "assembly_revision_id":record.id,
-                    "adopted_by":basis.adopted_by,
-                    "grounding_assembly_revision_id":basis.grounding_assembly_revision_id,
-                    "fresh_review":basis.fresh_review,
-                    "literal_observation":"grounding.base_snapshot",
-                    "candidate_interpretation":"record.assembly"
-                }),
+                crate::placement_source::PlacementSource::AdoptedAssemblyRevision {
+                    assembly_revision_id:record.id,
+                    adopted_by:basis.adopted_by,
+                    grounding_assembly_revision_id:basis.grounding_assembly_revision_id,
+                    fresh_review:Box::new((&basis.fresh_review).into()),
+                    literal_observation:crate::placement_source::LiteralObservation::GroundingBaseSnapshot,
+                    candidate_interpretation:crate::placement_source::CandidateInterpretation::RecordAssembly,
+                },
             )
             .await
         }
@@ -3647,7 +3647,7 @@ impl DustRouteMcp {
         params: &PreviewPlacementParams,
         player: String,
         revision: crate::revision::CircuitRevision,
-        source: Value,
+        source: crate::placement_source::PlacementSource,
     ) -> Result<Value, String> {
         if !revision.complete {
             return Err("incomplete source observation cannot authorize placement".into());

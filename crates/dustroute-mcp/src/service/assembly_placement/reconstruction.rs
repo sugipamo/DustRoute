@@ -19,7 +19,7 @@ impl AssemblyService<'_> {
         record: PlacedAssembly,
         proof: ValidatedAssemblyPlacement,
         observation: observation::InstanceObservation,
-        report: Value,
+        report: crate::recorded_instance::RecordedInstanceReport,
     ) -> Result<Value, String> {
         if record.state == InstanceState::Removed {
             return Err("removed instances need a new placement plan".into());

@@ -34,6 +34,54 @@ struct PositionHistoryAssumption {
     window_game_ticks: u16,
 }
 
+impl PlacementReview {
+    pub(crate) fn recorded(&self) -> crate::recorded_instance::RecordedPlacementReview {
+        use crate::recorded_instance::{
+            RecordedDeviceInitialCondition, RecordedPlacementReview, RecordedPositionHistory,
+        };
+        let PlacementReview {
+            review,
+            device_initial_conditions,
+        } = self;
+        RecordedPlacementReview {
+            review: review.into(),
+            device_initial_conditions: device_initial_conditions
+                .iter()
+                .map(|condition| {
+                    let DeviceInitialCondition {
+                        position,
+                        block,
+                        initial_output_signal,
+                        position_history,
+                        runtime_state_reconstructed_from_snapshot,
+                    } = condition;
+                    RecordedDeviceInitialCondition {
+                        position: *position,
+                        block: block.clone(),
+                        initial_output_signal: *initial_output_signal,
+                        position_history: position_history.as_ref().map(|history| {
+                            let PositionHistoryAssumption {
+                                assumed,
+                                observed,
+                                survives_block_removal,
+                                window_game_ticks,
+                            } = history;
+                            RecordedPositionHistory {
+                                assumed: (*assumed).into(),
+                                observed: *observed,
+                                survives_block_removal: *survives_block_removal,
+                                window_game_ticks: *window_game_ticks,
+                            }
+                        }),
+                        runtime_state_reconstructed_from_snapshot:
+                            *runtime_state_reconstructed_from_snapshot,
+                    }
+                })
+                .collect(),
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub(crate) struct ValidatedAssemblyPlacement {
     assembly: Assembly,

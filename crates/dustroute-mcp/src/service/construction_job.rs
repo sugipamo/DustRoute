@@ -101,7 +101,7 @@ impl DustRouteMcp {
         before: MinecraftSnapshot,
         after: MinecraftSnapshot,
         status: BotStatus,
-        source: Value,
+        source: crate::placement_source::PlacementSource,
     ) -> Result<Value, String> {
         assembly_placement::server_contract(&status, &revision.dimension)?;
         let target = TargetServer::observed(&status, &revision.dimension)?;

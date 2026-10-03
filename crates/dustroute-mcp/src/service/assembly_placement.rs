@@ -227,31 +227,29 @@ impl AssemblyService<'_> {
             let proof = self.rebuild_instance_proof(&record).await;
             let observation = self.observe_instance(&record).await;
             let eligible = record.state == InstanceState::Applied && proof.is_ok() && observation.matches_reference();
-            // JSON starts at the presentation/archive boundary; decisions above
-            // and operation baselines below use the fresh typed observation.
-            let mut report = serde_json::to_value(&observation).map_err(|e|e.to_string())?;
-            report["revalidation"] = match &proof {
-                Ok(proof) => json!({"status":"passed","fresh_target_review":proof.review()}),
-                Err(error) => json!({"status":"failed","reason":error}),
+            let report = crate::recorded_instance::RecordedInstanceReport {
+                observation: observation.recorded(),
+                revalidation: match &proof {
+                    Ok(proof) => crate::recorded_instance::RecordedRevalidation::Passed { fresh_target_review: Box::new(proof.review().recorded()) },
+                    Err(error) => crate::recorded_instance::RecordedRevalidation::Failed { reason: error.clone() },
+                },
+                removal_eligible: eligible,
+                diagnosis: if diagnose || reconstruct { Some(self.diagnose_instance(&record, &proof, &observation).await) } else { None },
             };
-            report["removal_eligible"] = json!(eligible);
-            if diagnose || reconstruct {
-                report["diagnosis"] = self.diagnose_instance(&record,&proof,&observation).await;
-            }
             record.last_observation = Some(report.clone());
             registry.save(&mut record)?;
             if reconstruct {
-                let diagnosis = report["diagnosis"].clone();
+                let diagnosis = report.diagnosis.clone();
                 let attempt = async {
                     self.plan_assembly_reconstruction(record, proof?, observation, report).await
                 }.await;
                 return Ok(match attempt {
-                    Ok(mut plan) => { plan["diagnosis"] = diagnosis; plan },
+                    Ok(mut plan) => { plan["diagnosis"] = json!(diagnosis); plan },
                     Err(error) => json!({"ok":false,"error":error,"diagnosis":diagnosis}),
                 });
             }
             if diagnose {
-                return Ok(json!({"ok":true,"instance":record.summary(),"diagnosis":report["diagnosis"],"observation":report}));
+                return Ok(json!({"ok":true,"instance":record.summary(),"diagnosis":report.diagnosis,"observation":report}));
             }
             if !removal || (!operating && !eligible) {
                 return Ok(json!({"ok":!removal,"instance":record.summary(),"observation":report,

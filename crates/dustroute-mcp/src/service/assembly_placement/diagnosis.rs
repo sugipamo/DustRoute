@@ -5,77 +5,10 @@ use dustroute_translate::diagnostic::report::{Diagnosis, RepairStatus};
 use dustroute_translate::snapshot::MinecraftSnapshot;
 use std::collections::BTreeMap;
 
-#[derive(serde::Serialize)]
-struct AssemblyDiagnosis {
-    #[serde(flatten)]
-    diagnosis: Diagnosis,
-    #[serde(flatten)]
-    details: DiagnosisOutcome,
-}
-
-#[derive(serde::Serialize)]
-#[serde(tag = "status", rename_all = "snake_case")]
-enum DiagnosisOutcome {
-    ObservationUnavailable { reason: String, cause: &'static str },
-    ReferenceUnverified(ComparisonDetails),
-    MatchesReference(ComparisonDetails),
-    DifferencesFound(ComparisonDetails),
-}
-impl DiagnosisOutcome {
-    fn comparison_mut(&mut self) -> Option<&mut ComparisonDetails> {
-        match self {
-            Self::ObservationUnavailable { .. } => None,
-            Self::ReferenceUnverified(details)
-            | Self::MatchesReference(details)
-            | Self::DifferencesFound(details) => Some(details),
-        }
-    }
-}
-
-#[derive(serde::Serialize)]
-#[serde(tag = "mode", rename_all = "snake_case")]
-enum ComparisonReference {
-    RemovedInstance,
-    ObservedInputs {
-        input_order: Vec<Pos>,
-        limit: &'static str,
-    },
-    DeclaredInitial {
-        reason: String,
-        limit: &'static str,
-    },
-    SavedInitialUnverified {
-        reason: String,
-        limit: &'static str,
-    },
-}
-
-#[derive(serde::Serialize)]
-struct DifferenceSummary {
-    differing_positions: usize,
-    by_kind: BTreeMap<DifferenceKind, usize>,
-}
-
-#[derive(serde::Serialize)]
-struct ReconstructionOffer {
-    steps: usize,
-    target: &'static str,
-    affected_blocks: usize,
-    next_action: &'static str,
-    review_scope: &'static str,
-}
-
-#[derive(serde::Serialize)]
-struct ComparisonDetails {
-    reference: ComparisonReference,
-    reference_snapshot: MinecraftSnapshot,
-    summary: DifferenceSummary,
-    repair_details: Option<ReconstructionOffer>,
-    cause: &'static str,
-    ownership: &'static str,
-    server_readiness_proven: bool,
-    interpretation: &'static str,
-}
+use crate::recorded_instance::{
+    AssemblyDiagnosis, ComparisonDetails, ComparisonReference, DiagnosisOutcome, DifferenceSummary,
+    ReconstructionOffer,
+};
 
 impl AssemblyService<'_> {
     pub(super) async fn diagnose_instance(
@@ -83,12 +16,12 @@ impl AssemblyService<'_> {
         record: &PlacedAssembly,
         proof: &Result<ValidatedAssemblyPlacement, String>,
         observation: &observation::InstanceObservation,
-    ) -> Value {
+    ) -> AssemblyDiagnosis {
         let snapshot = match observation::stable_baseline(observation) {
             Ok(snapshot) => snapshot,
             Err(cause) => {
                 let mut report = with_design(unavailable(&cause.message), record, proof);
-                report["observation_failure"] = serde_json::json!(cause);
+                report.observation_failure = Some(cause);
                 return report;
             }
         };
@@ -123,23 +56,24 @@ fn with_design(
     mut report: AssemblyDiagnosis,
     record: &PlacedAssembly,
     proof: &Result<ValidatedAssemblyPlacement, String>,
-) -> Value {
+) -> AssemblyDiagnosis {
     report.diagnosis.attach_design(
         record.assembly_id.clone(),
         proof.as_ref().ok().map(|p| p.design_index()),
         proof.is_ok(),
     );
-    serde_json::to_value(report).expect("serializable diagnosis")
+    report
 }
 
 fn unavailable(reason: &str) -> AssemblyDiagnosis {
     let mut diagnosis = Diagnosis::design_comparison(vec![]);
     diagnosis.assess_repair(RepairStatus::NotAssessed, Some(reason.into()));
     AssemblyDiagnosis {
+        observation_failure: None,
         diagnosis,
         details: DiagnosisOutcome::ObservationUnavailable {
             reason: reason.into(),
-            cause: "not_inferred",
+            cause: "not_inferred".into(),
         },
     }
 }
@@ -166,14 +100,14 @@ fn inspect_snapshot(
                 reference,
                 ComparisonReference::ObservedInputs {
                     input_order: proof.context().input_levers.clone(),
-                    limit: "one settled reference from the initial design and observed lever levels in declared order; other histories may have other valid states",
+                    limit: "one settled reference from the initial design and observed lever levels in declared order; other histories may have other valid states".into(),
                 },
             ),
             Err(reason) => (
                 proof.settled().clone(),
                 ComparisonReference::DeclaredInitial {
                     reason,
-                    limit: "input state could not be used; findings are relative to the initial construction result",
+                    limit: "input state could not be used; findings are relative to the initial construction result".into(),
                 },
             ),
         }
@@ -182,7 +116,7 @@ fn inspect_snapshot(
             saved,
             ComparisonReference::SavedInitialUnverified {
                 reason: proof.as_ref().unwrap_err().clone(),
-                limit: "historical reference only; fresh source/target review failed",
+                limit: "historical reference only; fresh source/target review failed".into(),
             },
         )
     };
@@ -217,10 +151,10 @@ fn inspect_snapshot(
                 None,
                 Some(ReconstructionOffer {
                     steps: steps.len(),
-                    target: "declared_initial_construction_result",
+                    target: "declared_initial_construction_result".into(),
                     affected_blocks: crate::revision::blocks(&snapshot)?.len(),
-                    next_action: "plan_reconstruction",
-                    review_scope: "all affected blocks, including matching blocks; ownership and modification intent are not inferred",
+                    next_action: "plan_reconstruction".into(),
+                    review_scope: "all affected blocks, including matching blocks; ownership and modification intent are not inferred".into(),
                 }),
             ),
             Err(reason) => (RepairStatus::Blocked, Some(reason), None),
@@ -235,12 +169,13 @@ fn inspect_snapshot(
             by_kind: counts,
         },
         repair_details,
-        cause: "not_inferred",
-        ownership: "not_proven",
+        cause: "not_inferred".into(),
+        ownership: "not_proven".into(),
         server_readiness_proven: false,
-        interpretation: "literal differences from the selected reference; damage, intentional edits, and consequences of another fault are not automatically distinguished",
+        interpretation: "literal differences from the selected reference; damage, intentional edits, and consequences of another fault are not automatically distinguished".into(),
     };
     Ok(AssemblyDiagnosis {
+        observation_failure: None,
         diagnosis,
         details: if proof.is_err() {
             DiagnosisOutcome::ReferenceUnverified(details)
@@ -274,7 +209,15 @@ mod tests {
             actual,
         )
         .unwrap();
-        let result = serde_json::to_value(result).unwrap();
+        let bytes =
+            dustroute_codec::storage::encode("diagnosis.history.v1", &result, 65536).unwrap();
+        let reopened: AssemblyDiagnosis =
+            dustroute_codec::storage::decode("diagnosis.history.v1", &bytes, 65536).unwrap();
+        assert_eq!(
+            serde_json::to_value(&result).unwrap(),
+            serde_json::to_value(&reopened).unwrap()
+        );
+        let result = serde_json::to_value(reopened).unwrap();
         assert_eq!(result["status"], "reference_unverified");
         assert_eq!(result["reference"]["mode"], "saved_initial_unverified");
         assert_eq!(result["summary"]["by_kind"]["missing"], 1);

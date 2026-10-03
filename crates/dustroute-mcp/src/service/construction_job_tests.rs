@@ -353,6 +353,11 @@ async fn explicit_recovery_reproves_an_unchanged_baseline_and_discards_the_old_s
         let mut changed = record.clone();
         changed.after.blocks.clear();
         assert!(registry.save(&changed).unwrap_err().contains("immutable"));
+        let mut changed = record.clone();
+        changed.source = crate::placement_source::PlacementSource::CircuitRevision {
+            revision_id: uuid::Uuid::new_v4(),
+        };
+        assert!(registry.save(&changed).unwrap_err().contains("immutable"));
         record.state = JobState::NeedsInspection;
         record.attempts.push(JobAttempt {
             operation_id: old_id,

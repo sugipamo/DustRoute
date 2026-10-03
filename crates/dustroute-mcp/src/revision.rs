@@ -5,7 +5,6 @@ use dustroute_translate::{
     snapshot::MinecraftSnapshot, snapshot::MinecraftSnapshotBlock, world::Pos,
 };
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet};
 use uuid::Uuid;
 
@@ -25,7 +24,7 @@ pub struct CircuitRevision {
     #[serde(default)]
     pub base_snapshot: Option<MinecraftSnapshot>,
     pub changes: Vec<RevisionChange>,
-    pub validation: Value,
+    pub validation: crate::recorded_revision::RevisionValidation,
     /// A modeled view of the literal snapshot. Older records and undecodable
     /// block states have no assembly; the literal snapshot remains authoritative.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -279,7 +278,26 @@ mod tests {
             },
             base_snapshot: None,
             changes: vec![],
-            validation: serde_json::json!({}),
+            validation: crate::recorded_revision::RevisionValidation::StateReview(Box::new(
+                crate::recorded_revision::StateRevisionReview {
+                    before: crate::recorded_revision::StateValidation::Unavailable {
+                        error: "fixture is not reviewed".into(),
+                        simulation: crate::recorded_revision::SimulationValidation::NotRun {
+                            reason: None,
+                        },
+                    },
+                    after: crate::recorded_revision::StateValidation::Unavailable {
+                        error: "fixture is not reviewed".into(),
+                        simulation: crate::recorded_revision::SimulationValidation::NotRun {
+                            reason: None,
+                        },
+                    },
+                    simulation_ticks: 0,
+                    scope: "capture-only fixture".into(),
+                    electrical_modification: None,
+                    assembly: None,
+                },
+            )),
             assembly: None,
         };
         let mut state = original.capture_assembly(None).unwrap();
