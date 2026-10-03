@@ -21,12 +21,12 @@ pub fn builtin_programs() -> &'static [LawProgram; 4] {
     static PROGRAMS: OnceLock<[LawProgram; 4]> = OnceLock::new();
     PROGRAMS.get_or_init(|| {
         [
-            include_str!("../laws/piston-state-v1.json"),
-            include_str!("../laws/piston-motion-v1.json"),
-            include_str!("../laws/piston-connection-v1.json"),
-            include_str!("../laws/piston-payload-v1.json"),
+            crate::law::builtins::piston_law::PISTON_STATE_V1,
+            crate::law::builtins::piston_law::PISTON_MOTION_V1,
+            crate::law::builtins::piston_law::PISTON_CONNECTION_V1,
+            crate::law::builtins::piston_law::PISTON_PAYLOAD_V1,
         ]
-        .map(|data| serde_json::from_str(data).expect("embedded piston law"))
+        .map(|definition| definition.program())
     })
 }
 
@@ -40,10 +40,7 @@ pub const ELECTRICAL_PAYLOAD_LAW: &str = "dustroute.law.piston.electrical-payloa
 pub fn electrical_payload_program() -> &'static LawProgram {
     static PROGRAM: OnceLock<LawProgram> = OnceLock::new();
     PROGRAM.get_or_init(|| {
-        serde_json::from_str(include_str!(
-            "../laws/piston-electrical-payload-java-1-21-11-v3.json"
-        ))
-        .expect("embedded electrical payload law")
+        crate::law::builtins::piston_law::PISTON_ELECTRICAL_PAYLOAD_JAVA_1_21_11_V3.program()
     })
 }
 

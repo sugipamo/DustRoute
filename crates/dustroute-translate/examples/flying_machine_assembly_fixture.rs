@@ -1,4 +1,6 @@
 //! Unadopted public-workflow input; review and adopt through existing MCP tools.
+// The shared fixture also exports harvested-crop cases used by integration tests.
+#[allow(dead_code)]
 #[path = "../tests/support/flying_machine_blueprint.rs"]
 mod fixture;
 

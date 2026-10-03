@@ -5,7 +5,7 @@ The isolated-law evidence and profile boundaries below remain historical contrac
 
 The local torch transition law is stored as immutable Blueprint Revision
 `dustroute.law.torch.java-1-21-11.v1` in
-[`torch-law-v1.json`](../crates/dustroute-library/blueprints/torch-law-v1.json).
+[`Rust torch definition`](../crates/dustroute-minecraft/src/law/builtins/torch.rs).
 It contains executable conditions and state updates, not an identifier that
 dispatches to a hardcoded torch implementation. `dustroute_minecraft::law`
 interprets the program; `dustroute_translate::torch_law` supplies support power.

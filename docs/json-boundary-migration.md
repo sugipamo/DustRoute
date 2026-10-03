@@ -74,7 +74,7 @@ journal schemaはv2へ更新し、旧v1は拒否する。旧形式の再開用co
 続行は現在の状態を再観測して新しく計画し、checkpointの単回消費と各送信前のdurable intentを保つ。
 保存された診断をネイティブ操作へ入力できる経路は設けない。
 
-第3〜8段階はこの時点で未着手。保存のJSON byte codecは第5段階で扱う。
+第2段階完了時点では第3〜8段階は未着手。保存のJSON byte codecは第5段階で扱う。
 MCP応答、他workflow、比較キー、組込みLaw、Voxrigのregistry・形状・NBT等の残存JSONは
 全面撤去が完了したとは扱わない。
 
@@ -126,3 +126,36 @@ JSON往復による診断射影は残っていない。journal・manifest・chec
 
 全MCP libの回帰は220件成功・明示実機/計測10件ignore（541.17秒）。
 formattingと差分の空白検査も成功した。第2段階の診断型移行は完了。
+
+## 第3段階: 組込みLawのRust定義
+
+組込み25プログラムを`law::builtins`のRust定数へ移し、`Definition::program()`から
+直接`LawProgram`を構成する。既存の有限`StaticLaw`とExpression/Stepおよび射影処理を共有する。
+履歴を持つTorchや複数handlerのLawには、`Definition`のconst constructorで参照、重複名、
+初期値、履歴capacity、正の予約delay、4096node/深さ32の構造上限を検査する。
+有限Lawは引き続き履歴・予約を拒否し、範囲と8192行の制限を検査する。
+一般のイベントLawでは条件内の代入を有限Lawの静的範囲判定に読み替えない。
+実行時のABI・構造・状態範囲検査はそのまま維持する。
+
+Dust/TorchのBlueprint metadataはlibraryでRustから構成する。下位のminecraft crateへ
+設計図メタデータを持ち込まない。全LawのRevision IDと意味、provenanceを維持した。
+本番の`laws/*.json`とTorch catalog JSONを撤去し、現在の定義の凍結fixtureはテストへ分けた。
+使われていなかったdirect-input、payload v1/v2、geometry v1の4ファイルは削除した。
+実機の過去観測証拠は変更しない。
+
+検証済み: 25プログラム全体と凍結fixtureの一致、minecraft lib/統合319件、libraryの
+実行Law・コンテキスト・metadata 19件が成功した。追加の物理・採用・compile-fail・静的検査は
+以下に最終結果を追記する。これは実機を再観測した検証ではない。
+
+上位のtranslateでは物理・Law・runtime採用・3×3ドアの関連45件が成功（明示計測1件ignore）。
+Torchの18ケースの保存済み実機観測とのgame tick単位の比較と予約回復の保持も含む。
+minecraft doctest 37件が成功し、そのうち新しい8件のcompile-failで、未知の参照、
+不正なdefault・delay・重複名、有限Lawへの履歴・予約追加をコンパイル時に拒否した。
+
+最終差分でminecraft/library/translate/MCPのall-target Clippy（`-D warnings`）が成功。
+最初のall-target実行では既存のexampleが共有fixtureのcrop helperを使わずdead-code警告が出た。
+そのexampleのfixture importだけへ許可を明示し、再実行が成功した。実行や物理には変更がない。
+
+MCPの`--no-default-features` all-target Clippy、formatting、差分検査も成功した。
+Voxrig pinの315ファイル一致を再確認した。組込みLawの本番経路にはJSON読込みが残っていない。
+第3段階は完了。比較キー・保存codec・Voxrig内部表現等の後続移行は未完了である。

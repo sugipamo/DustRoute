@@ -5,6 +5,8 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 
 pub mod abstract_history;
+pub mod builtins;
+pub mod definition;
 pub mod finite;
 pub mod static_program;
 

@@ -62,6 +62,11 @@ native関連型の共有とlive guardの分離について一旦停止し、ユ�
 保存のJSON codec、Law、比較キー、他workflow、registry等の後続移行は別段階に残る。
 全JSON移行の完了とは扱わない。最終検証は[移行記録](json-boundary-migration.md)を参照。
 
+第3段階では、組込み25 LawをRust定数へ移し、本番のJSON読込を除去した。
+有限LawとイベントLawは宣言・射影を共有し、履歴・予約を含むconst定義の参照等を検査する。
+Dust/TorchのBlueprint metadataはlibraryで直接構成する。詳細と検証結果は
+[移行記録](json-boundary-migration.md)を参照。比較キーと保存codecは後続段階で扱う。
+
 ## サバイバル統合後の追補（2026-10-03 UTC）
 
 基点は `fea85f5`（`codex/survival-single-client`）。今回の建築・観測統合に

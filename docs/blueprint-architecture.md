@@ -601,7 +601,7 @@ Comparator and observer migrations are described below.
 
 `dustroute.law.comparator.compatibility-boundary.v1` preserves the existing
 `RedstoneTickSimulator` model. Its
-[`LawProgram` body](../crates/dustroute-minecraft/laws/comparator-compatibility-v1.json)
+[`LawProgram` body](../crates/dustroute-minecraft/src/law/builtins/comparator_law.rs)
 is published unchanged by `builtin_laws()` as an immutable Blueprint Revision.
 The native adapter reads actual rear and side coordinates; the program computes
 the maximum of both side levels, then the compare or subtract result. No
@@ -658,7 +658,7 @@ cargo test -p dustroute-translate --test comparator_laws --test repeated_settlin
 
 `dustroute.law.observer.compatibility-boundary.v1` preserves the existing
 `RedstoneTickSimulator` observation and pulse model. Its
-[`LawProgram` body](../crates/dustroute-minecraft/laws/observer-compatibility-v1.json)
+[`LawProgram` body](../crates/dustroute-minecraft/src/law/builtins/observer_law.rs)
 is published unchanged as an immutable Blueprint Revision. Native adapters
 supply differences between actual observations, block presence and timer facts;
 the program decides notification, pulse output and deadline effects.
@@ -706,9 +706,9 @@ The remaining lamp paths in phase 3b execute two immutable programs, published
 unchanged by `builtin_laws()`:
 
 - `dustroute.law.lamp.compatibility-boundary.v1`:
-  [compatibility program](../crates/dustroute-minecraft/laws/lamp-compatibility-v1.json).
+  [compatibility program](../crates/dustroute-minecraft/src/law/builtins/lamp_law.rs).
 - `dustroute.law.lamp.bounded-event.v1`:
-  [bounded-event program](../crates/dustroute-minecraft/laws/lamp-bounded-v1.json).
+  [bounded-event program](../crates/dustroute-minecraft/src/law/builtins/lamp_law.rs).
 
 | Concern | Compatibility simulator | Bounded event runner |
 | --- | --- | --- |

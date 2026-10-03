@@ -6,16 +6,10 @@ use std::sync::OnceLock;
 use crate::law::{Instruction, LawProgram};
 
 pub const DUST_LAW_REVISION: &str = "dustroute.law.dust-strength.v1";
-pub const BLUEPRINT_JSON: &str = include_str!("../laws/dust-blueprint-v1.json");
 
 pub fn builtin_program() -> &'static LawProgram {
     static PROGRAM: OnceLock<LawProgram> = OnceLock::new();
-    PROGRAM.get_or_init(|| {
-        // The low layer reads executable data only. Catalog identity, metadata
-        // and immutable storage are validated by the library layer.
-        let asset: serde_json::Value = serde_json::from_str(BLUEPRINT_JSON).expect("dust asset");
-        serde_json::from_value(asset["revisions"][0]["law"].clone()).expect("dust program")
-    })
+    PROGRAM.get_or_init(|| crate::law::builtins::dust::DUST.program())
 }
 
 pub fn builtin_dust_law() -> &'static DustStrengthLaw {

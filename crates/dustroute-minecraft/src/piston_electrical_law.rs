@@ -17,12 +17,12 @@ pub fn builtin_programs() -> &'static [LawProgram; 4] {
     static PROGRAMS: OnceLock<[LawProgram; 4]> = OnceLock::new();
     PROGRAMS.get_or_init(|| {
         [
-            include_str!("../laws/piston-signal-emission-java-1-21-11-v1.json"),
-            include_str!("../laws/piston-conductor-java-1-21-11-v1.json"),
-            include_str!("../laws/piston-power-query-java-1-21-11-v1.json"),
-            include_str!("../laws/repeater-callback-java-1-21-11-v1.json"),
+            crate::law::builtins::piston_electrical_law::PISTON_SIGNAL_EMISSION_JAVA_1_21_11_V1,
+            crate::law::builtins::piston_electrical_law::PISTON_CONDUCTOR_JAVA_1_21_11_V1,
+            crate::law::builtins::piston_electrical_law::PISTON_POWER_QUERY_JAVA_1_21_11_V1,
+            crate::law::builtins::piston_electrical_law::REPEATER_CALLBACK_JAVA_1_21_11_V1,
         ]
-        .map(|s| serde_json::from_str(s).expect("embedded Java piston electrical law"))
+        .map(|definition| definition.program())
     })
 }
 

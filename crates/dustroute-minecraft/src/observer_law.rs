@@ -36,10 +36,7 @@ pub struct ObserverPulseAction {
 
 pub fn builtin_program() -> &'static LawProgram {
     static PROGRAM: OnceLock<LawProgram> = OnceLock::new();
-    PROGRAM.get_or_init(|| {
-        serde_json::from_str(include_str!("../laws/observer-compatibility-v1.json"))
-            .expect("embedded observer law")
-    })
+    PROGRAM.get_or_init(|| crate::law::builtins::observer_law::OBSERVER_COMPATIBILITY_V1.program())
 }
 
 pub fn builtin_observer_law() -> &'static CompatibilityObserverLaw {

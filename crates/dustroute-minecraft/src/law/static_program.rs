@@ -13,6 +13,16 @@
 //!     &[("input", 15)], &[("out", 1)],
 //!     &[Step::Set("out", Expression::Input("input"))]);
 //! ```
+//! ```compile_fail,E0080
+//! use dustroute_minecraft::law::static_program::*;
+//! const BAD: StaticLaw = StaticLaw::new(&[], &[("out", 1)],
+//!     &[Step::Set("out", Expression::Count("history"))]);
+//! ```
+//! ```compile_fail,E0080
+//! use dustroute_minecraft::law::static_program::*;
+//! const BAD: StaticLaw = StaticLaw::new(&[], &[],
+//!     &[Step::ScheduleIfAbsent("evaluate", 2)]);
+//! ```
 use super::{Expr, Instruction, LawProgram, Register};
 
 #[derive(Clone, Copy, Debug)]
@@ -20,6 +30,7 @@ pub enum Expression {
     Constant(u16),
     Input(&'static str),
     Register(&'static str),
+    Count(&'static str),
     Equal(&'static Self, &'static Self),
     AtLeast(&'static Self, &'static Self),
     Not(&'static Self),
@@ -32,6 +43,8 @@ pub enum Expression {
 pub enum Step {
     Set(&'static str, Expression),
     If(Expression, &'static [Self], &'static [Self]),
+    Remember(&'static str),
+    ScheduleIfAbsent(&'static str, u16),
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -125,6 +138,7 @@ impl StaticLaw {
             Expression::Constant(v) => *v,
             Expression::Input(n) => self.input_bound(n),
             Expression::Register(n) => self.output_bound(n),
+            Expression::Count(_) => panic!("finite law cannot read history"),
             Expression::Not(v) => {
                 assert!(
                     self.check_expr(v, depth + 1, budget) <= 1,
@@ -166,6 +180,9 @@ impl StaticLaw {
             assert!(depth <= 32 && *budget > 0, "law structural limit exceeded");
             *budget -= 1;
             match &body[i] {
+                Step::Remember(_) | Step::ScheduleIfAbsent(_, _) => {
+                    panic!("finite law cannot retain history or schedule events")
+                }
                 Step::Set(name, expr) => assert!(
                     self.check_expr(expr, depth + 1, budget) <= self.output_bound(name),
                     "law assignment exceeds output range"
@@ -185,56 +202,6 @@ impl StaticLaw {
 
     /// Export the same public law format used by catalog revisions and proofs.
     pub fn program(&self) -> LawProgram {
-        fn expression(e: &Expression) -> Expr {
-            match e {
-                Expression::Constant(value) => Expr::Constant { value: *value },
-                Expression::Input(name) => Expr::Input {
-                    name: (*name).into(),
-                },
-                Expression::Register(name) => Expr::Register {
-                    name: (*name).into(),
-                },
-                Expression::Not(v) => Expr::Not {
-                    value: Box::new(expression(v)),
-                },
-                Expression::Equal(a, b) => Expr::Equal {
-                    left: Box::new(expression(a)),
-                    right: Box::new(expression(b)),
-                },
-                Expression::AtLeast(a, b) => Expr::AtLeast {
-                    left: Box::new(expression(a)),
-                    right: Box::new(expression(b)),
-                },
-                Expression::And(a, b) => Expr::And {
-                    left: Box::new(expression(a)),
-                    right: Box::new(expression(b)),
-                },
-                Expression::Maximum(a, b) => Expr::Maximum {
-                    left: Box::new(expression(a)),
-                    right: Box::new(expression(b)),
-                },
-                Expression::SaturatingSubtract(a, b) => Expr::SaturatingSubtract {
-                    left: Box::new(expression(a)),
-                    right: Box::new(expression(b)),
-                },
-            }
-        }
-        fn body(steps: &[Step]) -> Vec<Instruction> {
-            steps
-                .iter()
-                .map(|s| match s {
-                    Step::Set(name, e) => Instruction::Set {
-                        register: (*name).into(),
-                        value: expression(e),
-                    },
-                    Step::If(e, yes, no) => Instruction::If {
-                        condition: expression(e),
-                        then: body(yes),
-                        otherwise: body(no),
-                    },
-                })
-                .collect()
-        }
         LawProgram {
             inputs: self
                 .inputs
@@ -258,4 +225,65 @@ impl StaticLaw {
             handlers: [("evaluate".into(), body(self.body))].into(),
         }
     }
+}
+
+pub(super) fn expression(e: &Expression) -> Expr {
+    match e {
+        Expression::Constant(value) => Expr::Constant { value: *value },
+        Expression::Input(name) => Expr::Input {
+            name: (*name).into(),
+        },
+        Expression::Register(name) => Expr::Register {
+            name: (*name).into(),
+        },
+        Expression::Count(name) => Expr::Count {
+            history: (*name).into(),
+        },
+        Expression::Not(v) => Expr::Not {
+            value: Box::new(expression(v)),
+        },
+        Expression::Equal(a, b) => Expr::Equal {
+            left: Box::new(expression(a)),
+            right: Box::new(expression(b)),
+        },
+        Expression::AtLeast(a, b) => Expr::AtLeast {
+            left: Box::new(expression(a)),
+            right: Box::new(expression(b)),
+        },
+        Expression::And(a, b) => Expr::And {
+            left: Box::new(expression(a)),
+            right: Box::new(expression(b)),
+        },
+        Expression::Maximum(a, b) => Expr::Maximum {
+            left: Box::new(expression(a)),
+            right: Box::new(expression(b)),
+        },
+        Expression::SaturatingSubtract(a, b) => Expr::SaturatingSubtract {
+            left: Box::new(expression(a)),
+            right: Box::new(expression(b)),
+        },
+    }
+}
+pub(super) fn body(steps: &[Step]) -> Vec<Instruction> {
+    steps
+        .iter()
+        .map(|s| match s {
+            Step::Set(name, e) => Instruction::Set {
+                register: (*name).into(),
+                value: expression(e),
+            },
+            Step::Remember(name) => Instruction::Remember {
+                history: (*name).into(),
+            },
+            Step::ScheduleIfAbsent(name, after) => Instruction::ScheduleIfAbsent {
+                event: (*name).into(),
+                after: *after,
+            },
+            Step::If(e, yes, no) => Instruction::If {
+                condition: expression(e),
+                then: body(yes),
+                otherwise: body(no),
+            },
+        })
+        .collect()
 }

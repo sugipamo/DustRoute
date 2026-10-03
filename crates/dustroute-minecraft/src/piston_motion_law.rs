@@ -19,12 +19,12 @@ pub fn builtin_programs() -> &'static [LawProgram; 4] {
     static PROGRAMS: OnceLock<[LawProgram; 4]> = OnceLock::new();
     PROGRAMS.get_or_init(|| {
         [
-            include_str!("../laws/piston-control-java-1-21-11-v1.json"),
-            include_str!("../laws/piston-carrier-java-1-21-11-v1.json"),
-            include_str!("../laws/piston-geometry-java-1-21-11-v2.json"),
-            include_str!("../laws/piston-head-java-1-21-11-v1.json"),
+            crate::law::builtins::piston_motion_law::PISTON_CONTROL_JAVA_1_21_11_V1,
+            crate::law::builtins::piston_motion_law::PISTON_CARRIER_JAVA_1_21_11_V1,
+            crate::law::builtins::piston_motion_law::PISTON_GEOMETRY_JAVA_1_21_11_V2,
+            crate::law::builtins::piston_motion_law::PISTON_HEAD_JAVA_1_21_11_V1,
         ]
-        .map(|source| serde_json::from_str(source).expect("embedded motion-time law"))
+        .map(|definition| definition.program())
     })
 }
 

@@ -25,12 +25,12 @@ pub fn builtin_programs() -> &'static [LawProgram; 4] {
     static PROGRAMS: OnceLock<[LawProgram; 4]> = OnceLock::new();
     PROGRAMS.get_or_init(|| {
         [
-            include_str!("../laws/block-traits-v1.json"),
-            include_str!("../laws/wire-shape-v1.json"),
-            include_str!("../laws/wire-transfer-v1.json"),
-            include_str!("../laws/wire-weak-power-v1.json"),
+            crate::law::builtins::spatial::BLOCK_TRAITS_V1,
+            crate::law::builtins::spatial::WIRE_SHAPE_V1,
+            crate::law::builtins::spatial::WIRE_TRANSFER_V1,
+            crate::law::builtins::spatial::WIRE_WEAK_POWER_V1,
         ]
-        .map(|json| serde_json::from_str(json).expect("embedded spatial law"))
+        .map(|definition| definition.program())
     })
 }
 

@@ -13,10 +13,10 @@ pub fn builtin_programs() -> &'static [LawProgram; 2] {
     static PROGRAMS: OnceLock<[LawProgram; 2]> = OnceLock::new();
     PROGRAMS.get_or_init(|| {
         [
-            include_str!("../laws/lamp-compatibility-v1.json"),
-            include_str!("../laws/lamp-bounded-v1.json"),
+            crate::law::builtins::lamp_law::LAMP_COMPATIBILITY_V1,
+            crate::law::builtins::lamp_law::LAMP_BOUNDED_V1,
         ]
-        .map(|json| serde_json::from_str(json).expect("embedded lamp law"))
+        .map(|definition| definition.program())
     })
 }
 

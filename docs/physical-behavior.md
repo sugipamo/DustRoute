@@ -16,7 +16,7 @@ the separate finite-burst requirement. See
 
 ## Executable dust law
 
-[`dust-blueprint-v1.json`](../crates/dustroute-minecraft/laws/dust-blueprint-v1.json)
+[`Rust dust definition`](../crates/dustroute-minecraft/src/law/builtins/dust.rs)
 stores `dustroute.law.dust-strength.v1`. Its program combines the maximum direct
 source strength and the maximum connected neighbor strength:
 

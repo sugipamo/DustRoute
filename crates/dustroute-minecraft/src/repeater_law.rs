@@ -15,10 +15,10 @@ pub fn builtin_programs() -> &'static [LawProgram; 2] {
     static PROGRAMS: OnceLock<[LawProgram; 2]> = OnceLock::new();
     PROGRAMS.get_or_init(|| {
         [
-            include_str!("../laws/repeater-compatibility-v1.json"),
-            include_str!("../laws/repeater-bounded-v1.json"),
+            crate::law::builtins::repeater_law::REPEATER_COMPATIBILITY_V1,
+            crate::law::builtins::repeater_law::REPEATER_BOUNDED_V1,
         ]
-        .map(|source| serde_json::from_str(source).expect("embedded repeater law"))
+        .map(|definition| definition.program())
     })
 }
 

@@ -10,10 +10,8 @@ pub const COMPARATOR_LAW_REVISION: &str = "dustroute.law.comparator.compatibilit
 
 pub fn builtin_program() -> &'static LawProgram {
     static PROGRAM: OnceLock<LawProgram> = OnceLock::new();
-    PROGRAM.get_or_init(|| {
-        serde_json::from_str(include_str!("../laws/comparator-compatibility-v1.json"))
-            .expect("embedded comparator law")
-    })
+    PROGRAM
+        .get_or_init(|| crate::law::builtins::comparator_law::COMPARATOR_COMPATIBILITY_V1.program())
 }
 
 pub fn builtin_comparator_law() -> &'static CompatibilityComparatorLaw {

@@ -2,7 +2,9 @@
 //! catalog is separate only as an asset; callers can import it into any catalog.
 use std::sync::OnceLock;
 
+use crate::Provenance;
 use crate::blueprint::{BlueprintCatalog, BlueprintRevision, BlueprintRevisionId};
+use dustroute_minecraft::law::LawProgram;
 
 pub use dustroute_minecraft::dust_law::DUST_LAW_REVISION;
 pub use dustroute_minecraft::execution_context::TORCH_LAW_REVISION;
@@ -20,17 +22,25 @@ pub fn spatial_law_revisions() -> &'static [BlueprintRevisionId; 4] {
 pub fn builtin_laws() -> &'static BlueprintCatalog {
     static CATALOG: OnceLock<BlueprintCatalog> = OnceLock::new();
     CATALOG.get_or_init(|| {
-        let mut catalog =
-            BlueprintCatalog::from_json(include_str!("../blueprints/torch-law-v1.json"))
-                .expect("embedded physical laws are structurally valid");
-        let dust = BlueprintCatalog::from_json(dustroute_minecraft::dust_law::BLUEPRINT_JSON)
-            .expect("embedded dust law is structurally valid");
+        let mut catalog = BlueprintCatalog::default();
+        let template = revision(
+            DUST_LAW_REVISION,
+            "Dust signal combination and attenuation",
+            "DustRoute: existing electrical model and differential fixtures",
+            dustroute_minecraft::dust_law::builtin_program().clone(),
+        );
         catalog
-            .insert_revisions(dust.revisions().cloned().collect())
-            .expect("distinct immutable laws");
-        // The programs live below the catalog so placement and the bounded
-        // world runner can execute the exact same data without a crate cycle.
-        let template = dust_law_template(&dust);
+            .insert_revision(template.clone())
+            .expect("fixed dust law metadata");
+        catalog
+            .insert_revision(revision(
+                TORCH_LAW_REVISION,
+                "Torch scheduled inversion, burnout and recovery (Java 1.21.11)",
+                "DustRoute: frozen server block-state observations and pinned 1.21.11 runtime inspection",
+                dustroute_minecraft::law::builtins::torch::TORCH.program(),
+            ))
+            .expect("fixed torch law metadata");
+        // Programs live below the catalog; immutable metadata belongs here.
         for (id, program) in dustroute_minecraft::spatial::SPATIAL_LAW_IDS
             .into_iter()
             .zip(dustroute_minecraft::spatial::builtin_programs())
@@ -93,10 +103,29 @@ pub fn builtin_laws() -> &'static BlueprintCatalog {
     })
 }
 
-fn dust_law_template(catalog: &BlueprintCatalog) -> &BlueprintRevision {
-    catalog
-        .revision(&BlueprintRevisionId::new(DUST_LAW_REVISION).expect("fixed ID"))
-        .expect("embedded memoryless law metadata")
+fn revision(id: &str, name: &str, author: &str, law: LawProgram) -> BlueprintRevision {
+    BlueprintRevision {
+        id: BlueprintRevisionId::new(id).expect("fixed law ID"),
+        parents: vec![],
+        name: name.into(),
+        classifications: vec![],
+        behavior_bindings: vec![],
+        static_type_bindings: vec![],
+        required_laws: vec![],
+        blocks: vec![],
+        initial_layout: None,
+        law: Some(law),
+        inclusions: vec![],
+        ports: vec![],
+        connections: vec![],
+        port_bindings: vec![],
+        provenance: Provenance {
+            author: author.into(),
+            source_url: None,
+            license: None,
+            retrieved_on: Some("2026-09-20".into()),
+        },
+    }
 }
 
 pub fn dust_law_revision() -> &'static BlueprintRevision {

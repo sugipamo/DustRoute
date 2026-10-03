@@ -1,0 +1,150 @@
+{
+  "inputs": {
+    "powered": 1
+  },
+  "registers": {
+    "lit": {
+      "initial": 1,
+      "maximum": 1
+    },
+    "burnout_seen": {
+      "initial": 0,
+      "maximum": 1
+    }
+  },
+  "histories": {
+    "off_edges": {
+      "window": 60,
+      "capacity": 8
+    }
+  },
+  "handlers": {
+    "neighbor_update": [
+      {
+        "op": "if",
+        "condition": {
+          "op": "equal",
+          "left": {
+            "op": "register",
+            "name": "lit"
+          },
+          "right": {
+            "op": "input",
+            "name": "powered"
+          }
+        },
+        "then": [
+          {
+            "op": "schedule_if_absent",
+            "event": "scheduled_tick",
+            "after": 2
+          }
+        ],
+        "otherwise": []
+      }
+    ],
+    "scheduled_tick": [
+      {
+        "op": "if",
+        "condition": {
+          "op": "register",
+          "name": "lit"
+        },
+        "then": [
+          {
+            "op": "if",
+            "condition": {
+              "op": "input",
+              "name": "powered"
+            },
+            "then": [
+              {
+                "op": "set",
+                "register": "lit",
+                "value": {
+                  "op": "constant",
+                  "value": 0
+                }
+              },
+              {
+                "op": "remember",
+                "history": "off_edges"
+              },
+              {
+                "op": "if",
+                "condition": {
+                  "op": "at_least",
+                  "left": {
+                    "op": "count",
+                    "history": "off_edges"
+                  },
+                  "right": {
+                    "op": "constant",
+                    "value": 8
+                  }
+                },
+                "then": [
+                  {
+                    "op": "set",
+                    "register": "burnout_seen",
+                    "value": {
+                      "op": "constant",
+                      "value": 1
+                    }
+                  },
+                  {
+                    "op": "schedule_if_absent",
+                    "event": "scheduled_tick",
+                    "after": 160
+                  }
+                ],
+                "otherwise": []
+              }
+            ],
+            "otherwise": []
+          }
+        ],
+        "otherwise": [
+          {
+            "op": "if",
+            "condition": {
+              "op": "and",
+              "left": {
+                "op": "not",
+                "value": {
+                  "op": "input",
+                  "name": "powered"
+                }
+              },
+              "right": {
+                "op": "not",
+                "value": {
+                  "op": "at_least",
+                  "left": {
+                    "op": "count",
+                    "history": "off_edges"
+                  },
+                  "right": {
+                    "op": "constant",
+                    "value": 8
+                  }
+                }
+              }
+            },
+            "then": [
+              {
+                "op": "set",
+                "register": "lit",
+                "value": {
+                  "op": "constant",
+                  "value": 1
+                }
+              }
+            ],
+            "otherwise": []
+          }
+        ]
+      }
+    ]
+  }
+}
