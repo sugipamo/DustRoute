@@ -1,0 +1,240 @@
+//! Admission and background execution, including ownership handback or retention.
+use super::*;
+
+impl DustRouteMcp {
+    pub(super) async fn start_survival(&self, id: uuid::Uuid, confirmed: bool) -> Value {
+        if !confirmed {
+            return failure(
+                "confirmation_required",
+                "review the generated preview and authorize its scope/materials",
+            );
+        }
+        if let Err(e) = self.policy.authorize_mutation() {
+            return failure("permission_denied", e);
+        }
+        let mut jobs = self.survival.entries.lock().await;
+        let Some(entry) = jobs.get_mut(&id) else {
+            return failure(
+                "plan_not_live",
+                "saved plans are diagnosis-only; generate a fresh plan",
+            );
+        };
+        if let Err(e) = self.policy.authorize_player(&entry.owner) {
+            return failure("permission_denied", e);
+        }
+        if entry.cancel.load(Ordering::SeqCst) || Instant::now() > entry.expires {
+            entry.plan = None;
+            entry.status =
+                json!({"state":"plan_expired_or_cancelled","construction_dispatched":false});
+            if let Err(e) = save(
+                &self
+                    .state_store
+                    .survival_job_root()
+                    .join(id.to_string())
+                    .join("status.json"),
+                &entry.status,
+            ) {
+                return failure("journal_io", e);
+            }
+            return failure("plan_expired_or_cancelled", "generate a fresh plan");
+        }
+        if entry.plan.is_none() {
+            return failure("job_already_started", "use get; no automatic replay");
+        }
+        let native = match self.bridge.survival_bridge() {
+            Ok(n) => n,
+            Err(e) => return failure("backend_unavailable", e),
+        };
+        let lease = match native.lease_survival() {
+            Ok(l) => l,
+            Err(e) => return failure("source_busy", e),
+        };
+        let plan = entry.plan.take().expect("checked plan");
+        let source = entry.source.clone();
+        let owner = entry.owner.clone();
+        let cancel = entry.cancel.clone();
+        let checkpoint = entry.checkpoint.clone();
+        let parent = entry.parent.clone();
+        entry.status = json!({"state":"admitting"});
+        if let Err(e) = save(
+            &self
+                .state_store
+                .survival_job_root()
+                .join(id.to_string())
+                .join("status.json"),
+            &entry.status,
+        ) {
+            let original = lease.source();
+            lease.release(original);
+            entry.status = json!({"state":"admission_refused","failure":failure("journal_io", &e),"construction_dispatched":false});
+            return failure("journal_io", e);
+        }
+        drop(jobs);
+        let service = self.clone();
+        let worker = tokio::spawn(async move {
+            service
+                .run_survival(ExecutionInput {
+                    id,
+                    owner,
+                    source,
+                    plan,
+                    lease,
+                    cancel,
+                    checkpoint,
+                    parent,
+                })
+                .await;
+        });
+        let service = self.clone();
+        tokio::spawn(async move {
+            if let Err(error) = worker.await {
+                service.set_survival_status(id, json!({"state":"needs_inspection", "failure":failure("execution_task_failed", error)})).await;
+            }
+        });
+        json!({"ok":true,"job_id":id,"state":"admitting","completed":false,"next_step":"action=get; admission can still refuse before any edits"})
+    }
+
+    async fn run_survival(&self, input: ExecutionInput) {
+        let ExecutionInput {
+            id,
+            owner,
+            source,
+            plan,
+            mut lease,
+            cancel,
+            checkpoint,
+            parent,
+        } = input;
+        let bot = lease.source();
+        let path = self.state_store.survival_job_root().join(id.to_string());
+        let admission = async {
+            let store = self.state_store.clone();
+            let p = owner.clone();
+            let original = source.clone();
+            tokio::task::spawn_blocking(move || {
+                let current =
+                    crate::blueprint_mcp::construction_source(&store, &p, &original.record.id)?;
+                if !original.matches(&current) {
+                    return Err("adopted source changed since preview".into());
+                }
+                Ok(())
+            })
+            .await
+            .map_err(|e| failure("admission_task_failed", e))?
+            .map_err(|e: String| failure("source_changed", e))?;
+            policy_scope(&self.policy, plan.scope(), &plan.source().dimension)
+                .map_err(|e| failure("permission_denied", e))?;
+            if parent.as_ref().is_some_and(|p| {
+                p.checkpoint.endpoint
+                    != crate::survival_execution::checkpoint::endpoint(&lease.reconnect())
+            }) {
+                return Err(failure(
+                    "checkpoint_endpoint_changed",
+                    "continuation requires the original endpoint and builder profile",
+                ));
+            }
+            if cancel.load(Ordering::SeqCst) {
+                return Err(failure(
+                    "cancelled_before_start",
+                    "no construction dispatched",
+                ));
+            }
+            let executor = SurvivalExecutor::create(
+                bot.clone(),
+                lease.reconnect(),
+                plan,
+                &path.join("execution"),
+            )
+            .await
+            .map_err(|e| json!({"ok":false,"error":e}))?;
+            let parent_lock = if let Some(parent) = &parent {
+                Some(
+                    crate::survival_execution::checkpoint::claim(
+                        &self
+                            .state_store
+                            .survival_job_root()
+                            .join(parent.id.to_string())
+                            .join("execution"),
+                        &parent.checkpoint,
+                        id,
+                    )
+                    .map_err(|e| json!({"ok":false,"error":e}))?,
+                )
+            } else {
+                None
+            };
+            Ok((executor, parent_lock))
+        }
+        .await;
+        let (mut executor, _parent_lock) = match admission {
+            Ok(e) => e,
+            Err(e) => {
+                lease.release(bot);
+                self.set_survival_status(id,json!({"state":"admission_refused","failure":e,"construction_dispatched":false})).await;
+                return;
+            }
+        };
+        lease.begin_execution();
+        loop {
+            if cancel.load(Ordering::SeqCst) {
+                let result = executor.cancel();
+                self.set_survival_status(id,json!({"state":"cancelled_needs_inspection","error":result.err(),"completed_steps":executor.record().completed_steps})).await;
+                break;
+            }
+            if checkpoint.load(Ordering::SeqCst) && !executor.pending_mining() {
+                match executor.checkpoint().await {
+                    Ok(boundary) => {
+                        let current = executor.client().clone();
+                        // Release the old journal writer before publishing readiness.
+                        drop(executor);
+                        lease.release(current);
+                        self.set_survival_status(id,json!({"state":"checkpointed","completed_steps":boundary.completed_steps,"safe_idle":true,"checkpoint":boundary,"next_step":"action=continue creates a fresh preview; start still requires confirmation"})).await;
+                        return;
+                    }
+                    Err(error) => {
+                        self.set_survival_status(id,json!({"state":"needs_inspection","error":error,"completed_steps":executor.record().completed_steps})).await;
+                        break;
+                    }
+                }
+            }
+            match executor.advance().await {
+                Ok(ExecutionProgress::Completed)=>{
+                    lease.release(executor.client().clone());
+                    self.set_survival_status(id,json!({"state":"completed","completed_steps":executor.record().completed_steps,"final_evidence":executor.record().events.last()})).await;
+                    return;
+                }
+                Ok(progress)=> {
+                    if !self.set_survival_status(id,json!({"state":"running","progress":progress,"completed_steps":executor.record().completed_steps})).await {
+                        let _=executor.cancel();
+                        break;
+                    }
+                },
+                Err(error)=>{self.set_survival_status(id,json!({"state":"needs_inspection","error":error,"completed_steps":executor.record().completed_steps})).await;break;}
+            }
+        }
+        if let Some(entry) = self.survival.entries.lock().await.get_mut(&id) {
+            entry.stopped = Some((lease, executor));
+        }
+    }
+    async fn set_survival_status(&self, id: uuid::Uuid, status: Value) -> bool {
+        let result = save(
+            &self
+                .state_store
+                .survival_job_root()
+                .join(id.to_string())
+                .join("status.json"),
+            &status,
+        );
+        let persisted = result.is_ok();
+        let status = match result {
+            Ok(()) => status,
+            Err(e) => {
+                json!({"state":"needs_inspection","last_status":status,"persistence_error":e})
+            }
+        };
+        if let Some(entry) = self.survival.entries.lock().await.get_mut(&id) {
+            entry.status = status;
+        }
+        persisted
+    }
+}

@@ -7,6 +7,41 @@
 この文書は調査時点の記録。以後の実装済み範囲・保留理由・検証結果は
 [初回移行](architecture-migration.md)と[互換経路廃止を含む移行](architecture-cutover.md)を参照。以下の行番号と規模は調査基点に対応する。
 
+## サバイバル統合後の追補（2026-10-03 UTC）
+
+基点は `fea85f5`（`codex/survival-single-client`）。今回の建築・観測統合に
+関係する実装を詳細に読み、加えてcrate内のRustファイルの規模と、MCP入口・物理イベント
+処理・建築探索の一部を確認した。以下は今回の対象についての棚卸しであり、全実装の
+正しさを保証する監査ではない。後続のA01–A13は最初の調査時点の記録を残している。
+
+| 優先 | 箇所と読みにくさ | 今回の対応／次の整理 |
+| --- | --- | --- |
+| 1 | 公開サバイバルサービスに計画生成、履歴読取り、開始・実行制御が同居し、責務間を往復する必要があった | 整理済み。中心ファイルを786→353行にし、`planning.rs`、`records.rs`、`execution.rs`へ段階別に分離。Rust DTO・ジョブ所有者・公開入口は中心に残した |
+| 2 | 採掘完了処理に結果待ち、履歴判定、接続更新、ワールド照合、再試行判定が続き、どこまで終えたか追いにくかった | 整理済み。採掘処理を`native/mining.rs`へまとめ、結果回収と接続更新を名前付き関数に分離。照合と次の判断を完了処理から読めるようにした |
+| 3 | チェックポイントにライブ停止・保存内容の検査・保存済み手順からの所有権再構築・単回消費が同居していた | 整理済み。保存検査を`checkpoint/validation.rs`へ分離し、確認済みprefixからの所有権再構築を独立関数にした |
+| 4 | サバイバルジョブの`status["state"]`、manifest、保存済み手順の種別が`Value`と文字列の組合せで判定される | 次候補。内部状態と診断用保存DTOを型として明示する。履歴とネイティブ操作権限を分け、現在の拒否条件・公開JSON・未知形式の扱いを契約テストで固定してから移行する |
+| 5 | `service.rs`は8,071行、約2,400行は末尾のテスト。公開ルーターと遷移試験・配置等の長いワークフローを同じファイルで追う必要がある | 次候補。既存のworkflow部品に合わせ、MCP decode/encodeと手順を分離。テストの機能別分割も行う。ファイル長だけを理由に一括変更しない |
+| 6 | 物理エンジンの`step_transition`にイベントの取り出し、順序制約、状態変更、拒否時の巻戻し、trace更新がまとまる | 後続候補。順序制約の検査とaccepted/rejected処理を段階に分ける。キュー順序・論理時刻・巻戻し範囲を保つ検証が必要 |
+
+今回の分割は同じRust crate内で読み進める単位を整えたもの。サービスの依存を新しい
+アプリケーション層へ移したり、ジョブ状態を新しい状態機械へ置き換えたりはしていない。
+Voxrigの物理・単発操作・接続生命周期と、DustRouteの設計・計画・所有権・ジョブの
+分担はそのまま。保存形式、エラー内容、送信前のdurable intent、接続更新順序、
+単回checkpoint消費、キャンセル時の不明状態保持を維持する。
+
+実装の入口:
+[公開要求](../crates/dustroute-mcp/src/service/survival.rs)、
+[計画](../crates/dustroute-mcp/src/service/survival/planning.rs)、
+[履歴](../crates/dustroute-mcp/src/service/survival/records.rs)、
+[実行制御](../crates/dustroute-mcp/src/service/survival/execution.rs)、
+[採掘](../crates/dustroute-mcp/src/survival_execution/native/mining.rs)、
+[保存検査](../crates/dustroute-mcp/src/survival_execution/checkpoint/validation.rs)。
+
+整理後の検証: 既存の関連テスト32件が成功（2回の対象指定実行に重複2件を含む）。
+明示的な実機試験は通常の単体テスト実行ではignoreのまま。Voxrig有効／既定構成の
+all-target Clippy（`-D warnings`）、formatting、差分の空白検査が成功。
+新しい機能・保存形式変更・保証条件の変更は含まない。
+
 ## 調査範囲と見方
 
 9 crate の依存宣言と `src` のRustファイル210件を棚卸しし、公開入口、主要データ型、
