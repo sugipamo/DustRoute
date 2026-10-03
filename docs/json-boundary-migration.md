@@ -199,3 +199,57 @@ translateの抽象挙動・runtime採用・電気ピストン採用・統合ピ�
 codec/minecraft/MCPのall-target Clippy（`-D warnings`）も成功した。
 MCPのno-default-features all-target Clippy、formatting、差分検査とVoxrigの315ファイル一致も
 確認した。第4段階は完了。実機や保存ファイルの移行はこの段階では行っていない。
+
+## 第5段階: 保存codecと先行する設計図保存
+
+比較キーとは別の`dustroute-codec::storage` APIを追加した。storage v1のheaderと
+record schemaを検査してから、固定したcanonical v1 payloadを直接Rust型へ読む。
+キーのAPIにはdecoderを公開しない。JSON/汎用Valueの中間表現や新しい外部依存はない。
+mapは符号化key順を検査し、重複・順序違反を拒否する。入力の長さからcollectionの
+capacityを確保せず、byte上限・深さ128・値数1,048,576を検査する。
+旧JSON、別schema、途中切れ、末尾の余剰、長さのoverflow、非有限数も拒否する。
+encode後にformat上限を検査し、保存不能なrecordを既存fileへ置換しない。
+この検査はdomainの妥当性・操作権限・freshnessの証明ではない。
+encoderはmap/structのentryを一時bufferに保持するため、byte上限はheap使用量の厳密な
+上限とは扱わない。既存のmodel予算と入力制限は呼出側に残る。
+
+設計図の保存は`catalog.store`、`dustroute.mcp-blueprints.v3`へ移した。
+`StoredBlueprints.archive`は`BlueprintUpdateArchive`を直接保持し、
+`BlueprintUpdates::from_archive`で従来のschema・参照・履歴・採用の整合性を検査する。
+lock、owner照合、16 MiB上限、fileとdirectoryのsync、atomic replaceは維持した。
+旧`catalog.json`がある場合に空のcatalogへ置き換えず、保存・読取りを拒否する。
+旧fileの変換・削除やfallbackはしない。catalog v13とupdates v5のdomain schema、
+MCPの応答形式は変更していない。履歴から採用するときは引き続き新しいreviewを行う。
+他の保存codec、scope/playerの保存先識別はまだ移行していない。
+
+### 残りの保存より先に必要となった型の整理案
+
+調査では、次の3fieldにJSON値が保存データそのものとして残っていた。
+
+| 保存field | 作成経路と接続先 | 必要な変更 |
+| --- | --- | --- |
+| `CircuitRevision.validation` | `service/circuit_reports/revision.rs`の仮想解析・simulation・電気的改造と、`analysis.rs`の階層分類summary | 型付きRevision検証記録と解析・simulation summary。現在の診断範囲・件数・sample・不確実性を保持する |
+| `JobRecord.source` | 回路Revisionまたは採用Assemblyから、`EditOrigin`・`ElectricalEditPlan`・ジョブへ受け渡す。保存時の不変条件でも比較する | 2種のsource enumと用途別の比較。不変条件で比較していた全fieldを保持し、保存時のreviewを今の合格と解釈しない |
+| `PlacedAssembly.last_observation` | live `InstanceObservation`の表示にrevalidationと`diagnose_instance`の結果を追加して保存する | 保存専用の観測・診断記録。現在の観測へ戻す変換を作らない |
+
+単にこの3fieldを置換するだけでは完結しない。Assembly sourceが含む`ReviewResponse`と
+`ReviewDiagnostics`は表示用Serializeだけを持ち、staticな説明文と`ReviewFinding`を含む。
+観測側も`InstanceObservation`を意図的にDeserializeできなくしている。
+これらへDeserializeを追加すると、履歴とfreshな結果の境界を不明確にする。
+保存専用のowned記録と一方向の射影を設計し、関連workflowの型付き受け渡しを先に
+整える必要がある。内部Valueを独自の汎用treeへ改名して残す案は採らない。
+
+推奨する順序変更は、**第5a段階のcodec・設計図保存 → 第7段階のうち上記の型付き
+report/sourceの接続 → 第5b段階の残る全store移行 → 第6段階 → 第7段階の残り → 第8段階**。
+責務と物理法則、fresh review・before-state・単回消費・durable intentは維持する。
+scope/player保存先のversion変更と全storeのschema/拡張子変更は第5b段階でまとめる。
+今回の型整理は表示境界と複数workflowにも広がるため、順序変更の改修前で停止して報告した。
+ユーザーが「履歴専用の記録型を先に整える」を承認したため、この順序で再開する。
+第5段階全体は未完了。Voxrigや実機への変更は行っていない。
+
+第5a段階の検証: codec 13件、設計図の公開MCP・再起動・採用・配置/撤去/診断の回帰25件が
+成功した。追加の旧JSON file拒否と最終静的検査は完了時に追記する。
+旧JSONが残る保存先への書込みを拒否し、旧fileを保持して新storeを作らない追加試験も成功。
+codec/translate/MCPのall-target Clippy（`-D warnings`）、MCP no-default-featuresの
+all-target Clippyが成功した。最初の設計図試験指定はmodule名の違いで0件だったため、
+件数は修正後の25件を使う。サーバー起動・実機接続・ワールド変更は行っていない。

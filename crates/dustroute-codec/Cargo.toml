@@ -1,6 +1,6 @@
 [package]
 name = "dustroute-codec"
-description = "Deterministic typed comparison encoding for DustRoute"
+description = "Typed comparison keys and bounded versioned historical storage for DustRoute"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

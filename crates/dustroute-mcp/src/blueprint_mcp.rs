@@ -10,7 +10,6 @@ use dustroute_translate::blueprint_update::*;
 use dustroute_translate::promotion::{CheckStatus, PromotionReport, review_assembly_with_context};
 use rmcp::schemars;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use std::collections::BTreeMap;
 
 use crate::state::PlanStateStore;
@@ -21,7 +20,7 @@ pub(crate) use response::{Response, ReviewResponse};
 
 const MAX_ARCHIVE_BYTES: u64 = 16 * 1024 * 1024;
 const MAX_REQUEST_BYTES: usize = 4 * 1024 * 1024;
-const STORE_SCHEMA: &str = "dustroute.mcp-blueprints.v2";
+const STORE_SCHEMA: &str = "dustroute.mcp-blueprints.v3";
 
 /// Current stores always carry the grounding map, including when it is empty.
 /// An absent map is a retired representation, never invented placement evidence.
@@ -30,7 +29,7 @@ const STORE_SCHEMA: &str = "dustroute.mcp-blueprints.v2";
 struct StoredBlueprints {
     schema: String,
     owner: String,
-    archive: Value,
+    archive: BlueprintUpdateArchive,
     groundings: BTreeMap<AssemblyRevisionId, AssemblyGrounding>,
 }
 
@@ -1028,7 +1027,7 @@ fn transaction<T>(
         .map_err(|e| e.to_string())?;
     fs2::FileExt::try_lock_exclusive(&lock)
         .map_err(|_| "Blueprint catalog is busy; retry the same request".to_owned())?;
-    let path = root.join("catalog.json");
+    let path = root.join("catalog.store");
     let (mut updates, mut groundings) = match fs::File::open(&path) {
         Ok(file) => {
             let mut bytes = Vec::new();
@@ -1038,37 +1037,48 @@ fn transaction<T>(
             if bytes.len() as u64 > MAX_ARCHIVE_BYTES {
                 return Err("stored Blueprint archive exceeds 16 MiB".into());
             }
-            let saved: Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-            if saved["schema"] != STORE_SCHEMA {
-                return Err("retired or unsupported MCP Blueprint store; preserve the archive separately and recreate/review with v2".into());
+            let saved: StoredBlueprints =
+                dustroute_codec::storage::decode(STORE_SCHEMA, &bytes, MAX_ARCHIVE_BYTES as usize)
+                    .map_err(|e| format!("invalid current MCP Blueprint store: {e}"))?;
+            if saved.schema != STORE_SCHEMA {
+                return Err("retired MCP Blueprint store; preserve it separately and recreate/review with v3".into());
             }
-            let saved: StoredBlueprints = serde_json::from_value(saved)
-                .map_err(|e| format!("invalid current MCP Blueprint store: {e}"))?;
             if saved.owner != player {
                 return Err("Blueprint archive owner mismatch".into());
             }
-            let updates = BlueprintUpdates::from_json(&saved.archive.to_string())
-                .map_err(|e| e.to_string())?;
+            let updates =
+                BlueprintUpdates::from_archive(saved.archive).map_err(|e| e.to_string())?;
             (updates, saved.groundings)
         }
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => (
-            BlueprintUpdates::new(
-                dustroute_library::builtin_blueprints::builtin_blueprints().clone(),
-            ),
-            BTreeMap::new(),
-        ),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            if root
+                .join("catalog.json")
+                .try_exists()
+                .map_err(|e| e.to_string())?
+            {
+                return Err("retired JSON Blueprint store; preserve it separately and recreate/review with v3".into());
+            }
+            (
+                BlueprintUpdates::new(
+                    dustroute_library::builtin_blueprints::builtin_blueprints().clone(),
+                ),
+                BTreeMap::new(),
+            )
+        }
         Err(e) => return Err(e.to_string()),
     };
     let (result, write) = action(&mut updates, &mut groundings)?;
     if write {
-        let archive: Value = serde_json::from_str(&updates.to_json().map_err(|e| e.to_string())?)
-            .map_err(|e| e.to_string())?;
-        let bytes = serde_json::to_vec(&StoredBlueprints {
-            schema: STORE_SCHEMA.into(),
-            owner: player.into(),
-            archive,
-            groundings,
-        })
+        let bytes = dustroute_codec::storage::encode(
+            STORE_SCHEMA,
+            &StoredBlueprints {
+                schema: STORE_SCHEMA.into(),
+                owner: player.into(),
+                archive: updates.archive(),
+                groundings,
+            },
+            MAX_ARCHIVE_BYTES as usize,
+        )
         .map_err(|e| e.to_string())?;
         if bytes.len() as u64 > MAX_ARCHIVE_BYTES {
             return Err("Blueprint catalog exceeds 16 MiB; no changes saved".into());
@@ -1077,4 +1087,29 @@ fn transaction<T>(
             .map_err(|e| e.to_string())?;
     }
     Ok(result)
+}
+
+// Corruption tests edit the MCP-shaped fixture, then encode a typed archive.
+// This helper is never part of a production storage or adoption path.
+#[cfg(test)]
+pub(crate) fn read_store_fixture(bytes: &[u8]) -> serde_json::Value {
+    let record: StoredBlueprints =
+        dustroute_codec::storage::decode(STORE_SCHEMA, bytes, MAX_ARCHIVE_BYTES as usize).unwrap();
+    serde_json::to_value(record).unwrap()
+}
+#[cfg(test)]
+pub(crate) fn encode_store_fixture(value: serde_json::Value) -> Vec<u8> {
+    if value.get("groundings").is_none() {
+        #[derive(Deserialize, Serialize)]
+        struct MissingGroundings {
+            schema: String,
+            owner: String,
+            archive: BlueprintUpdateArchive,
+        }
+        let record: MissingGroundings = serde_json::from_value(value).unwrap();
+        return dustroute_codec::storage::encode(STORE_SCHEMA, &record, MAX_ARCHIVE_BYTES as usize)
+            .unwrap();
+    }
+    let record: StoredBlueprints = serde_json::from_value(value).unwrap();
+    dustroute_codec::storage::encode(STORE_SCHEMA, &record, MAX_ARCHIVE_BYTES as usize).unwrap()
 }

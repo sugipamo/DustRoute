@@ -472,6 +472,12 @@ impl BlueprintUpdates {
     pub fn from_json(input: &str) -> Result<Self, BlueprintUpdateError> {
         let archive: BlueprintUpdateArchive = serde_json::from_str(input)
             .map_err(|error| BlueprintUpdateError::Invalid(error.to_string()))?;
+        Self::from_archive(archive)
+    }
+
+    /// Validates typed historical data without parsing a presentation format.
+    /// Saved validation events never become fresh adoption authority.
+    pub fn from_archive(archive: BlueprintUpdateArchive) -> Result<Self, BlueprintUpdateError> {
         if archive.schema != UPDATE_ARCHIVE_SCHEMA {
             return invalid(
                 "retired or unsupported blueprint updates schema; recreate and freshly review proposals with the current version (v5)",

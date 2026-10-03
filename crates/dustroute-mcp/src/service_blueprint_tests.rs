@@ -1212,11 +1212,11 @@ async fn blueprint_mcp_revalidates_forged_saved_pass_and_retains_rejected_old_re
     // Stored diagnostics deliberately claim a pass. Adoption must compute a new review.
     let path = PlanStateStore::new(root.clone(), 1)
         .blueprint_root("Tester")
-        .join("catalog.json");
-    let mut saved: Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+        .join("catalog.store");
+    let mut saved: Value = crate::blueprint_mcp::read_store_fixture(&fs::read(&path).unwrap());
     saved["archive"]["proposals"][0]["events"][0]["report"] =
         json!({"occurrences":[],"arrangement":[]});
-    fs::write(&path, serde_json::to_vec(&saved).unwrap()).unwrap();
+    fs::write(&path, crate::blueprint_mcp::encode_store_fixture(saved)).unwrap();
     let (client, server) = start(&root).await;
     let refused = call(
         &client,
@@ -1263,13 +1263,26 @@ fn blueprint_store_is_atomic_scoped_and_locked_across_instances() {
     let root = temporary();
     let store = PlanStateStore::new(root.clone(), 1);
     let (records, _) = fixture(false);
+    let directory = store.blueprint_root("Tester");
+    fs::create_dir_all(&directory).unwrap();
+    let retired = directory.join("catalog.json");
+    fs::write(&retired, b"retired JSON archive").unwrap();
+    let write = serde_json::from_value(records["blueprint"].clone()).unwrap();
+    assert!(
+        execute(&store, "Tester", Command::Write(write))
+            .unwrap_err()
+            .contains("retired JSON")
+    );
+    assert_eq!(fs::read(&retired).unwrap(), b"retired JSON archive");
+    assert!(!directory.join("catalog.store").exists());
+    fs::remove_file(retired).unwrap();
     execute(
         &store,
         "Tester",
         Command::Write(serde_json::from_value(records["blueprint"].clone()).unwrap()),
     )
     .unwrap();
-    let path = store.blueprint_root("Tester").join("catalog.json");
+    let path = store.blueprint_root("Tester").join("catalog.store");
     let before = fs::read(&path).unwrap();
     let mut valid = builtin_blueprints()
         .revision(&id(NOT_TOP_REVISION))
@@ -1314,8 +1327,8 @@ fn blueprint_store_is_atomic_scoped_and_locked_across_instances() {
             .unwrap()
             .is_some()
     );
-    let current: Value = serde_json::from_slice(&before).unwrap();
-    assert_eq!(current["schema"], "dustroute.mcp-blueprints.v2");
+    let current: Value = crate::blueprint_mcp::read_store_fixture(&before);
+    assert_eq!(current["schema"], "dustroute.mcp-blueprints.v3");
     assert_eq!(
         current["archive"]["schema"],
         "dustroute.blueprint-updates.v5"
@@ -1335,7 +1348,7 @@ fn blueprint_store_is_atomic_scoped_and_locked_across_instances() {
         refused.push((old_history, "retired"));
     }
     for (record, reason) in refused {
-        let bytes = serde_json::to_vec(&record).unwrap();
+        let bytes = crate::blueprint_mcp::encode_store_fixture(record);
         fs::write(&path, &bytes).unwrap();
         assert!(
             execute(&other, "Tester", Command::Read(BlueprintRead::Archive))

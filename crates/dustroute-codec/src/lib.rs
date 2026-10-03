@@ -1,2 +1,3 @@
-//! Deterministic typed keys. This is an encoder, not a storage or authority decoder.
+//! Typed encoding. Comparison keys and bounded historical storage are separate APIs.
 pub mod canonical;
+pub mod storage;
