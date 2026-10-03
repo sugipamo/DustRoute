@@ -1,7 +1,8 @@
 # Survival construction: next milestones
 
-Updated 2026-10-03 JST. This roadmap refines the agreed stages after fixed-reference
-acceptance. It does not claim implementation of the remaining stages.
+Updated 2026-10-03 UTC after single-builder acceptance. Bounded stages 2, 3 and
+sealed idle-checkpoint stage 4A are accepted. Broader interrupted-operation recovery
+and stage 5 remain separate milestones.
 
 ## Product objective and baseline
 
@@ -37,16 +38,23 @@ Separate non-OP cases refused actual inventory shortage and a changed site befor
 construction, preserving all 3,120 observed cells. See the
 [public workflow](survival-public-construction.md) and
 [hashed acceptance evidence](evidence/survival-public-acceptance-20261003.json).
-Stage 4A now has idle checkpoint, fresh diagnosis and new remaining-plan
-implementation. Its placement-boundary checkpoint, separate-process read,
-external-change/shortage refusal and 104-action remaining preview were verified.
-Continuation execution stopped on a missing exact builder entity in the new
-observer before its first movement. It is **not complete**; dependent work is
-stopped for the [observer readiness prerequisite](survival-observer-readiness-prerequisite.md).
-Mining-boundary acceptance and final continuation completion remain pending;
-stage 5 remains future work. The compiler stop below is historical: after the
-user increased guest memory, serial compilation succeeded without changing the
-toolchain or thread-stack setting. The original crash cause is undetermined.
+Stage 4A is now complete for sealed settled-boundary continuation under the
+explicitly approved one-builder prediction contract. A normal 115-step public
+roof and separate-process continuation from placement and mining-requested
+checkpoints completed cleanup and retreat on fresh isolated non-OP worlds.
+The service did not configure an observer; a separate comparison client verified
+3,120 cells and final position in each case. Both continuation trials refused
+foreign changes and material shortages and prevented duplicate checkpoint claims.
+See [the current public contract](survival-public-construction.md) and
+[hashed single-builder evidence](evidence/survival-single-builder-live-20261003.json).
+
+The earlier continuation's missing observer entity remains a recorded historical
+failure, not a diagnosed tracking issue. The new production path removes that
+dependency. Motion remains explicitly predicted, with no physical position error
+bound or server stop acknowledgement. Arbitrary crash recovery and stage 5's
+broad disturbance campaign are not completed. The compiler stop below is also
+historical: serial compilation succeeded after the user's memory increase;
+the original crash cause remains undetermined.
 
 ## Ordered milestones
 
@@ -106,9 +114,11 @@ causes. The previous 215.57-second roof test includes setup and preflight; it is
 not a pure construction throughput measurement. Set performance targets after
 generated-plan measurements, while preserving the existing correctness gates.
 
-The acceptance fixture uses an independent observer. Its operational setup and
-readiness must be explicit in the public workflow; automatic generation does not
-remove that dependency or prove single-client observation suffices.
+Acceptance fixtures use independent observers for comparison only. Normal
+operation uses the builder's received world and the explicitly approved modeled
+motion contract. This is not independent spatial corroboration; correction,
+interruption and fresh-state admission guards remain. The public workflow states
+the absence of a measured position error bound and server stop acknowledgement.
 
 ## Stop conditions and deferred scope
 

@@ -37,26 +37,40 @@ still match exactly at admission. A saved validation pass is never sufficient.
 
 ## Native ownership and observations
 
-Configure `DUSTROUTE_SURVIVAL_OBSERVER_USERNAME` before native MCP startup. The
-observer must be a distinct account from the builder and configured player, on
-the same server and dimension, with the whole work region loaded. Both accounts
-must be admitted by server access rules. The tool does not move the observer or
-automatically load distant chunks. No server MOD or operator privileges are
-required for this survival execution path. World mutation policy must permit it.
+Normal construction uses one builder/account; an observer is not required for
+planning, admission, execution, checkpoints or continuation.
+`DUSTROUTE_SURVIVAL_OBSERVER_USERNAME` is optional legacy configuration, not a
+survival prerequisite. Independent observers in acceptance fixtures compare
+results without participating in the service's admission decisions. No server
+MOD or operator privileges are required. World mutation policy must permit it.
 
 Planning temporarily reserves the source connection without dispatching actions.
 Execution exclusively holds that source and its checked replacement connections;
 other source operations are unavailable until a complete successful handback.
-The initial independent observation must match the builder's current complete
-scene. The executor then checks the original connection, dimension and position,
-world baseline and actual inventory before dispatch. Each subsequent action uses
-the common executor's fresh checks. Final independent block comparison and retreat
-verification precede completion. These are client observations, not an atomic
-server world lock or proof that nobody can change the world afterward.
+The executor checks the original connection, dimension and standing basis, the
+builder's complete received scene, world baseline and actual inventory before
+dispatch. Every subsequent action uses fresh native checks. Final checks compare
+the full expected site, remaining temporary ownership and retreat condition.
 
-Voxrig owns physical checks, received state and native single-operation contracts.
-DustRoute owns adoption, scope, search, materials, exclusivity and job records.
-This integration does not change Voxrig's mining retirement contract.
+Movement uses the explicitly selected `predicted_dry_cube_v1` contract. Received
+positions, model predictions and independent comparisons remain distinct native
+Rust types. The 1/16-block horizontal planning reserve is a model-space policy,
+not a measured physical error bound. Corrections, impulses, generation changes,
+unsupported support/geometry or interrupted dispatch invalidate continuation.
+The public `execution_contract` reports `world_evidence=builder_received`,
+`independent_observer_required=false`, `server_stop_acknowledged=false` and
+`server_position_error_bound=null`. Confirmed world edits remain received
+observations; movement is recorded as predicted. These observations are not an
+atomic server world lock or proof against later changes.
+
+Voxrig owns physical checks, received state, native single-operation contracts
+and connection recovery. DustRoute owns adoption, scope, search, materials,
+exclusivity, temporary ownership and durable job records. Owned temporary cleanup
+uses the audited direct-vanilla same-profile login boundary: explicitly close the
+old source, obtain a fresh successful login under exclusive account ownership,
+then validate the declared target condition and current scene. A local close or
+elapsed delay alone is not retirement proof. Continuous same-connection mining
+reuse is not admitted. The library also retains its independent-retirement API.
 
 ## Stops and persisted evidence
 
@@ -65,12 +79,11 @@ This integration does not change Voxrig's mining retirement contract.
 | `source_not_adopted_or_mismatched` / `source_changed` | Read the current adoption and specification; propose/review corrections. |
 | `generation_refused` | Read the structured cause, shortages or search limits; no execution plan was accepted. |
 | `permission_denied` | Check player, dimension, region, action-count and mutation policy. |
-| `observer_not_configured` / `observer_mismatch` | Restore independent complete observation before making a fresh plan. |
 | `admission_refused` | Read `failure.error.code`, e.g. `snapshot_mismatch`, `plan_source_changed` or `supplied_materials_missing`; construction was not dispatched. The consumed job cannot replay. |
 | `needs_inspection` | Execution or persistence is uncertain. Inspect saved evidence and freshly observe; do not blindly retry. |
 | `cancelled_needs_inspection` | Cancellation stops at an executor boundary. It does not prove an outstanding native operation was aborted. |
-| `completed` | The executor recorded final independent verification. Later edits still require fresh observation. |
-| `checkpointed` | The old executor is sealed at an independently checked idle boundary; request a fresh continuation preview. |
+| `completed` | The builder verified the complete expected site, cleanup and retreat under the declared prediction/received-world contract. Later edits require fresh observation. |
+| `checkpointed` | The old executor is sealed after native operation-history and current received-scene/standing checks; request a fresh continuation preview. Model standing remains explicitly predicted. |
 | `safe_checkpoint_missing` | The last durable event does not prove a settled idle boundary. Lost native operations require intervention. |
 | `checkpoint_site_changed` | Read `diagnosis.conflicts` and inspect the changed cells; no automatic removal or repair was performed. |
 | `checkpoint_consumed` | A new job already claimed this boundary. Inspect that job rather than starting another branch. |
@@ -79,13 +92,13 @@ For a planned safe stop, call `action=checkpoint, job_id` and poll until
 `status.state=checkpointed`. The request itself does not confirm idle. An active
 mining attempt completes its existing outcome/retirement/reconnect path first;
 no new mining is started for the stop. The old executor then checks native
-operation history, current standing/inventory and the complete independent site,
+operation history, current standing/inventory and the complete builder-received site,
 durably records the checkpoint, seals its old sequence and returns the source.
 `cancel` retains its existing uncertain-stop semantics.
 
 After that boundary, including after starting a new MCP process, call
 `action=continue, job_id=<old job>, limits=<optional search budgets>`. The tool
-rechecks adoption, endpoint/profile, dimension, scope and both current scenes.
+rechecks adoption, endpoint/profile, dimension, scope and the current native scene.
 It reports completed/unbuilt targets and conditional remaining owned temporary
 blocks, counts currently received inventory and searches a **new** complete plan
 for remaining placements, cleanup and retreat. Review its preview and then use
@@ -100,7 +113,9 @@ checks but before dispatch and held under the prior journal's writer lock.
 Competing previews cannot both execute. The claim remains consumed if admission
 subsequently fails or its controller is lost; inspect the linked new job. Only
 new manifests that retain the normalized specification support this workflow.
-An ordinary historical `revalidate`, an elapsed wait, or a lost unresolved
+Checkpoint schema v2 stores standing provenance for diagnosis only; old v1
+checkpoints are not converted. An ordinary historical `revalidate`, an elapsed
+wait, or a lost unresolved
 mining attempt is insufficient. This is bounded idle-checkpoint continuation,
 not arbitrary crash recovery, an atomic world lock or an automatic repair system.
 
@@ -122,18 +137,30 @@ of lost unresolved operations remains outside this milestone.
 
 ## Verification
 
-Stage 3 passed its bounded acceptance on 2026-10-03 JST: public MCP authoring and
-adoption led to a completed 115-action roof, all 18 temporary removals, retreat
-and 3,120 independently checked cells. Separate inventory-shortage and changed-site
-cases refused before construction and preserved the observed world. New-service
-diagnosis retained evidence without restoring native authority. See the
-[roadmap](survival-construction-roadmap.md) and
-[exact test artifacts](evidence/survival-public-acceptance-20261003.json).
-This does not establish interrupted-job recovery or unrestricted construction.
+The single-builder path passed its declared isolated non-OP Java 1.21.11
+acceptance on 2026-10-03 UTC. Public MCP authoring/adoption produced a completed
+115-step roof, 18 temporary removals and retreat without configuring an observer
+in the service. A separate test client then compared all 3,120 cells and final
+position. Each server and test process exited normally.
 
-Stage 4A adds the checkpoint/continuation workflow described above, but its live
-acceptance is incomplete. A placement checkpoint and a new remaining preview
-passed in separate OS processes; the first continuation movement refused because
-the fresh observer lacked the exact spawned builder entity. Further dependent
-work is stopped under the user's scope rule. See the
-[readiness prerequisite and proposed next work](survival-observer-readiness-prerequisite.md).
+Two fresh-world trials checkpointed after placement and after a request made
+during mining, then used genuinely separate OS processes to diagnose the saved
+boundary and generate new plans. Both completed construction, cleanup and retreat.
+Both refused external site changes without edits, rejected missing materials and
+refused a second claim of the consumed checkpoint. Placement checkpoint: 11 steps
+saved, one temporary retained, 104 new steps completed. Mining checkpoint: 31 steps
+saved after one same-profile recovery, six temporary blocks retained, 85 new steps
+completed. Historical diagnosis restored no native operation authority.
+
+The complete MCP library suite passed 210 tests; ten explicitly opt-in tests were
+ignored by that offline run. Focused survival and prediction/checkpoint regressions
+and both all-target Clippy configurations passed. See the
+[offline record](evidence/survival-single-builder-offline-20261003.json),
+[hashed live traces and controllers](evidence/survival-single-builder-live-20261003.json)
+and [single-builder plan](survival-single-client-plan.md).
+
+Earlier [observer-based acceptance](evidence/survival-public-acceptance-20261003.json)
+and the [failed observer-readiness continuation](survival-observer-readiness-prerequisite.md)
+remain historical evidence. The new path removes that production dependency; it
+does not diagnose the old tracking failure. These cases establish bounded sealed
+checkpoint continuation, not arbitrary crash recovery or unrestricted construction.

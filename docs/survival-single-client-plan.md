@@ -12,21 +12,22 @@ Following the approved prediction contract and native comparative acceptance,
 the current managed snapshot is `5bace7be7cd941e1340ad94052e922db23c4f892`
 (313 files), with unchanged implementation from live-tested `c491f6a`.
 
-Normal operation is intended to use one builder/account, with an independent
-observer used in verification fixtures. The overall goal is unfinished. The user
-approved explicitly predicted continuation with isolated comparative testing.
-Native movement and placement comparison passed. DustRoute switching and its
-verification are in progress. Further responsibility or correctness-contract
-changes still require reporting before dependent work.
+Normal operation now uses one builder/account, with an independent observer
+used only for verification comparisons. The user approved explicitly predicted
+continuation. Native movement/placement and integrated construction/continuation
+acceptance passed. The declared single-builder goal is complete; broader terrain,
+arbitrary crash recovery and a full disturbance campaign are separate work.
+Further responsibility or correctness-contract changes still require reporting
+before dependent work.
 
 ## Stages and current status
 
 | Stage | Completion condition | Status |
 | --- | --- | --- |
 | 1. Native mining continuation | Establish a same-connection release or same-profile fresh recovery without an observer retirement watch; preserve uncertainty and once-only login guards | Same-profile recovery implemented and declared native cases passed; continuous reuse remains unsupported |
-| 2. Movement and shared standing | Define the basis for one-bot walk/rest/jump/land and subsequent look/place/mine checks; compare against independent test evidence | Explicit prediction contract implemented; native walk/jump/collision/placement comparison passed; integrated mining-after-movement remains to verify |
-| 3. DustRoute execution | Use the chosen native contract for admission, placements, cleanup, final checks and durable checkpoints; expose actual evidence in MCP | One-builder implementation in progress; full build and continuation acceptance pending |
-| 4. Construction continuation acceptance | Complete a roofed build and separate-process continuation through cleanup/retreat, including checkpoint requested during mining | Pending; prior continuation failures remain recorded, not relabelled as passes |
+| 2. Movement and shared standing | Define the basis for one-bot walk/rest/jump/land and subsequent look/place/mine checks; compare against independent test evidence | Explicit prediction contract implemented; native walk/jump/collision/placement comparison passed; integrated movement, placement and subsequent mining/cleanup accepted |
+| 3. DustRoute execution | Use the chosen native contract for admission, placements, cleanup, final checks and durable checkpoints; expose actual evidence in MCP | One-builder integration complete; full roof and both continuation cases accepted |
+| 4. Construction continuation acceptance | Complete a roofed build and separate-process continuation through cleanup/retreat, including checkpoint requested during mining | Accepted on fresh isolated worlds; prior failures retained as historical evidence |
 
 The earlier `6ede15d` dependency update was independent of the movement choice.
 It did not switch the executor, remove the observer requirement or authorize
@@ -68,7 +69,7 @@ not converted. Reopening still creates a new checked plan from current native
 scene/materials and consumes the original checkpoint exactly once on admission.
 MCP states builder-received world evidence, predicted motion, no required
 independent observer, no server stop acknowledgement and no physical position
-error bound. Full integrated live acceptance remains to run.
+error bound. Full integrated live acceptance passed; see the final record below.
 
 ## Completed native mining slice
 
@@ -212,3 +213,32 @@ and the managed 313-file vendor check passed. Logs and source hashes are retaine
 in [the offline verification record](evidence/survival-single-builder-offline-20261003.json).
 Integrated roof construction, cleanup, retreat and two-process continuation are
 still pending; native movement acceptance alone is not their acceptance.
+
+## Integrated live acceptance (2026-10-03 UTC)
+
+Immutable DustRoute source `e4206c2cb463b6e611a28e44bf1736b4093cbc19` and the
+managed native pin above passed three fresh isolated non-OP vanilla trials. The
+production service had no configured observer; the separate test viewer compared
+results only. Every final scene matched all 3,120 cells and the independently
+received final position. Each trial removed all owned temporary blocks and
+satisfied retreat; every test and server exited zero.
+
+- Normal public construction: 115 completed steps, 30 predicted movement runs,
+  67 received placements and 18 temporary removals/same-profile recoveries.
+- Placement checkpoint: 11 completed steps saved with one owned temporary block;
+  a different process generated and completed a 104-step plan. The saved standing
+  basis remained explicitly predicted.
+- Mining-requested checkpoint: request observed `mining_started`; the normal
+  outcome and one same-profile recovery completed before saving 31 steps and six
+  owned temporary blocks. A different process completed a new 85-step plan.
+
+Both continuation cases independently verified that external changes were refused
+without mutation, material shortage was reported, historical reads restored no
+native authority, and a second continuation claim was refused. They are planned
+settled-boundary continuation, not arbitrary interrupted-operation recovery.
+Controllers, original traces, process identities, executable/JAR/JVM hashes,
+commands and source pins are in
+[the live verification record](evidence/survival-single-builder-live-20261003.json).
+The test servers were stopped normally; no user world or host configuration was
+changed. The public contract is documented in
+[the updated workflow](survival-public-construction.md).

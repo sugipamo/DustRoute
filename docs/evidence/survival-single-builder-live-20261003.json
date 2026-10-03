@@ -1,0 +1,177 @@
+{
+  "scope": "Declared single-builder dry-cube survival construction and sealed idle checkpoint continuation accepted",
+  "dustroute_source": "e4206c2cb463b6e611a28e44bf1736b4093cbc19",
+  "voxrig_revision": "5bace7be7cd941e1340ad94052e922db23c4f892",
+  "server": "Unmodified Java 1.21.11; isolated localhost:25572; offline authentication; forced survival; no operators; fresh separate fixture worlds",
+  "builder": "NatMineBot",
+  "comparison_only_observer": "NatMineView",
+  "trials": [
+    {
+      "case": "roof",
+      "source": "e4206c2cb463b6e611a28e44bf1736b4093cbc19",
+      "state": "completed",
+      "completed_steps": 115,
+      "same_profile_reconnects": 18,
+      "production_observer_configured": false,
+      "independently_compared_cells": 3120,
+      "independent_position_compared": true,
+      "remaining_owned_temporary": [],
+      "test_exit_code": 0,
+      "server_exit_code": 0,
+      "total_seconds_including_setup": 207.15128433698555,
+      "artifacts": [
+        {
+          "path": "docs/evidence/survival-single-builder-roof-20261003-a.json.gz",
+          "sha256": "1b3af25cb848bc15b0d8d12163e1d8ea5114e35a1eef4a75ef5edaea7b0efc7e",
+          "uncompressed_sha256": "96dda6a630b4c7d710da60bb76443f51e60da55f52f69c9f5d2ce0b04c8968fd"
+        },
+        {
+          "path": "docs/evidence/survival-single-builder-roof-20261003-a-runtime.json.gz",
+          "sha256": "2e1f509b1c38f1c55a29bf806aec810413231f3ad5767fb690ccf761d636db52",
+          "uncompressed_sha256": "becf80eab58064aa5ba84566b40e07e12fbc6ade5d0c91f1ce6ab97f41660e74"
+        },
+        {
+          "path": "docs/evidence/survival-single-builder-roof-20261003-a-server-console.log.gz",
+          "sha256": "b76471a6bbce188141413d4c6ff8b8c24be5633694003b50db3dccd24f3d39dd",
+          "uncompressed_sha256": "a5545ad63b6fcb0724ed929fca92b6413b38159dcb6ce73401d1fa291e33c071"
+        },
+        {
+          "path": "docs/evidence/survival-single-builder-roof-20261003-a-test.log.gz",
+          "sha256": "ca586c5eb29ff9d59e29c916f9ef8b49ef957cbbc4f66a3bee09e68d20bf6a85",
+          "uncompressed_sha256": "12062b5312f80532bcbf902bee7dbdbc0c93d8f83b25cf8f4f10e414fc40e849"
+        }
+      ]
+    },
+    {
+      "case": "placement_checkpoint",
+      "source": "e4206c2cb463b6e611a28e44bf1736b4093cbc19",
+      "state": "completed",
+      "completed_steps": 104,
+      "same_profile_reconnects": 18,
+      "production_observer_configured": false,
+      "independently_compared_cells": 3120,
+      "independent_position_compared": true,
+      "remaining_owned_temporary": [],
+      "test_exit_code": 0,
+      "server_exit_code": 0,
+      "total_seconds_including_setup": 242.13856291701086,
+      "checkpoint": {
+        "schema": "dustroute.survival-checkpoint.v2",
+        "completed_steps": 11,
+        "retained_owned_temporary": 1,
+        "standing_basis": "predicted",
+        "reconnects_before_idle": 0,
+        "requested_at_progress": "step_completed",
+        "separate_os_processes": true,
+        "historical_native_authority_restored": false,
+        "foreign_change_refused_without_edits": true,
+        "materials_shortage_refused": true,
+        "duplicate_claim_refused": true
+      },
+      "artifacts": [
+        {
+          "path": "docs/evidence/survival-single-builder-continuation-20261003-placement-a.json.gz",
+          "sha256": "d1941c29a47948585587e509d753b305945c2cd60b83a52124451e67facc49a9",
+          "uncompressed_sha256": "8532d7d265aed306f77afe3f954b840dcb96453c3e5d378279ce9935ae59b6d8"
+        },
+        {
+          "path": "docs/evidence/survival-single-builder-continuation-20261003-placement-a-runtime.json.gz",
+          "sha256": "fc12d887adb44ebfb03cb413ded069a7da0408b51f216860a7fc9d28d9d615c0",
+          "uncompressed_sha256": "d5b85e9c7138dc64cf7b001608e76639d074c9f1a00e1d091b07255fbbf422b9"
+        },
+        {
+          "path": "docs/evidence/survival-single-builder-continuation-20261003-placement-a-server-console.log.gz",
+          "sha256": "ed51f00332685892bac597ac976eb4893c97118bb6c7a472f215e47b1bcccbcf",
+          "uncompressed_sha256": "034b07c67b53677959e02a0077ee97f0002960f53e36b85ddec10111940c0e3f"
+        },
+        {
+          "path": "docs/evidence/survival-single-builder-continuation-20261003-placement-a-checkpoint-test.log.gz",
+          "sha256": "21e4f5e5f47aece9bfa7de63afef8a4db89c40eda1344d1bc1a5b3509d4a2677",
+          "uncompressed_sha256": "828685c49b0b69ade8f8ef2c692f3d8dd3e6099916cbf854624803661f3714a4"
+        },
+        {
+          "path": "docs/evidence/survival-single-builder-continuation-20261003-placement-a-continue-test.log.gz",
+          "sha256": "31f29a891d047ff4f24b3036843eae14c4199c873fc9bd490d0c14f79bc4b3b7",
+          "uncompressed_sha256": "ca32195755a652e209c87389caaf0771b0a1f7bdf94f0711bd2e6e447b248a73"
+        }
+      ]
+    },
+    {
+      "case": "mining_checkpoint",
+      "source": "e4206c2cb463b6e611a28e44bf1736b4093cbc19",
+      "state": "completed",
+      "completed_steps": 85,
+      "same_profile_reconnects": 17,
+      "production_observer_configured": false,
+      "independently_compared_cells": 3120,
+      "independent_position_compared": true,
+      "remaining_owned_temporary": [],
+      "test_exit_code": 0,
+      "server_exit_code": 0,
+      "total_seconds_including_setup": 240.4804879099829,
+      "checkpoint": {
+        "schema": "dustroute.survival-checkpoint.v2",
+        "completed_steps": 31,
+        "retained_owned_temporary": 6,
+        "standing_basis": "received",
+        "reconnects_before_idle": 1,
+        "requested_at_progress": "mining_started",
+        "separate_os_processes": true,
+        "historical_native_authority_restored": false,
+        "foreign_change_refused_without_edits": true,
+        "materials_shortage_refused": true,
+        "duplicate_claim_refused": true
+      },
+      "artifacts": [
+        {
+          "path": "docs/evidence/survival-single-builder-continuation-20261003-mining-a.json.gz",
+          "sha256": "d9debf61c1e85852cdb032ca2cdda852dbbd4dbcbc964ff636ee2f9f8c9ae565",
+          "uncompressed_sha256": "c86759f81d15cb4ce46f50ffedb230091bc3c0d945941a8825c60918846b0da7"
+        },
+        {
+          "path": "docs/evidence/survival-single-builder-continuation-20261003-mining-a-runtime.json.gz",
+          "sha256": "6304a3e893b7ef009c71a802ba01909912e0d52d79f3c79764ddf3c7d6fca0d5",
+          "uncompressed_sha256": "0debe28df899e067cefeff18f5c7bacb2182cabdecace149e0bc79ea7ca5328f"
+        },
+        {
+          "path": "docs/evidence/survival-single-builder-continuation-20261003-mining-a-server-console.log.gz",
+          "sha256": "b004a0bfa4872d07c2010cc527716960d404a8c89c8ad11bb03350f8074e9126",
+          "uncompressed_sha256": "13ba9f9db4799919801b1039e0b10574be83c6caecdfb5a24710d209849a3f35"
+        },
+        {
+          "path": "docs/evidence/survival-single-builder-continuation-20261003-mining-a-checkpoint-test.log.gz",
+          "sha256": "5e31569ad7efc5b599e0bea1b215e8b57e798a6352dd9bdf03984f25a3fc18fa",
+          "uncompressed_sha256": "781d99f45fe8d04f10c9510a8a8fccb1b1a442fc8c4d0680b55abb79e9b0c26a"
+        },
+        {
+          "path": "docs/evidence/survival-single-builder-continuation-20261003-mining-a-continue-test.log.gz",
+          "sha256": "9a9d563a41c1cf50159274b768f35b544458a4700b73b318dd4271ac1612705d",
+          "uncompressed_sha256": "431165e863aab1c3665f08797aa50b76537de5f3acdcf2cb502b6fb3b3f44d34"
+        }
+      ]
+    }
+  ],
+  "controllers": [
+    {
+      "path": "docs/evidence/survival-single-builder-20261003-run-single-builder-roof-trial.py.gz",
+      "sha256": "8ccc1221820a19486bca199d7076abb1a4b68a9be49c93358dd3cb5dcd93fa14",
+      "uncompressed_sha256": "c7cc47253470ca54a23bbf04a2f1c617f8b69b3dfb6a5edb898dfe5af79293e1"
+    },
+    {
+      "path": "docs/evidence/survival-single-builder-20261003-run-single-builder-continuation-trial.py.gz",
+      "sha256": "efed84838fca6f02e31abbd9dea2177f334bed7553cee532b5bac494f8cb07fd",
+      "uncompressed_sha256": "de29ee278c2ed462214b4677f24e3e19f103412bccf9835568906477df22f881"
+    }
+  ],
+  "offline_verification": "docs/evidence/survival-single-builder-offline-20261003.json",
+  "native_movement_verification": "vendor/voxrig/docs/evidence/survival-predicted-motion-live-20261003.json",
+  "native_mining_verification": "vendor/voxrig/docs/evidence/survival-single-profile-live-20261003.json",
+  "limits": [
+    "Movement remains model prediction; no server position error bound or stop acknowledgement",
+    "Retirement uses audited direct vanilla same-profile fresh login and exclusive account ownership; continuous same-connection mining reuse is not admitted",
+    "Declared dry passive cubes, supplied inventory and bounded edit/travel/temporary/retreat footprints only",
+    "Fresh-process continuation requires a sealed settled checkpoint and a newly checked plan; no arbitrary crash recovery or replay of unknown operations",
+    "Independent observers compare acceptance trials only; ordinary service does not require them",
+    "Stage 5 broad disturbance campaign and new entities/terrain/material-gathering capabilities remain separate work"
+  ]
+}
