@@ -37,7 +37,14 @@ Separate non-OP cases refused actual inventory shortage and a changed site befor
 construction, preserving all 3,120 observed cells. See the
 [public workflow](survival-public-construction.md) and
 [hashed acceptance evidence](evidence/survival-public-acceptance-20261003.json).
-Stages 4-5 remain future work. The compiler stop below is historical: after the
+Stage 4A now has idle checkpoint, fresh diagnosis and new remaining-plan
+implementation. Its placement-boundary checkpoint, separate-process read,
+external-change/shortage refusal and 104-action remaining preview were verified.
+Continuation execution stopped on a missing exact builder entity in the new
+observer before its first movement. It is **not complete**; dependent work is
+stopped for the [observer readiness prerequisite](survival-observer-readiness-prerequisite.md).
+Mining-boundary acceptance and final continuation completion remain pending;
+stage 5 remains future work. The compiler stop below is historical: after the
 user increased guest memory, serial compilation succeeded without changing the
 toolchain or thread-stack setting. The original crash cause is undetermined.
 

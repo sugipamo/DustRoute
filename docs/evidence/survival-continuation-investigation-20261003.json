@@ -1,0 +1,313 @@
+{
+  "schema": "dustroute.survival-continuation-investigation.v1",
+  "date": "2026-10-03 UTC",
+  "implementation_source": "e6c8fbc8c8b1bf8a8da5c3a78798eb641205aa42",
+  "voxrig_pin": "2b6e7bfc94e6270054eac5c7b14a74d4657a411c",
+  "status": "implementation_stopped_for_new_observer_readiness_prerequisite",
+  "accepted_complete": false,
+  "validated": [
+    "settled idle checkpoint after placement boundary",
+    "historical reopening in a separate OS process without native authority restoration",
+    "external-change refusal",
+    "current-inventory shortage refusal",
+    "fresh checked remaining plan with 8 complete targets, 41 unbuilt targets and 1 old temporary cube"
+  ],
+  "not_validated": [
+    "completed continuation execution",
+    "mining-requested checkpoint live acceptance",
+    "initial remote-player visibility after independent observer relogin",
+    "arbitrary crash recovery"
+  ],
+  "focused_tests": {
+    "command": "cargo test --offline --locked -j 1 -p dustroute-mcp --features voxrig --lib survival -- --test-threads=1",
+    "passed": 29,
+    "failed": 0,
+    "ignored": 6
+  },
+  "static_checks": {
+    "clippy_features_voxrig": "passed",
+    "clippy_without_features": "passed",
+    "fmt": "passed",
+    "full_regression_suite_repeated": false,
+    "checked_source": "14935aaafba6392a30a78b2994648dccaf69c64c",
+    "following_source_change": "e6c8fbc changes only the live-test shortage assertion and a source-lease comment; the two public offline tests passed afterward."
+  },
+  "cases": [
+    {
+      "case": "idle-placement-a",
+      "source": "14935aaafba6392a30a78b2994648dccaf69c64c",
+      "processes": [
+        {
+          "phase": "checkpoint",
+          "pid": 13733,
+          "exit_code": 0
+        },
+        {
+          "phase": "continue",
+          "pid": 13767,
+          "exit_code": 101
+        }
+      ],
+      "test_exit_code": 101,
+      "server_exit_code": 0,
+      "total_seconds": 60.8167400980019,
+      "parent_job_id": "18be980a-eb5f-4416-9295-67a11b419e94",
+      "retained_records": [
+        ".local/survival-continuation-20261003-idle-placement-a.state/survival-jobs/18be980a-eb5f-4416-9295-67a11b419e94/manifest.json",
+        ".local/survival-continuation-20261003-idle-placement-a.state/survival-jobs/18be980a-eb5f-4416-9295-67a11b419e94/status.json",
+        ".local/survival-continuation-20261003-idle-placement-a.state/survival-jobs/18be980a-eb5f-4416-9295-67a11b419e94/execution/record.json"
+      ],
+      "accepted_complete": false,
+      "stop_reason": "Live test expected the wrong shape for a correctly returned insufficient_materials cause; no positive continuation was attempted."
+    },
+    {
+      "case": "idle-placement-b",
+      "source": "e6c8fbc8c8b1bf8a8da5c3a78798eb641205aa42",
+      "processes": [
+        {
+          "phase": "checkpoint",
+          "pid": 14220,
+          "exit_code": 0
+        },
+        {
+          "phase": "continue",
+          "pid": 14263,
+          "exit_code": 101
+        }
+      ],
+      "test_exit_code": 101,
+      "server_exit_code": 0,
+      "total_seconds": 116.26753892301349,
+      "parent_job_id": "3258b70a-bf1c-444e-8b50-b8b058b0d18b",
+      "retained_records": [
+        ".local/survival-continuation-20261003-idle-placement-b.state/survival-jobs/3258b70a-bf1c-444e-8b50-b8b058b0d18b/manifest.json",
+        ".local/survival-continuation-20261003-idle-placement-b.state/survival-jobs/3258b70a-bf1c-444e-8b50-b8b058b0d18b/status.json",
+        ".local/survival-continuation-20261003-idle-placement-b.state/survival-jobs/3258b70a-bf1c-444e-8b50-b8b058b0d18b/execution/record.json",
+        ".local/survival-continuation-20261003-idle-placement-b.state/survival-jobs/3258b70a-bf1c-444e-8b50-b8b058b0d18b/execution/continuation-claim.json",
+        ".local/survival-continuation-20261003-idle-placement-b.state/survival-jobs/e4df05a2-9545-45a9-818b-d5dc2d98c6eb/manifest.json",
+        ".local/survival-continuation-20261003-idle-placement-b.state/survival-jobs/e4df05a2-9545-45a9-818b-d5dc2d98c6eb/status.json",
+        ".local/survival-continuation-20261003-idle-placement-b.state/survival-jobs/e4df05a2-9545-45a9-818b-d5dc2d98c6eb/execution/record.json"
+      ],
+      "accepted_complete": false,
+      "new_job_id": "e4df05a2-9545-45a9-818b-d5dc2d98c6eb",
+      "new_job_status": {
+        "completed_steps": 0,
+        "error": {
+          "code": "native_refused",
+          "detail": "exact player UUID is not observed"
+        },
+        "state": "needs_inspection"
+      },
+      "new_job_last_event": {
+        "step": 0,
+        "phase": "stopped",
+        "outcome": "uncertain",
+        "continuation": "needs_inspection",
+        "evidence": {
+          "error": {
+            "code": "native_refused",
+            "detail": "exact player UUID is not observed"
+          },
+          "remaining_owned_temporary": [
+            [
+              1,
+              -60,
+              6
+            ]
+          ]
+        }
+      },
+      "new_job_first_step": "move",
+      "stop_reason": "Native initial movement refused because the independent observer lacked the exact spawned player UUID. Aggregating full test evidence then exceeded the production save helper bound; original separate job records remain intact.",
+      "new_preview_actions": 104,
+      "new_preview_completed_targets": 8,
+      "new_preview_remaining_targets": 41
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "docs/evidence/survival-continuation/20261003/survival-continuation-20261003-idle-placement-a.json.gz",
+      "original": ".local/survival-continuation-20261003-idle-placement-a.json",
+      "sha256": "9e3076d9b88366060369b79b7287436d0e33fc000936a0d300621d6e731a5055",
+      "uncompressed_sha256": "3844b08085b311702f99887d20c075a8d48bec1fd471f2488942779eafe8e64f",
+      "bytes": 250575,
+      "uncompressed_bytes": 5944015
+    },
+    {
+      "path": "docs/evidence/survival-continuation/20261003/survival-continuation-20261003-idle-placement-a-runtime.json.gz",
+      "original": ".local/survival-continuation-20261003-idle-placement-a-runtime.json",
+      "sha256": "3f27548964afb080f992e4a3011b4a0dc458ad4dcd472c64906b7bbc35be469b",
+      "uncompressed_sha256": "5071eba100f7df30a31f03e2fae489e982d6a1bb7e6df3aea743663cedda25c5",
+      "bytes": 704,
+      "uncompressed_bytes": 1296
+    },
+    {
+      "path": "docs/evidence/survival-continuation/20261003/survival-continuation-20261003-idle-placement-a-server-console.log.gz",
+      "original": ".local/survival-continuation-20261003-idle-placement-a-server-console.log",
+      "sha256": "caf1cb43a2c2598d879d6e7b8f723f883eb8608179c696c4a71b85f324c51e87",
+      "uncompressed_sha256": "f19805b256537a2e361713ceb001301a1b4a2bc914b43b2c78787769295baea2",
+      "bytes": 1207,
+      "uncompressed_bytes": 4675
+    },
+    {
+      "path": "docs/evidence/survival-continuation/20261003/survival-continuation-20261003-idle-placement-a-server.log.gz",
+      "original": ".local/survival-continuation-20261003-idle-placement-a-server.log",
+      "sha256": "9af728a4f4088a67adb9cd7baa46151b14577edff96de519f1b10a031f7112fa",
+      "uncompressed_sha256": "95d811110474f96b55ffb0d055e095abcef2113ba14d3f81ce91a98b52cf9c64",
+      "bytes": 1197,
+      "uncompressed_bytes": 4640
+    },
+    {
+      "path": "docs/evidence/survival-continuation/20261003/survival-continuation-20261003-idle-placement-a-checkpoint-test.log.gz",
+      "original": ".local/survival-continuation-20261003-idle-placement-a-checkpoint-test.log",
+      "sha256": "d4d059961ec286b131b8dad78141f5e375a0c069c68282377729ea4407eeb14b",
+      "uncompressed_sha256": "011442952297d4f60260d23f4a3b5b56a998589e5bb5483667ef13b91cc5be0b",
+      "bytes": 235,
+      "uncompressed_bytes": 297
+    },
+    {
+      "path": "docs/evidence/survival-continuation/20261003/survival-continuation-20261003-idle-placement-a-continue-test.log.gz",
+      "original": ".local/survival-continuation-20261003-idle-placement-a-continue-test.log",
+      "sha256": "49bbf366e8e0c4ad405396308308be9d5e581c01625723c4a6b1830e8f4c2fc7",
+      "uncompressed_sha256": "82d16d490ee12a816edccd7836d2ad4274913afe9e866d3e45c46bf287a00c4d",
+      "bytes": 903,
+      "uncompressed_bytes": 1964
+    },
+    {
+      "path": "docs/evidence/survival-continuation/20261003/survival-continuation-20261003-idle-placement-a.state--survival-jobs--18be980a-eb5f-4416-9295-67a11b419e94--manifest.json.gz",
+      "original": ".local/survival-continuation-20261003-idle-placement-a.state/survival-jobs/18be980a-eb5f-4416-9295-67a11b419e94/manifest.json",
+      "sha256": "1d31d30253fa1721fed5317d2184d728d439c86d77228e9c621b222bc60406d6",
+      "uncompressed_sha256": "cdfd3f43a2d9e2a680347049cd3cec1adf408954fb0e9d62659706780487a074",
+      "bytes": 79945,
+      "uncompressed_bytes": 2359093
+    },
+    {
+      "path": "docs/evidence/survival-continuation/20261003/survival-continuation-20261003-idle-placement-a.state--survival-jobs--18be980a-eb5f-4416-9295-67a11b419e94--status.json.gz",
+      "original": ".local/survival-continuation-20261003-idle-placement-a.state/survival-jobs/18be980a-eb5f-4416-9295-67a11b419e94/status.json",
+      "sha256": "98f14b2b42a2218811745c420eb8c7d0ab59168915e2ba479287c4e9116c3c47",
+      "uncompressed_sha256": "99af5c92a6b09f6cdc681f0b811502c40dc311a6cbe9769a3179eb59a73e66c7",
+      "bytes": 2366,
+      "uncompressed_bytes": 90115
+    },
+    {
+      "path": "docs/evidence/survival-continuation/20261003/survival-continuation-20261003-idle-placement-a.state--survival-jobs--18be980a-eb5f-4416-9295-67a11b419e94--execution--record.json.gz",
+      "original": ".local/survival-continuation-20261003-idle-placement-a.state/survival-jobs/18be980a-eb5f-4416-9295-67a11b419e94/execution/record.json",
+      "sha256": "1a496bbcda004930d8c920a9a0feb37dfabd7f418414a10a803732b8374f8089",
+      "uncompressed_sha256": "522e1445baf14d6846919341f3bdf065ecc02ce4b51f389eef4ac5b9f3eb1d0c",
+      "bytes": 40304,
+      "uncompressed_bytes": 466999
+    },
+    {
+      "path": "docs/evidence/survival-continuation/20261003/survival-continuation-20261003-idle-placement-b.json.gz",
+      "original": ".local/survival-continuation-20261003-idle-placement-b.json",
+      "sha256": "7a0f8c2f5df370057ec5e0be86ba0d462eedb1b4d34931b2a7b3cac68c23fca9",
+      "uncompressed_sha256": "bb62ced906f82e33bdfb3ef23d95b2d0194e805e348d5977fc0a610d9fb405ff",
+      "bytes": 306844,
+      "uncompressed_bytes": 7096418
+    },
+    {
+      "path": "docs/evidence/survival-continuation/20261003/survival-continuation-20261003-idle-placement-b-runtime.json.gz",
+      "original": ".local/survival-continuation-20261003-idle-placement-b-runtime.json",
+      "sha256": "2fe48b9ead78ceaafe65d05ac57472f7d780bb09c15feed426d608b8e2a90fef",
+      "uncompressed_sha256": "42ee7716cd8808c8908faa722c5adec3fdca4849a0a25faedd23f4760e655253",
+      "bytes": 705,
+      "uncompressed_bytes": 1298
+    },
+    {
+      "path": "docs/evidence/survival-continuation/20261003/survival-continuation-20261003-idle-placement-b-server-console.log.gz",
+      "original": ".local/survival-continuation-20261003-idle-placement-b-server-console.log",
+      "sha256": "455d05e1d57dd2a52251f00f9cd94cf96df4c564fbff58118891e735cdc5c10b",
+      "uncompressed_sha256": "9539e76c6a8453661ebb9adb4c2426f70cdae8d0b2ac3935c7cc9f2ed14a4d1e",
+      "bytes": 1231,
+      "uncompressed_bytes": 4743
+    },
+    {
+      "path": "docs/evidence/survival-continuation/20261003/survival-continuation-20261003-idle-placement-b-server.log.gz",
+      "original": ".local/survival-continuation-20261003-idle-placement-b-server.log",
+      "sha256": "8d5f0d0d220e08e84d5b3c1c909d0ce5b75a9b958266ed7175cbe5b6a93fc918",
+      "uncompressed_sha256": "cbbe3f7d9ce0f132e33e56c32fc429ae3db7cdfd3afc864d78f47c1e604b3059",
+      "bytes": 1221,
+      "uncompressed_bytes": 4708
+    },
+    {
+      "path": "docs/evidence/survival-continuation/20261003/survival-continuation-20261003-idle-placement-b-checkpoint-test.log.gz",
+      "original": ".local/survival-continuation-20261003-idle-placement-b-checkpoint-test.log",
+      "sha256": "321d0d99f841c707cfae7116250eeeba82f3006b360660df08ec7e6b5ccf0166",
+      "uncompressed_sha256": "1b0e4999fe49a2c96ace35c2f0d61fd992873f390fe054e5ee2e167622706f07",
+      "bytes": 236,
+      "uncompressed_bytes": 297
+    },
+    {
+      "path": "docs/evidence/survival-continuation/20261003/survival-continuation-20261003-idle-placement-b-continue-test.log.gz",
+      "original": ".local/survival-continuation-20261003-idle-placement-b-continue-test.log",
+      "sha256": "a4ee41bf91ade035696e5f4697de38502d5a5b6fa2635cf996bf8292cfed87f8",
+      "uncompressed_sha256": "350e2bd3053c8b3fad8478f7fd24cc8a0d757c396ec6ff6c4c298e657486c386",
+      "bytes": 404,
+      "uncompressed_bytes": 763
+    },
+    {
+      "path": "docs/evidence/survival-continuation/20261003/survival-continuation-20261003-idle-placement-b.state--survival-jobs--3258b70a-bf1c-444e-8b50-b8b058b0d18b--manifest.json.gz",
+      "original": ".local/survival-continuation-20261003-idle-placement-b.state/survival-jobs/3258b70a-bf1c-444e-8b50-b8b058b0d18b/manifest.json",
+      "sha256": "15feb3afa9ec4f059d36197d85dce4759e22276bc75b0fe4b3051cb4f26438fa",
+      "uncompressed_sha256": "15546fb56811c1dbc85e2e9982c28ce2699c1bf136b85758554a4c041d3073fe",
+      "bytes": 79954,
+      "uncompressed_bytes": 2359124
+    },
+    {
+      "path": "docs/evidence/survival-continuation/20261003/survival-continuation-20261003-idle-placement-b.state--survival-jobs--3258b70a-bf1c-444e-8b50-b8b058b0d18b--status.json.gz",
+      "original": ".local/survival-continuation-20261003-idle-placement-b.state/survival-jobs/3258b70a-bf1c-444e-8b50-b8b058b0d18b/status.json",
+      "sha256": "c4f949a68405cee1ce0211901bde9d0ccdf2062b20ef4cb66eca4eb3c6f83f39",
+      "uncompressed_sha256": "d798f715b3221cf37c473846bf9912b00bb5cedd4eb0b617e9037ec5783c0134",
+      "bytes": 2367,
+      "uncompressed_bytes": 90115
+    },
+    {
+      "path": "docs/evidence/survival-continuation/20261003/survival-continuation-20261003-idle-placement-b.state--survival-jobs--3258b70a-bf1c-444e-8b50-b8b058b0d18b--execution--record.json.gz",
+      "original": ".local/survival-continuation-20261003-idle-placement-b.state/survival-jobs/3258b70a-bf1c-444e-8b50-b8b058b0d18b/execution/record.json",
+      "sha256": "943d8e7227e930fdae9cd1967bba77a450a70597438bc1ae58f84ee20467c100",
+      "uncompressed_sha256": "92895bb95d2625882f19af08135620069d8e8987995d2f470014d30f217a8b19",
+      "bytes": 40286,
+      "uncompressed_bytes": 467031
+    },
+    {
+      "path": "docs/evidence/survival-continuation/20261003/survival-continuation-20261003-idle-placement-b.state--survival-jobs--3258b70a-bf1c-444e-8b50-b8b058b0d18b--execution--continuation-claim.json.gz",
+      "original": ".local/survival-continuation-20261003-idle-placement-b.state/survival-jobs/3258b70a-bf1c-444e-8b50-b8b058b0d18b/execution/continuation-claim.json",
+      "sha256": "5dc34bec3f1e22ff2bd80179c489ff881db3b68bc109204e69c7382ff415035b",
+      "uncompressed_sha256": "642f172f04a05cd88761f7b5c7b9db76cc62a1cfbbf8fe055724ab924d22466b",
+      "bytes": 130,
+      "uncompressed_bytes": 129
+    },
+    {
+      "path": "docs/evidence/survival-continuation/20261003/survival-continuation-20261003-idle-placement-b.state--survival-jobs--e4df05a2-9545-45a9-818b-d5dc2d98c6eb--manifest.json.gz",
+      "original": ".local/survival-continuation-20261003-idle-placement-b.state/survival-jobs/e4df05a2-9545-45a9-818b-d5dc2d98c6eb/manifest.json",
+      "sha256": "794f13f494b78b07fe615abd543868d790317a935a5f6cc6ce4ea207aabcffe2",
+      "uncompressed_sha256": "a9af5be647af2f8ab92dcb777d2cf908a82bab0b5ab80f3a2dd53c22720a73b4",
+      "bytes": 79266,
+      "uncompressed_bytes": 2457229
+    },
+    {
+      "path": "docs/evidence/survival-continuation/20261003/survival-continuation-20261003-idle-placement-b.state--survival-jobs--e4df05a2-9545-45a9-818b-d5dc2d98c6eb--status.json.gz",
+      "original": ".local/survival-continuation-20261003-idle-placement-b.state/survival-jobs/e4df05a2-9545-45a9-818b-d5dc2d98c6eb/status.json",
+      "sha256": "8f27074e6d37ada178bac99ee5b3e1498cbca90d0936e056a5e88d7fafaa5572",
+      "uncompressed_sha256": "0754bdd35859d9f91a64dd1ef6eb52dbb7c3e65c8f4a2dc6727610d2ff76e2e7",
+      "bytes": 136,
+      "uncompressed_bytes": 155
+    },
+    {
+      "path": "docs/evidence/survival-continuation/20261003/survival-continuation-20261003-idle-placement-b.state--survival-jobs--e4df05a2-9545-45a9-818b-d5dc2d98c6eb--execution--record.json.gz",
+      "original": ".local/survival-continuation-20261003-idle-placement-b.state/survival-jobs/e4df05a2-9545-45a9-818b-d5dc2d98c6eb/execution/record.json",
+      "sha256": "893af1d4bec8c3f4d684c9fe79a57e8bb5dda26b6dd37729f2007f500028ff4d",
+      "uncompressed_sha256": "7a0ba05484a5197107e51302dc342abcbd00534bac23f4ff74bdb8be79da81f4",
+      "bytes": 34779,
+      "uncompressed_bytes": 411811
+    },
+    {
+      "path": "docs/evidence/survival-continuation/20261003/controller.py.gz",
+      "original": ".local/run-continuation-trial.py",
+      "sha256": "d69299bdecdaaebcb96347a8ffdd374e0ecca34c053170312204563415dd6d2b",
+      "uncompressed_sha256": "dd0f7519c952a6fcfebb8f09dd33345a175841ba183cebc7ea6d7eb95bfad3d2",
+      "bytes": 2132,
+      "uncompressed_bytes": 5450
+    }
+  ]
+}

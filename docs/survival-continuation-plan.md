@@ -2,8 +2,9 @@
 
 Recorded 2026-10-03 UTC on source `950deef`. The stage-4 goal has been created.
 The initial investigation stopped for a scope decision. The user subsequently
-approved continuation after a checked idle boundary. Stage 4A implementation is
-in progress; unresolved mining after loss of its native sessions remains a
+approved continuation after a checked idle boundary. Stage 4A was implemented
+but live completion is stopped for the [new observer readiness prerequisite](survival-observer-readiness-prerequisite.md);
+unresolved mining after loss of its native sessions remains a
 diagnostic stop. The original investigation ran no new fault trial or compilation.
 
 ## Confirmed prerequisite boundary

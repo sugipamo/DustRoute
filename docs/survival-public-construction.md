@@ -115,8 +115,10 @@ diagnosis. Routine live progress polling uses the in-memory summary. Restarted
 records are always `historical_only=true` and
 `execution_authority_restored=false`, even if their last recorded status was
 completed. They cannot resume, replay or cancel an old native operation. A new
-process still requires the operator to resolve outstanding operations and freshly
-observe before a new plan. Automatic recovery/replanning is a later milestone.
+process still requires outstanding operations to be resolved and a fresh
+observation before a new plan. A sealed idle checkpoint supplies the historical
+boundary for `continue`; it does not restore the old executor. Automatic recovery
+of lost unresolved operations remains outside this milestone.
 
 ## Verification
 
@@ -128,3 +130,10 @@ diagnosis retained evidence without restoring native authority. See the
 [roadmap](survival-construction-roadmap.md) and
 [exact test artifacts](evidence/survival-public-acceptance-20261003.json).
 This does not establish interrupted-job recovery or unrestricted construction.
+
+Stage 4A adds the checkpoint/continuation workflow described above, but its live
+acceptance is incomplete. A placement checkpoint and a new remaining preview
+passed in separate OS processes; the first continuation movement refused because
+the fresh observer lacked the exact spawned builder entity. Further dependent
+work is stopped under the user's scope rule. See the
+[readiness prerequisite and proposed next work](survival-observer-readiness-prerequisite.md).
