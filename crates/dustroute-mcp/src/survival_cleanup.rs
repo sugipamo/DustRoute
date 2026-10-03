@@ -1,6 +1,7 @@
 //! Caller-side reconciliation of owned temporary removals, without replay authority.
 //! Native observation/retirement belongs to Voxrig. Permissions, bounded retries,
 //! temporary-block ownership and fresh action selection remain with the caller.
+use crate::survival_error::SurvivalErrorCode;
 use serde::Serialize;
 use voxrig::NativeBlockState;
 use voxrig::checked_survival::{
@@ -11,10 +12,10 @@ use voxrig::checked_survival::{
 
 #[derive(Clone, Debug, Serialize)]
 pub struct CleanupError {
-    pub code: &'static str,
+    pub code: SurvivalErrorCode,
     pub detail: String,
 }
-fn refusal(code: &'static str, detail: &str) -> CleanupError {
+fn refusal(code: SurvivalErrorCode, detail: &str) -> CleanupError {
     CleanupError {
         code,
         detail: detail.into(),
@@ -33,7 +34,7 @@ pub fn choose_empty_hand(player: &PlayerState) -> Result<u8, CleanupError> {
         || inv.slots.len() != 46
     {
         return Err(refusal(
-            "inventory_unavailable",
+            SurvivalErrorCode::InventoryUnavailable,
             "a supported received player inventory is required",
         ));
     }
@@ -43,7 +44,7 @@ pub fn choose_empty_hand(player: &PlayerState) -> Result<u8, CleanupError> {
         .map(|n| n as u8)
         .ok_or_else(|| {
             refusal(
-                "empty_hand_unavailable",
+                SurvivalErrorCode::EmptyHandUnavailable,
                 "no received empty hotbar slot; caller must arrange inventory",
             )
         })
@@ -80,7 +81,7 @@ impl CleanupRecoveryPlan {
             || !record.start_dispatched
         {
             return Err(refusal(
-                "removal_intent_mismatch",
+                SurvivalErrorCode::RemovalIntentMismatch,
                 "record does not match the declared temporary removal",
             ));
         }
@@ -92,7 +93,7 @@ impl CleanupRecoveryPlan {
                 || removal.target_receipt.receive_sequence <= record.intent.after_sequence
             {
                 return Err(refusal(
-                    "removal_receipt_mismatch",
+                    SurvivalErrorCode::RemovalReceiptMismatch,
                     "removal lacks the exact fresh target receipt",
                 ));
             }
@@ -104,7 +105,7 @@ impl CleanupRecoveryPlan {
                 && record.requires_inspection.is_some()
         }) {
             return Err(refusal(
-                "mining_needs_inspection",
+                SurvivalErrorCode::MiningNeedsInspection,
                 "only a received held-item change with no other conflict can enter this recovery policy",
             ));
         }
@@ -136,7 +137,7 @@ impl CleanupRecoveryPlan {
                 Ok(state.clone())
             }
             _ => Err(refusal(
-                "retired_target_changed",
+                SurvivalErrorCode::RetiredTargetChanged,
                 "target is missing, foreign, or reappeared after confirmed removal",
             )),
         }
@@ -160,19 +161,19 @@ impl CleanupRecoveryPlan {
             || scene.source().dimension != self.intent.dimension
         {
             return Err(refusal(
-                "recovery_provenance_mismatch",
+                SurvivalErrorCode::RecoveryProvenanceMismatch,
                 "fresh scene and closed original history must match this recovery",
             ));
         }
         let record = old.mining.as_ref().ok_or_else(|| {
             refusal(
-                "missing_mining_history",
+                SurvivalErrorCode::MissingMiningHistory,
                 "original mining history is unavailable",
             )
         })?;
         if record.intent != self.intent {
             return Err(refusal(
-                "removal_intent_mismatch",
+                SurvivalErrorCode::RemovalIntentMismatch,
                 "recovery belongs to another removal attempt",
             ));
         }
@@ -182,12 +183,12 @@ impl CleanupRecoveryPlan {
             .scenario()
             .block(self.edit.position)
             .map_err(|e| CleanupError {
-                code: "fresh_target_unavailable",
+                code: SurvivalErrorCode::FreshTargetUnavailable,
                 detail: e.to_string(),
             })?;
         if actual != evidence.target {
             return Err(refusal(
-                "fresh_target_changed",
+                SurvivalErrorCode::FreshTargetChanged,
                 "target changed after fresh-session validation",
             ));
         }
@@ -272,7 +273,7 @@ mod tests {
             CleanupRecoveryPlan::for_record(&wrong, &record)
                 .unwrap_err()
                 .code,
-            "removal_intent_mismatch"
+            SurvivalErrorCode::RemovalIntentMismatch
         );
         let mut conflicted = record.clone();
         conflicted.inventory_change.as_mut().unwrap().sole_cause = false;

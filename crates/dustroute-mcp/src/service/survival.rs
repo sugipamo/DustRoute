@@ -5,6 +5,7 @@ use crate::survival_construction::generation::{SearchLimits, generate_constructi
 use crate::survival_construction::{
     ConstructionScope, ConstructionSite, HypotheticalConstructionPlan,
 };
+use crate::survival_error::SurvivalErrorCode;
 use crate::survival_execution::{ExecutionProgress, SurvivalExecutor};
 use crate::voxrig_bridge::SurvivalLease;
 use dustroute_library::{blueprint::AssemblyRevisionId, building::GroundedBuildingDesignRequest};
@@ -69,7 +70,7 @@ struct Entry {
     source: SourceIdentity,
     plan: Option<HypotheticalConstructionPlan>,
     expires: Instant,
-    status: Value,
+    status: JobStatus,
     cancel: Arc<AtomicBool>,
     checkpoint: Arc<AtomicBool>,
     parent: Option<ContinuationParent>,
@@ -82,7 +83,7 @@ struct PlanningInput {
     supplied: BTreeMap<String, usize>,
     temporary_material: String,
     limits: SearchLimits,
-    specification: Value,
+    specification: GroundedBuildingDesignRequest,
 }
 #[derive(Clone)]
 struct ContinuationParent {
@@ -99,7 +100,7 @@ struct ExecutionInput {
     checkpoint: Arc<AtomicBool>,
     parent: Option<ContinuationParent>,
 }
-fn failure(code: &str, detail: impl std::fmt::Display) -> Value {
+fn failure(code: impl serde::Serialize, detail: impl std::fmt::Display) -> Value {
     json!({"ok":false,"schema_version":"dustroute.survival-job.v1",
         "error":{"code":code,"detail":detail.to_string()},"automatic_replay":false})
 }
@@ -109,7 +110,7 @@ fn region(r: dustroute_translate::world::Region) -> voxrig::Region {
         max: [r.max.x, r.max.y, r.max.z],
     }
 }
-fn save(path: &Path, value: &Value) -> Result<(), String> {
+fn save(path: &Path, value: &impl serde::Serialize) -> Result<(), String> {
     let bytes = serde_json::to_vec_pretty(value).map_err(|e| e.to_string())?;
     if bytes.len() > 16 * 1024 * 1024 {
         return Err("survival job record exceeds bound".into());
@@ -117,7 +118,7 @@ fn save(path: &Path, value: &Value) -> Result<(), String> {
     crate::storage::replace(path, &bytes, crate::storage::Durability::FileAndDirectory)
         .map_err(|e| e.to_string())
 }
-fn load(path: &Path) -> Result<Value, String> {
+fn load<T: serde::de::DeserializeOwned>(path: &Path) -> Result<T, String> {
     use std::io::Read;
     let mut bytes = Vec::new();
     std::fs::File::open(path)
@@ -216,7 +217,7 @@ impl DustRouteMcp {
                 }
                 let store = self.state_store.clone();
                 let p = owner.clone();
-                let saved_specification = json!(specification);
+                let saved_specification = (*specification).clone();
                 let checked = tokio::task::spawn_blocking(move || {
                     let source = crate::blueprint_mcp::construction_source(
                         &store,
@@ -282,10 +283,7 @@ impl DustRouteMcp {
                 if let Err(e) = self.policy.authorize_player(&entry.owner) {
                     return failure("permission_denied", e);
                 }
-                if !matches!(
-                    entry.status["state"].as_str(),
-                    Some("running" | "admitting")
-                ) {
+                if !entry.status.allows_checkpoint() {
                     return failure(
                         "checkpoint_not_running",
                         "no running executor; inspect the saved record",
@@ -307,7 +305,9 @@ impl DustRouteMcp {
                 }
                 entry.cancel.store(true, Ordering::SeqCst);
                 if entry.plan.take().is_some() {
-                    entry.status = json!({"state":"cancelled_before_start","world_writes":false});
+                    entry.status = JobStatus::CancelledBeforeStart {
+                        world_writes: false,
+                    };
                     if let Err(e) = save(
                         &self
                             .state_store
@@ -327,6 +327,9 @@ impl DustRouteMcp {
 
 #[cfg(test)]
 mod tests;
+
+mod model;
+use model::{ConstructionSpecification, InspectionReason, JobManifest, JobSchema, JobStatus};
 
 mod continuation;
 mod execution;

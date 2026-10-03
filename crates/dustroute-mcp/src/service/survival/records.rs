@@ -19,7 +19,7 @@ impl DustRouteMcp {
             if !include_record {
                 return json!({"ok":true,"schema_version":"dustroute.survival-job.v1","job_id":id,"owner":owner,
                     "process_local_job_present":true,"historical_only":false,"execution_authority_restored":false,
-                    "completed_steps":status["completed_steps"],"status":status,
+                    "completed_steps":status.completed_steps(),"status":status,
                     "next_step":"inspect status; stopped jobs never automatically replay"});
             }
         }
@@ -38,25 +38,17 @@ impl DustRouteMcp {
         &self,
         id: uuid::Uuid,
         include_record: bool,
-        live: Option<(String, Value)>,
+        live: Option<(String, JobStatus)>,
     ) -> Value {
         let path = self.state_store.survival_job_root().join(id.to_string());
-        let manifest = match load(&path.join("manifest.json")) {
+        let manifest: JobManifest = match load(&path.join("manifest.json")) {
             Ok(m) => m,
             Err(e) => return failure("job_unavailable", e),
         };
-        if manifest["schema"] != "dustroute.survival-job.v1"
-            || manifest["job_id"] != json!(id)
-            || manifest["execution_authority_restorable"] != false
-        {
-            return failure(
-                "invalid_record",
-                "unknown schema or mismatched job identity",
-            );
+        if let Err(error) = manifest.validate_identity(id) {
+            return failure("invalid_record", error);
         }
-        let Some(owner) = manifest["owner"].as_str() else {
-            return failure("invalid_record", "missing job owner");
-        };
+        let owner = &manifest.owner;
         if let Err(e) = self.policy.authorize_player(owner) {
             return failure("permission_denied", e);
         }
@@ -67,7 +59,7 @@ impl DustRouteMcp {
             return failure("invalid_record", "saved owner differs from live job");
         }
         let historical_status = if path.join("status.json").exists() {
-            match load(&path.join("status.json")) {
+            match load::<JobStatus>(&path.join("status.json")) {
                 Ok(v) => Some(v),
                 Err(e) => return failure("invalid_record", e),
             }
@@ -90,11 +82,13 @@ impl DustRouteMcp {
             "completed_steps":record.map(|r|r.completed_steps),"recorded_continuation":record.map(|r|&r.continuation),
             "next_step":if live.is_none(){"historical diagnosis only; reobserve and resolve outstanding operations before any new plan"}else{"inspect status; stopped jobs never automatically replay"}});
         if include_record {
-            response["manifest"] = manifest;
+            response["manifest"] = json!(manifest);
             response["diagnosis"] = json!(diagnosis);
             if directory.join("continuation-claim.json").exists() {
-                match load(&directory.join("continuation-claim.json")) {
-                    Ok(claim) => response["continuation_job_id"] = claim["new_job"].clone(),
+                match load::<crate::survival_execution::diagnostic::CheckpointClaim>(
+                    &directory.join("continuation-claim.json"),
+                ) {
+                    Ok(claim) => response["continuation_job_id"] = json!(claim.new_job),
                     Err(e) => return failure("invalid_continuation_claim", e),
                 }
             }

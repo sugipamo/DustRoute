@@ -3,14 +3,18 @@
 //! Voxrig retains physical admission, native action guards and retirement receipts.
 //! JSON journals diagnose uncertainty; they cannot restore a native session/token.
 pub(crate) mod checkpoint;
+pub mod diagnostic;
+use diagnostic::RecordedExecutionPlan;
 mod journal;
 mod native;
 use crate::survival_construction::{
     HypotheticalConstructionPlan, HypotheticalConstructionStep, PlacementPurpose,
 };
+use crate::survival_error::SurvivalErrorCode;
 use journal::Journal;
 pub use journal::{
-    Continuation, ExecutionDiagnosis, ExecutionEvent, ExecutionRecord, OperationOutcome, diagnose,
+    Continuation, ExecutionDiagnosis, ExecutionEvent, ExecutionEvidence, ExecutionPhase,
+    ExecutionRecord, JournalSchema, OperationOutcome, diagnose,
 };
 pub(crate) use native::received_materials;
 use serde::Serialize;
@@ -21,13 +25,13 @@ use voxrig::checked_survival::{
 };
 use voxrig::{Client, ConnectionConfig, NativeBlockState};
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, serde::Deserialize)]
 pub struct ExecutionError {
-    pub code: &'static str,
+    pub code: SurvivalErrorCode,
     pub detail: String,
 }
 impl ExecutionError {
-    fn new(code: &'static str, detail: impl ToString) -> Self {
+    fn new(code: SurvivalErrorCode, detail: impl ToString) -> Self {
         Self {
             code,
             detail: detail.to_string(),
@@ -42,17 +46,17 @@ impl std::fmt::Display for ExecutionError {
 impl std::error::Error for ExecutionError {}
 impl From<voxrig::Error> for ExecutionError {
     fn from(e: voxrig::Error) -> Self {
-        Self::new("native_refused", e)
+        Self::new(SurvivalErrorCode::NativeRefused, e)
     }
 }
 impl From<std::io::Error> for ExecutionError {
     fn from(e: std::io::Error) -> Self {
-        Self::new("journal_io", e)
+        Self::new(SurvivalErrorCode::JournalIo, e)
     }
 }
 impl From<serde_json::Error> for ExecutionError {
     fn from(e: serde_json::Error) -> Self {
-        Self::new("journal_encoding", e)
+        Self::new(SurvivalErrorCode::JournalEncoding, e)
     }
 }
 impl From<crate::survival_cleanup::CleanupError> for ExecutionError {
@@ -70,7 +74,7 @@ pub(crate) fn check_completed_snapshot_for_test(
     native::check_snapshot(scene, snapshot)
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, serde::Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum ExecutionProgress {
     StepCompleted {
@@ -123,7 +127,7 @@ impl SurvivalExecutor {
             || ops.capabilities().prediction_based_contract.is_none()
         {
             return Err(ExecutionError::new(
-                "unsupported_motion_contract",
+                SurvivalErrorCode::UnsupportedMotionContract,
                 "explicit prediction contract required",
             ));
         }
@@ -135,7 +139,7 @@ impl SurvivalExecutor {
             || scene.source().position != plan.source().position
         {
             return Err(ExecutionError::new(
-                "plan_source_changed",
+                SurvivalErrorCode::PlanSourceChanged,
                 "plan requires the original live starting context",
             ));
         }
@@ -147,9 +151,7 @@ impl SurvivalExecutor {
         let expected = native::scene_blocks(&scene)?;
         let journal = Journal::create(
             directory,
-            json!({"plan":plan,"capabilities":ops.capabilities(),
-                "declared_reconnect":{"host":reconnect.server.host,"port":reconnect.server.port,
-                    "username":reconnect.username,"version":reconnect.version}}),
+            RecordedExecutionPlan::capture(&plan, ops.capabilities(), &reconnect),
         )?;
         let temporary = plan
             .initial_temporary()
@@ -181,7 +183,7 @@ impl SurvivalExecutor {
     /// an outstanding operation still requires inspection and explicit retirement.
     pub fn cancel(&mut self) -> Result<()> {
         self.call_active = true;
-        self.journal.event("cancelled", self.journal.record.outcome.clone(), Continuation::Cancelled,
+        self.journal.event(ExecutionPhase::Cancelled, self.journal.record.outcome.clone(), Continuation::Cancelled,
             json!({"native_operation_may_remain":true,"remaining_owned_temporary":self.temporary.keys().collect::<Vec<_>>()}))
     }
     /// One bounded transition. Mining START returns before waiting for its result;
@@ -194,7 +196,7 @@ impl SurvivalExecutor {
             )
         {
             return Err(ExecutionError::new(
-                "execution_needs_inspection",
+                SurvivalErrorCode::ExecutionNeedsInspection,
                 "previous call interrupted/refused; no automatic replay",
             ));
         }
@@ -210,7 +212,7 @@ impl SurvivalExecutor {
             }
             Err(error) => {
                 // If this write also fails, the pre-dispatch uncertain intent remains.
-                let _ = self.journal.event("stopped", self.journal.record.outcome.clone(), Continuation::NeedsInspection, json!({"error":error,"remaining_owned_temporary":self.temporary.keys().collect::<Vec<_>>()}));
+                let _ = self.journal.event(ExecutionPhase::Stopped, self.journal.record.outcome.clone(), Continuation::NeedsInspection, json!({"error":error,"remaining_owned_temporary":self.temporary.keys().collect::<Vec<_>>()}));
                 Err(error)
             }
         }
@@ -224,7 +226,7 @@ impl SurvivalExecutor {
         let actual = native::scene_blocks(&scene)?;
         if actual != self.expected {
             return Err(ExecutionError::new(
-                "site_changed",
+                SurvivalErrorCode::SiteChanged,
                 "fresh scene differs from exact last confirmed site; no further dispatch",
             ));
         }
@@ -236,7 +238,7 @@ impl SurvivalExecutor {
         )?;
         if !crate::survival_navigation::hypothetical_admissible(&idle, self.plan.scope().travel) {
             return Err(ExecutionError::new(
-                "body_scope_changed",
+                SurvivalErrorCode::BodyScopeChanged,
                 "fresh body/standing clearance leaves permitted travel scope",
             ));
         }
@@ -256,12 +258,12 @@ impl SurvivalExecutor {
                 || (0..3).any(|i| p[i] < retreat.min[i] || p[i] > retreat.max[i])
             {
                 return Err(ExecutionError::new(
-                    "final_obligation_missing",
+                    SurvivalErrorCode::FinalObligationMissing,
                     "temporary cleanup or safe retreat incomplete",
                 ));
             }
             self.journal.event(
-                "completed",
+                ExecutionPhase::Completed,
                 OperationOutcome::Observed,
                 Continuation::Completed,
                 json!({"remaining_owned_temporary":[],"builder_checked_cells":self.expected.len(),
@@ -295,7 +297,7 @@ impl SurvivalExecutor {
             } => {
                 if self.temporary.get(&edit.position) != Some(&edit.before) {
                     return Err(ExecutionError::new(
-                        "temporary_not_owned",
+                        SurvivalErrorCode::TemporaryNotOwned,
                         "only observed placements from this execution may be removed",
                     ));
                 }
@@ -306,7 +308,7 @@ impl SurvivalExecutor {
     fn complete_step(&mut self, outcome: OperationOutcome) -> Result<ExecutionProgress> {
         self.journal.record.completed_steps += 1;
         self.journal.event(
-            "step_completed",
+            ExecutionPhase::StepCompleted,
             outcome,
             Continuation::Revalidate,
             json!({"remaining_owned_temporary":self.temporary.keys().collect::<Vec<_>>()}),

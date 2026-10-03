@@ -81,7 +81,7 @@ fn roof_contract_preserves_exact_materials_and_requires_complete_sequence() {
             .finish(&BTreeMap::new())
             .unwrap_err()
             .code,
-        "incomplete_sequence"
+        SurvivalErrorCode::IncompleteSequence
     );
     let mut ledger = Ledger::new(&site);
     permanent(&mut ledger);
@@ -118,7 +118,7 @@ fn temporary_reuse_never_credits_unobserved_item_recovery() {
         ("minecraft:dirt".into(), 1),
     ]);
     let err = ledger.finish(&budget).unwrap_err();
-    assert_eq!(err.code, "insufficient_supplied_materials");
+    assert_eq!(err.code, SurvivalErrorCode::InsufficientSuppliedMaterials);
     assert!(err.detail.contains("minecraft:dirt"));
 }
 
@@ -159,7 +159,7 @@ fn temporary_scope_cannot_expand_into_air_obligations_structure_or_ground() {
         s.temporary = vec![region(forbidden, forbidden)];
         assert_eq!(
             ConstructionSite::from_grounded(&g, s).unwrap_err().code,
-            "invalid_site_contract"
+            SurvivalErrorCode::InvalidSiteContract
         );
     }
     let mut s = scope();
@@ -188,7 +188,7 @@ fn only_exact_own_temporary_blocks_can_be_removed_and_all_must_be_removed() {
                 .remove(&edit(p, block(name), air()))
                 .unwrap_err()
                 .code,
-            "removal_outside_temporary_works"
+            SurvivalErrorCode::RemovalOutsideTemporaryWorks
         );
     }
     let put = edit([-3, 0, 2], air(), block("dirt"));
@@ -201,7 +201,7 @@ fn only_exact_own_temporary_blocks_can_be_removed_and_all_must_be_removed() {
     assert_eq!(ledger.temporary.len(), 1);
     assert_eq!(
         ledger.finish(&BTreeMap::new()).unwrap_err().code,
-        "incomplete_sequence"
+        SurvivalErrorCode::IncompleteSequence
     );
 }
 

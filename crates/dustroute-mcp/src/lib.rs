@@ -28,6 +28,8 @@ pub mod survival_cleanup;
 #[cfg(feature = "voxrig")]
 pub mod survival_construction;
 #[cfg(feature = "voxrig")]
+pub mod survival_error;
+#[cfg(feature = "voxrig")]
 pub mod survival_execution;
 #[cfg(feature = "voxrig")]
 pub mod survival_navigation;

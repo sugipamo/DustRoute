@@ -46,7 +46,7 @@ pub(crate) fn assess(
     owned: &[TemporaryBlock],
     fresh: &MinecraftSnapshot,
 ) -> Result<SiteDiagnosis> {
-    let bad = |e: &str| ConstructionPlanningError::new("invalid_checkpoint_site", e);
+    let bad = |e: &str| ConstructionPlanningError::new(SurvivalErrorCode::InvalidCheckpointSite, e);
     if Region::new(checkpoint.min, checkpoint.max) != original.scope.observed
         || checkpoint.min != fresh.min
         || checkpoint.max != fresh.max
@@ -132,7 +132,7 @@ pub(crate) fn rebase(
     let diagnosis = assess(&original, checkpoint, owned, &fresh)?;
     if !diagnosis.conflicts.is_empty() {
         return Err(ConstructionPlanningError::new(
-            "checkpoint_site_changed",
+            SurvivalErrorCode::CheckpointSiteChanged,
             "fresh site differs; inspect conflicts before planning",
         ));
     }
@@ -235,7 +235,7 @@ mod tests {
         let budget = BTreeMap::from([("minecraft:cobblestone".into(), 48)]);
         assert_eq!(
             ledger.clone().finish(&budget).unwrap_err().code,
-            "incomplete_sequence"
+            SurvivalErrorCode::IncompleteSequence
         );
         ledger
             .remove(&HypotheticalBlockEdit {
@@ -269,7 +269,7 @@ mod tests {
         assert_eq!(diagnosis.conflicts[0].position, owned[0].position);
         assert_eq!(
             rebase(original, &saved, &owned, changed).unwrap_err().code,
-            "checkpoint_site_changed"
+            SurvivalErrorCode::CheckpointSiteChanged
         );
     }
     #[test]
@@ -296,7 +296,7 @@ mod tests {
         });
         assert_eq!(
             assess(&original, &saved, &owned, &saved).unwrap_err().code,
-            "invalid_checkpoint_site"
+            SurvivalErrorCode::InvalidCheckpointSite
         );
     }
 }

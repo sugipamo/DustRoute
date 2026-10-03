@@ -1,5 +1,6 @@
 //! Read-only candidate construction checks. No adoption, durable job or action authority.
 //! The caller selects a sequence; native geometry verifies each ordered dependency.
+use crate::survival_error::SurvivalErrorCode;
 use crate::survival_navigation::{self, RouteRequest, TravelBounds};
 use dustroute_library::world_edit::WorldEditScope;
 use dustroute_translate::{
@@ -18,7 +19,7 @@ use voxrig::checked_survival::{
 use voxrig::{BlockFace, NativeBlockState};
 
 /// Proposed execution footprint, separate from immutable final Blueprint geometry.
-#[derive(Clone, Debug, Serialize, serde::Deserialize, rmcp::schemars::JsonSchema)]
+#[derive(Clone, Debug, PartialEq, Serialize, serde::Deserialize, rmcp::schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ConstructionScope {
     pub observed: Region,
@@ -33,7 +34,7 @@ pub struct ConstructionScope {
 
 #[derive(Clone, Debug, Serialize)]
 pub struct ConstructionPlanningError {
-    pub code: &'static str,
+    pub code: SurvivalErrorCode,
     pub action: Option<usize>,
     pub position: Option<[i32; 3]>,
     pub detail: String,
@@ -41,7 +42,7 @@ pub struct ConstructionPlanningError {
     pub missing_materials: BTreeMap<String, usize>,
 }
 impl ConstructionPlanningError {
-    fn new(code: &'static str, detail: impl ToString) -> Self {
+    fn new(code: SurvivalErrorCode, detail: impl ToString) -> Self {
         Self {
             code,
             action: None,
@@ -63,7 +64,7 @@ impl std::fmt::Display for ConstructionPlanningError {
 impl std::error::Error for ConstructionPlanningError {}
 type Result<T> = std::result::Result<T, ConstructionPlanningError>;
 fn native_error(e: voxrig::Error) -> ConstructionPlanningError {
-    ConstructionPlanningError::new("native_geometry_refused", e)
+    ConstructionPlanningError::new(SurvivalErrorCode::NativeGeometryRefused, e)
 }
 fn pos(p: [i32; 3]) -> Pos {
     Pos::new(p[0], p[1], p[2])
@@ -145,7 +146,8 @@ impl ConstructionSite {
         protected_ground: Option<Region>,
         temporary_only: bool,
     ) -> Result<Self> {
-        let bad = |e: &str| ConstructionPlanningError::new("invalid_site_contract", e);
+        let bad =
+            |e: &str| ConstructionPlanningError::new(SurvivalErrorCode::InvalidSiteContract, e);
         let known = scope.observed;
         let mut volume = 1i64;
         for (lo, hi) in xyz(known.min).into_iter().zip(xyz(known.max)) {
@@ -248,7 +250,7 @@ impl ConstructionSite {
     }
 }
 
-#[derive(Clone, Copy, Debug, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum PlacementPurpose {
     Permanent,
@@ -292,7 +294,7 @@ pub enum HypotheticalConstructionStep {
         reconnect: HypotheticalReconnectBoundary,
     },
 }
-#[derive(Clone, Debug, Default, Serialize)]
+#[derive(Clone, Debug, Default, Serialize, serde::Deserialize)]
 pub struct ConstructionMaterials {
     pub permanent: BTreeMap<String, usize>,
     /// Every placement consumes supplied inventory; removal never credits drops.
@@ -320,11 +322,14 @@ pub struct HypotheticalConstructionPlan {
 /// explicitly approved temporary footprint; an identical state is not attribution.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
-pub(crate) struct TemporaryBlock {
+pub struct TemporaryBlock {
     pub position: [i32; 3],
     pub state: NativeBlockState,
 }
 impl HypotheticalConstructionPlan {
+    pub(crate) fn final_position(&self) -> [f64; 3] {
+        self.final_position
+    }
     pub(crate) fn motion_contract(&self) -> SurvivalMotionContract {
         self.motion_contract
     }
@@ -376,7 +381,8 @@ impl<'a> Ledger<'a> {
     }
     fn place(&mut self, purpose: PlacementPurpose, edit: &HypotheticalBlockEdit) -> Result<()> {
         let fail = |detail| {
-            ConstructionPlanningError::new("placement_outside_plan", detail).at(edit.position)
+            ConstructionPlanningError::new(SurvivalErrorCode::PlacementOutsidePlan, detail)
+                .at(edit.position)
         };
         if edit.before != air()
             || edit.after == air()
@@ -438,7 +444,7 @@ impl<'a> Ledger<'a> {
     fn remove(&mut self, edit: &HypotheticalBlockEdit) -> Result<()> {
         if self.temporary.get(&edit.position) != Some(&edit.before) || edit.after != air() {
             return Err(ConstructionPlanningError::new(
-                "removal_outside_temporary_works",
+                SurvivalErrorCode::RemovalOutsideTemporaryWorks,
                 "only an exact previously planned temporary cube may be removed",
             )
             .at(edit.position));
@@ -449,7 +455,7 @@ impl<'a> Ledger<'a> {
     fn finish(self, supplied: &BTreeMap<String, usize>) -> Result<ConstructionMaterials> {
         if !self.remaining.is_empty() || !self.temporary.is_empty() {
             return Err(ConstructionPlanningError::new(
-                "incomplete_sequence",
+                SurvivalErrorCode::IncompleteSequence,
                 format!(
                     "{} permanent targets unbuilt; {} temporary cubes not removed",
                     self.remaining.len(),
@@ -468,7 +474,7 @@ impl<'a> Ledger<'a> {
             .collect();
         if !missing.is_empty() {
             let mut error = ConstructionPlanningError::new(
-                "insufficient_supplied_materials",
+                SurvivalErrorCode::InsufficientSuppliedMaterials,
                 format!("missing without assuming drops: {missing:?}"),
             );
             error.missing_materials = missing;
@@ -489,7 +495,7 @@ pub fn preview_construction_sequence(
 ) -> Result<HypotheticalConstructionPlan> {
     if actions.is_empty() || actions.len() > 512 {
         return Err(ConstructionPlanningError::new(
-            "invalid_sequence",
+            SurvivalErrorCode::InvalidSequence,
             "requires 1..512 actions",
         ));
     }
@@ -515,7 +521,7 @@ impl<'a> CheckedPrefix<'a> {
             || scene.region().max != xyz(site.scope.observed.max)
         {
             return Err(ConstructionPlanningError::new(
-                "scene_scope_mismatch",
+                SurvivalErrorCode::SceneScopeMismatch,
                 "capture and declared observation bounds differ",
             ));
         }
@@ -524,7 +530,7 @@ impl<'a> CheckedPrefix<'a> {
         for p in cells(Region::new(site.baseline.min, site.baseline.max)) {
             if scenario.block(xyz(p)).map_err(native_error)? != literal(&baseline, p) {
                 return Err(ConstructionPlanningError::new(
-                    "site_baseline_mismatch",
+                    SurvivalErrorCode::SiteBaselineMismatch,
                     "observed cell differs from declared predecessor",
                 )
                 .at(xyz(p)));
@@ -538,7 +544,7 @@ impl<'a> CheckedPrefix<'a> {
         let initial = scenario.preview_path(&idle).map_err(native_error)?;
         if !survival_navigation::hypothetical_admissible(&initial, site.scope.travel) {
             return Err(ConstructionPlanningError::new(
-                "travel_scope_mismatch",
+                SurvivalErrorCode::TravelScopeMismatch,
                 "initial body is not safely within travel bounds",
             ));
         }
@@ -555,7 +561,7 @@ impl<'a> CheckedPrefix<'a> {
         (|| {
             if index >= 512 {
                 return Err(ConstructionPlanningError::new(
-                    "invalid_sequence",
+                    SurvivalErrorCode::InvalidSequence,
                     "at most 512 actions",
                 ));
             }
@@ -569,7 +575,7 @@ impl<'a> CheckedPrefix<'a> {
                     if !survival_navigation::hypothetical_admissible(&prediction, site.scope.travel)
                     {
                         return Err(ConstructionPlanningError::new(
-                            "unsafe_planned_motion",
+                            SurvivalErrorCode::UnsafePlannedMotion,
                             "body leaves travel bounds or cannot stop safely",
                         ));
                     }
@@ -636,7 +642,7 @@ impl<'a> CheckedPrefix<'a> {
             && !self.ledger.site.structure.is_empty()
         {
             return Err(ConstructionPlanningError::new(
-                "invalid_sequence",
+                SurvivalErrorCode::InvalidSequence,
                 "requires at least one action",
             ));
         }
@@ -658,14 +664,14 @@ impl<'a> CheckedPrefix<'a> {
                 || final_position[i] > site.scope.retreat.max[i]
         }) {
             return Err(ConstructionPlanningError::new(
-                "retreat_not_reached",
+                SurvivalErrorCode::RetreatNotReached,
                 "sequence must end in the declared safe feet volume",
             ));
         }
         let end = scenario.preview_path(&idle).map_err(native_error)?;
         if !survival_navigation::hypothetical_admissible(&end, site.scope.travel) {
             return Err(ConstructionPlanningError::new(
-                "unsafe_final_standing",
+                SurvivalErrorCode::UnsafeFinalStanding,
                 "cleanup must preserve safe standing clearance",
             ));
         }
@@ -674,7 +680,7 @@ impl<'a> CheckedPrefix<'a> {
         for p in cells(Region::new(site.expected.min, site.expected.max)) {
             if scenario.block(xyz(p)).map_err(native_error)? != literal(&expected, p) {
                 return Err(ConstructionPlanningError::new(
-                    "final_geometry_mismatch",
+                    SurvivalErrorCode::FinalGeometryMismatch,
                     "candidate does not reproduce exact final geometry",
                 )
                 .at(xyz(p)));

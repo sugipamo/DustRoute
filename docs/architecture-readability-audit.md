@@ -19,7 +19,7 @@
 | 1 | 公開サバイバルサービスに計画生成、履歴読取り、開始・実行制御が同居し、責務間を往復する必要があった | 整理済み。中心ファイルを786→353行にし、`planning.rs`、`records.rs`、`execution.rs`へ段階別に分離。Rust DTO・ジョブ所有者・公開入口は中心に残した |
 | 2 | 採掘完了処理に結果待ち、履歴判定、接続更新、ワールド照合、再試行判定が続き、どこまで終えたか追いにくかった | 整理済み。採掘処理を`native/mining.rs`へまとめ、結果回収と接続更新を名前付き関数に分離。照合と次の判断を完了処理から読めるようにした |
 | 3 | チェックポイントにライブ停止・保存内容の検査・保存済み手順からの所有権再構築・単回消費が同居していた | 整理済み。保存検査を`checkpoint/validation.rs`へ分離し、確認済みprefixからの所有権再構築を独立関数にした |
-| 4 | サバイバルジョブの`status["state"]`、manifest、保存済み手順の種別が`Value`と文字列の組合せで判定される | 次候補。内部状態と診断用保存DTOを型として明示する。履歴とネイティブ操作権限を分け、現在の拒否条件・公開JSON・未知形式の扱いを契約テストで固定してから移行する |
+| 4 | サバイバルジョブの`status["state"]`、manifest、保存済み手順の種別が`Value`と文字列の組合せで判定される | 型へ移行済み。ジョブ状態・イベント・エラー・schema・保存手順・endpoint・単回消費記録をRust enum/structで保持・検査する。実機での保存・別プロセス続行を検証中 |
 | 5 | `service.rs`は8,071行、約2,400行は末尾のテスト。公開ルーターと遷移試験・配置等の長いワークフローを同じファイルで追う必要がある | 次候補。既存のworkflow部品に合わせ、MCP decode/encodeと手順を分離。テストの機能別分割も行う。ファイル長だけを理由に一括変更しない |
 | 6 | 物理エンジンの`step_transition`にイベントの取り出し、順序制約、状態変更、拒否時の巻戻し、trace更新がまとまる | 後続候補。順序制約の検査とaccepted/rejected処理を段階に分ける。キュー順序・論理時刻・巻戻し範囲を保つ検証が必要 |
 
@@ -46,6 +46,33 @@ all-target Clippy（`-D warnings`）、formatting、差分の空白検査が成�
 本文は、可視性と整形を除いて移動前と一致することも確認した。
 [整理後の検証記録と原本](evidence/survival-readability-refactor-20261003.json)。
 新しい機能・保存形式変更・保証条件の変更は含まない。
+
+### 内部の文字列・JSON判定の撤去
+
+追加の整理では、サバイバル建築の状態・イベント名・手順種別・拒否コード・保存schemaを
+enumへ、manifest・保存済み計画・endpoint・checkpoint消費記録をstructへ置き換えた。
+確認済み手順からの足場所有権の再構築は、`RecordedStep`のmatchと型付きeditを使う。
+現在のscope・endpointとの照合も型同士で行い、JSON化して比較しない。
+
+MCPとファイル保存の境界では既存の文字列名・JSON形式を使う。プレイヤー名、ブロック名、
+エラー説明はデータとして残す。意味を解釈しないネイティブ診断receiptは、中身を参照する
+APIを持たない`DiagnosticPayload`に包み、実行や所有権の判断には使わない。
+未知の状態・イベント、不正なcheckpointをdecode/検証時に拒否する。
+
+保存用DTOにはネイティブ計画・操作tokenの復元機能を設けない。
+`DiagnosticOnly`は保存上のfalseだけを表し、権限復元・自動再送のtrueはdecodeできない。
+続行は現在の設計図・ワールド・所持品を再確認して新しい計画を生成する。
+Voxrigの責務、送信前のdurable intent、接続退役・更新、単回消費の順序は変更しない。
+
+型の入口:
+[ジョブとmanifest](../crates/dustroute-mcp/src/service/survival/model.rs)、
+[イベントと履歴](../crates/dustroute-mcp/src/survival_execution/journal.rs)、
+[保存用計画と診断専用型](../crates/dustroute-mcp/src/survival_execution/diagnostic.rs)、
+[拒否コード](../crates/dustroute-mcp/src/survival_error.rs)。
+
+型移行後の関連テスト37件が成功（実機等の明示実行用6件はignore）。保存形式の不正な
+状態・イベント・手順、所有権、権限復元・自動再送フラグ、保存失敗時の進捗の扱いを含む。
+実機続行とall-target Clippyの最終結果は検証完了後に追記する。
 
 ## 調査範囲と見方
 

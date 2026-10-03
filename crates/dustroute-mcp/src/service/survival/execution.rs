@@ -24,8 +24,9 @@ impl DustRouteMcp {
         }
         if entry.cancel.load(Ordering::SeqCst) || Instant::now() > entry.expires {
             entry.plan = None;
-            entry.status =
-                json!({"state":"plan_expired_or_cancelled","construction_dispatched":false});
+            entry.status = JobStatus::PlanExpiredOrCancelled {
+                construction_dispatched: false,
+            };
             if let Err(e) = save(
                 &self
                     .state_store
@@ -55,7 +56,7 @@ impl DustRouteMcp {
         let cancel = entry.cancel.clone();
         let checkpoint = entry.checkpoint.clone();
         let parent = entry.parent.clone();
-        entry.status = json!({"state":"admitting"});
+        entry.status = JobStatus::Admitting;
         if let Err(e) = save(
             &self
                 .state_store
@@ -66,7 +67,10 @@ impl DustRouteMcp {
         ) {
             let original = lease.source();
             lease.release(original);
-            entry.status = json!({"state":"admission_refused","failure":failure("journal_io", &e),"construction_dispatched":false});
+            entry.status = JobStatus::AdmissionRefused {
+                failure: failure("journal_io", &e).into(),
+                construction_dispatched: false,
+            };
             return failure("journal_io", e);
         }
         drop(jobs);
@@ -88,7 +92,16 @@ impl DustRouteMcp {
         let service = self.clone();
         tokio::spawn(async move {
             if let Err(error) = worker.await {
-                service.set_survival_status(id, json!({"state":"needs_inspection", "failure":failure("execution_task_failed", error)})).await;
+                service
+                    .set_survival_status(
+                        id,
+                        JobStatus::NeedsInspection {
+                            reason: InspectionReason::Task {
+                                failure: failure("execution_task_failed", error).into(),
+                            },
+                        },
+                    )
+                    .await;
             }
         });
         json!({"ok":true,"job_id":id,"state":"admitting","completed":false,"next_step":"action=get; admission can still refuse before any edits"})
@@ -170,7 +183,14 @@ impl DustRouteMcp {
             Ok(e) => e,
             Err(e) => {
                 lease.release(bot);
-                self.set_survival_status(id,json!({"state":"admission_refused","failure":e,"construction_dispatched":false})).await;
+                self.set_survival_status(
+                    id,
+                    JobStatus::AdmissionRefused {
+                        failure: e.into(),
+                        construction_dispatched: false,
+                    },
+                )
+                .await;
                 return;
             }
         };
@@ -178,7 +198,14 @@ impl DustRouteMcp {
         loop {
             if cancel.load(Ordering::SeqCst) {
                 let result = executor.cancel();
-                self.set_survival_status(id,json!({"state":"cancelled_needs_inspection","error":result.err(),"completed_steps":executor.record().completed_steps})).await;
+                self.set_survival_status(
+                    id,
+                    JobStatus::CancelledNeedsInspection {
+                        error: result.err(),
+                        completed_steps: executor.record().completed_steps,
+                    },
+                )
+                .await;
                 break;
             }
             if checkpoint.load(Ordering::SeqCst) && !executor.pending_mining() {
@@ -188,35 +215,80 @@ impl DustRouteMcp {
                         // Release the old journal writer before publishing readiness.
                         drop(executor);
                         lease.release(current);
-                        self.set_survival_status(id,json!({"state":"checkpointed","completed_steps":boundary.completed_steps,"safe_idle":true,"checkpoint":boundary,"next_step":"action=continue creates a fresh preview; start still requires confirmation"})).await;
+                        self.set_survival_status(
+                            id,
+                            JobStatus::Checkpointed {
+                                completed_steps: boundary.completed_steps,
+                                safe_idle: true,
+                                checkpoint: Box::new(boundary),
+                                next_step: "action=continue creates a fresh preview; start still requires confirmation".into(),
+                            },
+                        ).await;
                         return;
                     }
                     Err(error) => {
-                        self.set_survival_status(id,json!({"state":"needs_inspection","error":error,"completed_steps":executor.record().completed_steps})).await;
+                        self.set_survival_status(
+                            id,
+                            JobStatus::NeedsInspection {
+                                reason: InspectionReason::Execution {
+                                    error,
+                                    completed_steps: executor.record().completed_steps,
+                                },
+                            },
+                        )
+                        .await;
                         break;
                     }
                 }
             }
             match executor.advance().await {
-                Ok(ExecutionProgress::Completed)=>{
+                Ok(ExecutionProgress::Completed) => {
                     lease.release(executor.client().clone());
-                    self.set_survival_status(id,json!({"state":"completed","completed_steps":executor.record().completed_steps,"final_evidence":executor.record().events.last()})).await;
+                    self.set_survival_status(
+                        id,
+                        JobStatus::Completed {
+                            completed_steps: Some(executor.record().completed_steps),
+                            final_evidence: executor.record().events.last().cloned(),
+                        },
+                    )
+                    .await;
                     return;
                 }
-                Ok(progress)=> {
-                    if !self.set_survival_status(id,json!({"state":"running","progress":progress,"completed_steps":executor.record().completed_steps})).await {
-                        let _=executor.cancel();
+                Ok(progress) => {
+                    if !self
+                        .set_survival_status(
+                            id,
+                            JobStatus::Running {
+                                progress,
+                                completed_steps: executor.record().completed_steps,
+                            },
+                        )
+                        .await
+                    {
+                        let _ = executor.cancel();
                         break;
                     }
-                },
-                Err(error)=>{self.set_survival_status(id,json!({"state":"needs_inspection","error":error,"completed_steps":executor.record().completed_steps})).await;break;}
+                }
+                Err(error) => {
+                    self.set_survival_status(
+                        id,
+                        JobStatus::NeedsInspection {
+                            reason: InspectionReason::Execution {
+                                error,
+                                completed_steps: executor.record().completed_steps,
+                            },
+                        },
+                    )
+                    .await;
+                    break;
+                }
             }
         }
         if let Some(entry) = self.survival.entries.lock().await.get_mut(&id) {
             entry.stopped = Some((lease, executor));
         }
     }
-    async fn set_survival_status(&self, id: uuid::Uuid, status: Value) -> bool {
+    async fn set_survival_status(&self, id: uuid::Uuid, status: JobStatus) -> bool {
         let result = save(
             &self
                 .state_store
@@ -228,9 +300,12 @@ impl DustRouteMcp {
         let persisted = result.is_ok();
         let status = match result {
             Ok(()) => status,
-            Err(e) => {
-                json!({"state":"needs_inspection","last_status":status,"persistence_error":e})
-            }
+            Err(e) => JobStatus::NeedsInspection {
+                reason: InspectionReason::Persistence {
+                    last_status: Box::new(status),
+                    persistence_error: e,
+                },
+            },
         };
         if let Some(entry) = self.survival.entries.lock().await.get_mut(&id) {
             entry.status = status;

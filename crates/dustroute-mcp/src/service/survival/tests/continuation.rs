@@ -43,7 +43,7 @@ fn survival_continuation_evidence_exceeds_job_bound_without_changing_job_storage
     save_trial_evidence(&output, &value).unwrap();
     assert_eq!(load_trial_evidence(&output).unwrap(), value);
     assert_eq!(
-        load(&output).unwrap_err(),
+        load::<Value>(&output).unwrap_err(),
         "survival job record exceeds bound"
     );
     std::fs::remove_dir_all(root).unwrap();

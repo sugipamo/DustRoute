@@ -51,8 +51,18 @@ impl DustRouteMcp {
                 return json!({"ok":false,"error":{"code":"generation_refused","cause":e},"writes_minecraft":false});
             }
         };
-        self.publish_survival_plan(owner, source, generated,
-            json!({"specification":specification,"scope":scope,"temporary_material":temporary_material}), None).await
+        self.publish_survival_plan(
+            owner,
+            source,
+            generated,
+            ConstructionSpecification {
+                specification,
+                scope,
+                temporary_material,
+            },
+            None,
+        )
+        .await
     }
 
     pub(super) async fn publish_survival_plan(
@@ -60,7 +70,7 @@ impl DustRouteMcp {
         owner: &str,
         source: SourceIdentity,
         generated: crate::survival_construction::generation::GeneratedConstructionPlan,
-        construction: Value,
+        construction: ConstructionSpecification,
         parent: Option<ContinuationParent>,
     ) -> Value {
         if self.survival.entries.lock().await.len() >= 32 {
@@ -77,8 +87,16 @@ impl DustRouteMcp {
         if let Err(e) = std::fs::create_dir_all(&path) {
             return failure("journal_io", e);
         }
-        let manifest = json!({"schema":"dustroute.survival-job.v1","job_id":id,"owner":owner,"source":source,
-            "preview":generated,"construction":construction,"parent_job_id":parent.as_ref().map(|p|p.id),"execution_authority_restorable":false});
+        let manifest = JobManifest {
+            schema: JobSchema::V1,
+            job_id: id,
+            owner: owner.into(),
+            source: Some(source.clone()),
+            preview: Some(json!(generated).into()),
+            construction: Some(construction),
+            parent_job_id: parent.as_ref().map(|p| p.id),
+            execution_authority_restorable: crate::survival_execution::diagnostic::DiagnosticOnly,
+        };
         if let Err(e) = save(&path.join("manifest.json"), &manifest) {
             return failure("journal_io", e);
         }
@@ -92,7 +110,7 @@ impl DustRouteMcp {
                 source,
                 plan: Some(generated.plan),
                 expires: Instant::now() + Duration::from_secs(900),
-                status: json!({"state":"planned"}),
+                status: JobStatus::Planned,
                 cancel: Arc::new(AtomicBool::new(false)),
                 checkpoint: Arc::new(AtomicBool::new(false)),
                 parent,

@@ -1,5 +1,6 @@
 //! Durable diagnosis, deliberately unable to recreate native operation authority.
-use super::{ExecutionError, Result};
+use super::diagnostic::{DiagnosticPayload, RecordedExecutionPlan};
+use super::{ExecutionError, Result, SurvivalErrorCode};
 use crate::storage::{self, Durability};
 use fs2::FileExt;
 use serde::{Deserialize, Serialize};
@@ -10,9 +11,50 @@ use std::{
     path::{Path, PathBuf},
 };
 
-const SCHEMA: &str = "dustroute.survival-execution.v1";
 const MAX_BYTES: usize = 16 * 1024 * 1024;
 const RESERVE: usize = 256 * 1024;
+
+/// Named lifecycle stages; opaque diagnostic payloads never decide a transition.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ExecutionPhase {
+    Cancelled,
+    CheckpointRefused,
+    Completed,
+    FreshReconnect,
+    IdleCheckpoint,
+    InventoryReceived,
+    InventorySwap,
+    MiningAim,
+    MiningFinishSend,
+    MiningOutcome,
+    MiningSelectEmpty,
+    MiningStartSend,
+    MiningStarted,
+    MovementPredicted,
+    MovementPredictionMismatch,
+    MovementSend,
+    Observed,
+    PlacementAim,
+    PlacementObserved,
+    PlacementSend,
+    ReconnectBoundaryVerified,
+    Recovered,
+    Removed,
+    RetireSource,
+    RetryImprovement,
+    SelectMaterial,
+    StepCompleted,
+    Stopped,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum JournalSchema {
+    #[serde(rename = "dustroute.survival-execution.v1")]
+    V1,
+    #[serde(other)]
+    Unknown,
+}
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -38,21 +80,67 @@ pub enum Continuation {
     Checkpoint,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize)]
 pub struct ExecutionEvent {
     pub step: usize,
-    pub phase: String,
+    pub phase: ExecutionPhase,
     pub outcome: OperationOutcome,
     pub continuation: Continuation,
-    pub evidence: Value,
+    pub evidence: ExecutionEvidence,
+}
+
+/// Payloads used for validation have Rust types; other native receipts are opaque.
+#[derive(Clone, Debug, Serialize)]
+#[serde(untagged)]
+pub enum ExecutionEvidence {
+    Checkpoint(Box<super::checkpoint::SafeCheckpoint>),
+    Diagnostic(DiagnosticPayload),
+}
+impl From<Value> for ExecutionEvidence {
+    fn from(value: Value) -> Self {
+        Self::Diagnostic(value.into())
+    }
+}
+impl From<super::checkpoint::SafeCheckpoint> for ExecutionEvidence {
+    fn from(value: super::checkpoint::SafeCheckpoint) -> Self {
+        Self::Checkpoint(Box::new(value))
+    }
+}
+impl<'de> Deserialize<'de> for ExecutionEvent {
+    fn deserialize<D: serde::Deserializer<'de>>(decoder: D) -> std::result::Result<Self, D::Error> {
+        // Wire decoding is the only place an opaque checkpoint becomes typed data.
+        #[derive(Deserialize)]
+        #[serde(deny_unknown_fields)]
+        struct Wire {
+            step: usize,
+            phase: ExecutionPhase,
+            outcome: OperationOutcome,
+            continuation: Continuation,
+            evidence: Value,
+        }
+        let wire = Wire::deserialize(decoder)?;
+        let evidence = match wire.phase {
+            ExecutionPhase::IdleCheckpoint => ExecutionEvidence::Checkpoint(Box::new(
+                serde_json::from_value(wire.evidence).map_err(serde::de::Error::custom)?,
+            )),
+            _ => ExecutionEvidence::Diagnostic(wire.evidence.into()),
+        };
+        Ok(Self {
+            step: wire.step,
+            phase: wire.phase,
+            outcome: wire.outcome,
+            continuation: wire.continuation,
+            evidence,
+        })
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ExecutionRecord {
-    pub schema: String,
+    pub schema: JournalSchema,
     pub id: uuid::Uuid,
     /// Diagnostic plan, not a deserializable HypotheticalConstructionPlan.
-    pub plan: Value,
+    pub plan: RecordedExecutionPlan,
     pub completed_steps: usize,
     pub outcome: OperationOutcome,
     pub continuation: Continuation,
@@ -75,14 +163,14 @@ pub fn diagnose(directory: &Path) -> Result<ExecutionDiagnosis> {
         .read_to_end(&mut bytes)?;
     if bytes.len() > MAX_BYTES {
         return Err(ExecutionError::new(
-            "journal_too_large",
+            SurvivalErrorCode::JournalTooLarge,
             "record exceeds bound",
         ));
     }
     let record: ExecutionRecord = serde_json::from_slice(&bytes)?;
-    if record.schema != SCHEMA {
+    if record.schema != JournalSchema::V1 {
         return Err(ExecutionError::new(
-            "journal_schema",
+            SurvivalErrorCode::JournalSchema,
             "unknown survival journal",
         ));
     }
@@ -99,7 +187,7 @@ pub(super) struct Journal {
     pub record: ExecutionRecord,
 }
 impl Journal {
-    pub fn create(directory: &Path, plan: Value) -> Result<Self> {
+    pub fn create(directory: &Path, plan: RecordedExecutionPlan) -> Result<Self> {
         let mut builder = fs::DirBuilder::new();
         builder.recursive(true);
         #[cfg(unix)]
@@ -117,11 +205,11 @@ impl Journal {
         }
         let lock = options.open(directory.join("executor.lock"))?;
         lock.try_lock_exclusive()
-            .map_err(|e| ExecutionError::new("execution_busy", e))?;
+            .map_err(|e| ExecutionError::new(SurvivalErrorCode::ExecutionBusy, e))?;
         let path = directory.join("record.json");
         if path.try_exists()? {
             return Err(ExecutionError::new(
-                "execution_exists",
+                SurvivalErrorCode::ExecutionExists,
                 "existing record requires diagnosis; it cannot be overwritten or resumed",
             ));
         }
@@ -129,7 +217,7 @@ impl Journal {
             _lock: lock,
             path,
             record: ExecutionRecord {
-                schema: SCHEMA.into(),
+                schema: JournalSchema::V1,
                 id: uuid::Uuid::new_v4(),
                 plan,
                 completed_steps: 0,
@@ -146,7 +234,7 @@ impl Journal {
         let bytes = serde_json::to_vec(&self.record)?;
         if bytes.len() > MAX_BYTES - if reserve { RESERVE } else { 0 } {
             return Err(ExecutionError::new(
-                "journal_too_large",
+                SurvivalErrorCode::JournalTooLarge,
                 "no durable room for another action/outcome",
             ));
         }
@@ -155,38 +243,38 @@ impl Journal {
     }
     pub fn event(
         &mut self,
-        phase: &str,
+        phase: ExecutionPhase,
         outcome: OperationOutcome,
         continuation: Continuation,
-        evidence: Value,
+        evidence: impl Into<ExecutionEvidence>,
     ) -> Result<()> {
-        self.append(phase, outcome, continuation, evidence);
+        self.append(phase, outcome, continuation, evidence.into());
         self.save(false)
     }
     fn append(
         &mut self,
-        phase: &str,
+        phase: ExecutionPhase,
         outcome: OperationOutcome,
         continuation: Continuation,
-        evidence: Value,
+        evidence: ExecutionEvidence,
     ) {
         self.record.outcome = outcome.clone();
         self.record.continuation = continuation.clone();
         self.record.events.push(ExecutionEvent {
             step: self.record.completed_steps,
-            phase: phase.into(),
+            phase,
             outcome,
             continuation,
             evidence,
         });
     }
     /// Must succeed before *each* mutating call, including inventory/look/reconnect.
-    pub fn intend(&mut self, phase: &str, evidence: Value) -> Result<()> {
+    pub fn intend(&mut self, phase: ExecutionPhase, evidence: Value) -> Result<()> {
         self.append(
             phase,
             OperationOutcome::Uncertain,
             Continuation::NeedsInspection,
-            evidence,
+            evidence.into(),
         );
         self.save(true)
     }
@@ -219,7 +307,7 @@ mod tests {
         assert!(!diagnosis.record.events.is_empty());
         assert_eq!(diagnosis.continuation, Continuation::NeedsInspection);
         assert!(
-            matches!(Journal::create(&directory,serde_json::json!({})),Err(e) if e.code == "execution_exists")
+            matches!(Journal::create(&directory,RecordedExecutionPlan::default()),Err(e) if e.code == SurvivalErrorCode::ExecutionExists)
         );
         assert_eq!(fs::read(directory.join("record.json")).unwrap(), before);
         println!(
@@ -230,8 +318,8 @@ mod tests {
     #[test]
     fn restart_retains_uncertain_intent_without_replaying_or_replacing_it() {
         let d = Directory::new();
-        let mut j = Journal::create(&d.0, json!({"diagnostic_plan":1})).unwrap();
-        j.intend("mining_start_send", json!({"target":[1,2,3]}))
+        let mut j = Journal::create(&d.0, RecordedExecutionPlan::default()).unwrap();
+        j.intend(ExecutionPhase::MiningStartSend, json!({"target":[1,2,3]}))
             .unwrap();
         let id = j.record.id;
         drop(j);
@@ -240,16 +328,20 @@ mod tests {
         assert_eq!(diagnosis.record.outcome, OperationOutcome::Uncertain);
         assert_eq!(diagnosis.continuation, Continuation::NeedsInspection);
         assert_eq!(
-            diagnosis.record.events[0].evidence["target"],
+            json!(diagnosis.record.events[0].evidence)["target"],
             json!([1, 2, 3])
         );
-        assert!(matches!(Journal::create(&d.0,json!(null)),Err(e) if e.code == "execution_exists"));
+        assert!(
+            matches!(Journal::create(&d.0,RecordedExecutionPlan::default()),Err(e) if e.code == SurvivalErrorCode::ExecutionExists)
+        );
     }
     #[test]
     fn only_one_writer_and_even_historical_readiness_cannot_resume() {
         let d = Directory::new();
-        let j = Journal::create(&d.0, json!({})).unwrap();
-        assert!(matches!(Journal::create(&d.0,json!({})),Err(e) if e.code == "execution_busy"));
+        let j = Journal::create(&d.0, RecordedExecutionPlan::default()).unwrap();
+        assert!(
+            matches!(Journal::create(&d.0,RecordedExecutionPlan::default()),Err(e) if e.code == SurvivalErrorCode::ExecutionBusy)
+        );
         let r = diagnose(&d.0).unwrap();
         assert_eq!(r.record.continuation, Continuation::Revalidate);
         assert_eq!(r.continuation, Continuation::NeedsInspection);
@@ -258,13 +350,13 @@ mod tests {
     #[test]
     fn failed_outcome_save_keeps_the_pre_dispatch_intent_on_disk() {
         let d = Directory::new();
-        let mut j = Journal::create(&d.0, json!({})).unwrap();
-        j.intend("placement_send", json!({"target":[1,2,3]}))
+        let mut j = Journal::create(&d.0, RecordedExecutionPlan::default()).unwrap();
+        j.intend(ExecutionPhase::PlacementSend, json!({"target":[1,2,3]}))
             .unwrap();
         j.path = d.0.join("missing-directory/record.json");
         assert!(
             j.event(
-                "observed",
+                ExecutionPhase::Observed,
                 OperationOutcome::Observed,
                 Continuation::Revalidate,
                 json!({})
@@ -278,9 +370,9 @@ mod tests {
     #[test]
     fn result_and_continuation_are_independent_and_cancellation_is_retained() {
         let d = Directory::new();
-        let mut j = Journal::create(&d.0, json!({})).unwrap();
+        let mut j = Journal::create(&d.0, RecordedExecutionPlan::default()).unwrap();
         j.event(
-            "removed",
+            ExecutionPhase::Removed,
             OperationOutcome::Observed,
             Continuation::NeedsInspection,
             json!({"retirement_pending":true}),
@@ -290,7 +382,7 @@ mod tests {
         assert_eq!(r.outcome, OperationOutcome::Observed);
         assert_eq!(r.continuation, Continuation::NeedsInspection);
         j.event(
-            "cancelled",
+            ExecutionPhase::Cancelled,
             OperationOutcome::Observed,
             Continuation::Cancelled,
             json!({}),
@@ -305,12 +397,41 @@ mod tests {
     #[test]
     fn unknown_or_oversized_records_are_not_accepted() {
         let d = Directory::new();
-        let mut j = Journal::create(&d.0, json!({})).unwrap();
-        j.record.schema = "future-unknown".into();
+        let mut j = Journal::create(&d.0, RecordedExecutionPlan::default()).unwrap();
+        j.record.schema = JournalSchema::Unknown;
         j.save(false).unwrap();
-        assert_eq!(diagnose(&d.0).unwrap_err().code, "journal_schema");
+        assert_eq!(
+            diagnose(&d.0).unwrap_err().code,
+            SurvivalErrorCode::JournalSchema
+        );
         let f = File::create(d.0.join("record.json")).unwrap();
         f.set_len((MAX_BYTES + 1) as u64).unwrap();
-        assert_eq!(diagnose(&d.0).unwrap_err().code, "journal_too_large");
+        assert_eq!(
+            diagnose(&d.0).unwrap_err().code,
+            SurvivalErrorCode::JournalTooLarge
+        );
+    }
+
+    #[test]
+    fn unknown_phase_and_untyped_checkpoint_cannot_supply_a_saved_boundary() {
+        let d = Directory::new();
+        let mut journal = Journal::create(&d.0, RecordedExecutionPlan::default()).unwrap();
+        journal
+            .intend(ExecutionPhase::MiningStartSend, json!({"target":[1,2,3]}))
+            .unwrap();
+        let mut wire = json!(journal.record);
+        drop(journal);
+        for phase in ["future_observed", "idle_checkpoint"] {
+            wire["events"][0]["phase"] = json!(phase);
+            fs::write(d.0.join("record.json"), serde_json::to_vec(&wire).unwrap()).unwrap();
+            assert_eq!(
+                diagnose(&d.0).unwrap_err().code,
+                SurvivalErrorCode::JournalEncoding
+            );
+            assert_eq!(
+                fs::read(d.0.join("record.json")).unwrap(),
+                serde_json::to_vec(&wire).unwrap()
+            );
+        }
     }
 }

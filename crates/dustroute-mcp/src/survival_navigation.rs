@@ -11,7 +11,9 @@ use voxrig::checked_survival::{
 };
 
 /// Reviewed spatial scope, inclusive bounds on the entire standing/jumping body.
-#[derive(Clone, Copy, Debug, Serialize, serde::Deserialize, rmcp::schemars::JsonSchema)]
+#[derive(
+    Clone, Copy, Debug, PartialEq, Serialize, serde::Deserialize, rmcp::schemars::JsonSchema,
+)]
 #[serde(deny_unknown_fields)]
 pub struct TravelBounds {
     pub min: [f64; 3],

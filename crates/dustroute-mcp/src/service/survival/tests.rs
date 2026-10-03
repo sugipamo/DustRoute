@@ -222,7 +222,10 @@ async fn public_saved_jobs_are_diagnostic_and_corrupt_identity_is_refused() {
         refusal["historical_diagnosis"]["last_event"]["phase"],
         "mining_start_send"
     );
-    assert_eq!(load(&execution.join("record.json")).unwrap(), record);
+    assert_eq!(
+        load::<Value>(&execution.join("record.json")).unwrap(),
+        record
+    );
     manifest["owner"] = json!("AnotherPlayer");
     save(&path.join("manifest.json"), &manifest).unwrap();
     let denied = call(&client, "survival_construction", get.clone()).await;
@@ -315,7 +318,7 @@ async fn native_public_roof() {
             } else {
                 original.expires
             },
-            status: json!({"state":"planned"}),
+            status: JobStatus::Planned,
             cancel: Arc::new(AtomicBool::new(false)),
             checkpoint: Arc::new(AtomicBool::new(false)),
             parent: None,
@@ -337,7 +340,7 @@ async fn native_public_roof() {
             .await;
             assert_eq!(cancelled["ok"], true);
             assert_eq!(
-                load(&directory.join("status.json")).unwrap()["state"],
+                load::<Value>(&directory.join("status.json")).unwrap()["state"],
                 "cancelled_before_start"
             );
         }

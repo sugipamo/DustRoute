@@ -1,52 +1,57 @@
 //! Read-only validation of persisted idle boundaries and confirmed temporary ownership.
 use super::*;
-
-#[derive(Deserialize)]
-struct SavedEdit {
-    position: [i32; 3],
-    before: NativeBlockState,
-    after: NativeBlockState,
-}
+use crate::survival_execution::diagnostic::{RecordedConstructionPlan, RecordedStep};
 
 pub(super) fn checked(directory: &Path) -> Result<SafeCheckpoint> {
     if directory.join("continuation-claim.json").try_exists()? {
         return Err(ExecutionError::new(
-            "checkpoint_consumed",
+            SurvivalErrorCode::CheckpointConsumed,
             "another new job already claimed this checkpoint; diagnose that job",
         ));
     }
     let record = diagnose(directory)?.record;
     let last = record.events.last().ok_or_else(|| {
         ExecutionError::new(
-            "safe_checkpoint_missing",
+            SurvivalErrorCode::SafeCheckpointMissing,
             "no settled idle checkpoint; lost handles cannot be restored",
         )
     })?;
     if record.continuation != Continuation::Checkpoint
         || record.outcome != OperationOutcome::Observed
-        || last.phase != "idle_checkpoint"
+        || last.phase != ExecutionPhase::IdleCheckpoint
         || last.continuation != Continuation::Checkpoint
         || last.outcome != OperationOutcome::Observed
         || last.step != record.completed_steps
     {
         return Err(ExecutionError::new(
-            "safe_checkpoint_missing",
+            SurvivalErrorCode::SafeCheckpointMissing,
             "last durable event is not an idle checkpoint; unresolved effects require inspection",
         ));
     }
-    let checkpoint: SafeCheckpoint = serde_json::from_value(last.evidence.clone())?;
-    if checkpoint.schema != "dustroute.survival-checkpoint.v2"
+    let ExecutionEvidence::Checkpoint(checkpoint) = &last.evidence else {
+        return Err(ExecutionError::new(
+            SurvivalErrorCode::InvalidCheckpoint,
+            "missing typed checkpoint evidence",
+        ));
+    };
+    let plan = record.plan.plan.as_ref().ok_or_else(|| {
+        ExecutionError::new(
+            SurvivalErrorCode::InvalidCheckpoint,
+            "missing diagnostic construction plan",
+        )
+    })?;
+    if checkpoint.schema != CheckpointSchema::V2
         || checkpoint.execution_id != record.id
         || checkpoint.completed_steps != record.completed_steps
-        || json!(checkpoint.scope) != record.plan["plan"]["scope"]
-        || checkpoint.endpoint != record.plan["declared_reconnect"]
+        || checkpoint.scope != plan.scope
+        || record.plan.declared_reconnect.as_ref() != Some(&checkpoint.endpoint)
     {
         return Err(ExecutionError::new(
-            "invalid_checkpoint",
+            SurvivalErrorCode::InvalidCheckpoint,
             "checkpoint provenance differs from execution",
         ));
     }
-    let owned = confirmed_temporary_ownership(&record)?;
+    let owned = confirmed_temporary_ownership(&record, plan)?;
     let recorded: BTreeMap<_, _> = checkpoint
         .temporary
         .iter()
@@ -54,24 +59,22 @@ pub(super) fn checked(directory: &Path) -> Result<SafeCheckpoint> {
         .collect();
     if recorded.len() != checkpoint.temporary.len() || recorded != owned {
         return Err(ExecutionError::new(
-            "invalid_checkpoint",
+            SurvivalErrorCode::InvalidCheckpoint,
             "checkpoint ownership differs from confirmed prefix",
         ));
     }
-    Ok(checkpoint)
+    Ok((**checkpoint).clone())
 }
 
-/// Rebuild ownership only from the confirmed, evidence-typed prefix; JSON never
-/// becomes a process-local executor or an independent ownership assertion.
+/// Only typed confirmed edits contribute ownership; saved native previews cannot run.
 fn confirmed_temporary_ownership(
     record: &ExecutionRecord,
+    plan: &RecordedConstructionPlan,
 ) -> Result<BTreeMap<[i32; 3], NativeBlockState>> {
-    // Ownership is rebuilt from confirmed prefix edits, never from a caller list.
-    let plan = &record.plan["plan"];
     let completions: Vec<_> = record
         .events
         .iter()
-        .filter(|e| e.phase == "step_completed")
+        .filter(|e| e.phase == ExecutionPhase::StepCompleted)
         .collect();
     if completions.len() != record.completed_steps
         || completions.iter().enumerate().any(|(i, e)| {
@@ -84,67 +87,63 @@ fn confirmed_temporary_ownership(
         })
     {
         return Err(ExecutionError::new(
-            "invalid_checkpoint",
+            SurvivalErrorCode::InvalidCheckpoint,
             "completed prefix lacks sequential observed events",
         ));
     }
     let mut owned = BTreeMap::new();
-    let initial: Vec<TemporaryBlock> = serde_json::from_value(plan["initial_temporary"].clone())?;
-    for block in initial {
-        if owned.insert(block.position, block.state).is_some() {
+    for block in &plan.initial_temporary {
+        if owned.insert(block.position, block.state.clone()).is_some() {
             return Err(ExecutionError::new(
-                "invalid_checkpoint",
+                SurvivalErrorCode::InvalidCheckpoint,
                 "duplicate initial ownership",
             ));
         }
     }
-    let steps = plan["steps"]
-        .as_array()
-        .ok_or_else(|| ExecutionError::new("invalid_checkpoint", "missing diagnostic steps"))?;
-    if record.completed_steps > steps.len() {
+    if record.completed_steps > plan.steps.len() {
         return Err(ExecutionError::new(
-            "invalid_checkpoint",
+            SurvivalErrorCode::InvalidCheckpoint,
             "completed prefix exceeds plan",
         ));
     }
-    for (index, step) in steps[..record.completed_steps].iter().enumerate() {
-        let expected_outcome = if step["kind"] == "move" {
-            OperationOutcome::Predicted
-        } else {
-            OperationOutcome::Observed
-        };
-        if completions[index].outcome != expected_outcome {
+    for (index, step) in plan.steps[..record.completed_steps].iter().enumerate() {
+        if completions[index].outcome != step.expected_outcome()? {
             return Err(ExecutionError::new(
-                "invalid_checkpoint",
+                SurvivalErrorCode::InvalidCheckpoint,
                 "step outcome differs from its evidence contract",
             ));
         }
-        match step["kind"].as_str() {
-            Some("place") if step["purpose"] == "temporary" => {
-                let edit: SavedEdit = serde_json::from_value(step["placement"]["edit"].clone())?;
-                if owned.insert(edit.position, edit.after).is_some() {
+        match step {
+            RecordedStep::Place {
+                purpose: PlacementPurpose::Temporary,
+                placement,
+            } => {
+                let placement = placement.as_ref().ok_or_else(|| {
+                    ExecutionError::new(
+                        SurvivalErrorCode::InvalidCheckpoint,
+                        "missing historical placement edit",
+                    )
+                })?;
+                if owned
+                    .insert(placement.edit.position, placement.edit.after.clone())
+                    .is_some()
+                {
                     return Err(ExecutionError::new(
-                        "invalid_checkpoint",
+                        SurvivalErrorCode::InvalidCheckpoint,
                         "duplicate temporary placement",
                     ));
                 }
             }
-            Some("remove_temporary") => {
-                let edit: SavedEdit = serde_json::from_value(step["edit"].clone())?;
+            RecordedStep::RemoveTemporary { edit, .. } => {
                 if owned.remove(&edit.position).as_ref() != Some(&edit.before) {
                     return Err(ExecutionError::new(
-                        "invalid_checkpoint",
+                        SurvivalErrorCode::InvalidCheckpoint,
                         "removal lacks historical ownership",
                     ));
                 }
             }
-            Some("place" | "move") => {}
-            _ => {
-                return Err(ExecutionError::new(
-                    "invalid_checkpoint",
-                    "unknown historical step",
-                ));
-            }
+            RecordedStep::Place { .. } | RecordedStep::Move { .. } => {}
+            RecordedStep::Unknown => unreachable!("expected_outcome refuses unknown steps"),
         }
     }
     Ok(owned)

@@ -1,5 +1,7 @@
 //! Settled idle boundaries, not recovery of lost native operation handles.
+use super::diagnostic::{CheckpointSchema, DiagnosticPayload, RecordedEndpoint};
 use super::*;
+use crate::survival_construction::PlacementPurpose;
 use crate::survival_construction::{
     ConstructionScope, TemporaryBlock, continuation::scene_snapshot,
 };
@@ -11,22 +13,22 @@ mod validation;
 use serde::Deserialize;
 use std::fs::{File, OpenOptions};
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub(crate) struct SafeCheckpoint {
-    pub schema: String,
+pub struct SafeCheckpoint {
+    pub schema: CheckpointSchema,
     pub execution_id: uuid::Uuid,
     pub completed_steps: usize,
     pub dimension: String,
     pub scope: ConstructionScope,
     pub snapshot: MinecraftSnapshot,
     pub temporary: Vec<TemporaryBlock>,
-    pub endpoint: serde_json::Value,
+    pub endpoint: RecordedEndpoint,
     /// Diagnostic provenance only; never used to restore native standing authority.
-    pub standing: serde_json::Value,
+    pub standing: DiagnosticPayload,
 }
-pub(crate) fn endpoint(config: &ConnectionConfig) -> serde_json::Value {
-    json!({"host":config.server.host,"port":config.server.port,"username":config.username,"version":config.version})
+pub(crate) fn endpoint(config: &ConnectionConfig) -> RecordedEndpoint {
+    config.into()
 }
 
 impl SurvivalExecutor {
@@ -45,7 +47,7 @@ impl SurvivalExecutor {
             )
         {
             return Err(ExecutionError::new(
-                "checkpoint_not_idle",
+                SurvivalErrorCode::CheckpointNotIdle,
                 "outstanding or interrupted operation; no idle checkpoint",
             ));
         }
@@ -53,7 +55,7 @@ impl SurvivalExecutor {
         let result = self.checkpoint_inner().await;
         if let Err(error) = &result {
             let _ = self.journal.event(
-                "checkpoint_refused",
+                ExecutionPhase::CheckpointRefused,
                 self.journal.record.outcome.clone(),
                 Continuation::NeedsInspection,
                 json!({"error":error}),
@@ -84,7 +86,7 @@ impl SurvivalExecutor {
                 .is_some_and(|s| !s.dispatched)
         {
             return Err(ExecutionError::new(
-                "checkpoint_native_unsettled",
+                SurvivalErrorCode::CheckpointNativeUnsettled,
                 "native history retains unresolved effects",
             ));
         }
@@ -93,7 +95,7 @@ impl SurvivalExecutor {
         // Prediction remains prediction; this is not independent corroboration.
         let fresh = self.current_scene().await?;
         let checkpoint = SafeCheckpoint {
-            schema: "dustroute.survival-checkpoint.v2".into(),
+            schema: CheckpointSchema::V2,
             execution_id: self.record().id,
             completed_steps: self.record().completed_steps,
             dimension: fresh.source().dimension.clone(),
@@ -108,13 +110,13 @@ impl SurvivalExecutor {
                 })
                 .collect(),
             endpoint: endpoint(&self.reconnect),
-            standing: json!(fresh.source()),
+            standing: json!(fresh.source()).into(),
         };
         self.journal.event(
-            "idle_checkpoint",
+            ExecutionPhase::IdleCheckpoint,
             OperationOutcome::Observed,
             Continuation::Checkpoint,
-            json!(checkpoint),
+            checkpoint.clone(),
         )?;
         Ok(checkpoint)
     }
@@ -132,7 +134,7 @@ fn lock(directory: &Path) -> Result<File> {
         .write(true)
         .open(directory.join("executor.lock"))?;
     lock.try_lock_exclusive()
-        .map_err(|e| ExecutionError::new("checkpoint_writer_live", e))?;
+        .map_err(|e| ExecutionError::new(SurvivalErrorCode::CheckpointWriterLive, e))?;
     Ok(lock)
 }
 
@@ -145,17 +147,19 @@ pub(crate) fn claim(
 ) -> Result<File> {
     let lock = lock(directory)?;
     let now = checked(directory)?;
-    if json!(now) != json!(expected) {
+    if &now != expected {
         return Err(ExecutionError::new(
-            "checkpoint_changed",
+            SurvivalErrorCode::CheckpointChanged,
             "checkpoint differs from preview",
         ));
     }
     crate::storage::replace(
         &directory.join("continuation-claim.json"),
-        &serde_json::to_vec(
-            &json!({"new_job":new_job,"execution_id":now.execution_id,"automatic_replay":false}),
-        )?,
+        &serde_json::to_vec(&super::diagnostic::CheckpointClaim {
+            new_job,
+            execution_id: now.execution_id,
+            automatic_replay: super::diagnostic::DiagnosticOnly,
+        })?,
         crate::storage::Durability::FileAndDirectory,
     )?;
     Ok(lock)
@@ -164,6 +168,7 @@ pub(crate) fn claim(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::survival_execution::diagnostic::{RecordedConstructionPlan, RecordedStep};
     struct Directory(std::path::PathBuf);
     impl Drop for Directory {
         fn drop(&mut self) {
@@ -175,14 +180,32 @@ mod tests {
             std::env::temp_dir().join(format!("dustroute-checkpoint-{}", uuid::Uuid::new_v4())),
         );
         let scope = crate::survival_construction::tests::scope();
-        let native_endpoint = json!({"host":"127.0.0.1","port":25572,"username":"NatMineBot","version":"Java1_21_11"});
+        let native_endpoint = endpoint(&voxrig::ConnectionConfig::offline(
+            voxrig::Server::new("127.0.0.1", 25572),
+            "NatMineBot",
+            voxrig::MinecraftVersion::Java1_21_11,
+        ));
         let mut journal = Journal::create(
             &d.0,
-            json!({"plan":{"scope":scope,"initial_temporary":[],"steps":[]},"declared_reconnect":native_endpoint}),
+            RecordedExecutionPlan {
+                plan: Some(RecordedConstructionPlan {
+                    scope: scope.clone(),
+                    initial_temporary: vec![],
+                    steps: vec![],
+                    motion_contract: None,
+                    source: None,
+                    baseline: None,
+                    expected: None,
+                    materials: None,
+                    final_position: None,
+                }),
+                capabilities: None,
+                declared_reconnect: Some(native_endpoint.clone()),
+            },
         )
         .unwrap();
         let checkpoint = SafeCheckpoint {
-            schema: "dustroute.survival-checkpoint.v2".into(),
+            schema: CheckpointSchema::V2,
             execution_id: journal.record.id,
             completed_steps: 0,
             dimension: "minecraft:overworld".into(),
@@ -190,14 +213,14 @@ mod tests {
             snapshot: crate::survival_construction::tests::design().baseline,
             temporary: vec![],
             endpoint: native_endpoint,
-            standing: json!({"position_basis":{"kind":"received","receive_sequence":1}}),
+            standing: json!({"position_basis":{"kind":"received","receive_sequence":1}}).into(),
         };
         journal
             .event(
-                "idle_checkpoint",
+                ExecutionPhase::IdleCheckpoint,
                 OperationOutcome::Observed,
                 Continuation::Checkpoint,
-                json!(checkpoint),
+                checkpoint.clone(),
             )
             .unwrap();
         (d, journal, checkpoint)
@@ -205,12 +228,18 @@ mod tests {
     #[test]
     fn only_settled_last_event_and_released_writer_can_supply_new_plan_facts() {
         let (d, mut journal, checkpoint) = fixture();
-        assert_eq!(read(&d.0).unwrap_err().code, "checkpoint_writer_live");
+        assert_eq!(
+            read(&d.0).unwrap_err().code,
+            SurvivalErrorCode::CheckpointWriterLive
+        );
         journal
-            .intend("mining_start_send", json!({"target":[1,2,3]}))
+            .intend(ExecutionPhase::MiningStartSend, json!({"target":[1,2,3]}))
             .unwrap();
         drop(journal);
-        assert_eq!(read(&d.0).unwrap_err().code, "safe_checkpoint_missing");
+        assert_eq!(
+            read(&d.0).unwrap_err().code,
+            SurvivalErrorCode::SafeCheckpointMissing
+        );
         let (d, journal, _) = fixture();
         drop(journal);
         assert_eq!(read(&d.0).unwrap().schema, checkpoint.schema);
@@ -227,10 +256,13 @@ mod tests {
         let guard = claim(&d.0, &checkpoint, child).unwrap();
         assert!(claim(&d.0, &checkpoint, uuid::Uuid::new_v4()).is_err());
         drop(guard);
-        assert_eq!(read(&d.0).unwrap_err().code, "checkpoint_consumed");
+        assert_eq!(
+            read(&d.0).unwrap_err().code,
+            SurvivalErrorCode::CheckpointConsumed
+        );
         assert_eq!(
             diagnose(&d.0).unwrap().record.events.last().unwrap().phase,
-            "idle_checkpoint"
+            ExecutionPhase::IdleCheckpoint
         );
     }
     #[test]
@@ -245,29 +277,47 @@ mod tests {
         });
         journal
             .event(
-                "idle_checkpoint",
+                ExecutionPhase::IdleCheckpoint,
                 OperationOutcome::Observed,
                 Continuation::Checkpoint,
-                json!(checkpoint),
+                checkpoint.clone(),
             )
             .unwrap();
         drop(journal);
-        assert_eq!(read(&d.0).unwrap_err().code, "invalid_checkpoint");
+        assert_eq!(
+            read(&d.0).unwrap_err().code,
+            SurvivalErrorCode::InvalidCheckpoint
+        );
     }
     #[test]
     fn persisted_motion_prediction_cannot_certify_a_world_edit() {
-        for (kind, outcome, accepted) in [
-            ("move", OperationOutcome::Predicted, true),
-            ("move", OperationOutcome::Observed, false),
-            ("place", OperationOutcome::Predicted, false),
+        for (step, outcome, accepted) in [
+            (
+                RecordedStep::Move { prediction: None },
+                OperationOutcome::Predicted,
+                true,
+            ),
+            (
+                RecordedStep::Move { prediction: None },
+                OperationOutcome::Observed,
+                false,
+            ),
+            (
+                RecordedStep::Place {
+                    purpose: PlacementPurpose::Permanent,
+                    placement: None,
+                },
+                OperationOutcome::Predicted,
+                false,
+            ),
         ] {
             let (d, mut journal, mut checkpoint) = fixture();
-            journal.record.plan["plan"]["steps"] = json!([{"kind":kind,"purpose":"permanent"}]);
+            journal.record.plan.plan.as_mut().unwrap().steps = vec![step];
             journal.record.completed_steps = 1;
             checkpoint.completed_steps = 1;
             journal
                 .event(
-                    "step_completed",
+                    ExecutionPhase::StepCompleted,
                     outcome,
                     Continuation::Revalidate,
                     json!({}),
@@ -275,10 +325,10 @@ mod tests {
                 .unwrap();
             journal
                 .event(
-                    "idle_checkpoint",
+                    ExecutionPhase::IdleCheckpoint,
                     OperationOutcome::Observed,
                     Continuation::Checkpoint,
-                    json!(checkpoint),
+                    checkpoint.clone(),
                 )
                 .unwrap();
             drop(journal);
@@ -286,8 +336,48 @@ mod tests {
             if accepted {
                 result.unwrap();
             } else {
-                assert_eq!(result.unwrap_err().code, "invalid_checkpoint");
+                assert_eq!(
+                    result.unwrap_err().code,
+                    SurvivalErrorCode::InvalidCheckpoint
+                );
             }
+        }
+    }
+
+    #[test]
+    fn unknown_step_and_missing_temporary_edit_never_create_ownership() {
+        for step in [
+            RecordedStep::Unknown,
+            RecordedStep::Place {
+                purpose: PlacementPurpose::Temporary,
+                placement: None,
+            },
+        ] {
+            let (d, mut journal, mut checkpoint) = fixture();
+            journal.record.plan.plan.as_mut().unwrap().steps = vec![step];
+            journal.record.completed_steps = 1;
+            checkpoint.completed_steps = 1;
+            journal
+                .event(
+                    ExecutionPhase::StepCompleted,
+                    OperationOutcome::Observed,
+                    Continuation::Revalidate,
+                    json!({}),
+                )
+                .unwrap();
+            journal
+                .event(
+                    ExecutionPhase::IdleCheckpoint,
+                    OperationOutcome::Observed,
+                    Continuation::Checkpoint,
+                    checkpoint,
+                )
+                .unwrap();
+            drop(journal);
+            assert_eq!(
+                read(&d.0).unwrap_err().code,
+                SurvivalErrorCode::InvalidCheckpoint
+            );
         }
     }
 }

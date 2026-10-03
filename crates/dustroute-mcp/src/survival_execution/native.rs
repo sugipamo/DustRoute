@@ -29,7 +29,12 @@ fn face(id: u8) -> Result<BlockFace> {
         3 => BlockFace::South,
         4 => BlockFace::West,
         5 => BlockFace::East,
-        _ => return Err(ExecutionError::new("invalid_face", "unknown native face")),
+        _ => {
+            return Err(ExecutionError::new(
+                SurvivalErrorCode::InvalidFace,
+                "unknown native face",
+            ));
+        }
     })
 }
 fn positions(r: Region) -> impl Iterator<Item = [i32; 3]> {
@@ -50,7 +55,7 @@ pub(super) fn check_snapshot(
     snapshot: &MinecraftSnapshot,
 ) -> Result<()> {
     let index = LiteralSnapshotIndex::new(snapshot)
-        .map_err(|e| ExecutionError::new("snapshot_invalid", e))?;
+        .map_err(|e| ExecutionError::new(SurvivalErrorCode::SnapshotInvalid, e))?;
     let scenario = scene.scenario();
     for p in positions(Region {
         min: [snapshot.min.x, snapshot.min.y, snapshot.min.z],
@@ -68,7 +73,7 @@ pub(super) fn check_snapshot(
         );
         if scenario.block(p)? != expected {
             return Err(ExecutionError::new(
-                "snapshot_mismatch",
+                SurvivalErrorCode::SnapshotMismatch,
                 format!("declared site differs at {p:?}"),
             ));
         }
@@ -86,7 +91,7 @@ fn inventory_ready(p: &PlayerState) -> Result<()> {
         || i.slots[9..45].contains(&InventorySlot::Unavailable)
     {
         return Err(ExecutionError::new(
-            "inventory_unavailable",
+            SurvivalErrorCode::InventoryUnavailable,
             "complete plain player inventory required",
         ));
     }
@@ -118,7 +123,7 @@ pub(super) fn require_supplied(p: &PlayerState, budget: &BTreeMap<String, usize>
             .sum();
         if received < *needed {
             return Err(ExecutionError::new(
-                "supplied_materials_missing",
+                SurvivalErrorCode::SuppliedMaterialsMissing,
                 format!("{name}: need {needed}, received {received}"),
             ));
         }
@@ -132,25 +137,27 @@ impl SurvivalExecutor {
         let p = ops.player_state().await?;
         inventory_ready(&p)?;
         let slot = (9..45).rev().find(|&s| matches!(&p.inventory.slots[s], InventorySlot::Item { item } if item.name == name && item.count > 0))
-            .ok_or_else(|| ExecutionError::new("material_unavailable", name))?;
+            .ok_or_else(|| ExecutionError::new(SurvivalErrorCode::MaterialUnavailable, name))?;
         let hotbar = if slot >= 36 {
             (slot - 36) as u8
         } else {
             // Only a received empty slot can be used; do not discard another item.
             let empty = choose_empty_hand(&p)?;
-            self.journal.intend("inventory_swap", json!({"main_slot":slot,"hotbar":empty,"inventory_sequence":p.inventory.receive_sequence}))?;
+            self.journal.intend(ExecutionPhase::InventorySwap, json!({"main_slot":slot,"hotbar":empty,"inventory_sequence":p.inventory.receive_sequence}))?;
             let swap = ops.swap_player_hotbar(slot as u8, empty).await?;
             let received = ops.wait_inventory_swap(&swap, WAIT).await?;
             self.journal.event(
-                "inventory_received",
+                ExecutionPhase::InventoryReceived,
                 OperationOutcome::Observed,
                 Continuation::NeedsInspection,
                 json!(received),
             )?;
             empty
         };
-        self.journal
-            .intend("select_material", json!({"hotbar":hotbar,"material":name}))?;
+        self.journal.intend(
+            ExecutionPhase::SelectMaterial,
+            json!({"hotbar":hotbar,"material":name}),
+        )?;
         ops.select_hotbar(hotbar).await?;
         Ok(())
     }
@@ -168,18 +175,19 @@ impl SurvivalExecutor {
         )?;
         if !same_edit(&live.edit, &p.edit) || live.cursor != p.cursor {
             return Err(ExecutionError::new(
-                "placement_plan_changed",
+                SurvivalErrorCode::PlacementPlanChanged,
                 "fresh geometry no longer matches checked placement",
             ));
         }
         self.select_material(&p.edit.after.name).await?;
         let ops = self.bot.survival()?;
         self.journal.intend(
-            "placement_aim",
+            ExecutionPhase::PlacementAim,
             json!({"rotation":p.rotation,"edit":p.edit}),
         )?;
         ops.look(p.rotation).await?;
-        self.journal.intend("placement_send", json!(p))?;
+        self.journal
+            .intend(ExecutionPhase::PlacementSend, json!(p))?;
         let intent = ops.place_survival_cube(p.support, face(p.face_id)?).await?;
         if intent.target != p.edit.position
             || intent.before != p.edit.before
@@ -187,19 +195,19 @@ impl SurvivalExecutor {
             || intent.cursor != p.cursor
         {
             return Err(ExecutionError::new(
-                "placement_intent_changed",
+                SurvivalErrorCode::PlacementIntentChanged,
                 "sent intent differs; outcome requires inspection",
             ));
         }
         let status = ops.wait_survival_placement(&intent, WAIT).await?;
         if !matches!(status, PlacementStatus::ObservedPlaced { .. }) {
             return Err(ExecutionError::new(
-                "placement_unconfirmed",
+                SurvivalErrorCode::PlacementUnconfirmed,
                 format!("{status:?}"),
             ));
         }
         self.journal.event(
-            "placement_observed",
+            ExecutionPhase::PlacementObserved,
             OperationOutcome::Observed,
             Continuation::NeedsInspection,
             json!({"intent":intent,"status":status,"world_evidence":"builder_received"}),
@@ -212,7 +220,7 @@ impl SurvivalExecutor {
         p.initial_aim_requirement.validate_standing(&live.initial)?;
         if p.endpoint_contract != SurvivalMotionContract::Predicted {
             return Err(ExecutionError::new(
-                "movement_contract_changed",
+                SurvivalErrorCode::MovementContractChanged,
                 "checked plan requires a different endpoint contract",
             ));
         }
@@ -227,32 +235,35 @@ impl SurvivalExecutor {
                         .then_some(p.frames.len().min(live.frames.len()))
                 });
             self.journal.event(
-                "movement_prediction_mismatch",
+                ExecutionPhase::MovementPredictionMismatch,
                 OperationOutcome::NotStarted,
                 Continuation::NeedsInspection,
                 json!({"first_differing_frame_index":first,"checked":p,"fresh":live}),
             )?;
             return Err(ExecutionError::new(
-                "movement_plan_changed",
+                SurvivalErrorCode::MovementPlanChanged,
                 "fresh trajectory differs from checked plan",
             ));
         }
         self.journal.intend(
-            "movement_send",
+            ExecutionPhase::MovementSend,
             json!({"controls":p.controls,"planned_initial_position":p.initial_position}),
         )?;
         ops.start_previewed_predicted_survival_motion(&live).await?;
         let motion = tokio::time::timeout(Duration::from_secs(40), async {
             loop {
                 let record = ops.survival_motion().await.ok_or_else(|| {
-                    ExecutionError::new("movement_missing", "native record unavailable")
+                    ExecutionError::new(
+                        SurvivalErrorCode::MovementMissing,
+                        "native record unavailable",
+                    )
                 })?;
                 if record.status == SurvivalMotionStatus::Predicted {
                     return Ok(record);
                 }
                 if record.status == SurvivalMotionStatus::RequiresInspection {
                     return Err(ExecutionError::new(
-                        "movement_needs_inspection",
+                        SurvivalErrorCode::MovementNeedsInspection,
                         format!("{:?}", record.problem),
                     ));
                 }
@@ -260,9 +271,14 @@ impl SurvivalExecutor {
             }
         })
         .await
-        .map_err(|_| ExecutionError::new("movement_timeout", "native movement did not finish"))??;
+        .map_err(|_| {
+            ExecutionError::new(
+                SurvivalErrorCode::MovementTimeout,
+                "native movement did not finish",
+            )
+        })??;
         self.journal.event(
-            "movement_predicted",
+            ExecutionPhase::MovementPredicted,
             OperationOutcome::Predicted,
             Continuation::NeedsInspection,
             json!(motion),

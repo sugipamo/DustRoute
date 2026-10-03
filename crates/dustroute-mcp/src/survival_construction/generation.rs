@@ -31,7 +31,7 @@ impl SearchLimits {
             || !(1..=512).contains(&self.actions)
         {
             return Err(ConstructionPlanningError::new(
-                "invalid_search_limits",
+                SurvivalErrorCode::InvalidSearchLimits,
                 "require 1..1000000 candidate checks, 1..4096 expansions, 1..64 frontier, 1..512 actions",
             ));
         }
@@ -253,7 +253,7 @@ impl<'a> Search<'a> {
                 let missing = missing_materials(&checked.ledger, self.supplied);
                 if !missing.is_empty() {
                     let mut error = ConstructionPlanningError::new(
-                        "insufficient_supplied_materials",
+                        SurvivalErrorCode::InsufficientSuppliedMaterials,
                         "candidate consumes reserved permanent or unavailable temporary materials",
                     );
                     error.missing_materials = missing;
@@ -752,7 +752,7 @@ pub fn generate_construction_plan(
     if !temporary_material.starts_with("minecraft:") || temporary_material.len() > 128 {
         return Err(GenerationFailure::InvalidInput {
             error: ConstructionPlanningError::new(
-                "invalid_temporary_material",
+                SurvivalErrorCode::InvalidTemporaryMaterial,
                 "use a canonical minecraft material name",
             ),
         });
@@ -968,7 +968,10 @@ mod tests {
                 ..Default::default()
             },
         ] {
-            assert_eq!(limits.validate().unwrap_err().code, "invalid_search_limits");
+            assert_eq!(
+                limits.validate().unwrap_err().code,
+                SurvivalErrorCode::InvalidSearchLimits
+            );
         }
     }
 }

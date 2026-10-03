@@ -7,35 +7,26 @@ struct Preparation {
     owner: String,
     source: SourceIdentity,
     original: ConstructionSite,
-    construction: Value,
+    construction: ConstructionSpecification,
     boundary: checkpoint::SafeCheckpoint,
 }
 fn preparation(service: &DustRouteMcp, id: uuid::Uuid) -> Result<Preparation, Value> {
     let directory = service.state_store.survival_job_root().join(id.to_string());
-    let manifest =
+    let manifest: JobManifest =
         load(&directory.join("manifest.json")).map_err(|e| failure("job_unavailable", e))?;
-    if manifest["schema"] != "dustroute.survival-job.v1"
-        || manifest["job_id"] != json!(id)
-        || manifest["execution_authority_restorable"] != false
-    {
-        return Err(failure(
-            "invalid_record",
-            "unknown schema or mismatched job identity",
-        ));
-    }
-    let owner = manifest["owner"]
-        .as_str()
-        .ok_or_else(|| failure("invalid_record", "missing job owner"))?
-        .to_owned();
+    manifest
+        .validate_identity(id)
+        .map_err(|e| failure("invalid_record", e))?;
+    let owner = manifest.owner;
     service
         .policy
         .authorize_player(&owner)
         .map_err(|e| failure("permission_denied", e))?;
     let boundary = checkpoint::read(&directory.join("execution")).map_err(|e| {
         let mut response = failure(e.code, &e.detail);
-        if e.code == "checkpoint_consumed" {
-            if let Ok(claim) = load(&directory.join("execution/continuation-claim.json")) {
-                response["continuation_job_id"] = claim["new_job"].clone();
+        if e.code == SurvivalErrorCode::CheckpointConsumed {
+            if let Ok(claim) = load::<crate::survival_execution::diagnostic::CheckpointClaim>(&directory.join("execution/continuation-claim.json")) {
+                response["continuation_job_id"] = json!(claim.new_job);
                 response["next_step"] = json!("get the linked new job; do not replay the old checkpoint");
             }
         }
@@ -45,8 +36,9 @@ fn preparation(service: &DustRouteMcp, id: uuid::Uuid) -> Result<Preparation, Va
         }
         response
     })?;
-    let saved: SourceIdentity = serde_json::from_value(manifest["source"].clone())
-        .map_err(|e| failure("invalid_record", e))?;
+    let saved = manifest
+        .source
+        .ok_or_else(|| failure("invalid_record", "missing adopted source"))?;
     let current =
         crate::blueprint_mcp::construction_source(&service.state_store, &owner, &saved.record.id)
             .map_err(|e| failure("source_changed", e))?;
@@ -56,17 +48,19 @@ fn preparation(service: &DustRouteMcp, id: uuid::Uuid) -> Result<Preparation, Va
             "adopted source differs from checkpoint job",
         ));
     }
-    let construction = manifest["construction"].clone();
-    let specification: GroundedBuildingDesignRequest =
-        serde_json::from_value(construction["specification"].clone())
-            .map_err(|e| failure("continuation_specification_missing", e))?;
+    let construction = manifest.construction.ok_or_else(|| {
+        failure(
+            "continuation_specification_missing",
+            "missing construction specification",
+        )
+    })?;
+    let specification = construction.specification.clone();
     let design = dustroute_translate::building::generate_grounded_building_design(specification)
         .map_err(|e| failure("specification_invalid", e))?;
     validate_design(&current, &design)
         .map_err(|e| failure("source_not_adopted_or_mismatched", e))?;
-    let scope: ConstructionScope = serde_json::from_value(construction["scope"].clone())
-        .map_err(|e| failure("invalid_record", e))?;
-    if json!(scope) != json!(boundary.scope) {
+    let scope = construction.scope.clone();
+    if scope != boundary.scope {
         return Err(failure(
             "invalid_checkpoint",
             "stored scope differs from checkpoint",
@@ -185,10 +179,7 @@ impl DustRouteMcp {
                 .map_err(|e| failure("inventory_unavailable", e))?,
         )
         .map_err(|e| failure(e.code, e.detail))?;
-        let temporary_material = construction["temporary_material"]
-            .as_str()
-            .ok_or_else(|| failure("invalid_record", "missing temporary material"))?
-            .to_owned();
+        let temporary_material = construction.temporary_material.clone();
         let generated = generate_construction_plan_async(scene,site,supplied.clone(),temporary_material,limits).await
                 .map_err(|e|json!({"ok":false,"error":{"code":"generation_refused","cause":e},"diagnosis":diagnosis,"received_materials":supplied,"writes_minecraft":false}))?;
         let mut response = self

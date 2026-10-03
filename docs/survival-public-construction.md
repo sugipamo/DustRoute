@@ -164,3 +164,23 @@ and the [failed observer-readiness continuation](survival-observer-readiness-pre
 remain historical evidence. The new path removes that production dependency; it
 does not diagnose the old tracking failure. These cases establish bounded sealed
 checkpoint continuation, not arbitrary crash recovery or unrestricted construction.
+
+## Typed internal state and stored diagnosis
+
+Job status, execution phase, refusal code, journal/checkpoint/job schema and saved
+step kinds now use Rust enums. Manifests, declared endpoints, construction
+specifications and continuation claims use typed DTOs. Checkpoint validation
+matches typed steps and edits to reconstruct conditional temporary ownership;
+it does not index JSON fields or compare serialized scope/endpoint strings.
+
+Wire names and JSON encoding remain at MCP/storage boundaries. Player/material
+identifiers and human-readable explanations remain text. Native receipts retained
+only for diagnosis use an opaque `DiagnosticPayload`; their JSON fields are not
+available to business logic. Saved data still cannot become a live checked plan
+or native operation token. `DiagnosticOnly` represents only false for authority
+restoration and automatic replay; true is rejected when decoding.
+
+Unknown status/phase and malformed checkpoint data refuse before continuation.
+This strengthens decoding; it does not convert older checkpoint schemas or grant
+authority from historical evidence. Adoption, live scene/inventory checks,
+durable intent, retirement/reconnect and single-use claims retain their contracts.

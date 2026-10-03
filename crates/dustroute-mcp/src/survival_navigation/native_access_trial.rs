@@ -1,5 +1,6 @@
 //! Declared temporary-access acceptance through public native APIs only.
 use super::*;
+use crate::survival_error::SurvivalErrorCode;
 use serde_json::{Value, json};
 use std::{io::Write, time::Duration};
 use voxrig::checked_survival::InventorySlot;
@@ -289,7 +290,7 @@ async fn exercise(
                     assert!(executor.advance().await.is_err());
                 }
                 let refusal = executor.advance().await.unwrap_err();
-                assert_eq!(refusal.code, "execution_needs_inspection");
+                assert_eq!(refusal.code, SurvivalErrorCode::ExecutionNeedsInspection);
                 let history = executor
                     .client()
                     .survival()
