@@ -1,0 +1,88 @@
+{
+  "scope": "Survival readability refactor; public contract, persistence representation and operation order unchanged",
+  "baseline": "fea85f5",
+  "tested_source": "92db63d5cfd28713e65025c78e91bfd0668f9a48",
+  "voxrig_revision": "5bace7be7cd941e1340ad94052e922db23c4f892",
+  "changes": [
+    "Split read-only planning/publication, history reading and background execution modules",
+    "Separate mining outcome collection and same-profile recovery calls",
+    "Separate persisted checkpoint validation and confirmed-prefix ownership reconstruction"
+  ],
+  "offline_checks": [
+    {
+      "command": "cargo test --offline --locked -j 1 -p dustroute-mcp --features voxrig --lib survival_ -- --test-threads=1",
+      "passed": 30,
+      "ignored": 4,
+      "failed": 0
+    },
+    {
+      "command": "cargo test --offline --locked -j 1 -p dustroute-mcp --features voxrig --lib service::survival:: -- --test-threads=1",
+      "passed": 4,
+      "ignored": 2,
+      "failed": 0
+    },
+    {
+      "command": "cargo clippy --offline --locked -j 1 -p dustroute-mcp --features voxrig --all-targets -- -D warnings",
+      "exit_code": 0
+    },
+    {
+      "command": "cargo clippy --offline --locked -j 1 -p dustroute-mcp --all-targets -- -D warnings",
+      "exit_code": 0
+    },
+    {
+      "command": "cargo fmt --all",
+      "exit_code": 0
+    },
+    {
+      "command": "git diff --check",
+      "exit_code": 0
+    }
+  ],
+  "unique_passing_related_tests": 32,
+  "source_comparison": "Planning, history and background execution body text matched baseline excluding formatting and private method visibility",
+  "live_acceptance": {
+    "server": "Isolated fresh vanilla Java 1.21.11 world; non-OP survival; localhost:25572",
+    "completed_steps": 115,
+    "temporary_removals_and_same_profile_recoveries": 18,
+    "remaining_owned_temporary": [],
+    "production_observer_configured": false,
+    "independently_checked_cells": 3120,
+    "final_position_compared": true,
+    "test_exit_code": 0,
+    "server_exit_code": 0,
+    "total_seconds_including_setup": 184.85946654196596,
+    "test_seconds": 164.91
+  },
+  "artifacts": [
+    {
+      "path": "docs/evidence/survival-readability-roof-20261003-a.json.gz",
+      "sha256": "d957c0fb92f7b3d21c8de8863a37c2da394d19ce4bea7c831ab67df2e841d687",
+      "uncompressed_sha256": "ff2d2320e26c4641f1b9153d0dbddaa8ce89dd86b49c86ec7f43ec876e34b674"
+    },
+    {
+      "path": "docs/evidence/survival-readability-roof-20261003-a-runtime.json.gz",
+      "sha256": "3e2c573a7596a5750da315e381dc54a5e66d3a7fe9dc2338216257ec7ec10157",
+      "uncompressed_sha256": "c20cb5a5ae4b037167ee26589c1421e42dc17b59a495b184228d2a7f066590d7"
+    },
+    {
+      "path": "docs/evidence/survival-readability-roof-20261003-a-test.log.gz",
+      "sha256": "e20669b0c02208b387b1667c927902525248f5cdc7fd23735a7f1cfacc6e77d9",
+      "uncompressed_sha256": "448b5042e9577ace1201c5f656a3ca8858ff7512b1c86b1d839d0cef4b1137d8"
+    },
+    {
+      "path": "docs/evidence/survival-readability-roof-20261003-a-server-console.log.gz",
+      "sha256": "2d72e44aab6d32f98de6851c8c98fbbc2630d04e584ad6565c01d843005b033b",
+      "uncompressed_sha256": "f3ccbb2ebd79424b569ee557517e552027a214d5e2a800218f38a90372f151cf"
+    },
+    {
+      "path": "docs/evidence/run-survival-readability-roof-trial.py.gz",
+      "sha256": "1661971b22419b6bff5c5b43167c3b35e6c248cf78de2d80ba204131f119e39f",
+      "uncompressed_sha256": "5ffc8275785bcfbd59599e7fb637b39a9d028aabdabf050cad04ffb47191d952"
+    }
+  ],
+  "limits": [
+    "Saved step/status/manifest internals remain JSON; Rust-state/diagnostic DTO migration is a follow-up candidate",
+    "This refactor re-ran full construction/cleanup/retreat; separate-process live continuation was previously accepted at e4206c2, not repeated here",
+    "Voxrig sources and motion/retirement contracts were not changed"
+  ]
+}
