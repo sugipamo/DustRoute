@@ -47,6 +47,8 @@ mod trial {
         let remote = Client::connect(config("AimProbe")?).await?;
         remote.wait_until_ready().await?;
         pause("READY; creative both, OP BridgeProbe; clear owned 98 180 98 .. 106 187 106; teleport BridgeProbe 100.5 182 103.5 and AimProbe 104.5 182 103.5 yaw 180 pitch 0; enter").await?;
+        // The actor owns its view intent; configure it through the client API.
+        remote.java_1_21_11_operations()?.look([180.0, 0.0]).await?;
         bridge.wait_ticks(20, DIM).await?;
         let mut steps = Vec::new();
         let result = run(&bridge, &remote, &mut steps).await;
