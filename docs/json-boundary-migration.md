@@ -45,3 +45,31 @@ formatting、差分の空白検査が成功した。認可拒否前の保存開�
 再起動後の採否、偽造した過去の合格の再利用拒否、配置・撤去・修復の既存経路を含む。
 最初の対象指定はmodule名の相違により0件だったため、上記はその後の全lib実行の結果を使う。
 この段階では実機を再起動したり、ワールドへ変更を加えたりしていない。
+
+## 第2段階の先行改修と停止位置
+
+第2段階は未完了。先行して、挙動検証の`CheckEvidence.behavior`を
+`BehaviorDiagnostics`へ置き換えた。通常・有限burst・周期・抽象検証の診断を
+用途別の記録として受け渡し、counterexample等の構造化証拠を保持する。
+履歴を読めても、検証モデルや実行状態、採用権限を復元する型にはしない。
+表示用detailからJSONを除き、構造化診断を別fieldで返す。
+欠落・混在した周期/finite reportを別の種類に読み替えない検査も追加した。
+
+再構築失敗の詳細とnative error kindをRust enumにした。ピストン配置のreviewと
+device初期条件も型で構成し、JSONへの書込みや読み戻しをなくした。
+初期条件はモデルの仮定として表示し、snapshotから隠れたruntime状態を復元した証拠にはしない。
+公開応答のfield構造と、保存済みの合格をfresh reviewへ流用しない条件は維持した。
+
+サバイバルの`DiagnosticPayload(Value)`、イベントのopaque evidence、manifestのpreviewは
+まだ残る。これらのnative field依存をたどると既存のVoxrig定義64種類に広がり、
+純粋なデータとlive watch/tokenを分ける設計判断が必要になった。
+[具体的な改修案](native-diagnostic-records.md)を作成し、Voxrig側の変更を開始する前で停止した。
+全64種類を二重定義する案や、native型へ一括してDeserializeを付ける案は採っていない。
+第3〜8段階は未着手。第2段階の完了後に次のゴールを作成する。
+
+先行改修の検証: translateの診断・更新・runtime採用の統合テスト18件、
+診断の不完全/混在形式を拒否するunit 1件、MCPのnative bridge 6件・failure 7件・
+子の挙動失敗を再起動後にも採用しない公開経路1件が成功した。
+native bridgeの実機試験1件はignoreのまま。既定構成と`--no-default-features`の
+MCP all-target Clippy（`-D warnings`）、formatting、差分の空白検査も成功した。
+今回は実機・接続・ワールドへ操作していない。Voxrigのcodeとvendor pinは変更していない。

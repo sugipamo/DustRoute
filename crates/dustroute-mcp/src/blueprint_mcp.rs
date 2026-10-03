@@ -241,11 +241,6 @@ pub(crate) fn failure(message: impl ToString) -> Response {
     Response::failure(message)
 }
 
-/// Transitional display boundary for callers not yet migrated to typed reports.
-pub(crate) fn report_json(report: &PromotionReport, catalog: &BlueprintCatalog) -> Value {
-    serde_json::to_value(review_response(report, catalog)).expect("review response is serializable")
-}
-
 pub(crate) fn review_response(
     report: &PromotionReport,
     catalog: &BlueprintCatalog,

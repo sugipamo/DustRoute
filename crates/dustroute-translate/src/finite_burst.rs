@@ -3,13 +3,13 @@
 use std::time::Instant;
 
 use dustroute_library::blueprint::{TypeContract, TypeRevision, TypeRevisionId};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::autonomous::{TraversalStats, trace_autonomous};
 use crate::behavior_type::{BehaviorBudget, BehaviorModel};
 use crate::promotion::CheckStatus;
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct FiniteBurstCessation {
     /// Actual ON-to-OFF transitions from the declared initial state.
     pub falling_edges: usize,

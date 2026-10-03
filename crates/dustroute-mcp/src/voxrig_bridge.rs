@@ -83,9 +83,10 @@ impl ClientRegion {
                 crate::failure::CauseKind::ObservationIncomplete,
                 "client reconstruction incomplete; fresh observation required",
             );
-            cause.details.reconstruction_issue = observation.issue.as_ref().map(|issue| {
-                serde_json::to_value(issue).expect("serializable reconstruction issue")
-            });
+            cause.details.reconstruction_issue = observation
+                .issue
+                .as_ref()
+                .map(|issue| crate::failure::ReconstructionDiagnostic::Client(issue.into()));
             cause.details.recovery_chunks = observation
                 .recovery_chunks
                 .iter()
@@ -295,8 +296,52 @@ fn native_error(error: voxrig::Error) -> BotBridgeError {
         _ => C::Unknown,
     };
     let mut cause = crate::failure::FailureCause::new(kind, format!("Voxrig: {error}"));
-    cause.details.native_error_kind = Some(format!("{:?}", error.kind()));
+    cause.details.native_error_kind = Some(error.kind().into());
     BotBridgeError::Detailed(cause)
+}
+
+impl From<&voxrig::versions::java_1_21_11::reconstruction::ReconstructionIssue>
+    for crate::failure::ClientReconstructionDiagnostic
+{
+    fn from(issue: &voxrig::versions::java_1_21_11::reconstruction::ReconstructionIssue) -> Self {
+        use voxrig::versions::java_1_21_11::reconstruction::ReconstructionIssue as Native;
+        match issue {
+            Native::UnsupportedTickControl => Self::UnsupportedTickControl,
+            Native::MissingBlock { position } => Self::MissingBlock {
+                position: *position,
+            },
+            Native::UnsupportedBlock { position, name } => Self::UnsupportedBlock {
+                position: *position,
+                name: name.clone(),
+            },
+            Native::MissingCarrier { position } => Self::MissingCarrier {
+                position: *position,
+            },
+            Native::ChunkInvalidated { chunk } => Self::ChunkInvalidated { chunk: *chunk },
+            Native::Limit => Self::Limit,
+            Native::InvalidAction => Self::InvalidAction,
+        }
+    }
+}
+
+impl From<voxrig::ErrorKind> for crate::failure::NativeFailureKind {
+    fn from(kind: voxrig::ErrorKind) -> Self {
+        use voxrig::ErrorKind as Native;
+        match kind {
+            Native::Unsupported => Self::Unsupported,
+            Native::InvalidInput => Self::InvalidInput,
+            Native::Connection => Self::Connection,
+            Native::UncertainDispatch => Self::UncertainDispatch,
+            Native::Timeout => Self::Timeout,
+            Native::Disconnected => Self::Disconnected,
+            Native::Protocol => Self::Protocol,
+            Native::ResourceLimit => Self::ResourceLimit,
+            Native::Rejected => Self::Rejected,
+            Native::State => Self::State,
+            Native::Other => Self::Other,
+            _ => Self::Unknown,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -369,7 +414,7 @@ mod tests {
             ))
             .cause();
             assert_eq!(cause.kind, expected);
-            assert_eq!(cause.details.native_error_kind, Some(format!("{native:?}")));
+            assert_eq!(cause.details.native_error_kind, Some(native.into()));
         }
         let mut observation = sample();
         let region = observation.received.region;

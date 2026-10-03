@@ -1,4 +1,7 @@
 //! Structured review evidence. Serializable history is never validation authority.
+mod behavior;
+pub use behavior::BehaviorDiagnostics;
+
 use crate::promotion::{CheckKind, CheckStatus, PromotionReport};
 use dustroute_library::assembly::AssemblyPortRef;
 use dustroute_library::blueprint::{BlueprintRevisionId, InstancePath, TypeRevisionId};
@@ -80,11 +83,10 @@ pub struct CheckEvidence {
     pub observation: Option<ReviewObservation>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub inputs: Vec<ReviewInput>,
-    /// Native verifier report, including its available counterexample and graph
-    /// closure/budget evidence. Kept as JSON data across verifier report kinds;
-    /// never parsed from the human-readable detail or deserialized as a runtime.
+    /// Typed verifier diagnostics, including counterexamples and closure/budget
+    /// evidence. No model or runtime state can be restored from this data.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub behavior: Option<serde_json::Value>,
+    pub behavior: Option<BehaviorDiagnostics>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub binding: Option<dustroute_library::blueprint::BehaviorBinding>,
 }

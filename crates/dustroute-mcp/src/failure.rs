@@ -63,9 +63,9 @@ pub struct CauseDetails {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub maximum: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub reconstruction_issue: Option<Value>,
+    pub reconstruction_issue: Option<ReconstructionDiagnostic>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub native_error_kind: Option<String>,
+    pub native_error_kind: Option<NativeFailureKind>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub recovery_chunks: Vec<[i32; 2]>,
     #[serde(default)]
@@ -74,6 +74,45 @@ pub struct CauseDetails {
     pub mismatches: Vec<Pos>,
     #[serde(default)]
     pub mismatches_truncated: bool,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(untagged, deny_unknown_fields)]
+pub enum ReconstructionDiagnostic {
+    Client(ClientReconstructionDiagnostic),
+    World {
+        issues: Vec<dustroute_translate::world::WorldValidationIssue>,
+    },
+}
+
+/// Native categories remain facts; diagnostic text never determines this value.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub enum NativeFailureKind {
+    Unsupported,
+    InvalidInput,
+    Connection,
+    UncertainDispatch,
+    Timeout,
+    Disconnected,
+    Protocol,
+    ResourceLimit,
+    Rejected,
+    State,
+    Other,
+    Unknown,
+}
+
+/// Archived reconstruction reason, never a usable client observation.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+pub enum ClientReconstructionDiagnostic {
+    UnsupportedTickControl,
+    MissingBlock { position: [i32; 3] },
+    UnsupportedBlock { position: [i32; 3], name: String },
+    MissingCarrier { position: [i32; 3] },
+    ChunkInvalidated { chunk: [i32; 2] },
+    Limit,
+    InvalidAction,
 }
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct FailureCause {
@@ -224,7 +263,9 @@ impl From<dustroute_app::PlanningError> for FailureCause {
                 cause.details.maximum = Some(limit);
             }
             dustroute_app::PlanningError::InvalidWorld(error) => {
-                cause.details.reconstruction_issue = serde_json::to_value(error).ok();
+                cause.details.reconstruction_issue = Some(ReconstructionDiagnostic::World {
+                    issues: error.issues,
+                });
             }
         }
         cause

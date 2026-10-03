@@ -9,7 +9,7 @@ use dustroute_library::blueprint::{
     TypeContract, TypeRevisionId,
 };
 
-use crate::abstract_behavior::{HISTORY_ABSTRACTION_METHOD, verify_abstract_repeated_settling};
+use crate::abstract_behavior::verify_abstract_repeated_settling;
 use crate::behavior_type::BehaviorBudget;
 use crate::finite_burst::verify_finite_burst;
 use crate::periodic::verify_periodic;
@@ -277,10 +277,7 @@ impl<'a> BehaviorReview<'a> {
             &inputs,
             &bound.outputs,
         );
-        let scope = format!(
-            "{id}; bindings={bound:?}; context={}",
-            serde_json::to_string(context).expect("serializable context")
-        );
+        let scope = format!("{id}; bindings={bound:?}; context={context:?}");
         match outcome {
             Err(error) => result.detail = format!("{scope}: {error}"),
             Ok(model) => {
@@ -298,7 +295,7 @@ impl<'a> BehaviorReview<'a> {
                             report.status,
                             report.reachable_states,
                             report.evaluated_steps,
-                            serde_json::to_value(&report).expect("serializable diagnostics"),
+                            crate::review_diagnostics::BehaviorDiagnostics::from(&report),
                         ))
                     }
                     TypeContract::FiniteBurst { .. } => {
@@ -307,7 +304,7 @@ impl<'a> BehaviorReview<'a> {
                             report.status,
                             report.reachable_states,
                             report.evaluated_steps,
-                            serde_json::to_value(&report).expect("serializable diagnostics"),
+                            crate::review_diagnostics::BehaviorDiagnostics::from(&report),
                         ))
                     }
                     TypeContract::RepeatedSettling { relation } => {
@@ -327,7 +324,7 @@ impl<'a> BehaviorReview<'a> {
                                     report.status,
                                     report.abstract_states,
                                     report.evaluated_transitions,
-                                    serde_json::json!({"abstraction_method":HISTORY_ABSTRACTION_METHOD,"report":report}),
+                                    crate::review_diagnostics::BehaviorDiagnostics::from(&report),
                                 )
                             },
                         )

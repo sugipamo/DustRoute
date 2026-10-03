@@ -4,13 +4,13 @@
 use std::time::Instant;
 
 use dustroute_library::blueprint::{TypeContract, TypeRevision, TypeRevisionId};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::autonomous::{TraversalStats, trace_autonomous};
 use crate::behavior_type::{BehaviorBudget, BehaviorModel};
 use crate::promotion::CheckStatus;
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct PeriodicCycle {
     /// Steps before entry into the recurring complete-state cycle. This is a
     /// sufficient startup prefix, not necessarily the earliest output recurrence.

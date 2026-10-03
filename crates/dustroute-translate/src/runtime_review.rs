@@ -665,16 +665,15 @@ pub fn review_assembly_in_runtime_context(
                         behavior.status,
                         format!(
                             "{path:?}: {}",
-                            serde_json::to_string(&behavior)
-                                .expect("serializable behavior diagnostics")
+                            crate::review_diagnostics::BehaviorDiagnostics::from(&behavior)
                         ),
                     );
                     result.evidence = Some(Box::new(CheckEvidence {
                         type_revision: Some(binding.behavior_type().clone()),
                         binding: Some(binding.clone()),
-                        behavior: Some(
-                            serde_json::to_value(&behavior).expect("serializable verifier report"),
-                        ),
+                        behavior: Some(crate::review_diagnostics::BehaviorDiagnostics::from(
+                            &behavior,
+                        )),
                         ..Default::default()
                     }));
                     report.record(path, result);

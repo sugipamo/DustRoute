@@ -7,7 +7,7 @@ use std::time::{Duration, Instant};
 
 use dustroute_library::behavior_type::RepeatedSettling;
 use dustroute_library::blueprint::{TypeContract, TypeRevision, TypeRevisionId};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::promotion::CheckStatus;
 
@@ -57,14 +57,14 @@ impl Default for BehaviorBudget {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(tag = "action", rename_all = "snake_case")]
 pub enum WitnessAction {
     SetInputs { inputs: Vec<bool> },
     Advance,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct BehaviorCounterexample {
     /// Replay from initial_state, then hold held_inputs. No reset is involved.
     pub prefix: Vec<WitnessAction>,

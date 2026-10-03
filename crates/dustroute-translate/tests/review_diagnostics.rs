@@ -111,11 +111,11 @@ fn native_behavior_counterexamples_are_not_hidden_in_detail_strings() {
             f.evidence.as_ref().filter(|e| {
                 e.behavior
                     .as_ref()
-                    .is_some_and(|b| !b["counterexample"].is_null())
+                    .is_some_and(|b| b.counterexample().is_some())
             })
         })
         .unwrap();
-    let behavior = e.behavior.as_ref().unwrap();
+    let behavior = serde_json::to_value(e.behavior.as_ref().unwrap()).unwrap();
     assert_eq!(behavior["status"], "failed");
     assert!(behavior["counterexample"]["held_inputs"].is_array());
     assert!(behavior["counterexample"]["prefix"].is_array());

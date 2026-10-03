@@ -51,6 +51,11 @@ BlueprintUpdatesのarchiveも型付きcatalogを保持し、JSONによる内部�
 他のworkflow、診断、保存codec、Law、比較キー、VoxrigのJSONは後続段階に残る。
 検証はMCP218件、BlueprintUpdates10件、MCP all-target Clippyとformattingが成功。
 
+第2段階では、挙動report・再構築失敗詳細・ピストン配置reviewを型へ移した。
+サバイバルのopaque payloadは残る。native関連型64種類の共有とlive guardの分離が
+必要になるため、[Voxrig側の診断データ層の改修案](native-diagnostic-records.md)を作成して
+その変更の前で停止している。全JSON移行の完了とは扱わない。
+
 ## サバイバル統合後の追補（2026-10-03 UTC）
 
 基点は `fea85f5`（`codex/survival-single-client`）。今回の建築・観測統合に

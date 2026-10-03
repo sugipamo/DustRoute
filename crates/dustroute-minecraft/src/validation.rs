@@ -12,7 +12,7 @@ use crate::{Block, BlockKind, CapabilityLevel, Facing, Pos, World};
 mod wire_rise;
 pub use wire_rise::wire_rise_issues;
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, Serialize)]
 #[serde(tag = "code", rename_all = "snake_case")]
 pub enum WorldValidationIssue {
     InvalidSupport {
