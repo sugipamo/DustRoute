@@ -1,0 +1,181 @@
+{
+  "scope": "Survival internal control decisions and historical validation use Rust types; MCP/storage encodings and text identifiers remain",
+  "baseline": "7946f2a",
+  "tested_source": "7ef4e2f55658c08e8c1948fe9a6ce09848663e39",
+  "voxrig_revision": "5bace7be7cd941e1340ad94052e922db23c4f892",
+  "offline_checks": [
+    {
+      "command": "cargo test --offline --locked -j 1 -p dustroute-mcp --features voxrig --lib survival -- --test-threads=1",
+      "passed": 37,
+      "ignored": 6,
+      "failed": 0
+    },
+    {
+      "command": "cargo clippy --offline --locked -j 1 -p dustroute-mcp --features voxrig --all-targets -- -D warnings",
+      "exit_code": 0
+    },
+    {
+      "command": "cargo clippy --offline --locked -j 1 -p dustroute-mcp --all-targets -- -D warnings",
+      "exit_code": 0
+    },
+    {
+      "command": "cargo fmt --all",
+      "exit_code": 0
+    },
+    {
+      "command": "git diff --check",
+      "exit_code": 0
+    }
+  ],
+  "retained_previous_record": {
+    "baseline_source": "92db63d",
+    "execution_id": "1aafcc9c-d519-442d-9300-32109c0f280a",
+    "passed": 1,
+    "historical_continuation": "Completed",
+    "effective_continuation": "NeedsInspection",
+    "native_client_created": false
+  },
+  "artifacts": [
+    {
+      "path": "docs/evidence/survival-typed-state-tests-boxed-final-20261003.log.gz",
+      "sha256": "7d8ed13b8fc69e65d38be24c4d4e21e5767891e78232568cb43ef14b93a3473a",
+      "uncompressed_sha256": "b624283f21dd8ab29027194ee907af6fd1816cee538692ee0c7bc5b10a956781"
+    },
+    {
+      "path": "docs/evidence/survival-typed-state-old-record-20261003.log.gz",
+      "sha256": "8ac9fb089ba3ae6acf5a54990e0795dfe08e0336df0b8cb4343393884b8a0770",
+      "uncompressed_sha256": "599061f1c403f675b0f27a664646ebbf0a50cbe8a5a1b0cf2d7b9e4c3bc458b4"
+    },
+    {
+      "path": "docs/evidence/survival-typed-state-clippy-voxrig-final-20261003.log.gz",
+      "sha256": "1181d8a7ba4b46a1446d0f2f36510542ef9179ea65046830824b64c75c3f65b0",
+      "uncompressed_sha256": "30510a6ea55dab1ba404b271b548a16c2c53a5b6c2aecd74d11fb83bd51e2822"
+    },
+    {
+      "path": "docs/evidence/survival-typed-state-clippy-default-20261003.log.gz",
+      "sha256": "3718e03a15a4511070e9f223b29cdd29631e66cdece03ed365fdc3d6404cf263",
+      "uncompressed_sha256": "c29b07065dfa460bed8c4eb715d52cf73535cdd69039244a2cd7c76d3cf9f278"
+    },
+    {
+      "path": "docs/evidence/survival-typed-state-clippy-voxrig-20261003.log.gz",
+      "sha256": "abdad4c7be950d2758fcdc6c56c4debdb552ac3bff5164ef0b65ab39c97b0492",
+      "uncompressed_sha256": "0cae0cc7a3b80e98f6d2bf14d53ba8526b3de3681c8cbbe35a82ec97c0fc7834"
+    },
+    {
+      "path": "docs/evidence/run-survival-typed-state-continuation-trial.py.gz",
+      "sha256": "d1fc0612ccf44b853cefe302f963cfc452523a530d7ab99706f6d1b5fa52cf0a",
+      "uncompressed_sha256": "3bbc3fae14ea048d449f1712cba345c056b153533d1b617c4261be6c9099b56b"
+    }
+  ],
+  "live_trials": [
+    {
+      "boundary": "placement",
+      "server": "Fresh isolated vanilla Java 1.21.11; survival; non-OP; localhost:25572",
+      "source": "7ef4e2f55658c08e8c1948fe9a6ce09848663e39",
+      "state": "completed",
+      "checkpoint_completed_steps": 11,
+      "checkpoint_retained_owned_temporary": 1,
+      "checkpoint_standing_basis": "predicted",
+      "checkpoint_reconnects": 0,
+      "continuation_completed_steps": 104,
+      "continuation_reconnects": 18,
+      "remaining_owned_temporary": [],
+      "production_observer_configured": false,
+      "independently_compared_cells": 3120,
+      "independent_position_compared": true,
+      "separate_os_processes": true,
+      "historical_native_authority_restored": false,
+      "foreign_change_refused_without_edits": true,
+      "materials_shortage_refused": true,
+      "duplicate_claim_refused": true,
+      "test_exit_code": 0,
+      "server_exit_code": 0,
+      "total_seconds_including_setup": 283.9707436999888,
+      "artifacts": [
+        {
+          "path": "docs/evidence/survival-typed-state-continuation-20261003-placement-a.json.gz",
+          "sha256": "faf5e56fc83b09d6dd38674b473887e53962329695275d69db130366c9fea039",
+          "uncompressed_sha256": "abe717ecaa9fa9504161ca2f71b368d5bb800600359bd59d16ee6b2394a7c4b3"
+        },
+        {
+          "path": "docs/evidence/survival-typed-state-continuation-20261003-placement-a-runtime.json.gz",
+          "sha256": "370abe4a49cb2cfea620debf7dc71534a50f4e368a96a8b3401f2af76d03734c",
+          "uncompressed_sha256": "590a4b61447bba7136f60086a854ec714c07ef32fdd7251c9ab63397c61e3882"
+        },
+        {
+          "path": "docs/evidence/survival-typed-state-continuation-20261003-placement-a-server-console.log.gz",
+          "sha256": "6a307943fd0e59698628632fd8c64a09b13f290c53d6b169c8bdd30cf36a3046",
+          "uncompressed_sha256": "a43c6e03ee8d527d96a5d000cbfb4c71e9020a4d3e41a61ea81d167ee1a1bda0"
+        },
+        {
+          "path": "docs/evidence/survival-typed-state-continuation-20261003-placement-a-checkpoint-test.log.gz",
+          "sha256": "3fd7a1a8d74b582f775e1cb649072af20751b1341cb367ffcec45087a94c94cf",
+          "uncompressed_sha256": "c9171cda2c4e40d5de69c41285d213e393faa74c522831d29d3afd24bcf31b07"
+        },
+        {
+          "path": "docs/evidence/survival-typed-state-continuation-20261003-placement-a-continue-test.log.gz",
+          "sha256": "8e8ac1dbf6098b904a2281858b675e222411bb6b0c2fd36559bd0a9a927b9d3b",
+          "uncompressed_sha256": "c782a3bb6d0afa47513e74f8899d480ef4edd6a34c70b7d61d569cf50c003d31"
+        }
+      ]
+    },
+    {
+      "boundary": "mining",
+      "server": "Fresh isolated vanilla Java 1.21.11; survival; non-OP; localhost:25572",
+      "source": "7ef4e2f55658c08e8c1948fe9a6ce09848663e39",
+      "state": "completed",
+      "checkpoint_completed_steps": 31,
+      "checkpoint_retained_owned_temporary": 6,
+      "checkpoint_standing_basis": "received",
+      "checkpoint_reconnects": 1,
+      "continuation_completed_steps": 85,
+      "continuation_reconnects": 17,
+      "remaining_owned_temporary": [],
+      "production_observer_configured": false,
+      "independently_compared_cells": 3120,
+      "independent_position_compared": true,
+      "separate_os_processes": true,
+      "historical_native_authority_restored": false,
+      "foreign_change_refused_without_edits": true,
+      "materials_shortage_refused": true,
+      "duplicate_claim_refused": true,
+      "test_exit_code": 0,
+      "server_exit_code": 0,
+      "total_seconds_including_setup": 252.57304509798996,
+      "artifacts": [
+        {
+          "path": "docs/evidence/survival-typed-state-continuation-20261003-mining-a.json.gz",
+          "sha256": "5150534523464c27e44d395998e7a412a128426803a9e4895ac0a61b9c3f99a5",
+          "uncompressed_sha256": "0381dedcc2aef5d6ebe5927a6b3f2c76ff230c8b2900840b94bf773caa337a2d"
+        },
+        {
+          "path": "docs/evidence/survival-typed-state-continuation-20261003-mining-a-runtime.json.gz",
+          "sha256": "6ba807defca13eb84b2a76f15980b634adb6943c312f362e8c48dcee51d74037",
+          "uncompressed_sha256": "d2b0fef93137463dc0bb3b8e0f85263deb858d3e1a10c3c3ae69874b92a8d0f9"
+        },
+        {
+          "path": "docs/evidence/survival-typed-state-continuation-20261003-mining-a-server-console.log.gz",
+          "sha256": "80ab02dd92276ac3be89d1ba572b9612fcf0db94e206e856d368ab24d3566873",
+          "uncompressed_sha256": "fed5f2a3bc6586a81f5545b67dc0e74825852b8534efe838938a6a9f893437b5"
+        },
+        {
+          "path": "docs/evidence/survival-typed-state-continuation-20261003-mining-a-checkpoint-test.log.gz",
+          "sha256": "9bbb47865cb13d467c2d082770be6abea3758b8f987c5cdbe498ed5037f55712",
+          "uncompressed_sha256": "6d85de1736a2bb21daf8d70a1c7ce9abe52211ec0ab4de9b5db0d8841e4060bd"
+        },
+        {
+          "path": "docs/evidence/survival-typed-state-continuation-20261003-mining-a-continue-test.log.gz",
+          "sha256": "48e9f24f3b2dedd9b2acbb6b28a8204b0837ad95d302f3a8dca1b72a147934b9",
+          "uncompressed_sha256": "e83a168aedc68fbe9b2ce60bad03b4f8bf82afc7a6b15061f4cee299b2257c03"
+        }
+      ]
+    }
+  ],
+  "initial_clippy_correction": "Box checkpoint data to keep job enum compact; no lint suppression or wire change",
+  "limits": [
+    "Migration covers survival planning, cleanup, execution and saved-job validation, not every text identifier/codec in the workspace",
+    "Persistence decoding rejects unknown state/phase or malformed checkpoint data; no legacy checkpoint conversion",
+    "Voxrig/native authority and retirement/motion contracts unchanged",
+    "These bounded roof continuation trials do not establish arbitrary survival construction/crash recovery"
+  ]
+}

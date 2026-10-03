@@ -184,3 +184,13 @@ Unknown status/phase and malformed checkpoint data refuse before continuation.
 This strengthens decoding; it does not convert older checkpoint schemas or grant
 authority from historical evidence. Adoption, live scene/inventory checks,
 durable intent, retirement/reconnect and single-use claims retain their contracts.
+
+Validation at `7ef4e2f`: 37 related offline tests passed; six opt-in cases remained
+ignored by that offline invocation. Both all-target Clippy configurations passed.
+A retained pre-migration live journal reopened as diagnosis only without a native
+client. Separate fresh non-OP live trials accepted placement and mining checkpoint
+continuation in different OS processes: 11 saved + 104 new steps and 31 saved + 85
+new steps, respectively. Both removed all temporary works, retreated, independently
+compared 3,120 cells and position, and refused external changes, material shortage
+and duplicate claims. All test/server processes exited normally. See
+[typed-state validation and hashed originals](evidence/survival-typed-state-validation-20261003.json).
