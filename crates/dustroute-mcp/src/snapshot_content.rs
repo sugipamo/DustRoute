@@ -19,7 +19,11 @@ impl std::fmt::Display for ContentId {
 }
 impl Serialize for ContentId {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        serializer.collect_str(self)
+        if serializer.is_human_readable() {
+            serializer.collect_str(self)
+        } else {
+            serializer.serialize_bytes(&self.0)
+        }
     }
 }
 
@@ -217,6 +221,37 @@ pub(crate) fn content_id(snapshot: &MinecraftSnapshot) -> ContentId {
     ContentId(writer.0.finalize().into())
 }
 
+/// Conditions for the currently exposed static mixed-IR analysis.
+/// The key accepts this type, never an arbitrary JSON condition object.
+#[derive(Clone, Serialize)]
+pub(crate) struct StaticAnalysisConditions<'a> {
+    scope: StaticAnalysisScope,
+    dimension: &'a str,
+    bounds: dustroute_translate::world_reverse::RegionBounds,
+    complete: bool,
+}
+#[derive(Clone, Copy, Serialize)]
+enum StaticAnalysisScope {
+    #[serde(rename = "static_mixed_ir.v1")]
+    StaticMixedIr,
+}
+impl<'a> StaticAnalysisConditions<'a> {
+    pub(crate) fn new(
+        dimension: &'a str,
+        bounds: dustroute_translate::world_reverse::RegionBounds,
+        complete: bool,
+    ) -> Self {
+        Self {
+            scope: StaticAnalysisScope::StaticMixedIr,
+            dimension,
+            bounds,
+            complete,
+        }
+    }
+}
+
+pub(crate) const VALIDATION_KEY_SCHEMA: &str = "dustroute.validation-key.v2";
+
 /// Analysis identity pins both input contents and the model/conditions which interpret them.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Serialize)]
 #[serde(transparent)]
@@ -230,12 +265,13 @@ impl ValidationKey {
     pub(crate) fn new(
         inputs: &[ContentId],
         context: &dustroute_translate::world::execution_context::WorldExecutionContext,
-        conditions: impl Serialize,
+        conditions: &StaticAnalysisConditions<'_>,
     ) -> Self {
         let mut writer = HashWriter(Sha256::new());
-        writer.0.update(b"dustroute.validation-key.v1\0");
+        writer.0.update(VALIDATION_KEY_SCHEMA.as_bytes());
+        writer.0.update([0]);
         let mut buffer = std::io::BufWriter::new(writer);
-        serde_json::to_writer(
+        dustroute_codec::canonical::write(
             &mut buffer,
             &(
                 inputs,
@@ -384,7 +420,9 @@ mod tests {
         let context = WorldExecutionContext::for_profile(
             WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V19,
         );
-        let conditions = serde_json::json!({"scope":"test","complete":true,"ticks":64});
+        let bounds =
+            dustroute_translate::world_reverse::RegionBounds::new(snapshot().min, snapshot().max);
+        let conditions = StaticAnalysisConditions::new("minecraft:overworld", bounds, true);
         let key = ValidationKey::new(&[input.id()], &context, &conditions);
         assert_eq!(
             key,
@@ -408,10 +446,30 @@ mod tests {
             ValidationKey::new(
                 &[input.id()],
                 &context,
-                serde_json::json!({"scope":"test","complete":false,"ticks":64})
+                &StaticAnalysisConditions::new("minecraft:overworld", bounds, false)
             )
         );
         assert_ne!(key, ValidationKey::new(&[], &context, &conditions));
+        assert_ne!(
+            key,
+            ValidationKey::new(
+                &[input.id()],
+                &context,
+                &StaticAnalysisConditions::new("minecraft:the_nether", bounds, true),
+            )
+        );
+        let shifted = dustroute_translate::world_reverse::RegionBounds::new(
+            bounds.min,
+            dustroute_translate::world::Pos::new(bounds.max.x + 1, bounds.max.y, bounds.max.z),
+        );
+        assert_ne!(
+            key,
+            ValidationKey::new(
+                &[input.id()],
+                &context,
+                &StaticAnalysisConditions::new("minecraft:overworld", shifted, true),
+            )
+        );
     }
 
     #[test]

@@ -1851,18 +1851,25 @@ impl DustRouteMcp {
             dustroute_translate::world::execution_context::WorldExecutionProfile::UnifiedPistonElectricalCallbacksJava12111V19,
         );
         let analysis_id = crate::snapshot_content::ValidationKey::new(
-            &[snapshot.id()], &context,
-            json!({"scope":"static_mixed_ir.v1","dimension":dimension,"bounds":bounds_json(bounds),"complete":circuit.complete}),
-        ).to_string();
+            &[snapshot.id()],
+            &context,
+            &crate::snapshot_content::StaticAnalysisConditions::new(
+                &dimension,
+                bounds,
+                circuit.complete,
+            ),
+        )
+        .to_string();
         if params.node_id.is_some() && params.analysis_id.as_deref() != Some(analysis_id.as_str()) {
             return json_text(json!({
                 "ok": false,
                 "error": if params.analysis_id.is_some() {
-                    "the observed circuit changed after the mixed-IR summary; request a new summary before expanding a node"
+                    "the circuit, model, or analysis conditions no longer match the mixed-IR summary; request a new summary before expanding a node"
                 } else {
                     "analysis_id from a mixed-IR summary is required when node_id is specified"
                 },
                 "current_analysis_id": analysis_id,
+                "analysis_id_schema": crate::snapshot_content::VALIDATION_KEY_SCHEMA,
                 "retryable": true,
             }));
         }
@@ -1889,6 +1896,7 @@ impl DustRouteMcp {
             "circuit_id": circuit_id,
             "content_id": snapshot.id(),
             "analysis_id": analysis_id,
+            "analysis_id_schema": crate::snapshot_content::VALIDATION_KEY_SCHEMA,
             "mutation_performed": false,
             "target": target,
             "bounds": bounds_json(bounds),
@@ -6553,6 +6561,44 @@ mod tests {
         .unwrap();
         assert_eq!(ir["ok"], true);
         assert_eq!(ir["circuit_id"], circuit_id);
+        assert_eq!(
+            ir["analysis_id_schema"],
+            crate::snapshot_content::VALIDATION_KEY_SCHEMA
+        );
+        let node = ir["mixed_ir"]["nodes"][0]["id"].as_u64().unwrap() as usize;
+        for supplied in [
+            None,
+            Some("obsolete-analysis-id".to_owned()),
+            ir["analysis_id"].as_str().map(str::to_owned),
+        ] {
+            let matches = supplied.as_deref() == ir["analysis_id"].as_str();
+            let expanded: Value = serde_json::from_str(
+                &service
+                    .get_circuit_ir(Parameters(GetLookedAtCircuitIrParams {
+                        player: None,
+                        max_components: None,
+                        fragment_gap: None,
+                        node_id: Some(node),
+                        analysis_id: supplied,
+                        circuit_id: Some(circuit_id.clone()),
+                    }))
+                    .await,
+            )
+            .unwrap();
+            assert_eq!(expanded["ok"], matches);
+            assert_eq!(
+                expanded["analysis_id_schema"],
+                crate::snapshot_content::VALIDATION_KEY_SCHEMA
+            );
+            if matches {
+                assert_eq!(expanded["analysis_id"], ir["analysis_id"]);
+                assert_eq!(expanded["mutation_performed"], false);
+                assert!(expanded["mixed_ir"]["expanded_node"].is_object());
+            } else {
+                assert_eq!(expanded["current_analysis_id"], ir["analysis_id"]);
+                assert_eq!(expanded["retryable"], true);
+            }
+        }
     }
 
     #[tokio::test]

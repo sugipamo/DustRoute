@@ -40,8 +40,10 @@ The v19 profile pins `dustroute.device-programs.java-1-21-11.v7` and physical
 admission v10 in addition to its selected laws. It includes stone-button use/release in the library runtime;
 the behavioral explorer continues to accept explicit lever bindings. Previous
 electrical v1–v18 execution contexts/checkpoints are rejected rather than migrated.
-The v19 root comparison contract v4 retains identity-guarded deferred support
-ticks in addition to device ticks and carriers. See the
+The v19 root comparison contract v5 uses a versioned non-JSON encoding of the
+complete normalized state, retaining identity-guarded deferred support ticks,
+device ticks and carriers. See [comparison migration](json-boundary-migration.md)
+and the
 [fixed environment and cane scope](existing-machine-modification.md).
 Adhesive materials are explicitly excluded from the older execution adapters,
 including the standalone bounded piston planner. Their passive registration

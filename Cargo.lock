@@ -305,6 +305,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "dustroute-codec"
+version = "0.2.0"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "dustroute-ir"
 version = "0.2.0"
 dependencies = [
@@ -331,6 +338,7 @@ dependencies = [
  "anyhow",
  "axum",
  "dustroute-app",
+ "dustroute-codec",
  "dustroute-ir",
  "dustroute-library",
  "dustroute-optimize",
@@ -351,6 +359,7 @@ dependencies = [
 name = "dustroute-minecraft"
 version = "0.2.0"
 dependencies = [
+ "dustroute-codec",
  "schemars",
  "serde",
  "serde_json",

@@ -1,6 +1,6 @@
 //! Versioned byte ordering for one adapter's complete root-boundary state.
 //! Normalization and admissible boundaries are owned by the caller. The named
-//! record documents the compared fields; its array encoding preserves v3 order.
+//! record documents the compared fields; its typed tuple retains every compared field.
 use super::super::Delivery;
 use super::State;
 use crate::time::runtime::RuntimeError;
@@ -47,7 +47,7 @@ impl<'a, P: Serialize> RootRecord<'a, P> {
         }
     }
     pub(super) fn encode(&self) -> Result<Vec<u8>, RuntimeError> {
-        serde_json::to_vec(self).map_err(|e| RuntimeError::Invalid(e.to_string()))
+        dustroute_codec::canonical::encode(self).map_err(|e| RuntimeError::Invalid(e.to_string()))
     }
 }
 impl<P: Serialize> Serialize for RootRecord<'_, P> {

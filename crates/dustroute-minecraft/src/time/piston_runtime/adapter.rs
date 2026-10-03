@@ -734,7 +734,7 @@ fn finish_or_advance(
 }
 
 impl RootComparisonAdapter for ElectricalPistonAdapter {
-    const COMPARISON: &'static str = "dustroute.piston-electrical-root-comparison.v4";
+    const COMPARISON: &'static str = "dustroute.piston-electrical-root-comparison.v5";
     fn permits_root(kind: InvocationKind, payload: &PistonEvent) -> bool {
         matches!(
             (kind, payload),

@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "crates/dustroute-codec",
     "crates/dustroute-minecraft",
     "crates/dustroute-physical",
     "crates/dustroute-ir",

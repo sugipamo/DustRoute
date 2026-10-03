@@ -12,6 +12,7 @@ default = ["voxrig"]
 voxrig = ["dep:voxrig"]
 
 [dependencies]
+dustroute-codec = { path = "../dustroute-codec" }
 fs2 = "0.4.3"
 anyhow = "1.0"
 axum = "0.8"

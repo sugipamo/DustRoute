@@ -159,3 +159,43 @@ minecraft doctest 37件が成功し、そのうち新しい8件のcompile-fail�
 MCPの`--no-default-features` all-target Clippy、formatting、差分検査も成功した。
 Voxrig pinの315ファイル一致を再確認した。組込みLawの本番経路にはJSON読込みが残っていない。
 第3段階は完了。比較キー・保存codec・Voxrig内部表現等の後続移行は未完了である。
+
+## 第4段階: 比較・検証キーの非JSON化
+
+共通の小さな`dustroute-codec::canonical`を追加し、RustのSerializeから直接キーを作る。
+JSONへの変換・解析はなく、新しいregistry依存も追加しない。Cargo.lockの変更はローカルcrateと
+その2箇所の利用関係のみ。固定幅の整数・IEEE floatのbit列、長さ付きtext/bytes、
+型・variant・field名・collection境界を記録する。map/structのfieldは符号化したkeyで整列し、
+重複key・不足value・宣言した長さの不一致・書込み失敗は拒否する。
+この層には読込み、操作権限、再送、native値への復元機能を設けない。
+保存codecの移行は第5段階で別に行う。
+
+runtimeは同じ14項目の完全root recordからキーを作り、比較contractをv4からv5へ更新する。
+比較は全byte列で行い、hashに置き換えない。world、queue順、carriers、hidden outputs、
+生きたhistory、相対deadline、zero epoch、tick section、progress、limitsを保持する。
+既存の正規化とrestore照合を変更しない。
+
+MCPのValidationKeyはv2へ更新し、static mixed-IRのdimension/bounds/complete/scopeを
+`StaticAnalysisConditions`で渡す。任意のJSON条件objectはキーAPIへ渡せない。
+input content、model context、physical admission revisionも引き続き含める。
+ContentIdはMCP等のhuman-readable境界では従来のhex、キーでは32byteとして符号化する。
+exact snapshotの既存v1 hash、完全payloadのcollision照合、取得ごとのObservationIdは維持する。
+公開summaryと不一致応答に`analysis_id_schema`を返し、旧ID・未指定IDで詳細展開しない。
+不一致をworldの変更だけと断定せず、回路・モデル・条件の不一致として説明する。
+
+監査対象の他の比較では、typed Ord/Eqや世代内のshape/state hashを使っており、JSONを
+キーにする処理は確認されなかった。世代内hashだけをexact before-stateや観測証明に使わない
+既存契約を保つ。StateStoreのscope/playerディレクトリは従来のRust DefaultHasherであり、
+JSONとは無関係だが保存先の版と一緒に第5段階で整理する。旧保存先の互換探索は追加しない。
+公開response・保存codec・観測fixture等に残るJSONの全廃とは扱わない。
+
+初期検証: codec 6件、runtimeのroot比較/restore/正規化9件、MCP snapshot/cache 6件、
+公開summaryからの未指定・旧ID拒否と現在IDによる詳細展開1件が成功した。
+最初のMCP compileではRegionとRegionBoundsの取り違えが型検査で見つかったため、
+実際の解析境界であるRegionBoundsに揃えた。物理計算や座標の正規化は変更していない。
+上位の探索・採用と最終静的検査は以下へ結果を追記する。
+
+translateの抽象挙動・runtime採用・電気ピストン採用・統合ピストン挙動の18件が成功した。
+codec/minecraft/MCPのall-target Clippy（`-D warnings`）も成功した。
+MCPのno-default-features all-target Clippy、formatting、差分検査とVoxrigの315ファイル一致も
+確認した。第4段階は完了。実機や保存ファイルの移行はこの段階では行っていない。

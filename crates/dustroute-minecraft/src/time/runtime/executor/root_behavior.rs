@@ -220,12 +220,12 @@ mod tests {
     }
 
     #[test]
-    fn comparison_record_preserves_the_pinned_byte_order() {
+    fn comparison_record_encodes_every_field_with_the_current_binary_contract() {
         let mut runtime = scene();
         schedule_electrical_input(&mut runtime, 1, INPUT, true).unwrap();
         let captured = runtime.behavior_state().unwrap();
         let state = &captured.state;
-        let previous_key = serde_json::to_vec(&(
+        let typed_key = dustroute_codec::canonical::encode(&(
             ElectricalPistonAdapter::COMPARISON,
             state.profile,
             state.adapter,
@@ -242,7 +242,7 @@ mod tests {
             state.limits,
         ))
         .unwrap();
-        assert_eq!(captured.key, previous_key);
+        assert_eq!(captured.key, typed_key);
     }
 
     #[test]

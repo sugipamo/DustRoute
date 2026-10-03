@@ -67,6 +67,11 @@ native関連型の共有とlive guardの分離について一旦停止し、ユ�
 Dust/TorchのBlueprint metadataはlibraryで直接構成する。詳細と検証結果は
 [移行記録](json-boundary-migration.md)を参照。比較キーと保存codecは後続段階で扱う。
 
+第4段階では比較・検証キーの符号化を`dustroute-codec`に分離した。
+完全root recordと具体的な解析条件をRustの値から直接符号化し、JSONを中間表現にしない。
+比較・検証IDの版を更新し、公開MCPにもIDのschemaを返す。保存形式の移行とは分ける。
+[移行記録](json-boundary-migration.md)に範囲と検証を記載する。
+
 ## サバイバル統合後の追補（2026-10-03 UTC）
 
 基点は `fea85f5`（`codex/survival-single-client`）。今回の建築・観測統合に
