@@ -7,8 +7,8 @@ use dustroute_translate::{
 };
 use std::time::Duration;
 use voxrig::checked_survival::{
-    HypotheticalMovementPreview, HypotheticalPlacement, InventorySlot, MiningRetirementStatus,
-    MiningStatus, PlacementStatus, PlayerState, SurvivalMotionStatus,
+    HypotheticalMovementPreview, HypotheticalPlacement, InventorySlot, MiningStatus,
+    PlacementStatus, PlayerState, SurvivalMotionContract, SurvivalMotionStatus,
 };
 use voxrig::{BlockFace, Region};
 
@@ -157,6 +157,7 @@ impl SurvivalExecutor {
         scene: &CapturedSurvivalScene,
         p: &HypotheticalPlacement,
     ) -> Result<()> {
+        p.aim_requirement.validate_standing(scene.source())?;
         let live = scene.scenario().preview_cube_placement(
             p.support,
             face(p.face_id)?,
@@ -195,40 +196,24 @@ impl SurvivalExecutor {
                 format!("{status:?}"),
             ));
         }
-        let independent = tokio::time::timeout(WAIT, async {
-            loop {
-                let seen = self
-                    .observer
-                    .observe_region(Region {
-                        min: intent.target,
-                        max: intent.target,
-                    })
-                    .await?;
-                if seen.blocks.len() == 1 && seen.blocks[0].state.as_ref() == Some(&p.edit.after) {
-                    return Ok::<_, ExecutionError>(seen);
-                }
-                tokio::time::sleep(Duration::from_millis(20)).await;
-            }
-        })
-        .await
-        .map_err(|_| {
-            ExecutionError::new(
-                "placement_observer_timeout",
-                "independent target did not confirm",
-            )
-        })??;
         self.journal.event(
             "placement_observed",
             OperationOutcome::Observed,
             Continuation::NeedsInspection,
-            json!({"intent":intent,"status":status,"independent":independent}),
+            json!({"intent":intent,"status":status,"world_evidence":"builder_received"}),
         )?;
         Ok(())
     }
     pub(super) async fn move_along(&mut self, p: &HypotheticalMovementPreview) -> Result<()> {
         let ops = self.bot.survival()?;
-        let observer = self.observer.survival()?;
         let live = ops.preview_survival_path(&p.controls).await?;
+        p.initial_aim_requirement.validate_standing(&live.initial)?;
+        if p.endpoint_contract != SurvivalMotionContract::Predicted {
+            return Err(ExecutionError::new(
+                "movement_contract_changed",
+                "checked plan requires a different endpoint contract",
+            ));
+        }
         if live.initial_frame != p.initial_frame || live.frames != p.frames {
             let first = p
                 .frames
@@ -254,14 +239,13 @@ impl SurvivalExecutor {
             "movement_send",
             json!({"controls":p.controls,"planned_initial_position":p.initial_position}),
         )?;
-        ops.start_previewed_survival_motion(&live, &observer)
-            .await?;
+        ops.start_previewed_predicted_survival_motion(&live).await?;
         let motion = tokio::time::timeout(Duration::from_secs(40), async {
             loop {
                 let record = ops.survival_motion().await.ok_or_else(|| {
                     ExecutionError::new("movement_missing", "native record unavailable")
                 })?;
-                if record.status == SurvivalMotionStatus::Observed {
+                if record.status == SurvivalMotionStatus::Predicted {
                     return Ok(record);
                 }
                 if record.status == SurvivalMotionStatus::RequiresInspection {
@@ -276,8 +260,8 @@ impl SurvivalExecutor {
         .await
         .map_err(|_| ExecutionError::new("movement_timeout", "native movement did not finish"))??;
         self.journal.event(
-            "movement_observed",
-            OperationOutcome::Observed,
+            "movement_predicted",
+            OperationOutcome::Predicted,
             Continuation::NeedsInspection,
             json!(motion),
         )?;
@@ -397,32 +381,17 @@ impl SurvivalExecutor {
             Continuation::NeedsInspection,
             json!({"history":history,"recovery_plan":plan,"attempt":attempt}),
         )?;
-        let recovery = current
-            .prepare_mining_retirement(&intent, &self.observer.survival()?)
-            .await?;
+        let recovery = current.prepare_mining_profile_recovery(&intent).await?;
         self.journal.intend("retire_source", json!(intent))?;
         recovery.close_source().await?;
-        let retired = recovery.wait(WAIT).await?;
-        if !matches!(retired, MiningRetirementStatus::Retired { .. }) {
-            return Err(ExecutionError::new(
-                "retirement_unconfirmed",
-                format!("{retired:?}"),
-            ));
-        }
-        let target = self
-            .observer
-            .observe_region(Region {
-                min: edit.position,
-                max: edit.position,
-            })
-            .await?;
-        let expected =
-            plan.target_for_reconnect(target.blocks.first().and_then(|b| b.state.as_ref()))?;
+        let target_condition = plan.target_condition();
         self.journal.intend(
             "fresh_reconnect",
-            json!({"retirement":retired,"expected_target":expected}),
+            json!({"method":"same_profile_login", "target_condition":target_condition}),
         )?;
-        let recovered = recovery.reconnect(self.reconnect.clone(), expected).await?;
+        let recovered = recovery
+            .reconnect(self.reconnect.clone(), target_condition)
+            .await?;
         self.bot = recovered.client;
         self.journal.record.reconnects += 1;
         let fresh = recovered
@@ -465,7 +434,7 @@ impl SurvivalExecutor {
                 )?;
                 self.expected = expected_site;
                 self.temporary.remove(&edit.position);
-                self.complete_step()
+                self.complete_step(OperationOutcome::Observed)
             }
             CleanupReconciliation::NeedsNewPlan => {
                 let player = recovered.operations.player_state().await?;

@@ -95,7 +95,6 @@ struct ExecutionInput {
     source: SourceIdentity,
     plan: HypotheticalConstructionPlan,
     lease: SurvivalLease,
-    observer: voxrig::Client,
     cancel: Arc<AtomicBool>,
     checkpoint: Arc<AtomicBool>,
     parent: Option<ContinuationParent>,
@@ -239,12 +238,6 @@ impl DustRouteMcp {
                     Ok(Err(e)) => return failure("source_not_adopted_or_mismatched", e),
                     Err(e) => return failure("planning_task_failed", e),
                 };
-                if self.survival_observer.is_none() {
-                    return failure(
-                        "observer_not_configured",
-                        "configure DUSTROUTE_SURVIVAL_OBSERVER_USERNAME on the same server before planning",
-                    );
-                }
                 let native = match self.bridge.survival_bridge() {
                     Ok(n) => n,
                     Err(e) => return failure("backend_unavailable", e),
@@ -570,9 +563,6 @@ impl DustRouteMcp {
         if entry.plan.is_none() {
             return failure("job_already_started", "use get; no automatic replay");
         }
-        let Some(observer) = self.survival_observer.clone() else {
-            return failure("observer_not_configured", "independent observer required");
-        };
         let native = match self.bridge.survival_bridge() {
             Ok(n) => n,
             Err(e) => return failure("backend_unavailable", e),
@@ -611,7 +601,6 @@ impl DustRouteMcp {
                     source,
                     plan,
                     lease,
-                    observer,
                     cancel,
                     checkpoint,
                     parent,
@@ -634,7 +623,6 @@ impl DustRouteMcp {
             source,
             plan,
             mut lease,
-            observer,
             cancel,
             checkpoint,
             parent,
@@ -667,58 +655,6 @@ impl DustRouteMcp {
                     "continuation requires the original endpoint and builder profile",
                 ));
             }
-            let observer_state = observer
-                .java_1_21_11_operations()
-                .map_err(|e| failure("observer_unavailable", e))?
-                .player_state()
-                .await
-                .map_err(|e| failure("observer_unavailable", e))?;
-            let observed = observer
-                .observe_region(region(plan.scope().observed))
-                .await
-                .map_err(|e| failure("observer_unavailable", e))?;
-            let observer_after = observer
-                .java_1_21_11_operations()
-                .map_err(|e| failure("observer_unavailable", e))?
-                .player_state()
-                .await
-                .map_err(|e| failure("observer_unavailable", e))?;
-            let scene = bot
-                .survival()
-                .map_err(|e| failure("native_refused", e))?
-                .capture_survival_scene(region(plan.scope().observed))
-                .await
-                .map_err(|e| failure("observation_unavailable", e))?;
-            let scenario = scene.scenario();
-            if observer_state.dimension.as_deref() != Some(plan.source().dimension.as_str())
-                || observer_after.dimension != observer_state.dimension
-                || observer_after.connection_id != observer_state.connection_id
-                || observed.connection_id == scene.source().connection_id
-                || observed.connection_id != observer_state.connection_id
-                || observed.version != voxrig::MinecraftVersion::Java1_21_11
-                || observed.region != scene.region()
-                || observed.blocks.len()
-                    != scene
-                        .region()
-                        .volume()
-                        .map_err(|e| failure("invalid_observation", e))?
-                || observed
-                    .blocks
-                    .iter()
-                    .map(|b| b.position)
-                    .collect::<std::collections::BTreeSet<_>>()
-                    .len()
-                    != observed.blocks.len()
-                || observed.blocks.iter().any(|b| {
-                    b.state.is_none()
-                        || scenario.block(b.position).ok().as_ref() != b.state.as_ref()
-                })
-            {
-                return Err(failure(
-                    "observer_mismatch",
-                    "independent initial scene does not match builder",
-                ));
-            }
             if cancel.load(Ordering::SeqCst) {
                 return Err(failure(
                     "cancelled_before_start",
@@ -727,7 +663,6 @@ impl DustRouteMcp {
             }
             let executor = SurvivalExecutor::create(
                 bot.clone(),
-                observer,
                 lease.reconnect(),
                 plan,
                 &path.join("execution"),
@@ -834,9 +769,18 @@ mod continuation;
 #[tool_router(router = survival_tool_router, vis = "pub(super)")]
 impl DustRouteMcp {
     #[tool(
-        description = "Plan and run bounded non-OP survival construction from a uniquely adopted grounded Blueprint. Supply materials to the source bot. action=plan requires matching specification, edit/temporary/travel/retreat scopes and material budget; returns a complete preview without world edits. action=start requires job_id and confirmed=true and freshly checks source/site/inventory; execution continues in background. action=get reports progress or durable diagnosis. action=checkpoint requests a sealed idle stop after any pending mining settles and retires; poll get until checkpointed. action=continue with that old job_id reobserves the site and current materials and generates a NEW preview, also after process restart; review and explicitly start its new job_id. External changes or unresolved lost actions refuse continuation. A checkpoint is consumed once on new admission. action=cancel stops at the next boundary and may retain uncertainty. Requires the independent survival observer. No gathering, native-token restoration, command placement or automatic replay."
+        description = "Plan and run bounded non-OP survival construction from a uniquely adopted grounded Blueprint. Supply materials to the source bot. action=plan requires matching specification, edit/temporary/travel/retreat scopes and material budget; returns a complete preview without world edits. action=start requires job_id and confirmed=true and freshly checks source/site/inventory; execution continues in background. action=get reports progress or durable diagnosis. action=checkpoint requests a sealed idle stop after any pending mining settles and retires; poll get until checkpointed. action=continue with that old job_id reobserves the site and current materials and generates a NEW preview, also after process restart; review and explicitly start its new job_id. External changes or unresolved lost actions refuse continuation. A checkpoint is consumed once on new admission. action=cancel stops at the next boundary and may retain uncertainty. Uses builder-received world evidence and explicit model-based motion continuation; no independent position error bound or server stop acknowledgement. No observation bot required. No gathering, native-token restoration, command placement or automatic replay."
     )]
     async fn survival_construction(&self, Parameters(params): Parameters<Request>) -> String {
-        json_text(self.survival_request(params).await)
+        let mut result = self.survival_request(params).await;
+        if let Some(object) = result.as_object_mut() {
+            object.insert(
+                "execution_contract".into(),
+                json!({"motion":"predicted_dry_cube_v1",
+                "world_evidence":"builder_received","independent_observer_required":false,
+                "server_stop_acknowledged":false,"server_position_error_bound":null}),
+            );
+        }
+        json_text(result)
     }
 }

@@ -111,10 +111,10 @@ async fn native_public_idle_continuation() {
     )
     .await
     .unwrap();
-    service = service.with_survival_observer("NatMineView").await.unwrap();
+    assert!(service.survival_observer.is_none());
     service.state_store = PlanStateStore::new(root.clone(), 3600);
     let native = service.bridge.survival_bridge().unwrap();
-    let observer = service.survival_observer.clone().unwrap();
+    let observer = comparison_observer().await;
     if phase == "checkpoint" {
         console("FIXTURE roof: checkpoint trial; enter").await;
     }
@@ -337,9 +337,15 @@ async fn native_public_idle_continuation() {
             json!([])
         );
         assert_eq!(
-            final_result["status"]["final_evidence"]["evidence"]["independently_checked_cells"],
+            final_result["status"]["final_evidence"]["evidence"]["builder_checked_cells"],
             3120
         );
+        let lease = native.lease_survival().unwrap();
+        let current = lease.source();
+        evidence["independent_final_comparison"] =
+            compare_completed_site(&current, &observer).await;
+        evidence["production_observer_configured"] = json!(false);
+        lease.release(current);
         let consumed = call(&client, "survival_construction", request).await;
         assert_eq!(consumed["error"]["code"], "checkpoint_consumed");
         assert_eq!(consumed["continuation_job_id"], id);

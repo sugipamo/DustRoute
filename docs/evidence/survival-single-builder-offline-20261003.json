@@ -1,0 +1,79 @@
+{
+  "scope": "Prediction-based single-builder integration; offline verification only, integrated live acceptance pending",
+  "voxrig_revision": "5bace7be7cd941e1340ad94052e922db23c4f892",
+  "results": {
+    "mcp_library": {
+      "passed": 210,
+      "ignored": 10,
+      "failed": 0
+    },
+    "focused_survival": {
+      "passed": 31,
+      "ignored": 6,
+      "failed": 0
+    },
+    "checkpoint_prediction_cannot_certify_edit": {
+      "passed": 1,
+      "failed": 0
+    },
+    "all_targets_clippy_voxrig": "passed; -D warnings",
+    "all_targets_clippy_default": "passed; -D warnings",
+    "formatting": "passed",
+    "vendor_check": "passed; 313 managed files"
+  },
+  "source_sha256": {
+    "crates/dustroute-mcp/src/service/survival.rs": "aebf3cde248b2deab9ee8c7353c301e8c5b9bf2c76b9527cea55a3e8d816c2e7",
+    "crates/dustroute-mcp/src/service/survival/continuation.rs": "bfab13dcecb6695b10d986458d0924f7d091c13508f431488b79f4b47b038379",
+    "crates/dustroute-mcp/src/service/survival/tests.rs": "ae1bb2e9dffa7d5f5c7d76a39faecc52f3d19a37bccfa8e238f0bdc5fd91b98f",
+    "crates/dustroute-mcp/src/service/survival/tests/continuation.rs": "b5b3358f1419ca4b3591f2d52d6f240161a6ed21e52e68f5756ea7c2b53ed7a9",
+    "crates/dustroute-mcp/src/survival_cleanup.rs": "f5ba51348fa97182e3680a5a738fce7acef4d19b13d701133ff2728768e797c7",
+    "crates/dustroute-mcp/src/survival_construction.rs": "ea80fad976048f4fd25b734c2b711c9101849ab96462e842fea1e253821fb63a",
+    "crates/dustroute-mcp/src/survival_construction/native_roof_trial.rs": "960de50dfef64c246896635e2566d86c96e7ac66665724cc1006ac4dee0c5e2e",
+    "crates/dustroute-mcp/src/survival_execution.rs": "b8774e39753b1bebaf14aeee8cef063ee1072ce9d2875820c4caf71f505105ca",
+    "crates/dustroute-mcp/src/survival_execution/checkpoint.rs": "3807b7d7c8bce0df3c5ca21c08f70068b60652c1b3e09b9efb6b8ec2b3e4b74d",
+    "crates/dustroute-mcp/src/survival_execution/journal.rs": "5f58ef0d9b3049fa306f41e8b6e257151976877274e23ef786e8b3a90d1f8670",
+    "crates/dustroute-mcp/src/survival_execution/native.rs": "9a9e249287ab094e14d988a9f407c601e63f24bae4dd5b4991849d4c73d3dc70",
+    "crates/dustroute-mcp/src/survival_navigation/native_access_trial.rs": "aa20025c2e48e4ed1147cc4f001ac777116618982b12046ac3414e0f6fb09990",
+    "vendor/voxrig/src/checked_survival.rs": "7fe114a97e65872f7ff2e19543628048c45913e335cdae8f118dc3b735f0fc13",
+    "vendor/voxrig/src/versions/java_1_21_11/client/movement_native_trials.rs": "5d7e80daf8f4bf12ea652dc969e0ca57aca2becef04652bb9f8c39e5045f5c81",
+    "vendor/voxrig/src/versions/java_1_21_11/client/operations.rs": "ef1ac6294a86a385429019cf9c247df3a375ad53f033d6564c8d3aa1b80c9e0f",
+    "vendor/voxrig/src/versions/java_1_21_11/client/operations/mining/tests.rs": "0fb2033a6d51f6f43685e37fd4a513cb95e1037513ce2f5d32cafe827551a01e",
+    "vendor/voxrig/src/versions/java_1_21_11/client/operations/movement.rs": "775bb4ac46dcba9f75ee6b9956f53103268cff10f473974cf46fddab3b3b51f4",
+    "vendor/voxrig/src/versions/java_1_21_11/client/operations/movement/control.rs": "c1e6d6694ca897893f750fe4db9088f7a2143b7f4a5ed2ff352fb8c45e89f354",
+    "vendor/voxrig/src/versions/java_1_21_11/client/operations/movement/scenario.rs": "dc3845966811abcc678cc9225d649bc91e3bb6206756e8dc463d6bf5160ef2dc",
+    "vendor/voxrig/src/versions/java_1_21_11/client/operations/placement.rs": "4db02125bc68e9b2ea0d953e3915640268064edb8a5971fae89fda6b0dc135f4",
+    "vendor/voxrig/src/versions/java_1_21_11/client/operations/survival.rs": "fb0aed2943a207472fe42825e66cf73c4fcca5bbb3fa5c307a3965db8aee56ab"
+  },
+  "artifacts": [
+    {
+      "path": "docs/evidence/survival-single-builder-single-client-runtime-mcp-suite-20261003.log.gz",
+      "sha256": "d34bbb4eebd0e78f7a08db81dd6be1739f1d6dc713d6ed22c82afce92459f6bf",
+      "uncompressed_sha256": "8627dcf12f4f52c3f37e390f5962065a95f1c515326026eb0520b9cfe3374752"
+    },
+    {
+      "path": "docs/evidence/survival-single-builder-single-client-runtime-survival-20261003-final2.log.gz",
+      "sha256": "f15f547219b460275f11140e771e66f0e1ff99fe0b2198aa54b1734b3c47df32",
+      "uncompressed_sha256": "0847128ddb3c76193207d9598d96992cccd76442b6a11fc696b2633afe91d49a"
+    },
+    {
+      "path": "docs/evidence/survival-single-builder-single-client-checkpoint-outcome-20261003.log.gz",
+      "sha256": "ea647bfaee2e53d2957be515c1726a105e97a47f9495305751478ad8f6813c99",
+      "uncompressed_sha256": "e5c43e9136de963ebea1c375da7257baf5e5d2e73e91769d4310f8986b11105e"
+    },
+    {
+      "path": "docs/evidence/survival-single-builder-single-client-runtime-clippy-20261003-final.log.gz",
+      "sha256": "1d8820b500f277c028923c40ee03f610788d33a17666a8c7887a12c07b1d488e",
+      "uncompressed_sha256": "0445cb704f11ae9966ada74c8fae0b3f33ca8f256619bf0ceffffe4c20db3692"
+    },
+    {
+      "path": "docs/evidence/survival-single-builder-single-client-runtime-clippy-default-20261003.log.gz",
+      "sha256": "d0244c1526bbe682f2990009f64739be60c77070a84c93564da6e5386d51078b",
+      "uncompressed_sha256": "4cf86278c1e6d659943a46a3d7e3da429ac15be90f0f17742e24ef85228e7d3e"
+    }
+  ],
+  "limits": [
+    "Model position is not a received position or independent corroboration",
+    "No measured server position error bound or server stop acknowledgement",
+    "Full roof and fresh-process continuation remain pending"
+  ]
+}

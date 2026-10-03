@@ -427,7 +427,14 @@ pub(super) fn context_with_basis(
     if state.reconstruction.issue.is_some() || !state.reconstruction.recovery_chunks.is_empty() {
         return Err(unavailable("client reconstruction incomplete"));
     }
-    let geometry = standing_geometry(state, position, position_basis.horizontal_error())?;
+    let geometry = standing_geometry(state, position, position_basis.geometry_reserve())?;
+    if matches!(position_basis, StandingPositionBasis::Predicted { .. })
+        && geometry.support.is_empty()
+    {
+        return Err(unavailable(
+            "predicted standing lost its currently received floor support",
+        ));
+    }
     Ok(StandingContext {
         connection_id,
         receive_sequence: state.sequence,
@@ -535,7 +542,7 @@ pub(super) fn uncertain_target(
     uncertain_target_in(
         state,
         standing.eye_position,
-        standing.position_basis.horizontal_error(),
+        standing.position_basis.geometry_reserve(),
         state.rotation,
         hit,
     )

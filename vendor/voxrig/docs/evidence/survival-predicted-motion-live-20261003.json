@@ -1,0 +1,152 @@
+{
+  "recorded_at_utc": "2026-10-03T08:03:40.305786+00:00",
+  "source": "c491f6a34fd94bd43eae06e2aa6ac8112d05e5f1",
+  "live_command": "python3 .local/run-predicted-motion-trial.py",
+  "test": "versions::java_1_21_11::client::movement_native_trials::native_survival_predicted_walk_jump_collision_and_place",
+  "contract": "predicted_dry_cube_v1",
+  "observer_role": "comparison_only; never passed to prediction operation",
+  "cases": [
+    {
+      "case": "walk",
+      "ticks": 30,
+      "endpoint": [
+        2.109088459339283,
+        -60.0,
+        0.5
+      ],
+      "contract": "predicted",
+      "status": "predicted"
+    },
+    {
+      "case": "jump",
+      "ticks": 30,
+      "endpoint": [
+        2.109088459339283,
+        -60.0,
+        0.5
+      ],
+      "contract": "predicted",
+      "status": "predicted"
+    },
+    {
+      "case": "wall",
+      "ticks": 60,
+      "endpoint": [
+        2.8428304617655695,
+        -60.0,
+        0.5
+      ],
+      "contract": "predicted",
+      "status": "predicted"
+    }
+  ],
+  "placements": [
+    {
+      "case": "walk_placement",
+      "target": [
+        4,
+        -60,
+        0
+      ],
+      "status": "observed_placed"
+    },
+    {
+      "case": "jump_placement",
+      "target": [
+        4,
+        -59,
+        0
+      ],
+      "status": "observed_placed"
+    },
+    {
+      "case": "wall_placement",
+      "target": [
+        2,
+        -60,
+        2
+      ],
+      "status": "observed_placed"
+    }
+  ],
+  "checks": {
+    "focused_prediction_tests": "4 passed",
+    "native_library_before_new_opt_in_driver": "202 passed, 7 ignored; production sources same as live-tested source",
+    "documentation": "2 regular and 2 compile-fail passed",
+    "final_driver_compilation": "passed",
+    "all_target_clippy": "passed after final driver sample instrumentation",
+    "format": "passed"
+  },
+  "production_source_hashes": {
+    "src/checked_survival.rs": "7fe114a97e65872f7ff2e19543628048c45913e335cdae8f118dc3b735f0fc13",
+    "src/versions/java_1_21_11/client/operations.rs": "ef1ac6294a86a385429019cf9c247df3a375ad53f033d6564c8d3aa1b80c9e0f",
+    "src/versions/java_1_21_11/client/operations/movement.rs": "775bb4ac46dcba9f75ee6b9956f53103268cff10f473974cf46fddab3b3b51f4",
+    "src/versions/java_1_21_11/client/operations/movement/control.rs": "c1e6d6694ca897893f750fe4db9088f7a2143b7f4a5ed2ff352fb8c45e89f354",
+    "src/versions/java_1_21_11/client/operations/movement/scenario.rs": "dc3845966811abcc678cc9225d649bc91e3bb6206756e8dc463d6bf5160ef2dc",
+    "src/versions/java_1_21_11/client/operations/placement.rs": "4db02125bc68e9b2ea0d953e3915640268064edb8a5971fae89fda6b0dc135f4",
+    "src/versions/java_1_21_11/client/operations/survival.rs": "fb0aed2943a207472fe42825e66cf73c4fcca5bbb3fa5c307a3965db8aee56ab"
+  },
+  "runtime": {
+    "test_exit_code": 0,
+    "server_exit_code": 0,
+    "total_seconds": 38.52221121394541,
+    "java_version": "openjdk version \"21.0.12.1\" 2026-08-18 LTS\nOpenJDK Runtime Environment Temurin-21.0.12.1+1 (build 21.0.12.1+1-LTS)\nOpenJDK 64-Bit Server VM Temurin-21.0.12.1+1 (build 21.0.12.1+1-LTS, mixed mode, sharing)\n",
+    "java_sha256": "2a207f5e7d075afa01d97f8048389a64432a44c4a5af0f5e77d6e286ec5f401d",
+    "server_jar_sha256": "f83b8e093865806f931c7e34aae41b177d4c076335263dd124c75d6d65dd1726",
+    "test_executable_sha256": "43fec5507b6aeda5106fc7b801d356df24943903ebcedd43a2e60cfaa6918a12",
+    "flags": [
+      "-XX:ActiveProcessorCount=1",
+      "-Xms256m",
+      "-Xmx768M"
+    ],
+    "endpoint": "127.0.0.1:25572"
+  },
+  "artifacts": [
+    {
+      "path": "survival-predicted-motion-20261003-a.json.gz",
+      "original": ".local/survival-predicted-motion-20261003-a.json",
+      "sha256": "e01e0602b60a3392dbb609efc202d3867eee0c8ed2e80d61ec5782500e1429cf",
+      "uncompressed_sha256": "c8d945e419c4eca0b85ee7aee2cc0e01106a0b5709126a799a8d4c849fd45fc5",
+      "uncompressed_bytes": 2686050,
+      "bytes": 20373
+    },
+    {
+      "path": "survival-predicted-motion-20261003-a-runtime.json.gz",
+      "original": ".local/survival-predicted-motion-20261003-a-runtime.json",
+      "sha256": "d89ba9ceb157a78ff2636a4d256614cb6c4d9dabac25b6fabbbc420b49aa8fe4",
+      "uncompressed_sha256": "9d391e382f39a3b7db5f72df68386d802cd6d973f4d2fcb4effb9ca5b847d7ae",
+      "uncompressed_bytes": 1580,
+      "bytes": 797
+    },
+    {
+      "path": "survival-predicted-motion-20261003-a-test.log.gz",
+      "original": ".local/survival-predicted-motion-20261003-a-test.log",
+      "sha256": "c7d116c03db744bb060e030d5cffcbc45f90ac44a33445b7baf956cbf258379a",
+      "uncompressed_sha256": "62330c7c12ac7b14f4edf26a799d24dc03a1dd7d8cafcb0a5853de2e3aaa3640",
+      "uncompressed_bytes": 613,
+      "bytes": 386
+    },
+    {
+      "path": "survival-predicted-motion-20261003-a-server-console.log.gz",
+      "original": ".local/survival-predicted-motion-20261003-a-server-console.log",
+      "sha256": "3dce62c67c2abc226b0b5fc93492dbd3a507323af79917a3cc3a08adc247cd7a",
+      "uncompressed_sha256": "e71c1a6ac794b3f86f7cbbec9a023fe8e0084c0e2503ba369ece6ca4626f643f",
+      "uncompressed_bytes": 11660,
+      "bytes": 2230
+    },
+    {
+      "path": "survival-predicted-motion-20261003-a-controller.py.gz",
+      "original": ".local/run-predicted-motion-trial.py",
+      "sha256": "95689c9cc6225b713bdab9bec557a27be53d6ae23e219a3e28c8e72de758cfa8",
+      "uncompressed_sha256": "283768f6055f53572c96396a4046a2350c1bbad7c8e9700c361630fc1b12f87f",
+      "uncompressed_bytes": 5822,
+      "bytes": 2278
+    }
+  ],
+  "limits": [
+    "No physical position error bound or server stop acknowledgement claimed.",
+    "Direct vanilla Java 1.21.11, admitted dry cubes, supplied plain inventory and exclusive bot control only.",
+    "No integrated DustRoute build or separate-process continuation acceptance in this native trial.",
+    "No live mining-after-predicted-motion comparison yet; integration acceptance will exercise cleanup."
+  ]
+}

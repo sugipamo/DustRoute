@@ -4,6 +4,8 @@ use tokio::{
     net::{TcpListener, TcpStream},
     task::JoinHandle,
 };
+#[path = "prediction_tests.rs"]
+mod prediction_tests;
 
 // Regression from a detached roof preflight; no network or world edits.
 #[test]

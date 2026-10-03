@@ -36,9 +36,9 @@ pub use native::{
     MiningRecord, MiningRecoveryAttempt, MiningRecoveryBoundary, MiningRecoveryEvidence,
     MiningRecoveryMethod, MiningRecoveryTarget, MiningRetirementStatus, MiningStatus,
     OperationHistory, PlacementIntent, PlacementStatus, PlayerState, PredictedMotionFrame,
-    StandingContext, StandingPositionBasis, SurvivalControl, SurvivalInput, SurvivalMotionRecheck,
-    SurvivalMotionRecord, SurvivalMotionStatus, SurvivalMovementPreview, SurvivalScenario,
-    TerminalClearance,
+    StandingContext, StandingPositionBasis, SurvivalControl, SurvivalInput, SurvivalMotionContract,
+    SurvivalMotionRecheck, SurvivalMotionRecord, SurvivalMotionStatus, SurvivalMovementPreview,
+    SurvivalScenario, TerminalClearance,
 };
 
 /// Versioned semantics, separate from a wire protocol number.
@@ -50,6 +50,11 @@ pub enum SurvivalContract {
     /// dirt/stone mining with explicit vanilla retirement and fresh recovery.
     /// No entities, fluids, gathering, tools, sprinting or crouching.
     ObservedDryCubeV1,
+    /// Fully dispatched dry-cube model endpoints and fresh received geometry,
+    /// explicitly without independent spatial corroboration or a physical error
+    /// bound. Corrections/interruption invalidate continuation. Other supported
+    /// inventory, placement and mining/recovery restrictions remain unchanged.
+    PredictedDryCubeV1,
 }
 
 /// Static adapter support. A supported contract still checks each live action.
@@ -63,6 +68,8 @@ pub struct SurvivalCapabilities {
     /// Audited direct vanilla same-profile fresh mining recovery. This does not
     /// imply observer-free movement or permission to reuse the old connection.
     pub same_profile_mining_recovery: bool,
+    /// Explicit observer-free model contract. None means unavailable for this version.
+    pub prediction_based_contract: Option<SurvivalContract>,
 }
 impl SurvivalCapabilities {
     /// Discover implementation support without opening a connection.
@@ -74,6 +81,10 @@ impl SurvivalCapabilities {
                 MinecraftVersion::Java1_21_11 => Some(SurvivalContract::ObservedDryCubeV1),
             },
             same_profile_mining_recovery: matches!(version, MinecraftVersion::Java1_21_11),
+            prediction_based_contract: match version {
+                MinecraftVersion::Java1_16_1 => None,
+                MinecraftVersion::Java1_21_11 => Some(SurvivalContract::PredictedDryCubeV1),
+            },
         }
     }
 }
@@ -260,6 +271,23 @@ impl Operations {
         self.native
             .start_survival_path(controls, &observer.native)
             .await
+    }
+    /// Revalidate and execute with model-based continuation, without an observer.
+    /// The endpoint is not a received pose or independently measured position.
+    pub async fn start_previewed_predicted_survival_motion(
+        &self,
+        expected: &SurvivalMovementPreview,
+    ) -> Result<SurvivalMotionRecord> {
+        self.native
+            .start_previewed_predicted_survival_motion(expected)
+            .await
+    }
+    /// Execute bounded controls under the explicit prediction-based contract.
+    pub async fn start_predicted_survival_path(
+        &self,
+        controls: &[SurvivalControl],
+    ) -> Result<SurvivalMotionRecord> {
+        self.native.start_predicted_survival_path(controls).await
     }
     /// Execute one heading of bounded inputs with independent endpoint observation.
     pub async fn start_survival_motion(

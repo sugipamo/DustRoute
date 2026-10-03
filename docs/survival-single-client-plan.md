@@ -8,25 +8,29 @@ the immutable vendor snapshot was initially
 through the checksum-managed vendor script to
 `4b46c66cd031eacc72bdf82736eaa60c57ccb9ab`, whose implementation is unchanged from
 the live-tested `bed0465` source; only acceptance documentation/evidence was added.
+Following the approved prediction contract and native comparative acceptance,
+the current managed snapshot is `5bace7be7cd941e1340ad94052e922db23c4f892`
+(313 files), with unchanged implementation from live-tested `c491f6a`.
 
 Normal operation is intended to use one builder/account, with an independent
-observer used in verification fixtures. The overall goal is unfinished. Movement
-implementation and dependent DustRoute switching are stopped for the contract
-review below, under the user's instruction to handle responsibilities carefully
-and report concerns before continuing dependent work.
+observer used in verification fixtures. The overall goal is unfinished. The user
+approved explicitly predicted continuation with isolated comparative testing.
+Native movement and placement comparison passed. DustRoute switching and its
+verification are in progress. Further responsibility or correctness-contract
+changes still require reporting before dependent work.
 
 ## Stages and current status
 
 | Stage | Completion condition | Status |
 | --- | --- | --- |
 | 1. Native mining continuation | Establish a same-connection release or same-profile fresh recovery without an observer retirement watch; preserve uncertainty and once-only login guards | Same-profile recovery implemented and declared native cases passed; continuous reuse remains unsupported |
-| 2. Movement and shared standing | Define the basis for one-bot walk/rest/jump/land and subsequent look/place/mine checks; compare against independent test evidence | Contract review pending; no motion or standing gate has been weakened |
-| 3. DustRoute execution | Use the chosen native contract for admission, placements, cleanup, final checks and durable checkpoints; expose actual evidence in MCP | Pending stage 2; production observer requirement unchanged |
+| 2. Movement and shared standing | Define the basis for one-bot walk/rest/jump/land and subsequent look/place/mine checks; compare against independent test evidence | Explicit prediction contract implemented; native walk/jump/collision/placement comparison passed; integrated mining-after-movement remains to verify |
+| 3. DustRoute execution | Use the chosen native contract for admission, placements, cleanup, final checks and durable checkpoints; expose actual evidence in MCP | One-builder implementation in progress; full build and continuation acceptance pending |
 | 4. Construction continuation acceptance | Complete a roofed build and separate-process continuation through cleanup/retreat, including checkpoint requested during mining | Pending; prior continuation failures remain recorded, not relabelled as passes |
 
-The shared dependency update is independent of the movement policy choice. It
-does not switch DustRoute's executor to the new recovery method, remove its
-observer requirement or authorize prediction-only standing. The consumer's
+The earlier `6ede15d` dependency update was independent of the movement choice.
+It did not switch the executor, remove the observer requirement or authorize
+prediction-only standing. The consumer's
 diagnostic mining test fixture now initializes the new retained recovery-attempt
 field. [Integration verification](evidence/survival-single-client-integration-20261003.json)
 passed 29 focused survival tests (six opt-in live tests ignored), all-target Clippy
@@ -34,6 +38,37 @@ with and without the native feature, formatting and verification of all 305
 managed snapshot files. This accepts the dependency integration, not observer-free
 runtime construction. No new Minecraft trial or full MCP regression run was made
 for this consumer update.
+
+## Approved one-builder implementation
+
+The native prediction contract keeps received, predicted and independently seen
+positions distinct. Its 1/16-block construction reserve is a model-space policy,
+not a physical error bound. The standalone non-OP trial used no observer watches
+in its native runs: walk, jump/landing and wall collision/retreat all completed
+and all three subsequent placements were independently compared. The observer
+also received the jump rise and matching final positions. Native tests covered
+correction, impulse, generation, current support and interrupted dispatch refusal.
+See the vendored [contract](../vendor/voxrig/docs/survival-predicted-motion.md) and
+[native evidence](../vendor/voxrig/docs/evidence/survival-predicted-motion-live-20261003.json).
+
+Construction plans explicitly select predicted endpoints. The executor uses the
+same checked contract and own received target/material/sequence evidence. Owned
+temporary cleanup declares an exact-air target after confirmed removal, or an
+original-or-air fresh target after an admitted inventory-only conflict; Voxrig
+performs same-profile retirement/recovery. No observer is retained by the
+executor or required by public planning, admission, checkpoint or continuation.
+The opt-in public trials create a separate comparison client outside the service.
+
+Motion events and completed movement steps record `outcome=predicted`, while
+confirmed world edits remain `observed`. Checkpoint prefix validation requires
+the appropriate outcome for each kind of step, so predicted placement cannot
+invent temporary ownership. Checkpoint schema v2 retains diagnostic standing
+provenance and does not restore it as native authority. Old v1 checkpoints are
+not converted. Reopening still creates a new checked plan from current native
+scene/materials and consumes the original checkpoint exactly once on admission.
+MCP states builder-received world evidence, predicted motion, no required
+independent observer, no server stop acknowledgement and no physical position
+error bound. Full integrated live acceptance remains to run.
 
 ## Completed native mining slice
 
@@ -76,7 +111,7 @@ separate Voxrig repository under
 `docs/evidence/survival-single-profile-live-20261003.json` and
 `docs/evidence/survival-single-profile-audit-20261003.json`.
 
-## Movement decision requiring review
+## Approved movement decision and its limits
 
 The existing runtime's common standing basis is `Received` or
 `PredictedAndObserved`. The latter derives the horizontal geometry envelope from
@@ -122,10 +157,10 @@ Two concrete approaches are available:
 The first path changes the confirmation basis for continuing, even though the
 library responsibilities remain the same. The second adds a broader native
 lifecycle primitive and caller-side reconnect obligations. This is why the
-dependent movement implementation is stopped for a concrete choice instead of
-silently deleting the observer guards. The preliminary investigation did not
-establish a prediction-only physical error bound or choose a movement-reconnect
-policy.
+dependent movement implementation was stopped for a concrete choice. The user
+subsequently selected the recommended explicitly predicted contract. The
+preliminary investigation did not establish a prediction-only physical error
+bound; the approved implementation must continue to state that limit explicitly.
 
 ## Boundaries retained in either approach
 
@@ -166,3 +201,14 @@ the initial evidence inventory. Current code references:
 [executor calls](../crates/dustroute-mcp/src/survival_execution/native.rs),
 [checkpoint](../crates/dustroute-mcp/src/survival_execution/checkpoint.rs) and
 [public admission](../crates/dustroute-mcp/src/service/survival.rs).
+
+## Integrated offline verification (2026-10-03)
+
+The single-builder integration passed the complete MCP library suite (210 passed,
+10 explicitly ignored live/profile tests), focused survival tests (31 passed,
+6 ignored), and the new persisted prediction/world-edit separation regression.
+Both default and Voxrig all-target Clippy passed with warnings denied. Formatting
+and the managed 313-file vendor check passed. Logs and source hashes are retained
+in [the offline verification record](evidence/survival-single-builder-offline-20261003.json).
+Integrated roof construction, cleanup, retreat and two-process continuation are
+still pending; native movement acceptance alone is not their acceptance.

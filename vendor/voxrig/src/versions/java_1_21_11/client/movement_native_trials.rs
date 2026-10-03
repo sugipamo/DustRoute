@@ -17,6 +17,14 @@ async fn connect(name: &str) -> Bot {
 #[tokio::test]
 #[ignore = "requires explicit dedicated native fixture and console setup"]
 async fn native_survival_walk_jump_collision_and_place() {
+    motion_fixture(false).await;
+}
+#[tokio::test]
+#[ignore = "requires explicit dedicated non-OP fixture; observer is comparison only"]
+async fn native_survival_predicted_walk_jump_collision_and_place() {
+    motion_fixture(true).await;
+}
+async fn motion_fixture(predicted: bool) {
     use std::io::Write;
     assert_eq!(std::env::var("NATIVE_MOVEMENT_PORT").unwrap(), "25572");
     let file = std::fs::OpenOptions::new()
@@ -71,7 +79,7 @@ async fn native_survival_walk_jump_collision_and_place() {
     let before = api.player_state().await.unwrap();
     assert_eq!(before.game_mode, Some(operations::GameMode::Survival));
     let mut cases = Vec::new();
-    let result = run_cases(&api, &observer, &viewer, &mut cases).await;
+    let result = run_cases(&api, &observer, &viewer, &mut cases, predicted).await;
 
     let after = api.player_state().await;
     let history = api.operation_history().await;
@@ -79,7 +87,7 @@ async fn native_survival_walk_jump_collision_and_place() {
     let observer_trace = viewer.stop_packet_trace().await.unwrap();
     bot.disconnect().await.unwrap();
     viewer.disconnect().await.unwrap();
-    serde_json::to_writer(file,&json!({"minecraft":"Java 1.21.11","scope":"isolated non-OP native dry walking, jump/landing, wall collision and ordinary placement; no stop acknowledgement claim","before":before,"cases":cases,"after":after.as_ref().ok(),"history":history,"error":result.as_ref().err().map(ToString::to_string),"trace":trace,"observer_trace":observer_trace})).unwrap();
+    serde_json::to_writer(file,&json!({"minecraft":"Java 1.21.11","scope":"isolated non-OP native dry walking, jump/landing, wall collision and ordinary placement; no stop acknowledgement claim","prediction_contract":predicted,"observer_role":if predicted {"comparison_only"} else {"endpoint_admission_and_comparison"},"before":before,"cases":cases,"after":after.as_ref().ok(),"history":history,"error":result.as_ref().err().map(ToString::to_string),"trace":trace,"observer_trace":observer_trace})).unwrap();
     result.unwrap();
 }
 
@@ -88,6 +96,7 @@ async fn run_cases(
     observer: &operations::Operations,
     viewer: &Bot,
     cases: &mut Vec<serde_json::Value>,
+    predicted: bool,
 ) -> Result<()> {
     use std::io::Write;
 
@@ -96,6 +105,17 @@ async fn run_cases(
         .await?;
     api.select_hotbar(0).await?;
     for name in ["walk", "jump", "wall"] {
+        if predicted && name == "wall" {
+            println!("PREDICTED_WALL: place the fixed test wall; enter");
+            std::io::stdout().flush().unwrap();
+            tokio::task::spawn_blocking(|| {
+                let mut line = String::new();
+                std::io::stdin().read_line(&mut line).unwrap();
+            })
+            .await
+            .unwrap();
+            tokio::time::sleep(Duration::from_millis(200)).await;
+        }
         let mut inputs = vec![SurvivalInput::default(); if name == "wall" { 40 } else { 30 }];
         if name == "jump" {
             inputs[0].jump = true;
@@ -116,11 +136,19 @@ async fn run_cases(
                 ));
             }
             let history = serde_json::to_value(api.operation_history().await).unwrap();
-            if api
-                .start_survival_motion(-90.0, &inputs, observer)
-                .await
-                .is_ok()
-            {
+            let controls: Vec<_> = inputs
+                .iter()
+                .map(|input| operations::SurvivalControl {
+                    yaw: -90.,
+                    input: *input,
+                })
+                .collect();
+            let result = if predicted {
+                api.start_predicted_survival_path(&controls).await
+            } else {
+                api.start_survival_motion(-90.0, &inputs, observer).await
+            };
+            if result.is_ok() {
                 return Err(Error::new(
                     ErrorKind::State,
                     anyhow::anyhow!("wall-touch input was sent"),
@@ -139,31 +167,70 @@ async fn run_cases(
                 i.forward = -1;
             }
         }
-        let start = api.start_survival_motion(-90.0, &inputs, observer).await?;
+        let controls: Vec<_> = inputs
+            .iter()
+            .map(|input| operations::SurvivalControl {
+                yaw: -90.,
+                input: *input,
+            })
+            .collect();
+        let start = if predicted {
+            api.start_predicted_survival_path(&controls).await?
+        } else {
+            api.start_survival_motion(-90.0, &inputs, observer).await?
+        };
         println!("MOTION {name} started run {}", start.run_id);
         std::io::stdout().flush().unwrap();
+        let mut comparison_samples = Vec::new();
         let run = timeout(Duration::from_secs(40), async {
             loop {
                 let r = api.survival_motion().await.unwrap();
+                if predicted {
+                    let seen = observer.visible_players().await?;
+                    if let Some(p) = seen.players.into_iter().find(|p| p.name == "NatMineBot") {
+                        comparison_samples.push(p);
+                    }
+                }
                 if matches!(
                     r.status,
-                    SurvivalMotionStatus::Observed | SurvivalMotionStatus::RequiresInspection
+                    SurvivalMotionStatus::Observed
+                        | SurvivalMotionStatus::Predicted
+                        | SurvivalMotionStatus::RequiresInspection
                 ) {
-                    break r;
+                    break Ok::<_, Error>(r);
                 }
                 tokio::time::sleep(Duration::from_millis(20)).await;
             }
         })
         .await
-        .context("motion result timeout")?;
+        .context("motion result timeout")??;
         cases.push(json!({"phase":name,"motion":run}));
-        if run.status != SurvivalMotionStatus::Observed {
+        let expected = if predicted {
+            SurvivalMotionStatus::Predicted
+        } else {
+            SurvivalMotionStatus::Observed
+        };
+        if run.status != expected {
             return Err(Error::new(
                 ErrorKind::State,
                 anyhow::anyhow!("motion {name}: {:?}", run.problem),
             ));
         }
         let standing = api.standing_context().await?;
+        if predicted {
+            if name == "jump"
+                && !comparison_samples
+                    .iter()
+                    .any(|p| p.position[1] > start.preview.initial.position[1] + 0.5)
+            {
+                return Err(Error::new(
+                    ErrorKind::State,
+                    anyhow::anyhow!("jump rise not independently observed"),
+                ));
+            }
+            cases.push(json!({"phase":format!("{name}_trajectory_comparison"),
+                "samples":comparison_samples,"used_for_native_admission":false}));
+        }
         if name == "wall" && !run.preview.frames.iter().any(|f| f.horizontal_collision) {
             return Err(Error::new(
                 ErrorKind::State,
@@ -219,6 +286,28 @@ async fn run_cases(
         })
         .await
         .context("independent placement timeout")??;
+        if predicted {
+            let position = timeout(Duration::from_secs(5), async {
+                loop {
+                    let seen = observer.visible_players().await?;
+                    if let Some(p) = seen.players.iter().find(|p| p.name == "NatMineBot") {
+                        if (0..3).all(|i| {
+                            (p.position[i] - standing.position[i]).abs()
+                                <= p.motion.position_error[i] + 1e-9
+                        }) {
+                            break Ok::<_, Error>(p.clone());
+                        }
+                    }
+                    tokio::time::sleep(Duration::from_millis(20)).await;
+                }
+            })
+            .await
+            .context("comparison-only endpoint timeout")??;
+            cases.push(
+                json!({"phase":format!("{name}_independent_comparison"),"position":position,
+                "after_native_placement":true,"physical_error_bound_claimed":false}),
+            );
+        }
         cases.push(json!({"phase":format!("{name}_placement"),"standing":standing,"intent":intent,"placement":placement,"independent":independent}));
         println!("PLACED after {name}");
         std::io::stdout().flush().unwrap();

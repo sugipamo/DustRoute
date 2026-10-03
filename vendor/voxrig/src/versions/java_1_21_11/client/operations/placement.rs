@@ -184,7 +184,7 @@ fn prepare(
         state,
         standing.position,
         standing.bounds,
-        standing.position_basis.horizontal_error(),
+        standing.position_basis.geometry_reserve(),
         state.rotation,
         support,
         face,

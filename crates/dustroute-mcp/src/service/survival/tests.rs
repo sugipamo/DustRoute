@@ -3,6 +3,66 @@ use crate::service::test_support::{Client, call, serve, start, stop, temporary};
 use crate::survival_construction::native_roof_trial as fixture;
 use std::io::Write;
 
+async fn comparison_observer() -> voxrig::Client {
+    let client = voxrig::Client::connect(voxrig::ConnectionConfig::offline(
+        voxrig::Server::new("127.0.0.1", 25572),
+        "NatMineView",
+        voxrig::MinecraftVersion::Java1_21_11,
+    ))
+    .await
+    .unwrap();
+    client.wait_until_ready().await.unwrap();
+    client
+}
+
+// Test-only comparison after completion; this observer is never configured on
+// the production service and cannot affect its admission or continuation gates.
+async fn compare_completed_site(builder: &voxrig::Client, observer: &voxrig::Client) -> Value {
+    let scene = builder
+        .survival()
+        .unwrap()
+        .capture_survival_scene(region(fixture::scope().observed))
+        .await
+        .unwrap();
+    let observed = observer.observe_region(scene.region()).await.unwrap();
+    assert_ne!(observed.connection_id, scene.source().connection_id);
+    assert_eq!(observed.blocks.len(), 3120);
+    let scenario = scene.scenario();
+    for cell in &observed.blocks {
+        assert_eq!(
+            cell.state.as_ref(),
+            Some(&scenario.block(cell.position).unwrap()),
+            "{:?}",
+            cell.position
+        );
+    }
+    let design = fixture::design().unwrap();
+    crate::survival_execution::check_completed_snapshot_for_test(&scene, &design.expected).unwrap();
+    let position = tokio::time::timeout(Duration::from_secs(5), async {
+        loop {
+            let seen = observer
+                .survival()
+                .unwrap()
+                .visible_players()
+                .await
+                .unwrap();
+            if let Some(p) = seen.players.into_iter().find(|p| p.name == "NatMineBot") {
+                if (0..3).all(|i| {
+                    (p.position[i] - scene.source().position[i]).abs()
+                        <= p.motion.position_error[i] + 1e-9
+                }) {
+                    break p;
+                }
+            }
+            tokio::time::sleep(Duration::from_millis(20)).await;
+        }
+    })
+    .await
+    .expect("independent final position comparison");
+    json!({"independently_checked_cells":observed.blocks.len(),"observation":observed,
+        "position":position,"standing":scene.source(),"used_for_execution_admission":false})
+}
+
 async fn generate(client: &Client, spec: Value) -> Value {
     let r = call(
         client,
@@ -49,7 +109,7 @@ fn plan_request(spec: Value, id: Value) -> Value {
 }
 
 #[tokio::test]
-async fn public_grounded_adoption_is_required_and_observer_is_explicit() {
+async fn public_grounded_adoption_is_required_and_prediction_contract_is_explicit() {
     let root = temporary();
     let (client, server) = start(&root).await;
     let spec = serde_json::to_value(fixture::design().unwrap().specification).unwrap();
@@ -62,10 +122,20 @@ async fn public_grounded_adoption_is_required_and_observer_is_explicit() {
     );
     adopt(&client, &generated).await;
     let missing = call(&client, "survival_construction", request.clone()).await;
+    assert_eq!(missing["error"]["code"], "backend_unavailable", "{missing}");
     assert_eq!(
-        missing["error"]["code"], "observer_not_configured",
-        "{missing}"
+        missing["execution_contract"]["independent_observer_required"],
+        false
     );
+    assert_eq!(
+        missing["execution_contract"]["motion"],
+        "predicted_dry_cube_v1"
+    );
+    assert_eq!(
+        missing["execution_contract"]["server_stop_acknowledged"],
+        false
+    );
+    assert!(missing["execution_contract"]["server_position_error_bound"].is_null());
     let mut different = request;
     different["specification"]["design"]["name"] = json!("Different design");
     let mismatch = call(&client, "survival_construction", different).await;
@@ -193,13 +263,13 @@ async fn native_public_roof() {
     )
     .await
     .unwrap();
-    service = service.with_survival_observer("NatMineView").await.unwrap();
+    assert!(service.survival_observer.is_none());
     service.state_store = PlanStateStore::new(root.clone(), 3600);
     let native = service.bridge.survival_bridge().unwrap();
     let initial = native.lease_survival().unwrap();
     let bot = initial.source();
     initial.release(bot.clone());
-    let observer = service.survival_observer.clone().unwrap();
+    let observer = comparison_observer().await;
     println!(
         "FIXTURE roof: flat stone y=-61; air above; bot 2.5 -60 7.5; viewer 7.5 -60 2.5; clear bot; inventory.0 cobblestone 49, inventory.1 dirt 32; enter"
     );
@@ -442,17 +512,25 @@ async fn native_public_roof() {
         return;
     }
     assert!(error.is_null(), "{error}");
-    assert_eq!(final_result["completed_steps"], 115);
+    assert_eq!(
+        final_result["completed_steps"],
+        json!(plan["preview"]["plan"]["steps"].as_array().unwrap().len())
+    );
     assert_eq!(
         final_result["diagnosis"]["record"]["events"]
             .as_array()
             .unwrap()
             .last()
-            .unwrap()["evidence"]["independently_checked_cells"],
+            .unwrap()["evidence"]["builder_checked_cells"],
         3120
     );
     let restored = native.lease_survival().unwrap();
     let current = restored.source();
+    let comparison = compare_completed_site(&current, &observer).await;
+    let mut evidence: Value = serde_json::from_slice(&std::fs::read(&output).unwrap()).unwrap();
+    evidence["independent_final_comparison"] = comparison;
+    evidence["production_observer_configured"] = json!(false);
+    std::fs::write(&output, serde_json::to_vec_pretty(&evidence).unwrap()).unwrap();
     assert_ne!(
         bot.survival()
             .unwrap()

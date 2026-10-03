@@ -223,10 +223,9 @@ async fn exercise(
         "NatMineBot",
         MinecraftVersion::Java1_21_11,
     );
-    let mut executor =
-        SurvivalExecutor::create(bot.clone(), viewer.clone(), config, plan, &directory)
-            .await
-            .map_err(|e| e.to_string())?;
+    let mut executor = SurvivalExecutor::create(bot.clone(), config, plan, &directory)
+        .await
+        .map_err(|e| e.to_string())?;
     let mut reconnects = 0;
     loop {
         let result = executor.advance().await;

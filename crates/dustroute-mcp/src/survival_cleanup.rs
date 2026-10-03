@@ -5,7 +5,8 @@ use serde::Serialize;
 use voxrig::NativeBlockState;
 use voxrig::checked_survival::{
     CapturedSurvivalScene, HypotheticalBlockEdit, InventorySlot, MiningIntent,
-    MiningInventoryChangeKind, MiningRecord, MiningRecoveryEvidence, PlayerState,
+    MiningInventoryChangeKind, MiningRecord, MiningRecoveryEvidence, MiningRecoveryTarget,
+    PlayerState,
 };
 
 #[derive(Clone, Debug, Serialize)]
@@ -114,9 +115,18 @@ impl CleanupRecoveryPlan {
         })
     }
 
-    /// Classify a target read from the independent observer AFTER exact retirement.
-    /// The subsequent native reconnect still checks its own fresh target receipt.
-    pub fn target_for_reconnect(
+    /// Caller policy for native fresh-session target admission after retirement.
+    /// Confirmed removal must remain absent; an inventory-only conflict may retain
+    /// the exact original cube. No historical observation grants new action authority.
+    pub fn target_condition(&self) -> MiningRecoveryTarget {
+        if self.removal_observed {
+            MiningRecoveryTarget::Exact(self.edit.after.clone())
+        } else {
+            MiningRecoveryTarget::OriginalOrAir
+        }
+    }
+    /// Classify the fresh target validated by the native recovery boundary.
+    fn target_for_reconnect(
         &self,
         observed: Option<&NativeBlockState>,
     ) -> Result<NativeBlockState, CleanupError> {
@@ -279,6 +289,10 @@ mod tests {
     fn retired_target_requires_exact_baseline_or_air_and_never_credits_materials() {
         let (edit, record) = fixture();
         let plan = CleanupRecoveryPlan::for_record(&edit, &record).unwrap();
+        assert!(matches!(
+            plan.target_condition(),
+            MiningRecoveryTarget::OriginalOrAir
+        ));
         assert_eq!(
             plan.target_for_reconnect(Some(&block("dirt"))).unwrap(),
             edit.before
@@ -304,6 +318,9 @@ mod tests {
             continuation_validated: false,
         });
         let plan = CleanupRecoveryPlan::for_record(&edit, &record).unwrap();
+        assert!(
+            matches!(plan.target_condition(), MiningRecoveryTarget::Exact(ref state) if *state == edit.after)
+        );
         assert!(plan.target_for_reconnect(Some(&edit.after)).is_ok());
         assert!(plan.target_for_reconnect(Some(&edit.before)).is_err());
         record

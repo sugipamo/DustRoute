@@ -14,8 +14,8 @@ pub use movement::{
     CapturedSurvivalScene, HypotheticalAimRequirement, HypotheticalBlockEdit,
     HypotheticalMovementPreview, HypotheticalPlacement, HypotheticalReconnectBoundary,
     MAX_SURVIVAL_CONTROL_TICKS, PredictedMotionFrame, StandingPositionBasis, SurvivalControl,
-    SurvivalInput, SurvivalMotionRecheck, SurvivalMotionRecord, SurvivalMotionStatus,
-    SurvivalMovementPreview, SurvivalScenario, TerminalClearance,
+    SurvivalInput, SurvivalMotionContract, SurvivalMotionRecheck, SurvivalMotionRecord,
+    SurvivalMotionStatus, SurvivalMovementPreview, SurvivalScenario, TerminalClearance,
 };
 #[cfg(test)]
 mod tests;
@@ -637,11 +637,14 @@ impl Operations {
         if state
             .survival_motion
             .as_ref()
-            .is_some_and(|r| r.status != SurvivalMotionStatus::Observed)
+            .is_some_and(|r| !r.status.is_continuation_candidate())
         {
             return Err(invalid(
                 "survival motion unresolved; inspect retained run before another mutation",
             ));
+        }
+        if state.survival_motion.is_some() {
+            movement::standing_basis(state)?;
         }
         if state.motion.position_basis == PositionBasis::PendingSubmission {
             return Err(Error::new(

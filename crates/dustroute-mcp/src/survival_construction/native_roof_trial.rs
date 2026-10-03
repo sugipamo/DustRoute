@@ -299,7 +299,9 @@ fn plan(
 ) -> std::result::Result<HypotheticalConstructionPlan, String> {
     let site = ConstructionSite::from_grounded(&design()?, scope()).map_err(|e| e.to_string())?;
     let mut recipe = Recipe {
-        scenario: scene.scenario(),
+        scenario: scene.scenario_with_motion_contract(
+            voxrig::checked_survival::SurvivalMotionContract::Predicted,
+        ),
         actions: Vec::new(),
         evidence,
     };
@@ -424,7 +426,7 @@ async fn native_fixed_roof() {
     let mut events = Vec::new();
     let mut traces = Vec::new();
     let live = std::env::var("DUSTROUTE_SURVIVAL_ROOF_EXECUTE").as_deref() == Ok("1");
-    let result = exercise(&mut bot, &viewer, &output, live, &mut events, &mut traces).await;
+    let result = exercise(&mut bot, &output, live, &mut events, &mut traces).await;
     let history = bot.survival().unwrap().operation_history().await;
     if let Ok(t) = bot.stop_packet_trace().await {
         traces.push(json!(t));
@@ -437,7 +439,6 @@ async fn native_fixed_roof() {
 }
 async fn exercise(
     bot: &mut Client,
-    viewer: &Client,
     output: &str,
     live: bool,
     events: &mut Vec<Value>,
@@ -504,15 +505,10 @@ async fn exercise(
         return Ok(());
     }
     let directory = std::path::PathBuf::from(format!("{output}.journal"));
-    let mut executor = SurvivalExecutor::create(
-        bot.clone(),
-        viewer.clone(),
-        config("NatMineBot"),
-        plan,
-        &directory,
-    )
-    .await
-    .map_err(|e| e.to_string())?;
+    let mut executor =
+        SurvivalExecutor::create(bot.clone(), config("NatMineBot"), plan, &directory)
+            .await
+            .map_err(|e| e.to_string())?;
     let mut reconnects = 0;
     loop {
         let result = executor.advance().await;

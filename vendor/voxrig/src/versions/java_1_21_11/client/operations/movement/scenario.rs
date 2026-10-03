@@ -19,6 +19,12 @@ pub enum HypotheticalAimRequirement {
     /// A future new connection must supply a fresh received standing position.
     /// This is a planning obligation, not a received pose or mutation authority.
     ReceivedAfterReconnect,
+    /// Future fully dispatched prediction under the explicit model contract.
+    /// The reserve is a geometric planning policy, not a measured position error.
+    PredictedEndpoint {
+        /// Horizontal model-space reserve required for subsequent interaction.
+        planning_reserve: [f64; 3],
+    },
     /// Future motion must satisfy the same independent observation contract as
     /// actual motion. This variant cannot stand in for that later observation.
     IndependentlyObservedEndpoint {
@@ -41,11 +47,59 @@ impl HypotheticalAimRequirement {
     fn error(self) -> [f64; 3] {
         match self {
             Self::ReceivedAfterReconnect => [0.0; 3],
+            Self::PredictedEndpoint { planning_reserve } => planning_reserve,
             Self::CapturedPosition { horizontal_error }
             | Self::IndependentlyObservedEndpoint {
                 horizontal_error, ..
             } => horizontal_error,
         }
+    }
+    /// Compare this prospective obligation with an actual freshly checked basis.
+    /// This grants no authority and cannot replace native standing admission.
+    pub fn validate_standing(&self, standing: &StandingContext) -> Result<()> {
+        let basis = &standing.position_basis;
+        let kind_matches = match self {
+            Self::ReceivedAfterReconnect => matches!(basis, StandingPositionBasis::Received { .. }),
+            Self::CapturedPosition { .. } => {
+                !matches!(basis, StandingPositionBasis::Predicted { .. })
+            }
+            Self::PredictedEndpoint { .. } => {
+                matches!(basis, StandingPositionBasis::Predicted { .. })
+            }
+            Self::IndependentlyObservedEndpoint {
+                max_packet_error,
+                max_prediction_discrepancy,
+                ..
+            } => {
+                if let StandingPositionBasis::PredictedAndObserved {
+                    predicted,
+                    observed,
+                    ..
+                } = basis
+                {
+                    (0..3).all(|i| {
+                        observed.motion.position_error[i] <= *max_packet_error
+                            && (predicted.position[i] - observed.position[i]).abs()
+                                <= *max_prediction_discrepancy
+                    })
+                } else {
+                    false
+                }
+            }
+        };
+        let reserve = self.error();
+        if !kind_matches
+            || (0..3).any(|i| {
+                !reserve[i].is_finite()
+                    || reserve[i] < 0.0
+                    || basis.geometry_reserve()[i] > reserve[i]
+            })
+        {
+            return Err(invalid(
+                "actual standing basis differs from the hypothetical evidence contract",
+            ));
+        }
+        Ok(())
     }
 }
 
@@ -109,6 +163,7 @@ pub struct SurvivalScenario {
     ticks: usize,
     clearance_error: [f64; 3],
     aim_requirement: HypotheticalAimRequirement,
+    motion_contract: SurvivalMotionContract,
     origin: Arc<()>,
 }
 /// Future geometry prediction, deliberately incompatible with live input APIs.
@@ -132,6 +187,8 @@ pub struct HypotheticalMovementPreview {
     pub initial_bounds: [f64; 6],
     /// Prospective evidence required at the start; never an actual new receipt.
     pub initial_aim_requirement: HypotheticalAimRequirement,
+    /// Required endpoint evidence contract, distinct from the predicted frames.
+    pub endpoint_contract: SurvivalMotionContract,
     /// Number of preceding hypothetical cell edits.
     pub preceding_edits: usize,
     /// Exact inputs used by the shared native model.
@@ -229,7 +286,7 @@ fn capture(
     survival::standing_geometry(
         &scene,
         scene.initial.position,
-        scene.initial.position_basis.horizontal_error(),
+        scene.initial.position_basis.geometry_reserve(),
     )?;
     Ok(scene)
 }
@@ -287,15 +344,36 @@ impl CapturedSurvivalScene {
     }
     /// Start a detached branch, with the native model's original velocity.
     pub fn scenario(&self) -> SurvivalScenario {
+        let contract = if matches!(
+            self.initial.position_basis,
+            StandingPositionBasis::Predicted { .. }
+        ) {
+            SurvivalMotionContract::Predicted
+        } else {
+            SurvivalMotionContract::IndependentlyObserved
+        };
+        self.scenario_with_motion_contract(contract)
+    }
+    /// Declare future endpoint evidence without inventing any actual receipt.
+    pub fn scenario_with_motion_contract(
+        &self,
+        motion_contract: SurvivalMotionContract,
+    ) -> SurvivalScenario {
         SurvivalScenario {
             scene: self.clone(),
             model: Model::from_context(&self.initial),
             edits: 0,
             ticks: 0,
-            clearance_error: self.initial.position_basis.horizontal_error(),
-            aim_requirement: HypotheticalAimRequirement::CapturedPosition {
-                horizontal_error: self.initial.position_basis.horizontal_error(),
+            clearance_error: self.initial.position_basis.geometry_reserve(),
+            aim_requirement: match self.initial.position_basis {
+                StandingPositionBasis::Predicted {
+                    planning_reserve, ..
+                } => HypotheticalAimRequirement::PredictedEndpoint { planning_reserve },
+                _ => HypotheticalAimRequirement::CapturedPosition {
+                    horizontal_error: self.initial.position_basis.geometry_reserve(),
+                },
             },
+            motion_contract,
             origin: Arc::new(()),
         }
     }
@@ -389,6 +467,7 @@ impl SurvivalScenario {
             )?
             .bounds,
             initial_aim_requirement: self.aim_requirement,
+            endpoint_contract: self.motion_contract,
             preceding_edits: self.edits,
             controls: controls.to_vec(),
             terminal_clearance: clearance(&self.scene, frames.last().unwrap()),
@@ -412,7 +491,16 @@ impl SurvivalScenario {
             model,
             ticks: self.ticks + controls.len(),
             clearance_error: [TERMINAL_MARGIN, 0.0, TERMINAL_MARGIN],
-            aim_requirement: HypotheticalAimRequirement::after_observed_motion(),
+            aim_requirement: match self.motion_contract {
+                SurvivalMotionContract::IndependentlyObserved => {
+                    HypotheticalAimRequirement::after_observed_motion()
+                }
+                SurvivalMotionContract::Predicted => {
+                    HypotheticalAimRequirement::PredictedEndpoint {
+                        planning_reserve: [TERMINAL_MARGIN, 0.0, TERMINAL_MARGIN],
+                    }
+                }
+            },
             ..self.clone()
         })
     }

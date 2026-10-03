@@ -21,6 +21,8 @@ pub enum OperationOutcome {
     Uncertain,
     Pending,
     Observed,
+    /// Fully dispatched, model-based motion; no received endpoint is implied.
+    Predicted,
 }
 
 /// Saved readiness is historical evidence, never authority after reopening.

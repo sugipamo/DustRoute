@@ -7,7 +7,8 @@ use super::*;
 use crate::versions::java_1_21_11::math::trig;
 pub(super) use control::standing_basis;
 pub use control::{
-    StandingPositionBasis, SurvivalMotionRecheck, SurvivalMotionRecord, SurvivalMotionStatus,
+    StandingPositionBasis, SurvivalMotionContract, SurvivalMotionRecheck, SurvivalMotionRecord,
+    SurvivalMotionStatus,
 };
 pub use scenario::{
     CapturedSurvivalScene, HypotheticalAimRequirement, HypotheticalBlockEdit,
@@ -82,7 +83,7 @@ pub struct SurvivalMovementPreview {
 pub enum TerminalClearance {
     /// Resting with conservative support and a margin from solid walls.
     Admitted {
-        /// Per-axis horizontal margin; exceeds worst admitted relative error.
+        /// Per-axis model-space planning reserve. Not a physical error bound for predicted continuation.
         horizontal_margin: f64,
     },
     /// Input planning must change before any movement packet is sent.
@@ -388,8 +389,8 @@ impl Model {
     }
     fn from_context(context: &StandingContext) -> Self {
         let mut model = Self::new(context.position);
-        if let StandingPositionBasis::PredictedAndObserved { predicted, .. } =
-            &context.position_basis
+        if let StandingPositionBasis::PredictedAndObserved { predicted, .. }
+        | StandingPositionBasis::Predicted { predicted, .. } = &context.position_basis
         {
             model.frame.velocity = predicted.velocity;
         }

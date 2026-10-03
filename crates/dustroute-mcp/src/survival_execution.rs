@@ -16,7 +16,9 @@ pub(crate) use native::received_materials;
 use serde::Serialize;
 use serde_json::json;
 use std::{collections::BTreeMap, path::Path};
-use voxrig::checked_survival::{CapturedSurvivalScene, HypotheticalBlockEdit, MiningIntent};
+use voxrig::checked_survival::{
+    CapturedSurvivalScene, HypotheticalBlockEdit, MiningIntent, SurvivalMotionContract,
+};
 use voxrig::{Client, ConnectionConfig, NativeBlockState};
 
 #[derive(Clone, Debug, Serialize)]
@@ -60,6 +62,14 @@ impl From<crate::survival_cleanup::CleanupError> for ExecutionError {
 }
 type Result<T> = std::result::Result<T, ExecutionError>;
 
+#[cfg(test)]
+pub(crate) fn check_completed_snapshot_for_test(
+    scene: &CapturedSurvivalScene,
+    snapshot: &dustroute_translate::snapshot::MinecraftSnapshot,
+) -> Result<()> {
+    native::check_snapshot(scene, snapshot)
+}
+
 #[derive(Clone, Debug, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum ExecutionProgress {
@@ -89,7 +99,6 @@ struct PendingMining {
 /// uncertain intent and permanently blocks this executor from further dispatch.
 pub struct SurvivalExecutor {
     bot: Client,
-    observer: Client,
     reconnect: ConnectionConfig,
     plan: HypotheticalConstructionPlan,
     journal: Journal,
@@ -105,12 +114,19 @@ impl SurvivalExecutor {
     /// A fresh directory is required. Existing records are diagnosis-only.
     pub async fn create(
         bot: Client,
-        observer: Client,
         reconnect: ConnectionConfig,
         plan: HypotheticalConstructionPlan,
         directory: &Path,
     ) -> Result<Self> {
         let ops = bot.survival()?;
+        if plan.motion_contract() != SurvivalMotionContract::Predicted
+            || ops.capabilities().prediction_based_contract.is_none()
+        {
+            return Err(ExecutionError::new(
+                "unsupported_motion_contract",
+                "explicit prediction contract required",
+            ));
+        }
         let scene = ops
             .capture_survival_scene(native::region(plan.scope().observed))
             .await?;
@@ -142,7 +158,6 @@ impl SurvivalExecutor {
             .collect();
         Ok(Self {
             bot,
-            observer,
             reconnect,
             plan,
             journal,
@@ -245,20 +260,15 @@ impl SurvivalExecutor {
                     "temporary cleanup or safe retreat incomplete",
                 ));
             }
-            let independent = self.observer.observe_region(scene.region()).await?;
-            if independent.blocks.len() != self.expected.len()
-                || independent
-                    .blocks
-                    .iter()
-                    .any(|b| b.state.as_ref() != self.expected.get(&b.position))
-            {
-                return Err(ExecutionError::new(
-                    "final_observer_mismatch",
-                    "independent final site differs",
-                ));
-            }
-            self.journal.event("completed", OperationOutcome::Observed, Continuation::Completed,
-                json!({"remaining_owned_temporary":[],"independently_checked_cells":independent.blocks.len(),"position":p}))?;
+            self.journal.event(
+                "completed",
+                OperationOutcome::Observed,
+                Continuation::Completed,
+                json!({"remaining_owned_temporary":[],"builder_checked_cells":self.expected.len(),
+                    "world_evidence":"builder_received","standing":scene.source(),
+                    "motion_contract":self.plan.motion_contract(),"server_stop_acknowledged":false,
+                    "server_position_error_bound":null,"position":p}),
+            )?;
             return Ok(ExecutionProgress::Completed);
         }
         let scene = self.current_scene().await?;
@@ -271,11 +281,11 @@ impl SurvivalExecutor {
                     self.temporary
                         .insert(placement.edit.position, placement.edit.after);
                 }
-                self.complete_step()
+                self.complete_step(OperationOutcome::Observed)
             }
             HypotheticalConstructionStep::Move { prediction } => {
                 self.move_along(&prediction).await?;
-                self.complete_step()
+                self.complete_step(OperationOutcome::Predicted)
             }
             HypotheticalConstructionStep::RemoveTemporary {
                 edit,
@@ -293,11 +303,11 @@ impl SurvivalExecutor {
             }
         }
     }
-    fn complete_step(&mut self) -> Result<ExecutionProgress> {
+    fn complete_step(&mut self, outcome: OperationOutcome) -> Result<ExecutionProgress> {
         self.journal.record.completed_steps += 1;
         self.journal.event(
             "step_completed",
-            OperationOutcome::Observed,
+            outcome,
             Continuation::Revalidate,
             json!({"remaining_owned_temporary":self.temporary.keys().collect::<Vec<_>>()}),
         )?;

@@ -5,6 +5,18 @@ use crate::versions::java_1_21_11::client::players::{
 };
 use std::time::Duration;
 
+/// How a bounded dry-cube endpoint may be used by subsequent checked operations.
+/// Neither contract is a server acknowledgement that motion has stopped.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SurvivalMotionContract {
+    /// Requires a fresh same-instance position from a distinct client.
+    IndependentlyObserved,
+    /// Uses fully dispatched controls, the model and currently received geometry.
+    /// No independent position or actual server-position error bound is available.
+    Predicted,
+}
+
 /// No phase means server-confirmed stopped motion.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -15,8 +27,17 @@ pub enum SurvivalMotionStatus {
     AwaitingObservation,
     /// Prediction and observation agree, subject to fresh standing geometry checks.
     Observed,
+    /// Fully dispatched and locally settled under the explicit prediction contract.
+    /// Fresh native standing/geometry checks are still required before interaction.
+    Predicted,
     /// Failure, correction, changed context or missing observation. Never auto-replay.
     RequiresInspection,
+}
+impl SurvivalMotionStatus {
+    /// A candidate for fresh standing admission, not authority by itself.
+    pub fn is_continuation_candidate(self) -> bool {
+        matches!(self, Self::Observed | Self::Predicted)
+    }
 }
 /// Diagnostic control record retained before the first packet; cannot be imported.
 #[derive(Clone, Debug, Serialize)]
@@ -35,10 +56,12 @@ pub struct SurvivalMotionRecord {
     pub attempted_tick: u16,
     /// Current phase; elapsed time alone cannot produce Observed.
     pub status: SurvivalMotionStatus,
+    /// Declared endpoint evidence contract; never inferred from missing packets.
+    pub contract: SurvivalMotionContract,
     /// Independent observer identity.
-    pub observer_connection_id: u64,
+    pub observer_connection_id: Option<u64>,
     /// Initial exact target lifetime watch.
-    pub initial_watch: PlayerMotionWatch,
+    pub initial_watch: Option<PlayerMotionWatch>,
     /// New position boundary after the final dispatch; not a server-time fence.
     pub final_watch: Option<PlayerMotionWatch>,
     /// Exact same-instance observation used for continuation.
@@ -51,7 +74,7 @@ pub struct SurvivalMotionRecord {
     #[serde(skip)]
     received_pose_sequence: u64,
     #[serde(skip)]
-    observer_session: Weak<Session>,
+    observer_session: Option<Weak<Session>>,
 }
 /// Common standing provenance. Packet velocity and model velocity stay distinct.
 #[derive(Clone, Debug, Serialize)]
@@ -61,6 +84,17 @@ pub enum StandingPositionBasis {
     Received {
         /// Position packet ordinal; no server-rest acknowledgement is implied.
         receive_sequence: u64,
+    },
+    /// A fully dispatched dry-cube prediction, without independent corroboration.
+    Predicted {
+        /// Connection-local run identity.
+        run_id: u64,
+        /// Simulated rest and next-tick gravity velocity.
+        predicted: PredictedMotionFrame,
+        /// Last own pose receipt before this run, not a receipt of its endpoint.
+        received_pose_sequence: u64,
+        /// Model-space construction reserve, not a measured physical error bound.
+        planning_reserve: [f64; 3],
     },
     /// Locally settled dry-cube model corroborated by a later observer position.
     PredictedAndObserved {
@@ -75,9 +109,12 @@ pub enum StandingPositionBasis {
     },
 }
 impl StandingPositionBasis {
-    pub(in super::super::super) fn horizontal_error(&self) -> [f64; 3] {
+    pub(in super::super::super) fn geometry_reserve(&self) -> [f64; 3] {
         match self {
             Self::Received { .. } => [0.0; 3],
+            Self::Predicted {
+                planning_reserve, ..
+            } => *planning_reserve,
             Self::PredictedAndObserved {
                 predicted,
                 observed,
@@ -127,10 +164,13 @@ fn stable_context(state: &State, r: &SurvivalMotionRecord) -> Result<()> {
 }
 pub(in super::super::super) fn standing_basis(state: &State) -> Result<StandingPositionBasis> {
     if let Some(r) = &state.survival_motion {
-        if r.status != SurvivalMotionStatus::Observed {
+        if !r.status.is_continuation_candidate() {
             return Err(invalid(
-                "survival motion has no settled observed result; inspect retained run",
+                "survival motion has no settled continuation candidate; inspect retained run",
             ));
+        }
+        if r.status == SurvivalMotionStatus::Predicted {
+            return predicted_basis(state, r);
         }
         let watch = r
             .final_watch
@@ -154,36 +194,63 @@ pub(in super::super::super) fn standing_basis(state: &State) -> Result<StandingP
         })
     } else {
         Err(invalid(
-            "stationary context requires received zero-velocity pose or settled predicted-and-observed motion",
+            "stationary context requires a received zero-velocity pose or a settled declared motion contract",
         ))
     }
 }
-fn observed_basis(
-    state: &State,
-    r: &SurvivalMotionRecord,
-    watch: &PlayerMotionWatch,
-) -> Result<StandingPositionBasis> {
+fn dispatched_rest(state: &State, r: &SurvivalMotionRecord) -> Result<()> {
     stable_context(state, r)?;
     let predicted = r.preview.frames.last().expect("nonempty validated run");
     if state.motion.position_basis != PositionBasis::Submitted
         || state.position != Some(predicted.position)
         || !predicted.resting
         || r.dispatched_ticks != predicted.tick
-        || state
-            .motion
-            .last_submission
-            .as_ref()
-            .is_none_or(|s| !s.dispatched || s.superseded_at.is_some())
+        || r.attempted_tick != predicted.tick
+        || state.motion.last_submission.as_ref().is_none_or(|s| {
+            !s.dispatched
+                || s.superseded_at.is_some()
+                || s.generation != r.generation
+                || s.position != predicted.position
+        })
     {
         return Err(invalid(
             "survival motion result superseded or not fully dispatched",
         ));
     }
+    Ok(())
+}
+fn predicted_basis(state: &State, r: &SurvivalMotionRecord) -> Result<StandingPositionBasis> {
+    if r.contract != SurvivalMotionContract::Predicted {
+        return Err(invalid(
+            "independent motion cannot become prediction-only continuation",
+        ));
+    }
+    dispatched_rest(state, r)?;
+    Ok(StandingPositionBasis::Predicted {
+        run_id: r.run_id,
+        predicted: r.preview.frames.last().unwrap().clone(),
+        received_pose_sequence: r.received_pose_sequence,
+        planning_reserve: [TERMINAL_MARGIN, 0.0, TERMINAL_MARGIN],
+    })
+}
+fn observed_basis(
+    state: &State,
+    r: &SurvivalMotionRecord,
+    watch: &PlayerMotionWatch,
+) -> Result<StandingPositionBasis> {
+    if r.contract != SurvivalMotionContract::IndependentlyObserved {
+        return Err(invalid(
+            "predicted motion has no independent observation obligation",
+        ));
+    }
+    dispatched_rest(state, r)?;
+    let predicted = r.preview.frames.last().expect("nonempty validated run");
     // Nonblocking second lock: reciprocal observers cannot deadlock, and a
     // busy/closed/reconfigured observer does not silently keep authority.
     let observer = r
         .observer_session
-        .upgrade()
+        .as_ref()
+        .and_then(Weak::upgrade)
         .ok_or_else(|| invalid("motion observer closed"))?;
     observer.check_outbound()?;
     let observed_state = observer.state.try_lock().map_err(|_| {
@@ -192,7 +259,12 @@ fn observed_basis(
     observer.check(&observed_state)?;
 
     if matches!(
-        super::super::super::players::evaluate_motion(&observed_state, &r.initial_watch),
+        super::super::super::players::evaluate_motion(
+            &observed_state,
+            r.initial_watch
+                .as_ref()
+                .ok_or_else(|| invalid("initial observer watch missing"))?
+        ),
         PlayerMotionStatus::RequiresInspection { .. }
     ) {
         return Err(invalid("original motion observer lifetime changed"));
@@ -210,7 +282,9 @@ fn observed_basis(
     Ok(StandingPositionBasis::PredictedAndObserved {
         run_id: r.run_id,
         predicted: predicted.clone(),
-        observer_connection_id: r.observer_connection_id,
+        observer_connection_id: r
+            .observer_connection_id
+            .ok_or_else(|| invalid("observer identity missing"))?,
         observed: Box::new(current),
     })
 }
@@ -227,7 +301,7 @@ impl Operations {
         inputs: &[SurvivalInput],
         observer: &Operations,
     ) -> Result<SurvivalMotionRecord> {
-        self.start_control_path(&fixed_controls(yaw, inputs)?, observer, None)
+        self.start_control_path(&fixed_controls(yaw, inputs)?, Some(observer), None)
             .await
     }
     /// Start a caller-selected multi-heading path, revalidating current geometry.
@@ -236,7 +310,8 @@ impl Operations {
         controls: &[SurvivalControl],
         observer: &Operations,
     ) -> Result<SurvivalMotionRecord> {
-        self.start_control_path(controls, observer, None).await
+        self.start_control_path(controls, Some(observer), None)
+            .await
     }
     /// Recompute an earlier preview under the send-intent lock. Changed initial
     /// context, generation, world revision or predicted frames refuse before I/O.
@@ -246,16 +321,32 @@ impl Operations {
         expected: &SurvivalMovementPreview,
         observer: &Operations,
     ) -> Result<SurvivalMotionRecord> {
-        self.start_control_path(&expected.controls, observer, Some(expected))
+        self.start_control_path(&expected.controls, Some(observer), Some(expected))
+            .await
+    }
+    /// Explicit model-based continuation. No observer, receipt or error bound is
+    /// substituted; corrected, interrupted or unsupported motion requires inspection.
+    pub async fn start_predicted_survival_path(
+        &self,
+        controls: &[SurvivalControl],
+    ) -> Result<SurvivalMotionRecord> {
+        self.start_control_path(controls, None, None).await
+    }
+    /// Revalidate a preview and dispatch under the prediction-only contract.
+    pub async fn start_previewed_predicted_survival_motion(
+        &self,
+        expected: &SurvivalMovementPreview,
+    ) -> Result<SurvivalMotionRecord> {
+        self.start_control_path(&expected.controls, None, Some(expected))
             .await
     }
     async fn start_control_path(
         &self,
         controls: &[SurvivalControl],
-        observer: &Operations,
+        observer: Option<&Operations>,
         expected: Option<&SurvivalMovementPreview>,
     ) -> Result<SurvivalMotionRecord> {
-        if self.bot.session.id == observer.bot.session.id {
+        if observer.is_some_and(|o| self.bot.session.id == o.bot.session.id) {
             return Err(invalid("motion requires an independent observer"));
         }
         let identity = {
@@ -266,29 +357,36 @@ impl Operations {
                 .clone()
                 .ok_or_else(|| invalid("motion login identity unavailable"))?
         };
-        let observer_dimension = {
-            let state = observer.bot.session.state.lock().await;
-            observer.ready(&state)?;
-            let other = state
-                .identity
-                .as_ref()
-                .ok_or_else(|| invalid("observer identity unavailable"))?;
-            if other.server != identity.server
-                || other.uuid == identity.uuid
-                || state.players.profile_name(&identity.uuid) != Some(identity.name.as_str())
-            {
-                return Err(invalid(
-                    "motion observer must know the exact profile on the same endpoint",
-                ));
-            }
-            state
-                .world
-                .dimension
-                .as_ref()
-                .map(|d| d.0.clone())
-                .ok_or_else(|| invalid("observer dimension unavailable"))?
+        let (observer_dimension, initial_watch) = if let Some(observer) = observer {
+            let dimension = {
+                let state = observer.bot.session.state.lock().await;
+                observer.ready(&state)?;
+                let other = state
+                    .identity
+                    .as_ref()
+                    .ok_or_else(|| invalid("observer identity unavailable"))?;
+                if other.server != identity.server
+                    || other.uuid == identity.uuid
+                    || state.players.profile_name(&identity.uuid) != Some(identity.name.as_str())
+                {
+                    return Err(invalid(
+                        "motion observer must know the exact profile on the same endpoint",
+                    ));
+                }
+                state
+                    .world
+                    .dimension
+                    .as_ref()
+                    .map(|d| d.0.clone())
+                    .ok_or_else(|| invalid("observer dimension unavailable"))?
+            };
+            (
+                Some(dimension),
+                Some(observer.watch_player_motion(identity.uuid).await?),
+            )
+        } else {
+            (None, None)
         };
-        let initial_watch = observer.watch_player_motion(identity.uuid).await?;
         let mut state = self.bot.session.state.lock().await;
         self.mutable(&state)?;
         if state.operations.inventory.pending_swap.is_some() {
@@ -310,7 +408,10 @@ impl Operations {
                 ));
             }
         }
-        if preview.initial.dimension != observer_dimension {
+        if observer_dimension
+            .as_ref()
+            .is_some_and(|d| d != &preview.initial.dimension)
+        {
             return Err(invalid("observer dimension differs"));
         }
         if !preview.frames.last().is_some_and(|f| f.resting) {
@@ -330,13 +431,18 @@ impl Operations {
             dispatched_ticks: 0,
             attempted_tick: 0,
             status: SurvivalMotionStatus::Running,
-            observer_connection_id: observer.bot.session.id,
+            contract: if observer.is_some() {
+                SurvivalMotionContract::IndependentlyObserved
+            } else {
+                SurvivalMotionContract::Predicted
+            },
+            observer_connection_id: observer.map(|o| o.bot.session.id),
             initial_watch,
             final_watch: None,
             observed: None,
             problem: None,
             recheck: None,
-            observer_session: Arc::downgrade(&observer.bot.session),
+            observer_session: observer.map(|o| Arc::downgrade(&o.bot.session)),
             received_pose_sequence: state
                 .motion
                 .received_pose
@@ -346,12 +452,12 @@ impl Operations {
         };
         state.survival_motion = Some(record.clone());
         let owner = self.clone();
-        let observer = observer.clone();
+        let observer = observer.cloned();
         let running = record.clone();
         // No await between retaining the intent and spawning its finite owner.
         tokio::spawn(async move {
             if let Err(error) = owner
-                .run_survival_motion(&running, &observer, identity.uuid)
+                .run_survival_motion(&running, observer.as_ref(), identity.uuid)
                 .await
             {
                 let mut state = owner.bot.session.state.lock().await;
@@ -371,12 +477,23 @@ impl Operations {
     /// Inspect the retained run, including failure after connection closure. The
     /// returned diagnostic record cannot be imported to authorize another client.
     pub async fn survival_motion(&self) -> Option<SurvivalMotionRecord> {
-        self.bot.session.state.lock().await.survival_motion.clone()
+        let mut state = self.bot.session.state.lock().await;
+        let problem = state
+            .survival_motion
+            .as_ref()
+            .filter(|r| r.status.is_continuation_candidate())
+            .and_then(|r| dispatched_rest(&state, r).err());
+        if let Some(problem) = problem {
+            let r = state.survival_motion.as_mut().unwrap();
+            r.status = SurvivalMotionStatus::RequiresInspection;
+            r.problem.get_or_insert_with(|| problem.to_string());
+        }
+        state.survival_motion.clone()
     }
     async fn run_survival_motion(
         &self,
         run: &SurvivalMotionRecord,
-        observer: &Operations,
+        observer: Option<&Operations>,
         uuid: [u8; 16],
     ) -> Result<()> {
         let mut model = Model::from_context(&run.preview.initial);
@@ -386,10 +503,13 @@ impl Operations {
             let input = control.input;
             interval.tick().await;
             // Observer lifetime is checked before each send, without two locks.
-            if let PlayerMotionStatus::RequiresInspection { reason } =
-                observer.observe_player_motion(&run.initial_watch).await?
-            {
-                return Err(invalid(&reason));
+            if let Some(observer) = observer {
+                if let PlayerMotionStatus::RequiresInspection { reason } = observer
+                    .observe_player_motion(run.initial_watch.as_ref().unwrap())
+                    .await?
+                {
+                    return Err(invalid(&reason));
+                }
             }
             let mut state = self.bot.session.state.lock().await;
             self.ready(&state)?;
@@ -444,10 +564,24 @@ impl Operations {
             state.motion.dispatched();
             state.survival_motion.as_mut().unwrap().dispatched_ticks = expected.tick;
         }
+        if observer.is_none() {
+            let mut state = self.bot.session.state.lock().await;
+            self.ready(&state)?;
+            let basis = predicted_basis(&state, state.survival_motion.as_ref().unwrap())?;
+            let tick = self.bot.session.started.elapsed().as_millis() as u64 / 50;
+            let context =
+                survival::context_with_basis(&mut state, self.bot.session.id, tick, basis)?;
+            validate_initial(&context)?;
+            state.survival_motion.as_mut().unwrap().status = SurvivalMotionStatus::Predicted;
+            self.bot.session.changed.notify_waiters();
+            return Ok(());
+        }
+        let observer = observer.unwrap();
         // Register after dispatch, still not a cross-connection causal/time fence.
         let watch = observer.watch_player_motion(uuid).await?;
-        if let PlayerMotionStatus::RequiresInspection { reason } =
-            observer.observe_player_motion(&run.initial_watch).await?
+        if let PlayerMotionStatus::RequiresInspection { reason } = observer
+            .observe_player_motion(run.initial_watch.as_ref().unwrap())
+            .await?
         {
             return Err(invalid(&reason));
         }
@@ -461,8 +595,9 @@ impl Operations {
         let deadline = tokio::time::Instant::now() + Duration::from_secs(30);
         loop {
             self.ready(&*self.bot.session.state.lock().await)?;
-            if let PlayerMotionStatus::RequiresInspection { reason } =
-                observer.observe_player_motion(&run.initial_watch).await?
+            if let PlayerMotionStatus::RequiresInspection { reason } = observer
+                .observe_player_motion(run.initial_watch.as_ref().unwrap())
+                .await?
             {
                 return Err(invalid(&reason));
             }
@@ -608,7 +743,9 @@ impl Operations {
             let state = self.bot.session.state.lock().await;
             self.ready(&state)?;
             let r = recheck_eligible(&state, run_id)?;
-            if r.observer_connection_id != observer.bot.session.id {
+            if r.contract != SurvivalMotionContract::IndependentlyObserved
+                || r.observer_connection_id != Some(observer.bot.session.id)
+            {
                 return Err(invalid(
                     "motion recheck requires the original observer connection",
                 ));

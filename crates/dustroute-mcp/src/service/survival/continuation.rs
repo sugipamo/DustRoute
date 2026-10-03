@@ -124,12 +124,6 @@ impl DustRouteMcp {
             Ok(Err(e)) => return e,
             Err(e) => return failure("continuation_preparation_failed", e),
         };
-        let Some(observer) = self.survival_observer.as_ref() else {
-            return failure(
-                "observer_not_configured",
-                "fresh independent scene required",
-            );
-        };
         let native = match self.bridge.survival_bridge() {
             Ok(n) => n,
             Err(e) => return failure("backend_unavailable", e),
@@ -146,9 +140,7 @@ impl DustRouteMcp {
                 "continuation requires the original endpoint and builder profile",
             );
         }
-        let result = self
-            .continue_with_scene(prepared, id, limits, &bot, observer)
-            .await;
+        let result = self.continue_with_scene(prepared, id, limits, &bot).await;
         lease.release(bot);
         result.unwrap_or_else(|e| e)
     }
@@ -158,7 +150,6 @@ impl DustRouteMcp {
         parent: uuid::Uuid,
         limits: SearchLimits,
         bot: &voxrig::Client,
-        observer: &voxrig::Client,
     ) -> Result<Value, Value> {
         let Preparation {
             owner,
@@ -176,50 +167,6 @@ impl DustRouteMcp {
             return Err(failure(
                 "checkpoint_dimension_changed",
                 "builder is in a different dimension",
-            ));
-        }
-        let obs_ops = observer
-            .java_1_21_11_operations()
-            .map_err(|e| failure("observer_unavailable", e))?;
-        let before = obs_ops
-            .player_state()
-            .await
-            .map_err(|e| failure("observer_unavailable", e))?;
-        let observed = observer
-            .observe_region(scene.region())
-            .await
-            .map_err(|e| failure("observer_unavailable", e))?;
-        let after = obs_ops
-            .player_state()
-            .await
-            .map_err(|e| failure("observer_unavailable", e))?;
-        if before.dimension.as_deref() != Some(boundary.dimension.as_str())
-            || after.dimension != before.dimension
-            || after.connection_id != before.connection_id
-            || observed.connection_id != before.connection_id
-            || observed.connection_id == scene.source().connection_id
-            || observed.region != scene.region()
-            || observed.version != voxrig::MinecraftVersion::Java1_21_11
-            || observed.blocks.len()
-                != scene
-                    .region()
-                    .volume()
-                    .map_err(|e| failure("invalid_observation", e))?
-            || observed
-                .blocks
-                .iter()
-                .map(|b| b.position)
-                .collect::<std::collections::BTreeSet<_>>()
-                .len()
-                != observed.blocks.len()
-            || observed.blocks.iter().any(|b| {
-                b.state.is_none()
-                    || b.state.as_ref() != scene.scenario().block(b.position).ok().as_ref()
-            })
-        {
-            return Err(failure(
-                "observer_mismatch",
-                "fresh independent site differs from builder",
             ));
         }
         let fresh = scene_snapshot(&scene).map_err(|e| failure(e.code, e.detail))?;

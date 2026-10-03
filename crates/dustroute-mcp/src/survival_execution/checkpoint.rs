@@ -7,7 +7,6 @@ use dustroute_translate::snapshot::MinecraftSnapshot;
 use fs2::FileExt;
 use serde::Deserialize;
 use std::fs::{File, OpenOptions};
-use voxrig::checked_survival::SurvivalMotionStatus;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -20,6 +19,8 @@ pub(crate) struct SafeCheckpoint {
     pub snapshot: MinecraftSnapshot,
     pub temporary: Vec<TemporaryBlock>,
     pub endpoint: serde_json::Value,
+    /// Diagnostic provenance only; never used to restore native standing authority.
+    pub standing: serde_json::Value,
 }
 pub(crate) fn endpoint(config: &ConnectionConfig) -> serde_json::Value {
     json!({"host":config.server.host,"port":config.server.port,"username":config.username,"version":config.version})
@@ -65,7 +66,7 @@ impl SurvivalExecutor {
         result
     }
     async fn checkpoint_inner(&mut self) -> Result<SafeCheckpoint> {
-        let scene = self.current_scene().await?;
+        self.current_scene().await?;
         let history = self.bot.survival()?.operation_history().await;
         if history.connection_closed
             || history.interrupted_packet_id.is_some()
@@ -79,7 +80,7 @@ impl SurvivalExecutor {
             || history
                 .survival_motion
                 .as_ref()
-                .is_some_and(|m| m.status != SurvivalMotionStatus::Observed)
+                .is_some_and(|m| !m.status.is_continuation_candidate())
             || history
                 .selected_hotbar
                 .as_ref()
@@ -91,40 +92,11 @@ impl SurvivalExecutor {
             ));
         }
         native::received_materials(&self.bot.survival()?.player_state().await?)?;
-        let observer_ops = self.observer.java_1_21_11_operations()?;
-        let before = observer_ops.player_state().await?;
-        let observation = self.observer.observe_region(scene.region()).await?;
-        let after = observer_ops.player_state().await?;
-        if before.dimension.as_deref() != Some(scene.source().dimension.as_str())
-            || before.dimension != after.dimension
-            || before.connection_id != after.connection_id
-            || observation.connection_id != before.connection_id
-            || observation.connection_id == scene.source().connection_id
-            || observation.region != scene.region()
-            || observation.version != voxrig::MinecraftVersion::Java1_21_11
-            || observation.blocks.len() != self.expected.len()
-            || observation
-                .blocks
-                .iter()
-                .map(|b| b.position)
-                .collect::<std::collections::BTreeSet<_>>()
-                .len()
-                != self.expected.len()
-            || observation
-                .blocks
-                .iter()
-                .any(|b| b.state.as_ref() != self.expected.get(&b.position))
-        {
-            return Err(ExecutionError::new(
-                "checkpoint_observer_mismatch",
-                "independent checkpoint site differs or is incomplete",
-            ));
-        }
-        // Capture again after independent observation: all completed effects and
-        // the standing contract must still agree. No fixed delay acts as a fence.
+        // A second native capture rechecks current received geometry and standing.
+        // Prediction remains prediction; this is not independent corroboration.
         let fresh = self.current_scene().await?;
         let checkpoint = SafeCheckpoint {
-            schema: "dustroute.survival-checkpoint.v1".into(),
+            schema: "dustroute.survival-checkpoint.v2".into(),
             execution_id: self.record().id,
             completed_steps: self.record().completed_steps,
             dimension: fresh.source().dimension.clone(),
@@ -139,6 +111,7 @@ impl SurvivalExecutor {
                 })
                 .collect(),
             endpoint: endpoint(&self.reconnect),
+            standing: json!(fresh.source()),
         };
         self.journal.event(
             "idle_checkpoint",
@@ -192,7 +165,7 @@ fn checked(directory: &Path) -> Result<SafeCheckpoint> {
         ));
     }
     let checkpoint: SafeCheckpoint = serde_json::from_value(last.evidence.clone())?;
-    if checkpoint.schema != "dustroute.survival-checkpoint.v1"
+    if checkpoint.schema != "dustroute.survival-checkpoint.v2"
         || checkpoint.execution_id != record.id
         || checkpoint.completed_steps != record.completed_steps
         || json!(checkpoint.scope) != record.plan["plan"]["scope"]
@@ -213,7 +186,10 @@ fn checked(directory: &Path) -> Result<SafeCheckpoint> {
     if completions.len() != record.completed_steps
         || completions.iter().enumerate().any(|(i, e)| {
             e.step != i + 1
-                || e.outcome != OperationOutcome::Observed
+                || !matches!(
+                    e.outcome,
+                    OperationOutcome::Observed | OperationOutcome::Predicted
+                )
                 || e.continuation != Continuation::Revalidate
         })
     {
@@ -241,7 +217,18 @@ fn checked(directory: &Path) -> Result<SafeCheckpoint> {
             "completed prefix exceeds plan",
         ));
     }
-    for step in &steps[..record.completed_steps] {
+    for (index, step) in steps[..record.completed_steps].iter().enumerate() {
+        let expected_outcome = if step["kind"] == "move" {
+            OperationOutcome::Predicted
+        } else {
+            OperationOutcome::Observed
+        };
+        if completions[index].outcome != expected_outcome {
+            return Err(ExecutionError::new(
+                "invalid_checkpoint",
+                "step outcome differs from its evidence contract",
+            ));
+        }
         match step["kind"].as_str() {
             Some("place") if step["purpose"] == "temporary" => {
                 let edit: SavedEdit = serde_json::from_value(step["placement"]["edit"].clone())?;
@@ -330,7 +317,7 @@ mod tests {
         )
         .unwrap();
         let checkpoint = SafeCheckpoint {
-            schema: "dustroute.survival-checkpoint.v1".into(),
+            schema: "dustroute.survival-checkpoint.v2".into(),
             execution_id: journal.record.id,
             completed_steps: 0,
             dimension: "minecraft:overworld".into(),
@@ -338,6 +325,7 @@ mod tests {
             snapshot: crate::survival_construction::tests::design().baseline,
             temporary: vec![],
             endpoint: native_endpoint,
+            standing: json!({"position_basis":{"kind":"received","receive_sequence":1}}),
         };
         journal
             .event(
@@ -400,5 +388,41 @@ mod tests {
             .unwrap();
         drop(journal);
         assert_eq!(read(&d.0).unwrap_err().code, "invalid_checkpoint");
+    }
+    #[test]
+    fn persisted_motion_prediction_cannot_certify_a_world_edit() {
+        for (kind, outcome, accepted) in [
+            ("move", OperationOutcome::Predicted, true),
+            ("move", OperationOutcome::Observed, false),
+            ("place", OperationOutcome::Predicted, false),
+        ] {
+            let (d, mut journal, mut checkpoint) = fixture();
+            journal.record.plan["plan"]["steps"] = json!([{"kind":kind,"purpose":"permanent"}]);
+            journal.record.completed_steps = 1;
+            checkpoint.completed_steps = 1;
+            journal
+                .event(
+                    "step_completed",
+                    outcome,
+                    Continuation::Revalidate,
+                    json!({}),
+                )
+                .unwrap();
+            journal
+                .event(
+                    "idle_checkpoint",
+                    OperationOutcome::Observed,
+                    Continuation::Checkpoint,
+                    json!(checkpoint),
+                )
+                .unwrap();
+            drop(journal);
+            let result = read(&d.0);
+            if accepted {
+                result.unwrap();
+            } else {
+                assert_eq!(result.unwrap_err().code, "invalid_checkpoint");
+            }
+        }
     }
 }

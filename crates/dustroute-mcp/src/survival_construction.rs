@@ -13,7 +13,7 @@ use std::collections::BTreeMap;
 use voxrig::checked_survival::{
     CapturedSurvivalScene, HypotheticalBlockEdit, HypotheticalMovementPreview,
     HypotheticalPlacement, HypotheticalReconnectBoundary, StandingContext, SurvivalControl,
-    SurvivalScenario,
+    SurvivalMotionContract, SurvivalScenario,
 };
 use voxrig::{BlockFace, NativeBlockState};
 
@@ -305,6 +305,7 @@ pub struct ConstructionMaterials {
 /// The caller-authorized executor must revalidate it; it is not deserializable.
 #[derive(Clone, Debug, Serialize)]
 pub struct HypotheticalConstructionPlan {
+    motion_contract: SurvivalMotionContract,
     source: StandingContext,
     scope: ConstructionScope,
     baseline: MinecraftSnapshot,
@@ -324,6 +325,9 @@ pub(crate) struct TemporaryBlock {
     pub state: NativeBlockState,
 }
 impl HypotheticalConstructionPlan {
+    pub(crate) fn motion_contract(&self) -> SurvivalMotionContract {
+        self.motion_contract
+    }
     pub(crate) fn source(&self) -> &StandingContext {
         &self.source
     }
@@ -515,7 +519,7 @@ impl<'a> CheckedPrefix<'a> {
                 "capture and declared observation bounds differ",
             ));
         }
-        let scenario = scene.scenario();
+        let scenario = scene.scenario_with_motion_contract(SurvivalMotionContract::Predicted);
         let baseline = LiteralSnapshotIndex::new(&site.baseline).expect("checked site baseline");
         for p in cells(Region::new(site.baseline.min, site.baseline.max)) {
             if scenario.block(xyz(p)).map_err(native_error)? != literal(&baseline, p) {
@@ -677,6 +681,7 @@ impl<'a> CheckedPrefix<'a> {
             }
         }
         Ok(HypotheticalConstructionPlan {
+            motion_contract: SurvivalMotionContract::Predicted,
             source: scene.source().clone(),
             scope: site.scope.clone(),
             baseline: site.baseline.clone(),
