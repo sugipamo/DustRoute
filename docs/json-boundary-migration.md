@@ -60,8 +60,10 @@ device初期条件も型で構成し、JSONへの書込みや読み戻しをな�
 初期条件はモデルの仮定として表示し、snapshotから隠れたruntime状態を復元した証拠にはしない。
 公開応答のfield構造と、保存済みの合格をfresh reviewへ流用しない条件は維持した。
 
-サバイバルの`DiagnosticPayload(Value)`、イベントのopaque evidence、manifestのpreviewは
-まだ残る。これらのnative field依存をたどると既存のVoxrig定義64種類に広がり、
+サバイバルの`DiagnosticPayload(Value)`とイベントのopaque evidenceはまだ残る。
+manifestのpreview全体は`RecordedConstructionPreview`へ移したが、その計画記録中の
+source・移動予測・照準・再接続条件はまだopaque payloadである。
+これらのnative field依存をたどると既存のVoxrig定義64種類に広がり、
 純粋なデータとlive watch/tokenを分ける設計判断が必要になった。
 [具体的な改修案](native-diagnostic-records.md)を作成し、Voxrig側の変更を開始する前で停止した。
 全64種類を二重定義する案や、native型へ一括してDeserializeを付ける案は採っていない。
@@ -73,3 +75,26 @@ device初期条件も型で構成し、JSONへの書込みや読み戻しをな�
 native bridgeの実機試験1件はignoreのまま。既定構成と`--no-default-features`の
 MCP all-target Clippy（`-D warnings`）、formatting、差分の空白検査も成功した。
 今回は実機・接続・ワールドへ操作していない。Voxrigのcodeとvendor pinは変更していない。
+
+### DustRoute内で完結する追加改修
+
+開始前のadmissionとバックグラウンドtask失敗は`JobFailure`にした。
+`JobRefusalCode`と`ExecutionError`を型のままジョブ所有者・保存診断へ渡し、
+MCP失敗応答をJSONにしてから`DiagnosticPayload`へ包む経路を除去した。
+公開の拒否codeとfield構造は維持し、成功や自動再送を表す`true`、未知の拒否codeは
+履歴の読込みでも受け入れない。
+
+manifestのpreviewには既存の`RecordedConstructionPlan`と型付き探索結果を保持する。
+探索数、候補位置、資材不足、拒否例は純粋なデータとして共有する。
+native計画と`GeneratedConstructionPlan`にDeserializeは追加せず、記録からnative計画へ
+戻す変換も設けない。プレビューの読込みでnativeのwatchやtokenは生成しない。
+`HypotheticalConstructionPlan`からの射影に残るnative opaque fieldは、承認待ちの別改修で扱う。
+
+追加改修の検証: サバイバル関連39件が成功し、明示実行用の実機等6件はignoreのまま。
+公開MCPから保存previewと拒否診断を読み直しても、新規startが`plan_not_live`で拒否される
+ことを確認した。durable intent、未知のcheckpoint、単回消費、停止済み所有権、
+未観測dropを資材へ計上しない既存検査も成功している。
+資材不足がない拒否例では空mapが保存時に省略されるため、読込みの既定値を明示した。
+資材不足あり/なしの拒否例を含む保存previewの公開読込み試験を最終差分で再実行し、成功した。
+最終差分は既定構成と`--no-default-features`のMCP all-target Clippy（`-D warnings`）、
+formatting、差分の空白検査も成功した。Voxrigのcode・vendor pinと実機は変更していない。

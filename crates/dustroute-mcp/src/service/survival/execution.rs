@@ -66,7 +66,7 @@ impl DustRouteMcp {
             let original = lease.source();
             lease.release(original);
             entry.publish(JobStatus::AdmissionRefused {
-                failure: failure("journal_io", &e).into(),
+                failure: JobFailure::boundary(JobRefusalCode::JournalIo, &e),
                 construction_dispatched: false,
             });
             return failure("journal_io", e);
@@ -95,7 +95,10 @@ impl DustRouteMcp {
                         id,
                         JobStatus::NeedsInspection {
                             reason: InspectionReason::Task {
-                                failure: failure("execution_task_failed", error).into(),
+                                failure: JobFailure::boundary(
+                                    JobRefusalCode::ExecutionTaskFailed,
+                                    error,
+                                ),
                             },
                         },
                     )
@@ -131,22 +134,22 @@ impl DustRouteMcp {
                 Ok(())
             })
             .await
-            .map_err(|e| failure("admission_task_failed", e))?
-            .map_err(|e: String| failure("source_changed", e))?;
+            .map_err(|e| JobFailure::boundary(JobRefusalCode::AdmissionTaskFailed, e))?
+            .map_err(|e: String| JobFailure::boundary(JobRefusalCode::SourceChanged, e))?;
             policy_scope(&self.policy, plan.scope(), &plan.source().dimension)
-                .map_err(|e| failure("permission_denied", e))?;
+                .map_err(|e| JobFailure::boundary(JobRefusalCode::PermissionDenied, e))?;
             if parent.as_ref().is_some_and(|p| {
                 p.checkpoint.endpoint
                     != crate::survival_execution::checkpoint::endpoint(&lease.reconnect())
             }) {
-                return Err(failure(
-                    "checkpoint_endpoint_changed",
+                return Err(JobFailure::boundary(
+                    JobRefusalCode::CheckpointEndpointChanged,
                     "continuation requires the original endpoint and builder profile",
                 ));
             }
             if cancel.load(Ordering::SeqCst) {
-                return Err(failure(
-                    "cancelled_before_start",
+                return Err(JobFailure::boundary(
+                    JobRefusalCode::CancelledBeforeStart,
                     "no construction dispatched",
                 ));
             }
@@ -157,7 +160,7 @@ impl DustRouteMcp {
                 &path.join("execution"),
             )
             .await
-            .map_err(|e| json!({"ok":false,"error":e}))?;
+            .map_err(JobFailure::from)?;
             let parent_lock = if let Some(parent) = &parent {
                 Some(
                     crate::survival_execution::checkpoint::claim(
@@ -169,7 +172,7 @@ impl DustRouteMcp {
                         &parent.checkpoint,
                         id,
                     )
-                    .map_err(|e| json!({"ok":false,"error":e}))?,
+                    .map_err(JobFailure::from)?,
                 )
             } else {
                 None
@@ -184,7 +187,7 @@ impl DustRouteMcp {
                 self.set_survival_status(
                     id,
                     JobStatus::AdmissionRefused {
-                        failure: e.into(),
+                        failure: e,
                         construction_dispatched: false,
                     },
                 )

@@ -184,13 +184,74 @@ async fn public_saved_jobs_are_diagnostic_and_corrupt_identity_is_refused() {
     std::fs::create_dir_all(&path).unwrap();
     let mut manifest = json!({"schema":"dustroute.survival-job.v1","job_id":id,
         "owner":"Tester","execution_authority_restorable":false});
+    let preview = crate::survival_execution::diagnostic::RecordedConstructionPreview {
+        plan: crate::survival_execution::diagnostic::RecordedConstructionPlan {
+            scope: crate::survival_construction::tests::scope(),
+            initial_temporary: vec![],
+            steps: vec![],
+            motion_contract: None,
+            source: None,
+            baseline: None,
+            expected: None,
+            materials: None,
+            final_position: None,
+        },
+        search: crate::survival_construction::generation::ConstructionSearch {
+            candidate_checks: 12,
+            best_remaining_targets: vec![[1, 6, 1]],
+            progress: vec![crate::survival_construction::generation::SearchProgress {
+                candidate_checks: 12,
+                actions: 2,
+                position: [0.5, 1.0, 0.5],
+                remaining_permanent: 1,
+                remaining_temporary: 0,
+            }],
+            refusal_examples: vec![
+                crate::survival_construction::ConstructionPlanningError {
+                    code: SurvivalErrorCode::InsufficientSuppliedMaterials,
+                    action: Some(2),
+                    position: Some([1, 6, 1]),
+                    detail: "missing reserved material".into(),
+                    missing_materials: BTreeMap::from([("minecraft:cobblestone".into(), 1)]),
+                },
+                crate::survival_construction::ConstructionPlanningError {
+                    code: SurvivalErrorCode::NativeGeometryRefused,
+                    action: None,
+                    position: None,
+                    detail: "target outside reach".into(),
+                    missing_materials: BTreeMap::new(),
+                },
+            ],
+            ..Default::default()
+        },
+    };
+    manifest["preview"] = json!(preview);
     save(&path.join("manifest.json"), &manifest).unwrap();
-    save(&path.join("status.json"), &json!({"state":"completed"})).unwrap();
+    save(
+        &path.join("status.json"),
+        &JobStatus::AdmissionRefused {
+            failure: JobFailure::boundary(JobRefusalCode::SourceChanged, "source changed"),
+            construction_dispatched: false,
+        },
+    )
+    .unwrap();
     let (client, server) = serve(service).await;
     let get = json!({"action":"get","job_id":id});
     let history = call(&client, "survival_construction", get.clone()).await;
     assert_eq!(history["historical_only"], true);
     assert_eq!(history["execution_authority_restored"], false);
+    assert_eq!(history["status"]["state"], "admission_refused");
+    assert_eq!(
+        history["status"]["failure"]["error"]["code"],
+        "source_changed"
+    );
+    let detailed = call(
+        &client,
+        "survival_construction",
+        json!({"action":"get","job_id":id,"include_record":true}),
+    )
+    .await;
+    assert_eq!(detailed["manifest"]["preview"], json!(preview));
     let refused = call(
         &client,
         "survival_construction",

@@ -316,7 +316,10 @@ mod jobs;
 use jobs::{Entry, StartReadiness};
 
 mod model;
-use model::{ConstructionSpecification, InspectionReason, JobManifest, JobSchema, JobStatus};
+use model::{
+    ConstructionSpecification, InspectionReason, JobFailure, JobManifest, JobRefusalCode,
+    JobSchema, JobStatus,
+};
 
 mod continuation;
 mod execution;

@@ -24,7 +24,7 @@ enum State {
     CancelledBeforeStart,
     PlanExpiredOrCancelled,
     AdmissionRefused {
-        failure: crate::survival_execution::diagnostic::DiagnosticPayload,
+        failure: JobFailure,
     },
     Checkpointed {
         completed_steps: usize,

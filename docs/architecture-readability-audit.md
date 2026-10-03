@@ -52,6 +52,7 @@ BlueprintUpdatesのarchiveも型付きcatalogを保持し、JSONによる内部�
 検証はMCP218件、BlueprintUpdates10件、MCP all-target Clippyとformattingが成功。
 
 第2段階では、挙動report・再構築失敗詳細・ピストン配置reviewを型へ移した。
+admission/taskの拒否診断と、manifest previewの外側・探索結果も型へ移した。
 サバイバルのopaque payloadは残る。native関連型64種類の共有とlive guardの分離が
 必要になるため、[Voxrig側の診断データ層の改修案](native-diagnostic-records.md)を作成して
 その変更の前で停止している。全JSON移行の完了とは扱わない。

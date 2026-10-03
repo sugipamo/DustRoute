@@ -39,7 +39,8 @@ impl SearchLimits {
     }
 }
 
-#[derive(Clone, Debug, Default, Serialize)]
+#[derive(Clone, Debug, Default, Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ConstructionSearch {
     pub candidate_checks: usize,
     pub expanded: usize,
@@ -60,7 +61,8 @@ pub struct ConstructionSearch {
     pub refusal_examples: Vec<ConstructionPlanningError>,
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct SearchProgress {
     pub candidate_checks: usize,
     pub actions: usize,

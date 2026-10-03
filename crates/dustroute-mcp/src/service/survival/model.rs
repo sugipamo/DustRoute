@@ -1,8 +1,73 @@
 //! Typed job state and persisted diagnostic data. None restores native authority.
 use super::*;
 use crate::survival_execution::checkpoint::SafeCheckpoint;
-use crate::survival_execution::diagnostic::{DiagnosticOnly, DiagnosticPayload};
+use crate::survival_execution::diagnostic::{DiagnosticOnly, RecordedConstructionPreview};
 use crate::survival_execution::{ExecutionError, ExecutionEvent};
+
+/// Stored refusals describe why work stopped; they contain no action authority.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(untagged)]
+pub(super) enum JobFailure {
+    Boundary(BoundaryFailure),
+    Execution(ExecutionFailure),
+}
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct BoundaryFailure {
+    ok: DiagnosticOnly,
+    schema_version: FailureSchema,
+    error: BoundaryError,
+    automatic_replay: DiagnosticOnly,
+}
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct ExecutionFailure {
+    ok: DiagnosticOnly,
+    error: ExecutionError,
+}
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+enum FailureSchema {
+    #[serde(rename = "dustroute.survival-job.v1")]
+    V1,
+}
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct BoundaryError {
+    code: JobRefusalCode,
+    detail: String,
+}
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub(super) enum JobRefusalCode {
+    JournalIo,
+    ExecutionTaskFailed,
+    AdmissionTaskFailed,
+    SourceChanged,
+    PermissionDenied,
+    CheckpointEndpointChanged,
+    CancelledBeforeStart,
+}
+impl JobFailure {
+    pub(super) fn boundary(code: JobRefusalCode, detail: impl std::fmt::Display) -> Self {
+        Self::Boundary(BoundaryFailure {
+            ok: DiagnosticOnly,
+            schema_version: FailureSchema::V1,
+            error: BoundaryError {
+                code,
+                detail: detail.to_string(),
+            },
+            automatic_replay: DiagnosticOnly,
+        })
+    }
+}
+impl From<ExecutionError> for JobFailure {
+    fn from(error: ExecutionError) -> Self {
+        Self::Execution(ExecutionFailure {
+            ok: DiagnosticOnly,
+            error,
+        })
+    }
+}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "state", rename_all = "snake_case")]
@@ -16,7 +81,7 @@ pub(super) enum JobStatus {
     },
     Admitting,
     AdmissionRefused {
-        failure: DiagnosticPayload,
+        failure: JobFailure,
         construction_dispatched: bool,
     },
     Running {
@@ -52,7 +117,7 @@ pub(super) enum InspectionReason {
         completed_steps: usize,
     },
     Task {
-        failure: DiagnosticPayload,
+        failure: JobFailure,
     },
     Persistence {
         last_status: Box<JobStatus>,
@@ -107,9 +172,9 @@ pub(super) struct JobManifest {
     pub owner: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub source: Option<SourceIdentity>,
-    /// Full native preview is retained only for display; no fields drive execution.
+    /// Historical plan/search facts, separate from the process-local native plan.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub preview: Option<DiagnosticPayload>,
+    pub preview: Option<Box<RecordedConstructionPreview>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub construction: Option<ConstructionSpecification>,
     pub parent_job_id: Option<uuid::Uuid>,
@@ -160,5 +225,50 @@ mod tests {
         assert!(matches!(reread, JobStatus::NeedsInspection { .. }));
         assert_eq!(reread.completed_steps(), None);
         assert_eq!(json!(reread), wire);
+    }
+
+    #[test]
+    fn refused_job_history_keeps_typed_causes_without_restoring_success_or_replay() {
+        let examples = [
+            (
+                JobFailure::boundary(JobRefusalCode::SourceChanged, "source changed"),
+                json!({"ok":false,"schema_version":"dustroute.survival-job.v1",
+                    "error":{"code":"source_changed","detail":"source changed"},
+                    "automatic_replay":false}),
+            ),
+            (
+                ExecutionError {
+                    code: SurvivalErrorCode::CheckpointConsumed,
+                    detail: "checkpoint already consumed".into(),
+                }
+                .into(),
+                json!({"ok":false,"error":{"code":"checkpoint_consumed",
+                    "detail":"checkpoint already consumed"}}),
+            ),
+        ];
+        for (failure, wire) in examples {
+            assert_eq!(json!(failure), wire);
+            let stored = JobStatus::AdmissionRefused {
+                failure,
+                construction_dispatched: false,
+            };
+            let bytes = serde_json::to_vec(&stored).unwrap();
+            let reread: JobStatus = serde_json::from_slice(&bytes).unwrap();
+            assert!(matches!(reread, JobStatus::AdmissionRefused { .. }));
+            assert_eq!(reread.completed_steps(), None);
+            assert_eq!(json!(reread)["failure"], wire);
+            let mut altered = wire;
+            altered["ok"] = json!(true);
+            assert!(serde_json::from_value::<JobFailure>(altered).is_err());
+        }
+        let mut wire = json!(JobFailure::boundary(
+            JobRefusalCode::ExecutionTaskFailed,
+            "worker failed"
+        ));
+        wire["automatic_replay"] = json!(true);
+        assert!(serde_json::from_value::<JobFailure>(wire.clone()).is_err());
+        wire["automatic_replay"] = json!(false);
+        wire["error"]["code"] = json!("future_execution_failure");
+        assert!(serde_json::from_value::<JobFailure>(wire).is_err());
     }
 }

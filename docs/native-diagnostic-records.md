@@ -65,6 +65,8 @@ DustRoute側はこの診断型をRecordedStep、checkpoint、manifest、イベ�
 ## 今回の停止位置
 
 検証report、観測失敗詳細、piston配置の初期条件の型移行は先行して実施。
+さらにDustRoute内で完結するadmission/taskの拒否診断と、manifest previewの外側・探索結果を
+型へ移した。preview中のnative fieldは既存のopaque payloadのまま残る。
 `DiagnosticPayload(Value)`・サバイバルの履歴はまだ残る。
 64種類にまたがるデータ共有とlive型の境界調整は、単純なJSON置換より広い設計変更になるため、
 ユーザーの「責務に関わる部分の変更は慎重に、必要に応じて作業を止めユーザーに報告」に従い、

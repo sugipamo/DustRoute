@@ -32,13 +32,14 @@ pub struct ConstructionScope {
     pub retreat: TravelBounds,
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ConstructionPlanningError {
     pub code: SurvivalErrorCode,
     pub action: Option<usize>,
     pub position: Option<[i32; 3]>,
     pub detail: String,
-    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub missing_materials: BTreeMap<String, usize>,
 }
 impl ConstructionPlanningError {

@@ -92,7 +92,7 @@ impl DustRouteMcp {
             job_id: id,
             owner: owner.into(),
             source: Some(source.clone()),
-            preview: Some(json!(generated).into()),
+            preview: Some(Box::new((&generated).into())),
             construction: Some(construction),
             parent_job_id: parent.as_ref().map(|p| p.id),
             execution_authority_restorable: crate::survival_execution::diagnostic::DiagnosticOnly,

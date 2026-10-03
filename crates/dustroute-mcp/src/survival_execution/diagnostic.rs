@@ -242,6 +242,26 @@ impl From<&HypotheticalConstructionPlan> for RecordedConstructionPlan {
     }
 }
 
+/// Saved search and plan facts. This does not deserialize a native generated plan.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RecordedConstructionPreview {
+    pub plan: RecordedConstructionPlan,
+    pub search: crate::survival_construction::generation::ConstructionSearch,
+}
+impl From<&crate::survival_construction::generation::GeneratedConstructionPlan>
+    for RecordedConstructionPreview
+{
+    fn from(
+        generated: &crate::survival_construction::generation::GeneratedConstructionPlan,
+    ) -> Self {
+        Self {
+            plan: (&generated.plan).into(),
+            search: generated.search.clone(),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct RecordedExecutionPlan {
