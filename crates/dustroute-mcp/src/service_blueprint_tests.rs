@@ -605,7 +605,10 @@ async fn runtime_blueprint_review_and_adoption_preserve_child_failures_after_res
             )
             .unwrap();
             assert_eq!(basis.grounding.circuit_revision_id, grounding_revision);
-            assert_eq!(basis.fresh_review["status"], "passed");
+            assert_eq!(
+                basis.fresh_review.status,
+                dustroute_translate::promotion::CheckStatus::Passed
+            );
         }
         stop(client, server).await;
         fs::remove_dir_all(root).unwrap();
@@ -2002,6 +2005,45 @@ async fn blueprint_optimization_moves_ports_and_reenters_persisted_explicit_adop
         old["result"]["record"],
         serde_json::to_value(parent).unwrap()
     );
+    stop(client, server).await;
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[tokio::test]
+async fn blueprint_operation_activity_does_not_become_archived_proof() {
+    let root = temporary();
+    let mut service = DustRouteMcp::with_policy_and_player(McpPolicy::default(), "Tester");
+    service.state_store = PlanStateStore::new(root.clone(), 3600);
+    let registry = service.operations.clone();
+    let (client, server) = super::test_support::serve(service).await;
+    let (records, proposal) = fixture(false);
+    assert_eq!(
+        call(&client, "test_circuit_change", records).await["ok"],
+        true
+    );
+    let created = call(&client, "test_circuit_change", proposal).await;
+    let operation = created["operation_id"].as_str().unwrap();
+    let id = uuid::Uuid::parse_str(operation).unwrap();
+    let guard = registry
+        .begin_activity(id, crate::operations::ActivityAction::InvokeOperation)
+        .await
+        .unwrap();
+    let live = call(&client, "get_operation", json!({"operation_id":operation})).await;
+    assert_eq!(live["ok"], true);
+    assert_eq!(live["operation"]["status"], "open");
+    assert_eq!(live["activity"]["active"], true);
+    assert_eq!(live["activity"]["cancellable"], false);
+    assert_eq!(live["stored_history_is_validation_proof"], false);
+    assert!(live.get("can_adopt").is_none());
+    assert!(live.get("validation").is_none());
+    drop(guard);
+    stop(client, server).await;
+    let (client, server) = start(&root).await;
+    let archived = call(&client, "get_operation", json!({"operation_id":operation})).await;
+    assert_eq!(archived["operation"], live["operation"]);
+    assert_eq!(archived["stored_history_is_validation_proof"], false);
+    assert!(archived.get("activity").is_none());
+    assert!(archived.get("can_adopt").is_none());
     stop(client, server).await;
     fs::remove_dir_all(root).unwrap();
 }

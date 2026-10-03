@@ -3,6 +3,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::sync::Arc;
 
 mod assembly_placement;
+mod blueprints;
 mod circuit_capture;
 mod circuit_reports;
 #[cfg(all(test, feature = "voxrig"))]
@@ -443,6 +444,13 @@ fn contract_assessment_json(assessment: &OptimizationContractAssessment) -> Valu
     })
 }
 
+fn typed_text(value: impl Serialize) -> String {
+    match serde_json::to_value(value) {
+        Ok(value) => json_text(value),
+        Err(error) => json_text(FailureCause::from(error).response()),
+    }
+}
+
 fn json_text(mut value: Value) -> String {
     let measurement = crate::performance::span(crate::performance::Phase::ResponseEncode);
     if value.get("ok") == Some(&Value::Bool(false))
@@ -749,36 +757,6 @@ impl Default for DustRouteMcp {
 }
 
 impl DustRouteMcp {
-    async fn blueprint_command(
-        &self,
-        command: crate::blueprint_mcp::Command,
-        player_override: Option<&str>,
-        required: bool,
-    ) -> Option<String> {
-        let player = match self.resolve_player(player_override) {
-            Ok(player) => player,
-            Err(error) => return required.then(|| json_text(crate::blueprint_mcp::failure(error))),
-        };
-        if let Some(error) = self.authorize_player(&player) {
-            return Some(error);
-        }
-        let store = self.state_store.clone();
-        match tokio::task::spawn_blocking(move || {
-            crate::blueprint_mcp::execute(&store, &player, command)
-        })
-        .await
-        {
-            Ok(Ok(Some(result))) => Some(json_text(result)),
-            Ok(Ok(None)) => required.then(|| {
-                json_text(crate::blueprint_mcp::failure(
-                    "unknown Blueprint operation ID",
-                ))
-            }),
-            Ok(Err(error)) => Some(json_text(crate::blueprint_mcp::failure(error))),
-            Err(error) => Some(json_text(crate::blueprint_mcp::failure(error))),
-        }
-    }
-
     #[must_use]
     pub fn new() -> Self {
         Self::with_policy(McpPolicy::default())
@@ -1939,7 +1917,7 @@ impl DustRouteMcp {
                 || params.circuit_id.is_some()
                 || params.revision_id.is_some()
             {
-                return json_text(crate::blueprint_mcp::failure(
+                return typed_text(crate::blueprint_mcp::failure(
                     "blueprint operations cannot be combined with circuit block-edit parameters",
                 ));
             }
@@ -1949,7 +1927,7 @@ impl DustRouteMcp {
             {
                 let player = match self.resolve_player(params.player.as_deref()) {
                     Ok(p) => p,
-                    Err(e) => return json_text(crate::blueprint_mcp::failure(e)),
+                    Err(e) => return typed_text(crate::blueprint_mcp::failure(e)),
                 };
                 if let Some(error) = self.authorize_player(&player) {
                     return error;
@@ -1967,7 +1945,7 @@ impl DustRouteMcp {
                     }))
                 }) {
                     Ok(value) => value,
-                    Err(e) => return json_text(crate::blueprint_mcp::failure(e)),
+                    Err(e) => return typed_text(crate::blueprint_mcp::failure(e)),
                 };
                 crate::blueprint_mcp::Command::Capture {
                     record: Box::new(record),
@@ -1976,10 +1954,11 @@ impl DustRouteMcp {
             } else {
                 crate::blueprint_mcp::Command::Write(write)
             };
-            return self
-                .blueprint_command(command, params.player.as_deref(), true)
-                .await
-                .expect("explicit blueprint response");
+            return typed_text(
+                self.blueprint_command(command, params.player.as_deref(), true)
+                    .await
+                    .expect("explicit blueprint response"),
+            );
         }
         let result: Result<Value,String> = async {
             let player=self.resolve_player(params.player.as_deref())?;
@@ -2076,14 +2055,15 @@ impl DustRouteMcp {
     ) -> String {
         if let Some(query) = params.blueprint {
             if !params.revision_id.is_empty() || params.include_snapshot.is_some() {
-                return json_text(crate::blueprint_mcp::failure(
+                return typed_text(crate::blueprint_mcp::failure(
                     "blueprint queries cannot be combined with revision_id/include_snapshot",
                 ));
             }
-            return self
-                .blueprint_command(crate::blueprint_mcp::Command::Read(query), None, true)
-                .await
-                .expect("explicit blueprint response");
+            return typed_text(
+                self.blueprint_command(crate::blueprint_mcp::Command::Read(query), None, true)
+                    .await
+                    .expect("explicit blueprint response"),
+            );
         }
         let result: Result<Value, String> = (|| {
             let player = self.resolve_player(None)?;
@@ -5322,7 +5302,7 @@ impl DustRouteMcp {
             )
             .await
         {
-            return result;
+            return typed_text(result);
         }
         error_text(McpErrorCode::NotFound, "operation not found", false)
     }
@@ -5343,12 +5323,12 @@ impl DustRouteMcp {
         };
         if let Some(decision) = params.blueprint_decision {
             if params.contracts.is_some() {
-                return json_text(crate::blueprint_mcp::failure(
+                return typed_text(crate::blueprint_mcp::failure(
                     "transition contracts are not Blueprint decision parameters",
                 ));
             }
-            return self
-                .blueprint_command(
+            return typed_text(
+                self.blueprint_command(
                     crate::blueprint_mcp::Command::Decide(
                         operation_id,
                         Some(decision),
@@ -5358,7 +5338,8 @@ impl DustRouteMcp {
                     true,
                 )
                 .await
-                .expect("explicit blueprint response");
+                .expect("explicit blueprint response"),
+            );
         }
         let plan_kind = self.plans.kind(&operation_id).await;
         if plan_kind == Some(PlanKind::ElectricalEdit) {
@@ -5425,7 +5406,7 @@ impl DustRouteMcp {
             )
             .await
         {
-            return result;
+            return typed_text(result);
         }
         error_text(McpErrorCode::NotFound, "operation not found", false)
     }
@@ -5495,7 +5476,7 @@ impl DustRouteMcp {
             )
             .await
         {
-            return result;
+            return typed_text(result);
         }
         error_text(McpErrorCode::NotFound, "operation not found", false)
     }
@@ -5522,23 +5503,21 @@ impl DustRouteMcp {
                     json!({"ok":true,"operation_id":operation_id})
                 }
                 None => {
-                    let text = self
+                    if let Some(response) = self
                         .blueprint_command(
                             crate::blueprint_mcp::Command::Get(operation_id),
                             None,
                             false,
                         )
                         .await
-                        .unwrap_or_else(|| {
-                            if activity.is_some() {
-                                json_text(json!({"ok":true,"operation_id":operation_id}))
-                            } else {
-                                error_text(McpErrorCode::NotFound, "unknown operation ID", false)
-                            }
-                        });
-                    serde_json::from_str(&text).unwrap_or_else(
-                        |_| json!({"ok":false,"error":"invalid operation response"}),
-                    )
+                    {
+                        return typed_text(blueprints::ResponseWithActivity { response, activity });
+                    }
+                    if activity.is_some() {
+                        json!({"ok":true,"operation_id":operation_id})
+                    } else {
+                        workflow_error(McpErrorCode::NotFound, "unknown operation ID", false)
+                    }
                 }
             },
         };

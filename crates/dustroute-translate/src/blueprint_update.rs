@@ -182,11 +182,11 @@ pub struct BlueprintUpdates {
 
 const UPDATE_ARCHIVE_SCHEMA: &str = "dustroute.blueprint-updates.v5";
 
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
-struct UpdateArchive {
+pub struct BlueprintUpdateArchive {
     schema: String,
-    catalog: serde_json::Value,
+    catalog: BlueprintCatalog,
     proposals: Vec<BlueprintUpdate>,
 }
 
@@ -456,25 +456,28 @@ impl BlueprintUpdates {
     /// Self-contained persistence of sources, states, candidates and decisions.
     /// Validation events are historical diagnostics and never adoption authority.
     pub fn to_json(&self) -> Result<String, BlueprintUpdateError> {
-        let catalog = serde_json::from_str(&self.catalog.to_json()?)
-            .map_err(|error| BlueprintUpdateError::Invalid(error.to_string()))?;
-        serde_json::to_string_pretty(&UpdateArchive {
+        serde_json::to_string_pretty(&self.archive())
+            .map_err(|error| BlueprintUpdateError::Invalid(error.to_string()))
+    }
+
+    /// Diagnostic data, never executable authority or reusable review proof.
+    pub fn archive(&self) -> BlueprintUpdateArchive {
+        BlueprintUpdateArchive {
             schema: UPDATE_ARCHIVE_SCHEMA.into(),
-            catalog,
+            catalog: self.catalog.clone(),
             proposals: self.proposals.values().cloned().collect(),
-        })
-        .map_err(|error| BlueprintUpdateError::Invalid(error.to_string()))
+        }
     }
 
     pub fn from_json(input: &str) -> Result<Self, BlueprintUpdateError> {
-        let archive: UpdateArchive = serde_json::from_str(input)
+        let archive: BlueprintUpdateArchive = serde_json::from_str(input)
             .map_err(|error| BlueprintUpdateError::Invalid(error.to_string()))?;
         if archive.schema != UPDATE_ARCHIVE_SCHEMA {
             return invalid(
                 "retired or unsupported blueprint updates schema; recreate and freshly review proposals with the current version (v5)",
             );
         }
-        let mut restored = Self::new(BlueprintCatalog::from_json(&archive.catalog.to_string())?);
+        let mut restored = Self::new(archive.catalog);
         for proposal in archive.proposals {
             let request = &proposal.request;
             if restored.proposals.contains_key(&request.id) {

@@ -42,6 +42,15 @@ bridge endpointをRustの設定・constructorから除去した。JSON/TCPによ
 Mineflayer RPCを理由とする例外は不要になった。Voxrigの別version adapterは維持し、
 外部protocolが要求する形式と内部表現を区別して調べる。必要な例外が判明した場合は相談する。
 
+## JSON境界の段階移行（2026-10-03 UTC）
+
+[移行ロードマップ](json-boundary-migration.md)の第1段階で、設計図コマンドの応答をRust型にした。
+認可とdispatchは`service/blueprints.rs`、読取り・生成・採用等の応答は
+`blueprint_mcp/response.rs`へ分離した。`get_operation`はBlueprint応答を文字列から再解析しない。
+BlueprintUpdatesのarchiveも型付きcatalogを保持し、JSONによる内部往復をなくした。
+他のworkflow、診断、保存codec、Law、比較キー、VoxrigのJSONは後続段階に残る。
+検証はMCP218件、BlueprintUpdates10件、MCP all-target Clippyとformattingが成功。
+
 ## サバイバル統合後の追補（2026-10-03 UTC）
 
 基点は `fea85f5`（`codex/survival-single-client`）。今回の建築・観測統合に

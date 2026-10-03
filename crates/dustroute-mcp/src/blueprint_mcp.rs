@@ -10,10 +10,14 @@ use dustroute_translate::blueprint_update::*;
 use dustroute_translate::promotion::{CheckStatus, PromotionReport, review_assembly_with_context};
 use rmcp::schemars;
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde_json::Value;
 use std::collections::BTreeMap;
 
 use crate::state::PlanStateStore;
+
+mod response;
+use response::*;
+pub(crate) use response::{Response, ReviewResponse};
 
 const MAX_ARCHIVE_BYTES: u64 = 16 * 1024 * 1024;
 const MAX_REQUEST_BYTES: usize = 4 * 1024 * 1024;
@@ -233,11 +237,19 @@ pub(crate) struct AssemblyGrounding {
     pub base_snapshot: dustroute_translate::snapshot::MinecraftSnapshot,
 }
 
-pub(crate) fn failure(message: impl ToString) -> Value {
-    json!({"ok":false,"schema_version":"dustroute.blueprint-mcp.v1","error_code":"invalid_state","error":message.to_string(),"writes_minecraft":false})
+pub(crate) fn failure(message: impl ToString) -> Response {
+    Response::failure(message)
 }
 
+/// Transitional display boundary for callers not yet migrated to typed reports.
 pub(crate) fn report_json(report: &PromotionReport, catalog: &BlueprintCatalog) -> Value {
+    serde_json::to_value(review_response(report, catalog)).expect("review response is serializable")
+}
+
+pub(crate) fn review_response(
+    report: &PromotionReport,
+    catalog: &BlueprintCatalog,
+) -> ReviewResponse {
     // Keep the existing v1 value for catalogs with only periodic obligations.
     let native = report
         .behavior_context
@@ -259,60 +271,80 @@ pub(crate) fn report_json(report: &PromotionReport, catalog: &BlueprintCatalog) 
     } else {
         "placement_connections_and_declared_periodic_obligations"
     };
-    json!({"status":report.status(),"fresh":true,"scope":scope,
-        "diagnostics":report.diagnostics(64),
-        "placement_validation_profile":report.placement_validation_profile(),
-        "initial_state_checks_passed":report.status()==CheckStatus::Passed,
-        "checks":RecordedReview::from(report),
-        "behavior_verified":false,
-        "declared_behavior_verified":report.status()==CheckStatus::Passed && report.behavior_status()==Some(CheckStatus::Passed),
-        "behavior_scope":"declared_obligations_in_selected_model_only",
-        "behavior_status":report.behavior_status(),"live_world_verified":false})
+    ReviewResponse {
+        status: report.status(),
+        fresh: true,
+        scope,
+        diagnostics: report.diagnostics(64),
+        placement_validation_profile: report.placement_validation_profile(),
+        initial_state_checks_passed: report.status() == CheckStatus::Passed,
+        checks: RecordedReview::from(report),
+        behavior_verified: false,
+        declared_behavior_verified: report.status() == CheckStatus::Passed
+            && report.behavior_status() == Some(CheckStatus::Passed),
+        behavior_scope: "declared_obligations_in_selected_model_only",
+        behavior_status: report.behavior_status(),
+        live_world_verified: false,
+    }
 }
 
 fn operation(
     updates: &BlueprintUpdates,
     id: &BlueprintUpdateId,
     details: bool,
-) -> Result<Value, String> {
+) -> Result<OperationResponse, String> {
     let proposal = updates
         .proposal(id)
         .ok_or("unknown blueprint update operation")?;
-    let mut result = json!({"ok":true,"schema_version":"dustroute.blueprint-mcp.v1","operation_id":id,
-    "operation":{"id":id,"kind":"blueprint_update","status":proposal.status(),"request":proposal.request(),
-        "history":proposal.events()},"writes_minecraft":false,"stored_history_is_validation_proof":false,
-    "next_step":if proposal.status()==UpdateStatus::Open {
-        "show_operation for a fresh review; invoke_operation with confirm=true and an explicit blueprint_decision"
-    } else {
-        "retain this decision and its exact revisions; a further change requires a new proposal"
-    }});
-    if details {
-        result["diff"] = serde_json::to_value(updates.diff(id).map_err(|e| e.to_string())?)
-            .map_err(|e| e.to_string())?;
-    }
-    Ok(result)
+    Ok(OperationResponse {
+        operation_id: id.clone(),
+        operation: ProposalDetail {
+            id: id.clone(),
+            kind: "blueprint_update",
+            status: proposal.status(),
+            request: proposal.request().clone(),
+            history: proposal.events().to_vec(),
+        },
+        stored_history_is_validation_proof: false,
+        next_step: if proposal.status() == UpdateStatus::Open {
+            "show_operation for a fresh review; invoke_operation with confirm=true and an explicit blueprint_decision"
+        } else {
+            "retain this decision and its exact revisions; a further change requires a new proposal"
+        },
+        diff: details
+            .then(|| updates.diff(id).map_err(|e| e.to_string()))
+            .transpose()?,
+        can_adopt: None,
+        validation: None,
+        error_code: None,
+        error: None,
+    })
+}
+
+fn operation_response(operation: OperationResponse) -> Response {
+    Response::success(Body::Operation(Box::new(operation)))
 }
 
 fn assembly_lifecycle(
     updates: &BlueprintUpdates,
     groundings: &BTreeMap<AssemblyRevisionId, AssemblyGrounding>,
     id: &AssemblyRevisionId,
-) -> Value {
+) -> AssemblyLifecycle {
     let adopted_by = updates
         .proposals()
         .filter(|proposal| {
             proposal.status() == UpdateStatus::Adopted
                 && proposal.request().candidate_state.id == *id
         })
-        .map(|proposal| &proposal.request().id)
+        .map(|proposal| proposal.request().id.clone())
         .collect::<Vec<_>>();
     if adopted_by.is_empty() {
-        json!({
-            "status":"catalog_only_unadopted",
-            "adopted":false,
-            "placement_eligible":false,
-            "reason":"catalog import or capture is immutable data, not an adopted update"
-        })
+        AssemblyLifecycle::Unadopted {
+            status: "catalog_only_unadopted",
+            adopted: false,
+            placement_eligible: false,
+            reason: "catalog import or capture is immutable data, not an adopted update",
+        }
     } else {
         let grounded = updates.catalog().assembly(id).is_some_and(|record| {
             let mut current = record;
@@ -330,27 +362,27 @@ fn assembly_lifecycle(
             }
         });
         let construction = adopted_by.len() == 1
-            && updates.proposal(adopted_by[0]).is_some_and(|proposal| {
+            && updates.proposal(&adopted_by[0]).is_some_and(|proposal| {
                 matches!(
                     proposal.request().behavior_context.as_ref(),
                     Some(BehaviorReviewContext::Runtime(_))
                 )
             });
-        json!({
-            "status":"adopted",
-            "adopted":true,
-            "placement_eligible":grounded || construction,
-            "grounded_placement_eligible":grounded,
-            "new_target_construction_eligible":construction,
-            "adopted_by":adopted_by,
-            "reason":if construction {
+        AssemblyLifecycle::Adopted {
+            status: "adopted",
+            adopted: true,
+            placement_eligible: grounded || construction,
+            grounded_placement_eligible: grounded,
+            new_target_construction_eligible: construction,
+            adopted_by,
+            reason: if construction {
                 "new-target construction may be requested; fresh target review, complete empty-region observation and server settings are still required"
             } else if grounded {
                 "placement may be requested; fresh model and live-world checks are still mandatory"
             } else {
                 "adoption is established, but no captured literal observation grounds this Assembly ancestry"
-            }
-        })
+            },
+        }
     }
 }
 
@@ -361,7 +393,7 @@ pub(crate) struct GroundedSource {
     pub grounding_assembly_revision_id: AssemblyRevisionId,
     pub grounding: AssemblyGrounding,
     /// Display report only; admission already checked the typed PromotionReport.
-    pub fresh_review: Value,
+    pub fresh_review: ReviewResponse,
 }
 
 fn placement_basis(
@@ -410,7 +442,7 @@ fn placement_basis(
         adopted_by: proposal.request().id.clone(),
         grounding_assembly_revision_id: ancestor.id.clone(),
         grounding: grounding.clone(),
-        fresh_review: report_json(&report, updates.catalog()),
+        fresh_review: review_response(&report, updates.catalog()),
     })
 }
 
@@ -458,9 +490,9 @@ fn read(
     updates: &BlueprintUpdates,
     groundings: &BTreeMap<AssemblyRevisionId, AssemblyGrounding>,
     query: BlueprintRead,
-) -> Result<Value, String> {
+) -> Result<Response, String> {
     let catalog = updates.catalog();
-    let record = match query {
+    let result = match query {
         BlueprintRead::Catalog {
             classification_id,
             offset,
@@ -484,16 +516,53 @@ fn read(
                 })
                 .collect::<Vec<_>>();
             let offset = offset.unwrap_or(0);
-            json!({"kind":"catalog","blueprints":revisions.iter().skip(offset).take(limit).map(|r|json!({"id":r.id,"name":r.name,"classifications":r.classifications})).collect::<Vec<_>>(),
-                "total_blueprints":revisions.len(),"next_offset":(offset.saturating_add(limit)<revisions.len()).then_some(offset.saturating_add(limit)),
-                "classifications":catalog.classifications().map(|r|json!({"id":r.id,"name":r.name})).collect::<Vec<_>>(),
-                "types":catalog.type_revisions().map(|r|json!({"id":r.id,"name":r.name})).collect::<Vec<_>>(),
-                "assemblies":catalog.assemblies().map(|r|&r.id).collect::<Vec<_>>(),
-                "operations":updates.proposals().map(|p|json!({"operation_id":p.request().id,"status":p.status(),"title":p.request().title})).collect::<Vec<_>>()})
+            ReadRecord::Catalog(Box::new(CatalogResponse {
+                blueprints: revisions
+                    .iter()
+                    .skip(offset)
+                    .take(limit)
+                    .map(|r| BlueprintSummary {
+                        id: r.id.clone(),
+                        name: r.name.clone(),
+                        classifications: r.classifications.clone(),
+                    })
+                    .collect(),
+                total_blueprints: revisions.len(),
+                next_offset: (offset.saturating_add(limit) < revisions.len())
+                    .then_some(offset.saturating_add(limit)),
+                classifications: catalog
+                    .classifications()
+                    .map(|r| DefinitionSummary {
+                        id: r.id.clone(),
+                        name: r.name.clone(),
+                    })
+                    .collect(),
+                types: catalog
+                    .type_revisions()
+                    .map(|r| DefinitionSummary {
+                        id: r.id.clone(),
+                        name: r.name.clone(),
+                    })
+                    .collect(),
+                assemblies: catalog.assemblies().map(|r| r.id.clone()).collect(),
+                operations: updates
+                    .proposals()
+                    .map(|p| ProposalSummary {
+                        operation_id: p.request().id.clone(),
+                        status: p.status(),
+                        title: p.request().title.clone(),
+                    })
+                    .collect(),
+            }))
         }
-        BlueprintRead::Blueprint { id } => {
-            json!({"kind":"blueprint","record":catalog.revision(&id).ok_or("unknown Blueprint Revision ID")?})
-        }
+        BlueprintRead::Blueprint { id } => ReadRecord::Blueprint {
+            record: Box::new(
+                catalog
+                    .revision(&id)
+                    .ok_or("unknown Blueprint Revision ID")?
+                    .clone(),
+            ),
+        },
         BlueprintRead::Assembly {
             id,
             validate,
@@ -503,41 +572,54 @@ fn read(
             let record = catalog
                 .assembly(&id)
                 .ok_or("unknown Assembly Revision ID")?;
-            let mut result = json!({"kind":"assembly","record":record,
-                "lifecycle":assembly_lifecycle(updates, groundings, &id)});
-            if validate.unwrap_or(false) {
-                result["validation"] = report_json(
-                    &review_assembly_with_context(
-                        catalog,
-                        &record.assembly,
-                        behavior_context.as_ref(),
-                        BehaviorBudget::default(),
-                    )
-                    .map_err(|e| e.to_string())?,
+            let review = if validate.unwrap_or(false) {
+                let report = review_assembly_with_context(
                     catalog,
-                );
-                result["validation_context"] = json!(behavior_context);
-                result["world_execution_context"] = json!(
-                    behavior_context
+                    &record.assembly,
+                    behavior_context.as_ref(),
+                    BehaviorBudget::default(),
+                )
+                .map_err(|e| e.to_string())?;
+                Some(AssemblyReview {
+                    validation: review_response(&report, catalog),
+                    world_execution_context: behavior_context
                         .as_ref()
-                        .map(|context| context.execution_context())
-                );
-            }
-            result
+                        .map(|c| c.execution_context()),
+                    validation_context: behavior_context,
+                })
+            } else {
+                None
+            };
+            ReadRecord::Assembly(Box::new(AssemblyResponse {
+                record: record.clone(),
+                lifecycle: assembly_lifecycle(updates, groundings, &id),
+                review,
+            }))
         }
-        BlueprintRead::Type { id } => {
-            json!({"kind":"type","record":catalog.type_revision(&id).ok_or("unknown Type Revision ID")?})
-        }
-        BlueprintRead::Classification { id } => {
-            json!({"kind":"classification","record":catalog.classification(&id).ok_or("unknown Classification Revision ID")?})
-        }
-        BlueprintRead::Archive => {
-            json!({"kind":"archive","archive":serde_json::from_str::<Value>(&updates.to_json().map_err(|e|e.to_string())?).map_err(|e|e.to_string())?})
-        }
+        BlueprintRead::Type { id } => ReadRecord::Type {
+            record: Box::new(
+                catalog
+                    .type_revision(&id)
+                    .ok_or("unknown Type Revision ID")?
+                    .clone(),
+            ),
+        },
+        BlueprintRead::Classification { id } => ReadRecord::Classification {
+            record: Box::new(
+                catalog
+                    .classification(&id)
+                    .ok_or("unknown Classification Revision ID")?
+                    .clone(),
+            ),
+        },
+        BlueprintRead::Archive => ReadRecord::Archive {
+            archive: Box::new(updates.archive()),
+        },
     };
-    Ok(
-        json!({"ok":true,"schema_version":"dustroute.blueprint-mcp.v1","result":record,"writes_minecraft":false,"catalog_membership_is_validation_proof":false}),
-    )
+    Ok(Response::success(Body::Read {
+        result,
+        catalog_membership_is_validation_proof: false,
+    }))
 }
 
 fn import(updates: &mut BlueprintUpdates, records: BlueprintRecords) -> Result<(), String> {
@@ -600,28 +682,14 @@ fn import(updates: &mut BlueprintUpdates, records: BlueprintRecords) -> Result<(
     Ok(())
 }
 
-fn generated_building_json(generated: impl Serialize) -> Value {
-    json!({"ok":true,"schema_version":"dustroute.blueprint-mcp.v1",
-        "result":generated,"writes_minecraft":false,"catalog_changed":false,
-        "adoption_authorized":false,
-        "next_step":"Import result.records; propose_update with result.request after removing its id; review and adopt; then new_placement with assembly_target. After interrupted placement, diagnose and create a fresh reconstruction plan."})
-}
-
-fn building_result_json<T: Serialize>(
-    result: Result<T, dustroute_translate::building::BuildingDesignError>,
-) -> Value {
-    match result {
-        Ok(generated) => generated_building_json(generated),
-        Err(error) => json!({"ok":false,"schema_version":"dustroute.blueprint-mcp.v1",
-            "errors":[error],"writes_minecraft":false,"catalog_changed":false,"adoption_authorized":false}),
-    }
-}
+const BUILDING_NEXT_STEP: &str = "Import result.records; propose_update with result.request after removing its id; review and adopt; then new_placement with assembly_target. After interrupted placement, diagnose and create a fresh reconstruction plan.";
+const BUILDING_UPDATE_NEXT_STEP: &str = "Import result.records; propose_update with result.request after removing its id; inspect diff, review and adopt. Existing placed instances retain their pinned source; a separate site-edit operation is required to modify one.";
 
 fn perform(
     updates: &mut BlueprintUpdates,
     groundings: &mut BTreeMap<AssemblyRevisionId, AssemblyGrounding>,
     command: Command,
-) -> Result<(Option<Value>, bool), String> {
+) -> Result<(Option<Response>, bool), String> {
     match command {
         Command::Read(query) => Ok((Some(read(updates, groundings, query)?), false)),
         Command::Capture { record, grounding } => {
@@ -648,9 +716,10 @@ fn perform(
                 },
             )?;
             Ok((
-                Some(
-                    json!({"ok":true,"schema_version":"dustroute.blueprint-mcp.v1","assembly_revision_id":id,"writes_minecraft":false,"validation":"not_evaluated"}),
-                ),
+                Some(Response::success(Body::Captured {
+                    assembly_revision_id: id,
+                    validation: "not_evaluated",
+                })),
                 true,
             ))
         }
@@ -662,7 +731,13 @@ fn perform(
                 BlueprintWrite::GenerateGroundedBuildingDesign { request } => {
                     let generated =
                         dustroute_translate::building::generate_grounded_building_design(*request);
-                    Ok((Some(building_result_json(generated)), false))
+                    Ok((
+                        Some(Response::building(
+                            generated.map(|r| Generated::Grounded(Box::new(r))),
+                            BUILDING_NEXT_STEP,
+                        )),
+                        false,
+                    ))
                 }
                 BlueprintWrite::GenerateBuildingDesignUpdate { request } => {
                     let generated = (|| {
@@ -686,13 +761,13 @@ fn perform(
                             next.as_ref().map(|s| &s.context),
                         )
                     })();
-                    let mut response = building_result_json(generated);
-                    if response["ok"] == true {
-                        response["next_step"] = json!(
-                            "Import result.records; propose_update with result.request after removing its id; inspect diff, review and adopt. Existing placed instances retain their pinned source; a separate site-edit operation is required to modify one."
-                        );
-                    }
-                    Ok((Some(response), false))
+                    Ok((
+                        Some(Response::building(
+                            generated.map(|r| Generated::DesignUpdate(Box::new(r))),
+                            BUILDING_UPDATE_NEXT_STEP,
+                        )),
+                        false,
+                    ))
                 }
                 BlueprintWrite::GenerateBuildingDesign { request } => {
                     let source = request
@@ -707,20 +782,37 @@ fn perform(
                         ),
                         Err(detail) => {
                             return Ok((
-                                Some(json!({"ok":false,
-                            "schema_version":"dustroute.blueprint-mcp.v1", "errors":[{
-                                "code":"source_not_adopted_or_reviewable", "detail":detail,
-                                "item":request.component.as_ref().map(|c| &c.name)}],
-                            "writes_minecraft":false,"catalog_changed":false,"adoption_authorized":false})),
+                                Some(Response::building(
+                                    Err(dustroute_translate::building::BuildingDesignError {
+                                        code: "source_not_adopted_or_reviewable",
+                                        detail,
+                                        item: request.component.as_ref().map(|c| c.name.clone()),
+                                        position: None,
+                                        diagnostics: None,
+                                    }),
+                                    BUILDING_NEXT_STEP,
+                                )),
                                 false,
                             ));
                         }
                     };
-                    Ok((Some(building_result_json(generated)), false))
+                    Ok((
+                        Some(Response::building(
+                            generated.map(|r| Generated::Design(Box::new(r))),
+                            BUILDING_NEXT_STEP,
+                        )),
+                        false,
+                    ))
                 }
                 BlueprintWrite::GenerateBuilding { request } => {
                     let generated = dustroute_translate::building::generate_building(*request);
-                    Ok((Some(building_result_json(generated)), false))
+                    Ok((
+                        Some(Response::building(
+                            generated.map(|r| Generated::Building(Box::new(r))),
+                            BUILDING_NEXT_STEP,
+                        )),
+                        false,
+                    ))
                 }
                 BlueprintWrite::GenerateBuildingWithDoor { request } => {
                     let source = construction_basis(updates, &request.door.assembly_revision_id)?;
@@ -729,7 +821,13 @@ fn perform(
                         &source.catalog,
                         &source.context,
                     );
-                    Ok((Some(building_result_json(generated)), false))
+                    Ok((
+                        Some(Response::building(
+                            generated.map(|r| Generated::Building(Box::new(r))),
+                            BUILDING_NEXT_STEP,
+                        )),
+                        false,
+                    ))
                 }
                 BlueprintWrite::GenerateFlyingMachine { request } => {
                     let generated = dustroute_translate::flying_machine::generate_flying_machine(
@@ -738,16 +836,15 @@ fn perform(
                     )?;
                     let passed = generated.verification.status == CheckStatus::Passed;
                     Ok((
-                        Some(
-                            json!({"ok":passed,"schema_version":"dustroute.blueprint-mcp.v1",
-                            "result":generated,"writes_minecraft":false,"catalog_changed":false,
-                            "adoption_authorized":false,
-                            "next_step":if passed {
+                        Some(Response::generated(
+                            Generated::FlyingMachine(Box::new(generated)),
+                            passed,
+                            if passed {
                                 "Import result.records; propose_update with result.request after removing its id; review and adopt explicitly; then plan placement at the target."
                             } else {
                                 "Inspect result.verification; this candidate did not establish a usable generated flight."
-                            }}),
-                        ),
+                            },
+                        )),
                         false,
                     ))
                 }
@@ -765,11 +862,11 @@ fn perform(
                         budget,
                     )?;
                     Ok((
-                        Some(
-                            json!({"ok":true,"schema_version":"dustroute.blueprint-mcp.v1","result":report,
-                        "writes_minecraft":false,"catalog_changed":false,"adoption_authorized":false,
-                        "next_step":"Review each candidate status; only passing candidates satisfy the selected type in this exact context. Use an explicit update proposal and fresh adoption checks."}),
-                        ),
+                        Some(Response::generated(
+                            Generated::Enumeration(Box::new(report)),
+                            true,
+                            "Review each candidate status; only passing candidates satisfy the selected type in this exact context. Use an explicit update proposal and fresh adoption checks.",
+                        )),
                         false,
                     ))
                 }
@@ -787,20 +884,21 @@ fn perform(
                         budget,
                     )?;
                     Ok((
-                        Some(
-                            json!({"ok":true,"schema_version":"dustroute.blueprint-mcp.v1","result":report,
-                        "writes_minecraft":false,"catalog_changed":false,"adoption_authorized":false,
-                        "next_step":"Use a passing smaller candidate in an explicit parent update proposal, retain its target binding and execution context, then review and explicitly adopt. Search reports never authorize adoption."}),
-                        ),
+                        Some(Response::generated(
+                            Generated::Reduction(Box::new(report)),
+                            true,
+                            "Use a passing smaller candidate in an explicit parent update proposal, retain its target binding and execution context, then review and explicitly adopt. Search reports never authorize adoption.",
+                        )),
                         false,
                     ))
                 }
                 BlueprintWrite::Import { records } => {
                     import(updates, records)?;
                     Ok((
-                        Some(
-                            json!({"ok":true,"schema_version":"dustroute.blueprint-mcp.v1","writes_minecraft":false,"validation":"not_evaluated","next_step":"read the catalog or create an explicit update proposal"}),
-                        ),
+                        Some(Response::success(Body::Imported {
+                            validation: "not_evaluated",
+                            next_step: "read the catalog or create an explicit update proposal",
+                        })),
                         true,
                     ))
                 }
@@ -810,7 +908,10 @@ fn perform(
                     updates
                         .create(request.into_request(id.clone()))
                         .map_err(|e| e.to_string())?;
-                    Ok((Some(operation(updates, &id, false)?), true))
+                    Ok((
+                        Some(operation_response(operation(updates, &id, false)?)),
+                        true,
+                    ))
                 }
                 BlueprintWrite::CaptureRevision { .. } => {
                     Err("capture must resolve a saved circuit revision first".into())
@@ -826,7 +927,7 @@ fn perform(
                 return Ok((None, false));
             }
             match command {
-                Command::Get(_) => Ok((Some(operation(updates, &id, false)?), false)),
+                Command::Get(_) => Ok((Some(operation_response(operation(updates, &id, false)?)), false)),
                 Command::Show(_) => {
                     let open = updates.proposal(&id).unwrap().status() == UpdateStatus::Open;
                     let report = if open {
@@ -835,9 +936,9 @@ fn perform(
                         updates.review(&id)
                     }.map_err(|e| e.to_string())?;
                     let mut result = operation(updates, &id, true)?;
-                    result["can_adopt"] = json!(open && report.status() == CheckStatus::Passed);
-                    result["validation"] = report_json(&report, updates.catalog());
-                    Ok((Some(result), open))
+                    result.can_adopt = Some(open && report.status() == CheckStatus::Passed);
+                    result.validation = Some(review_response(&report, updates.catalog()));
+                    Ok((Some(operation_response(result)), open))
                 }
                 Command::Decide(_, decision, confirm) => {
                     if !confirm {
@@ -851,14 +952,15 @@ fn perform(
                         BlueprintDecision::Reject { reason } => updates.reject(&id, reason),
                     };
                     match result {
-                        Ok(()) => Ok((Some(operation(updates, &id, false)?), true)),
+                        Ok(()) => Ok((Some(operation_response(operation(updates, &id, false)?)), true)),
                         Err(BlueprintUpdateError::Validation(report)) => {
                             let mut result = operation(updates, &id, true)?;
-                            result["ok"] = json!(false);
-                            result["error_code"] = json!("verification_failed");
-                            result["error"] = json!("adoption refused; required checks failed or are undetermined");
-                            result["validation"] = report_json(&report, updates.catalog());
-                            Ok((Some(result), true))
+                            result.error_code = Some(crate::api::McpErrorCode::VerificationFailed);
+                            result.error = Some("adoption refused; required checks failed or are undetermined");
+                            result.validation = Some(review_response(&report, updates.catalog()));
+                            let mut response = operation_response(result);
+                            response.ok = false;
+                            Ok((Some(response), true))
                         }
                         Err(e) => Err(e.to_string()),
                     }
@@ -876,7 +978,7 @@ pub(crate) fn execute(
     store: &PlanStateStore,
     player: &str,
     command: Command,
-) -> Result<Option<Value>, String> {
+) -> Result<Option<Response>, String> {
     transaction(store, player, |updates, groundings| {
         perform(updates, groundings, command)
     })
