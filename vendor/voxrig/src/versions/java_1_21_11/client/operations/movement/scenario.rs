@@ -1,40 +1,44 @@
 //! Detached hypothetical scenes. No session, sender, observation or action authority.
 use super::*;
+use crate::diagnostic_projection::diagnostic_record;
 use std::collections::BTreeMap;
 
 const MAX_CELLS: usize = 32768;
 const MAX_EDITS: usize = 256;
 const MAX_TICKS: usize = 4096;
 
-/// Required position evidence for a hypothetical interaction, not an actual
-/// receipt. Real interaction admission always reads its own fresh standing basis.
-#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
-#[serde(tag = "kind", rename_all = "snake_case")]
-pub enum HypotheticalAimRequirement {
-    /// Error obtained from the original captured standing evidence.
-    CapturedPosition {
-        /// Per-axis uncertainty about the model's eye coordinates.
-        horizontal_error: [f64; 3],
-    },
-    /// A future new connection must supply a fresh received standing position.
-    /// This is a planning obligation, not a received pose or mutation authority.
-    ReceivedAfterReconnect,
-    /// Future fully dispatched prediction under the explicit model contract.
-    /// The reserve is a geometric planning policy, not a measured position error.
-    PredictedEndpoint {
-        /// Horizontal model-space reserve required for subsequent interaction.
-        planning_reserve: [f64; 3],
-    },
-    /// Future motion must satisfy the same independent observation contract as
-    /// actual motion. This variant cannot stand in for that later observation.
-    IndependentlyObservedEndpoint {
-        /// Maximum per-axis error of the independent position packet.
-        max_packet_error: f64,
-        /// Maximum discrepancy between predicted and independently seen positions.
-        max_prediction_discrepancy: f64,
-        /// Sum of the two limits in horizontal axes; floor contact supplies Y.
-        horizontal_error: [f64; 3],
-    },
+diagnostic_record! {
+    /// Required position evidence for a hypothetical interaction, not an actual
+    /// receipt. Real interaction admission always reads its own fresh standing basis.
+    #[derive(Clone, Copy, Debug, PartialEq, Serialize)]
+    #[serde(tag = "kind", rename_all = "snake_case")]
+    pub enum HypotheticalAimRequirement => RecordedHypotheticalAimRequirement {
+        /// Error obtained from the original captured standing evidence.
+        CapturedPosition {
+            /// Per-axis uncertainty about the model's eye coordinates.
+            horizontal_error: [f64; 3],
+        },
+        /// A future new connection must supply a fresh received standing position.
+        /// This is a planning obligation, not a received pose or mutation authority.
+        ReceivedAfterReconnect,
+        /// Future fully dispatched prediction under the explicit model contract.
+        /// The reserve is a geometric planning policy, not a measured position error.
+        PredictedEndpoint {
+            /// Horizontal model-space reserve required for subsequent interaction.
+            planning_reserve: [f64; 3],
+        },
+        /// Future motion must satisfy the same independent observation contract as
+        /// actual motion. This variant cannot stand in for that later observation.
+        IndependentlyObservedEndpoint {
+            /// Maximum per-axis error of the independent position packet.
+            max_packet_error: f64,
+            /// Maximum discrepancy between predicted and independently seen positions.
+            max_prediction_discrepancy: f64,
+            /// Sum of the two limits in horizontal axes; floor contact supplies Y.
+            horizontal_error: [f64; 3],
+        },
+    }
+    diagnostic_serde { #[serde(tag = "kind", rename_all = "snake_case")] }
 }
 impl HypotheticalAimRequirement {
     fn after_observed_motion() -> Self {
@@ -103,12 +107,15 @@ impl HypotheticalAimRequirement {
     }
 }
 
-/// A future connection-reset obligation. No reconnect, receipt or action token
-/// is created by this value; callers still perform and verify their own lifecycle.
-#[derive(Clone, Debug, Serialize)]
-pub struct HypotheticalReconnectBoundary {
-    expected_position: [f64; 3],
-    dimension: String,
+diagnostic_record! {
+    /// A future connection-reset obligation. No reconnect, receipt or action token
+    /// is created by this value; callers still perform and verify their own lifecycle.
+    #[derive(Clone, Debug, Serialize)]
+    pub struct HypotheticalReconnectBoundary => RecordedHypotheticalReconnectBoundary {
+        expected_position: [f64; 3],
+        dimension: String,
+    }
+    diagnostic_serde {}
 }
 impl HypotheticalReconnectBoundary {
     /// Compare an actually captured new-connection standing scene with the
@@ -144,15 +151,18 @@ pub struct CapturedSurvivalScene {
     region: crate::Region,
     blocks: Arc<BTreeMap<[i32; 3], crate::NativeBlockState>>,
 }
-/// Explicit hypothetical predecessor and successor; neither is a live write.
-#[derive(Clone, Debug, Serialize)]
-pub struct HypotheticalBlockEdit {
-    /// Cell inside the captured scene.
-    pub position: [i32; 3],
-    /// Exact required scenario state before this edit.
-    pub before: crate::NativeBlockState,
-    /// Admitted passive cube or air; no dynamic callback is assumed.
-    pub after: crate::NativeBlockState,
+diagnostic_record! {
+    /// Explicit hypothetical predecessor and successor; neither is a live write.
+    #[derive(Clone, Debug, Serialize)]
+    pub struct HypotheticalBlockEdit => RecordedHypotheticalBlockEdit {
+        /// Cell inside the captured scene.
+        pub position: [i32; 3],
+        /// Exact required scenario state before this edit.
+        pub before: crate::NativeBlockState,
+        /// Admitted passive cube or air; no dynamic callback is assumed.
+        pub after: crate::NativeBlockState,
+    }
+    diagnostic_serde {}
 }
 /// Detached branch of a captured scene; no deserialization/action authority.
 #[derive(Clone, Debug)]
@@ -166,37 +176,42 @@ pub struct SurvivalScenario {
     motion_contract: SurvivalMotionContract,
     origin: Arc<()>,
 }
-/// Future geometry prediction, deliberately incompatible with live input APIs.
-/// ```compile_fail
-/// use voxrig::versions::java_1_21_11::operations::{Operations, HypotheticalMovementPreview};
-/// async fn cannot_execute(api: &Operations, observer: &Operations, future: &HypotheticalMovementPreview) {
-///     api.start_previewed_survival_motion(future, observer).await.unwrap();
-/// }
-/// ```
-#[derive(Clone, Debug, Serialize)]
-pub struct HypotheticalMovementPreview {
-    #[serde(skip)]
-    origin: Arc<()>,
-    /// Original capture provenance, not the hypothetical player's current pose.
-    pub source: StandingContext,
-    /// Initial model frame (tick zero), including the native velocity phase.
-    pub initial_frame: PredictedMotionFrame,
-    /// Hypothetical starting feet; never a received StandingContext.
-    pub initial_position: [f64; 3],
-    /// Native standing bounds at the hypothetical start, including uncertainty.
-    pub initial_bounds: [f64; 6],
-    /// Prospective evidence required at the start; never an actual new receipt.
-    pub initial_aim_requirement: HypotheticalAimRequirement,
-    /// Required endpoint evidence contract, distinct from the predicted frames.
-    pub endpoint_contract: SurvivalMotionContract,
-    /// Number of preceding hypothetical cell edits.
-    pub preceding_edits: usize,
-    /// Exact inputs used by the shared native model.
-    pub controls: Vec<SurvivalControl>,
-    /// Frames against this branch's geometry.
-    pub frames: Vec<PredictedMotionFrame>,
-    /// Same conservative stop check as a live preview.
-    pub terminal_clearance: TerminalClearance,
+diagnostic_record! {
+    /// Future geometry prediction, deliberately incompatible with live input APIs.
+    /// ```compile_fail
+    /// use voxrig::versions::java_1_21_11::operations::{Operations, HypotheticalMovementPreview};
+    /// async fn cannot_execute(api: &Operations, observer: &Operations, future: &HypotheticalMovementPreview) {
+    ///     api.start_previewed_survival_motion(future, observer).await.unwrap();
+    /// }
+    /// ```
+    #[derive(Clone, Debug, Serialize)]
+    pub struct HypotheticalMovementPreview => RecordedHypotheticalMovementPreview {
+        /// Original capture provenance, not the hypothetical player's current pose.
+        pub source: StandingContext,
+        /// Initial model frame (tick zero), including the native velocity phase.
+        pub initial_frame: PredictedMotionFrame,
+        /// Hypothetical starting feet; never a received StandingContext.
+        pub initial_position: [f64; 3],
+        /// Native standing bounds at the hypothetical start, including uncertainty.
+        pub initial_bounds: [f64; 6],
+        /// Prospective evidence required at the start; never an actual new receipt.
+        pub initial_aim_requirement: HypotheticalAimRequirement,
+        /// Required endpoint evidence contract, distinct from the predicted frames.
+        pub endpoint_contract: SurvivalMotionContract,
+        /// Number of preceding hypothetical cell edits.
+        pub preceding_edits: usize,
+        /// Exact inputs used by the shared native model.
+        pub controls: Vec<SurvivalControl>,
+        /// Frames against this branch's geometry.
+        pub frames: Vec<PredictedMotionFrame>,
+        /// Same conservative stop check as a live preview.
+        pub terminal_clearance: TerminalClearance,
+    }
+    native_only {
+        #[serde(skip)]
+        origin: Arc<()>,
+    }
+    diagnostic_serde {}
 }
 impl HypotheticalMovementPreview {
     /// Whether both predictions start from the identical immutable scenario.
@@ -204,21 +219,24 @@ impl HypotheticalMovementPreview {
         Arc::ptr_eq(&self.origin, &other.origin)
     }
 }
-/// Geometric possibility only: no material reservation, action sequence or receipt.
-#[derive(Clone, Debug, Serialize)]
-pub struct HypotheticalPlacement {
-    /// Exact proposed cell change, usable only in a detached scenario.
-    pub edit: HypotheticalBlockEdit,
-    /// Requested supporting cell.
-    pub support: [i32; 3],
-    /// Native face ID.
-    pub face_id: u8,
-    /// Native yaw/pitch used for visibility/reach checks.
-    pub rotation: [f32; 2],
-    /// Native face cursor.
-    pub cursor: [f32; 3],
-    /// Required position evidence for this hypothetical target/face/cursor.
-    pub aim_requirement: HypotheticalAimRequirement,
+diagnostic_record! {
+    /// Geometric possibility only: no material reservation, action sequence or receipt.
+    #[derive(Clone, Debug, Serialize)]
+    pub struct HypotheticalPlacement => RecordedHypotheticalPlacement {
+        /// Exact proposed cell change, usable only in a detached scenario.
+        pub edit: HypotheticalBlockEdit,
+        /// Requested supporting cell.
+        pub support: [i32; 3],
+        /// Native face ID.
+        pub face_id: u8,
+        /// Native yaw/pitch used for visibility/reach checks.
+        pub rotation: [f32; 2],
+        /// Native face cursor.
+        pub cursor: [f32; 3],
+        /// Required position evidence for this hypothetical target/face/cursor.
+        pub aim_requirement: HypotheticalAimRequirement,
+    }
+    diagnostic_serde {}
 }
 impl GeometryView for CapturedSurvivalScene {
     fn block(&self, p: [i32; 3]) -> Result<crate::NativeBlockState> {

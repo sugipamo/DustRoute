@@ -1,39 +1,46 @@
 //! Ordinary player-inventory swaps. Submitted clicks never predict received slots.
 use super::*;
+use crate::diagnostic_projection::diagnostic_record;
 use std::time::Duration;
 
-/// One submitted SWAP click, tied to this connection and received baseline.
-/// It is not an acknowledgement and cannot be restored from serialized history.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
-pub struct InventorySwap {
-    /// Owning native connection.
-    pub connection_id: u64,
-    /// Receive boundary immediately before submission.
-    pub after_sequence: u64,
-    /// Received screen revision sent with the click.
-    pub screen_revision: i32,
-    /// Main-inventory screen slot, 9..35.
-    pub main_slot: u8,
-    /// Hotbar index, 0..8 (screen slot 36..44).
-    pub hotbar: u8,
-    /// Received main-inventory stack before submission.
-    pub main_before: InventorySlot,
-    /// Received hotbar stack before submission.
-    pub hotbar_before: InventorySlot,
+diagnostic_record! {
+    /// One submitted SWAP click, tied to this connection and received baseline.
+    /// It is not an acknowledgement and cannot be restored from serialized history.
+    #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+    pub struct InventorySwap => RecordedInventorySwap {
+        /// Owning native connection.
+        pub connection_id: u64,
+        /// Receive boundary immediately before submission.
+        pub after_sequence: u64,
+        /// Received screen revision sent with the click.
+        pub screen_revision: i32,
+        /// Main-inventory screen slot, 9..35.
+        pub main_slot: u8,
+        /// Hotbar index, 0..8 (screen slot 36..44).
+        pub hotbar: u8,
+        /// Received main-inventory stack before submission.
+        pub main_before: InventorySlot,
+        /// Received hotbar stack before submission.
+        pub hotbar_before: InventorySlot,
+    }
+    diagnostic_serde {}
 }
 
-/// Both swap destinations were received after submission with the expected stacks.
-/// This is client receive evidence, not an independent server-side receipt.
-#[derive(Clone, Debug, Serialize)]
-pub struct InventorySwapObservation {
-    /// Original submission, with its received predecessor.
-    pub submission: InventorySwap,
-    /// Receive boundary at verification.
-    pub receive_sequence: u64,
-    /// Received main destination after submission.
-    pub main_sequence: u64,
-    /// Received hotbar destination after submission.
-    pub hotbar_sequence: u64,
+diagnostic_record! {
+    /// Both swap destinations were received after submission with the expected stacks.
+    /// This is client receive evidence, not an independent server-side receipt.
+    #[derive(Clone, Debug, Serialize)]
+    pub struct InventorySwapObservation => RecordedInventorySwapObservation {
+        /// Original submission, with its received predecessor.
+        pub submission: InventorySwap,
+        /// Receive boundary at verification.
+        pub receive_sequence: u64,
+        /// Received main destination after submission.
+        pub main_sequence: u64,
+        /// Received hotbar destination after submission.
+        pub hotbar_sequence: u64,
+    }
+    diagnostic_serde {}
 }
 
 fn unavailable(message: &str) -> Error {

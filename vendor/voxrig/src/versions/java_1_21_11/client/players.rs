@@ -2,6 +2,7 @@
 use super::super::wire::velocity;
 use super::operations::VelocitySample;
 use super::{Reader, ids};
+pub use motion::RecordedPlayerMotionWatch;
 mod motion;
 use anyhow::{Context, bail};
 pub(super) use motion::evaluate as evaluate_motion;
@@ -26,7 +27,7 @@ pub struct PlayerObservations {
 }
 
 /// Latest received player coordinates; no server-current-time guarantee.
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, serde::Deserialize, PartialEq)]
 pub struct ObservedPlayer {
     /// Name from the native profile packet.
     pub name: String,
@@ -51,7 +52,7 @@ pub struct ObservedPlayer {
 }
 
 /// A received ground flag, independent of position freshness or local contact tests.
-#[derive(Clone, Copy, Debug, Serialize)]
+#[derive(Clone, Copy, Debug, Serialize, serde::Deserialize, PartialEq)]
 pub struct GroundReceipt {
     /// Native flag; the server can retain the moving client's reported ground
     /// bit. It is not independent collision validation or a stop acknowledgement.
@@ -60,7 +61,7 @@ pub struct GroundReceipt {
     pub receive_sequence: u64,
 }
 /// Distinct motion evidence attached to a remote player's current viewpoint.
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, serde::Deserialize, PartialEq)]
 pub struct PlayerMotion {
     /// Spawn receipt distinguishes repeated entity IDs and reappearance of a UUID.
     pub spawn_receive_sequence: u64,
@@ -80,7 +81,7 @@ pub struct PlayerMotion {
 }
 
 /// Native poses relevant to a player's viewpoint.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, serde::Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum PlayerPose {
     /// Standing.

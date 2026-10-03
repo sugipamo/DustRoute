@@ -1,5 +1,5 @@
 //! Settled idle boundaries, not recovery of lost native operation handles.
-use super::diagnostic::{CheckpointSchema, DiagnosticPayload, RecordedEndpoint};
+use super::diagnostic::{CheckpointSchema, RecordedEndpoint};
 use super::*;
 use crate::survival_construction::PlacementPurpose;
 use crate::survival_construction::{
@@ -25,7 +25,7 @@ pub struct SafeCheckpoint {
     pub temporary: Vec<TemporaryBlock>,
     pub endpoint: RecordedEndpoint,
     /// Diagnostic provenance only; never used to restore native standing authority.
-    pub standing: DiagnosticPayload,
+    pub standing: Box<voxrig::checked_survival::diagnostic::RecordedStandingContext>,
 }
 pub(crate) fn endpoint(config: &ConnectionConfig) -> RecordedEndpoint {
     config.into()
@@ -58,7 +58,9 @@ impl SurvivalExecutor {
                 ExecutionPhase::CheckpointRefused,
                 self.journal.record.outcome.clone(),
                 Continuation::NeedsInspection,
-                json!({"error":error}),
+                ExecutionEvidence::CheckpointRefused {
+                    error: error.clone(),
+                },
             );
         }
         // Success also seals this executor. All continuation uses a fresh plan.
@@ -110,7 +112,7 @@ impl SurvivalExecutor {
                 })
                 .collect(),
             endpoint: endpoint(&self.reconnect),
-            standing: json!(fresh.source()).into(),
+            standing: Box::new(fresh.source().into()),
         };
         self.journal.event(
             ExecutionPhase::IdleCheckpoint,
@@ -213,7 +215,26 @@ mod tests {
             snapshot: crate::survival_construction::tests::design().baseline,
             temporary: vec![],
             endpoint: native_endpoint,
-            standing: json!({"position_basis":{"kind":"received","receive_sequence":1}}).into(),
+            standing: Box::new(
+                voxrig::checked_survival::diagnostic::RecordedStandingContext {
+                    connection_id: 1,
+                    receive_sequence: 1,
+                    client_tick: 0,
+                    world_revision: 0,
+                    dimension: "minecraft:overworld".into(),
+                    position_basis:
+                        voxrig::checked_survival::diagnostic::StandingPositionBasis::Received {
+                            receive_sequence: 1,
+                        },
+                    position: [0.5, 0.0, 0.5],
+                    eye_position: [0.5, 1.62, 0.5],
+                    bounds: [0.2, 0.0, 0.2, 0.8, 1.8, 0.8],
+                    on_ground: true,
+                    support: vec![[0, -1, 0]],
+                    submerged: false,
+                    player: voxrig::checked_survival::diagnostic::LocalPlayerState::default(),
+                },
+            ),
         };
         journal
             .event(
@@ -233,7 +254,10 @@ mod tests {
             SurvivalErrorCode::CheckpointWriterLive
         );
         journal
-            .intend(ExecutionPhase::MiningStartSend, json!({"target":[1,2,3]}))
+            .intend(
+                ExecutionPhase::MiningStartSend,
+                super::evidence::mining_start_fixture(),
+            )
             .unwrap();
         drop(journal);
         assert_eq!(
@@ -320,7 +344,9 @@ mod tests {
                     ExecutionPhase::StepCompleted,
                     outcome,
                     Continuation::Revalidate,
-                    json!({}),
+                    ExecutionEvidence::StepCompleted {
+                        remaining_owned_temporary: vec![],
+                    },
                 )
                 .unwrap();
             journal
@@ -362,7 +388,9 @@ mod tests {
                     ExecutionPhase::StepCompleted,
                     OperationOutcome::Observed,
                     Continuation::Revalidate,
-                    json!({}),
+                    ExecutionEvidence::StepCompleted {
+                        remaining_owned_temporary: vec![],
+                    },
                 )
                 .unwrap();
             journal

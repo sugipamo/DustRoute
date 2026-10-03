@@ -1,7 +1,8 @@
 # サバイバル診断の型移行で見つかった境界
 
 調査基点: DustRoute `f478986`とVoxrig `5bace7be7cd941e1340ad94052e922db23c4f892`。
-診断JSONを置き換える際の設計判断。ここで提案するVoxrig改修は未着手。
+診断JSONを置き換える際の設計判断と実装記録。2026-10-03 UTCにユーザーが改修を承認し、
+Voxrigの別checkoutで実装・検証後、DustRouteへ接続した。
 
 ## 見つかった依存
 
@@ -26,7 +27,7 @@ StandingContext、仮想移動・照準・再接続条件、能力、インベ�
 既存型へまとめてDeserializeを付ける移行は行わない。原点identity、watch、token、
 Session等のlive guardを保存形式から再作成する機能も追加しない。
 
-## 推奨案
+## 採用した構造
 
 Voxrigのchecked survival APIに、診断専用のデータ層を設ける。
 Rust型の定義は以下の三群に分け、共用可能なfieldを一度だけ定義する。
@@ -38,8 +39,8 @@ Rust型の定義は以下の三群に分け、共用可能なfieldを一度だ�
 3. liveなchecked値: 接続・登録されたwatch・操作token・場面の原点identity。
    現在のnon-Deserialize契約とnative側の毎回のadmissionを維持する。
 
-例えば、`StandingContext`から`StandingRecord`を作って保存できても、
-`StandingRecord`は`validate_survival_scene`や操作APIへの入力型にはならない。
+例えば、`StandingContext`から`RecordedStandingContext`を作って保存できても、
+`RecordedStandingContext`は`validate_survival_scene`や操作APIへの入力型にはならない。
 再開時には現在のワールド・所持品・位置を読み、新しい場面と計画を作る。
 同様に、保存した採掘やretirementの記録は、結果が不明な旧操作を再送する権限を持たない。
 
@@ -58,16 +59,33 @@ DustRoute側はこの診断型をRecordedStep、checkpoint、manifest、イベ�
 - DustRouteのopaque payloadを撤去し、イベント・保存schema・再読込み・checkpointを検証する。
 - 保存された診断から権限や自動再送が復元されないこと、durable intentと単回消費の順序を確認する。
 
-この前提整備を入れる場合、第2段階の中でVoxrig側の型設計を扱う。
-第6段階に予定していたregistry・形状・NBT・通信形式の移行とは分ける。
-先に別案を採るなら、この部分を保留して後続の独立したLaw移行へ進めることもできる。
+## 実装結果
 
-## 今回の停止位置
+最初の依存調査は64型。全体の配置・ブロック編集も診断射影へ統一した結果、対象は66型となった。
+39型は接続や操作権限を持たない純粋なデータとして共有し、27型は別の`Recorded*`型を公開した。
+`checked_survival::diagnostic`を公開入口とし、`ToDiagnostic`で直接Rustの値を射影する。
+JSONへ書き出してから読み戻す処理はない。
 
-検証report、観測失敗詳細、piston配置の初期条件の型移行は先行して実施。
-さらにDustRoute内で完結するadmission/taskの拒否診断と、manifest previewの外側・探索結果を
-型へ移した。preview中のnative fieldは既存のopaque payloadのまま残る。
-`DiagnosticPayload(Value)`・サバイバルの履歴はまだ残る。
-64種類にまたがるデータ共有とlive型の境界調整は、単純なJSON置換より広い設計変更になるため、
-ユーザーの「責務に関わる部分の変更は慎重に、必要に応じて作業を止めユーザーに報告」に従い、
-Voxrig側の変更を開始する前で停止する。
+ネイティブ値と記録のfieldは、元の定義位置にある`diagnostic_record!`で一度だけ宣言する。
+元のfieldの可視性、derive、methodは維持する。`native_only`の接続guard・受信境界は
+記録へ含めない。privateなwatchの識別情報を記録へコピーしても、ネイティブwatch自体を
+公開・生成する経路にはならない。記録からネイティブ値への逆変換は実装しない。
+
+DustRouteでは`DiagnosticPayload(Value)`を除去し、計画・checkpoint・イベントをこの型へ
+接続した。採掘後の照合条件も`RecordedCleanupRecoveryPlan`へ一方向に射影する。
+イベントの`ExecutionEvidence`は用途別のenumとなり、種別と証拠型が一致しない場合は
+保存前と読込み時に拒否する。journalは`dustroute.survival-execution.v2`へ更新した。
+旧v1を変換する経路は設けず、旧形式は拒否する。checkpointのwire構造は保ち、v2のままとした。
+再開は現在の状態からの新規計画・検証と単回消費を維持する。
+
+Voxrig revision: `f7209ed7892aeae4b13eca5a4423949311f25317`。
+別リポジトリへcommitし、vendor updaterで315ファイルを取り込んだ。直接vendor編集は行っていない。
+このcommitはローカルの履歴であり、今回pushやPR作成は行っていない。
+
+検証: Voxrigのlib 203件成功・明示実機用8件ignore、doctestの通常例2件とcompile-fail 10件成功。
+ネイティブ計画・intent・standing・watch・移動記録をDeserializeできないこと、
+記録から採掘intentやstandingへ戻せないことを含む。private watchの寿命検査と
+結果不明の採掘記録の保存再読込みも成功した。all-target Clippy（`-D warnings`）、
+formatting、差分検査、vendor一致検査が成功した。
+DustRouteの最終検証結果は[移行記録](json-boundary-migration.md)を参照。
+実機操作は行っていない。JSONの保存codecは第5段階で移行する。

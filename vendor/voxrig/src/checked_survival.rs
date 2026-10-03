@@ -20,6 +20,9 @@
 //! Route selection, building designs, resource reservations and durable jobs
 //! belong to the caller. This surface exposes no commands or creative controls.
 
+/// Diagnostic-only projections; persisted data never restores checked authority.
+pub mod diagnostic;
+
 use crate::versions::java_1_21_11::operations as native;
 use crate::{
     BlockFace, Client, ConnectionConfig, MinecraftVersion, NativeBlockState, Region, Result,
@@ -42,7 +45,7 @@ pub use native::{
 };
 
 /// Versioned semantics, separate from a wire protocol number.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, serde::Serialize)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SurvivalContract {
     /// Bounded dry full-cube walking/jumping with independent endpoint observation,
@@ -58,7 +61,7 @@ pub enum SurvivalContract {
 }
 
 /// Static adapter support. A supported contract still checks each live action.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, serde::Serialize)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct SurvivalCapabilities {
     /// Exact immutable wire/registry version.
     pub version: MinecraftVersion,

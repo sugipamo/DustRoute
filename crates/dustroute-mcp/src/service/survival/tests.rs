@@ -269,8 +269,8 @@ async fn public_saved_jobs_are_diagnostic_and_corrupt_identity_is_refused() {
     let execution = path.join("execution");
     std::fs::create_dir_all(&execution).unwrap();
     std::fs::write(execution.join("executor.lock"), []).unwrap();
-    let intent = json!({"step":0,"phase":"mining_start_send","outcome":"uncertain","continuation":"needs_inspection","evidence":{"target":[1,2,3]}});
-    let record = json!({"schema":"dustroute.survival-execution.v1","id":uuid::Uuid::new_v4(),"plan":{},"completed_steps":0,"outcome":"uncertain","continuation":"needs_inspection","reconnects":0,"events":[intent]});
+    let intent = json!({"step":0,"phase":"mining_start_send","outcome":"uncertain","continuation":"needs_inspection","evidence":crate::survival_execution::evidence::mining_start_fixture()});
+    let record = json!({"schema":"dustroute.survival-execution.v2","id":uuid::Uuid::new_v4(),"plan":{},"completed_steps":0,"outcome":"uncertain","continuation":"needs_inspection","reconnects":0,"events":[intent]});
     save(&execution.join("record.json"), &record).unwrap();
     let refusal = call(
         &client,
@@ -571,7 +571,7 @@ async fn native_public_roof() {
             .as_array()
             .unwrap()
             .last()
-            .unwrap()["evidence"]["builder_checked_cells"],
+            .unwrap()["evidence"]["data"]["builder_checked_cells"],
         3120
     );
     let restored = native.lease_survival().unwrap();

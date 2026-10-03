@@ -2,7 +2,7 @@
 use serde::Serialize;
 
 /// Last actual own-player position/correction packet, after native relative decoding.
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, serde::Deserialize, PartialEq)]
 pub struct ReceivedPose {
     /// Login/respawn/configuration generation.
     pub generation: u64,
@@ -16,7 +16,7 @@ pub struct ReceivedPose {
     pub velocity: Option<[f64; 3]>,
 }
 /// A locally submitted position. Not a physics prediction or server receipt.
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, serde::Deserialize, PartialEq)]
 pub struct PositionSubmission {
     /// Monotonic local attempt ID, never sent as a native movement sequence.
     pub attempt_id: u64,
@@ -34,7 +34,7 @@ pub struct PositionSubmission {
     pub superseded_at: Option<u64>,
 }
 /// What the current position represents. No inference from silence or elapsed time.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, serde::Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum PositionBasis {
     /// No supported current provenance.
@@ -48,7 +48,7 @@ pub enum PositionBasis {
     Submitted,
 }
 /// Current position basis and retained history; serialized data grants no authority.
-#[derive(Clone, Debug, Default, Serialize)]
+#[derive(Clone, Debug, Default, Serialize, serde::Deserialize, PartialEq)]
 pub struct OwnMotion {
     /// Provenance for the current position.
     pub position_basis: PositionBasis,

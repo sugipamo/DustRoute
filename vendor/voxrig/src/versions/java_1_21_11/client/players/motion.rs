@@ -1,17 +1,21 @@
 //! Read-only watches. Fresh position is an observation, not construction authority.
 use super::super::operations::Operations;
 use super::*;
+use crate::diagnostic_projection::diagnostic_record;
 use crate::{Error, ErrorKind, Result};
 
-/// One live observer/world/entity instance; cannot be restored from JSON.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
-pub struct PlayerMotionWatch {
-    observer_connection_id: u64,
-    generation: u64,
-    entity_id: i32,
-    uuid: [u8; 16],
-    spawn_receive_sequence: u64,
-    after_receive_sequence: u64,
+diagnostic_record! {
+    /// One live observer/world/entity instance; cannot be restored from JSON.
+    #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+    pub struct PlayerMotionWatch => RecordedPlayerMotionWatch {
+        observer_connection_id: u64,
+        generation: u64,
+        entity_id: i32,
+        uuid: [u8; 16],
+        spawn_receive_sequence: u64,
+        after_receive_sequence: u64,
+    }
+    diagnostic_serde {}
 }
 /// Freshness result; none of these states certifies stopped motion or grants mutation.
 #[derive(Clone, Debug, Serialize)]
@@ -116,6 +120,15 @@ mod tests {
             spawn_receive_sequence: 2,
             after_receive_sequence: 2,
         };
+        let record = crate::diagnostic_projection::ToDiagnostic::diagnostic(&watch);
+        let encoded = serde_json::to_vec(&record).unwrap();
+        let reread: RecordedPlayerMotionWatch = serde_json::from_slice(&encoded).unwrap();
+        assert_eq!(reread.entity_id, 42);
+        assert_eq!(reread.spawn_receive_sequence, 2);
+        assert_eq!(
+            serde_json::to_value(reread).unwrap(),
+            serde_json::to_value(&watch).unwrap()
+        );
         assert!(matches!(
             evaluate(&state, &watch),
             PlayerMotionStatus::Pending

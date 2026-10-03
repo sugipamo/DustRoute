@@ -8,11 +8,14 @@ sibling checkout. Cargo excludes this crate from the DustRoute workspace; it is
 an optional path dependency selected by `--features voxrig`.
 
 The authoritative current commit and file count are in
-[`voxrig-source.json`](voxrig-source.json), published on
-[`codex/survival-construction`](https://github.com/sugipamo/Voxrig/tree/codex/survival-construction).
+[`voxrig-source.json`](voxrig-source.json). The current snapshot was validated and
+committed in the separate local Voxrig checkout; vendoring does not imply that
+this revision has been pushed to an upstream branch.
 The snapshot includes the [checked survival API](voxrig/docs/survival-api.md),
 version-selected capabilities, native operation history and explicit session
-retirement/recovery. Each evidence record retains the exact tested revision;
+retirement/recovery. The [diagnostic data layer](voxrig/docs/architecture.md)
+provides one-way records independently of native plans, watches and operation
+authority. Each evidence record retains the exact tested revision;
 older evidence is not relabeled when the current source pin advances.
 
 Verify the recorded snapshot without network access:

@@ -1,12 +1,13 @@
 //! Shared native fresh-miner admission and once-only recovery ownership.
 use super::*;
+use crate::diagnostic_projection::diagnostic_record;
 
 fn unavailable(message: &str) -> Error {
     Error::new(ErrorKind::State, anyhow::anyhow!("{message}"))
 }
 
 /// Fresh connection and stationary target observation after validated retirement.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum MiningRecoveryMethod {
     /// Exact independently received profile removal before reconnect.
@@ -15,7 +16,7 @@ pub enum MiningRecoveryMethod {
     SameProfileLogin,
 }
 /// Caller-declared condition on the newly received target. No edit is sent.
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, serde::Deserialize)]
 #[serde(tag = "kind", content = "state", rename_all = "snake_case")]
 pub enum MiningRecoveryTarget {
     /// Require the exact original baseline or an exact ordinary air state.
@@ -50,49 +51,55 @@ impl MiningRecoveryTarget {
     }
 }
 /// Original connection's retained before-I/O claim, not a login result.
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, serde::Deserialize, PartialEq)]
 pub struct MiningRecoveryAttempt {
     /// Selected native retirement semantics.
     pub method: MiningRecoveryMethod,
     /// Declared fresh target condition.
     pub target: MiningRecoveryTarget,
 }
-/// Evidence establishing which native recovery boundary was used.
-#[derive(Clone, Debug, Serialize)]
-#[serde(tag = "kind", rename_all = "snake_case")]
-pub enum MiningRecoveryBoundary {
-    /// Independent exact UUID removal after the source closed.
-    IndependentRemoval {
-        /// Observer's retained receipt and once-only recovery claim.
-        receipt: Box<MiningRetirementRecord>,
-    },
-    /// Audited vanilla login excludes the old same-UUID player before success.
-    /// This is a version-specific lifecycle interpretation, not a general server ACK.
-    SameProfileLogin {
-        /// Authenticated UUID received again on the new connection.
-        uuid: [u8; 16],
-        /// Exact authenticated profile name.
-        name: String,
-    },
+diagnostic_record! {
+    /// Evidence establishing which native recovery boundary was used.
+    #[derive(Clone, Debug, Serialize)]
+    #[serde(tag = "kind", rename_all = "snake_case")]
+    pub enum MiningRecoveryBoundary => RecordedMiningRecoveryBoundary {
+        /// Independent exact UUID removal after the source closed.
+        IndependentRemoval {
+            /// Observer's retained receipt and once-only recovery claim.
+            receipt: Box<MiningRetirementRecord>,
+        },
+        /// Audited vanilla login excludes the old same-UUID player before success.
+        /// This is a version-specific lifecycle interpretation, not a general server ACK.
+        SameProfileLogin {
+            /// Authenticated UUID received again on the new connection.
+            uuid: [u8; 16],
+            /// Exact authenticated profile name.
+            name: String,
+        },
+    }
+    diagnostic_serde { #[serde(tag = "kind", rename_all = "snake_case")] }
 }
-/// Closed original history and fresh native baseline with explicit lifecycle evidence.
-#[derive(Clone, Debug, Serialize)]
-pub struct MiningRecoveryEvidence {
-    /// Current-generation PLAYER_LOADED dispatched before exposing new operations.
-    /// This is not server acceptance of a subsequent game action.
-    pub interaction_ready: bool,
-    /// Old mining state is retained; it is never imported into the new session.
-    pub old_history: OperationHistory,
-    /// Native lifecycle boundary; independent and same-profile evidence stay distinct.
-    pub boundary: MiningRecoveryBoundary,
-    /// New, live connection identity.
-    pub connection_id: u64,
-    /// Entire new stationary context; contains no inherited position/health data.
-    pub standing: StandingContext,
-    /// Newly loaded exact target contents matching the caller's declared condition.
-    pub target: crate::NativeBlockState,
-    /// New connection's receive boundary; incomparable to the old ordinal.
-    pub receive_sequence: u64,
+diagnostic_record! {
+    /// Closed original history and fresh native baseline with explicit lifecycle evidence.
+    #[derive(Clone, Debug, Serialize)]
+    pub struct MiningRecoveryEvidence => RecordedMiningRecoveryEvidence {
+        /// Current-generation PLAYER_LOADED dispatched before exposing new operations.
+        /// This is not server acceptance of a subsequent game action.
+        pub interaction_ready: bool,
+        /// Old mining state is retained; it is never imported into the new session.
+        pub old_history: OperationHistory,
+        /// Native lifecycle boundary; independent and same-profile evidence stay distinct.
+        pub boundary: MiningRecoveryBoundary,
+        /// New, live connection identity.
+        pub connection_id: u64,
+        /// Entire new stationary context; contains no inherited position/health data.
+        pub standing: StandingContext,
+        /// Newly loaded exact target contents matching the caller's declared condition.
+        pub target: crate::NativeBlockState,
+        /// New connection's receive boundary; incomparable to the old ordinal.
+        pub receive_sequence: u64,
+    }
+    diagnostic_serde {}
 }
 /// Explicit recovery result. The original connection remains closed and blocked.
 pub struct MiningRecovery {

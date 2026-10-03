@@ -1,5 +1,6 @@
 //! Connection-owned bounded controls. Dropping a caller's wait does not drop input.
 use super::*;
+use crate::diagnostic_projection::diagnostic_record;
 use crate::versions::java_1_21_11::client::players::{
     ObservedPlayer, PlayerMotionStatus, PlayerMotionWatch,
 };
@@ -7,7 +8,7 @@ use std::time::Duration;
 
 /// How a bounded dry-cube endpoint may be used by subsequent checked operations.
 /// Neither contract is a server acknowledgement that motion has stopped.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SurvivalMotionContract {
     /// Requires a fresh same-instance position from a distinct client.
@@ -18,7 +19,7 @@ pub enum SurvivalMotionContract {
 }
 
 /// No phase means server-confirmed stopped motion.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SurvivalMotionStatus {
     /// The bounded input sequence is being dispatched at native tick spacing.
@@ -39,45 +40,50 @@ impl SurvivalMotionStatus {
         matches!(self, Self::Observed | Self::Predicted)
     }
 }
-/// Diagnostic control record retained before the first packet; cannot be imported.
-#[derive(Clone, Debug, Serialize)]
-pub struct SurvivalMotionRecord {
-    /// Connection-local monotonically increasing run identity.
-    pub run_id: u64,
-    /// Owning connection, distinct from the observer.
-    pub connection_id: u64,
-    /// Owning native world generation.
-    pub generation: u64,
-    /// Prediction made before starting the run, against the then-received geometry.
-    pub preview: SurvivalMovementPreview,
-    /// Last tick whose input and position frames were fully dispatched.
-    pub dispatched_ticks: u16,
-    /// Before-I/O tick intent; may exceed dispatched_ticks after interruption.
-    pub attempted_tick: u16,
-    /// Current phase; elapsed time alone cannot produce Observed.
-    pub status: SurvivalMotionStatus,
-    /// Declared endpoint evidence contract; never inferred from missing packets.
-    pub contract: SurvivalMotionContract,
-    /// Independent observer identity.
-    pub observer_connection_id: Option<u64>,
-    /// Initial exact target lifetime watch.
-    pub initial_watch: Option<PlayerMotionWatch>,
-    /// New position boundary after the final dispatch; not a server-time fence.
-    pub final_watch: Option<PlayerMotionWatch>,
-    /// Exact same-instance observation used for continuation.
-    pub observed: Option<ObservedPlayer>,
-    /// Retained failure; further controls require explicit investigation.
-    pub problem: Option<String>,
-    /// Latest explicit observation-only reassessment; original problem is retained.
-    pub recheck: Option<SurvivalMotionRecheck>,
-    // Live in-process guards; diagnostic JSON can never restore these.
-    #[serde(skip)]
-    received_pose_sequence: u64,
-    #[serde(skip)]
-    observer_session: Option<Weak<Session>>,
+diagnostic_record! {
+    /// Diagnostic control record retained before the first packet; cannot be imported.
+    #[derive(Clone, Debug, Serialize)]
+    pub struct SurvivalMotionRecord => RecordedSurvivalMotionRecord {
+        /// Connection-local monotonically increasing run identity.
+        pub run_id: u64,
+        /// Owning connection, distinct from the observer.
+        pub connection_id: u64,
+        /// Owning native world generation.
+        pub generation: u64,
+        /// Prediction made before starting the run, against the then-received geometry.
+        pub preview: SurvivalMovementPreview,
+        /// Last tick whose input and position frames were fully dispatched.
+        pub dispatched_ticks: u16,
+        /// Before-I/O tick intent; may exceed dispatched_ticks after interruption.
+        pub attempted_tick: u16,
+        /// Current phase; elapsed time alone cannot produce Observed.
+        pub status: SurvivalMotionStatus,
+        /// Declared endpoint evidence contract; never inferred from missing packets.
+        pub contract: SurvivalMotionContract,
+        /// Independent observer identity.
+        pub observer_connection_id: Option<u64>,
+        /// Initial exact target lifetime watch.
+        pub initial_watch: Option<PlayerMotionWatch>,
+        /// New position boundary after the final dispatch; not a server-time fence.
+        pub final_watch: Option<PlayerMotionWatch>,
+        /// Exact same-instance observation used for continuation.
+        pub observed: Option<ObservedPlayer>,
+        /// Retained failure; further controls require explicit investigation.
+        pub problem: Option<String>,
+        /// Latest explicit observation-only reassessment; original problem is retained.
+        pub recheck: Option<SurvivalMotionRecheck>,
+        // Live in-process guards; diagnostic JSON can never restore these.
+    }
+    native_only {
+        #[serde(skip)]
+        received_pose_sequence: u64,
+        #[serde(skip)]
+        observer_session: Option<Weak<Session>>,
+    }
+    diagnostic_serde {}
 }
 /// Common standing provenance. Packet velocity and model velocity stay distinct.
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, serde::Deserialize, PartialEq)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum StandingPositionBasis {
     /// Own native position packet with zero resolved packet velocity.
@@ -695,14 +701,17 @@ mod tests {
     }
 }
 
-/// An in-process, exact-run observation fence for explicit reassessment. No
-/// deserialization or movement authority; creating it sends no player controls.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
-pub struct SurvivalMotionRecheck {
-    connection_id: u64,
-    run_id: u64,
-    attempt: u64,
-    watch: PlayerMotionWatch,
+diagnostic_record! {
+    /// An in-process, exact-run observation fence for explicit reassessment. No
+    /// deserialization or movement authority; creating it sends no player controls.
+    #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+    pub struct SurvivalMotionRecheck => RecordedSurvivalMotionRecheck {
+        connection_id: u64,
+        run_id: u64,
+        attempt: u64,
+        watch: PlayerMotionWatch,
+    }
+    diagnostic_serde {}
 }
 fn recheck_eligible(state: &State, run_id: u64) -> Result<&SurvivalMotionRecord> {
     let r = state

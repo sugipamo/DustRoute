@@ -5,22 +5,9 @@ use crate::survival_construction::{
     HypotheticalConstructionStep, PlacementPurpose, TemporaryBlock,
 };
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
-use voxrig::checked_survival::{
-    HypotheticalPlacement, SurvivalCapabilities, SurvivalMotionContract,
-};
-use voxrig::{ConnectionConfig, MinecraftVersion, NativeBlockState};
-
-/// Retained native receipts may be serialized for display, but not indexed or
-/// inspected as JSON by business logic. Validation inputs have separate types.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(transparent)]
-pub struct DiagnosticPayload(Value);
-impl From<Value> for DiagnosticPayload {
-    fn from(value: Value) -> Self {
-        Self(value)
-    }
-}
+use voxrig::checked_survival::diagnostic::{self as records, ToDiagnostic};
+use voxrig::checked_survival::{SurvivalCapabilities, SurvivalMotionContract};
+use voxrig::{ConnectionConfig, MinecraftVersion};
 
 /// A serialized `false` marker cannot represent restorable authority or replay.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -91,53 +78,17 @@ pub enum CheckpointSchema {
     Unknown,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct RecordedEdit {
-    pub position: [i32; 3],
-    pub before: NativeBlockState,
-    pub after: NativeBlockState,
-}
-impl From<&voxrig::checked_survival::HypotheticalBlockEdit> for RecordedEdit {
-    fn from(edit: &voxrig::checked_survival::HypotheticalBlockEdit) -> Self {
-        Self {
-            position: edit.position,
-            before: edit.before.clone(),
-            after: edit.after.clone(),
-        }
-    }
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct RecordedPlacement {
-    pub edit: RecordedEdit,
-    pub support: [i32; 3],
-    pub face_id: u8,
-    pub rotation: [f32; 2],
-    pub cursor: [f32; 3],
-    /// Native provenance is retained for diagnosis, never interpreted as authority.
-    pub aim_requirement: DiagnosticPayload,
-}
-impl From<&HypotheticalPlacement> for RecordedPlacement {
-    fn from(placement: &HypotheticalPlacement) -> Self {
-        Self {
-            edit: (&placement.edit).into(),
-            support: placement.support,
-            face_id: placement.face_id,
-            rotation: placement.rotation,
-            cursor: placement.cursor,
-            aim_requirement: json!(placement.aim_requirement).into(),
-        }
-    }
-}
+pub use records::{
+    RecordedHypotheticalBlockEdit as RecordedEdit,
+    RecordedHypotheticalPlacement as RecordedPlacement,
+};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum RecordedStep {
     Move {
         #[serde(skip_serializing_if = "Option::is_none")]
-        prediction: Option<DiagnosticPayload>,
+        prediction: Option<Box<records::RecordedHypotheticalMovementPreview>>,
     },
     Place {
         purpose: PlacementPurpose,
@@ -149,7 +100,7 @@ pub enum RecordedStep {
         face_id: u8,
         rotation: [f32; 2],
         /// Diagnostic native reconnect requirement; no token can be restored.
-        reconnect: DiagnosticPayload,
+        reconnect: records::RecordedHypotheticalReconnectBoundary,
     },
     #[serde(other)]
     Unknown,
@@ -170,7 +121,7 @@ impl From<&HypotheticalConstructionStep> for RecordedStep {
     fn from(step: &HypotheticalConstructionStep) -> Self {
         match step {
             HypotheticalConstructionStep::Move { prediction } => Self::Move {
-                prediction: Some(json!(prediction).into()),
+                prediction: Some(prediction.diagnostic()),
             },
             HypotheticalConstructionStep::Place { purpose, placement } => Self::Place {
                 purpose: *purpose,
@@ -185,7 +136,7 @@ impl From<&HypotheticalConstructionStep> for RecordedStep {
                 edit: edit.into(),
                 face_id: *face_id,
                 rotation: *rotation,
-                reconnect: json!(reconnect).into(),
+                reconnect: reconnect.into(),
             },
         }
     }
@@ -216,7 +167,7 @@ pub struct RecordedConstructionPlan {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub motion_contract: Option<RecordedMotionContract>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub source: Option<DiagnosticPayload>,
+    pub source: Option<Box<records::RecordedStandingContext>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub baseline: Option<dustroute_translate::snapshot::MinecraftSnapshot>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -233,7 +184,7 @@ impl From<&HypotheticalConstructionPlan> for RecordedConstructionPlan {
             initial_temporary: plan.initial_temporary().to_vec(),
             steps: plan.steps().iter().map(Into::into).collect(),
             motion_contract: Some(plan.motion_contract().into()),
-            source: Some(json!(plan.source()).into()),
+            source: Some(Box::new(plan.source().into())),
             baseline: Some(plan.baseline().clone()),
             expected: Some(plan.expected().clone()),
             materials: Some(plan.materials().clone()),
@@ -267,9 +218,9 @@ impl From<&crate::survival_construction::generation::GeneratedConstructionPlan>
 pub struct RecordedExecutionPlan {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub plan: Option<RecordedConstructionPlan>,
-    /// Opaque library capabilities for read-only diagnosis.
+    /// Static implementation support, never live operation readiness.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub capabilities: Option<DiagnosticPayload>,
+    pub capabilities: Option<SurvivalCapabilities>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub declared_reconnect: Option<RecordedEndpoint>,
 }
@@ -281,7 +232,7 @@ impl RecordedExecutionPlan {
     ) -> Self {
         Self {
             plan: Some(plan.into()),
-            capabilities: Some(json!(capabilities).into()),
+            capabilities: Some(capabilities),
             declared_reconnect: Some(reconnect.into()),
         }
     }
@@ -290,6 +241,7 @@ impl RecordedExecutionPlan {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
     #[test]
     fn persisted_claim_cannot_enable_automatic_replay() {
         let mut wire = json!({"new_job":uuid::Uuid::new_v4(),"execution_id":uuid::Uuid::new_v4(),"automatic_replay":false});

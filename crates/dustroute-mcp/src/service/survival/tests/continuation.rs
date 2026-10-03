@@ -194,7 +194,7 @@ async fn native_public_idle_continuation() {
             .as_array()
             .unwrap()
             .last()
-            .unwrap()["evidence"];
+            .unwrap()["evidence"]["data"];
         assert_eq!(final_result["status"]["safe_idle"], true);
         assert!(
             !checkpoint["temporary"].as_array().unwrap().is_empty(),
@@ -333,11 +333,11 @@ async fn native_public_idle_continuation() {
             final_result["status"]
         );
         assert_eq!(
-            final_result["status"]["final_evidence"]["evidence"]["remaining_owned_temporary"],
+            final_result["status"]["final_evidence"]["evidence"]["data"]["remaining_owned_temporary"],
             json!([])
         );
         assert_eq!(
-            final_result["status"]["final_evidence"]["evidence"]["builder_checked_cells"],
+            final_result["status"]["final_evidence"]["evidence"]["data"]["builder_checked_cells"],
             3120
         );
         let lease = native.lease_survival().unwrap();

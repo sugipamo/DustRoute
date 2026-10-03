@@ -4,7 +4,7 @@ pub mod java_1_16_1;
 pub mod java_1_21_11;
 
 /// Explicit Minecraft wire and registry version for one connection.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, serde::Serialize)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum MinecraftVersion {
     /// Existing Java 1.16.1 implementation (protocol 736).
     Java1_16_1,

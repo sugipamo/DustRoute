@@ -58,3 +58,21 @@ registry名はraw IDと併存させます。NBT、raw JSON chat、metadataなど
 ネイティブな位置観測、衝突、照準、操作履歴、採掘セッションの退役と再接続検証はVoxrigの責務です。
 経路探索、仮設の配置、設計図、資材予約、永続ジョブ、復旧後の再計画は利用側に残します。
 再接続は明示呼出しで一度だけ試み、利用側の計画を移植したり自動再試行したりしません。
+
+## 診断記録と実行用の型
+
+`checked_survival::diagnostic`は、一方向の`ToDiagnostic::diagnostic`と用途別の
+`Recorded*`を公開します。接続や操作を行わず、現在の値から保存可能なRustデータを作ります。
+JSONに一度変換して型を作る実装ではありません。
+
+座標・入力・受信値・状態ラベルなど39種類は純粋なデータとして共有します。
+計画、intent、watch、それらを含む履歴等27種類は別の診断型にします。
+`diagnostic_record!`でnative型と診断型のfieldを一か所で宣言し、型ごとの診断射影を
+コンパイラに検査させます。元のnative型のfield visibility・derive・操作メソッドは維持します。
+nativeにだけ存在する受信境界、slot更新境界、observer sessionは`native_only`に置き、
+診断型へ含めません。privateなwatchもnativeのfieldはprivateのままです。
+
+`Recorded*`にDeserializeがあっても、nativeの計画・intent・watchや`Operations`を
+復元する逆変換はありません。単発操作のadmission、世代・接続の照合、単回消費と
+退役確認は従来どおりnative側で行います。保存済みの数値や結果ラベルは現在の証拠になりません。
+診断型のschema選択、永続化と再計画は利用側の責務です。

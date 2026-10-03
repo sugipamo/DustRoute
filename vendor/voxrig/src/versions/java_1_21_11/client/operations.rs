@@ -22,13 +22,29 @@ mod tests;
 pub use super::loading::{InteractionLoading, LoadingAttempt};
 pub use super::motion::{OwnMotion, PositionBasis, PositionSubmission, ReceivedPose};
 use super::*;
+use crate::diagnostic_projection::diagnostic_record;
 pub use inventory::{InventorySwap, InventorySwapObservation};
+pub use inventory::{RecordedInventorySwap, RecordedInventorySwapObservation};
 pub use mining::{
     MiningIntent, MiningInventoryChange, MiningInventoryChangeKind, MiningRecord, MiningRemoval,
     MiningSend, MiningStatus, MiningTargetReceipt,
 };
+pub use mining::{
+    RecordedMiningIntent, RecordedMiningRecord, RecordedMiningRemoval, RecordedMiningStatus,
+};
 pub(super) use mining::{mining_chunk_changed, mining_received, mining_world_changed};
+pub use movement::RecordedSurvivalMovementPreview;
+pub use movement::{
+    RecordedHypotheticalAimRequirement, RecordedHypotheticalBlockEdit,
+    RecordedHypotheticalMovementPreview, RecordedHypotheticalPlacement,
+    RecordedHypotheticalReconnectBoundary, RecordedSurvivalMotionRecheck,
+    RecordedSurvivalMotionRecord,
+};
 pub use placement::{PlacementIntent, PlacementObservation, PlacementRecord, PlacementStatus};
+pub use placement::{
+    RecordedPlacementIntent, RecordedPlacementObservation, RecordedPlacementRecord,
+    RecordedPlacementStatus,
+};
 pub(super) use placement::{
     placement_chunk_changed, placement_context_received, placement_received,
 };
@@ -37,16 +53,19 @@ pub use recovery::{
     MiningRecovery, MiningRecoveryAttempt, MiningRecoveryBoundary, MiningRecoveryEvidence,
     MiningRecoveryMethod, MiningRecoveryTarget,
 };
+pub use recovery::{RecordedMiningRecoveryBoundary, RecordedMiningRecoveryEvidence};
 pub(super) use retirement::retirement_received;
 pub use retirement::{MiningRetirementRecord, MiningRetirementStatus, MiningRetirementWatch};
+pub use retirement::{RecordedMiningRetirementRecord, RecordedMiningRetirementWatch};
 use serde::Serialize;
+pub use survival::RecordedStandingContext;
 pub use survival::{
     AttributeValue, LocalPlayerState, MotionInterruption, PlayerHealth, ReceivedEffect,
     StandingContext, ValueBasis, VelocitySample,
 };
 
 /// Game mode observed in a native login/respawn/change packet.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum GameMode {
     /// Survival.
@@ -71,7 +90,7 @@ impl GameMode {
 }
 
 /// A default item stack, without added or removed data components.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, serde::Deserialize)]
 pub struct PlainItem {
     /// Registry identifier, including namespace.
     pub name: String,
@@ -99,7 +118,7 @@ pub fn default_item(name: &str, count: u8) -> Result<PlainItem> {
     })
 }
 /// Received inventory knowledge; unknown never means an empty slot.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, serde::Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum InventorySlot {
     /// No complete supported packet has established this slot.
@@ -112,30 +131,35 @@ pub enum InventorySlot {
         item: PlainItem,
     },
 }
-/// Received inventory contents; unsupported components invalidate the affected baseline.
-#[derive(Clone, Debug, Serialize)]
-pub struct Inventory {
-    /// Player screen slots 0..45 (hotbar 36..44).
-    pub slots: Vec<InventorySlot>,
-    /// Most recent applied native inventory packet sequence.
-    pub receive_sequence: Option<u64>,
-    /// Some component encodings require additional version-specific decoders.
-    pub unsupported_components: bool,
-    /// Submitted creative hotbar writes still awaiting a native inventory update.
-    pub pending_creative: Vec<u8>,
-    /// Active received container, unknown until an inventory/window packet arrives.
-    pub window_id: Option<i32>,
-    /// Latest received player-screen revision, never incremented from a submitted click.
-    pub screen_revision: Option<i32>,
-    /// Received carried stack. Unavailable never means an empty cursor.
-    pub cursor: InventorySlot,
-    /// An unresolved ordinary swap. Cancellation/timeout never clears its uncertainty.
-    pub pending_swap: Option<InventorySwap>,
-    #[serde(skip)]
-    slot_sequences: Vec<Option<u64>>,
+diagnostic_record! {
+    /// Received inventory contents; unsupported components invalidate the affected baseline.
+    #[derive(Clone, Debug, Serialize)]
+    pub struct Inventory => RecordedInventory {
+        /// Player screen slots 0..45 (hotbar 36..44).
+        pub slots: Vec<InventorySlot>,
+        /// Most recent applied native inventory packet sequence.
+        pub receive_sequence: Option<u64>,
+        /// Some component encodings require additional version-specific decoders.
+        pub unsupported_components: bool,
+        /// Submitted creative hotbar writes still awaiting a native inventory update.
+        pub pending_creative: Vec<u8>,
+        /// Active received container, unknown until an inventory/window packet arrives.
+        pub window_id: Option<i32>,
+        /// Latest received player-screen revision, never incremented from a submitted click.
+        pub screen_revision: Option<i32>,
+        /// Received carried stack. Unavailable never means an empty cursor.
+        pub cursor: InventorySlot,
+        /// An unresolved ordinary swap. Cancellation/timeout never clears its uncertainty.
+        pub pending_swap: Option<InventorySwap>,
+    }
+    native_only {
+        #[serde(skip)]
+        slot_sequences: Vec<Option<u64>>,
+    }
+    diagnostic_serde {}
 }
 /// Selected main-hand hotbar slot with explicit receive/submission provenance.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, serde::Deserialize)]
 pub struct HotbarSelection {
     /// Native hotbar index 0..8.
     pub slot: u8,
@@ -161,80 +185,86 @@ impl Default for Inventory {
         }
     }
 }
-/// A session-bound player/inventory observation; position may include submitted movement.
-#[derive(Clone, Debug, Serialize)]
-pub struct PlayerState {
-    /// Native loading stage; complete dispatch is not an operation acknowledgement.
-    pub interaction_loading: InteractionLoading,
-    /// Session identity, not reusable across connections.
-    pub connection_id: u64,
-    /// Last applied receive sequence.
-    pub receive_sequence: u64,
-    /// Current dimension, absent during reconfiguration.
-    pub dimension: Option<String>,
-    /// Current feet position.
-    pub position: Option<[f64; 3]>,
-    /// False after local movement until a server position packet replaces it.
-    pub position_from_server: bool,
-    /// Separate position receipts and local submissions, with retained provenance.
-    pub motion: OwnMotion,
-    /// Yaw and pitch in native degrees.
-    pub rotation: [f32; 2],
-    /// Latest received game mode.
-    pub game_mode: Option<GameMode>,
-    /// Server permission to fly; false until received.
-    pub may_fly: bool,
-    /// Latest client flight request, not an acknowledgement.
-    pub requested_flying: bool,
-    /// Highest received block interaction acknowledgement.
-    pub acknowledged_interaction: Option<i32>,
-    /// Inventory as received, never filled from submitted creative packets.
-    pub inventory: Inventory,
-    /// Main-hand selection, absent until explicitly sent or received.
-    pub selected_hotbar: Option<HotbarSelection>,
-    /// Own-player defaults and received updates, with explicit provenance.
-    pub local_player: LocalPlayerState,
-    /// Configuration flags actually received, absent until observed.
-    pub enabled_features: Option<Vec<String>>,
-    /// Last periodic server-time sample; never a current-tick fence.
-    pub server_time: Option<ServerTime>,
+diagnostic_record! {
+    /// A session-bound player/inventory observation; position may include submitted movement.
+    #[derive(Clone, Debug, Serialize)]
+    pub struct PlayerState => RecordedPlayerState {
+        /// Native loading stage; complete dispatch is not an operation acknowledgement.
+        pub interaction_loading: InteractionLoading,
+        /// Session identity, not reusable across connections.
+        pub connection_id: u64,
+        /// Last applied receive sequence.
+        pub receive_sequence: u64,
+        /// Current dimension, absent during reconfiguration.
+        pub dimension: Option<String>,
+        /// Current feet position.
+        pub position: Option<[f64; 3]>,
+        /// False after local movement until a server position packet replaces it.
+        pub position_from_server: bool,
+        /// Separate position receipts and local submissions, with retained provenance.
+        pub motion: OwnMotion,
+        /// Yaw and pitch in native degrees.
+        pub rotation: [f32; 2],
+        /// Latest received game mode.
+        pub game_mode: Option<GameMode>,
+        /// Server permission to fly; false until received.
+        pub may_fly: bool,
+        /// Latest client flight request, not an acknowledgement.
+        pub requested_flying: bool,
+        /// Highest received block interaction acknowledgement.
+        pub acknowledged_interaction: Option<i32>,
+        /// Inventory as received, never filled from submitted creative packets.
+        pub inventory: Inventory,
+        /// Main-hand selection, absent until explicitly sent or received.
+        pub selected_hotbar: Option<HotbarSelection>,
+        /// Own-player defaults and received updates, with explicit provenance.
+        pub local_player: LocalPlayerState,
+        /// Configuration flags actually received, absent until observed.
+        pub enabled_features: Option<Vec<String>>,
+        /// Last periodic server-time sample; never a current-tick fence.
+        pub server_time: Option<ServerTime>,
+    }
+    diagnostic_serde {}
 }
-/// Diagnostic history, available even after closure. These records are not a
-/// current player/world observation or permission to replay an action.
-#[derive(Clone, Debug, Serialize)]
-pub struct OperationHistory {
-    /// Owning connection; never reusable on a replacement connection.
-    pub connection_id: u64,
-    /// Last applied receive ordinal, not a fresh observation fence.
-    pub last_receive_sequence: u64,
-    /// True when the connection can no longer be used for operations.
-    pub connection_closed: bool,
-    /// First attempted packet whose frame completion became uncertain.
-    /// Does not prove how many bytes or which server effects occurred.
-    pub interrupted_packet_id: Option<i32>,
-    /// Most recent protocol/receive failure, if retained.
-    pub receive_failure: Option<String>,
-    /// An unresolved ordinary inventory swap; do not replay from this history.
-    pub pending_inventory_swap: Option<InventorySwap>,
-    /// Creative slots awaiting a received result, including interrupted sends.
-    pub pending_creative_slots: Vec<u8>,
-    /// Last mining intent/result, pending or observed. Never replay from history.
-    pub mining: Option<MiningRecord>,
-    /// Last ordinary placement, including unresolved sends and observed consumption.
-    pub placement: Option<PlacementRecord>,
-    /// Last independent retirement watch; history does not authorize recovery.
-    pub mining_retirement: Option<MiningRetirementRecord>,
-    /// Native loading attempts survive failure and remain available as history.
-    pub interaction_loading: InteractionLoading,
-    /// Last main-hand selection evidence, including incomplete send attempts.
-    pub selected_hotbar: Option<HotbarSelection>,
-    /// Position receipt/submission history; never replayable authority.
-    pub motion: OwnMotion,
-    /// Bounded survival control intent and observations; never replayable authority.
-    pub survival_motion: Option<SurvivalMotionRecord>,
+diagnostic_record! {
+    /// Diagnostic history, available even after closure. These records are not a
+    /// current player/world observation or permission to replay an action.
+    #[derive(Clone, Debug, Serialize)]
+    pub struct OperationHistory => RecordedOperationHistory {
+        /// Owning connection; never reusable on a replacement connection.
+        pub connection_id: u64,
+        /// Last applied receive ordinal, not a fresh observation fence.
+        pub last_receive_sequence: u64,
+        /// True when the connection can no longer be used for operations.
+        pub connection_closed: bool,
+        /// First attempted packet whose frame completion became uncertain.
+        /// Does not prove how many bytes or which server effects occurred.
+        pub interrupted_packet_id: Option<i32>,
+        /// Most recent protocol/receive failure, if retained.
+        pub receive_failure: Option<String>,
+        /// An unresolved ordinary inventory swap; do not replay from this history.
+        pub pending_inventory_swap: Option<InventorySwap>,
+        /// Creative slots awaiting a received result, including interrupted sends.
+        pub pending_creative_slots: Vec<u8>,
+        /// Last mining intent/result, pending or observed. Never replay from history.
+        pub mining: Option<MiningRecord>,
+        /// Last ordinary placement, including unresolved sends and observed consumption.
+        pub placement: Option<PlacementRecord>,
+        /// Last independent retirement watch; history does not authorize recovery.
+        pub mining_retirement: Option<MiningRetirementRecord>,
+        /// Native loading attempts survive failure and remain available as history.
+        pub interaction_loading: InteractionLoading,
+        /// Last main-hand selection evidence, including incomplete send attempts.
+        pub selected_hotbar: Option<HotbarSelection>,
+        /// Position receipt/submission history; never replayable authority.
+        pub motion: OwnMotion,
+        /// Bounded survival control intent and observations; never replayable authority.
+        pub survival_motion: Option<SurvivalMotionRecord>,
+    }
+    diagnostic_serde {}
 }
 /// A periodic native time packet bound to its receive sequence.
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, serde::Deserialize, PartialEq)]
 pub struct ServerTime {
     /// Received game age.
     pub game_age: i64,

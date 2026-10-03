@@ -38,7 +38,8 @@ bridge endpointをRustの設定・constructorから除去した。JSON/TCPによ
 この確認は宣言した隔離fixtureの範囲であり、空のserver queueや任意の建築を保証しない。
 
 内部JSONの撤去全体は未完了。保存codec、Lawのruntime読込、探索比較キー、
-診断payload、Voxrigのregistry/outline/component表現は引き続き移行対象である。
+Voxrigのregistry/outline/component表現は引き続き移行対象である。
+診断payloadの撤去は後述の第2段階で実施した。
 Mineflayer RPCを理由とする例外は不要になった。Voxrigの別version adapterは維持し、
 外部protocolが要求する形式と内部表現を区別して調べる。必要な例外が判明した場合は相談する。
 
@@ -53,9 +54,13 @@ BlueprintUpdatesのarchiveも型付きcatalogを保持し、JSONによる内部�
 
 第2段階では、挙動report・再構築失敗詳細・ピストン配置reviewを型へ移した。
 admission/taskの拒否診断と、manifest previewの外側・探索結果も型へ移した。
-サバイバルのopaque payloadは残る。native関連型64種類の共有とlive guardの分離が
-必要になるため、[Voxrig側の診断データ層の改修案](native-diagnostic-records.md)を作成して
-その変更の前で停止している。全JSON移行の完了とは扱わない。
+native関連型の共有とlive guardの分離について一旦停止し、ユーザー承認後に
+[Voxrigの診断データ層](native-diagnostic-records.md)を実装した。
+39型の純粋なデータを共有し、27型は別の記録型として公開する。ネイティブ値への逆変換はない。
+サバイバルのopaque payloadを除去し、用途別の証拠型を直接保存する。イベント種別と証拠型の
+不一致は保存前・読込み時に拒否する。journalはv2へ更新し、旧v1のconverterは作らない。
+保存のJSON codec、Law、比較キー、他workflow、registry等の後続移行は別段階に残る。
+全JSON移行の完了とは扱わない。最終検証は[移行記録](json-boundary-migration.md)を参照。
 
 ## サバイバル統合後の追補（2026-10-03 UTC）
 
@@ -106,7 +111,8 @@ enumへ、manifest・保存済み計画・endpoint・checkpoint消費記録をst
 
 MCPとファイル保存の境界では既存の文字列名・JSON形式を使う。プレイヤー名、ブロック名、
 エラー説明はデータとして残す。意味を解釈しないネイティブ診断receiptは、中身を参照する
-APIを持たない`DiagnosticPayload`に包み、実行や所有権の判断には使わない。
+APIを持たない`DiagnosticPayload`に包み、実行や所有権の判断には使わなかった。
+その後、第2段階でこのwrapperを用途別の記録型へ置換した。
 未知の状態・イベント、不正なcheckpointをdecode/検証時に拒否する。
 
 保存用DTOにはネイティブ計画・操作tokenの復元機能を設けない。

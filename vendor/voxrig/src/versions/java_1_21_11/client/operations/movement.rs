@@ -4,8 +4,10 @@ mod endpoint;
 mod scenario;
 use super::geometry::GeometryView;
 use super::*;
+use crate::diagnostic_projection::diagnostic_record;
 use crate::versions::java_1_21_11::math::trig;
 pub(super) use control::standing_basis;
+pub use control::{RecordedSurvivalMotionRecheck, RecordedSurvivalMotionRecord};
 pub use control::{
     StandingPositionBasis, SurvivalMotionContract, SurvivalMotionRecheck, SurvivalMotionRecord,
     SurvivalMotionStatus,
@@ -15,9 +17,14 @@ pub use scenario::{
     HypotheticalMovementPreview, HypotheticalPlacement, HypotheticalReconnectBoundary,
     SurvivalScenario,
 };
+pub use scenario::{
+    RecordedHypotheticalAimRequirement, RecordedHypotheticalBlockEdit,
+    RecordedHypotheticalMovementPreview, RecordedHypotheticalPlacement,
+    RecordedHypotheticalReconnectBoundary,
+};
 
 /// Digital walking input for one predicted native game tick, without sprint/sneak.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, serde::Deserialize)]
 pub struct SurvivalInput {
     /// -1 backwards, 0 released, 1 forwards.
     pub forward: i8,
@@ -27,7 +34,7 @@ pub struct SurvivalInput {
     pub jump: bool,
 }
 /// One native tick's heading and digital input. Route selection belongs to the caller.
-#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, serde::Deserialize)]
 pub struct SurvivalControl {
     /// Native body yaw in degrees.
     pub yaw: f32,
@@ -46,7 +53,7 @@ fn fixed_controls(yaw: f32, inputs: &[SurvivalInput]) -> Result<Vec<SurvivalCont
         .collect())
 }
 /// A simulated player frame, never a received pose or permission to build.
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, serde::Deserialize)]
 pub struct PredictedMotionFrame {
     /// Tick count from the preview's initial context, not server time.
     pub tick: u16,
@@ -61,24 +68,27 @@ pub struct PredictedMotionFrame {
     /// No displacement with released controls and predicted floor contact.
     pub resting: bool,
 }
-/// Read-only simulation against one received world snapshot. Not a reusable plan.
-#[derive(Clone, Debug, Serialize)]
-pub struct SurvivalMovementPreview {
-    /// Received starting posture, attributes and world revision.
-    pub initial: StandingContext,
-    /// Initial model frame (tick zero), distinguishing received reset from rest.
-    pub initial_frame: PredictedMotionFrame,
-    /// World generation of the starting context.
-    pub generation: u64,
-    /// Exact per-tick heading and input; no packets were sent.
-    pub controls: Vec<SurvivalControl>,
-    /// Predicted frames. The world itself is not advanced into the future.
-    pub frames: Vec<PredictedMotionFrame>,
-    /// Prospective terminal clearance; does not authorize later sends.
-    pub terminal_clearance: TerminalClearance,
+diagnostic_record! {
+    /// Read-only simulation against one received world snapshot. Not a reusable plan.
+    #[derive(Clone, Debug, Serialize)]
+    pub struct SurvivalMovementPreview => RecordedSurvivalMovementPreview {
+        /// Received starting posture, attributes and world revision.
+        pub initial: StandingContext,
+        /// Initial model frame (tick zero), distinguishing received reset from rest.
+        pub initial_frame: PredictedMotionFrame,
+        /// World generation of the starting context.
+        pub generation: u64,
+        /// Exact per-tick heading and input; no packets were sent.
+        pub controls: Vec<SurvivalControl>,
+        /// Predicted frames. The world itself is not advanced into the future.
+        pub frames: Vec<PredictedMotionFrame>,
+        /// Prospective terminal clearance; does not authorize later sends.
+        pub terminal_clearance: TerminalClearance,
+    }
+    diagnostic_serde {}
 }
 /// Why a predicted endpoint can or cannot be used as a construction stop.
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, serde::Deserialize, PartialEq)]
 #[serde(tag = "status", rename_all = "snake_case")]
 pub enum TerminalClearance {
     /// Resting with conservative support and a margin from solid walls.

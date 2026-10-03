@@ -5,7 +5,11 @@
 pub(crate) mod checkpoint;
 pub mod diagnostic;
 use diagnostic::RecordedExecutionPlan;
+pub(crate) mod evidence;
 mod journal;
+pub use evidence::ExecutionEvidence;
+use evidence::{RetryReason, WorldEvidence};
+use voxrig::checked_survival::diagnostic::ToDiagnostic;
 mod native;
 use crate::survival_construction::{
     HypotheticalConstructionPlan, HypotheticalConstructionStep, PlacementPurpose,
@@ -13,12 +17,11 @@ use crate::survival_construction::{
 use crate::survival_error::SurvivalErrorCode;
 use journal::Journal;
 pub use journal::{
-    Continuation, ExecutionDiagnosis, ExecutionEvent, ExecutionEvidence, ExecutionPhase,
-    ExecutionRecord, JournalSchema, OperationOutcome, diagnose,
+    Continuation, ExecutionDiagnosis, ExecutionEvent, ExecutionPhase, ExecutionRecord,
+    JournalSchema, OperationOutcome, diagnose,
 };
 pub(crate) use native::received_materials;
 use serde::Serialize;
-use serde_json::json;
 use std::{collections::BTreeMap, path::Path};
 use voxrig::checked_survival::{
     CapturedSurvivalScene, HypotheticalBlockEdit, MiningIntent, SurvivalMotionContract,
@@ -183,8 +186,15 @@ impl SurvivalExecutor {
     /// an outstanding operation still requires inspection and explicit retirement.
     pub fn cancel(&mut self) -> Result<()> {
         self.call_active = true;
-        self.journal.event(ExecutionPhase::Cancelled, self.journal.record.outcome.clone(), Continuation::Cancelled,
-            json!({"native_operation_may_remain":true,"remaining_owned_temporary":self.temporary.keys().collect::<Vec<_>>()}))
+        self.journal.event(
+            ExecutionPhase::Cancelled,
+            self.journal.record.outcome.clone(),
+            Continuation::Cancelled,
+            ExecutionEvidence::Cancelled {
+                native_operation_may_remain: true,
+                remaining_owned_temporary: self.temporary.keys().copied().collect(),
+            },
+        )
     }
     /// One bounded transition. Mining START returns before waiting for its result;
     /// the next call collects the result and retires the old native connection.
@@ -212,7 +222,15 @@ impl SurvivalExecutor {
             }
             Err(error) => {
                 // If this write also fails, the pre-dispatch uncertain intent remains.
-                let _ = self.journal.event(ExecutionPhase::Stopped, self.journal.record.outcome.clone(), Continuation::NeedsInspection, json!({"error":error,"remaining_owned_temporary":self.temporary.keys().collect::<Vec<_>>()}));
+                let _ = self.journal.event(
+                    ExecutionPhase::Stopped,
+                    self.journal.record.outcome.clone(),
+                    Continuation::NeedsInspection,
+                    ExecutionEvidence::Stopped {
+                        error: error.clone(),
+                        remaining_owned_temporary: self.temporary.keys().copied().collect(),
+                    },
+                );
                 Err(error)
             }
         }
@@ -266,10 +284,16 @@ impl SurvivalExecutor {
                 ExecutionPhase::Completed,
                 OperationOutcome::Observed,
                 Continuation::Completed,
-                json!({"remaining_owned_temporary":[],"builder_checked_cells":self.expected.len(),
-                    "world_evidence":"builder_received","standing":scene.source(),
-                    "motion_contract":self.plan.motion_contract(),"server_stop_acknowledged":false,
-                    "server_position_error_bound":null,"position":p}),
+                ExecutionEvidence::Completed {
+                    remaining_owned_temporary: vec![],
+                    builder_checked_cells: self.expected.len(),
+                    world_evidence: WorldEvidence::BuilderReceived,
+                    standing: Box::new(scene.source().into()),
+                    motion_contract: self.plan.motion_contract(),
+                    server_stop_acknowledged: diagnostic::DiagnosticOnly,
+                    server_position_error_bound: None,
+                    position: p,
+                },
             )?;
             return Ok(ExecutionProgress::Completed);
         }
@@ -311,7 +335,9 @@ impl SurvivalExecutor {
             ExecutionPhase::StepCompleted,
             outcome,
             Continuation::Revalidate,
-            json!({"remaining_owned_temporary":self.temporary.keys().collect::<Vec<_>>()}),
+            ExecutionEvidence::StepCompleted {
+                remaining_owned_temporary: self.temporary.keys().copied().collect(),
+            },
         )?;
         Ok(ExecutionProgress::StepCompleted {
             completed: self.record().completed_steps,

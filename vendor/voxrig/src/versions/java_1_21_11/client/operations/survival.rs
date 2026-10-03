@@ -3,6 +3,7 @@ mod attributes;
 use super::super::super::wire::velocity;
 use super::geometry::GeometryView;
 use super::*;
+use crate::diagnostic_projection::diagnostic_record;
 use crate::versions::java_1_21_11::client::players::{self, PlayerPose};
 use std::collections::BTreeMap;
 
@@ -10,7 +11,7 @@ use std::collections::BTreeMap;
 mod tests;
 
 /// Distinguishes a native new-world default from an actual received update.
-#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, serde::Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum ValueBasis {
     /// Native client initialization, not an independent server observation.
@@ -22,7 +23,7 @@ pub enum ValueBasis {
     },
 }
 /// A projected native attribute and its basis.
-#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, serde::Deserialize)]
 pub struct AttributeValue {
     /// Value after native modifier order and attribute-specific clamping.
     pub value: f64,
@@ -30,7 +31,7 @@ pub struct AttributeValue {
     pub basis: ValueBasis,
 }
 /// Last received health packet; no health is inferred from game mode.
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, serde::Deserialize)]
 pub struct PlayerHealth {
     /// Native health (zero means dead).
     pub health: f32,
@@ -42,7 +43,7 @@ pub struct PlayerHealth {
     pub receive_sequence: u64,
 }
 /// A velocity sample; elapsed time does not simulate gravity or friction.
-#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, serde::Deserialize)]
 pub struct VelocitySample {
     /// Blocks per game tick, resolved from a native packet.
     pub value: [f64; 3],
@@ -50,7 +51,7 @@ pub struct VelocitySample {
     pub receive_sequence: u64,
 }
 /// Last received effect update. Duration is not a current remaining duration.
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, serde::Deserialize)]
 pub struct ReceivedEffect {
     /// Native status-effect registry identifier.
     pub effect_id: i32,
@@ -64,7 +65,7 @@ pub struct ReceivedEffect {
     pub receive_sequence: u64,
 }
 /// A packet whose player-motion consequences are outside this stationary model.
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, serde::Deserialize)]
 pub struct MotionInterruption {
     /// Native packet ID, retained for diagnosis rather than silently ignored.
     pub packet_id: i32,
@@ -72,7 +73,7 @@ pub struct MotionInterruption {
     pub receive_sequence: u64,
 }
 /// Own-player client projection. It does not assert a complete server snapshot.
-#[derive(Clone, Debug, Default, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, serde::Deserialize)]
 pub struct LocalPlayerState {
     /// Identity from this world's login, never from a nearby player's spawn.
     pub entity_id: Option<i32>,
@@ -278,35 +279,38 @@ fn interrupt(state: &mut State, packet_id: i32) {
     });
 }
 
-/// A derived stationary standing context; never a server ground acknowledgement.
-#[derive(Clone, Debug, Serialize)]
-pub struct StandingContext {
-    /// Connection identity.
-    pub connection_id: u64,
-    /// Received packet boundary shared with the geometry read.
-    pub receive_sequence: u64,
-    /// Current reconstructed client frame, not server time.
-    pub client_tick: u64,
-    /// Received-world revision.
-    pub world_revision: u64,
-    /// Current dimension.
-    pub dimension: String,
-    /// Explicit received or predicted-and-observed basis. Neither proves server rest.
-    pub position_basis: StandingPositionBasis,
-    /// Feet position with the basis above. Locally submitted flight is refused.
-    pub position: [f64; 3],
-    /// Native standing eye position, using float dimensions.
-    pub eye_position: [f64; 3],
-    /// Native unscaled standing body bounds, minimum XYZ then maximum XYZ.
-    pub bounds: [f64; 6],
-    /// Derived downward contact with admitted static geometry.
-    pub on_ground: bool,
-    /// Solid cells establishing the contact; empty if not supported.
-    pub support: Vec<[i32; 3]>,
-    /// False after all admitted surrounding cells establish a dry context.
-    pub submerged: bool,
-    /// Own-player projection at the same boundary, including mining attributes.
-    pub player: LocalPlayerState,
+diagnostic_record! {
+    /// A derived stationary standing context; never a server ground acknowledgement.
+    #[derive(Clone, Debug, Serialize)]
+    pub struct StandingContext => RecordedStandingContext {
+        /// Connection identity.
+        pub connection_id: u64,
+        /// Received packet boundary shared with the geometry read.
+        pub receive_sequence: u64,
+        /// Current reconstructed client frame, not server time.
+        pub client_tick: u64,
+        /// Received-world revision.
+        pub world_revision: u64,
+        /// Current dimension.
+        pub dimension: String,
+        /// Explicit received or predicted-and-observed basis. Neither proves server rest.
+        pub position_basis: StandingPositionBasis,
+        /// Feet position with the basis above. Locally submitted flight is refused.
+        pub position: [f64; 3],
+        /// Native standing eye position, using float dimensions.
+        pub eye_position: [f64; 3],
+        /// Native unscaled standing body bounds, minimum XYZ then maximum XYZ.
+        pub bounds: [f64; 6],
+        /// Derived downward contact with admitted static geometry.
+        pub on_ground: bool,
+        /// Solid cells establishing the contact; empty if not supported.
+        pub support: Vec<[i32; 3]>,
+        /// False after all admitted surrounding cells establish a dry context.
+        pub submerged: bool,
+        /// Own-player projection at the same boundary, including mining attributes.
+        pub player: LocalPlayerState,
+    }
+    diagnostic_serde {}
 }
 
 impl Operations {

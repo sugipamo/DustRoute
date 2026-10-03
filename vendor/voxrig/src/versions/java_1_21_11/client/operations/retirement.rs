@@ -1,30 +1,37 @@
 //! Explicit vanilla player-retirement recovery. Air never releases the old miner.
 use super::recovery::{connect_fresh_miner, identity};
 use super::*;
+use crate::diagnostic_projection::diagnostic_record;
 use std::time::Duration;
 
-/// An in-process watch established while an independent observer knows the
-/// authenticated miner profile. Private fields prevent importing JSON as authority.
-#[derive(Clone, Debug, PartialEq, Serialize)]
-pub struct MiningRetirementWatch {
-    intent: MiningIntent,
-    observer_connection_id: u64,
-    after_sequence: u64,
-    observer_dimension: String,
-    miner_uuid: [u8; 16],
-    miner_name: String,
+diagnostic_record! {
+    /// An in-process watch established while an independent observer knows the
+    /// authenticated miner profile. Private fields prevent importing JSON as authority.
+    #[derive(Clone, Debug, PartialEq, Serialize)]
+    pub struct MiningRetirementWatch => RecordedMiningRetirementWatch {
+        intent: MiningIntent,
+        observer_connection_id: u64,
+        after_sequence: u64,
+        observer_dimension: String,
+        miner_uuid: [u8; 16],
+        miner_name: String,
+    }
+    diagnostic_serde {}
 }
-/// Bounded observer history: one watch, with an exact player-info removal receipt.
-#[derive(Clone, Debug, Serialize)]
-pub struct MiningRetirementRecord {
-    /// Owning intent, authenticated identity and independent receive boundary.
-    pub watch: MiningRetirementWatch,
-    /// PLAYER_REMOVE containing that UUID, received after watch registration.
-    pub removal_receive_sequence: Option<u64>,
-    /// Latched observer context/rejoin conflict; a later removal cannot clear it.
-    pub requires_inspection: Option<String>,
-    /// An explicit reconnect has begun. Retained before I/O; never auto-retried.
-    pub recovery_started: bool,
+diagnostic_record! {
+    /// Bounded observer history: one watch, with an exact player-info removal receipt.
+    #[derive(Clone, Debug, Serialize)]
+    pub struct MiningRetirementRecord => RecordedMiningRetirementRecord {
+        /// Owning intent, authenticated identity and independent receive boundary.
+        pub watch: MiningRetirementWatch,
+        /// PLAYER_REMOVE containing that UUID, received after watch registration.
+        pub removal_receive_sequence: Option<u64>,
+        /// Latched observer context/rejoin conflict; a later removal cannot clear it.
+        pub requires_inspection: Option<String>,
+        /// An explicit reconnect has begun. Retained before I/O; never auto-retried.
+        pub recovery_started: bool,
+    }
+    diagnostic_serde {}
 }
 /// Retirement is separate from the target's removal result.
 #[derive(Clone, Debug, Serialize)]

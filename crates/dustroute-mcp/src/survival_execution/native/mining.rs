@@ -37,17 +37,29 @@ impl SurvivalExecutor {
         };
         self.journal.intend(
             ExecutionPhase::MiningSelectEmpty,
-            json!({"hotbar":empty,"attempt":attempt,"edit":edit}),
+            ExecutionEvidence::MiningSelectEmpty {
+                hotbar: empty,
+                attempt,
+                edit: (&edit).into(),
+            },
         )?;
         current.select_hotbar(empty).await?;
         self.journal.intend(
             ExecutionPhase::MiningAim,
-            json!({"rotation":rotation,"edit":edit}),
+            ExecutionEvidence::MiningAim {
+                rotation,
+                edit: (&edit).into(),
+            },
         )?;
         current.look(rotation).await?;
         self.journal.intend(
             ExecutionPhase::MiningStartSend,
-            json!({"edit":edit,"face_id":face_id,"attempt":attempt,"hotbar":empty}),
+            ExecutionEvidence::MiningStartSend {
+                edit: (&edit).into(),
+                face_id,
+                attempt,
+                hotbar: empty,
+            },
         )?;
         let intent = current
             .start_survival_mining(edit.position, face(face_id)?)
@@ -62,7 +74,11 @@ impl SurvivalExecutor {
             ExecutionPhase::MiningStarted,
             OperationOutcome::Pending,
             Continuation::AwaitMining,
-            json!({"intent":intent,"attempt":attempt,"selected_from":player}),
+            ExecutionEvidence::MiningStarted {
+                intent: Box::new((&intent).into()),
+                attempt,
+                selected_from: Box::new((&player).into()),
+            },
         )?;
         self.pending = Some(PendingMining {
             intent,
@@ -114,7 +130,11 @@ impl SurvivalExecutor {
             ExecutionPhase::Recovered,
             OperationOutcome::Observed,
             Continuation::NeedsInspection,
-            json!({"evidence":recovered.evidence,"decision":decision,"attempt":attempt}),
+            ExecutionEvidence::Recovered {
+                evidence: Box::new((&recovered.evidence).into()),
+                decision,
+                attempt,
+            },
         )?;
         match decision {
             CleanupReconciliation::AlreadyAbsent => {
@@ -131,7 +151,11 @@ impl SurvivalExecutor {
                     ExecutionPhase::ReconnectBoundaryVerified,
                     OperationOutcome::Observed,
                     Continuation::NeedsInspection,
-                    json!({"requirement":reconnect,"retired_connection_id":intent.connection_id,"received_start":fresh.source()}),
+                    ExecutionEvidence::ReconnectBoundaryVerified {
+                        requirement: reconnect.into(),
+                        retired_connection_id: intent.connection_id,
+                        received_start: Box::new(fresh.source().into()),
+                    },
                 )?;
                 self.expected = expected_site;
                 self.temporary.remove(&edit.position);
@@ -142,8 +166,19 @@ impl SurvivalExecutor {
                 let next = choose_empty_hand(&player)?;
                 retry_improved(slot, next, attempt)?;
                 self.retry = Some((next, attempt + 1));
-                self.journal.event(ExecutionPhase::RetryImprovement, OperationOutcome::NotStarted, Continuation::Replan,
-                    json!({"reason":"different_received_empty_hotbar_after_retirement","previous_hotbar":slot,"next_hotbar":next,"inventory_sequence":player.inventory.receive_sequence,"attempt":attempt+1,"owned_target":edit}))?;
+                self.journal.event(
+                    ExecutionPhase::RetryImprovement,
+                    OperationOutcome::NotStarted,
+                    Continuation::Replan,
+                    ExecutionEvidence::RetryImprovement {
+                        reason: RetryReason::DifferentReceivedEmptyHotbarAfterRetirement,
+                        previous_hotbar: slot,
+                        next_hotbar: next,
+                        inventory_sequence: player.inventory.receive_sequence,
+                        attempt: attempt + 1,
+                        owned_target: (&edit).into(),
+                    },
+                )?;
                 Ok(ExecutionProgress::Replanned {
                     previous_hotbar: slot,
                     next_hotbar: next,
@@ -165,8 +200,10 @@ impl SurvivalExecutor {
             .wait_survival_mining(intent, Duration::from_millis(intent.estimated_wait_ms))
             .await?;
         if matches!(status, MiningStatus::Mining { .. }) {
-            self.journal
-                .intend(ExecutionPhase::MiningFinishSend, json!(intent))?;
+            self.journal.intend(
+                ExecutionPhase::MiningFinishSend,
+                ExecutionEvidence::MiningFinishSend(Box::new(intent.into())),
+            )?;
             if let Err(error) = current.finish_survival_mining(intent).await {
                 if error.kind() != voxrig::ErrorKind::State
                     || !matches!(
@@ -196,7 +233,11 @@ impl SurvivalExecutor {
             ExecutionPhase::MiningOutcome,
             outcome,
             Continuation::NeedsInspection,
-            json!({"history":history,"recovery_plan":plan,"attempt":attempt}),
+            ExecutionEvidence::MiningOutcome {
+                history: Box::new((&history).into()),
+                recovery_plan: Box::new(plan.diagnostic()),
+                attempt,
+            },
         )?;
         Ok(plan)
     }
@@ -209,13 +250,19 @@ impl SurvivalExecutor {
         plan: &CleanupRecoveryPlan,
     ) -> Result<RecoveredSurvivalClient> {
         let recovery = current.prepare_mining_profile_recovery(intent).await?;
-        self.journal
-            .intend(ExecutionPhase::RetireSource, json!(intent))?;
+        self.journal.intend(
+            ExecutionPhase::RetireSource,
+            ExecutionEvidence::RetireSource(Box::new(intent.into())),
+        )?;
         recovery.close_source().await?;
         let target_condition = plan.target_condition();
         self.journal.intend(
             ExecutionPhase::FreshReconnect,
-            json!({"method":"same_profile_login", "target_condition":target_condition}),
+            ExecutionEvidence::FreshReconnect {
+                method:
+                    voxrig::checked_survival::diagnostic::MiningRecoveryMethod::SameProfileLogin,
+                target_condition: target_condition.clone(),
+            },
         )?;
         recovery
             .reconnect(self.reconnect.clone(), target_condition)

@@ -3,7 +3,7 @@ use super::*;
 use serde::Serialize;
 
 /// One PLAYER_LOADED attempt, retained before sending. Dispatch is not an ack.
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, serde::Deserialize, PartialEq)]
 pub struct LoadingAttempt {
     /// Receive ordinal starting this login/respawn/configuration generation.
     pub generation: u64,
@@ -13,7 +13,7 @@ pub struct LoadingAttempt {
     pub dispatched: bool,
 }
 /// Received loading progress and notification history for this connection.
-#[derive(Clone, Debug, Default, Serialize)]
+#[derive(Clone, Debug, Default, Serialize, serde::Deserialize, PartialEq)]
 pub struct InteractionLoading {
     /// Last login/respawn/configuration receive boundary, not a server tick.
     pub generation: u64,

@@ -57,7 +57,25 @@ pub struct CleanupRecoveryPlan {
     intent: MiningIntent,
     removal_observed: bool,
 }
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+/// Read-only policy facts; never an executable cleanup plan or native intent.
+#[derive(Clone, Debug, Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RecordedCleanupRecoveryPlan {
+    pub edit: voxrig::checked_survival::diagnostic::RecordedHypotheticalBlockEdit,
+    pub intent: voxrig::checked_survival::diagnostic::RecordedMiningIntent,
+    pub removal_observed: bool,
+}
+impl voxrig::checked_survival::diagnostic::ToDiagnostic for CleanupRecoveryPlan {
+    type Record = RecordedCleanupRecoveryPlan;
+    fn diagnostic(&self) -> Self::Record {
+        RecordedCleanupRecoveryPlan {
+            edit: (&self.edit).into(),
+            intent: (&self.intent).into(),
+            removal_observed: self.removal_observed,
+        }
+    }
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum CleanupReconciliation {
     /// Fresh target is exactly the declared final air. No actor attribution.

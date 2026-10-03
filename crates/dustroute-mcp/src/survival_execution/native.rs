@@ -143,20 +143,30 @@ impl SurvivalExecutor {
         } else {
             // Only a received empty slot can be used; do not discard another item.
             let empty = choose_empty_hand(&p)?;
-            self.journal.intend(ExecutionPhase::InventorySwap, json!({"main_slot":slot,"hotbar":empty,"inventory_sequence":p.inventory.receive_sequence}))?;
+            self.journal.intend(
+                ExecutionPhase::InventorySwap,
+                ExecutionEvidence::InventorySwap {
+                    main_slot: slot,
+                    hotbar: empty,
+                    inventory_sequence: p.inventory.receive_sequence,
+                },
+            )?;
             let swap = ops.swap_player_hotbar(slot as u8, empty).await?;
             let received = ops.wait_inventory_swap(&swap, WAIT).await?;
             self.journal.event(
                 ExecutionPhase::InventoryReceived,
                 OperationOutcome::Observed,
                 Continuation::NeedsInspection,
-                json!(received),
+                ExecutionEvidence::InventoryReceived(Box::new((&received).into())),
             )?;
             empty
         };
         self.journal.intend(
             ExecutionPhase::SelectMaterial,
-            json!({"hotbar":hotbar,"material":name}),
+            ExecutionEvidence::SelectMaterial {
+                hotbar,
+                material: name.to_owned(),
+            },
         )?;
         ops.select_hotbar(hotbar).await?;
         Ok(())
@@ -183,11 +193,16 @@ impl SurvivalExecutor {
         let ops = self.bot.survival()?;
         self.journal.intend(
             ExecutionPhase::PlacementAim,
-            json!({"rotation":p.rotation,"edit":p.edit}),
+            ExecutionEvidence::PlacementAim {
+                rotation: p.rotation,
+                edit: (&p.edit).into(),
+            },
         )?;
         ops.look(p.rotation).await?;
-        self.journal
-            .intend(ExecutionPhase::PlacementSend, json!(p))?;
+        self.journal.intend(
+            ExecutionPhase::PlacementSend,
+            ExecutionEvidence::PlacementSend(Box::new(p.into())),
+        )?;
         let intent = ops.place_survival_cube(p.support, face(p.face_id)?).await?;
         if intent.target != p.edit.position
             || intent.before != p.edit.before
@@ -210,7 +225,11 @@ impl SurvivalExecutor {
             ExecutionPhase::PlacementObserved,
             OperationOutcome::Observed,
             Continuation::NeedsInspection,
-            json!({"intent":intent,"status":status,"world_evidence":"builder_received"}),
+            ExecutionEvidence::PlacementObserved {
+                intent: Box::new((&intent).into()),
+                status: Box::new((&status).into()),
+                world_evidence: WorldEvidence::BuilderReceived,
+            },
         )?;
         Ok(())
     }
@@ -238,7 +257,11 @@ impl SurvivalExecutor {
                 ExecutionPhase::MovementPredictionMismatch,
                 OperationOutcome::NotStarted,
                 Continuation::NeedsInspection,
-                json!({"first_differing_frame_index":first,"checked":p,"fresh":live}),
+                ExecutionEvidence::MovementPredictionMismatch {
+                    first_differing_frame_index: first,
+                    checked: Box::new(p.into()),
+                    fresh: Box::new((&live).into()),
+                },
             )?;
             return Err(ExecutionError::new(
                 SurvivalErrorCode::MovementPlanChanged,
@@ -247,7 +270,10 @@ impl SurvivalExecutor {
         }
         self.journal.intend(
             ExecutionPhase::MovementSend,
-            json!({"controls":p.controls,"planned_initial_position":p.initial_position}),
+            ExecutionEvidence::MovementSend {
+                controls: p.controls.clone(),
+                planned_initial_position: p.initial_position,
+            },
         )?;
         ops.start_previewed_predicted_survival_motion(&live).await?;
         let motion = tokio::time::timeout(Duration::from_secs(40), async {
@@ -281,7 +307,7 @@ impl SurvivalExecutor {
             ExecutionPhase::MovementPredicted,
             OperationOutcome::Predicted,
             Continuation::NeedsInspection,
-            json!(motion),
+            ExecutionEvidence::MovementPredicted(Box::new((&motion).into())),
         )?;
         Ok(())
     }

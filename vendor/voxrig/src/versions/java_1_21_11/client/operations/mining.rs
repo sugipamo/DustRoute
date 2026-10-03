@@ -1,39 +1,43 @@
 //! Bounded empty-hand cube mining. Cancellation never authorizes a safe abort.
 use super::*;
+use crate::diagnostic_projection::diagnostic_record;
 use std::time::Duration;
 
 #[cfg(test)]
 mod tests;
 
-/// One owning connection's removal intent, stored before sending START.
-/// Serialized inspection cannot recreate a capability on another connection.
-#[derive(Clone, Debug, PartialEq, Serialize)]
-pub struct MiningIntent {
-    /// Owning connection.
-    pub connection_id: u64,
-    /// Receive boundary before START.
-    pub after_sequence: u64,
-    /// Globally increasing interaction sequence for START.
-    pub start_sequence: i32,
-    /// Owning dimension.
-    pub dimension: String,
-    /// Exact requested removal cell.
-    pub target: [i32; 3],
-    /// Native entry face ID 0..5.
-    pub face_id: u8,
-    /// Complete received predecessor; never inferred from the item registry.
-    pub baseline: crate::NativeBlockState,
-    /// Received stationary feet position before submission.
-    pub position: [f64; 3],
-    /// Empty main-hand slot selected by an ordered send or server update.
-    pub selection: HotbarSelection,
-    /// Receive sequence which established that slot as empty.
-    pub held_receive_sequence: u64,
-    /// Local scheduling estimate only; no server-tick or cancellation guarantee.
-    pub estimated_wait_ms: u64,
+diagnostic_record! {
+    /// One owning connection's removal intent, stored before sending START.
+    /// Serialized inspection cannot recreate a capability on another connection.
+    #[derive(Clone, Debug, PartialEq, Serialize)]
+    pub struct MiningIntent => RecordedMiningIntent {
+        /// Owning connection.
+        pub connection_id: u64,
+        /// Receive boundary before START.
+        pub after_sequence: u64,
+        /// Globally increasing interaction sequence for START.
+        pub start_sequence: i32,
+        /// Owning dimension.
+        pub dimension: String,
+        /// Exact requested removal cell.
+        pub target: [i32; 3],
+        /// Native entry face ID 0..5.
+        pub face_id: u8,
+        /// Complete received predecessor; never inferred from the item registry.
+        pub baseline: crate::NativeBlockState,
+        /// Received stationary feet position before submission.
+        pub position: [f64; 3],
+        /// Empty main-hand slot selected by an ordered send or server update.
+        pub selection: HotbarSelection,
+        /// Receive sequence which established that slot as empty.
+        pub held_receive_sequence: u64,
+        /// Local scheduling estimate only; no server-tick or cancellation guarantee.
+        pub estimated_wait_ms: u64,
+    }
+    diagnostic_serde {}
 }
 /// Separate send attempt retained even if its caller is cancelled.
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, serde::Deserialize, PartialEq)]
 pub struct MiningSend {
     /// Connection-global interaction sequence.
     pub sequence: i32,
@@ -43,27 +47,30 @@ pub struct MiningSend {
     pub dispatched: bool,
 }
 /// A target-specific received update, independent of global cache revision.
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, serde::Deserialize, PartialEq)]
 pub struct MiningTargetReceipt {
     /// Exact native state from a block/section packet applied to the loaded target.
     pub state: crate::NativeBlockState,
     /// That packet's receive ordinal.
     pub receive_sequence: u64,
 }
-/// Retained observation of the requested result; not a current world snapshot
-/// and does not prove which actor removed it.
-#[derive(Clone, Debug, Serialize)]
-pub struct MiningRemoval {
-    /// Original intent and received predecessor.
-    pub intent: MiningIntent,
-    /// Fresh received air at the exact target.
-    pub target_receipt: MiningTargetReceipt,
-    /// False: observed air does not establish that server delayed mining has
-    /// cleared. No next mutation is authorized on this connection yet.
-    pub continuation_validated: bool,
+diagnostic_record! {
+    /// Retained observation of the requested result; not a current world snapshot
+    /// and does not prove which actor removed it.
+    #[derive(Clone, Debug, Serialize)]
+    pub struct MiningRemoval => RecordedMiningRemoval {
+        /// Original intent and received predecessor.
+        pub intent: MiningIntent,
+        /// Fresh received air at the exact target.
+        pub target_receipt: MiningTargetReceipt,
+        /// False: observed air does not establish that server delayed mining has
+        /// cleared. No next mutation is authorized on this connection yet.
+        pub continuation_validated: bool,
+    }
+    diagnostic_serde {}
 }
 /// Received inventory prerequisite that interrupted pending empty-hand mining.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum MiningInventoryChangeKind {
     /// The original selected hotbar slot is no longer selected with its provenance.
@@ -77,7 +84,7 @@ pub enum MiningInventoryChangeKind {
 }
 /// First incompatible received inventory state. Diagnostic evidence only; does
 /// not attribute an item to pickup, gathering, a player or a server command.
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, serde::Deserialize, PartialEq)]
 pub struct MiningInventoryChange {
     /// Which prerequisite changed first.
     pub kind: MiningInventoryChangeKind,
@@ -101,54 +108,60 @@ pub struct MiningInventoryChange {
 }
 
 const INVENTORY_CHANGED: &str = "received inventory prerequisites changed during mining";
-/// Last mining attempt, retained on errors, timeouts, context changes and closure.
-#[derive(Clone, Debug, Serialize)]
-pub struct MiningRecord {
-    /// Stored before the first possible mutation.
-    pub intent: MiningIntent,
-    /// Complete START frame was dispatched.
-    pub start_dispatched: bool,
-    /// At most one explicit FINISH attempt, retained before I/O.
-    pub finish: Option<MiningSend>,
-    /// At most one explicit ABORT attempt; never resolves delayed mining by itself.
-    pub abort: Option<MiningSend>,
-    /// Latest target-specific received packet after START.
-    pub target_receipt: Option<MiningTargetReceipt>,
-    /// Latched context/conflict reason. Later air cannot silently clear it.
-    pub requires_inspection: Option<String>,
-    /// First received inventory interruption, never cleared by a later empty hand.
-    pub inventory_change: Option<MiningInventoryChange>,
-    /// Result established by a read-only observation. Even Some does not currently
-    /// authorize in-session continuation; that release remains unimplemented.
-    pub removal: Option<MiningRemoval>,
-    /// Once-only fresh login attempt, recorded before I/O. Shared by all recovery
-    /// methods; cancellation never permits a different method to open another login.
-    pub recovery_attempt: Option<MiningRecoveryAttempt>,
+diagnostic_record! {
+    /// Last mining attempt, retained on errors, timeouts, context changes and closure.
+    #[derive(Clone, Debug, Serialize)]
+    pub struct MiningRecord => RecordedMiningRecord {
+        /// Stored before the first possible mutation.
+        pub intent: MiningIntent,
+        /// Complete START frame was dispatched.
+        pub start_dispatched: bool,
+        /// At most one explicit FINISH attempt, retained before I/O.
+        pub finish: Option<MiningSend>,
+        /// At most one explicit ABORT attempt; never resolves delayed mining by itself.
+        pub abort: Option<MiningSend>,
+        /// Latest target-specific received packet after START.
+        pub target_receipt: Option<MiningTargetReceipt>,
+        /// Latched context/conflict reason. Later air cannot silently clear it.
+        pub requires_inspection: Option<String>,
+        /// First received inventory interruption, never cleared by a later empty hand.
+        pub inventory_change: Option<MiningInventoryChange>,
+        /// Result established by a read-only observation. Even Some does not currently
+        /// authorize in-session continuation; that release remains unimplemented.
+        pub removal: Option<MiningRemoval>,
+        /// Once-only fresh login attempt, recorded before I/O. Shared by all recovery
+        /// methods; cancellation never permits a different method to open another login.
+        pub recovery_attempt: Option<MiningRecoveryAttempt>,
+    }
+    diagnostic_serde {}
 }
-/// Explicit result states; a pending timeout is never a safe cancellation.
-#[derive(Clone, Debug, Serialize)]
-#[serde(tag = "status", rename_all = "snake_case")]
-pub enum MiningStatus {
-    /// START attempted, without a FINISH attempt or a confirmed result.
-    Mining {
-        /// Retained start and target evidence.
-        record: MiningRecord,
-    },
-    /// FINISH attempted; ABORT/acknowledgement do not authorize another mutation.
-    PendingAfterFinish {
-        /// Retained finish/abort attempts; still unresolved.
-        record: MiningRecord,
-    },
-    /// Exact target received as air after submission, with preserved context.
-    ObservedRemoved {
-        /// Received result, without attribution of its actor.
-        observation: MiningRemoval,
-    },
-    /// Changed/missing context or target requires inspection; intent remains pending.
-    RequiresInspection {
-        /// Original intent and latched diagnosis.
-        record: MiningRecord,
-    },
+diagnostic_record! {
+    /// Explicit result states; a pending timeout is never a safe cancellation.
+    #[derive(Clone, Debug, Serialize)]
+    #[serde(tag = "status", rename_all = "snake_case")]
+    pub enum MiningStatus => RecordedMiningStatus {
+        /// START attempted, without a FINISH attempt or a confirmed result.
+        Mining {
+            /// Retained start and target evidence.
+            record: MiningRecord,
+        },
+        /// FINISH attempted; ABORT/acknowledgement do not authorize another mutation.
+        PendingAfterFinish {
+            /// Retained finish/abort attempts; still unresolved.
+            record: MiningRecord,
+        },
+        /// Exact target received as air after submission, with preserved context.
+        ObservedRemoved {
+            /// Received result, without attribution of its actor.
+            observation: MiningRemoval,
+        },
+        /// Changed/missing context or target requires inspection; intent remains pending.
+        RequiresInspection {
+            /// Original intent and latched diagnosis.
+            record: MiningRecord,
+        },
+    }
+    diagnostic_serde { #[serde(tag = "status", rename_all = "snake_case")] }
 }
 
 fn unavailable(message: impl std::fmt::Display) -> Error {

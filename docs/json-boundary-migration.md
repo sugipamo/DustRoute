@@ -46,9 +46,9 @@ formatting、差分の空白検査が成功した。認可拒否前の保存開�
 最初の対象指定はmodule名の相違により0件だったため、上記はその後の全lib実行の結果を使う。
 この段階では実機を再起動したり、ワールドへ変更を加えたりしていない。
 
-## 第2段階の先行改修と停止位置
+## 第2段階の診断型移行
 
-第2段階は未完了。先行して、挙動検証の`CheckEvidence.behavior`を
+先行して、挙動検証の`CheckEvidence.behavior`を
 `BehaviorDiagnostics`へ置き換えた。通常・有限burst・周期・抽象検証の診断を
 用途別の記録として受け渡し、counterexample等の構造化証拠を保持する。
 履歴を読めても、検証モデルや実行状態、採用権限を復元する型にはしない。
@@ -60,21 +60,30 @@ device初期条件も型で構成し、JSONへの書込みや読み戻しをな�
 初期条件はモデルの仮定として表示し、snapshotから隠れたruntime状態を復元した証拠にはしない。
 公開応答のfield構造と、保存済みの合格をfresh reviewへ流用しない条件は維持した。
 
-サバイバルの`DiagnosticPayload(Value)`とイベントのopaque evidenceはまだ残る。
-manifestのpreview全体は`RecordedConstructionPreview`へ移したが、その計画記録中の
-source・移動予測・照準・再接続条件はまだopaque payloadである。
-これらのnative field依存をたどると既存のVoxrig定義64種類に広がり、
-純粋なデータとlive watch/tokenを分ける設計判断が必要になった。
-[具体的な改修案](native-diagnostic-records.md)を作成し、Voxrig側の変更を開始する前で停止した。
-全64種類を二重定義する案や、native型へ一括してDeserializeを付ける案は採っていない。
-第3〜8段階は未着手。第2段階の完了後に次のゴールを作成する。
+サバイバルのnative診断依存が64種類に広がった時点で、責務と権限の境界を確認するため
+一旦停止した。その後ユーザーの承認を受け、[Voxrigの診断データ層](native-diagnostic-records.md)
+を別checkoutで実装し、commit `f7209ed7892aeae4b13eca5a4423949311f25317`を取り込んだ。
+全体の配置・編集も含む66型のうち、純粋なデータ39型を共有し、27型は別の記録型にした。
+ネイティブ値へDeserializeや記録からの逆変換を追加せず、元のAPIの可視性と責務を維持した。
+
+`DiagnosticPayload(Value)`とイベントのopaque evidenceを撤去した。計画source、移動予測、
+配置・採掘・退役receipt、checkpoint、cleanup条件は用途別のRust型となった。
+`ExecutionEvidence`の種別とイベントphaseの照合を保存前・読込み時に行う。
+journal schemaはv2へ更新し、旧v1は拒否する。旧形式の再開用converterは作らない。
+公開診断のevidenceは`kind`と`data`で表し、現在の種別とfieldを明示する。
+続行は現在の状態を再観測して新しく計画し、checkpointの単回消費と各送信前のdurable intentを保つ。
+保存された診断をネイティブ操作へ入力できる経路は設けない。
+
+第3〜8段階はこの時点で未着手。保存のJSON byte codecは第5段階で扱う。
+MCP応答、他workflow、比較キー、組込みLaw、Voxrigのregistry・形状・NBT等の残存JSONは
+全面撤去が完了したとは扱わない。
 
 先行改修の検証: translateの診断・更新・runtime採用の統合テスト18件、
 診断の不完全/混在形式を拒否するunit 1件、MCPのnative bridge 6件・failure 7件・
 子の挙動失敗を再起動後にも採用しない公開経路1件が成功した。
 native bridgeの実機試験1件はignoreのまま。既定構成と`--no-default-features`の
 MCP all-target Clippy（`-D warnings`）、formatting、差分の空白検査も成功した。
-今回は実機・接続・ワールドへ操作していない。Voxrigのcodeとvendor pinは変更していない。
+この先行改修では実機・接続・ワールドへ操作していない。Voxrig改修前の検証結果である。
 
 ### DustRoute内で完結する追加改修
 
@@ -88,7 +97,8 @@ manifestのpreviewには既存の`RecordedConstructionPlan`と型付き探索結
 探索数、候補位置、資材不足、拒否例は純粋なデータとして共有する。
 native計画と`GeneratedConstructionPlan`にDeserializeは追加せず、記録からnative計画へ
 戻す変換も設けない。プレビューの読込みでnativeのwatchやtokenは生成しない。
-`HypotheticalConstructionPlan`からの射影に残るnative opaque fieldは、承認待ちの別改修で扱う。
+その後、`HypotheticalConstructionPlan`からの射影に残るnative opaque fieldも
+承認された診断データ層で置き換えた。
 
 追加改修の検証: サバイバル関連39件が成功し、明示実行用の実機等6件はignoreのまま。
 公開MCPから保存previewと拒否診断を読み直しても、新規startが`plan_not_live`で拒否される
@@ -97,4 +107,22 @@ native計画と`GeneratedConstructionPlan`にDeserializeは追加せず、記録
 資材不足がない拒否例では空mapが保存時に省略されるため、読込みの既定値を明示した。
 資材不足あり/なしの拒否例を含む保存previewの公開読込み試験を最終差分で再実行し、成功した。
 最終差分は既定構成と`--no-default-features`のMCP all-target Clippy（`-D warnings`）、
-formatting、差分の空白検査も成功した。Voxrigのcode・vendor pinと実機は変更していない。
+formatting、差分の空白検査も成功した。この追加改修時点ではVoxrigのcode・vendor pinと実機は変更していない。
+
+### ネイティブ診断の接続と検証
+
+最終の型付きサバイバル関連40件が成功し、明示実機用6件はignoreのまま。
+種別と証拠型の不一致ではin-memory状態も保存済みintentも変更しないこと、旧v1の拒否、
+不明な採掘の保存・再読込み、保存失敗時の送信前intent保持、checkpointの所有権・
+確認済みprefix・単回消費、公開の履歴読込みで`plan_not_live`となることを確認した。
+既定構成と`--no-default-features`のMCP all-target Clippy（`-D warnings`）が成功した。
+
+Voxrigは別checkoutでlib 203件、通常doctest 2件・compile-fail 10件が成功し、
+実機用8件はignoreのまま。記録からネイティブintent/standingへ戻せないことを含む。
+実装は別リポジトリへcommitした後、315ファイルを取り込み、pinとの一致を確認した。
+JSON往復による診断射影は残っていない。journal・manifest・checkpoint claimのJSON byte codec、
+公開MCPのencode/decode、テスト用wire fixtureはこの段階では残る。
+今回、サーバー起動・実機接続・ワールド変更は行っていない。
+
+全MCP libの回帰は220件成功・明示実機/計測10件ignore（541.17秒）。
+formattingと差分の空白検査も成功した。第2段階の診断型移行は完了。

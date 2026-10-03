@@ -1,93 +1,106 @@
 //! One-shot ordinary passive-cube placement with independent world/material receipts.
 use super::geometry::GeometryView;
 use super::*;
+use crate::diagnostic_projection::diagnostic_record;
 use std::time::Duration;
 
-/// A single main-hand placement, retained before any packet write.
-#[derive(Clone, Debug, PartialEq, Serialize)]
-pub struct PlacementIntent {
-    /// Owning live connection; serialized history cannot create an operation.
-    pub connection_id: u64,
-    /// Current loading/world generation.
-    pub generation: u64,
-    /// Receive boundary before submission.
-    pub after_sequence: u64,
-    /// Connection-global one-shot block-use sequence.
-    pub sequence: i32,
-    /// Observed dimension.
-    pub dimension: String,
-    /// Stationary feet position.
-    pub position: [f64; 3],
-    /// Nonreplaceable cube whose face is clicked.
-    pub support: [i32; 3],
-    /// Exact received predecessor at the clicked support.
-    pub support_state: crate::NativeBlockState,
-    /// Native face ID, 0..5.
-    pub face_id: u8,
-    /// Derived native face-hit cursor, local to support.
-    pub cursor: [f32; 3],
-    /// Adjacent air cell to receive the block.
-    pub target: [i32; 3],
-    /// Received target predecessor; never inferred air.
-    pub before: crate::NativeBlockState,
-    /// Expected passive block, with no state properties.
-    pub expected: crate::NativeBlockState,
-    /// Ordered main-hand selection used by this action.
-    pub selection: HotbarSelection,
-    /// Received component-free selected stack before placement.
-    pub held_before: PlainItem,
-    /// Per-slot receipt boundary for that predecessor.
-    pub held_receive_sequence: u64,
+diagnostic_record! {
+    /// A single main-hand placement, retained before any packet write.
+    #[derive(Clone, Debug, PartialEq, Serialize)]
+    pub struct PlacementIntent => RecordedPlacementIntent {
+        /// Owning live connection; serialized history cannot create an operation.
+        pub connection_id: u64,
+        /// Current loading/world generation.
+        pub generation: u64,
+        /// Receive boundary before submission.
+        pub after_sequence: u64,
+        /// Connection-global one-shot block-use sequence.
+        pub sequence: i32,
+        /// Observed dimension.
+        pub dimension: String,
+        /// Stationary feet position.
+        pub position: [f64; 3],
+        /// Nonreplaceable cube whose face is clicked.
+        pub support: [i32; 3],
+        /// Exact received predecessor at the clicked support.
+        pub support_state: crate::NativeBlockState,
+        /// Native face ID, 0..5.
+        pub face_id: u8,
+        /// Derived native face-hit cursor, local to support.
+        pub cursor: [f32; 3],
+        /// Adjacent air cell to receive the block.
+        pub target: [i32; 3],
+        /// Received target predecessor; never inferred air.
+        pub before: crate::NativeBlockState,
+        /// Expected passive block, with no state properties.
+        pub expected: crate::NativeBlockState,
+        /// Ordered main-hand selection used by this action.
+        pub selection: HotbarSelection,
+        /// Received component-free selected stack before placement.
+        pub held_before: PlainItem,
+        /// Per-slot receipt boundary for that predecessor.
+        pub held_receive_sequence: u64,
+    }
+    diagnostic_serde {}
 }
-/// Both received outcomes, not attribution to a particular actor.
-#[derive(Clone, Debug, Serialize)]
-pub struct PlacementObservation {
-    /// Original operation and predecessors.
-    pub intent: PlacementIntent,
-    /// Fresh target-specific block/section update.
-    pub target_receive_sequence: u64,
-    /// Fresh selected-slot update showing exactly one material consumed.
-    pub inventory_receive_sequence: u64,
-    /// Exact remaining selected stack (possibly empty).
-    pub held_after: InventorySlot,
-    /// Native one-shot interaction sequence processed; never success by itself.
-    pub acknowledged_sequence: i32,
+diagnostic_record! {
+    /// Both received outcomes, not attribution to a particular actor.
+    #[derive(Clone, Debug, Serialize)]
+    pub struct PlacementObservation => RecordedPlacementObservation {
+        /// Original operation and predecessors.
+        pub intent: PlacementIntent,
+        /// Fresh target-specific block/section update.
+        pub target_receive_sequence: u64,
+        /// Fresh selected-slot update showing exactly one material consumed.
+        pub inventory_receive_sequence: u64,
+        /// Exact remaining selected stack (possibly empty).
+        pub held_after: InventorySlot,
+        /// Native one-shot interaction sequence processed; never success by itself.
+        pub acknowledged_sequence: i32,
+    }
+    diagnostic_serde {}
 }
-/// Retained stage; timeout/cancellation never permits a blind second use.
-#[derive(Clone, Debug, Serialize)]
-pub struct PlacementRecord {
-    /// Stored before I/O.
-    pub intent: PlacementIntent,
-    /// Complete frame submitted, not server acceptance.
-    pub dispatched: bool,
-    /// Latest exact target receipt.
-    pub target_receive_sequence: Option<u64>,
-    /// Latest receipt showing exactly one selected material consumed.
-    pub inventory_receive_sequence: Option<u64>,
-    /// Latched unexpected state/context.
-    pub requires_inspection: Option<String>,
-    /// Historical completed result. Each next operation revalidates its own site.
-    pub observation: Option<PlacementObservation>,
+diagnostic_record! {
+    /// Retained stage; timeout/cancellation never permits a blind second use.
+    #[derive(Clone, Debug, Serialize)]
+    pub struct PlacementRecord => RecordedPlacementRecord {
+        /// Stored before I/O.
+        pub intent: PlacementIntent,
+        /// Complete frame submitted, not server acceptance.
+        pub dispatched: bool,
+        /// Latest exact target receipt.
+        pub target_receive_sequence: Option<u64>,
+        /// Latest receipt showing exactly one selected material consumed.
+        pub inventory_receive_sequence: Option<u64>,
+        /// Latched unexpected state/context.
+        pub requires_inspection: Option<String>,
+        /// Historical completed result. Each next operation revalidates its own site.
+        pub observation: Option<PlacementObservation>,
+    }
+    diagnostic_serde {}
 }
-/// Acknowledgement, target change and material consumption are distinct stages.
-#[derive(Clone, Debug, Serialize)]
-#[serde(tag = "status", rename_all = "snake_case")]
-pub enum PlacementStatus {
-    /// One or more required receipts have not arrived. Do not resend.
-    Pending {
-        /// Retained unresolved attempt.
-        record: PlacementRecord,
-    },
-    /// Both expected outcomes and processed sequence have been received.
-    ObservedPlaced {
-        /// Received placement and material outcome.
-        observation: PlacementObservation,
-    },
-    /// A conflict requires fresh inspection, not automatic retry.
-    RequiresInspection {
-        /// Attempt and latched conflict.
-        record: PlacementRecord,
-    },
+diagnostic_record! {
+    /// Acknowledgement, target change and material consumption are distinct stages.
+    #[derive(Clone, Debug, Serialize)]
+    #[serde(tag = "status", rename_all = "snake_case")]
+    pub enum PlacementStatus => RecordedPlacementStatus {
+        /// One or more required receipts have not arrived. Do not resend.
+        Pending {
+            /// Retained unresolved attempt.
+            record: PlacementRecord,
+        },
+        /// Both expected outcomes and processed sequence have been received.
+        ObservedPlaced {
+            /// Received placement and material outcome.
+            observation: PlacementObservation,
+        },
+        /// A conflict requires fresh inspection, not automatic retry.
+        RequiresInspection {
+            /// Attempt and latched conflict.
+            record: PlacementRecord,
+        },
+    }
+    diagnostic_serde { #[serde(tag = "status", rename_all = "snake_case")] }
 }
 fn unavailable(message: &str) -> Error {
     Error::new(ErrorKind::State, anyhow::anyhow!("{message}"))
