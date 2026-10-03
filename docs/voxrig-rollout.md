@@ -64,6 +64,16 @@ native confirmation. The Node bridge, npm dependencies and executable live actor
 are removed. [Old measurements](evidence/legacy-mineflayer/README.md) retain their
 original facts and clock. Offline observation parsers remain separately usable.
 
+The [native-only validation](evidence/native-only-validation-20261003.json)
+rechecks the current path after retirement of the bridge: standard production
+startup without a backend override, status, gaze, lever interaction, placement,
+removal, recording and the maximum client wait. Independent server predicates
+matched all 648 final cells. A non-OP survival roof completed 115 steps with
+3,120 final cells and position checked by a separate bot. All processes exited
+normally. The initial actor-view setup failure is retained alongside the retry;
+the actor now sets its view through the existing client API. These bounded trials
+do not establish server queue emptiness or unrestricted construction.
+
 Native player targets now carry `targeting_geometry=block_outline`, connection and
 receive sequence. Audited native static outlines include dust, switches and
 gates; fluids are skipped, while unsupported/unavailable/moving geometry rejects

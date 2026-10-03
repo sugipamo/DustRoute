@@ -22,6 +22,21 @@ bridge endpointをRustの設定・constructorから除去した。JSON/TCPによ
 その射影とした。開始済みのジョブへ再びstartを送っても、期限やcancel flagで
 未開始扱いへ変更できない。native操作の退役・位置確認・再観測の契約は維持する。
 
+検証: 移行途中のMCP全体216件、最終差分のbridge関連19件・survival関連38件が成功。
+既定構成と`--no-default-features`のall-target Clippy、formattingが成功した。
+保存済みdevice証拠の14試験は、移動前のmock名を修正して最終の1試験を再実行した。
+ドア証拠2件と予約tick読取2件も成功。旧証拠14ファイルは移動前とbyte一致する。
+
+`e620f78`の隔離Java 1.21.11試験で、観測・配置・撤去・記録・最大200tickのclient待機を
+確認し、最終648セルをサーバーのblock predicateと照合した。backend指定なしの本番MCP
+起動と`get_bot_status`がVoxrigを返すこと、旧backend指定の起動拒否も確認した。
+補助botの初回視線条件は不一致となり、試験actor自身の既存look APIで向きを指定した
+再試験が成功した。元の失敗も保存し、providerへの追加改修・原因の深追いは行っていない。
+サバイバル建築は115手順、足場撤去・退避を完走し、別botで3,120セルと位置を照合した。
+実行用observerは設定していない。試験・MCP・サーバーはいずれも正常終了した。
+[検証記録・原本・hash](evidence/native-only-validation-20261003.json)。
+この確認は宣言した隔離fixtureの範囲であり、空のserver queueや任意の建築を保証しない。
+
 内部JSONの撤去全体は未完了。保存codec、Lawのruntime読込、探索比較キー、
 診断payload、Voxrigのregistry/outline/component表現は引き続き移行対象である。
 Mineflayer RPCを理由とする例外は不要になった。Voxrigの別version adapterは維持し、

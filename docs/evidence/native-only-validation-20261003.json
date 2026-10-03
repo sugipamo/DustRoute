@@ -1,0 +1,291 @@
+{
+  "schema": "dustroute.native-only-validation.v1",
+  "code_commit": "e620f78c2ee72b84e5fc9cfc68deeb6cb8e61e90",
+  "scope": {
+    "mineflayer_runtime_removed": true,
+    "native_default_startup_verified": true,
+    "internal_json_elimination_complete": false,
+    "voxrig_source_unchanged": true
+  },
+  "offline": {
+    "mcp_suite": {
+      "passed": 216,
+      "ignored": 10,
+      "note": "Full suite during refactor; later final changes rechecked by focused suites and Clippy."
+    },
+    "bridge_final": {
+      "passed": 19,
+      "ignored": 1
+    },
+    "survival_final": {
+      "passed": 38,
+      "ignored": 6
+    },
+    "clippy_default_all_targets": "passed",
+    "clippy_no_default_features_all_targets": "passed",
+    "device_fixture_tests": {
+      "methods": 14,
+      "note": "13 methods passed in first run; one method had three stale mock module-name errors and passed after its reference was updated."
+    },
+    "door_fixture_tests": 2,
+    "saved_queue_tests": 2,
+    "historical_capture_bytes_preserved": 14
+  },
+  "native_bridge": {
+    "source": "e620f78c2ee72b84e5fc9cfc68deeb6cb8e61e90",
+    "checked_cells": 648,
+    "test_exit_code": 0,
+    "mcp_exit_code": 0,
+    "server_exit_code": 0,
+    "default_backend": "voxrig",
+    "server_confirmed": false,
+    "client_wait_clock": "client_wall_time_20hz",
+    "maximum_wait_ticks": 200
+  },
+  "roof": {
+    "source": "e620f78c2ee72b84e5fc9cfc68deeb6cb8e61e90",
+    "completed_steps": 115,
+    "checked_cells": 3120,
+    "production_observer_configured": false,
+    "observer_used_for_execution_admission": false,
+    "lifecycle_checks": [
+      "cancelled_preview",
+      "expired_preview"
+    ],
+    "test_exit_code": 0,
+    "server_exit_code": 0
+  },
+  "retained_failed_trial": {
+    "source": "2956037bd23e7c3ab263b999cb937013ccd760e5",
+    "test_exit_code": 1,
+    "server_exit_code": 0,
+    "stage": "player_target",
+    "observed": "Expected north-facing actor, but observed yaw 2*pi and no target.",
+    "resolution": "Trial actor uses existing native look([180,0]) API; retry passed. No Voxrig/runtime change was required.",
+    "root_cause_diagnosis": "Not established; no deeper provider investigation after controlled retry passed."
+  },
+  "limits": [
+    "Client evidence does not prove server ticks, empty queues, or exclusion of concurrent edits.",
+    "This tests the declared static creative fixture and bounded dry survival roof, not unrestricted construction.",
+    "Former live capture actors are retired; historical evidence remains readable by separate offline parsers."
+  ],
+  "artifacts": [
+    {
+      "file": "native-only-workflow-tests-20261003.log.gz",
+      "source_file": ".local/native-only-workflow-tests-20261003.log",
+      "bytes": 24704,
+      "sha256": "3f937ca5d59db57102e0c4f38aa21346f5c70d69fff6fac827c965e534bd7384",
+      "gzip_sha256": "dd623440c648d028bba751c233b6d7e433b87686b3f7766af17b2d1724f8e0c6"
+    },
+    {
+      "file": "native-only-bridge-tests-20261003.log.gz",
+      "source_file": ".local/native-only-bridge-tests-20261003.log",
+      "bytes": 2170,
+      "sha256": "11d51583fb935fd030ff7bb1da472e6b4f476d6225f3bd7830b1c7f9ca456dae",
+      "gzip_sha256": "4e8191f3eeb51f9feecf30acd4b3407678a3ef3d446a4bb516f8ec0ce72a0701"
+    },
+    {
+      "file": "native-only-survival-tests-20261003.log.gz",
+      "source_file": ".local/native-only-survival-tests-20261003.log",
+      "bytes": 5609,
+      "sha256": "42255e1b5540c12917416a34853dbee5c4d60590a27a9b0960a210a2c290eee3",
+      "gzip_sha256": "3a3c028283bbfe8d2bca90db307cecb61465a6a98f644bd0e6503cdbc0d00bf0"
+    },
+    {
+      "file": "native-only-clippy-20261003.log.gz",
+      "source_file": ".local/native-only-clippy-20261003.log",
+      "bytes": 145,
+      "sha256": "6ddc592cc5a5de64291410826c4b473ee539a175826f0ae0ab1deb83c3cdfa6c",
+      "gzip_sha256": "2cb0c25a69020d84ef9f73c33e65dad538425a343f88f9c698bec61ca9810e3f"
+    },
+    {
+      "file": "native-only-offline-clippy-20261003.log.gz",
+      "source_file": ".local/native-only-offline-clippy-20261003.log",
+      "bytes": 146,
+      "sha256": "d4405dd6db5b1a06f9c91f8afc4af555146bd04315784cb4a8b54438e23a65c1",
+      "gzip_sha256": "b05195585d4cc89094109ccf2418779be05c764329aab040ccae58079582dcdb"
+    },
+    {
+      "file": "native-only-build-20261003.log.gz",
+      "source_file": ".local/native-only-build-20261003.log",
+      "bytes": 146,
+      "sha256": "c81ed602e4ac59fb6b99b8abdb57c5c4cbe9f661c8faff084cfc3d082cd5f5ad",
+      "gzip_sha256": "d1dbbee2becec55fdc5c597c6db4e35c8c67915cdc4c4a42cde1589c5b4be007"
+    },
+    {
+      "file": "native-only-bridge-actor-build-20261003.log.gz",
+      "source_file": ".local/native-only-bridge-actor-build-20261003.log",
+      "bytes": 145,
+      "sha256": "0a4e0f86460cce38847d4ca2cd7d1104a39b52a50836d2a62aa8e749eb201938",
+      "gzip_sha256": "ae2becf11de85a151157118b60e506d854b612cc59e51eabe51556209b24c24a"
+    },
+    {
+      "file": "native-only-retired-backend-check-20261003.log.gz",
+      "source_file": ".local/native-only-retired-backend-check-20261003.log",
+      "bytes": 129,
+      "sha256": "f7c23a86c730dd327c0b765d086312e6a55afb02b86de78cd1cfde31d49e1e45",
+      "gzip_sha256": "e308388f3e174516e6671ccd5002eea810424c1afc66a3a6ddd624927459267b"
+    },
+    {
+      "file": "native-only-device-fixture-tests-20261003.log.gz",
+      "source_file": ".local/native-only-device-fixture-tests-20261003.log",
+      "bytes": 4841,
+      "sha256": "beae03c78a962a82798f8d66a4fcf8780a46d42b63710edcab66c2ba95a484bc",
+      "gzip_sha256": "148e93138e89b5ed867b05096caba303403574dd61fd88a55a70a9ce2c45eb56"
+    },
+    {
+      "file": "native-only-device-fixture-recheck-20261003.log.gz",
+      "source_file": ".local/native-only-device-fixture-recheck-20261003.log",
+      "bytes": 98,
+      "sha256": "ce74792a384c6f6abf412f35611b275b5baaca26a133f02157b337e353c98823",
+      "gzip_sha256": "16fbb182432324ca4ba74683cf6a04077c79cc71a7fd6ad88592b7e51a02fa4a"
+    },
+    {
+      "file": "native-only-door-fixture-tests-20261003.log.gz",
+      "source_file": ".local/native-only-door-fixture-tests-20261003.log",
+      "bytes": 101,
+      "sha256": "033e4b544a5c627de8ffe7b1378feb0e71e2932f5e6213d9178424c6b174f785",
+      "gzip_sha256": "0f4b940ca27f8d1a929deeaf42a278dde149699da83f05f2aad6f2492f2cc909"
+    },
+    {
+      "file": "native-only-saved-queue-tests-20261003.log.gz",
+      "source_file": ".local/native-only-saved-queue-tests-20261003.log",
+      "bytes": 100,
+      "sha256": "6f283ee6225d2cef4c0127d95456a6f954c45141c92b97dd89016cb1c630e8f4",
+      "gzip_sha256": "41164fef7a7c96487e731f61180ea068950f983f9ae8ab2fb052f5c5cc2eb9c9"
+    },
+    {
+      "file": "run-native-only-bridge-trial.py.gz",
+      "source_file": ".local/run-native-only-bridge-trial.py",
+      "bytes": 9030,
+      "sha256": "c7fd9db6580b2896b16bb9f43f2ff9abb653fe9487fce049618157660d0d1396",
+      "gzip_sha256": "4fbc8dc25c337c4b074752413333888831228b76a28d3530a510c5eb2c0dbb01"
+    },
+    {
+      "file": "run-native-only-bridge-trial-a.py.gz",
+      "source_file": ".local/run-native-only-bridge-trial-a.py",
+      "bytes": 8840,
+      "sha256": "5fcf2262430ce700fff6435b3219ded102e5490ded866946919124363988251e",
+      "gzip_sha256": "e33e1fdb58ead1f9ce08c48af065af6f3a7bd5f023964bbcfb43f4030d22347f"
+    },
+    {
+      "file": "run-native-only-roof-trial.py.gz",
+      "source_file": ".local/run-native-only-roof-trial.py",
+      "bytes": 5724,
+      "sha256": "164042af6e8e504d0d4ae6eff19ccf987d348802b01a52b5a29f9bd3863d4e4c",
+      "gzip_sha256": "c60141760a768a23257baedbf7d11cbaecce199585f8a11ee628c0ba991e7ff2"
+    },
+    {
+      "file": "native-only-bridge-20261003-a.json.gz",
+      "source_file": ".local/native-only-bridge-20261003-a.json",
+      "bytes": 1183,
+      "sha256": "83e08bddb4e6c9681cabda232712077544ee3131828e8a02493654356db67300",
+      "gzip_sha256": "619e2cd0df647756071cd3b7f6c4ce539ffe8f71196def9016692c9525f59b25"
+    },
+    {
+      "file": "native-only-bridge-20261003-a-runtime.json.gz",
+      "source_file": ".local/native-only-bridge-20261003-a-runtime.json",
+      "bytes": 1181,
+      "sha256": "8e7956d87c2a3217f9bfb617a740a015a75efbb6ab84fe5af98b499fd1606bfa",
+      "gzip_sha256": "a46e8c93a342a82a0f73bbea886f93dbb91c11f348801f288d51791768be59e7"
+    },
+    {
+      "file": "native-only-bridge-20261003-a-server-console.log.gz",
+      "source_file": ".local/native-only-bridge-20261003-a-server-console.log",
+      "bytes": 11809,
+      "sha256": "bca1017c1cd594f9f2edaa3b46c17bd0b368263c9a24dfe57dccb7a83a0cd229",
+      "gzip_sha256": "5865e9c612ada1707617dd45dba734239932f85cb99f26e6d1bae0af92d4b8f6"
+    },
+    {
+      "file": "native-only-bridge-20261003-a-test.log.gz",
+      "source_file": ".local/native-only-bridge-20261003-a-test.log",
+      "bytes": 538,
+      "sha256": "8ead3423c24f11afb71d68d29b56d651bd305c9686a28183ed82907682694769",
+      "gzip_sha256": "5b2745331d1baff930c4a5c980dc50e2531c4ab7671e32ccfec2ebfb3d501acb"
+    },
+    {
+      "file": "native-only-bridge-20261003-a-controller.log.gz",
+      "source_file": ".local/native-only-bridge-20261003-a-controller.log",
+      "bytes": 803,
+      "sha256": "8cbde4cb589fd6bb079dfd13c7f0dda81a2a9e7d99a4f8f3230c48274bb66eeb",
+      "gzip_sha256": "ac66b3a0d893d6619610afd1c8cba0ddfeafcb111d23b5f2c2652bd4b0be33d2"
+    },
+    {
+      "file": "native-only-bridge-20261003-b.json.gz",
+      "source_file": ".local/native-only-bridge-20261003-b.json",
+      "bytes": 181048,
+      "sha256": "dd8cad6aa8b212cd8b853b5a062fc1bf23fd733de9ea121b2d43f37d68819056",
+      "gzip_sha256": "567ea94a28df3091383dd2bcff01452446df03f448fd190d05c5338ef6ef7a45"
+    },
+    {
+      "file": "native-only-bridge-20261003-b-runtime.json.gz",
+      "source_file": ".local/native-only-bridge-20261003-b-runtime.json",
+      "bytes": 58165,
+      "sha256": "95198c4912e73b2fba4810cfd2f7d70fcf249762f8983958f820882d021abfb1",
+      "gzip_sha256": "f5e7bd05b3c6d24bcd3e23caff1b43b5cb2bf51ddb185c899e910a68c54ceb48"
+    },
+    {
+      "file": "native-only-bridge-20261003-b-server-console.log.gz",
+      "source_file": ".local/native-only-bridge-20261003-b-server-console.log",
+      "bytes": 64667,
+      "sha256": "2da0920696d9573cf01408ca8beba21ec34fadba78aad3be48d2ed1e8fa07600",
+      "gzip_sha256": "f9aa09df1101b2962998446959fd9feeb0919f07f264ba6139427155734a9cb2"
+    },
+    {
+      "file": "native-only-bridge-20261003-b-test.log.gz",
+      "source_file": ".local/native-only-bridge-20261003-b-test.log",
+      "bytes": 311,
+      "sha256": "7b6b5da73440b60b03455e14151fdf5c3f1d963eb64c75e8e5d78271ba74a4cf",
+      "gzip_sha256": "08546fe08177d6c27b9a527d4e133d4f2bbd5c9fff87cb5058985073bb411b46"
+    },
+    {
+      "file": "native-only-bridge-20261003-b-controller.log.gz",
+      "source_file": ".local/native-only-bridge-20261003-b-controller.log",
+      "bytes": 96,
+      "sha256": "1203d888ff3a7b0d712d22bbbcc6cedd1b0377ef67a749e0ef0f8faacaf3eafe",
+      "gzip_sha256": "122dbb6cbf6686d23b843abcc2ad2a19c03c5622010dc0c766be9e536b8bce45"
+    },
+    {
+      "file": "native-only-roof-20261003-a.json.gz",
+      "source_file": ".local/native-only-roof-20261003-a.json",
+      "bytes": 17293361,
+      "sha256": "4c0a08847b529922edab1b9391c878f13238c55513bc65149363b729f5c7fc03",
+      "gzip_sha256": "da68b5f4ec9d9e205a130e381ca30411d0bb0c580e863f55e6e50ece089f8e88"
+    },
+    {
+      "file": "native-only-roof-20261003-a-runtime.json.gz",
+      "source_file": ".local/native-only-roof-20261003-a-runtime.json",
+      "bytes": 1479,
+      "sha256": "0c866eb6a15e7e14986ef29998911869a74a5fe1ae3f32c918f142762948db4f",
+      "gzip_sha256": "54a073ec7b9a5aa195c100cd8d10d7a1a6a67f813d1f0a123ceeeab81ef4e88e"
+    },
+    {
+      "file": "native-only-roof-20261003-a-server-console.log.gz",
+      "source_file": ".local/native-only-roof-20261003-a-server-console.log",
+      "bytes": 17683,
+      "sha256": "837cf806abc6534f96662f110a3555d54b4ba19019758aeb6e501564d3fb0edc",
+      "gzip_sha256": "b16bfc2ed9bb3ee67d24e521d5aaf1862a4173e3eaa2f7e576aaf30773405edf"
+    },
+    {
+      "file": "native-only-roof-20261003-a-test.log.gz",
+      "source_file": ".local/native-only-roof-20261003-a-test.log",
+      "bytes": 2971,
+      "sha256": "b4d3fac3f17c47f51a03988f78ed5ffe86e11436e72fc13aea94b389739413de",
+      "gzip_sha256": "e105018f5ad11c947009f84922e0c211f92e261f6f727277feeefcbba927090f"
+    },
+    {
+      "file": "native-only-roof-20261003-a-controller.log.gz",
+      "source_file": ".local/native-only-roof-20261003-a-controller.log",
+      "bytes": 2823,
+      "sha256": "220ff136909293705db0010a1179804161d86518782694f0d3a6014a709806be",
+      "gzip_sha256": "1a06b3b0ef1aec5ec4a343fcfdd6a2def0d42e737a562df922ac4ed8cb5198be"
+    },
+    {
+      "file": "native-only-bridge-20261003-b-mcp-stderr.log.gz",
+      "source_file": ".local/native-only-bridge-20261003-b-mcp-stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gzip_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64"
+    }
+  ]
+}
