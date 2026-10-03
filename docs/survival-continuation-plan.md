@@ -1,9 +1,10 @@
 # Stage 4: observed-site continuation scope
 
 Recorded 2026-10-03 UTC on source `950deef`. The stage-4 goal has been created.
-Implementation is stopped pending a scope decision under the user's rule to
-report newly necessary prerequisites or substantial correctness concerns.
-This is a code/contract investigation; no new live fault trial or compilation ran.
+The initial investigation stopped for a scope decision. The user subsequently
+approved continuation after a checked idle boundary. Stage 4A implementation is
+in progress; unresolved mining after loss of its native sessions remains a
+diagnostic stop. The original investigation ran no new fault trial or compilation.
 
 ## Confirmed prerequisite boundary
 
@@ -53,7 +54,8 @@ limit, not successful crash recovery.
 2. **Checked stopping boundary.** Add an explicit settlement/checkpoint path
    to the common executor. Where its live mining intent survives, prepare the
    existing independent retirement before closure and classify the fresh target
-   after retirement. Do not send the old placement or FINISH again. A failed
+   after retirement. Finish the already started attempt through its normal live
+   executor, without replaying an old placement or duplicate FINISH. A failed
    settlement retains the exclusive source and diagnostic state.
 3. **New plan from current facts.** Rebase the checked site on the fresh snapshot,
    preserve completed permanent targets and protected/foreign surroundings,

@@ -1,0 +1,404 @@
+//! Settled idle boundaries, not recovery of lost native operation handles.
+use super::*;
+use crate::survival_construction::{
+    ConstructionScope, TemporaryBlock, continuation::scene_snapshot,
+};
+use dustroute_translate::snapshot::MinecraftSnapshot;
+use fs2::FileExt;
+use serde::Deserialize;
+use std::fs::{File, OpenOptions};
+use voxrig::checked_survival::SurvivalMotionStatus;
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct SafeCheckpoint {
+    pub schema: String,
+    pub execution_id: uuid::Uuid,
+    pub completed_steps: usize,
+    pub dimension: String,
+    pub scope: ConstructionScope,
+    pub snapshot: MinecraftSnapshot,
+    pub temporary: Vec<TemporaryBlock>,
+    pub endpoint: serde_json::Value,
+}
+pub(crate) fn endpoint(config: &ConnectionConfig) -> serde_json::Value {
+    json!({"host":config.server.host,"port":config.server.port,"username":config.username,"version":config.version})
+}
+#[derive(Deserialize)]
+struct SavedEdit {
+    position: [i32; 3],
+    before: NativeBlockState,
+    after: NativeBlockState,
+}
+
+impl SurvivalExecutor {
+    pub(crate) fn pending_mining(&self) -> bool {
+        self.pending.is_some()
+    }
+
+    /// Only a settled caller-owned executor can checkpoint. A request made during
+    /// mining must first collect the normal result and original retirement receipt.
+    pub(crate) async fn checkpoint(&mut self) -> Result<SafeCheckpoint> {
+        if self.call_active
+            || self.pending.is_some()
+            || !matches!(
+                self.record().continuation,
+                Continuation::Revalidate | Continuation::Replan
+            )
+        {
+            return Err(ExecutionError::new(
+                "checkpoint_not_idle",
+                "outstanding or interrupted operation; no idle checkpoint",
+            ));
+        }
+        self.call_active = true;
+        let result = self.checkpoint_inner().await;
+        if let Err(error) = &result {
+            let _ = self.journal.event(
+                "checkpoint_refused",
+                self.journal.record.outcome.clone(),
+                Continuation::NeedsInspection,
+                json!({"error":error}),
+            );
+        }
+        // Success also seals this executor. All continuation uses a fresh plan.
+        result
+    }
+    async fn checkpoint_inner(&mut self) -> Result<SafeCheckpoint> {
+        let scene = self.current_scene().await?;
+        let history = self.bot.survival()?.operation_history().await;
+        if history.connection_closed
+            || history.interrupted_packet_id.is_some()
+            || history.receive_failure.is_some()
+            || history.pending_inventory_swap.is_some()
+            || !history.pending_creative_slots.is_empty()
+            || history.mining.is_some()
+            || history.placement.as_ref().is_some_and(|p| {
+                !p.dispatched || p.observation.is_none() || p.requires_inspection.is_some()
+            })
+            || history
+                .survival_motion
+                .as_ref()
+                .is_some_and(|m| m.status != SurvivalMotionStatus::Observed)
+            || history
+                .selected_hotbar
+                .as_ref()
+                .is_some_and(|s| !s.dispatched)
+        {
+            return Err(ExecutionError::new(
+                "checkpoint_native_unsettled",
+                "native history retains unresolved effects",
+            ));
+        }
+        native::received_materials(&self.bot.survival()?.player_state().await?)?;
+        let observer_ops = self.observer.java_1_21_11_operations()?;
+        let before = observer_ops.player_state().await?;
+        let observation = self.observer.observe_region(scene.region()).await?;
+        let after = observer_ops.player_state().await?;
+        if before.dimension.as_deref() != Some(scene.source().dimension.as_str())
+            || before.dimension != after.dimension
+            || before.connection_id != after.connection_id
+            || observation.connection_id != before.connection_id
+            || observation.connection_id == scene.source().connection_id
+            || observation.region != scene.region()
+            || observation.version != voxrig::MinecraftVersion::Java1_21_11
+            || observation.blocks.len() != self.expected.len()
+            || observation
+                .blocks
+                .iter()
+                .map(|b| b.position)
+                .collect::<std::collections::BTreeSet<_>>()
+                .len()
+                != self.expected.len()
+            || observation
+                .blocks
+                .iter()
+                .any(|b| b.state.as_ref() != self.expected.get(&b.position))
+        {
+            return Err(ExecutionError::new(
+                "checkpoint_observer_mismatch",
+                "independent checkpoint site differs or is incomplete",
+            ));
+        }
+        // Capture again after independent observation: all completed effects and
+        // the standing contract must still agree. No fixed delay acts as a fence.
+        let fresh = self.current_scene().await?;
+        let checkpoint = SafeCheckpoint {
+            schema: "dustroute.survival-checkpoint.v1".into(),
+            execution_id: self.record().id,
+            completed_steps: self.record().completed_steps,
+            dimension: fresh.source().dimension.clone(),
+            scope: self.plan.scope().clone(),
+            snapshot: scene_snapshot(&fresh).map_err(|e| ExecutionError::new(e.code, e.detail))?,
+            temporary: self
+                .temporary
+                .iter()
+                .map(|(&position, state)| TemporaryBlock {
+                    position,
+                    state: state.clone(),
+                })
+                .collect(),
+            endpoint: endpoint(&self.reconnect),
+        };
+        self.journal.event(
+            "idle_checkpoint",
+            OperationOutcome::Observed,
+            Continuation::Checkpoint,
+            json!(checkpoint),
+        )?;
+        Ok(checkpoint)
+    }
+}
+
+/// Read under the old executor lock. A live writer, missing checkpoint, later
+/// intent or already-consumed boundary cannot become a continuation source.
+pub(crate) fn read(directory: &Path) -> Result<SafeCheckpoint> {
+    let _lock = lock(directory)?;
+    checked(directory)
+}
+fn lock(directory: &Path) -> Result<File> {
+    let lock = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(directory.join("executor.lock"))?;
+    lock.try_lock_exclusive()
+        .map_err(|e| ExecutionError::new("checkpoint_writer_live", e))?;
+    Ok(lock)
+}
+fn checked(directory: &Path) -> Result<SafeCheckpoint> {
+    if directory.join("continuation-claim.json").try_exists()? {
+        return Err(ExecutionError::new(
+            "checkpoint_consumed",
+            "another new job already claimed this checkpoint; diagnose that job",
+        ));
+    }
+    let record = diagnose(directory)?.record;
+    let last = record.events.last().ok_or_else(|| {
+        ExecutionError::new(
+            "safe_checkpoint_missing",
+            "no settled idle checkpoint; lost handles cannot be restored",
+        )
+    })?;
+    if record.continuation != Continuation::Checkpoint
+        || record.outcome != OperationOutcome::Observed
+        || last.phase != "idle_checkpoint"
+        || last.continuation != Continuation::Checkpoint
+        || last.outcome != OperationOutcome::Observed
+        || last.step != record.completed_steps
+    {
+        return Err(ExecutionError::new(
+            "safe_checkpoint_missing",
+            "last durable event is not an idle checkpoint; unresolved effects require inspection",
+        ));
+    }
+    let checkpoint: SafeCheckpoint = serde_json::from_value(last.evidence.clone())?;
+    if checkpoint.schema != "dustroute.survival-checkpoint.v1"
+        || checkpoint.execution_id != record.id
+        || checkpoint.completed_steps != record.completed_steps
+        || json!(checkpoint.scope) != record.plan["plan"]["scope"]
+        || checkpoint.endpoint != record.plan["declared_reconnect"]
+    {
+        return Err(ExecutionError::new(
+            "invalid_checkpoint",
+            "checkpoint provenance differs from execution",
+        ));
+    }
+    // Ownership is rebuilt from confirmed prefix edits, never from a caller list.
+    let plan = &record.plan["plan"];
+    let completions: Vec<_> = record
+        .events
+        .iter()
+        .filter(|e| e.phase == "step_completed")
+        .collect();
+    if completions.len() != record.completed_steps
+        || completions.iter().enumerate().any(|(i, e)| {
+            e.step != i + 1
+                || e.outcome != OperationOutcome::Observed
+                || e.continuation != Continuation::Revalidate
+        })
+    {
+        return Err(ExecutionError::new(
+            "invalid_checkpoint",
+            "completed prefix lacks sequential observed events",
+        ));
+    }
+    let mut owned = BTreeMap::new();
+    let initial: Vec<TemporaryBlock> = serde_json::from_value(plan["initial_temporary"].clone())?;
+    for block in initial {
+        if owned.insert(block.position, block.state).is_some() {
+            return Err(ExecutionError::new(
+                "invalid_checkpoint",
+                "duplicate initial ownership",
+            ));
+        }
+    }
+    let steps = plan["steps"]
+        .as_array()
+        .ok_or_else(|| ExecutionError::new("invalid_checkpoint", "missing diagnostic steps"))?;
+    if record.completed_steps > steps.len() {
+        return Err(ExecutionError::new(
+            "invalid_checkpoint",
+            "completed prefix exceeds plan",
+        ));
+    }
+    for step in &steps[..record.completed_steps] {
+        match step["kind"].as_str() {
+            Some("place") if step["purpose"] == "temporary" => {
+                let edit: SavedEdit = serde_json::from_value(step["placement"]["edit"].clone())?;
+                if owned.insert(edit.position, edit.after).is_some() {
+                    return Err(ExecutionError::new(
+                        "invalid_checkpoint",
+                        "duplicate temporary placement",
+                    ));
+                }
+            }
+            Some("remove_temporary") => {
+                let edit: SavedEdit = serde_json::from_value(step["edit"].clone())?;
+                if owned.remove(&edit.position).as_ref() != Some(&edit.before) {
+                    return Err(ExecutionError::new(
+                        "invalid_checkpoint",
+                        "removal lacks historical ownership",
+                    ));
+                }
+            }
+            Some("place" | "move") => {}
+            _ => {
+                return Err(ExecutionError::new(
+                    "invalid_checkpoint",
+                    "unknown historical step",
+                ));
+            }
+        }
+    }
+    let recorded: BTreeMap<_, _> = checkpoint
+        .temporary
+        .iter()
+        .map(|t| (t.position, t.state.clone()))
+        .collect();
+    if recorded.len() != checkpoint.temporary.len() || recorded != owned {
+        return Err(ExecutionError::new(
+            "invalid_checkpoint",
+            "checkpoint ownership differs from confirmed prefix",
+        ));
+    }
+    Ok(checkpoint)
+}
+
+/// The durable claim is single-use even after controller loss. On admission
+/// failure it remains a diagnostic stop, never permission to replay implicitly.
+pub(crate) fn claim(
+    directory: &Path,
+    expected: &SafeCheckpoint,
+    new_job: uuid::Uuid,
+) -> Result<File> {
+    let lock = lock(directory)?;
+    let now = checked(directory)?;
+    if json!(now) != json!(expected) {
+        return Err(ExecutionError::new(
+            "checkpoint_changed",
+            "checkpoint differs from preview",
+        ));
+    }
+    crate::storage::replace(
+        &directory.join("continuation-claim.json"),
+        &serde_json::to_vec(
+            &json!({"new_job":new_job,"execution_id":now.execution_id,"automatic_replay":false}),
+        )?,
+        crate::storage::Durability::FileAndDirectory,
+    )?;
+    Ok(lock)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    struct Directory(std::path::PathBuf);
+    impl Drop for Directory {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+    fn fixture() -> (Directory, Journal, SafeCheckpoint) {
+        let d = Directory(
+            std::env::temp_dir().join(format!("dustroute-checkpoint-{}", uuid::Uuid::new_v4())),
+        );
+        let scope = crate::survival_construction::tests::scope();
+        let native_endpoint = json!({"host":"127.0.0.1","port":25572,"username":"NatMineBot","version":"Java1_21_11"});
+        let mut journal = Journal::create(
+            &d.0,
+            json!({"plan":{"scope":scope,"initial_temporary":[],"steps":[]},"declared_reconnect":native_endpoint}),
+        )
+        .unwrap();
+        let checkpoint = SafeCheckpoint {
+            schema: "dustroute.survival-checkpoint.v1".into(),
+            execution_id: journal.record.id,
+            completed_steps: 0,
+            dimension: "minecraft:overworld".into(),
+            scope,
+            snapshot: crate::survival_construction::tests::design().baseline,
+            temporary: vec![],
+            endpoint: native_endpoint,
+        };
+        journal
+            .event(
+                "idle_checkpoint",
+                OperationOutcome::Observed,
+                Continuation::Checkpoint,
+                json!(checkpoint),
+            )
+            .unwrap();
+        (d, journal, checkpoint)
+    }
+    #[test]
+    fn only_settled_last_event_and_released_writer_can_supply_new_plan_facts() {
+        let (d, mut journal, checkpoint) = fixture();
+        assert_eq!(read(&d.0).unwrap_err().code, "checkpoint_writer_live");
+        journal
+            .intend("mining_start_send", json!({"target":[1,2,3]}))
+            .unwrap();
+        drop(journal);
+        assert_eq!(read(&d.0).unwrap_err().code, "safe_checkpoint_missing");
+        let (d, journal, _) = fixture();
+        drop(journal);
+        assert_eq!(read(&d.0).unwrap().schema, checkpoint.schema);
+        assert_eq!(
+            diagnose(&d.0).unwrap().continuation,
+            Continuation::NeedsInspection
+        );
+    }
+    #[test]
+    fn claim_survives_process_local_handle_loss_and_refuses_other_branches() {
+        let (d, journal, checkpoint) = fixture();
+        drop(journal);
+        let child = uuid::Uuid::new_v4();
+        let guard = claim(&d.0, &checkpoint, child).unwrap();
+        assert!(claim(&d.0, &checkpoint, uuid::Uuid::new_v4()).is_err());
+        drop(guard);
+        assert_eq!(read(&d.0).unwrap_err().code, "checkpoint_consumed");
+        assert_eq!(
+            diagnose(&d.0).unwrap().record.events.last().unwrap().phase,
+            "idle_checkpoint"
+        );
+    }
+    #[test]
+    fn ownership_is_derived_from_confirmed_prefix_not_a_saved_claim() {
+        let (d, mut journal, mut checkpoint) = fixture();
+        checkpoint.temporary.push(TemporaryBlock {
+            position: [-3, 0, 2],
+            state: NativeBlockState {
+                name: "minecraft:dirt".into(),
+                properties: Default::default(),
+            },
+        });
+        journal
+            .event(
+                "idle_checkpoint",
+                OperationOutcome::Observed,
+                Continuation::Checkpoint,
+                json!(checkpoint),
+            )
+            .unwrap();
+        drop(journal);
+        assert_eq!(read(&d.0).unwrap_err().code, "invalid_checkpoint");
+    }
+}

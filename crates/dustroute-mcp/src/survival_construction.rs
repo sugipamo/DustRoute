@@ -104,6 +104,7 @@ pub struct ConstructionSite {
     expected: MinecraftSnapshot,
     structure: BTreeMap<[i32; 3], NativeBlockState>,
     scope: ConstructionScope,
+    initial_temporary: BTreeMap<[i32; 3], NativeBlockState>,
 }
 impl ConstructionSite {
     pub(crate) fn scope(&self) -> &ConstructionScope {
@@ -242,6 +243,7 @@ impl ConstructionSite {
             expected: after.clone(),
             structure,
             scope,
+            initial_temporary: BTreeMap::new(),
         })
     }
 }
@@ -310,6 +312,16 @@ pub struct HypotheticalConstructionPlan {
     steps: Vec<HypotheticalConstructionStep>,
     materials: ConstructionMaterials,
     final_position: [f64; 3],
+    initial_temporary: Vec<TemporaryBlock>,
+}
+
+/// Historical ownership is conditional on an exact fresh observation and the
+/// explicitly approved temporary footprint; an identical state is not attribution.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct TemporaryBlock {
+    pub position: [i32; 3],
+    pub state: NativeBlockState,
 }
 impl HypotheticalConstructionPlan {
     pub(crate) fn source(&self) -> &StandingContext {
@@ -330,6 +342,9 @@ impl HypotheticalConstructionPlan {
     pub fn materials(&self) -> &ConstructionMaterials {
         &self.materials
     }
+    pub(crate) fn initial_temporary(&self) -> &[TemporaryBlock] {
+        &self.initial_temporary
+    }
 }
 
 #[derive(Clone)]
@@ -341,11 +356,18 @@ struct Ledger<'a> {
 }
 impl<'a> Ledger<'a> {
     fn new(site: &'a ConstructionSite) -> Self {
+        let mut materials = ConstructionMaterials::default();
+        for state in site.initial_temporary.values() {
+            *materials
+                .peak_temporary_in_world
+                .entry(state.name.clone())
+                .or_default() += 1;
+        }
         Self {
             site,
             remaining: site.structure.clone(),
-            temporary: BTreeMap::new(),
-            materials: Default::default(),
+            temporary: site.initial_temporary.clone(),
+            materials,
         }
     }
     fn place(&mut self, purpose: PlacementPurpose, edit: &HypotheticalBlockEdit) -> Result<()> {
@@ -605,7 +627,10 @@ impl<'a> CheckedPrefix<'a> {
     }
 
     fn finish(self, supplied: &BTreeMap<String, usize>) -> Result<HypotheticalConstructionPlan> {
-        if self.steps.is_empty() {
+        if self.steps.is_empty()
+            && self.ledger.site.initial_temporary.is_empty()
+            && !self.ledger.site.structure.is_empty()
+        {
             return Err(ConstructionPlanningError::new(
                 "invalid_sequence",
                 "requires at least one action",
@@ -659,13 +684,21 @@ impl<'a> CheckedPrefix<'a> {
             steps,
             materials,
             final_position,
+            initial_temporary: site
+                .initial_temporary
+                .iter()
+                .map(|(&position, state)| TemporaryBlock {
+                    position,
+                    state: state.clone(),
+                })
+                .collect(),
         })
     }
 }
 
 #[cfg(test)]
 #[path = "survival_construction/tests.rs"]
-mod tests;
+pub(crate) mod tests;
 
 #[cfg(test)]
 #[path = "survival_construction/native_roof_trial.rs"]
@@ -673,3 +706,6 @@ pub(crate) mod native_roof_trial;
 
 #[path = "survival_construction/generation.rs"]
 pub mod generation;
+
+#[path = "survival_construction/continuation.rs"]
+pub(crate) mod continuation;

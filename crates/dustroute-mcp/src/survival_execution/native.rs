@@ -90,6 +90,18 @@ fn inventory_ready(p: &PlayerState) -> Result<()> {
     }
     Ok(())
 }
+pub(crate) fn received_materials(p: &PlayerState) -> Result<BTreeMap<String, usize>> {
+    inventory_ready(p)?;
+    let mut counts = BTreeMap::new();
+    for slot in &p.inventory.slots[9..45] {
+        if let InventorySlot::Item { item } = slot {
+            if let Ok(count) = usize::try_from(item.count) {
+                *counts.entry(item.name.clone()).or_default() += count;
+            }
+        }
+    }
+    Ok(counts)
+}
 pub(super) fn require_supplied(p: &PlayerState, budget: &BTreeMap<String, usize>) -> Result<()> {
     inventory_ready(p)?;
     for (name, needed) in budget {

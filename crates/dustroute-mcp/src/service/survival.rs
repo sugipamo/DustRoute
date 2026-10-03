@@ -48,6 +48,16 @@ enum Action {
         #[schemars(with = "String")]
         job_id: uuid::Uuid,
     },
+    Checkpoint {
+        #[schemars(with = "String")]
+        job_id: uuid::Uuid,
+    },
+    Continue {
+        #[schemars(with = "String")]
+        job_id: uuid::Uuid,
+        #[serde(default)]
+        limits: SearchLimits,
+    },
 }
 
 #[derive(Default)]
@@ -61,6 +71,8 @@ struct Entry {
     expires: Instant,
     status: Value,
     cancel: Arc<AtomicBool>,
+    checkpoint: Arc<AtomicBool>,
+    parent: Option<ContinuationParent>,
     // Keep uncertain native operations and exclusive ownership inspectable.
     stopped: Option<(SurvivalLease, SurvivalExecutor)>,
 }
@@ -70,6 +82,12 @@ struct PlanningInput {
     supplied: BTreeMap<String, usize>,
     temporary_material: String,
     limits: SearchLimits,
+    specification: Value,
+}
+#[derive(Clone)]
+struct ContinuationParent {
+    id: uuid::Uuid,
+    checkpoint: crate::survival_execution::checkpoint::SafeCheckpoint,
 }
 struct ExecutionInput {
     id: uuid::Uuid,
@@ -79,6 +97,8 @@ struct ExecutionInput {
     lease: SurvivalLease,
     observer: voxrig::Client,
     cancel: Arc<AtomicBool>,
+    checkpoint: Arc<AtomicBool>,
+    parent: Option<ContinuationParent>,
 }
 fn failure(code: &str, detail: impl std::fmt::Display) -> Value {
     json!({"ok":false,"schema_version":"dustroute.survival-job.v1",
@@ -197,6 +217,7 @@ impl DustRouteMcp {
                 }
                 let store = self.state_store.clone();
                 let p = owner.clone();
+                let saved_specification = json!(specification);
                 let checked = tokio::task::spawn_blocking(move || {
                     let source = crate::blueprint_mcp::construction_source(
                         &store,
@@ -207,36 +228,10 @@ impl DustRouteMcp {
                         *specification,
                     )
                     .map_err(|e| e.to_string())?;
-                    if source.record != design.request.candidate_state
-                        || source.context != design.context
-                    {
-                        return Err(
-                            "specification does not match the exact adopted Assembly and context"
-                                .to_owned(),
-                        );
-                    }
-                    let catalog = design.records.catalog().map_err(|e| e.to_string())?;
-                    if !catalog
-                        .revisions()
-                        .chain(design.request.revisions.iter())
-                        .all(|r| source.catalog.revision(&r.id) == Some(r))
-                        || !catalog
-                            .type_revisions()
-                            .all(|r| source.catalog.type_revision(&r.id) == Some(r))
-                        || !catalog
-                            .classifications()
-                            .all(|r| source.catalog.classification(&r.id) == Some(r))
-                        || !catalog
-                            .assemblies()
-                            .all(|r| source.catalog.assembly(&r.id) == Some(r))
-                    {
-                        return Err(
-                            "adopted definitions differ from the grounded specification".into()
-                        );
-                    }
+                    continuation::validate_design(&source, &design)?;
                     let site = ConstructionSite::from_grounded(&design, *scope)
                         .map_err(|e| e.to_string())?;
-                    Ok((source, site))
+                    Ok::<_, String>((source, site))
                 })
                 .await;
                 let (source, site) = match checked {
@@ -268,6 +263,7 @@ impl DustRouteMcp {
                             supplied,
                             temporary_material,
                             limits,
+                            specification: saved_specification,
                         },
                         &bot,
                     )
@@ -281,6 +277,30 @@ impl DustRouteMcp {
                 include_record,
             } => self.get_survival(job_id, include_record).await,
             Action::Start { job_id, confirmed } => self.start_survival(job_id, confirmed).await,
+            Action::Continue { job_id, limits } => self.continue_survival(job_id, limits).await,
+            Action::Checkpoint { job_id } => {
+                let jobs = self.survival.entries.lock().await;
+                let Some(entry) = jobs.get(&job_id) else {
+                    return failure(
+                        "job_not_live",
+                        "only a live executor can establish a safe checkpoint",
+                    );
+                };
+                if let Err(e) = self.policy.authorize_player(&entry.owner) {
+                    return failure("permission_denied", e);
+                }
+                if !matches!(
+                    entry.status["state"].as_str(),
+                    Some("running" | "admitting")
+                ) {
+                    return failure(
+                        "checkpoint_not_running",
+                        "no running executor; inspect the saved record",
+                    );
+                }
+                entry.checkpoint.store(true, Ordering::SeqCst);
+                json!({"ok":true,"job_id":job_id,"checkpoint_requested":true,"idle_confirmed":false,"next_step":"get until checkpointed; pending mining must settle first"})
+            }
             Action::Cancel { job_id } => {
                 let mut jobs = self.survival.entries.lock().await;
                 let Some(entry) = jobs.get_mut(&job_id) else {
@@ -323,6 +343,7 @@ impl DustRouteMcp {
             supplied,
             temporary_material,
             limits,
+            specification,
         } = input;
         let scope = site.scope().clone();
         if let Err(e) =
@@ -345,15 +366,35 @@ impl DustRouteMcp {
         if let Err(e) = policy_scope(&self.policy, &scope, &scene.source().dimension) {
             return failure("permission_denied", e);
         }
-        let result =
-            generate_construction_plan_async(scene, site, supplied, temporary_material, limits)
-                .await;
+        let result = generate_construction_plan_async(
+            scene,
+            site,
+            supplied,
+            temporary_material.clone(),
+            limits,
+        )
+        .await;
         let generated = match result {
             Ok(r) => r,
             Err(e) => {
                 return json!({"ok":false,"error":{"code":"generation_refused","cause":e},"writes_minecraft":false});
             }
         };
+        self.publish_survival_plan(owner, source, generated,
+            json!({"specification":specification,"scope":scope,"temporary_material":temporary_material}), None).await
+    }
+
+    async fn publish_survival_plan(
+        &self,
+        owner: &str,
+        source: SourceIdentity,
+        generated: crate::survival_construction::generation::GeneratedConstructionPlan,
+        construction: Value,
+        parent: Option<ContinuationParent>,
+    ) -> Value {
+        if self.survival.entries.lock().await.len() >= 32 {
+            return failure("job_capacity", "at most 32 process-local jobs");
+        }
         if let Err(e) = self
             .policy
             .validate_placement_size(generated.plan.steps().len())
@@ -366,7 +407,7 @@ impl DustRouteMcp {
             return failure("journal_io", e);
         }
         let manifest = json!({"schema":"dustroute.survival-job.v1","job_id":id,"owner":owner,"source":source,
-            "preview":generated,"execution_authority_restorable":false});
+            "preview":generated,"construction":construction,"parent_job_id":parent.as_ref().map(|p|p.id),"execution_authority_restorable":false});
         if let Err(e) = save(&path.join("manifest.json"), &manifest) {
             return failure("journal_io", e);
         }
@@ -382,6 +423,8 @@ impl DustRouteMcp {
                 expires: Instant::now() + Duration::from_secs(900),
                 status: json!({"state":"planned"}),
                 cancel: Arc::new(AtomicBool::new(false)),
+                checkpoint: Arc::new(AtomicBool::new(false)),
+                parent,
                 stopped: None,
             },
         );
@@ -478,6 +521,12 @@ impl DustRouteMcp {
         if include_record {
             response["manifest"] = manifest;
             response["diagnosis"] = json!(diagnosis);
+            if directory.join("continuation-claim.json").exists() {
+                match load(&directory.join("continuation-claim.json")) {
+                    Ok(claim) => response["continuation_job_id"] = claim["new_job"].clone(),
+                    Err(e) => return failure("invalid_continuation_claim", e),
+                }
+            }
         }
         response
     }
@@ -536,6 +585,8 @@ impl DustRouteMcp {
         let source = entry.source.clone();
         let owner = entry.owner.clone();
         let cancel = entry.cancel.clone();
+        let checkpoint = entry.checkpoint.clone();
+        let parent = entry.parent.clone();
         entry.status = json!({"state":"admitting"});
         if let Err(e) = save(
             &self
@@ -562,6 +613,8 @@ impl DustRouteMcp {
                     lease,
                     observer,
                     cancel,
+                    checkpoint,
+                    parent,
                 })
                 .await;
         });
@@ -583,6 +636,8 @@ impl DustRouteMcp {
             mut lease,
             observer,
             cancel,
+            checkpoint,
+            parent,
         } = input;
         let bot = lease.source();
         let path = self.state_store.survival_job_root().join(id.to_string());
@@ -603,6 +658,15 @@ impl DustRouteMcp {
             .map_err(|e: String| failure("source_changed", e))?;
             policy_scope(&self.policy, plan.scope(), &plan.source().dimension)
                 .map_err(|e| failure("permission_denied", e))?;
+            if parent.as_ref().is_some_and(|p| {
+                p.checkpoint.endpoint
+                    != crate::survival_execution::checkpoint::endpoint(&lease.reconnect())
+            }) {
+                return Err(failure(
+                    "checkpoint_endpoint_changed",
+                    "continuation requires the original endpoint and builder profile",
+                ));
+            }
             let observer_state = observer
                 .java_1_21_11_operations()
                 .map_err(|e| failure("observer_unavailable", e))?
@@ -661,7 +725,7 @@ impl DustRouteMcp {
                     "no construction dispatched",
                 ));
             }
-            SurvivalExecutor::create(
+            let executor = SurvivalExecutor::create(
                 bot.clone(),
                 observer,
                 lease.reconnect(),
@@ -669,10 +733,27 @@ impl DustRouteMcp {
                 &path.join("execution"),
             )
             .await
-            .map_err(|e| json!({"ok":false,"error":e}))
+            .map_err(|e| json!({"ok":false,"error":e}))?;
+            let parent_lock = if let Some(parent) = &parent {
+                Some(
+                    crate::survival_execution::checkpoint::claim(
+                        &self
+                            .state_store
+                            .survival_job_root()
+                            .join(parent.id.to_string())
+                            .join("execution"),
+                        &parent.checkpoint,
+                        id,
+                    )
+                    .map_err(|e| json!({"ok":false,"error":e}))?,
+                )
+            } else {
+                None
+            };
+            Ok((executor, parent_lock))
         }
         .await;
-        let mut executor = match admission {
+        let (mut executor, _parent_lock) = match admission {
             Ok(e) => e,
             Err(e) => {
                 lease.release(bot);
@@ -686,6 +767,22 @@ impl DustRouteMcp {
                 let result = executor.cancel();
                 self.set_survival_status(id,json!({"state":"cancelled_needs_inspection","error":result.err(),"completed_steps":executor.record().completed_steps})).await;
                 break;
+            }
+            if checkpoint.load(Ordering::SeqCst) && !executor.pending_mining() {
+                match executor.checkpoint().await {
+                    Ok(boundary) => {
+                        let current = executor.client().clone();
+                        // Release the old journal writer before publishing readiness.
+                        drop(executor);
+                        lease.release(current);
+                        self.set_survival_status(id,json!({"state":"checkpointed","completed_steps":boundary.completed_steps,"safe_idle":true,"checkpoint":boundary,"next_step":"action=continue creates a fresh preview; start still requires confirmation"})).await;
+                        return;
+                    }
+                    Err(error) => {
+                        self.set_survival_status(id,json!({"state":"needs_inspection","error":error,"completed_steps":executor.record().completed_steps})).await;
+                        break;
+                    }
+                }
             }
             match executor.advance().await {
                 Ok(ExecutionProgress::Completed)=>{
@@ -732,10 +829,12 @@ impl DustRouteMcp {
 #[cfg(test)]
 mod tests;
 
+mod continuation;
+
 #[tool_router(router = survival_tool_router, vis = "pub(super)")]
 impl DustRouteMcp {
     #[tool(
-        description = "Plan and run bounded non-OP survival construction from a uniquely adopted grounded Blueprint. Supply materials to the source bot. action=plan requires specification matching that exact Assembly, declared edit/temporary/travel/retreat scopes and material budget; returns a complete preview without world edits. action=start requires job_id and confirmed=true and freshly checks source/site/inventory; execution continues in background. action=get reports progress or durable diagnosis after restart; action=cancel stops at the next operation boundary, never undoing or replaying uncertain actions. Requires the configured independent survival observer. No resource collection, native-token restoration, command placement or automatic job resume."
+        description = "Plan and run bounded non-OP survival construction from a uniquely adopted grounded Blueprint. Supply materials to the source bot. action=plan requires matching specification, edit/temporary/travel/retreat scopes and material budget; returns a complete preview without world edits. action=start requires job_id and confirmed=true and freshly checks source/site/inventory; execution continues in background. action=get reports progress or durable diagnosis. action=checkpoint requests a sealed idle stop after any pending mining settles and retires; poll get until checkpointed. action=continue with that old job_id reobserves the site and current materials and generates a NEW preview, also after process restart; review and explicitly start its new job_id. External changes or unresolved lost actions refuse continuation. A checkpoint is consumed once on new admission. action=cancel stops at the next boundary and may retain uncertainty. Requires the independent survival observer. No gathering, native-token restoration, command placement or automatic replay."
     )]
     async fn survival_construction(&self, Parameters(params): Parameters<Request>) -> String {
         json_text(self.survival_request(params).await)

@@ -2,6 +2,7 @@
 //! The caller exclusively owns the source bot for this executor's lifetime.
 //! Voxrig retains physical admission, native action guards and retirement receipts.
 //! JSON journals diagnose uncertainty; they cannot restore a native session/token.
+pub(crate) mod checkpoint;
 mod journal;
 mod native;
 use crate::survival_construction::{
@@ -11,6 +12,7 @@ use journal::Journal;
 pub use journal::{
     Continuation, ExecutionDiagnosis, ExecutionEvent, ExecutionRecord, OperationOutcome, diagnose,
 };
+pub(crate) use native::received_materials;
 use serde::Serialize;
 use serde_json::json;
 use std::{collections::BTreeMap, path::Path};
@@ -133,6 +135,11 @@ impl SurvivalExecutor {
                 "declared_reconnect":{"host":reconnect.server.host,"port":reconnect.server.port,
                     "username":reconnect.username,"version":reconnect.version}}),
         )?;
+        let temporary = plan
+            .initial_temporary()
+            .iter()
+            .map(|t| (t.position, t.state.clone()))
+            .collect();
         Ok(Self {
             bot,
             observer,
@@ -140,7 +147,7 @@ impl SurvivalExecutor {
             plan,
             journal,
             expected,
-            temporary: BTreeMap::new(),
+            temporary,
             pending: None,
             retry: None,
             call_active: false,
@@ -168,7 +175,7 @@ impl SurvivalExecutor {
         if self.call_active
             || matches!(
                 self.record().continuation,
-                Continuation::NeedsInspection | Continuation::Cancelled
+                Continuation::NeedsInspection | Continuation::Cancelled | Continuation::Checkpoint
             )
         {
             return Err(ExecutionError::new(

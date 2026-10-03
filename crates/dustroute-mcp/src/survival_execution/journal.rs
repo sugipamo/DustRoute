@@ -33,6 +33,7 @@ pub enum Continuation {
     NeedsInspection,
     Completed,
     Cancelled,
+    Checkpoint,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

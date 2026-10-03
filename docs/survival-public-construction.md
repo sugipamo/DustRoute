@@ -70,6 +70,39 @@ This integration does not change Voxrig's mining retirement contract.
 | `needs_inspection` | Execution or persistence is uncertain. Inspect saved evidence and freshly observe; do not blindly retry. |
 | `cancelled_needs_inspection` | Cancellation stops at an executor boundary. It does not prove an outstanding native operation was aborted. |
 | `completed` | The executor recorded final independent verification. Later edits still require fresh observation. |
+| `checkpointed` | The old executor is sealed at an independently checked idle boundary; request a fresh continuation preview. |
+| `safe_checkpoint_missing` | The last durable event does not prove a settled idle boundary. Lost native operations require intervention. |
+| `checkpoint_site_changed` | Read `diagnosis.conflicts` and inspect the changed cells; no automatic removal or repair was performed. |
+| `checkpoint_consumed` | A new job already claimed this boundary. Inspect that job rather than starting another branch. |
+
+For a planned safe stop, call `action=checkpoint, job_id` and poll until
+`status.state=checkpointed`. The request itself does not confirm idle. An active
+mining attempt completes its existing outcome/retirement/reconnect path first;
+no new mining is started for the stop. The old executor then checks native
+operation history, current standing/inventory and the complete independent site,
+durably records the checkpoint, seals its old sequence and returns the source.
+`cancel` retains its existing uncertain-stop semantics.
+
+After that boundary, including after starting a new MCP process, call
+`action=continue, job_id=<old job>, limits=<optional search budgets>`. The tool
+rechecks adoption, endpoint/profile, dimension, scope and both current scenes.
+It reports completed/unbuilt targets and conditional remaining owned temporary
+blocks, counts currently received inventory and searches a **new** complete plan
+for remaining placements, cleanup and retreat. Review its preview and then use
+`action=start, job_id=<new job>, confirmed=true`. Saved steps or native tokens
+are never resumed. Completed permanent blocks cost no new materials; old
+temporary works must be removed and do not refund future drops. Matching block
+states do not prove who placed them; temporary ownership remains conditional on
+the explicitly approved footprint and exact comparison.
+
+A checkpoint has one durable continuation claim, written after fresh admission
+checks but before dispatch and held under the prior journal's writer lock.
+Competing previews cannot both execute. The claim remains consumed if admission
+subsequently fails or its controller is lost; inspect the linked new job. Only
+new manifests that retain the normalized specification support this workflow.
+An ordinary historical `revalidate`, an elapsed wait, or a lost unresolved
+mining attempt is insufficient. This is bounded idle-checkpoint continuation,
+not arbitrary crash recovery, an atomic world lock or an automatic repair system.
 
 `action=cancel` before start consumes the plan without Minecraft writes. After
 start it requests a boundary stop; the stopped executor and exclusive lease are

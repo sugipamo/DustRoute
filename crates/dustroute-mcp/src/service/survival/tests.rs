@@ -135,6 +135,24 @@ async fn public_saved_jobs_are_diagnostic_and_corrupt_identity_is_refused() {
     )
     .await;
     assert_eq!(refused["error"]["code"], "job_not_live");
+    let execution = path.join("execution");
+    std::fs::create_dir_all(&execution).unwrap();
+    std::fs::write(execution.join("executor.lock"), []).unwrap();
+    let intent = json!({"step":0,"phase":"mining_start_send","outcome":"uncertain","continuation":"needs_inspection","evidence":{"target":[1,2,3]}});
+    let record = json!({"schema":"dustroute.survival-execution.v1","id":uuid::Uuid::new_v4(),"plan":{},"completed_steps":0,"outcome":"uncertain","continuation":"needs_inspection","reconnects":0,"events":[intent]});
+    save(&execution.join("record.json"), &record).unwrap();
+    let refusal = call(
+        &client,
+        "survival_construction",
+        json!({"action":"continue","job_id":id}),
+    )
+    .await;
+    assert_eq!(refusal["error"]["code"], "safe_checkpoint_missing");
+    assert_eq!(
+        refusal["historical_diagnosis"]["last_event"]["phase"],
+        "mining_start_send"
+    );
+    assert_eq!(load(&execution.join("record.json")).unwrap(), record);
     manifest["owner"] = json!("AnotherPlayer");
     save(&path.join("manifest.json"), &manifest).unwrap();
     let denied = call(&client, "survival_construction", get.clone()).await;
@@ -146,6 +164,9 @@ async fn public_saved_jobs_are_diagnostic_and_corrupt_identity_is_refused() {
     stop(client, server).await;
     std::fs::remove_dir_all(root).unwrap();
 }
+
+#[path = "tests/continuation.rs"]
+mod continuation;
 
 #[tokio::test]
 #[ignore = "explicit isolated non-OP server and supplied inventory; public MCP roof acceptance"]
@@ -226,6 +247,8 @@ async fn native_public_roof() {
             },
             status: json!({"state":"planned"}),
             cancel: Arc::new(AtomicBool::new(false)),
+            checkpoint: Arc::new(AtomicBool::new(false)),
+            parent: None,
             stopped: None,
         };
         jobs.insert(fork_id, fork);
