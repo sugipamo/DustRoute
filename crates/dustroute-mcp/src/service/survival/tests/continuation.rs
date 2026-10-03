@@ -194,8 +194,8 @@ async fn native_public_idle_continuation() {
         console("INJECT continuation materials:").await;
         let refused = call(&client, "survival_construction", request.clone()).await;
         assert_eq!(refused["error"]["code"], "generation_refused", "{refused}");
-        assert!(
-            !refused["error"]["cause"]["InsufficientMaterials"].is_null(),
+        assert_eq!(
+            refused["error"]["cause"]["kind"], "insufficient_materials",
             "{refused}"
         );
         events.push(json!({"phase":"materials_shortage_refused","result":refused}));

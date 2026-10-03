@@ -48,7 +48,8 @@ impl SurvivalLease {
     }
 
     /// Only after read-only planning (no executor dispatched), or a fully
-    /// completed executor. Stopped/uncertain jobs retain their lease instead.
+    /// completed executor or a sealed, independently checked idle checkpoint.
+    /// Stopped/uncertain jobs retain their lease instead.
     pub(crate) fn begin_execution(&mut self) {
         self.restore_on_drop = false;
     }
