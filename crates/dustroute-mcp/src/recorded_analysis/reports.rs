@@ -4,7 +4,7 @@ mod flat;
 mod hierarchical;
 mod mechanisms;
 mod truth;
-pub(crate) use common::{FocusedHierarchy, focused_component, focused_hierarchy};
+pub(crate) use common::{FocusedComponent, focused_component, focused_hierarchy};
 pub(crate) use flat::{ReverseAnalysisReport, reverse_report};
 pub(crate) use hierarchical::{HierarchicalAnalysisReport, hierarchical_report};
 pub(crate) use mechanisms::ObservedMechanism;

@@ -1387,3 +1387,42 @@ JSON除去ゴールを継続する。新しいJSON例外、依存・pin・Voxrig
 workspace全targetとMCPの`--no-default-features`全targetのClippyは最終版で
 `-D warnings`に成功した。`cargo fmt --all -- --check`と`git diff --check`も成功した。
 Cargoは単独offline/locked・`-j1`、試験は単一threadで実行した。
+
+### 同期解析・focused診断の追加情報をnativeで組み立てる
+
+`convert_from_circuit`のflat/hierarchicalと`convert_from_selected_region`を、
+`Conversion`・`Capture`・用途別の追加表示へ接続した。reverse/hierarchicalのreportを
+JSONへ変換してobjectへ追記する旧経路を削除し、公開MCPの最後でのみencodeする。
+`test_circuit`もfocused explanationをnativeで保持し、`FocusedDiagnostic`として返す。
+旧`analysis` codecを削除し、reverseのJSON helperは既存MCP境界試験だけへ限定した。
+
+置換候補はnative candidate、plan、構造検査、materializationのResult、定常状態・
+遷移report、contract/assessmentを個別に保持する。公開serializerは以前と同じ10項目の
+candidateと13項目のplacement planを投影し、world・source catalog・実行権限を出力しない。
+rotation・verification・入出力方向はRust enumを保持し、文字列化はserializerに限定する。
+materialization拒否もnative errorのままで、理由のDebug表示はMCP出力時に行う。
+
+採否・構造/materializationの条件、512件の切替と明示truth-table要求の優先、
+観測不完全の設定、保存/取得/正規化/要求検査の順序、旧profileや実機の物理は変更しない。
+選択領域には視線向けのidentity/diagnostic/macro候補/next_toolsを追加しない。
+flatでfocusなしのexplanationは省略、hierarchical/診断ではnullを維持する。
+候補未取得のnullと、候補検索済みの空リストを区別する。未知の取得数を記録上zeroにしない。
+
+`macro-wire-before-bdc08c6.json`は変更前の同期macro encoderを一時的な試験で直接実行して
+採取した独立したMCP期待値である。採取コードは除去し、移行後の出力から期待値を作らない。
+仮想XORのnative planとpatch、明示した不一致の定常状態/遷移、構造拒否と未検証reportを
+含め、全出力の一致を確認する。初回の採取試験は仮想配線のcoverage不足で拒否されたため、
+試験だけで空き領域を明示した。製品側のscan coverageや正当性条件は緩めていない。
+
+公開toolの試験では未知の取得数、512/513件、truth-table指定によるflat選択、
+complete/incomplete、focus有無、focused診断、権限拒否の旧応答一致を確認する。
+操作/planを作らないことと保存先が生成されないことも確認する。
+Minecraftサーバーへは接続せず、実機配置・観測・保存形式/依存/pin/Voxrigの変更は行わない。
+
+応答正規化のCause再解析、認可text、全体のJSON境界監査は残っており、ゴールは継続する。
+
+最終版で関連27件のoffline試験が成功した（circuit_reports 12件、analysis 10件、
+focused診断/回路表示各1件、truth-tableの追加3件。重複するidentity試験は一度だけ数える）。
+workspace全targetとMCPの`--no-default-features`全targetのClippyは`-D warnings`に成功し、
+`cargo fmt --all -- --check`と`git diff --check`も成功した。Cargoは単独offline/locked・
+`-j1`、試験は単一threadで実行した。

@@ -1,8 +1,8 @@
 use crate::bridge_protocol::CommandWrite;
 use crate::operations::mutation::{Success, UnrecordedFailure};
-use crate::operations::preview::optimization::{
-    OptimizationAssessmentView, OptimizationContractView, WireObjective,
-};
+#[cfg(test)]
+use crate::operations::preview::optimization::OptimizationContractView;
+use crate::operations::preview::optimization::WireObjective;
 use crate::operations::preview::{
     BuiltinOptimization, BuiltinPlacementPreview, BuiltinPlanningFailure, DoorPlanningFailure,
     DoorProposal, ExternalInputHypothesis, HypothesisConfidence, OptimizationPhase,
@@ -30,10 +30,15 @@ mod repair_workflow;
 #[cfg(feature = "voxrig")]
 mod survival;
 mod world_editor;
+#[cfg(test)]
+use circuit_reports::reverse_result_json;
 use circuit_reports::{
-    bounds_json, circuit_identity_json, focused_component, focused_explanation_json,
-    focused_hierarchy, hierarchical_result_json, mixed_ir_report, raw_world_inspection,
-    reverse_result_json, revision_display, revision_validation,
+    Capture, Conversion, Discovery, GazeFlat, GazeHierarchy, MacroPlanReport, MacroProposals,
+    NextTools, Selected,
+};
+use circuit_reports::{
+    bounds_json, focused_component, focused_hierarchy, mixed_ir_report, raw_world_inspection,
+    revision_display, revision_validation,
 };
 #[cfg(test)]
 mod building_tests;
@@ -1737,7 +1742,7 @@ impl DustRouteMcp {
     ) -> CallToolResult {
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
-            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
+            Err(error) => return typed_reply(error.as_response()),
         };
         let (circuit_id, circuit) = match self
             .resolve_circuit_snapshot(
@@ -1749,7 +1754,7 @@ impl DustRouteMcp {
             .await
         {
             Ok(circuit) => circuit,
-            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
+            Err(error) => return typed_reply(error.as_response()),
         };
         let target = circuit.target;
         let bounds = circuit.bounds;
@@ -1761,9 +1766,14 @@ impl DustRouteMcp {
         let world = match world_from_snapshot_for_service(&snapshot) {
             Ok(world) => world,
             Err(error) => {
-                return json_reply(
-                    json!({ "ok": false, "error": error, "circuit_id": circuit_id, "mechanisms": mechanisms }),
-                );
+                return typed_reply(Conversion {
+                    report: error.as_response(),
+                    captured: Capture {
+                        circuit_id,
+                        mechanisms,
+                    },
+                    detail: Selected {},
+                });
             }
         };
         let mut analysis = dustroute_translate::world_reverse::analyze_world_region(&world, bounds);
@@ -1776,28 +1786,26 @@ impl DustRouteMcp {
                 &world,
                 ReverseRequest::new(bounds).with_observation_complete(complete),
             );
-            focused_explanation_json(&focused, target, complete)
+            dustroute_translate::analysis::explain_focused_component(&focused, target, complete)
         });
-        json_reply(json!({
-            "ok": true,
-            "schema_version": DIAGNOSTIC_SCHEMA_V1,
-            "analysis_mode": "focused_fast",
-            "mechanisms": mechanisms,
-            "circuit_id": circuit_id,
-            "content_id": snapshot.id(),
-            "circuit_expires_in_seconds": CIRCUIT_SNAPSHOT_TTL.as_secs(),
-            "mutation_performed": false,
-            "target": target,
-            "bounds": bounds_json(bounds),
-            "expansion": circuit.expansion,
-            "diagnostic": diagnostic,
-            "focused_explanation": focused_explanation,
-            "detail_tools": {
-                "full_conversion": "convert_from_circuit",
-                "raw_observation": "get_world",
-                "repair_planning": "new_repair"
-            }
-        }))
+        typed_reply(circuit_reports::FocusedDiagnostic {
+            ok: Success,
+            schema_version: DIAGNOSTIC_SCHEMA_V1,
+            analysis_mode: "focused_fast",
+            captured: Capture {
+                mechanisms,
+                circuit_id,
+            },
+            content_id: snapshot.id(),
+            circuit_expires_in_seconds: CIRCUIT_SNAPSHOT_TTL.as_secs(),
+            mutation_performed: false,
+            target,
+            bounds,
+            expansion: circuit.expansion.recorded(),
+            diagnostic,
+            focused_explanation,
+            detail_tools: circuit_reports::DetailTools::default(),
+        })
     }
 
     #[tool(
@@ -2097,7 +2105,7 @@ impl DustRouteMcp {
         }
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
-            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
+            Err(error) => return typed_reply(error.as_response()),
         };
         let (circuit_id, circuit) = match self
             .resolve_circuit_snapshot(
@@ -2109,7 +2117,7 @@ impl DustRouteMcp {
             .await
         {
             Ok(circuit) => circuit,
-            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
+            Err(error) => return typed_reply(error.as_response()),
         };
         let target = circuit.target;
         let bounds = circuit.bounds;
@@ -2121,9 +2129,14 @@ impl DustRouteMcp {
         let world = match world_from_snapshot_for_service(&snapshot) {
             Ok(world) => world,
             Err(error) => {
-                return json_reply(
-                    json!({ "ok": false, "error": error, "circuit_id": circuit_id, "mechanisms": mechanisms }),
-                );
+                return typed_reply(Conversion {
+                    report: error.as_response(),
+                    captured: Capture {
+                        circuit_id,
+                        mechanisms,
+                    },
+                    detail: Selected {},
+                });
             }
         };
         let discovered_components = circuit.expansion.components_loaded().unwrap_or(0);
@@ -2150,34 +2163,33 @@ impl DustRouteMcp {
             let hierarchy = dustroute_ir::derive_hierarchy(&analysis.scene);
             let focused =
                 target.map(|target| focused_hierarchy(&analysis.scene, &hierarchy, target));
-            let mut result =
-                hierarchical_result_json(bounds, &hierarchy, focused, &circuit.expansion, target);
-            if let Some(object) = result.as_object_mut() {
-                object.insert("mechanisms".into(), json!(&mechanisms));
-                object.insert(
-                    "circuit_identity".to_owned(),
-                    circuit_identity_json(&hierarchy, None, circuit.complete, 0),
-                );
-                object.insert(
-                    "diagnostic".to_owned(),
-                    serde_json::to_value(dustroute_translate::diagnostic::diagnose_scene(
+            return typed_reply(Conversion {
+                report: hierarchical_report(
+                    bounds,
+                    &hierarchy,
+                    focused,
+                    circuit.expansion.recorded(),
+                    target,
+                ),
+                captured: Capture {
+                    circuit_id,
+                    mechanisms,
+                },
+                detail: GazeHierarchy {
+                    circuit_identity: crate::recorded_analysis::circuit_identity(
+                        &hierarchy,
+                        None,
+                        circuit.complete,
+                        0,
+                    ),
+                    diagnostic: dustroute_translate::diagnostic::diagnose_scene(
                         &analysis.scene,
                         target,
                         circuit.complete,
-                    ))
-                    .unwrap_or(Value::Null),
-                );
-                object.insert("circuit_id".to_owned(), json!(circuit_id));
-                object.insert(
-                    "next_tools".to_owned(),
-                    json!({
-                        "ir_detail": "get_circuit_ir",
-                        "repair_planning": "new_repair",
-                        "transition_planning": "new_transition_test"
-                    }),
-                );
-            }
-            return json_reply(result);
+                    ),
+                    next_tools: NextTools::default(),
+                },
+            });
         }
         let mut staged = self.app.analyze_physical(&world, request);
         staged.reverse.analysis.scene.observation.dimension = dimension.clone();
@@ -2285,7 +2297,7 @@ impl DustRouteMcp {
                                 None,
                             )
                         });
-                        Some((
+                        Some(MacroPlanReport {
                             plan,
                             structural,
                             materialized,
@@ -2293,177 +2305,56 @@ impl DustRouteMcp {
                             transitions,
                             contract,
                             contract_assessment,
-                        ))
+                        })
                     })
                     .collect::<Vec<_>>()
             })
         });
         let focused = target.map(|target| focused_component(translated, target));
         let incomplete = !circuit.complete;
-        let mut result = reverse_result_json(bounds, translated);
-        if let Some(object) = result.as_object_mut() {
-            object.insert("mechanisms".into(), json!(&mechanisms));
-            object.insert("circuit_id".to_owned(), json!(circuit_id));
-            object.insert(
-                "circuit_identity".to_owned(),
-                circuit_identity_json(
+        typed_reply(Conversion {
+            report: reverse_report(bounds, translated),
+            captured: Capture {
+                circuit_id,
+                mechanisms,
+            },
+            detail: GazeFlat {
+                circuit_identity: crate::recorded_analysis::circuit_identity(
                     &staged.hierarchy,
                     Some(&staged.logical_role),
                     !incomplete,
                     0,
                 ),
-            );
-            object.insert(
-                "diagnostic".to_owned(),
-                serde_json::to_value(dustroute_translate::diagnostic::diagnose_scene(
+                diagnostic: dustroute_translate::diagnostic::diagnose_scene(
                     &translated.analysis.scene,
                     target,
                     !incomplete,
-                ))
-                .unwrap_or(Value::Null),
-            );
-            object.insert("focused_component".to_owned(), json!(focused));
-            if let Some(target) = target {
-                object.insert(
-                    "focused_explanation".to_owned(),
-                    focused_explanation_json(&staged, target, !incomplete),
-                );
-            }
-            object.insert(
-                "discovery".to_owned(),
-                json!({ "seed": target, "bounds": bounds_json(bounds) }),
-            );
-            object.insert("analysis_complete".to_owned(), Value::Bool(!incomplete));
-            object.insert(
-                "macro_replacement_candidates".to_owned(),
-                macro_candidates.as_ref().map_or(Value::Null, |candidates| json!({
-                    "status": "proposal_only",
-                    "realization": "contextual placement and transition verification are required before a mutation plan can be created",
-                    "candidates": candidates.iter().map(|candidate| json!({
-                        "component_id": candidate.component_id.as_str(),
-                        "name": candidate.name,
-                        "kind": candidate.kind,
-                        "layout_reference": candidate.layout_reference,
-                        "input_ports": candidate.input_ports,
-                        "output_ports": candidate.output_ports,
-                        "physical": candidate.physical,
-                        "saved_blocks": candidate.saved_blocks,
-                        "saved_volume": candidate.saved_volume,
-                        "requires_contextual_transition_verification": candidate.requires_contextual_transition_verification,
-                    })).collect::<Vec<_>>()
-                    ,"placement_plans": macro_plans.as_ref().map(|plans| plans.iter().map(|(plan, structural, materialized, steady_state, transitions, contract, contract_assessment)| json!({
-                        "component_id": plan.component_id,
-                        "origin": plan.placed.origin,
-                        "rotation_y": format!("{:?}", plan.placed.rotation).to_lowercase(),
-                        "total_route_length": plan.total_route_length,
-                        "automatic_apply_allowed": plan.automatic_apply_allowed,
-                        "contract": OptimizationContractView(*contract),
-                        "contract_assessment": contract_assessment.as_ref().map(|assessment| OptimizationAssessmentView(assessment.clone())),
-                        "structural_report": {
-                            "valid": structural.valid(),
-                            "candidate_collisions": structural.candidate_collisions,
-                            "route_collisions": structural.route_collisions,
-                            "route_cross_net_contacts": structural.route_cross_net_contacts.iter().map(|(first, second, a, b)| json!({
-                                "first_route": first,
-                                "second_route": second,
-                                "first_position": a,
-                                "second_position": b,
-                            })).collect::<Vec<_>>(),
-                            "candidate_support_issues": structural.candidate_support_issues,
-                            "required_route_supports": structural.required_route_supports,
-                            "blocked_route_supports": structural.blocked_route_supports,
-                        },
-                        "materialization": match materialized {
-                            Ok(materialized) => json!({
-                                "status": "preview_ready",
-                                "change_count": materialized.patch.changes.len(),
-                                "added_supports": materialized.added_supports,
-                                "inserted_repeaters": materialized.inserted_repeaters,
-                                "patch": materialized.patch,
-                            }),
-                            Err(error) => json!({
-                                "status": "unavailable",
-                                "reason": format!("{error:?}"),
-                            }),
-                        },
-                        "steady_state_report": steady_state.as_ref().map(|report| json!({
-                            "state": format!("{:?}", report.state).to_lowercase(),
-                            "comparison": report.comparison,
-                            "input_mapping": report.input_mapping,
-                            "output_mapping": report.output_mapping,
-                            "differing_assignments": report.differing_assignments,
-                            "reason": report.reason,
-                        })),
-                        "transition_report": transitions.as_ref().map(|report| json!({
-                            "state": format!("{:?}", report.state).to_lowercase(),
-                            "case_count": report.cases.len(),
-                            "differing_cases": report.differing_cases,
-                            "reason": report.reason,
-                            "cases": report.cases.iter().map(|case| json!({
-                                "from": case.from,
-                                "to": case.to,
-                                "equivalent": case.equivalent,
-                                "first_difference_tick": case.first_difference_tick,
-                                "original_transitions": case
-                                    .original_transition_edges()
-                                    .iter()
-                                    .map(|transition| json!({
-                                        "at_tick": transition.at_tick,
-                                        "from": transition.from,
-                                        "to": transition.to,
-                                        "elapsed_from_previous": transition.elapsed_from_previous,
-                                    }))
-                                    .collect::<Vec<_>>(),
-                                "candidate_transitions": case
-                                    .candidate_transition_edges()
-                                    .iter()
-                                    .map(|transition| json!({
-                                        "at_tick": transition.at_tick,
-                                        "from": transition.from,
-                                        "to": transition.to,
-                                        "elapsed_from_previous": transition.elapsed_from_previous,
-                                    }))
-                                    .collect::<Vec<_>>(),
-                                "original_outputs": case.original_outputs,
-                                "candidate_outputs": case.candidate_outputs,
-                            })).collect::<Vec<_>>(),
-                        })),
-                        "verification": {
-                            "structural": format!("{:?}", plan.verification.structural).to_lowercase(),
-                            "steady_state": format!("{:?}", plan.verification.steady_state).to_lowercase(),
-                            "transitions": format!("{:?}", plan.verification.transitions).to_lowercase(),
-                        },
-                        "routes": plan.routes.iter().map(|route| json!({
-                            "direction": format!("{:?}", route.boundary.direction).to_lowercase(),
-                            "observed_index": route.boundary.observed_index,
-                            "boundary_position": route.boundary.position,
-                            "boundary_facing": route.boundary.facing,
-                            "driver_position": route.boundary.driver_position,
-                            "candidate_port": route.candidate_port,
-                            "candidate_position": route.candidate_position,
-                            "path": route.path,
-                        })).collect::<Vec<_>>(),
-                    })).collect::<Vec<_>>()).unwrap_or_default(),
-                })),
-            );
-            object.insert(
-                "next_tools".to_owned(),
-                json!({
-                    "ir_detail": "get_circuit_ir",
-                    "repair_planning": "new_repair",
-                    "transition_planning": "new_transition_test"
+                ),
+                focused_component: focused,
+                focused_explanation: target.map(|target| {
+                    dustroute_translate::analysis::explain_focused_component(
+                        &staged,
+                        target,
+                        !incomplete,
+                    )
                 }),
-            );
-            object.insert(
-                "interpretation_guidance".to_owned(),
-                Value::String(if incomplete {
+                discovery: Discovery {
+                    seed: target,
+                    bounds,
+                },
+                analysis_complete: !incomplete,
+                macro_replacement_candidates: macro_candidates.map(|candidates| MacroProposals {
+                    candidates,
+                    placement_plans: macro_plans.unwrap_or_default(),
+                }),
+                next_tools: NextTools::default(),
+                interpretation_guidance: if incomplete {
                     "Treat the logical classification as provisional because the connected circuit continues beyond the scan boundary. Explain the local role, then ask the user to select or isolate a larger functional region before applying a repair."
                 } else {
                     "Explain the focused component in the context of the inferred logical function. Repairs are proposals only; preview one and obtain confirmation before mutation."
-                }.to_owned()),
-            );
-        }
-        json_reply(result)
+                },
+            },
+        })
     }
 
     #[tool(
@@ -2854,17 +2745,17 @@ impl DustRouteMcp {
     async fn convert_from_selected_region(&self, params: AnalyzeLookedAtParams) -> CallToolResult {
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
-            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
+            Err(error) => return typed_reply(error.as_response()),
         };
         if let Some(error) = self.authorize_player(&player) {
             return CallToolResult::error(vec![ContentBlock::text(error)]);
         }
         let (bounds, dimension) = match self.selected_region(&player).await {
             Ok(region) => region,
-            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
+            Err(error) => return typed_reply(error.as_response()),
         };
         if let Err(error) = self.policy.validate_region(bounds) {
-            return json_reply(json!({ "ok": false, "error": FailureCause::from(error) }));
+            return typed_reply(FailureCause::from(error).as_response());
         }
         let snapshot = match self
             .bridge
@@ -2873,7 +2764,7 @@ impl DustRouteMcp {
         {
             Ok(snapshot) => snapshot,
             Err(error) => {
-                return json_reply(json!({ "ok": false, "error": FailureCause::from(error) }));
+                return typed_reply(FailureCause::from(error).as_response());
             }
         };
         let circuit_id = self
@@ -2901,9 +2792,14 @@ impl DustRouteMcp {
         let world = match world_from_snapshot_for_service(&snapshot) {
             Ok(world) => world,
             Err(error) => {
-                return json_reply(
-                    json!({ "ok": false, "error": error, "circuit_id": circuit_id, "mechanisms": mechanisms }),
-                );
+                return typed_reply(Conversion {
+                    report: error.as_response(),
+                    captured: Capture {
+                        circuit_id,
+                        mechanisms,
+                    },
+                    detail: Selected {},
+                });
             }
         };
         let request = match reverse_request_for_truth_table(
@@ -2927,31 +2823,37 @@ impl DustRouteMcp {
                 dustroute_translate::world_reverse::analyze_world_region(&world, bounds);
             analysis.scene.observation.dimension = dimension;
             let hierarchy = dustroute_ir::derive_hierarchy(&analysis.scene);
-            let mut result = hierarchical_result_json(
+            let report = hierarchical_report(
                 bounds,
                 &hierarchy,
                 None,
-                &ExpansionEvidence::ExplicitSelectedRegion {
+                ExpansionEvidence::ExplicitSelectedRegion {
                     components_loaded: Some(redstone_components),
                     component_limit: None,
                     limit_reached: false,
-                },
+                }
+                .recorded(),
                 None,
             );
-            if let Some(object) = result.as_object_mut() {
-                object.insert("mechanisms".into(), json!(&mechanisms));
-                object.insert("circuit_id".to_owned(), json!(circuit_id));
-            }
-            return json_reply(result);
+            return typed_reply(Conversion {
+                report,
+                captured: Capture {
+                    circuit_id,
+                    mechanisms,
+                },
+                detail: Selected {},
+            });
         }
         let mut staged = self.app.analyze_physical(&world, request);
         staged.reverse.analysis.scene.observation.dimension = dimension;
-        let mut result = reverse_result_json(bounds, &staged.reverse);
-        if let Some(object) = result.as_object_mut() {
-            object.insert("mechanisms".into(), json!(&mechanisms));
-            object.insert("circuit_id".to_owned(), json!(circuit_id));
-        }
-        json_reply(result)
+        typed_reply(Conversion {
+            report: reverse_report(bounds, &staged.reverse),
+            captured: Capture {
+                circuit_id,
+                mechanisms,
+            },
+            detail: Selected {},
+        })
     }
 
     #[tool(

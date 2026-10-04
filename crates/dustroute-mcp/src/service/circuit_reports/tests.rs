@@ -5,6 +5,173 @@ use super::super::test_support::{
 use super::super::*;
 
 #[tokio::test]
+async fn conversion_and_focused_health_preserve_absence_and_discovery_limits() {
+    use dustroute_translate::snapshot::MinecraftSnapshot;
+    use dustroute_translate::world_reverse::RegionBounds;
+    let root = temporary();
+    let mut service =
+        DustRouteMcp::with_test_transport_and_player("127.0.0.1:1", McpPolicy::default(), "Tester");
+    service.state_store = PlanStateStore::new(root.clone(), 3600);
+    let bounds = RegionBounds::new(Pos::new(0, 0, 0), Pos::new(1, 1, 1));
+    // Explicitly synthetic acquisition facts exercise dispatch independently
+    // of physical extraction. No observation or server authority is fabricated.
+    for (count, complete, focus, infer) in [
+        (None, true, None, false),
+        (Some(512), false, Some(Pos::new(0, 0, 0)), false),
+        (Some(513), false, None, false),
+        (Some(513), true, Some(Pos::new(0, 0, 0)), false),
+        (Some(513), true, None, true),
+    ] {
+        let id = service
+            .store_circuit(StoredCircuit {
+                player: "Tester".into(),
+                dimension: "minecraft:overworld".into(),
+                bounds,
+                target: focus,
+                snapshot: service
+                    .bridge
+                    .share_snapshot(MinecraftSnapshot {
+                        min: bounds.min,
+                        max: bounds.max,
+                        blocks: vec![],
+                    })
+                    .unwrap(),
+                expansion: ExpansionEvidence::ExplicitSelectedRegion {
+                    components_loaded: count,
+                    component_limit: None,
+                    limit_reached: !complete,
+                },
+                complete,
+                expires_at: Instant::now() + CIRCUIT_SNAPSHOT_TTL,
+            })
+            .await;
+        let response = decode_reply(
+            &service
+                .convert_from_circuit(Parameters(
+                    serde_json::from_value(json!({
+                        "circuit_id":id,"include_truth_table":infer
+                    }))
+                    .unwrap(),
+                ))
+                .await,
+        )
+        .unwrap();
+        assert_eq!(response["ok"], true, "{response}");
+        assert_eq!(response["circuit_id"], id.to_string());
+        assert_eq!(response["mechanisms"], json!([]));
+        assert_eq!(response["analysis_complete"], complete);
+        assert_eq!(response["diagnostic"]["observation_complete"], complete);
+        assert_eq!(response["circuit_identity"]["analysis_complete"], complete);
+        assert!(response.get("execution_progress").is_none());
+        if count.is_some_and(|n| n > 512) && !infer {
+            assert_eq!(response["analysis_mode"], "hierarchical_local_first");
+            assert_eq!(response["expansion"]["components_loaded"], 513);
+            assert_eq!(response["focused_explanation"].is_null(), focus.is_none());
+            assert!(response.get("macro_replacement_candidates").is_none());
+            assert!(response.get("discovery").is_none());
+        } else {
+            assert!(response.get("analysis_mode").is_none());
+            assert_eq!(response["macro_replacement_candidates"], Value::Null);
+            assert_eq!(response["focused_component"].is_null(), focus.is_none());
+            assert_eq!(
+                response.get("focused_explanation").is_none(),
+                focus.is_none()
+            );
+            assert_eq!(response["physical"]["analysis_complete"], complete);
+            assert_eq!(response["discovery"]["seed"], json!(focus));
+            assert_eq!(response["discovery"]["bounds"], json!(bounds));
+        }
+        let health = decode_reply(
+            &service
+                .test_circuit(Parameters(
+                    serde_json::from_value(json!({"circuit_id":id})).unwrap(),
+                ))
+                .await,
+        )
+        .unwrap();
+        assert_eq!(health["analysis_mode"], "focused_fast");
+        assert_eq!(health["mutation_performed"], false);
+        assert_eq!(health["target"], json!(focus));
+        assert_eq!(health["focused_explanation"].is_null(), focus.is_none());
+        assert_eq!(health["diagnostic"]["observation_complete"], complete);
+        assert_eq!(
+            health["expansion"].get("components_loaded").is_none(),
+            count.is_none()
+        );
+        assert!(health.get("macro_replacement_candidates").is_none());
+    }
+    assert!(service.operations.list().await.is_empty());
+    assert!(service.plans.placements().lock().await.is_empty());
+    assert!(!root.exists());
+}
+
+#[test]
+fn selected_conversion_adds_only_capture_fields_to_the_native_report() {
+    use crate::recorded_analysis::reports::{hierarchical_report, reverse_report, tests::fixture};
+    use dustroute_translate::world_reverse::RegionBounds;
+    let (bounds, reverse) = fixture(0);
+    let id = uuid::Uuid::nil();
+    let mut expected = reverse_result_json(bounds, &reverse);
+    expected["circuit_id"] = json!(id);
+    expected["mechanisms"] = json!([]);
+    let value = serde_json::to_value(Conversion {
+        report: reverse_report(bounds, &reverse),
+        captured: Capture {
+            circuit_id: id,
+            mechanisms: vec![],
+        },
+        detail: Selected {},
+    })
+    .unwrap();
+    assert_eq!(value, expected);
+    for key in [
+        "circuit_identity",
+        "diagnostic",
+        "next_tools",
+        "discovery",
+        "focused_explanation",
+        "macro_replacement_candidates",
+        "analysis_complete",
+    ] {
+        assert!(value.get(key).is_none(), "{key}");
+    }
+    let hierarchy = dustroute_ir::derive_hierarchy(&reverse.analysis.scene);
+    let bounds = RegionBounds::new(bounds.min, bounds.max);
+    let value = serde_json::to_value(Conversion {
+        report: hierarchical_report(
+            bounds,
+            &hierarchy,
+            None,
+            ExpansionEvidence::ExplicitSelectedRegion {
+                components_loaded: Some(513),
+                component_limit: None,
+                limit_reached: false,
+            }
+            .recorded(),
+            None,
+        ),
+        captured: Capture {
+            circuit_id: id,
+            mechanisms: vec![],
+        },
+        detail: Selected {},
+    })
+    .unwrap();
+    assert_eq!(value["analysis_mode"], "hierarchical_local_first");
+    assert_eq!(value["focused_explanation"], Value::Null);
+    assert_eq!(value["expansion"]["components_loaded"], 513);
+    for key in [
+        "circuit_identity",
+        "diagnostic",
+        "next_tools",
+        "discovery",
+        "macro_replacement_candidates",
+    ] {
+        assert!(value.get(key).is_none(), "{key}");
+    }
+}
+
+#[tokio::test]
 async fn raw_capture_keeps_gaze_frontier_separate_from_complete_work_region() {
     let root = temporary();
     let (fake, address, bridge) =
@@ -149,6 +316,28 @@ async fn player_override_keeps_known_cause_and_legacy_message_distinct() {
         (
             service
                 .get_circuit_ir(Parameters(
+                    serde_json::from_value(json!({
+                        "player":"AnotherPlayer","circuit_id":"invalid"
+                    }))
+                    .unwrap(),
+                ))
+                .await,
+            "permission_denied",
+        ),
+        (
+            service
+                .convert_from_circuit(Parameters(
+                    serde_json::from_value(json!({
+                        "player":"AnotherPlayer","circuit_id":"invalid"
+                    }))
+                    .unwrap(),
+                ))
+                .await,
+            "permission_denied",
+        ),
+        (
+            service
+                .test_circuit(Parameters(
                     serde_json::from_value(json!({
                         "player":"AnotherPlayer","circuit_id":"invalid"
                     }))
