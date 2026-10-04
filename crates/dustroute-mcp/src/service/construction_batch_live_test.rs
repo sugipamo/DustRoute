@@ -125,7 +125,8 @@ async fn profile_native_construction_batches() -> anyhow::Result<()> {
                 let batches = construction_batches(steps).count();
                 anyhow::ensure!(
                     readbacks.len() == 2 * batches
-                        && measurement.phases["write"].commands == count as u64,
+                        && measurement.phases[&crate::performance::Phase::Write].commands
+                            == count as u64,
                     "complete readback boundaries and write count required"
                 );
                 samples.push(json!({"blocks":count,"sample":sample,"mode":mode,"verified_steps":verified,"execution_batches":batches,"measurement":measurement,"readbacks":readbacks}));

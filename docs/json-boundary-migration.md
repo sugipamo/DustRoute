@@ -444,3 +444,56 @@ MCP既定構成・no-default-featuresのall-target Clippyは`-D warnings`で成�
 formatting、差分の空白検査、Voxrig commitと322ファイルの一致も確認した。
 実機依存10件は未実行。サーバー起動・実機接続・ワールド変更は行っていない。
 第6段階は完了。次は第7b段階の残るworkflowと物理遷移の分解へ進む。
+
+## 第7b段階の分割と第7b-1のゴール
+
+第6段階の後、残るworkflowを調査した。`OperationRegistry`がJSONの`ok`、
+`failure.progress`、`execution_progress`から成功・進捗・既に消費された操作を判定している。
+公開MCP応答を解析してlive activityへ戻す経路も残る。これらを無条件の成功やzeroの進捗へ
+置換してはならず、各workflowの型付き応答と同時に移す必要がある。
+
+第7bを次の順序で扱う。今回のゴールは第7b-1に限定する。
+
+1. **計測・観測診断・共通物理実行の整理**: 計測キーをRust enumで保持し、計測stderrと
+   観測エラーDisplayからJSONを除く。物理runtimeのqueue登録とトランザクションを別moduleへ
+   分ける。既存の公開計測field、通知順序、巻戻し、trace、checkpointの照合を維持する。
+2. **操作結果・進捗の型付き接続**: 各workflowの応答型を共通操作registryへつなぎ、
+   成功・進捗・既に消費された操作の判定とlive activityでJSONを再解析しない形へ移す。
+   未知とzero、保存された記録と新しい実行事実、一次/二次失敗、再送禁止の条件を保つ。
+3. **残る長いworkflowの分解と監査**: 配置・修復・transitionの工程を、admission・送信前の
+   永続化・実行・読戻し・失敗/restoreへ分ける。新しい挙動や緩い判定を追加しない。
+   第8段階の全体検証と残る依存・fixtureの監査へ接続する。
+
+第7b-1では、実機接続・ワールド変更・保存schemaやVoxrig pinの更新を行わない。
+新しいJSON通信例外、責務や正当性条件の変更、大きなブロック要素、宣言外の先行作業が
+必要なら変更前に停止して具体案を報告する。第7b全体や内部JSON全面撤去の完了とは扱わない。
+
+### 第7b-1の実装・検証結果
+
+計測の`Measurement.phases`を`BTreeMap<Phase, PhaseMeasurement>`へ移し、enumをJSONへ
+変換して文字列キーを取り出す往復を除いた。公開MCPの`dustroute.performance.v1`、
+snake-caseのphase名と各counterは維持し、全phase名を公開形式の回帰テストで確認した。
+内部の任意stderr計測は、非JSONの`dustroute.performance.trace.v2`診断文になった。
+操作名の改行はescapeし、request間の計測分離とblocking workerからの復帰条件を保つ。
+観測エラーの`Display`もenumの状態と理由だけを表示し、snapshot全体をJSONに変換しない。
+公開観測構造、保存記録、安定baselineを使える条件は変えていない。
+
+共通物理runtimeの所有状態と復元境界は`executor.rs`に残し、queueの登録・重複排除・
+配送順序を`executor/queue.rs`、delta・carrier・履歴・通知の適用とmicrostepのcommitを
+`executor/transaction.rs`へ分けた。移動した8メソッドの本体は、空白を除いた比較で
+変更がないことを確認した。予算、失敗時の巻戻し、traceの確定とcheckpoint照合を維持する。
+
+検証は全てoffline、Cargoは一つずつ`--offline --locked -j1`で実行した。
+
+- `dustroute-minecraft --tests`: 319件成功。途中checkpoint再開、通知順序、遅い段階で
+  拒否されたeffectの巻戻し、ピストン・粘着・支持喪失などの物理回帰を含む。
+- MCP libraryの`performance` filter: 6件成功、計測用の2件はignoredのまま。
+  観測分類の4件、操作診断・取消し・履歴とlive activityの区別の5件も成功した。
+  MCP全件・実機依存試験・任意benchmarkは再実行していない。
+- `dustroute-minecraft`とMCPの既定構成、およびMCPの`no-default-features`構成で
+  all-target Clippyが`-D warnings`で成功した。
+- formatting、差分の空白検査、Voxrigの同じcommitに対する322ファイルの一致を確認した。
+
+第7b-1は完了。サーバー起動・実機接続・ワールド変更、依存や保存形式の更新は行っていない。
+`OperationRegistry`の結果JSONと公開応答からlive activityへ戻すJSON再解析は残っており、
+第7b-2で各workflowの型付き結果と一緒に移す。内部JSON全面撤去はまだ完了していない。

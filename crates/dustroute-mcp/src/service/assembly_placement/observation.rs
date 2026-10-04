@@ -163,11 +163,24 @@ fn record_evidence(evidence: &SampleEvidence) -> crate::recorded_instance::Recor
 }
 impl std::fmt::Display for InstanceObservation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            serde_json::to_value(self).map_err(|_| std::fmt::Error)?
-        )
+        let (status, reason) = match &self.outcome {
+            ObservationOutcome::Matches { reason, .. } => ("matches", reason.as_deref()),
+            ObservationOutcome::Changed { reason, .. } => ("changed", Some(reason.as_str())),
+            ObservationOutcome::HistoryUnavailable { reason, .. } => {
+                ("history unavailable", Some(*reason))
+            }
+            ObservationOutcome::TargetMismatch { reason } => {
+                ("target mismatch", Some(reason.as_str()))
+            }
+            ObservationOutcome::ObservationIncomplete { reason, .. } => {
+                ("observation incomplete", Some(reason.as_str()))
+            }
+        };
+        write!(f, "instance observation: {status}")?;
+        if let Some(reason) = reason {
+            write!(f, "; {reason}")?;
+        }
+        Ok(())
     }
 }
 

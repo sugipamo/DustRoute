@@ -691,7 +691,7 @@ mod tests {
                         .iter()
                         .all(|r| r.snapshot.shares_storage_with(&records[0].snapshot))
                 );
-                let conversion = &measurement.phases["native_convert"];
+                let conversion = &measurement.phases[&crate::performance::Phase::NativeConvert];
                 assert_eq!(conversion.materialized_cells, volume as u64);
                 assert_eq!(conversion.cache_hits, 99);
                 println!(

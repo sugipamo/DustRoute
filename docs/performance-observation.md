@@ -307,10 +307,13 @@ Transport stubs verify workflow/persistence rather than Minecraft physics.
 ## Opt-in request phase tracing
 
 Set `DUSTROUTE_PERFORMANCE_TRACE=1` on the **next normally scheduled MCP start**
-to emit one `dustroute.performance.v1` JSON line to stderr for each completed
-tool call. It is disabled by default; this setting was not applied to the
-running bot. MCP response schemas and the stdio protocol are unchanged. The
-bounded counters are request-local and never combine concurrent requests.
+to emit one `dustroute.performance.trace.v2` diagnostic line to stderr for each
+completed tool call. This is plain Rust diagnostic text, not an internal JSON
+protocol. The typed measurement exposed at an explicit MCP/serialization boundary
+retains `dustroute.performance.v1` field names and snake-case phase keys.
+It is disabled by default; this setting was not applied to the running bot.
+MCP response schemas and the stdio protocol are unchanged. The bounded counters
+are request-local and never combine concurrent requests.
 Positions, block states, player identities and arguments are not logged.
 
 `elapsed_ms` measures wall time within the tool router, before delivery to the

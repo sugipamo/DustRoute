@@ -9,7 +9,9 @@ use std::time::{Duration, Instant};
 
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub(crate) enum Phase {
+/// Request-local measurement category. It stays typed inside the workflow;
+/// serde supplies protocol spelling only at an explicit output boundary.
+pub enum Phase {
     Normalization,
     Analysis,
     Verification,
@@ -40,7 +42,7 @@ pub(crate) enum Phase {
     DirectorySync,
 }
 
-#[derive(Default, Serialize)]
+#[derive(Debug, Default, Serialize)]
 pub struct PhaseMeasurement {
     pub calls: u64,
     pub elapsed_ms: f64,
@@ -60,7 +62,21 @@ pub struct Measurement {
     pub elapsed_ms: f64,
     pub debug_assertions: bool,
     /// Inclusive wall time, including awaits; not CPU time or server ticks.
-    pub phases: BTreeMap<String, PhaseMeasurement>,
+    pub phases: BTreeMap<Phase, PhaseMeasurement>,
+}
+
+impl std::fmt::Display for Measurement {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "dustroute.performance.trace.v2 operation={:?} elapsed_ms={:.3} debug_assertions={}",
+            self.operation, self.elapsed_ms, self.debug_assertions
+        )?;
+        for (phase, measurement) in &self.phases {
+            write!(f, " {phase:?}={measurement:?}")?;
+        }
+        Ok(())
+    }
 }
 
 #[derive(Clone, Default)]
@@ -160,13 +176,7 @@ pub async fn measure<T>(operation: &str, work: impl Future<Output = T>) -> (T, M
             .unwrap()
             .lock()
             .unwrap_or_else(|e| e.into_inner()),
-    )
-    .into_iter()
-    .map(|(phase, value)| {
-        let name = serde_json::to_value(phase).expect("phase name is serializable");
-        (name.as_str().unwrap().to_owned(), value)
-    })
-    .collect();
+    );
     (
         result,
         Measurement {
@@ -187,9 +197,7 @@ pub(crate) async fn tool<T>(name: &str, work: impl Future<Output = T>) -> T {
     let (result, measurement) = measure(name, work).await;
     // stderr only: tool responses and the stdio MCP stream remain unchanged.
     // No positions, player names, block states or request arguments are logged.
-    if let Ok(line) = serde_json::to_string(&measurement) {
-        eprintln!("{line}");
-    }
+    eprintln!("{measurement}");
     result
 }
 
@@ -308,11 +316,14 @@ mod tests {
             let _span = span(Phase::Status);
         });
         let ((_, a), (_, b)) = tokio::join!(a, b);
-        assert_eq!(a.phases["wait"].requested_ticks, 20);
-        assert_eq!(a.phases["model_proof"].calls, 1);
-        assert!(!a.phases.contains_key("status"));
-        assert_eq!(b.phases["status"].calls, 1);
-        assert!(!b.phases.contains_key("wait"));
+        assert_eq!(
+            a.phases[&crate::performance::Phase::Wait].requested_ticks,
+            20
+        );
+        assert_eq!(a.phases[&crate::performance::Phase::ModelProof].calls, 1);
+        assert!(!a.phases.contains_key(&crate::performance::Phase::Status));
+        assert_eq!(b.phases[&crate::performance::Phase::Status].calls, 1);
+        assert!(!b.phases.contains_key(&crate::performance::Phase::Wait));
         assert!(current().metrics.is_none());
         assert!(
             tokio::task::spawn_blocking(|| current().metrics.is_none())
@@ -331,8 +342,8 @@ mod tests {
             Err::<(), _>("unloaded")
         })
         .await;
-        assert_eq!(report.phases["scan"].calls, 1);
-        assert_eq!(report.phases["scan"].cells, 125);
+        assert_eq!(report.phases[&crate::performance::Phase::Scan].calls, 1);
+        assert_eq!(report.phases[&crate::performance::Phase::Scan].cells, 125);
         assert!(span(Phase::Scan).started.is_none());
     }
 
@@ -350,5 +361,91 @@ mod tests {
         });
         assert!(outcome.is_err());
         assert!(current().metrics.is_none());
+    }
+    #[test]
+    fn typed_phase_keys_preserve_the_public_mcp_measurement_contract() {
+        let phases = [
+            (Phase::Normalization, "normalization"),
+            (Phase::Analysis, "analysis"),
+            (Phase::Verification, "verification"),
+            (Phase::Gaze, "gaze"),
+            (Phase::Status, "status"),
+            (Phase::Scan, "scan"),
+            (Phase::ContentIntern, "content_intern"),
+            (Phase::DiscoveryMerge, "discovery_merge"),
+            (Phase::DiscoveryNeighbors, "discovery_neighbors"),
+            (Phase::StaticValidation, "static_validation"),
+            (Phase::ResponseEncode, "response_encode"),
+            (Phase::ModelQueue, "model_queue"),
+            (Phase::ModelProof, "model_proof"),
+            (Phase::MutationQueue, "mutation_queue"),
+            (Phase::Wait, "wait"),
+            (Phase::Preview, "preview"),
+            (Phase::Write, "write"),
+            (Phase::Checkpoint, "checkpoint"),
+            (Phase::StoreRead, "store_read"),
+            (Phase::StoreEncode, "store_encode"),
+            (Phase::FileWrite, "file_write"),
+            (Phase::FileSync, "file_sync"),
+            (Phase::FileRename, "file_rename"),
+            (Phase::DirectorySync, "directory_sync"),
+        ];
+        let phases = phases.into_iter();
+        #[cfg(feature = "voxrig")]
+        let phases = phases.chain([
+            (Phase::NativeObserve, "native_observe"),
+            (Phase::NativeConvert, "native_convert"),
+        ]);
+        let phases: Vec<_> = phases.collect();
+        let report = Measurement {
+            schema: "dustroute.performance.v1",
+            operation: "wire-boundary".into(),
+            elapsed_ms: 2.5,
+            debug_assertions: true,
+            phases: phases
+                .iter()
+                .map(|&(phase, _)| {
+                    (
+                        phase,
+                        PhaseMeasurement {
+                            calls: 2,
+                            requested_ticks: 20,
+                            cells: 125,
+                            ..Default::default()
+                        },
+                    )
+                })
+                .collect(),
+        };
+        let wire = serde_json::to_value(report).unwrap();
+        assert_eq!(wire["schema"], "dustroute.performance.v1");
+        assert_eq!(wire["phases"].as_object().unwrap().len(), phases.len());
+        for (_, name) in phases {
+            assert_eq!(wire["phases"][name]["calls"], 2);
+            assert_eq!(wire["phases"][name]["requested_ticks"], 20);
+            assert_eq!(wire["phases"][name]["cells"], 125);
+        }
+    }
+    #[test]
+    fn internal_trace_is_non_json_and_escapes_line_breaks_in_the_operation_label() {
+        let report = Measurement {
+            schema: "dustroute.performance.v1",
+            operation: "test\noperation".into(),
+            elapsed_ms: 1.5,
+            debug_assertions: true,
+            phases: BTreeMap::from([(
+                Phase::Scan,
+                PhaseMeasurement {
+                    calls: 1,
+                    cells: 8,
+                    ..Default::default()
+                },
+            )]),
+        };
+        let line = report.to_string();
+        assert!(line.starts_with("dustroute.performance.trace.v2 "));
+        assert!(!line.contains('\n'));
+        assert!(line.contains("Scan="));
+        assert!(line.contains("cells: 8"));
     }
 }

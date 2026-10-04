@@ -156,7 +156,7 @@ async fn profile_observation_and_edit_phases() {
         )
         .await;
         let observation = decoded(&text);
-        assert_eq!(report.phases["scan"].cells, 4221);
+        assert_eq!(report.phases[&crate::performance::Phase::Scan].cells, 4221);
         assert_eq!(observation["expansion"]["scanned_tiles"], 1);
         emit(&report);
 
@@ -187,7 +187,7 @@ async fn profile_observation_and_edit_phases() {
         .await;
         let observation = decoded(&text);
         assert_eq!(observation["expansion"]["scanned_tiles"], 8);
-        assert_eq!(report.phases["scan"].cells, 32893);
+        assert_eq!(report.phases[&crate::performance::Phase::Scan].cells, 32893);
         emit(&report);
         {
             let mut state = fake.lock().unwrap();
@@ -205,8 +205,8 @@ async fn profile_observation_and_edit_phases() {
         )
         .await;
         let capture = decoded(&text);
-        assert_eq!(report.phases["scan"].calls, 1);
-        assert_eq!(report.phases["scan"].cells, 336);
+        assert_eq!(report.phases[&crate::performance::Phase::Scan].calls, 1);
+        assert_eq!(report.phases[&crate::performance::Phase::Scan].cells, 336);
         emit(&report);
 
         let (text, report) = measure(
@@ -225,7 +225,10 @@ async fn profile_observation_and_edit_phases() {
             revision["validation"]["electrical_modification"]["status"],
             "passed"
         );
-        assert_eq!(report.phases["model_proof"].calls, 1);
+        assert_eq!(
+            report.phases[&crate::performance::Phase::ModelProof].calls,
+            1
+        );
         emit(&report);
 
         let (text, report) = measure(
@@ -236,8 +239,14 @@ async fn profile_observation_and_edit_phases() {
         )
         .await;
         let plan = decoded(&text);
-        assert_eq!(report.phases["model_proof"].calls, 1);
-        assert_eq!(report.phases["wait"].requested_ticks, 20);
+        assert_eq!(
+            report.phases[&crate::performance::Phase::ModelProof].calls,
+            1
+        );
+        assert_eq!(
+            report.phases[&crate::performance::Phase::Wait].requested_ticks,
+            20
+        );
         assert_eq!(plan["steps"].as_array().unwrap().len(), 2);
         emit(&report);
 
@@ -249,7 +258,10 @@ async fn profile_observation_and_edit_phases() {
         )
         .await;
         decoded(&text);
-        assert_eq!(report.phases["wait"].requested_ticks, 20);
+        assert_eq!(
+            report.phases[&crate::performance::Phase::Wait].requested_ticks,
+            20
+        );
         emit(&report);
         fake.lock().unwrap().steps = plan["steps"].as_array().unwrap().iter().cloned().collect();
         let (text, report) = measure(
@@ -261,12 +273,21 @@ async fn profile_observation_and_edit_phases() {
         )
         .await;
         decoded(&text);
-        assert_eq!(report.phases["model_proof"].calls, 1);
-        assert_eq!(report.phases["checkpoint"].calls, 3);
-        assert_eq!(report.phases["write"].commands, 2);
-        assert_eq!(report.phases["write"].calls, 1);
-        assert_eq!(report.phases["scan"].calls, 4);
-        assert_eq!(report.phases["wait"].requested_ticks, 24);
+        assert_eq!(
+            report.phases[&crate::performance::Phase::ModelProof].calls,
+            1
+        );
+        assert_eq!(
+            report.phases[&crate::performance::Phase::Checkpoint].calls,
+            3
+        );
+        assert_eq!(report.phases[&crate::performance::Phase::Write].commands, 2);
+        assert_eq!(report.phases[&crate::performance::Phase::Write].calls, 1);
+        assert_eq!(report.phases[&crate::performance::Phase::Scan].calls, 4);
+        assert_eq!(
+            report.phases[&crate::performance::Phase::Wait].requested_ticks,
+            24
+        );
         emit(&report);
         assert_eq!(fake.lock().unwrap().writes, 2);
         bridge.abort();
