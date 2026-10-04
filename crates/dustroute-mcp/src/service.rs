@@ -1,10 +1,12 @@
 use crate::bridge_protocol::CommandWrite;
 use crate::operations::mutation::{Success, UnrecordedFailure};
 use crate::operations::preview::{
-    BuiltinOptimization, BuiltinPlacementPreview, BuiltinPlanningFailure, ExternalInputHypothesis,
-    HypothesisConfidence, OptimizationPhase, PlacementPlanDisplay, RelatedComponent,
-    RelatedConnection, RemovalCandidate, RepairCandidate, RepairCandidateEntry, RepairCandidates,
-    RepairContextFacts, RepairContextReport, RepairHypothesis, ShownRepair,
+    BuiltinOptimization, BuiltinPlacementPreview, BuiltinPlanningFailure, DoorPlanningFailure,
+    DoorProposal, ExternalInputHypothesis, HypothesisConfidence, OptimizationPhase,
+    PistonPlacementPreview, PistonPlanDisplay, PistonPlanState, PlacementPlanDisplay,
+    RelatedComponent, RelatedConnection, RemovalCandidate, RepairCandidate, RepairCandidateEntry,
+    RepairCandidates, RepairContextFacts, RepairContextReport, RepairHypothesis, ShownDoor,
+    ShownPistonPlacement, ShownRepair,
 };
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::sync::Arc;
@@ -222,6 +224,16 @@ enum PistonPlacementState {
     Applied,
     Undone,
     NeedsInspection,
+}
+impl From<PistonPlacementState> for PistonPlanState {
+    fn from(state: PistonPlacementState) -> Self {
+        match state {
+            PistonPlacementState::Planned => Self::Planned,
+            PistonPlacementState::Applied => Self::Applied,
+            PistonPlacementState::Undone => Self::Undone,
+            PistonPlacementState::NeedsInspection => Self::NeedsInspection,
+        }
+    }
 }
 #[derive(Clone, Debug)]
 struct StoredPistonPlacement {
@@ -2794,19 +2806,23 @@ impl DustRouteMcp {
         {
             let player = match self.resolve_player(None) {
                 Ok(player) => player,
-                Err(error) => return json_reply(json!({"ok":false,"error":error})),
+                Err(error) => return typed_reply(UnrecordedFailure::message(error)),
             };
-            if let Some(error) = self.authorize_player(&player) {
-                return CallToolResult::error(vec![ContentBlock::text(error)]);
+            if let Err(error) = self.player_scope().authorize(&player) {
+                return typed_reply(error.at(FailurePhase::Admission).as_response());
             }
             if plan.player != player {
-                return json_reply(
-                    json!({"ok":false,"error":"placement belongs to another player"}),
-                );
+                return typed_reply(UnrecordedFailure::message(
+                    "placement belongs to another player",
+                ));
             }
-            return json_reply(
-                json!({"ok":true,"read_only":self.policy.read_only,"plan":{"operation_id":operation_id,"origin":plan.proof.origin(),"bounds":bounds_json(plan.proof.bounds()),"changes":plan.proof.writes(false),"undo_changes":plan.proof.writes(true),"previewed":plan.previewed,"state":format!("{:?}",plan.state)}}),
-            );
+            return typed_reply(PistonPlanDisplay::new(
+                operation_id,
+                &plan.proof,
+                plan.previewed,
+                plan.state.into(),
+                self.policy.read_only,
+            ));
         }
         match self.placement_view(operation_id).await {
             Ok(plan) => typed_reply(PlacementPlanDisplay {
@@ -3904,53 +3920,153 @@ impl DustRouteMcp {
     }
 
     async fn plan_piston_placement(&self, params: PreviewPlacementParams) -> CallToolResult {
-        let result: Result<Value,String> = async {
-            if params.optimize.unwrap_or(false) { return Err("the pinned piston-door layout cannot be optimized".into()); }
-            let player = self.resolve_player(params.player.as_deref())?;
-            if let Some(error) = self.authorize_player(&player) { return Err(error); }
-            let observation = self.bridge.observe_player(&player,64.0).await.map_err(|e|e.to_string())?;
-            let anchor = observation.targeted_block.ok_or("look at the ground below the placement")?;
-            let origin = Pos::new(anchor.x, anchor.y.checked_add(3).ok_or("coordinate overflow")?, anchor.z);
-            if [origin.x,origin.y,origin.z].iter().any(|v| *v < i32::MIN+16 || *v > i32::MAX-16) { return Err("coordinate overflow".into()); }
-            let bounds = dustroute_translate::world_reverse::RegionBounds::new(origin.offset(-3,-2,-4),origin.offset(7,3,6));
-            self.policy.authorize_dimension(&observation.dimension).map_err(|e|e.to_string())?;
-            self.policy.validate_region(bounds).map_err(|e|e.to_string())?;
-            let status = self.bridge.status().await.map_err(|e|e.to_string())?;
-            if !status.connected || status.dimension.as_deref()!=Some(observation.dimension.as_str()) { return Err("bot disconnected or dimension changed".into()); }
-            let baseline = self.bridge.scan_region(bounds.min,bounds.max,&observation.dimension).await.map_err(|e|e.to_string())?;
-            let proof = crate::piston_door::ValidatedDoorPlacement::new(origin,&baseline,&status.version)?;
-            let count = proof.initial().blocks.len();
-            self.policy.validate_placement_size(count).map_err(|e|e.to_string())?;
-            if params.max_blocks.is_some_and(|limit| count > limit) { return Err("placement exceeds max_blocks".into()); }
-            let mut materials = std::collections::BTreeMap::<String,usize>::new();
-            for b in &proof.initial().blocks { *materials.entry(b.name.clone()).or_default() += 1; }
-            let id = uuid::Uuid::new_v4();
-            let response = json!({"ok":true,"operation_id":id,"circuit":"piston-door-1x2","origin":origin,"anchor":anchor,"bounds":bounds_json(bounds),"initial_state":"open","materials":materials,"changed_blocks":count,"collision_count":0,"undo_change_count":count,"read_only":self.policy.read_only,"changes":proof.writes(false),"undo_changes":proof.writes(true),"next_step":"show_operation, then invoke_operation(confirm=true)","placement_note":"origin is three blocks above the gaze target to preserve an empty guard above the ground"});
-            let mut plans = self.plans.table::<StoredPistonPlacement>().lock().await;
-            plans.retain(|_,p| p.state != PistonPlacementState::Planned || p.expires_at > Instant::now());
-            if plans.len() >= 256 { return Err("too many retained piston placements".into()); }
-            plans.insert(id,StoredPistonPlacement {player,dimension:observation.dimension,proof,previewed:false,state:PistonPlacementState::Planned,expires_at:Instant::now()+Duration::from_secs(300)});
-            drop(plans);
-            self.operations.record_unmigrated(id,OperationKind::PlacementPreview,response.clone()).await;
-            Ok(response)
-        }.await;
-        json_reply(result.unwrap_or_else(|error| json!({"ok":false,"error":error})))
+        match self.piston_placement_proposal(params).await {
+            Ok(response) => typed_reply(response),
+            Err(error) => typed_reply(error),
+        }
+    }
+
+    async fn piston_placement_proposal(
+        &self,
+        params: PreviewPlacementParams,
+    ) -> Result<PistonPlacementPreview, UnrecordedFailure> {
+        if params.optimize.unwrap_or(false) {
+            return Err("the pinned piston-door layout cannot be optimized".into());
+        }
+        let player = self.resolve_player(params.player.as_deref())?;
+        self.player_scope()
+            .authorize(&player)
+            .map_err(|error| error.at(FailurePhase::Admission))?;
+        let observation = self
+            .bridge
+            .observe_player(&player, 64.0)
+            .await
+            .map_err(|error| error.to_string())?;
+        let anchor = observation
+            .targeted_block
+            .ok_or("look at the ground below the placement")?;
+        let origin = Pos::new(
+            anchor.x,
+            anchor.y.checked_add(3).ok_or("coordinate overflow")?,
+            anchor.z,
+        );
+        if [origin.x, origin.y, origin.z]
+            .iter()
+            .any(|v| *v < i32::MIN + 16 || *v > i32::MAX - 16)
+        {
+            return Err("coordinate overflow".into());
+        }
+        let bounds = dustroute_translate::world_reverse::RegionBounds::new(
+            origin.offset(-3, -2, -4),
+            origin.offset(7, 3, 6),
+        );
+        self.policy
+            .authorize_dimension(&observation.dimension)
+            .map_err(|error| error.to_string())?;
+        self.policy
+            .validate_region(bounds)
+            .map_err(|error| error.to_string())?;
+        let status = self
+            .bridge
+            .status()
+            .await
+            .map_err(|error| error.to_string())?;
+        if !status.connected || status.dimension.as_deref() != Some(observation.dimension.as_str())
+        {
+            return Err("bot disconnected or dimension changed".into());
+        }
+        let baseline = self
+            .bridge
+            .scan_region(bounds.min, bounds.max, &observation.dimension)
+            .await
+            .map_err(|error| error.to_string())?;
+        let proof =
+            crate::piston_door::ValidatedDoorPlacement::new(origin, &baseline, &status.version)?;
+        let count = proof.initial().blocks.len();
+        self.policy
+            .validate_placement_size(count)
+            .map_err(|error| error.to_string())?;
+        if params.max_blocks.is_some_and(|limit| count > limit) {
+            return Err("placement exceeds max_blocks".into());
+        }
+        let mut materials = BTreeMap::<String, usize>::new();
+        for block in &proof.initial().blocks {
+            *materials.entry(block.name.clone()).or_default() += 1;
+        }
+        let id = uuid::Uuid::new_v4();
+        let response =
+            PistonPlacementPreview::new(id, anchor, &proof, materials, self.policy.read_only);
+        let mut plans = self.plans.table::<StoredPistonPlacement>().lock().await;
+        plans.retain(|_, plan| {
+            plan.state != PistonPlacementState::Planned || plan.expires_at > Instant::now()
+        });
+        if plans.len() >= 256 {
+            return Err("too many retained piston placements".into());
+        }
+        plans.insert(
+            id,
+            StoredPistonPlacement {
+                player,
+                dimension: observation.dimension,
+                proof,
+                previewed: false,
+                state: PistonPlacementState::Planned,
+                expires_at: Instant::now() + Duration::from_secs(300),
+            },
+        );
+        drop(plans);
+        self.operations
+            .record_completed(id, OperationKind::PlacementPreview, response.clone().into())
+            .await;
+        Ok(response)
     }
 
     async fn show_piston_placement(&self, id: uuid::Uuid, player: Option<&str>) -> CallToolResult {
-        let result: Result<Value,String> = async {
+        let result: Result<ShownPistonPlacement, UnrecordedFailure> = async {
             let player = self.resolve_player(player)?;
-            if let Some(error)=self.authorize_player(&player) { return Err(error); }
-            let plan = self.plans.table::<StoredPistonPlacement>().lock().await.get(&id).cloned().ok_or("placement not found")?;
-            if plan.player != player || plan.state != PistonPlacementState::Planned || plan.expires_at <= Instant::now() { return Err("placement is expired, used, or owned by another player".into()); }
+            self.player_scope()
+                .authorize(&player)
+                .map_err(|error| error.at(FailurePhase::Admission))?;
+            let plan = self
+                .plans
+                .table::<StoredPistonPlacement>()
+                .lock()
+                .await
+                .get(&id)
+                .cloned()
+                .ok_or("placement not found")?;
+            if plan.player != player
+                || plan.state != PistonPlacementState::Planned
+                || plan.expires_at <= Instant::now()
+            {
+                return Err("placement is expired, used, or owned by another player".into());
+            }
             let bounds = plan.proof.bounds();
-            self.policy.authorize_dimension(&plan.dimension).map_err(|e|e.to_string())?;
-            self.policy.validate_region(bounds).map_err(|e|e.to_string())?;
-            let preview = self.bridge.preview_region(&player,bounds.min,bounds.max,&plan.dimension).await.map_err(|e|e.to_string())?;
-            self.plans.table::<StoredPistonPlacement>().lock().await.get_mut(&id).ok_or("placement not found")?.previewed=true;
-            Ok(json!({"ok":true,"operation_id":id,"preview":preview,"bounds":bounds_json(bounds),"changes":plan.proof.writes(false),"undo_changes":plan.proof.writes(true),"initial_state":"open"}))
-        }.await;
-        json_reply(result.unwrap_or_else(|error| json!({"ok":false,"error":error})))
+            self.policy
+                .authorize_dimension(&plan.dimension)
+                .map_err(|error| error.to_string())?;
+            self.policy
+                .validate_region(bounds)
+                .map_err(|error| error.to_string())?;
+            let preview = self
+                .bridge
+                .preview_region(&player, bounds.min, bounds.max, &plan.dimension)
+                .await
+                .map_err(|error| error.to_string())?;
+            self.plans
+                .table::<StoredPistonPlacement>()
+                .lock()
+                .await
+                .get_mut(&id)
+                .ok_or("placement not found")?
+                .previewed = true;
+            Ok(ShownPistonPlacement::new(id, &plan.proof, preview))
+        }
+        .await;
+        match result {
+            Ok(response) => typed_reply(response),
+            Err(error) => typed_reply(error),
+        }
     }
 
     async fn mutate_piston_placement(
@@ -4078,46 +4194,119 @@ impl DustRouteMcp {
         &self,
         Parameters(params): Parameters<NewPistonDoorParams>,
     ) -> CallToolResult {
-        let result: Result<Value,String> = async {
-            let player=self.resolve_player(None)?;
-            if let Some(error)=self.authorize_player(&player) { return Err(error); }
-            let (_,circuit)=self.load_circuit(&params.circuit_id,&player).await?;
+        match self.piston_door_proposal(params).await {
+            Ok(response) => typed_reply(response),
+            Err(error) => typed_reply(error),
+        }
+    }
 
-            let status=self.bridge.status().await.map_err(|e|e.to_string())?;
-            if !status.connected || status.dimension.as_deref()!=Some(circuit.dimension.as_str()) { return Err("bot is disconnected or in another dimension".into()); }
-            self.policy.authorize_dimension(&circuit.dimension).map_err(|e|e.to_string())?;
-            let observation=crate::piston_door::inspect(&circuit.snapshot,&status.version,circuit.complete,None);
-            if !matches!(observation.state,dustroute_translate::piston_observation::PistonObservationState::Open|dustroute_translate::piston_observation::PistonObservationState::Closed) {
-                return Ok(json!({"ok":false,"error":"door is not a completely observed stable configuration","observation":observation}));
-            }
-            let door=crate::piston_door::verify(&circuit.snapshot,&status.version)?;
-            self.policy.validate_region(door.bounds()).map_err(|e|e.to_string())?;
-            let id=uuid::Uuid::new_v4();
-            let result=json!({"ok":true,"operation_id":id,"contract":"piston_door_v1","observation":observation,"state":door.state(),"target":params.target,"bounds":bounds_json(door.bounds()),"lever":door.lever(),"expires_in_seconds":300,"next_step":"show_operation, then invoke_operation(confirm=true) after confirmation"});
-            let mut plans=self.plans.table::<StoredDoorPlan>().lock().await;
-            plans.retain(|_,p|p.expires_at>Instant::now());
-            if plans.len()>=256 { return Err("too many door plans; wait for expiry".into()); }
-            plans.insert(id,StoredDoorPlan{player,dimension:circuit.dimension,door,target:params.target,lifecycle:InvocationState::Draft,expires_at:Instant::now()+std::time::Duration::from_secs(300)});
-            drop(plans);
-            self.operations.record_unmigrated(id,OperationKind::PistonDoorProposal,result.clone()).await;
-            Ok(result)
-        }.await;
-        json_reply(result.unwrap_or_else(|error| json!({"ok":false,"error":error})))
+    async fn piston_door_proposal(
+        &self,
+        params: NewPistonDoorParams,
+    ) -> Result<DoorProposal, DoorPlanningFailure> {
+        let player = self.resolve_player(None)?;
+        self.player_scope()
+            .authorize(&player)
+            .map_err(|error| error.at(FailurePhase::Admission))?;
+        let (_, circuit) = self.load_circuit(&params.circuit_id, &player).await?;
+        let status = self
+            .bridge
+            .status()
+            .await
+            .map_err(|error| error.to_string())?;
+        if !status.connected || status.dimension.as_deref() != Some(circuit.dimension.as_str()) {
+            return Err("bot is disconnected or in another dimension".into());
+        }
+        self.policy
+            .authorize_dimension(&circuit.dimension)
+            .map_err(|error| error.to_string())?;
+        let observation =
+            crate::piston_door::inspect(&circuit.snapshot, &status.version, circuit.complete, None);
+        if !matches!(
+            observation.state,
+            dustroute_translate::piston_observation::PistonObservationState::Open
+                | dustroute_translate::piston_observation::PistonObservationState::Closed
+        ) {
+            return Err(DoorPlanningFailure::incomplete(observation));
+        }
+        let door = crate::piston_door::verify(&circuit.snapshot, &status.version)?;
+        self.policy
+            .validate_region(door.bounds())
+            .map_err(|error| error.to_string())?;
+        let id = uuid::Uuid::new_v4();
+        let response = DoorProposal::new(id, observation, &door, params.target);
+        let mut plans = self.plans.table::<StoredDoorPlan>().lock().await;
+        plans.retain(|_, plan| plan.expires_at > Instant::now());
+        if plans.len() >= 256 {
+            return Err("too many door plans; wait for expiry".into());
+        }
+        plans.insert(
+            id,
+            StoredDoorPlan {
+                player,
+                dimension: circuit.dimension,
+                door,
+                target: params.target,
+                lifecycle: InvocationState::Draft,
+                expires_at: Instant::now() + Duration::from_secs(300),
+            },
+        );
+        drop(plans);
+        self.operations
+            .record_completed(
+                id,
+                OperationKind::PistonDoorProposal,
+                response.clone().into(),
+            )
+            .await;
+        Ok(response)
     }
 
     async fn show_piston_door(&self, id: uuid::Uuid, player: Option<&str>) -> CallToolResult {
-        let result:Result<Value,String>=async {
-            let player=self.resolve_player(player)?;
-            if let Some(error)=self.authorize_player(&player) { return Err(error); }
-            let plan=self.plans.table::<StoredDoorPlan>().lock().await.get(&id).cloned().ok_or("door plan not found")?;
-            if plan.player!=player || plan.lifecycle.attempted() || plan.expires_at<=Instant::now() { return Err("door plan is expired, consumed or owned by another player".into()); }
-            self.policy.authorize_dimension(&plan.dimension).map_err(|e|e.to_string())?;
-            let bounds=plan.door.bounds();
-            let preview=self.bridge.preview_region(&player,bounds.min,bounds.max,&plan.dimension).await.map_err(|e|e.to_string())?;
-            if let Some(p)=self.plans.table::<StoredDoorPlan>().lock().await.get_mut(&id) { p.lifecycle.preview()?; }
-            Ok(json!({"ok":true,"operation_id":id,"state":plan.door.state(),"target":plan.target,"preview":preview,"warning":"Normal lever activation changes this door and leaves it in the requested state. Failure requires fresh inspection; no automatic retry or rollback."}))
-        }.await;
-        json_reply(result.unwrap_or_else(|error| json!({"ok":false,"error":error})))
+        let result: Result<ShownDoor, UnrecordedFailure> = async {
+            let player = self.resolve_player(player)?;
+            self.player_scope()
+                .authorize(&player)
+                .map_err(|error| error.at(FailurePhase::Admission))?;
+            let plan = self
+                .plans
+                .table::<StoredDoorPlan>()
+                .lock()
+                .await
+                .get(&id)
+                .cloned()
+                .ok_or("door plan not found")?;
+            if plan.player != player
+                || plan.lifecycle.attempted()
+                || plan.expires_at <= Instant::now()
+            {
+                return Err("door plan is expired, consumed or owned by another player".into());
+            }
+            self.policy
+                .authorize_dimension(&plan.dimension)
+                .map_err(|error| error.to_string())?;
+            let bounds = plan.door.bounds();
+            let preview = self
+                .bridge
+                .preview_region(&player, bounds.min, bounds.max, &plan.dimension)
+                .await
+                .map_err(|error| error.to_string())?;
+            if let Some(stored) = self
+                .plans
+                .table::<StoredDoorPlan>()
+                .lock()
+                .await
+                .get_mut(&id)
+            {
+                stored.lifecycle.preview()?;
+            }
+            Ok(ShownDoor::new(id, plan.door.state(), plan.target, preview))
+        }
+        .await;
+        match result {
+            Ok(response) => typed_reply(response),
+            Err(error) => typed_reply(error),
+        }
     }
 
     async fn invoke_piston_door(&self, id: uuid::Uuid, confirm: bool) -> CallToolResult {
@@ -8204,6 +8393,112 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn piston_candidates_keep_admission_denial_before_transport_or_retention() {
+        let service = DustRouteMcp::with_test_transport_and_player(
+            "127.0.0.1:1",
+            McpPolicy {
+                allowed_players: BTreeSet::from(["someone_else".into()]),
+                ..Default::default()
+            },
+            "builder",
+        );
+        let id = uuid::Uuid::new_v4();
+        let replies = [
+            service
+                .plan_piston_placement(PreviewPlacementParams {
+                    circuit: "piston-door-1x2".into(),
+                    ..Default::default()
+                })
+                .await,
+            service.show_piston_placement(id, None).await,
+            service
+                .new_piston_door_operation(Parameters(NewPistonDoorParams {
+                    circuit_id: id.to_string(),
+                    target: crate::piston_door::DoorState::Closed,
+                }))
+                .await,
+            service.show_piston_door(id, None).await,
+        ];
+        for reply in replies {
+            assert_eq!(reply.is_error, Some(true));
+            let result = test_support::decode_reply(&reply).unwrap();
+            assert_eq!(result["error_code"], "permission_denied");
+            assert_eq!(result["failure"]["primary"]["phase"], "admission");
+            assert!(result["failure"]["progress"].is_null());
+            assert!(!result["error"].as_str().unwrap().starts_with('{'));
+        }
+        assert!(service.operations.list().await.is_empty());
+        assert!(
+            service
+                .plans
+                .table::<StoredPistonPlacement>()
+                .lock()
+                .await
+                .is_empty()
+        );
+        assert!(
+            service
+                .plans
+                .table::<StoredDoorPlan>()
+                .lock()
+                .await
+                .is_empty()
+        );
+    }
+
+    #[tokio::test]
+    async fn incomplete_door_candidate_returns_observation_without_retaining_a_plan() {
+        let root = test_support::temporary();
+        let (fake, address, bridge) = test_support::start_construction_bridge(
+            test_support::DurableRegistry::Edits(root.join("unused-record")),
+        )
+        .await;
+        let mut service =
+            DustRouteMcp::with_test_transport_and_player(address, McpPolicy::default(), "Tester");
+        service.state_store = PlanStateStore::new(root.clone(), 3600);
+        let snapshot = crate::piston_door::sample(crate::piston_door::DoorState::Open);
+        let bounds =
+            dustroute_translate::world_reverse::RegionBounds::new(snapshot.min, snapshot.max);
+        let id = service
+            .store_circuit(StoredCircuit {
+                player: "Tester".into(),
+                dimension: "minecraft:overworld".into(),
+                bounds,
+                target: None,
+                snapshot: service.bridge.share_snapshot(snapshot).unwrap(),
+                expansion: ExpansionEvidence::Unspecified {},
+                complete: false,
+                expires_at: Instant::now() + Duration::from_secs(300),
+            })
+            .await;
+        let reply = service
+            .new_piston_door_operation(Parameters(NewPistonDoorParams {
+                circuit_id: id.to_string(),
+                target: crate::piston_door::DoorState::Closed,
+            }))
+            .await;
+        assert_eq!(reply.is_error, Some(true));
+        let result = test_support::decode_reply(&reply).unwrap();
+        assert_eq!(result["observation"]["state"], "observation_incomplete");
+        assert!(result.get("operation_id").is_none());
+        assert_eq!(result["schema_version"], crate::api::ERROR_SCHEMA_V1);
+        assert_eq!(result["failure"]["primary"]["phase"], "unknown");
+        assert!(result["failure"]["progress"].is_null());
+        assert!(
+            service
+                .plans
+                .table::<StoredDoorPlan>()
+                .lock()
+                .await
+                .is_empty()
+        );
+        assert!(service.operations.list().await.is_empty());
+        assert_eq!(fake.lock().unwrap().writes, 0);
+        assert!(!root.exists());
+        bridge.abort();
+    }
+
+    #[tokio::test]
     async fn piston_mutations_keep_player_denial_typed_before_any_transport() {
         let service = DustRouteMcp::with_test_transport_and_player(
             "127.0.0.1:1",
@@ -8327,6 +8622,26 @@ mod tests {
             )
             .unwrap();
             assert_eq!(proposal["ok"], true, "{mode}: {proposal}");
+            let candidate_id =
+                uuid::Uuid::parse_str(proposal["operation_id"].as_str().unwrap()).unwrap();
+            let candidate = service
+                .operations
+                .get(candidate_id)
+                .await
+                .unwrap()
+                .result
+                .unwrap();
+            assert!(matches!(
+                &candidate,
+                crate::operations::OperationResult::PistonPlacementPreview(_)
+            ));
+            assert!(candidate.progress().is_none());
+            assert!(!candidate.consumed());
+            assert_eq!(
+                test_support::decode_reply(&typed_reply(candidate)).unwrap(),
+                proposal
+            );
+            assert!(service.operations.activity(candidate_id).await.is_none());
             let id = proposal["operation_id"].as_str().unwrap().to_owned();
             let detail: Value = test_support::decode_reply(
                 &service
@@ -8338,6 +8653,10 @@ mod tests {
             .unwrap();
             assert_eq!(detail["ok"], true);
             assert_eq!(detail["plan"]["changes"], proposal["changes"]);
+            assert_eq!(detail["plan"]["undo_changes"], proposal["undo_changes"]);
+            assert_eq!(detail["plan"]["state"], "Planned");
+            assert_eq!(detail["plan"]["previewed"], false);
+            assert!(detail.get("execution_progress").is_none());
             if mode != "unpreviewed" {
                 let shown: Value = test_support::decode_reply(
                     &service
@@ -8516,6 +8835,26 @@ mod tests {
             )
             .unwrap();
             assert_eq!(proposed["ok"], true, "{mode}: {proposed}");
+            let candidate_id =
+                uuid::Uuid::parse_str(proposed["operation_id"].as_str().unwrap()).unwrap();
+            let candidate = service
+                .operations
+                .get(candidate_id)
+                .await
+                .unwrap()
+                .result
+                .unwrap();
+            assert!(matches!(
+                &candidate,
+                crate::operations::OperationResult::DoorProposal(_)
+            ));
+            assert!(candidate.progress().is_none());
+            assert!(!candidate.consumed());
+            assert_eq!(
+                test_support::decode_reply(&typed_reply(candidate)).unwrap(),
+                proposed
+            );
+            assert!(service.operations.activity(candidate_id).await.is_none());
             let id = proposed["operation_id"].as_str().unwrap().to_owned();
             if mode != "unpreviewed" {
                 let preview: Value = test_support::decode_reply(

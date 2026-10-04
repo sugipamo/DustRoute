@@ -4,6 +4,7 @@ mod assembly;
 mod builtin;
 mod electrical;
 mod job;
+mod piston;
 mod repair;
 use super::mutation::Success;
 use crate::placement_source::PlacementSource;
@@ -25,6 +26,10 @@ use dustroute_translate::world_reverse::RegionBounds;
 pub use electrical::ElectricalEditPreview;
 pub(crate) use electrical::ShownElectricalEdit;
 pub(crate) use job::{JobObservation, JobResponse, JobStagePreview, JobSummary};
+pub(crate) use piston::{
+    DoorPlanningFailure, PistonPlanDisplay, PistonPlanState, ShownDoor, ShownPistonPlacement,
+};
+pub use piston::{DoorProposal, PistonPlacementPreview};
 pub use repair::RepairCandidate;
 pub(crate) use repair::{
     ExternalInputHypothesis, HypothesisConfidence, RelatedComponent, RelatedConnection,

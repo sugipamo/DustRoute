@@ -1083,3 +1083,51 @@ workspace全targetとMCPの`--no-default-features`全targetのClippyは
 `-D warnings`で成功した。大きい拒否詳細はnativeデータをBoxで保持し、最後の変更後に
 既存診断表示を保つunitを再実行して成功した。Cargoは単独・offline/locked・`-j1`、
 テストは単一threadで実行した。formattingと差分の空白検査も成功した。
+
+### 固定ピストンドアの配置・開閉候補の型付き接続
+
+固定1x2ドアの配置候補を`PistonPlacementPreview`、既設ドアの開閉候補を`DoorProposal`に
+移した。get/showは`PistonPlanDisplay`、`ShownPistonPlacement`、`ShownDoor`を返す。
+内部の候補生成とregistryの記録にValueを使わず、公開入口でのみ符号化する。
+配置のorigin/anchor、完全なchanges/undo_changes、materials、空のguardと既存warning、
+開閉の観測・lever・target・300秒の期限表示は維持する。計画stateはRust enumを射影し、
+既存のPascalCase表示をDebug文字列から作らない。
+
+候補には純粋な位置・literal block stateと観測・意図だけを保持し、
+`ValidatedDoorPlacement`や`VerifiedDoor`自体は含めない。履歴用のcommand表示に
+Deserializeや実行planへの逆変換を追加しない。候補生成完了はworld確認済み状態・
+実行進捗・操作消費・現在のactivityを意味しない。
+
+動作中・未確定・観測不完全・版違い等の診断は拒否応答に残し、成功候補や保存済みplanへ
+読み替えない。認可は同じ位置で共通player層からnative causeを取得する。
+旧経路のJSON符号化済み拒否文字列を再度error文字列へ包む処理を削除し、既知の
+permission_denied/admissionと未取得の進捗を直接返す。その他の従来String-only拒否は
+unknown/v1のまま保持する。新たな認可条件や可否判定は追加しない。
+所有者・期限・preview・再観測・実行前の消費とguardの検査順序、256件の保持制限を維持する。
+実行器・固定レイアウト・サーバー版・保存schema・依存・Voxrig source/vendorは変更しない。
+
+#### 固定ドア候補の回帰検証
+
+関連39件のoffline試験が成功した。結果・registry等28件、候補admission拒否1件、
+不完全な観測の候補拒否1件、実行admission拒否1件、固定配置の公開workflow1件、
+既設ドアの開閉workflow1件、固定レイアウト・逆観測・guard検証6件を実行した。
+
+新しい表示の試験では完全な予定command列と既存応答の一致、4つの計画stateの公開表記、
+候補の未取得の進捗と未消費を確認した。完全な観測でも記録だけから現在の実行事実を
+作らず、動作中等の拒否でもoperation_id・進捗を生成しない。
+認可拒否はtransport・plan読込み・候補保持より先に起こる。
+不完全なimmutable circuitからの公開要求は観測診断だけを返し、plan・履歴・保存・
+world書込みを作らない。
+
+既存workflowの各条件では、期限切れ・read-only・未確認・未preview・直前のworld変化の
+拒否、応答喪失後のNeedsInspection、同じ操作の再送拒否、配置undo、開閉不要時の既知zero、
+immutableな過去の観測とfresh scanの分離を確認した。実機の過去captureとの一致は
+独立した既存fixtureを使い、simulator出力で期待値を作り直していない。
+接続先はoffline mockだけで、実機接続・ワールド変更は行わない。
+
+最適化workflow・非同期解析・機構の逆観測表示などにはJSONが残る。
+`OperationResult::Unmigrated`は暫定のままであり、内部JSON除去の統合ゴールは継続する。
+
+workspace全targetとMCPの`--no-default-features`全targetのClippyは
+`-D warnings`で成功した。Cargoは単独・offline/locked・`-j1`、テストは単一threadで実行。
+formattingと差分の空白検査も成功した。今回も実機・host・ワールドへ操作していない。
