@@ -296,15 +296,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "dustroute-cli"
-version = "0.2.0"
-dependencies = [
- "dustroute-app",
- "dustroute-translate",
- "serde_json",
-]
-
-[[package]]
 name = "dustroute-codec"
 version = "0.2.0"
 dependencies = [

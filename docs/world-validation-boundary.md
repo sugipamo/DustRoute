@@ -94,16 +94,18 @@ fail before execution with structured issues, including
 `synthetic_input_driver`. A future real controller needs its own input
 contract; setting a metadata flag cannot promote this schema.
 
-For model regression and the existing live diagnostic only:
+For model regression, call `PistonDoorScenario::run_open_diagnostic` or
+`run_cycle_diagnostic` from Rust. The CLI entry point has been retired.
+The existing API regression is:
 
 ```bash
-cargo run -p dustroute-cli -- run-piston-door crates/dustroute-translate/tests/fixtures/3x3_piston_shuttle_fanout.json cycle --diagnostic
+cargo test --offline --locked -j1 -p dustroute-translate --test fanout_probe
 ```
 
-This returns `execution_mode = "diagnostic"`,
-`status = "diagnostic_complete"`, and the failed `placement_validation`.
-Without the flag, the CLI returns `world_validation_failed` at stage
-`validation`, a nonzero exit status, and no execution trace.
+The diagnostic API returns a settled engine for model inspection, while
+`validate_placement` still rejects the layout. Regular `run_open` and `run_cycle`
+return a validation error before creating an execution trace. Diagnostic replay
+does not grant placement authority.
 
 ## Regression coverage
 

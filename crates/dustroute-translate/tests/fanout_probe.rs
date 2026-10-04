@@ -29,7 +29,12 @@ struct ReferencePiston {
 }
 
 fn scenario() -> PistonDoorScenario {
-    PistonDoorScenario::from_json(FIXTURE).expect("3x3 fanout fixture must be valid")
+    let scenario: PistonDoorScenario =
+        serde_json::from_str(FIXTURE).expect("valid scenario fixture");
+    scenario
+        .validate()
+        .expect("3x3 fanout fixture must be valid");
+    scenario
 }
 
 fn reference_fixture() -> ReferenceFixture {
@@ -438,5 +443,19 @@ fn normal_execution_rejects_the_unbuildable_model_before_running() {
             issue,
             dustroute_translate::world::WorldValidationIssue::SyntheticInputDriver { .. }
         )));
+    }
+}
+
+#[test]
+fn zero_pulse_width_is_rejected_by_both_diagnostic_entry_points() {
+    let mut scenario = scenario();
+    scenario.control.pulse_width_game_ticks = 0;
+    for result in [
+        scenario.run_open_diagnostic(),
+        scenario.run_cycle_diagnostic(),
+    ] {
+        let error = result.expect_err("an invalid pulse must not start diagnostic execution");
+        assert!(matches!(error, PistonDoorScenarioError::Invalid { .. }));
+        assert!(error.to_string().contains("pulse width"));
     }
 }

@@ -7,8 +7,7 @@ use dustroute_translate::{
     transition_conformance::SameTickOrderEvidence, transition_conformance::TransitionEvidence,
     transition_conformance::compare_transition_traces,
     transition_conformance::normalize_observed_fixture,
-    transition_conformance::normalize_transition_trace,
-    transition_conformance::observed_fixture_from_json, wire::update_wire_shapes, world::Block,
+    transition_conformance::normalize_transition_trace, wire::update_wire_shapes, world::Block,
     world::BlockKind, world::Facing, world::Pos, world::WireConnection, world::World,
 };
 use std::collections::{BTreeMap, BTreeSet};
@@ -27,7 +26,7 @@ const FIXTURES: &[(&str, &str)] = &[
 #[test]
 fn java_1_21_11_observations_project_without_claiming_scheduler_phase() {
     for (name, source) in FIXTURES {
-        let fixture = observed_fixture_from_json(source)
+        let fixture = fixture_observation(source)
             .unwrap_or_else(|error| panic!("{name} fixture must parse: {error}"));
         let normalized = normalize_observed_fixture(&fixture);
         assert!(normalized.complete, "{name}");
@@ -53,7 +52,7 @@ fn java_1_21_11_observations_project_without_claiming_scheduler_phase() {
 
 #[test]
 fn observed_noop_remains_distinct_from_state_transitions() {
-    let fixture = observed_fixture_from_json(FIXTURES[0].1).unwrap();
+    let fixture = fixture_observation(FIXTURES[0].1).unwrap();
     let normalized = normalize_observed_fixture(&fixture);
     let no_op = normalized
         .transitions
@@ -64,7 +63,7 @@ fn observed_noop_remains_distinct_from_state_transitions() {
 }
 
 fn observed_without_input(fixture_index: usize, input: Pos) -> NormalizedTransitionTrace {
-    let fixture = observed_fixture_from_json(FIXTURES[fixture_index].1).unwrap();
+    let fixture = fixture_observation(FIXTURES[fixture_index].1).unwrap();
     let mut trace = normalize_observed_fixture(&fixture);
     trace.transitions.retain(|item| item.position != input);
     trace
@@ -249,7 +248,7 @@ fn piston_fixture_is_connected_to_engine_transition_trace() {
     engine.run_piston_events().unwrap();
     assert_eq!(engine.transition_trace().status, TraceStatus::Complete);
 
-    let observed = normalize_observed_fixture(&observed_fixture_from_json(FIXTURES[1].1).unwrap());
+    let observed = normalize_observed_fixture(&fixture_observation(FIXTURES[1].1).unwrap());
     let modelled = normalize_transition_trace(engine.transition_trace(), 0);
     println!("modelled transitions: {:#?}", modelled.transitions);
     let result = compare_transition_traces(&observed, &modelled);
@@ -294,11 +293,10 @@ fn piston_instrumentation_fixture_compares_typed_moving_and_stable_states() {
     engine.schedule_redstone_input(0, input_pos, true);
     engine.run_redstone_piston_events().unwrap();
 
-    let artifact =
-        dustroute_translate::vanilla_instrumentation::parse_and_validate_instrumentation(
-            include_str!("fixtures/vanilla_1_21_11_offline_piston_input.json"),
-        )
-        .unwrap();
+    let artifact = fixture_instrumentation(include_str!(
+        "fixtures/vanilla_1_21_11_offline_piston_input.json"
+    ))
+    .unwrap();
     let mut observed =
         dustroute_translate::transition_conformance::normalize_vanilla_instrumentation_artifact(
             &artifact,
@@ -328,4 +326,22 @@ fn piston_instrumentation_fixture_compares_typed_moving_and_stable_states() {
         }),
         "{result:#?}"
     );
+}
+
+fn fixture_observation(
+    source: &str,
+) -> Result<dustroute_translate::transition_conformance::ObservedSchedulerFixture, serde_json::Error>
+{
+    serde_json::from_str(source)
+}
+fn fixture_instrumentation(
+    source: &str,
+) -> Result<
+    dustroute_translate::vanilla_instrumentation::VanillaInstrumentationArtifact,
+    Box<dyn std::error::Error>,
+> {
+    let value: dustroute_translate::vanilla_instrumentation::VanillaInstrumentationArtifact =
+        serde_json::from_str(source)?;
+    value.validate()?;
+    Ok(value)
 }

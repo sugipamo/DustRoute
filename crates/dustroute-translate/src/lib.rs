@@ -40,6 +40,7 @@ pub mod minecraft_semantics;
 pub mod multinet;
 pub mod native_state;
 pub mod observed_piston_door;
+pub mod observed_properties;
 pub mod periodic;
 pub mod physical;
 pub mod physical_behavior;

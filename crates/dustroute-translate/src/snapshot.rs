@@ -26,7 +26,6 @@ pub struct MinecraftSnapshotBlock {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum SnapshotError {
-    Json(String),
     InvalidSnapshot(String),
     InvalidFacing { pos: Pos, value: String },
 }
@@ -34,7 +33,6 @@ pub enum SnapshotError {
 impl Display for SnapshotError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Json(message) => write!(f, "invalid Minecraft snapshot JSON: {message}"),
             Self::InvalidSnapshot(message) => write!(f, "invalid Minecraft snapshot: {message}"),
             Self::InvalidFacing { pos, value } => {
                 write!(f, "invalid facing {value:?} at {pos:?}")
@@ -146,13 +144,6 @@ pub fn index_literal_snapshot(
     snapshot: &MinecraftSnapshot,
 ) -> Result<BTreeMap<Pos, MinecraftSnapshotBlock>, String> {
     Ok(LiteralSnapshotIndex::new(snapshot)?.to_owned_blocks())
-}
-
-pub fn world_from_snapshot_json(json: &str) -> Result<(MinecraftSnapshot, World), SnapshotError> {
-    let snapshot: MinecraftSnapshot =
-        serde_json::from_str(json).map_err(|error| SnapshotError::Json(error.to_string()))?;
-    let world = world_from_snapshot(&snapshot)?;
-    Ok((snapshot, world))
 }
 
 pub fn world_from_snapshot(snapshot: &MinecraftSnapshot) -> Result<World, SnapshotError> {
@@ -471,7 +462,8 @@ mod tests {
               {"pos":{"x":2,"y":1,"z":0},"name":"minecraft:redstone_wire","properties":{"west":"side"}}
             ]
         }"#;
-        let (_, world) = world_from_snapshot_json(json).unwrap();
+        let snapshot = serde_json::from_str(json).unwrap();
+        let world = world_from_snapshot(&snapshot).unwrap();
         assert_eq!(
             world.get(Pos::new(1, 1, 0)).unwrap().facing,
             Some(Facing::East)
@@ -487,7 +479,8 @@ mod tests {
               {"pos":{"x":0,"y":0,"z":0},"name":"minecraft:target","properties":{"power":"7","custom":"kept"}}
             ]
         }"#;
-        let (_, world) = world_from_snapshot_json(json).unwrap();
+        let snapshot = serde_json::from_str(json).unwrap();
+        let world = world_from_snapshot(&snapshot).unwrap();
         let block = world.get(Pos::new(0, 0, 0)).unwrap();
         assert_eq!(block.kind, BlockKind::Solid);
         assert_eq!(block.observed_name.as_deref(), Some("minecraft:target"));

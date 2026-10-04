@@ -9,7 +9,6 @@ members = [
     "crates/dustroute-optimize",
     "crates/dustroute-app",
     "crates/dustroute-mcp",
-    "crates/dustroute-cli",
 ]
 resolver = "2"
 exclude = ["vendor/voxrig"]

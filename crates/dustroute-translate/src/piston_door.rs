@@ -19,7 +19,7 @@ use dustroute_minecraft::{
 use dustroute_minecraft::{ValidatedWorld, WorldValidationError, WorldValidationIssue};
 use serde::{Deserialize, Serialize};
 
-/// Schema accepted by [`PistonDoorScenario::from_json`].
+/// Version of the typed diagnostic scenario contract.
 pub const PISTON_DOOR_FANOUT_SCHEMA: &str = "dustroute.3x3-piston-shuttle-fanout.v1";
 /// Event budget used by the bounded reference executor.
 pub const DEFAULT_PISTON_DOOR_EVENT_BUDGET: usize = 8192;
@@ -115,7 +115,6 @@ impl PistonDoorWorld {
 /// cannot be silently interpreted as a different circuit.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum PistonDoorScenarioError {
-    Json(String),
     Invalid {
         reason: String,
     },
@@ -132,9 +131,6 @@ pub enum PistonDoorScenarioError {
 impl Display for PistonDoorScenarioError {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Json(message) => {
-                write!(formatter, "invalid piston-door scenario JSON: {message}")
-            }
             Self::Invalid { reason } => write!(formatter, "invalid piston-door scenario: {reason}"),
             Self::Collision {
                 position,
@@ -181,14 +177,6 @@ impl PistonDoorScenario {
         Err(PistonDoorScenarioError::Validation(WorldValidationError {
             issues,
         }))
-    }
-
-    /// Parses and validates the versioned scenario contract.
-    pub fn from_json(json: &str) -> Result<Self, PistonDoorScenarioError> {
-        let scenario: Self = serde_json::from_str(json)
-            .map_err(|error| PistonDoorScenarioError::Json(error.to_string()))?;
-        scenario.validate()?;
-        Ok(scenario)
     }
 
     /// Validates the geometry and all dimensions needed by the bounded

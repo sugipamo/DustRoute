@@ -6,11 +6,13 @@ use std::collections::{BTreeMap, BTreeSet};
 use dustroute_minecraft::time::{TraceStatus, TransitionTrace as MinecraftTransitionTrace};
 use serde::{Deserialize, Serialize};
 
+use crate::observed_properties::ObservedProperty;
 use crate::vanilla_instrumentation::{
     PistonStateKind, PistonStateObservation, StreamCompleteness, VanillaInstrumentationArtifact,
 };
 use crate::{world::Block, world::BlockKind, world::Facing, world::Pos, world::WireConnection};
 use dustroute_minecraft::piston_state;
+mod input;
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -141,6 +143,7 @@ pub struct ObservedInput {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+#[serde(try_from = "input::Event")]
 pub struct ObservedTransitionEvent {
     pub sequence: u64,
     pub kind: String,
@@ -154,9 +157,10 @@ pub struct ObservedTransitionEvent {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+#[serde(try_from = "input::State")]
 pub struct ObservedBlockState {
     pub name: String,
-    pub properties: serde_json::Value,
+    pub properties: BTreeMap<String, ObservedProperty>,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -199,12 +203,6 @@ pub struct TransitionConformance {
     pub status: ConformanceStatus,
     pub compared_transitions: usize,
     pub issues: Vec<ConformanceIssue>,
-}
-
-pub fn observed_fixture_from_json(
-    source: &str,
-) -> Result<ObservedSchedulerFixture, serde_json::Error> {
-    serde_json::from_str(source)
 }
 
 #[must_use]
@@ -883,42 +881,26 @@ fn compare_state(
 }
 
 fn observed_state(state: &ObservedBlockState) -> NormalizedBlockState {
-    let properties = state
-        .properties
-        .as_object()
-        .into_iter()
-        .flatten()
-        .map(|(key, value)| {
-            let value = value
-                .as_str()
-                .map(str::to_owned)
-                .unwrap_or_else(|| value.to_string());
-            (key.clone(), value)
-        })
-        .collect();
     NormalizedBlockState {
         name: state.name.clone(),
-        properties,
+        properties: state
+            .properties
+            .iter()
+            .map(|(key, value)| (key.clone(), value.to_string()))
+            .collect(),
     }
 }
 
 fn instrumented_state(
     state: &crate::vanilla_instrumentation::InstrumentedBlockState,
 ) -> NormalizedBlockState {
-    let properties = state
-        .properties
-        .iter()
-        .map(|(key, value)| {
-            let value = value
-                .as_str()
-                .map(str::to_owned)
-                .unwrap_or_else(|| value.to_string());
-            (key.clone(), value)
-        })
-        .collect();
     NormalizedBlockState {
         name: state.name.clone(),
-        properties,
+        properties: state
+            .properties
+            .iter()
+            .map(|(key, value)| (key.clone(), value.to_string()))
+            .collect(),
     }
 }
 
@@ -1158,6 +1140,22 @@ fn unavailable(index: Option<usize>, field: ConformanceField, reason: &str) -> C
 
 #[cfg(test)]
 mod tests {
+    fn fixture_observation(
+        source: &str,
+    ) -> Result<super::ObservedSchedulerFixture, serde_json::Error> {
+        serde_json::from_str(source)
+    }
+    fn fixture_instrumentation(
+        source: &str,
+    ) -> Result<
+        crate::vanilla_instrumentation::VanillaInstrumentationArtifact,
+        Box<dyn std::error::Error>,
+    > {
+        let value: crate::vanilla_instrumentation::VanillaInstrumentationArtifact =
+            serde_json::from_str(source)?;
+        value.validate()?;
+        Ok(value)
+    }
     use super::*;
     use dustroute_minecraft::time::{
         EventId, PhysicsEventPhase, PhysicsTime, TransitionId, TransitionRecord,
@@ -1345,7 +1343,7 @@ mod tests {
 
     #[test]
     fn fixture_keeps_packet_order_noop_and_unknown_phase() {
-        let fixture = observed_fixture_from_json(include_str!(
+        let fixture = fixture_observation(include_str!(
             "../tests/fixtures/scheduler_1_21_11_observed_repeater_observer.json"
         ))
         .unwrap();
@@ -1366,9 +1364,9 @@ mod tests {
 
     #[test]
     fn vanilla_artifact_projection_preserves_internal_causal_evidence() {
-        let artifact = crate::vanilla_instrumentation::parse_and_validate_instrumentation(
-            include_str!("../tests/fixtures/vanilla_1_21_11_offline_piston_input.json"),
-        )
+        let artifact = fixture_instrumentation(include_str!(
+            "../tests/fixtures/vanilla_1_21_11_offline_piston_input.json"
+        ))
         .unwrap();
         let normalized = normalize_vanilla_instrumentation_artifact(&artifact);
         assert_eq!(normalized.transitions.len(), artifact.state_events.len());
@@ -1389,9 +1387,9 @@ mod tests {
 
     #[test]
     fn neighbor_update_evidence_is_projected_and_model_gap_is_unavailable() {
-        let mut artifact = crate::vanilla_instrumentation::parse_and_validate_instrumentation(
-            include_str!("../tests/fixtures/vanilla_1_21_11_offline_piston_input.json"),
-        )
+        let mut artifact = fixture_instrumentation(include_str!(
+            "../tests/fixtures/vanilla_1_21_11_offline_piston_input.json"
+        ))
         .unwrap();
         artifact.neighbor_updates.clear();
         artifact

@@ -32,7 +32,7 @@ async fn shared_circuit_contents_keep_owner_and_expiry_authorization_separate() 
             ),
             target: None,
             snapshot,
-            expansion: json!({}),
+            expansion: ExpansionEvidence::Unspecified {},
             complete: true,
             expires_at,
         }

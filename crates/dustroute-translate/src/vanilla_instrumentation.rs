@@ -10,7 +10,9 @@ use std::fmt::{Display, Formatter};
 
 use serde::{Deserialize, Serialize};
 
+use crate::observed_properties::ObservedProperty;
 use crate::world::Pos;
+mod input;
 
 pub const VANILLA_INSTRUMENTATION_SCHEMA: &str = "dustroute.vanilla-instrumentation.v1";
 
@@ -56,10 +58,11 @@ pub struct InputTimingObservation {
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(try_from = "input::State")]
 pub struct InstrumentedBlockState {
     pub name: String,
     #[serde(default)]
-    pub properties: BTreeMap<String, serde_json::Value>,
+    pub properties: BTreeMap<String, ObservedProperty>,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -96,6 +99,7 @@ pub enum PistonStateKind {
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(try_from = "input::Piston")]
 pub struct PistonStateObservation {
     pub sequence: u64,
     /// Relative ticks may be negative for retained pre-roll observations.
@@ -115,6 +119,7 @@ pub struct PistonStateObservation {
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(try_from = "input::Event")]
 pub struct InstrumentedStateEvent {
     pub sequence: u64,
     /// Relative ticks may be negative for retained pre-roll observations.
@@ -136,6 +141,7 @@ pub struct InstrumentedStateEvent {
 /// neighbor-update propagation. The sequence is local to this evidence family;
 /// it preserves callback order without pretending to be a scheduler ID.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(try_from = "input::Neighbor")]
 pub struct NeighborUpdateObservation {
     pub sequence: u64,
     /// Relative ticks may be negative for retained pre-roll observations.
@@ -456,17 +462,6 @@ fn validate_capture(
     Ok(())
 }
 
-pub fn parse_and_validate_instrumentation(
-    source: &str,
-) -> Result<VanillaInstrumentationArtifact, String> {
-    let artifact: VanillaInstrumentationArtifact = serde_json::from_str(source)
-        .map_err(|error| format!("instrumentation artifact JSON is invalid: {error}"))?;
-    artifact
-        .validate()
-        .map_err(|error| format!("instrumentation artifact contract is invalid: {error}"))?;
-    Ok(artifact)
-}
-
 fn validate_ordered_ticks(
     observations: &[OrderedTickObservation],
 ) -> Result<(), InstrumentationValidationError> {
@@ -727,6 +722,13 @@ fn short_name(name: &str) -> &str {
 
 #[cfg(test)]
 mod tests {
+    fn fixture_instrumentation(
+        source: &str,
+    ) -> Result<super::VanillaInstrumentationArtifact, Box<dyn std::error::Error>> {
+        let value: super::VanillaInstrumentationArtifact = serde_json::from_str(source)?;
+        value.validate()?;
+        Ok(value)
+    }
     use super::*;
 
     fn artifact() -> VanillaInstrumentationArtifact {
@@ -833,7 +835,7 @@ mod tests {
     #[test]
     fn parser_round_trips_a_reviewed_artifact() {
         let encoded = serde_json::to_string(&artifact()).unwrap();
-        let parsed = parse_and_validate_instrumentation(&encoded).unwrap();
+        let parsed = fixture_instrumentation(&encoded).unwrap();
         assert_eq!(parsed.scenario, "piston_motion_trace");
         assert_eq!(parsed.ordered_ticks.len(), 1);
     }
@@ -893,7 +895,7 @@ mod tests {
         value.piston_states[0].game_tick = -1;
         assert!(value.validate().is_ok());
         let encoded = serde_json::to_string(&value).unwrap();
-        let parsed = parse_and_validate_instrumentation(&encoded).unwrap();
+        let parsed = fixture_instrumentation(&encoded).unwrap();
         assert_eq!(parsed.ordered_ticks[0].trigger_game_tick, -2);
     }
 

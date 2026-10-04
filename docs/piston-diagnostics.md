@@ -9,7 +9,8 @@
 The supported public door is the [fixed 1×2 MCP contract](piston-door-mcp-v1.md).
 The retained 3×3 shuttle fixtures are diagnostic models and regression evidence,
 not installable lever-controlled circuits. This distinction also applies to
-successful diagnostic CLI output.
+successful diagnostic API replay. The CLI has been retired; debugging uses the
+typed Rust scenario APIs.
 
 ## Retained models
 
@@ -51,18 +52,19 @@ Read-only recognition of observed 3×3 geometry is a separate
 Run from the repository root:
 
 ```bash
-cargo run -p dustroute-cli -- run-piston-door crates/dustroute-translate/tests/fixtures/3x3_piston_shuttle_fanout.json cycle --diagnostic
 cargo test -p dustroute-translate --test reference_3x3_piston_door
 cargo test -p dustroute-translate --test single_cell_piston_shuttle
 cargo test -p dustroute-translate --test fanout_probe
 ```
 
-Diagnostic mode reports `diagnostic_complete` together with failed placement
-validation. Without it, the invalid scenario reports `world_validation_failed`
-and creates no execution trace.
+`PistonDoorScenario::run_open_diagnostic` and `run_cycle_diagnostic` return an
+engine for model inspection. Regular execution still rejects placement and
+creates no execution trace. `fanout_probe` covers open/cycle replay, translated
+layouts, malformed geometry and rejection of the synthetic controller.
 
-For the historical live comparison, use the private disposable server from
-[setup](../crates/dustroute-mcp/SETUP.md), then:
+The historical live comparison used the private disposable server from
+[setup](../crates/dustroute-mcp/SETUP.md) and the now-removed CLI and Mineflayer
+harness:
 
 ```bash
 cargo build -p dustroute-cli

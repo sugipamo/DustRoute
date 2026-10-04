@@ -497,3 +497,112 @@ snake-caseのphase名と各counterは維持し、全phase名を公開形式の�
 第7b-1は完了。サーバー起動・実機接続・ワールド変更、依存や保存形式の更新は行っていない。
 `OperationRegistry`の結果JSONと公開応答からlive activityへ戻すJSON再解析は残っており、
 第7b-2で各workflowの型付き結果と一緒に移す。内部JSON全面撤去はまだ完了していない。
+
+## 内部JSON除去の統合ゴールと最初の分岐点
+
+ユーザーの追加指示により、第7b-2以降を個別ゴールに分けず、内部JSON除去の統合ゴールで
+進める。公開MCPと承認済みMinecraftサーバーwireを除き、内部状態・通信・保存・操作結果・
+進捗を用途別Rust型で接続する。分岐点は変更前に停止してユーザーへ報告する。
+
+初回監査で、CLIの公開JSON入出力が未決定の境界として見つかった。
+`dustroute-cli/src/main.rs`の`analyze-snapshot`はsnapshot JSONファイルを読み、
+`run-piston-door`はscenario JSONファイルまたは標準入力を受け取る。両コマンドはJSONを
+標準出力へ返す。後者には既存のCLI統合試験と`docs/piston-diagnostics.md`の再現手順もある。
+これは内部RPCではないが、MCP境界でもMinecraftサーバーwireでもない。
+
+選択肢は次の二つであり、どちらも内部の汎用JSON結果や文字列再解析を残す理由にはしない。
+
+1. **CLIの外部入出力だけ例外として維持する（推奨案、未承認）**:
+   input decodeとoutput encodeをCLIへ限定する。下位crateの
+   `world_from_snapshot_json`、`PistonDoorScenario::from_json`等は型付き入力へ移し、
+   CLIの結果構築と成功判定もRust型で行う。既存の公開CLI形式を保ちながら内部依存を撤去する。
+2. **CLIのJSON入口・出力も撤去する**:
+   当該コマンドの廃止か非JSON入力への変更、結果の表示形式、対応するCLI試験・文書を
+   一緒に変更する。Rust APIとMCPの回路・物理機能を削除することは含まない。
+
+この選択は外部互換性またはJSON例外の追加に関わるため、監査時点で実装前に停止した。
+コード・依存・公開形式は未変更。build/test、実機接続、ワールド変更は行っていない。
+ユーザーの選択後、操作registry・live activityの型付き接続から作業を再開する。
+
+### CLI撤去の承認と再開
+
+CLIの利用用途を調査し、ユーザーがCLI撤去・内部APIでのデバッグ方針を承認した。
+CLIにはeval、snapshot解析、ピストン診断再現、回路datapack出力、意味論datapack出力の
+5入口があった。リポジトリ内の呼び出しは開発文書とCLI専用試験6件であり、MCPから
+CLIを起動する経路はなかった。ZIP出力はMCPに同じ入口がないが、Rustの出力APIは残す。
+
+workspaceからCLI crateを外し、binary・manifest・CLI専用試験とlockfileのpackageを
+撤去する。引数・標準入力・JSON応答だけの契約は廃止し、開閉・座標移動・synthetic
+controller拒否の既存API回帰と、zero pulse width拒否のAPI試験で物理側の契約を確認する。
+snapshot・scenarioのJSON専用APIとJSON decodeエラーも下位crateから除き、テストの
+独立fixture decodeと型付きworld/scenarioの検査を分ける。CLI向けJSON例外は追加しない。
+以降も統合ゴールの操作結果・進捗・残存JSONの整理を続け、CLI撤去だけを完了条件にしない。
+
+### 回路取得情報の型付き接続
+
+回路キャッシュの`StoredCircuit.expansion: Value`を`ExpansionEvidence`へ移した。
+接続部品の探索、明示した作業領域、明示した選択領域をenumで区別し、探索上限と読込数を
+Rustのfieldとして保持する。未計測の読込数は`None`であり、観測したzeroへ変換しない。
+既存の大規模解析入口の閾値選択にだけ従来と同じfallbackを使い、公開reportは未知を維持する。
+取得後にJSONへ符号化してcacheへ戻す処理と、解析の分岐でJSON keyを参照する処理を除いた。
+取得応答も型付きでMCP facadeへ渡し、公開strategy名・field・欠落/nullの扱いを維持する。
+保存形式、Voxrig pin、観測権限、実機への操作は変えていない。
+
+### 次の分岐点: 観測属性の形式と欠測の扱い（未着手）
+
+`transition_conformance::ObservedBlockState.properties`は任意のJSON値であり、
+`observed_state`はobject以外を空の属性として扱う。その投影を使う
+`normalize_observed_fixture`はtraceを`complete: true`、欠測理由なしで返している。
+`InstrumentedBlockState.properties`も各propertyに任意のJSON値を保持し、string以外の
+値はJSONの表示文字列で比較する。これらはコード調査で確認した内容であり、新たな実機
+不一致や実行時の誤判定を再現したとの主張ではない。
+
+JSON treeをRust側に作り直すのではなく、Minecraft属性に必要なstring・boolean・整数の
+用途別型へ移すには、null・array・object・非整数数値などの扱いを決める必要がある。
+既存の無条件受入れや空属性への投影を変えるため、判定条件の変更前に停止する。
+
+- **推奨案**: それらを不正な観測属性として入力境界で拒否する。property名と値型・
+  位置を診断へ残し、正当な観測値と見なさない。既存の適正fixtureのbool/整数/stringと
+  正規化結果は維持し、観測記録をnative操作権限へ戻す経路は追加しない。
+- **代替案**: 不正な値を用途別の欠測理由として残し、traceはincomplete/unavailableとする。
+  部分的な観測を使うための契約も整える必要があり、拒否より変更範囲が広い。
+
+この改修は未着手。CLI撤去・回路取得情報の作成済み差分の検証と記録を終えた後、
+ユーザーの判断を待つ。組込み設計図のJSON初期化、操作registryの結果・live activity、
+残るworkflow、診断用exampleなども未完了であり、統合ゴール全体は達成扱いにしない。
+
+### 観測属性の拒否方針の承認と実装
+
+ユーザーが不正な観測属性を入力境界で拒否する案を承認した。bool、string、i64、u64を
+`ObservedProperty`で区別し、比較用の属性文字列は各型から正規化する。汎用JSON treeを
+別名のRust型として作り直す経路は加えない。不正な構造は保持せず、拒否理由だけを入力の
+所有イベントまで渡して属性名・値型・state slot・座標を診断へ含める。独立したstateの
+decodeでは座標を取得できないため、未知のままにする。属性省略の既存差（packet fixtureは
+必須、instrumentationはempty既定値）を保ち、明示nullを省略へ読み替えない。
+
+packetイベント、instrumentationのstateイベント、Piston body/head/moving payload、
+neighbor-update targetの全てに同じ属性契約を適用する。不正な値を正規化済みstateや
+completeなtraceへ渡さない。二つのJSON専用parserとstandalone validator exampleを撤去し、
+独立fixtureのdecodeはテストへ分け、内部は型付き入力と既存のvalidate APIを使う。
+判定条件の変更は承認された不正属性の拒否に限り、native観測・操作権限は追加しない。
+
+### CLI撤去・取得情報・観測属性の検証結果
+
+全てoffline/locked、Cargoは一つずつ`-j1`、テストは単一threadで実行した。
+
+- CLI撤去とsnapshot/scenario API整理後、translate library 180件、`fanout_probe` 12件、
+  `observation_fixtures` 6件が成功した。library全件の実行は観測属性の改修前である。
+- 観測属性の最終実装では、`observed_properties` 4件、`transition_conformance` 5件、
+  `vanilla_instrumentation_fixture` 2件が成功した。属性名・拒否した種類・state slot・
+  owner座標、全てのinstrumentation state slot、不正形式と省略の区別を確認した。
+  libraryの該当moduleもtransition conformance 9件、instrumentation 17件が成功した。
+- MCPの取得情報3件、視線・preview・逆解析1件、操作診断5件、大規模truth tableの
+  明示要求と予算1件が成功した。不明と実測zero、公開field、取消し、消費済み履歴の
+  保持を確認した。MCP全件・実機試験は再実行していない。
+- workspace全targetとMCPの`no-default-features`全targetのClippyが`-D warnings`で成功。
+  formatting、差分の空白検査、Voxrig 322ファイルの既存pinとの一致も確認した。
+
+最初のMCP compileでは公開応答への取得情報代入に型不一致があり、公開encode箇所を
+修正してから関連テストと静的検査を完了した。依存version、保存形式、native操作契約、
+サーバー・ワールドは変更していない。これらは統合ゴールの途中の完了項目であり、
+操作registry・live activity・workflow・組込み定義などの残存JSONは未解決である。

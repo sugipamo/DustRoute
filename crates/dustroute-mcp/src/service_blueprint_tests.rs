@@ -1413,7 +1413,7 @@ async fn blueprint_mcp_captures_saved_assembly_and_rejects_mixed_operations() {
             ),
             target: None,
             snapshot: service.bridge.share_snapshot(snapshot).unwrap(),
-            expansion: json!({}),
+            expansion: ExpansionEvidence::Unspecified {},
             complete: true,
             expires_at: Instant::now() + Duration::from_secs(300),
         })

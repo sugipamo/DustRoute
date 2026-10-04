@@ -1,4 +1,4 @@
-//! Application services shared by MCP, CLI, and future frontends.
+//! Typed application services shared by MCP, tests, and future frontends.
 
 mod planning;
 

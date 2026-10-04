@@ -73,7 +73,7 @@ live Minecraft trial. Existing user state files are not deleted by these checks.
 ## Reproducing the checks
 
 ```sh
-cargo test --offline --locked -j1 -p dustroute-app -p dustroute-physical -p dustroute-ir -p dustroute-cli -- --test-threads=1
+cargo test --offline --locked -j1 -p dustroute-app -p dustroute-physical -p dustroute-ir -- --test-threads=1
 cargo test --offline --locked -j1 -p dustroute-translate --tests -- --test-threads=1
 cargo test --offline --locked -j1 -p dustroute-translate --test blueprint_updates --test runtime_adoption --test ordinary_reference_door --test physical_periodic --test repeated_settling_adoption --test flying_machine_adoption -- --test-threads=1
 cargo test --offline --locked -j1 -p dustroute-mcp --lib -- --test-threads=1

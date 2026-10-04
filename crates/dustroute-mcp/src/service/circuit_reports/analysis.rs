@@ -247,7 +247,7 @@ pub(in super::super) fn hierarchical_result_json(
     bounds: dustroute_translate::world_reverse::RegionBounds,
     hierarchy: &dustroute_ir::HierarchicalIr,
     focused: Value,
-    expansion: &Value,
+    expansion: &super::super::circuit_capture::ExpansionEvidence,
     focus: Option<dustroute_physical::Pos>,
 ) -> Value {
     let scene = &hierarchy.physical_graph.value.scene;
@@ -265,15 +265,14 @@ pub(in super::super) fn hierarchical_result_json(
             *counts.entry(representation).or_insert(0_usize) += 1;
             counts
         });
-    let analysis_complete =
-        expansion["limit_reached"] != Value::Bool(true) && scene.observation.is_complete();
+    let analysis_complete = !expansion.limit_reached() && scene.observation.is_complete();
     let focused_explanation = focus
         .map(|target| focused_scene_explanation_json(scene, hierarchy, target, analysis_complete));
     json!({
         "ok": true,
         "analysis_mode": "hierarchical_local_first",
         "bounds": bounds_json(bounds),
-        "analysis_complete": expansion["limit_reached"] != Value::Bool(true),
+        "analysis_complete": !expansion.limit_reached(),
         "focused_component": focused,
         "focused_explanation": focused_explanation,
         "expansion": expansion,
@@ -338,7 +337,7 @@ pub(in super::super) fn hierarchical_result_json(
         "truth_table_status": "skipped_large_circuit",
         "truth_table_skip": {
             "code": "flat_analysis_component_threshold",
-            "component_count": expansion["components_loaded"],
+            "component_count": expansion.components_loaded(),
             "threshold": MAX_FLAT_ANALYSIS_COMPONENTS,
             "guidance": "set include_truth_table=true to request bounded exhaustive simulation"
         },

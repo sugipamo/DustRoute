@@ -16,7 +16,6 @@ For Java server/bot setup, use [MCP setup](../crates/dustroute-mcp/SETUP.md).
 | `dustroute-optimize` | Candidate search and structural/behavioral verification |
 | `dustroute-app` | Shared application services and placement planning |
 | `dustroute-mcp` | MCP orchestration, observed/revision/operation identities and bot bridge |
-| `dustroute-cli` | Diagnostic and automation entry points |
 
 Forward compilation follows logical intent → primitive lowering → cell mapping
 → placement/routing → legality validation → Java export. Reverse interpretation
@@ -131,22 +130,22 @@ continues to exclude build products, local worlds, dependencies and secrets.
 Run narrower tests for a bounded change, and the workspace checks before
 integration. Do not restart live servers merely to validate documentation.
 
-## CLI examples
+## Rust diagnostics and export APIs
 
-```bash
-cargo run -p dustroute-cli -- eval mux2 a=1 b=0 s=0
-cargo run -p dustroute-cli -- export half-adder target/half-adder.zip ro_half_rust
-cargo run -p dustroute-cli -- export-semantics target/semantics.zip ro_sem
-cargo run -p dustroute-cli -- analyze-snapshot snapshot.json
-```
+The CLI has been retired. Product work uses MCP; offline debugging calls typed
+Rust APIs directly. `DustRouteService::built_in_circuit` provides logical
+evaluation, and `DustRouteService::analyze_world` accepts a world and a bounded
+`ReverseRequest`. `compile_builtin` and `compiled_circuit_datapack` provide
+circuit export; `semantics_datapack` provides semantics export. Datapacks can
+still be written as ZIP files with `write_zip`; removing the CLI does not remove
+these library capabilities or add equivalent MCP tools.
 
-The CLI snapshot analyzer requests bounded functional inference; MCP leaves
-exhaustive truth tables opt-in. An incomplete interface or exhausted row/time/
+MCP leaves exhaustive truth tables opt-in. An incomplete interface or exhausted row/time/
 solver budget must return unavailable/error evidence, not partial rows labeled
 as a complete function. See [function modeling](physical-function-model.md).
 
-The retained 3×3 piston CLI scenarios are diagnostic-only. Their commands and
-limits are in [piston diagnostics](piston-diagnostics.md); successful diagnostic
+The retained 3×3 piston scenarios are diagnostic-only. Their API regression tests
+and limits are in [piston diagnostics](piston-diagnostics.md); successful diagnostic
 execution does not authorize construction.
 
 ## Snapshot format

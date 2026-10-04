@@ -49,7 +49,9 @@ use requests::{
     StartSelectedRegionConversionParams, TestCircuitChangeParams, TransitionContractParam,
 };
 mod placement_registry;
-use circuit_capture::{CircuitCapture, DiscoveryObservation, is_redstone_candidate_name};
+use circuit_capture::{
+    CircuitCapture, DiscoveryObservation, ExpansionEvidence, is_redstone_candidate_name,
+};
 mod operation_lifecycle;
 use operation_lifecycle::{InvocationState, RepairLifecycle, RevisionLifecycle};
 mod operation_plans;
@@ -238,7 +240,7 @@ struct StoredCircuit {
     bounds: dustroute_translate::world_reverse::RegionBounds,
     target: Option<Pos>,
     snapshot: crate::snapshot_content::SharedSnapshot,
-    expansion: Value,
+    expansion: ExpansionEvidence,
     complete: bool,
     expires_at: Instant,
 }
@@ -1137,8 +1139,10 @@ impl DustRouteMcp {
             params.include_block_list.unwrap_or(false),
             limit,
         );
-        let expansion = json!({"strategy":"explicit_work_region","limit_reached":false,
-            "scope":"complete requested cuboid; circuit and movement may extend beyond it"});
+        let expansion = ExpansionEvidence::ExplicitWorkRegion {
+            limit_reached: false,
+            scope: "complete requested cuboid; circuit and movement may extend beyond it",
+        };
         let content_id = snapshot.id();
         let circuit_id = self
             .store_circuit(StoredCircuit {
@@ -1159,7 +1163,7 @@ impl DustRouteMcp {
         result["player_observation"] = json!(observation);
         result["observation_capabilities"] = json!(self.bridge.observation_capabilities());
         result["readback"] = json!(record.readback);
-        result["expansion"] = expansion;
+        result["expansion"] = json!(expansion);
         result["mutation_authorized"] = json!(false);
         Ok(result)
     }
@@ -1242,15 +1246,14 @@ impl DustRouteMcp {
             .scan_region_shared(bounds.min, bounds.max, &dimension)
             .await
             .map_err(FailureCause::from)?;
-        let complete = !discovery.expansion.limit_reached;
+        let complete = !discovery.expansion.limit_reached();
         let circuit = StoredCircuit {
             player: player.to_owned(),
             dimension,
             bounds,
             target: Some(target),
             snapshot,
-            expansion: serde_json::to_value(&discovery.expansion)
-                .map_err(|e| FailureCause::new(CauseKind::Serialization, e.to_string()))?,
+            expansion: discovery.expansion,
             complete,
             expires_at: Instant::now() + CIRCUIT_SNAPSHOT_TTL,
         };
@@ -1744,7 +1747,7 @@ impl DustRouteMcp {
             )
             .await
         {
-            Ok(discovery) => json_text(discovery.response()),
+            Ok(discovery) => typed_text(discovery.response()),
             Err(error) => json_text(json!({"ok": false, "error": error})),
         }
     }
@@ -2138,10 +2141,7 @@ impl DustRouteMcp {
                 );
             }
         };
-        let discovered_components = circuit.expansion["components_loaded"]
-            .as_u64()
-            .and_then(|count| usize::try_from(count).ok())
-            .unwrap_or(0);
+        let discovered_components = circuit.expansion.components_loaded().unwrap_or(0);
         let request = match reverse_request_for_truth_table(
             bounds,
             TruthTableRequestOptions {
@@ -2877,11 +2877,11 @@ impl DustRouteMcp {
                         bounds,
                         target: None,
                         snapshot,
-                        expansion: json!({
-                            "strategy": "explicit_selected_region",
-                            "component_limit": null,
-                            "limit_reached": false
-                        }),
+                        expansion: ExpansionEvidence::ExplicitSelectedRegion {
+                            components_loaded: None,
+                            component_limit: None,
+                            limit_reached: false,
+                        },
                         complete: true,
                         expires_at: Instant::now() + CIRCUIT_SNAPSHOT_TTL,
                     })
@@ -2932,11 +2932,11 @@ impl DustRouteMcp {
                 bounds,
                 target: None,
                 snapshot: snapshot.clone(),
-                expansion: json!({
-                    "strategy": "explicit_selected_region",
-                    "component_limit": null,
-                    "limit_reached": false
-                }),
+                expansion: ExpansionEvidence::ExplicitSelectedRegion {
+                    components_loaded: None,
+                    component_limit: None,
+                    limit_reached: false,
+                },
                 complete: true,
                 expires_at: Instant::now() + CIRCUIT_SNAPSHOT_TTL,
             })
@@ -2980,12 +2980,11 @@ impl DustRouteMcp {
                 bounds,
                 &hierarchy,
                 Value::Null,
-                &json!({
-                    "strategy": "explicit_selected_region",
-                    "components_loaded": redstone_components,
-                    "component_limit": null,
-                    "limit_reached": false
-                }),
+                &ExpansionEvidence::ExplicitSelectedRegion {
+                    components_loaded: Some(redstone_components),
+                    component_limit: None,
+                    limit_reached: false,
+                },
                 None,
             );
             if let Some(object) = result.as_object_mut() {
@@ -5112,12 +5111,11 @@ impl DustRouteMcp {
                                 bounds,
                                 &hierarchy,
                                 Value::Null,
-                                &json!({
-                                    "strategy": "explicit_selected_region",
-                                    "components_loaded": redstone_components,
-                                    "component_limit": null,
-                                    "limit_reached": false
-                                }),
+                                &ExpansionEvidence::ExplicitSelectedRegion {
+                                    components_loaded: Some(redstone_components),
+                                    component_limit: None,
+                                    limit_reached: false,
+                                },
                                 None,
                             )
                         } else {
@@ -7338,7 +7336,7 @@ mod tests {
                     ),
                     target: None,
                     snapshot: service.bridge.share_snapshot(snapshot).unwrap(),
-                    expansion: json!({}),
+                    expansion: ExpansionEvidence::Unspecified {},
                     complete: true,
                     expires_at: Instant::now() + Duration::from_secs(300),
                 })
@@ -7473,7 +7471,7 @@ mod tests {
                 ),
                 target: None,
                 snapshot: service.bridge.share_snapshot(snapshot.clone()).unwrap(),
-                expansion: json!({}),
+                expansion: ExpansionEvidence::Unspecified {},
                 complete: true,
                 expires_at: Instant::now() + Duration::from_secs(300),
             })
@@ -8037,7 +8035,7 @@ mod tests {
                     bounds,
                     target: None,
                     snapshot: service.bridge.share_snapshot(snapshot).unwrap(),
-                    expansion: json!({}),
+                    expansion: ExpansionEvidence::Unspecified {},
                     complete: true,
                     expires_at: Instant::now() + std::time::Duration::from_secs(300),
                 })

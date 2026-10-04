@@ -18,16 +18,23 @@ repository remains the normalization, validation, and comparison boundary.
 The local probe runs with `online-mode=false`, so it does not require Microsoft
 authentication. An authenticated client or an online-mode server is not a requirement of this repository’s offline fixture validation.
 
-Validate an artifact with:
+Validate typed observations with `VanillaInstrumentationArtifact::validate()`.
+The standalone JSON validator has been retired; offline fixture decoding stays
+in tests, outside the normalization and validation APIs. Reproduce the retained
+fixture checks with:
 
 ```console
-cargo run -p dustroute-translate --example validate_vanilla_instrumentation -- \
-  path/to/vanilla-1.21.11-instrumentation.json
+cargo test --offline --locked -j1 -p dustroute-translate --test vanilla_instrumentation_fixture
 ```
 
 The validator rejects packet-only evidence, wrong Minecraft versions, retained
 absolute server ticks, unclaimed scheduler phases, backwards execution ticks,
-and stable Piston observations without a head state.
+and stable Piston observations without a head state. Block-state properties
+accept only strings, booleans and signed/unsigned 64-bit integers. Explicit null,
+arrays, objects and non-integer numeric representations are rejected, including
+when nested in Piston body/head/payload or neighbor-update targets. Rejections
+retain the offending property, value kind, state slot and owning coordinate
+when decoded as an event. Independently decoded states have no owner coordinate.
 
 ## Artifact contents
 

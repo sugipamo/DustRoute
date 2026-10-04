@@ -1,8 +1,8 @@
-use dustroute_translate::vanilla_instrumentation::parse_and_validate_instrumentation;
+use dustroute_translate::vanilla_instrumentation::VanillaInstrumentationArtifact;
 
 #[test]
 fn offline_piston_input_fixture_is_valid_and_fail_closed_about_scheduler_order() {
-    let artifact = parse_and_validate_instrumentation(include_str!(
+    let artifact = fixture_instrumentation(include_str!(
         "fixtures/vanilla_1_21_11_offline_piston_input.json"
     ))
     .expect("reviewed offline instrumentation fixture must satisfy the contract");
@@ -24,7 +24,7 @@ fn offline_piston_input_fixture_is_valid_and_fail_closed_about_scheduler_order()
 
 #[test]
 fn bounded_capture_fixture_keeps_signed_preroll_and_partial_streams() {
-    let artifact = parse_and_validate_instrumentation(include_str!(
+    let artifact = fixture_instrumentation(include_str!(
         "fixtures/vanilla_1_21_11_bounded_capture.json"
     ))
     .expect("bounded capture contract fixture must satisfy the validator");
@@ -33,4 +33,12 @@ fn bounded_capture_fixture_keeps_signed_preroll_and_partial_streams() {
     assert_eq!(artifact.state_events[0].game_tick, -2);
     assert_eq!(artifact.capture.as_ref().unwrap().sequence_gap_count, 3);
     assert!(!artifact.capture.as_ref().unwrap().sequence_contiguous);
+}
+
+fn fixture_instrumentation(
+    source: &str,
+) -> Result<VanillaInstrumentationArtifact, Box<dyn std::error::Error>> {
+    let value: VanillaInstrumentationArtifact = serde_json::from_str(source)?;
+    value.validate()?;
+    Ok(value)
 }

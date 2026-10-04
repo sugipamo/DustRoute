@@ -211,7 +211,6 @@ impl From<dustroute_translate::snapshot::SnapshotError> for FailureCause {
         use dustroute_translate::snapshot::SnapshotError::*;
         let mut cause = Self::new(CauseKind::ObservationIncomplete, error.to_string());
         match error {
-            Json(_) => cause.kind = CauseKind::Serialization,
             InvalidFacing { pos, .. } => cause.details.position = Some(pos),
             InvalidSnapshot(_) => {}
         }

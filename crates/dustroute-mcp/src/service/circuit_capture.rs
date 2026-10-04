@@ -5,7 +5,6 @@ use crate::performance::{Phase, span};
 use crate::{BotBridge, CircuitDiscovery, McpPolicy, discover_connected_region};
 use dustroute_physical::Pos;
 use serde::Serialize;
-use serde_json::{Value, json};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 pub(super) struct CircuitCapture<'a> {
@@ -13,14 +12,55 @@ pub(super) struct CircuitCapture<'a> {
     pub policy: &'a McpPolicy,
 }
 
-#[derive(Serialize)]
-pub(super) struct ExpansionEvidence {
-    strategy: &'static str,
-    components_loaded: usize,
-    component_limit: usize,
-    pub limit_reached: bool,
-    scanned_tiles: usize,
-    scanned_block_positions: usize,
+/// Acquisition facts stay typed in the circuit cache. This is descriptive
+/// evidence, not a fresh observation or permission to modify the region.
+#[derive(Clone, Debug, Serialize)]
+#[serde(tag = "strategy", rename_all = "snake_case")]
+pub(super) enum ExpansionEvidence {
+    AdjacentComponentFloodFill {
+        components_loaded: usize,
+        component_limit: usize,
+        limit_reached: bool,
+        scanned_tiles: usize,
+        scanned_block_positions: usize,
+    },
+    ExplicitWorkRegion {
+        limit_reached: bool,
+        scope: &'static str,
+    },
+    ExplicitSelectedRegion {
+        #[serde(skip_serializing_if = "Option::is_none")]
+        components_loaded: Option<usize>,
+        component_limit: Option<usize>,
+        limit_reached: bool,
+    },
+    #[cfg(test)]
+    #[serde(untagged)]
+    Unspecified {},
+}
+impl ExpansionEvidence {
+    pub(super) fn components_loaded(&self) -> Option<usize> {
+        match self {
+            Self::AdjacentComponentFloodFill {
+                components_loaded, ..
+            } => Some(*components_loaded),
+            Self::ExplicitSelectedRegion {
+                components_loaded, ..
+            } => *components_loaded,
+            Self::ExplicitWorkRegion { .. } => None,
+            #[cfg(test)]
+            Self::Unspecified {} => None,
+        }
+    }
+    pub(super) fn limit_reached(&self) -> bool {
+        match self {
+            Self::AdjacentComponentFloodFill { limit_reached, .. }
+            | Self::ExplicitWorkRegion { limit_reached, .. }
+            | Self::ExplicitSelectedRegion { limit_reached, .. } => *limit_reached,
+            #[cfg(test)]
+            Self::Unspecified {} => false,
+        }
+    }
 }
 
 pub(super) struct DiscoveryObservation {
@@ -29,11 +69,27 @@ pub(super) struct DiscoveryObservation {
     pub expansion: ExpansionEvidence,
 }
 impl DiscoveryObservation {
-    pub fn response(&self) -> Value {
-        json!({"ok": true, "candidate": self.candidate, "expansion": self.expansion,
-            "warning": self.expansion.limit_reached.then_some("the circuit exceeds the component limit; analysis is incomplete"),
-            "next_step": "call show_region and ask the player to confirm the highlighted candidate"})
+    pub fn response(&self) -> DiscoveryResponse<'_> {
+        DiscoveryResponse {
+            ok: true,
+            candidate: &self.candidate,
+            expansion: &self.expansion,
+            warning: self
+                .expansion
+                .limit_reached()
+                .then_some("the circuit exceeds the component limit; analysis is incomplete"),
+            next_step: "call show_region and ask the player to confirm the highlighted candidate",
+        }
     }
+}
+
+#[derive(Serialize)]
+pub(super) struct DiscoveryResponse<'a> {
+    ok: bool,
+    candidate: &'a CircuitDiscovery,
+    expansion: &'a ExpansionEvidence,
+    warning: Option<&'static str>,
+    next_step: &'static str,
 }
 
 #[derive(Debug)]
@@ -95,8 +151,7 @@ impl CircuitCapture<'_> {
         Ok(DiscoveryObservation {
             candidate,
             dimension: observation.dimension,
-            expansion: ExpansionEvidence {
-                strategy: "adjacent_component_flood_fill",
+            expansion: ExpansionEvidence::AdjacentComponentFloodFill {
                 components_loaded: scan.component_count,
                 component_limit: scan.component_limit,
                 limit_reached: scan.limit_reached,
@@ -327,4 +382,74 @@ pub(super) fn is_supported_redstone_name(name: &str) -> bool {
                 | "minecraft:piston"
                 | "minecraft:sticky_piston"
         )
+}
+
+#[cfg(test)]
+mod evidence_tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn unavailable_count_stays_distinct_from_an_observed_zero() {
+        let unknown = ExpansionEvidence::ExplicitSelectedRegion {
+            components_loaded: None,
+            component_limit: None,
+            limit_reached: false,
+        };
+        let empty = ExpansionEvidence::ExplicitSelectedRegion {
+            components_loaded: Some(0),
+            component_limit: None,
+            limit_reached: false,
+        };
+        assert_eq!(unknown.components_loaded(), None);
+        assert_eq!(empty.components_loaded(), Some(0));
+        let wire = serde_json::to_value(&unknown).unwrap();
+        assert_eq!(
+            wire,
+            json!({"strategy":"explicit_selected_region","component_limit":null,"limit_reached":false})
+        );
+        assert_eq!(
+            serde_json::to_value(&empty).unwrap()["components_loaded"],
+            0
+        );
+        assert!(!unknown.limit_reached());
+    }
+
+    #[test]
+    fn incomplete_discovery_preserves_its_counts_and_public_field_names() {
+        let evidence = ExpansionEvidence::AdjacentComponentFloodFill {
+            components_loaded: 128,
+            component_limit: 128,
+            limit_reached: true,
+            scanned_tiles: 7,
+            scanned_block_positions: 400,
+        };
+        assert_eq!(evidence.components_loaded(), Some(128));
+        assert!(evidence.limit_reached());
+        assert_eq!(
+            serde_json::to_value(evidence).unwrap(),
+            json!({
+                "strategy":"adjacent_component_flood_fill","components_loaded":128,
+                "component_limit":128,"limit_reached":true,"scanned_tiles":7,
+                "scanned_block_positions":400
+            })
+        );
+    }
+
+    #[test]
+    fn work_region_does_not_claim_circuit_discovery_counts() {
+        let evidence = ExpansionEvidence::ExplicitWorkRegion {
+            limit_reached: false,
+            scope: "complete requested cuboid; circuit and movement may extend beyond it",
+        };
+        assert_eq!(evidence.components_loaded(), None);
+        assert!(!evidence.limit_reached());
+        assert_eq!(
+            serde_json::to_value(evidence).unwrap(),
+            json!({
+                "strategy":"explicit_work_region","limit_reached":false,
+                "scope":"complete requested cuboid; circuit and movement may extend beyond it"
+            })
+        );
+    }
 }

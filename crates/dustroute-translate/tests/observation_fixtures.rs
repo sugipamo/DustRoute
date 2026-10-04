@@ -2,9 +2,8 @@ use dustroute_ir::derive_hierarchy;
 use dustroute_physical::{BlockKind, CapabilityLevel, CapabilityStage, Pos};
 use dustroute_translate::{
     api::ReverseRequest, api::Translator, connectivity::extract_connectivity,
-    electrical::DeviceOutputState, electrical::solve_instantaneous,
-    snapshot::world_from_snapshot_json, world_reverse::RegionBounds,
-    world_reverse::analyze_world_region,
+    electrical::DeviceOutputState, electrical::solve_instantaneous, snapshot::world_from_snapshot,
+    world_reverse::RegionBounds, world_reverse::analyze_world_region,
 };
 
 fn load(
@@ -13,7 +12,10 @@ fn load(
     dustroute_translate::snapshot::MinecraftSnapshot,
     dustroute_translate::world::World,
 ) {
-    world_from_snapshot_json(source).expect("fixture must be a valid lossless observation")
+    let snapshot = serde_json::from_str(source).expect("fixture must be valid snapshot data");
+    let world =
+        world_from_snapshot(&snapshot).expect("fixture must be a valid lossless observation");
+    (snapshot, world)
 }
 
 fn analyze(source: &str) -> dustroute_translate::world_reverse::RegionAnalysis {
