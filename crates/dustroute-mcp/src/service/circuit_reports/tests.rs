@@ -5,6 +5,74 @@ use super::super::test_support::{
 use super::super::*;
 
 #[tokio::test]
+async fn all_session_authorization_entries_preserve_cause_and_pending_state() {
+    use dustroute_translate::{snapshot::MinecraftSnapshot, world_reverse::RegionBounds};
+    let root = temporary();
+    let mut service =
+        DustRouteMcp::with_test_transport_and_player("127.0.0.1:1", McpPolicy::default(), "Tester");
+    service.state_store = PlanStateStore::new(root.clone(), 3600);
+    assert!(service.authorize_player("Tester").is_ok());
+    service.policy.allowed_players = ["AnotherPlayer".into()].into();
+    let cause = service.authorize_player("Tester").unwrap_err();
+    let expected = decode_reply(&legacy_cause_reply(cause.clone())).unwrap();
+    assert_eq!(cause.phase, Some(FailurePhase::Admission));
+    assert_eq!(cause.details.resource.as_deref(), Some("player:Tester"));
+    let bounds = RegionBounds::new(Pos::new(0, 0, 0), Pos::new(1, 1, 1));
+    service.selections.lock().await.insert(
+        "Tester".into(),
+        LocatedSelection::with_bounds("Tester", bounds, "minecraft:overworld".into()),
+    );
+    let world = dustroute_translate::world::World::new();
+    let checked = dustroute_translate::world::ValidatedWorld::try_from(world.clone()).unwrap();
+    let plan = plan_world_overlay(&world, &checked, Pos::new(0, 0, 0), 1).unwrap();
+    let id = plan.operation_id;
+    let snapshot = MinecraftSnapshot {
+        min: bounds.min,
+        max: bounds.max,
+        blocks: vec![],
+    };
+    service.plans.placements().lock().await.insert(
+        plan,
+        "minecraft:overworld".into(),
+        Some(RevisionPlacementContext {
+            player: "Other".into(),
+            dimension: "minecraft:overworld".into(),
+            version: "1.21.11".into(),
+            before: snapshot.clone(),
+            after: snapshot,
+            expires_at: Instant::now() - Duration::from_secs(1),
+            lifecycle: RevisionLifecycle::Planned,
+        }),
+    );
+    let replies = [
+        service.get_player_gaze(Parameters(serde_json::from_value(json!({"max_distance":0})).unwrap())).await,
+        service.set_region(Parameters(serde_json::from_value(json!({"corner":"invalid"})).unwrap())).await,
+        service.resolve_looked_at_circuit(Parameters(serde_json::from_value(json!({"max_components":0})).unwrap())).await,
+        service.show_region(Parameters(serde_json::from_value(json!({})).unwrap())).await,
+        service.convert_from_circuit(Parameters(serde_json::from_value(json!({"scope":"selected_region","include_truth_table":true,"truth_table_max_inputs":0})).unwrap())).await,
+        service.show_operation(Parameters(serde_json::from_value(json!({"operation_id":id})).unwrap())).await,
+        service.clear_region(Parameters(serde_json::from_value(json!({})).unwrap())).await,
+    ];
+    for reply in replies {
+        assert_eq!(reply.is_error, Some(true));
+        assert_eq!(decode_reply(&reply).unwrap(), expected);
+    }
+    let selected = service.selections.lock().await;
+    let selected = selected.get("Tester").unwrap();
+    assert_eq!(selected.session.bounds().unwrap(), bounds);
+    assert_eq!(selected.dimension.as_deref(), Some("minecraft:overworld"));
+    let plans = service.plans.placements().lock().await;
+    assert!(!plans.get(&id).unwrap().previewed);
+    assert_eq!(
+        plans.revision(&id).unwrap().lifecycle,
+        RevisionLifecycle::Planned
+    );
+    assert!(service.operations.list().await.is_empty());
+    assert!(service.circuits.lock().await.is_empty());
+    assert!(!root.exists());
+}
+
+#[tokio::test]
 async fn conversion_and_focused_health_preserve_absence_and_discovery_limits() {
     use dustroute_translate::snapshot::MinecraftSnapshot;
     use dustroute_translate::world_reverse::RegionBounds;
@@ -366,9 +434,10 @@ async fn player_override_keeps_known_cause_and_legacy_message_distinct() {
         let message = "player override is not allowed; configured assist player is \"Tester\"";
         let expected = if code == "permission_denied" {
             // Original boundary encoded the native cause, including no assigned phase.
-            decode_reply(&json_reply(
-                json!({"ok":false,"error":FailureCause::new(CauseKind::PermissionDenied, message)}),
-            ))
+            decode_reply(&legacy_cause_reply(FailureCause::new(
+                CauseKind::PermissionDenied,
+                message,
+            )))
             .unwrap()
         } else {
             decode_reply(&json_reply(json!({"ok":false,"error":message}))).unwrap()

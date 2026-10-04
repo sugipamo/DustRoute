@@ -2,11 +2,18 @@
 use super::*;
 use crate::blueprint_mcp::{Command, Response};
 
-#[derive(Debug, Serialize)]
-#[serde(untagged)]
+#[derive(Debug)]
 pub(super) enum BlueprintCommandResponse {
     Blueprint(Box<Response>),
-    PermissionDenied { ok: bool, error: FailureCause },
+    PermissionDenied(FailureCause),
+}
+impl Serialize for BlueprintCommandResponse {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self {
+            Self::Blueprint(response) => response.serialize(serializer),
+            Self::PermissionDenied(cause) => cause.as_response().serialize(serializer),
+        }
+    }
 }
 impl BlueprintCommandResponse {
     fn failure(message: impl ToString) -> Self {
@@ -26,10 +33,9 @@ impl DustRouteMcp {
             Err(error) => return required.then(|| BlueprintCommandResponse::failure(error)),
         };
         if let Err(error) = self.player_scope().authorize(&player) {
-            return Some(BlueprintCommandResponse::PermissionDenied {
-                ok: false,
-                error: error.at(FailurePhase::Admission),
-            });
+            return Some(BlueprintCommandResponse::PermissionDenied(
+                error.at(FailurePhase::Admission),
+            ));
         }
         let store = self.state_store.clone();
         match tokio::task::spawn_blocking(move || {
@@ -73,9 +79,13 @@ mod tests {
             .blueprint_command(Command::Read(BlueprintRead::Archive), None, true)
             .await
             .unwrap();
+        let expected = super::super::test_support::decode_reply(&legacy_cause_reply(
+            FailureCause::from(service.policy.authorize_player("builder").unwrap_err())
+                .at(FailurePhase::Admission),
+        ))
+        .unwrap();
         match &response {
-            BlueprintCommandResponse::PermissionDenied { ok, error } => {
-                assert!(!ok);
+            BlueprintCommandResponse::PermissionDenied(error) => {
                 assert_eq!(error.kind, CauseKind::PermissionDenied);
                 assert_eq!(error.phase, Some(FailurePhase::Admission));
             }
@@ -83,6 +93,7 @@ mod tests {
         }
         let public: Value =
             super::super::test_support::decode_reply(&typed_reply(response)).unwrap();
+        assert_eq!(public, expected);
         assert_eq!(public["ok"], false);
         assert_eq!(public["error_code"], "permission_denied");
         assert_eq!(public["failure"]["progress"], Value::Null);

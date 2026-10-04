@@ -23,10 +23,15 @@ mod construction_batch_live_test;
 mod construction_executor;
 mod construction_job;
 mod electrical_edit;
+mod mcp_output;
 mod optimization_workflow;
 mod placement_workflow;
 mod player_scope;
+#[cfg(test)]
+use mcp_output::legacy_cause_reply;
+use mcp_output::{error_reply, json_reply, typed_reply};
 mod repair_workflow;
+mod session_reports;
 #[cfg(feature = "voxrig")]
 mod survival;
 mod world_editor;
@@ -101,8 +106,8 @@ use rmcp::{
         wrapper::Parameters,
     },
     model::{
-        CallToolResult, ContentBlock, GetPromptResult, Implementation, PromptMessage, Role,
-        ServerCapabilities, ServerInfo,
+        CallToolResult, GetPromptResult, Implementation, PromptMessage, Role, ServerCapabilities,
+        ServerInfo,
     },
     prompt, prompt_handler, prompt_router, tool, tool_handler, tool_router,
 };
@@ -424,90 +429,6 @@ fn optimization_contract_from_param(
     Ok(contract)
 }
 
-fn typed_reply(value: impl Serialize) -> CallToolResult {
-    match serde_json::to_value(value) {
-        Ok(value) => json_reply(value),
-        Err(error) => json_reply(FailureCause::from(error).response()),
-    }
-}
-
-fn json_reply(value: Value) -> CallToolResult {
-    let response = encode_response(value);
-    let content = vec![ContentBlock::text(response.text)];
-    if response.failed {
-        CallToolResult::error(content)
-    } else {
-        CallToolResult::success(content)
-    }
-}
-
-/// Outcome stays separate from its final MCP text representation. Legacy
-/// authorization paths still consume the text until their workflows are typed.
-struct EncodedResponse {
-    text: String,
-    failed: bool,
-}
-
-fn encode_response(mut value: Value) -> EncodedResponse {
-    let measurement = crate::performance::span(crate::performance::Phase::ResponseEncode);
-    if value.get("ok") == Some(&Value::Bool(false))
-        && let Some(object) = value.as_object_mut()
-    {
-        // Only a typed cause is promoted; arbitrary strings remain unknown.
-        if !object.contains_key("failure")
-            && let Some(cause) = object
-                .get("error")
-                .cloned()
-                .and_then(|value| serde_json::from_value::<FailureCause>(value).ok())
-        {
-            object.extend(
-                cause
-                    .response()
-                    .as_object()
-                    .expect("diagnostic object")
-                    .clone(),
-            );
-        }
-        object
-            .entry("schema_version")
-            .or_insert_with(|| Value::String(crate::api::ERROR_SCHEMA_V1.to_owned()));
-        object
-            .entry("error_code")
-            .or_insert_with(|| Value::String("internal".to_owned()));
-        object.entry("retryable").or_insert(Value::Bool(false));
-        // Legacy String-only boundaries have no trustworthy execution facts.
-        // Preserve that absence rather than manufacturing zero writes or a phase.
-        if !object.contains_key("failure") {
-            let kind = match object.get("error_code").and_then(Value::as_str) {
-                Some("invalid_argument") => CauseKind::InvalidInput,
-                Some("invalid_state") => CauseKind::InvalidState,
-                Some("not_found") => CauseKind::NotFound,
-                Some("permission_denied") => CauseKind::PermissionDenied,
-                Some("observation_unavailable") => CauseKind::ObservationUnavailable,
-                Some("verification_failed") => CauseKind::VerificationMismatch,
-                Some("serialization_failed") => CauseKind::Serialization,
-                Some("unsupported") => CauseKind::Unsupported,
-                Some("resource_limit") => CauseKind::ResourceLimit,
-                Some("persistence_failed") => CauseKind::Persistence,
-                _ => CauseKind::Unknown,
-            };
-            let message = object
-                .get("error")
-                .and_then(Value::as_str)
-                .unwrap_or("operation failed without a diagnostic");
-            object.insert("failure".into(),json!({"primary":FailureCause::new(kind,message).at(FailurePhase::Unknown),"secondary":[],"progress":null}));
-            object.insert("recovery".into(),json!({"reobserve_required":null,"replan_required":null,"inspect_saved_record":null,"same_operation_replay_allowed":false}));
-        }
-    }
-    let failed = value.get("ok") == Some(&Value::Bool(false));
-    let (text, failed) = match serde_json::to_string_pretty(&value) {
-        Ok(text) => (text, failed),
-        Err(error) => (FailureCause::from(error).response().to_string(), true),
-    };
-    drop(measurement.bytes(text.len()));
-    EncodedResponse { text, failed }
-}
-
 /// Convert an already decoded bridge snapshot directly into the simulator
 /// world.  Bridge responses are typed before they reach the service, so
 /// serializing them to JSON and parsing the same JSON again only adds copying
@@ -577,17 +498,6 @@ fn snapshot_from_grounded_assembly(
         });
     }
     Ok(dustroute_translate::snapshot::MinecraftSnapshot { min, max, blocks })
-}
-
-// Application workflows return structured reports. Only the MCP facade adds
-// text framing and default tool error metadata.
-fn workflow_error(code: McpErrorCode, message: impl Into<String>, retryable: bool) -> Value {
-    serde_json::to_value(ErrorResponse::new(code, message, retryable))
-        .unwrap_or_else(|e| json!({"ok":false,"error":format!("failed to encode error: {e}")}))
-}
-
-fn error_reply(code: McpErrorCode, message: impl Into<String>, retryable: bool) -> CallToolResult {
-    json_reply(workflow_error(code, message, retryable))
 }
 
 fn transition_contracts(
@@ -895,11 +805,10 @@ impl DustRouteMcp {
         self.player_scope().resolve(requested)
     }
 
-    fn authorize_player(&self, player: &str) -> Option<String> {
-        self.policy
-            .authorize_player(player)
-            .err()
-            .map(|error| encode_response(json!({ "ok": false, "error": FailureCause::from(error).at(FailurePhase::Admission) })).text)
+    fn authorize_player(&self, player: &str) -> Result<(), FailureCause> {
+        self.player_scope()
+            .authorize(player)
+            .map_err(|cause| cause.at(FailurePhase::Admission))
     }
 
     async fn placement_view(&self, id: uuid::Uuid) -> Result<PlacementPlan, String> {
@@ -1447,7 +1356,7 @@ impl DustRouteMcp {
                 "policy": self.policy,
                 "observation_capabilities": self.bridge.observation_capabilities()
             })),
-            Err(error) => json_reply(json!({ "ok": false, "error": FailureCause::from(error) })),
+            Err(error) => typed_reply(FailureCause::from(error).as_response()),
         }
     }
 
@@ -1481,18 +1390,21 @@ impl DustRouteMcp {
                             && self.policy.authorize_dimension(&player.dimension).is_ok()
                     })
                     .collect::<Vec<_>>();
-                let mut result = json!({
-                    "ok": reacquire_error.is_none(),
-                    "players": players,
-                    "assist_player": self.assist_player,
-                    "reacquire_error": reacquire_error.as_ref().map(ToString::to_string)
-                });
-                if let Some(cause) = reacquire_error {
-                    result["error"] = json!(cause);
-                }
-                json_reply(result)
+                typed_reply(session_reports::VisiblePlayers {
+                    outcome: match reacquire_error.as_ref() {
+                        None => session_reports::VisibilityOutcome::Visible { ok: Success },
+                        Some(cause) => {
+                            session_reports::VisibilityOutcome::Failed(cause.as_response())
+                        }
+                    },
+                    players,
+                    assist_player: &self.assist_player,
+                    reacquire_error: reacquire_error
+                        .as_ref()
+                        .map(session_reports::DiagnosticText),
+                })
             }
-            Err(error) => json_reply(json!({ "ok": false, "error": FailureCause::from(error) })),
+            Err(error) => typed_reply(FailureCause::from(error).as_response()),
         }
     }
 
@@ -1506,10 +1418,10 @@ impl DustRouteMcp {
     ) -> CallToolResult {
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
-            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
+            Err(error) => return typed_reply(error.as_response()),
         };
-        if let Some(error) = self.authorize_player(&player) {
-            return CallToolResult::error(vec![ContentBlock::text(error)]);
+        if let Err(error) = self.authorize_player(&player) {
+            return typed_reply(error.as_response());
         }
         match self
             .bridge
@@ -1518,11 +1430,9 @@ impl DustRouteMcp {
         {
             Ok(observation) => match self.policy.authorize_dimension(&observation.dimension) {
                 Ok(()) => json_reply(json!({ "ok": true, "observation": observation })),
-                Err(error) => {
-                    json_reply(json!({ "ok": false, "error": FailureCause::from(error) }))
-                }
+                Err(error) => typed_reply(FailureCause::from(error).as_response()),
             },
-            Err(error) => json_reply(json!({ "ok": false, "error": FailureCause::from(error) })),
+            Err(error) => typed_reply(FailureCause::from(error).as_response()),
         }
     }
 
@@ -1651,10 +1561,10 @@ impl DustRouteMcp {
     async fn set_region(&self, Parameters(params): Parameters<MarkCornerParams>) -> CallToolResult {
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
-            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
+            Err(error) => return typed_reply(error.as_response()),
         };
-        if let Some(error) = self.authorize_player(&player) {
-            return CallToolResult::error(vec![ContentBlock::text(error)]);
+        if let Err(error) = self.authorize_player(&player) {
+            return typed_reply(error.as_response());
         }
         let observation = match self
             .bridge
@@ -1663,7 +1573,7 @@ impl DustRouteMcp {
         {
             Ok(observation) => observation,
             Err(error) => {
-                return json_reply(json!({ "ok": false, "error": FailureCause::from(error) }));
+                return typed_reply(FailureCause::from(error).as_response());
             }
         };
         let Some(target) = observation.targeted_block else {
@@ -1672,36 +1582,47 @@ impl DustRouteMcp {
             );
         };
         if let Err(error) = self.policy.authorize_dimension(&observation.dimension) {
-            return json_reply(json!({ "ok": false, "error": FailureCause::from(error) }));
+            return typed_reply(FailureCause::from(error).as_response());
         }
         let mut selections = self.selections.lock().await;
         let selected = selections
             .entry(player.clone())
             .or_insert_with(|| LocatedSelection::new(&player));
+        use session_reports::{Corner, CornerResponse, MarkedCorner};
         let result = match params.corner.as_str() {
             "first" => {
                 selected.session.mark_first(target);
                 selected.dimension = Some(observation.dimension.clone());
-                json!({ "ok": true, "corner": "first", "position": target })
+                CornerResponse::Marked(MarkedCorner {
+                    ok: Success,
+                    corner: Corner::First,
+                    position: target,
+                    bounds: None,
+                })
             }
             "second" => match selected
                 .dimension
                 .as_ref()
                 .filter(|dimension| *dimension == &observation.dimension)
             {
-                None => {
-                    json!({ "ok": false, "error": "player changed dimension between region corners" })
-                }
+                None => CornerResponse::Failed(UnrecordedFailure::message(
+                    "player changed dimension between region corners",
+                )),
                 Some(_) => match selected.session.mark_second(target) {
-                    Ok(bounds) => {
-                        json!({ "ok": true, "corner": "second", "position": target, "bounds": bounds_json(bounds) })
-                    }
-                    Err(error) => json!({ "ok": false, "error": FailureCause::from(error) }),
+                    Ok(bounds) => CornerResponse::Marked(MarkedCorner {
+                        ok: Success,
+                        corner: Corner::Second,
+                        position: target,
+                        bounds: Some(bounds),
+                    }),
+                    Err(error) => CornerResponse::Failed(FailureCause::from(error).into()),
                 },
             },
-            _ => json!({ "ok": false, "error": "corner must be first or second" }),
+            _ => {
+                CornerResponse::Failed(UnrecordedFailure::message("corner must be first or second"))
+            }
         };
-        json_reply(result)
+        typed_reply(result)
     }
 
     #[tool(
@@ -1713,10 +1634,10 @@ impl DustRouteMcp {
     ) -> CallToolResult {
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
-            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
+            Err(error) => return typed_reply(error.as_response()),
         };
-        if let Some(error) = self.authorize_player(&player) {
-            return CallToolResult::error(vec![ContentBlock::text(error)]);
+        if let Err(error) = self.authorize_player(&player) {
+            return typed_reply(error.as_response());
         }
         match self
             .discover_selection(
@@ -1728,7 +1649,7 @@ impl DustRouteMcp {
             .await
         {
             Ok(discovery) => typed_reply(discovery.response()),
-            Err(error) => json_reply(json!({"ok": false, "error": error})),
+            Err(error) => typed_reply(error.as_response()),
         }
     }
 
@@ -2681,17 +2602,17 @@ impl DustRouteMcp {
     async fn show_region(&self, Parameters(params): Parameters<PlayerParams>) -> CallToolResult {
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
-            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
+            Err(error) => return typed_reply(error.as_response()),
         };
-        if let Some(error) = self.authorize_player(&player) {
-            return CallToolResult::error(vec![ContentBlock::text(error)]);
+        if let Err(error) = self.authorize_player(&player) {
+            return typed_reply(error.as_response());
         }
         let (bounds, dimension) = match self.selected_region(&player).await {
             Ok(region) => region,
-            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
+            Err(error) => return typed_reply(error.as_response()),
         };
         if let Err(error) = self.policy.validate_region(bounds) {
-            return json_reply(json!({ "ok": false, "error": FailureCause::from(error) }));
+            return typed_reply(FailureCause::from(error).as_response());
         }
         match self
             .bridge
@@ -2706,9 +2627,7 @@ impl DustRouteMcp {
                 {
                     Ok(snapshot) => snapshot,
                     Err(error) => {
-                        return json_reply(
-                            json!({ "ok": false, "error": FailureCause::from(error) }),
-                        );
+                        return typed_reply(FailureCause::from(error).as_response());
                     }
                 };
                 let mechanisms = self.observed_mechanisms(&snapshot, true, &dimension).await;
@@ -2738,7 +2657,7 @@ impl DustRouteMcp {
                     "mechanisms": mechanisms
                 }))
             }
-            Err(error) => json_reply(json!({ "ok": false, "error": FailureCause::from(error) })),
+            Err(error) => typed_reply(FailureCause::from(error).as_response()),
         }
     }
 
@@ -2747,8 +2666,8 @@ impl DustRouteMcp {
             Ok(player) => player,
             Err(error) => return typed_reply(error.as_response()),
         };
-        if let Some(error) = self.authorize_player(&player) {
-            return CallToolResult::error(vec![ContentBlock::text(error)]);
+        if let Err(error) = self.authorize_player(&player) {
+            return typed_reply(error.as_response());
         }
         let (bounds, dimension) = match self.selected_region(&player).await {
             Ok(region) => region,
@@ -5367,10 +5286,10 @@ impl DustRouteMcp {
         if let Some(context) = revision_context {
             let player = match self.resolve_player(params.player.as_deref()) {
                 Ok(player) => player,
-                Err(error) => return json_reply(json!({"ok":false,"error":error})),
+                Err(error) => return typed_reply(error.as_response()),
             };
-            if let Some(error) = self.authorize_player(&player) {
-                return CallToolResult::error(vec![ContentBlock::text(error)]);
+            if let Err(error) = self.authorize_player(&player) {
+                return typed_reply(error.as_response());
             }
             if context.player != player
                 || !context.lifecycle.can_begin(false)
@@ -5668,10 +5587,29 @@ impl DustRouteMcp {
             }
             Ok(None) => {}
         }
-        let mut result = match self.operations.get(operation_id).await {
-            Some(operation) => json!({"ok":true,"operation":operation}),
+        #[derive(Serialize)]
+        #[serde(untagged)]
+        enum Query {
+            Record {
+                ok: Success,
+                operation: Box<crate::operations::OperationRecord>,
+            },
+            Active {
+                ok: Success,
+                operation_id: uuid::Uuid,
+            },
+            Missing(ErrorResponse),
+        }
+        let result = match self.operations.get(operation_id).await {
+            Some(operation) => Query::Record {
+                ok: Success,
+                operation: Box::new(operation),
+            },
             None if activity.is_some() && self.plans.kind(&operation_id).await.is_some() => {
-                json!({"ok":true,"operation_id":operation_id})
+                Query::Active {
+                    ok: Success,
+                    operation_id,
+                }
             }
             None => {
                 if let Some(response) = self
@@ -5685,16 +5623,23 @@ impl DustRouteMcp {
                     return typed_reply(blueprints::ResponseWithActivity { response, activity });
                 }
                 if activity.is_some() {
-                    json!({"ok":true,"operation_id":operation_id})
+                    Query::Active {
+                        ok: Success,
+                        operation_id,
+                    }
                 } else {
-                    workflow_error(McpErrorCode::NotFound, "unknown operation ID", false)
+                    Query::Missing(ErrorResponse::new(
+                        McpErrorCode::NotFound,
+                        "unknown operation ID",
+                        false,
+                    ))
                 }
             }
         };
-        if let Some(activity) = activity {
-            result["activity"] = json!(activity);
-        }
-        json_reply(result)
+        typed_reply(WithActivity {
+            response: result,
+            activity,
+        })
     }
 
     #[tool(
@@ -5718,10 +5663,10 @@ impl DustRouteMcp {
     async fn clear_region(&self, Parameters(params): Parameters<PlayerParams>) -> CallToolResult {
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
-            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
+            Err(error) => return typed_reply(error.as_response()),
         };
-        if let Some(error) = self.authorize_player(&player) {
-            return CallToolResult::error(vec![ContentBlock::text(error)]);
+        if let Err(error) = self.authorize_player(&player) {
+            return typed_reply(error.as_response());
         }
         if let Some(session) = self.selections.lock().await.get_mut(&player) {
             session.session.clear();

@@ -427,9 +427,8 @@ mod tests {
         assert!(cause.details.reconstruction_issue.is_some());
         assert_eq!(cause.details.recovery_chunks.len(), 64);
         assert!(cause.details.recovery_chunks_truncated);
-        let response = crate::failure::ExecutionProgress::default()
-            .cause(cause)
-            .response();
+        let report = crate::failure::ExecutionProgress::default().cause(cause);
+        let response = serde_json::to_value(report.as_response()).unwrap();
         assert_eq!(
             response["failure"]["primary"]["kind"],
             "observation_incomplete"

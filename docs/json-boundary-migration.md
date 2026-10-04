@@ -1426,3 +1426,63 @@ focused診断/回路表示各1件、truth-tableの追加3件。重複するident
 workspace全targetとMCPの`--no-default-features`全targetのClippyは`-D warnings`に成功し、
 `cargo fmt --all -- --check`と`git diff --check`も成功した。Cargoは単独offline/locked・
 `-j1`、試験は単一threadで実行した。
+
+### 認可・拒否原因・session表示のnative接続
+
+`authorize_player`はJSON textではなく`Result<(), FailureCause>`を返す。gaze取得、
+region選択/表示/解除、回路発見、selected-region解析、revision配置previewの7入口を
+nativeな認可原因へ接続した。phase=admission、resource、未取得のprogress、再送禁止を
+維持し、認可条件とその検査順序は変えない。
+
+MCPの最終codecを`service/mcp_output`へ明示した。既知の原因は各入口でnativeな
+`CauseResponse`へ投影し、productionでJSONのerrorからFailureCauseを復元する経路を除去した。
+Blueprintの認可拒否も、この暗黙の復元に依存していたためnative serializerで投影する。
+JSON errorの分類も最終codec内に移した。coreのFailureCause/FailureReportからValue応答と
+objectへのattach helperを除去し、診断・進捗の型はJSONに依存しない。
+
+visible-playerのrefresh失敗では、フィルタ済みの現在のplayersとnative原因を両方保持する。
+reacquire_errorの人間向け文字列化はserializerでだけ行い、成功時のnullを維持する。
+選択cornerの成功/拒否、通常operation queryの記録/active-only/不在もnativeに組み立てる。
+active-onlyを実行完了とせず、live activityを保存済み履歴の代用にしない。history、registry、
+plan、Blueprintの照会順序は維持する。
+
+旧Cause昇格は公開境界の比較専用adapter（cfg(test)）に限り残し、productionでは使わない。
+新しい7入口の試験は、許可されたnative認可から拒否への変更と全拒否応答の一致を確認する。
+拒否時には既存selectionを解除せず、preview/lifecycleを変えず、bridge・保存へ進まない。
+不正corner/要求値、期限切れ/別ownerのcontextより、元の順番通り認可拒否を先に返す。
+既存のBlueprint認可試験も旧応答全体と一致する。
+
+関連35件のoffline試験が成功した（circuit_reports 13、Blueprint認可1、failure 6、
+MCP codec/unknown/envelope 4、operation diagnostics 7、MCP経由のstatus/gaze・変換と
+共通拒否4）。workspace全targetのClippyは`-D warnings`に成功した。
+Voxrig source/vendor/pin、保存schema、設計図の採用条件、実機接続・ワールドは変更していない。
+
+### 次の分岐点: Blueprint要求の4 MiB制限（未着手）
+
+`blueprint_mcp::perform`の`Command::Write`は、nativeなBlueprintWriteをJSON化し、
+そのbyte数で4 MiB制限を判定している（現在の`blueprint_mcp.rs:721`）。ここは
+最終MCP codecではなく、catalogのlock・読込み後に呼ばれる内部処理であり、残存するJSON依存。
+保存archiveの16 MiB制限は既にnative storage符号化の実byte数で検査しており、別の条件である。
+
+この残存箇所の移行は、MCP側と内部処理の責務を明示し直す必要があるため未着手とした。
+JSONとnative archiveは、escaping、field名、数値やenumの表現が違うので、単にstorageの
+byte数へ置き換えると4 MiB境界で受け付ける要求が変わる。また、先に入力を拒否するだけでは、
+現在のlock/保存物の拒否とサイズ拒否の優先順が変わる。
+
+推奨する具体案:
+
+- 公開MCP入力境界で、従来と同じBlueprintWriteのJSON wire表現のbyte数を計測する。
+  JSON利用は許可されたMCP境界だけに留める。
+- 計測結果または計測失敗を、対応するimmutableな要求本体と組にしたRust型で内部へ渡す。
+  任意のサイズを外部から指定したり、保存済みの値を要求の受付根拠として復元したりしない。
+- 内部の`perform`はJSONへencodeせず、従来と同じlock/読込み後の位置で4 MiBを判定する。
+  この入力規模の記録を、設計図の採用・観測・配置の証明として扱わない。
+- 上限ちょうど/超過、UTF-8とescapeを含む要求、計測失敗、lock/破損保存物との拒否優先順を
+  公開境界で確認する。4 MiBと16 MiBの条件を混ぜない。
+
+ご指定の「責務移動・正当性条件の変更・範囲選択の分岐点は改修前に停止」に従い、
+この型と境界の変更への承認を求める。ゴール全体の達成は未証明で、全体監査も継続対象である。
+
+最終版でMCPの`--no-default-features`全targetのClippyも`-D warnings`に成功した。
+`cargo fmt --all -- --check`と`git diff --check`が成功し、Cargoは単独offline/locked・
+`-j1`、試験は単一threadで実行した。4 MiBの判断・計測位置は変更していない。

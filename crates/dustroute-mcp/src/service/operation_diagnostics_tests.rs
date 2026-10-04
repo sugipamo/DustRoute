@@ -576,7 +576,7 @@ async fn analysis_admission_matches_legacy_boundary_before_creating_work() {
             test_support::decode_reply(&error_reply(McpErrorCode::InvalidArgument, error, false))
                 .unwrap()
         } else {
-            test_support::decode_reply(&json_reply(json!({"ok":false,"error":cause}))).unwrap()
+            test_support::decode_reply(&legacy_cause_reply(cause)).unwrap()
         };
         let reply = service
             .start_selected_region_conversion(Parameters(serde_json::from_value(args).unwrap()))

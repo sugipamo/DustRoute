@@ -7,7 +7,6 @@ pub use response::{
 
 use dustroute_physical::Pos;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use std::fmt::{Display, Formatter};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -135,10 +134,6 @@ impl FailureCause {
             phase: None,
         }
     }
-    /// Diagnostics without execution facts must not invent zero world changes.
-    pub fn response(&self) -> Value {
-        serde_json::to_value(self.as_response()).expect("failure facts are serializable")
-    }
     pub fn input_range(parameter: &str, actual: f64, min: f64, max: f64) -> Self {
         let mut cause = Self::new(
             CauseKind::InvalidInput,
@@ -242,11 +237,6 @@ impl From<crate::discovery::DiscoveryError> for FailureCause {
 impl From<crate::selection::SelectionError> for FailureCause {
     fn from(error: crate::selection::SelectionError) -> Self {
         Self::new(CauseKind::InvalidState, error.to_string())
-    }
-}
-impl From<serde_json::Error> for FailureCause {
-    fn from(error: serde_json::Error) -> Self {
-        Self::new(CauseKind::Serialization, error.to_string())
     }
 }
 impl From<dustroute_app::PlanningError> for FailureCause {
@@ -444,17 +434,6 @@ impl Display for FailureReport {
 }
 impl std::error::Error for FailureReport {}
 impl FailureReport {
-    pub fn response(&self) -> Value {
-        serde_json::to_value(self.as_response()).expect("failure facts are serializable")
-    }
-    pub fn attach(&self, response: &mut Value) {
-        let extra = self.response();
-        if let (Some(target), Some(fields)) = (response.as_object_mut(), extra.as_object()) {
-            for (key, value) in fields {
-                target.insert(key.clone(), value.clone());
-            }
-        }
-    }
     pub fn append(
         progress: &ExecutionProgress,
         report: &mut Option<Self>,
@@ -518,7 +497,10 @@ mod tests {
             ..Default::default()
         }
         .cause(FailureCause::new(CauseKind::Timeout, "read timed out"));
-        assert_eq!(report.response()["recovery"]["reobserve_required"], true);
+        assert_eq!(
+            serde_json::to_value(report.as_response()).unwrap()["recovery"]["reobserve_required"],
+            true
+        );
         assert_eq!(report.progress.world, WorldOutcome::NotAttempted);
     }
     #[test]
@@ -531,12 +513,12 @@ mod tests {
                 maximum: 32,
             },
         );
-        let response = ExecutionProgress {
+        let report = ExecutionProgress {
             phase: FailurePhase::ModelProof,
             ..Default::default()
         }
-        .cause(cause)
-        .response();
+        .cause(cause);
+        let response = serde_json::to_value(report.as_response()).unwrap();
         assert_eq!(response["failure"]["primary"]["kind"], "resource_limit");
         assert_eq!(response["failure"]["primary"]["details"]["actual"], 33);
         assert_eq!(response["failure"]["primary"]["details"]["maximum"], 32);
@@ -611,7 +593,7 @@ mod tests {
             CauseKind::Persistence,
             "journal unavailable",
         ));
-        let response = report.response();
+        let response = serde_json::to_value(report.as_response()).unwrap();
         assert_eq!(response["failure"]["progress"]["world"], "unknown");
         assert_eq!(response["failure"]["progress"]["verified_steps"], 0);
         assert_eq!(response["failure"]["secondary"][0]["kind"], "persistence");
