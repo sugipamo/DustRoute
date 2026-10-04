@@ -1,3 +1,6 @@
+#[path = "support/archive_fixture.rs"]
+mod archive_fixture;
+use archive_fixture::FixtureJson;
 #[allow(dead_code)]
 #[path = "support/reference_door_blueprint.rs"]
 mod fixture;
@@ -99,9 +102,9 @@ fn reference_door_and_enclosure_share_physics_construction_and_restart_adoption(
     assert!(positions.contains(&Pos::new(4, 7, 0)));
     let mut updates = BlueprintUpdates::new(generated.records.catalog().unwrap());
     updates.create(generated.request.clone()).unwrap();
-    let mut updates = BlueprintUpdates::from_json(&updates.to_json().unwrap()).unwrap();
+    let mut updates = archive_fixture::updates(&updates.fixture_json().unwrap()).unwrap();
     updates.adopt(&generated.request.id).unwrap();
-    let updates = BlueprintUpdates::from_json(&updates.to_json().unwrap()).unwrap();
+    let updates = archive_fixture::updates(&updates.fixture_json().unwrap()).unwrap();
     assert_eq!(
         updates.catalog().assembly(&door.source_assembly_revision),
         catalog.assembly(&door.source_assembly_revision)

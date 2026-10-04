@@ -1,3 +1,6 @@
+#[path = "support/catalog_fixture.rs"]
+mod catalog_fixture;
+use catalog_fixture::FixtureJson;
 use dustroute_library::blueprint::{BlueprintCatalog, BlueprintRevisionId};
 use dustroute_library::builtin_laws::{builtin_laws, torch_law_revision};
 use dustroute_minecraft::law::{Expr, Instruction};
@@ -40,7 +43,7 @@ fn motion_time_laws_are_immutable_executable_blueprint_revisions() {
     changed.id = BlueprintRevisionId::new("test.piston.carrier.hold.v1").unwrap();
     changed.parents = vec![original.id.clone()];
     catalog.insert_revision(changed.clone()).unwrap();
-    let loaded = BlueprintCatalog::from_json(&catalog.to_json().unwrap()).unwrap();
+    let loaded = catalog_fixture::catalog(&catalog.fixture_json().unwrap()).unwrap();
     assert_eq!(loaded.revision(&changed.id), Some(&changed));
     let mut alternative = programs.clone();
     alternative[1] = loaded.revision(&changed.id).unwrap().law.clone().unwrap();
@@ -109,7 +112,7 @@ fn observer_law_round_trips_without_rebinding_detection_or_pulse_rules() {
     let mut conflict = changed.clone();
     conflict.id = original.id.clone();
     assert!(catalog.insert_revision(conflict).is_err());
-    let loaded = BlueprintCatalog::from_json(&catalog.to_json().unwrap()).unwrap();
+    let loaded = catalog_fixture::catalog(&catalog.fixture_json().unwrap()).unwrap();
     for (source, duration) in [(&original, 1), (&changed, 3)] {
         assert_eq!(loaded.revision(&source.id), Some(source));
         let law = CompatibilityObserverLaw::compile(
@@ -150,7 +153,7 @@ fn comparator_law_round_trips_without_rebinding_the_published_revision() {
     let mut conflicting = changed.clone();
     conflicting.id = id;
     assert!(catalog.insert_revision(conflicting).is_err());
-    let loaded = BlueprintCatalog::from_json(&catalog.to_json().unwrap()).unwrap();
+    let loaded = catalog_fixture::catalog(&catalog.fixture_json().unwrap()).unwrap();
     assert_eq!(loaded.revision(&original.id), Some(&original));
     assert_eq!(loaded.revision(&changed.id), Some(&changed));
     for (id, expected) in [(&original.id, 12), (&changed.id, 3)] {
@@ -190,7 +193,7 @@ fn repeater_laws_round_trip_as_distinct_immutable_executable_revisions() {
     let mut conflicting = changed.clone();
     conflicting.id = original.id.clone();
     assert!(catalog.insert_revision(conflicting).is_err());
-    let loaded = BlueprintCatalog::from_json(&catalog.to_json().unwrap()).unwrap();
+    let loaded = catalog_fixture::catalog(&catalog.fixture_json().unwrap()).unwrap();
     assert_eq!(loaded.revision(&original.id), Some(&original));
     assert_eq!(loaded.revision(&changed.id), Some(&changed));
     for (id, expected) in [(&original.id, true), (&changed.id, false)] {
@@ -234,7 +237,7 @@ fn spatial_blueprint_revisions_round_trip_and_drive_world_support_without_rebind
     ids[0] = revised.id.clone();
     catalog.insert_revision(revised.clone()).unwrap();
     assert!(catalog.insert_revision(original.clone()).is_err());
-    let loaded = BlueprintCatalog::from_json(&catalog.to_json().unwrap()).unwrap();
+    let loaded = catalog_fixture::catalog(&catalog.fixture_json().unwrap()).unwrap();
     assert_eq!(loaded.revision(&original.id), Some(&original));
     assert_eq!(loaded.revision(&revised.id), Some(&revised));
     let programs = ids.map(|id| loaded.revision(&id).unwrap().law.clone().unwrap());
@@ -276,10 +279,10 @@ fn law_revisions_round_trip_and_modified_rules_execute_without_rebinding_the_sou
     );
     catalog.insert_revision(changed.clone()).unwrap();
     assert!(catalog.insert_revision(original.clone()).is_err());
-    let saved = catalog.to_json().unwrap();
+    let saved = catalog.fixture_json().unwrap();
     assert!(saved.contains("dustroute.blueprint-catalog.v13"));
-    assert!(BlueprintCatalog::from_json(&saved.replace("catalog.v13", "catalog.v2")).is_err());
-    let loaded = BlueprintCatalog::from_json(&saved).unwrap();
+    assert!(catalog_fixture::catalog(&saved.replace("catalog.v13", "catalog.v2")).is_err());
+    let loaded = catalog_fixture::catalog(&saved).unwrap();
     assert_eq!(loaded.revision(&original.id), Some(&original));
     assert_eq!(loaded.revision(&changed.id), Some(&changed));
     for (law, expected) in [(before, 0), (changed.law.unwrap().compile().unwrap(), 1)] {
@@ -298,7 +301,7 @@ fn law_revisions_round_trip_and_modified_rules_execute_without_rebinding_the_sou
 #[test]
 fn invalid_programs_and_failed_execution_cannot_mutate_the_catalog_or_state() {
     let mut catalog = builtin_laws().clone();
-    let saved = catalog.to_json().unwrap();
+    let saved = catalog.fixture_json().unwrap();
     let mut bad = torch_law_revision().clone();
     bad.id = BlueprintRevisionId::new("bad-law.v1").unwrap();
     bad.law.as_mut().unwrap().handlers.insert(
@@ -309,7 +312,7 @@ fn invalid_programs_and_failed_execution_cannot_mutate_the_catalog_or_state() {
         }],
     );
     assert!(catalog.insert_revision(bad).is_err());
-    assert_eq!(catalog.to_json().unwrap(), saved);
+    assert_eq!(catalog.fixture_json().unwrap(), saved);
 
     let mut program = torch_law_revision().law.clone().unwrap();
     program.handlers.insert(
@@ -375,20 +378,18 @@ fn law_requirements_are_immutable_dependencies_and_cannot_be_silently_downgraded
     source.law = None;
     source.required_laws = vec![torch_law_revision().id.clone()];
     catalog.insert_revision(source.clone()).unwrap();
-    let saved = catalog.to_json().unwrap();
+    let saved = catalog.fixture_json().unwrap();
     assert!(saved.contains("dustroute.blueprint-catalog.v13"));
     assert_eq!(
-        BlueprintCatalog::from_json(&saved)
+        catalog_fixture::catalog(&saved)
             .unwrap()
             .revision(&source.id),
         Some(&source)
     );
     for version in 1..9 {
         assert!(
-            BlueprintCatalog::from_json(
-                &saved.replace("catalog.v13", &format!("catalog.v{version}"))
-            )
-            .is_err()
+            catalog_fixture::catalog(&saved.replace("catalog.v13", &format!("catalog.v{version}")))
+                .is_err()
         );
     }
     for requirements in [
@@ -400,7 +401,7 @@ fn law_requirements_are_immutable_dependencies_and_cannot_be_silently_downgraded
         invalid.id = BlueprintRevisionId::new("test.invalid.v1").unwrap();
         invalid.required_laws = requirements;
         assert!(catalog.insert_revision(invalid).is_err());
-        assert_eq!(catalog.to_json().unwrap(), saved);
+        assert_eq!(catalog.fixture_json().unwrap(), saved);
     }
 }
 
@@ -417,11 +418,11 @@ fn mutually_required_laws_are_declarations_not_recursive_inclusions() {
         .insert_revisions(vec![left.clone(), right.clone()])
         .unwrap();
     assert_eq!(catalog.expand(&left.id).unwrap().occurrences.len(), 1);
-    let saved = catalog.to_json().unwrap();
+    let saved = catalog.fixture_json().unwrap();
     assert_eq!(
-        BlueprintCatalog::from_json(&saved)
+        catalog_fixture::catalog(&saved)
             .unwrap()
-            .to_json()
+            .fixture_json()
             .unwrap(),
         saved
     );
@@ -459,7 +460,7 @@ fn lamp_law_revisions_preserve_both_models_and_executable_archive_data() {
     changed.id = BlueprintRevisionId::new("test.lamp.five-boundaries.v1").unwrap();
     changed.parents = vec![old.id.clone()];
     catalog.insert_revision(changed.clone()).unwrap();
-    let restored = BlueprintCatalog::from_json(&catalog.to_json().unwrap()).unwrap();
+    let restored = catalog_fixture::catalog(&catalog.fixture_json().unwrap()).unwrap();
     assert_eq!(restored.revision(&old.id), Some(&old));
     assert_eq!(restored.revision(&changed.id), Some(&changed));
     for (source, delay) in [(&old, 2), (&changed, 5)] {
@@ -505,7 +506,7 @@ fn piston_laws_round_trip_as_executable_immutable_revisions_without_rebinding() 
     changed.parents = vec![original.id.clone()];
     ids[1] = changed.id.clone();
     catalog.insert_revision(changed.clone()).unwrap();
-    let loaded = BlueprintCatalog::from_json(&catalog.to_json().unwrap()).unwrap();
+    let loaded = catalog_fixture::catalog(&catalog.fixture_json().unwrap()).unwrap();
     assert_eq!(loaded.revision(&original.id), Some(&original));
     assert_eq!(loaded.revision(&changed.id), Some(&changed));
     let programs = ids.map(|id| loaded.revision(&id).unwrap().law.clone().unwrap());

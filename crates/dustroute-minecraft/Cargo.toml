@@ -11,6 +11,8 @@ rust-version.workspace = true
 dustroute-codec = { path = "../dustroute-codec" }
 schemars = "1.2"
 serde = { version = "1.0", features = ["derive"] }
+
+[dev-dependencies]
 serde_json = "1.0"
 
 [lints]

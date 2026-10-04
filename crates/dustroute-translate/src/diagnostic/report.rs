@@ -267,7 +267,7 @@ mod tests {
             .collect();
         let parent_id = parent.id.clone();
         catalog.insert_revision(parent).unwrap();
-        let before = catalog.to_json().unwrap();
+        let before = catalog.clone();
         let origin = Pos::new(-90, 180, 1000);
         let assembly = Assembly {
             name: "Diagnostic source links".into(),
@@ -336,7 +336,7 @@ mod tests {
         let restored: Diagnosis =
             serde_json::from_str(&serde_json::to_string(&report).unwrap()).unwrap();
         assert_eq!(restored, report);
-        assert_eq!(catalog.to_json().unwrap(), before);
+        assert_eq!(catalog, before);
         report.attach_design(
             AssemblyRevisionId::new("diagnostic-state.v1").unwrap(),
             None,

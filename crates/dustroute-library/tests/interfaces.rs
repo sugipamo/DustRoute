@@ -1,3 +1,6 @@
+#[path = "support/catalog_fixture.rs"]
+mod catalog_fixture;
+use catalog_fixture::FixtureJson;
 use dustroute_library::assembly::*;
 use dustroute_library::blueprint::*;
 use dustroute_library::builtin_blueprints::*;
@@ -82,7 +85,7 @@ fn nested_aliases_keep_the_leaf_frame_and_all_consumer_requirements() {
     let mut outer = wrapper(&catalog, &first.id, "outer.v1", RotationY::R90);
     outer.ports[0].required_source_types.clear();
     catalog.insert_revision(outer.clone()).unwrap();
-    let loaded = BlueprintCatalog::from_json(&catalog.to_json().unwrap()).unwrap();
+    let loaded = catalog_fixture::catalog(&catalog.fixture_json().unwrap()).unwrap();
     let (resolved, rotation) = loaded.resolve_port(&outer.id, &port(&[], "a")).unwrap();
     assert_eq!(rotation, RotationY::R180);
     assert_eq!(

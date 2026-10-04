@@ -11,6 +11,7 @@ pub mod blueprint;
 pub mod building;
 mod builtin;
 pub mod builtin_blueprints;
+mod builtin_definitions;
 pub mod builtin_laws;
 pub mod builtin_primitives;
 mod catalog;

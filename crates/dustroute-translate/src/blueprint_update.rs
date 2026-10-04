@@ -453,13 +453,6 @@ impl BlueprintUpdates {
         Ok(())
     }
 
-    /// Self-contained persistence of sources, states, candidates and decisions.
-    /// Validation events are historical diagnostics and never adoption authority.
-    pub fn to_json(&self) -> Result<String, BlueprintUpdateError> {
-        serde_json::to_string_pretty(&self.archive())
-            .map_err(|error| BlueprintUpdateError::Invalid(error.to_string()))
-    }
-
     /// Diagnostic data, never executable authority or reusable review proof.
     pub fn archive(&self) -> BlueprintUpdateArchive {
         BlueprintUpdateArchive {
@@ -467,12 +460,6 @@ impl BlueprintUpdates {
             catalog: self.catalog.clone(),
             proposals: self.proposals.values().cloned().collect(),
         }
-    }
-
-    pub fn from_json(input: &str) -> Result<Self, BlueprintUpdateError> {
-        let archive: BlueprintUpdateArchive = serde_json::from_str(input)
-            .map_err(|error| BlueprintUpdateError::Invalid(error.to_string()))?;
-        Self::from_archive(archive)
     }
 
     /// Validates typed historical data without parsing a presentation format.

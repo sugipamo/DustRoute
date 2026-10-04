@@ -3,6 +3,7 @@
 use std::sync::OnceLock;
 
 use crate::blueprint::BlueprintCatalog;
+mod data;
 
 pub const NOT_CLASSIFICATION_REVISION: &str = "dustroute.classification.not.v1";
 pub const AND_CLASSIFICATION_REVISION: &str = "dustroute.classification.and.v1";
@@ -25,13 +26,12 @@ pub const XOR_REVISION: &str = "dustroute.xor.compiled.v1";
 pub const XOR_COMPACT_REVISION: &str = "dustroute.xor.compact.v1";
 pub const EXTERNAL_XOR_REVISION: &str = "redstone-compiler.xor-generated.v1";
 
-pub const BUILTIN_BLUEPRINT_ARCHIVE: &str = include_str!("../blueprints/builtin-v1.json");
-
 #[must_use]
 pub fn builtin_blueprints() -> &'static BlueprintCatalog {
     static CATALOG: OnceLock<BlueprintCatalog> = OnceLock::new();
     CATALOG.get_or_init(|| {
-        BlueprintCatalog::from_json(BUILTIN_BLUEPRINT_ARCHIVE)
-            .expect("embedded built-in blueprint archive is valid")
+        data::records()
+            .catalog()
+            .expect("fixed built-in blueprint records are valid")
     })
 }

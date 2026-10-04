@@ -1,3 +1,6 @@
+#[path = "support/archive_fixture.rs"]
+mod archive_fixture;
+use archive_fixture::FixtureJson;
 use dustroute_library::assembly::*;
 use dustroute_library::blueprint::*;
 use dustroute_library::builtin_blueprints::*;
@@ -205,9 +208,9 @@ fn fixture(air: Pos) -> (BlueprintUpdates, BlueprintUpdateRequest) {
 #[test]
 fn nested_shared_not_update_roundtrips_reviews_and_adopts_without_changing_history() {
     let (mut updates, request) = fixture(Pos::new(6, 0, 0));
-    let old = updates.catalog().to_json().unwrap();
+    let old = updates.catalog().fixture_json().unwrap();
     updates.create(request.clone()).unwrap();
-    assert_eq!(updates.catalog().to_json().unwrap(), old);
+    assert_eq!(updates.catalog().fixture_json().unwrap(), old);
     assert!(
         updates
             .catalog()
@@ -246,7 +249,7 @@ fn nested_shared_not_update_roundtrips_reviews_and_adopts_without_changing_histo
         updates.proposal(&request.id).unwrap().status(),
         UpdateStatus::Open
     );
-    assert_eq!(updates.catalog().to_json().unwrap(), old);
+    assert_eq!(updates.catalog().fixture_json().unwrap(), old);
     let disk_path = std::env::temp_dir().join(format!(
         "dustroute-update-roundtrip-{}-{}.json",
         std::process::id(),
@@ -255,9 +258,9 @@ fn nested_shared_not_update_roundtrips_reviews_and_adopts_without_changing_histo
             .unwrap()
             .as_nanos()
     ));
-    std::fs::write(&disk_path, updates.to_json().unwrap()).unwrap();
+    std::fs::write(&disk_path, updates.fixture_json().unwrap()).unwrap();
     let mut loaded =
-        BlueprintUpdates::from_json(&std::fs::read_to_string(&disk_path).unwrap()).unwrap();
+        archive_fixture::updates(&std::fs::read_to_string(&disk_path).unwrap()).unwrap();
     std::fs::remove_file(&disk_path).unwrap();
     assert_eq!(loaded.diff(&request.id).unwrap(), diff);
     assert_eq!(loaded.proposal(&request.id).unwrap().events().len(), 1);
@@ -273,7 +276,7 @@ fn nested_shared_not_update_roundtrips_reviews_and_adopts_without_changing_histo
         loaded.catalog().assembly(&request.candidate_state.id),
         Some(&request.candidate_state)
     );
-    let original = BlueprintCatalog::from_json(&old).unwrap();
+    let original = archive_fixture::catalog(&old).unwrap();
     for record in original.revisions() {
         assert_eq!(loaded.catalog().revision(&record.id), Some(record));
     }
@@ -298,7 +301,7 @@ fn nested_shared_not_update_roundtrips_reviews_and_adopts_without_changing_histo
             .into_world();
         assert!(dustroute_translate::cell_library::verify_cell(GateKind::Not, &cell).valid);
     }
-    let mut reloaded = BlueprintUpdates::from_json(&loaded.to_json().unwrap()).unwrap();
+    let mut reloaded = archive_fixture::updates(&loaded.fixture_json().unwrap()).unwrap();
     assert_eq!(reloaded.proposal(&request.id), loaded.proposal(&request.id));
     assert_eq!(
         reloaded.review(&request.id).unwrap().status(),
@@ -318,7 +321,7 @@ fn nested_shared_not_update_roundtrips_reviews_and_adopts_without_changing_histo
 fn parent_pass_child_fail_blocks_adoption_and_rejection_preserves_old_pins_and_proposal() {
     // The top-torch layout leaves this cell empty; the side-torch uses it as support.
     let (mut updates, request) = fixture(Pos::new(2, -1, 0));
-    let before = updates.catalog().to_json().unwrap();
+    let before = updates.catalog().fixture_json().unwrap();
     updates.create(request.clone()).unwrap();
     let report = updates.validate(&request.id).unwrap();
     assert_eq!(
@@ -340,17 +343,17 @@ fn parent_pass_child_fail_blocks_adoption_and_rejection_preserves_old_pins_and_p
         updates.proposal(&request.id).unwrap().status(),
         UpdateStatus::Open
     );
-    assert_eq!(updates.catalog().to_json().unwrap(), before);
+    assert_eq!(updates.catalog().fixture_json().unwrap(), before);
     updates
         .reject(&request.id, "Keep the old layout and shared clearance")
         .unwrap();
-    let mut loaded = BlueprintUpdates::from_json(&updates.to_json().unwrap()).unwrap();
+    let mut loaded = archive_fixture::updates(&updates.fixture_json().unwrap()).unwrap();
     assert_eq!(
         loaded.proposal(&request.id).unwrap().status(),
         UpdateStatus::Rejected
     );
     assert_eq!(loaded.proposal(&request.id).unwrap().request(), &request);
-    assert_eq!(loaded.catalog().to_json().unwrap(), before);
+    assert_eq!(loaded.catalog().fixture_json().unwrap(), before);
     assert!(matches!(
         loaded.adopt(&request.id),
         Err(BlueprintUpdateError::ClosedProposal(_))
@@ -361,7 +364,7 @@ fn parent_pass_child_fail_blocks_adoption_and_rejection_preserves_old_pins_and_p
 fn undetermined_shared_state_cannot_be_adopted() {
     let (mut updates, mut request) = fixture(Pos::new(6, 0, 0));
     request.candidate_state.assembly.known_regions.clear();
-    let before = updates.catalog().to_json().unwrap();
+    let before = updates.catalog().fixture_json().unwrap();
     updates.create(request.clone()).unwrap();
     let report = updates.validate(&request.id).unwrap();
     assert_eq!(
@@ -374,7 +377,7 @@ fn undetermined_shared_state_cannot_be_adopted() {
         updates.adopt(&request.id),
         Err(BlueprintUpdateError::Validation(_))
     ));
-    assert_eq!(updates.catalog().to_json().unwrap(), before);
+    assert_eq!(updates.catalog().fixture_json().unwrap(), before);
 }
 
 #[test]
@@ -382,7 +385,8 @@ fn forged_saved_success_cannot_substitute_for_fresh_verification() {
     let (mut updates, request) = fixture(Pos::new(2, -1, 0));
     updates.create(request.clone()).unwrap();
     updates.validate(&request.id).unwrap();
-    let mut archive: serde_json::Value = serde_json::from_str(&updates.to_json().unwrap()).unwrap();
+    let mut archive: serde_json::Value =
+        serde_json::from_str(&updates.fixture_json().unwrap()).unwrap();
     let report = &mut archive["proposals"][0]["events"][0]["report"];
     for occurrence in report["occurrences"].as_array_mut().unwrap() {
         for check in occurrence[1]["checks"].as_array_mut().unwrap() {
@@ -392,13 +396,13 @@ fn forged_saved_success_cannot_substitute_for_fresh_verification() {
     for check in report["arrangement"].as_array_mut().unwrap() {
         check["status"] = "passed".into();
     }
-    let mut loaded = BlueprintUpdates::from_json(&archive.to_string()).unwrap();
-    let before = loaded.catalog().to_json().unwrap();
+    let mut loaded = archive_fixture::updates(&archive.to_string()).unwrap();
+    let before = loaded.catalog().fixture_json().unwrap();
     assert!(matches!(
         loaded.adopt(&request.id),
         Err(BlueprintUpdateError::Validation(_))
     ));
-    assert_eq!(loaded.catalog().to_json().unwrap(), before);
+    assert_eq!(loaded.catalog().fixture_json().unwrap(), before);
     assert_eq!(loaded.proposal(&request.id).unwrap().events().len(), 2);
     assert_eq!(
         loaded.review(&request.id).unwrap().status(),
@@ -409,7 +413,7 @@ fn forged_saved_success_cannot_substitute_for_fresh_verification() {
 #[test]
 fn invalid_selections_and_attempted_rebinding_leave_the_workspace_unchanged() {
     let (mut updates, request) = fixture(Pos::new(6, 0, 0));
-    let before = updates.to_json().unwrap();
+    let before = updates.fixture_json().unwrap();
     let mut wrong = request.clone();
     wrong.previous_child = id(NOT_SIDE_REVISION);
     assert!(updates.create(wrong).is_err());
@@ -422,9 +426,9 @@ fn invalid_selections_and_attempted_rebinding_leave_the_workspace_unchanged() {
     let mut wrong = request.clone();
     wrong.revisions[0].parents.clear();
     assert!(updates.create(wrong).is_err());
-    assert_eq!(updates.to_json().unwrap(), before);
+    assert_eq!(updates.fixture_json().unwrap(), before);
     updates.create(request.clone()).unwrap();
-    let before = updates.to_json().unwrap();
+    let before = updates.fixture_json().unwrap();
     assert!(matches!(
         updates.create(request.clone()),
         Err(BlueprintUpdateError::DuplicateProposal(_))
@@ -439,32 +443,34 @@ fn invalid_selections_and_attempted_rebinding_leave_the_workspace_unchanged() {
             .append_state(request.candidate_state.clone())
             .is_err()
     );
-    assert_eq!(updates.to_json().unwrap(), before);
+    assert_eq!(updates.fixture_json().unwrap(), before);
 }
 
 #[test]
 fn archives_reject_inconsistent_decisions_and_preserve_unreviewed_proposals() {
     let (mut updates, request) = fixture(Pos::new(6, 0, 0));
     updates.create(request.clone()).unwrap();
-    let mut loaded = BlueprintUpdates::from_json(&updates.to_json().unwrap()).unwrap();
+    let mut loaded = archive_fixture::updates(&updates.fixture_json().unwrap()).unwrap();
     assert!(loaded.proposal(&request.id).unwrap().events().is_empty());
-    let mut archive: serde_json::Value = serde_json::from_str(&updates.to_json().unwrap()).unwrap();
+    let mut archive: serde_json::Value =
+        serde_json::from_str(&updates.fixture_json().unwrap()).unwrap();
     archive["proposals"][0]["events"] = serde_json::json!([
         {"kind": "adopted", "parent": "parent.v2", "state": "state.v2"}
     ]);
-    assert!(BlueprintUpdates::from_json(&archive.to_string()).is_err());
+    assert!(archive_fixture::updates(&archive.to_string()).is_err());
     loaded.reject(&request.id, "Prefer the original").unwrap();
-    let mut archive: serde_json::Value = serde_json::from_str(&loaded.to_json().unwrap()).unwrap();
+    let mut archive: serde_json::Value =
+        serde_json::from_str(&loaded.fixture_json().unwrap()).unwrap();
     archive["proposals"][0]["events"]
         .as_array_mut()
         .unwrap()
         .push(serde_json::json!({"kind": "rejected", "reason": "again"}));
-    assert!(BlueprintUpdates::from_json(&archive.to_string()).is_err());
-    let original = updates.catalog().to_json().unwrap();
+    assert!(archive_fixture::updates(&archive.to_string()).is_err());
+    let original = updates.catalog().fixture_json().unwrap();
     // Explicit adoption can request its own review; a saved pass is unnecessary.
     updates.adopt(&request.id).unwrap();
     assert_eq!(updates.proposal(&request.id).unwrap().events().len(), 2);
-    assert_ne!(updates.catalog().to_json().unwrap(), original);
+    assert_ne!(updates.catalog().fixture_json().unwrap(), original);
 }
 
 #[test]
@@ -526,9 +532,9 @@ fn publishing_a_new_child_definition_does_not_update_or_adopt_any_parent() {
 fn current_archive_retains_unadopted_static_obligations_and_rejects_retired_formats() {
     let (mut updates, mut request) = fixture(Pos::new(6, 0, 0));
     // The current format is required even before any behavioral declaration.
-    let initial = updates.to_json().unwrap();
+    let initial = updates.fixture_json().unwrap();
     assert!(initial.contains("dustroute.blueprint-updates.v5"));
-    let restored = BlueprintUpdates::from_json(&initial).unwrap();
+    let restored = archive_fixture::updates(&initial).unwrap();
     assert_eq!(restored.catalog(), updates.catalog());
     assert_eq!(restored.proposals().count(), 0);
     for version in 1..5 {
@@ -536,7 +542,7 @@ fn current_archive_retains_unadopted_static_obligations_and_rejects_retired_form
             "dustroute.blueprint-updates.v5",
             &format!("dustroute.blueprint-updates.v{version}"),
         );
-        assert!(BlueprintUpdates::from_json(&retired).is_err());
+        assert!(archive_fixture::updates(&retired).is_err());
     }
     let requirement = TypeRevisionId::new("test.known-air.v1").unwrap();
     updates
@@ -559,27 +565,27 @@ fn current_archive_retains_unadopted_static_obligations_and_rejects_retired_form
     });
     // No validation event exists yet, and no committed source uses the new field.
     // A reload must retain the pending obligation before any review is recorded.
-    let original = updates.catalog().to_json().unwrap();
+    let original = updates.catalog().fixture_json().unwrap();
     updates.create(request.clone()).unwrap();
-    let archive = updates.to_json().unwrap();
+    let archive = updates.fixture_json().unwrap();
     assert!(archive.contains("dustroute.blueprint-updates.v5"));
     assert!(original.contains("dustroute.blueprint-catalog.v13"));
     assert!(!original.contains("static_type_bindings"));
     assert!(
-        BlueprintUpdates::from_json(&archive.replace(
+        archive_fixture::updates(&archive.replace(
             "dustroute.blueprint-updates.v5",
             "dustroute.blueprint-updates.v1"
         ))
         .is_err()
     );
-    let mut restored = BlueprintUpdates::from_json(&archive).unwrap();
+    let mut restored = archive_fixture::updates(&archive).unwrap();
     assert_eq!(restored.proposal(&request.id).unwrap().request(), &request);
     assert_eq!(
         restored.validate(&request.id).unwrap().status(),
         CheckStatus::Failed
     );
     assert!(restored.adopt(&request.id).is_err());
-    assert_eq!(restored.catalog().to_json().unwrap(), original);
+    assert_eq!(restored.catalog().fixture_json().unwrap(), original);
 }
 
 #[test]
@@ -595,28 +601,28 @@ fn unadopted_law_requirements_survive_reload_and_require_world_evidence() {
         .find(|source| source.id == request.candidate_parent)
         .unwrap()
         .required_laws = vec![id(TORCH_LAW_REVISION)];
-    let original = updates.catalog().to_json().unwrap();
+    let original = updates.catalog().fixture_json().unwrap();
     assert!(!original.contains("required_laws"));
     updates.create(request.clone()).unwrap();
-    let archive = updates.to_json().unwrap();
+    let archive = updates.fixture_json().unwrap();
     assert!(archive.contains("dustroute.blueprint-updates.v5"));
     for version in 1..5 {
         assert!(
-            BlueprintUpdates::from_json(&archive.replace(
+            archive_fixture::updates(&archive.replace(
                 "dustroute.blueprint-updates.v5",
                 &format!("dustroute.blueprint-updates.v{version}"),
             ))
             .is_err()
         );
     }
-    let mut restored = BlueprintUpdates::from_json(&archive).unwrap();
+    let mut restored = archive_fixture::updates(&archive).unwrap();
     assert_eq!(restored.proposal(&request.id).unwrap().request(), &request);
     assert_eq!(
         restored.validate(&request.id).unwrap().status(),
         CheckStatus::Undetermined
     );
     assert!(restored.adopt(&request.id).is_err());
-    assert_eq!(restored.catalog().to_json().unwrap(), original);
+    assert_eq!(restored.catalog().fixture_json().unwrap(), original);
 }
 
 #[test]
@@ -653,26 +659,26 @@ fn unadopted_observation_bindings_cannot_be_hidden_in_an_old_history_schema() {
         observed_inputs: BTreeMap::new(),
         observed_outputs: BTreeMap::from([("out".into(), ObservedPort::Signal { port: output })]),
     });
-    let original = updates.catalog().to_json().unwrap();
+    let original = updates.catalog().fixture_json().unwrap();
     assert!(!original.contains("observed_outputs"));
     updates.create(request.clone()).unwrap();
-    let archive = updates.to_json().unwrap();
+    let archive = updates.fixture_json().unwrap();
     assert!(archive.contains("dustroute.blueprint-updates.v5"));
     for version in 1..5 {
         assert!(
-            BlueprintUpdates::from_json(&archive.replace(
+            archive_fixture::updates(&archive.replace(
                 "dustroute.blueprint-updates.v5",
                 &format!("dustroute.blueprint-updates.v{version}")
             ))
             .is_err()
         );
     }
-    let mut restored = BlueprintUpdates::from_json(&archive).unwrap();
+    let mut restored = archive_fixture::updates(&archive).unwrap();
     assert_eq!(restored.proposal(&request.id).unwrap().request(), &request);
     assert_eq!(
         restored.validate(&request.id).unwrap().behavior_status(),
         Some(CheckStatus::Undetermined)
     );
     assert!(restored.adopt(&request.id).is_err());
-    assert_eq!(restored.catalog().to_json().unwrap(), original);
+    assert_eq!(restored.catalog().fixture_json().unwrap(), original);
 }

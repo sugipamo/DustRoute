@@ -1,3 +1,6 @@
+#[path = "support/archive_fixture.rs"]
+mod archive_fixture;
+use archive_fixture::FixtureJson;
 use std::collections::BTreeMap;
 
 use dustroute_library::assembly::{Assembly, AssemblyRevision};
@@ -274,7 +277,7 @@ fn changing_a_law_revision_changes_execution_without_rewriting_existing_pins() {
     catalog.insert_revision(changed.clone()).unwrap();
     let mut candidate = selected;
     candidate.dust_law = changed.id.clone();
-    let loaded = BlueprintCatalog::from_json(&catalog.to_json().unwrap()).unwrap();
+    let loaded = archive_fixture::catalog(&catalog.fixture_json().unwrap()).unwrap();
     let new = PhysicalBehaviorModel::from_fresh_assembly(&loaded, candidate).unwrap();
     assert_eq!(
         old.verify(BehaviorBudget::default()).behavior.status,
@@ -584,7 +587,7 @@ fn history_abstraction_closes_arbitrary_input_not_graphs_without_modifying_execu
     }
     for (world, input, output) in layouts {
         let catalog = catalog(&world, relation(true));
-        let unchanged = catalog.to_json().unwrap();
+        let unchanged = catalog.fixture_json().unwrap();
         let model = PhysicalBehaviorModel::from_fresh_assembly_with_profile(
             &catalog,
             selection(input, output),
@@ -596,7 +599,7 @@ fn history_abstraction_closes_arbitrary_input_not_graphs_without_modifying_execu
         eprintln!("{:#?}", report.behavior);
         assert_eq!(report.behavior.status, CheckStatus::Passed, "{report:?}");
         assert_eq!(model.initial_state().unwrap(), initial);
-        assert_eq!(catalog.to_json().unwrap(), unchanged);
+        assert_eq!(catalog.fixture_json().unwrap(), unchanged);
         let incomplete = model.verify_history_abstraction(BehaviorBudget {
             max_states: 1,
             ..BehaviorBudget::default()

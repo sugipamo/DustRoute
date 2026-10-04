@@ -1,3 +1,6 @@
+#[path = "support/archive_fixture.rs"]
+mod archive_fixture;
+use archive_fixture::FixtureJson;
 use std::time::Duration;
 
 use dustroute_library::PortDirection;
@@ -160,7 +163,7 @@ fn a_reachable_bad_cycle_refutes_a_type_without_closing_an_unbounded_branch() {
 #[test]
 fn new_behavior_type_round_trips_without_rebinding_connection_types_or_old_archives() {
     let mut catalog = builtin_blueprints().clone();
-    let old = catalog.to_json().unwrap();
+    let old = catalog.fixture_json().unwrap();
     let old_wire = catalog
         .type_revision(&TypeRevisionId::new(WIRE_TYPE_REVISION).unwrap())
         .unwrap()
@@ -168,18 +171,18 @@ fn new_behavior_type_round_trips_without_rebinding_connection_types_or_old_archi
     catalog.insert_type(not_type()).unwrap();
     assert_eq!(catalog.type_revision(&old_wire.id), Some(&old_wire));
     assert!(catalog.insert_type(not_type()).is_err());
-    let saved = catalog.to_json().unwrap();
+    let saved = catalog.fixture_json().unwrap();
     assert!(saved.contains("dustroute.blueprint-catalog.v13"));
-    assert_eq!(BlueprintCatalog::from_json(&saved).unwrap(), catalog);
+    assert_eq!(archive_fixture::catalog(&saved).unwrap(), catalog);
     assert!(
-        BlueprintCatalog::from_json(&saved.replace(
+        archive_fixture::catalog(&saved.replace(
             "dustroute.blueprint-catalog.v13",
             "dustroute.blueprint-catalog.v2"
         ))
         .is_err()
     );
     assert_eq!(
-        BlueprintCatalog::from_json(&old).unwrap(),
+        archive_fixture::catalog(&old).unwrap(),
         *builtin_blueprints()
     );
 }

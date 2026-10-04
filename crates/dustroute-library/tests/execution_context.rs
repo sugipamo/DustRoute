@@ -1,3 +1,6 @@
+#[path = "support/catalog_fixture.rs"]
+mod catalog_fixture;
+use catalog_fixture::FixtureJson;
 use std::collections::BTreeSet;
 
 use dustroute_library::behavior_type::PhysicalBehaviorContext;
@@ -104,7 +107,7 @@ fn profiles_select_distinct_complete_law_sets_without_extending_proof_capabiliti
         (UnifiedPistonElectricalCallbacksJava12111V19, 18),
     ] {
         let context = WorldExecutionContext::for_profile(profile);
-        let saved = builtin_laws().to_json().unwrap();
+        let saved = builtin_laws().fixture_json().unwrap();
         let selected = resolve_law_references(builtin_laws(), &context).unwrap();
         assert_eq!(selected.len(), size);
         let required: Vec<_> = selected.values().map(|r| r.id.clone()).collect();
@@ -114,7 +117,7 @@ fn profiles_select_distinct_complete_law_sets_without_extending_proof_capabiliti
             serde_json::from_str::<WorldExecutionContext>(&json).unwrap(),
             context
         );
-        assert_eq!(builtin_laws().to_json().unwrap(), saved);
+        assert_eq!(builtin_laws().fixture_json().unwrap(), saved);
     }
     let proof = WorldExecutionContext::for_profile(DustTorchSynchronousGameTickV1);
     let native = WorldExecutionContext::for_profile(BoundedRedstoneEventsV1);
@@ -158,7 +161,7 @@ fn electrical_context_roundtrips_and_pins_its_connection_program() {
     {
         archived.insert_revision((*law).clone()).unwrap();
     }
-    let loaded = BlueprintCatalog::from_json(&archived.to_json().unwrap()).unwrap();
+    let loaded = catalog_fixture::catalog(&archived.fixture_json().unwrap()).unwrap();
     assert_eq!(
         resolve_law_references(&loaded, &world).unwrap(),
         resolve_law_references(builtin_laws(), &world).unwrap()

@@ -1,3 +1,6 @@
+#[path = "support/catalog_fixture.rs"]
+mod catalog_fixture;
+use catalog_fixture::FixtureJson;
 use std::collections::BTreeSet;
 
 use dustroute_library::blueprint::*;
@@ -50,7 +53,7 @@ fn batch_insertion_rolls_back_missing_dependencies_cycles_and_duplicates() {
     catalog
         .insert_revision(revision("existing.v1", vec![]))
         .unwrap();
-    let before = catalog.to_json().unwrap();
+    let before = catalog.fixture_json().unwrap();
     let first = revision("first.v1", vec![]);
     let mut second = revision("second.v1", vec![]);
     second.inclusions.push(include("missing", "absent.v1", 0));
@@ -59,7 +62,7 @@ fn batch_insertion_rolls_back_missing_dependencies_cycles_and_duplicates() {
             .insert_revisions(vec![first.clone(), second])
             .is_err()
     );
-    assert_eq!(catalog.to_json().unwrap(), before);
+    assert_eq!(catalog.fixture_json().unwrap(), before);
     let mut cyclic = revision("cyclic.v1", vec![]);
     cyclic.inclusions.push(include("self", "cyclic.v1", 0));
     assert!(
@@ -67,13 +70,13 @@ fn batch_insertion_rolls_back_missing_dependencies_cycles_and_duplicates() {
             .insert_revisions(vec![first.clone(), cyclic])
             .is_err()
     );
-    assert_eq!(catalog.to_json().unwrap(), before);
+    assert_eq!(catalog.fixture_json().unwrap(), before);
     assert!(
         catalog
             .insert_revisions(vec![first.clone(), first])
             .is_err()
     );
-    assert_eq!(catalog.to_json().unwrap(), before);
+    assert_eq!(catalog.fixture_json().unwrap(), before);
 }
 
 fn include(name: &str, target: &str, x: i32) -> BlueprintInclusion {
@@ -113,10 +116,10 @@ fn overlapping_interpretations_share_one_physical_block_and_survive_persistence(
         BTreeSet::from([vec![], vec![instance("b")], vec![instance("c")],])
     );
     // Lexicographic archive order deliberately puts the parent before its child.
-    let saved = catalog.to_json().unwrap();
-    let loaded = BlueprintCatalog::from_json(&saved).unwrap();
+    let saved = catalog.fixture_json().unwrap();
+    let loaded = catalog_fixture::catalog(&saved).unwrap();
     assert_eq!(loaded.expand(&revision_id("parent.v1")).unwrap(), original);
-    assert_eq!(loaded.to_json().unwrap(), saved);
+    assert_eq!(loaded.fixture_json().unwrap(), saved);
 }
 
 #[test]
@@ -166,7 +169,7 @@ fn conflicting_shared_states_are_reported_atomically_without_choosing_a_completi
             vec![block(0, BlockKind::Solid), block(1, BlockKind::Transparent)],
         ))
         .unwrap();
-    let before = catalog.to_json().unwrap();
+    let before = catalog.fixture_json().unwrap();
     let mut changed = catalog.revision(&revision_id("parent.v1")).unwrap().clone();
     changed.id = revision_id("parent.v2");
     changed.parents = vec![revision_id("parent.v1")];
@@ -178,7 +181,7 @@ fn conflicting_shared_states_are_reported_atomically_without_choosing_a_completi
             ..
         })
     ));
-    assert_eq!(catalog.to_json().unwrap(), before);
+    assert_eq!(catalog.fixture_json().unwrap(), before);
 }
 
 #[test]
@@ -202,7 +205,7 @@ fn explicit_air_is_a_requirement_but_unspecified_space_is_not() {
 #[test]
 fn archives_reject_unknown_references_and_separate_containment_from_ancestry_cycles() {
     let original: serde_json::Value =
-        serde_json::from_str(&shared_catalog().to_json().unwrap()).unwrap();
+        serde_json::from_str(&shared_catalog().fixture_json().unwrap()).unwrap();
     let parent_index = original["revisions"]
         .as_array()
         .unwrap()
@@ -212,19 +215,19 @@ fn archives_reject_unknown_references_and_separate_containment_from_ancestry_cyc
     let mut missing = original.clone();
     missing["revisions"][parent_index]["inclusions"][0]["revision"] = "missing".into();
     assert_eq!(
-        BlueprintCatalog::from_json(&missing.to_string()).unwrap_err(),
+        catalog_fixture::catalog(&missing.to_string()).unwrap_err(),
         BlueprintError::UnknownRevision(revision_id("missing"))
     );
     let mut cycle = original.clone();
     cycle["revisions"][parent_index]["inclusions"][0]["revision"] = "parent.v1".into();
     assert!(matches!(
-        BlueprintCatalog::from_json(&cycle.to_string()),
+        catalog_fixture::catalog(&cycle.to_string()),
         Err(BlueprintError::ContainmentCycle(_))
     ));
     let mut ancestry = original;
     ancestry["revisions"][parent_index]["parents"] = serde_json::json!(["parent.v1"]);
     assert!(matches!(
-        BlueprintCatalog::from_json(&ancestry.to_string()),
+        catalog_fixture::catalog(&ancestry.to_string()),
         Err(BlueprintError::AncestryCycle(_))
     ));
 }
@@ -353,7 +356,7 @@ fn consumer_requirements_pin_existing_type_revisions_without_certifying_them() {
         })
         .unwrap();
     catalog.insert_revision(consumer.clone()).unwrap();
-    let loaded = BlueprintCatalog::from_json(&catalog.to_json().unwrap()).unwrap();
+    let loaded = catalog_fixture::catalog(&catalog.fixture_json().unwrap()).unwrap();
     assert_eq!(loaded.revision(&consumer.id), Some(&consumer));
     assert!(loaded.expand(&consumer.id).unwrap().blocks.is_empty());
 }

@@ -1,3 +1,6 @@
+#[path = "support/archive_fixture.rs"]
+mod archive_fixture;
+use archive_fixture::FixtureJson;
 use std::collections::BTreeMap;
 
 use dustroute_library::PortDirection;
@@ -162,7 +165,7 @@ fn mixed_world_exploration_drives_all_physical_inputs_and_reloads_the_context() 
     let (catalog, assembly, instance, binding, context) = fixture(3);
     let context: RuntimeBehaviorContext =
         serde_json::from_str(&serde_json::to_string(&context).unwrap()).unwrap();
-    let catalog = BlueprintCatalog::from_json(&catalog.to_json().unwrap()).unwrap();
+    let catalog = archive_fixture::catalog(&catalog.fixture_json().unwrap()).unwrap();
     let model = RuntimeBehaviorModel::from_fresh_assembly(
         &catalog, &assembly, &instance, &binding, &context,
     )
@@ -250,7 +253,7 @@ fn attachment_loss_can_close_the_piston_behavior_graph() {
 #[test]
 fn electrical_profile_explores_mixed_assemblies_after_catalog_reload() {
     let (catalog, assembly, instance, binding, context) = fixture(1);
-    let catalog = BlueprintCatalog::from_json(&catalog.to_json().unwrap()).unwrap();
+    let catalog = archive_fixture::catalog(&catalog.fixture_json().unwrap()).unwrap();
     let context = serde_json::from_str(&serde_json::to_string(&context).unwrap()).unwrap();
     let model = RuntimeBehaviorModel::from_fresh_assembly(
         &catalog, &assembly, &instance, &binding, &context,

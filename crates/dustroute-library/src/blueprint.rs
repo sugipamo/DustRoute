@@ -6,7 +6,7 @@
 use std::collections::BTreeMap;
 
 mod archive;
-pub use archive::CATALOG_SCHEMA;
+pub use archive::{BlueprintCatalogArchive, CATALOG_SCHEMA};
 mod catalog;
 mod expansion;
 mod records;

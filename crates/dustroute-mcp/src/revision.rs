@@ -256,7 +256,7 @@ mod tests {
     fn modeled_state_retains_pins_but_never_restores_source_blocks_or_rebinds_ids() {
         use dustroute_library::blueprint::{BlueprintInclusion, BlueprintRevisionId, InstanceId};
         use dustroute_library::builtin_blueprints::{NOT_TOP_REVISION, builtin_blueprints};
-        let catalog_before = builtin_blueprints().to_json().unwrap();
+        let catalog_before = builtin_blueprints().clone();
         let mut original = CircuitRevision {
             schema_version: "dustroute.circuit-revision.v1".into(),
             revision_id: Uuid::new_v4(),
@@ -326,7 +326,7 @@ mod tests {
         );
         assert!(!view.source_differences().is_empty());
         assert_eq!(original.assembly.as_ref(), Some(&state));
-        assert_eq!(builtin_blueprints().to_json().unwrap(), catalog_before);
+        assert_eq!(builtin_blueprints(), &catalog_before);
         let restored: CircuitRevision =
             serde_json::from_slice(&serde_json::to_vec(&child).unwrap()).unwrap();
         restored.check_assembly_record().unwrap();

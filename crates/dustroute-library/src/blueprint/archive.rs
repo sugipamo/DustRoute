@@ -6,30 +6,24 @@ use super::{
 pub const CATALOG_SCHEMA: &str = "dustroute.blueprint-catalog.v13";
 use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Serialize)]
-struct Archive {
-    schema: String,
-    types: Vec<TypeRevision>,
-    classifications: Vec<ClassificationRevision>,
-    revisions: Vec<BlueprintRevision>,
+/// Historical definitions, without executable validation or placement proof.
+/// Codecs are chosen at an application boundary; reconstruction validates the
+/// schema and all references independently of the codec.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename = "Archive")]
+pub struct BlueprintCatalogArchive {
+    pub schema: String,
+    pub types: Vec<TypeRevision>,
+    pub classifications: Vec<ClassificationRevision>,
+    pub revisions: Vec<BlueprintRevision>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    assemblies: Vec<crate::assembly::AssemblyRevision>,
+    pub assemblies: Vec<crate::assembly::AssemblyRevision>,
 }
 
 impl BlueprintCatalog {
-    pub fn to_json(&self) -> Result<String, BlueprintError> {
-        serde_json::to_string_pretty(self)
-            .map_err(|error| BlueprintError::Invalid(error.to_string()))
-    }
-
     /// Archives are self-contained and may list children after parents. No
     /// filesystem paths, function names or network references are executed.
-    pub fn from_json(input: &str) -> Result<Self, BlueprintError> {
-        let archive = serde_json::from_str(input)
-            .map_err(|error| BlueprintError::Invalid(error.to_string()))?;
-        Self::from_archive(archive)
-    }
-    fn from_archive(archive: Archive) -> Result<Self, BlueprintError> {
+    pub fn from_archive(archive: BlueprintCatalogArchive) -> Result<Self, BlueprintError> {
         if archive.schema != CATALOG_SCHEMA {
             return invalid(
                 "retired or unsupported blueprint archive schema; recreate the catalog with the current version (v13)",
@@ -62,22 +56,27 @@ impl BlueprintCatalog {
         }
         Ok(catalog)
     }
-}
 
-impl Serialize for BlueprintCatalog {
-    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        Archive {
+    #[must_use]
+    pub fn archive(&self) -> BlueprintCatalogArchive {
+        BlueprintCatalogArchive {
             schema: CATALOG_SCHEMA.into(),
             types: self.types.values().cloned().collect(),
             classifications: self.classifications.values().cloned().collect(),
             revisions: self.revisions.values().cloned().collect(),
             assemblies: self.assemblies.values().cloned().collect(),
         }
-        .serialize(serializer)
+    }
+}
+
+impl Serialize for BlueprintCatalog {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        self.archive().serialize(serializer)
     }
 }
 impl<'de> Deserialize<'de> for BlueprintCatalog {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        Self::from_archive(Archive::deserialize(deserializer)?).map_err(serde::de::Error::custom)
+        Self::from_archive(BlueprintCatalogArchive::deserialize(deserializer)?)
+            .map_err(serde::de::Error::custom)
     }
 }

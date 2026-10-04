@@ -1,3 +1,6 @@
+#[path = "support/archive_fixture.rs"]
+mod archive_fixture;
+use archive_fixture::FixtureJson;
 use dustroute_library::assembly::*;
 use dustroute_library::blueprint::*;
 use dustroute_library::builtin_primitives::*;
@@ -67,7 +70,7 @@ fn own_lever_identity_is_checked_without_consumers_after_reload_and_rotation() {
     ] {
         for powered in [false, true] {
             let (catalog, assembly) = fixture(powered, rotation);
-            let catalog = BlueprintCatalog::from_json(&catalog.to_json().unwrap()).unwrap();
+            let catalog = archive_fixture::catalog(&catalog.fixture_json().unwrap()).unwrap();
             let review = review_assembly(&catalog, &assembly).unwrap();
             assert_eq!(review.status(), CheckStatus::Passed);
             assert!(
@@ -101,7 +104,7 @@ fn own_lever_identity_is_checked_without_consumers_after_reload_and_rotation() {
 #[test]
 fn parent_pass_cannot_hide_failed_or_unknown_child_and_adoption_pins_static_types() {
     let (mut catalog, assembly) = fixture(true, RotationY::R90);
-    let before = catalog.to_json().unwrap();
+    let before = catalog.fixture_json().unwrap();
     for unknown in [false, true] {
         let mut bad = assembly.clone();
         if unknown {
@@ -123,7 +126,7 @@ fn parent_pass_cannot_hide_failed_or_unknown_child_and_adoption_pins_static_type
             CheckStatus::Passed
         );
         assert!(review.adopt(&mut catalog).is_err());
-        assert_eq!(catalog.to_json().unwrap(), before);
+        assert_eq!(catalog.fixture_json().unwrap(), before);
     }
     let candidate = PromotionCandidate::prepare(&catalog, &assembly, grouping(&catalog)).unwrap();
     let review = candidate.validate(&catalog).unwrap();
@@ -136,13 +139,13 @@ fn parent_pass_cannot_hide_failed_or_unknown_child_and_adoption_pins_static_type
                 serde_json::json!({"kind":"signal", "port_kind":"device_output"});
         }
     }
-    let mut changed = BlueprintCatalog::from_json(&changed.to_string()).unwrap();
+    let mut changed = archive_fixture::catalog(&changed.to_string()).unwrap();
     assert!(matches!(
         review.clone().adopt(&mut changed),
         Err(PromotionError::ChangedDependency(_))
     ));
     let grouped = review.adopt(&mut catalog).unwrap();
-    let restored = BlueprintCatalog::from_json(&catalog.to_json().unwrap()).unwrap();
+    let restored = archive_fixture::catalog(&catalog.fixture_json().unwrap()).unwrap();
     assert_eq!(
         review_assembly(&restored, &grouped).unwrap().status(),
         CheckStatus::Passed

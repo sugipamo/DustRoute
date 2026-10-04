@@ -66,7 +66,7 @@ it; a lever powers its attachment support. These directions share the existing
 electrical model's target calculation.
 
 The independent definitions in
-[`primitives-v2.json`](../crates/dustroute-library/blueprints/primitives-v2.json)
+[`Rust definitions`](../crates/dustroute-library/src/builtin_primitives/data.rs)
 include:
 
 - `dustroute.lever.wall.v2`: one lever, with a support supplied by its environment.

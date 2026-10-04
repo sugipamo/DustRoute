@@ -4,6 +4,30 @@ use dustroute_library::{ComponentId, ComponentQuery, REDSTONE_COMPILER_XOR_ID, b
 use dustroute_minecraft::BlockKind;
 
 #[test]
+fn typed_definitions_preserve_every_pinned_record_from_independent_fixtures() {
+    for (fixture, actual) in [
+        (
+            include_str!("fixtures/builtin-blueprints/builtin-v1.json"),
+            builtin_blueprints(),
+        ),
+        (
+            include_str!("fixtures/builtin-blueprints/primitives-v2.json"),
+            dustroute_library::builtin_primitives::builtin_primitives(),
+        ),
+    ] {
+        let frozen: dustroute_library::blueprint::BlueprintCatalog =
+            serde_json::from_str(fixture).unwrap();
+        assert_eq!(&frozen, actual);
+        for record in frozen.revisions() {
+            assert_eq!(
+                frozen.expand(&record.id).unwrap(),
+                actual.expand(&record.id).unwrap()
+            );
+        }
+    }
+}
+
+#[test]
 fn builtins_load_without_a_translation_or_compiler_dependency() {
     let catalog = builtin_blueprints();
     for record in catalog.revisions() {

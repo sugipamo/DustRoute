@@ -948,8 +948,8 @@ async fn blueprint_mcp_round_trip_adopts_after_restart_without_minecraft() {
         json!({"blueprint":{"kind":"archive"}}),
     )
     .await;
-    let loaded = dustroute_translate::blueprint_update::BlueprintUpdates::from_json(
-        &archive["result"]["archive"].to_string(),
+    let loaded = dustroute_translate::blueprint_update::BlueprintUpdates::from_archive(
+        serde_json::from_value(archive["result"]["archive"].clone()).unwrap(),
     )
     .unwrap();
     assert_eq!(loaded.proposals().count(), 1);

@@ -1,3 +1,6 @@
+#[path = "support/archive_fixture.rs"]
+mod archive_fixture;
+use archive_fixture::FixtureJson;
 #[allow(dead_code)]
 #[path = "support/reference_door_blueprint.rs"]
 mod fixture;
@@ -25,16 +28,16 @@ fn ordinary_door_is_freshly_adopted_and_reverified_after_archive_restart() {
     let source = f.catalog.clone();
     let mut updates = BlueprintUpdates::new(f.catalog);
     updates.create(f.request.clone()).unwrap();
-    let saved = updates.to_json().unwrap();
+    let saved = updates.fixture_json().unwrap();
     assert!(saved.contains("dustroute.blueprint-catalog.v13"));
-    let mut restored = BlueprintUpdates::from_json(&saved).unwrap();
+    let mut restored = archive_fixture::updates(&saved).unwrap();
     restored.adopt(&f.request.id).unwrap();
     assert_eq!(
         updates.catalog(),
         &source,
         "original isolated archive unchanged"
     );
-    let restored = BlueprintUpdates::from_json(&restored.to_json().unwrap()).unwrap();
+    let restored = archive_fixture::updates(&restored.fixture_json().unwrap()).unwrap();
     assert_eq!(restored.catalog().assembly(&f.base.id), Some(&f.base));
     let candidate = restored
         .catalog()

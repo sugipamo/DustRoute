@@ -1,3 +1,6 @@
+#[path = "support/archive_fixture.rs"]
+mod archive_fixture;
+use archive_fixture::FixtureJson;
 use dustroute_library::assembly::*;
 use dustroute_library::blueprint::*;
 use dustroute_library::builtin_blueprints::*;
@@ -81,7 +84,7 @@ fn captured_native_states_and_observation_coverage_are_not_inferred() {
 #[test]
 fn half_adder_roundtrip_restores_composed_wire_states_and_preserves_source_revisions() {
     let mut catalog = builtin_blueprints().clone();
-    let sources = catalog.to_json().unwrap();
+    let sources = catalog.fixture_json().unwrap();
     let compiled = BaselineCompiler::new(Default::default())
         .compile(&dustroute_translate::circuits::half_adder())
         .unwrap();
@@ -99,14 +102,14 @@ fn half_adder_roundtrip_restores_composed_wire_states_and_preserves_source_revis
         assembly: assembly.clone(),
     };
     catalog.insert_assembly(saved.clone()).unwrap();
-    let loaded = BlueprintCatalog::from_json(&catalog.to_json().unwrap()).unwrap();
+    let loaded = archive_fixture::catalog(&catalog.fixture_json().unwrap()).unwrap();
     let restored = loaded.assembly(&saved.id).unwrap();
     assert_eq!(restored, &saved);
     assert_eq!(
         validate_assembly(&loaded, &restored.assembly).unwrap(),
         compiled.world
     );
-    let original = BlueprintCatalog::from_json(&sources).unwrap();
+    let original = archive_fixture::catalog(&sources).unwrap();
     for record in original.revisions() {
         assert_eq!(loaded.revision(&record.id), Some(record));
     }
@@ -137,7 +140,7 @@ fn half_adder_roundtrip_restores_composed_wire_states_and_preserves_source_revis
         assembly: nested,
     };
     catalog.insert_assembly(nested_revision.clone()).unwrap();
-    let loaded = BlueprintCatalog::from_json(&catalog.to_json().unwrap()).unwrap();
+    let loaded = archive_fixture::catalog(&catalog.fixture_json().unwrap()).unwrap();
     let nested = &loaded.assembly(&nested_revision.id).unwrap().assembly;
     assert_eq!(validate_assembly(&loaded, nested).unwrap(), compiled.world);
     assert!(
@@ -219,7 +222,7 @@ fn replacing_a_shared_not_arrangement_can_change_its_nesting_without_mutating_hi
     }
     assert_eq!(catalog.assembly(&first.id), Some(&first));
     assert_eq!(catalog.revision(&parent.id), Some(&parent));
-    let restored = BlueprintCatalog::from_json(&catalog.to_json().unwrap()).unwrap();
+    let restored = archive_fixture::catalog(&catalog.fixture_json().unwrap()).unwrap();
     assert_eq!(restored.assembly(&next.id), Some(&next));
 }
 
@@ -239,7 +242,7 @@ fn loading_a_broken_state_does_not_restore_placement_or_connection_proof() {
         assembly,
     };
     catalog.insert_assembly(revision.clone()).unwrap();
-    let loaded = BlueprintCatalog::from_json(&catalog.to_json().unwrap()).unwrap();
+    let loaded = archive_fixture::catalog(&catalog.fixture_json().unwrap()).unwrap();
     assert!(validate_assembly(&loaded, &loaded.assembly(&revision.id).unwrap().assembly).is_err());
 }
 
@@ -325,7 +328,7 @@ fn exact_type_requirements_are_checked_against_actual_state_after_loading() {
         assembly: actual,
     };
     catalog.insert_assembly(revision.clone()).unwrap();
-    let loaded = BlueprintCatalog::from_json(&catalog.to_json().unwrap()).unwrap();
+    let loaded = archive_fixture::catalog(&catalog.fixture_json().unwrap()).unwrap();
     assert!(
         matches!(validate_assembly(&loaded, &loaded.assembly(&revision.id).unwrap().assembly),
         Err(AssemblyValidationError::Connection { error: dustroute_translate::blueprint_connection::BlueprintConnectionError::Blueprint(BlueprintError::UnsatisfiedSourceType(id)), .. }) if id == required)

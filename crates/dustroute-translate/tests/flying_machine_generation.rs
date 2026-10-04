@@ -1,3 +1,6 @@
+#[path = "support/archive_fixture.rs"]
+mod archive_fixture;
+use archive_fixture::FixtureJson;
 use dustroute_library::flying_machine::*;
 use dustroute_translate::behavior_type::BehaviorBudget;
 use dustroute_translate::blueprint_update::BlueprintUpdates;
@@ -84,7 +87,7 @@ fn harvest_requires_all_targets_removed_and_payload_arrival_after_restore() {
                 let mut updates = BlueprintUpdates::new(generated.records.catalog().unwrap());
                 updates.create(generated.request.clone()).unwrap();
                 let mut restored =
-                    BlueprintUpdates::from_json(&updates.to_json().unwrap()).unwrap();
+                    archive_fixture::updates(&updates.fixture_json().unwrap()).unwrap();
                 restored.adopt(&generated.request.id).unwrap();
             }
         }
@@ -297,7 +300,7 @@ fn added_blocks_must_arrive_and_drafts_require_fresh_adoption_after_restart() {
     assert_eq!(generated.verification.status, CheckStatus::Passed);
     let mut updates = BlueprintUpdates::new(generated.records.catalog().unwrap());
     updates.create(generated.request.clone()).unwrap();
-    let mut restored = BlueprintUpdates::from_json(&updates.to_json().unwrap()).unwrap();
+    let mut restored = archive_fixture::updates(&updates.fixture_json().unwrap()).unwrap();
     restored.adopt(&generated.request.id).unwrap();
     let mut detached = request();
     detached.attachments.push(FlyingMachineAttachment {

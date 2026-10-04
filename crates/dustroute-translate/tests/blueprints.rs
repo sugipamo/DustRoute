@@ -1,3 +1,6 @@
+#[path = "support/archive_fixture.rs"]
+mod archive_fixture;
+use archive_fixture::FixtureJson;
 use dustroute_library::blueprint::*;
 use dustroute_translate::blueprint::*;
 use dustroute_translate::{
@@ -14,7 +17,7 @@ fn frozen_archive_is_reproduced_by_independent_authoring_recipes() {
     let generated =
         dustroute_translate::blueprint_generation::generate_builtin_blueprints().unwrap();
     let loaded = builtin_blueprints();
-    assert_eq!(generated.to_json().unwrap(), loaded.to_json().unwrap());
+    assert_eq!(&generated, loaded);
     for record in generated.revisions() {
         assert_eq!(
             blueprint_cell(&generated, &record.id).unwrap(),
@@ -44,8 +47,8 @@ fn frozen_compilation_preserves_the_authoring_geometry_and_validation() {
 #[test]
 fn compiler_and_replacement_candidates_resolve_the_same_persistable_not_realizations() {
     let catalog = builtin_not_blueprints();
-    let saved = catalog.to_json().unwrap();
-    let loaded = BlueprintCatalog::from_json(&saved).unwrap();
+    let saved = catalog.fixture_json().unwrap();
+    let loaded = archive_fixture::catalog(&saved).unwrap();
     let classification = ClassificationRevisionId::new(NOT_CLASSIFICATION_REVISION).unwrap();
     assert_eq!(loaded.candidates(&classification).len(), 2);
     let top = blueprint_cell(&loaded, &id(NOT_TOP_REVISION)).unwrap();
@@ -88,7 +91,7 @@ fn parent_can_keep_raw_blocks_and_shared_interpretations_without_duplicating_geo
     assert_eq!(expanded.membership[&Pos::default()].len(), 3);
     let cell = blueprint_cell(&catalog, &parent.id).unwrap();
     assert!(verify_cell(GateKind::Not, &cell).valid);
-    let old = catalog.to_json().unwrap();
+    let old = catalog.fixture_json().unwrap();
     let mut replacement = parent.clone();
     replacement.id = id("parent.v2");
     replacement.parents = vec![parent.id.clone()];
@@ -116,7 +119,7 @@ fn parent_can_keep_raw_blocks_and_shared_interpretations_without_duplicating_geo
     );
     assert_eq!(catalog.expand(&parent.id).unwrap(), expanded);
     assert!(
-        BlueprintCatalog::from_json(&old)
+        archive_fixture::catalog(&old)
             .unwrap()
             .revision(&replacement.id)
             .is_none()

@@ -1,3 +1,6 @@
+#[path = "support/archive_fixture.rs"]
+mod archive_fixture;
+use archive_fixture::FixtureJson;
 #[allow(dead_code)]
 #[path = "support/reference_door_blueprint.rs"]
 mod fixture;
@@ -72,9 +75,9 @@ fn explicit_shell_cutouts_windows_and_named_air_compile_to_shared_blueprints() {
     );
     let mut updates = BlueprintUpdates::new(generated.records.catalog().unwrap());
     updates.create(generated.request.clone()).unwrap();
-    let mut updates = BlueprintUpdates::from_json(&updates.to_json().unwrap()).unwrap();
+    let mut updates = archive_fixture::updates(&updates.fixture_json().unwrap()).unwrap();
     updates.adopt(&generated.request.id).unwrap();
-    let updates = BlueprintUpdates::from_json(&updates.to_json().unwrap()).unwrap();
+    let updates = archive_fixture::updates(&updates.fixture_json().unwrap()).unwrap();
     let mut changed = updates
         .catalog()
         .assembly(&generated.request.candidate_state.id)
@@ -225,7 +228,7 @@ fn pinned_door_composition_rechecks_the_whole_world_and_handles_nonzero_anchors(
     assert_eq!(attached.terminals["door.control"], Pos::new(4, 6, 0));
     let mut updates = BlueprintUpdates::new(generated.records.catalog().unwrap());
     updates.create(generated.request.clone()).unwrap();
-    let mut updates = BlueprintUpdates::from_json(&updates.to_json().unwrap()).unwrap();
+    let mut updates = archive_fixture::updates(&updates.fixture_json().unwrap()).unwrap();
     updates.adopt(&generated.request.id).unwrap();
     assert_eq!(
         updates

@@ -1,3 +1,6 @@
+#[path = "support/archive_fixture.rs"]
+mod archive_fixture;
+use archive_fixture::FixtureJson;
 #[path = "support/runtime_blueprint.rs"]
 mod fixture;
 use dustroute_library::blueprint::*;
@@ -62,7 +65,7 @@ fn a_child_failure_during_motion_identifies_requirement_position_time_and_input(
     let saved = serde_json::to_value(RecordedReview::from(&report)).unwrap();
     let restored: RecordedReview = serde_json::from_value(saved.clone()).unwrap();
     assert_eq!(serde_json::to_value(restored).unwrap(), saved);
-    let mut archived = BlueprintUpdates::from_json(&updates.to_json().unwrap()).unwrap();
+    let mut archived = archive_fixture::updates(&updates.fixture_json().unwrap()).unwrap();
     assert!(
         archived.adopt(&f.request.id).is_err(),
         "saved evidence cannot authorize adoption"

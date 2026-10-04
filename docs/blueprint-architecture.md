@@ -270,9 +270,12 @@ rechecked. A geometry-only legacy adapter rejects obligations it cannot retain.
 These adapters are temporary migration boundaries, not alternate definitions of
 Blueprint identity or type semantics.
 
-Existing authoring recipes remain reproducible with
-`cargo run -p dustroute-translate --example generate_blueprints`; committed source
-revisions cannot be rewritten in place when an authoring recipe changes.
+Existing authoring recipes remain available through the typed
+`generate_builtin_blueprints` API. The JSON regeneration command has been retired.
+Runtime catalogs load fixed Rust definitions without running recipes or a compiler.
+Reproduce the independent recipe and geometry checks with
+`cargo test --offline --locked -j1 -p dustroute-translate --test blueprints frozen_`.
+Committed source revisions cannot be rewritten in place when an authoring recipe changes.
 See [component library](component-library.md) and [development](development.md).
 
 ## Explicit child-update proposals

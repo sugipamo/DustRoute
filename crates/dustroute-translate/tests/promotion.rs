@@ -1,3 +1,6 @@
+#[path = "support/archive_fixture.rs"]
+mod archive_fixture;
+use archive_fixture::FixtureJson;
 use dustroute_library::PortDirection;
 use dustroute_library::assembly::*;
 use dustroute_library::blueprint::*;
@@ -185,9 +188,10 @@ fn wire_to_block_routes_use_actual_arms_through_rotation_reload_and_adoption() {
                     assembly: assembly.clone(),
                 };
                 catalog.insert_assembly(state.clone()).unwrap();
-                let mut loaded = BlueprintCatalog::from_json(&catalog.to_json().unwrap()).unwrap();
+                let mut loaded =
+                    archive_fixture::catalog(&catalog.fixture_json().unwrap()).unwrap();
                 assert_eq!(loaded.assembly(&state.id), Some(&state));
-                let saved = loaded.to_json().unwrap();
+                let saved = loaded.fixture_json().unwrap();
                 let status = if arm {
                     CheckStatus::Passed
                 } else {
@@ -205,7 +209,7 @@ fn wire_to_block_routes_use_actual_arms_through_rotation_reload_and_adoption() {
                 assert_eq!(review.report().status(), status);
                 assert_eq!(review.adopt(&mut loaded).is_ok(), arm);
                 if !arm {
-                    assert_eq!(loaded.to_json().unwrap(), saved);
+                    assert_eq!(loaded.fixture_json().unwrap(), saved);
                 }
                 assert_eq!(loaded.revision(&child.id), Some(&child));
                 assert_eq!(loaded.assembly(&state.id), Some(&state));
@@ -270,7 +274,7 @@ fn rise_conflicts_and_unknown_clearance_block_shared_child_adoption_without_rewr
 
     world.set(Pos::new(0, 2, 0), Block::new(BlockKind::Solid));
     assembly.blocks = records(&world);
-    let original = catalog.to_json().unwrap();
+    let original = catalog.fixture_json().unwrap();
     let original_assembly = assembly.clone();
     let report = review_assembly(&catalog, &assembly).unwrap();
     assert_eq!(
@@ -296,7 +300,7 @@ fn rise_conflicts_and_unknown_clearance_block_shared_child_adoption_without_rewr
             .adopt(&mut catalog)
             .is_err()
     );
-    assert_eq!(catalog.to_json().unwrap(), original);
+    assert_eq!(catalog.fixture_json().unwrap(), original);
     assert_eq!(assembly, original_assembly);
     // Persistence stores the literal conflict as data, never as a passing proof.
     let state = AssemblyRevision {
@@ -305,7 +309,7 @@ fn rise_conflicts_and_unknown_clearance_block_shared_child_adoption_without_rewr
         assembly,
     };
     catalog.insert_assembly(state.clone()).unwrap();
-    let loaded = BlueprintCatalog::from_json(&catalog.to_json().unwrap()).unwrap();
+    let loaded = archive_fixture::catalog(&catalog.fixture_json().unwrap()).unwrap();
     assert_eq!(loaded.revision(&child.id), Some(&child));
     assert_eq!(loaded.assembly(&state.id), Some(&state));
     assert_eq!(
@@ -317,7 +321,7 @@ fn rise_conflicts_and_unknown_clearance_block_shared_child_adoption_without_rewr
 #[test]
 fn shared_wire_promotion_preserves_actual_layout_and_each_child_source_after_reload_and_rotation() {
     let (mut catalog, assembly, child) = cross();
-    let before = catalog.to_json().unwrap();
+    let before = catalog.fixture_json().unwrap();
     let before_state = assembly.clone();
     let candidate = PromotionCandidate::prepare(&catalog, &assembly, grouping("cross.v1")).unwrap();
     assert_eq!(
@@ -331,15 +335,16 @@ fn shared_wire_promotion_preserves_actual_layout_and_each_child_source_after_rel
     );
     let review = candidate.validate(&catalog).unwrap();
     assert_eq!(review.report().status(), CheckStatus::Passed);
-    assert_eq!(catalog.to_json().unwrap(), before); // Validation never adopts.
+    assert_eq!(catalog.fixture_json().unwrap(), before); // Validation never adopts.
     let grouped = review.adopt(&mut catalog).unwrap();
     assert_eq!(assembly, before_state);
     assert_eq!(catalog.revision(&child.id), Some(&child));
-    let loaded = BlueprintCatalog::from_json(&catalog.to_json().unwrap()).unwrap();
-    let mut archive: serde_json::Value = serde_json::from_str(&catalog.to_json().unwrap()).unwrap();
+    let loaded = archive_fixture::catalog(&catalog.fixture_json().unwrap()).unwrap();
+    let mut archive: serde_json::Value =
+        serde_json::from_str(&catalog.fixture_json().unwrap()).unwrap();
     assert_eq!(archive["schema"], "dustroute.blueprint-catalog.v13");
     archive["schema"] = "dustroute.blueprint-catalog.v1".into();
-    assert!(BlueprintCatalog::from_json(&archive.to_string()).is_err());
+    assert!(archive_fixture::catalog(&archive.to_string()).is_err());
     let expanded = loaded.expand(&id("cross.v1")).unwrap();
     assert_eq!(
         expanded.proposed_world(),
@@ -433,7 +438,7 @@ fn typed_arrangement(offset: Pos, expected: Block) -> (BlueprintCatalog, Assembl
 #[test]
 fn passing_parent_cannot_hide_failing_shared_children_and_failed_adoption_is_atomic() {
     let (mut catalog, assembly) = typed_arrangement(Pos::new(0, -1, 0), Block::new(BlockKind::Air));
-    let before = catalog.to_json().unwrap();
+    let before = catalog.fixture_json().unwrap();
     let candidate =
         PromotionCandidate::prepare(&catalog, &assembly, grouping("invalid-parent.v1")).unwrap();
     let review = candidate.validate(&catalog).unwrap();
@@ -452,7 +457,7 @@ fn passing_parent_cannot_hide_failing_shared_children_and_failed_adoption_is_ato
         review.adopt(&mut catalog),
         Err(PromotionError::Validation(_))
     ));
-    assert_eq!(catalog.to_json().unwrap(), before);
+    assert_eq!(catalog.fixture_json().unwrap(), before);
     assert_eq!(
         review.candidate().blueprint().inclusions,
         assembly.instances
@@ -502,7 +507,7 @@ fn nested_shared_children_are_checked_in_current_context_without_mutating_prior_
         .unwrap();
     assert_eq!(first.report().status(), CheckStatus::Passed);
     let mut grouped = first.adopt(&mut catalog).unwrap();
-    let before = catalog.to_json().unwrap();
+    let before = catalog.fixture_json().unwrap();
     grouped
         .blocks
         .iter_mut()
@@ -529,7 +534,7 @@ fn nested_shared_children_are_checked_in_current_context_without_mutating_prior_
         );
     }
     assert!(review.adopt(&mut catalog).is_err());
-    assert_eq!(catalog.to_json().unwrap(), before);
+    assert_eq!(catalog.fixture_json().unwrap(), before);
 }
 
 #[test]
@@ -540,7 +545,8 @@ fn reviewed_dependencies_cannot_be_rebound_in_another_catalog() {
         .validate(&catalog)
         .unwrap();
     assert_eq!(review.report().status(), CheckStatus::Passed);
-    let mut archive: serde_json::Value = serde_json::from_str(&catalog.to_json().unwrap()).unwrap();
+    let mut archive: serde_json::Value =
+        serde_json::from_str(&catalog.fixture_json().unwrap()).unwrap();
     let definition = archive["types"]
         .as_array_mut()
         .unwrap()
@@ -548,13 +554,13 @@ fn reviewed_dependencies_cannot_be_rebound_in_another_catalog() {
         .find(|record| record["id"] == "context.v1")
         .unwrap();
     definition["name"] = "Different definition under the same ID".into();
-    let mut other = BlueprintCatalog::from_json(&archive.to_string()).unwrap();
-    let before = other.to_json().unwrap();
+    let mut other = archive_fixture::catalog(&archive.to_string()).unwrap();
+    let before = other.fixture_json().unwrap();
     assert!(matches!(
         review.adopt(&mut other),
         Err(PromotionError::ChangedDependency(_))
     ));
-    assert_eq!(other.to_json().unwrap(), before);
+    assert_eq!(other.fixture_json().unwrap(), before);
 }
 
 #[test]
@@ -594,7 +600,7 @@ fn invalid_and_unknown_supports_block_adoption_without_repairing_shared_geometry
     assembly
         .blocks
         .retain(|record| record.position != Pos::default());
-    let before = catalog.to_json().unwrap();
+    let before = catalog.fixture_json().unwrap();
     let failed = PromotionCandidate::prepare(&catalog, &assembly, grouping("unsupported.v1"))
         .unwrap()
         .validate(&catalog)
@@ -614,7 +620,7 @@ fn invalid_and_unknown_supports_block_adoption_without_repairing_shared_geometry
         .unwrap();
     assert_eq!(unknown.report().status(), CheckStatus::Undetermined);
     assert!(unknown.adopt(&mut catalog).is_err());
-    assert_eq!(catalog.to_json().unwrap(), before);
+    assert_eq!(catalog.fixture_json().unwrap(), before);
 }
 
 #[test]
@@ -624,7 +630,7 @@ fn a_broken_internal_route_fails_its_declaring_parent_even_when_all_ports_exist(
     assembly
         .blocks
         .retain(|record| record.position != Pos::new(0, 1, 0));
-    let before = catalog.to_json().unwrap();
+    let before = catalog.fixture_json().unwrap();
     let review = PromotionCandidate::prepare(&catalog, &assembly, grouping("broken-route.v1"))
         .unwrap()
         .validate(&catalog)
@@ -647,7 +653,7 @@ fn a_broken_internal_route_fails_its_declaring_parent_even_when_all_ports_exist(
         );
     }
     assert!(review.adopt(&mut catalog).is_err());
-    assert_eq!(catalog.to_json().unwrap(), before);
+    assert_eq!(catalog.fixture_json().unwrap(), before);
 }
 
 #[test]
@@ -665,7 +671,7 @@ fn captured_parent_state_cannot_discard_a_childs_explicit_air_requirement() {
         position,
         block: Block::new(BlockKind::Solid),
     });
-    let before = catalog.to_json().unwrap();
+    let before = catalog.fixture_json().unwrap();
     let review = PromotionCandidate::prepare(&catalog, &assembly, grouping("occupied-air.v1"))
         .unwrap()
         .validate(&catalog)
@@ -683,7 +689,7 @@ fn captured_parent_state_cannot_discard_a_childs_explicit_air_requirement() {
         CheckStatus::Passed
     );
     assert!(review.adopt(&mut catalog).is_err());
-    assert_eq!(catalog.to_json().unwrap(), before);
+    assert_eq!(catalog.fixture_json().unwrap(), before);
     // Importing unverified data cannot conceal the same child requirement from
     // a legacy geometry adapter that cannot carry it through validation.
     let mut drafts = catalog.clone();

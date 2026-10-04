@@ -1,3 +1,6 @@
+#[path = "support/archive_fixture.rs"]
+mod archive_fixture;
+use archive_fixture::FixtureJson;
 use std::collections::BTreeMap;
 
 use dustroute_library::PortDirection;
@@ -146,7 +149,7 @@ fn bound_coordinates_stay_fixed_while_multiple_named_observations_see_motion() {
     ] {
         let (catalog, assembly, path, binding, region) = fixture(rotation);
         let original = assembly.clone();
-        let saved = catalog.to_json().unwrap();
+        let saved = catalog.fixture_json().unwrap();
         let view = assembly.inspect(&catalog).unwrap();
         let input = view
             .resolved_port(&BlueprintPortRef {
@@ -201,7 +204,7 @@ fn bound_coordinates_stay_fixed_while_multiple_named_observations_see_motion() {
         assert!(!sample.outputs["occupied"].value);
         assert!(!sample.outputs["solid"].value);
         assert_eq!(sample.outputs["solid"].state.position(), output);
-        assert_eq!(catalog.to_json().unwrap(), saved);
+        assert_eq!(catalog.fixture_json().unwrap(), saved);
         assert_eq!(assembly, original);
     }
 }
@@ -455,7 +458,7 @@ fn whole_review_keeps_parent_pass_and_child_motion_failure_separate() {
         catalog.insert_revision(child).unwrap();
         assembly.instances[0].revision = parent.id.clone();
         catalog.insert_revision(parent).unwrap();
-        let before = catalog.to_json().unwrap();
+        let before = catalog.fixture_json().unwrap();
         let original = assembly.clone();
         let report = review_assembly_in_runtime_context(
             &catalog,
@@ -501,7 +504,7 @@ fn whole_review_keeps_parent_pass_and_child_motion_failure_separate() {
                 .iter()
                 .all(|b| b.report.status == CheckStatus::Passed)
         );
-        assert_eq!(catalog.to_json().unwrap(), before);
+        assert_eq!(catalog.fixture_json().unwrap(), before);
         assert_eq!(assembly, original);
     }
 }

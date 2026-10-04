@@ -1,3 +1,6 @@
+#[path = "support/archive_fixture.rs"]
+mod archive_fixture;
+use archive_fixture::FixtureJson;
 use dustroute_library::PortDirection;
 use dustroute_library::assembly::*;
 use dustroute_library::blueprint::*;
@@ -78,7 +81,7 @@ fn promoted_not_reuses_internal_routes_and_nested_requirements_when_compiled_aga
         .unwrap()
         .required_source_types = vec![TypeRevisionId::new(WIRE_TYPE_REVISION).unwrap()];
     catalog.insert_revision(parent.clone()).unwrap();
-    let restored = BlueprintCatalog::from_json(&catalog.to_json().unwrap()).unwrap();
+    let restored = archive_fixture::catalog(&catalog.fixture_json().unwrap()).unwrap();
     selection.insert(GateKind::Not, parent.id.clone());
     let reused = BaselineCompiler::new(BaselineCompileConfig {
         spacing_x: 48,

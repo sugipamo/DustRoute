@@ -1,3 +1,6 @@
+#[path = "support/catalog_fixture.rs"]
+mod catalog_fixture;
+use catalog_fixture::FixtureJson;
 use dustroute_library::behavior_type::PistonDoor;
 use dustroute_library::blueprint::{BlueprintCatalog, TypeContract, TypeRevision, TypeRevisionId};
 
@@ -17,15 +20,13 @@ fn registered_door_alone_requires_new_schema_and_cannot_be_downgraded() {
     catalog
         .insert_type(definition(PistonDoor::three_by_three()))
         .unwrap();
-    let saved = catalog.to_json().unwrap();
+    let saved = catalog.fixture_json().unwrap();
     assert!(saved.contains("dustroute.blueprint-catalog.v13"));
-    assert_eq!(BlueprintCatalog::from_json(&saved).unwrap(), catalog);
+    assert_eq!(catalog_fixture::catalog(&saved).unwrap(), catalog);
     for version in 1..=10 {
         assert!(
-            BlueprintCatalog::from_json(
-                &saved.replace("catalog.v13", &format!("catalog.v{version}"))
-            )
-            .is_err()
+            catalog_fixture::catalog(&saved.replace("catalog.v13", &format!("catalog.v{version}")))
+                .is_err()
         );
     }
 }

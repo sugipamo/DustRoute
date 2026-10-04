@@ -1,3 +1,6 @@
+#[path = "support/archive_fixture.rs"]
+mod archive_fixture;
+use archive_fixture::FixtureJson;
 use dustroute_library::building::{BuildingDesignRequest, GroundedBuildingDesignRequest};
 use dustroute_minecraft::{Block, BlockKind, Pos};
 use dustroute_translate::blueprint_update::BlueprintUpdates;
@@ -38,9 +41,9 @@ fn grounded_adoption_survives_restart_and_retains_ground_and_air_requirements() 
     assert!(!g.verification.live_world_verified);
     let mut updates = BlueprintUpdates::new(g.records.catalog().unwrap());
     updates.create(g.request.clone()).unwrap();
-    let mut updates = BlueprintUpdates::from_json(&updates.to_json().unwrap()).unwrap();
+    let mut updates = archive_fixture::updates(&updates.fixture_json().unwrap()).unwrap();
     updates.adopt(&g.request.id).unwrap();
-    let updates = BlueprintUpdates::from_json(&updates.to_json().unwrap()).unwrap();
+    let updates = archive_fixture::updates(&updates.fixture_json().unwrap()).unwrap();
     let base = updates.catalog().assembly(&g.request.base_state).unwrap();
     assert_eq!(base.assembly.blocks.len(), 49);
     let assembly = &updates
@@ -146,7 +149,7 @@ fn translated_sites_keep_exact_absolute_obligations_without_requiring_world_orig
         let mut updates = BlueprintUpdates::new(g.records.catalog().unwrap());
         updates.create(g.request.clone()).unwrap();
         updates.adopt(&g.request.id).unwrap();
-        let updates = BlueprintUpdates::from_json(&updates.to_json().unwrap()).unwrap();
+        let updates = archive_fixture::updates(&updates.fixture_json().unwrap()).unwrap();
         let catalog = updates.catalog();
         let body = g
             .request

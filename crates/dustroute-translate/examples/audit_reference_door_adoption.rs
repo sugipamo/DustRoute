@@ -181,7 +181,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let mut updates = BlueprintUpdates::new(f.catalog);
             updates.create(f.request)?;
             let mut prepared = json!({"records":records,"request":request,
-                "archive":serde_json::from_str::<serde_json::Value>(&updates.to_json()?)?});
+                "archive":updates.archive()});
             if let Some(probes) = probes {
                 prepared["live_probes"] = probes;
             }
@@ -218,7 +218,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .ok_or("expected saved audit JSON containing archive")?,
             )?)?;
             let mut updates =
-                BlueprintUpdates::from_json(&serde_json::to_string(&input["archive"])?)?;
+                BlueprintUpdates::from_archive(serde_json::from_value(input["archive"].clone())?)?;
             let id = &f.request.id;
             let result = match updates.adopt(id) {
                 Ok(()) => json!({"status":"adopted"}),
@@ -228,14 +228,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             };
             json!({"result":result,"proposal_status":updates.proposal(id).unwrap().status(),
                 "candidate_published":updates.catalog().assembly(&f.request.candidate_state.id).is_some(),
-                "archive":serde_json::from_str::<serde_json::Value>(&updates.to_json()?)?})
+                "archive":updates.archive()})
         }
         "recheck" => {
             let input: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(
                 args.next()
                     .ok_or("expected saved audit JSON containing archive")?,
             )?)?;
-            let updates = BlueprintUpdates::from_json(&serde_json::to_string(&input["archive"])?)?;
+            let updates =
+                BlueprintUpdates::from_archive(serde_json::from_value(input["archive"].clone())?)?;
             let request = updates
                 .proposal(&f.request.id)
                 .ok_or("saved proposal missing")?

@@ -1,3 +1,6 @@
+#[path = "support/archive_fixture.rs"]
+mod archive_fixture;
+use archive_fixture::FixtureJson;
 #[allow(dead_code)]
 #[path = "support/runtime_blueprint.rs"]
 mod fixture;
@@ -76,7 +79,7 @@ fn updates_descend_from_the_selected_base_retain_pins_and_survive_restart() {
         }
     }
     updates.create(generated.design.request.clone()).unwrap();
-    let mut updates = BlueprintUpdates::from_json(&updates.to_json().unwrap()).unwrap();
+    let mut updates = archive_fixture::updates(&updates.fixture_json().unwrap()).unwrap();
     updates.adopt(&generated.design.request.id).unwrap();
     assert_eq!(updates.catalog().assembly(&base.id), Some(&base));
     let final_design = design("test.update.final", "glass");

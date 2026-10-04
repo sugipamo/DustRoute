@@ -1,3 +1,6 @@
+#[path = "support/catalog_fixture.rs"]
+mod catalog_fixture;
+use catalog_fixture::FixtureJson;
 use dustroute_library::PortDirection;
 use dustroute_library::blueprint::*;
 use dustroute_library::builtin_primitives::*;
@@ -52,18 +55,18 @@ fn independent_lever_type_checks_identity_without_fixing_powered_state() {
 
 #[test]
 fn new_interfaces_are_output_only_and_archives_cannot_hide_their_version() {
-    let original = builtin_primitives().to_json().unwrap();
+    let original = builtin_primitives().fixture_json().unwrap();
     assert!(original.contains("dustroute.blueprint-catalog.v13"));
     assert_eq!(
-        BlueprintCatalog::from_json(&original)
+        catalog_fixture::catalog(&original)
             .unwrap()
-            .to_json()
+            .fixture_json()
             .unwrap(),
         original
     );
     for version in 1..=12 {
         assert!(
-            BlueprintCatalog::from_json(&original.replace(
+            catalog_fixture::catalog(&original.replace(
                 "blueprint-catalog.v13",
                 &format!("blueprint-catalog.v{version}")
             ))
@@ -87,8 +90,13 @@ fn new_interfaces_are_output_only_and_archives_cannot_hide_their_version() {
 #[test]
 fn static_bindings_are_explicit_versioned_and_reject_incomplete_or_behavioral_declarations() {
     let legacy =
-        BlueprintCatalog::from_json(include_str!("../blueprints/primitives-v1.json")).unwrap();
-    assert!(legacy.to_json().unwrap().contains("blueprint-catalog.v13"));
+        catalog_fixture::catalog(include_str!("../blueprints/primitives-v1.json")).unwrap();
+    assert!(
+        legacy
+            .fixture_json()
+            .unwrap()
+            .contains("blueprint-catalog.v13")
+    );
     assert_eq!(
         legacy.revision(&BlueprintRevisionId::new(LEGACY_LEVER_REVISION).unwrap()),
         builtin_primitives().revision(&BlueprintRevisionId::new(LEGACY_LEVER_REVISION).unwrap())

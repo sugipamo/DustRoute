@@ -1,3 +1,6 @@
+#[path = "support/archive_fixture.rs"]
+mod archive_fixture;
+use archive_fixture::FixtureJson;
 use std::collections::BTreeMap;
 
 use dustroute_library::PortDirection;
@@ -124,7 +127,7 @@ fn explicit_location_bindings_cannot_inherit_a_legacy_fixed_geometry_pass() {
     }];
     assembly.instances[0].revision = source.id.clone();
     catalog.insert_revision(source).unwrap();
-    let before = catalog.to_json().unwrap();
+    let before = catalog.fixture_json().unwrap();
     let report = review_assembly_in_context(
         &catalog,
         &assembly,
@@ -140,7 +143,7 @@ fn explicit_location_bindings_cannot_inherit_a_legacy_fixed_geometry_pass() {
             .iter()
             .any(|check| check.detail.contains("runtime behavior context"))
     );
-    assert_eq!(catalog.to_json().unwrap(), before);
+    assert_eq!(catalog.fixture_json().unwrap(), before);
 }
 fn fixture() -> (BlueprintCatalog, Assembly, PhysicalBehaviorContext) {
     let mut catalog = builtin_laws().clone();
@@ -277,13 +280,13 @@ fn law_requirements_need_a_world_and_parent_success_cannot_hide_child_conflicts(
         CheckStatus::Failed
     );
     assert_eq!(report.status(), CheckStatus::Failed);
-    let before = catalog.to_json().unwrap();
+    let before = catalog.fixture_json().unwrap();
     let candidate = PromotionCandidate::prepare(&catalog, &assembly, grouping()).unwrap();
     let checked = candidate
         .validate_in_context(&catalog, context, BehaviorBudget::default())
         .unwrap();
     assert!(checked.adopt(&mut catalog).is_err());
-    assert_eq!(catalog.to_json().unwrap(), before);
+    assert_eq!(catalog.fixture_json().unwrap(), before);
 }
 
 #[test]
@@ -307,7 +310,7 @@ fn publishing_device_laws_does_not_extend_dust_torch_proof_contexts() {
         source.required_laws = vec![id(law)];
         catalog.insert_revision(source).unwrap();
         assembly.instances[0].revision = id("requires-device.v1");
-        let before = catalog.to_json().unwrap();
+        let before = catalog.fixture_json().unwrap();
         let report = review(&catalog, &assembly, &context);
         assert_eq!(report.status(), CheckStatus::Failed);
         assert!(
@@ -322,7 +325,7 @@ fn publishing_device_laws_does_not_extend_dust_torch_proof_contexts() {
             .validate_in_context(&catalog, context, BehaviorBudget::default())
             .unwrap();
         assert!(reviewed.adopt(&mut catalog).is_err());
-        assert_eq!(catalog.to_json().unwrap(), before);
+        assert_eq!(catalog.fixture_json().unwrap(), before);
     }
 }
 
@@ -431,7 +434,8 @@ fn implicit_spatial_pins_preserve_old_archives_and_reject_conflicting_definition
     let old_context = serde_json::to_string(&context).unwrap();
     assert!(!old_context.contains("spatial"));
     assert_eq!(context.law_revisions().len(), 6);
-    let mut archive: serde_json::Value = serde_json::from_str(&catalog.to_json().unwrap()).unwrap();
+    let mut archive: serde_json::Value =
+        serde_json::from_str(&catalog.fixture_json().unwrap()).unwrap();
     archive["revisions"]
         .as_array_mut()
         .unwrap()
@@ -440,13 +444,13 @@ fn implicit_spatial_pins_preserve_old_archives_and_reject_conflicting_definition
                 .iter()
                 .any(|id| record["id"] == id.as_str())
         });
-    let old_catalog = BlueprintCatalog::from_json(&archive.to_string()).unwrap();
-    let old_saved = old_catalog.to_json().unwrap();
+    let old_catalog = archive_fixture::catalog(&archive.to_string()).unwrap();
+    let old_saved = old_catalog.fixture_json().unwrap();
     assert_eq!(
         review(&old_catalog, &assembly, &context).status(),
         CheckStatus::Passed
     );
-    assert_eq!(old_catalog.to_json().unwrap(), old_saved);
+    assert_eq!(old_catalog.fixture_json().unwrap(), old_saved);
     assert_eq!(serde_json::to_string(&context).unwrap(), old_context);
 
     let mut conflict = builtin_laws()
@@ -585,20 +589,18 @@ fn arbitrary_input_not_promotes_with_fresh_proof_and_keeps_immutable_sources() {
     let adopted = checked.adopt(&mut catalog).unwrap();
     assert_eq!(adopted.blocks, assembly.blocks);
     assert_eq!(catalog.revision(&original.id), Some(&original));
-    let saved = catalog.to_json().unwrap();
+    let saved = catalog.fixture_json().unwrap();
     assert!(saved.contains("dustroute.blueprint-catalog.v13"));
-    let loaded = BlueprintCatalog::from_json(&saved).unwrap();
-    assert_eq!(loaded.to_json().unwrap(), saved);
+    let loaded = archive_fixture::catalog(&saved).unwrap();
+    assert_eq!(loaded.fixture_json().unwrap(), saved);
     assert_eq!(
         review(&loaded, &adopted, &context).status(),
         CheckStatus::Passed
     );
     for version in 1..6 {
         assert!(
-            BlueprintCatalog::from_json(
-                &saved.replace("catalog.v13", &format!("catalog.v{version}"))
-            )
-            .is_err()
+            archive_fixture::catalog(&saved.replace("catalog.v13", &format!("catalog.v{version}")))
+                .is_err()
         );
     }
 }
@@ -659,7 +661,10 @@ fn missing_ambiguous_unrelated_drivers_wrong_ports_and_budgets_cannot_pass() {
     );
     let mut untouched = catalog.clone();
     assert!(checked.adopt(&mut untouched).is_err());
-    assert_eq!(catalog.to_json().unwrap(), untouched.to_json().unwrap());
+    assert_eq!(
+        catalog.fixture_json().unwrap(),
+        untouched.fixture_json().unwrap()
+    );
 }
 
 #[test]
@@ -695,9 +700,9 @@ fn parent_pass_never_hides_child_relation_failure_or_rebinds_its_type() {
     );
     // Abstract counterexamples remain undetermined until concretely replayed.
     assert_eq!(report.status(), CheckStatus::Undetermined);
-    let before = catalog.to_json().unwrap();
+    let before = catalog.fixture_json().unwrap();
     assert!(checked.adopt(&mut catalog).is_err());
-    assert_eq!(catalog.to_json().unwrap(), before);
+    assert_eq!(catalog.fixture_json().unwrap(), before);
     assert_eq!(catalog.revision(&child.id), Some(&child));
 }
 

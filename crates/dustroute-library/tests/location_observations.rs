@@ -1,3 +1,6 @@
+#[path = "support/catalog_fixture.rs"]
+mod catalog_fixture;
+use catalog_fixture::FixtureJson;
 use std::collections::BTreeMap;
 
 use dustroute_library::PortDirection;
@@ -276,9 +279,9 @@ fn unknown_coordinates_and_missing_properties_are_not_false_or_air() {
 #[test]
 fn explicit_bindings_roundtrip_in_a_new_archive_without_rewriting_old_types() {
     let catalog = catalog();
-    let saved = catalog.to_json().unwrap();
+    let saved = catalog.fixture_json().unwrap();
     assert!(saved.contains("dustroute.blueprint-catalog.v13"));
-    let loaded = BlueprintCatalog::from_json(&saved).unwrap();
+    let loaded = catalog_fixture::catalog(&saved).unwrap();
     assert_eq!(
         loaded.revision(&revision().id),
         catalog.revision(&revision().id)
@@ -286,18 +289,16 @@ fn explicit_bindings_roundtrip_in_a_new_archive_without_rewriting_old_types() {
     assert_eq!(loaded.type_revision(&definition().id), Some(&definition()));
     for version in 1..=9 {
         assert!(
-            BlueprintCatalog::from_json(
-                &saved.replace("catalog.v13", &format!("catalog.v{version}"))
-            )
-            .is_err()
+            catalog_fixture::catalog(&saved.replace("catalog.v13", &format!("catalog.v{version}")))
+                .is_err()
         );
     }
-    let before = catalog.to_json().unwrap();
+    let before = catalog.fixture_json().unwrap();
     let mut run = runtime();
     schedule_electrical_input(&mut run, 1, INPUT, true).unwrap();
     schedule_electrical_input(&mut run, 2, INPUT, false).unwrap();
     run.run_until_idle().unwrap();
-    assert_eq!(catalog.to_json().unwrap(), before);
+    assert_eq!(catalog.fixture_json().unwrap(), before);
     assert_eq!(
         catalog.revision(&revision().id).unwrap().ports[1].position,
         OUT

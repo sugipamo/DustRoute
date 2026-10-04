@@ -648,3 +648,55 @@ JSON例外を追加せずに進める具体案は次の通り。
 CLIとは別のauthoringコマンドについて、再生成入口を廃止するか新形式の生成器を作るかは
 未決定である。この範囲選択の改修前に停止した。上記の組込み定義・example・archive API
 にはまだ変更していない。操作registry・live activity・残るworkflowも未完了である。
+
+### 再生成入口の統合承認と固定Rust定義への移行
+
+ユーザーが推奨案を承認した。`builtin_blueprints/data.rs`と
+`builtin_primitives/data.rs`へ固定定義を移した。幾何tableの`Cell`はMinecraftの
+`BlockKind`、`Facing`、`Pos`、`WireConnection`を使い、未知の給電とfalse、wire観測の
+欠落と空mapを区別する。文字列のblock kindを起動時に解析せず、Rust compilerが
+tableのvariant・field・値型を検査する。既存のrecord型でmetadataを明示し、
+`BlueprintRecords::catalog`で構造を検査する。レシピやcompilerは起動時に呼ばない。
+
+12件のRevision、731個のblock、全てのtype/classification、要求・provenance・IDを
+既存の内容のまま保持した。元の二つのJSON assetは内容を変えず独立回帰fixtureへ移した。
+再生成用exampleを撤去し、独立した`generate_builtin_blueprints` APIは維持する。
+固定定義との比較はtyped catalogとphysical cellで行い、file上書きの入口は残さない。
+
+カタログと更新提案の`to_json`/`from_json` APIも撤去した。カタログは
+`BlueprintCatalogArchive`と`archive`/`from_archive`、更新提案は既存の
+`BlueprintUpdateArchive`と`archive`/`from_archive`で接続する。schemaと参照の検査、
+保存された合格を新しい採用権限にしない再検証条件は変えない。
+
+カタログのarchiveを公開Rust型にした際、canonical/storage codecがstruct名を含める
+ことを確認した。serializer上の名前は従来の`Archive`を維持し、以前のprivate recordの
+独立定義に対して保存byteとtyped再構築を検査する。保存schemaやcodecは変更しない。
+
+presentationのschema・改ざんfixtureのdecode/encodeはテスト専用supportへ移した。
+最適化の状態比較はcatalogそのものを比較し、再構築はtyped archiveを使う。
+library/translate/Minecraft crateの直接の`serde_json`依存はdev dependencyとした。
+MCP用の既存schema metadataを生成する`schemars`等の間接依存まで撤去したとの
+主張ではない。旧JSONを本番保存の互換入力として探索・復元する経路は加えていない。
+
+操作registryの結果、公開応答からlive activityへの再解析、残るworkflow・診断exampleの
+JSONはまだ残っている。これらの全面除去まで統合ゴールを達成扱いにしない。
+
+#### 固定定義とtyped archiveの検証
+
+- libraryのunit/integration全64件が成功した。固定fixtureとの全record・展開の一致、
+  保存byteの維持、非JSON codecからの復元、schema拒否・重複拒否を含む。
+- translateの`blueprints`、`blueprint_updates`、`reference_door_adoption`、
+  `flying_machine_adoption`、`runtime_adoption`の計32件が成功した。最初の独立生成
+  レシピ比較2件と固定catalog/deviceの6件も成功し、変更後の該当全targetで再確認した。
+- optimizeの`reduced_candidate_enters_existing_parent_proposal_and_is_reverified_after_reload`
+  1件が成功した。最適化側へJSON依存を追加せず、状態比較とarchive再構築で確認した。
+- MCPの`blueprint_mcp_` filterは6件成功した。保存・再起動・採用、妨害されたwire、
+  保存された偽の合格、欠測のclearance、保存Assemblyの扱いを確認した。
+- workspace全targetとMCPの`no-default-features`全targetのClippyが`-D warnings`で成功。
+  初回Clippyで最適化テストの古いJSON helper依存が見つかり、typed比較・再構築へ
+  直してから検査を完了した。内部APIの検査を旧JSON helperに依存させていない。
+
+全てoffline/locked、Cargoは単独`-j1`、テストは単一threadで実行した。
+実機接続・ワールド変更・依存version更新は行っていない。codecの互換性検査用に
+既存workspaceの`dustroute-codec`をlibraryのdev dependencyへ追加した。
+formatting、差分の空白検査、Voxrig 322ファイルの既存pinとの一致も確認した。

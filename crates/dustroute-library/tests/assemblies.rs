@@ -1,3 +1,6 @@
+#[path = "support/catalog_fixture.rs"]
+mod catalog_fixture;
+use catalog_fixture::FixtureJson;
 use std::collections::BTreeSet;
 
 use dustroute_library::assembly::*;
@@ -89,7 +92,7 @@ fn actual_state_is_stored_once_without_rebinding_shared_sources_or_old_states() 
     catalog.insert_assembly(second.clone()).unwrap();
     assert_eq!(catalog.revision(&source), Some(&original_source));
     assert_eq!(catalog.assembly(&first.id), Some(&first));
-    let loaded = BlueprintCatalog::from_json(&catalog.to_json().unwrap()).unwrap();
+    let loaded = catalog_fixture::catalog(&catalog.fixture_json().unwrap()).unwrap();
     assert_eq!(loaded.assembly(&second.id), Some(&second));
     let view = second.assembly.inspect(&loaded).unwrap();
     assert_eq!(view.block_at(output).unwrap().power_level, Some(7));
@@ -180,11 +183,12 @@ fn state_archives_reject_missing_sources_cycles_duplicate_states_and_overflow() 
         Err(BlueprintError::CoordinateOverflow)
     );
     catalog.insert_assembly(record).unwrap();
-    let mut data: serde_json::Value = serde_json::from_str(&catalog.to_json().unwrap()).unwrap();
+    let mut data: serde_json::Value =
+        serde_json::from_str(&catalog.fixture_json().unwrap()).unwrap();
     let duplicate = data["assemblies"][0].clone();
     data["assemblies"].as_array_mut().unwrap().push(duplicate);
     assert!(matches!(
-        BlueprintCatalog::from_json(&data.to_string()),
+        catalog_fixture::catalog(&data.to_string()),
         Err(BlueprintError::DuplicateAssembly(_))
     ));
 }

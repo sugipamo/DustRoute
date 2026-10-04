@@ -315,6 +315,7 @@ dependencies = [
 name = "dustroute-library"
 version = "0.2.0"
 dependencies = [
+ "dustroute-codec",
  "dustroute-ir",
  "dustroute-minecraft",
  "schemars",

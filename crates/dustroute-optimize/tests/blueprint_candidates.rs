@@ -98,7 +98,7 @@ fn nested_library(broken: bool) -> (CellLibrary, BlueprintRevisionId) {
         port.required_source_types.clear();
     }
     catalog.insert_revision(parent.clone()).unwrap();
-    let catalog = BlueprintCatalog::from_json(&catalog.to_json().unwrap()).unwrap();
+    let catalog = BlueprintCatalog::from_archive(catalog.archive()).unwrap();
     (
         CellLibrary::from_blueprints(
             &catalog,
@@ -123,7 +123,7 @@ fn catalog_discovery_compiles_nested_shared_candidates_without_builtin_registrat
     assert!(library.unavailable().is_empty());
     assert_eq!(library.candidates_for(GateKind::Not).len(), 1);
     let catalog = library.catalog().unwrap();
-    let saved = catalog.to_json().unwrap();
+    let saved = catalog.clone();
     let compiled = BaselineCompiler::new(Default::default())
         .compile_with_library(&inverter(), &library, &boundaries())
         .unwrap();
@@ -175,7 +175,7 @@ fn catalog_discovery_compiles_nested_shared_candidates_without_builtin_registrat
         review_assembly(catalog, &captured).unwrap().status(),
         CheckStatus::Passed
     );
-    assert_eq!(catalog.to_json().unwrap(), saved);
+    assert_eq!(catalog.clone(), saved);
 }
 
 #[test]
@@ -288,7 +288,7 @@ fn typed_macro_requires_explicit_upstream_context_and_keeps_shared_occurrences()
     ));
     let assembly = compiled.assembly.as_ref().unwrap();
     let before = assembly.clone();
-    let saved = catalog.to_json().unwrap();
+    let saved = catalog.clone();
     let occurrence = vec![instance(&format!("cell-{}", cell_id.0))];
     let realized = materialize_macro_replacement_in_assembly(
         &plan,
@@ -308,7 +308,7 @@ fn typed_macro_requires_explicit_upstream_context_and_keeps_shared_occurrences()
     );
     assert!(!plan.automatic_apply_allowed);
     assert_eq!(*assembly, before);
-    assert_eq!(catalog.to_json().unwrap(), saved);
+    assert_eq!(catalog.clone(), saved);
 
     let mut unknown = realized.assembly.clone();
     unknown.known_regions.clear();

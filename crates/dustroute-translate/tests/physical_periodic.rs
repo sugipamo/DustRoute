@@ -1,3 +1,6 @@
+#[path = "support/archive_fixture.rs"]
+mod archive_fixture;
+use archive_fixture::FixtureJson;
 use std::collections::BTreeMap;
 
 use dustroute_library::PortDirection;
@@ -331,7 +334,7 @@ fn block_effects_refuse_unmodeled_multi_torch_order_and_nested_neighbor_effects(
 #[test]
 fn effects_context_rejects_clock_promotion_without_changing_old_pins() {
     let (mut catalog, assembly) = declared_clock();
-    let before = catalog.to_json().unwrap();
+    let before = catalog.fixture_json().unwrap();
     let legacy = context();
     let mut effects = legacy.clone();
     effects.profile = PhysicalBehaviorProfile::DustSingleTorchBlockEffectsV1;
@@ -364,7 +367,7 @@ fn effects_context_rejects_clock_promotion_without_changing_old_pins() {
         .unwrap();
     assert_eq!(review.report().behavior_status(), Some(CheckStatus::Failed));
     assert!(review.adopt(&mut catalog).is_err());
-    assert_eq!(catalog.to_json().unwrap(), before);
+    assert_eq!(catalog.fixture_json().unwrap(), before);
     assert_eq!(
         review_assembly_in_context(
             &catalog,
@@ -481,7 +484,7 @@ fn burst_context() -> PhysicalBehaviorContext {
 #[test]
 fn observed_feedback_satisfies_finite_burst_but_not_periodicity_in_the_effects_profile() {
     let (catalog, _, selected) = declared_burst();
-    let before = catalog.to_json().unwrap();
+    let before = catalog.fixture_json().unwrap();
     let model = PhysicalBehaviorModel::from_fresh_assembly_with_profile(
         &catalog,
         selected.clone(),
@@ -533,7 +536,7 @@ fn observed_feedback_satisfies_finite_burst_but_not_periodicity_in_the_effects_p
         )
         .is_err()
     );
-    assert_eq!(catalog.to_json().unwrap(), before);
+    assert_eq!(catalog.fixture_json().unwrap(), before);
 }
 
 #[test]
@@ -600,9 +603,9 @@ fn finite_burst_obligations_and_consumer_requirements_need_fresh_context_for_pro
     assert_eq!(review.report().behavior_status(), Some(CheckStatus::Passed));
     review.adopt(&mut catalog).unwrap();
     assert_eq!(catalog.revision(&original.id), Some(&original));
-    let saved = catalog.to_json().unwrap();
+    let saved = catalog.fixture_json().unwrap();
     assert!(saved.contains("dustroute.blueprint-catalog.v13"));
-    let loaded = BlueprintCatalog::from_json(&saved).unwrap();
+    let loaded = archive_fixture::catalog(&saved).unwrap();
     assert!(
         validate_assembly_in_context(
             &loaded,
@@ -632,7 +635,7 @@ fn passing_burst_parent_cannot_hide_failing_periodic_child_or_change_its_pin() {
     parent.inclusions = vec![include("child", "clock.v1")];
     catalog.insert_revision(parent).unwrap();
     assembly.instances = vec![include("root", "burst.parent.v1")];
-    let original = catalog.to_json().unwrap();
+    let original = catalog.fixture_json().unwrap();
     let candidate =
         PromotionCandidate::prepare(&catalog, &assembly, grouping("burst.rejected.v1")).unwrap();
     let review = candidate
@@ -647,7 +650,7 @@ fn passing_burst_parent_cannot_hide_failing_periodic_child_or_change_its_pin() {
         CheckStatus::Failed
     );
     assert!(review.adopt(&mut catalog).is_err());
-    assert_eq!(catalog.to_json().unwrap(), original);
+    assert_eq!(catalog.fixture_json().unwrap(), original);
     assert_eq!(catalog.revision(&child.id), Some(&child));
 }
 
@@ -697,14 +700,14 @@ fn declared_clock_requires_fresh_context_for_promotion_and_rotated_reuse() {
         .iter()
         .map(|b| Region::around(b.position, 2))
         .collect();
-    let loaded = BlueprintCatalog::from_json(&catalog.to_json().unwrap()).unwrap();
+    let loaded = archive_fixture::catalog(&catalog.fixture_json().unwrap()).unwrap();
     assert!(
         validate_assembly_in_context(&loaded, &moved, Some(&context()), BehaviorBudget::default())
             .is_ok()
     );
 
     let mut incompatible: serde_json::Value =
-        serde_json::from_str(&catalog.to_json().unwrap()).unwrap();
+        serde_json::from_str(&catalog.fixture_json().unwrap()).unwrap();
     let torch = incompatible["revisions"]
         .as_array_mut()
         .unwrap()
@@ -712,7 +715,7 @@ fn declared_clock_requires_fresh_context_for_promotion_and_rotated_reuse() {
         .find(|r| r["id"] == TORCH_LAW_REVISION)
         .unwrap();
     torch["law"]["handlers"]["scheduled_tick"] = serde_json::json!([]);
-    let mut incompatible = BlueprintCatalog::from_json(&incompatible.to_string()).unwrap();
+    let mut incompatible = archive_fixture::catalog(&incompatible.to_string()).unwrap();
     // Even an identically spelled law ID cannot replace the reviewed definition.
     let other = PromotionCandidate::prepare(&catalog, &assembly, grouping("other.v1")).unwrap();
     let reviewed = other
@@ -758,7 +761,7 @@ fn connection_requirements_and_children_are_checked_in_the_actual_shared_context
     broken
         .blocks
         .retain(|block| block.position != Pos::new(1, 1, 0));
-    let original = catalog.to_json().unwrap();
+    let original = catalog.fixture_json().unwrap();
     let candidate =
         PromotionCandidate::prepare(&catalog, &broken, grouping("broken.group.v1")).unwrap();
     let review = candidate
@@ -777,7 +780,7 @@ fn connection_requirements_and_children_are_checked_in_the_actual_shared_context
         CheckStatus::Failed
     );
     assert!(review.adopt(&mut catalog).is_err());
-    assert_eq!(catalog.to_json().unwrap(), original);
+    assert_eq!(catalog.fixture_json().unwrap(), original);
 
     let no_budget = review_assembly_in_context(
         &catalog,
@@ -870,8 +873,8 @@ fn restored_update_rechecks_periodicity_and_cannot_adopt_a_forged_saved_success(
         updates.validate(&request.id).unwrap().status(),
         CheckStatus::Passed
     );
-    let saved = updates.to_json().unwrap();
-    let mut valid = BlueprintUpdates::from_json(&saved).unwrap();
+    let saved = updates.fixture_json().unwrap();
+    let mut valid = archive_fixture::updates(&saved).unwrap();
     valid.adopt(&request.id).unwrap();
     assert_eq!(
         valid.proposal(&request.id).unwrap().status(),
@@ -883,10 +886,10 @@ fn restored_update_rechecks_periodicity_and_cannot_adopt_a_forged_saved_success(
         .as_array_mut()
         .unwrap()
         .retain(|b| b["position"] != serde_json::json!({"x":1,"y":1,"z":0}));
-    let mut forged = BlueprintUpdates::from_json(&forged.to_string()).unwrap();
-    let catalog_before = forged.catalog().to_json().unwrap();
+    let mut forged = archive_fixture::updates(&forged.to_string()).unwrap();
+    let catalog_before = forged.catalog().fixture_json().unwrap();
     assert!(forged.adopt(&request.id).is_err());
-    assert_eq!(forged.catalog().to_json().unwrap(), catalog_before);
+    assert_eq!(forged.catalog().fixture_json().unwrap(), catalog_before);
     assert_eq!(
         forged.proposal(&request.id).unwrap().status(),
         UpdateStatus::Open

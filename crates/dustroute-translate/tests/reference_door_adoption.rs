@@ -1,3 +1,6 @@
+#[path = "support/archive_fixture.rs"]
+mod archive_fixture;
+use archive_fixture::FixtureJson;
 #[path = "support/reference_door_blueprint.rs"]
 mod fixture;
 
@@ -72,7 +75,7 @@ fn candidate_preserves_literal_geometry_and_saved_source_references() {
     let original = f.catalog.clone();
     let mut updates = BlueprintUpdates::new(f.catalog);
     updates.create(f.request.clone()).unwrap();
-    let restored = BlueprintUpdates::from_json(&updates.to_json().unwrap()).unwrap();
+    let restored = archive_fixture::updates(&updates.fixture_json().unwrap()).unwrap();
     assert_eq!(restored.catalog(), &original);
     assert_eq!(
         restored.proposal(&f.request.id).unwrap().request(),

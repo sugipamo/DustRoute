@@ -164,7 +164,7 @@ fn fixture() -> (BlueprintCatalog, BlueprintReductionRequest) {
 #[test]
 fn search_reduces_real_blocks_moves_both_ports_and_does_not_rewrite_old_interpretations() {
     let (catalog, request) = fixture();
-    let before = catalog.to_json().unwrap();
+    let before = catalog.clone();
     let result =
         reduce_blueprint_blocks(&catalog, &request, BlueprintReductionBudget::default()).unwrap();
     eprintln!(
@@ -217,13 +217,13 @@ fn search_reduces_real_blocks_moves_both_ports_and_does_not_rewrite_old_interpre
             .iter()
             .all(|c| c.status == CheckStatus::Passed)
     );
-    assert_eq!(catalog.to_json().unwrap(), before);
+    assert_eq!(catalog.clone(), before);
     let mut saved = catalog.clone();
     saved
         .insert_revision(best.candidate.blueprint.clone())
         .unwrap();
     saved.insert_assembly(best.candidate.state.clone()).unwrap();
-    let saved = BlueprintCatalog::from_json(&saved.to_json().unwrap()).unwrap();
+    let saved = BlueprintCatalog::from_archive(saved.archive()).unwrap();
     let fresh = review_assembly_in_context(
         &saved,
         &best.candidate.state.assembly,
@@ -383,7 +383,7 @@ fn reduced_candidate_enters_existing_parent_proposal_and_is_reverified_after_rel
         updates.validate(&proposal).unwrap().status(),
         CheckStatus::Passed
     );
-    let mut loaded = BlueprintUpdates::from_json(&updates.to_json().unwrap()).unwrap();
+    let mut loaded = BlueprintUpdates::from_archive(updates.archive()).unwrap();
     loaded.adopt(&proposal).unwrap();
     assert_eq!(
         loaded.proposal(&proposal).unwrap().status(),
@@ -451,7 +451,7 @@ fn existing_builtin_not_realizations_reduce_by_observing_the_torch_directly() {
         };
         request.behavior_context.input_drivers[0].port_position = Pos::default();
         request.behavior_context.input_drivers[0].port_kind = BlueprintPortKind::BlockPower;
-        let before = catalog.to_json().unwrap();
+        let before = catalog.clone();
         let result =
             reduce_blueprint_blocks(&catalog, &request, BlueprintReductionBudget::default())
                 .unwrap();
@@ -478,7 +478,7 @@ fn existing_builtin_not_realizations_reduce_by_observing_the_torch_directly() {
                 .unwrap()
                 .position
         );
-        assert_eq!(catalog.to_json().unwrap(), before);
+        assert_eq!(catalog.clone(), before);
     }
 }
 
@@ -506,7 +506,7 @@ fn component_search_separates_fixed_equipment_and_counts_shared_support_once() {
             .collect(),
         environment_instances: vec![include("control", "external-control.v1")],
     };
-    let before = catalog.to_json().unwrap();
+    let before = catalog.clone();
     let result = reduce_blueprint_blocks(&catalog, &request, Default::default()).unwrap();
     assert_eq!(
         (result.baseline_blocks, result.baseline_total_blocks),
@@ -540,7 +540,7 @@ fn component_search_separates_fixed_equipment_and_counts_shared_support_once() {
         Some(actual_lever),
         base.assembly.blocks.iter().find(|b| b.position == lever)
     );
-    assert_eq!(catalog.to_json().unwrap(), before);
+    assert_eq!(catalog.clone(), before);
     // The shared support belongs to the body and the external interpretation,
     // but occupies only one cell in the complete physical Assembly.
     assert!(
@@ -651,7 +651,7 @@ fn torch_support_patterns_are_enumerated_then_proved_in_all_five_orientations() 
     };
     search.base_state = base.id.clone();
     catalog.insert_assembly(base).unwrap();
-    let before = catalog.to_json().unwrap();
+    let before = catalog.clone();
     let request = TorchSupportEnumerationRequest {
         search,
         support_position: Pos::default(),
@@ -702,7 +702,7 @@ fn torch_support_patterns_are_enumerated_then_proved_in_all_five_orientations() 
                 .all(|b| b.block.kind != BlockKind::Lever)
         );
     }
-    assert_eq!(catalog.to_json().unwrap(), before);
+    assert_eq!(catalog.clone(), before);
     let bounded = enumerate_torch_supports(
         &catalog,
         &request,
@@ -867,7 +867,7 @@ fn external_route_fixture(shared_middle: bool) -> (BlueprintCatalog, BlueprintRe
 fn enumeration_keeps_external_routes_and_boundaries_and_rejects_shared_wire_damage() {
     for shared_middle in [false, true] {
         let (catalog, request) = external_route_fixture(shared_middle);
-        let before = catalog.to_json().unwrap();
+        let before = catalog.clone();
         let original = &catalog.assembly(&request.base_state).unwrap().assembly;
         let report = enumerate_torch_supports(
             &catalog,
@@ -918,7 +918,7 @@ fn enumeration_keeps_external_routes_and_boundaries_and_rejects_shared_wire_dama
                 == dustroute_translate::promotion::CheckKind::Connection
                 && c.status == CheckStatus::Failed));
         }
-        assert_eq!(catalog.to_json().unwrap(), before);
+        assert_eq!(catalog.clone(), before);
     }
 }
 
@@ -974,7 +974,7 @@ fn undeclared_external_endpoint_requires_explicit_reconnection_instead_of_being_
     {
         environment_instances.pop();
     }
-    let before = catalog.to_json().unwrap();
+    let before = catalog.clone();
     let error = enumerate_torch_supports(
         &catalog,
         &TorchSupportEnumerationRequest {
@@ -985,5 +985,5 @@ fn undeclared_external_endpoint_requires_explicit_reconnection_instead_of_being_
     )
     .unwrap_err();
     assert!(error.contains("explicit parent reconnection"), "{error}");
-    assert_eq!(catalog.to_json().unwrap(), before);
+    assert_eq!(catalog.clone(), before);
 }

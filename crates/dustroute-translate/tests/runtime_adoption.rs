@@ -1,3 +1,6 @@
+#[path = "support/archive_fixture.rs"]
+mod archive_fixture;
+use archive_fixture::FixtureJson;
 #[path = "support/runtime_blueprint.rs"]
 mod fixture;
 
@@ -24,18 +27,18 @@ fn native_proposal_relocates_ports_and_adopts_only_after_fresh_reload_review() {
         dustroute_translate::world::ValidatedWorld::PROFILE
     );
     assert_eq!(updates.catalog(), &original);
-    let saved = updates.to_json().unwrap();
+    let saved = updates.fixture_json().unwrap();
     assert!(saved.contains("dustroute.blueprint-updates.v5"));
     for version in 1..=4 {
         assert!(
-            BlueprintUpdates::from_json(&saved.replace(
+            archive_fixture::updates(&saved.replace(
                 "dustroute.blueprint-updates.v5",
                 &format!("dustroute.blueprint-updates.v{version}")
             ))
             .is_err()
         );
     }
-    let mut restored = BlueprintUpdates::from_json(&saved).unwrap();
+    let mut restored = archive_fixture::updates(&saved).unwrap();
     restored.adopt(&f.request.id).unwrap();
     assert_eq!(
         restored.proposal(&f.request.id).unwrap().status(),
@@ -49,7 +52,7 @@ fn native_proposal_relocates_ports_and_adopts_only_after_fresh_reload_review() {
     for source in original.revisions() {
         assert_eq!(restored.catalog().revision(&source.id), Some(source));
     }
-    let reloaded = BlueprintUpdates::from_json(&restored.to_json().unwrap()).unwrap();
+    let reloaded = archive_fixture::updates(&restored.fixture_json().unwrap()).unwrap();
     assert_eq!(
         reloaded.review(&f.request.id).unwrap().status(),
         CheckStatus::Passed
@@ -65,12 +68,13 @@ fn a_forged_saved_pass_cannot_adopt_a_child_broken_only_during_motion() {
     let report = updates.validate(&f.request.id).unwrap();
     assert_eq!(report.status(), CheckStatus::Failed);
     assert_eq!(report.behavior_status(), Some(CheckStatus::Passed));
-    let mut saved: serde_json::Value = serde_json::from_str(&updates.to_json().unwrap()).unwrap();
+    let mut saved: serde_json::Value =
+        serde_json::from_str(&updates.fixture_json().unwrap()).unwrap();
     let recorded = &mut saved["proposals"][0]["events"][0]["report"];
     recorded["occurrences"] = serde_json::json!([]);
     recorded["arrangement"] = serde_json::json!([]);
     recorded["behavior"] = serde_json::json!([]);
-    let mut restored = BlueprintUpdates::from_json(&saved.to_string()).unwrap();
+    let mut restored = archive_fixture::updates(&saved.to_string()).unwrap();
     assert!(matches!(
         restored.adopt(&f.request.id),
         Err(BlueprintUpdateError::Validation(_))
@@ -123,7 +127,8 @@ fn promotion_pins_runtime_laws_and_keeps_legacy_world_proofs_separate() {
     assert!(adopted.revision(&candidate.blueprint().id).is_some());
     // A same-ID executable-law edit is a changed dependency, even if it still
     // looks like a complete catalog after deserialization.
-    let mut raw: serde_json::Value = serde_json::from_str(&f.catalog.to_json().unwrap()).unwrap();
+    let mut raw: serde_json::Value =
+        serde_json::from_str(&f.catalog.fixture_json().unwrap()).unwrap();
     // Mutate a selected law's ordinary metadata without changing its valid program.
     fn change(value: &mut serde_json::Value) -> bool {
         match value {
@@ -141,7 +146,7 @@ fn promotion_pins_runtime_laws_and_keeps_legacy_world_proofs_separate() {
         }
     }
     assert!(change(&mut raw));
-    let mut changed = BlueprintCatalog::from_json(&raw.to_string()).unwrap();
+    let mut changed = archive_fixture::catalog(&raw.to_string()).unwrap();
     assert!(matches!(
         review.adopt(&mut changed),
         Err(PromotionError::ChangedDependency(_))
@@ -170,13 +175,14 @@ fn contexts_reject_mixed_shapes_and_history_alone_requires_the_new_schema() {
     let mut updates = BlueprintUpdates::new(f.catalog);
     updates.create(f.request.clone()).unwrap();
     updates.validate(&f.request.id).unwrap();
-    let mut saved: serde_json::Value = serde_json::from_str(&updates.to_json().unwrap()).unwrap();
+    let mut saved: serde_json::Value =
+        serde_json::from_str(&updates.fixture_json().unwrap()).unwrap();
     saved["proposals"][0]["request"]
         .as_object_mut()
         .unwrap()
         .remove("behavior_context");
     saved["schema"] = serde_json::json!("dustroute.blueprint-updates.v4");
-    assert!(BlueprintUpdates::from_json(&saved.to_string()).is_err());
+    assert!(archive_fixture::updates(&saved.to_string()).is_err());
 }
 
 #[test]
@@ -191,7 +197,7 @@ fn an_unfinished_native_execution_cannot_publish_candidate_revisions() {
         updates.review(&f.request.id).unwrap().status(),
         CheckStatus::Undetermined
     );
-    let mut restored = BlueprintUpdates::from_json(&updates.to_json().unwrap()).unwrap();
+    let mut restored = archive_fixture::updates(&updates.fixture_json().unwrap()).unwrap();
     assert!(matches!(
         restored.adopt(&f.request.id),
         Err(BlueprintUpdateError::Validation(_))
