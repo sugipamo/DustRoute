@@ -22,7 +22,6 @@ pub struct ComponentQuery {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum CatalogError {
     Duplicate(ComponentId),
-    Decode(String),
     InvalidLogicalSpec(String),
 }
 
@@ -30,7 +29,6 @@ impl Display for CatalogError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Duplicate(id) => write!(f, "duplicate component id {id}"),
-            Self::Decode(error) => write!(f, "cannot decode component catalog: {error}"),
             Self::InvalidLogicalSpec(error) => write!(f, "invalid logical specification: {error}"),
         }
     }
@@ -39,9 +37,11 @@ impl Display for CatalogError {
 impl Error for CatalogError {}
 
 impl Catalog {
-    pub fn from_json(input: &str) -> Result<Self, CatalogError> {
-        let components: Vec<Component> =
-            serde_json::from_str(input).map_err(|error| CatalogError::Decode(error.to_string()))?;
+    /// Reconstruct a catalog from decoded records with the same logical and
+    /// identity checks as insertion. Presentation codecs belong to callers.
+    pub fn from_components(
+        components: impl IntoIterator<Item = Component>,
+    ) -> Result<Self, CatalogError> {
         let mut catalog = Self::default();
         for component in components {
             catalog.insert(component)?;

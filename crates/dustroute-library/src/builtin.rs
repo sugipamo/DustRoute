@@ -327,7 +327,25 @@ mod tests {
         let catalog = builtin_catalog();
         let components = catalog.search(&ComponentQuery::default());
         let json = serde_json::to_string(&components).unwrap();
-        let decoded = Catalog::from_json(&json).unwrap();
+        let records: Vec<crate::Component> = serde_json::from_str(&json).unwrap();
+        let decoded = Catalog::from_components(records).unwrap();
         assert_eq!(decoded.len(), catalog.len());
+    }
+
+    #[test]
+    fn typed_catalog_import_checks_duplicate_ids_and_logical_behavior() {
+        let catalog = builtin_catalog();
+        let component = catalog.search(&ComponentQuery::default())[0].clone();
+        assert_eq!(
+            Catalog::from_components([component.clone(), component.clone()]).unwrap_err(),
+            crate::CatalogError::Duplicate(component.id.clone())
+        );
+        let mut wrong_behavior = component;
+        let output = wrong_behavior.logical.input_names().len();
+        wrong_behavior.logical.truth_table[0][output] ^= true;
+        assert!(matches!(
+            Catalog::from_components([wrong_behavior]),
+            Err(crate::CatalogError::InvalidLogicalSpec(_))
+        ));
     }
 }

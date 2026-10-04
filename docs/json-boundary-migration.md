@@ -606,3 +606,45 @@ completeなtraceへ渡さない。二つのJSON専用parserとstandalone validat
 修正してから関連テストと静的検査を完了した。依存version、保存形式、native操作契約、
 サーバー・ワールドは変更していない。これらは統合ゴールの途中の完了項目であり、
 操作registry・live activity・workflow・組込み定義などの残存JSONは未解決である。
+
+### 型付きcomponent catalog入力
+
+`Catalog::from_json`を`Catalog::from_components`へ移した。構築時は全てのrecordを従来と
+同じ`insert`へ渡し、論理仕様と重複IDの検査を維持する。presentationのdecodeエラーを
+catalogのdomain errorから除き、fixture decodeはテストへ限定する。library unit test
+6件が成功し、typed importでも重複IDと誤ったtruth tableを拒否することを確認した。
+library全targetのClippyも`-D warnings`で成功した。
+
+### 次の分岐点: 組込み設計図の再生成入口（改修前）
+
+通常のCLI crateとは別に、`dustroute-translate/examples/generate_blueprints.rs`が
+JSONを標準出力または指定fileへ生成している。`--check`では固定assetとのbyte一致を
+検査し、file更新では既存のtype・classification・revision・assemblyを削除または
+再束縛しないことを検査する。これはデバッグだけでなく、固定定義のauthoring入口である。
+`docs/blueprint-architecture.md`にも再生成手順として記載されている。
+
+本番の`builtin_blueprints`と`builtin_primitives`はJSON assetを起動時にdecodeする。
+固定assetの内容は前者がtype 2件・classification 6件・revision 10件・block 729個、
+後者がtype 2件・revision 2件・block 2個であり、ここにassembliesや子inclusionはない。
+生成APIの`generate_builtin_blueprints`は既に独立したauthoring recipeとして存在し、
+`tests/blueprints.rs`の先頭2試験が固定定義と生成レシピ、およびcompilerの幾何を比較する。
+
+JSON例外を追加せずに進める具体案は次の通り。
+
+1. **推奨: 固定Rust定義・既存API・回帰テストへ統合**。
+   blockの座標・kind・向き・支持offset・wire接続・未知/falseをRust定数の用途別型で
+   明示し、起動時には既存`BlueprintRecords::catalog`で構造を検査する。compilerは
+   起動しない。type/classification/revisionのID・幾何・要求・provenanceは変えない。
+   旧JSONは独立回帰fixtureに限って保持し、新定義との完全なcatalog一致を検査する。
+   生成レシピとの比較はJSON byteではなくtyped catalog/physical cellで行う。
+   再生成用exampleのコマンドは廃止し、生成APIとテストへ移す。上書き機能自体を
+   廃止するため、そのfile更新gateだけを削除して無制限更新を残すことはしない。
+   公開catalogの重複ID・再束縛拒否、archive schema/構造検証、採用の再検証は維持する。
+2. **代替: Rust sourceを生成する開発用コマンドを整備する**。
+   JSON入出力を廃止してRust source出力へ変える。固定定義・既存Revisionの保護・
+   明示的更新を担う生成器とその検査の整備が追加で必要になる。
+
+組込み定義の非JSON化自体は統合ゴールの範囲である。一方、今回撤去を承認された5入口の
+CLIとは別のauthoringコマンドについて、再生成入口を廃止するか新形式の生成器を作るかは
+未決定である。この範囲選択の改修前に停止した。上記の組込み定義・example・archive API
+にはまだ変更していない。操作registry・live activity・残るworkflowも未完了である。
