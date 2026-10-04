@@ -298,3 +298,64 @@ Clippyの指摘に従い、履歴revalidationの大きいreviewをBoxで保持�
 最終形のMCP all-target Clippyとno-default-features all-target Clippyは
 いずれも`-D warnings`で成功した。formatting、差分検査とVoxrigの315ファイル一致も確認した。
 第7a先行段階は完了。次は第5b段階の残る保存codecと保存先識別の移行へ戻る。
+
+## 第5b段階: 残る保存経路と保存先識別
+
+第7aで整えた履歴専用型を、既存の版付きstorage codecへ直接接続した。
+productionの保存・読取りでJSON/Value treeを介さない。native scene・plan・intent・token・
+watch・接続寿命の復元経路や、保存した合格だけで実行する経路は追加していない。
+
+| 保存対象 | 現行file / storage schema | 符号化byte上限 |
+| --- | --- | --- |
+| 修復TTL plan | `repairs/<UUID>.store` / `dustroute.repair-plan-store.v1` | 16 MiB |
+| CircuitRevision TTL envelope | `circuit_revisions/<UUID>.store` / `dustroute.circuit-revision-store.v1` | 4 MiB + envelope用4096 byte |
+| construction job | `construction-jobs/<UUID>.store` / `dustroute.construction-job.v3` | 16 MiB |
+| placed Assembly | `assembly-instances/<UUID>.store` / `dustroute.placed-assembly.v5` | 32 MiB |
+| edit history | `world-edits/<UUID>.store` / `dustroute.world-edit.v2` | 32 MiB |
+| survival manifest | `survival-jobs/<UUID>/manifest.store` / `dustroute.survival-job-manifest-store.v1` | 16 MiB |
+| survival status | 同directoryの`status.store` / `dustroute.survival-job-status-store.v1` | 16 MiB |
+| durable execution journal | jobの`execution/record.store` / `dustroute.survival-execution.v3` | 16 MiB |
+| checkpoint claim | 同execution directoryの`continuation-claim.store` / `dustroute.survival-checkpoint-claim-store.v1` | 16 MiB |
+
+CircuitRevision本体・snapshotの予算もJSON推定から実際のstorage符号化4 MiBへ移した。
+manifestのdomain schemaは`dustroute.survival-job.v1`、checkpointはv2のまま。
+job・Assembly・edit・journalの保存schemaは上表へ更新する。公開MCPの応答field構造、
+preview v2・job response v2は維持するが、履歴の内部schema fieldには現行版が表示される。
+
+通常の保存先は`<DUSTROUTE_STATE_DIR>/storage-v2/<scope identity>`へ分離した。
+scopeとplayerは`dustroute.storage-identity.v1\0`とnamespace/valueのu64長さframeを
+SHA-256で識別する。player catalogは`blueprints/<player identity>/catalog.store`。
+旧DefaultHasherのroot/player directoryは探索・変換・削除しない。
+明示rootを使う試験・組込み呼出しは、そのroot内で現行fileを使う。
+
+現在の保存先に旧`.json`だけが残る場合、読取り・上書き・空履歴への置換を拒否する。
+現行fileと旧fileが両方ある場合は現行fileを読み、旧fileを保持する。Assembly一覧は
+UUIDを重複排除して一度だけ読む。旧形式を隔離するには利用者が明示的に退避し、現在の
+観測・要求から新しく検証・計画する。現存するユーザーデータへの操作は行っていない。
+checkpoint claimは現行・旧JSONのどちらが残る場合も消費済みとし、再発行しない。
+
+共通readは上限+1 byteまで読み、codecが版・完全性・構造・型を検査する。
+TTLは同じbyte列からtimestampを先に読み、期限切れならpayload型へ戻す前に除去する。
+通常readでTTLを延長しない。owner/id、不変のjob source、boundary prefix、取消しの永続性、
+registry lock、atomic replace、各storeの従来のsync契約を保つ。
+送信前にはjournalの256 KiB、construction完了境界の64 KiBを実際の符号化byteで予約する。
+codecの容量超過・schema不一致・不正内容はRust error variantで区別し、journal容量超過を
+文字列一致で分類しない。既存のlive検証・再観測・単回消費・durable intent条件は保つ。
+
+この段階は保存経路の移行であり、Voxrigのregistry/形状/NBT、残るworkflowや組込みfixtureの
+JSON、実機試験用MCP証拠の集約まで撤去したものではない。それらは第6/7b/8段階へ残す。
+サーバー起動・実機接続・ワールド変更は行わない。
+
+検証: codecの14件と、保存・journal・checkpoint・survival履歴の関連24件が成功した。
+追加した送信前容量予約の拒否と、旧claimの消費済み判定も全体試験で成功した。
+最初のMCP全体実行は221件成功・8件失敗・10件ignored・ドア付き建築1件を別枠とした。
+8件は共通の試験用transportがAssembly fileをedit schemaとして読んだため失敗した。
+試験側に保存種類を明示するenumを追加し、実際の履歴型をcodecで読むよう修正した。
+送信前intentの存在と保存済みprogressの検査は維持し、JSONで再解析しない。
+修正後の関連31件はドア付き建築の配置・撤去も含めてすべて成功した（525.82秒）。
+先の全体実行で成功したcaseと合わせ、MCPの非ignored 230caseの成功を確認した。
+実機依存10件は未実行であり、offline transportは実機の物理証明とは扱わない。
+codec/MCPのall-target ClippyとMCP no-default-features all-target Clippyは
+`-D warnings`で成功した。Clippyが指摘した試験内の不要なCopy値のcloneを除去した。
+formatting、差分の空白検査、Voxrigの315ファイル一致も確認した。
+第5b段階は完了。次は第6段階のVoxrig内部表現の整理へ進む。

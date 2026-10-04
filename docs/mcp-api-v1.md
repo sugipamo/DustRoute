@@ -174,13 +174,13 @@ positions separately from natural settled differences; those differences have
 count/truncation fields. `no_write_checkpoint` permits an empty command list,
 but still requires fresh observation, preview and confirmation.
 
-Job records use `dustroute.construction-job.v2` and retain sparse verified
+Job records use `dustroute.construction-job.v3` and retain sparse verified
 `boundaries`, including natural updates. `regions[].parts` defines exact stage
 membership; `region` is only its display bounding box. Large job summaries
 expose `intention_expanded:false`; `manage_construction_job(action=get,
 include_intention=true)` explicitly expands the complete historical record.
-v1 job files remain untouched but cannot authorize continuation; recapture a
-new v2 job. These schemas do not change the existing placement-mutation or
+Retired v1/v2 JSON job files remain untouched and are refused; recapture a
+new v3 job using the versioned non-JSON store. These schemas do not change the existing placement-mutation or
 readback families. See [region work](large-circuit-regions.md).
 
 The [Blueprint MCP contract](blueprint-mcp.md) describes the `blueprint`
@@ -525,10 +525,10 @@ client samples do not prove empty server queues; no companion MOD is required.
 Failed attempts are preserved; this is a new operation, never a blind retry.
 The response retains a `diagnosis` even when reconstruction planning fails.
 
-Registry records use schema `dustroute.placed-assembly.v4`, no TTL, and lifecycle
+Registry records use schema `dustroute.placed-assembly.v5`, no TTL, and lifecycle
 `needs_inspection | applied | removed`. A failure after an attempted write keeps
 `needs_inspection`, the verified prefix and an error. Persisted records and old
-observations never deserialize into execution permission. Retired v1–v3 records
+observations never deserialize into execution permission. Retired v1–v4 records
 are rejected without automatic upgrade; see the [cutover guide](architecture-cutover.md).
 See the
 [complete persistence and conditional-removal contract](placed-assembly-management.md).

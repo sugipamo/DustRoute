@@ -172,12 +172,17 @@ construction needs its own reviewed empty-site plan.
 
 Configure a durable `DUSTROUTE_STATE_DIR`; its default lives in the operating
 system's temporary directory and is not a permanent storage guarantee.
-`<scoped state directory>/assembly-instances/<instance UUID>.json` has schema
-`dustroute.placed-assembly.v4`, a monotonically increasing record revision and
+`<scoped state directory>/assembly-instances/<instance UUID>.store` has schema
+`dustroute.placed-assembly.v5`, a monotonically increasing record revision and
 no TTL. `DUSTROUTE_PLAN_TTL_SECONDS` does not expire these files. Records are
 limited to 32 MiB each. A registry file lock serializes updates and construction
 attempts across MCP instances using the same state directory; another request
 may receive a busy error and should retry that request.
+
+The scoped directory is now `<DUSTROUTE_STATE_DIR>/storage-v2/<scope hash>`;
+the scope uses a versioned, length-framed SHA-256 identity. Retired scope roots
+and JSON files are not searched, converted or removed. See the
+[storage migration](json-boundary-migration.md) before changing deployed data.
 
 Before the first world write, an atomic, fsynced record saves the attempt as
 `needs_inspection`. Each verified stage persists its progress before the next

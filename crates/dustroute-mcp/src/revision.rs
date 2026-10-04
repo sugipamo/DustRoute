@@ -177,13 +177,8 @@ pub fn apply(
         max: snapshot.max,
         blocks: blocks.into_values().collect(),
     };
-    if serde_json::to_vec(&result)
-        .map_err(|e| e.to_string())?
-        .len()
-        > MAX_BYTES
-    {
-        return Err("revision snapshot exceeds 4 MiB".into());
-    }
+    dustroute_codec::storage::encode("dustroute.revision-snapshot.v1", &result, MAX_BYTES)
+        .map_err(|e| format!("revision snapshot exceeds storage bound or is invalid: {e}"))?;
     Ok((result, changes))
 }
 

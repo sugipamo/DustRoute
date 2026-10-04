@@ -13,7 +13,7 @@ struct Preparation {
 fn preparation(service: &DustRouteMcp, id: uuid::Uuid) -> Result<Preparation, Value> {
     let directory = service.state_store.survival_job_root().join(id.to_string());
     let manifest: JobManifest =
-        load(&directory.join("manifest.json")).map_err(|e| failure("job_unavailable", e))?;
+        load(&directory.join("manifest.store")).map_err(|e| failure("job_unavailable", e))?;
     manifest
         .validate_identity(id)
         .map_err(|e| failure("invalid_record", e))?;
@@ -25,7 +25,7 @@ fn preparation(service: &DustRouteMcp, id: uuid::Uuid) -> Result<Preparation, Va
     let boundary = checkpoint::read(&directory.join("execution")).map_err(|e| {
         let mut response = failure(e.code, &e.detail);
         if e.code == SurvivalErrorCode::CheckpointConsumed {
-            if let Ok(claim) = load::<crate::survival_execution::diagnostic::CheckpointClaim>(&directory.join("execution/continuation-claim.json")) {
+            if let Ok(claim) = load::<crate::survival_execution::diagnostic::CheckpointClaim>(&directory.join("execution/continuation-claim.store")) {
                 response["continuation_job_id"] = json!(claim.new_job);
                 response["next_step"] = json!("get the linked new job; do not replay the old checkpoint");
             }

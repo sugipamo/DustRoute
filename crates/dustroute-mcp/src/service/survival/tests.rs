@@ -182,8 +182,16 @@ async fn public_saved_jobs_are_diagnostic_and_corrupt_identity_is_refused() {
     let id = uuid::Uuid::new_v4();
     let path = service.state_store.survival_job_root().join(id.to_string());
     std::fs::create_dir_all(&path).unwrap();
-    let mut manifest = json!({"schema":"dustroute.survival-job.v1","job_id":id,
-        "owner":"Tester","execution_authority_restorable":false});
+    let mut manifest = JobManifest {
+        schema: JobSchema::V1,
+        job_id: id,
+        owner: "Tester".into(),
+        source: None,
+        preview: None,
+        construction: None,
+        parent_job_id: None,
+        execution_authority_restorable: crate::survival_execution::diagnostic::DiagnosticOnly,
+    };
     let preview = crate::survival_execution::diagnostic::RecordedConstructionPreview {
         plan: crate::survival_execution::diagnostic::RecordedConstructionPlan {
             scope: crate::survival_construction::tests::scope(),
@@ -225,10 +233,10 @@ async fn public_saved_jobs_are_diagnostic_and_corrupt_identity_is_refused() {
             ..Default::default()
         },
     };
-    manifest["preview"] = json!(preview);
-    save(&path.join("manifest.json"), &manifest).unwrap();
+    manifest.preview = Some(Box::new(preview.clone()));
+    save(&path.join("manifest.store"), &manifest).unwrap();
     save(
-        &path.join("status.json"),
+        &path.join("status.store"),
         &JobStatus::AdmissionRefused {
             failure: JobFailure::boundary(JobRefusalCode::SourceChanged, "source changed"),
             construction_dispatched: false,
@@ -269,9 +277,23 @@ async fn public_saved_jobs_are_diagnostic_and_corrupt_identity_is_refused() {
     let execution = path.join("execution");
     std::fs::create_dir_all(&execution).unwrap();
     std::fs::write(execution.join("executor.lock"), []).unwrap();
-    let intent = json!({"step":0,"phase":"mining_start_send","outcome":"uncertain","continuation":"needs_inspection","evidence":crate::survival_execution::evidence::mining_start_fixture()});
-    let record = json!({"schema":"dustroute.survival-execution.v2","id":uuid::Uuid::new_v4(),"plan":{},"completed_steps":0,"outcome":"uncertain","continuation":"needs_inspection","reconnects":0,"events":[intent]});
-    save(&execution.join("record.json"), &record).unwrap();
+    let record = crate::survival_execution::ExecutionRecord {
+        schema: crate::survival_execution::JournalSchema::V3,
+        id: uuid::Uuid::new_v4(),
+        plan: Default::default(),
+        completed_steps: 0,
+        outcome: crate::survival_execution::OperationOutcome::Uncertain,
+        continuation: crate::survival_execution::Continuation::NeedsInspection,
+        reconnects: 0,
+        events: vec![crate::survival_execution::ExecutionEvent {
+            step: 0,
+            phase: crate::survival_execution::ExecutionPhase::MiningStartSend,
+            outcome: crate::survival_execution::OperationOutcome::Uncertain,
+            continuation: crate::survival_execution::Continuation::NeedsInspection,
+            evidence: crate::survival_execution::evidence::mining_start_fixture(),
+        }],
+    };
+    save(&execution.join("record.store"), &record).unwrap();
     let refusal = call(
         &client,
         "survival_construction",
@@ -284,15 +306,18 @@ async fn public_saved_jobs_are_diagnostic_and_corrupt_identity_is_refused() {
         "mining_start_send"
     );
     assert_eq!(
-        load::<Value>(&execution.join("record.json")).unwrap(),
-        record
+        json!(
+            load::<crate::survival_execution::ExecutionRecord>(&execution.join("record.store"))
+                .unwrap()
+        ),
+        json!(record)
     );
-    manifest["owner"] = json!("AnotherPlayer");
-    save(&path.join("manifest.json"), &manifest).unwrap();
+    manifest.owner = "AnotherPlayer".into();
+    save(&path.join("manifest.store"), &manifest).unwrap();
     let denied = call(&client, "survival_construction", get.clone()).await;
     assert_eq!(denied["error"]["code"], "permission_denied");
-    manifest["job_id"] = json!(uuid::Uuid::new_v4());
-    save(&path.join("manifest.json"), &manifest).unwrap();
+    manifest.job_id = uuid::Uuid::new_v4();
+    save(&path.join("manifest.store"), &manifest).unwrap();
     let invalid = call(&client, "survival_construction", get).await;
     assert_eq!(invalid["error"]["code"], "invalid_record");
     stop(client, server).await;
@@ -387,7 +412,7 @@ async fn native_public_roof() {
             .await;
             assert_eq!(cancelled["ok"], true);
             assert_eq!(
-                load::<Value>(&directory.join("status.json")).unwrap()["state"],
+                json!(load::<JobStatus>(&directory.join("status.store")).unwrap())["state"],
                 "cancelled_before_start"
             );
         }

@@ -6,9 +6,10 @@ use fs2::FileExt;
 use serde::{Deserialize, Serialize};
 use std::{
     fs::{self, File, OpenOptions},
-    io::Read,
     path::{Path, PathBuf},
 };
+
+pub(crate) const STORE_SCHEMA: &str = "dustroute.survival-execution.v3";
 
 const MAX_BYTES: usize = 16 * 1024 * 1024;
 const RESERVE: usize = 256 * 1024;
@@ -47,8 +48,8 @@ pub enum ExecutionPhase {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum JournalSchema {
-    #[serde(rename = "dustroute.survival-execution.v2")]
-    V2,
+    #[serde(rename = "dustroute.survival-execution.v3")]
+    V3,
     #[serde(other)]
     Unknown,
 }
@@ -136,18 +137,25 @@ pub struct ExecutionDiagnosis {
 }
 
 pub fn diagnose(directory: &Path) -> Result<ExecutionDiagnosis> {
-    let mut bytes = Vec::new();
-    File::open(directory.join("record.json"))?
-        .take((MAX_BYTES + 1) as u64)
-        .read_to_end(&mut bytes)?;
+    let path = directory.join("record.store");
+    if !path.try_exists()? && path.with_extension("json").try_exists()? {
+        return Err(ExecutionError::new(
+            SurvivalErrorCode::JournalSchema,
+            "retired JSON journal; retain it for separate inspection",
+        ));
+    }
+    let bytes = storage::read_record(&path, MAX_BYTES)?.ok_or_else(|| {
+        std::io::Error::new(std::io::ErrorKind::NotFound, "execution record not found")
+    })?;
     if bytes.len() > MAX_BYTES {
         return Err(ExecutionError::new(
             SurvivalErrorCode::JournalTooLarge,
             "record exceeds bound",
         ));
     }
-    let record: ExecutionRecord = serde_json::from_slice(&bytes)?;
-    if record.schema != JournalSchema::V2 {
+    let record: ExecutionRecord =
+        dustroute_codec::storage::decode(STORE_SCHEMA, &bytes, MAX_BYTES)?;
+    if record.schema != JournalSchema::V3 {
         return Err(ExecutionError::new(
             SurvivalErrorCode::JournalSchema,
             "unknown survival journal",
@@ -185,8 +193,8 @@ impl Journal {
         let lock = options.open(directory.join("executor.lock"))?;
         lock.try_lock_exclusive()
             .map_err(|e| ExecutionError::new(SurvivalErrorCode::ExecutionBusy, e))?;
-        let path = directory.join("record.json");
-        if path.try_exists()? {
+        let path = directory.join("record.store");
+        if storage::record_exists(&path)? {
             return Err(ExecutionError::new(
                 SurvivalErrorCode::ExecutionExists,
                 "existing record requires diagnosis; it cannot be overwritten or resumed",
@@ -196,7 +204,7 @@ impl Journal {
             _lock: lock,
             path,
             record: ExecutionRecord {
-                schema: JournalSchema::V2,
+                schema: JournalSchema::V3,
                 id: uuid::Uuid::new_v4(),
                 plan,
                 completed_steps: 0,
@@ -210,7 +218,8 @@ impl Journal {
         Ok(this)
     }
     fn save(&self, reserve: bool) -> Result<()> {
-        let bytes = serde_json::to_vec(&self.record)?;
+        let limit = MAX_BYTES - if reserve { RESERVE } else { 0 };
+        let bytes = dustroute_codec::storage::encode(STORE_SCHEMA, &self.record, limit)?;
         if bytes.len() > MAX_BYTES - if reserve { RESERVE } else { 0 } {
             return Err(ExecutionError::new(
                 SurvivalErrorCode::JournalTooLarge,
@@ -273,7 +282,6 @@ impl Journal {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::json;
     struct Directory(PathBuf);
     impl Directory {
         fn new() -> Self {
@@ -292,14 +300,14 @@ mod tests {
     #[ignore = "read-only fresh-process check of an explicitly selected retained live journal"]
     fn retained_live_record_is_diagnosis_only_in_a_fresh_process() {
         let directory = PathBuf::from(std::env::var("DUSTROUTE_SURVIVAL_REOPEN_JOURNAL").unwrap());
-        let before = fs::read(directory.join("record.json")).unwrap();
+        let before = fs::read(directory.join("record.store")).unwrap();
         let diagnosis = diagnose(&directory).unwrap();
         assert!(!diagnosis.record.events.is_empty());
         assert_eq!(diagnosis.continuation, Continuation::NeedsInspection);
         assert!(
             matches!(Journal::create(&directory,RecordedExecutionPlan::default()),Err(e) if e.code == SurvivalErrorCode::ExecutionExists)
         );
-        assert_eq!(fs::read(directory.join("record.json")).unwrap(), before);
+        assert_eq!(fs::read(directory.join("record.store")).unwrap(), before);
         println!(
             "reopened {}: historical {:?}, effective diagnosis {:?}; no native client created",
             diagnosis.record.id, diagnosis.record.continuation, diagnosis.continuation
@@ -350,7 +358,7 @@ mod tests {
             super::super::evidence::placement_send_fixture(),
         )
         .unwrap();
-        j.path = d.0.join("missing-directory/record.json");
+        j.path = d.0.join("missing-directory/record.store");
         assert!(
             j.event(
                 ExecutionPhase::StepCompleted,
@@ -408,19 +416,64 @@ mod tests {
             diagnose(&d.0).unwrap_err().code,
             SurvivalErrorCode::JournalSchema
         );
-        let mut legacy = json!(j.record);
-        legacy["schema"] = json!("dustroute.survival-execution.v1");
-        fs::write(&j.path, serde_json::to_vec(&legacy).unwrap()).unwrap();
+        fs::remove_file(&j.path).unwrap();
+        fs::write(j.path.with_extension("json"), b"{retired JSON journal}").unwrap();
         assert_eq!(
             diagnose(&d.0).unwrap_err().code,
             SurvivalErrorCode::JournalSchema
         );
-        let f = File::create(d.0.join("record.json")).unwrap();
+        assert!(
+            matches!(Journal::create(&d.0, RecordedExecutionPlan::default()), Err(e) if e.code == SurvivalErrorCode::ExecutionBusy)
+        );
+        drop(j);
+        assert!(
+            matches!(Journal::create(&d.0, RecordedExecutionPlan::default()), Err(e) if e.code == SurvivalErrorCode::ExecutionExists)
+        );
+        assert_eq!(
+            fs::read(d.0.join("record.json")).unwrap(),
+            b"{retired JSON journal}"
+        );
+        assert!(!d.0.join("record.store").exists());
+        let f = File::create(d.0.join("record.store")).unwrap();
         f.set_len((MAX_BYTES + 1) as u64).unwrap();
         assert_eq!(
             diagnose(&d.0).unwrap_err().code,
             SurvivalErrorCode::JournalTooLarge
         );
+    }
+
+    #[test]
+    fn intent_reserves_encoded_outcome_room_before_replacing_the_record() {
+        let d = Directory::new();
+        let mut journal = Journal::create(&d.0, RecordedExecutionPlan::default()).unwrap();
+        journal
+            .event(
+                ExecutionPhase::CheckpointRefused,
+                OperationOutcome::Observed,
+                Continuation::NeedsInspection,
+                ExecutionEvidence::CheckpointRefused {
+                    error: ExecutionError::new(
+                        SurvivalErrorCode::CheckpointNotIdle,
+                        "x".repeat(MAX_BYTES - RESERVE / 2),
+                    ),
+                },
+            )
+            .unwrap();
+        let before = fs::read(&journal.path).unwrap();
+        assert!(before.len() > MAX_BYTES - RESERVE && before.len() < MAX_BYTES);
+        assert_eq!(
+            journal
+                .intend(
+                    ExecutionPhase::MiningStartSend,
+                    super::super::evidence::mining_start_fixture(),
+                )
+                .unwrap_err()
+                .code,
+            SurvivalErrorCode::JournalTooLarge
+        );
+        assert_eq!(fs::read(&journal.path).unwrap(), before);
+        drop(journal);
+        assert_eq!(diagnose(&d.0).unwrap().record.events.len(), 1);
     }
 
     #[test]
@@ -450,19 +503,58 @@ mod tests {
                 super::super::evidence::mining_start_fixture(),
             )
             .unwrap();
-        let mut wire = json!(journal.record);
+        #[derive(Serialize)]
+        enum BadPhase {
+            #[serde(rename = "future_observed")]
+            FutureObserved,
+            #[serde(rename = "idle_checkpoint")]
+            IdleCheckpoint,
+        }
+        #[derive(Serialize)]
+        struct BadEvent<'a> {
+            step: usize,
+            phase: BadPhase,
+            outcome: OperationOutcome,
+            continuation: Continuation,
+            evidence: &'a ExecutionEvidence,
+        }
+        #[derive(Serialize)]
+        struct BadRecord<'a> {
+            schema: JournalSchema,
+            id: uuid::Uuid,
+            plan: &'a RecordedExecutionPlan,
+            completed_steps: usize,
+            outcome: OperationOutcome,
+            continuation: Continuation,
+            reconnects: usize,
+            events: [BadEvent<'a>; 1],
+        }
+        let record = journal.record.clone();
         drop(journal);
-        for phase in ["future_observed", "idle_checkpoint"] {
-            wire["events"][0]["phase"] = json!(phase);
-            fs::write(d.0.join("record.json"), serde_json::to_vec(&wire).unwrap()).unwrap();
+        for phase in [BadPhase::FutureObserved, BadPhase::IdleCheckpoint] {
+            let wire = BadRecord {
+                schema: record.schema,
+                id: record.id,
+                plan: &record.plan,
+                completed_steps: 0,
+                outcome: record.outcome.clone(),
+                continuation: record.continuation.clone(),
+                reconnects: 0,
+                events: [BadEvent {
+                    step: 0,
+                    phase,
+                    outcome: record.outcome.clone(),
+                    continuation: record.continuation.clone(),
+                    evidence: &record.events[0].evidence,
+                }],
+            };
+            let bytes = dustroute_codec::storage::encode(STORE_SCHEMA, &wire, MAX_BYTES).unwrap();
+            fs::write(d.0.join("record.store"), &bytes).unwrap();
             assert_eq!(
                 diagnose(&d.0).unwrap_err().code,
                 SurvivalErrorCode::JournalEncoding
             );
-            assert_eq!(
-                fs::read(d.0.join("record.json")).unwrap(),
-                serde_json::to_vec(&wire).unwrap()
-            );
+            assert_eq!(fs::read(d.0.join("record.store")).unwrap(), bytes);
         }
     }
 }

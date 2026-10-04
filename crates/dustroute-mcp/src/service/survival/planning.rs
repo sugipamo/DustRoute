@@ -97,7 +97,7 @@ impl DustRouteMcp {
             parent_job_id: parent.as_ref().map(|p| p.id),
             execution_authority_restorable: crate::survival_execution::diagnostic::DiagnosticOnly,
         };
-        if let Err(e) = save(&path.join("manifest.json"), &manifest) {
+        if let Err(e) = save(&path.join("manifest.store"), &manifest) {
             return failure("journal_io", e);
         }
         let response = json!({"ok":true,"schema_version":"dustroute.survival-job.v1","job_id":id,

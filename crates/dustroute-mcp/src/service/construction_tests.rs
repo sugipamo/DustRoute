@@ -23,7 +23,10 @@ struct AppliedCase {
 }
 async fn adopted_case() -> Case {
     let root = temporary();
-    let (fake, address, bridge) = start_construction_bridge(root.join("assembly-instances")).await;
+    let (fake, address, bridge) = start_construction_bridge(
+        crate::service::test_support::DurableRegistry::Assemblies(root.join("assembly-instances")),
+    )
+    .await;
     let f = runtime_fixture::electrical_fixture(false);
     let (client, server) = connected(&root, &address).await;
     let imported = call(&client,"test_circuit_change",json!({"blueprint":{"action":"import","records":{
@@ -538,11 +541,25 @@ async fn removal_revalidates_pins_expectations_revision_and_live_baseline_after_
     // Deserializing an altered expectation must not construct a capability.
     let record_path = root
         .join("assembly-instances")
-        .join(format!("{}.json", id.as_str().unwrap()));
+        .join(format!("{}.store", id.as_str().unwrap()));
     let original_bytes = fs::read(&record_path).unwrap();
-    let mut corrupted: Value = serde_json::from_slice(&original_bytes).unwrap();
-    corrupted["expected"] = changed.clone();
-    fs::write(&record_path, serde_json::to_vec(&corrupted).unwrap()).unwrap();
+    let mut corrupted: crate::assembly_registry::PlacedAssembly = dustroute_codec::storage::decode(
+        &crate::assembly_registry::PlacedAssembly::schema(),
+        &original_bytes,
+        32 * 1024 * 1024,
+    )
+    .unwrap();
+    corrupted.expected = serde_json::from_value(changed.clone()).unwrap();
+    fs::write(
+        &record_path,
+        dustroute_codec::storage::encode(
+            &crate::assembly_registry::PlacedAssembly::schema(),
+            &corrupted,
+            32 * 1024 * 1024,
+        )
+        .unwrap(),
+    )
+    .unwrap();
     let corrupt = call(
         &client,
         "manage_assembly",

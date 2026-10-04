@@ -105,8 +105,8 @@ Existing user files are not rewritten or deleted by this migration.
 | --- | --- | --- |
 | Blueprint catalog schemas v1–v12 | `dustroute.blueprint-catalog.v13` | Preserve or discard old archives explicitly; recreate definitions and freshly review/adopt intended Assemblies |
 | Blueprint update archive schemas v1–v4 | `dustroute.blueprint-updates.v5` for every history | Recreate/freshly review proposals; content-dependent version selection has been removed |
-| Player-scoped MCP Blueprint store v1 or missing grounding map | `dustroute.mcp-blueprints.v2` with a required map | Preserve/move the old store outside the active state directory and recreate/freshly review; no automatic reset or upgrade |
-| Placed Assembly schemas v1–v3 | `dustroute.placed-assembly.v4` with typed source identity | Old instance records are rejected, including list operations that encounter them; preserve/move them outside the active registry before starting a fresh registry |
+| Player-scoped MCP Blueprint JSON store v1/v2 or missing grounding map | `dustroute.mcp-blueprints.v3` non-JSON store with a required map | Preserve/move the old store outside the active state directory and recreate/freshly review; no automatic reset or upgrade |
+| Placed Assembly schemas v1–v4 or JSON encoding | `dustroute.placed-assembly.v5` non-JSON store with typed source identity | Old instance records are rejected, including list operations that encounter them; preserve/move them outside the active registry before starting a fresh registry |
 | Repair archives with `previewed`/`applied` booleans or missing contract/boundary fields | Required `lifecycle`, contract and boundary records | Diagnose again and create a new repair proposal; do not retry an old token |
 | RPC `write_blocks` / `place_physical_blocks` | `submit_command_batch` / `submit_physical_batch`, envelope `dustroute.bridge-mutation.v1` | Update Rust MCP and JS Bridge together; a mismatched peer rejects the unknown RPC before entering its write handler |
 | Bridge mutation `Value` inputs/results | `CommandWrite` / `PhysicalChange` and typed submission receipts | Build typed batches; still obtain independent readback |

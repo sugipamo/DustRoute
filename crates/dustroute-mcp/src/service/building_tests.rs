@@ -292,7 +292,10 @@ async fn virtual_design_components_require_unique_adoption_and_keep_pinned_requi
 #[tokio::test]
 async fn virtual_design_error_correction_adoption_restart_placement_and_removal() {
     let root = temporary();
-    let (fake, address, bridge) = start_construction_bridge(root.join("assembly-instances")).await;
+    let (fake, address, bridge) = start_construction_bridge(
+        crate::service::test_support::DurableRegistry::Assemblies(root.join("assembly-instances")),
+    )
+    .await;
     let (client, server) = start(&root).await;
     let before = call(
         &client,
@@ -456,7 +459,10 @@ async fn apply(client: &Client, plan: &Value) -> Value {
 #[tokio::test]
 async fn building_with_adopted_door_uses_common_public_placement_and_removal() {
     let root = temporary();
-    let (fake, address, bridge) = start_construction_bridge(root.join("assembly-instances")).await;
+    let (fake, address, bridge) = start_construction_bridge(
+        crate::service::test_support::DurableRegistry::Assemblies(root.join("assembly-instances")),
+    )
+    .await;
     let (client, server) = start(&root).await;
     let f = door_fixture::ordinary_fixture();
     let generate = json!({"blueprint":{"action":"generate_building_with_door","request":{
@@ -615,7 +621,10 @@ async fn building_with_adopted_door_uses_common_public_placement_and_removal() {
 #[tokio::test]
 async fn building_generation_adoption_batched_placement_diagnosis_repair_and_removal() {
     let root = temporary();
-    let (fake, address, bridge) = start_construction_bridge(root.join("assembly-instances")).await;
+    let (fake, address, bridge) = start_construction_bridge(
+        crate::service::test_support::DurableRegistry::Assemblies(root.join("assembly-instances")),
+    )
+    .await;
     let (client, server) = start(&root).await;
     let (result, proposal) = generate_and_propose(&client).await;
     stop(client, server).await;
@@ -745,7 +754,10 @@ async fn building_generation_adoption_batched_placement_diagnosis_repair_and_rem
 #[tokio::test]
 async fn building_partial_batch_is_diagnosed_and_replanned_after_restart() {
     let root = temporary();
-    let (fake, address, bridge) = start_construction_bridge(root.join("assembly-instances")).await;
+    let (fake, address, bridge) = start_construction_bridge(
+        crate::service::test_support::DurableRegistry::Assemblies(root.join("assembly-instances")),
+    )
+    .await;
     let (client, server) = connected(&root, &address).await;
     let (result, proposal) = generate_and_propose(&client).await;
     adopt(&client, &proposal).await;

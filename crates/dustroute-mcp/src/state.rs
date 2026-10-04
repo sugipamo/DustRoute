@@ -1,11 +1,10 @@
-use std::collections::hash_map::DefaultHasher;
 use std::fs;
-use std::hash::{Hash, Hasher};
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use serde::Serialize;
 use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 
 const DEFAULT_TTL_SECONDS: u64 = 60 * 60;
 
@@ -16,7 +15,26 @@ pub(crate) enum PlanRecordKind {
     Repairs,
     CircuitRevisions,
 }
+#[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct PlanEnvelope<T> {
+    pub saved_at_unix_seconds: u64,
+    pub value: T,
+}
+
 impl PlanRecordKind {
+    pub(crate) const fn schema(self) -> &'static str {
+        match self {
+            Self::Repairs => "dustroute.repair-plan-store.v1",
+            Self::CircuitRevisions => "dustroute.circuit-revision-store.v1",
+        }
+    }
+    const fn max_bytes(self) -> usize {
+        match self {
+            Self::Repairs => 16 * 1024 * 1024,
+            Self::CircuitRevisions => 4 * 1024 * 1024 + 4096,
+        }
+    }
     const fn directory(self) -> &'static str {
         match self {
             Self::Repairs => "repairs",
@@ -47,16 +65,11 @@ impl PlanStateStore {
     }
 
     pub(crate) fn blueprint_root(&self, player: &str) -> PathBuf {
-        let mut hasher = DefaultHasher::new();
-        player.hash(&mut hasher);
-        self.root
-            .join("blueprints")
-            .join(format!("{:016x}", hasher.finish()))
+        let identity = storage_identity("player", player);
+        self.root.join("blueprints").join(identity)
     }
     pub(crate) fn from_environment(scope: &str) -> Self {
-        let mut hasher = DefaultHasher::new();
-        scope.hash(&mut hasher);
-        let scope = format!("{:016x}", hasher.finish());
+        let scope = storage_identity("scope", scope);
         let base = std::env::var_os("DUSTROUTE_STATE_DIR")
             .map(PathBuf::from)
             .unwrap_or_else(|| std::env::temp_dir().join("dustroute-mcp-state"));
@@ -65,7 +78,7 @@ impl PlanStateStore {
             .and_then(|value| value.parse().ok())
             .filter(|value| *value > 0)
             .unwrap_or(DEFAULT_TTL_SECONDS);
-        Self::new(base.join(scope), ttl_seconds)
+        Self::new(base.join("storage-v2").join(scope), ttl_seconds)
     }
 
     pub(crate) fn new(root: PathBuf, ttl_seconds: u64) -> Self {
@@ -84,13 +97,15 @@ impl PlanStateStore {
         restrict_directory(&directory)?;
         let bytes = {
             let _measurement = crate::performance::span(crate::performance::Phase::StoreEncode);
-            let envelope = serde_json::json!({
-                "saved_at_unix_seconds": unix_seconds()?,
-                "value": value,
-            });
-            serde_json::to_vec(&envelope).map_err(|error| error.to_string())?
+            let envelope = PlanEnvelope {
+                saved_at_unix_seconds: unix_seconds()?,
+                value,
+            };
+            dustroute_codec::storage::encode(kind.schema(), &envelope, kind.max_bytes())
+                .map_err(|e| e.to_string())?
         };
-        let destination = directory.join(format!("{id}.json"));
+        let destination = directory.join(format!("{id}.store"));
+        crate::storage::check_destination(&destination).map_err(|e| e.to_string())?;
         crate::storage::replace(
             &destination,
             &bytes,
@@ -105,25 +120,36 @@ impl PlanStateStore {
         id: uuid::Uuid,
     ) -> Result<Option<T>, String> {
         let _measurement = crate::performance::span(crate::performance::Phase::StoreRead);
-        let path = self.root.join(kind.directory()).join(format!("{id}.json"));
-        let bytes = match fs::read(&path) {
-            Ok(bytes) => bytes,
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
-            Err(error) => return Err(error.to_string()),
+        let path = self.root.join(kind.directory()).join(format!("{id}.store"));
+        let bytes = match crate::storage::read_record(&path, kind.max_bytes())
+            .map_err(|e| e.to_string())?
+        {
+            Some(bytes) => bytes,
+            None => return Ok(None),
         };
-        let envelope: serde_json::Value =
-            serde_json::from_slice(&bytes).map_err(|error| error.to_string())?;
-        let saved_at = envelope["saved_at_unix_seconds"]
-            .as_u64()
-            .ok_or_else(|| "stored plan has no valid timestamp".to_owned())?;
+        let metadata: PlanEnvelope<serde::de::IgnoredAny> =
+            dustroute_codec::storage::decode(kind.schema(), &bytes, kind.max_bytes())
+                .map_err(|e| e.to_string())?;
+        let saved_at = metadata.saved_at_unix_seconds;
         if unix_seconds()?.saturating_sub(saved_at) > self.ttl_seconds {
             let _ = fs::remove_file(path);
             return Ok(None);
         }
-        serde_json::from_value(envelope["value"].clone())
-            .map(Some)
-            .map_err(|error| error.to_string())
+        let envelope: PlanEnvelope<T> =
+            dustroute_codec::storage::decode(kind.schema(), &bytes, kind.max_bytes())
+                .map_err(|e| e.to_string())?;
+        Ok(Some(envelope.value))
     }
+}
+
+fn storage_identity(namespace: &str, value: &str) -> String {
+    let mut hash = Sha256::new();
+    hash.update(b"dustroute.storage-identity.v1\0");
+    for part in [namespace, value] {
+        hash.update((part.len() as u64).to_be_bytes());
+        hash.update(part.as_bytes());
+    }
+    hash.finalize().iter().map(|b| format!("{b:02x}")).collect()
 }
 
 fn unix_seconds() -> Result<u64, String> {
@@ -178,5 +204,79 @@ mod tests {
             })
         );
         fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn expired_plans_are_removed_before_payload_type_decode_and_reads_do_not_extend_ttl() {
+        let root = std::env::temp_dir().join(format!("dustroute-ttl-{}", uuid::Uuid::new_v4()));
+        let store = PlanStateStore::new(root.clone(), 60);
+        let id = uuid::Uuid::new_v4();
+        store
+            .save(
+                PlanRecordKind::Repairs,
+                id,
+                &ExamplePlan {
+                    value: "valid".into(),
+                },
+            )
+            .unwrap();
+        let path = root.join("repairs").join(format!("{id}.store"));
+        let before = fs::read(&path).unwrap();
+        store
+            .load::<ExamplePlan>(PlanRecordKind::Repairs, id)
+            .unwrap();
+        assert_eq!(fs::read(&path).unwrap(), before);
+        let bytes = dustroute_codec::storage::encode(
+            PlanRecordKind::Repairs.schema(),
+            &PlanEnvelope {
+                saved_at_unix_seconds: 0,
+                value: 12_u64,
+            },
+            4096,
+        )
+        .unwrap();
+        fs::write(&path, bytes).unwrap();
+        assert!(
+            store
+                .load::<ExamplePlan>(PlanRecordKind::Repairs, id)
+                .unwrap()
+                .is_none()
+        );
+        assert!(!path.exists());
+        let old = path.with_extension("json");
+        fs::write(&old, b"retired JSON").unwrap();
+        assert!(
+            store
+                .load::<ExamplePlan>(PlanRecordKind::Repairs, id)
+                .is_err()
+        );
+        assert!(
+            store
+                .save(
+                    PlanRecordKind::Repairs,
+                    id,
+                    &ExamplePlan {
+                        value: "new".into()
+                    }
+                )
+                .is_err()
+        );
+        assert_eq!(fs::read(&old).unwrap(), b"retired JSON");
+        assert!(!path.exists());
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn storage_identity_is_framed_versioned_and_separates_namespaces() {
+        assert_eq!(
+            storage_identity("player", "Tester"),
+            storage_identity("player", "Tester")
+        );
+        assert_ne!(
+            storage_identity("player", "Tester"),
+            storage_identity("scope", "Tester")
+        );
+        assert_ne!(storage_identity("ab", "c"), storage_identity("a", "bc"));
+        assert_eq!(storage_identity("player", "Tester").len(), 64);
     }
 }

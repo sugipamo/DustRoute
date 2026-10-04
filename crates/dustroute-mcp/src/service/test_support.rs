@@ -32,8 +32,50 @@ pub(super) struct Fake {
     /// Match native observation volume for offline profiling, including air.
     pub(super) include_air: bool,
 }
+pub(super) enum DurableRegistry {
+    Assemblies(PathBuf),
+    Edits(PathBuf),
+}
+impl DurableRegistry {
+    fn path(&self) -> &Path {
+        match self {
+            Self::Assemblies(path) | Self::Edits(path) => path,
+        }
+    }
+    fn active_progress(&self, bytes: &[u8]) -> Option<(usize, usize)> {
+        match self {
+            Self::Assemblies(_) => {
+                let record: crate::assembly_registry::PlacedAssembly =
+                    dustroute_codec::storage::decode(
+                        &crate::assembly_registry::PlacedAssembly::schema(),
+                        bytes,
+                        32 * 1024 * 1024,
+                    )
+                    .unwrap();
+                if record.state != crate::assembly_registry::InstanceState::NeedsInspection {
+                    return None;
+                }
+                let attempt = record.attempts.last().unwrap();
+                Some((attempt.verified_steps, attempt.total_steps))
+            }
+            Self::Edits(_) => {
+                let record: crate::edit_registry::EditRecord = dustroute_codec::storage::decode(
+                    crate::edit_registry::SCHEMA,
+                    bytes,
+                    32 * 1024 * 1024,
+                )
+                .unwrap();
+                if record.state != crate::edit_registry::EditState::NeedsInspection {
+                    return None;
+                }
+                let attempt = record.attempts.last().unwrap();
+                Some((attempt.verified_steps, attempt.total_steps))
+            }
+        }
+    }
+}
 pub(super) async fn start_construction_bridge(
-    durable_root: PathBuf,
+    durable_registry: DurableRegistry,
 ) -> (
     Arc<std::sync::Mutex<Fake>>,
     String,
@@ -120,16 +162,14 @@ pub(super) async fn start_construction_bridge(
                     "submit_command_batch" => {
                         // Transport stub only: physical callback conformance is
                         // covered by independent server captures, not this mock.
-                        let active: Vec<Value> = fs::read_dir(&durable_root)
+                        let active: Vec<(usize, usize)> = fs::read_dir(durable_registry.path())
                             .unwrap()
                             .filter_map(|entry| {
                                 let path = entry.unwrap().path();
-                                if path.extension().and_then(|s| s.to_str()) != Some("json") {
+                                if path.extension().and_then(|s| s.to_str()) != Some("store") {
                                     return None;
                                 }
-                                let record: Value =
-                                    serde_json::from_slice(&fs::read(path).unwrap()).unwrap();
-                                (record["state"] == "needs_inspection").then_some(record)
+                                durable_registry.active_progress(&fs::read(path).unwrap())
                             })
                             .collect();
                         assert_eq!(
@@ -137,11 +177,8 @@ pub(super) async fn start_construction_bridge(
                             1,
                             "durable intent must exist before every write"
                         );
-                        let attempt = active[0]["attempts"].as_array().unwrap().last().unwrap();
-                        assert_eq!(
-                            attempt["verified_steps"].as_u64().unwrap() as usize,
-                            attempt["total_steps"].as_u64().unwrap() as usize - state.steps.len()
-                        );
+                        let (verified_steps, total_steps) = active[0];
+                        assert_eq!(verified_steps, total_steps - state.steps.len());
                         let changes = req["params"]["changes"].as_array().unwrap();
                         state.write_batches += 1;
                         for change in changes {

@@ -9,7 +9,10 @@ async fn fixture() -> (
     tokio::task::JoinHandle<()>,
 ) {
     let root = temporary();
-    let (fake, address, bridge) = start_construction_bridge(root.join("world-edits")).await;
+    let (fake, address, bridge) = start_construction_bridge(
+        crate::service::test_support::DurableRegistry::Edits(root.join("world-edits")),
+    )
+    .await;
     {
         let mut state = fake.lock().unwrap();
         state.snapshot = Some(
@@ -88,8 +91,14 @@ async fn legacy_projected_history_is_retained_and_cannot_authorize_writes() {
     let first = propose(&client).await;
     let path = root
         .join("construction-jobs")
-        .join(format!("{}.json", first["job_id"].as_str().unwrap()));
-    let mut legacy: Value = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+        .join(format!("{}.store", first["job_id"].as_str().unwrap()));
+    let record: crate::construction_jobs::JobRecord = dustroute_codec::storage::decode(
+        crate::construction_jobs::SCHEMA,
+        &std::fs::read(&path).unwrap(),
+        16 * 1024 * 1024,
+    )
+    .unwrap();
+    let mut legacy = json!(record);
     legacy["schema"] = json!("dustroute.construction-job.v1");
     legacy.as_object_mut().unwrap().remove("boundaries");
     for stage in legacy["regions"].as_array_mut().unwrap() {
@@ -108,7 +117,7 @@ async fn legacy_projected_history_is_retained_and_cannot_authorize_writes() {
         history["error"]
             .as_str()
             .unwrap()
-            .contains("recapture a v2 job")
+            .contains("unsupported stored encoding")
     );
     let old = call(
         &client,

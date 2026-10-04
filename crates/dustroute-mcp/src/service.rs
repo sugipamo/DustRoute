@@ -2017,7 +2017,7 @@ impl DustRouteMcp {
                     revision.validation.state_mut().ok_or("state review missing")?.assembly=Some(crate::recorded_revision::AssemblyValidation::Unavailable { error });
                 },
             }
-            if serde_json::to_vec(&revision).map_err(|e|e.to_string())?.len()>crate::revision::MAX_BYTES {return Err("revision record exceeds 4 MiB".into());}
+            dustroute_codec::storage::encode("dustroute.circuit-revision-record.v1", &revision, crate::revision::MAX_BYTES).map_err(|e|e.to_string())?;
             self.state_store.save(PlanRecordKind::CircuitRevisions,revision.revision_id,&revision)?;
             Ok(revision_json(&revision,false))
         }.await;
@@ -6908,13 +6908,27 @@ mod tests {
                     .unwrap();
                 // Exercise the formerly cached read before invalidating its disk record.
                 assert!(service.repair_plan(id).await.unwrap().is_some());
-                let path = root.join("repairs").join(format!("{id}.json"));
+                let path = root.join("repairs").join(format!("{id}.store"));
                 match invalidation {
                     "expired" => {
-                        let mut envelope: Value =
-                            serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
-                        envelope["saved_at_unix_seconds"] = json!(1);
-                        std::fs::write(&path, serde_json::to_vec(&envelope).unwrap()).unwrap();
+                        let mut envelope: crate::state::PlanEnvelope<StoredRepairPlan> =
+                            dustroute_codec::storage::decode(
+                                PlanRecordKind::Repairs.schema(),
+                                &std::fs::read(&path).unwrap(),
+                                16 * 1024 * 1024,
+                            )
+                            .unwrap();
+                        envelope.saved_at_unix_seconds = 1;
+                        std::fs::write(
+                            &path,
+                            dustroute_codec::storage::encode(
+                                PlanRecordKind::Repairs.schema(),
+                                &envelope,
+                                16 * 1024 * 1024,
+                            )
+                            .unwrap(),
+                        )
+                        .unwrap();
                     }
                     "deleted" => std::fs::remove_file(&path).unwrap(),
                     "corrupt" => std::fs::write(&path, b"not json").unwrap(),
@@ -7625,10 +7639,25 @@ mod tests {
         // Expiry of an ancestor does not invalidate a self-contained descendant.
         let path = root
             .join("circuit_revisions")
-            .join(format!("{}.json", base["revision_id"].as_str().unwrap()));
-        let mut envelope: Value = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
-        envelope["saved_at_unix_seconds"] = json!(0);
-        std::fs::write(&path, serde_json::to_vec(&envelope).unwrap()).unwrap();
+            .join(format!("{}.store", base["revision_id"].as_str().unwrap()));
+        let mut envelope: crate::state::PlanEnvelope<crate::revision::CircuitRevision> =
+            dustroute_codec::storage::decode(
+                PlanRecordKind::CircuitRevisions.schema(),
+                &std::fs::read(&path).unwrap(),
+                4 * 1024 * 1024 + 4096,
+            )
+            .unwrap();
+        envelope.saved_at_unix_seconds = 0;
+        std::fs::write(
+            &path,
+            dustroute_codec::storage::encode(
+                PlanRecordKind::CircuitRevisions.schema(),
+                &envelope,
+                4 * 1024 * 1024 + 4096,
+            )
+            .unwrap(),
+        )
+        .unwrap();
         assert!(
             service
                 .load_revision(base["revision_id"].as_str().unwrap(), "builder")

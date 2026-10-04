@@ -6,7 +6,6 @@ use crate::storage::{Durability, replace};
 use dustroute_translate::snapshot::MinecraftSnapshot;
 use serde::{Deserialize, Serialize};
 use std::fs::{self, File, OpenOptions};
-use std::io::Read;
 use std::path::PathBuf;
 use uuid::Uuid;
 
@@ -51,7 +50,7 @@ pub(crate) struct EditAttempt {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub progress: Option<crate::failure::ExecutionProgress>,
 }
-pub(crate) const SCHEMA: &str = "dustroute.world-edit.v1";
+pub(crate) const SCHEMA: &str = "dustroute.world-edit.v2";
 const MAX_BYTES: u64 = 32 * 1024 * 1024;
 
 pub(crate) struct EditRegistry {
@@ -84,19 +83,21 @@ impl EditRegistry {
     }
     pub fn load(&self, id: Uuid, player: &str) -> Result<Option<EditRecord>, String> {
         let _measurement = crate::performance::span(crate::performance::Phase::StoreRead);
-        let file = match File::open(self.root.join(format!("{id}.json"))) {
-            Ok(file) => file,
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
-            Err(e) => return Err(e.to_string()),
+        let bytes = match crate::storage::read_record(
+            &self.root.join(format!("{id}.store")),
+            MAX_BYTES as usize,
+        )
+        .map_err(|e| e.to_string())?
+        {
+            Some(bytes) => bytes,
+            None => return Ok(None),
         };
-        let mut bytes = Vec::new();
-        file.take(MAX_BYTES + 1)
-            .read_to_end(&mut bytes)
-            .map_err(|e| e.to_string())?;
         if bytes.len() as u64 > MAX_BYTES {
             return Err("world edit record exceeds 32 MiB".into());
         }
-        let record: EditRecord = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+        let record: EditRecord =
+            dustroute_codec::storage::decode(SCHEMA, &bytes, MAX_BYTES as usize)
+                .map_err(|e| e.to_string())?;
         if record.schema != SCHEMA || record.operation_id != id {
             return Err("invalid world edit record identity/schema".into());
         }
@@ -112,13 +113,14 @@ impl EditRegistry {
         self.load(record.operation_id, &record.player)?;
         let bytes = {
             let _measurement = crate::performance::span(crate::performance::Phase::StoreEncode);
-            serde_json::to_vec(record).map_err(|e| e.to_string())?
+            dustroute_codec::storage::encode(SCHEMA, record, MAX_BYTES as usize)
+                .map_err(|e| e.to_string())?
         };
         if bytes.len() as u64 > MAX_BYTES {
             return Err("world edit record exceeds 32 MiB".into());
         }
         replace(
-            &self.root.join(format!("{}.json", record.operation_id)),
+            &self.root.join(format!("{}.store", record.operation_id)),
             &bytes,
             Durability::FileAndDirectory,
         )

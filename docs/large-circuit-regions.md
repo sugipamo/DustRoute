@@ -56,12 +56,12 @@ explicit confirmation before progress advances. Its inverse is also freshly
 verified; no-op stages never grant permission to skip these checks.
 
 Jobs are durable intentions/history, not restored validation capabilities.
-The `dustroute.construction-job.v2` format stores sparse verified boundary
+The `dustroute.construction-job.v3` format stores sparse verified boundary
 deltas, including natural updates. After restart it reconstructs the current
 literal boundary from these deltas, then freshly proves only the next stage.
 It never projects old progress from final properties or replays all preceding
-physical proofs. v1 job files are retained as history but cannot be resumed or
-converted automatically; explicitly recapture and create a v2 job. Ordinary
+physical proofs. Retired v1/v2 JSON files are preserved separately and refused by the current
+reader; explicitly recapture and create a v3 job in the non-JSON store. Ordinary
 electrical operation history remains readable through `get_operation`.
 Failed or uncertain attempts stop with needs_inspection. There is no automatic
 retry, rollback, chunk loading or world lock. Undo must proceed in reverse region

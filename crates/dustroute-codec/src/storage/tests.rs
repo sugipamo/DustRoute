@@ -1,4 +1,21 @@
 use super::*;
+
+#[test]
+fn byte_limit_and_schema_errors_are_typed() {
+    assert!(matches!(
+        encode("test.v1", &"x".repeat(100), 64),
+        Err(Error::ByteLimit)
+    ));
+    let bytes = encode("test.v1", &42_u64, 4096).unwrap();
+    assert!(matches!(
+        decode::<u64>("other.v1", &bytes, 4096),
+        Err(Error::Schema)
+    ));
+    assert!(matches!(
+        decode::<u64>("test.v1", &bytes, 1),
+        Err(Error::ByteLimit)
+    ));
+}
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 

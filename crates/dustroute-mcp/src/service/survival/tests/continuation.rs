@@ -37,13 +37,23 @@ fn survival_continuation_evidence_exceeds_job_bound_without_changing_job_storage
     let value = json!({"continuation_final":{"status":"needs_inspection",
         "diagnostic":"x".repeat(16 * 1024 * 1024)}});
     assert_eq!(
-        save(&output, &value).unwrap_err(),
+        save(
+            &output,
+            &JobStatus::AdmissionRefused {
+                failure: JobFailure::boundary(
+                    JobRefusalCode::SourceChanged,
+                    "x".repeat(16 * 1024 * 1024)
+                ),
+                construction_dispatched: false,
+            }
+        )
+        .unwrap_err(),
         "survival job record exceeds bound"
     );
     save_trial_evidence(&output, &value).unwrap();
     assert_eq!(load_trial_evidence(&output).unwrap(), value);
     assert_eq!(
-        load::<Value>(&output).unwrap_err(),
+        load::<JobStatus>(&output).unwrap_err(),
         "survival job record exceeds bound"
     );
     std::fs::remove_dir_all(root).unwrap();

@@ -3,7 +3,7 @@ use super::*;
 use crate::survival_execution::diagnostic::{RecordedConstructionPlan, RecordedStep};
 
 pub(super) fn checked(directory: &Path) -> Result<SafeCheckpoint> {
-    if directory.join("continuation-claim.json").try_exists()? {
+    if crate::storage::record_exists(&directory.join("continuation-claim.store"))? {
         return Err(ExecutionError::new(
             SurvivalErrorCode::CheckpointConsumed,
             "another new job already claimed this checkpoint; diagnose that job",

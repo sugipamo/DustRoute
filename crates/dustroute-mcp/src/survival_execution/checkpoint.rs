@@ -1,4 +1,6 @@
 //! Settled idle boundaries, not recovery of lost native operation handles.
+pub(crate) const CLAIM_SCHEMA: &str = "dustroute.survival-checkpoint-claim-store.v1";
+
 use super::diagnostic::{CheckpointSchema, RecordedEndpoint};
 use super::*;
 use crate::survival_construction::PlacementPurpose;
@@ -156,12 +158,16 @@ pub(crate) fn claim(
         ));
     }
     crate::storage::replace(
-        &directory.join("continuation-claim.json"),
-        &serde_json::to_vec(&super::diagnostic::CheckpointClaim {
-            new_job,
-            execution_id: now.execution_id,
-            automatic_replay: super::diagnostic::DiagnosticOnly,
-        })?,
+        &directory.join("continuation-claim.store"),
+        &dustroute_codec::storage::encode(
+            CLAIM_SCHEMA,
+            &super::diagnostic::CheckpointClaim {
+                new_job,
+                execution_id: now.execution_id,
+                automatic_replay: super::diagnostic::DiagnosticOnly,
+            },
+            16 * 1024 * 1024,
+        )?,
         crate::storage::Durability::FileAndDirectory,
     )?;
     Ok(lock)
@@ -278,6 +284,13 @@ mod tests {
         drop(journal);
         let child = uuid::Uuid::new_v4();
         let guard = claim(&d.0, &checkpoint, child).unwrap();
+        let path = d.0.join("continuation-claim.store");
+        let bytes = std::fs::read(&path).unwrap();
+        let saved: super::diagnostic::CheckpointClaim =
+            dustroute_codec::storage::decode(CLAIM_SCHEMA, &bytes, 16 * 1024 * 1024).unwrap();
+        assert_eq!(saved.new_job, child);
+        assert_eq!(saved.execution_id, checkpoint.execution_id);
+        assert!(!bool::from(saved.automatic_replay));
         assert!(claim(&d.0, &checkpoint, uuid::Uuid::new_v4()).is_err());
         drop(guard);
         assert_eq!(
@@ -288,6 +301,27 @@ mod tests {
             diagnose(&d.0).unwrap().record.events.last().unwrap().phase,
             ExecutionPhase::IdleCheckpoint
         );
+        assert_eq!(std::fs::read(path).unwrap(), bytes);
+    }
+    #[test]
+    fn retired_json_claim_is_still_consumed_and_cannot_be_reissued() {
+        let (d, journal, checkpoint) = fixture();
+        drop(journal);
+        let path = d.0.join("continuation-claim.json");
+        let bytes = b"{retired claim}";
+        std::fs::write(&path, bytes).unwrap();
+        assert_eq!(
+            read(&d.0).unwrap_err().code,
+            SurvivalErrorCode::CheckpointConsumed
+        );
+        assert_eq!(
+            claim(&d.0, &checkpoint, uuid::Uuid::new_v4())
+                .unwrap_err()
+                .code,
+            SurvivalErrorCode::CheckpointConsumed
+        );
+        assert_eq!(std::fs::read(path).unwrap(), bytes);
+        assert!(!d.0.join("continuation-claim.store").exists());
     }
     #[test]
     fn ownership_is_derived_from_confirmed_prefix_not_a_saved_claim() {

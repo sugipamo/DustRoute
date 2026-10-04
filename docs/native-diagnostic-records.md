@@ -74,7 +74,8 @@ JSONへ書き出してから読み戻す処理はない。
 DustRouteでは`DiagnosticPayload(Value)`を除去し、計画・checkpoint・イベントをこの型へ
 接続した。採掘後の照合条件も`RecordedCleanupRecoveryPlan`へ一方向に射影する。
 イベントの`ExecutionEvidence`は用途別のenumとなり、種別と証拠型が一致しない場合は
-保存前と読込み時に拒否する。journalは`dustroute.survival-execution.v2`へ更新した。
+保存前と読込み時に拒否する。診断型の導入時にはjournalを`dustroute.survival-execution.v2`
+へ更新した。その後の[保存codec移行](json-boundary-migration.md)では非JSONのv3へ移した。
 旧v1を変換する経路は設けず、旧形式は拒否する。checkpointのwire構造は保ち、v2のままとした。
 再開は現在の状態からの新規計画・検証と単回消費を維持する。
 

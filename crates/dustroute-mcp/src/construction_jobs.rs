@@ -10,11 +10,10 @@ use dustroute_translate::piston_construction::{
 use dustroute_translate::snapshot::MinecraftSnapshot;
 use serde::{Deserialize, Serialize};
 use std::fs::{self, File, OpenOptions};
-use std::io::Read;
 use std::path::PathBuf;
 use uuid::Uuid;
 
-pub(crate) const SCHEMA: &str = "dustroute.construction-job.v2";
+pub(crate) const SCHEMA: &str = "dustroute.construction-job.v3";
 const MAX_BYTES: u64 = 16 * 1024 * 1024;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -158,20 +157,21 @@ impl JobRegistry {
         }
     }
     pub fn load(&self, id: Uuid, player: &str) -> Result<JobRecord, String> {
-        let file = File::open(self.root.join(format!("{id}.json"))).map_err(|e| e.to_string())?;
-        let mut bytes = vec![];
-        file.take(MAX_BYTES + 1)
-            .read_to_end(&mut bytes)
-            .map_err(|e| e.to_string())?;
+        let bytes = match crate::storage::read_record(
+            &self.root.join(format!("{id}.store")),
+            MAX_BYTES as usize,
+        )
+        .map_err(|e| e.to_string())?
+        {
+            Some(bytes) => bytes,
+            None => return Err("construction job not found".into()),
+        };
         if bytes.len() as u64 > MAX_BYTES {
             return Err("construction job exceeds 16 MiB".into());
         }
-        let envelope: serde_json::Value =
-            serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-        if envelope["schema"] != SCHEMA {
-            return Err("unsupported construction job format; retain its history and recapture a v2 job instead of projecting old checkpoints".into());
-        }
-        let record: JobRecord = serde_json::from_value(envelope).map_err(|e| e.to_string())?;
+        let record: JobRecord =
+            dustroute_codec::storage::decode(SCHEMA, &bytes, MAX_BYTES as usize)
+                .map_err(|e| e.to_string())?;
         if record.schema != SCHEMA || record.id != id || record.player != player {
             return Err("construction job identity/schema/owner mismatch".into());
         }
@@ -184,8 +184,8 @@ impl JobRegistry {
         {
             return Err("construction job schema/history limit exceeded".into());
         }
-        let path = self.root.join(format!("{}.json", record.id));
-        if path.exists() {
+        let path = self.root.join(format!("{}.store", record.id));
+        if crate::storage::record_exists(&path).map_err(|e| e.to_string())? {
             let old = self.load(record.id, &record.player)?;
             if old.forward_cancelled && !record.forward_cancelled {
                 return Err("forward cancellation is permanent; create a new job".into());
@@ -208,7 +208,8 @@ impl JobRegistry {
                 return Err("construction job intention is immutable; create a new job".into());
             }
         }
-        let bytes = serde_json::to_vec(record).map_err(|e| e.to_string())?;
+        let bytes = dustroute_codec::storage::encode(SCHEMA, record, MAX_BYTES as usize)
+            .map_err(|e| e.to_string())?;
         if bytes.len() as u64 > MAX_BYTES {
             return Err("construction job exceeds 16 MiB".into());
         }
@@ -229,16 +230,8 @@ impl JobRegistry {
                 .boundaries
                 .push(ElectricalBoundary::between(proof.before(), proof.after())?);
         }
-        if serde_json::to_vec(&candidate)
-            .map_err(|e| e.to_string())?
-            .len() as u64
-            > MAX_BYTES - 65536
-        {
-            return Err(
-                "construction boundary storage budget exhausted before writes; split the job"
-                    .into(),
-            );
-        }
+        dustroute_codec::storage::encode(SCHEMA, &candidate, (MAX_BYTES - 65536) as usize)
+            .map_err(|e| format!("construction boundary storage budget exhausted before writes; split the job: {e}"))?;
         Ok(())
     }
 }

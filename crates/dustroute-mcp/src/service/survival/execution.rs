@@ -30,7 +30,7 @@ impl DustRouteMcp {
                         .state_store
                         .survival_job_root()
                         .join(id.to_string())
-                        .join("status.json"),
+                        .join("status.store"),
                     &entry.status(),
                 ) {
                     return failure("journal_io", e);
@@ -60,7 +60,7 @@ impl DustRouteMcp {
                 .state_store
                 .survival_job_root()
                 .join(id.to_string())
-                .join("status.json"),
+                .join("status.store"),
             &entry.status(),
         ) {
             let original = lease.source();
@@ -295,7 +295,7 @@ impl DustRouteMcp {
                 .state_store
                 .survival_job_root()
                 .join(id.to_string())
-                .join("status.json"),
+                .join("status.store"),
             &status,
         );
         let persisted = result.is_ok();

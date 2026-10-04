@@ -1,7 +1,7 @@
 //! Caller-authorized, checked fixed sequences. No automatic adoption or plan replay.
 //! The caller exclusively owns the source bot for this executor's lifetime.
 //! Voxrig retains physical admission, native action guards and retirement receipts.
-//! JSON journals diagnose uncertainty; they cannot restore a native session/token.
+//! Typed historical journals diagnose uncertainty; they cannot restore a native session/token.
 pub(crate) mod checkpoint;
 pub mod diagnostic;
 use diagnostic::RecordedExecutionPlan;
@@ -9,6 +9,8 @@ pub(crate) mod evidence;
 mod journal;
 pub use evidence::ExecutionEvidence;
 use evidence::{RetryReason, WorldEvidence};
+#[cfg(test)]
+pub(crate) use journal::STORE_SCHEMA as JOURNAL_STORE_SCHEMA;
 use voxrig::checked_survival::diagnostic::ToDiagnostic;
 mod native;
 use crate::survival_construction::{
@@ -57,9 +59,14 @@ impl From<std::io::Error> for ExecutionError {
         Self::new(SurvivalErrorCode::JournalIo, e)
     }
 }
-impl From<serde_json::Error> for ExecutionError {
-    fn from(e: serde_json::Error) -> Self {
-        Self::new(SurvivalErrorCode::JournalEncoding, e)
+impl From<dustroute_codec::storage::Error> for ExecutionError {
+    fn from(e: dustroute_codec::storage::Error) -> Self {
+        let code = match &e {
+            dustroute_codec::storage::Error::ByteLimit => SurvivalErrorCode::JournalTooLarge,
+            dustroute_codec::storage::Error::Schema => SurvivalErrorCode::JournalSchema,
+            dustroute_codec::storage::Error::Invalid(_) => SurvivalErrorCode::JournalEncoding,
+        };
+        Self::new(code, e)
     }
 }
 impl From<crate::survival_cleanup::CleanupError> for ExecutionError {

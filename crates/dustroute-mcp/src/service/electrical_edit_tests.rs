@@ -56,7 +56,10 @@ async fn fixture() -> (
     tokio::task::JoinHandle<()>,
 ) {
     let root = temporary();
-    let (fake, address, bridge) = start_construction_bridge(root.join("world-edits")).await;
+    let (fake, address, bridge) = start_construction_bridge(
+        crate::service::test_support::DurableRegistry::Edits(root.join("world-edits")),
+    )
+    .await;
     {
         let mut state = fake.lock().unwrap();
         state.snapshot = Some(machine());

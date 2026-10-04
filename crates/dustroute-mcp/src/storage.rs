@@ -2,7 +2,7 @@
 //! retain their transaction/attempt locks and decide their durability contract.
 use std::{
     fs::{self, File, OpenOptions},
-    io::{self, Write},
+    io::{self, Read, Write},
     path::Path,
 };
 
@@ -10,6 +10,37 @@ use std::{
 pub(crate) enum Durability {
     ReplaceOnly,
     FileAndDirectory,
+}
+
+/// Read at most one byte beyond the caller's bound. Domain-specific error
+/// classification stays with the caller; old JSON is never a fallback.
+pub(crate) fn read_record(path: &Path, max_bytes: usize) -> io::Result<Option<Vec<u8>>> {
+    let file = match File::open(path) {
+        Ok(file) => file,
+        Err(e) if e.kind() == io::ErrorKind::NotFound => {
+            check_destination(path)?;
+            return Ok(None);
+        }
+        Err(e) => return Err(e),
+    };
+    let mut bytes = Vec::new();
+    file.take((max_bytes as u64).saturating_add(1))
+        .read_to_end(&mut bytes)?;
+    Ok(Some(bytes))
+}
+
+pub(crate) fn record_exists(path: &Path) -> io::Result<bool> {
+    Ok(path.try_exists()? || path.with_extension("json").try_exists()?)
+}
+
+pub(crate) fn check_destination(path: &Path) -> io::Result<()> {
+    if !path.try_exists()? && path.with_extension("json").try_exists()? {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "retired JSON record; preserve it separately and create a freshly validated record",
+        ));
+    }
+    Ok(())
 }
 
 pub(crate) fn replace(path: &Path, bytes: &[u8], durability: Durability) -> io::Result<()> {
@@ -58,7 +89,7 @@ mod tests {
     fn replacement_keeps_unrelated_files_and_cleans_failed_temporary_write() {
         let root = std::env::temp_dir().join(format!("dustroute-atomic-{}", uuid::Uuid::new_v4()));
         fs::create_dir(&root).unwrap();
-        let saved = root.join("record.json");
+        let saved = root.join("record.store");
         replace(&saved, b"first", Durability::ReplaceOnly).unwrap();
         replace(&saved, b"second", Durability::FileAndDirectory).unwrap();
         assert_eq!(fs::read(&saved).unwrap(), b"second");

@@ -23,23 +23,23 @@ impl<'de> Decoder<'de> {
         let end = self
             .offset
             .checked_add(count)
-            .ok_or_else(|| Error("record length overflow".into()))?;
+            .ok_or_else(|| Error::Invalid("record length overflow".into()))?;
         let bytes = self
             .bytes
             .get(self.offset..end)
-            .ok_or_else(|| Error("truncated record".into()))?;
+            .ok_or_else(|| Error::Invalid("truncated record".into()))?;
         self.offset = end;
         Ok(bytes)
     }
     pub fn expect_bytes(&mut self, bytes: &[u8]) -> Result<()> {
         if self.take(bytes.len())? != bytes {
-            return Err(Error("unsupported stored encoding".into()));
+            return Err(Error::Invalid("unsupported stored encoding".into()));
         }
         Ok(())
     }
     pub fn finish(&self) -> Result<()> {
         if self.offset != self.bytes.len() {
-            return Err(Error("trailing record data".into()));
+            return Err(Error::Invalid("trailing record data".into()));
         }
         Ok(())
     }
@@ -50,28 +50,29 @@ impl<'de> Decoder<'de> {
         self.bytes
             .get(self.offset)
             .copied()
-            .ok_or_else(|| Error("truncated record".into()))
+            .ok_or_else(|| Error::Invalid("truncated record".into()))
     }
     fn array<const N: usize>(&mut self) -> Result<[u8; N]> {
         Ok(self.take(N)?.try_into().expect("checked slice length"))
     }
     fn bytes_payload(&mut self) -> Result<&'de [u8]> {
         let len = usize::try_from(u64::from_be_bytes(self.array()?))
-            .map_err(|_| Error("record length overflow".into()))?;
+            .map_err(|_| Error::Invalid("record length overflow".into()))?;
         self.take(len)
     }
     pub fn text_payload(&mut self) -> Result<&'de str> {
-        std::str::from_utf8(self.bytes_payload()?).map_err(|_| Error("invalid record UTF-8".into()))
+        std::str::from_utf8(self.bytes_payload()?)
+            .map_err(|_| Error::Invalid("invalid record UTF-8".into()))
     }
     fn name(&mut self) -> Result<&'de str> {
         if self.byte()? != 15 {
-            return Err(Error("invalid record name".into()));
+            return Err(Error::Invalid("invalid record name".into()));
         }
         self.text_payload()
     }
     fn enter(&mut self) -> Result<()> {
         if self.depth >= MAX_DEPTH || self.remaining == 0 {
-            return Err(Error("record depth/value limit exceeded".into()));
+            return Err(Error::Invalid("record depth/value limit exceeded".into()));
         }
         self.depth += 1;
         self.remaining -= 1;
@@ -90,7 +91,7 @@ impl<'de> Decoder<'de> {
         };
         let value = visitor.visit_map(&mut access)?;
         if access.pending {
-            return Err(Error("record map has no value".into()));
+            return Err(Error::Invalid("record map has no value".into()));
         }
         access.decoder.expect_bytes(&[0])?;
         Ok(value)
@@ -107,7 +108,7 @@ impl<'de> de::Deserializer<'de> for &mut Decoder<'de> {
             1 => match self.byte()? {
                 0 => visitor.visit_bool(false),
                 1 => visitor.visit_bool(true),
-                _ => Err(Error("invalid boolean".into())),
+                _ => Err(Error::Invalid("invalid boolean".into())),
             },
             2 => visitor.visit_i8(i8::from_be_bytes(self.array()?)),
             3 => visitor.visit_i16(i16::from_be_bytes(self.array()?)),
@@ -122,20 +123,20 @@ impl<'de> de::Deserializer<'de> for &mut Decoder<'de> {
             12 => {
                 let value = f32::from_bits(u32::from_be_bytes(self.array()?));
                 if !value.is_finite() {
-                    return Err(Error("non-finite stored number".into()));
+                    return Err(Error::Invalid("non-finite stored number".into()));
                 }
                 visitor.visit_f32(value)
             }
             13 => {
                 let value = f64::from_bits(u64::from_be_bytes(self.array()?));
                 if !value.is_finite() {
-                    return Err(Error("non-finite stored number".into()));
+                    return Err(Error::Invalid("non-finite stored number".into()));
                 }
                 visitor.visit_f64(value)
             }
             14 => visitor.visit_char(
                 char::from_u32(u32::from_be_bytes(self.array()?))
-                    .ok_or_else(|| Error("invalid char".into()))?,
+                    .ok_or_else(|| Error::Invalid("invalid char".into()))?,
             ),
             15 => visitor.visit_borrowed_str(self.text_payload()?),
             16 => visitor.visit_borrowed_bytes(self.bytes_payload()?),
@@ -161,7 +162,7 @@ impl<'de> de::Deserializer<'de> for &mut Decoder<'de> {
                 };
                 let value = visitor.visit_map(&mut entry)?;
                 if entry.variant.is_some() || entry.pending {
-                    return Err(Error("incomplete enum payload".into()));
+                    return Err(Error::Invalid("incomplete enum payload".into()));
                 }
                 Ok(value)
             }
@@ -179,7 +180,7 @@ impl<'de> de::Deserializer<'de> for &mut Decoder<'de> {
                 self.name()?;
                 self.map(visitor)
             }
-            _ => Err(Error("invalid record tag".into())),
+            _ => Err(Error::Invalid("invalid record tag".into())),
         })();
         self.depth -= 1;
         result
@@ -196,7 +197,7 @@ impl<'de> de::Deserializer<'de> for &mut Decoder<'de> {
         let result = (|| {
             let tag = self.byte()?;
             if !matches!(tag, 21 | 23 | 27 | 30) {
-                return Err(Error("expected typed enum".into()));
+                return Err(Error::Invalid("expected typed enum".into()));
             }
             self.name()?;
             let variant = self.name()?;
@@ -235,7 +236,7 @@ impl<'de> MapAccess<'de> for &mut Fields<'_, 'de> {
     type Error = Error;
     fn next_key_seed<K: DeserializeSeed<'de>>(&mut self, seed: K) -> Result<Option<K::Value>> {
         if self.pending {
-            return Err(Error("record map has no value".into()));
+            return Err(Error::Invalid("record map has no value".into()));
         }
         if self.decoder.peek()? == 0 {
             return Ok(None);
@@ -244,7 +245,7 @@ impl<'de> MapAccess<'de> for &mut Fields<'_, 'de> {
         let key = seed.deserialize(&mut *self.decoder)?;
         let bytes = &self.decoder.bytes[start..self.decoder.offset];
         if self.previous.is_some_and(|old| old >= bytes) {
-            return Err(Error("duplicate or unordered record key".into()));
+            return Err(Error::Invalid("duplicate or unordered record key".into()));
         }
         self.previous = Some(bytes);
         self.pending = true;
@@ -252,7 +253,7 @@ impl<'de> MapAccess<'de> for &mut Fields<'_, 'de> {
     }
     fn next_value_seed<V: DeserializeSeed<'de>>(&mut self, seed: V) -> Result<V::Value> {
         if !self.pending {
-            return Err(Error("record map value has no key".into()));
+            return Err(Error::Invalid("record map value has no key".into()));
         }
         self.pending = false;
         seed.deserialize(&mut *self.decoder)
@@ -270,7 +271,7 @@ impl<'de> MapAccess<'de> for &mut EnumEntry<'_, 'de> {
     type Error = Error;
     fn next_key_seed<K: DeserializeSeed<'de>>(&mut self, seed: K) -> Result<Option<K::Value>> {
         if self.pending {
-            return Err(Error("enum value not consumed".into()));
+            return Err(Error::Invalid("enum value not consumed".into()));
         }
         self.variant
             .take()
@@ -282,7 +283,7 @@ impl<'de> MapAccess<'de> for &mut EnumEntry<'_, 'de> {
     }
     fn next_value_seed<V: DeserializeSeed<'de>>(&mut self, seed: V) -> Result<V::Value> {
         if !self.pending {
-            return Err(Error("enum value has no key".into()));
+            return Err(Error::Invalid("enum value has no key".into()));
         }
         self.pending = false;
         seed.deserialize(EnumPayload {
@@ -305,7 +306,7 @@ impl<'de> de::Deserializer<'de> for EnumPayload<'_, 'de> {
             23 => de::Deserializer::deserialize_any(self.decoder, visitor),
             27 => self.decoder.sequence(visitor),
             30 => self.decoder.map(visitor),
-            _ => Err(Error("invalid enum payload".into())),
+            _ => Err(Error::Invalid("invalid enum payload".into())),
         }
     }
     serde::forward_to_deserialize_any! {
@@ -332,19 +333,19 @@ impl<'de> VariantAccess<'de> for Variant<'_, 'de> {
     type Error = Error;
     fn unit_variant(self) -> Result<()> {
         if self.tag != 21 {
-            return Err(Error("expected unit variant".into()));
+            return Err(Error::Invalid("expected unit variant".into()));
         }
         Ok(())
     }
     fn newtype_variant_seed<T: DeserializeSeed<'de>>(self, seed: T) -> Result<T::Value> {
         if self.tag != 23 {
-            return Err(Error("expected newtype variant".into()));
+            return Err(Error::Invalid("expected newtype variant".into()));
         }
         seed.deserialize(self.decoder)
     }
     fn tuple_variant<V: Visitor<'de>>(self, _len: usize, visitor: V) -> Result<V::Value> {
         if self.tag != 27 {
-            return Err(Error("expected tuple variant".into()));
+            return Err(Error::Invalid("expected tuple variant".into()));
         }
         self.decoder.sequence(visitor)
     }
@@ -354,7 +355,7 @@ impl<'de> VariantAccess<'de> for Variant<'_, 'de> {
         visitor: V,
     ) -> Result<V::Value> {
         if self.tag != 30 {
-            return Err(Error("expected struct variant".into()));
+            return Err(Error::Invalid("expected struct variant".into()));
         }
         self.decoder.map(visitor)
     }

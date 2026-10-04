@@ -78,7 +78,8 @@ get_world({region: {min, max}, include_block_list: true})
 その範囲を検証済みとする。途中失敗では適用済みの一部があっても検証済みに昇格しない。
 条件と計測範囲は [配置のまとめ処理](construction-batching.md) を参照。
 失敗した試行は `needs_inspection` になり、同じ操作の再適用や自動取消を行わない。
-履歴は `dustroute.world-edit.v1` として保存され、再起動後も `get_operation` で読める。
+履歴は `dustroute.world-edit.v2` の版付き非JSON `.store` として保存され、再起動後も
+`get_operation` で読める。旧JSONは保持・拒否し、自動変換しない。
 計画は実行前5分で失効し、再起動後には復元しない。
 
 ## 差分施工基盤の検証（2026-09-30、今回の基盤拡張前）

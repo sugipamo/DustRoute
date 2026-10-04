@@ -62,11 +62,13 @@ impl ElectricalEditPlan {
 
 impl DustRouteMcp {
     pub(super) fn electrical_edit_history(&self, id: uuid::Uuid) -> Result<Option<Value>, String> {
-        if !self
-            .state_store
-            .edit_record_root()
-            .join(format!("{id}.json"))
-            .exists()
+        if !crate::storage::record_exists(
+            &self
+                .state_store
+                .edit_record_root()
+                .join(format!("{id}.store")),
+        )
+        .map_err(|e| e.to_string())?
         {
             return Ok(None);
         }

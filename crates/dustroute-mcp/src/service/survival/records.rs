@@ -41,7 +41,7 @@ impl DustRouteMcp {
         live: Option<(String, JobStatus)>,
     ) -> Value {
         let path = self.state_store.survival_job_root().join(id.to_string());
-        let manifest: JobManifest = match load(&path.join("manifest.json")) {
+        let manifest: JobManifest = match load(&path.join("manifest.store")) {
             Ok(m) => m,
             Err(e) => return failure("job_unavailable", e),
         };
@@ -58,23 +58,25 @@ impl DustRouteMcp {
         {
             return failure("invalid_record", "saved owner differs from live job");
         }
-        let historical_status = if path.join("status.json").exists() {
-            match load::<JobStatus>(&path.join("status.json")) {
-                Ok(v) => Some(v),
-                Err(e) => return failure("invalid_record", e),
-            }
-        } else {
-            None
-        };
+        let historical_status =
+            if crate::storage::record_exists(&path.join("status.store")).unwrap_or(true) {
+                match load::<JobStatus>(&path.join("status.store")) {
+                    Ok(v) => Some(v),
+                    Err(e) => return failure("invalid_record", e),
+                }
+            } else {
+                None
+            };
         let directory = path.join("execution");
-        let diagnosis = if directory.join("record.json").exists() {
-            match crate::survival_execution::diagnose(&directory) {
-                Ok(d) => Some(d),
-                Err(e) => return failure("journal_unavailable", e),
-            }
-        } else {
-            None
-        };
+        let diagnosis =
+            if crate::storage::record_exists(&directory.join("record.store")).unwrap_or(true) {
+                match crate::survival_execution::diagnose(&directory) {
+                    Ok(d) => Some(d),
+                    Err(e) => return failure("journal_unavailable", e),
+                }
+            } else {
+                None
+            };
         let record = diagnosis.as_ref().map(|d| &d.record);
         let mut response = json!({"ok":true,"schema_version":"dustroute.survival-job.v1","job_id":id,"owner":owner,
             "process_local_job_present":live.is_some(),"status":live.as_ref().map(|(_,s)|s).or(historical_status.as_ref()),
@@ -84,9 +86,11 @@ impl DustRouteMcp {
         if include_record {
             response["manifest"] = json!(manifest);
             response["diagnosis"] = json!(diagnosis);
-            if directory.join("continuation-claim.json").exists() {
+            if crate::storage::record_exists(&directory.join("continuation-claim.store"))
+                .unwrap_or(true)
+            {
                 match load::<crate::survival_execution::diagnostic::CheckpointClaim>(
-                    &directory.join("continuation-claim.json"),
+                    &directory.join("continuation-claim.store"),
                 ) {
                     Ok(claim) => response["continuation_job_id"] = json!(claim.new_job),
                     Err(e) => return failure("invalid_continuation_claim", e),

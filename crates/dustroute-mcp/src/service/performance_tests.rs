@@ -127,7 +127,10 @@ async fn profile_observation_and_edit_phases() {
         let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../.local")
             .join(temporary_name.file_name().unwrap());
-        let (fake, address, bridge) = start_construction_bridge(root.join("world-edits")).await;
+        let (fake, address, bridge) = start_construction_bridge(
+            crate::service::test_support::DurableRegistry::Edits(root.join("world-edits")),
+        )
+        .await;
         let original = super::electrical_edit_tests::machine();
         {
             let mut state = fake.lock().unwrap();

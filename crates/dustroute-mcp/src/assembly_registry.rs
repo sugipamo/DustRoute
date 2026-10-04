@@ -1,7 +1,6 @@
 //! Durable facts about world operations, deliberately separate from executable
 //! capabilities and TTL-bound plans. A file lock spans each mutation attempt.
 use std::fs::{self, File, OpenOptions};
-use std::io::Read;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -15,7 +14,7 @@ use uuid::Uuid;
 
 use crate::{bridge::BotStatus, state::PlanStateStore};
 
-const SCHEMA: &str = "dustroute.placed-assembly.v4";
+const SCHEMA: &str = "dustroute.placed-assembly.v5";
 const MAX_BYTES: u64 = 32 * 1024 * 1024;
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
@@ -171,23 +170,21 @@ impl RegistryLock {
 
     fn load(&self, id: Uuid) -> Result<Option<PlacedAssembly>, String> {
         let _measurement = crate::performance::span(crate::performance::Phase::StoreRead);
-        let file = match File::open(self.root.join(format!("{id}.json"))) {
-            Ok(f) => f,
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
-            Err(e) => return Err(e.to_string()),
+        let bytes = match crate::storage::read_record(
+            &self.root.join(format!("{id}.store")),
+            MAX_BYTES as usize,
+        )
+        .map_err(|e| e.to_string())?
+        {
+            Some(bytes) => bytes,
+            None => return Ok(None),
         };
-        let mut bytes = Vec::new();
-        file.take(MAX_BYTES + 1)
-            .read_to_end(&mut bytes)
-            .map_err(|e| e.to_string())?;
         if bytes.len() as u64 > MAX_BYTES {
             return Err("placed Assembly record exceeds 32 MiB".into());
         }
-        let header: Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-        if header["schema"] != SCHEMA {
-            return Err("retired placed Assembly format; preserve the old record separately and recapture/re-adopt with v4".into());
-        }
-        let record: PlacedAssembly = serde_json::from_value(header).map_err(|e| e.to_string())?;
+        let record: PlacedAssembly =
+            dustroute_codec::storage::decode(SCHEMA, &bytes, MAX_BYTES as usize)
+                .map_err(|e| e.to_string())?;
         if record.schema != SCHEMA
             || record.instance_id != id
             || record.revision == 0
@@ -209,10 +206,13 @@ impl RegistryLock {
     }
 
     pub fn list(&self, player: &str) -> Result<Vec<Value>, String> {
-        let mut result = Vec::new();
+        let mut ids = std::collections::BTreeSet::new();
         for entry in fs::read_dir(&self.root).map_err(|e| e.to_string())? {
             let path = entry.map_err(|e| e.to_string())?.path();
-            if path.extension().and_then(|s| s.to_str()) != Some("json") {
+            if !matches!(
+                path.extension().and_then(|s| s.to_str()),
+                Some("store" | "json")
+            ) {
                 continue;
             }
             let id = path
@@ -220,15 +220,19 @@ impl RegistryLock {
                 .and_then(|s| s.to_str())
                 .and_then(|s| Uuid::parse_str(s).ok())
                 .ok_or("invalid placed Assembly registry filename")?;
+            ids.insert(id);
+        }
+        let mut result = Vec::new();
+        for id in ids {
             let record = self
                 .load(id)?
                 .ok_or("placed Assembly disappeared while locked")?;
             if record.player == player {
-                result.push(record.summary());
+                result.push(record);
             }
         }
-        result.sort_by_key(|r| r["instance_id"].as_str().unwrap_or_default().to_owned());
-        Ok(result)
+        result.sort_by_key(|r| r.instance_id.to_string());
+        Ok(result.iter().map(PlacedAssembly::summary).collect())
     }
 
     /// Compare-and-save also rejects stale values from callers in this process.
@@ -250,12 +254,13 @@ impl RegistryLock {
         next.updated_at_unix_ms = now_ms()?;
         let bytes = {
             let _measurement = crate::performance::span(crate::performance::Phase::StoreEncode);
-            serde_json::to_vec(&next).map_err(|e| e.to_string())?
+            dustroute_codec::storage::encode(SCHEMA, &next, MAX_BYTES as usize)
+                .map_err(|e| e.to_string())?
         };
         if bytes.len() as u64 > MAX_BYTES {
             return Err("placed Assembly record exceeds 32 MiB".into());
         }
-        let destination = self.root.join(format!("{}.json", record.instance_id));
+        let destination = self.root.join(format!("{}.store", record.instance_id));
         crate::storage::replace(
             &destination,
             &bytes,
@@ -360,11 +365,18 @@ mod tests {
         assert!(registry.list("Other").unwrap().is_empty());
         let path = store
             .assembly_instance_root()
-            .join(format!("{}.json", record.instance_id));
-        let mut old: Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
-        old["schema"] = serde_json::json!(SCHEMA);
-        old["updated_at_unix_ms"] = serde_json::json!(1);
-        fs::write(&path, serde_json::to_vec(&old).unwrap()).unwrap();
+            .join(format!("{}.store", record.instance_id));
+        let mut old = registry.get(record.instance_id, "Tester").unwrap();
+        old.updated_at_unix_ms = 1;
+        let encode = |record: &PlacedAssembly| {
+            dustroute_codec::storage::encode(SCHEMA, record, MAX_BYTES as usize).unwrap()
+        };
+        fs::write(&path, encode(&old)).unwrap();
+        let retired = path.with_extension("json");
+        fs::write(&retired, b"{retired JSON}").unwrap();
+        assert_eq!(registry.list("Tester").unwrap().len(), 1);
+        assert_eq!(fs::read(&retired).unwrap(), b"{retired JSON}");
+        fs::remove_file(&retired).unwrap();
         drop(registry);
         let reopened = RegistryLock::acquire(&PlanStateStore::new(root.clone(), 1)).unwrap();
         assert_eq!(
@@ -376,17 +388,25 @@ mod tests {
             1,
             "plan TTL must never erase placed records"
         );
-        let legacy = reopened.get(record.instance_id, "Tester").unwrap();
-        assert_eq!(legacy.schema, SCHEMA);
-        assert_eq!(legacy.state, InstanceState::NeedsInspection);
-        let mut history = serde_json::to_value(&legacy).unwrap();
-        history["attempts"] = serde_json::json!([{
-            "operation_id":Uuid::new_v4(), "removal":true,
-            "operating_removal":{"baseline":legacy.expected,"steps":[]},
-            "verified_steps":0,"total_steps":0,"started_at_unix_ms":1,
-            "finished_at_unix_ms":2,"error":null
-        }]);
-        fs::write(&path, serde_json::to_vec(&history).unwrap()).unwrap();
+        let mut history = reopened.get(record.instance_id, "Tester").unwrap();
+        history.attempts.push(Attempt {
+            operation_id: Uuid::new_v4(),
+            removal: true,
+            reconstruction: None,
+            operating_removal: Some(OperatingRemoval {
+                baseline: history.expected.clone(),
+                steps: vec![],
+            }),
+            verified_steps: 0,
+            total_steps: 0,
+            started_at_unix_ms: 1,
+            finished_at_unix_ms: Some(2),
+            error: None,
+            readbacks: vec![],
+            failure: None,
+            progress: None,
+        });
+        fs::write(&path, encode(&history)).unwrap();
         assert!(
             reopened.get(record.instance_id, "Tester").unwrap().attempts[0]
                 .operating_removal
@@ -396,29 +416,34 @@ mod tests {
             "dustroute.placed-assembly.v1",
             "dustroute.placed-assembly.v2",
             "dustroute.placed-assembly.v3",
+            "dustroute.placed-assembly.v4",
         ] {
-            history["schema"] = serde_json::json!(schema);
-            fs::write(&path, serde_json::to_vec(&history).unwrap()).unwrap();
+            history.schema = schema.into();
+            fs::write(&path, encode(&history)).unwrap();
             assert!(reopened.get(record.instance_id, "Tester").is_err());
-            let mut old_without_removal = history.clone();
-            old_without_removal["attempts"][0]
-                .as_object_mut()
-                .unwrap()
-                .remove("operating_removal");
-            fs::write(&path, serde_json::to_vec(&old_without_removal).unwrap()).unwrap();
+            let mut without_removal = history.clone();
+            without_removal.attempts[0].operating_removal = None;
+            fs::write(&path, encode(&without_removal)).unwrap();
             assert!(reopened.get(record.instance_id, "Tester").is_err());
         }
-        history["schema"] = serde_json::json!(SCHEMA);
-        history["attempts"][0]["removal"] = serde_json::json!(false);
-        fs::write(&path, serde_json::to_vec(&history).unwrap()).unwrap();
+        history.schema = SCHEMA.into();
+        history.attempts[0].removal = false;
+        fs::write(&path, encode(&history)).unwrap();
         assert!(reopened.get(record.instance_id, "Tester").is_err());
         fs::write(&path, b"{truncated").unwrap();
         assert!(reopened.get(record.instance_id, "Tester").is_err());
         assert!(reopened.save(&mut record).is_err());
         assert_eq!(fs::read(&path).unwrap(), b"{truncated");
-        old["schema"] = serde_json::json!("unknown.future.schema");
-        fs::write(&path, serde_json::to_vec(&old).unwrap()).unwrap();
+        old.schema = "unknown.future.schema".into();
+        fs::write(&path, encode(&old)).unwrap();
         assert!(reopened.get(record.instance_id, "Tester").is_err());
+        fs::remove_file(&path).unwrap();
+        let retired = path.with_extension("json");
+        fs::write(&retired, b"{retired JSON}").unwrap();
+        assert!(reopened.save(&mut record).is_err());
+        assert!(reopened.list("Tester").is_err());
+        assert!(!path.exists());
+        assert_eq!(fs::read(&retired).unwrap(), b"{retired JSON}");
         drop(reopened);
         fs::remove_dir_all(root).unwrap();
     }

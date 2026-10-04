@@ -98,27 +98,43 @@ fn region(r: dustroute_translate::world::Region) -> voxrig::Region {
         max: [r.max.x, r.max.y, r.max.z],
     }
 }
-fn save(path: &Path, value: &impl serde::Serialize) -> Result<(), String> {
-    let bytes = serde_json::to_vec_pretty(value).map_err(|e| e.to_string())?;
-    if bytes.len() > 16 * 1024 * 1024 {
-        return Err("survival job record exceeds bound".into());
+trait StoredRecord: serde::Serialize + serde::de::DeserializeOwned {
+    const STORE_SCHEMA: &'static str;
+}
+impl StoredRecord for JobManifest {
+    const STORE_SCHEMA: &'static str = "dustroute.survival-job-manifest-store.v1";
+}
+impl StoredRecord for JobStatus {
+    const STORE_SCHEMA: &'static str = "dustroute.survival-job-status-store.v1";
+}
+impl StoredRecord for crate::survival_execution::diagnostic::CheckpointClaim {
+    const STORE_SCHEMA: &'static str = crate::survival_execution::checkpoint::CLAIM_SCHEMA;
+}
+#[cfg(test)]
+impl StoredRecord for crate::survival_execution::ExecutionRecord {
+    const STORE_SCHEMA: &'static str = crate::survival_execution::JOURNAL_STORE_SCHEMA;
+}
+fn storage_failure(e: dustroute_codec::storage::Error) -> String {
+    match e {
+        dustroute_codec::storage::Error::ByteLimit => "survival job record exceeds bound".into(),
+        other => other.to_string(),
     }
+}
+fn save<T: StoredRecord>(path: &Path, value: &T) -> Result<(), String> {
+    let bytes = dustroute_codec::storage::encode(T::STORE_SCHEMA, value, 16 * 1024 * 1024)
+        .map_err(storage_failure)?;
+    crate::storage::check_destination(path).map_err(|e| e.to_string())?;
     crate::storage::replace(path, &bytes, crate::storage::Durability::FileAndDirectory)
         .map_err(|e| e.to_string())
 }
-fn load<T: serde::de::DeserializeOwned>(path: &Path) -> Result<T, String> {
-    use std::io::Read;
-    let mut bytes = Vec::new();
-    std::fs::File::open(path)
+fn load<T: StoredRecord>(path: &Path) -> Result<T, String> {
+    let bytes = crate::storage::read_record(path, 16 * 1024 * 1024)
         .map_err(|e| e.to_string())?
-        .take(16 * 1024 * 1024 + 1)
-        .read_to_end(&mut bytes)
-        .map_err(|e| e.to_string())?;
-    if bytes.len() > 16 * 1024 * 1024 {
-        return Err("survival job record exceeds bound".into());
-    }
-    serde_json::from_slice(&bytes).map_err(|e| e.to_string())
+        .ok_or("survival record not found")?;
+    dustroute_codec::storage::decode(T::STORE_SCHEMA, &bytes, 16 * 1024 * 1024)
+        .map_err(storage_failure)
 }
+
 fn policy_scope(
     policy: &McpPolicy,
     scope: &ConstructionScope,
@@ -297,7 +313,7 @@ impl DustRouteMcp {
                             .state_store
                             .survival_job_root()
                             .join(job_id.to_string())
-                            .join("status.json"),
+                            .join("status.store"),
                         &entry.status(),
                     ) {
                         return failure("journal_io", e);
