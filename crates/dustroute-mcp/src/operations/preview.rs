@@ -1,9 +1,18 @@
 //! Diagnostic projections of intentions. These values cannot reconstruct a
 //! fresh proof, executable plan or observation authority.
+mod assembly;
 mod electrical;
 mod job;
 use super::mutation::Success;
 use crate::placement_source::PlacementSource;
+pub use assembly::{
+    AssemblyConstructionPreview, AssemblyPreview, AssemblyReconstructionPreview,
+    AssemblyRemovalPreview,
+};
+pub(crate) use assembly::{
+    AssemblyManagementReport, AssemblyPlanDetails, AssemblyPlanState, AssemblyPlanSteps,
+    InstanceDetails, RemovalReference, ShownAssemblyPlan,
+};
 use dustroute_translate::piston_construction::{ElectricalConstructionStep, construction_batches};
 use dustroute_translate::snapshot::MinecraftSnapshot;
 use dustroute_translate::world_reverse::RegionBounds;

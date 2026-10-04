@@ -2524,11 +2524,14 @@ impl DustRouteMcp {
             );
         }
         if params.assembly_target.is_some() {
-            return json_reply(
-                self.assembly_service()
-                    .plan_assembly_construction(params)
-                    .await,
-            );
+            return match self
+                .assembly_service()
+                .plan_assembly_construction(params)
+                .await
+            {
+                Ok(response) => typed_reply(response),
+                Err(error) => typed_reply(error.as_response()),
+            };
         }
         if params.assembly_revision_id.is_some() {
             return self.plan_adopted_assembly_placement(params).await;
@@ -2810,11 +2813,14 @@ impl DustRouteMcp {
             };
         }
         if self.plans.kind(&operation_id).await == Some(PlanKind::Assembly) {
-            return json_reply(
-                self.assembly_service()
-                    .get_assembly_construction(operation_id)
-                    .await,
-            );
+            return match self
+                .assembly_service()
+                .get_assembly_construction(operation_id)
+                .await
+            {
+                Ok(response) => typed_reply(response),
+                Err(error) => typed_reply(error.as_response()),
+            };
         }
         if let Some(plan) = self
             .plans
@@ -5252,7 +5258,10 @@ impl DustRouteMcp {
         &self,
         Parameters(params): Parameters<assembly_placement::ManageAssemblyParams>,
     ) -> CallToolResult {
-        json_reply(self.assembly_service().manage_placed_assembly(params).await)
+        match self.assembly_service().manage_placed_assembly(params).await {
+            Ok(response) => typed_reply(response),
+            Err(error) => typed_reply(error.as_response()),
+        }
     }
 
     #[tool(
@@ -5296,11 +5305,14 @@ impl DustRouteMcp {
             };
         }
         if plan_kind == Some(PlanKind::Assembly) {
-            return json_reply(
-                self.assembly_service()
-                    .show_assembly_construction(operation_id, params.player.as_deref())
-                    .await,
-            );
+            return match self
+                .assembly_service()
+                .show_assembly_construction(operation_id, params.player.as_deref())
+                .await
+            {
+                Ok(response) => typed_reply(response),
+                Err(error) => typed_reply(error.as_response()),
+            };
         }
         if plan_kind == Some(PlanKind::Piston) {
             return self

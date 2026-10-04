@@ -974,3 +974,57 @@ workspace全targetとMCPの`--no-default-features`全targetのClippyは
 `-D warnings`で成功した。Cargoは単独・offline/locked・`-j1`、テストは単一threadで実行。
 この移行は保存schema・依存version・Voxrig source/vendorを変更しない。
 formattingと差分の空白検査も成功した。
+
+### Assembly配置・診断・再構築の型付き計画
+
+Assemblyの配置・撤去・再構築の候補を`AssemblyPreview`の用途別variantへ移した。
+公開管理入口の一覧・詳細・観測・診断・再構築結果、get/showの表示もRust型で接続する。
+`RegistryLock::list`と`PlacedAssembly::summary`はJSONを生成せず、`InstanceSummary`を返す。
+一覧の選択・順序、所有者検査、履歴の保存schemaと保存・再起動の扱いは変えない。
+保存済みのboundsは表示時に正規化しない。新たな型比較は純粋な記録の比較であり、
+一致していても現在の観測や実行許可を証明しない。
+
+再構築の応答へ診断をJSONで後付けする処理を除去し、用途別の型で結合する。
+操作registryには従来通りの候補を保存し、応答だけに追加するrootのdiagnosisを
+保存済み候補へ混ぜない。observationに含まれる診断はその記録の事実として保持する。
+再構築失敗は診断を添えたString-onlyの拒否として、その他のadmission失敗は
+`FailureCause`の射影としてMCP入口へ渡す。不明な進捗をzeroへ変換しない。
+観測成功のerror:null、未取得の再構築条件のnullと、既存のstateの公開表記も維持する。
+
+候補と履歴表示にDeserializeやfresh proofへの復元入口を追加しない。
+`ValidatedAssemblyPlacement`、fresh observation、TTL付きの実行planは別に保持する。
+現在のモデルレビュー・観測・intent保存・preview・実行前再検証・実行の順序と判定条件は
+変更しない。記録から現在のactivityや操作消費を作らず、候補の作成完了を
+worldの確認済み状態やserver readinessに読み替えない。
+表示のbatch射影は既存の`operations::preview`へ集め、使われなくなった実行器の
+batch表示wrapperを削除した。実行器そのものの処理は変更しない。
+
+保存schema・依存version・Voxrig source/vendorと実機・ワールドは変更しない。
+通常の配置/修復候補・固定ピストン候補・最適化・解析等には未移行JSONが残るため、
+内部JSON除去の統合ゴールは継続する。
+
+
+#### Assembly計画の回帰検証
+
+関連40件のoffline試験が成功した。結果・registry等の25件、Assembly registryの1件、
+観測証拠の2件、観測・診断・型付き表示の6件、公開Assembly workflowの5件、
+建築物の設計訂正・採用・再起動・配置・撤去の1件を実行した。
+
+公開workflowでは未採用・未preview・観測不完全・直前のworld差分・不明なfeature flagsの
+拒否、ピン/期待状態/record revision/所有者の再検査、途中書込みと応答喪失、再送禁止、
+再起動後の新しい再構築、通常undoと撤去のjournalを確認した。
+再構築のroot診断は応答だけに追加し、registryには従来の観測を含む候補を保持する。
+診断と撤去拒否は、不明な実行進捗をnullのまま伝え、再送許可を作らない。
+
+型付き表示の試験ではnative reviewと記録用reviewの公開射影の一致、候補の未取得の進捗、
+保存boundsの無正規化、診断の共有を検査した。詳細取得は内部APIから確認し、
+期限切れと4つの既存stateの読取りでも実行権限やactivityを生成しない。
+この詳細取得ツールは従来通りdebug profile専用であり、公開profileの範囲は変更しない。
+接続先はofflineのmockとMCPテストtransportだけで、実機試験・計測試験は実行しない。
+
+
+workspace全targetとMCPの`--no-default-features`全targetのClippyは
+`-D warnings`で成功した。Cargoは単独・offline/locked・`-j1`、テストは単一threadで実行。
+formattingと差分の空白検査も成功した。
+実機接続・ワールド変更・保存schema・依存version・Voxrig source/vendorの変更はない。
+内部JSON除去の統合ゴールは継続する。

@@ -23,12 +23,6 @@ pub(super) enum StageProgress {
     WriteIntent(ExecutionProgress),
 }
 
-pub(super) fn batch_summary(
-    steps: &[ElectricalConstructionStep],
-) -> Vec<crate::operations::preview::BatchSummary> {
-    crate::operations::preview::batch_summary(steps)
-}
-
 pub(super) struct ConstructionExecutor<'a> {
     pub bridge: &'a BotBridge,
     pub policy: &'a McpPolicy,

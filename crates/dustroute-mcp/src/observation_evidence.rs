@@ -14,14 +14,14 @@ use serde::{Deserialize, Serialize};
 
 /// Durable evidence identifies its own schema and source. Existing server
 /// receipts retain their exact serialization; client records have no server tick.
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum ObservationEvidence {
     ServerConfirmed(ServerReadback),
     ClientReconstructed(ClientReadback),
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct ClientReadback {
     pub schema_version: ClientReadbackSchema,
@@ -38,12 +38,12 @@ pub struct ClientReadback {
     pub captured_at_millis: u64,
     pub moving: bool,
 }
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub enum ClientReadbackSchema {
     #[serde(rename = "dustroute.client-readback.v1")]
     V1,
 }
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ClientReadbackKind {
     ClientReconstructed,

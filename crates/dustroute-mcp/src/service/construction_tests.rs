@@ -139,6 +139,9 @@ async fn construction_checks_adoption_preview_baseline_and_observation_before_wr
         "dustroute.piston-electrical-root-exploration.v19"
     );
     let id = planned["operation_id"].clone();
+    let history = call(&client, "get_operation", json!({"operation_id":id})).await;
+    assert_eq!(history["operation"]["result"], planned);
+    assert!(history.get("activity").is_none());
     assert_eq!(
         call(
             &client,
@@ -283,6 +286,9 @@ async fn diagnosis_reports_human_damage_and_incomplete_evidence_without_writes()
     assert_eq!(matched["observation"]["status"], "matches", "{matched}");
     assert_eq!(matched["observation"]["revalidation"]["status"], "passed");
     assert_eq!(matched["observation"]["removal_eligible"], true);
+    assert!(matched.as_object().unwrap().contains_key("error"));
+    assert!(matched["error"].is_null());
+    assert!(matched["observation"].get("diagnosis").is_none());
     let writes_before_diagnosis = fake.lock().unwrap().writes;
     let diagnosis = call(
         &client,
@@ -430,6 +436,14 @@ async fn diagnosis_reports_human_damage_and_incomplete_evidence_without_writes()
         "observation_incomplete"
     );
     assert_eq!(incomplete["ok"], false);
+    assert!(incomplete["error"].is_string());
+    assert_eq!(incomplete["schema_version"], crate::api::ERROR_SCHEMA_V1);
+    assert_eq!(incomplete["failure"]["primary"]["kind"], "unknown");
+    assert!(incomplete["failure"]["progress"].is_null());
+    assert_eq!(
+        incomplete["recovery"]["same_operation_replay_allowed"],
+        false
+    );
     let diagnosis = call(
         &client,
         "manage_assembly",
@@ -909,6 +923,14 @@ async fn interrupted_construction_and_reconstruction_preserve_attempts_across_re
     );
     assert!(!repair["differences"].as_array().unwrap().is_empty());
     let repair_id = repair["operation_id"].clone();
+    let history = call(&client, "get_operation", json!({"operation_id":repair_id})).await;
+    assert!(history["operation"]["result"].get("diagnosis").is_none());
+    assert_eq!(
+        history["operation"]["result"]["observation"],
+        repair["observation"]
+    );
+    assert_eq!(repair["diagnosis"], repair["observation"]["diagnosis"]);
+    assert!(history.get("activity").is_none());
     assert_eq!(
         call(
             &client,

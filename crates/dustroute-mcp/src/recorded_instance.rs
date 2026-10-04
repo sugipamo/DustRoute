@@ -9,14 +9,14 @@ use dustroute_translate::{
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub(crate) struct RecordedPlacementReview {
     #[serde(flatten)]
     pub review: RecordedReviewResponse,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub device_initial_conditions: Vec<RecordedDeviceInitialCondition>,
 }
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub(crate) struct RecordedDeviceInitialCondition {
     pub position: dustroute_physical::Pos,
     pub block: Option<String>,
@@ -24,7 +24,7 @@ pub(crate) struct RecordedDeviceInitialCondition {
     pub position_history: Option<RecordedPositionHistory>,
     pub runtime_state_reconstructed_from_snapshot: bool,
 }
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub(crate) struct RecordedPositionHistory {
     pub assumed: String,
     pub observed: bool,
@@ -32,12 +32,12 @@ pub(crate) struct RecordedPositionHistory {
     pub window_game_ticks: u16,
 }
 
-#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum SampleClock {
     Client,
 }
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub(crate) struct RecordedSampleEvidence {
     pub readbacks: [ObservationEvidence; 2],
     pub sample_interval_ticks: u16,
@@ -46,14 +46,14 @@ pub(crate) struct RecordedSampleEvidence {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub observed_client_tick_interval: Option<u64>,
 }
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub(crate) struct RecordedStableSamples {
     pub snapshot: MinecraftSnapshot,
     #[serde(flatten)]
     pub evidence: RecordedSampleEvidence,
     pub matching_samples: usize,
 }
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "status", rename_all = "snake_case")]
 pub(crate) enum RecordedObservationOutcome {
     Matches {
@@ -80,14 +80,14 @@ pub(crate) enum RecordedObservationOutcome {
         cause: FailureCause,
     },
 }
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub(crate) struct RecordedInstanceObservation {
     #[serde(flatten)]
     pub outcome: RecordedObservationOutcome,
     pub observed_at_unix_ms: Option<u64>,
     pub runtime_history_reconstructed: bool,
 }
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "status", rename_all = "snake_case")]
 pub(crate) enum RecordedRevalidation {
     Passed {
@@ -97,7 +97,7 @@ pub(crate) enum RecordedRevalidation {
         reason: String,
     },
 }
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub(crate) struct RecordedInstanceReport {
     #[serde(flatten)]
     pub observation: RecordedInstanceObservation,
@@ -110,7 +110,7 @@ pub(crate) struct RecordedInstanceReport {
 
 // Diagnosis is pure data and can be shared by generation and historical reads.
 // It contains instructions/counts, not an executable reconstruction or proof.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub(crate) struct AssemblyDiagnosis {
     #[serde(flatten)]
     pub diagnosis: Diagnosis,
@@ -119,7 +119,7 @@ pub(crate) struct AssemblyDiagnosis {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub observation_failure: Option<FailureCause>,
 }
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "status", rename_all = "snake_case")]
 pub(crate) enum DiagnosisOutcome {
     ObservationUnavailable { reason: String, cause: String },
@@ -137,7 +137,7 @@ impl DiagnosisOutcome {
         }
     }
 }
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "mode", rename_all = "snake_case")]
 pub(crate) enum ComparisonReference {
     RemovedInstance,
@@ -154,12 +154,12 @@ pub(crate) enum ComparisonReference {
         limit: String,
     },
 }
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub(crate) struct DifferenceSummary {
     pub differing_positions: usize,
     pub by_kind: BTreeMap<DifferenceKind, usize>,
 }
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub(crate) struct ReconstructionOffer {
     pub steps: usize,
     pub target: String,
@@ -167,7 +167,7 @@ pub(crate) struct ReconstructionOffer {
     pub next_action: String,
     pub review_scope: String,
 }
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub(crate) struct ComparisonDetails {
     pub reference: ComparisonReference,
     pub reference_snapshot: MinecraftSnapshot,

@@ -1,6 +1,7 @@
 //! A newly reviewed reconstruction, never continuation of an uncertain attempt.
 use super::*;
 use crate::assembly_registry::ReconstructionAttempt;
+use crate::operations::preview::AssemblyReconstructionPreview;
 
 pub(super) fn conditions() -> crate::operations::construction::ReconstructionConditions {
     crate::operations::construction::ReconstructionConditions::declared()
@@ -13,7 +14,7 @@ impl AssemblyService<'_> {
         proof: ValidatedAssemblyPlacement,
         observation: observation::InstanceObservation,
         report: crate::recorded_instance::RecordedInstanceReport,
-    ) -> Result<Value, String> {
+    ) -> Result<AssemblyReconstructionPreview, String> {
         if record.state == InstanceState::Removed {
             return Err("removed instances need a new placement plan".into());
         }
@@ -30,14 +31,15 @@ impl AssemblyService<'_> {
             dustroute_translate::diagnostic::difference::differences(&baseline, proof.settled())?;
         let reconstruction = ReconstructionAttempt { baseline, steps };
         let operation_id = uuid::Uuid::new_v4();
-        let response = json!({"ok":true,"kind":"placed_assembly_reconstruction",
-            "operation_id":operation_id,"instance_id":record.instance_id,"record_revision":record.revision,
-            "bounds":bounds_json(proof.bounds()),"dimension":record.target.dimension,
-            "read_only":self.policy.read_only,"differences":differences,
-            "reconstruction":reconstruction,"reconstruction_conditions":conditions(),
-            "execution_batches":super::super::construction_executor::batch_summary(&reconstruction.steps),
-            "fresh_target_review":proof.review(),"observation":report,
-            "next_step":"show_operation; confirm all observed blocks may be removed and rebuilt, then invoke_operation(confirm=true)"});
+        let response = AssemblyReconstructionPreview::new(
+            operation_id,
+            &record,
+            &proof,
+            &reconstruction,
+            differences,
+            report,
+            self.policy.read_only,
+        );
         let mut plans = self
             .plans
             .table::<assembly_placement::StoredAssemblyPlacement>()
@@ -71,10 +73,10 @@ impl AssemblyService<'_> {
         );
         drop(plans);
         self.operations
-            .record_unmigrated(
+            .record_completed(
                 operation_id,
                 OperationKind::PlacementPreview,
-                response.clone(),
+                AssemblyPreview::Reconstruction(Box::new(response.clone())).into(),
             )
             .await;
         Ok(response)

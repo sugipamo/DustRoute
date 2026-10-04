@@ -3,7 +3,9 @@
 use super::construction::{AssemblyConstructionResult, ElectricalEditResult};
 use super::mutation::{PlacementAttempt, RepairAttempt};
 use super::piston::{DoorOperationResult, PistonPlacementResult};
-use super::preview::{DiscardedJobStage, ElectricalEditPreview, GroundedRevisionPreview};
+use super::preview::{
+    AssemblyPreview, DiscardedJobStage, ElectricalEditPreview, GroundedRevisionPreview,
+};
 use super::transition::{TransitionProposal, TransitionRestoreResult, TransitionRunResult};
 use crate::failure::ExecutionProgress;
 use serde::{Serialize, Serializer};
@@ -17,6 +19,7 @@ pub enum OperationResult {
     AssemblyConstruction(Box<AssemblyConstructionResult>),
     PistonPlacement(Box<PistonPlacementResult>),
     DoorOperation(Box<DoorOperationResult>),
+    AssemblyPreview(Box<AssemblyPreview>),
     ElectricalEditPreview(Box<ElectricalEditPreview>),
     GroundedRevisionPreview(Box<GroundedRevisionPreview>),
     DiscardedJobStage(DiscardedJobStage),
@@ -97,6 +100,11 @@ impl From<DiscardedJobStage> for OperationResult {
         Self::DiscardedJobStage(result)
     }
 }
+impl From<AssemblyPreview> for OperationResult {
+    fn from(result: AssemblyPreview) -> Self {
+        Self::AssemblyPreview(Box::new(result))
+    }
+}
 impl Serialize for OperationResult {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         match self {
@@ -106,6 +114,7 @@ impl Serialize for OperationResult {
             Self::AssemblyConstruction(result) => result.serialize(serializer),
             Self::PistonPlacement(result) => result.serialize(serializer),
             Self::DoorOperation(result) => result.serialize(serializer),
+            Self::AssemblyPreview(result) => result.serialize(serializer),
             Self::ElectricalEditPreview(result) => result.serialize(serializer),
             Self::GroundedRevisionPreview(result) => result.serialize(serializer),
             Self::DiscardedJobStage(result) => result.serialize(serializer),
@@ -128,7 +137,9 @@ impl OperationResult {
             Self::AssemblyConstruction(result) => result.failed(),
             Self::PistonPlacement(result) => result.failed(),
             Self::DoorOperation(result) => result.failed(),
-            Self::ElectricalEditPreview(_) | Self::GroundedRevisionPreview(_) => false,
+            Self::AssemblyPreview(_)
+            | Self::ElectricalEditPreview(_)
+            | Self::GroundedRevisionPreview(_) => false,
             Self::DiscardedJobStage(_) => true,
             Self::TransitionProposal(_) => false,
             Self::TransitionRun(result) => result.failed(),
@@ -144,7 +155,8 @@ impl OperationResult {
             Self::AssemblyConstruction(result) => Some(result.progress()),
             Self::PistonPlacement(result) => Some(result.progress()),
             Self::DoorOperation(result) => result.progress(),
-            Self::ElectricalEditPreview(_)
+            Self::AssemblyPreview(_)
+            | Self::ElectricalEditPreview(_)
             | Self::GroundedRevisionPreview(_)
             | Self::DiscardedJobStage(_) => None,
             Self::TransitionProposal(_) => None,

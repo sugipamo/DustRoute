@@ -9,7 +9,6 @@ use dustroute_library::blueprint::AssemblyRevisionId;
 use dustroute_library::runtime_behavior::RuntimeBehaviorContext;
 use dustroute_translate::{assembly_transform::AssemblyTransform, snapshot::MinecraftSnapshot};
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use uuid::Uuid;
 
 use crate::{bridge::BotStatus, state::PlanStateStore};
@@ -60,7 +59,7 @@ pub(crate) enum InstanceState {
     Removed,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub(crate) struct Attempt {
     pub operation_id: Uuid,
     pub removal: bool,
@@ -84,7 +83,7 @@ pub(crate) struct Attempt {
     pub progress: Option<crate::failure::ExecutionProgress>,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub(crate) struct ReconstructionAttempt {
     pub baseline: MinecraftSnapshot,
     #[serde(
@@ -93,7 +92,7 @@ pub(crate) struct ReconstructionAttempt {
     pub steps: Vec<dustroute_translate::piston_construction::ElectricalConstructionStep>,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub(crate) struct OperatingRemoval {
     pub baseline: MinecraftSnapshot,
     #[serde(
@@ -128,13 +127,40 @@ impl PlacedAssembly {
     pub fn schema() -> String {
         SCHEMA.into()
     }
-    pub fn summary(&self) -> Value {
-        serde_json::json!({"instance_id":self.instance_id,"record_revision":self.revision,
-            "assembly_revision_id":self.assembly_id,"target":self.target,"transform":self.transform,
-            "bounds":{"min":self.expected.min,"max":self.expected.max},"state":self.state,
-            "attempts":self.attempts,"last_observation":self.last_observation,
-            "updated_at_unix_ms":self.updated_at_unix_ms,"saved_record_is_validation_proof":false})
+    pub fn summary(&self) -> InstanceSummary {
+        InstanceSummary {
+            instance_id: self.instance_id,
+            record_revision: self.revision,
+            assembly_revision_id: self.assembly_id.clone(),
+            target: self.target.clone(),
+            transform: self.transform,
+            bounds: dustroute_translate::world_reverse::RegionBounds {
+                min: self.expected.min,
+                max: self.expected.max,
+            },
+            state: self.state,
+            attempts: self.attempts.clone(),
+            last_observation: self.last_observation.clone(),
+            updated_at_unix_ms: self.updated_at_unix_ms,
+            saved_record_is_validation_proof: false,
+        }
     }
+}
+
+/// Historical display only: neither freshness nor executable authority.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub(crate) struct InstanceSummary {
+    pub instance_id: Uuid,
+    pub record_revision: u64,
+    pub assembly_revision_id: AssemblyRevisionId,
+    pub target: TargetServer,
+    pub transform: AssemblyTransform,
+    pub bounds: dustroute_translate::world_reverse::RegionBounds,
+    pub state: InstanceState,
+    pub attempts: Vec<Attempt>,
+    pub last_observation: Option<crate::recorded_instance::RecordedInstanceReport>,
+    pub updated_at_unix_ms: u64,
+    pub saved_record_is_validation_proof: bool,
 }
 
 pub(crate) fn now_ms() -> Result<u64, String> {
@@ -205,7 +231,7 @@ impl RegistryLock {
         Ok(record)
     }
 
-    pub fn list(&self, player: &str) -> Result<Vec<Value>, String> {
+    pub fn list(&self, player: &str) -> Result<Vec<InstanceSummary>, String> {
         let mut ids = std::collections::BTreeSet::new();
         for entry in fs::read_dir(&self.root).map_err(|e| e.to_string())? {
             let path = entry.map_err(|e| e.to_string())?.path();
