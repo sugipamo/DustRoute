@@ -988,7 +988,10 @@ impl DustRouteMcp {
         snapshot: &dustroute_translate::snapshot::MinecraftSnapshot,
         observation_ticks: u16,
         max_events: usize,
-    ) -> (TransitionSafetyAssessment, Vec<Value>) {
+    ) -> (
+        TransitionSafetyAssessment,
+        Vec<crate::operations::transition::TransitionProposal>,
+    ) {
         let safety = assess_transition_safety(snapshot);
         if safety.safety == TransitionSafety::Rejected {
             return (safety, Vec::new());
@@ -1027,19 +1030,19 @@ impl DustRouteMcp {
                         lifecycle: InvocationState::Draft,
                     },
                 );
-            let proposal = json!({
-                "operation_id": operation_id,
-                "lever": lever,
-                "transition": if original_powered { "on_to_off" } else { "off_to_on" },
-                "observation_ticks": observation_ticks,
-                "max_events": max_events,
-                "safety": safety,
-            });
+            let proposal = crate::operations::transition::TransitionProposal::new(
+                operation_id,
+                lever,
+                original_powered,
+                observation_ticks,
+                max_events,
+                safety.clone(),
+            );
             self.operations
-                .record_unmigrated(
+                .record_completed(
                     operation_id,
                     OperationKind::TransitionProposal,
-                    proposal.clone(),
+                    proposal.clone().into(),
                 )
                 .await;
             proposals.push(proposal);
@@ -4194,10 +4197,10 @@ impl DustRouteMcp {
     ) -> CallToolResult {
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
-            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
+            Err(error) => return typed_reply(error.as_response()),
         };
-        if let Some(error) = self.authorize_player(&player) {
-            return CallToolResult::error(vec![ContentBlock::text(error)]);
+        if let Err(error) = self.player_scope().authorize(&player) {
+            return typed_reply(error.at(FailurePhase::Admission).as_response());
         }
         let observation_ticks = params.observation_ticks.unwrap_or(20);
         let max_events = params.max_events.unwrap_or(16_384);
@@ -4210,12 +4213,12 @@ impl DustRouteMcp {
         }
         let (circuit_id, circuit) = match self.load_circuit(&params.circuit_id, &player).await {
             Ok(circuit) => circuit,
-            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
+            Err(error) => return typed_reply(error.as_response()),
         };
         let bounds = circuit.bounds;
         let dimension = circuit.dimension;
         if let Err(error) = self.policy.validate_region(bounds) {
-            return json_reply(json!({ "ok": false, "error": FailureCause::from(error) }));
+            return typed_reply(FailureCause::from(error).as_response());
         }
         let snapshot = circuit.snapshot;
         let (safety, proposals) = self
@@ -4229,27 +4232,45 @@ impl DustRouteMcp {
             )
             .await;
         if safety.safety == TransitionSafety::Rejected {
-            return json_reply(json!({
-                "ok": false,
-                "safety": safety,
-                "error": "the observed region is not eligible for an automatic transition scenario"
-            }));
+            #[derive(Serialize)]
+            struct Rejected {
+                #[serde(flatten)]
+                error: crate::operations::mutation::UnrecordedFailure,
+                safety: TransitionSafetyAssessment,
+            }
+            return typed_reply(Rejected {
+                error: crate::operations::mutation::UnrecordedFailure::message(
+                    "the observed region is not eligible for an automatic transition scenario",
+                ),
+                safety,
+            });
         }
-        json_reply(json!({
-            "schema_version": TRANSITION_SCHEMA_V1,
-            "ok": true,
-            "circuit_id": circuit_id,
-            "bounds": bounds_json(bounds),
-            "dimension": dimension,
-            "proposals": proposals,
-            "next_step": "show_operation, then invoke_operation(confirm=true) only for a ready proposal"
-        }))
+        #[derive(Serialize)]
+        struct Proposals {
+            schema_version: &'static str,
+            ok: crate::operations::mutation::Success,
+            circuit_id: uuid::Uuid,
+            bounds: dustroute_translate::world_reverse::RegionBounds,
+            dimension: String,
+            proposals: Vec<crate::operations::transition::TransitionProposal>,
+            next_step: &'static str,
+        }
+        typed_reply(Proposals {
+            schema_version: TRANSITION_SCHEMA_V1,
+            ok: crate::operations::mutation::Success,
+            circuit_id,
+            bounds,
+            dimension,
+            proposals,
+            next_step: "show_operation, then invoke_operation(confirm=true) only for a ready proposal",
+        })
     }
 
     async fn show_transition_test(
         &self,
         Parameters(params): Parameters<PreviewTransitionParams>,
     ) -> CallToolResult {
+        use crate::operations::mutation::{Success, UnrecordedFailure};
         let operation_id = match uuid::Uuid::parse_str(&params.operation_id) {
             Ok(id) => id,
             Err(error) => {
@@ -4267,12 +4288,12 @@ impl DustRouteMcp {
         drop(plans);
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
-            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
+            Err(error) => return typed_reply(error.as_response()),
         };
         if player != plan.player {
-            return json_reply(
-                json!({ "ok": false, "error": "scenario belongs to another player" }),
-            );
+            return typed_reply(UnrecordedFailure::message(
+                "scenario belongs to another player",
+            ));
         }
         let preview = match self
             .bridge
@@ -4281,7 +4302,7 @@ impl DustRouteMcp {
         {
             Ok(preview) => preview,
             Err(error) => {
-                return json_reply(json!({ "ok": false, "error": FailureCause::from(error) }));
+                return typed_reply(FailureCause::from(error).as_response());
             }
         };
         if let Some(stored) = self
@@ -4292,19 +4313,30 @@ impl DustRouteMcp {
             .get_mut(&operation_id)
         {
             if let Err(error) = stored.lifecycle.preview() {
-                return json_reply(json!({"ok":false,"error":error}));
+                return typed_reply(UnrecordedFailure::message(error));
             }
         }
-        json_reply(json!({
-            "schema_version": TRANSITION_SCHEMA_V1,
-            "ok": true,
-            "operation_id": operation_id,
-            "lever": plan.lever,
-            "original_powered": plan.original_powered,
-            "safety": plan.safety,
-            "preview": preview,
-            "warning": "running moves the bot within reach when necessary, normally activates this lever once, and restores it after observation"
-        }))
+        #[derive(Serialize)]
+        struct Preview {
+            schema_version: &'static str,
+            ok: Success,
+            operation_id: uuid::Uuid,
+            lever: Pos,
+            original_powered: bool,
+            safety: TransitionSafetyAssessment,
+            preview: crate::bridge::PreviewSubmission,
+            warning: &'static str,
+        }
+        typed_reply(Preview {
+            schema_version: TRANSITION_SCHEMA_V1,
+            ok: Success,
+            operation_id,
+            lever: plan.lever,
+            original_powered: plan.original_powered,
+            safety: plan.safety,
+            preview,
+            warning: "running moves the bot within reach when necessary, normally activates this lever once, and restores it after observation",
+        })
     }
 
     async fn invoke_transition_test(

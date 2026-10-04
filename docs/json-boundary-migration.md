@@ -905,3 +905,26 @@ workspace全targetとMCPの`--no-default-features`全targetのClippyは
 Cargoは単独・offline/locked・`-j1`、テストは単一threadで実行した。
 実機接続・ワールド変更・保存schema・依存version・Voxrig source/vendorの変更はない。
 計画・preview・解析等に未移行JSONが残るため、内部JSON除去の統合ゴールは継続する。
+
+### 遷移候補・プレビューの型付き接続
+
+遷移候補の`Vec<Value>`とJSONを保持する履歴を`TransitionProposal`へ移した。
+レバーの変化方向もenumで表す。候補は実行済み結果や再利用可能なplanではなく、
+診断用のメタデータであり、進捗・操作消費・復元用decode入口を持たない。
+従来の候補の履歴表示は維持し、候補の作成完了をworld操作の確認済み状態へ読み替えない。
+
+候補作成とプレビューの成功・拒否応答もRust型へ接続した。
+候補抽出、safety判定、player認可、範囲と入力上限、previewの状態遷移は変えない。
+player認可は既存の共通層を呼び、拒否をJSON文字列へencodeせずにadmissionの原因を渡す。
+プレビューの提出は描画完了や実行の証拠ではない。既存の提出後に状態を検査する順序を
+維持し、消費済み候補の再プレビューでも履歴や実行進捗を上書きしない。
+
+追加のoffline試験2件が成功した（遷移workflow全5件を再実行して成功）。
+ON/OFF双方、temporal部品によるpreview-only、危険ブロック・レバーなしの拒否、
+parseできないpowered属性を候補に含めない既存の処理、履歴のfield構造、進捗の未取得、
+player認可の順序、previewの提出のみのreceiptと消費後の再表示を確認した。
+workspace全targetとMCPの`--no-default-features`全targetのClippyは
+`-D warnings`で成功した。Cargoは単独・offline/locked・`-j1`、テストは単一thread。
+formattingと差分の空白検査も成功した。
+実機接続・ワールド変更・保存schema・依存version・Voxrig source/vendorの変更はない。
+他の計画・preview・解析等には未移行JSONが残り、統合ゴールは継続する。

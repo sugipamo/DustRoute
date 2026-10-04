@@ -566,3 +566,283 @@ async fn transition_preflight_refusals_preserve_wire_details_without_creating_pr
         );
     }
 }
+
+#[tokio::test]
+async fn transition_candidates_preserve_safety_and_have_no_execution_progress() {
+    use dustroute_translate::snapshot::{MinecraftSnapshot, MinecraftSnapshotBlock};
+    for (mode, expected_safety, candidate_count) in [
+        ("off", "ready", 1),
+        ("on", "ready", 1),
+        ("temporal", "preview_only", 1),
+        ("dangerous", "rejected", 0),
+        ("no_lever", "rejected", 0),
+        ("invalid_powered", "ready", 0),
+    ] {
+        let service = DustRouteMcp::with_test_transport_and_player(
+            "127.0.0.1:1",
+            McpPolicy::default(),
+            "Tester",
+        );
+        let lever = Pos::new(0, 81, 0);
+        let mut blocks = vec![MinecraftSnapshotBlock {
+            pos: Pos::new(0, 80, 0),
+            name: "minecraft:stone".into(),
+            properties: Default::default(),
+        }];
+        if mode != "no_lever" {
+            blocks.push(MinecraftSnapshotBlock {
+                pos: lever,
+                name: "minecraft:lever".into(),
+                properties: std::collections::BTreeMap::from([
+                    ("face".into(), "floor".into()),
+                    ("facing".into(), "north".into()),
+                    (
+                        "powered".into(),
+                        match mode {
+                            "on" => "true",
+                            "invalid_powered" => "invalid",
+                            _ => "false",
+                        }
+                        .into(),
+                    ),
+                ]),
+            });
+        }
+        if matches!(mode, "temporal" | "dangerous") {
+            blocks.push(MinecraftSnapshotBlock {
+                pos: Pos::new(1, 80, 0),
+                name: if mode == "temporal" {
+                    "minecraft:piston"
+                } else {
+                    "minecraft:tnt"
+                }
+                .into(),
+                properties: Default::default(),
+            });
+        }
+        let bounds = RegionBounds::new(Pos::new(-1, 80, -1), Pos::new(1, 82, 1));
+        let initial = MinecraftSnapshot {
+            min: bounds.min,
+            max: bounds.max,
+            blocks,
+        };
+        let circuit_id = service
+            .store_circuit(StoredCircuit {
+                player: "Tester".into(),
+                dimension: "minecraft:overworld".into(),
+                bounds,
+                target: None,
+                snapshot: service.bridge.share_snapshot(initial.clone()).unwrap(),
+                expansion: ExpansionEvidence::Unspecified {},
+                complete: true,
+                expires_at: Instant::now() + Duration::from_secs(300),
+            })
+            .await;
+        let reply = service
+            .new_transition_test(Parameters(ProposeTransitionParams {
+                player: None,
+                observation_ticks: Some(40),
+                max_events: Some(512),
+                circuit_id: circuit_id.to_string(),
+            }))
+            .await;
+        let result = test_support::decode_reply(&reply).unwrap();
+        let rejected = expected_safety == "rejected";
+        assert_eq!(reply.is_error, Some(rejected));
+        assert_eq!(result["ok"], !rejected);
+        assert_eq!(
+            service
+                .plans
+                .table::<StoredTransitionPlan>()
+                .lock()
+                .await
+                .len(),
+            candidate_count
+        );
+        if rejected {
+            assert_eq!(result["safety"]["safety"], expected_safety);
+            assert!(result["failure"]["progress"].is_null());
+            continue;
+        }
+        assert_eq!(result["schema_version"], TRANSITION_SCHEMA_V1);
+        assert_eq!(result["bounds"], json!({"min":bounds.min,"max":bounds.max}));
+        assert_eq!(result["circuit_id"], json!(circuit_id));
+        let proposals = result["proposals"].as_array().unwrap();
+        assert_eq!(proposals.len(), candidate_count);
+        for proposal in proposals {
+            assert!(proposal.get("ok").is_none());
+            assert!(proposal.get("execution_progress").is_none());
+            assert_eq!(proposal["lever"], json!(lever));
+            assert_eq!(proposal["observation_ticks"], 40);
+            assert_eq!(proposal["max_events"], 512);
+            assert_eq!(proposal["safety"]["safety"], expected_safety);
+            assert_eq!(
+                proposal["transition"],
+                if mode == "on" {
+                    "on_to_off"
+                } else {
+                    "off_to_on"
+                }
+            );
+            let id = uuid::Uuid::parse_str(proposal["operation_id"].as_str().unwrap()).unwrap();
+            let stored = service.operations.get(id).await.unwrap();
+            assert_eq!(stored.kind, OperationKind::TransitionProposal);
+            assert_eq!(stored.status, OperationStatus::Completed);
+            assert_eq!(stored.progress_percent, 100);
+            let result = stored.result.unwrap();
+            assert!(matches!(
+                result,
+                crate::operations::OperationResult::TransitionProposal(_)
+            ));
+            assert!(!result.failed());
+            assert!(result.progress().is_none());
+            assert_eq!(serde_json::to_value(result).unwrap(), *proposal);
+            let plans = service.plans.table::<StoredTransitionPlan>().lock().await;
+            let plan = plans.get(&id).unwrap();
+            assert_eq!(plan.lifecycle, InvocationState::Draft);
+            assert_eq!(plan.original_powered, mode == "on");
+            assert_eq!(plan.initial_snapshot, initial);
+        }
+    }
+    // Authorization happens before parsing/loading a circuit or creating plans.
+    let service = DustRouteMcp::with_test_transport_and_player(
+        "127.0.0.1:1",
+        McpPolicy {
+            allowed_players: ["AnotherPlayer".to_owned()].into(),
+            ..Default::default()
+        },
+        "Tester",
+    );
+    let reply = service
+        .new_transition_test(Parameters(ProposeTransitionParams {
+            player: None,
+            observation_ticks: None,
+            max_events: None,
+            circuit_id: "not a circuit id".into(),
+        }))
+        .await;
+    assert_eq!(reply.is_error, Some(true));
+    let result = test_support::decode_reply(&reply).unwrap();
+    assert_eq!(result["error_code"], "permission_denied");
+    assert_eq!(result["failure"]["primary"]["phase"], "admission");
+    assert!(result["failure"]["progress"].is_null());
+    assert!(
+        service
+            .plans
+            .table::<StoredTransitionPlan>()
+            .lock()
+            .await
+            .is_empty()
+    );
+}
+
+#[tokio::test]
+async fn transition_preview_submission_does_not_replace_candidate_or_execution_evidence() {
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap().to_string();
+    let previews = Arc::new(AtomicUsize::new(0));
+    let count = previews.clone();
+    let transport = tokio::spawn(async move {
+        loop {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let mut line = String::new();
+            BufReader::new(&mut stream)
+                .read_line(&mut line)
+                .await
+                .unwrap();
+            let request: Value = serde_json::from_str(&line).unwrap();
+            assert_eq!(request["method"], "preview_region");
+            assert_eq!(request["params"]["player"], "Tester");
+            count.fetch_add(1, Ordering::SeqCst);
+            stream
+                .write_all(
+                    format!(
+                        "{}\n",
+                        json!({"id":request["id"],"result":{"particle_corners":8}})
+                    )
+                    .as_bytes(),
+                )
+                .await
+                .unwrap();
+        }
+    });
+    let service =
+        DustRouteMcp::with_test_transport_and_player(address, McpPolicy::default(), "Tester");
+    let lever = Pos::new(0, 81, 0);
+    let snapshot = dustroute_translate::snapshot::MinecraftSnapshot {
+        min: lever,
+        max: lever,
+        blocks: vec![dustroute_translate::snapshot::MinecraftSnapshotBlock {
+            pos: lever,
+            name: "minecraft:lever".into(),
+            properties: [("powered".into(), "false".into())].into(),
+        }],
+    };
+    let (_, candidates) = service
+        .create_transition_proposals(
+            "Tester",
+            "minecraft:overworld",
+            RegionBounds::new(lever, lever),
+            &snapshot,
+            20,
+            512,
+        )
+        .await;
+    let candidate = serde_json::to_value(&candidates[0]).unwrap();
+    let id = uuid::Uuid::parse_str(candidate["operation_id"].as_str().unwrap()).unwrap();
+    let request = || {
+        Parameters(PreviewTransitionParams {
+            operation_id: id.to_string(),
+            player: None,
+        })
+    };
+    let reply = service.show_transition_test(request()).await;
+    assert_eq!(reply.is_error, Some(false));
+    let result = test_support::decode_reply(&reply).unwrap();
+    assert_eq!(
+        result["preview"],
+        json!({"min":lever,"max":lever,"particle_corners":8,"submission_only":true})
+    );
+    assert_eq!(result["original_powered"], false);
+    assert!(result.get("execution_progress").is_none());
+    assert_eq!(
+        service
+            .plans
+            .table::<StoredTransitionPlan>()
+            .lock()
+            .await
+            .get(&id)
+            .unwrap()
+            .lifecycle,
+        InvocationState::Previewed
+    );
+    // Keep the existing submission-before-lifecycle-check order on re-preview.
+    service
+        .plans
+        .table::<StoredTransitionPlan>()
+        .lock()
+        .await
+        .get_mut(&id)
+        .unwrap()
+        .lifecycle = InvocationState::NeedsInspection;
+    let refused = service.show_transition_test(request()).await;
+    assert_eq!(refused.is_error, Some(true));
+    let refused = test_support::decode_reply(&refused).unwrap();
+    assert!(refused["failure"]["progress"].is_null());
+    assert_eq!(previews.load(Ordering::SeqCst), 2);
+    let stored = service.operations.get(id).await.unwrap().result.unwrap();
+    assert_eq!(serde_json::to_value(&stored).unwrap(), candidate);
+    assert!(stored.progress().is_none());
+    assert_eq!(
+        service
+            .plans
+            .table::<StoredTransitionPlan>()
+            .lock()
+            .await
+            .get(&id)
+            .unwrap()
+            .lifecycle,
+        InvocationState::NeedsInspection
+    );
+    transport.abort();
+}

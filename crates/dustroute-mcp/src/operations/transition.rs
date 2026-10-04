@@ -1,5 +1,5 @@
-//! One transition attempt's evidence and cleanup. Simulation results are
-//! separate from live execution, restoration and replay authority.
+//! Transition candidate metadata and one attempt's evidence and cleanup.
+//! Simulation results remain separate from execution and replay authority.
 use super::mutation::Success;
 use crate::api::{TRANSITION_SCHEMA_V1, TransitionTraceResponse};
 use crate::bridge::LeverActivation;
@@ -8,6 +8,46 @@ use dustroute_ir::{BehaviorTrace, TransientAssessment, TransitionTrace};
 use dustroute_translate::scenario::{Scenario, ScenarioDifference, ScenarioRun, ScenarioTrace};
 use serde::{Serialize, Serializer};
 use uuid::Uuid;
+
+/// Candidate metadata is neither an execution result nor a reusable plan.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct TransitionProposal {
+    operation_id: Uuid,
+    lever: dustroute_physical::Pos,
+    transition: LeverTransition,
+    observation_ticks: u16,
+    max_events: usize,
+    safety: crate::transition::TransitionSafetyAssessment,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+enum LeverTransition {
+    OnToOff,
+    OffToOn,
+}
+impl TransitionProposal {
+    pub(crate) fn new(
+        operation_id: Uuid,
+        lever: dustroute_physical::Pos,
+        originally_powered: bool,
+        observation_ticks: u16,
+        max_events: usize,
+        safety: crate::transition::TransitionSafetyAssessment,
+    ) -> Self {
+        Self {
+            operation_id,
+            lever,
+            transition: if originally_powered {
+                LeverTransition::OnToOff
+            } else {
+                LeverTransition::OffToOn
+            },
+            observation_ticks,
+            max_events,
+            safety,
+        }
+    }
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) enum TransitionOutcome {
