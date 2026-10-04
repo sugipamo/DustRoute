@@ -6,6 +6,7 @@ use super::*;
 use crate::assembly_registry::{TargetServer, now_ms};
 use crate::construction_jobs::{JobAttempt, JobRegistry, JobStageBinding, JobState};
 use crate::edit_registry::{EditAttempt, EditRecord, EditRegistry, EditState, SCHEMA};
+use crate::operations::construction::ElectricalEditResult;
 use crate::performance::{Phase, current, span};
 use crate::piston_assembly::ValidatedAssemblyPlacement;
 use dustroute_translate::piston_construction::ElectricalModification;
@@ -354,13 +355,13 @@ impl DustRouteMcp {
         id: uuid::Uuid,
         confirm: bool,
         undo: bool,
-    ) -> Value {
+    ) -> ElectricalEditResult {
         let mut progress = ExecutionProgress::default();
         let result = self
             .execute_electrical_edit(id, confirm, undo, &mut progress)
             .await;
         crate::performance::execution_progress(&progress);
-        result.unwrap_or_else(|error| progress.cause(error).response())
+        result.unwrap_or_else(|error| ElectricalEditResult::failed_attempt(progress.cause(error)))
     }
 
     async fn execute_electrical_edit(
@@ -369,7 +370,7 @@ impl DustRouteMcp {
         confirm: bool,
         undo: bool,
         progress: &mut ExecutionProgress,
-    ) -> Result<Value, FailureCause> {
+    ) -> Result<ElectricalEditResult, FailureCause> {
         if !confirm {
             return Err(FailureCause::new(
                 CauseKind::InvalidInput,
@@ -626,23 +627,17 @@ impl DustRouteMcp {
                 PistonPlacementState::Applied
             };
         }
-        let mut response = json!({"ok":run.is_ok(),"operation_id":id,"kind":"electrical_revision_modification","undo":undo,"job_stage":plan.job,
-            "status":if run.is_ok(){"verified"}else{"needs_inspection"},"verified_steps":completed,"total_steps":steps.len(),
-            "error":run.as_ref().err().map(ToString::to_string),"retry_allowed":false,"automatic_rollback":false,"assembly_adoption_modified":false});
-        if let Err(report) = &run {
-            report.attach(&mut response);
-        } else {
-            response["execution_progress"] = json!(progress);
-        }
+        let response =
+            ElectricalEditResult::completed(id, undo, plan.job, completed, steps.len(), run);
         self.operations
-            .record_unmigrated(
+            .record_completed(
                 id,
                 if undo {
                     OperationKind::PlacementUndo
                 } else {
                     OperationKind::PlacementApply
                 },
-                response.clone(),
+                response.clone().into(),
             )
             .await;
         Ok(response)

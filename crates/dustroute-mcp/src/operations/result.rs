@@ -1,5 +1,6 @@
 //! Result owners are explicit. The unmigrated variant is only a temporary
 //! marker for existing workflows; it must disappear before the JSON goal ends.
+use super::construction::{AssemblyConstructionResult, ElectricalEditResult};
 use super::mutation::{PlacementAttempt, RepairAttempt};
 use crate::failure::ExecutionProgress;
 use serde::{Serialize, Serializer};
@@ -9,6 +10,8 @@ use serde_json::Value;
 pub enum OperationResult {
     Placement(Box<PlacementAttempt>),
     Repair(Box<RepairAttempt>),
+    ElectricalEdit(Box<ElectricalEditResult>),
+    AssemblyConstruction(Box<AssemblyConstructionResult>),
     /// Existing workflows awaiting typed migration. No implicit From<Value>.
     #[doc(hidden)]
     Unmigrated(UnmigratedResult),
@@ -33,11 +36,23 @@ impl From<RepairAttempt> for OperationResult {
         Self::Repair(Box::new(result))
     }
 }
+impl From<ElectricalEditResult> for OperationResult {
+    fn from(result: ElectricalEditResult) -> Self {
+        Self::ElectricalEdit(Box::new(result))
+    }
+}
+impl From<AssemblyConstructionResult> for OperationResult {
+    fn from(result: AssemblyConstructionResult) -> Self {
+        Self::AssemblyConstruction(Box::new(result))
+    }
+}
 impl Serialize for OperationResult {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         match self {
             Self::Placement(result) => result.serialize(serializer),
             Self::Repair(result) => result.serialize(serializer),
+            Self::ElectricalEdit(result) => result.serialize(serializer),
+            Self::AssemblyConstruction(result) => result.serialize(serializer),
             Self::Unmigrated(result) => result.serialize(serializer),
         }
     }
@@ -50,6 +65,8 @@ impl OperationResult {
         match self {
             Self::Placement(result) => result.failed(),
             Self::Repair(result) => result.failed(),
+            Self::ElectricalEdit(result) => result.failed(),
+            Self::AssemblyConstruction(result) => result.failed(),
             Self::Unmigrated(result) => result.0.get("ok") == Some(&Value::Bool(false)),
         }
     }
@@ -57,6 +74,8 @@ impl OperationResult {
         match self {
             Self::Placement(result) => result.progress(),
             Self::Repair(result) => result.progress(),
+            Self::ElectricalEdit(result) => Some(result.progress()),
+            Self::AssemblyConstruction(result) => Some(result.progress()),
             Self::Unmigrated(_) => None,
         }
     }

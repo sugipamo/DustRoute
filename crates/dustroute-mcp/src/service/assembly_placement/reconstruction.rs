@@ -2,15 +2,8 @@
 use super::*;
 use crate::assembly_registry::ReconstructionAttempt;
 
-pub(super) fn conditions() -> Value {
-    json!({
-        "strategy":"teardown_observed_layout_then_rebuild_declared_initial_state",
-        "server_readiness_proven":false,
-        "runtime_history_reconstructed":false,
-        "automatic_retry":false,
-        "operator_requirement":"review all affected blocks; let previous commands finish and keep other inputs/edits out of the region during reconstruction",
-        "limitation":"matching client samples cannot prove empty server queues, ownership of identical material, or atomic check-and-write"
-    })
+pub(super) fn conditions() -> crate::operations::construction::ReconstructionConditions {
+    crate::operations::construction::ReconstructionConditions::declared()
 }
 
 impl AssemblyService<'_> {

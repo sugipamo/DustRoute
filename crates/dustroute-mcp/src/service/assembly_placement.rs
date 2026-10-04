@@ -9,6 +9,7 @@ use super::*;
 use crate::assembly_registry::{
     Attempt, InstanceState, PlacedAssembly, RegistryLock, TargetServer, now_ms,
 };
+use crate::operations::construction::AssemblyConstructionKind;
 use crate::piston_assembly::ValidatedAssemblyPlacement;
 use crate::source_identity::SourceIdentity;
 use dustroute_library::blueprint::AssemblyRevisionId;
@@ -98,11 +99,11 @@ impl StoredAssemblyPlacement {
             _ => None,
         }
     }
-    fn kind(&self) -> &'static str {
+    fn kind(&self) -> AssemblyConstructionKind {
         match self.action {
-            AssemblyPlacementAction::Construct => "custom_piston_assembly_construction",
-            AssemblyPlacementAction::Remove { .. } => "placed_assembly_removal",
-            AssemblyPlacementAction::Reconstruct { .. } => "placed_assembly_reconstruction",
+            AssemblyPlacementAction::Construct => AssemblyConstructionKind::Construct,
+            AssemblyPlacementAction::Remove { .. } => AssemblyConstructionKind::Remove,
+            AssemblyPlacementAction::Reconstruct { .. } => AssemblyConstructionKind::Reconstruct,
         }
     }
     fn steps(

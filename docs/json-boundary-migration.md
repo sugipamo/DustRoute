@@ -794,3 +794,37 @@ workspace全targetとMCPの`--no-default-features`全targetのClippyは
 全てoffline/lockedでCargoは単独`-j1`、テストは単一thread。
 実機接続、ワールド変更、保存schema、依存version、Voxrig source/vendorへの変更はない。
 統合ゴールは継続し、上記の未移行経路と他の内部JSONを残作業とする。
+
+### 電気編集・Assembly施工の型付き結果
+
+共通施工器を使う電気編集とAssembly施工の結果を、`ElectricalEditResult` /
+`AssemblyConstructionResult`で受け渡す。結果は診断用の値で、内部にJSON payloadや
+decode入口を持たない。詳細を持つ実行結果と、途中で返されたfailureだけの結果を
+Rust enumで分ける。操作履歴の成功・消費済み状態・確認済み数もRust型から判断する。
+Assemblyの構築・撤去・再構築の表示kindはenumとし、再構築の条件も型付きrecordにした。
+
+`job_stage`の有無、instance/revisionの参照、確認済みprefix、unknownとzero、
+最終保存に失敗したworldの確認済み状態を維持する。表示のserializeは純粋な投影で、
+現在の観測や新しい実行権限を作らない。保存・状態遷移・書込み・readbackの順序、
+採用済みsourceの再検証と古い実行tokenの拒否は変えない。
+公開MCP境界でだけ応答形式へencodeし、この二つの実行結果のJSON生成・保持を撤去する。
+電気編集やAssemblyのpreview・診断・計画、他の操作結果の未移行JSONはまだ残る。
+
+#### 施工結果の回帰検証
+
+関連38件が成功した。操作registryと型付き結果の15件では、詳細の未取得と既知のzero、
+job bindingと確認済みprefix、消費済み結果への再送拒否、最終保存の失敗を検査した。
+電気編集の公開MCP試験9件と建築jobの9件では、apply/undo、部分書込み、権限、
+保護領域の変化、再起動後の記録・再開・取消し・新しい回復計画を確認した。
+
+Assembly施工の5件では、採用・プレビュー・直前観測の再検証、人間による損傷の診断、
+施工中断後の再構築、再起動後の撤去、同一processでのundoを検査した。
+終了時のactivityと返された進捗の一致も既存試験で確認した。
+独立した観測が後から一致しても、不確かな旧attemptを成功や再送可能へ変えない。
+新しいJSON入力・復元APIや保存schemaの変更は追加していない。
+
+workspace全targetとMCPの`--no-default-features`全targetのClippyが
+`-D warnings`で成功し、formattingと差分の空白検査も成功した。
+Cargoは単独・offline/locked・`-j1`、テストは単一threadで実行した。
+実機接続・ワールド変更・依存version更新・Voxrig source/vendorの変更はない。
+内部JSONの全面除去は未完了であり、未移行の結果所有者とworkflowを次に移す。

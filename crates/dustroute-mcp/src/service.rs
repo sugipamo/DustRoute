@@ -5414,13 +5414,13 @@ impl DustRouteMcp {
         }
         let plan_kind = self.plans.kind(&operation_id).await;
         if plan_kind == Some(PlanKind::ElectricalEdit) {
-            return json_reply(
+            return typed_reply(
                 self.mutate_electrical_edit(operation_id, params.confirm, false)
                     .await,
             );
         }
         if plan_kind == Some(PlanKind::Assembly) {
-            return json_reply(
+            return typed_reply(
                 self.assembly_service()
                     .mutate_assembly_construction(operation_id, params.confirm, false)
                     .await,
@@ -5498,13 +5498,13 @@ impl DustRouteMcp {
         };
         let plan_kind = self.plans.kind(&operation_id).await;
         if plan_kind == Some(PlanKind::ElectricalEdit) {
-            return json_reply(
+            return typed_reply(
                 self.mutate_electrical_edit(operation_id, params.confirm, true)
                     .await,
             );
         }
         if plan_kind == Some(PlanKind::Assembly) {
-            return json_reply(
+            return typed_reply(
                 self.assembly_service()
                     .mutate_assembly_construction(operation_id, params.confirm, true)
                     .await,
