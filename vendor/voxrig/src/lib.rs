@@ -51,9 +51,11 @@ mod diagnostic_projection;
 mod error;
 mod protocol;
 pub mod snapshot;
+mod tables;
+pub mod text_component;
 pub mod versions;
 
-// The established 1.16.1 API remains source-compatible and explicitly pinned.
+// The Java 1.16.1 adapter remains explicitly pinned. Received text uses ProtocolText.
 pub use block_state::NativeBlockState;
 pub use connection::{Client, ConnectionConfig, Observation, ObservedBlock, Region};
 pub use versions::MinecraftVersion;

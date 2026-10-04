@@ -19,3 +19,7 @@ packet parserを変更する場合は、正常系に加えて切断された入�
 場合は、source、version、変換方法、licenseを`THIRD_PARTY_NOTICES.md`へ記録してください。
 
 Contributorは投稿した変更をrepositoryのMIT Licenseで配布することに同意するものとします。
+
+registryやshape入力を更新した場合は、`python3 scripts/generate_rust_tables.py`で
+Rust定数を生成し、`--check`で一致を確認してください。build時には生成しません。
+[型付きnative dataとtext API](docs/typed-native-data.md)に移行範囲と通信例外を記載しています。

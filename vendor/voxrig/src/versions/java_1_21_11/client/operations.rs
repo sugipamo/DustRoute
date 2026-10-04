@@ -279,24 +279,14 @@ pub struct SystemMessage {
     /// Packet receive sequence.
     pub receive_sequence: u64,
     /// Parsed native component. None means unavailable, never an empty message.
-    pub component: Option<serde_json::Value>,
+    pub component: Option<crate::text_component::TextNbt>,
     /// Whether this was an overlay message.
     pub overlay: bool,
 }
 impl SystemMessage {
     /// Exact literal text, excluding translated or concatenated components.
     pub fn literal_text(&self) -> Option<&str> {
-        let c = self.component.as_ref()?;
-        if let Some(text) = c.as_str() {
-            return Some(text);
-        }
-        if c.get("translate").is_some()
-            || c.get("extra")
-                .is_some_and(|v| v.as_array().is_none_or(|a| !a.is_empty()))
-        {
-            return None;
-        }
-        c.get("text")?.as_str()
+        self.component.as_ref()?.literal_text()
     }
 }
 #[derive(Clone, Default)]
@@ -760,19 +750,8 @@ fn check_reach(state: &State, p: [i32; 3]) -> Result<()> {
     }
     Ok(())
 }
-#[derive(serde::Deserialize)]
-struct ItemDefinition {
-    id: i32,
-    name: String,
-    #[serde(rename = "stackSize")]
-    stack_size: i32,
-}
-fn items() -> &'static [ItemDefinition] {
-    static ITEMS: std::sync::OnceLock<Vec<ItemDefinition>> = std::sync::OnceLock::new();
-    ITEMS.get_or_init(|| {
-        serde_json::from_str(include_str!("../../../../data/java_1_21_11/items.json"))
-            .expect("valid pinned item registry")
-    })
+fn items() -> &'static [crate::tables::ItemDefinition] {
+    crate::tables::java_1_21_11::ITEMS
 }
 fn slot(r: &mut Reader<'_>) -> anyhow::Result<Option<InventorySlot>> {
     let count = r.varint()?;

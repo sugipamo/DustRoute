@@ -4,8 +4,8 @@ pub(super) mod uncertainty;
 use super::{BlockHit, NativeBlockState};
 use crate::versions::java_1_21_11::math::trig;
 use crate::versions::java_1_21_11::{reconstruction::Direction, state_id};
+#[cfg(test)]
 use serde::Deserialize;
-use std::sync::OnceLock;
 
 /// Entity.getRotationVector uses float angles and MathHelper's indexed sine table.
 pub(super) fn direction([yaw, pitch]: [f32; 2]) -> [f64; 3] {
@@ -18,21 +18,8 @@ pub(super) fn direction([yaw, pitch]: [f32; 2]) -> [f64; 3] {
     ]
 }
 
-#[derive(Deserialize)]
-struct Shapes {
-    state_shapes: Vec<Option<[usize; 2]>>,
-    shapes: Vec<Vec<[f64; 6]>>,
-    #[cfg(test)]
-    registry_fnv64: String,
-}
-fn shapes() -> &'static Shapes {
-    static SHAPES: OnceLock<Shapes> = OnceLock::new();
-    SHAPES.get_or_init(|| {
-        serde_json::from_str(include_str!(
-            "../../../../../data/java_1_21_11/outline_shapes.json"
-        ))
-        .expect("validated native outline data")
-    })
+fn shapes() -> &'static crate::tables::OutlineShapes {
+    &crate::tables::java_1_21_11::OUTLINE
 }
 
 /// Native DDA visits cells in order and returns the first cell's hit. Neighboring
@@ -80,9 +67,9 @@ pub(super) fn cast(
         let pair = data.state_shapes[state_id(&state)? as usize].ok_or_else(|| {
             anyhow::anyhow!("outline geometry unsupported at {cell:?}: {}", state.name)
         })?;
-        if let Some((fraction, mut face)) = intersect(start, end, cell, &data.shapes[pair[0]]) {
+        if let Some((fraction, mut face)) = intersect(start, end, cell, data.shapes[pair[0]]) {
             // The auxiliary shape may override the face, never the hit position.
-            if let Some((nearer, side)) = intersect(start, end, cell, &data.shapes[pair[1]])
+            if let Some((nearer, side)) = intersect(start, end, cell, data.shapes[pair[1]])
                 && nearer < fraction
             {
                 face = side;

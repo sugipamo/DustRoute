@@ -89,7 +89,7 @@ pub struct OpenWindow {
     /// The `window_type` value.
     pub window_type: i32,
     /// Raw JSON chat component supplied by the server.
-    pub title_json: String,
+    pub title: crate::text_component::ProtocolText,
     /// The `entity_id` value.
     pub entity_id: Option<i32>,
     /// The `declared_slots` value.

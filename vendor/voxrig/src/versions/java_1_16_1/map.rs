@@ -15,8 +15,8 @@ pub struct MapIcon {
     pub z: i8,
     /// The `direction` value.
     pub direction: u8,
-    /// The `display_name_json` value.
-    pub display_name_json: Option<String>,
+    /// The `display_name` value.
+    pub display_name: Option<crate::text_component::ProtocolText>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -122,8 +122,10 @@ pub(crate) fn parse_map_update(payload: &[u8]) -> Result<MapUpdate> {
         let x = take_i8(&mut rest)?;
         let z = take_i8(&mut rest)?;
         let direction = take_u8(&mut rest)?;
-        let display_name_json = if take_bool(&mut rest)? {
-            Some(get_string(&mut rest)?)
+        let display_name = if take_bool(&mut rest)? {
+            Some(crate::text_component::ProtocolText::received(get_string(
+                &mut rest,
+            )?))
         } else {
             None
         };
@@ -132,7 +134,7 @@ pub(crate) fn parse_map_update(payload: &[u8]) -> Result<MapUpdate> {
             x,
             z,
             direction,
-            display_name_json,
+            display_name,
         });
     }
     let width = take_u8(&mut rest)?;

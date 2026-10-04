@@ -118,7 +118,11 @@ async fn main() -> Result<()> {
             tokio::spawn(async move {
                 while let Ok(event) = events.recv().await {
                     if let Event::Chat(chat) = event {
-                        if chat.json.contains("MC_AI_RESCUE_PREPARE") {
+                        if chat
+                            .component
+                            .as_wire_json()
+                            .is_some_and(|text| text.contains("MC_AI_RESCUE_PREPARE"))
+                        {
                             controlled_bot.suspend_movement_for(Duration::from_secs(7));
                         }
                     }

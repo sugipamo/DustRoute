@@ -5,6 +5,11 @@ following open-source projects. The Voxrig MIT license does not replace their
 notices. Exact npm versions and registry integrity digests are recorded in
 `reference/package-lock.json`.
 
+`src/tables/java_1_16_1.rs` and `src/tables/java_1_21_11.rs` are compiled Rust
+projections of the pinned registry/shape inputs below. Their input SHA-256 digests
+and deterministic transformation are recorded by `scripts/generate_rust_tables.py`.
+The generated representation retains the original data notices.
+
 ## Locally recorded Java 1.21.11 diagnostics
 
 `data/java_1_21_11/outline_*` contains factual shape coordinates, native state

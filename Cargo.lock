@@ -1335,7 +1335,6 @@ dependencies = [
  "byteorder",
  "flate2",
  "serde",
- "serde_json",
  "tokio",
 ]
 

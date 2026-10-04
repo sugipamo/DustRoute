@@ -295,8 +295,8 @@ pub enum ResourcePackStatus {
 pub struct TabCompletionMatch {
     /// The `value` value.
     pub value: String,
-    /// The `tooltip_json` value.
-    pub tooltip_json: Option<String>,
+    /// The `tooltip` value.
+    pub tooltip: Option<crate::text_component::ProtocolText>,
 }
 #[derive(Clone, Debug, Eq, PartialEq)]
 /// State and protocol data represented by `TabCompletion`.
@@ -695,7 +695,7 @@ pub enum Event {
     /// The `Disconnected` variant.
     Disconnected {
         /// The `reason` value carried by this variant.
-        reason: String,
+        reason: crate::text_component::DisconnectReason,
     },
     /// The `Error` variant.
     Error {
@@ -988,7 +988,7 @@ impl Bot {
         tokio::spawn(async move {
             match reader_task.await {
                 Ok(Ok(())) => supervisor.emit(Event::Disconnected {
-                    reason: "connection closed".to_owned(),
+                    reason: crate::text_component::DisconnectReason::Local("connection closed"),
                 }),
                 Ok(Err(error)) => supervisor.emit(Event::Error {
                     kind: "connection",
@@ -2553,7 +2553,7 @@ impl Bot {
     /// This does not wait for a server-side disconnect event.
     pub async fn disconnect(&self) -> Result<()> {
         self.emit(Event::Disconnected {
-            reason: "client disconnected".to_owned(),
+            reason: crate::text_component::DisconnectReason::Local("client disconnected"),
         });
         self.clear_control().await;
         tokio::io::AsyncWriteExt::shutdown(&mut self.writer.lock().await.inner).await?;
@@ -2977,7 +2977,11 @@ impl Bot {
                     let mut s = p.as_slice();
                     self.physics.lock().await.record_disconnect();
                     self.emit(Event::Disconnected {
-                        reason: get_string(&mut s).unwrap_or_default(),
+                        reason: crate::text_component::DisconnectReason::Server(
+                            crate::text_component::ProtocolText::received(
+                                get_string(&mut s).unwrap_or_default(),
+                            ),
+                        ),
                     });
                     break;
                 }
@@ -3034,7 +3038,7 @@ impl Bot {
                     let window = OpenWindow {
                         id: window_id,
                         window_type: -1,
-                        title_json: String::new(),
+                        title: crate::text_component::ProtocolText::default(),
                         entity_id: Some(entity_id),
                         declared_slots: Some(declared_slots),
                     };
@@ -3183,7 +3187,9 @@ impl Bot {
                     let window = OpenWindow {
                         id: id as i8,
                         window_type: get_varint(&mut rest)?,
-                        title_json: get_string(&mut rest)?,
+                        title: crate::text_component::ProtocolText::received(get_string(
+                            &mut rest,
+                        )?),
                         entity_id: None,
                         declared_slots: None,
                     };
@@ -3844,15 +3850,14 @@ fn parse_tab_completion(payload: &[u8]) -> Result<TabCompletion> {
         let value = get_string(&mut rest)?;
         let has_tooltip = *rest.first().context("missing completion tooltip flag")? != 0;
         rest = &rest[1..];
-        let tooltip_json = if has_tooltip {
-            Some(get_string(&mut rest)?)
+        let tooltip = if has_tooltip {
+            Some(crate::text_component::ProtocolText::received(get_string(
+                &mut rest,
+            )?))
         } else {
             None
         };
-        matches.push(TabCompletionMatch {
-            value,
-            tooltip_json,
-        });
+        matches.push(TabCompletionMatch { value, tooltip });
     }
     Ok(TabCompletion {
         transaction_id,

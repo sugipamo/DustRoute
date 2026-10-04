@@ -73,7 +73,12 @@ async fn main() -> Result<()> {
     timeout(Duration::from_secs(15), async {
         loop {
             match b_events.recv().await? {
-                Event::Chat(chat) if chat.json.contains("handoff-ready") => {
+                Event::Chat(chat)
+                    if chat
+                        .component
+                        .as_wire_json()
+                        .is_some_and(|text| text.contains("handoff-ready")) =>
+                {
                     return Ok::<(), anyhow::Error>(());
                 }
                 Event::Error { kind, message } => anyhow::bail!("B error {kind}: {message}"),

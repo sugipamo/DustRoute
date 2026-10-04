@@ -214,8 +214,8 @@ pub enum CombatEvent {
         player_id: i32,
         /// The `entity_id` value carried by this variant.
         entity_id: i32,
-        /// The `message_json` value carried by this variant.
-        message_json: String,
+        /// The `message` value carried by this variant.
+        message: crate::text_component::ProtocolText,
     },
     /// The `Unknown` variant.
     Unknown {
@@ -390,7 +390,7 @@ pub(crate) fn parse_combat_event(payload: &[u8]) -> Result<CombatEvent> {
             CombatEvent::Death {
                 player_id,
                 entity_id,
-                message_json: get_string(&mut rest)?,
+                message: crate::text_component::ProtocolText::received(get_string(&mut rest)?),
             }
         }
         id => CombatEvent::Unknown { id },
@@ -460,7 +460,9 @@ mod tests {
             CombatEvent::Death {
                 player_id: 7,
                 entity_id: 42,
-                message_json: r#"{\"text\":\"fell\"}"#.into(),
+                message: crate::text_component::ProtocolText::received(
+                    r#"{\"text\":\"fell\"}"#.into()
+                ),
             }
         );
     }

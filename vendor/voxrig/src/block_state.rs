@@ -13,26 +13,44 @@ pub struct NativeBlockState {
     pub properties: BTreeMap<String, String>,
 }
 
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct BlockDefinition {
-    name: String,
-    min_state_id: i32,
-    max_state_id: i32,
-    states: Vec<Property>,
+pub(crate) struct BlockDefinition {
+    pub name: &'static str,
+    pub min_state_id: i32,
+    pub max_state_id: i32,
+    pub states: &'static [Property],
 }
 
-#[derive(Deserialize)]
-struct Property {
-    name: String,
-    #[serde(rename = "type")]
-    kind: String,
-    num_values: u32,
-    values: Option<Vec<String>>,
+pub(crate) struct Property {
+    pub name: &'static str,
+    pub values: PropertyValues,
+}
+pub(crate) enum PropertyValues {
+    Boolean,
+    Integer {
+        count: u32,
+        values: Option<&'static [&'static str]>,
+    },
+    Enum(&'static [&'static str]),
+}
+impl PropertyValues {
+    fn count(&self) -> u32 {
+        match self {
+            Self::Boolean => 2,
+            Self::Integer { count, .. } => *count,
+            Self::Enum(values) => values.len() as u32,
+        }
+    }
+    fn named(&self) -> Option<&'static [&'static str]> {
+        match self {
+            Self::Integer { values, .. } => *values,
+            Self::Enum(values) => Some(values),
+            Self::Boolean => None,
+        }
+    }
 }
 
 pub(crate) struct StateRegistry {
-    definitions: Vec<BlockDefinition>,
+    definitions: &'static [BlockDefinition],
 }
 
 impl StateRegistry {
@@ -40,7 +58,7 @@ impl StateRegistry {
         usize::try_from(block_id)
             .ok()
             .and_then(|i| self.definitions.get(i))
-            .map(|b| b.name.as_str())
+            .map(|b| b.name)
     }
     pub(crate) fn encode(&self, state: &NativeBlockState) -> Result<i32> {
         let name = state.name.strip_prefix("minecraft:").ok_or_else(|| {
@@ -66,16 +84,16 @@ impl StateRegistry {
             ));
         }
         let mut offset = 0u32;
-        for property in &block.states {
-            let value = state.properties.get(&property.name).ok_or_else(|| {
+        for property in block.states {
+            let value = state.properties.get(property.name).ok_or_else(|| {
                 Error::new(
                     ErrorKind::InvalidInput,
                     anyhow::anyhow!("missing property {}", property.name),
                 )
             })?;
-            let index = if let Some(values) = &property.values {
-                values.iter().position(|v| v == value).map(|i| i as u32)
-            } else if property.kind == "bool" {
+            let index = if let Some(values) = property.values.named() {
+                values.iter().position(|v| *v == value).map(|i| i as u32)
+            } else if matches!(property.values, PropertyValues::Boolean) {
                 match value.as_str() {
                     "true" => Some(0),
                     "false" => Some(1),
@@ -87,14 +105,14 @@ impl StateRegistry {
                     .ok()
                     .filter(|i| i.to_string() == *value)
             }
-            .filter(|i| *i < property.num_values)
+            .filter(|i| *i < property.values.count())
             .ok_or_else(|| {
                 Error::new(
                     ErrorKind::InvalidInput,
                     anyhow::anyhow!("invalid property {}", property.name),
                 )
             })?;
-            offset = offset * property.num_values + index;
+            offset = offset * property.values.count() + index;
         }
         Ok(block.min_state_id + offset as i32)
     }
@@ -107,33 +125,23 @@ impl StateRegistry {
         }
         Ok(())
     }
-    pub(crate) fn parse(json: &str) -> Result<Self> {
-        let definitions: Vec<BlockDefinition> =
-            serde_json::from_str(json).map_err(|error| Error::new(ErrorKind::Protocol, error))?;
+    pub(crate) fn new(definitions: &'static [BlockDefinition]) -> Result<Self> {
         let mut next = 0;
-        for block in &definitions {
+        for block in definitions {
             let mut count = Some(1u32);
-            for property in &block.states {
-                let valid = property.num_values > 0
-                    && match property.kind.as_str() {
-                        "bool" => property.num_values == 2 && property.values.is_none(),
-                        "int" => property
-                            .values
-                            .as_ref()
-                            .is_none_or(|v| v.len() == property.num_values as usize),
-                        "enum" => property
-                            .values
-                            .as_ref()
-                            .is_some_and(|v| v.len() == property.num_values as usize),
-                        _ => false,
-                    };
+            for property in block.states {
+                let valid = property.values.count() > 0
+                    && property
+                        .values
+                        .named()
+                        .is_none_or(|v| v.len() == property.values.count() as usize);
                 if !valid {
                     return Err(Error::new(
                         ErrorKind::Protocol,
                         anyhow::anyhow!("invalid property in {}", block.name),
                     ));
                 }
-                count = count.and_then(|n| n.checked_mul(property.num_values));
+                count = count.and_then(|n| n.checked_mul(property.values.count()));
             }
             if block.min_state_id != next
                 || count.map(i64::from)
@@ -168,16 +176,16 @@ impl StateRegistry {
         let mut offset = (id - block.min_state_id) as u32;
         let mut properties = BTreeMap::new();
         for property in block.states.iter().rev() {
-            let index = offset % property.num_values;
-            offset /= property.num_values;
-            let value = if let Some(values) = &property.values {
-                values[index as usize].clone()
-            } else if property.kind == "bool" {
+            let index = offset % property.values.count();
+            offset /= property.values.count();
+            let value = if let Some(values) = property.values.named() {
+                values[index as usize].to_owned()
+            } else if matches!(property.values, PropertyValues::Boolean) {
                 (index == 0).to_string()
             } else {
                 index.to_string()
             };
-            properties.insert(property.name.clone(), value);
+            properties.insert(property.name.to_owned(), value);
         }
         Ok(NativeBlockState {
             name: format!("minecraft:{}", block.name),
@@ -214,12 +222,33 @@ mod tests {
 
     #[test]
     fn malformed_registry_ranges_and_property_counts_are_rejected() {
-        for json in [
-            r#"[{"name":"air","minStateId":1,"maxStateId":1,"states":[]}]"#,
-            r#"[{"name":"bad","minStateId":0,"maxStateId":1,"states":[]}]"#,
-            r#"[{"name":"bad","minStateId":0,"maxStateId":1,"states":[{"name":"shape","type":"enum","num_values":2,"values":["straight"]}]}]"#,
+        for definitions in [
+            &[BlockDefinition {
+                name: "air",
+                min_state_id: 1,
+                max_state_id: 1,
+                states: &[],
+            }][..],
+            &[BlockDefinition {
+                name: "bad",
+                min_state_id: 0,
+                max_state_id: 1,
+                states: &[],
+            }][..],
+            &[BlockDefinition {
+                name: "bad",
+                min_state_id: 0,
+                max_state_id: 1,
+                states: &[Property {
+                    name: "shape",
+                    values: PropertyValues::Integer {
+                        count: 2,
+                        values: Some(&["straight"]),
+                    },
+                }],
+            }][..],
         ] {
-            assert!(StateRegistry::parse(json).is_err());
+            assert!(StateRegistry::new(definitions).is_err());
         }
     }
 }

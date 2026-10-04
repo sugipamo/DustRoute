@@ -3,48 +3,13 @@
 use serde::Deserialize;
 use std::{collections::HashMap, sync::OnceLock};
 
-#[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct BlockData {
-    name: String,
-    hardness: Option<f64>,
-    min_state_id: i32,
-    max_state_id: i32,
-    #[serde(default)]
-    diggable: bool,
-    material: Option<String>,
-    harvest_tools: Option<HashMap<String, bool>>,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-struct ItemData {
-    id: i32,
-    name: String,
-    #[serde(rename = "stackSize")]
-    stack_size: i8,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-struct EntityData {
-    id: i32,
-    name: String,
-    width: f64,
-    height: f64,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-struct SoundData {
-    id: i32,
-    name: String,
-}
-
 struct Registry {
-    blocks: Vec<BlockData>,
-    items: HashMap<i32, (String, i8)>,
-    materials: HashMap<String, HashMap<String, f64>>,
-    recipes: HashMap<String, Vec<RawRecipe>>,
-    entities: HashMap<i32, (String, f64, f64)>,
-    sounds: HashMap<i32, String>,
+    blocks: &'static [crate::tables::MiningBlock],
+    items: HashMap<i32, (&'static str, i8)>,
+    materials: HashMap<&'static str, HashMap<i32, f64>>,
+    recipes: HashMap<i32, Vec<RawRecipe>>,
+    entities: HashMap<i32, (&'static str, f64, f64)>,
+    sounds: HashMap<i32, &'static str>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -89,47 +54,50 @@ pub struct RawRecipe {
 
 fn registry() -> &'static Registry {
     static REGISTRY: OnceLock<Registry> = OnceLock::new();
-    REGISTRY.get_or_init(|| Registry {
-        blocks: serde_json::from_str(include_str!("../../../data/blocks.json"))
-            .expect("embedded 1.16.1 blocks registry must be valid"),
-        items: serde_json::from_str::<Vec<ItemData>>(include_str!("../../../data/items.json"))
-            .expect("embedded 1.16.1 items registry must be valid")
-            .into_iter()
-            .map(|item| (item.id, (item.name, item.stack_size)))
-            .collect(),
-        materials: serde_json::from_str(include_str!("../../../data/materials.json"))
-            .expect("embedded 1.16.1 materials registry must be valid"),
-        recipes: serde_json::from_str(include_str!("../../../data/recipes.json"))
-            .expect("embedded 1.16.1 recipes registry must be valid"),
-        entities: serde_json::from_str::<Vec<EntityData>>(include_str!(
-            "../../../data/entities.json"
-        ))
-        .expect("embedded 1.16.1 entities registry must be valid")
-        .into_iter()
-        .map(|entity| (entity.id, (entity.name, entity.width, entity.height)))
-        .collect(),
-        sounds: serde_json::from_str::<Vec<SoundData>>(include_str!("../../../data/sounds.json"))
-            .expect("embedded 1.16.1 sounds registry must be valid")
-            .into_iter()
-            .map(|sound| (sound.id, sound.name))
-            .collect(),
+    REGISTRY.get_or_init(|| {
+        use crate::tables::java_1_16_1 as data;
+        let mut recipes: HashMap<i32, Vec<RawRecipe>> = HashMap::new();
+        let grid =
+            |rows: &'static [&'static [Option<i32>]]| rows.iter().map(|row| row.to_vec()).collect();
+        for recipe in data::RECIPES {
+            recipes.entry(recipe.output).or_default().push(RawRecipe {
+                result: RecipeResult {
+                    id: recipe.result.0,
+                    count: recipe.result.1,
+                },
+                ingredients: recipe.ingredients.map(<[i32]>::to_vec),
+                in_shape: recipe.in_shape.map(grid),
+                out_shape: recipe.out_shape.map(grid),
+            });
+        }
+        Registry {
+            blocks: data::MINING_BLOCKS,
+            items: data::ITEMS
+                .iter()
+                .map(|i| (i.id, (i.name, i.stack_size as i8)))
+                .collect(),
+            materials: data::MATERIALS
+                .iter()
+                .map(|(name, tools)| (*name, tools.iter().copied().collect()))
+                .collect(),
+            recipes,
+            entities: data::ENTITIES
+                .iter()
+                .map(|&(id, name, width, height)| (id, (name, width, height)))
+                .collect(),
+            sounds: data::SOUNDS.iter().copied().collect(),
+        }
     })
 }
 
 /// Performs the `recipes_for_output` operation.
 pub fn recipes_for_output(item_id: i32) -> &'static [RawRecipe] {
-    registry()
-        .recipes
-        .get(&item_id.to_string())
-        .map_or(&[], Vec::as_slice)
+    registry().recipes.get(&item_id).map_or(&[], Vec::as_slice)
 }
 
 /// Performs the `entity_name` operation.
 pub fn entity_name(id: i32) -> Option<&'static str> {
-    registry()
-        .entities
-        .get(&id)
-        .map(|(name, _, _)| name.as_str())
+    registry().entities.get(&id).map(|(name, _, _)| *name)
 }
 
 /// Performs the `entity_dimensions` operation.
@@ -142,12 +110,12 @@ pub fn entity_dimensions(id: i32) -> Option<(f64, f64)> {
 
 /// Performs the `sound_name` operation.
 pub fn sound_name(id: i32) -> Option<&'static str> {
-    registry().sounds.get(&id).map(String::as_str)
+    registry().sounds.get(&id).copied()
 }
 
 /// Performs the `item_name` operation.
 pub fn item_name(id: i32) -> Option<&'static str> {
-    registry().items.get(&id).map(|(name, _)| name.as_str())
+    registry().items.get(&id).map(|(name, _)| *name)
 }
 
 pub(crate) fn item_stack_size(id: i32) -> i8 {
@@ -160,7 +128,7 @@ pub fn block_name_from_state(state_id: i32) -> Option<&'static str> {
         .blocks
         .iter()
         .find(|block| (block.min_state_id..=block.max_state_id).contains(&state_id))
-        .map(|block| block.name.as_str())
+        .map(|block| block.name)
 }
 
 /// Performs the `mining_info` operation.
@@ -187,18 +155,14 @@ pub fn mining_info(state_id: i32, tool_id: Option<i32>) -> Option<MiningInfo> {
             predicted_ticks: Some(0),
         });
     }
-    let tool_key = tool_id.map(|id| id.to_string());
     let tool_speed = block
         .material
-        .as_ref()
         .and_then(|material| registry.materials.get(material))
-        .and_then(|tools| tool_key.as_ref().and_then(|key| tools.get(key)))
+        .and_then(|tools| tool_id.as_ref().and_then(|key| tools.get(key)))
         .copied()
         .unwrap_or(1.0);
-    let harvestable = block.harvest_tools.as_ref().is_none_or(|tools| {
-        tool_key
-            .as_ref()
-            .is_some_and(|key| tools.get(key).copied().unwrap_or(false))
+    let harvestable = block.harvest_tools.is_none_or(|tools| {
+        tool_id.is_some_and(|id| tools.iter().any(|&(tool, harvests)| tool == id && harvests))
     });
     let damage_per_tick = tool_speed / hardness / if harvestable { 30.0 } else { 100.0 };
     Some(MiningInfo {

@@ -19,7 +19,11 @@ async fn main() -> Result<()> {
     timeout(Duration::from_secs(5), async {
         loop {
             if let Event::Chat(chat) = events.recv().await? {
-                if chat.json.contains("structured-chat-probe") {
+                if chat
+                    .component
+                    .as_wire_json()
+                    .is_some_and(|text| text.contains("structured-chat-probe"))
+                {
                     println!("CHAT {chat:?}");
                     return Ok::<(), anyhow::Error>(());
                 }

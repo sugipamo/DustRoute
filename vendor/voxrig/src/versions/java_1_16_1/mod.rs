@@ -30,7 +30,7 @@ pub fn native_state(id: i32) -> crate::Result<crate::NativeBlockState> {
         std::sync::OnceLock::new();
     STATES
         .get_or_init(|| {
-            crate::block_state::StateRegistry::parse(include_str!("../../../data/blocks.json"))
+            crate::block_state::StateRegistry::new(crate::tables::java_1_16_1::STATES)
                 .expect("bundled Java 1.16.1 state definitions are valid")
         })
         .decode(id)

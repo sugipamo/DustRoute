@@ -2,8 +2,8 @@
 mod outline;
 use super::{State, operations::Operations, players::ObservedPlayer};
 use crate::{Error, ErrorKind, NativeBlockState, Result};
-use serde::{Deserialize, Serialize};
-use std::{collections::BTreeSet, sync::OnceLock};
+use serde::Serialize;
+use std::collections::BTreeSet;
 
 /// A static block hit. The enclosing observation declares the geometry policy.
 #[derive(Clone, Debug, Serialize)]
@@ -207,24 +207,13 @@ impl Operations {
     }
 }
 
-#[derive(Deserialize)]
-struct Shapes {
-    state_shapes: Vec<usize>,
-    shapes: Vec<Vec<[f64; 6]>>,
-}
-fn shapes() -> &'static Shapes {
-    static SHAPES: OnceLock<Shapes> = OnceLock::new();
-    SHAPES.get_or_init(|| {
-        serde_json::from_str(include_str!(
-            "../../../../data/java_1_21_11/collision_shapes.json"
-        ))
-        .expect("validated generated collision data")
-    })
+fn shapes() -> &'static crate::tables::CollisionShapes {
+    &crate::tables::java_1_21_11::COLLISION
 }
 fn boxes(state: &NativeBlockState) -> anyhow::Result<&'static [[f64; 6]]> {
     let id = super::super::state_id(state)? as usize;
     let shapes = shapes();
-    Ok(&shapes.shapes[shapes.state_shapes[id]])
+    Ok(shapes.shapes[shapes.state_shapes[id]])
 }
 fn intersection(
     origin: [f64; 3],

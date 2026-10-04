@@ -10,8 +10,8 @@ use std::{collections::HashMap, io::Cursor};
 pub struct BossBar {
     /// The `uuid` value.
     pub uuid: [u8; 16],
-    /// The `title_json` value.
-    pub title_json: String,
+    /// The `title` value.
+    pub title: crate::text_component::ProtocolText,
     /// The `health` value.
     pub health: f32,
     /// The `color` value.
@@ -26,8 +26,8 @@ pub struct BossBar {
 pub struct ScoreboardObjective {
     /// The `name` value.
     pub name: String,
-    /// The `display_json` value.
-    pub display_json: String,
+    /// The `display` value.
+    pub display: crate::text_component::ProtocolText,
     /// The `render_type` value.
     pub render_type: i32,
 }
@@ -36,8 +36,8 @@ pub struct ScoreboardObjective {
 pub struct Team {
     /// The `name` value.
     pub name: String,
-    /// The `display_json` value.
-    pub display_json: String,
+    /// The `display` value.
+    pub display: crate::text_component::ProtocolText,
     /// The `friendly_flags` value.
     pub friendly_flags: i8,
     /// The `name_tag_visibility` value.
@@ -46,22 +46,22 @@ pub struct Team {
     pub collision_rule: String,
     /// The `color` value.
     pub color: i32,
-    /// The `prefix_json` value.
-    pub prefix_json: String,
-    /// The `suffix_json` value.
-    pub suffix_json: String,
+    /// The `prefix` value.
+    pub prefix: crate::text_component::ProtocolText,
+    /// The `suffix` value.
+    pub suffix: crate::text_component::ProtocolText,
     /// The `members` value.
     pub members: Vec<String>,
 }
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 /// State and protocol data represented by `TitleState`.
 pub struct TitleState {
-    /// The `title_json` value.
-    pub title_json: Option<String>,
-    /// The `subtitle_json` value.
-    pub subtitle_json: Option<String>,
-    /// The `action_bar_json` value.
-    pub action_bar_json: Option<String>,
+    /// The `title` value.
+    pub title: Option<crate::text_component::ProtocolText>,
+    /// The `subtitle` value.
+    pub subtitle: Option<crate::text_component::ProtocolText>,
+    /// The `action_bar` value.
+    pub action_bar: Option<crate::text_component::ProtocolText>,
     /// The `fade_in` value.
     pub fade_in: i32,
     /// The `stay` value.
@@ -104,10 +104,10 @@ pub struct UiState {
     pub teams: HashMap<String, Team>,
     /// The `title` value.
     pub title: TitleState,
-    /// The `tab_header_json` value.
-    pub tab_header_json: String,
-    /// The `tab_footer_json` value.
-    pub tab_footer_json: String,
+    /// The `tab_header` value.
+    pub tab_header: crate::text_component::ProtocolText,
+    /// The `tab_footer` value.
+    pub tab_footer: crate::text_component::ProtocolText,
     /// The `world_border` value.
     pub world_border: WorldBorder,
 }
@@ -139,7 +139,7 @@ impl UiState {
         let action = get_varint(&mut rest)?;
         match action {
             0 => {
-                let title_json = get_string(&mut rest)?;
+                let title = crate::text_component::ProtocolText::received(get_string(&mut rest)?);
                 let health = take_f32(&mut rest)?;
                 let color = get_varint(&mut rest)?;
                 let divisions = get_varint(&mut rest)?;
@@ -148,7 +148,7 @@ impl UiState {
                     uuid,
                     BossBar {
                         uuid,
-                        title_json,
+                        title,
                         health,
                         color,
                         divisions,
@@ -166,7 +166,8 @@ impl UiState {
             }
             3 => {
                 if let Some(bar) = self.boss_bars.get_mut(&uuid) {
-                    bar.title_json = get_string(&mut rest)?;
+                    bar.title =
+                        crate::text_component::ProtocolText::received(get_string(&mut rest)?);
                 }
             }
             4 => {
@@ -193,13 +194,13 @@ impl UiState {
         let action = take_i8(&mut r)?;
         match action {
             0 | 2 => {
-                let display_json = get_string(&mut r)?;
+                let display = crate::text_component::ProtocolText::received(get_string(&mut r)?);
                 let render_type = get_varint(&mut r)?;
                 self.objectives.insert(
                     name.clone(),
                     ScoreboardObjective {
                         name,
-                        display_json,
+                        display,
                         render_type,
                     },
                 );
@@ -246,26 +247,26 @@ impl UiState {
             return Ok(());
         }
         if mode == 0 || mode == 2 {
-            let display_json = get_string(&mut r)?;
+            let display = crate::text_component::ProtocolText::received(get_string(&mut r)?);
             let friendly_flags = take_i8(&mut r)?;
             let name_tag_visibility = get_string(&mut r)?;
             let collision_rule = get_string(&mut r)?;
             let color = get_varint(&mut r)?;
-            let prefix_json = get_string(&mut r)?;
-            let suffix_json = get_string(&mut r)?;
+            let prefix = crate::text_component::ProtocolText::received(get_string(&mut r)?);
+            let suffix = crate::text_component::ProtocolText::received(get_string(&mut r)?);
             let old = self.teams.remove(&key);
             let members = old.map_or_else(Vec::new, |t| t.members);
             self.teams.insert(
                 key.clone(),
                 Team {
                     name: key.clone(),
-                    display_json,
+                    display,
                     friendly_flags,
                     name_tag_visibility,
                     collision_rule,
                     color,
-                    prefix_json,
-                    suffix_json,
+                    prefix,
+                    suffix,
                     members,
                 },
             );
@@ -299,9 +300,21 @@ impl UiState {
     pub(crate) fn apply_title(&mut self, p: &[u8]) -> Result<()> {
         let mut r = p;
         match get_varint(&mut r)? {
-            0 => self.title.title_json = Some(get_string(&mut r)?),
-            1 => self.title.subtitle_json = Some(get_string(&mut r)?),
-            2 => self.title.action_bar_json = Some(get_string(&mut r)?),
+            0 => {
+                self.title.title = Some(crate::text_component::ProtocolText::received(get_string(
+                    &mut r,
+                )?))
+            }
+            1 => {
+                self.title.subtitle = Some(crate::text_component::ProtocolText::received(
+                    get_string(&mut r)?,
+                ))
+            }
+            2 => {
+                self.title.action_bar = Some(crate::text_component::ProtocolText::received(
+                    get_string(&mut r)?,
+                ))
+            }
             3 => {
                 let mut c = Cursor::new(r);
                 self.title.fade_in = c.read_i32::<BigEndian>()?;
@@ -310,9 +323,9 @@ impl UiState {
             }
             4 => self.title = TitleState::default(),
             5 => {
-                self.title.title_json = None;
-                self.title.subtitle_json = None;
-                self.title.action_bar_json = None;
+                self.title.title = None;
+                self.title.subtitle = None;
+                self.title.action_bar = None;
             }
             a => bail!("unknown title action {a}"),
         }
@@ -320,8 +333,8 @@ impl UiState {
     }
     pub(crate) fn apply_tab(&mut self, p: &[u8]) -> Result<()> {
         let mut r = p;
-        self.tab_header_json = get_string(&mut r)?;
-        self.tab_footer_json = get_string(&mut r)?;
+        self.tab_header = crate::text_component::ProtocolText::received(get_string(&mut r)?);
+        self.tab_footer = crate::text_component::ProtocolText::received(get_string(&mut r)?);
         Ok(())
     }
     pub(crate) fn apply_border(&mut self, p: &[u8]) -> Result<()> {

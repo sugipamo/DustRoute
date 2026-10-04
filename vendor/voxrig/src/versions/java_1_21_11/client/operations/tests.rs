@@ -139,7 +139,12 @@ fn system_messages_preserve_native_components_and_mark_dropped_history() {
     assert_eq!(state.operations.messages[0].receive_sequence, 3);
     assert_eq!(
         state.operations.messages[0].component,
-        Some(serde_json::json!({"text":"hello"}))
+        Some(crate::text_component::TextNbt::Compound(
+            std::collections::BTreeMap::from([(
+                "text".into(),
+                crate::text_component::TextNbt::String("hello".into())
+            )])
+        ))
     );
     assert!(
         receive(
@@ -153,4 +158,45 @@ fn system_messages_preserve_native_components_and_mark_dropped_history() {
     state.operations.reset_configuration(130);
     assert!(state.operations.messages.is_empty());
     assert_eq!(state.operations.messages_dropped_through, 130);
+}
+
+#[test]
+fn unprojectable_system_text_preserves_sequence_without_mutating_history_on_invalid_frames() {
+    let mut state = State::default();
+    let mut budget = vec![7];
+    budget.extend(16384i32.to_be_bytes());
+    budget.resize(budget.len() + 16384, 0);
+    budget.push(1);
+    let mut size = vec![8];
+    size.extend(u16::MAX.to_be_bytes());
+    size.resize(size.len() + usize::from(u16::MAX), b'a');
+    size.push(0);
+    let mut depth = vec![10];
+    for _ in 0..33 {
+        depth.extend([10, 0, 0]);
+    }
+    depth.extend([0; 34]);
+    depth.push(0);
+    for (index, data) in [budget, size, depth].into_iter().enumerate() {
+        state.sequence = index as u64 + 1;
+        receive(&mut state, ids::play_clientbound::SYSTEM_CHAT, &data).unwrap();
+        let message = state.operations.messages.back().unwrap();
+        assert_eq!(message.receive_sequence, state.sequence);
+        assert!(message.component.is_none());
+        assert_eq!(message.overlay, index == 0);
+        let before = state.operations.messages.len();
+        assert!(
+            receive(
+                &mut state,
+                ids::play_clientbound::SYSTEM_CHAT,
+                &data[..data.len() - 1]
+            )
+            .is_err()
+        );
+        assert_eq!(state.operations.messages.len(), before);
+        let mut trailing = data;
+        trailing.push(0);
+        assert!(receive(&mut state, ids::play_clientbound::SYSTEM_CHAT, &trailing).is_err());
+        assert_eq!(state.operations.messages.len(), before);
+    }
 }

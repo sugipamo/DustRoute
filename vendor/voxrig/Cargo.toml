@@ -15,6 +15,7 @@ include = [
     "/examples/**",
     "/docs/**",
     "/scripts/generate_java_1_21_11.cjs",
+    "/scripts/generate_rust_tables.py",
     "/scripts/prepare_motion_confirmation.py",
     "/scripts/export_outline_shapes.py",
     "/scripts/ExportOutlineShapes.java",
@@ -39,8 +40,8 @@ anyhow = "1"
 byteorder = "1"
 flate2 = "1"
 serde = { version = "1", features = ["derive", "rc"] }
-serde_json = "1"
 tokio = { version = "1", features = ["full"] }
 
 [dev-dependencies]
+serde_json = "1"
 hex = "0.4"

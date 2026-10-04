@@ -42,7 +42,7 @@ crate rootのre-exportと用途別moduleは同一の型を参照します。
 | `inventory` | ItemStack、player inventory、window、transaction |
 | `interaction` | block座標、面、手、digging状態 |
 | `entity` | entity snapshot、metadata、equipment |
-| `chat` | raw JSON chatとplayer list |
+| `chat` | `ProtocolText`によるserver textとplayer list |
 | `map` | map item icon、部分更新、Arc-backed color data |
 | `ui` | scoreboard、team、boss bar、title、tab、world border |
 | `progress` | recipe book、advancement、statistics |
@@ -245,3 +245,5 @@ Futureをdropすると利用側の待機はcancelされますが、すでにserv
 - `bot.server_info()`：実際に接続しているhostとport
 
 利用側は起動時にこれらを検査し、要求するprotocolや能力と一致しない場合は早期に停止できます。
+
+受信text fieldのRust型とAPI変更は[型付きnative data](typed-native-data.md)を参照してください。

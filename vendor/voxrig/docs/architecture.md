@@ -44,7 +44,7 @@ AI / Planner / Behavior Tree
 
 wire formatを安全で扱いやすいRust型へdecodeし、差分packetを現在状態へ反映するところまではclientの責務です。そこから「危険」「食料」「目的地」といった意味を付与するのは外部controllerの責務です。
 
-registry名はraw IDと併存させます。NBT、raw JSON chat、metadataなど、上位層が後から解釈できる情報を可能な限り保持します。
+registry名はraw IDと併存させます。NBTはnative tagを保持するRust型、Java 1.16.1のwire JSON textは用途を限定した`ProtocolText`で表します。registryと形状は生成済みRust定数を読みます。内部通信にJSONを使いません。詳しくは[型付きnative data](typed-native-data.md)を参照してください。
 
 ## 状態と並行性
 

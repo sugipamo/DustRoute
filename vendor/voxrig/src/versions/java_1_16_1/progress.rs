@@ -38,10 +38,10 @@ pub struct StatisticsState {
 #[derive(Clone, Debug, PartialEq)]
 /// State and protocol data represented by `AdvancementDisplay`.
 pub struct AdvancementDisplay {
-    /// The `title_json` value.
-    pub title_json: String,
-    /// The `description_json` value.
-    pub description_json: String,
+    /// The `title` value.
+    pub title: crate::text_component::ProtocolText,
+    /// The `description` value.
+    pub description: crate::text_component::ProtocolText,
     /// The `icon` value.
     pub icon: ItemStack,
     /// The `frame_type` value.
@@ -102,8 +102,9 @@ impl AdvancementState {
                 .then(|| get_string(&mut rest))
                 .transpose()?;
             let display = if take_bool(&mut rest)? {
-                let title_json = get_string(&mut rest)?;
-                let description_json = get_string(&mut rest)?;
+                let title = crate::text_component::ProtocolText::received(get_string(&mut rest)?);
+                let description =
+                    crate::text_component::ProtocolText::received(get_string(&mut rest)?);
                 let icon = read_slot(&mut rest)?
                     .ok_or_else(|| anyhow::anyhow!("advancement display has no icon"))?;
                 let frame_type = get_varint(&mut rest)?;
@@ -116,8 +117,8 @@ impl AdvancementState {
                 let x = read_f32(&mut rest)?;
                 let y = read_f32(&mut rest)?;
                 Some(AdvancementDisplay {
-                    title_json,
-                    description_json,
+                    title,
+                    description,
                     icon,
                     frame_type,
                     background,

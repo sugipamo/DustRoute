@@ -8,7 +8,7 @@ use std::collections::HashMap;
 /// State and protocol data represented by `ChatMessage`.
 pub struct ChatMessage {
     /// Raw JSON chat component; rendering and natural-language conversion are caller concerns.
-    pub json: String,
+    pub component: crate::text_component::ProtocolText,
     /// The `position` value.
     pub position: i8,
     /// The `sender` value.
@@ -39,8 +39,8 @@ pub struct PlayerListEntry {
     pub game_mode: i32,
     /// The `latency` value.
     pub latency: i32,
-    /// The `display_name_json` value.
-    pub display_name_json: Option<String>,
+    /// The `display_name` value.
+    pub display_name: Option<crate::text_component::ProtocolText>,
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -72,11 +72,11 @@ fn optional_string(rest: &mut &[u8]) -> Result<Option<String>> {
 
 pub(crate) fn parse_chat(payload: &[u8]) -> Result<ChatMessage> {
     let mut rest = payload;
-    let json = get_string(&mut rest)?;
+    let component = crate::text_component::ProtocolText::received(get_string(&mut rest)?);
     let position = *rest.first().context("missing chat position")? as i8;
     rest = &rest[1..];
     Ok(ChatMessage {
-        json,
+        component,
         position,
         sender: read_uuid(&mut rest)?,
     })
@@ -113,7 +113,8 @@ pub(crate) fn apply_player_info(
                 }
                 let game_mode = get_varint(&mut rest)?;
                 let latency = get_varint(&mut rest)?;
-                let display_name_json = optional_string(&mut rest)?;
+                let display_name =
+                    optional_string(&mut rest)?.map(crate::text_component::ProtocolText::received);
                 list.entries.insert(
                     uuid,
                     PlayerListEntry {
@@ -122,7 +123,7 @@ pub(crate) fn apply_player_info(
                         properties,
                         game_mode,
                         latency,
-                        display_name_json,
+                        display_name,
                     },
                 );
             }
@@ -139,9 +140,10 @@ pub(crate) fn apply_player_info(
                 }
             }
             3 => {
-                let display_name_json = optional_string(&mut rest)?;
+                let display_name =
+                    optional_string(&mut rest)?.map(crate::text_component::ProtocolText::received);
                 if let Some(entry) = list.entries.get_mut(&uuid) {
-                    entry.display_name_json = display_name_json;
+                    entry.display_name = display_name;
                 }
             }
             4 => {
@@ -165,7 +167,10 @@ mod tests {
         payload.push(0);
         payload.extend([7; 16]);
         let message = parse_chat(&payload).unwrap();
-        assert_eq!(message.json, r#"{\"text\":\"hello\"}"#);
+        assert_eq!(
+            message.component.as_wire_json(),
+            Some(r#"{\"text\":\"hello\"}"#)
+        );
         assert_eq!(message.sender, [7; 16]);
     }
 }

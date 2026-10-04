@@ -1,7 +1,8 @@
 # JSON境界の移行
 
 基点: `56d0c07`、`codex/survival-single-client`。
-ユーザーの目的は、内部データをRustの型で表し、JSON処理をMCPの入出力へ限定すること。
+ユーザーの目的は、内部データ・通信をRustの型で表し、JSON処理を公開通信境界へ限定すること。
+MCPの入出力に加え、第6段階でMinecraftサーバーのwireに必要なJSONが明示的に承認された。
 組込み定義はRustの定数テーブルを使う。旧形式の維持のためだけの互換経路は作らない。
 過去の実機証拠は現行の実行形式と分ける。
 
@@ -359,3 +360,87 @@ codec/MCPのall-target ClippyとMCP no-default-features all-target Clippyは
 `-D warnings`で成功した。Clippyが指摘した試験内の不要なCopy値のcloneを除去した。
 formatting、差分の空白検査、Voxrigの315ファイル一致も確認した。
 第5b段階は完了。次は第6段階のVoxrig内部表現の整理へ進む。
+
+## 第6段階の予備調査と通信境界の承認
+
+第6段階のゴールを作成し、別checkoutの本番経路を調査した。予備調査時点ではコード改修は未着手。
+Voxrig checkoutは既存の未追跡`logs/`を除きclean、DustRouteもcleanだった。
+元のVoxrig commitは`f7209ed7892aeae4b13eca5a4423949311f25317`。
+
+| 対象 | 現在の経路 | 移行案 |
+| --- | --- | --- |
+| 両版block state | `block_state::StateRegistry::parse`から組込みJSONを解析。property kindは文字列 | property種別をenumにし、版別のRust定義から検査・encode/decodeする。ID範囲・property順・boolの順序・値集合を維持する |
+| 1.16.1 registry | `registry.rs`がblock/item/material/recipe/entity/soundのJSONを初期化時に解析 | 必要fieldを生成済みRustテーブルへ写す。材料・item IDの照合を数値で表す。mining/crafting/public ID契約を変えない |
+| 衝突とoutline | 1.16.1 collisionは`Value`で共通ID/状態別IDを分岐。1.21.11 collision/outlineはtyped structへJSONを解析 | 型付きmappingとRustテーブルへ移す。outlineのNoneをempty shapeへ読み替えず、offset・指紋・座標とbox順序を維持する |
+| 1.21.11受信component | `component_nbt.rs`がNBTを汎用JSON treeへ投影し、`SystemMessage.component`に保持 | nativeのtag/整数幅/list/compoundを区別する記録型へ移す。文字列とtranslation/extraの判定、受信sequence、128件queue、64 KiB投影/深さ32/値数16384の既存予算を保つ |
+| moving-piston NBT | `piston_nbt.rs`は既に用途別型と直接wire解析を使う | generic treeへ戻さない。未知fieldのskip・状態ID検査・progress/roleの照合を保つ |
+| 1.16.1チャット/UI | `chat.rs`の`ChatMessage.json`と`PlayerListEntry.display_name_json`、`inventory::OpenWindow.title_json`、`ui.rs`のタイトル/チーム/bossbar等が受信JSON文字列を保持 | 通信形式の例外と内部の記録型を先に明示する必要がある。MCP限定という現方針のまま無断でJSON decoderや互換経路を追加しない |
+
+この最後の対象はMineflayer RPCではない。現行のJava 1.16.1 adapterがnative packetの
+text fieldを受け取る経路であり、`get_string`/`optional_string`から各公開fieldへ渡している。
+古いJavaチャットでJSON文字列を使うことは[protocol実装側の例](https://github.com/PrismarineJS/node-minecraft-protocol#client-example-joining-a-realm)
+とも対応する。Java 1.21.11のsystem messageはNBTであり、既存のJSON treeは内部投影なので
+取り除ける。この二つの用途を同一の「JSON」として扱わない。
+
+推奨案は、**Minecraft wireに必要なtext JSONの符号化・復号だけを明示的な例外とし、
+受信後の内部保持・registry・物理・診断・保存・比較キーには汎用JSONを使わない**こと。
+APIのtext fieldは用途別のRust型へ移し、旧JSON fieldだけを維持する互換APIは追加しない。
+この例外を許可しない場合は、まずregistry/形状と1.21.11のNBT投影に範囲を絞り、
+1.16.1 textの扱いを未解決として残す案になる。「内部JSONの全撤去」とは報告しない。
+adapter自体の削除は、両版共存という承認済みの範囲を変えるため、推奨案に含めない。
+
+「必要なJSON通信例外なら変更前に停止」という停止条件に該当し、いったん実装前に停止した。
+その後、利用者が「マイクラサーバーとのやり取りという例外でよい」「内部通信にJSONを
+使いたくない」と承認したため、第6段階の実装へ進んだ。Minecraft wireの必要payloadだけを
+例外とし、内部JSON RPCや汎用Value treeを許可するものではない。
+
+## 第6段階: 型付きnativeデータへの移行
+
+別checkoutのVoxrigで実装・検証し、commit
+`c26c1c6e83fb2e2bcfc37927744f144b0c915c4f`をvendor updaterで取り込んだ。
+[型付きnative dataの仕様とAPI変更](../vendor/voxrig/docs/typed-native-data.md)に
+生成手順・通信例外・維持する条件を記載した。vendorを直接改修していない。
+
+両版のstate propertyはboolean/integer/enumのRust定義から読む。block/item、
+1.16.1のmining/material/recipe/entity/soundと両版のcollision、1.21.11のoutlineは
+生成済みRust定数を使い、初期化時にJSONを解析しない。material/tool/recipeのID照合も
+数値のまま行う。生成はpinned dataから明示的に行い、各入力のSHA-256を定数fileに記録する。
+build時の生成やネットワーク取得は加えない。元のsource data、独立fixtureとライセンスを保持する。
+outlineの未対応と空形状、state ID/property順序、shape/box順序と座標bitは維持する。
+
+1.16.1のサーバーtextは`ProtocolText`で受け取り、wire payloadを不透明に保持する。
+`as_wire_json()`は通信由来の元payloadだけを返す。汎用JSON treeや内部RPCへ展開せず、
+レンダリングや意味解釈は保証しない。欠落と受信した空文字列を区別する。
+旧`ChatMessage.json`/各`*_json`fieldを維持する転送APIは加えず、用途名とRust型へ移した。
+切断理由もlocal診断とserver textをenumで区別する。local errorの診断文はserver textにしない。
+
+1.21.11の`SystemMessage.component`は`Option<TextNbt>`へ移した。native tag、整数幅、
+listの要素tag、byte/int/long array、compound fieldを区別し、汎用JSONへ投影しない。
+診断用Serializeはnativeのtag/valueを表示する形式になる。旧JSON projectionのfieldを
+indexする互換性は維持しない。literal判定、receive sequence、128件queue、dropped-through、
+64 KiB投影・深さ32・値数16384の既存予算を維持する。適正frameで投影できないcomponentは
+Noneのまま受信記録を保持し、不適正frameは履歴を更新しない。moving-piston NBTの用途別解析、
+単発操作・観測・接続寿命・記録から権限を戻せない条件と両adapterの責務は変えていない。
+
+Voxrigの`serde_json`はdevelopment dependencyに移した。本番の通常依存treeに存在しない。
+DustRoute lockfileの差分はVoxrigの通常依存から`serde_json`を除いた1行のみで、packageの
+解決versionは更新していない。元JSONデータ、比較fixture、実機試験用の記録toolは残っており、
+リポジトリ全体からJSONを撤去した段階とは扱わない。これらと残るworkflowは第7b/8段階で監査する。
+
+Voxrig検証: library 212件、通常doctest 2件・compile-fail 10件が成功。実機依存8件は未実行。
+全state ID/propertyと全shape座標bit、outline対応範囲、全recipeと全ての消費item/mining/
+material/entity/sound fieldを元fixtureと比較した。NBTの各tag、切断入力、重複fieldの予算、
+各上限と履歴の不変性も成功した。all-target Clippyは`-D warnings`で成功。
+定数再生成の一致、formatting、空白検査、crate packageに生成toolと定数が含まれることを確認した。
+
+DustRouteの全MCP library試験は229件成功・1件失敗・10件ignored（653.70秒）。
+失敗した設計図最適化caseは、候補の一つが抽象検証の時間予算切れで未判定となり、期待する
+合格候補数4に対して3だった。実機/Voxrig通信を使わないcatalog内の試験である。
+コード・時間予算・判定条件を変更せず、同じcaseを単独で再実行し成功した（34.08秒）。
+非ignored 230caseすべての成功を合わせて確認したが、一回の全体実行が全件成功したとは記録しない。
+並行負荷の影響は考えられるが、原因の断定や予算緩和の改修は行っていない。
+
+MCP既定構成・no-default-featuresのall-target Clippyは`-D warnings`で成功した。
+formatting、差分の空白検査、Voxrig commitと322ファイルの一致も確認した。
+実機依存10件は未実行。サーバー起動・実機接続・ワールド変更は行っていない。
+第6段階は完了。次は第7b段階の残るworkflowと物理遷移の分解へ進む。

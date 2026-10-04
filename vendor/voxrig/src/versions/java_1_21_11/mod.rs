@@ -21,10 +21,12 @@ fn registry() -> &'static crate::block_state::StateRegistry {
     static REGISTRY: std::sync::OnceLock<crate::block_state::StateRegistry> =
         std::sync::OnceLock::new();
     REGISTRY.get_or_init(|| {
-        crate::block_state::StateRegistry::parse(include_str!(
-            "../../../data/java_1_21_11/blocks.json"
-        ))
-        .expect("valid bundled 1.21.11 registry")
+        crate::tables::validate_shapes(
+            crate::tables::java_1_21_11::STATES,
+            &crate::tables::java_1_21_11::COLLISION,
+        );
+        crate::block_state::StateRegistry::new(crate::tables::java_1_21_11::STATES)
+            .expect("valid bundled 1.21.11 registry")
     })
 }
 
