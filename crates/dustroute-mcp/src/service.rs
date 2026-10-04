@@ -3958,12 +3958,13 @@ impl DustRouteMcp {
         confirm: bool,
         undo: bool,
     ) -> CallToolResult {
+        use crate::operations::piston::{ExecutionOutcome, PistonExecution, PistonPlacementResult};
         let mut progress = ExecutionProgress::default();
-        let result: Result<Value,FailureCause> = async {
+        let result: Result<PistonPlacementResult,FailureCause> = async {
             if !confirm { return Err("confirm=true is required".into()); }
             self.policy.authorize_mutation().map_err(FailureCause::from)?;
             let player = self.resolve_player(None)?;
-            if let Some(error)=self.authorize_player(&player) { return Err(error.into()); }
+            self.player_scope().authorize(&player)?;
             let _guard = self.mutation_lock.lock().await;
             let plan = self.plans.table::<StoredPistonPlacement>().lock().await.get(&id).cloned().ok_or("placement not found")?;
             if plan.player != player { return Err("placement belongs to another player".into()); }
@@ -3994,7 +3995,10 @@ impl DustRouteMcp {
             let verification = observed.as_ref().map_err(|e|e.to_string()).and_then(|snapshot| if undo { plan.proof.validate_empty(snapshot,&status.version) } else { plan.proof.validate_built(snapshot,&status.version) });
             let ok = write.is_ok() && wait.is_ok() && verification.is_ok();
             if ok { self.plans.table::<StoredPistonPlacement>().lock().await.get_mut(&id).ok_or("placement not found")?.state = if undo { PistonPlacementState::Undone } else { PistonPlacementState::Applied }; }
-            let mut response = json!({"ok":ok,"operation_id":id,"verified":verification.is_ok(),"status":if ok {"verified"} else {"needs_inspection"},"undo":undo,"write_error":write.as_ref().err().map(|e|e.to_string()),"wait_error":wait.as_ref().err().map(|e|e.to_string()),"verification_error":verification.as_ref().err(),"retry_allowed":false,"automatic_rollback":false,"bounds":bounds_json(bounds)});
+            let verified = verification.is_ok();
+            let write_error = write.as_ref().err().map(ToString::to_string);
+            let wait_error = wait.as_ref().err().map(ToString::to_string);
+            let verification_error = verification.as_ref().err().cloned();
             let mut failure=None;
             match write {
                 Ok(receipt)=>progress.submitted(receipt.submitted_changes),
@@ -4005,17 +4009,21 @@ impl DustRouteMcp {
                 Err(error)=>FailureReport::append(&progress,&mut failure,error.cause().at(FailurePhase::AfterReadback)),
                 Ok(_)=>if let Err(error)=verification {FailureReport::append(&progress,&mut failure,FailureCause::new(CauseKind::VerificationMismatch,error).at(FailurePhase::Verification));},
             }
-            progress.phase=if response["verification_error"].is_null(){FailurePhase::Verification}else{FailurePhase::AfterReadback};
-            if response["verified"]==true {progress.world=WorldOutcome::Verified;progress.verified_steps=progress.total_changes.unwrap_or(0);}
-            if let Some(mut failure)=failure {*failure.progress=progress.clone();failure.attach(&mut response);}else{response["execution_progress"]=json!(progress);}
-            self.operations.record_unmigrated(id,if undo {OperationKind::PlacementUndo} else {OperationKind::PlacementApply},response.clone()).await;
+            progress.phase=if verification_error.is_none(){FailurePhase::Verification}else{FailurePhase::AfterReadback};
+            if verified {progress.world=WorldOutcome::Verified;progress.verified_steps=progress.total_changes.unwrap_or(0);}
+            let response = PistonPlacementResult::executed(id, PistonExecution {
+                verified, undo, write_error, wait_error, verification_error, automatic_rollback: false,
+                bounds: bounds.into(), outcome: ExecutionOutcome::from_attempt(progress.clone(), failure),
+            });
+            self.operations.record_completed(id,if undo {OperationKind::PlacementUndo} else {OperationKind::PlacementApply},response.clone().into()).await;
             if !ok {self.operations.fail(id,"piston placement requires inspection").await;}
             Ok(response)
         }.await;
         crate::performance::execution_progress(&progress);
-        let mut response = result.unwrap_or_else(|error| progress.cause(error).response());
-        response["operation_id"] = json!(id);
-        json_reply(response)
+        let response = result.unwrap_or_else(|error| {
+            PistonPlacementResult::failed_attempt(id, progress.cause(error))
+        });
+        typed_reply(response)
     }
 
     async fn observed_mechanisms(
@@ -4112,12 +4120,13 @@ impl DustRouteMcp {
     }
 
     async fn invoke_piston_door(&self, id: uuid::Uuid, confirm: bool) -> CallToolResult {
+        use crate::operations::piston::{DoorExecution, DoorOperationResult, ExecutionOutcome};
         let mut progress = ExecutionProgress::default();
-        let result:Result<Value,FailureCause>=async {
+        let result:Result<DoorOperationResult,FailureCause>=async {
             if !confirm { return Err("confirm=true is required".into()); }
             self.policy.authorize_mutation().map_err(FailureCause::from)?;
             let player=self.resolve_player(None)?;
-            if let Some(error)=self.authorize_player(&player) { return Err(error.into()); }
+            self.player_scope().authorize(&player)?;
             let _guard=self.mutation_lock.lock().await;
             let plan=self.plans.table::<StoredDoorPlan>().lock().await.get(&id).cloned().ok_or("door plan not found")?;
             if plan.player!=player || !plan.lifecycle.is_previewed() || plan.lifecycle.attempted() || plan.expires_at<=Instant::now() { return Err("door plan requires preview, matching owner, unexpired and unused token".into()); }
@@ -4133,9 +4142,9 @@ impl DustRouteMcp {
             let observation=crate::piston_door::inspect(&snapshot,&status.version,true,Some(&plan.door));
             let current=match crate::piston_door::verify(&snapshot,&status.version) {
                 Ok(door)=>door,
-                Err(error)=>return Ok(json!({"ok":false,"error":error,"observation":observation})),
+                Err(error)=>return Ok(DoorOperationResult::refused(id, error, observation)),
             };
-            if current.lever()!=plan.door.lever() || current.state()!=plan.door.state() { return Ok(json!({"ok":false,"error":"door changed since proposal; inspect and create a new plan","observation":observation})); }
+            if current.lever()!=plan.door.lever() || current.state()!=plan.door.state() { return Ok(DoorOperationResult::refused(id, "door changed since proposal; inspect and create a new plan", observation)); }
             // Consume before any write: an uncertain bridge response must never
             // make an old plan eligible for an automatic second toggle.
             {
@@ -4152,8 +4161,8 @@ impl DustRouteMcp {
                 self.plans.table::<StoredDoorPlan>().lock().await.get_mut(&id).ok_or("door plan missing")?.lifecycle.confirm(true);
                 progress.world=WorldOutcome::Verified;progress.total_changes=Some(0);
                 crate::performance::execution_progress(&progress);
-                let result=json!({"execution_progress":progress,"ok":true,"operation_id":id,"state":plan.target,"observed_state":plan.target,"changed":false,"verified":true,"observation":observation});
-                self.operations.record_unmigrated(id,OperationKind::PistonDoorRun,result.clone()).await;
+                let result = DoorOperationResult::unchanged(id, plan.target, observation, progress.clone());
+                self.operations.record_completed(id,OperationKind::PistonDoorRun,result.clone().into()).await;
                 return Ok(result);
             }
             progress.begin_submission();
@@ -4170,7 +4179,11 @@ impl DustRouteMcp {
             let matches=verified.as_ref().is_some_and(|d|d.lever()==plan.door.lever() && d.state()==plan.target);
             let ok=activation.is_ok() && wait.is_ok() && matches;
             self.plans.table::<StoredDoorPlan>().lock().await.get_mut(&id).ok_or("door plan missing")?.lifecycle.confirm(ok);
-            let mut result=json!({"ok":ok,"operation_id":id,"target":plan.target,"observed_state":verified.as_ref().map(|d|d.state()),"observation":observation,"verified":matches,"verification_error":verification.as_ref().err(),"activation_error":activation.as_ref().err().map(|e|e.to_string()),"wait_error":wait.as_ref().err().map(|e|e.to_string()),"scan_error":observed.as_ref().err().map(|e|e.to_string()),"status":if ok {"verified"} else {"needs_inspection"},"retry_allowed":false,"automatic_rollback":false});
+            let observed_state = verified.map(|d| d.state());
+            let verification_error = verification.as_ref().err().cloned();
+            let activation_error = activation.as_ref().err().map(ToString::to_string);
+            let wait_error = wait.as_ref().err().map(ToString::to_string);
+            let scan_error = observed.as_ref().err().map(ToString::to_string);
             let mut failure=None;
             match activation {Ok(_)=>progress.submitted(1),Err(error)=>{progress.submitted_changes=None;FailureReport::append(&progress,&mut failure,error.cause().at(FailurePhase::Submission));}}
             if let Err(error)=wait {FailureReport::append(&progress,&mut failure,error.cause().at(FailurePhase::Wait));}
@@ -4178,20 +4191,23 @@ impl DustRouteMcp {
                 Err(error)=>FailureReport::append(&progress,&mut failure,error.cause().at(FailurePhase::AfterReadback)),
                 Ok(_)=>if !matches {FailureReport::append(&progress,&mut failure,FailureCause::new(CauseKind::VerificationMismatch,"door did not match requested state").at(FailurePhase::Verification));},
             }
-            progress.phase=if result["scan_error"].is_null(){FailurePhase::Verification}else{FailurePhase::AfterReadback};
+            progress.phase=if scan_error.is_none(){FailurePhase::Verification}else{FailurePhase::AfterReadback};
             if matches {progress.world=WorldOutcome::Verified;progress.verified_steps=1;}
             crate::performance::execution_progress(&progress);
-            if let Some(mut failure)=failure {*failure.progress=progress.clone();failure.attach(&mut result);}else{result["execution_progress"]=json!(progress);}
-            self.operations.record_unmigrated(id,OperationKind::PistonDoorRun,result.clone()).await;
+            let result = DoorOperationResult::executed(id, DoorExecution {
+                target: plan.target, observed_state, observation, verified: matches,
+                verification_error, activation_error, wait_error, scan_error, automatic_rollback: false,
+                outcome: ExecutionOutcome::from_attempt(progress.clone(), failure),
+            });
+            self.operations.record_completed(id,OperationKind::PistonDoorRun,result.clone().into()).await;
             if !ok { self.operations.fail(id, "door result requires fresh inspection").await; }
             Ok(result)
         }.await;
-        let mut response = result.unwrap_or_else(|error| {
+        let response = result.unwrap_or_else(|error| {
             crate::performance::execution_progress(&progress);
-            progress.cause(error).response()
+            DoorOperationResult::failed_attempt(id, progress.cause(error))
         });
-        response["operation_id"] = json!(id);
-        json_reply(response)
+        typed_reply(response)
     }
     #[tool(
         description = "Discover single-lever transition scenarios in the supplied immutable circuit_id without changing the world",
@@ -7887,6 +7903,35 @@ mod tests {
             );
         }
         server.abort();
+    }
+
+    #[tokio::test]
+    async fn piston_mutations_keep_player_denial_typed_before_any_transport() {
+        let service = DustRouteMcp::with_test_transport_and_player(
+            "127.0.0.1:1",
+            McpPolicy {
+                read_only: false,
+                allowed_players: BTreeSet::from(["someone_else".into()]),
+                ..Default::default()
+            },
+            "builder",
+        );
+        for door in [false, true] {
+            let id = uuid::Uuid::new_v4();
+            let reply = if door {
+                service.invoke_piston_door(id, true).await
+            } else {
+                service.mutate_piston_placement(id, true, false).await
+            };
+            assert_eq!(reply.is_error, Some(true));
+            let result = test_support::decode_reply(&reply).unwrap();
+            assert_eq!(result["failure"]["primary"]["kind"], "permission_denied");
+            assert_eq!(result["failure"]["primary"]["phase"], "admission");
+            assert_eq!(result["failure"]["progress"]["operation_consumed"], false);
+            assert_eq!(result["failure"]["progress"]["world"], "not_attempted");
+            assert!(!result["error"].as_str().unwrap().starts_with('{'));
+            assert!(service.operations.get(id).await.is_none());
+        }
     }
 
     #[tokio::test]

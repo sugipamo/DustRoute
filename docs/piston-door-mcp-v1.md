@@ -7,8 +7,11 @@ unsupported. The [3×3 diagnostic fixtures](piston-diagnostics.md) are separate.
 
 ## Exact layout
 
-The embedded [contract](../crates/dustroute-mcp/src/piston_door_v1.json) retains
-complete live block properties for open and closed states. The lower piston is
+The fixed [Rust layout](../crates/dustroute-mcp/src/piston_door/data.rs) retains
+complete live block properties for open and closed states. The independent
+[capture](../crates/dustroute-mcp/tests/fixtures/piston_door_v1.json) is used only
+for regression tests; production does not decode JSON to define the contract.
+The lower piston is
 at origin `(0,0,0)`, the upper opposing piston at `(4,1,0)`, and the lever at
 `(2,0,4)`. Select the complete guard `(-3,-2,-4)..(7,3,6)` relative to origin.
 

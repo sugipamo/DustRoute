@@ -828,3 +828,43 @@ workspace全targetとMCPの`--no-default-features`全targetのClippyが
 Cargoは単独・offline/locked・`-j1`、テストは単一threadで実行した。
 実機接続・ワールド変更・依存version更新・Voxrig source/vendorの変更はない。
 内部JSONの全面除去は未完了であり、未移行の結果所有者とworkflowを次に移す。
+
+### 固定ピストン配置・ドア操作の型付き接続
+
+固定1x2ドアの配置と操作結果を、`PistonPlacementResult` /
+`DoorOperationResult`で履歴まで接続した。ドアの変更不要、直前の形状変更による拒否、
+実行結果、途中のfailureをRust variantで区別する。変更不要は既知のzeroであり、
+直前の拒否は新しい実行の進捗を作らない。応答喪失後に目的状態が観測されても、
+確認されたworldと実行成功を別々に保持し、消費済み操作を再送可能へ変えない。
+`verified`とphaseの判定ではJSON fieldを読まず、検証結果とエラーのRust値を使う。
+既存のphase分類・確認済み数・状態遷移・操作順序を維持する。
+
+この二経路のplayer認可は既存の`PlayerScope::authorize`へ接続した。同じpolicyの
+同じ判定で拒否し、認可条件・所有者の条件は変えない。内部で認可failureをJSON文字列に
+encodeしてunknownなエラーへ包み直す処理を使わず、permission denialとadmissionを
+構造化した原因としてそのまま公開する。ほかの所有者に残るencoded認可エラーも移行対象。
+
+固定ドアの本番定義は`piston_door/data.rs`のRust tableへ移した。座標、facing、wire arm、
+bool状態を型付きで定義し、JSONを読み込まずに既存のsnapshot recordを構築する。
+open 55セル・closed 57セルの全属性と範囲を保持した。
+元のJSONは内容を変えず`tests/fixtures/piston_door_v1.json`へ移し、独立した実機観測の
+比較資料としてだけdecodeする。本番の照合条件、対応版、空のguard、平行移動だけを
+許す条件は変えず、観測資料の期待値をシミュレータから作り直していない。
+
+#### ピストン結果・固定定義の回帰検証
+
+関連27件が成功した。型付き結果とregistryの18件、固定ドアの6件、公開MCPの3件。
+変更不要と拒否の差、目的状態が観測できても残る応答喪失、再送禁止、成功時に余分な
+errorを作らない表示を確認した。認可拒否はtransport以前に起き、消費せず、
+MCPの失敗flagとpermission/admissionの診断を保持する。
+
+固定定義は全snapshot recordを元のcaptureと比較した。元fileのbyte一致も確認した。
+ガード不足、重複座標、異なる版、wire形状、異物、未settle、平行移動、undoの境界を
+既存試験で検査した。公開MCPでは正常・変更済み・post mismatch・応答喪失・変更不要・
+期限切れ・未preview・未確認・read-only等のケースを含む。
+
+workspace全targetとMCPの`--no-default-features`全targetのClippyは
+`-D warnings`で成功し、formattingと差分の空白検査も成功した。
+Cargoは単独・offline/locked・`-j1`、テストは単一thread。実機接続、ワールド変更、
+保存schema、依存version、Voxrig source/vendorへの変更はない。
+計画・transition・解析等の未移行JSONは残っており、統合ゴールは継続する。

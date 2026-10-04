@@ -1,5 +1,6 @@
 //! Exact, version-pinned operation contract for an already built 1x2 door.
 //! This is not a general placement proof and never creates ValidatedWorld.
+mod data;
 use dustroute_translate::{snapshot::MinecraftSnapshot, world::Pos, world_reverse::RegionBounds};
 use rmcp::schemars::{self, JsonSchema};
 use serde::{Deserialize, Serialize};
@@ -32,13 +33,15 @@ impl VerifiedDoor {
     }
 }
 
-#[derive(Deserialize)]
 struct Contract {
     open: MinecraftSnapshot,
     closed: MinecraftSnapshot,
 }
 fn contract() -> Contract {
-    serde_json::from_str(include_str!("piston_door_v1.json")).expect("embedded door contract")
+    Contract {
+        open: data::open(),
+        closed: data::closed(),
+    }
 }
 type BlockMap = BTreeMap<Pos, (String, BTreeMap<String, String>)>;
 
@@ -204,6 +207,21 @@ pub(crate) fn sample(state: DoorState) -> MinecraftSnapshot {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn fixed_rust_layout_matches_the_independent_live_capture() {
+        #[derive(Deserialize)]
+        struct Capture {
+            open: MinecraftSnapshot,
+            closed: MinecraftSnapshot,
+        }
+        let captured: Capture =
+            serde_json::from_str(include_str!("../tests/fixtures/piston_door_v1.json")).unwrap();
+        let defined = contract();
+        assert_eq!(defined.open.blocks.len(), 55);
+        assert_eq!(defined.closed.blocks.len(), 57);
+        assert_eq!(defined.open, captured.open);
+        assert_eq!(defined.closed, captured.closed);
+    }
     #[test]
     fn fixed_placement_requires_empty_complete_site_and_exact_open_undo() {
         let mut empty = sample(DoorState::Open);

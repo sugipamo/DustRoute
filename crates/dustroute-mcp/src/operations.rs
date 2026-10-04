@@ -1,5 +1,6 @@
 pub mod construction;
 pub mod mutation;
+pub mod piston;
 mod result;
 pub use result::OperationResult;
 #[path = "operation_activity.rs"]
