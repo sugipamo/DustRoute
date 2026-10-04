@@ -1028,3 +1028,58 @@ workspace全targetとMCPの`--no-default-features`全targetのClippyは
 formattingと差分の空白検査も成功した。
 実機接続・ワールド変更・保存schema・依存version・Voxrig source/vendorの変更はない。
 内部JSON除去の統合ゴールは継続する。
+
+### 通常配置・修復候補と診断仮説の型付き接続
+
+組込み回路の通常配置を`BuiltinPlacementPreview`へ移し、最適化のsafety・behaviorと
+phaseのscoreはnative型のまま保持する。既存の診断用Debug表記はSerialize時に作り、
+内部処理ではその文字列を読み戻さない。未実施の最適化のnull、collision sampleの32件上限、
+直接参照sourceの順序、Assembly座標と完全なget/showの計画を維持する。
+操作registryの候補も同じ型で記録し、JSONへ変換してから格納する経路を削除した。
+
+修復候補は`RepairCandidate`、一覧は`RepairCandidates`、撤去候補は`RemovalCandidate`、
+previewは`ShownRepair`で接続する。registryには従来通りpatch/evidence/impactだけを記録し、
+応答のoperation_idやdiagnostic_finding_idsを追加しない。明示撤去の入口は従来通りdraftを
+保存し、新しいregistry履歴や認可条件は追加しない。撤去の40%という低いconfidenceと
+人間の意図を形状から推定できないwarningを維持する。
+
+修復文脈は`RepairContextReport`と用途別の仮説・関係・factsで構成する。
+故障修復と意図的な外部入力の競合、支持・反証・counterfactualの証拠を保持する。
+選択された操作は同じdimension/boundsとpatchの照合を通り、診断が実行許可を作らない。
+候補32件、gap表示16件、関連component32件と距離2の条件は変えない。
+summaryには表示で切り詰める前のgap件数を使い、未選択ID等のnullも残す。
+
+候補と記録にDeserializeやnative planへの復元入口は追加しない。
+未取得の進捗をzeroへ変換せず、候補生成完了とworld操作完了・操作消費・activityを分ける。
+認可は既存の共通player層から原因を受け取り、JSON文字列へ包み直さない。
+既存のString-only失敗のunknown/v1と、明示error codeは維持する。
+修復のpreview保存は引き続きmutation lock内で行い、遅いpreviewがNeedsInspectionを
+上書きしない。保存schema・TTL・実行前の再検査条件と順序は変更しない。
+
+#### 通常配置・修復計画の回帰検証
+
+関連39件のoffline試験が成功した。結果・registry等26件、admission拒否1件、
+最適化あり/なしの組込み配置1件、明示撤去候補1件、修復apply/再起動/undo1件、
+保存状態の不在・破損等を拒否する1件、preview必須と改竄拒否の2件、
+操作診断5件、grounded配置の累積差分・undo1件を確認した。
+
+候補と公開応答の一致は同じMCP codecを通して比較する。内部のf64 scoreをJSONで
+往復させて一致させる設計にはしない。最適化のnative safetyと公開の既存Debug表示を
+別途検査した。候補/previewは実行進捗・消費・live activityを生成しない。
+repair contextは新しいtransport観測へ切り替えず、同じimmutable circuitと保存済みpatchを
+使って競合仮説を比較する。撤去候補の保存とpreviewでもworld書込みは発生しない。
+
+最初のテストbuildはrust-lldの`.eh_frame`に対する`R_X86_64_PC32 out of range`で失敗し、
+テストは実行されなかった。同じ条件で一度再実行するとリンクと26件が成功した。
+toolchain・build設定・cache・host操作は変更していない。原因を断定せず、追加の故障試験は
+行わない。追加した配置一致の検査はnative f64とJSON読戻しの比較で一度失敗したため、
+両辺に同じ公開codecを適用する検査へ修正して成功を確認した。
+
+実機接続・ワールド変更・保存schema・依存version・Voxrig source/vendorの変更はない。
+固定ピストン候補・最適化workflow・非同期解析と一部診断のJSONが残るため、
+内部JSON除去の統合ゴールは継続する。
+
+workspace全targetとMCPの`--no-default-features`全targetのClippyは
+`-D warnings`で成功した。大きい拒否詳細はnativeデータをBoxで保持し、最後の変更後に
+既存診断表示を保つunitを再実行して成功した。Cargoは単独・offline/locked・`-j1`、
+テストは単一threadで実行した。formattingと差分の空白検査も成功した。

@@ -1,8 +1,10 @@
 //! Diagnostic projections of intentions. These values cannot reconstruct a
 //! fresh proof, executable plan or observation authority.
 mod assembly;
+mod builtin;
 mod electrical;
 mod job;
+mod repair;
 use super::mutation::Success;
 use crate::placement_source::PlacementSource;
 pub use assembly::{
@@ -13,12 +15,22 @@ pub(crate) use assembly::{
     AssemblyManagementReport, AssemblyPlanDetails, AssemblyPlanState, AssemblyPlanSteps,
     InstanceDetails, RemovalReference, ShownAssemblyPlan,
 };
+pub use builtin::BuiltinPlacementPreview;
+pub(crate) use builtin::{
+    BuiltinOptimization, BuiltinPlanningFailure, OptimizationPhase, PlacementPlanDisplay,
+};
 use dustroute_translate::piston_construction::{ElectricalConstructionStep, construction_batches};
 use dustroute_translate::snapshot::MinecraftSnapshot;
 use dustroute_translate::world_reverse::RegionBounds;
 pub use electrical::ElectricalEditPreview;
 pub(crate) use electrical::ShownElectricalEdit;
 pub(crate) use job::{JobObservation, JobResponse, JobStagePreview, JobSummary};
+pub use repair::RepairCandidate;
+pub(crate) use repair::{
+    ExternalInputHypothesis, HypothesisConfidence, RelatedComponent, RelatedConnection,
+    RemovalCandidate, RepairCandidateEntry, RepairCandidates, RepairContextFacts,
+    RepairContextReport, RepairHypothesis, ShownRepair,
+};
 use serde::Serialize;
 use uuid::Uuid;
 

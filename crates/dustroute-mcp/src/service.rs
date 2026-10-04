@@ -1,4 +1,11 @@
 use crate::bridge_protocol::CommandWrite;
+use crate::operations::mutation::{Success, UnrecordedFailure};
+use crate::operations::preview::{
+    BuiltinOptimization, BuiltinPlacementPreview, BuiltinPlanningFailure, ExternalInputHypothesis,
+    HypothesisConfidence, OptimizationPhase, PlacementPlanDisplay, RelatedComponent,
+    RelatedConnection, RemovalCandidate, RepairCandidate, RepairCandidateEntry, RepairCandidates,
+    RepairContextFacts, RepairContextReport, RepairHypothesis, ShownRepair,
+};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::sync::Arc;
 
@@ -98,7 +105,7 @@ use tokio::time::{Duration, Instant};
 use crate::McpConfig;
 use crate::api::{
     DIAGNOSTIC_SCHEMA_V1, ErrorResponse, McpErrorCode, OPTIMIZATION_SCHEMA_V1, PLACEMENT_SCHEMA_V1,
-    REPAIR_CONTEXT_SCHEMA_V1, REPAIR_SCHEMA_V1, TRANSITION_SCHEMA_V1,
+    TRANSITION_SCHEMA_V1,
 };
 use crate::failure::{
     CauseKind, ExecutionProgress, FailureCause, FailurePhase, FailureReport, PersistenceOutcome,
@@ -2542,26 +2549,34 @@ impl DustRouteMcp {
         if params.circuit == "piston-door-1x2" {
             return self.plan_piston_placement(params).await;
         }
+        match self.plan_builtin_placement(params).await {
+            Ok(response) => typed_reply(response),
+            Err(error) => typed_reply(error),
+        }
+    }
+
+    async fn plan_builtin_placement(
+        &self,
+        params: PreviewPlacementParams,
+    ) -> Result<BuiltinPlacementPreview, BuiltinPlanningFailure> {
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
-            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
+            Err(error) => return Err(error.into()),
         };
-        if let Some(error) = self.authorize_player(&player) {
-            return CallToolResult::error(vec![ContentBlock::text(error)]);
-        }
+        self.player_scope()
+            .authorize(&player)
+            .map_err(|error| error.at(FailurePhase::Admission))?;
         let observation = match self.bridge.observe_player(&player, 64.0).await {
             Ok(observation) => observation,
             Err(error) => {
-                return json_reply(json!({ "ok": false, "error": FailureCause::from(error) }));
+                return Err(FailureCause::from(error).into());
             }
         };
         let Some(origin) = observation.targeted_block else {
-            return json_reply(
-                json!({ "ok": false, "error": "the player is not looking at a block" }),
-            );
+            return Err("the player is not looking at a block".into());
         };
         if let Err(error) = self.policy.authorize_dimension(&observation.dimension) {
-            return json_reply(json!({ "ok": false, "error": FailureCause::from(error) }));
+            return Err(FailureCause::from(error).into());
         }
         let translated = match self
             .app
@@ -2569,12 +2584,9 @@ impl DustRouteMcp {
         {
             Ok(Some(result)) => result,
             Ok(None) => {
-                return json_reply(json!({
-                    "ok": false,
-                    "error": "unknown circuit; expected half-adder, half-subtractor, mux2, decoder1to2, full-adder, or piston-door-1x2"
-                }));
+                return Err("unknown circuit; expected half-adder, half-subtractor, mux2, decoder1to2, full-adder, or piston-door-1x2".into());
             }
-            Err(error) => return json_reply(json!({ "ok": false, "error": error.to_string() })),
+            Err(error) => return Err(error.to_string().into()),
         };
         let (proposed_world, assembly, optimization) = if params.optimize.unwrap_or(false) {
             let optimization_plan = OptimizationPlan::directional_then_global(
@@ -2591,10 +2603,7 @@ impl DustRouteMcp {
             ) {
                 Ok(realized) => realized,
                 Err(error) => {
-                    return json_reply(json!({
-                        "ok": false,
-                        "error": format!("placement optimization failed: {error}")
-                    }));
+                    return Err(format!("placement optimization failed: {error}").into());
                 }
             };
             let verification = verify_realized_optimization(
@@ -2604,59 +2613,43 @@ impl DustRouteMcp {
                 BehavioralVerificationConfig::default(),
             );
             let safety = assess_optimization_safety(&verification, TemporalCapabilities::current());
-            let safety_label = match &safety {
-                OptimizationSafety::Verified { .. } => "verified",
-                OptimizationSafety::PreviewOnly { .. } => "preview_only",
-                OptimizationSafety::Rejected { .. } => {
-                    return json_reply(json!({
-                        "ok": false,
-                        "error": format!("optimized placement was rejected: {safety:?}"),
-                        "optimization": {
-                            "safety": "rejected",
-                            "topology_preserved": verification.topology_preserved,
-                            "behavior": format!("{:?}", verification.behavior)
-                        }
-                    }));
-                }
-            };
+            if matches!(&safety, OptimizationSafety::Rejected { .. }) {
+                return Err(BuiltinPlanningFailure::OptimizationRejected {
+                    safety,
+                    topology_preserved: verification.topology_preserved,
+                    behavior: Box::new(verification.behavior),
+                });
+            }
             let phases = realized
                 .optimization
                 .phases
                 .iter()
-                .map(|phase| {
-                    json!({
-                        "accepted_mutations": phase.accepted.len(),
-                        "initial_score": phase.initial_score.total,
-                        "final_score": phase.final_score.total
-                    })
+                .map(|phase| OptimizationPhase {
+                    accepted_mutations: phase.accepted.len(),
+                    initial_score: phase.initial_score.total,
+                    final_score: phase.final_score.total,
                 })
                 .collect::<Vec<_>>();
             let assembly = match realized.capture_assembly() {
                 Ok(assembly) => assembly,
                 Err(error) => {
-                    return json_reply(
-                        json!({"ok":false,"error":format!("cannot capture optimized blueprint state: {error}")}),
-                    );
+                    return Err(format!("cannot capture optimized blueprint state: {error}").into());
                 }
             };
             (
                 realized.world,
                 assembly,
-                Some(json!({
-                    "strategy": "directional_x_toward_minimum_then_global",
-                    "safety": safety_label,
-                    "safety_details": format!("{safety:?}"),
-                    "topology_preserved": verification.topology_preserved,
-                    "phases": phases
-                })),
+                Some(BuiltinOptimization {
+                    safety,
+                    topology_preserved: verification.topology_preserved,
+                    phases,
+                }),
             )
         } else {
             let assembly = match translated.compiled.capture_assembly(&params.circuit) {
                 Ok(assembly) => assembly,
                 Err(error) => {
-                    return json_reply(
-                        json!({"ok":false,"error":format!("cannot capture compiled blueprint state: {error}")}),
-                    );
+                    return Err(format!("cannot capture compiled blueprint state: {error}").into());
                 }
             };
             (
@@ -2669,12 +2662,10 @@ impl DustRouteMcp {
             dustroute_library::builtin_blueprints::builtin_blueprints(),
             &assembly,
         ) {
-            return json_reply(
-                json!({"ok":false,"error":format!("proposed assembly failed validation: {error}")}),
-            );
+            return Err(format!("proposed assembly failed validation: {error}").into());
         }
         let Some((local_min, local_max)) = proposed_world.bounds() else {
-            return json_reply(json!({ "ok": false, "error": "compiled circuit is empty" }));
+            return Err("compiled circuit is empty".into());
         };
         let min = Pos::new(
             local_min.x + origin.x,
@@ -2688,11 +2679,11 @@ impl DustRouteMcp {
         );
         let placement_bounds = dustroute_translate::world_reverse::RegionBounds::new(min, max);
         if let Err(error) = self.policy.validate_region(placement_bounds) {
-            return json_reply(json!({ "ok": false, "error": FailureCause::from(error) }));
+            return Err(FailureCause::from(error).into());
         }
         let proposed_blocks = proposed_world.iter().count();
         if let Err(error) = self.policy.validate_placement_size(proposed_blocks) {
-            return json_reply(json!({ "ok": false, "error": FailureCause::from(error) }));
+            return Err(FailureCause::from(error).into());
         }
         let snapshot = match self
             .bridge
@@ -2701,20 +2692,18 @@ impl DustRouteMcp {
         {
             Ok(snapshot) => snapshot,
             Err(error) => {
-                return json_reply(json!({ "ok": false, "error": FailureCause::from(error) }));
+                return Err(FailureCause::from(error).into());
             }
         };
         let existing = match world_from_snapshot_for_service(&snapshot) {
             Ok(world) => world,
-            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
+            Err(error) => return Err(error.into()),
         };
         let proposed_world =
             match dustroute_translate::world::ValidatedWorld::try_from(proposed_world) {
                 Ok(world) => world,
                 Err(error) => {
-                    return json_reply(
-                        json!({ "ok": false, "error": error.to_string(), "validation": error }),
-                    );
+                    return Err(BuiltinPlanningFailure::InvalidWorld(error));
                 }
             };
         let mut plan = match plan_world_overlay(
@@ -2728,66 +2717,40 @@ impl DustRouteMcp {
         ) {
             Ok(plan) => plan,
             Err(error) => {
-                return json_reply(json!({ "ok": false, "error": FailureCause::from(error) }));
+                return Err(FailureCause::from(error).into());
             }
         };
         let operation_id = plan.operation_id;
         let assembly_id = crate::revision::assembly_id(uuid::Uuid::new_v4());
-        let assembly_summary = json!({
-            "assembly_revision_id": assembly_id,
-            "coordinate_origin": origin,
-            "source_revision_ids": assembly.instances.iter().map(|instance| &instance.revision).collect::<std::collections::BTreeSet<_>>(),
-            "source_instances": assembly.instances.len(),
-            "connections": assembly.connections.len(),
-            "scope": "proposed composed circuit state; full data in show_operation"
-        });
-        plan.assembly = Some(dustroute_app::PlacementAssembly {
+        let placement_assembly = dustroute_app::PlacementAssembly {
             coordinate_origin: origin,
             revision: dustroute_library::assembly::AssemblyRevision {
                 id: assembly_id,
                 parents: vec![],
                 assembly,
             },
-        });
-        let collision_samples = plan
-            .changes
-            .iter()
-            .filter(|change| change.collision)
-            .take(32)
-            .map(|change| change.pos)
-            .collect::<Vec<_>>();
-        let response = json!({
-            "ok": true,
-            "read_only": self.policy.read_only,
-            "operation_id": operation_id,
-            "origin": origin,
-            "bounds": { "min": min, "max": max },
-            "changed_blocks": plan.changes.len(),
-            "collision_count": plan.collision_count,
-            "collision_samples": collision_samples,
-            "materials": &plan.materials,
-            "undo_change_count": plan.undo.changes.len(),
-            "optimization": optimization,
-            "assembly_state": assembly_summary,
-            "next_step": if self.policy.read_only {
-                "review this plan; writes are disabled by policy"
-            } else {
-                "call show_operation, obtain explicit player confirmation, then call invoke_operation with confirm=true"
-            }
-        });
+        };
+        let response = BuiltinPlacementPreview::new(
+            &plan,
+            &placement_assembly,
+            placement_bounds,
+            optimization,
+            self.policy.read_only,
+        );
+        plan.assembly = Some(placement_assembly);
         self.plans
             .placements()
             .lock()
             .await
             .insert(plan, observation.dimension, None);
         self.operations
-            .record_unmigrated(
+            .record_completed(
                 operation_id,
                 OperationKind::PlacementPreview,
-                response.clone(),
+                response.clone().into(),
             )
             .await;
-        json_reply(response)
+        Ok(response)
     }
 
     #[tool(
@@ -2846,10 +2809,12 @@ impl DustRouteMcp {
             );
         }
         match self.placement_view(operation_id).await {
-            Ok(plan) => {
-                json_reply(json!({"ok": true, "read_only": self.policy.read_only, "plan": plan}))
-            }
-            Err(error) => json_reply(json!({"ok": false, "error": error})),
+            Ok(plan) => typed_reply(PlacementPlanDisplay {
+                ok: Success,
+                read_only: self.policy.read_only,
+                plan,
+            }),
+            Err(error) => typed_reply(UnrecordedFailure::message(error)),
         }
     }
 
@@ -3030,96 +2995,100 @@ impl DustRouteMcp {
         &self,
         Parameters(params): Parameters<ProposeRepairsParams>,
     ) -> CallToolResult {
-        let player = match self.resolve_player(params.player.as_deref()) {
-            Ok(player) => player,
-            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
-        };
-        if let Some(error) = self.authorize_player(&player) {
-            return CallToolResult::error(vec![ContentBlock::text(error)]);
-        }
-        let max_gap = params.max_gap.unwrap_or(2);
-        if !(1..=8).contains(&max_gap) {
-            return json_reply(json!({ "ok": false, "error": "max_gap must be 1..8" }));
-        }
-        let (circuit_id, circuit) = match self.load_circuit(&params.circuit_id, &player).await {
-            Ok(circuit) => circuit,
-            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
-        };
-        let bounds = circuit.bounds;
-        let dimension = circuit.dimension;
-        let snapshot = circuit.snapshot;
-        let world = match world_from_snapshot_for_service(&snapshot) {
-            Ok(world) => world,
-            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
-        };
-        let analysis = dustroute_translate::world_reverse::analyze_world_region(&world, bounds);
-        let fragments_before = analysis.scene.fragments.len();
-        let mut diagnostic = dustroute_translate::diagnostic::diagnose_scene(
-            &analysis.scene,
-            circuit.target,
-            circuit.complete,
-        );
-        let proposals =
-            dustroute_translate::repair::propose_scene_repairs(&world, &analysis.scene, max_gap);
-        diagnostic.diagnosis.assess_repair(
-            if proposals.is_empty() {
-                dustroute_translate::diagnostic::report::RepairStatus::NoCandidate
-            } else {
-                dustroute_translate::diagnostic::report::RepairStatus::PlanAvailable
-            },
-            None,
-        );
-        let mut response = Vec::new();
-        for proposal in proposals.into_iter().take(32) {
-            let operation_id = uuid::Uuid::new_v4();
-            if let Err(error) = self
-                .store_repair_plan(
-                    operation_id,
-                    StoredRepairPlan {
-                        patch: proposal.patch.clone(),
-                        dimension: dimension.clone(),
-                        analysis_bounds: bounds,
-                        fragments_before,
-                        baseline_truth_table: None,
-                        lifecycle: RepairLifecycle::Draft,
-                        contract_satisfied: true,
-                        preserved_boundary: Vec::new(),
-                    },
-                )
-                .await
-            {
-                return json_reply(json!({ "ok": false, "error": error }));
+        let result: Result<RepairCandidates, UnrecordedFailure> = async {
+            let player = match self.resolve_player(params.player.as_deref()) {
+                Ok(player) => player,
+                Err(error) => return Err(error.into()),
+            };
+            self.player_scope()
+                .authorize(&player)
+                .map_err(|error| error.at(FailurePhase::Admission))?;
+            let max_gap = params.max_gap.unwrap_or(2);
+            if !(1..=8).contains(&max_gap) {
+                return Err("max_gap must be 1..8".into());
             }
-            self.operations
-                .record_unmigrated(
+            let (circuit_id, circuit) = match self.load_circuit(&params.circuit_id, &player).await {
+                Ok(circuit) => circuit,
+                Err(error) => return Err(error.into()),
+            };
+            let bounds = circuit.bounds;
+            let dimension = circuit.dimension;
+            let snapshot = circuit.snapshot;
+            let world = match world_from_snapshot_for_service(&snapshot) {
+                Ok(world) => world,
+                Err(error) => return Err(error.into()),
+            };
+            let analysis = dustroute_translate::world_reverse::analyze_world_region(&world, bounds);
+            let fragments_before = analysis.scene.fragments.len();
+            let mut diagnostic = dustroute_translate::diagnostic::diagnose_scene(
+                &analysis.scene,
+                circuit.target,
+                circuit.complete,
+            );
+            let proposals = dustroute_translate::repair::propose_scene_repairs(
+                &world,
+                &analysis.scene,
+                max_gap,
+            );
+            diagnostic.diagnosis.assess_repair(
+                if proposals.is_empty() {
+                    dustroute_translate::diagnostic::report::RepairStatus::NoCandidate
+                } else {
+                    dustroute_translate::diagnostic::report::RepairStatus::PlanAvailable
+                },
+                None,
+            );
+            let mut response = Vec::new();
+            for proposal in proposals.into_iter().take(32) {
+                let operation_id = uuid::Uuid::new_v4();
+                if let Err(error) = self
+                    .store_repair_plan(
+                        operation_id,
+                        StoredRepairPlan {
+                            patch: proposal.patch.clone(),
+                            dimension: dimension.clone(),
+                            analysis_bounds: bounds,
+                            fragments_before,
+                            baseline_truth_table: None,
+                            lifecycle: RepairLifecycle::Draft,
+                            contract_satisfied: true,
+                            preserved_boundary: Vec::new(),
+                        },
+                    )
+                    .await
+                {
+                    return Err(error.into());
+                }
+                let diagnostic_finding_ids = diagnostic
+                    .diagnosis
+                    .findings_for_repair(&proposal, &analysis.scene);
+                let candidate = RepairCandidate::new(proposal);
+                self.operations
+                    .record_completed(
+                        operation_id,
+                        OperationKind::RepairProposal,
+                        candidate.clone().into(),
+                    )
+                    .await;
+                response.push(RepairCandidateEntry {
                     operation_id,
-                    OperationKind::RepairProposal,
-                    json!({
-                        "patch": &proposal.patch,
-                        "evidence": &proposal.evidence,
-                        "impact": proposal.impact
-                    }),
-                )
-                .await;
-            response.push(json!({
-                "operation_id": operation_id,
-                "diagnostic_finding_ids": diagnostic.diagnosis.findings_for_repair(&proposal, &analysis.scene),
-                "patch": proposal.patch,
-                "evidence": proposal.evidence,
-                "impact": proposal.impact,
-            }));
+                    diagnostic_finding_ids,
+                    candidate,
+                });
+            }
+            Ok(RepairCandidates::new(
+                circuit_id,
+                bounds,
+                fragments_before,
+                diagnostic,
+                response,
+            ))
         }
-        json_reply(json!({
-            "schema_version": REPAIR_SCHEMA_V1,
-            "ok": true,
-            "circuit_id": circuit_id,
-            "bounds": bounds_json(bounds),
-            "fragments": fragments_before,
-            "diagnostic": diagnostic,
-            "proposal_count": response.len(),
-            "proposals": response,
-            "next_step": "review a proposal, call show_operation, ask for explicit confirmation, then call invoke_operation with confirm=true"
-        }))
+        .await;
+        match result {
+            Ok(response) => typed_reply(response),
+            Err(error) => typed_reply(error),
+        }
     }
 
     #[tool(
@@ -3130,24 +3099,50 @@ impl DustRouteMcp {
         &self,
         Parameters(params): Parameters<GetRepairContextParams>,
     ) -> CallToolResult {
+        match self.repair_context_report(params).await {
+            Ok(response) => typed_reply(response),
+            Err(error) => typed_reply(error),
+        }
+    }
+
+    async fn repair_context_report(
+        &self,
+        params: GetRepairContextParams,
+    ) -> Result<RepairContextReport, UnrecordedFailure> {
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
-            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
+            Err(error) => return Err(error.into()),
         };
-        if let Some(error) = self.authorize_player(&player) {
-            return CallToolResult::error(vec![ContentBlock::text(error)]);
-        }
+        self.player_scope()
+            .authorize(&player)
+            .map_err(|error| error.at(FailurePhase::Admission))?;
         let max_gap = params.max_gap.unwrap_or(2);
         if !(1..=8).contains(&max_gap) {
-            return error_reply(McpErrorCode::InvalidArgument, "max_gap must be 1..8", false);
+            return Err(UnrecordedFailure::coded(
+                McpErrorCode::InvalidArgument,
+                "max_gap must be 1..8".to_string(),
+                false,
+            ));
         }
         let (circuit_id, circuit) = match self.load_circuit(&params.circuit_id, &player).await {
             Ok(circuit) => circuit,
-            Err(error) => return error_reply(McpErrorCode::NotFound, error, false),
+            Err(error) => {
+                return Err(UnrecordedFailure::coded(
+                    McpErrorCode::NotFound,
+                    error.to_string(),
+                    false,
+                ));
+            }
         };
         let world = match world_from_snapshot_for_service(&circuit.snapshot) {
             Ok(world) => world,
-            Err(error) => return error_reply(McpErrorCode::SerializationFailed, error, false),
+            Err(error) => {
+                return Err(UnrecordedFailure::coded(
+                    McpErrorCode::SerializationFailed,
+                    error.to_string(),
+                    false,
+                ));
+            }
         };
         let analysis =
             dustroute_translate::world_reverse::analyze_world_region(&world, circuit.bounds);
@@ -3170,7 +3165,11 @@ impl DustRouteMcp {
             Some(value) => match uuid::Uuid::parse_str(value) {
                 Ok(id) => Some(id),
                 Err(error) => {
-                    return error_reply(McpErrorCode::InvalidArgument, error.to_string(), false);
+                    return Err(UnrecordedFailure::coded(
+                        McpErrorCode::InvalidArgument,
+                        error.to_string(),
+                        false,
+                    ));
                 }
             },
             None => None,
@@ -3179,20 +3178,26 @@ impl DustRouteMcp {
             let plan = match self.repair_plan(operation_id).await {
                 Ok(Some(plan)) => plan,
                 Ok(None) => {
-                    return error_reply(
+                    return Err(UnrecordedFailure::coded(
                         McpErrorCode::NotFound,
-                        "repair operation not found",
+                        "repair operation not found".to_string(),
                         false,
-                    );
+                    ));
                 }
-                Err(error) => return error_reply(McpErrorCode::Internal, error, false),
+                Err(error) => {
+                    return Err(UnrecordedFailure::coded(
+                        McpErrorCode::Internal,
+                        error.to_string(),
+                        false,
+                    ));
+                }
             };
             if plan.dimension != circuit.dimension || plan.analysis_bounds != circuit.bounds {
-                return error_reply(
+                return Err(UnrecordedFailure::coded(
                     McpErrorCode::InvalidArgument,
-                    "operation_id does not belong to this circuit snapshot",
+                    "operation_id does not belong to this circuit snapshot".to_string(),
                     false,
-                );
+                ));
             }
             Some(plan.patch)
         } else {
@@ -3225,12 +3230,10 @@ impl DustRouteMcp {
                     .connections
                     .iter()
                     .filter(|connection| connection.sink.component == component.id)
-                    .map(|connection| {
-                        json!({
-                            "component": connection.source.component,
-                            "transfer": connection.transfer,
-                            "confidence": connection.confidence
-                        })
+                    .map(|connection| RelatedConnection {
+                        component: connection.source.component,
+                        transfer: connection.transfer,
+                        confidence: connection.confidence,
                     })
                     .collect::<Vec<_>>();
                 let outgoing = analysis
@@ -3238,23 +3241,21 @@ impl DustRouteMcp {
                     .connections
                     .iter()
                     .filter(|connection| connection.source.component == component.id)
-                    .map(|connection| {
-                        json!({
-                            "component": connection.sink.component,
-                            "transfer": connection.transfer,
-                            "confidence": connection.confidence
-                        })
+                    .map(|connection| RelatedConnection {
+                        component: connection.sink.component,
+                        transfer: connection.transfer,
+                        confidence: connection.confidence,
                     })
                     .collect::<Vec<_>>();
-                json!({
-                    "id": component.id,
-                    "position": component.pos,
-                    "block": component.block.kind,
-                    "facing": component.block.facing,
-                    "support": component.support,
-                    "incoming": incoming,
-                    "outgoing": outgoing
-                })
+                RelatedComponent {
+                    id: component.id,
+                    position: component.pos,
+                    block: component.block.kind,
+                    facing: component.block.facing,
+                    support: component.support,
+                    incoming,
+                    outgoing,
+                }
             })
             .collect::<Vec<_>>();
 
@@ -3291,29 +3292,28 @@ impl DustRouteMcp {
                         .to_owned(),
                 );
             }
-            hypotheses.push(json!({
-                "kind": proposal.patch.reason,
-                "confidence_percent": proposal.patch.confidence_percent,
-                "supporting_evidence": supporting_evidence,
-                "contradictions": contradictions,
-                "diagnostic_finding_ids": diagnostic.diagnosis.findings_for_repair(proposal, &analysis.scene),
-                "physical_evidence": proposal.evidence,
-                "counterfactual_impact": proposal.impact,
-                "operation_id": operation_id
-            }));
+            hypotheses.push(RepairHypothesis::Repair {
+                kind: proposal.patch.reason,
+                confidence_percent: proposal.patch.confidence_percent,
+                supporting_evidence,
+                contradictions,
+                diagnostic_finding_ids: diagnostic
+                    .diagnosis
+                    .findings_for_repair(proposal, &analysis.scene),
+                physical_evidence: proposal.evidence.clone(),
+                counterfactual_impact: proposal.impact,
+                operation_id,
+            });
         }
         if diagnostic.counts.awaiting_external_input > 0 {
-            hypotheses.push(json!({
-                "kind": "intentional_external_inputs",
-                "confidence": "plausible",
-                "supporting_evidence": [
-                    "the disconnected paths satisfy the structural rules for inferred input boundaries"
-                ],
-                "contradictions": selected.map_or_else(Vec::new, |proposal| vec![format!(
+            hypotheses.push(RepairHypothesis::ExternalInputs {
+                kind: ExternalInputHypothesis::IntentionalExternalInputs, confidence: HypothesisConfidence::Plausible,
+                supporting_evidence: vec!["the disconnected paths satisfy the structural rules for inferred input boundaries"],
+                contradictions: selected.map_or_else(Vec::new, |proposal| vec![format!(
                     "the highest-ranked virtual repair improves connectivity with {} block change(s)",
                     proposal.patch.changes.len()
-                )])
-            }));
+                )]),
+            });
         }
 
         let gaps = analysis.scene.gap_candidates(max_gap);
@@ -3333,32 +3333,24 @@ impl DustRouteMcp {
                     .to_owned(),
             );
         }
-        json_reply(json!({
-            "schema_version": REPAIR_CONTEXT_SCHEMA_V1,
-            "ok": true,
-            "circuit_id": circuit_id,
-            "operation_id": operation_id,
-            "summary": format!(
-                "{} physical component(s), {} traversal fragment(s), {} nearby gap candidate(s), {} repair hypothesis/hypotheses",
-                analysis.scene.components.len(),
-                analysis.scene.fragments.len(),
-                gaps.len(),
-                hypotheses.len()
-            ),
-            "facts": {
-                "observation_complete": diagnostic.observation_complete,
-                "components": analysis.scene.components.len(),
-                "fragments": analysis.scene.fragments.len(),
-                "gap_candidates": gaps.iter().take(16).collect::<Vec<_>>(),
-                "gap_candidates_truncated": gaps.len() > 16,
-                "diagnostic": diagnostic,
-                "temporal": analysis.scene.temporal_assessment()
-            },
-            "hypotheses": hypotheses,
-            "related_components": related_components,
-            "questions": questions,
-            "next_step": "compare the hypotheses with the player's intent; use show_operation only after choosing a repair hypothesis"
-        }))
+        let facts = RepairContextFacts {
+            observation_complete: diagnostic.observation_complete,
+            components: analysis.scene.components.len(),
+            fragments: analysis.scene.fragments.len(),
+            gap_candidates: gaps.iter().take(16).cloned().collect(),
+            gap_candidates_truncated: gaps.len() > 16,
+            diagnostic,
+            temporal: analysis.scene.temporal_assessment(),
+        };
+        Ok(RepairContextReport::new(
+            circuit_id,
+            operation_id,
+            gaps.len(),
+            facts,
+            hypotheses,
+            related_components,
+            questions,
+        ))
     }
 
     #[tool(
@@ -3453,132 +3445,135 @@ impl DustRouteMcp {
         &self,
         Parameters(params): Parameters<PlayerParams>,
     ) -> CallToolResult {
-        let player = match self.resolve_player(params.player.as_deref()) {
-            Ok(player) => player,
-            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
-        };
-        let observation = match self.bridge.observe_player(&player, 64.0).await {
-            Ok(observation) => observation,
-            Err(error) => {
-                return json_reply(json!({ "ok": false, "error": FailureCause::from(error) }));
+        let result: Result<RemovalCandidate, UnrecordedFailure> = async {
+            let player = match self.resolve_player(params.player.as_deref()) {
+                Ok(player) => player,
+                Err(error) => return Err(error.into()),
+            };
+            let observation = match self.bridge.observe_player(&player, 64.0).await {
+                Ok(observation) => observation,
+                Err(error) => {
+                    return Err(FailureCause::from(error).into());
+                }
+            };
+            let Some(target) = observation.targeted_block else {
+                return Err("player is not looking at a block".into());
+            };
+            let (bounds, dimension) = match self.selected_region(&player).await {
+                Ok(region) => region,
+                Err(error) => return Err(error.into()),
+            };
+            if !bounds.contains(target) {
+                return Err("target is outside the selected region".into());
             }
-        };
-        let Some(target) = observation.targeted_block else {
-            return json_reply(json!({ "ok": false, "error": "player is not looking at a block" }));
-        };
-        let (bounds, dimension) = match self.selected_region(&player).await {
-            Ok(region) => region,
-            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
-        };
-        if !bounds.contains(target) {
-            return json_reply(
-                json!({ "ok": false, "error": "target is outside the selected region" }),
-            );
-        }
-        let snapshot = match self
-            .bridge
-            .scan_region(bounds.min, bounds.max, &dimension)
-            .await
-        {
-            Ok(snapshot) => snapshot,
-            Err(error) => {
-                return json_reply(json!({ "ok": false, "error": FailureCause::from(error) }));
+            let snapshot = match self
+                .bridge
+                .scan_region(bounds.min, bounds.max, &dimension)
+                .await
+            {
+                Ok(snapshot) => snapshot,
+                Err(error) => {
+                    return Err(FailureCause::from(error).into());
+                }
+            };
+            let world = match world_from_snapshot_for_service(&snapshot) {
+                Ok(world) => world,
+                Err(error) => return Err(error.into()),
+            };
+            let analysis = dustroute_translate::world_reverse::analyze_world_region(&world, bounds);
+            let Some(proposal) = dustroute_translate::repair::propose_scene_component_removal(
+                &world,
+                &analysis.scene,
+                target,
+            ) else {
+                return Err("target is not a removable redstone component".into());
+            };
+            let operation_id = uuid::Uuid::new_v4();
+            if let Err(error) = self
+                .store_repair_plan(
+                    operation_id,
+                    StoredRepairPlan {
+                        patch: proposal.patch.clone(),
+                        dimension,
+                        analysis_bounds: bounds,
+                        fragments_before: analysis.scene.fragments.len(),
+                        baseline_truth_table: None,
+                        lifecycle: RepairLifecycle::Draft,
+                        contract_satisfied: true,
+                        preserved_boundary: Vec::new(),
+                    },
+                )
+                .await
+            {
+                return Err(error.into());
             }
-        };
-        let world = match world_from_snapshot_for_service(&snapshot) {
-            Ok(world) => world,
-            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
-        };
-        let analysis = dustroute_translate::world_reverse::analyze_world_region(&world, bounds);
-        let Some(proposal) = dustroute_translate::repair::propose_scene_component_removal(
-            &world,
-            &analysis.scene,
-            target,
-        ) else {
-            return json_reply(
-                json!({ "ok": false, "error": "target is not a removable redstone component" }),
-            );
-        };
-        let operation_id = uuid::Uuid::new_v4();
-        if let Err(error) = self
-            .store_repair_plan(
-                operation_id,
-                StoredRepairPlan {
-                    patch: proposal.patch.clone(),
-                    dimension,
-                    analysis_bounds: bounds,
-                    fragments_before: analysis.scene.fragments.len(),
-                    baseline_truth_table: None,
-                    lifecycle: RepairLifecycle::Draft,
-                    contract_satisfied: true,
-                    preserved_boundary: Vec::new(),
-                },
-            )
-            .await
-        {
-            return json_reply(json!({ "ok": false, "error": error }));
+            Ok(RemovalCandidate::new(operation_id, proposal))
         }
-        json_reply(json!({
-            "schema_version": REPAIR_SCHEMA_V1,
-            "ok": true,
-            "operation_id": operation_id,
-            "proposal": proposal,
-            "warning": "removal intent cannot be inferred from geometry alone; preview and explicit confirmation are required",
-            "next_step": "call show_operation, then invoke_operation with confirm=true only after confirmation"
-        }))
+        .await;
+        match result {
+            Ok(response) => typed_reply(response),
+            Err(error) => typed_reply(error),
+        }
     }
 
     async fn show_repair_plan(
         &self,
         Parameters(params): Parameters<PreviewRepairParams>,
     ) -> CallToolResult {
-        let player = match self.resolve_player(params.player.as_deref()) {
-            Ok(player) => player,
-            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
-        };
-        let operation_id = match uuid::Uuid::parse_str(&params.operation_id) {
-            Ok(id) => id,
-            Err(error) => {
-                return error_reply(McpErrorCode::InvalidArgument, error.to_string(), false);
-            }
-        };
-        // Serialize preview persistence with attempts, so a delayed preview
-        // cannot overwrite a saved NeedsInspection state.
-        let _mutation_guard = self.mutation_lock.lock().await;
-        let plan = match self.repair_plan(operation_id).await {
-            Ok(Some(plan)) => plan,
-            Ok(None) => {
-                return json_reply(json!({ "ok": false, "error": "unknown or expired repair ID" }));
-            }
-            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
-        };
-        let Some(bounds) = bounds_for_changes(&plan.patch.changes) else {
-            return json_reply(json!({ "ok": false, "error": "repair has no changes" }));
-        };
-        match self
-            .bridge
-            .preview_region(&player, bounds.min, bounds.max, &plan.dimension)
-            .await
-        {
-            Ok(preview) => {
-                let mut previewed = plan.clone();
-                if let Err(error) = previewed.lifecycle.preview() {
-                    return error_reply(McpErrorCode::InvalidState, error, false);
+        let result: Result<ShownRepair, UnrecordedFailure> = async {
+            let player = match self.resolve_player(params.player.as_deref()) {
+                Ok(player) => player,
+                Err(error) => return Err(error.into()),
+            };
+            let operation_id = match uuid::Uuid::parse_str(&params.operation_id) {
+                Ok(id) => id,
+                Err(error) => {
+                    return Err(UnrecordedFailure::coded(
+                        McpErrorCode::InvalidArgument,
+                        error.to_string(),
+                        false,
+                    ));
                 }
-                if let Err(error) = self.store_repair_plan(operation_id, previewed).await {
-                    return json_reply(json!({ "ok": false, "error": error }));
+            };
+            // Serialize preview persistence with attempts, so a delayed preview
+            // cannot overwrite a saved NeedsInspection state.
+            let _mutation_guard = self.mutation_lock.lock().await;
+            let plan = match self.repair_plan(operation_id).await {
+                Ok(Some(plan)) => plan,
+                Ok(None) => {
+                    return Err("unknown or expired repair ID".into());
                 }
-                json_reply(json!({
-                    "schema_version": REPAIR_SCHEMA_V1,
-                    "ok": true,
-                    "operation_id": operation_id,
-                    "bounds": bounds_json(bounds),
-                    "patch": plan.patch,
-                    "preview": preview,
-                    "next_step": "obtain explicit player confirmation before invoke_operation"
-                }))
+                Err(error) => return Err(error.into()),
+            };
+            let Some(bounds) = bounds_for_changes(&plan.patch.changes) else {
+                return Err("repair has no changes".into());
+            };
+            match self
+                .bridge
+                .preview_region(&player, bounds.min, bounds.max, &plan.dimension)
+                .await
+            {
+                Ok(preview) => {
+                    let mut previewed = plan.clone();
+                    if let Err(error) = previewed.lifecycle.preview() {
+                        return Err(UnrecordedFailure::coded(
+                            McpErrorCode::InvalidState,
+                            error.to_string(),
+                            false,
+                        ));
+                    }
+                    if let Err(error) = self.store_repair_plan(operation_id, previewed).await {
+                        return Err(error.into());
+                    }
+                    Ok(ShownRepair::new(operation_id, bounds, plan.patch, preview))
+                }
+                Err(error) => Err(FailureCause::from(error).into()),
             }
-            Err(error) => json_reply(json!({ "ok": false, "error": FailureCause::from(error) })),
+        }
+        .await;
+        match result {
+            Ok(response) => typed_reply(response),
+            Err(error) => typed_reply(error),
         }
     }
 
@@ -5376,15 +5371,17 @@ impl DustRouteMcp {
                 plan.previewed = true;
             }
             return match self.placement_view(operation_id).await {
-                Ok(plan) => json_reply(
-                    json!({"ok": true, "read_only": self.policy.read_only, "plan": plan}),
-                ),
+                Ok(plan) => typed_reply(PlacementPlanDisplay {
+                    ok: Success,
+                    read_only: self.policy.read_only,
+                    plan,
+                }),
                 Err(error) => {
                     if let Some(plan) = self.plans.placements().lock().await.get_mut(&operation_id)
                     {
                         plan.previewed = false;
                     }
-                    json_reply(json!({"ok": false, "error": error}))
+                    typed_reply(UnrecordedFailure::message(error))
                 }
             };
         }
@@ -5771,6 +5768,55 @@ impl ServerHandler for DustRouteMcp {
 
 #[cfg(test)]
 mod tests {
+    #[tokio::test]
+    async fn builtin_and_repair_planning_denial_keeps_cause_before_transport_or_storage() {
+        use super::*;
+        let root = test_support::temporary();
+        let mut service = DustRouteMcp::with_test_transport_and_player(
+            "127.0.0.1:1",
+            McpPolicy {
+                allowed_players: ["AnotherPlayer".to_owned()].into(),
+                ..Default::default()
+            },
+            "Tester",
+        );
+        service.state_store = PlanStateStore::new(root.clone(), 3600);
+        let circuit_id = uuid::Uuid::new_v4().to_string();
+        let replies = [
+            service
+                .new_placement(Parameters(PreviewPlacementParams {
+                    circuit: "half-adder".into(),
+                    ..Default::default()
+                }))
+                .await,
+            service
+                .new_repair(Parameters(ProposeRepairsParams {
+                    player: None,
+                    circuit_id: circuit_id.clone(),
+                    max_gap: None,
+                }))
+                .await,
+            service
+                .get_repair_context(Parameters(GetRepairContextParams {
+                    player: None,
+                    circuit_id,
+                    operation_id: None,
+                    max_gap: None,
+                }))
+                .await,
+        ];
+        for reply in replies {
+            assert_eq!(reply.is_error, Some(true));
+            let response = test_support::decode_reply(&reply).unwrap();
+            assert_eq!(response["error_code"], "permission_denied");
+            assert_eq!(response["failure"]["primary"]["phase"], "admission");
+            assert!(response["failure"]["progress"].is_null());
+            assert!(!response["error"].as_str().unwrap().starts_with('{'));
+        }
+        assert!(service.operations.list().await.is_empty());
+        assert!(!root.exists());
+    }
+
     #[tokio::test]
     async fn grounded_planning_denial_keeps_admission_cause_before_loading_or_transport() {
         use super::*;
@@ -6892,6 +6938,82 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn removal_candidate_keeps_intent_uncertain_and_saved_preview_separate() {
+        let root = test_support::temporary();
+        let (fake, address, bridge) = test_support::start_construction_bridge(
+            test_support::DurableRegistry::Edits(root.join("unused-edit-record")),
+        )
+        .await;
+        {
+            let mut state = fake.lock().unwrap();
+            state.snapshot = Some(broken_wire_snapshot(false));
+            state.gaze_target = Some(json!({"x":2,"y":1,"z":0}));
+        }
+        let mut service =
+            DustRouteMcp::with_test_transport_and_player(address, McpPolicy::default(), "Tester");
+        service.state_store = PlanStateStore::new(root.clone(), 3600);
+        let bounds = dustroute_translate::world_reverse::RegionBounds::new(
+            Pos::new(0, 0, 0),
+            Pos::new(2, 2, 0),
+        );
+        service.selections.lock().await.insert(
+            "Tester".into(),
+            LocatedSelection::with_bounds("Tester", bounds, "minecraft:overworld".into()),
+        );
+        let proposed = test_support::decode_reply(
+            &service
+                .new_component_removal_plan(Parameters(PlayerParams { player: None }))
+                .await,
+        )
+        .unwrap();
+        assert_eq!(proposed["ok"], true, "{proposed}");
+        assert_eq!(proposed["schema_version"], crate::api::REPAIR_SCHEMA_V1);
+        assert_eq!(
+            proposed["proposal"]["patch"]["reason"],
+            "remove_unexpected_connection"
+        );
+        assert_eq!(proposed["proposal"]["patch"]["confidence_percent"], 40);
+        assert!(
+            proposed["warning"]
+                .as_str()
+                .unwrap()
+                .contains("cannot be inferred")
+        );
+        assert!(proposed.get("execution_progress").is_none());
+        let id = uuid::Uuid::parse_str(proposed["operation_id"].as_str().unwrap()).unwrap();
+        let draft = service.repair_plan(id).await.unwrap().unwrap();
+        assert_eq!(draft.lifecycle, RepairLifecycle::Draft);
+        assert!(draft.baseline_truth_table.is_none());
+        assert_eq!(draft.patch.changes[0].pos, Pos::new(2, 1, 0));
+        assert_eq!(
+            draft.patch.changes[0].after.kind,
+            dustroute_physical::BlockKind::Air
+        );
+        // This owner historically stores a draft, without adding execution history.
+        assert!(service.operations.get(id).await.is_none());
+        let shown = test_support::decode_reply(
+            &service
+                .show_repair_plan(Parameters(PreviewRepairParams {
+                    player: None,
+                    operation_id: id.to_string(),
+                }))
+                .await,
+        )
+        .unwrap();
+        assert_eq!(shown["ok"], true, "{shown}");
+        assert_eq!(shown["patch"], proposed["proposal"]["patch"]);
+        assert_eq!(shown["preview"]["particle_corners"], 8);
+        assert_eq!(
+            service.repair_plan(id).await.unwrap().unwrap().lifecycle,
+            RepairLifecycle::Previewed
+        );
+        assert!(service.operations.activity(id).await.is_none());
+        assert_eq!(fake.lock().unwrap().writes, 0);
+        bridge.abort();
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[tokio::test]
     async fn repairs_and_undoes_a_broken_wire_through_the_mcp_workflow() {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let address = listener.local_addr().unwrap().to_string();
@@ -6997,6 +7119,28 @@ mod tests {
                 .await,
         )
         .unwrap();
+        let hypothesis = context["hypotheses"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|h| h["kind"] == proposed["proposals"][0]["patch"]["reason"])
+            .unwrap();
+        assert_eq!(
+            hypothesis["physical_evidence"],
+            proposed["proposals"][0]["evidence"]
+        );
+        assert_eq!(
+            hypothesis["counterfactual_impact"],
+            proposed["proposals"][0]["impact"]
+        );
+        assert_eq!(
+            hypothesis["diagnostic_finding_ids"],
+            proposed["proposals"][0]["diagnostic_finding_ids"]
+        );
+        assert!(hypothesis.as_object().unwrap().contains_key("operation_id"));
+        assert!(hypothesis["operation_id"].is_null());
+        assert_eq!(context["facts"]["gap_candidates_truncated"], false);
+        assert!(!context["related_components"].as_array().unwrap().is_empty());
         let context_diagnosis: dustroute_translate::diagnostic::report::Diagnosis =
             serde_json::from_value(context["facts"]["diagnostic"].clone()).unwrap();
         assert_eq!(context_diagnosis, shared);
@@ -7016,6 +7160,49 @@ mod tests {
             .unwrap()
             .to_owned();
 
+        for candidate in proposed["proposals"].as_array().unwrap() {
+            let id = uuid::Uuid::parse_str(candidate["operation_id"].as_str().unwrap()).unwrap();
+            let record = service.operations.get(id).await.unwrap();
+            let result = record.result.unwrap();
+            assert!(matches!(
+                &result,
+                crate::operations::OperationResult::RepairCandidate(_)
+            ));
+            assert!(!result.failed());
+            assert!(result.progress().is_none());
+            assert!(!result.consumed());
+            let wire = serde_json::to_value(result).unwrap();
+            assert_eq!(wire["patch"], candidate["patch"]);
+            assert_eq!(wire["evidence"], candidate["evidence"]);
+            assert_eq!(wire["impact"], candidate["impact"]);
+            assert!(wire.get("ok").is_none());
+            assert!(wire.get("operation_id").is_none());
+            assert!(wire.get("diagnostic_finding_ids").is_none());
+            assert!(service.operations.activity(id).await.is_none());
+        }
+        let selected_context = test_support::decode_reply(
+            &service
+                .get_repair_context(Parameters(GetRepairContextParams {
+                    player: None,
+                    circuit_id: proposed["circuit_id"].as_str().unwrap().into(),
+                    operation_id: Some(operation_id.clone()),
+                    max_gap: Some(2),
+                }))
+                .await,
+        )
+        .unwrap();
+        assert_eq!(selected_context["operation_id"], operation_id);
+        let selected = selected_context["hypotheses"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|h| h.get("operation_id").is_some())
+            .unwrap();
+        assert_eq!(selected["operation_id"], operation_id);
+        assert_eq!(
+            selected["physical_evidence"],
+            proposed["proposals"][0]["evidence"]
+        );
         let preview = service
             .show_operation(Parameters(ShowOperationParams {
                 operation_id: operation_id.clone(),
@@ -7930,6 +8117,34 @@ mod tests {
             )
             .unwrap();
             assert_eq!(proposed["ok"], true, "{proposed}");
+            let operation_id =
+                uuid::Uuid::parse_str(proposed["operation_id"].as_str().unwrap()).unwrap();
+            let history = service.operations.get(operation_id).await.unwrap();
+            let result = history.result.unwrap();
+            assert!(matches!(
+                &result,
+                crate::operations::OperationResult::BuiltinPlacementPreview(_)
+            ));
+            assert!(result.progress().is_none());
+            assert!(!result.consumed());
+            // Both sides pass through the MCP codec; optimizer scores stay
+            // native f64 internally rather than being rounded by JSON parsing.
+            assert_eq!(
+                test_support::decode_reply(&typed_reply(result)).unwrap(),
+                proposed
+            );
+            assert!(service.operations.activity(operation_id).await.is_none());
+            if optimize {
+                assert_eq!(
+                    proposed["optimization"]["strategy"],
+                    "directional_x_toward_minimum_then_global"
+                );
+                assert!(proposed["optimization"]["safety_details"].is_string());
+                assert!(proposed["optimization"]["phases"].is_array());
+            } else {
+                assert!(proposed.as_object().unwrap().contains_key("optimization"));
+                assert!(proposed["optimization"].is_null());
+            }
             let full: Value = test_support::decode_reply(
                 &service
                     .get_circuit_placement(Parameters(OperationParams {

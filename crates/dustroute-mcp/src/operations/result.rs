@@ -4,7 +4,8 @@ use super::construction::{AssemblyConstructionResult, ElectricalEditResult};
 use super::mutation::{PlacementAttempt, RepairAttempt};
 use super::piston::{DoorOperationResult, PistonPlacementResult};
 use super::preview::{
-    AssemblyPreview, DiscardedJobStage, ElectricalEditPreview, GroundedRevisionPreview,
+    AssemblyPreview, BuiltinPlacementPreview, DiscardedJobStage, ElectricalEditPreview,
+    GroundedRevisionPreview, RepairCandidate,
 };
 use super::transition::{TransitionProposal, TransitionRestoreResult, TransitionRunResult};
 use crate::failure::ExecutionProgress;
@@ -19,6 +20,8 @@ pub enum OperationResult {
     AssemblyConstruction(Box<AssemblyConstructionResult>),
     PistonPlacement(Box<PistonPlacementResult>),
     DoorOperation(Box<DoorOperationResult>),
+    BuiltinPlacementPreview(Box<BuiltinPlacementPreview>),
+    RepairCandidate(Box<RepairCandidate>),
     AssemblyPreview(Box<AssemblyPreview>),
     ElectricalEditPreview(Box<ElectricalEditPreview>),
     GroundedRevisionPreview(Box<GroundedRevisionPreview>),
@@ -105,6 +108,16 @@ impl From<AssemblyPreview> for OperationResult {
         Self::AssemblyPreview(Box::new(result))
     }
 }
+impl From<BuiltinPlacementPreview> for OperationResult {
+    fn from(result: BuiltinPlacementPreview) -> Self {
+        Self::BuiltinPlacementPreview(Box::new(result))
+    }
+}
+impl From<RepairCandidate> for OperationResult {
+    fn from(result: RepairCandidate) -> Self {
+        Self::RepairCandidate(Box::new(result))
+    }
+}
 impl Serialize for OperationResult {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         match self {
@@ -114,6 +127,8 @@ impl Serialize for OperationResult {
             Self::AssemblyConstruction(result) => result.serialize(serializer),
             Self::PistonPlacement(result) => result.serialize(serializer),
             Self::DoorOperation(result) => result.serialize(serializer),
+            Self::BuiltinPlacementPreview(result) => result.serialize(serializer),
+            Self::RepairCandidate(result) => result.serialize(serializer),
             Self::AssemblyPreview(result) => result.serialize(serializer),
             Self::ElectricalEditPreview(result) => result.serialize(serializer),
             Self::GroundedRevisionPreview(result) => result.serialize(serializer),
@@ -137,7 +152,9 @@ impl OperationResult {
             Self::AssemblyConstruction(result) => result.failed(),
             Self::PistonPlacement(result) => result.failed(),
             Self::DoorOperation(result) => result.failed(),
-            Self::AssemblyPreview(_)
+            Self::BuiltinPlacementPreview(_)
+            | Self::RepairCandidate(_)
+            | Self::AssemblyPreview(_)
             | Self::ElectricalEditPreview(_)
             | Self::GroundedRevisionPreview(_) => false,
             Self::DiscardedJobStage(_) => true,
@@ -155,7 +172,9 @@ impl OperationResult {
             Self::AssemblyConstruction(result) => Some(result.progress()),
             Self::PistonPlacement(result) => Some(result.progress()),
             Self::DoorOperation(result) => result.progress(),
-            Self::AssemblyPreview(_)
+            Self::BuiltinPlacementPreview(_)
+            | Self::RepairCandidate(_)
+            | Self::AssemblyPreview(_)
             | Self::ElectricalEditPreview(_)
             | Self::GroundedRevisionPreview(_)
             | Self::DiscardedJobStage(_) => None,
