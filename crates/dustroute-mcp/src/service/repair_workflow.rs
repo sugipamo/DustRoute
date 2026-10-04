@@ -1,18 +1,21 @@
 //! Repair application workflow. Stores and world effects have explicit owners;
 //! routing, circuit capture and Blueprint admission are outside this service.
 use super::{
-    StoredRepairPlan, requests::ConfirmedOperationParams, workflow_error,
-    world_editor::WorldEditor, world_from_snapshot_for_service,
+    StoredRepairPlan, requests::ConfirmedOperationParams, world_editor::WorldEditor,
+    world_from_snapshot_for_service,
 };
 use crate::api::{McpErrorCode, REPAIR_SCHEMA_V1};
 use crate::failure::{
     CauseKind, ExecutionProgress, FailureCause, FailurePhase, PersistenceOutcome, WorldOutcome,
 };
+use crate::operations::mutation::{
+    MutationAction, RepairAttempt, RepairFailure, RepairOutcome, RepairReceipt, RepairRestoration,
+    RestorationOutcome, SemanticUnavailableReason, SemanticVerification, Success,
+};
 use crate::state::{PlanRecordKind, PlanStateStore};
 use crate::{BlockChange, BotBridge, McpPolicy, OperationKind, OperationRegistry};
 use dustroute_app::DustRouteService;
 use dustroute_translate::api::ReverseRequest;
-use serde_json::{Value, json};
 use tokio::sync::Mutex;
 
 pub(super) struct RepairWorkflow<'a> {
@@ -57,10 +60,16 @@ impl RepairWorkflow<'_> {
         &self,
         params: ConfirmedOperationParams,
         undo: bool,
-    ) -> Value {
+    ) -> RepairAttempt {
         let mut progress = ExecutionProgress::default();
-        let mut response = self.execute_repair(&params, undo, &mut progress).await;
-        response["operation_id"] = json!(params.operation_id);
+        let outcome = self.execute_repair(&params, undo, &mut progress).await;
+        let response = RepairAttempt {
+            operation_id: params.operation_id.clone(),
+            outcome,
+        };
+        if let Some(progress) = response.progress() {
+            crate::performance::execution_progress(progress);
+        }
         if let Ok(id) = uuid::Uuid::parse_str(&params.operation_id) {
             self.operations
                 .record_completed(
@@ -70,7 +79,7 @@ impl RepairWorkflow<'_> {
                     } else {
                         OperationKind::RepairApply
                     },
-                    response.clone(),
+                    response.clone().into(),
                 )
                 .await;
         }
@@ -81,15 +90,14 @@ impl RepairWorkflow<'_> {
         params: &ConfirmedOperationParams,
         undo: bool,
         progress: &mut ExecutionProgress,
-    ) -> Value {
+    ) -> RepairOutcome {
         if !params.confirm {
-            return json!({
-                "ok": false,
-                "error": "confirm must be true because this operation changes the world"
-            });
+            return RepairOutcome::refused(
+                "confirm must be true because this operation changes the world",
+            );
         }
         if let Err(error) = self.policy.authorize_mutation() {
-            return progress.cause(error).response();
+            return RepairOutcome::failed(progress.cause(error));
         }
         let queue = crate::performance::span(crate::performance::Phase::MutationQueue);
         let _mutation_guard = self.mutation_lock.lock().await;
@@ -97,25 +105,29 @@ impl RepairWorkflow<'_> {
         let operation_id = match uuid::Uuid::parse_str(&params.operation_id) {
             Ok(id) => id,
             Err(error) => {
-                return workflow_error(McpErrorCode::InvalidArgument, error.to_string(), false);
+                return RepairOutcome::coded(
+                    McpErrorCode::InvalidArgument,
+                    error.to_string(),
+                    false,
+                );
             }
         };
         let mut plan = match self.repair_plan(operation_id).await {
             Ok(Some(plan)) => plan,
             Ok(None) => {
-                return json!({ "ok": false, "error": "unknown or expired repair ID" });
+                return RepairOutcome::refused("unknown or expired repair ID");
             }
-            Err(error) => return json!({ "ok": false, "error": error }),
+            Err(error) => return RepairOutcome::refused(error),
         };
         if !undo && !plan.contract_satisfied {
-            return workflow_error(
+            return RepairOutcome::coded(
                 McpErrorCode::VerificationFailed,
                 "the optimization preservation contract is not fully satisfied",
                 false,
             );
         }
         if let Err(error) = plan.lifecycle.begin(undo, self.policy.preview_required) {
-            return workflow_error(McpErrorCode::InvalidState, error, false);
+            return RepairOutcome::coded(McpErrorCode::InvalidState, error, false);
         }
         let patch = if undo {
             plan.patch.inverse()
@@ -144,7 +156,7 @@ impl RepairWorkflow<'_> {
                 .await
             {
                 Ok(value) => Some(value),
-                Err(error) => return progress.cause(error).response(),
+                Err(error) => return RepairOutcome::failed(progress.cause(error)),
             }
         };
         progress.phase = FailurePhase::IntentSave;
@@ -152,9 +164,9 @@ impl RepairWorkflow<'_> {
         progress.operation_consumed = true;
         if let Err(error) = self.store_repair_plan(operation_id, plan.clone()).await {
             progress.persistence = PersistenceOutcome::Uncertain;
-            return progress
-                .cause(FailureCause::new(CauseKind::Persistence, error))
-                .response();
+            return RepairOutcome::failed(
+                progress.cause(FailureCause::new(CauseKind::Persistence, error)),
+            );
         }
         progress.operation_consumed = true;
         progress.persistence = PersistenceOutcome::IntentSaved;
@@ -176,7 +188,9 @@ impl RepairWorkflow<'_> {
                 crate::performance::execution_progress(progress);
                 result
             }
-            Err(error) => return progress.submission_error(error, previous_world).response(),
+            Err(error) => {
+                return RepairOutcome::failed(progress.submission_error(error, previous_world));
+            }
         };
         progress.phase = FailurePhase::AfterReadback;
         crate::performance::execution_progress(progress);
@@ -186,7 +200,7 @@ impl RepairWorkflow<'_> {
             .await
         {
             Ok(result) => result,
-            Err(error) => return progress.cause(error).response(),
+            Err(error) => return RepairOutcome::failed(progress.cause(error)),
         };
         let (boundary_verified, boundary_mismatches) = match self
             .world_editor()
@@ -194,7 +208,7 @@ impl RepairWorkflow<'_> {
             .await
         {
             Ok(result) => result,
-            Err(error) => return progress.cause(error).response(),
+            Err(error) => return RepairOutcome::failed(progress.cause(error)),
         };
         progress.phase = FailurePhase::Verification;
         crate::performance::execution_progress(progress);
@@ -266,13 +280,25 @@ impl RepairWorkflow<'_> {
                 }
             }
             *report.progress = progress.clone();
-            let mut response = report.response();
-            response["mismatches"] = json!(mismatches);
-            response["boundary_mismatches"] = json!(boundary_mismatches);
-            response["rollback_submitted"] = json!(rollback_submitted);
-            response["rollback_ok"] = json!(rollback_verified);
-            response["restoration"] = json!({"attempted":!undo,"world":if rollback_verified {"verified"} else if undo {"not_attempted"} else {"unknown"}});
-            return response;
+            return RepairOutcome::Failed(Box::new(RepairFailure {
+                report,
+                restoration: Some(RepairRestoration {
+                    mismatches,
+                    boundary_mismatches,
+                    rollback_submitted,
+                    rollback_ok: rollback_verified,
+                    restoration: RestorationOutcome {
+                        attempted: !undo,
+                        world: if rollback_verified {
+                            WorldOutcome::Verified
+                        } else if undo {
+                            WorldOutcome::NotAttempted
+                        } else {
+                            WorldOutcome::Unknown
+                        },
+                    },
+                }),
+            }));
         }
         progress.world = WorldOutcome::Verified;
         progress.verified_steps = patch.changes.len();
@@ -282,9 +308,9 @@ impl RepairWorkflow<'_> {
         crate::performance::execution_progress(progress);
         if let Err(error) = self.store_repair_plan(operation_id, updated_plan).await {
             progress.persistence = PersistenceOutcome::Uncertain;
-            return progress
-                .cause(FailureCause::new(CauseKind::Persistence, error))
-                .response();
+            return RepairOutcome::failed(
+                progress.cause(FailureCause::new(CauseKind::Persistence, error)),
+            );
         }
         progress.persistence = PersistenceOutcome::FinalSaved;
         progress.durable_verified_steps = Some(progress.verified_steps);
@@ -300,14 +326,14 @@ impl RepairWorkflow<'_> {
             .await
         {
             Ok(snapshot) => snapshot,
-            Err(error) => return progress.cause(error.cause()).response(),
+            Err(error) => return RepairOutcome::failed(progress.cause(error.cause())),
         };
         let post_world = match world_from_snapshot_for_service(&snapshot) {
             Ok(world) => world,
             Err(error) => {
-                return progress
-                    .cause(FailureCause::new(CauseKind::ObservationIncomplete, error))
-                    .response();
+                return RepairOutcome::failed(
+                    progress.cause(FailureCause::new(CauseKind::ObservationIncomplete, error)),
+                );
             }
         };
         let request = if plan.baseline_truth_table.is_some() {
@@ -324,33 +350,29 @@ impl RepairWorkflow<'_> {
             (Some(expected), Some(actual)) => {
                 let comparison =
                     dustroute_translate::world_reverse::compare_truth_tables(expected, actual);
-                json!({
-                    "available": true,
-                    "equivalent": comparison.comparable && comparison.fitness_penalty == 0,
-                    "comparison": comparison
-                })
+                SemanticVerification::Compared(comparison)
             }
-            _ => {
-                json!({"available":false,"reason":if plan.baseline_truth_table.is_none() {"baseline_truth_table_not_requested"}else {"post_analysis_truth_table_unavailable"}})
-            }
+            _ => SemanticVerification::Unavailable(if plan.baseline_truth_table.is_none() {
+                SemanticUnavailableReason::BaselineTruthTableNotRequested
+            } else {
+                SemanticUnavailableReason::PostAnalysisTruthTableUnavailable
+            }),
         };
-        let resulting_logic = &post_analysis.logical_role;
-        json!({
-            "schema_version": REPAIR_SCHEMA_V1,
-            "execution_progress":progress,
-            "ok": true,
-            "operation_id": operation_id,
-            "action": if undo { "undo" } else { "apply" },
-            "verified": verified,
-            "boundary_verified": boundary_verified,
-            "boundary_mismatches": boundary_mismatches,
-            "changed_blocks": patch.changes.len(),
-            "fragments_before": plan.fragments_before,
-            "fragments_after": fragments_after,
-            "resulting_logic": resulting_logic,
-            "semantic_verification": semantic_verification,
-            "bridge": bridge,
-        })
+        RepairOutcome::Verified(Box::new(RepairReceipt {
+            schema_version: REPAIR_SCHEMA_V1,
+            execution_progress: progress.clone(),
+            ok: Success,
+            action: MutationAction::from_undo(undo),
+            verified,
+            boundary_verified,
+            boundary_mismatches,
+            changed_blocks: patch.changes.len(),
+            fragments_before: plan.fragments_before,
+            fragments_after,
+            resulting_logic: post_analysis.logical_role,
+            semantic_verification,
+            bridge,
+        }))
     }
 }
 
@@ -362,6 +384,7 @@ mod tests {
         Block, BlockKind, PhysicalBlockChange, PhysicalPatch, PhysicalPatchReason, Pos,
     };
     use dustroute_translate::world_reverse::RegionBounds;
+    use serde_json::json;
     use std::sync::{
         Arc,
         atomic::{AtomicUsize, Ordering},

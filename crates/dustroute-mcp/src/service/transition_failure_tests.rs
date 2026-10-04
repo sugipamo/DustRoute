@@ -123,16 +123,27 @@ async fn transition_retains_original_failure_and_cleanup_errors_without_replay()
                     lifecycle: InvocationState::Previewed,
                 },
             );
+        let activity = service
+            .operations
+            .begin_activity(id, crate::operations::ActivityAction::InvokeOperation)
+            .await
+            .unwrap();
         let result: Value = super::test_support::decode_reply(
-            &service
-                .invoke_transition_test(Parameters(RunTransitionParams {
+            &crate::performance::with_activity(
+                Some(activity.0.clone()),
+                service.invoke_transition_test(Parameters(RunTransitionParams {
                     operation_id: id.to_string(),
                     confirm: true,
                     contracts: None,
-                }))
-                .await,
+                })),
+            )
+            .await,
         )
         .unwrap();
+        drop(activity);
+        let live = serde_json::to_value(service.operations.activity(id).await.unwrap()).unwrap();
+        assert_eq!(live["active"], false);
+        assert_eq!(live["execution_progress"], result["failure"]["progress"]);
         assert_eq!(result["ok"], false, "{result}");
         assert_eq!(result["failure"]["progress"]["world"], "unknown");
         let secondary = result["failure"]["secondary"].as_array().unwrap();
@@ -164,16 +175,29 @@ async fn transition_retains_original_failure_and_cleanup_errors_without_replay()
             }
         }
         let before = activations.load(Ordering::SeqCst);
+        let activity = service
+            .operations
+            .begin_activity(id, crate::operations::ActivityAction::InvokeOperation)
+            .await
+            .unwrap();
         let replay: Value = super::test_support::decode_reply(
-            &service
-                .invoke_transition_test(Parameters(RunTransitionParams {
+            &crate::performance::with_activity(
+                Some(activity.0.clone()),
+                service.invoke_transition_test(Parameters(RunTransitionParams {
                     operation_id: id.to_string(),
                     confirm: true,
                     contracts: None,
-                }))
-                .await,
+                })),
+            )
+            .await,
         )
         .unwrap();
+        drop(activity);
+        let live = serde_json::to_value(service.operations.activity(id).await.unwrap()).unwrap();
+        assert!(
+            live["execution_progress"].is_null(),
+            "replay refusal must not import the previous attempt's progress"
+        );
         assert_eq!(replay["ok"], false);
         assert_eq!(activations.load(Ordering::SeqCst), before);
         assert_eq!(

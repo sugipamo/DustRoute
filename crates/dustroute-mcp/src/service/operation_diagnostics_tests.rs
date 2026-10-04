@@ -162,7 +162,7 @@ async fn live_activity_does_not_replace_consumed_history_or_claim_mutation_cance
     let original =
         json!({"ok":false,"failure":{"progress":{"operation_consumed":true,"world":"unknown"}}});
     registry
-        .record_completed(id, OperationKind::PlacementApply, original.clone())
+        .record_unmigrated(id, OperationKind::PlacementApply, original.clone())
         .await;
     let guard = registry
         .begin_activity(id, crate::operations::ActivityAction::InvokeOperation)
@@ -201,7 +201,7 @@ async fn live_activity_does_not_replace_consumed_history_or_claim_mutation_cance
     })
     .await;
     registry
-        .record_completed(
+        .record_unmigrated(
             id,
             OperationKind::PlacementApply,
             json!({"ok":false,"error":"refused"}),

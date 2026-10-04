@@ -282,7 +282,7 @@ impl AssemblyService<'_> {
                 source_identity:record.source_identity,proof,previewed:false,state:PistonPlacementState::Planned,
                 expires_at:Instant::now()+Duration::from_secs(300),transform:record.transform,target:record.target,action:AssemblyPlacementAction::Remove { instance_id:id, revision:record.revision, operating:operating_plan } });
             drop(plans);
-            self.operations.record_completed(operation_id,OperationKind::PlacementPreview,response.clone()).await;
+            self.operations.record_unmigrated(operation_id,OperationKind::PlacementPreview,response.clone()).await;
             Ok(response)
         }.await;
         result.unwrap_or_else(|error| json!({"ok":false,"error":error}))
@@ -347,7 +347,7 @@ impl AssemblyService<'_> {
             if plans.len() >= 256 { return Err("too many retained Assembly construction plans".into()); }
             plans.insert(operation_id, StoredAssemblyPlacement { player, dimension, assembly_id:id, source_identity:basis, proof, previewed:false, state:PistonPlacementState::Planned, expires_at:Instant::now()+Duration::from_secs(300), transform, target:target_server, action:AssemblyPlacementAction::Construct });
             drop(plans);
-            self.operations.record_completed(operation_id,OperationKind::PlacementPreview,response.clone()).await;
+            self.operations.record_unmigrated(operation_id,OperationKind::PlacementPreview,response.clone()).await;
             Ok(response)
         }.await;
         result.unwrap_or_else(|e| json!({"ok":false,"error":e}))

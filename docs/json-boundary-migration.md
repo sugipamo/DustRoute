@@ -745,3 +745,52 @@ workspace全targetとMCPの`--no-default-features`全targetのClippyが
 `-D warnings`で成功し、formattingと差分の空白検査も成功した。
 Cargoは単独・offline/locked・`-j1`で実行した。実機接続、ワールド変更、
 Voxrig source/vendor pin、保存schema、依存versionへの変更はない。
+
+### 通常配置・修復の結果と実行進捗の型付き接続
+
+通常配置と修復のworkflowは、`PlacementAttempt` / `RepairAttempt`を返す。
+成功のreceipt、実行事実を持つ失敗、実行事実のない拒否をenumで区別し、
+`OperationResult`経由で操作履歴へ保持する。成功・失敗、消費済み操作、確認済み変更数の
+判定はRustのfieldとvariantから行い、この二経路のworkflow内ではJSONを作らない。
+MCP facadeで公開形式へencodeする。未解析の所持品や権限を結果から復元する入口はない。
+
+`FailureCause` / `FailureReport`の公開表示も、借用する型付きviewとして定義した。
+通常配置・修復の結果からこのviewをserializeし、表示のために中間JSONを保持しない。
+進捗の欠落はnull、既知のzeroはzeroとして維持する。修復の巻戻しが確認できても
+目的状態への失敗は成功へ変えず、真理値表が未取得の場合を非同等という判定に変えない。
+保存の確定とworldの確認、提出済み数と確認済み数、取消しと遅れて届いた結果も区別する。
+
+完成したMCP応答から進捗を読み直す`performance::tool_progress`を撤去した。
+通常配置・修復、Assembly配置、電気編集、ピストン配置、ドア操作、transitionの
+実行側が現在のattemptのRust進捗を通知する。途中の通知に加え、保存結果やcleanupを
+反映した終了時の値を通知する。処理を開始しなかった拒否からzeroを作らず、
+履歴の取得・serialize・再送拒否によって以前のattemptを現在のactivityへ取り込まない。
+
+これはregistry全体のJSON除去完了ではない。他の結果所有者は一時的な
+`OperationResult::Unmigrated`、crate内限定の`record_unmigrated` /
+`complete_unmigrated`を使用する。このpayloadは公開JSON入力や復元APIではなく、
+残る移行対象を明示するもの。暗黙の`From<Value>`は用意しない。
+これらの所有者に残るJSON生成・判定、古いfailureのJSON helper、他のworkflow・
+診断exampleは引き続き除去する。enumに包んだことだけをJSON除去とは扱わない。
+
+操作履歴は従来どおりmemory内の診断であり、Deserializeを撤去した。
+保存schema、実行可能なplan、独立観測の権限、botやworldへの操作は変更していない。
+
+#### 配置・修復・進捗の回帰検証
+
+関連filterの計79件が成功した（重複実行は件数に含めない）。通常配置・修復、undo、
+再起動、応答喪失、履歴取得、取消し、保存失敗、電気編集、建築jobの再開と回復を含む。
+型付きregistryの試験では、確認済みprefixだけの割合、消費済み結果の維持、
+遅れて完了する取消済み処理、過去結果のserializeと新しいactivityの分離を検査した。
+最終保存に失敗した場合は、worldが確認済みでも操作の完了へ変えない。
+
+transitionの失敗・cleanup後のactivityを返された診断と照合した。再送拒否のactivityは
+過去の進捗を保持せず未取得のまま。Assembly配置・undoでは、最終保存を含む終了値と
+公開activityの一致を確認した。通常配置のMCP試験でも、readbackを待つ途中の未確認と
+終了後の確認済み数を検査している。完成したJSON応答の再解析に頼っていない。
+
+workspace全targetとMCPの`--no-default-features`全targetのClippyは
+`-D warnings`で成功し、formattingと差分の空白検査も成功した。
+全てoffline/lockedでCargoは単独`-j1`、テストは単一thread。
+実機接続、ワールド変更、保存schema、依存version、Voxrig source/vendorへの変更はない。
+統合ゴールは継続し、上記の未移行経路と他の内部JSONを残作業とする。

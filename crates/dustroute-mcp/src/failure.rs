@@ -1,8 +1,13 @@
 //! Facts about a failed operation. No inference from diagnostic message text,
 //! replay authority or conversion of submitted commands into verified writes.
+mod response;
+pub use response::{
+    AttemptResponse, CauseResponse, FailureDisposition, RecoveryAdvice, UnrecordedDiagnostic,
+};
+
 use dustroute_physical::Pos;
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde_json::Value;
 use std::fmt::{Display, Formatter};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -132,14 +137,7 @@ impl FailureCause {
     }
     /// Diagnostics without execution facts must not invent zero world changes.
     pub fn response(&self) -> Value {
-        json!({"ok":false,"schema_version":"dustroute.error.v2",
-            "error":self.message,"error_code":self.error_code(),"retryable":false,
-            "failure":{"primary":self,"secondary":[],"progress":null},
-            "recovery":{"reobserve_required":match self.kind {
-                CauseKind::ObservationUnavailable | CauseKind::ObservationIncomplete |
-                CauseKind::MovingObservation | CauseKind::VerificationMismatch => Some(true),
-                _ => None },"replan_required":null,"inspect_saved_record":null,
-                "same_operation_replay_allowed":false}})
+        serde_json::to_value(self.as_response()).expect("failure facts are serializable")
     }
     pub fn input_range(parameter: &str, actual: f64, min: f64, max: f64) -> Self {
         let mut cause = Self::new(
@@ -447,30 +445,7 @@ impl Display for FailureReport {
 impl std::error::Error for FailureReport {}
 impl FailureReport {
     pub fn response(&self) -> Value {
-        let inspection = self.progress.world != WorldOutcome::NotAttempted
-            || self.progress.operation_consumed
-            || self.progress.persistence == PersistenceOutcome::Uncertain;
-        let reobserve = self.progress.world == WorldOutcome::Unknown
-            || matches!(
-                self.primary.kind,
-                CauseKind::ObservationUnavailable
-                    | CauseKind::ObservationIncomplete
-                    | CauseKind::MovingObservation
-                    | CauseKind::VerificationMismatch
-            )
-            || matches!(
-                self.primary.phase,
-                Some(FailurePhase::BeforeReadback | FailurePhase::AfterReadback)
-            );
-        json!({"ok":false,"schema_version":"dustroute.error.v2",
-            "error":self.primary.message,"error_code":self.primary.error_code(),
-            "retryable":false,"retry_allowed":false,
-            "status":if inspection {"needs_inspection"} else {"refused"},
-            "failure":self,
-            "recovery":{"reobserve_required":reobserve,
-                "replan_required":self.progress.operation_consumed || self.primary.kind==CauseKind::VerificationMismatch,
-                "inspect_saved_record":self.progress.persistence == PersistenceOutcome::Uncertain,
-                "same_operation_replay_allowed":false}})
+        serde_json::to_value(self.as_response()).expect("failure facts are serializable")
     }
     pub fn attach(&self, response: &mut Value) {
         let extra = self.response();

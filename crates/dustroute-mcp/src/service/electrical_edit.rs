@@ -216,11 +216,11 @@ impl DustRouteMcp {
         plans.insert(id, plan);
         drop(plans);
         for old in superseded {
-            self.operations.record_completed(old,OperationKind::PlacementPreview,
+            self.operations.record_unmigrated(old,OperationKind::PlacementPreview,
                 json!({"ok":false,"status":"job_stage_capability_discarded","next_step":"freshly plan the job stage"})).await;
         }
         self.operations
-            .record_completed(id, OperationKind::PlacementPreview, response.clone())
+            .record_unmigrated(id, OperationKind::PlacementPreview, response.clone())
             .await;
         Ok(response)
     }
@@ -356,9 +356,11 @@ impl DustRouteMcp {
         undo: bool,
     ) -> Value {
         let mut progress = ExecutionProgress::default();
-        self.execute_electrical_edit(id, confirm, undo, &mut progress)
-            .await
-            .unwrap_or_else(|error| progress.cause(error).response())
+        let result = self
+            .execute_electrical_edit(id, confirm, undo, &mut progress)
+            .await;
+        crate::performance::execution_progress(&progress);
+        result.unwrap_or_else(|error| progress.cause(error).response())
     }
 
     async fn execute_electrical_edit(
@@ -633,7 +635,7 @@ impl DustRouteMcp {
             response["execution_progress"] = json!(progress);
         }
         self.operations
-            .record_completed(
+            .record_unmigrated(
                 id,
                 if undo {
                     OperationKind::PlacementUndo

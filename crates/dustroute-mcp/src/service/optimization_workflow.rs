@@ -184,7 +184,7 @@ impl OptimizationWorkflow<'_> {
             return workflow_error(McpErrorCode::Internal, error, false);
         }
         self.operations
-            .record_completed(
+            .record_unmigrated(
                 operation_id,
                 OperationKind::OptimizationProposal,
                 json!({
@@ -500,7 +500,7 @@ impl OptimizationWorkflow<'_> {
             return workflow_error(McpErrorCode::Internal, error, false);
         }
         self.operations
-            .record_completed(
+            .record_unmigrated(
                 operation_id,
                 OperationKind::OptimizationProposal,
                 json!({

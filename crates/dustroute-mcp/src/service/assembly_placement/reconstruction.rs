@@ -78,7 +78,7 @@ impl AssemblyService<'_> {
         );
         drop(plans);
         self.operations
-            .record_completed(
+            .record_unmigrated(
                 operation_id,
                 OperationKind::PlacementPreview,
                 response.clone(),

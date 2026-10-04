@@ -9,7 +9,7 @@ pub const MUTATION_PROTOCOL: &str = "dustroute.bridge-mutation.v1";
 pub const COMMAND_LIMIT: usize = 32_768;
 pub const PHYSICAL_LIMIT: usize = 128;
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub enum MutationProtocol {
     #[serde(rename = "dustroute.bridge-mutation.v1")]
     V1,
@@ -45,13 +45,13 @@ pub(crate) struct MutationRequest<'a, T> {
     pub dimension: &'a str,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct CommandSubmission {
     pub protocol: MutationProtocol,
     pub submitted_changes: usize,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum PhysicalPlacementMode {
     #[cfg(test)]
@@ -59,7 +59,7 @@ pub enum PhysicalPlacementMode {
     VoxrigCreativePlayer,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct PhysicalSubmission {
     pub protocol: MutationProtocol,
     pub placed_changes: usize,

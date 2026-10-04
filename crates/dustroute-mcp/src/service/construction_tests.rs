@@ -740,6 +740,21 @@ async fn same_process_undo_uses_the_durable_construction_journal() {
     )
     .await;
     assert_eq!(same_process_applied["ok"], true, "{same_process_applied}");
+    let live = call(
+        &client,
+        "get_operation",
+        json!({"operation_id":same_process_id}),
+    )
+    .await;
+    assert_eq!(live["activity"]["active"], false);
+    assert_eq!(
+        live["activity"]["execution_progress"],
+        same_process_applied["execution_progress"]
+    );
+    assert_eq!(
+        live["activity"]["execution_progress"]["persistence"],
+        "final_saved"
+    );
     fake.lock().unwrap().steps = same_process["undo_steps"]
         .as_array()
         .unwrap()
@@ -753,6 +768,17 @@ async fn same_process_undo_uses_the_durable_construction_journal() {
     )
     .await;
     assert_eq!(same_process_undone["ok"], true, "{same_process_undone}");
+    let live = call(
+        &client,
+        "get_operation",
+        json!({"operation_id":same_process_id}),
+    )
+    .await;
+    assert_eq!(live["activity"]["active"], false);
+    assert_eq!(
+        live["activity"]["execution_progress"],
+        same_process_undone["execution_progress"]
+    );
     let same_process_record = call(
         &client,
         "manage_assembly",

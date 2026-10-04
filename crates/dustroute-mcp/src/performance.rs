@@ -132,34 +132,6 @@ pub(crate) fn execution_progress(progress: &crate::failure::ExecutionProgress) {
     }
 }
 
-pub(crate) fn tool_progress(response: &rmcp::model::CallToolResponse) {
-    if current().activity.is_none() {
-        return;
-    }
-    #[derive(serde::Deserialize)]
-    struct FailedFacts {
-        progress: Option<crate::failure::ExecutionProgress>,
-    }
-    #[derive(serde::Deserialize)]
-    struct Facts {
-        failure: Option<FailedFacts>,
-        execution_progress: Option<crate::failure::ExecutionProgress>,
-    }
-    if let rmcp::model::CallToolResponse::Complete(result) = response {
-        for content in &result.content {
-            if let rmcp::model::ContentBlock::Text(text) = content
-                && let Ok(facts) = serde_json::from_str::<Facts>(&text.text)
-                && let Some(progress) = facts
-                    .failure
-                    .and_then(|f| f.progress)
-                    .or(facts.execution_progress)
-            {
-                execution_progress(&progress);
-            }
-        }
-    }
-}
-
 /// Measure library calls without enabling process-wide logging. Independent
 /// captures, including concurrent requests, never share counters.
 pub async fn measure<T>(operation: &str, work: impl Future<Output = T>) -> (T, Measurement) {

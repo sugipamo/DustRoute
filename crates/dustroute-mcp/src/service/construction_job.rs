@@ -89,7 +89,7 @@ impl DustRouteMcp {
                 retain
             });
         for id in discarded {
-            self.operations.record_completed(id, OperationKind::PlacementPreview,
+            self.operations.record_unmigrated(id, OperationKind::PlacementPreview,
                 json!({"ok":false,"status":"job_stage_capability_discarded","job_id":job_id,
                     "next_step":"get_operation for durable edit history, or manage_construction_job"})).await;
         }

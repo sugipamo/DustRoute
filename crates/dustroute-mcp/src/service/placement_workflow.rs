@@ -1,6 +1,10 @@
 //! One command-placement attempt, its context check and independent readback.
 //! Player resolution and MCP dispatch have already happened at the facade.
 use super::*;
+use crate::operations::mutation::{
+    MutationAction, PlacementAttempt, PlacementFailure, PlacementOutcome, PlacementReceipt,
+    Success, UnrecordedFailure,
+};
 pub(super) struct PlacementWorkflow<'a> {
     pub bridge: &'a BotBridge,
     pub policy: &'a McpPolicy,
@@ -20,10 +24,18 @@ impl PlacementWorkflow<'_> {
         &self,
         params: ConfirmedOperationParams,
         undo: bool,
-    ) -> Value {
+    ) -> PlacementAttempt {
         let mut progress = ExecutionProgress::default();
-        let mut response = self.execute_placement(&params, undo, &mut progress).await;
-        response["operation_id"] = json!(params.operation_id);
+        let outcome = self.execute_placement(&params, undo, &mut progress).await;
+        let response = PlacementAttempt {
+            operation_id: params.operation_id.clone(),
+            outcome,
+        };
+        // Publish only this attempt's known facts. Refusals without execution
+        // facts neither invent zero changes nor read old history into activity.
+        if let Some(progress) = response.progress() {
+            crate::performance::execution_progress(progress);
+        }
         if let Ok(id) = uuid::Uuid::parse_str(&params.operation_id) {
             self.operations
                 .record_completed(
@@ -33,7 +45,7 @@ impl PlacementWorkflow<'_> {
                     } else {
                         OperationKind::PlacementApply
                     },
-                    response.clone(),
+                    response.clone().into(),
                 )
                 .await;
         }
@@ -44,15 +56,14 @@ impl PlacementWorkflow<'_> {
         params: &ConfirmedOperationParams,
         undo: bool,
         progress: &mut ExecutionProgress,
-    ) -> Value {
+    ) -> PlacementOutcome {
         if !params.confirm {
-            return json!({
-                "ok": false,
-                "error": "confirm must be true because this operation changes the world"
-            });
+            return PlacementOutcome::refused(
+                "confirm must be true because this operation changes the world",
+            );
         }
         if let Err(error) = self.policy.authorize_mutation() {
-            return progress.cause(error).response();
+            return PlacementOutcome::failed(progress.cause(error));
         }
         let queue = crate::performance::span(crate::performance::Phase::MutationQueue);
         let _mutation_guard = self.mutation_lock.lock().await;
@@ -60,19 +71,29 @@ impl PlacementWorkflow<'_> {
         let operation_id = match uuid::Uuid::parse_str(&params.operation_id) {
             Ok(id) => id,
             Err(error) => {
-                return workflow_error(McpErrorCode::InvalidArgument, error.to_string(), false);
+                return PlacementOutcome::coded(
+                    McpErrorCode::InvalidArgument,
+                    error.to_string(),
+                    false,
+                );
             }
         };
         if let Some(context) = self.plans.placements().lock().await.revision(&operation_id) {
             let player = match self.actor.clone() {
                 Ok(player) => player,
-                Err(error) => return json!({"ok":false,"error":error}),
+                Err(error) => {
+                    return PlacementOutcome::Refused(UnrecordedFailure::Cause(Box::new(error)));
+                }
             };
             if let Err(error) = self.policy.authorize_player(&player) {
-                return workflow_error(McpErrorCode::PermissionDenied, error.to_string(), false);
+                return PlacementOutcome::coded(
+                    McpErrorCode::PermissionDenied,
+                    error.to_string(),
+                    false,
+                );
             }
             if context.player != player {
-                return json!({"ok":false,"error":"placement belongs to another player"});
+                return PlacementOutcome::refused("placement belongs to another player");
             }
         }
         let plan = match self
@@ -84,7 +105,7 @@ impl PlacementWorkflow<'_> {
             .cloned()
         {
             Some(plan) => plan,
-            None => return json!({ "ok": false, "error": "unknown operation ID" }),
+            None => return PlacementOutcome::refused("unknown operation ID"),
         };
         let dimension = match self
             .plans
@@ -96,14 +117,11 @@ impl PlacementWorkflow<'_> {
         {
             Some(dimension) => dimension,
             None => {
-                return json!({
-                    "ok": false,
-                    "error": "placement plan has no captured dimension"
-                });
+                return PlacementOutcome::refused("placement plan has no captured dimension");
             }
         };
         if let Err(error) = self.policy.authorize_dimension(&dimension) {
-            return progress.cause(error).response();
+            return PlacementOutcome::failed(progress.cause(error));
         }
         let is_applied = self
             .plans
@@ -112,10 +130,10 @@ impl PlacementWorkflow<'_> {
             .await
             .is_applied(&operation_id);
         if undo && !is_applied {
-            return json!({ "ok": false, "error": "placement plan is not applied" });
+            return PlacementOutcome::refused("placement plan is not applied");
         }
         if !undo && is_applied {
-            return json!({ "ok": false, "error": "placement plan is already applied" });
+            return PlacementOutcome::refused("placement plan is already applied");
         }
         if !undo
             && (self.policy.preview_required
@@ -127,7 +145,7 @@ impl PlacementWorkflow<'_> {
                     .has_revision(&operation_id))
             && !plan.previewed
         {
-            return workflow_error(
+            return PlacementOutcome::coded(
                 McpErrorCode::InvalidState,
                 "placement must be shown with show_operation before invoke_operation",
                 false,
@@ -140,7 +158,7 @@ impl PlacementWorkflow<'_> {
             &plan.changes
         };
         if let Err(error) = self.policy.validate_placement_size(source.len()) {
-            return progress.cause(error).response();
+            return PlacementOutcome::failed(progress.cause(error));
         }
         progress.phase = FailurePhase::BeforeReadback;
         crate::performance::execution_progress(progress);
@@ -151,20 +169,20 @@ impl PlacementWorkflow<'_> {
             .await
         {
             Ok(result) => result,
-            Err(error) => return progress.cause(error).response(),
+            Err(error) => return PlacementOutcome::failed(progress.cause(error)),
         };
         if !baseline_matches {
             if let Some(stored) = self.plans.placements().lock().await.get_mut(&operation_id) {
                 stored.previewed = false;
             }
-            let mut response = progress
-                .cause(FailureCause::mismatch(
+            return PlacementOutcome::Failed(Box::new(PlacementFailure {
+                report: progress.cause(FailureCause::mismatch(
                     "placement baseline is stale; preview again before changing the world",
                     &baseline_mismatches,
-                ))
-                .response();
-            response["mismatches"] = json!(baseline_mismatches);
-            return response;
+                )),
+                mismatches: Some(baseline_mismatches),
+                bridge: None,
+            }));
         }
         // Serialized plans carry no validation proof. Recheck the current
         // placement context before forward writes. Exact undo restores captured
@@ -178,7 +196,7 @@ impl PlacementWorkflow<'_> {
                 .await
             {
                 Ok(changes) => Some(changes),
-                Err(error) => return progress.cause(error).response(),
+                Err(error) => return PlacementOutcome::failed(progress.cause(error)),
             }
         };
         let source = validated
@@ -218,13 +236,13 @@ impl PlacementWorkflow<'_> {
             .collect::<Result<Vec<_>, _>>()
         {
             Ok(writes) => writes,
-            Err(error) => return json!({ "ok": false, "error": error.to_string() }),
+            Err(error) => return PlacementOutcome::refused(error),
         };
         if let Err(error) = self
             .check_revision_placement(operation_id, undo, false, true)
             .await
         {
-            return progress.cause(error).response();
+            return PlacementOutcome::failed(progress.cause(error));
         }
         progress.operation_consumed = self
             .plans
@@ -240,9 +258,9 @@ impl PlacementWorkflow<'_> {
             .await
             .begin(&operation_id, undo)
         {
-            return progress
-                .cause(FailureCause::new(CauseKind::InvalidState, error))
-                .response();
+            return PlacementOutcome::failed(
+                progress.cause(FailureCause::new(CauseKind::InvalidState, error)),
+            );
         }
         progress.operation_consumed = true;
         let previous_world = progress.world;
@@ -254,7 +272,9 @@ impl PlacementWorkflow<'_> {
                 crate::performance::execution_progress(progress);
                 result
             }
-            Err(error) => return progress.submission_error(error, previous_world).response(),
+            Err(error) => {
+                return PlacementOutcome::failed(progress.submission_error(error, previous_world));
+            }
         };
         progress.phase = FailurePhase::AfterReadback;
         crate::performance::execution_progress(progress);
@@ -264,27 +284,26 @@ impl PlacementWorkflow<'_> {
             .await
         {
             Ok(result) => result,
-            Err(error) => return progress.cause(error).response(),
+            Err(error) => return PlacementOutcome::failed(progress.cause(error)),
         };
         progress.phase = FailurePhase::Verification;
         crate::performance::execution_progress(progress);
         if !verified {
-            let mut response = progress
-                .cause(FailureCause::mismatch(
+            return PlacementOutcome::Failed(Box::new(PlacementFailure {
+                report: progress.cause(FailureCause::mismatch(
                     "placement verification failed",
                     &verification_mismatches,
-                ))
-                .response();
-            response["mismatches"] = json!(verification_mismatches);
-            response["bridge"] = json!(bridge_result);
-            return response;
+                )),
+                mismatches: Some(verification_mismatches),
+                bridge: Some(bridge_result),
+            }));
         }
         // The full revision boundary must also match before declaring a verified target.
         if let Err(error) = self
             .check_revision_placement(operation_id, undo, true, false)
             .await
         {
-            return progress.cause(error).response();
+            return PlacementOutcome::failed(progress.cause(error));
         }
         progress.world = WorldOutcome::Verified;
         progress.verified_steps = source.len();
@@ -296,17 +315,16 @@ impl PlacementWorkflow<'_> {
         if let Some(stored) = self.plans.placements().lock().await.get_mut(&operation_id) {
             stored.previewed = false;
         }
-        json!({
-            "schema_version": PLACEMENT_SCHEMA_V1,
-            "execution_progress":progress,
-            "ok": true,
-            "operation_id": operation_id,
-            "action": if undo { "undo" } else { "apply" },
-            "changed_blocks": source.len(),
-            "verified": verified,
-            "dimension": dimension,
-            "bridge": bridge_result,
-        })
+        PlacementOutcome::Verified(Box::new(PlacementReceipt {
+            schema_version: PLACEMENT_SCHEMA_V1,
+            execution_progress: progress.clone(),
+            ok: Success,
+            action: MutationAction::from_undo(undo),
+            changed_blocks: source.len(),
+            verified,
+            dimension,
+            bridge: bridge_result,
+        }))
     }
 
     async fn check_revision_placement(

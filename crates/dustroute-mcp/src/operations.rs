@@ -1,3 +1,6 @@
+pub mod mutation;
+mod result;
+pub use result::OperationResult;
 #[path = "operation_activity.rs"]
 mod activity;
 pub(crate) use activity::{Activity, ActivityAction, ActivityGuard, ActivitySnapshot};
@@ -39,7 +42,7 @@ pub enum OperationStatus {
     Cancelled,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct OperationRecord {
     pub id: Uuid,
     pub kind: OperationKind,
@@ -49,7 +52,7 @@ pub struct OperationRecord {
     pub created_at_unix_ms: u128,
     pub updated_at_unix_ms: u128,
     pub completed_at_unix_ms: Option<u128>,
-    pub result: Option<Value>,
+    pub result: Option<OperationResult>,
 }
 
 #[derive(Clone, Debug)]
@@ -158,19 +161,19 @@ impl OperationRegistry {
         }
     }
 
-    pub async fn complete(&self, id: Uuid, result: Value) {
+    pub async fn complete(&self, id: Uuid, result: OperationResult) {
         if let Some(entry) = self.entries.lock().await.get_mut(&id) {
             let now = now_unix_ms();
             if entry.cancellation.is_cancelled() {
                 return;
             }
-            let failed = result.get("ok") == Some(&Value::Bool(false));
+            let failed = result.failed();
             entry.record.status = if failed {
                 OperationStatus::Failed
             } else {
                 OperationStatus::Completed
             };
-            entry.record.progress_percent = result_progress(&result);
+            entry.record.progress_percent = result.progress_percent();
             entry.record.message = if failed {
                 "failed; inspect result before recovery"
             } else {
@@ -183,30 +186,24 @@ impl OperationRegistry {
         }
     }
 
-    pub async fn record_completed(&self, id: Uuid, kind: OperationKind, result: Value) {
+    pub async fn record_completed(&self, id: Uuid, kind: OperationKind, result: OperationResult) {
         let now = now_unix_ms();
         let mut entries = self.entries.lock().await;
         // A refusal to replay is not a new world attempt. Keep the original
         // mutation's facts under its ID rather than replacing them with an
         // admission error that knows nothing about earlier effects.
-        let consumed = |value: &Value| {
-            value
-                .pointer("/failure/progress/operation_consumed")
-                .or_else(|| value.pointer("/execution_progress/operation_consumed"))
-                == Some(&Value::Bool(true))
-        };
-        if result.get("ok") == Some(&Value::Bool(false))
-            && !consumed(&result)
+        if result.failed()
+            && !result.consumed()
             && entries
                 .get(&id)
                 .and_then(|entry| entry.record.result.as_ref())
-                .is_some_and(consumed)
+                .is_some_and(OperationResult::consumed)
         {
             return;
         }
         prune_terminal_entries(&mut entries, self.max_entries.saturating_sub(1));
-        let failed = result.get("ok") == Some(&Value::Bool(false));
-        let progress_percent = result_progress(&result);
+        let failed = result.failed();
+        let progress_percent = result.progress_percent();
         entries.insert(
             id,
             OperationEntry {
@@ -233,6 +230,15 @@ impl OperationRegistry {
                 cancellation: CancellationToken::new(),
             },
         );
+    }
+
+    /// Temporary owner of existing JSON workflows. Remove when every caller is migrated.
+    pub(crate) async fn record_unmigrated(&self, id: Uuid, kind: OperationKind, result: Value) {
+        self.record_completed(id, kind, OperationResult::unmigrated(result))
+            .await;
+    }
+    pub(crate) async fn complete_unmigrated(&self, id: Uuid, result: Value) {
+        self.complete(id, OperationResult::unmigrated(result)).await;
     }
 
     pub async fn fail(&self, id: Uuid, message: impl Into<String>) {
@@ -300,27 +306,6 @@ impl OperationRegistry {
     }
 }
 
-fn result_progress(result: &Value) -> u8 {
-    if result.get("ok") != Some(&Value::Bool(false)) {
-        return 100;
-    }
-    let progress = result.pointer("/failure/progress");
-    let verified = progress
-        .and_then(|p| p.get("verified_steps"))
-        .or_else(|| result.get("verified_steps"))
-        .and_then(Value::as_u64);
-    let total = progress
-        .and_then(|p| p.get("total_changes"))
-        .or_else(|| result.get("total_steps"))
-        .and_then(Value::as_u64);
-    verified
-        .zip(total)
-        .filter(|(_, total)| *total > 0)
-        .map_or(0, |(verified, total)| {
-            ((u128::from(verified) * 100 / u128::from(total)).min(100)) as u8
-        })
-}
-
 fn prune_terminal_entries(entries: &mut HashMap<Uuid, OperationEntry>, target_len: usize) {
     if entries.len() <= target_len {
         return;
@@ -344,7 +329,135 @@ fn prune_terminal_entries(entries: &mut HashMap<Uuid, OperationEntry>, target_le
 
 #[cfg(test)]
 mod tests {
+    use super::mutation::{PlacementAttempt, PlacementOutcome, RepairAttempt, RepairOutcome};
     use super::*;
+    use crate::failure::{
+        CauseKind, ExecutionProgress, FailureCause, FailurePhase, PersistenceOutcome, WorldOutcome,
+    };
+
+    fn typed_failure(id: Uuid, progress: ExecutionProgress) -> OperationResult {
+        PlacementAttempt {
+            operation_id: id.to_string(),
+            outcome: PlacementOutcome::failed(progress.cause(FailureCause::new(
+                CauseKind::Timeout,
+                "readback unavailable",
+            ))),
+        }
+        .into()
+    }
+
+    #[tokio::test]
+    async fn typed_results_preserve_verified_prefix_and_consumed_attempt_across_refusal() {
+        let registry = OperationRegistry::default();
+        let id = Uuid::new_v4();
+        let original = typed_failure(
+            id,
+            ExecutionProgress {
+                world: WorldOutcome::Unknown,
+                submitted_changes: Some(10),
+                total_changes: Some(10),
+                verified_steps: 2,
+                operation_consumed: true,
+                ..Default::default()
+            },
+        );
+        registry
+            .record_completed(id, OperationKind::PlacementApply, original.clone())
+            .await;
+        let stored = registry.get(id).await.unwrap();
+        assert_eq!(stored.status, OperationStatus::Failed);
+        assert_eq!(stored.progress_percent, 20);
+        let refusal = PlacementAttempt {
+            operation_id: id.to_string(),
+            outcome: PlacementOutcome::refused("already consumed"),
+        };
+        assert!(refusal.progress().is_none());
+        registry
+            .record_completed(id, OperationKind::PlacementApply, refusal.into())
+            .await;
+        assert_eq!(registry.get(id).await.unwrap().result, Some(original));
+    }
+
+    #[tokio::test]
+    async fn verified_world_with_failed_final_save_is_not_a_completed_operation() {
+        let registry = OperationRegistry::default();
+        let id = Uuid::new_v4();
+        let progress = ExecutionProgress {
+            phase: FailurePhase::FinalSave,
+            world: WorldOutcome::Verified,
+            verified_steps: 2,
+            total_changes: Some(2),
+            durable_verified_steps: Some(1),
+            persistence: PersistenceOutcome::Uncertain,
+            operation_consumed: true,
+            ..Default::default()
+        };
+        let record = RepairAttempt {
+            operation_id: id.to_string(),
+            outcome: RepairOutcome::failed(progress.cause(FailureCause::new(
+                CauseKind::Persistence,
+                "final save unavailable",
+            ))),
+        };
+        registry
+            .record_completed(id, OperationKind::RepairApply, record.into())
+            .await;
+        let stored = registry.get(id).await.unwrap();
+        assert_eq!(stored.status, OperationStatus::Failed);
+        assert_eq!(stored.progress_percent, 100);
+        let progress = stored.result.as_ref().unwrap().progress().unwrap();
+        assert_eq!(progress.world, WorldOutcome::Verified);
+        assert_eq!(progress.durable_verified_steps, Some(1));
+        assert_eq!(progress.persistence, PersistenceOutcome::Uncertain);
+    }
+
+    #[tokio::test]
+    async fn cancellation_cannot_be_reclassified_by_a_late_typed_result() {
+        let registry = OperationRegistry::default();
+        let id = registry
+            .create(OperationKind::AnalyzeRegion, "queued")
+            .await;
+        assert!(registry.cancel(id).await);
+        registry
+            .complete(id, typed_failure(id, ExecutionProgress::default()))
+            .await;
+        let stored = registry.get(id).await.unwrap();
+        assert_eq!(stored.status, OperationStatus::Cancelled);
+        assert!(stored.result.is_none());
+    }
+
+    #[tokio::test]
+    async fn serializing_recorded_results_cannot_publish_a_fresh_attempt_progress() {
+        let registry = OperationRegistry::default();
+        let id = Uuid::new_v4();
+        registry
+            .record_completed(
+                id,
+                OperationKind::PlacementApply,
+                typed_failure(
+                    id,
+                    ExecutionProgress {
+                        operation_consumed: true,
+                        verified_steps: 5,
+                        world: WorldOutcome::Unknown,
+                        ..Default::default()
+                    },
+                ),
+            )
+            .await;
+        let guard = registry
+            .begin_activity(id, ActivityAction::InvokeOperation)
+            .await
+            .unwrap();
+        crate::performance::with_activity(Some(guard.0.clone()), async {
+            let history = registry.get(id).await.unwrap();
+            let wire = serde_json::to_value(history).unwrap();
+            assert_eq!(wire["result"]["failure"]["progress"]["verified_steps"], 5);
+            let live = serde_json::to_value(registry.activity(id).await.unwrap()).unwrap();
+            assert!(live["execution_progress"].is_null());
+        })
+        .await;
+    }
 
     #[tokio::test]
     async fn replay_refusal_does_not_replace_original_consumed_attempt() {
@@ -352,16 +465,19 @@ mod tests {
         let id = Uuid::new_v4();
         let original = serde_json::json!({"ok":false,"error":"reply lost","failure":{"progress":{"operation_consumed":true,"world":"unknown"}}});
         registry
-            .record_completed(id, OperationKind::RepairApply, original.clone())
+            .record_unmigrated(id, OperationKind::RepairApply, original.clone())
             .await;
         registry
-            .record_completed(
+            .record_unmigrated(
                 id,
                 OperationKind::RepairApply,
                 serde_json::json!({"ok":false,"error":"already consumed"}),
             )
             .await;
-        assert_eq!(registry.get(id).await.unwrap().result, Some(original));
+        assert_eq!(
+            registry.get(id).await.unwrap().result,
+            Some(OperationResult::unmigrated(original))
+        );
     }
     #[tokio::test]
     async fn completed_call_preserves_failure_and_only_verified_progress() {
@@ -369,16 +485,19 @@ mod tests {
         let result = serde_json::json!({"ok":false,"failure":{"progress":{"submitted_changes":10,"verified_steps":2,"total_changes":10}},"error":"after readback failed"});
         let id = Uuid::new_v4();
         registry
-            .record_completed(id, OperationKind::PlacementApply, result.clone())
+            .record_unmigrated(id, OperationKind::PlacementApply, result.clone())
             .await;
         let stored = registry.get(id).await.unwrap();
         assert_eq!(stored.status, OperationStatus::Failed);
         assert_eq!(stored.progress_percent, 20);
-        assert_eq!(stored.result, Some(result.clone()));
+        assert_eq!(
+            stored.result,
+            Some(OperationResult::unmigrated(result.clone()))
+        );
         let task = registry
             .create(OperationKind::AnalyzeRegion, "queued")
             .await;
-        registry.complete(task, result).await;
+        registry.complete_unmigrated(task, result).await;
         assert_eq!(
             registry.get(task).await.unwrap().status,
             OperationStatus::Failed
@@ -395,7 +514,7 @@ mod tests {
             .update(completed, OperationStatus::Running, 50, "analyzing")
             .await;
         registry
-            .complete(completed, serde_json::json!({ "ok": true }))
+            .complete_unmigrated(completed, serde_json::json!({ "ok": true }))
             .await;
         assert_eq!(
             registry.get(completed).await.unwrap().status,
@@ -424,7 +543,7 @@ mod tests {
                 .create(OperationKind::RepairProposal, "queued")
                 .await;
             registry
-                .complete(id, serde_json::json!({ "ok": true }))
+                .complete_unmigrated(id, serde_json::json!({ "ok": true }))
                 .await;
         }
 

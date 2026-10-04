@@ -976,7 +976,7 @@ impl DustRouteMcp {
         params: ConfirmedOperationParams,
         undo: bool,
     ) -> CallToolResult {
-        json_reply(
+        typed_reply(
             placement_workflow::PlacementWorkflow {
                 bridge: &self.bridge,
                 policy: &self.policy,
@@ -991,7 +991,7 @@ impl DustRouteMcp {
     }
 
     async fn mutate_repair(&self, params: ConfirmedOperationParams, undo: bool) -> CallToolResult {
-        json_reply(
+        typed_reply(
             repair_workflow::RepairWorkflow {
                 bridge: &self.bridge,
                 policy: &self.policy,
@@ -1061,7 +1061,7 @@ impl DustRouteMcp {
                 "safety": safety,
             });
             self.operations
-                .record_completed(
+                .record_unmigrated(
                     operation_id,
                     OperationKind::TransitionProposal,
                     proposal.clone(),
@@ -2800,7 +2800,7 @@ impl DustRouteMcp {
             .await
             .insert(plan, observation.dimension, None);
         self.operations
-            .record_completed(
+            .record_unmigrated(
                 operation_id,
                 OperationKind::PlacementPreview,
                 response.clone(),
@@ -3106,7 +3106,7 @@ impl DustRouteMcp {
                 return json_reply(json!({ "ok": false, "error": error }));
             }
             self.operations
-                .record_completed(
+                .record_unmigrated(
                     operation_id,
                     OperationKind::RepairProposal,
                     json!({
@@ -3897,7 +3897,7 @@ impl DustRouteMcp {
             }),
         );
         self.operations
-            .record_completed(id, OperationKind::PlacementPreview, response.clone())
+            .record_unmigrated(id, OperationKind::PlacementPreview, response.clone())
             .await;
         Ok(response)
     }
@@ -3930,7 +3930,7 @@ impl DustRouteMcp {
             if plans.len() >= 256 { return Err("too many retained piston placements".into()); }
             plans.insert(id,StoredPistonPlacement {player,dimension:observation.dimension,proof,previewed:false,state:PistonPlacementState::Planned,expires_at:Instant::now()+Duration::from_secs(300)});
             drop(plans);
-            self.operations.record_completed(id,OperationKind::PlacementPreview,response.clone()).await;
+            self.operations.record_unmigrated(id,OperationKind::PlacementPreview,response.clone()).await;
             Ok(response)
         }.await;
         json_reply(result.unwrap_or_else(|error| json!({"ok":false,"error":error})))
@@ -4008,10 +4008,11 @@ impl DustRouteMcp {
             progress.phase=if response["verification_error"].is_null(){FailurePhase::Verification}else{FailurePhase::AfterReadback};
             if response["verified"]==true {progress.world=WorldOutcome::Verified;progress.verified_steps=progress.total_changes.unwrap_or(0);}
             if let Some(mut failure)=failure {*failure.progress=progress.clone();failure.attach(&mut response);}else{response["execution_progress"]=json!(progress);}
-            self.operations.record_completed(id,if undo {OperationKind::PlacementUndo} else {OperationKind::PlacementApply},response.clone()).await;
+            self.operations.record_unmigrated(id,if undo {OperationKind::PlacementUndo} else {OperationKind::PlacementApply},response.clone()).await;
             if !ok {self.operations.fail(id,"piston placement requires inspection").await;}
             Ok(response)
         }.await;
+        crate::performance::execution_progress(&progress);
         let mut response = result.unwrap_or_else(|error| progress.cause(error).response());
         response["operation_id"] = json!(id);
         json_reply(response)
@@ -4089,7 +4090,7 @@ impl DustRouteMcp {
             if plans.len()>=256 { return Err("too many door plans; wait for expiry".into()); }
             plans.insert(id,StoredDoorPlan{player,dimension:circuit.dimension,door,target:params.target,lifecycle:InvocationState::Draft,expires_at:Instant::now()+std::time::Duration::from_secs(300)});
             drop(plans);
-            self.operations.record_completed(id,OperationKind::PistonDoorProposal,result.clone()).await;
+            self.operations.record_unmigrated(id,OperationKind::PistonDoorProposal,result.clone()).await;
             Ok(result)
         }.await;
         json_reply(result.unwrap_or_else(|error| json!({"ok":false,"error":error})))
@@ -4150,8 +4151,9 @@ impl DustRouteMcp {
             if current.state()==plan.target {
                 self.plans.table::<StoredDoorPlan>().lock().await.get_mut(&id).ok_or("door plan missing")?.lifecycle.confirm(true);
                 progress.world=WorldOutcome::Verified;progress.total_changes=Some(0);
+                crate::performance::execution_progress(&progress);
                 let result=json!({"execution_progress":progress,"ok":true,"operation_id":id,"state":plan.target,"observed_state":plan.target,"changed":false,"verified":true,"observation":observation});
-                self.operations.record_completed(id,OperationKind::PistonDoorRun,result.clone()).await;
+                self.operations.record_unmigrated(id,OperationKind::PistonDoorRun,result.clone()).await;
                 return Ok(result);
             }
             progress.begin_submission();
@@ -4178,12 +4180,16 @@ impl DustRouteMcp {
             }
             progress.phase=if result["scan_error"].is_null(){FailurePhase::Verification}else{FailurePhase::AfterReadback};
             if matches {progress.world=WorldOutcome::Verified;progress.verified_steps=1;}
+            crate::performance::execution_progress(&progress);
             if let Some(mut failure)=failure {*failure.progress=progress.clone();failure.attach(&mut result);}else{result["execution_progress"]=json!(progress);}
-            self.operations.record_completed(id,OperationKind::PistonDoorRun,result.clone()).await;
+            self.operations.record_unmigrated(id,OperationKind::PistonDoorRun,result.clone()).await;
             if !ok { self.operations.fail(id, "door result requires fresh inspection").await; }
             Ok(result)
         }.await;
-        let mut response = result.unwrap_or_else(|error| progress.cause(error).response());
+        let mut response = result.unwrap_or_else(|error| {
+            crate::performance::execution_progress(&progress);
+            progress.cause(error).response()
+        });
         response["operation_id"] = json!(id);
         json_reply(response)
     }
@@ -4490,9 +4496,10 @@ impl DustRouteMcp {
                 {
                     report.secondary(error.cause().at(FailurePhase::AfterReadback));
                 }
+                crate::performance::execution_progress(&report.progress);
                 let response = report.response();
                 self.operations
-                    .record_completed(operation_id, OperationKind::TransitionRun, response.clone())
+                    .record_unmigrated(operation_id, OperationKind::TransitionRun, response.clone())
                     .await;
                 return json_reply(response);
             }
@@ -4620,10 +4627,11 @@ impl DustRouteMcp {
             Err(_) => {
                 let mut report = failure.expect("recording error inserted");
                 *report.progress = progress.clone();
+                crate::performance::execution_progress(&report.progress);
                 let mut response = report.response();
                 response["restoration_verified"] = json!(restoration_verified);
                 self.operations
-                    .record_completed(operation_id, OperationKind::TransitionRun, response.clone())
+                    .record_unmigrated(operation_id, OperationKind::TransitionRun, response.clone())
                     .await;
                 return json_reply(response);
             }
@@ -4688,9 +4696,11 @@ impl DustRouteMcp {
                     FailureCause::new(CauseKind::Serialization, error.to_string())
                         .at(FailurePhase::PostAnalysis),
                 );
-                let response = failure.expect("serialization error inserted").response();
+                let report = failure.expect("serialization error inserted");
+                crate::performance::execution_progress(&report.progress);
+                let response = report.response();
                 self.operations
-                    .record_completed(operation_id, OperationKind::TransitionRun, response.clone())
+                    .record_unmigrated(operation_id, OperationKind::TransitionRun, response.clone())
                     .await;
                 return json_reply(response);
             }
@@ -4747,6 +4757,7 @@ impl DustRouteMcp {
             "wait_error": wait_error,
             "guidance": "hazard_candidate is an observed pulse without registered intent; register a signal contract before calling it a confirmed hazard"
         });
+        crate::performance::execution_progress(&progress);
         if let Some(mut report) = failure {
             *report.progress = progress.clone();
             report.attach(&mut result);
@@ -4754,7 +4765,7 @@ impl DustRouteMcp {
             result["execution_progress"] = json!(progress);
         }
         self.operations
-            .record_completed(operation_id, OperationKind::TransitionRun, result.clone())
+            .record_unmigrated(operation_id, OperationKind::TransitionRun, result.clone())
             .await;
         json_reply(result)
     }
@@ -5009,6 +5020,7 @@ impl DustRouteMcp {
             "snapshot_restore_attempted": forced_restore.is_some(),
             "snapshot_restore_error": forced_restore.and_then(Result::err),
         });
+        crate::performance::execution_progress(&progress);
         if let Some(mut report) = failure {
             *report.progress = progress.clone();
             report.attach(&mut result);
@@ -5016,7 +5028,7 @@ impl DustRouteMcp {
             result["execution_progress"] = json!(progress);
         }
         self.operations
-            .record_completed(
+            .record_unmigrated(
                 operation_id,
                 OperationKind::TransitionRestore,
                 result.clone(),
@@ -5089,7 +5101,7 @@ impl DustRouteMcp {
                     Ok(snapshot) => snapshot,
                     Err(error) => {
                         operations
-                            .complete(
+                            .complete_unmigrated(
                                 operation_id,
                                 FailureCause::from(error)
                                     .at(FailurePhase::BeforeReadback)
@@ -5121,7 +5133,7 @@ impl DustRouteMcp {
                     Ok(world) => world,
                     Err(error) => {
                         operations
-                            .complete(
+                            .complete_unmigrated(
                                 operation_id,
                                 error.at(FailurePhase::Normalization).response(),
                             )
@@ -5180,7 +5192,7 @@ impl DustRouteMcp {
                     Ok(result) => result,
                     Err(error) => {
                         operations
-                            .complete(
+                            .complete_unmigrated(
                                 operation_id,
                                 FailureCause::new(CauseKind::Unknown, error.to_string())
                                     .at(FailurePhase::Analysis)
@@ -5193,7 +5205,7 @@ impl DustRouteMcp {
                 if operations.is_cancelled(operation_id).await {
                     return;
                 }
-                operations.complete(operation_id, result).await;
+                operations.complete_unmigrated(operation_id, result).await;
             })
             .await;
         });
@@ -5677,11 +5689,7 @@ impl ServerHandler for DustRouteMcp {
         };
         let call = rmcp::handler::server::tool::ToolCallContext::new(self, request, context);
         crate::performance::with_activity(activity.as_ref().map(|guard| guard.0.clone()), async {
-            let result = crate::performance::tool(&name, self.tool_router.call(call)).await;
-            if let Ok(response) = &result {
-                crate::performance::tool_progress(response);
-            }
-            result
+            crate::performance::tool(&name, self.tool_router.call(call)).await
         })
         .await
     }
@@ -5759,7 +5767,7 @@ mod tests {
         let id = uuid::Uuid::new_v4();
         service
             .operations
-            .record_completed(
+            .record_unmigrated(
                 id,
                 OperationKind::PlacementApply,
                 serde_json::json!({"ok":false,"error":"reply lost"}),

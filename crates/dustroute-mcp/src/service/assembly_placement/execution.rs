@@ -136,9 +136,10 @@ impl AssemblyService<'_> {
                 "reconstruction_conditions":plan.reconstruction().map(|_|reconstruction::conditions()),
                 "status":if run.is_ok(){"verified"}else{"needs_inspection"},"error":run.as_ref().err().map(ToString::to_string),"retry_allowed":false,"automatic_rollback":false,"bounds":bounds_json(bounds)});
             if let Err(report)=&run {report.attach(&mut response);} else {response["execution_progress"]=json!(progress);}
-            self.operations.record_completed(id,if removal {OperationKind::PlacementUndo}else{OperationKind::PlacementApply},response.clone()).await;
+            self.operations.record_unmigrated(id,if removal {OperationKind::PlacementUndo}else{OperationKind::PlacementApply},response.clone()).await;
             Ok(response)
         }.await;
+        crate::performance::execution_progress(&progress);
         let mut response = result.unwrap_or_else(|e| progress.cause(e).response());
         response["operation_id"] = json!(id);
         response
