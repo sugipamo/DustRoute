@@ -1200,3 +1200,72 @@ formattingと差分の空白検査も成功した。依存・Voxrig・保存sche
 
 非同期解析・解析report・機構の逆観測表示などにはJSONが残る。
 `OperationResult::Unmigrated`はまだ暫定であり、内部JSON除去の統合ゴールは継続する。
+
+### 生ブロック観測・混在IR・仮想Revisionの応答接続
+
+get_worldの生ブロック一覧は`RawWorldInspection`で組み立て、gazeは
+`GazeWorldInspection`、明示した作業範囲のcaptureは`CapturedWorldInspection`で返す。
+JSON objectへの後付けやscan/boundaryのJSON書換えを削除した。
+目視対象を伴うPlayerObservationと、作業範囲で取得するPlayerContextを別の型として保持する。
+air/cave_air/void_airの除外、非air数と体積からのair数、propertyの完全な値、
+入力順のblock一覧と対象距離順のredstone一覧、表示上限とtruncationを維持する。
+一覧と対象のコピーは公開表示に必要な範囲だけで、元の共有snapshotをコピーし直さない。
+
+gazeのcomponent frontierと、生のcuboid端面は別のboundary variantで表す。
+gazeのcomplete/limit_reached/guidanceは従来の探索結果から設定する。
+gaze応答に新しいcircuit_idやcaptureを追加せず、明示した作業範囲だけで従来通り
+immutable circuitを保持する。ID、readback、観測capability、TTL、expansionはnative型で
+接続する。履歴表示にはFreshRegionの再生成や書込み許可を作るAPIはない。
+明示regionとgaze引数の併用拒否、完全なexact regionとstationary recordの要求、
+region/一覧上限の検査順序を変更しない。失敗の観測情報とscan_completeは、
+未取得の省略と既知falseを区別した`InspectionFailure`で保持する。
+
+get_circuit_irのgraph表示は`MixedIrReport`、応答は`CircuitIrResponse`で接続する。
+node/componentのID、kind、confidence、recognition、座標、literalな観測属性と
+incoming/outgoing edgeを型で保持し、再帰cell payloadを追加しない。
+node数・edge数と空graphのzero、未要求のexpanded_nodeのnullを保つ。
+解析IDは内部ではValidationKeyのままで、公開要求のanalysis_idとの比較と公開codecの
+地点だけで文字列表現を使う。未取得/不一致の解析IDと不在nodeは別の拒否型で返す。
+条件変更の検出、summary取得要求、拒否順序、既存のavailable_node_countを維持する。
+
+test_circuit_changeとget_circuit_revisionは`RevisionDisplay`を返す。
+保存のnativeなCircuitRevisionを表示へ移し、JSONの保存・組立て・再読込みは行わない。
+通常表示でsnapshot/assembly_revisionを省略し、詳細要求時はsnapshotを含める。
+詳細を要求してもAssemblyがない場合のassembly_revisionはexplicit nullのまま保持する。
+availableなAssemblyのID・親参照・重複を除いたsource revision順序・block/instance/connection数と、
+unavailable_or_legacyの区別をRust enumで表す。
+表示にはownerやbase_snapshotを追加せず、元の観測ID・parent revision・変更・validationを残す。
+仮想状態のmutation_performed/live_world_evidence/placement_authorizedは従来通りfalse。
+新しいvalidation proofや実行planへの逆変換、live circuitとしての復元入口は設けない。
+
+親の期限切れ後もself-containedな子を読めること、元のimmutable circuitを変更しないこと、
+支持喪失・不完全観測・シミュレーション未実施・不正な状態を分ける判定は維持する。
+Revisionの保存schema、TTL、input/owner/Assembly整合性、変更数・保存byte数・simulation tickの
+上限と検査順序を変更しない。Blueprint Captureの認可も同じ位置でnative causeを受け取る。
+観測/IRに元からある構造化原因と、Revisionの従来String-only拒否を区別し、
+未取得のphaseや進捗を既知zeroへ変換しない。
+
+#### 観測・IR・Revisionの回帰検証
+
+関連13件のoffline試験が成功した。raw inventoryの既存3件と公開表示1件、
+保存するvalidationの既存2件、新しいgaze/作業範囲/失敗情報の1件、認可順序1件、
+player overrideの旧応答との一致1件、既存のIR/解析ID/node展開1件、Revision分岐・
+保存・再起動・旧状態表示1件、既存のscoped electrical編集1件、累積差分の配置/undo1件を実行した。
+
+rawの試験ではcomponent limitによる不完全と、明示したcomplete work regionを区別する。
+表示のcutoff、block一覧未要求のnull、gaze応答の旧field集合、write数zeroを確認する。
+認可拒否は入力検査・transport・保存より先に起こり、過去の履歴や現在の進捗を生成しない。
+player overrideの試験ではnative causeの未指定phaseを当初unknown文字列と期待して失敗したため、
+従来の公開境界を通した応答全体との一致へ修正した。kindやphaseが未取得の記録を
+新しく推定しない。IRでは一致する解析IDでも不在nodeを拒否し、進捗や成功graphを生成しない。
+RevisionではAssembly不在の省略/null、保持するvalidation、再起動と親子の期限の分離を検査する。
+すべてsynthetic入力またはoffline mockであり、実機に接続せずワールド変更も行わない。
+
+平坦/階層解析report、機構の逆観測表示、非同期解析のcomplete_unmigratedと
+その暫定OperationResultにはJSONが残る。これらのnative接続と残存監査へ進み、
+内部JSON除去の統合ゴールは継続する。
+
+workspace全targetとMCPの`--no-default-features`全targetのClippyは
+`-D warnings`で成功した。Cargoは単独・offline/locked・`-j1`、テストは単一threadで実行。
+formattingと差分の空白検査も成功した。実機接続・ワールド変更・保存schema・依存・
+Voxrig source/vendor・物理の可否条件は変更していない。

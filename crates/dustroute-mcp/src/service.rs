@@ -32,8 +32,8 @@ mod survival;
 mod world_editor;
 use circuit_reports::{
     bounds_json, circuit_identity_json, focused_explanation_json, focused_hierarchy_role_json,
-    focused_role_json, hierarchical_result_json, mixed_ir_json, raw_world_inspection,
-    reverse_result_json, revision_json, revision_validation,
+    focused_role_json, hierarchical_result_json, mixed_ir_report, raw_world_inspection,
+    reverse_result_json, revision_display, revision_validation,
 };
 #[cfg(test)]
 mod building_tests;
@@ -1054,7 +1054,7 @@ impl DustRouteMcp {
         player: &str,
         region: requests::RegionParam,
         params: &InspectLookedAtWorldParams,
-    ) -> Result<Value, FailureCause> {
+    ) -> Result<circuit_reports::CapturedWorldInspection, FailureCause> {
         if params.component_gap.is_some()
             || params.max_components.is_some()
             || params.max_distance.is_some()
@@ -1102,7 +1102,7 @@ impl DustRouteMcp {
             ));
         }
         dustroute_translate::snapshot::index_literal_snapshot(&snapshot)?;
-        let mut result = raw_world_inspection(
+        let inspection = raw_world_inspection(
             &snapshot,
             target,
             &observation.dimension,
@@ -1126,16 +1126,18 @@ impl DustRouteMcp {
                 expires_at: Instant::now() + CIRCUIT_SNAPSHOT_TTL,
             })
             .await;
-        result["circuit_id"] = json!(circuit_id);
-        result["content_id"] = json!(content_id);
-        result["observation_id"] = json!(record.observation_id);
-        result["circuit_expires_in_seconds"] = json!(CIRCUIT_SNAPSHOT_TTL.as_secs());
-        result["player_observation"] = json!(observation);
-        result["observation_capabilities"] = json!(self.bridge.observation_capabilities());
-        result["readback"] = json!(record.readback);
-        result["expansion"] = json!(expansion);
-        result["mutation_authorized"] = json!(false);
-        Ok(result)
+        Ok(circuit_reports::CapturedWorldInspection {
+            inspection,
+            circuit_id,
+            content_id,
+            observation_id: record.observation_id,
+            circuit_expires_in_seconds: CIRCUIT_SNAPSHOT_TTL.as_secs(),
+            player_observation: observation,
+            observation_capabilities: self.bridge.observation_capabilities(),
+            readback: record.readback,
+            expansion,
+            mutation_authorized: false,
+        })
     }
 
     async fn load_circuit(
@@ -1524,19 +1526,20 @@ impl DustRouteMcp {
     ) -> CallToolResult {
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
-            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
+            Err(error) => return typed_reply(UnrecordedFailure::from(error)),
         };
-        if let Some(error) = self.authorize_player(&player) {
-            return CallToolResult::error(vec![ContentBlock::text(error)]);
+        if let Err(error) = self.player_scope().authorize(&player) {
+            return typed_reply(error.at(FailurePhase::Admission).as_response());
         }
         if let Some(region) = params.region {
-            return json_reply(
-                self.capture_work_region(&player, region, &params)
-                    .await
-                    .unwrap_or_else(
-                        |error| json!({"ok":false,"error":error,"scan_complete":false}),
-                    ),
-            );
+            return match self.capture_work_region(&player, region, &params).await {
+                Ok(response) => typed_reply(response),
+                Err(error) => typed_reply(circuit_reports::InspectionFailure {
+                    refusal: error.into(),
+                    observation: None,
+                    scan_complete: Some(false),
+                }),
+            };
         }
         let max_components = params.max_components.unwrap_or(8192);
         let component_gap = params.component_gap.unwrap_or(2);
@@ -1549,24 +1552,30 @@ impl DustRouteMcp {
             ("max_listed_blocks", max_listed_blocks as f64, 1.0, 2048.0),
         ] {
             if !(min..=max).contains(&actual) {
-                return json_reply(FailureCause::input_range(name, actual, min, max).response());
+                return typed_reply(
+                    FailureCause::input_range(name, actual, min, max).as_response(),
+                );
             }
         }
         let observation = match self.bridge.observe_player(&player, max_distance).await {
             Ok(observation) => observation,
             Err(error) => {
-                return json_reply(json!({ "ok": false, "error": FailureCause::from(error) }));
+                return typed_reply(FailureCause::from(error).as_response());
             }
         };
         let Some(target) = observation.targeted_block else {
-            return json_reply(json!({
-                "ok": false,
-                "error": FailureCause::new(CauseKind::NotFound, "the player is not looking at a block"),
-                "observation": observation
-            }));
+            return typed_reply(circuit_reports::InspectionFailure {
+                refusal: FailureCause::new(
+                    CauseKind::NotFound,
+                    "the player is not looking at a block",
+                )
+                .into(),
+                observation: Some(observation),
+                scan_complete: None,
+            });
         };
         if let Err(error) = self.policy.authorize_dimension(&observation.dimension) {
-            return json_reply(json!({ "ok": false, "error": FailureCause::from(error) }));
+            return typed_reply(FailureCause::from(error).as_response());
         }
         let scan = match (CircuitCapture {
             bridge: &self.bridge,
@@ -1582,12 +1591,11 @@ impl DustRouteMcp {
         {
             Ok(scan) => scan,
             Err(error) => {
-                return json_reply(json!({
-                    "ok": false,
-                    "error": error,
-                    "observation": observation,
-                    "scan_complete": false
-                }));
+                return typed_reply(circuit_reports::InspectionFailure {
+                    refusal: error.into(),
+                    observation: Some(observation),
+                    scan_complete: Some(false),
+                });
             }
         };
         let mut result = raw_world_inspection(
@@ -1597,47 +1605,34 @@ impl DustRouteMcp {
             params.include_block_list.unwrap_or(false),
             max_listed_blocks,
         );
-        if let Some(object) = result.as_object_mut() {
-            object.insert("player_observation".to_owned(), json!(observation));
-            object.insert(
-                "expansion".to_owned(),
-                json!({
-                    "strategy": "adjacent_component_flood_fill",
-                    "component_gap": component_gap,
-                    "components_loaded": scan.component_count,
-                    "component_limit": scan.component_limit,
-                    "limit_reached": scan.limit_reached,
-                    "complete": !scan.limit_reached,
-                    "scanned_tiles": scan.scanned_tiles,
-                    "scanned_block_positions": scan.scanned_block_positions,
-                    "guidance": scan.limit_reached.then_some(
-                        "the circuit is larger than the configured component limit; treat this inspection as incomplete"
-                    )
-                }),
-            );
-            if let Some(scan_json) = object.get_mut("scan").and_then(Value::as_object_mut) {
-                scan_json.insert("complete".to_owned(), json!(!scan.limit_reached));
-                scan_json.insert(
-                    "completeness_basis".to_owned(),
-                    json!(if scan.limit_reached {
-                        "component limit reached before the adjacency frontier was exhausted"
-                    } else {
-                        "the adjacency frontier was exhausted without reaching the component limit"
-                    }),
-                );
-            }
-            object.insert(
-                "boundary".to_owned(),
-                json!({
-                    "component_frontier_remaining": scan.limit_reached,
-                    "redstone_touches_boundary": scan.limit_reached,
-                    "guidance": scan.limit_reached.then_some(
-                        "raise max_components or explicitly select a smaller functional area"
-                    )
-                }),
-            );
-        }
-        json_reply(result)
+        result.scan.complete = !scan.limit_reached;
+        result.scan.completeness_basis = if scan.limit_reached {
+            "component limit reached before the adjacency frontier was exhausted"
+        } else {
+            "the adjacency frontier was exhausted without reaching the component limit"
+        };
+        result.boundary = circuit_reports::InspectionBoundary::ComponentFrontier {
+            component_frontier_remaining: scan.limit_reached,
+            redstone_touches_boundary: scan.limit_reached,
+            guidance: scan
+                .limit_reached
+                .then_some("raise max_components or explicitly select a smaller functional area"),
+        };
+        typed_reply(circuit_reports::GazeWorldInspection {
+            inspection: result,
+            player_observation: observation,
+            expansion: circuit_reports::GazeExpansion {
+                strategy: "adjacent_component_flood_fill",
+                component_gap,
+                components_loaded: scan.component_count,
+                component_limit: scan.component_limit,
+                limit_reached: scan.limit_reached,
+                complete: !scan.limit_reached,
+                scanned_tiles: scan.scanned_tiles,
+                scanned_block_positions: scan.scanned_block_positions,
+                guidance: scan.limit_reached.then_some("the circuit is larger than the configured component limit; treat this inspection as incomplete"),
+            },
+        })
     }
 
     #[tool(
@@ -1810,7 +1805,7 @@ impl DustRouteMcp {
     ) -> CallToolResult {
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
-            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
+            Err(error) => return typed_reply(UnrecordedFailure::from(error)),
         };
         let (circuit_id, circuit) = match self
             .resolve_circuit_snapshot(
@@ -1822,7 +1817,7 @@ impl DustRouteMcp {
             .await
         {
             Ok(circuit) => circuit,
-            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
+            Err(error) => return typed_reply(UnrecordedFailure::from(error)),
         };
         let target = circuit.target;
         let bounds = circuit.bounds;
@@ -1839,57 +1834,56 @@ impl DustRouteMcp {
                 bounds,
                 circuit.complete,
             ),
-        )
-        .to_string();
-        if params.node_id.is_some() && params.analysis_id.as_deref() != Some(analysis_id.as_str()) {
-            return json_reply(json!({
-                "ok": false,
-                "error": if params.analysis_id.is_some() {
+        );
+        if params.node_id.is_some()
+            && params.analysis_id.as_deref() != Some(analysis_id.to_string().as_str())
+        {
+            return typed_reply(circuit_reports::IrIdentityMismatch {
+                refusal: UnrecordedFailure::message(if params.analysis_id.is_some() {
                     "the circuit, model, or analysis conditions no longer match the mixed-IR summary; request a new summary before expanding a node"
                 } else {
                     "analysis_id from a mixed-IR summary is required when node_id is specified"
-                },
-                "current_analysis_id": analysis_id,
-                "analysis_id_schema": crate::snapshot_content::VALIDATION_KEY_SCHEMA,
-                "retryable": true,
-            }));
+                }),
+                current_analysis_id: analysis_id,
+                analysis_id_schema: crate::snapshot_content::VALIDATION_KEY_SCHEMA,
+                retryable: true,
+            });
         }
         let world = match world_from_snapshot_for_service(&snapshot) {
             Ok(world) => world,
-            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
+            Err(error) => return typed_reply(UnrecordedFailure::from(error)),
         };
         let mut analysis = dustroute_translate::world_reverse::analyze_world_region(&world, bounds);
         analysis.scene.observation.dimension = dimension;
         let hierarchy = dustroute_ir::derive_hierarchy(&analysis.scene);
-        let mixed_ir = match mixed_ir_json(&hierarchy, params.node_id) {
+        let mixed_ir = match mixed_ir_report(&hierarchy, params.node_id) {
             Ok(mixed_ir) => mixed_ir,
             Err(error) => {
-                return json_reply(json!({
-                    "ok": false,
-                    "error": error,
-                    "available_node_count": dustroute_ir::build_mixed_ir(&hierarchy).nodes.len(),
-                }));
+                return typed_reply(circuit_reports::IrNodeUnavailable {
+                    refusal: UnrecordedFailure::message(error),
+                    available_node_count: dustroute_ir::build_mixed_ir(&hierarchy).nodes.len(),
+                });
             }
         };
-        json_reply(json!({
-            "ok": true,
-            "analysis_mode": "mixed_ir",
-            "circuit_id": circuit_id,
-            "content_id": snapshot.id(),
-            "analysis_id": analysis_id,
-            "analysis_id_schema": crate::snapshot_content::VALIDATION_KEY_SCHEMA,
-            "mutation_performed": false,
-            "target": target,
-            "bounds": bounds_json(bounds),
-            "analysis_complete": circuit.complete,
-            "expansion": circuit.expansion,
-            "mixed_ir": mixed_ir,
-            "guidance": if params.node_id.is_some() {
+        typed_reply(circuit_reports::CircuitIrResponse {
+            ok: Success,
+            analysis_mode: "mixed_ir",
+            circuit_id,
+            content_id: snapshot.id(),
+            analysis_id,
+            analysis_id_schema: crate::snapshot_content::VALIDATION_KEY_SCHEMA,
+            mutation_performed: false,
+            target,
+            bounds,
+            analysis_complete: circuit.complete,
+            expansion: circuit.expansion,
+            mixed_ir,
+            guidance: if params.node_id.is_some() {
                 "Use the physical block details and directed neighbors to explain or diagnose this node in context."
             } else {
                 "Choose a node_id from this bounded graph and call this tool again to expand only that node."
-            }
-        }))
+            },
+        })
     }
 
     #[tool(
@@ -1918,8 +1912,8 @@ impl DustRouteMcp {
                     Ok(p) => p,
                     Err(e) => return typed_reply(crate::blueprint_mcp::failure(e)),
                 };
-                if let Some(error) = self.authorize_player(&player) {
-                    return CallToolResult::error(vec![ContentBlock::text(error)]);
+                if let Err(error) = self.player_scope().authorize(&player) {
+                    return typed_reply(error.at(FailurePhase::Admission).as_response());
                 }
                 let (record, grounding) = match self.load_revision(&revision_id, &player).and_then(|r| {
                     let record = r.assembly.clone().ok_or_else(|| "revision has no decodable Assembly".to_owned())?;
@@ -1949,14 +1943,14 @@ impl DustRouteMcp {
                     .expect("explicit blueprint response"),
             );
         }
-        let result: Result<Value,String> = async {
-            let player=self.resolve_player(params.player.as_deref())?;
-            if let Some(error)=self.authorize_player(&player) {return Err(error);}
+        let result: Result<circuit_reports::RevisionDisplay,UnrecordedFailure> = async {
+            let player=self.resolve_player(params.player.as_deref()).map_err(|error| UnrecordedFailure::message(error.to_string()))?;
+            self.player_scope().authorize(&player).map_err(|error| UnrecordedFailure::from(error.at(FailurePhase::Admission)))?;
             let ticks=params.simulation_ticks.unwrap_or(64);
             if !(1..=256).contains(&ticks) {return Err("simulation_ticks must be 1 through 256".into());}
             let (base_observation_id,parents,dimension,target,complete,baseline,base_snapshot,parent_assembly)=match (params.circuit_id.as_deref(),params.revision_id.as_deref()) {
                 (Some(id),None)=>{
-                    let (id,c)=self.load_circuit(id,&player).await?;
+                    let (id,c)=self.load_circuit(id,&player).await.map_err(|error| UnrecordedFailure::message(error.to_string()))?;
                     (id,vec![],c.dimension,c.target,c.complete,c.snapshot.clone(),Some(crate::revision::normalize(&c.snapshot)?),None)
                 },
                 (None,Some(id))=>{
@@ -1993,16 +1987,19 @@ impl DustRouteMcp {
                 },
                 Err(error)=>{
                     if parent_assembly.as_ref().is_some_and(|parent| !parent.assembly.instances.is_empty()) {
-                        return Err(format!("cannot retain pinned blueprint interpretations for this state: {error}"));
+                        return Err(format!("cannot retain pinned blueprint interpretations for this state: {error}").into());
                     }
                     revision.validation.state_mut().ok_or("state review missing")?.assembly=Some(crate::recorded_revision::AssemblyValidation::Unavailable { error });
                 },
             }
             dustroute_codec::storage::encode("dustroute.circuit-revision-record.v1", &revision, crate::revision::MAX_BYTES).map_err(|e|e.to_string())?;
             self.state_store.save(PlanRecordKind::CircuitRevisions,revision.revision_id,&revision)?;
-            Ok(revision_json(&revision,false))
+            Ok(revision_display(revision,false))
         }.await;
-        json_reply(result.unwrap_or_else(|error| json!({"ok":false,"error":error})))
+        match result {
+            Ok(response) => typed_reply(response),
+            Err(error) => typed_reply(error),
+        }
     }
 
     fn load_revision(
@@ -2055,18 +2052,23 @@ impl DustRouteMcp {
                     .expect("explicit blueprint response"),
             );
         }
-        let result: Result<Value, String> = (|| {
-            let player = self.resolve_player(None)?;
-            if let Some(error) = self.authorize_player(&player) {
-                return Err(error);
-            }
+        let result: Result<circuit_reports::RevisionDisplay, UnrecordedFailure> = (|| {
+            let player = self
+                .resolve_player(None)
+                .map_err(|error| UnrecordedFailure::message(error.to_string()))?;
+            self.player_scope()
+                .authorize(&player)
+                .map_err(|error| UnrecordedFailure::from(error.at(FailurePhase::Admission)))?;
             let revision = self.load_revision(&params.revision_id, &player)?;
-            Ok(revision_json(
-                &revision,
+            Ok(revision_display(
+                revision,
                 params.include_snapshot.unwrap_or(false),
             ))
         })();
-        json_reply(result.unwrap_or_else(|error| json!({"ok":false,"error":error})))
+        match result {
+            Ok(response) => typed_reply(response),
+            Err(error) => typed_reply(error),
+        }
     }
 
     #[tool(
@@ -6997,6 +6999,26 @@ mod tests {
                 assert_eq!(expanded["retryable"], true);
             }
         }
+        let invalid_node = service
+            .get_circuit_ir(Parameters(GetLookedAtCircuitIrParams {
+                player: None,
+                max_components: None,
+                fragment_gap: None,
+                node_id: Some(usize::MAX),
+                analysis_id: ir["analysis_id"].as_str().map(str::to_owned),
+                circuit_id: Some(circuit_id),
+            }))
+            .await;
+        assert_eq!(invalid_node.is_error, Some(true));
+        let invalid_node = test_support::decode_reply(&invalid_node).unwrap();
+        assert_eq!(invalid_node["ok"], false);
+        assert_eq!(
+            invalid_node["available_node_count"],
+            ir["mixed_ir"]["node_count"]
+        );
+        assert!(invalid_node["failure"]["progress"].is_null());
+        assert!(invalid_node.get("circuit_id").is_none());
+        assert!(invalid_node.get("expanded_node").is_none());
     }
 
     #[tokio::test]
@@ -7570,6 +7592,7 @@ mod tests {
             false,
             16,
         );
+        let result = serde_json::to_value(result).unwrap();
         assert_eq!(result["inference_applied"], false);
         assert_eq!(result["scan"]["volume"], 6);
         assert_eq!(result["counts"]["air"], 1);
@@ -8033,6 +8056,16 @@ mod tests {
         }
         let base = edit(&service, json!({"circuit_id":id,"changes":[]})).await;
         assert_eq!(base["ok"], true, "{base}");
+        assert!(base.get("snapshot").is_none());
+        assert!(base.get("assembly_revision").is_none());
+        for field in [
+            "mutation_performed",
+            "live_world_evidence",
+            "placement_authorized",
+        ] {
+            assert_eq!(base[field], false);
+        }
+
         assert_eq!(base["parent_revision_ids"], json!([]));
         assert_eq!(base["base_observation_id"], id.to_string());
         assert_eq!(base["validation"]["after"]["status"], "structurally_valid");
@@ -8181,6 +8214,33 @@ mod tests {
             invalid_state["validation"]["after"]["status"],
             "unavailable"
         );
+        for include_snapshot in [false, true] {
+            let display = test_support::decode_reply(
+                &restarted
+                    .get_circuit_revision(Parameters(GetCircuitRevisionParams {
+                        blueprint: None,
+                        revision_id: invalid_state["revision_id"].as_str().unwrap().into(),
+                        include_snapshot: Some(include_snapshot),
+                    }))
+                    .await,
+            )
+            .unwrap();
+            assert_eq!(display["ok"], true);
+            assert_eq!(
+                display["assembly_state"],
+                json!({"status":"unavailable_or_legacy"})
+            );
+            assert_eq!(display.get("snapshot").is_some(), include_snapshot);
+            assert_eq!(display.get("assembly_revision").is_some(), include_snapshot);
+            if include_snapshot {
+                assert!(display["assembly_revision"].is_null());
+                assert!(display["snapshot"].is_object());
+            }
+            assert_eq!(display["validation"], invalid_state["validation"]);
+            assert_eq!(display["placement_authorized"], false);
+            assert!(display.get("player").is_none());
+            assert!(display.get("base_snapshot").is_none());
+        }
         // Expiry of an ancestor does not invalidate a self-contained descendant.
         let path = root
             .join("circuit_revisions")

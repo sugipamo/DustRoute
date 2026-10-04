@@ -1,9 +1,15 @@
 //! Revision reports and bounded hypothetical-state analysis.
 use crate::failure::FailureCause;
+use crate::operations::mutation::Success;
 use crate::recorded_revision::*;
+use dustroute_library::assembly::AssemblyRevision;
+use dustroute_library::blueprint::{AssemblyRevisionId, BlueprintRevisionId};
 use dustroute_physical::Pos;
-use serde_json::{Value, json};
+use dustroute_translate::snapshot::MinecraftSnapshot;
+use dustroute_translate::world_reverse::RegionBounds;
+use serde::Serialize;
 use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 
 fn virtual_analysis_summary(
     scene: &dustroute_physical::PhysicalScene,
@@ -51,29 +57,89 @@ fn virtual_analysis_summary(
     }
 }
 
-pub(in super::super) fn revision_json(
-    r: &crate::revision::CircuitRevision,
+/// A saved hypothetical state display, never live-world observation or authority.
+#[derive(Debug, Serialize)]
+pub(crate) struct RevisionDisplay {
+    ok: Success,
+    schema_version: String,
+    analysis_mode: &'static str,
+    revision_id: uuid::Uuid,
+    parent_revision_ids: Vec<uuid::Uuid>,
+    base_observation_id: uuid::Uuid,
+    dimension: String,
+    bounds: RegionBounds,
+    changes: Vec<crate::revision::RevisionChange>,
+    validation: RevisionValidation,
+    analysis_complete: bool,
+    mutation_performed: bool,
+    live_world_evidence: bool,
+    placement_authorized: bool,
+    retention: &'static str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    snapshot: Option<MinecraftSnapshot>,
+    // Omitted unless requested; requested unavailable Assembly is explicit null.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    assembly_revision: Option<Option<AssemblyRevision>>,
+    assembly_state: RevisionAssemblyState,
+}
+#[derive(Debug, Serialize)]
+#[serde(tag = "status", rename_all = "snake_case")]
+enum RevisionAssemblyState {
+    Available {
+        assembly_revision_id: AssemblyRevisionId,
+        parent_assembly_revision_ids: Vec<AssemblyRevisionId>,
+        source_revision_ids: BTreeSet<BlueprintRevisionId>,
+        block_records: usize,
+        source_instances: usize,
+        connections: usize,
+        scope: &'static str,
+    },
+    UnavailableOrLegacy,
+}
+pub(in super::super) fn revision_display(
+    r: crate::revision::CircuitRevision,
     include_snapshot: bool,
-) -> Value {
-    let mut value = json!({"ok":true,"schema_version":r.schema_version,"analysis_mode":"virtual_circuit_revision","revision_id":r.revision_id,"parent_revision_ids":r.parent_revision_ids,"base_observation_id":r.base_observation_id,"dimension":r.dimension,"bounds":{"min":r.snapshot.min,"max":r.snapshot.max},"changes":r.changes,"validation":r.validation,"analysis_complete":r.complete,"mutation_performed":false,"live_world_evidence":false,"placement_authorized":false,"retention":"DUSTROUTE_PLAN_TTL_SECONDS (default 3600 seconds); reads do not extend lifetime"});
-    if include_snapshot {
-        value["snapshot"] = json!(r.snapshot);
-        value["assembly_revision"] = json!(r.assembly);
-    }
-    value["assembly_state"] = match &r.assembly {
-        Some(record) => json!({
-            "status": "available",
-            "assembly_revision_id": record.id,
-            "parent_assembly_revision_ids": record.parents,
-            "source_revision_ids": record.assembly.instances.iter().map(|instance| &instance.revision).collect::<std::collections::BTreeSet<_>>(),
-            "block_records": record.assembly.blocks.len(),
-            "source_instances": record.assembly.instances.len(),
-            "connections": record.assembly.connections.len(),
-            "scope": "saved hypothetical state; source references are interpretations, not restored evidence"
-        }),
-        None => json!({"status": "unavailable_or_legacy"}),
+) -> RevisionDisplay {
+    let assembly_state = match &r.assembly {
+        Some(record) => RevisionAssemblyState::Available {
+            assembly_revision_id: record.id.clone(),
+            parent_assembly_revision_ids: record.parents.clone(),
+            source_revision_ids: record
+                .assembly
+                .instances
+                .iter()
+                .map(|instance| instance.revision.clone())
+                .collect(),
+            block_records: record.assembly.blocks.len(),
+            source_instances: record.assembly.instances.len(),
+            connections: record.assembly.connections.len(),
+            scope: "saved hypothetical state; source references are interpretations, not restored evidence",
+        },
+        None => RevisionAssemblyState::UnavailableOrLegacy,
     };
-    value
+    RevisionDisplay {
+        ok: Success,
+        schema_version: r.schema_version,
+        analysis_mode: "virtual_circuit_revision",
+        revision_id: r.revision_id,
+        parent_revision_ids: r.parent_revision_ids,
+        base_observation_id: r.base_observation_id,
+        dimension: r.dimension,
+        bounds: RegionBounds {
+            min: r.snapshot.min,
+            max: r.snapshot.max,
+        },
+        changes: r.changes,
+        validation: r.validation,
+        analysis_complete: r.complete,
+        mutation_performed: false,
+        live_world_evidence: false,
+        placement_authorized: false,
+        retention: "DUSTROUTE_PLAN_TTL_SECONDS (default 3600 seconds); reads do not extend lifetime",
+        snapshot: include_snapshot.then_some(r.snapshot),
+        assembly_revision: include_snapshot.then_some(r.assembly),
+        assembly_state,
+    }
 }
 
 pub(in super::super) fn revision_validation(

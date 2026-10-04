@@ -1,8 +1,107 @@
 //! Literal world inventory and scan-boundary presentation.
 use super::super::circuit_capture::{is_redstone_candidate_name, is_supported_redstone_name};
+use crate::operations::mutation::Success;
 use dustroute_physical::{BlockKind, Pos};
-use serde_json::{Value, json};
+use dustroute_translate::snapshot::MinecraftSnapshotBlock;
+use dustroute_translate::world_reverse::RegionBounds;
+use serde::Serialize;
 use std::collections::{BTreeMap, BTreeSet};
+
+/// Literal diagnostic records only; no Deserialize or fresh-region constructor.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub(crate) struct RawWorldInspection {
+    ok: Success,
+    mode: &'static str,
+    inference_applied: bool,
+    dimension: String,
+    target: Option<Pos>,
+    block_list_order_origin: Pos,
+    target_block: Option<MinecraftSnapshotBlock>,
+    pub scan: InspectionScan,
+    counts: InspectionCounts,
+    pub boundary: InspectionBoundary,
+    redstone_blocks: Vec<MinecraftSnapshotBlock>,
+    redstone_blocks_truncated: bool,
+    blocks: Option<Vec<MinecraftSnapshotBlock>>,
+    blocks_truncated: bool,
+}
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub(crate) struct InspectionScan {
+    requested_and_returned_bounds: RegionBounds,
+    size: Pos,
+    volume: i64,
+    pub complete: bool,
+    pub completeness_basis: &'static str,
+    chunk_columns_with_non_air_blocks: usize,
+}
+#[derive(Clone, Debug, PartialEq, Serialize)]
+struct InspectionCounts {
+    air: usize,
+    non_air: usize,
+    redstone_candidates: usize,
+    modeled_redstone: usize,
+    unmodeled_redstone_candidates: usize,
+    by_block_name: BTreeMap<String, usize>,
+    state_properties_present: BTreeMap<String, usize>,
+}
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(untagged)]
+pub(crate) enum InspectionBoundary {
+    Raw {
+        non_air_blocks: usize,
+        redstone_candidates: usize,
+        redstone_touches_boundary: bool,
+        guidance: Option<&'static str>,
+    },
+    ComponentFrontier {
+        component_frontier_remaining: bool,
+        redstone_touches_boundary: bool,
+        guidance: Option<&'static str>,
+    },
+}
+#[derive(Debug, Serialize)]
+pub(crate) struct CapturedWorldInspection {
+    #[serde(flatten)]
+    pub inspection: RawWorldInspection,
+    pub circuit_id: uuid::Uuid,
+    pub content_id: crate::snapshot_content::ContentId,
+    pub observation_id: crate::snapshot_content::ObservationId,
+    pub circuit_expires_in_seconds: u64,
+    pub player_observation: crate::bridge::PlayerContext,
+    pub observation_capabilities: crate::bridge::ObservationCapabilities,
+    pub readback: crate::observation_evidence::ObservationEvidence,
+    pub expansion: super::super::circuit_capture::ExpansionEvidence,
+    pub mutation_authorized: bool,
+}
+#[derive(Debug, Serialize)]
+pub(crate) struct GazeWorldInspection {
+    #[serde(flatten)]
+    pub inspection: RawWorldInspection,
+    pub player_observation: crate::bridge::PlayerObservation,
+    pub expansion: GazeExpansion,
+}
+#[derive(Debug, Serialize)]
+pub(crate) struct GazeExpansion {
+    pub strategy: &'static str,
+    pub component_gap: u32,
+    pub components_loaded: usize,
+    pub component_limit: usize,
+    pub limit_reached: bool,
+    pub complete: bool,
+    pub scanned_tiles: usize,
+    pub scanned_block_positions: usize,
+    pub guidance: Option<&'static str>,
+}
+/// Context of a failed observation, with absent fields distinct from false.
+#[derive(Debug, Serialize)]
+pub(crate) struct InspectionFailure {
+    #[serde(flatten)]
+    pub refusal: crate::operations::mutation::UnrecordedFailure,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub observation: Option<crate::bridge::PlayerObservation>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub scan_complete: Option<bool>,
+}
 
 fn position_on_boundary(position: Pos, min: Pos, max: Pos) -> bool {
     position.x == min.x
@@ -19,7 +118,7 @@ pub(in super::super) fn raw_world_inspection(
     dimension: &str,
     include_block_list: bool,
     max_listed_blocks: usize,
-) -> Value {
+) -> RawWorldInspection {
     let target = target.into();
     let list_origin = target.unwrap_or(snapshot.min);
     let size = Pos::new(
@@ -45,7 +144,7 @@ pub(in super::super) fn raw_world_inspection(
     let mut boundary_redstone_count = 0_usize;
     let mut state_property_counts = BTreeMap::<String, usize>::new();
     let mut target_block = None;
-    for block in &non_air_blocks {
+    for block in non_air_blocks.iter().copied() {
         *counts.entry(block.name.clone()).or_default() += 1;
         chunks.insert((block.pos.x.div_euclid(16), block.pos.z.div_euclid(16)));
         if position_on_boundary(block.pos, snapshot.min, snapshot.max) {
@@ -86,50 +185,51 @@ pub(in super::super) fn raw_world_inspection(
     let air_count = usize::try_from(volume)
         .unwrap_or(usize::MAX)
         .saturating_sub(non_air_count);
-    json!({
-        "ok": true,
-        "mode": "raw_world_inspection",
-        "inference_applied": false,
-        "dimension": dimension,
-        "target": target,
-        "block_list_order_origin": list_origin,
-        "target_block": target_block,
-        "scan": {
-            "requested_and_returned_bounds": { "min": snapshot.min, "max": snapshot.max },
-            "size": size,
-            "volume": volume,
-            "complete": true,
-            "completeness_basis": "the bridge rejects the entire scan if any coordinate is unavailable",
-            "chunk_columns_with_non_air_blocks": chunks.len()
+    RawWorldInspection {
+        ok: Success,
+        mode: "raw_world_inspection",
+        inference_applied: false,
+        dimension: dimension.into(),
+        target,
+        block_list_order_origin: list_origin,
+        target_block: target_block.cloned(),
+        scan: InspectionScan {
+            requested_and_returned_bounds: RegionBounds { min: snapshot.min, max: snapshot.max },
+            size,
+            volume,
+            complete: true,
+            completeness_basis: "the bridge rejects the entire scan if any coordinate is unavailable",
+            chunk_columns_with_non_air_blocks: chunks.len(),
         },
-        "counts": {
-            "air": air_count,
-            "non_air": non_air_count,
-            "redstone_candidates": redstone.len(),
-            "modeled_redstone": modeled_redstone_count,
-            "unmodeled_redstone_candidates": redstone.len().saturating_sub(modeled_redstone_count),
-            "by_block_name": counts,
-            "state_properties_present": state_property_counts
+        counts: InspectionCounts {
+            air: air_count,
+            non_air: non_air_count,
+            redstone_candidates: redstone.len(),
+            modeled_redstone: modeled_redstone_count,
+            unmodeled_redstone_candidates: redstone.len().saturating_sub(modeled_redstone_count),
+            by_block_name: counts,
+            state_properties_present: state_property_counts,
         },
-        "boundary": {
-            "non_air_blocks": boundary_non_air_count,
-            "redstone_candidates": boundary_redstone_count,
-            "redstone_touches_boundary": boundary_redstone_count > 0,
-            "guidance": (boundary_redstone_count > 0).then_some(
+        boundary: InspectionBoundary::Raw {
+            non_air_blocks: boundary_non_air_count,
+            redstone_candidates: boundary_redstone_count,
+            redstone_touches_boundary: boundary_redstone_count > 0,
+            guidance: (boundary_redstone_count > 0).then_some(
                 "redstone reaches the raw scan boundary; increase the radius before assuming the circuit is complete"
-            )
+            ),
         },
-        "redstone_blocks": listed_redstone,
-        "redstone_blocks_truncated": redstone.len() > max_listed_blocks,
-        "blocks": listed_blocks,
-        "blocks_truncated": include_block_list && non_air_count > max_listed_blocks
-    })
+        redstone_blocks: listed_redstone.into_iter().map(|block| (**block).clone()).collect(),
+        redstone_blocks_truncated: redstone.len() > max_listed_blocks,
+        blocks: listed_blocks.map(|blocks| blocks.into_iter().map(|block| (**block).clone()).collect()),
+        blocks_truncated: include_block_list && non_air_count > max_listed_blocks,
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use dustroute_translate::snapshot::{MinecraftSnapshot, MinecraftSnapshotBlock};
+    use serde_json::json;
 
     fn block(pos: Pos, name: &str) -> MinecraftSnapshotBlock {
         MinecraftSnapshotBlock {
@@ -169,6 +269,7 @@ mod tests {
             |snapshot| raw_world_inspection(snapshot, target, "minecraft:overworld", true, 2);
         let result = inspect(&dense);
         assert_eq!(result, inspect(&sparse));
+        let result = serde_json::to_value(result).unwrap();
         assert_eq!(result["counts"]["non_air"], 3);
         assert_eq!(result["counts"]["air"], 5);
         assert_eq!(result["scan"]["chunk_columns_with_non_air_blocks"], 1);
@@ -198,6 +299,7 @@ mod tests {
         };
         let result =
             raw_world_inspection(&snapshot, Pos::new(0, 0, 0), "minecraft:overworld", true, 1);
+        let result = serde_json::to_value(result).unwrap();
         assert_eq!(result["counts"]["non_air"], 0);
         assert_eq!(result["counts"]["air"], 6);
         assert_eq!(result["counts"]["by_block_name"], json!({}));
@@ -220,6 +322,7 @@ mod tests {
             ],
         };
         let result = raw_world_inspection(&snapshot, target, "minecraft:overworld", true, 1);
+        let result = serde_json::to_value(result).unwrap();
         assert_eq!(result["counts"]["non_air"], 1);
         assert_eq!(result["counts"]["air"], 26);
         assert_eq!(result["boundary"]["non_air_blocks"], 0);
