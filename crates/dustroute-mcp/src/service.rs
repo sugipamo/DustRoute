@@ -31,8 +31,8 @@ mod repair_workflow;
 mod survival;
 mod world_editor;
 use circuit_reports::{
-    bounds_json, circuit_identity_json, focused_explanation_json, focused_hierarchy_role_json,
-    focused_role_json, hierarchical_result_json, mixed_ir_report, raw_world_inspection,
+    bounds_json, circuit_identity_json, focused_component, focused_explanation_json,
+    focused_hierarchy, hierarchical_result_json, mixed_ir_report, raw_world_inspection,
     reverse_result_json, revision_display, revision_validation,
 };
 #[cfg(test)]
@@ -114,6 +114,11 @@ use crate::api::{
 use crate::failure::{
     CauseKind, ExecutionProgress, FailureCause, FailurePhase, FailureReport, PersistenceOutcome,
     WorldOutcome,
+};
+use crate::operations::analysis::{AnalysisResult, QueuedAnalysis};
+use crate::recorded_analysis::{
+    RecordedExpansion,
+    reports::{ObservedMechanism, hierarchical_report, reverse_report},
 };
 use crate::state::{PlanRecordKind, PlanStateStore};
 use crate::{
@@ -2143,13 +2148,12 @@ impl DustRouteMcp {
                 dustroute_translate::world_reverse::analyze_world_region(&world, bounds);
             analysis.scene.observation.dimension = dimension;
             let hierarchy = dustroute_ir::derive_hierarchy(&analysis.scene);
-            let focused = target
-                .map(|target| focused_hierarchy_role_json(&analysis.scene, &hierarchy, target))
-                .unwrap_or(Value::Null);
+            let focused =
+                target.map(|target| focused_hierarchy(&analysis.scene, &hierarchy, target));
             let mut result =
                 hierarchical_result_json(bounds, &hierarchy, focused, &circuit.expansion, target);
             if let Some(object) = result.as_object_mut() {
-                object.insert("mechanisms".into(), mechanisms.clone());
+                object.insert("mechanisms".into(), json!(&mechanisms));
                 object.insert(
                     "circuit_identity".to_owned(),
                     circuit_identity_json(&hierarchy, None, circuit.complete, 0),
@@ -2294,13 +2298,11 @@ impl DustRouteMcp {
                     .collect::<Vec<_>>()
             })
         });
-        let focused = target
-            .map(|target| focused_role_json(translated, target))
-            .unwrap_or(Value::Null);
+        let focused = target.map(|target| focused_component(translated, target));
         let incomplete = !circuit.complete;
         let mut result = reverse_result_json(bounds, translated);
         if let Some(object) = result.as_object_mut() {
-            object.insert("mechanisms".into(), mechanisms.clone());
+            object.insert("mechanisms".into(), json!(&mechanisms));
             object.insert("circuit_id".to_owned(), json!(circuit_id));
             object.insert(
                 "circuit_identity".to_owned(),
@@ -2320,7 +2322,7 @@ impl DustRouteMcp {
                 ))
                 .unwrap_or(Value::Null),
             );
-            object.insert("focused_component".to_owned(), focused);
+            object.insert("focused_component".to_owned(), json!(focused));
             if let Some(target) = target {
                 object.insert(
                     "focused_explanation".to_owned(),
@@ -2928,7 +2930,7 @@ impl DustRouteMcp {
             let mut result = hierarchical_result_json(
                 bounds,
                 &hierarchy,
-                Value::Null,
+                None,
                 &ExpansionEvidence::ExplicitSelectedRegion {
                     components_loaded: Some(redstone_components),
                     component_limit: None,
@@ -2937,7 +2939,7 @@ impl DustRouteMcp {
                 None,
             );
             if let Some(object) = result.as_object_mut() {
-                object.insert("mechanisms".into(), mechanisms.clone());
+                object.insert("mechanisms".into(), json!(&mechanisms));
                 object.insert("circuit_id".to_owned(), json!(circuit_id));
             }
             return json_reply(result);
@@ -2946,7 +2948,7 @@ impl DustRouteMcp {
         staged.reverse.analysis.scene.observation.dimension = dimension;
         let mut result = reverse_result_json(bounds, &staged.reverse);
         if let Some(object) = result.as_object_mut() {
-            object.insert("mechanisms".into(), mechanisms.clone());
+            object.insert("mechanisms".into(), json!(&mechanisms));
             object.insert("circuit_id".to_owned(), json!(circuit_id));
         }
         json_reply(result)
@@ -4103,7 +4105,7 @@ impl DustRouteMcp {
         snapshot: &dustroute_translate::snapshot::MinecraftSnapshot,
         complete: bool,
         dimension: &str,
-    ) -> Value {
+    ) -> Vec<ObservedMechanism> {
         if !snapshot.blocks.iter().any(|b| {
             matches!(
                 b.name.as_str(),
@@ -4113,7 +4115,7 @@ impl DustRouteMcp {
                     | "minecraft:moving_piston"
             )
         }) {
-            return json!([]);
+            return Vec::new();
         }
         let observation = match self.bridge.status().await {
             Ok(status) if status.connected && status.dimension.as_deref() == Some(dimension) => {
@@ -4125,20 +4127,7 @@ impl DustRouteMcp {
                 "server version and dimension could not be verified",
             ),
         };
-        let recognized = matches!(
-            observation.state,
-            dustroute_translate::piston_observation::PistonObservationState::Open
-                | dustroute_translate::piston_observation::PistonObservationState::Closed
-        );
-        json!([{
-            "kind": if recognized { "piston_door" } else { "unidentified_piston_mechanism" },
-            "recognition": if recognized { "exact_contract_match" } else { "unidentified" },
-            "contract": if recognized { Some("piston_door_v1") } else { None },
-            "candidate_assessments": [{ "contract": "piston_door_v1", "observation": observation }],
-            "state": if recognized { Some(observation.state) } else { None },
-            "scope": "entire_observed_region",
-            "mutation_authorized": false
-        }])
+        vec![ObservedMechanism::piston(observation)]
     }
 
     #[tool(
@@ -5218,17 +5207,17 @@ impl DustRouteMcp {
     ) -> CallToolResult {
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
-            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
+            Err(error) => return typed_reply(UnrecordedFailure::from(error)),
         };
-        if let Some(error) = self.authorize_player(&player) {
-            return CallToolResult::error(vec![ContentBlock::text(error)]);
+        if let Err(error) = self.player_scope().authorize(&player) {
+            return typed_reply(error.at(FailurePhase::Admission).as_response());
         }
         let (bounds, dimension) = match self.selected_region(&player).await {
             Ok(region) => region,
-            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
+            Err(error) => return typed_reply(UnrecordedFailure::from(error)),
         };
         if let Err(error) = self.policy.validate_region(bounds) {
-            return json_reply(json!({ "ok": false, "error": FailureCause::from(error) }));
+            return typed_reply(FailureCause::from(error).as_response());
         }
         let request = match reverse_request_for_truth_table(
             bounds,
@@ -5273,11 +5262,12 @@ impl DustRouteMcp {
                     Ok(snapshot) => snapshot,
                     Err(error) => {
                         operations
-                            .complete_unmigrated(
+                            .complete(
                                 operation_id,
-                                FailureCause::from(error)
-                                    .at(FailurePhase::BeforeReadback)
-                                    .response(),
+                                AnalysisResult::from(
+                                    FailureCause::from(error).at(FailurePhase::BeforeReadback),
+                                )
+                                .into(),
                             )
                             .await;
                         return;
@@ -5305,9 +5295,9 @@ impl DustRouteMcp {
                     Ok(world) => world,
                     Err(error) => {
                         operations
-                            .complete_unmigrated(
+                            .complete(
                                 operation_id,
-                                error.at(FailurePhase::Normalization).response(),
+                                AnalysisResult::from(error.at(FailurePhase::Normalization)).into(),
                             )
                             .await;
                         return;
@@ -5341,21 +5331,21 @@ impl DustRouteMcp {
                                 );
                             analysis.scene.observation.dimension = dimension;
                             let hierarchy = dustroute_ir::derive_hierarchy(&analysis.scene);
-                            hierarchical_result_json(
+                            AnalysisResult::from(hierarchical_report(
                                 bounds,
                                 &hierarchy,
-                                Value::Null,
-                                &ExpansionEvidence::ExplicitSelectedRegion {
+                                None,
+                                RecordedExpansion::ExplicitSelectedRegion {
                                     components_loaded: Some(redstone_components),
                                     component_limit: None,
                                     limit_reached: false,
                                 },
                                 None,
-                            )
+                            ))
                         } else {
                             let mut staged = app.analyze_physical(&world, request);
                             staged.reverse.analysis.scene.observation.dimension = dimension;
-                            reverse_result_json(bounds, &staged.reverse)
+                            AnalysisResult::from(reverse_report(bounds, &staged.reverse))
                         }
                     })
                 })
@@ -5364,11 +5354,13 @@ impl DustRouteMcp {
                     Ok(result) => result,
                     Err(error) => {
                         operations
-                            .complete_unmigrated(
+                            .complete(
                                 operation_id,
-                                FailureCause::new(CauseKind::Unknown, error.to_string())
-                                    .at(FailurePhase::Analysis)
-                                    .response(),
+                                AnalysisResult::from(
+                                    FailureCause::new(CauseKind::Unknown, error.to_string())
+                                        .at(FailurePhase::Analysis),
+                                )
+                                .into(),
                             )
                             .await;
                         return;
@@ -5377,16 +5369,16 @@ impl DustRouteMcp {
                 if operations.is_cancelled(operation_id).await {
                     return;
                 }
-                operations.complete_unmigrated(operation_id, result).await;
+                operations.complete(operation_id, result.into()).await;
             })
             .await;
         });
-        json_reply(json!({
-            "ok": true,
-            "operation_id": operation_id,
-            "status": "queued",
-            "next_step": "poll get_operation; call stop_operation if the conversion is no longer needed"
-        }))
+        typed_reply(QueuedAnalysis {
+            ok: Success,
+            operation_id,
+            status: OperationStatus::Queued,
+            next_step: "poll get_operation; call stop_operation if the conversion is no longer needed",
+        })
     }
 
     #[tool(
@@ -6055,10 +6047,14 @@ mod tests {
         let id = uuid::Uuid::new_v4();
         service
             .operations
-            .record_unmigrated(
+            .record_completed(
                 id,
                 OperationKind::PlacementApply,
-                serde_json::json!({"ok":false,"error":"reply lost"}),
+                crate::operations::mutation::PlacementAttempt {
+                    operation_id: id.to_string(),
+                    outcome: crate::operations::mutation::PlacementOutcome::refused("reply lost"),
+                }
+                .into(),
             )
             .await;
         let (client, server) = test_support::serve(service).await;

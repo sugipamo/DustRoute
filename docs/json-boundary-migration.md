@@ -1269,3 +1269,71 @@ workspace全targetとMCPの`--no-default-features`全targetのClippyは
 `-D warnings`で成功した。Cargoは単独・offline/locked・`-j1`、テストは単一threadで実行。
 formattingと差分の空白検査も成功した。実機接続・ワールド変更・保存schema・依存・
 Voxrig source/vendor・物理の可否条件は変更していない。
+
+### 解析report・機構観測・非同期解析履歴の型付き接続
+
+`recorded_analysis::reports`に平坦・階層・注目部品・能力・給電経路・真理値表診断・
+機構観測の用途別Rust記録を置いた。解析はnative modelからこれらの型へ接続し、
+JSONの生成・キー検索・再解析を行わない。数値、状態、分類、位置、未取得の項目を
+nativeのenum/Option/整数で保持する。表記用の式文字列、分類キー、u128の公開表現は
+Serialize時にだけ作る。recordはSerializeのみで、fresh observation、実行plan、
+配置許可、validation proofを復元する入口を持たない。
+
+能力の件数はnative stage/levelの組で集計し、旧公開キーのDebug小文字表記を境界に残す。
+診断16件、能力上の問題32件、source/inputの詳細64件、注目位置付近16件の上限と、
+切り詰める前の総件数を維持する。unknown位置では従来省略される項目を省略し、
+観測される値のnull、入力経路不在、既知の孤立部品を混同しない。
+
+真理値表の15種類の失敗理由、computedの優先順位、予算超過とその他の未取得を残す。
+大きい件数はu128を保持し、公開MCPに出す時だけu64以下なら数値、それを超える値は
+従来通り十進文字列にする。解析自体の成功と、真理値表を導出できなかった状態は別である。
+階層reportのroot.analysis_completeは従来の展開上限判定を維持し、focused_explanationの
+observation_completeは観測の完全性も含めて判定する。この既存の違いを今回のJSON移行で
+新しい可否条件へ変更していない。
+
+`operations::analysis::AnalysisResult`は平坦/階層の記録またはnative FailureCauseを保持する。
+非同期のselected-region変換はこれをOperationRegistryへ直接渡す。解析上の件数や真理値表の
+失敗を、世界の書込み進捗や操作消費へ変換しない。scan/normalization/analysisの失敗phaseを
+保持し、未知の実行進捗はNoneのままとする。取消し後の遅れた完了・失敗は元のcancelledを
+上書きしない。認可、入力検査、世界読取り、cancellation検査、512件のモード切替は同じ位置で行う。
+
+機構表示はtyped PistonObservationを所有する。Open/Closedだけの認識、その他の状態の
+未識別、契約候補の根拠、entire_observed_regionという範囲、mutation_authorized=falseを残す。
+状態・dimension・versionの確認方法と呼出し順序は変えていない。
+
+`OperationResult::Unmigrated`、`UnmigratedResult`、`record_unmigrated`、
+`complete_unmigrated`をproduction/testの両方から除去した。registryの成功・失敗・消費・進捗の
+判定にJSON pointer/getを使わない。旧テストの入力も用途別のnative resultへ置き換え、
+配置・修復それぞれの消費済み履歴を、再実行の拒否で置き換えない検証を維持した。
+
+同期MCPの既存追加表示には、native reportを最終応答のValueへ出す小さいcodecを残す。
+それらは`service/circuit_reports`のMCP境界に限定し、非同期履歴と計算からは呼ばない。
+同期解析の追加表示・サバイバルworkflow・共通応答正規化の整理と全体の境界監査は未完了。
+JSON除去の統合ゴールは継続する。MCP以外のJSON例外、物理法則や可否条件の変更、
+Voxrig source/vendor/pin、保存schemaや依存の変更は追加していない。
+
+#### 解析記録の回帰検証
+
+関連55件のoffline試験が成功した。操作結果・registry・Voxrig physical batchの既存群33件、
+native修復履歴の再実行拒否1件、reportの4件、非同期MCP診断7件、truth-table関連4件、
+取得根拠3件、gaze/逆解析の公開MCP2件、失敗した履歴の公開envelope1件を実行した。
+
+`analysis-wire-before-1715ca1.json`は、移行直前commit 1715ca1の旧レンダラを一時的に
+test専用で呼び出して取得した独立した公開MCP期待値である。empty/half-adder、不完全観測、
+診断の切り詰め、能力とsourceの集計、注目部品の省略/null、真理値表15種類を比較する。
+新しいproducerから期待値を作らず、取得に使った旧レンダラの一時コードは除去した。
+JSON fixtureは公開境界の期待値であり、productionの内部状態・保存・通信では使用しない。
+
+別のnative配置で、入力待ちと未給電をそれぞれ70件数え、64件の詳細と16件の近傍表示を
+検証した。最初の試験では単独の石を既知の回路部品と期待したが、現行抽出に含まれなかった。
+世界/抽出の条件を変えず、既に抽出される孤立したリピーターを対象とするようfixtureを修正し、
+成功した。既知の孤立と未取得の区別を確認する。
+
+非同期MCPではnative flat/hierarchicalの成功、真理値表の未取得が解析の失敗にならないこと、
+in-flight scanのnormalization失敗と取消し、遅れた結果による上書き禁止、認可/選択/範囲/予算の
+拒否が仕事の作成より先であること、過去の結果と現在のactivity/進捗の分離を検証した。
+すべてsynthetic/offline mockで、Minecraftへ接続せずワールド変更を行っていない。
+
+最終版でworkspace全targetとMCPの`--no-default-features`全targetのClippyが
+`-D warnings`で成功した。`cargo fmt --all -- --check`と`git diff --check`も成功した。
+Cargoは一つずつoffline/locked・`-j1`、試験は単一threadで実行した。

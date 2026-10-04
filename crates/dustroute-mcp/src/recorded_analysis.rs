@@ -8,6 +8,58 @@ use dustroute_translate::analysis::{BooleanFunction, FunctionalClassification, L
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 
+pub(crate) mod reports;
+
+/// Acquisition facts in a diagnostic report; this never reconstructs a fresh scan.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(tag = "strategy", rename_all = "snake_case")]
+pub(crate) enum RecordedExpansion {
+    AdjacentComponentFloodFill {
+        components_loaded: usize,
+        component_limit: usize,
+        limit_reached: bool,
+        scanned_tiles: usize,
+        scanned_block_positions: usize,
+    },
+    ExplicitWorkRegion {
+        limit_reached: bool,
+        scope: &'static str,
+    },
+    ExplicitSelectedRegion {
+        #[serde(skip_serializing_if = "Option::is_none")]
+        components_loaded: Option<usize>,
+        component_limit: Option<usize>,
+        limit_reached: bool,
+    },
+    #[cfg(test)]
+    #[serde(untagged)]
+    Unspecified {},
+}
+impl RecordedExpansion {
+    pub(crate) fn components_loaded(&self) -> Option<usize> {
+        match self {
+            Self::AdjacentComponentFloodFill {
+                components_loaded, ..
+            } => Some(*components_loaded),
+            Self::ExplicitSelectedRegion {
+                components_loaded, ..
+            } => *components_loaded,
+            Self::ExplicitWorkRegion { .. } => None,
+            #[cfg(test)]
+            Self::Unspecified {} => None,
+        }
+    }
+    pub(crate) fn limit_reached(&self) -> bool {
+        match self {
+            Self::AdjacentComponentFloodFill { limit_reached, .. }
+            | Self::ExplicitSelectedRegion { limit_reached, .. }
+            | Self::ExplicitWorkRegion { limit_reached, .. } => *limit_reached,
+            #[cfg(test)]
+            Self::Unspecified {} => false,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(untagged)]
 pub(crate) enum PrimaryCandidate {

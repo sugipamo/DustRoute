@@ -39,6 +39,42 @@ pub(super) enum ExpansionEvidence {
     Unspecified {},
 }
 impl ExpansionEvidence {
+    pub(super) fn recorded(&self) -> crate::recorded_analysis::RecordedExpansion {
+        use crate::recorded_analysis::RecordedExpansion as Record;
+        match *self {
+            Self::AdjacentComponentFloodFill {
+                components_loaded,
+                component_limit,
+                limit_reached,
+                scanned_tiles,
+                scanned_block_positions,
+            } => Record::AdjacentComponentFloodFill {
+                components_loaded,
+                component_limit,
+                limit_reached,
+                scanned_tiles,
+                scanned_block_positions,
+            },
+            Self::ExplicitWorkRegion {
+                limit_reached,
+                scope,
+            } => Record::ExplicitWorkRegion {
+                limit_reached,
+                scope,
+            },
+            Self::ExplicitSelectedRegion {
+                components_loaded,
+                component_limit,
+                limit_reached,
+            } => Record::ExplicitSelectedRegion {
+                components_loaded,
+                component_limit,
+                limit_reached,
+            },
+            #[cfg(test)]
+            Self::Unspecified {} => Record::Unspecified {},
+        }
+    }
     pub(super) fn components_loaded(&self) -> Option<usize> {
         match self {
             Self::AdjacentComponentFloodFill {

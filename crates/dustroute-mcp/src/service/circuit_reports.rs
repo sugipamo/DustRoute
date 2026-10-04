@@ -1,5 +1,7 @@
-//! Stateless report projections. These functions take explicit model data;
-//! none can read a bridge, mutate an operation, or load a persisted catalog.
+//! MCP output projections and codecs for native report records. These functions
+//! cannot read a bridge, mutate an operation, or load a persisted catalog.
+//! JSON adapters are only for synchronous public response composition; analysis
+//! computation and operation history use `recorded_analysis::reports` directly.
 use serde_json::{Value, json};
 mod analysis;
 mod inspection;
@@ -9,9 +11,9 @@ mod revision;
 mod tests;
 mod truth_table;
 pub(super) use analysis::circuit_identity_json;
+pub(super) use analysis::focused_component;
 pub(super) use analysis::focused_explanation_json;
-pub(super) use analysis::focused_hierarchy_role_json;
-pub(super) use analysis::focused_role_json;
+pub(super) use analysis::focused_hierarchy;
 pub(super) use analysis::hierarchical_result_json;
 pub(super) use inspection::{
     CapturedWorldInspection, GazeExpansion, GazeWorldInspection, InspectionBoundary,
@@ -27,25 +29,4 @@ pub(super) fn bounds_json(bounds: dustroute_translate::world_reverse::RegionBoun
     json!({ "min": bounds.min, "max": bounds.max })
 }
 
-pub(super) fn truth_table_status(
-    translated: &dustroute_translate::api::ReverseResult,
-) -> &'static str {
-    if translated.truth_table.is_some() {
-        "computed"
-    } else if matches!(
-        translated.truth_table_error.as_ref(),
-        Some(
-            dustroute_translate::world_reverse::TruthTableError::BudgetExceeded { .. }
-                | dustroute_translate::world_reverse::TruthTableError::RuntimeBudgetExceeded { .. }
-                | dustroute_translate::world_reverse::TruthTableError::ElapsedBudgetExceeded { .. }
-        )
-    ) {
-        "budget_exceeded"
-    } else if translated.truth_table_error.is_some() {
-        "unavailable"
-    } else {
-        "not_requested"
-    }
-}
-
-pub(super) const MAX_FLAT_ANALYSIS_COMPONENTS: usize = 512;
+pub(super) use crate::recorded_analysis::reports::MAX_FLAT_ANALYSIS_COMPONENTS;

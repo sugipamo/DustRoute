@@ -1,3 +1,4 @@
+pub mod analysis;
 pub mod construction;
 pub mod mutation;
 pub mod piston;
@@ -13,7 +14,6 @@ use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use tokio::sync::Mutex;
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
@@ -234,16 +234,6 @@ impl OperationRegistry {
                 cancellation: CancellationToken::new(),
             },
         );
-    }
-
-    /// Legacy test fixtures only; production proposal owners now record Rust types.
-    #[cfg(test)]
-    pub(crate) async fn record_unmigrated(&self, id: Uuid, kind: OperationKind, result: Value) {
-        self.record_completed(id, kind, OperationResult::unmigrated(result))
-            .await;
-    }
-    pub(crate) async fn complete_unmigrated(&self, id: Uuid, result: Value) {
-        self.complete(id, OperationResult::unmigrated(result)).await;
     }
 
     pub async fn fail(&self, id: Uuid, message: impl Into<String>) {
@@ -468,41 +458,84 @@ mod tests {
     async fn replay_refusal_does_not_replace_original_consumed_attempt() {
         let registry = OperationRegistry::default();
         let id = Uuid::new_v4();
-        let original = serde_json::json!({"ok":false,"error":"reply lost","failure":{"progress":{"operation_consumed":true,"world":"unknown"}}});
+        let original: OperationResult = RepairAttempt {
+            operation_id: id.to_string(),
+            outcome: RepairOutcome::failed(
+                ExecutionProgress {
+                    world: WorldOutcome::Unknown,
+                    operation_consumed: true,
+                    ..Default::default()
+                }
+                .cause(FailureCause::new(CauseKind::Timeout, "reply lost")),
+            ),
+        }
+        .into();
         registry
-            .record_unmigrated(id, OperationKind::RepairApply, original.clone())
+            .record_completed(id, OperationKind::RepairApply, original.clone())
             .await;
         registry
-            .record_unmigrated(
+            .record_completed(
                 id,
                 OperationKind::RepairApply,
-                serde_json::json!({"ok":false,"error":"already consumed"}),
+                RepairAttempt {
+                    operation_id: id.to_string(),
+                    outcome: RepairOutcome::refused("already consumed"),
+                }
+                .into(),
             )
             .await;
-        assert_eq!(
-            registry.get(id).await.unwrap().result,
-            Some(OperationResult::unmigrated(original))
-        );
+        assert_eq!(registry.get(id).await.unwrap().result, Some(original));
     }
+
+    fn completed_analysis() -> OperationResult {
+        let bounds = dustroute_translate::world_reverse::RegionBounds::new(
+            dustroute_physical::Pos::new(0, 0, 0),
+            dustroute_physical::Pos::new(0, 0, 0),
+        );
+        let translated = dustroute_translate::api::Translator.reverse(
+            &dustroute_physical::World::new(),
+            dustroute_translate::api::ReverseRequest::new(bounds),
+        );
+        super::analysis::AnalysisResult::from(crate::recorded_analysis::reports::reverse_report(
+            bounds,
+            &translated,
+        ))
+        .into()
+    }
+
     #[tokio::test]
     async fn completed_call_preserves_failure_and_only_verified_progress() {
         let registry = OperationRegistry::default();
-        let result = serde_json::json!({"ok":false,"failure":{"progress":{"submitted_changes":10,"verified_steps":2,"total_changes":10}},"error":"after readback failed"});
         let id = Uuid::new_v4();
+        let result = typed_failure(
+            id,
+            ExecutionProgress {
+                submitted_changes: Some(10),
+                verified_steps: 2,
+                total_changes: Some(10),
+                ..Default::default()
+            },
+        );
         registry
-            .record_unmigrated(id, OperationKind::PlacementApply, result.clone())
+            .record_completed(id, OperationKind::PlacementApply, result.clone())
             .await;
         let stored = registry.get(id).await.unwrap();
         assert_eq!(stored.status, OperationStatus::Failed);
         assert_eq!(stored.progress_percent, 20);
-        assert_eq!(
-            stored.result,
-            Some(OperationResult::unmigrated(result.clone()))
-        );
+        assert_eq!(stored.result, Some(result.clone()));
         let task = registry
             .create(OperationKind::AnalyzeRegion, "queued")
             .await;
-        registry.complete_unmigrated(task, result).await;
+        registry
+            .complete(
+                task,
+                super::analysis::AnalysisResult::from(FailureCause::new(
+                    CauseKind::Timeout,
+                    "analysis unavailable",
+                ))
+                .into(),
+            )
+            .await;
         assert_eq!(
             registry.get(task).await.unwrap().status,
             OperationStatus::Failed
@@ -518,9 +551,7 @@ mod tests {
         registry
             .update(completed, OperationStatus::Running, 50, "analyzing")
             .await;
-        registry
-            .complete_unmigrated(completed, serde_json::json!({ "ok": true }))
-            .await;
+        registry.complete(completed, completed_analysis()).await;
         assert_eq!(
             registry.get(completed).await.unwrap().status,
             OperationStatus::Completed
@@ -545,11 +576,9 @@ mod tests {
             .await;
         for _ in 0..3 {
             let id = registry
-                .create(OperationKind::RepairProposal, "queued")
+                .create(OperationKind::AnalyzeRegion, "queued")
                 .await;
-            registry
-                .complete_unmigrated(id, serde_json::json!({ "ok": true }))
-                .await;
+            registry.complete(id, completed_analysis()).await;
         }
 
         let records = registry.list().await;

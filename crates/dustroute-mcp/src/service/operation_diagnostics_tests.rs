@@ -159,11 +159,21 @@ async fn live_activity_does_not_replace_consumed_history_or_claim_mutation_cance
     service.tool_router = DustRouteMcp::tool_router();
     let registry = service.operations.clone();
     let id = uuid::Uuid::new_v4();
-    let original =
-        json!({"ok":false,"failure":{"progress":{"operation_consumed":true,"world":"unknown"}}});
+    let original = crate::operations::mutation::PlacementAttempt {
+        operation_id: id.to_string(),
+        outcome: crate::operations::mutation::PlacementOutcome::failed(
+            ExecutionProgress {
+                operation_consumed: true,
+                world: crate::failure::WorldOutcome::Unknown,
+                ..Default::default()
+            }
+            .cause(FailureCause::new(CauseKind::Timeout, "reply lost")),
+        ),
+    };
     registry
-        .record_unmigrated(id, OperationKind::PlacementApply, original.clone())
+        .record_completed(id, OperationKind::PlacementApply, original.clone().into())
         .await;
+    let expected = serde_json::to_value(&original).unwrap();
     let guard = registry
         .begin_activity(id, crate::operations::ActivityAction::InvokeOperation)
         .await
@@ -186,7 +196,7 @@ async fn live_activity_does_not_replace_consumed_history_or_claim_mutation_cance
         };
         crate::performance::execution_progress(&progress);
         let read = call(&client, "get_operation", json!({"operation_id":id})).await;
-        assert_eq!(read["operation"]["result"], original);
+        assert_eq!(read["operation"]["result"], expected);
         assert_eq!(read["activity"]["phase"], "wait");
         assert_eq!(read["activity"]["execution_progress"]["verified_steps"], 4);
         assert_eq!(
@@ -201,15 +211,19 @@ async fn live_activity_does_not_replace_consumed_history_or_claim_mutation_cance
     })
     .await;
     registry
-        .record_unmigrated(
+        .record_completed(
             id,
             OperationKind::PlacementApply,
-            json!({"ok":false,"error":"refused"}),
+            crate::operations::mutation::PlacementAttempt {
+                operation_id: id.to_string(),
+                outcome: crate::operations::mutation::PlacementOutcome::refused("refused"),
+            }
+            .into(),
         )
         .await;
     drop(guard);
     let saved = call(&client, "get_operation", json!({"operation_id":id})).await;
-    assert_eq!(saved["operation"]["result"], original);
+    assert_eq!(saved["operation"]["result"], expected);
     assert_eq!(saved["activity"]["active"], false);
     stop(client, server).await;
     if root.exists() {
@@ -403,5 +417,173 @@ async fn visible_player_reacquisition_and_refresh_failures_keep_their_cause() {
         if root.exists() {
             std::fs::remove_dir_all(root).unwrap();
         }
+    }
+}
+
+#[tokio::test]
+async fn selected_region_analysis_completes_native_flat_and_hierarchical_reports() {
+    for count in [1, 513] {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap().to_string();
+        let transport = tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let mut line = String::new();
+            BufReader::new(&mut stream)
+                .read_line(&mut line)
+                .await
+                .unwrap();
+            let request: Value = serde_json::from_str(&line).unwrap();
+            assert_eq!(request["method"], "scan_region");
+            let snapshot = crate::bridge::test_readback_response(
+                &request,
+                json!({
+                    "min":{"x":0,"y":80,"z":0},"max":{"x":count-1,"y":80,"z":0},
+                    "blocks":(0..count).map(|x|json!({"pos":{"x":x,"y":80,"z":0},"name":"minecraft:redstone_block","properties":{}})).collect::<Vec<_>>(),
+                }),
+            );
+            let response = json!({"id":request["id"],"result":snapshot});
+            stream
+                .write_all(format!("{response}\n").as_bytes())
+                .await
+                .unwrap();
+        });
+        let mut service =
+            DustRouteMcp::with_test_transport_and_player(address, McpPolicy::default(), "Tester");
+        service.tool_router = DustRouteMcp::tool_router();
+        service.selections.lock().await.insert(
+            "Tester".into(),
+            LocatedSelection::with_bounds(
+                "Tester",
+                dustroute_translate::world_reverse::RegionBounds::new(
+                    Pos::new(0, 80, 0),
+                    Pos::new(count - 1, 80, 0),
+                ),
+                "minecraft:overworld".into(),
+            ),
+        );
+        let registry = service.operations.clone();
+        let (client, server) = serve(service).await;
+        let started = call(
+            &client,
+            "start_selected_region_conversion",
+            json!({"include_truth_table":count==1}),
+        )
+        .await;
+        assert_eq!(started["ok"], true, "{started}");
+        assert_eq!(started["status"], "queued");
+        let id = uuid::Uuid::parse_str(started["operation_id"].as_str().unwrap()).unwrap();
+        timeout(Duration::from_secs(20), async {
+            loop {
+                let record = registry.get(id).await.unwrap();
+                if record.completed_at_unix_ms.is_some()
+                    && registry.activity(id).await.is_some_and(|a| !a.active)
+                {
+                    break;
+                }
+                tokio::task::yield_now().await;
+            }
+        })
+        .await
+        .unwrap();
+        transport.await.unwrap();
+        let record = registry.get(id).await.unwrap();
+        assert_eq!(record.status, OperationStatus::Completed, "{record:?}");
+        let result = record.result.unwrap();
+        assert!(matches!(
+            result,
+            crate::operations::OperationResult::Analysis(_)
+        ));
+        assert!(result.progress().is_none());
+        assert!(!result.consumed());
+        let read = call(&client, "get_operation", json!({"operation_id":id})).await;
+        assert_eq!(read["ok"], true);
+        assert_eq!(read["operation"]["progress_percent"], 100);
+        assert!(read["activity"]["execution_progress"].is_null());
+        let public = &read["operation"]["result"];
+        assert_eq!(public["ok"], true);
+        assert!(public["truth_table"].is_null());
+        if count == 1 {
+            assert_eq!(public["truth_table_status"], "unavailable");
+            assert!(public["truth_table_error_details"].is_object());
+        } else {
+            assert_eq!(public["analysis_mode"], "hierarchical_local_first");
+            assert_eq!(public["truth_table_status"], "skipped_large_circuit");
+            assert_eq!(public["expansion"]["components_loaded"], 513);
+            assert!(public["expansion"]["component_limit"].is_null());
+            assert!(public["focused_component"].is_null());
+        }
+        stop(client, server).await;
+    }
+}
+
+#[tokio::test]
+async fn analysis_admission_matches_legacy_boundary_before_creating_work() {
+    for case in 0..5 {
+        let root = temporary();
+        let mut service = DustRouteMcp::with_test_transport_and_player(
+            "127.0.0.1:1",
+            McpPolicy::default(),
+            "Tester",
+        );
+        service.state_store = PlanStateStore::new(root.clone(), 3600);
+        let mut args = json!({});
+        let bounds = dustroute_translate::world_reverse::RegionBounds::new(
+            Pos::new(0, 80, 0),
+            Pos::new(
+                if case == 3 { 4096 } else { 0 },
+                80,
+                if case == 3 { 4096 } else { 0 },
+            ),
+        );
+        let cause = match case {
+            0 => {
+                args["player"] = json!("Other");
+                service.resolve_player(Some("Other")).unwrap_err()
+            }
+            1 => {
+                service.policy.allowed_players = ["AnotherPlayer".into()].into();
+                FailureCause::from(service.policy.authorize_player("Tester").unwrap_err())
+                    .at(FailurePhase::Admission)
+            }
+            2 => service.selected_region("Tester").await.unwrap_err(),
+            3 => {
+                service.selections.lock().await.insert(
+                    "Tester".into(),
+                    LocatedSelection::with_bounds("Tester", bounds, "minecraft:overworld".into()),
+                );
+                FailureCause::from(service.policy.validate_region(bounds).unwrap_err())
+            }
+            4 => {
+                service.selections.lock().await.insert(
+                    "Tester".into(),
+                    LocatedSelection::with_bounds("Tester", bounds, "minecraft:overworld".into()),
+                );
+                args = json!({"include_truth_table":true,"truth_table_max_inputs":0});
+                FailureCause::new(CauseKind::Unknown, "unused")
+            }
+            _ => unreachable!(),
+        };
+        let expected = if case == 4 {
+            let error = reverse_request_for_truth_table(
+                bounds,
+                TruthTableRequestOptions {
+                    include_truth_table: true,
+                    max_inputs: Some(0),
+                    ..Default::default()
+                },
+            )
+            .unwrap_err();
+            test_support::decode_reply(&error_reply(McpErrorCode::InvalidArgument, error, false))
+                .unwrap()
+        } else {
+            test_support::decode_reply(&json_reply(json!({"ok":false,"error":cause}))).unwrap()
+        };
+        let reply = service
+            .start_selected_region_conversion(Parameters(serde_json::from_value(args).unwrap()))
+            .await;
+        assert_eq!(reply.is_error, Some(true));
+        assert_eq!(test_support::decode_reply(&reply).unwrap(), expected);
+        assert!(service.operations.list().await.is_empty());
+        assert!(!root.exists());
     }
 }
